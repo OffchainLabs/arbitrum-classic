@@ -1,0 +1,35 @@
+{
+  "name": "arbitrum-js",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "start": "webpack-dev-server --open",
+    "watch": "webpack --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^4.29.3",
+    "webpack-cli": "^3.2.3",
+    "webpack-dev-server": "^3.1.14"
+  },
+  "dependencies": {
+    "bn.js": "^4.11.8",
+    "eventemitter3": "^3.1.0",
+    "events": "^3.0.0",
+    "http": "0.0.0",
+    "jayson": "^2.1.2",
+    "jquery": "^3.3.1",
+    "lodash": "^4.17.11",
+    "net": "^1.0.2",
+    "node-fetch": "^2.3.0",
+    "retry": "^0.12.0",
+    "tls": "0.0.1",
+    "util": "^0.11.1",
+    "web3": "^1.0.0-beta.46"
+  }
+}
