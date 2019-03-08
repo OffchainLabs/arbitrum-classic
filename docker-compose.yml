@@ -1,0 +1,20 @@
+version: '3'
+services:
+    verifier:
+      build: arbitrum-verifier-solidity
+      ports:
+        - "7545:7545"
+    manager:
+      build: arbitrum-go
+      volumes:
+        - demo-app/fibonacci.ao
+      links:
+        - verifier
+      ports:
+        - "1235:1235"
+    demo:
+      build: demo-app
+      links:
+        - manager
+      ports:
+        - "8080:8080"
