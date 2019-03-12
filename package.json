@@ -1,0 +1,25 @@
+{
+  "name": "arb-web3-provider",
+  "version": "1.0.0",
+  "description": "Arbitrum provider for web3",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OffchainLabs/arb-web3-provider.git"
+  },
+  "author": "Offchain Labs",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/OffchainLabs/arb-web3-provider/issues"
+  },
+  "homepage": "https://github.com/OffchainLabs/arb-web3-provider#readme",
+  "dependencies": {
+    "bn.js": "^4.11.8",
+    "eventemitter3": "^3.1.0",
+    "jayson": "^2.1.2",
+    "node-fetch": "^2.3.0"
+  }
+}
