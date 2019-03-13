@@ -17,9 +17,9 @@
   },
   "homepage": "https://github.com/OffchainLabs/arb-web3-provider#readme",
   "dependencies": {
-    "bn.js": "^4.11.8",
-    "eventemitter3": "^3.1.0",
+    "ethers": "^4.0.27",
     "jayson": "^2.1.2",
-    "node-fetch": "^2.3.0"
+    "node-fetch": "^2.3.0",
+    "promise-poller": "^1.7.0"
   }
 }
