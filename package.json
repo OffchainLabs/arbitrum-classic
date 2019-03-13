@@ -18,8 +18,11 @@
     "webpack-dev-server": "^3.2.1"
   },
   "dependencies": {
-    "arb-web3-provider": "github:OffchainLabs/arb-web3-provider",
+    "async-polling": "^0.2.1",
+    "ethers": "^4.0.27",
     "jquery": "^3.3.1",
-    "web3": "1.0.0-beta.46"
+    "promise-poller": "^1.7.0",
+    "web3": "^1.0.0-beta.48",
+    "web3-provider-engine": "^14.2.0"
   }
 }
