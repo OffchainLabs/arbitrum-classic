@@ -13,10 +13,10 @@ services:
         build: arb-validator
         ports:
             - "1235:1235"
-        network_mode: "host"
         depends_on:
             - arb-ethbridge
         environment:
+            - BRIDGE_URL=ws://arb-ethbridge:7545
             - DELAY=15
     # demo-app deploys with compiled.json
     # Depends on arb-web3-provider in same directory
