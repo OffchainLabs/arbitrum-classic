@@ -30,21 +30,21 @@ clean:
 src:
 	if [ ! -d "$(BIN)" ]; then                                  \
 	    mkdir $(BIN);                                           \
-	    git clone git@github.com:OffchainLabs/$(DEMO).git       \
+	    git clone https://github.com/OffchainLabs/$(DEMO).git       \
 	        $(BIN)/$(DEMO);                                     \
-	    git clone git@github.com:OffchainLabs/$(AWP).git        \
+	    git clone https://github.com/OffchainLabs/$(AWP).git        \
 	        $(BIN)/$(DEMO)/$(AWP);                              \
-	    git clone git@github.com:OffchainLabs/$(COMPILER).git   \
+	    git clone https://github.com/OffchainLabs/$(COMPILER).git   \
 	        $(BIN)/$(COMPILER);                                 \
-	    git clone git@github.com:OffchainLabs/$(ETHBRIDGE).git  \
+	    git clone https://github.com/OffchainLabs/$(ETHBRIDGE).git  \
 	        $(BIN)/$(ETHBRIDGE);                                \
-	    git clone git@github.com:OffchainLabs/$(VALIDATOR).git  \
+	    git clone https://github.com/OffchainLabs/$(VALIDATOR).git  \
 	        $(BIN)/$(VALIDATOR);                                \
-	    git clone git@github.com:OffchainLabs/arb-avm.git       \
+	    git clone https://github.com/OffchainLabs/arb-avm.git       \
 	        $(BIN)/$(VALIDATOR)/arb-avm;                        \
-	    git clone git@github.com:OffchainLabs/$(TDD).git        \
+	    git clone https://github.com/OffchainLabs/$(TDD).git        \
 	        $(BIN)/$(TDD);                                      \
-	    git clone git@github.com:OffchainLabs/$(ATP).git        \
+	    git clone https://github.com/OffchainLabs/$(ATP).git        \
 	        $(BIN)/$(TDD)/$(ATP);                               \
 	fi
 	cp docker-compose.yml $(BIN) || true
