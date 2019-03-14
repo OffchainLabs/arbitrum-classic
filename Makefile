@@ -30,8 +30,8 @@ clean:
 src:
 	if [ ! -d "$(BIN)" ]; then                                  \
 	    mkdir $(BIN);                                           \
-	    mkdir $(BIN)/$(DEMO);                                   \
-	    cp -r * $(BIN)/$(DEMO) || true;                         \
+	    git clone git@github.com:OffchainLabs/$(DEMO).git       \
+	        $(BIN)/$(DEMO);                                     \
 	    git clone git@github.com:OffchainLabs/$(AWP).git        \
 	        $(BIN)/$(DEMO)/$(AWP);                              \
 	    git clone git@github.com:OffchainLabs/$(COMPILER).git   \
@@ -48,3 +48,4 @@ src:
 	        $(BIN)/$(TDD)/$(ATP);                               \
 	fi
 	cp docker-compose.yml $(BIN) || true
+	rm -f $(BIN)/$(DEMO)/Makefile

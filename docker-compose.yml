@@ -2,12 +2,14 @@ version: '3'
 services:
     # arb-ethbridge deploys on ganache-cli
     arb-ethbridge:
+        image: arb-ethbridge
         build: arb-ethbridge
         ports:
             - "7545:7545"
     # arb-validator deploys with addresses.json and contract.ao
     # Depends on arb-avm in same directory
     arb-validator:
+        image: arb-validator
         build: arb-validator
         ports:
             - "1235:1235"
@@ -19,6 +21,7 @@ services:
     # demo-app deploys with compiled.json
     # Depends on arb-web3-provider in same directory
     demo-app:
+        image: demo-app
         build: demo-app
         ports:
             - "8080:8080"
