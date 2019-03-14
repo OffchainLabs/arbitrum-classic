@@ -1,22 +1,34 @@
 version: '3'
 services:
-    compiler:
+    # truffle-deploy-demo translates contracts/*.sol to compiled.json
+    truffle-deploy-demo:
+        build: truffle-deploy-demo
+        # Depends on arb-truffle-provider in same directory
+    # arbc-solidity compiles compiled.json into contract.ao
+    arbc-solidity:
         build: arbc-solidity
-    eth-bridge:
-        build: arbitrum-verifier-solidity
+        depends_on:
+            - truffle-deploy-demo
+    # arb-ethbridge deploys on ganache-cli
+    arb-ethbridge:
+        build: arb-ethbridge
         ports:
             - "7545:7545"
-    validator:
-        build: arbitrum-go
+    # arb-validator deploys with addresses.json and contract.ao
+    arb-validator:
+        build: arb-validator
         ports:
             - "1235:1235"
         network_mode: "host"
-        depends_on:
-            - compiler
-            - eth-bridge
+        depends_on: # Depends on arb-avm in same directory
+            - arbc-solidity
+            - arb-ethbridge
         environment:
             - DELAY=15
-    demo:
+    # demo-app deploys with compiled.json
+    demo-app:
         build: demo-app
         ports:
             - "8080:8080"
+        depends_on: # Depends on arb-web3-provider in same directory
+            - truffle-deploy-demo
