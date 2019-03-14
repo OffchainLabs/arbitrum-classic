@@ -16,8 +16,12 @@ ATP=arb-truffle-provider
 BIN=compose
 
 all: src
-	time sudo docker-compose build -f demo-app/docker-compose.yml
-	sudo docker-compose run -f demo-app/docker-compose.yml
+	# Prebuild images that don't run
+	cd $(BIN)/$(TDD) && sudo docker build -t $(TDD) .
+	cd $(BIN)/$(COMPILER) && sudo docker build -t $(COMPILER) .
+	# Build and run demo, ethbridge, and validator
+	cd $(BIN) && time sudo docker-compose build
+	cd $(BIN) && sudo docker-compose up
 
 clean:
 	rm -rf $(BIN)
@@ -43,3 +47,4 @@ src:
 	    git clone git@github.com:OffchainLabs/$(ATP).git        \
 	        $(BIN)/$(TDD)/$(ATP);                               \
 	fi
+	cp docker-compose.yml $(BIN) || true
