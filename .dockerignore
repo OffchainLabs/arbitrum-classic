@@ -1,0 +1,9 @@
+docker-compose.yml
+Dockerfile
+.dockerignore
+.git
+.gitignore
+Makefile
+node_modules
+README.md
+yarn-error.log
