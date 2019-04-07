@@ -1,36 +1,39 @@
 version: '3'
 services:
-    # arb-ethbridge deploys on ganache-cli
     arb-ethbridge:
         image: arb-ethbridge
-        build: arb-ethbridge
+        build: ./arb-ethbridge
         ports:
             - "7545:7545"
 
     arb-validator-coordinator:
         image: arb-validator
-        build: arb-validator
+        build: ./arb-validator
         command: >
-            sh -c "sleep 15 &&
-                   go run ./cmd/leaderServer/main.go addresses.json contract.ao ws://arb-ethbridge:7545"
+            sh -c "while ! nc -z arb-ethbridge 7545; do sleep 5; done &&
+                sleep 5; echo \"Finished waiting for arb-ethbridge...\";
+                leaderServer addresses.json contract.ao ws://arb-ethbridge:7545"
         ports:
             - "1235:1235"
+            - "1236:1236"
+        depends_on:
+            - arb-ethbridge
 
     arb-validator1:
         image: arb-validator
-        command: >
-            sh -c "sleep 25 &&
-                   go run ./cmd/followerServer/main.go addresses.json contract.ao wss://arb-validator-coordinator:1236/ws ws://arb-ethbridge:7545 1"
+        environment:
+            - COORDINATOR=arb-validator-coordinator
+            - UID=1
 
     arb-validator2:
         image: arb-validator
-        command: >
-            sh -c "sleep 25 &&
-                   go run ./cmd/followerServer/main.go addresses.json contract.ao wss://arb-validator-coordinator:1236/ws ws://arb-ethbridge:7545 2"
-    # demo-app deploys with compiled.json
-    # Depends on arb-web3-provider in same directory
+        environment:
+            - COORDINATOR=arb-validator-coordinator
+            - UID=2
+
+    # demo-app depends on compiled.json and arb-web3-provider
     demo-app:
         image: demo-app
-        build: demo-app
+        build: ./demo-app
         ports:
-            - "8080:8080"
+            - "80:80"
