@@ -8,144 +8,79 @@
 
 #include "datastack.hpp"
 
-void datastack::push(value &newdata){
-    value* tmp=new value(newdata);
-    basedatastack.push(tmp);
+#include "opcodes.hpp"
+
+void datastack::push(value && newdata){
+    basedatastack.push_back(std::move(newdata));
     
 };
-void datastack::push(uint256_t val, int type){
-    value* tmp=new value(val,type);
-    basedatastack.push(tmp);
-    
-};
-void datastack::pop(){
-    value* A=basedatastack.top();
-    basedatastack.pop();
-    delete A;
-    
-};
-void datastack::popNoDel(){
-    basedatastack.pop();
-};
-value *datastack::top(){
+
+value datastack::pop() {
     if (basedatastack.size()==0){
-        //error
-        return NULL;
+        throw std::runtime_error("Stack is empty");
     }
-    return basedatastack.top();
+    
+    auto val = std::move(basedatastack.back());
+    basedatastack.pop_back();
+    return val;
+};
+
+value &datastack::peak() {
+    if (basedatastack.size()==0){
+        throw std::runtime_error("Stack is empty");
+    }
+    
+    return basedatastack.back();
+};
+
+value &peak();
+
+void datastack::popSet(value &val) {
+    if (basedatastack.size()==0){
+        throw std::runtime_error("Stack is empty");
+    }
+    
+    val = std::move(basedatastack.back());
+    basedatastack.pop_back();
 };
 
 uint64_t datastack::stacksize(){
     return basedatastack.size();
 };
 
-void datastack::rpush(value &val){
-    push(val);
-};
-
-void datastack::rset(value &val){
-    A = top();
-    val=*A;
-    pop();
-};
-
 void datastack::pcpush(uint64_t i, uint64_t j){
-    pcmap.insert(make_pair(i, j-1));
-    push((uint256_t)i,CODEPT);
+    pcmap.insert(std::make_pair(i, j-1));
+    push(CodePoint{i});
 }
 
-pair<int,uint64_t> datastack::jmp(){
-    A = top();
-    if (A->type != CODEPT){
-        pop();
-        return make_pair(-1, NULL);
+std::pair<int,uint64_t> datastack::jmp(){
+    auto A = pop();
+    auto cp = mpark::get_if<CodePoint>(&A);
+    if (!cp) {
+        return std::make_pair(-1, NULL);
     }
-    uint64_t val=A->num.lower().lower();
-    pop();
     
+    uint64_t val = cp->pc;
     if (pcmap.find(val)==pcmap.end()){
-        return make_pair(0, val);
+        return std::make_pair(0, val);
     }else{
-        return make_pair(1, pcmap[val]);
+        return std::make_pair(1, pcmap[val]);
     }
-}
-
-int datastack::tget(){
-    if (stacksize()<2){
-        //error
-        return ERROR;
-    }
-    A=top();
-    popNoDel();
-    B=top();
-    popNoDel();
-    if ((A->type != NUM) || (B->type != TUPLE) || (A->num >= B->tplsize)){
-        delete A;
-        delete B;
-        return ERROR;
-    }
-    push(*(B->get_tuple_elem((uint)A->num)));
-    delete A;
-    delete B;
-    return EXTENSIVE;
 }
 
 int datastack::tset(){
-    A=top(); // slot
-    popNoDel();
-    B=top(); // tuple
-    popNoDel();
-    C=top(); // val
-    popNoDel();
-    if ((A->type != NUM) ||
-        (B->type != TUPLE) ||
-        (A->num >= B->tplsize)){
-        delete A;
-        delete B;
-        delete C;
+    auto A = pop(); // slot
+    auto B = pop(); // tuple
+    auto C = pop(); // val
+    auto aIndex = mpark::get_if<uint256_t>(&A);
+    auto bTup = mpark::get_if<Tuple>(&B);
+    if (!aIndex || bTup ||
+        *aIndex >= bTup->tuple_size()){
         return ERROR;
     }
     
-    B->set_tuple_elem((uint)A->num, C);
-    push(*B);
-    delete A;
-    delete B;
-    delete C;
+    bTup->set_element(static_cast<uint32_t>(*aIndex), std::move(C));
+    push(std::move(*bTup));
     return EXTENSIVE;
 }
 
-int datastack::add(){
-    A=top();
-    popNoDel();
-    B=top();
-    popNoDel();
-    if ((A->type != NUM) || (B->type != NUM)){
-        delete A;
-        delete B;
-        return ERROR;
-    }
-    
-    uint256_t sum=A->num+B->num;
-    A->set_num(sum);
-    push(*A);
-    delete A;
-    delete B;
-    return EXTENSIVE;
-}
-int datastack::mul(){
-    A=top();
-    popNoDel();
-    B=top();
-    popNoDel();
-    if ((A->type != NUM) || (B->type != NUM)){
-        delete A;
-        delete B;
-        return -1;
-    }
-    uint256_t sum=A->num*B->num;
-    A->set_num(sum);
-    push(*A);
-    delete A;
-    delete B;
-    return EXTENSIVE;
-}

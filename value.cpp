@@ -5,204 +5,154 @@
 //  Created by Timothy O'Bryan on 3/28/19.
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
-#include <iostream>
 
 #include "value.hpp"
+#include "pool.hpp"
+#include "util.hpp"
 
-    value::value(){
-        type=NONE;
-        size=1;
-        tplsize=0;
-        refcount=1;
-    }
-    
-    value::value(const value &obj){
-        type=obj.type;
-        size=obj.size;
-        tplsize=obj.tplsize;
-        refcount=1;
-        num=obj.num;
-        if (type==TUPLE){
-            tpl=obj.tpl;
-            tpl->ref++;
-        }
-    }
-    
-//    value::value(uint256_t val){
-//        type=NUM;
-//        size=1;
-//        tplsize=0;
-//        num=val;
-//        refcount=1;
-//    }
+#include <iostream>
 
-    value::value(uint256_t val, int newtype){
-        type=newtype;
-        size=1;
-        tplsize=0;
-        num=val;
-        refcount=1;
-    }
+uint256_t deserialize_int(char *&bufptr) {
+    uint256_t ret = from_big_endian(bufptr, bufptr + 32);
+    bufptr += 32;
+    return ret;
+}
 
-    value::value(int s){
-        type=TUPLE;
-        size=s+1;
-        tplsize=s;
-        tpl=tuplePool->getResource(s);
-        refcount=1;
-        
+Tuple deserialize_tuple(char *&bufptr, int size, TuplePool &pool) {
+    Tuple tup(size, &pool);
+    for (int i = 0; i < size; i++) {
+        tup.set_element(i, deserialize_value(bufptr, pool));
     }
-    
-    value::~value(){
-        refcount--;
-        //        cout<<"value obj "<<this<<" delete type="<<type<<" refcount="<<refcount<<endl;
-        if (type==TUPLE && refcount==0){
-            tuplePool->returnResource(tplsize, tpl);
-        }
-    }
-    
-    value &value::operator = (const value &val ){
-        type = val.type;
-        size = val.size;
-        tplsize = val.tplsize;
-        num = val.num;
-        tpl = val.tpl;
-        if (type == TUPLE){
-            tpl->ref++;
-        }
+    return tup;
+}
 
-        return *this;
-    }
-    //    value& operator=(value other);
-    //    value(const value &v2) { }
-    void value::reset(){
-        // TODO     release resource
-        type=NONE;
-        size=1;
-        tplsize=0;
-        
-    }
-    
-    void value::set_num(uint256_t val) {
-        type=NUM;
-        size=1;
-        tplsize=0;
-        num=val;
-    }
-
-    void value::set_codept(uint256_t val) {
-        type=CODEPT;
-        size=1;
-        tplsize=0;
-        num=val;
-    }
-    //    void set_reg(uint256_t val) {
-    //        reg=val;
-    //    }
-    
-    /*    void set_tuple(int count, value *vals) {
-     type=TUPLE;
-     size=count;
-     tplsize=count;
-     value *newtuple=new value[count];
-     tpl = newtuple;
-     cout<<tpl<<endl;
-     //        memcpy(tpl, vals, sizeof(value)*count);
-     for (int i=0; i<count; i++){
-     newtuple[i] = vals[i];
-     size+=newtuple[i].size;
-     }
-     }
-     */
-    //   copy_tuple(value *){
-    
-    //   }
-    value *value::dup(){
-        value *tmp=new value;
-        tmp->type = type;
-        if (type==NUM){
-            tmp->num=num;
-        }
-        if (type==CODEPT){
-            tmp->num=num;
-        }
-        if (type==TUPLE){
-            tmp->tpl=tpl;
-            tmp->tplsize=tplsize;
-        }
-        
-        return tmp;
-    }
-    int value::set_tuple_elem(int pos, value *newval) {
-        if (type != TUPLE) return -1;
-        if (pos >= tplsize) return -1;
-//        value *oldval=&tpl->vals[pos];
-        if (tpl->ref>1){
-            //make new copy tuple
-            vTuple* tmp=tuplePool->getResource(tplsize);
-            memcpy(tmp->vals, tpl->vals, sizeof(value)*tplsize);
-            tpl->ref--;
-            tpl=tmp;
-            for(int i=0; i<tplsize; i++){
-                if (tpl->vals[i].type==TUPLE){
-                    tpl->ref++;
-                }
+value deserialize_value(char *&srccode, TuplePool &pool) {
+    uint8_t valType;
+    memcpy(&valType, srccode, sizeof(valType));
+    srccode += sizeof(valType);
+    switch (valType) {
+        case NUM:
+            return deserialize_int(srccode);
+        case CODEPT:
+            throw std::runtime_error("Tried to deserialize unhandled codepoint");
+        default:
+            if (valType >= TUPLE && valType <= TUPLE + 8) {
+                return deserialize_tuple(srccode, valType - TUPLE, pool);
+            } else {
+                throw std::runtime_error("Tried to deserialize unhandled type");
             }
-//            value *oldval=&tpl->vals[pos];
-        }
-        if (tpl->vals[pos].type == TUPLE){
-            //slot is currently tuple return old
-            tuplePool->returnResource(tpl->vals[pos].tplsize, tpl->vals[pos].tpl);
-        }
-        tpl->vals[pos].type=newval->type;
-        tpl->vals[pos].size=newval->size;
-        tpl->vals[pos].tplsize=newval->tplsize;
-        tpl->vals[pos].num=newval->num;
-        
-        tpl->vals[pos].refcount=newval->refcount;
-        if (newval->type == TUPLE){
-            tpl->vals[pos].tpl=newval->tpl;
-            tpl->vals[pos].tpl->ref++;
-            //copy Tuple
-        } else {
-            tpl->vals[pos].num=newval->num;
-        }
-        return 0;
-    }
-    
-    value *value::get_tuple_elem(int pos) {
-        if (type != TUPLE) return NULL;
-        if (pos >= tplsize) return NULL;
-        
-        return &tpl->vals[pos];
-    }
-    void value::print(){
-        if (type==NUM){
-            cout<<"num="<<num;
-        }
-        if (type==CODEPT){cout<<"codept="<<num;}
-        if (type==TUPLE){
-            value *val=tpl->vals;
-            cout<<"tuple="<<tpl<<" [";
-            for (int i=0; i<tplsize; i++){
-                val[i].print();
-                cout<<((i<tplsize-1)?",":"");
-            }
-            cout<<"]";
-        }
-    }
-
-void value::printstack(){
-    if (type==NUM){cout<<"num="<<num;}
-    if (type==CODEPT){cout<<"codept="<<num;}
-    if (type==TUPLE){
-        value *val=tpl->vals;
-        cout<<"tuple="<<tpl<<" [";
-        for (int i=0; i<tplsize; i++){
-            val[i].print();
-            cout<<((i<tplsize-1)?",":"");
-        }
-        cout<<"]";
     }
 }
 
+Tuple::Tuple(int size_, TuplePool *pool) :
+tuplePool(pool),
+size(size_ + 1),
+tpl(pool->getResource(size_)) {}
+
+Tuple::Tuple(const Tuple &tup) :
+tuplePool(tup.tuplePool),
+size(tup.size),
+tpl(tup.tpl) {}
+
+Tuple::~Tuple(){
+    tuplePool->returnResource(std::move(tpl));
+}
+
+int Tuple::tuple_size() const {
+    return tpl->size();
+}
+
+void Tuple::set_element(int pos, value && newval) {
+    if (pos >= tuple_size()){
+        throw bad_tuple_index{};
+    }
+
+    if (tpl.use_count() > 1) {
+        //make new copy tuple
+        std::shared_ptr<std::vector<value>> tmp = tuplePool->getResource(tpl->size());
+        std::copy(tpl->begin(), tpl->end(), tmp->begin());
+        tpl=tmp;
+    }
+    (*tpl)[pos] = std::move(newval);
+}
+
+value Tuple::get_element(int pos) const {
+    if (pos >= tuple_size()){
+        throw bad_tuple_index{};
+    }
+    return (*tpl)[pos];
+}
+
+std::vector<unsigned char> value_hash_raw(const value &value) {
+    return mpark::visit([](const auto &val) {
+        return value_hash_raw(val);
+    }, value);
+}
+
+std::vector<unsigned char> value_hash_raw(const uint256_t &value) {
+    std::vector<unsigned char> intData;
+    intData.resize(32);
+    to_big_endian(value, intData.begin());
+    
+    std::vector<unsigned char> hashData;
+    hashData.resize(32);
+    evm::Keccak_256(intData.data(), 32, hashData.data());
+    return hashData;
+}
+
+std::vector<unsigned char> value_hash_raw(const Tuple &tup) {
+    
+    std::vector<unsigned char> tupData;
+    tupData.resize(1 + tup.tuple_size() * 32);
+    auto oit = tupData.begin();
+    tupData[0] = TUPLE + tup.tuple_size();
+    ++oit;
+    for (int i = 0; i < tup.tuple_size(); i++) {
+        auto valHash = value_hash_raw(tup.get_element(i));
+        std::copy(valHash.begin(), valHash.end(), oit);
+        oit += 32;
+    }
+    
+    std::vector<unsigned char> hashData;
+    hashData.resize(32);
+    evm::Keccak_256(tupData.data(), 32, hashData.data());
+    return hashData;
+}
+
+std::vector<unsigned char> value_hash_raw(const CodePoint &cp) {
+    throw std::runtime_error("CodePoint hash not supported");
+}
+
+uint256_t value_hash(const value &value) {
+    return mpark::visit([](const auto &val) {
+        auto raw = value_hash_raw(val);
+        return from_big_endian(raw.begin(), raw.end());
+    }, value);
+}
+
+struct ValuePrinter {
+    std::ostream& os;
+    
+    std::ostream &operator()(const Tuple &val) {
+        os << "tuple=" << " [";
+        for (int i = 0; i < val.tuple_size(); i++){
+            std::cout<< val.get_element(i) << ((i < val.tuple_size()-1) ? "," : "");
+        }
+        std::cout<<"]";
+        return os;
+    }
+    
+    std::ostream &operator()(const uint256_t &val) {
+        os << "num=" << val;
+        return os;
+    }
+    
+    std::ostream &operator()(const CodePoint &val) {
+        os << "codept=" << val;
+        return os;
+    }
+};
+
+std::ostream& operator<<(std::ostream& os, const value& val) {
+    return mpark::visit(ValuePrinter{os}, val);
+}

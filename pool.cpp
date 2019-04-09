@@ -11,21 +11,6 @@
 #include "pool.hpp"
 #include "value.hpp"
 
-/* Note, that this class is a singleton. */
-/**
- * Static method for accessing class instance.
- * Part of Singleton design pattern.
- *
- * @return ObjectPool instance.
- */
-ObjectPool* ObjectPool::getInstance()
-{
-    if (instance == 0)
-    {
-        instance = new ObjectPool;
-    }
-    return instance;
-}
 /**
  * Returns instance of Resource.
  *
@@ -34,19 +19,25 @@ ObjectPool* ObjectPool::getInstance()
  *
  * @return Resource instance.
  */
-vTuple* ObjectPool::getResource(int s)
+std::shared_ptr<std::vector<value>> TuplePool::getResource(int s)
 {
     if (resources[s].empty())
     {
-        vTuple *ret=new vTuple;
-        ret->ref=1;
-        ret->vals = new value[s];
-        return ret;
+        auto newTup = std::make_shared<std::vector<value>>();
+        newTup->reserve(s);
+        for (int i = 0; i < s; i++) {
+            newTup->push_back(Tuple(0, this));
+        }
+        return newTup;
     }
     else
     {
-        vTuple* resource = resources[s].front();
-        resources[s].pop_front();
+        std::shared_ptr<std::vector<value>> resource = resources[s].back();
+        resources[s].pop_back();
+        resource->clear();
+        for (int i = 0; i < s; i++) {
+            resource->push_back(Tuple(0, this));
+        }
         return resource;
     }
 }
@@ -60,15 +51,8 @@ vTuple* ObjectPool::getResource(int s)
  * @param object Resource instance.
  */
 
-void ObjectPool::returnResource(int size, vTuple* object)
-{
-    if (object->ref > 1){
-        object->ref--;
-    } else {
-        memset(object->vals,0,size*sizeof(value));
-        resources[size].push_back(object);
+void TuplePool::returnResource(std::shared_ptr<std::vector<value>> && object) {
+    if (object.use_count() == 1){
+        resources[object->size()].push_back(std::move(object));
     }
 }
-ObjectPool* ObjectPool::instance = 0;
-
-

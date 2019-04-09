@@ -29,16 +29,11 @@ int main(int argc, const char * argv[]) {
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "uint256_t.h"
 #include "pool.hpp"
 #include "value.hpp"
 #include "datastack.hpp"
 #include "code.hpp"
-#include "InternalMachine.hpp"
-#include "Machine.h"
-
-using namespace std;
-
+#include "machine.hpp"
 
 //struct stk{
 //    value *stkdata;
@@ -254,21 +249,21 @@ using namespace std;
 //
 //}
 
-Machine *read_file (string filename, vector<instr> &code, char *staticValue) {
-    ifstream myfile;
+Machine read_file (std::string filename) {
+    std::ifstream myfile;
     
     struct stat filestatus;
     stat( filename.c_str(), &filestatus );
 
     char *buf = (char *)malloc(filestatus.st_size);
     
-    myfile.open(filename, ios::in);
+    myfile.open(filename, std::ios::in);
     if (myfile.is_open())
     {
         myfile.read((char *)buf, filestatus.st_size);
         myfile.close();
     }
-    return Init_machine(buf, staticValue);
+    return Machine(buf);
 }
 
 //void oldread_file (string filename, vector<instr> &code, char *staticValue) {
@@ -318,27 +313,23 @@ Machine *read_file (string filename, vector<instr> &code, char *staticValue) {
 //int main() {
 int main(int argc, char *argv[])
 {
-    Machine *mach;
-    vector<instr> code;
 //    int state=EXTENSIVE;
-    string filename;
-    char staticValue[32];
-    unsigned long long stepCount=200;
-    Assertion result;
+    std::string filename;
+    unsigned long long stepCount=1000000;
     if(argc!=2)
     {
-        cout<<"Usage: AVMTest <ao file>"<<endl;
-        cout<<"   defaulting to use add.ao"<<endl;
+        std::cout<<"Usage: AVMTest <ao file>"<<std::endl;
+        std::cout<<"   defaulting to use add.ao"<<std::endl;
         filename = "add.ao";
     } else {
         filename = argv[1];
     }
 
 //    oldread_file(filename, code, staticValue);
-    mach = read_file(filename, code, staticValue);
+    Machine mach = read_file(filename);
 
 //    setupCode( code );
-    result = run_machine(mach, stepCount);
+    Assertion result = mach.run(stepCount);
     
 //    runMachine(code, state, 200);
     

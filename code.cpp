@@ -8,37 +8,13 @@
 
 #include "code.hpp"
 
-value *instr::getimmediate(){
-    if (immediate!=NULL){
-        immediate->refcount++;
-    }
-    return immediate;
-}
+#include <iostream>
 
-instr::~instr(){
-    if (immediate!=NULL && immediate->type!=TUPLE){
-        delete immediate;
-    }
-}
-
-instr::instr(const instr &i){
-    pc=i.pc;
-    opcode = i.opcode;
-    if (i.immediate!=NULL){
-        immediate=new value(*(i.immediate));
+std::ostream& operator<<(std::ostream& os, const instr& instruction) {
+    if (instruction.immediate.has_value()) {
+        os << "ImmediateInstruction(" << static_cast<int>(instruction.opcode) << ", " << *instruction.immediate << ")";
     } else {
-        immediate=NULL;
+        os << "BasicInstruction(" << static_cast<int>(instruction.opcode) << ")";
     }
-//        uint256_t codeHash;
-    
-}
-
-instr::instr(unsigned long long p, char o, value* i){
-    pc=p;
-    opcode=o;
-    if (i!=NULL){
-        immediate=new value(*i);
-    } else {
-        immediate=NULL;
-    }
+    return os;
 }

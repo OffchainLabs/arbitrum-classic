@@ -9,38 +9,18 @@
 #ifndef pool_hpp
 #define pool_hpp
 
+#include "value.hpp"
+
 #include <stdio.h>
 #include <list>
 #include <array>
-#include "uint256_t.h"
+#include <vector>
 
-using namespace std;
-
-
-class value;
-//class vTuple;
-class vTuple{
-public:
-    int ref;
-    value* vals;
-};
-
-/* Note, that this class is a singleton. */
-class ObjectPool
+class TuplePool
 {
 private:
-    std::array<std::list<vTuple*>,9> resources;
-
-    static ObjectPool* instance;
-    ObjectPool() {}
+    std::array<std::vector<std::shared_ptr<std::vector<value>>>,9> resources;
 public:
-    /**
-     * Static method for accessing class instance.
-     * Part of Singleton design pattern.
-     *
-     * @return ObjectPool instance.
-     */
-    static ObjectPool* getInstance();
     /**
      * Returns instance of Resource.
      *
@@ -49,7 +29,7 @@ public:
      *
      * @return Resource instance.
      */
-    vTuple* getResource(int s);
+    std::shared_ptr<std::vector<value>> getResource(int s);
     /**
      * Return resource back to the pool.
      *
@@ -59,7 +39,7 @@ public:
      *
      * @param object Resource instance.
      */
-    void returnResource(int size, vTuple* object);
+    void returnResource(std::shared_ptr<std::vector<value>> && object);
 };
 
 #endif /* pool_hpp */

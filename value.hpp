@@ -9,40 +9,49 @@
 #ifndef value_h
 #define value_h
 
-#include "uint256_t.h"
-#include "pool.hpp"
+#include "bigint.hpp"
+#include <mpark/variant.hpp>
 
-enum types{ NONE, NUM, CODEPT, TUPLE };
-
-class value{
-private:
-    ObjectPool* tuplePool = ObjectPool::getInstance();
-
+class bad_tuple_index : public std::exception {
 public:
-    int type;
-    int size;
-    int tplsize;
-    int refcount;
-    //    uint256_t reg;
-    uint256_t num;
-    vTuple *tpl;
-    
-    value();
-    value(const value &obj);
-    value(uint256_t val, int type);
-    value(int s);
-    ~value();
-    value &operator = (const value &val );
-    void reset();
-    void set_num(uint256_t val);
-    void set_codept(uint256_t val);
-    value *dup();
-
-    int set_tuple_elem(int pos, value *newval);
-    
-    value *get_tuple_elem(int pos);
-    void print();
-    void printstack();
+    virtual const char *what() const noexcept override { return "bad_tuple_index"; }
 };
+
+enum types{ NUM, CODEPT, TUPLE };
+
+class TuplePool;
+class Tuple;
+struct CodePoint;
+
+using value = mpark::variant<uint256_t, Tuple, CodePoint>;
+
+std::ostream& operator<<(std::ostream& os, const value& val);
+
+uint256_t value_hash(const value &value);
+
+class Tuple {
+private:
+    TuplePool* tuplePool;
+    int size;
+    std::shared_ptr<std::vector<value>> tpl;
+public:
+    Tuple(int size_, TuplePool *pool);
+    Tuple(const Tuple &tup);
+    ~Tuple();
+    
+    int tuple_size() const;
+    void set_element(int pos, value && newval);
+    value get_element(int pos) const;
+};
+
+struct CodePoint {
+    uint64_t pc;
+    
+    CodePoint(uint64_t pc_) : pc(pc_) {}
+};
+
+uint256_t deserialize_int(char *&srccode);
+Tuple deserialize_tuple(char *&bufptr, int size, TuplePool &pool);
+value deserialize_value(char *&srccode, TuplePool &pool);
 
 #endif /* value_h */
