@@ -1,0 +1,50 @@
+# Javascript Node CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+#
+version: 2
+jobs: 
+  deploy_stage:
+    docker:
+      # specify the version you desire here
+      - image: circleci/node:11.6.0
+      
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/mongo:3.4.4
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v2-dependencies-{{ checksum "package.json" }}
+          # fallback to using the latest cache if no exact match is found
+          - v2-dependencies-
+
+      - run: cd website
+      - run: yarn install
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+        
+      # run tests!
+      - run: yarn run build
+      - run: ssh -oStrictHostKeyChecking=no staging@104.248.0.46 "rm -rf /var/www/developer.offchainlabs.com/html/*"
+      - run: scp -oStrictHostKeyChecking=no -r . staging@104.248.0.46:/var/www/developer.offchainlabs.com/html
+
+workflows:
+  version: 2
+
+  build_test_deploy:
+    jobs:
+      - deploy_stage:
+          filters:
+            branches:
+              only: staging
