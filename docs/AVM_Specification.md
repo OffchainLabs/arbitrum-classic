@@ -153,7 +153,7 @@ Opcode | Nickname | Semantics
 0x04 | div | Pop two values (A, B) off the Data Stack. If A and B are both Integers and B is non-zero, Push A/B (unsigned integer divide) onto the Data Stack. Otherwise, raise an Error.
 0x05 | sdiv | Pop two values (A, B) off the Data Stack. If A and B are both Integers and B is non-zero, Push A/B (signed integer divide) onto the Data Stack. Otherwise, raise an Error.
 0x06 | mod | Same as div, except compute (A mod B), treating A and B as unsigned integers.
-0x07 | smod | Same as sdiv, except compute (A mod B), treating A and B as signed integers, rather than doing integer divide. The result is defined to be equal to A-B*trunc(A/B), where trunc truncates to an integer, toward zero.
+0x07 | smod | Same as sdiv, except compute (A mod B), treating A and B as signed integers, rather than doing integer divide. The result is defined to be equal to sgn(A)*(abs(A)%abs(B)), where sgn(x) is 1,0, or -1, if x is positive, zero, or negative, respectively, and abs is absolute value.
 0x08 | addmod | Pop three values (A, B, C) off the Data Stack. If A, B, and C are all Integers, and C is not zero, Push the value (A+B) % C (calculated without 256-bit truncation until end) onto the Data Stack. Otherwise, raise an Error.
 0x09 | mulmod | Same as addmod, except multiply rather than add.
 0x0a | exp | Same as add, except exponentiate rather than add.
