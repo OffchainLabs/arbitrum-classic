@@ -157,7 +157,7 @@ Opcode | Nickname | Semantics
 0x08 | addmod | Pop three values (A, B, C) off the Data Stack. If A, B, and C are all Integers, and C is not zero, Push the value (A+B) % C (calculated without 256-bit truncation until end) onto the Data Stack. Otherwise, raise an Error.
 0x09 | mulmod | Same as addmod, except multiply rather than add.
 0x0a | exp | Same as add, except exponentiate rather than add.
-0x0b | signextend | Pop two values (A, B) off the Data Stack. If A and B are both Integers, sign extend A from (B + 1) * 8 bits to 256 bits and Push to the Data Stack. Otherwise, raise an Error.
+0x0b | signextend | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<31 (interpreting B as unsigned), sign extend A from (B + 1) * 8 bits to 256 bits and Push the result onto the Data Stack; otherwise push A onto the Data Stack). Otherwise, raise an Error.
 | | 
 10s: Comparison & Bitwise Logic Operations | | 
 0x10 | lt | Pop two values (A,B) off the Data Stack. If A and B are both Integers, then (treating A and B as unsigned integers, if A<B, push 1 on the Data Stack; otherwise push 0 on the Data Stack). Otherwise, raise an Error. 
@@ -170,7 +170,7 @@ Opcode | Nickname | Semantics
 0x17 | or | Same as and, except bitwise or rather than bitwise and
 0x18 | xor | Same as and, except bitwise xor rather than bitwise and
 0x19 | not | Pop one value (A) off the Data Stack. If A is an Integer, then push the bitwise negation of A on the Data Stack. Otherwise, raise an Error.
-0x1a | byte | Pop two values (A, B) off the Data Stack. If A and B are both Integers, and 0<=B<32,  then push the B’th byte of A to the Data Stack. Otherwise, raise an Error.
+0x1a | byte | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<32 (interpreting B as unsigned), then push the B’th byte of A onto the Data Stack, otherwise push Integer 0 onto the Data Stack). Otherwise, raise an Error.
 | |
 20s: Hashing | | 
 0x20 | hash | Pop a Value (A) off of the Data Stack. Push Hash(A) onto the Data Stack.
