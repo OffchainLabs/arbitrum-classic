@@ -36,7 +36,7 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
         
       # run tests!
-      - run: npm run build
+      - run: cd website && npm run build
       - run: ssh -oStrictHostKeyChecking=no hkalodner@206.189.196.195 "rm -rf /var/www/developer.offchainlabs.com/html/*"
       - run: scp -oStrictHostKeyChecking=no -r . hkalodner@206.189.196.195:/var/www/developer.offchainlabs.com/html
   
