@@ -14,7 +14,7 @@ jobs:
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # - image: circleci/mongo:3.4.4
 
-    working_directory: ~/repo
+    working_directory: ~/repo/website
 
     steps:
       - checkout
@@ -26,7 +26,8 @@ jobs:
           # fallback to using the latest cache if no exact match is found
           - v2-dependencies-
 
-      - run: cd website
+      - run: ls -la
+      - run: pwd
       - run: npm install
 
       - save_cache:
@@ -35,7 +36,6 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
         
       # run tests!
-      - run: cd website
       - run: npm run build
       - run: ssh -oStrictHostKeyChecking=no hkalodner@206.189.196.195 "rm -rf /var/www/developer.offchainlabs.com/html/*"
       - run: scp -oStrictHostKeyChecking=no -r . hkalodner@206.189.196.195:/var/www/developer.offchainlabs.com/html
@@ -50,7 +50,7 @@ jobs:
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # - image: circleci/mongo:3.4.4
 
-    working_directory: ~/repo
+    working_directory: ~/repo/website
 
     steps:
       - checkout
@@ -62,7 +62,6 @@ jobs:
           # fallback to using the latest cache if no exact match is found
           - v2-dependencies-
 
-      - run: cd website
       - run: npm install
 
       - save_cache:
@@ -71,7 +70,6 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
         
       # run tests!
-      - run: cd website
       - run: npm run build
       - run: ssh -oStrictHostKeyChecking=no staging@104.248.0.46 "rm -rf /var/www/developer.offchainlabs.com/html/*"
       - run: scp -oStrictHostKeyChecking=no -r . staging@104.248.0.46:/var/www/developer.offchainlabs.com/html
