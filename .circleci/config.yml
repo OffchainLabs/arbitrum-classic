@@ -27,7 +27,7 @@ jobs:
           - v2-dependencies-
 
       - run: cd website
-      - run: yarn install
+      - run: npm install
 
       - save_cache:
           paths:
@@ -35,7 +35,8 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
         
       # run tests!
-      - run: yarn run build
+      - run: cd website
+      - run: npm run build
       - run: ssh -oStrictHostKeyChecking=no hkalodner@206.189.196.195 "rm -rf /var/www/developer.offchainlabs.com/html/*"
       - run: scp -oStrictHostKeyChecking=no -r . hkalodner@206.189.196.195:/var/www/developer.offchainlabs.com/html
   
@@ -62,7 +63,7 @@ jobs:
           - v2-dependencies-
 
       - run: cd website
-      - run: yarn install
+      - run: npm install
 
       - save_cache:
           paths:
@@ -70,7 +71,8 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
         
       # run tests!
-      - run: yarn run build
+      - run: cd website
+      - run: npm run build
       - run: ssh -oStrictHostKeyChecking=no staging@104.248.0.46 "rm -rf /var/www/developer.offchainlabs.com/html/*"
       - run: scp -oStrictHostKeyChecking=no -r . staging@104.248.0.46:/var/www/developer.offchainlabs.com/html
 
