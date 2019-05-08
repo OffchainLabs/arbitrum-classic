@@ -14,7 +14,7 @@ jobs:
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # - image: circleci/mongo:3.4.4
 
-    working_directory: ~/repo/website
+    working_directory: ~/repo
 
     steps:
       - checkout
@@ -28,7 +28,7 @@ jobs:
 
       - run: ls -la
       - run: pwd
-      - run: npm install
+      - run: cd website && npm install
 
       - save_cache:
           paths:
@@ -50,7 +50,7 @@ jobs:
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # - image: circleci/mongo:3.4.4
 
-    working_directory: ~/repo/website
+    working_directory: ~/repo
 
     steps:
       - checkout
