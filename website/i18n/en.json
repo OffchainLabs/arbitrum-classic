@@ -5,6 +5,9 @@
     "previous": "Previous",
     "tagline": "A website for testing",
     "docs": {
+      "AVM_Specification": {
+        "title": "AVM_Specification"
+      },
       "doc1": {
         "title": "Latin-ish",
         "sidebar_label": "Example Page"
@@ -29,9 +32,7 @@
       "Blog": "Blog"
     },
     "categories": {
-      "Docusaurus": "Docusaurus",
-      "First Category": "First Category",
-      "Second Category": "Second Category"
+      "Documentation": "Documentation"
     }
   },
   "pages-strings": {
