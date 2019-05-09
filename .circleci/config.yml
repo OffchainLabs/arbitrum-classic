@@ -36,7 +36,7 @@ jobs:
       # run tests!
       - run: cd website && npm run build
       - run: ssh -oStrictHostKeyChecking=no hkalodner@206.189.196.195 "rm -rf /var/www/developer.offchainlabs.com/html/*"
-      - run: scp -oStrictHostKeyChecking=no -r website/build/* hkalodner@206.189.196.195:/var/www/developer.offchainlabs.com/html
+      - run: scp -oStrictHostKeyChecking=no -r website/build/developer-website/* hkalodner@206.189.196.195:/var/www/developer.offchainlabs.com/html
   
   deploy_stage:
     docker:
@@ -70,7 +70,7 @@ jobs:
       # run tests!
       - run: cd website && npm run build
       - run: ssh -oStrictHostKeyChecking=no staging@104.248.0.46 "rm -rf /var/www/developer.offchainlabs.com/html/*"
-      - run: scp -oStrictHostKeyChecking=no -r website/build/* staging@104.248.0.46:/var/www/developer.offchainlabs.com/html
+      - run: scp -oStrictHostKeyChecking=no -r website/build/developer-website/* staging@104.248.0.46:/var/www/developer.offchainlabs.com/html
 
 workflows:
   version: 2
