@@ -3,10 +3,13 @@
   "localized-strings": {
     "next": "Next",
     "previous": "Previous",
-    "tagline": "A website for testing",
+    "tagline": "Build fast, private, secure dapps with Arbitrum",
     "docs": {
       "AVM_Specification": {
         "title": "AVM_Specification"
+      },
+      "Developer_Quickstart": {
+        "title": "Developer_Quickstart"
       },
       "doc1": {
         "title": "Latin-ish",
@@ -26,8 +29,8 @@
       }
     },
     "links": {
-      "Docs": "Docs",
-      "API": "API",
+      "Arbitrum Spec": "Arbitrum Spec",
+      "Developer Quickstart": "Developer Quickstart",
       "Help": "Help",
       "Blog": "Blog"
     },

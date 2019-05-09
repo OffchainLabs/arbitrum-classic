@@ -39,7 +39,7 @@ const siteConfig = {
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
     {doc: 'AVM_Specification', label: 'Arbitrum Spec'},
-    {doc: 'Developer_Quickstart', label: 'Developer Quikstart'},
+    {doc: 'Developer_Quickstart', label: 'Developer Quickstart'},
     {page: 'help', label: 'Help'},
     {blog: true, label: 'Blog'},
   ],
