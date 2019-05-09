@@ -21,8 +21,8 @@ const users = [
 ];
 
 const siteConfig = {
-  title: 'Offchain Labs Developers', // Title for your website.
-  tagline: 'A website for Offchain Lab developers',
+  title: 'Offchain Labs Dev Center', // Title for your website.
+  tagline: 'Build fast, private, secure dapps with Arbitrum',
   url: 'https://developer.offchainlabs.com', // Your website URL
   baseUrl: '/', // Base URL for your project */
   // For github.io type URLs, you would set the url and baseUrl like:
@@ -38,8 +38,8 @@ const siteConfig = {
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
-    {doc: 'AVM_Specification', label: 'Docs'},
-    {doc: 'doc4', label: 'API'},
+    {doc: 'AVM_Specification', label: 'Arbitrum Spec'},
+    {doc: 'Developer_Quickstart', label: 'Developer Quikstart'},
     {page: 'help', label: 'Help'},
     {blog: true, label: 'Blog'},
   ],
