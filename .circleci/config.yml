@@ -60,7 +60,7 @@ jobs:
           # fallback to using the latest cache if no exact match is found
           - v2-dependencies-
 
-      - run: npm install
+      - run: cd website && npm install
 
       - save_cache:
           paths:
@@ -68,7 +68,7 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
         
       # run tests!
-      - run: npm run build
+      - run: cd website && npm run build
       - run: ssh -oStrictHostKeyChecking=no staging@104.248.0.46 "rm -rf /var/www/developer.offchainlabs.com/html/*"
       - run: scp -oStrictHostKeyChecking=no -r website/* staging@104.248.0.46:/var/www/developer.offchainlabs.com/html
 
