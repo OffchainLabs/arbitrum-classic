@@ -2,17 +2,24 @@ version: '3'
 services:
     arb-ethbridge:
         image: arb-ethbridge
-        build: ./arb-ethbridge
+        build:
+#           context: https://github.com/OffchainLabs/arb-ethbridge.git#alpha
+            context: ./arb-ethbridge
+            args:
+                MNEMONIC: "jar deny prosper gasp flush glass core corn alarm treat leg smart"
+                NUM_WALLETS: 3
+                PORT: 7545
         ports:
             - "7545:7545"
 
     arb-validator-coordinator:
-        image: arb-validator
-        build: ./arb-validator
-        command: >
-            sh -c "while ! nc -z arb-ethbridge 7545; do sleep 5; done &&
-                sleep 5; echo \"Finished waiting for arb-ethbridge...\";
-                leaderServer addresses.json contract.ao ws://arb-ethbridge:7545"
+        build:
+#           context: https://github.com/OffchainLabs/arb-validator.git#alpha
+            context: ./arb-validator
+            args:
+                WAIT_FOR: "arb-ethbridge:7545"
+                ETH_URL: "ws://arb-ethbridge:7545"
+                ID: 0
         ports:
             - "1235:1235"
             - "1236:1236"
@@ -20,20 +27,28 @@ services:
             - arb-ethbridge
 
     arb-validator1:
-        image: arb-validator
-        environment:
-            - COORDINATOR=arb-validator-coordinator
-            - UID=1
+        build:
+#           context: https://github.com/OffchainLabs/arb-validator.git#alpha
+            context: ./arb-validator
+            args:
+                WAIT_FOR: "arb-validator-coordinator:1236"
+                ETH_URL: "ws://arb-ethbridge:7545"
+                COORDINATOR_URL: "wss://arb-validator-coordinator:1236/ws"
+                ID: 1
 
     arb-validator2:
-        image: arb-validator
-        environment:
-            - COORDINATOR=arb-validator-coordinator
-            - UID=2
+        build:
+#           context: https://github.com/OffchainLabs/arb-validator.git#alpha
+            context: ./arb-validator
+            args:
+                WAIT_FOR: "arb-validator-coordinator:1236"
+                ETH_URL: "ws://arb-ethbridge:7545"
+                COORDINATOR_URL: "wss://arb-validator-coordinator:1236/ws"
+                ID: 2
 
-    # demo-app depends on compiled.json and arb-web3-provider
     demo-app:
         image: demo-app
+#       build: https://github.com/OffchainLabs/demo-app.git#alpha
         build: ./demo-app
         ports:
             - "8080:8080"
