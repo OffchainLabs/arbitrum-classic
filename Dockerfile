@@ -10,23 +10,17 @@ RUN apk add --no-cache g++ git make python
 
 # Non-root user
 USER node
-ENV HOME="/home/node" PATH="/home/node/.npm-global/bin:${PATH}" \
-    DEP="arb-web3-provider"
+ENV HOME="/home/node" PATH="/home/node/.npm-global/bin:${PATH}"
 WORKDIR "${HOME}"
-RUN mkdir "${HOME}/.npm-global" && mkdir "${HOME}/${DEP}" && \
-    npm config set prefix "${HOME}/.npm-global" && \
-# Dependencies \
-    npm install -g yarn
+RUN mkdir "${HOME}/.npm-global" && \
+    npm config set prefix "${HOME}/.npm-global" && npm install -g yarn
+
+# Install project dependencies
 COPY package.json ./
 RUN yarn && yarn cache clean
-COPY arb-web3-provider/package.json ./arb-web3-provider/package.json
-RUN cd arb-web3-provider && yarn && yarn cache clean
 
-# Source code
+# Copy source code
 COPY . ./
-
-# Copy compiled.json to src
-COPY --from=truffle-deploy-demo compiled.json ./src/
 
 # Run server
 CMD yarn start
