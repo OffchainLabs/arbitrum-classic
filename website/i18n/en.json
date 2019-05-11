@@ -29,10 +29,10 @@
       }
     },
     "links": {
-      "Arbitrum Spec": "Arbitrum Spec",
       "Developer Quickstart": "Developer Quickstart",
-      "Help": "Help",
-      "Blog": "Blog"
+      "Arbitrum Spec": "Arbitrum Spec",
+      "Blog": "Blog",
+      "GitHub": "GitHub"
     },
     "categories": {
       "Documentation": "Documentation"
