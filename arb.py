@@ -20,8 +20,8 @@ def build():
 
     run("truffle migrate --network arbitrum")
     run("arbc-truffle-compile compiled.json contract.ao")
-    run("docker build -t %s -f %s ." % (CONTRACT_IMAGE, CONTRACT_DOCKERFILE))
-    run("docker-compose up --build")
+    run("sudo docker build -t %s -f %s ." % (CONTRACT_IMAGE, CONTRACT_DOCKERFILE))
+    run("sudo docker-compose up --build")
 
 # Run commands in shell
 def run(command):
