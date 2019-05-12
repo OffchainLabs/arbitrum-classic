@@ -1,5 +1,5 @@
 ---
-id: start
+id: Developer_Quickstart
 title: Arbitrum Developer Quickstart
 ---
 
