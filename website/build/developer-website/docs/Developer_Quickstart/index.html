@@ -35,11 +35,19 @@ deactivate
 sudo python3 setup.py install
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="hello-arbitrum"></a><a href="#hello-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello, Arbitrum</h2>
-<p>Download and build the demo app to run your first app using Arbitrum.</p>
+<p>Download and build the demo app to run your first app using Arbitrum. You can
+follow these instructions or just run <code>python3 arb.py</code> after downloading the
+demo to do these steps for you.</p>
 <ol>
 <li><p>Download the demo app</p>
 <pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/demo-app.git
 <span class="hljs-built_in">cd</span> demo-app
+</code></pre>
+<p>And it's dependencies:</p>
+<pre><code class="hljs">mkdir compose
+git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
+git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
+git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
 </code></pre></li>
 <li><p>Build</p>
 <p>Note: This step takes about seven minutes the first time. Subsuquent builds
@@ -52,16 +60,16 @@ are a matter of seconds.</p>
 <li><p>Compile the Fibonacci contract:</p>
 <pre><code class="hljs css language-bash">truffle migrate --network arbitrum
 arbc-truffle-compile compiled.json contract.ao
-./arb.py
+docker build -t arb-app -f .arb-app.Dockerfile .
 </code></pre></li>
 <li><p>Export the contract and build and run 3 Validators:</p>
 <pre><code class="hljs css language-bash">sudo docker-compose up --build
 </code></pre></li>
 <li><p>Run the Web3 frontend</p>
 <p>Make sure to open another bash prompt since step 4 is running the validators</p>
-<pre><code class="hljs css language-bash">yarn
+<pre><code class="hljs css language-bash">yarn start
 </code></pre>
-<p>Now go to: <a href="http://localhost:8080">localhost:8080</a></p></li>
+<p>The browser will open up <a href="http://localhost:8080">localhost:8080</a>.</p></li>
 </ol>
 <p>The next step is porting your own solidity code to an Arbitrum app.</p>
 <h2><a class="anchor" aria-hidden="true" id="porting-to-arbitrum"></a><a href="#porting-to-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Porting to Arbitrum</h2>
