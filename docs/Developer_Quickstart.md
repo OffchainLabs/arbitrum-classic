@@ -52,13 +52,24 @@ sudo python3 setup.py install
 
 ## Hello, Arbitrum
 
-Download and build the demo app to run your first app using Arbitrum.
+Download and build the demo app to run your first app using Arbitrum. You can
+follow these instructions or just run `python3 arb.py` after downloading the
+demo to do these steps for you.
 
 1. Download the demo app
 
     ``` bash
     git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
     cd demo-app
+    ```
+
+    And it's dependencies:
+
+    ```
+    mkdir compose
+    git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
+    git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
+    git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
     ```
 
 2. Build
@@ -81,7 +92,7 @@ Download and build the demo app to run your first app using Arbitrum.
     ``` bash
     truffle migrate --network arbitrum
     arbc-truffle-compile compiled.json contract.ao
-    ./arb.py
+    docker build -t arb-app -f .arb-app.Dockerfile .
     ```
 
 4. Export the contract and build and run 3 Validators:
@@ -95,10 +106,10 @@ Download and build the demo app to run your first app using Arbitrum.
     Make sure to open another bash prompt since step 4 is running the validators
 
     ``` bash
-    yarn
+    yarn start
     ```
 
-    Now go to: [localhost:8080](http://localhost:8080)
+    The browser will open up [localhost:8080](http://localhost:8080).
 
 The next step is porting your own solidity code to an Arbitrum app.
 
