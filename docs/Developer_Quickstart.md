@@ -79,8 +79,7 @@ Download and build the demo app to run your first app using Arbitrum.
 
     Enter a number i.e. 50 under "Arbitrum" to generate the 50th Fibonacci
     number. You should see "Successfully generated numbers". Then enter
-    49 under "Lookup numbers" and you should see the 50th Fibonacci number:
-    12586269025.
+    49 under "Lookup numbers" and you should see the 50th Fibonacci number: 12586269025.
 
 ### In depth details
 
