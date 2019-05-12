@@ -52,9 +52,37 @@ sudo python3 setup.py install
 
 ## Hello, Arbitrum
 
-Download and build the demo app to run your first app using Arbitrum. You can
-follow these instructions or just run `python3 arb.py` after downloading the
-demo to do these steps for you.
+Download and build the demo app to run your first app using Arbitrum.
+
+### Super quick start
+
+1. Build everything using `arb.py`
+
+    Note: sudo will require password
+
+    ``` bash
+    git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
+    cd demo-app
+    yarn
+    python3 arb.py
+    ```
+
+2. Start the frontend
+
+    In another bash shell go to `demo-app` and run:
+
+    ``` bash
+    yarn start
+    ```
+
+    The browser will open to [localhost:8080](http://localhost:8080)
+
+    Enter a number i.e. 50 under "Arbitrum" to generate the 50th Fibonacci
+    number. You should see "Successfully generated numbers". Then enter
+    49 under "Lookup numbers" and you should see the 50th Fibonacci number:
+    12586269025.
+
+### In depth details
 
 1. Download the demo app
 
