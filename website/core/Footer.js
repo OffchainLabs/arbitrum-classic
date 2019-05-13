@@ -37,31 +37,20 @@ class Footer extends React.Component {
           </a>
           <div>
             <h5>Docs</h5>
-            <a href={this.docUrl('doc1.html', this.props.language)}>
-              Getting Started (or other categories)
+            <a href={this.docUrl('Developer_Quickstart', this.props.language)}>
+              Developer Quickstart
             </a>
-            <a href={this.docUrl('doc2.html', this.props.language)}>
-              Guides (or other categories)
-            </a>
-            <a href={this.docUrl('doc3.html', this.props.language)}>
-              API Reference (or other categories)
+            <a href={this.docUrl('AVM_Specification', this.props.language)}>
+              AVM Specification
             </a>
           </div>
           <div>
             <h5>Community</h5>
-            <a href={this.pageUrl('users.html', this.props.language)}>
-              User Showcase
-            </a>
-            <a
-              href="http://stackoverflow.com/questions/tagged/"
-              target="_blank"
-              rel="noreferrer noopener">
-              Stack Overflow
-            </a>
-            <a href="https://discordapp.com/">Project Chat</a>
+            <a href="https://offchainlabs.com">Offchain Labs</a>
+            <a href="https://medium.com/offchainlabs">Blog</a>
             <a
               href="https://twitter.com/"
-              target="_blank"
+              target="OffchainLabs"
               rel="noreferrer noopener">
               Twitter
             </a>
@@ -69,30 +58,20 @@ class Footer extends React.Component {
           <div>
             <h5>More</h5>
             <a href={`${this.props.config.baseUrl}blog`}>Blog</a>
-            <a href="https://github.com/">GitHub</a>
-            <a
-              className="github-button"
-              href={this.props.config.repoUrl}
-              data-icon="octicon-star"
-              data-count-href="/facebook/docusaurus/stargazers"
-              data-show-count="true"
-              data-count-aria-label="# stargazers on GitHub"
-              aria-label="Star this project on GitHub">
-              Star
-            </a>
+            <a href="https://github.com/offchainlabs">GitHub</a>
           </div>
         </section>
 
         <a
-          href="https://opensource.facebook.com/"
+          href="https://offchainlabs.com/"
           target="_blank"
           rel="noreferrer noopener"
           className="fbOpenSource">
           <img
-            src={`${this.props.config.baseUrl}img/oss_logo.png`}
-            alt="Facebook Open Source"
+            src={`${this.props.config.baseUrl}img/logo.png`}
+            alt="Offchain Labs"
             width="170"
-            height="45"
+            height="48"
           />
         </a>
         <section className="copyright">{this.props.config.copyright}</section>
