@@ -6,68 +6,68 @@ title: Arbitrum Developer Quickstart
 Get started with Arbitrum by installing the dependencies, running the demo app,
 and porting your Solidity project.
 
-## Install
-
-Installing involves two steps: system dependencies including `docker-compose`
-and the Arbitrum compiler, `arbc-truffle-compile`.
-
-### Dependencies
+## Install Dependencies
 
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
 
-#### MacOS
+### MacOS
 
-``` bash
-brew install python3 node docker docker-machine docker-compose
-brew link docker
-brew link docker-compose
-```
+1. Install Python, Node, & Docker using [brew](https://brew.sh/):
 
-##### Change npm's default directory
+    ``` bash
+    brew install python3 node docker docker-machine docker-compose
+    brew link docker
+    brew link docker-compose
+    ```
 
-If you have not installed any npm global packages before,
-[change npm's default directory](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally)
-with the following commands:
+2. Change npm's default directory:
 
-``` bash
-mkdir ~/.npm-global
-npm config set prefix '~/.npm-global'
-echo $'# npm\nexport PATH=~/.npm-global/bin:$PATH' >> ~/.bash_profile
-source ~/.bash_profile
-```
+    If you have not installed any npm global packages before,
+    [change npm's default directory](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally)
+    with the following commands:
 
-##### Truffle and Yarn
+    ``` bash
+    mkdir ~/.npm-global
+    npm config set prefix '~/.npm-global'
+    echo $'# npm\nexport PATH=~/.npm-global/bin:$PATH' >> ~/.bash_profile
+    source ~/.bash_profile
+    ```
 
-``` bash
-npm install -g truffle yarn
-```
+3. Install truffle and yarn
 
-#### Ubuntu 18.04
+    ``` bash
+    npm install -g truffle yarn
+    ```
 
-``` bash
-sudo apt-get update
-sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
-sudo npm install -g truffle yarn
-```
+### Ubuntu 18.04
 
-##### Docker without sudo
+1. Install Python, Node, Docker, Truffle, and Yarn:
 
-Docker [can be installed](https://docs.docker.com/install/linux/linux-postinstall/)
-to give permissions "equivalent to the `roor` user", but without the `root` user group.
-You can skip this step by adding `sudo` in front of all of the `docker` and
-`docker-compose` commands.
+    ``` bash
+    sudo apt-get update
+    sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
+    sudo npm install -g truffle yarn
+    ```
 
-> Warning: "The docker group grants privileges equivalent to the `root` user.
-> For details on how this impacts security in your system, see
-> [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
+2. Use docker without sudo
 
-``` bash
-sudo groupadd docker
-sudo usermod -aG docker $USER
-```
+    Docker [can be installed](https://docs.docker.com/install/linux/linux-postinstall/)
+    to give permissions "equivalent to the `roor` user", but without the `root`
+    user group. You can skip this step by adding `sudo` in front of all of the `docker` and `docker-compose` commands during the rest of this introduction.
 
-#### Full List
+    > Warning: "The docker group grants privileges equivalent to the `root`
+    > user. For details on how this impacts security in your system, see
+    > [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
+
+    Run the following commands to use Docker without `sudo`:
+
+    ``` bash
+    sudo groupadd docker
+    sudo usermod -aG docker $USER
+    ```
+
+### Full List
 
 Here are the important dependencies in case you are not running on a supported OS:
 
@@ -79,12 +79,11 @@ Here are the important dependencies in case you are not running on a supported O
 - [virtualbox](https://www.virtualbox.org/wiki/Downloads)
 - [yarn](https://yarnpkg.com/en/)
 
-### Arbitrum Compiler
+## Install the Arbitrum Compiler
 
-Install the Arbitrum compiler (`arbc-compile` and `arbc-truffle-compile`) by
-building it from source.
+Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
 
-#### Build from source
+### Build from source
 
 ``` bash
 git clone --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
@@ -98,7 +97,7 @@ python3 setup.py install
 cd ..
 ```
 
-#### Check installation
+### Check installation
 
 Verify the installation was successful. You may need to open a new shell if the
 `arbc-truffle-compile` command is not found.
@@ -107,7 +106,9 @@ Verify the installation was successful. You may need to open a new shell if the
 which arbc-truffle-compile
 ```
 
-> Expected output: `/usr/local/bin/arbc-truffle-compile`
+The expected output is:
+
+> `/usr/local/bin/arbc-truffle-compile`
 
 ## Hello, Arbitrum
 
