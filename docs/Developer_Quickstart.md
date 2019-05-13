@@ -114,7 +114,7 @@ The expected output is:
 
 There are two ways to get started running your first code on Arbitrum.
 Either use the [build script](#build-script) or build the demo app
-[manually](#manually).
+[manually](#build-manually).
 
 ### Build Script
 
@@ -141,7 +141,7 @@ Either use the [build script](#build-script) or build the demo app
 
     The browser will open to [localhost:8080](http://localhost:8080)
 
-### Manually
+### Build Manually
 
 1. Download the demo app
 
