@@ -47,31 +47,22 @@ class Footer extends React.Component {
           <div>
             <h5>Community</h5>
             <a href="https://offchainlabs.com">Offchain Labs</a>
-            <a href="https://medium.com/offchainlabs">Blog</a>
-            <a
-              href="https://twitter.com/"
-              target="OffchainLabs"
-              rel="noreferrer noopener">
-              Twitter
-            </a>
+            <a href="https://medium.com/OffchainLabs">Blog</a>
+            <a href="https://twitter.com/OffchainLabs">Twitter</a>
           </div>
           <div>
             <h5>More</h5>
             <a href={`${this.props.config.baseUrl}blog`}>Blog</a>
-            <a href="https://github.com/offchainlabs">GitHub</a>
+            <a href="https://github.com/OffchainLabs">GitHub</a>
           </div>
         </section>
 
-        <a
-          href="https://offchainlabs.com/"
-          target="_blank"
-          rel="noreferrer noopener"
-          className="fbOpenSource">
+        <a href="https://offchainlabs.com/">
           <img
             src={`${this.props.config.baseUrl}img/logo.png`}
             alt="Offchain Labs"
             width="170"
-            height="48"
+            height="48.33"
           />
         </a>
         <section className="copyright">{this.props.config.copyright}</section>
