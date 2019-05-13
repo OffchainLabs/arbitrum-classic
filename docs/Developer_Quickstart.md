@@ -213,7 +213,7 @@ Either use the [build script](#build-script) or build the demo app
     For exmaple enter 49 under "Lookup numbers". This is the 50th fibonacci
     number and should return the correct result:
 
-    > 12586269025.
+    > 12586269025
 
 The next step is porting your own solidity code to an Arbitrum app.
 
