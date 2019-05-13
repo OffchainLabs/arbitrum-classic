@@ -1,8 +1,11 @@
-# Arbitrum VM informal architecture spec
+---
+id: AVM_Specification
+title: Arbitrum VM informal architecture spec
+---
 
 Version 3.9;  May 3, 2019
 
-This document describes informally the semantics of the Arbitrum VM architecture. This version is simplified, compared to the one described in the Arbitrum paper published in USENIX Security 2018. This version is also tailored to more closely match the Ethereum data formats and instruction set, to ease implementation of an EVM-to-AVM translator.  
+This document describes informally the semantics of the Arbitrum VM architecture. This version is simplified, compared to the one described in the Arbitrum paper published in USENIX Security 2018. This version is also tailored to more closely match the Ethereum data formats and instruction set, to ease implementation of an EVM-to-AVM translator.
 
 We expect that some implementations will optimize to save time and space, provided that the result is equivalent to what is described here.
 
@@ -43,9 +46,9 @@ Marshaling is an invertible mapping from a Value to an array of bytes. Outside t
 
 Unmarshaling is the inverse operation, which turns an array of bytes into a Value. This document does not specify the Unmarshaling operation, except to say that for all Values V, Unmarshal(Marshal(V)) yields V.  If a byte-array A could not possibly have been made by marshaling, then attempting to compute unmarshal(A) raises an Error.
 
-An Integer marshals to 
+An Integer marshals to
 * the byte 0
-* 32-byte big-endian representation of the value. 
+* 32-byte big-endian representation of the value.
 
 A Codepoint marshals to:
 * byte val of 1
@@ -121,7 +124,7 @@ Each Message is a 4-tuple [value, currency, amount, sender], where value is a Va
 
 A VM can receive from its Inbox by using the inbox instruction (described below), which pushes the current Inbox contents onto the Data Stack.
 
-Note that different values of the Inbox can denote the same sequence of messages. 
+Note that different values of the Inbox can denote the same sequence of messages.
 
 Note that a VM’s Inbox will contain the full sequence of messages received by the Inbox over all time, since the VM’s creation. Messages are never removed from the Inbox. The Inbox structure is designed in a way that allows a VM to determine efficiently which messages have arrived since a previous point in time. This allows an AVM program to process each incoming message once.
 
@@ -137,7 +140,7 @@ Some instructions are said to “block” until some condition is true. This mea
 
 A VM that is in the Halted or ErrorStop state cannot execute instructions.
 
-A VM that is in an extensive state can execute an instruction. To execute an instruction, the VM gets the opcode from the Current Codepoint.  
+A VM that is in an extensive state can execute an instruction. To execute an instruction, the VM gets the opcode from the Current Codepoint.
 
 If the opcode is not a value that is an opcode of the AVM instruction set, then an Error is raised. Otherwise the VM carries out the semantics of the opcode.
 
@@ -158,11 +161,11 @@ Opcode | Nickname | Semantics
 0x09 | mulmod | Same as addmod, except multiply rather than add.
 0x0a | exp | Same as add, except exponentiate rather than add.
 0x0b | signextend | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<31 (interpreting B as unsigned), sign extend A from (B + 1) * 8 bits to 256 bits and Push the result onto the Data Stack; otherwise push A onto the Data Stack). Otherwise, raise an Error.
-| | 
-10s: Comparison & Bitwise Logic Operations | | 
-0x10 | lt | Pop two values (A,B) off the Data Stack. If A and B are both Integers, then (treating A and B as unsigned integers, if A<B, push 1 on the Data Stack; otherwise push 0 on the Data Stack). Otherwise, raise an Error. 
+| |
+10s: Comparison & Bitwise Logic Operations | |
+0x10 | lt | Pop two values (A,B) off the Data Stack. If A and B are both Integers, then (treating A and B as unsigned integers, if A<B, push 1 on the Data Stack; otherwise push 0 on the Data Stack). Otherwise, raise an Error.
 0x11 | gt | Same as lt, except greater than rather than less than
-0x12 | slt | Pop two values (A,B) off the Data Stack. If A and B are both Integers, then (treating A and B as signed integers, if A<B, push 1 on the Data Stack; otherwise push 0 on the Data Stack). Otherwise, raise an Error. 
+0x12 | slt | Pop two values (A,B) off the Data Stack. If A and B are both Integers, then (treating A and B as signed integers, if A<B, push 1 on the Data Stack; otherwise push 0 on the Data Stack). Otherwise, raise an Error.
 0x13 | gt | Same as slt, except greater than rather than less than
 0x14 | eq | Pop two values (A, B) off the Data Stack. If A and B have different types, raise an Error.  Otherwise if A and B are equal by value, Push 1 on the Data Stack. (Two Tuples are equal by value if they have the same number of slots and are equal by value in every slot.) Otherwise, Push 0 on the Data Stack.
 0x15 | iszero | If A is the Integer 0, push 1 onto the Data Stack. Otherwise, if A is a non-zero Integer, push 0 onto the Data Stack. Otherwise (i.e., if A is not an Integer), raise an Error.
@@ -172,7 +175,7 @@ Opcode | Nickname | Semantics
 0x19 | not | Pop one value (A) off the Data Stack. If A is an Integer, then push the bitwise negation of A on the Data Stack. Otherwise, raise an Error.
 0x1a | byte | Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B<32 (interpreting B as unsigned), then push the B’th byte of A onto the Data Stack, otherwise push Integer 0 onto the Data Stack). Otherwise, raise an Error.
 | |
-20s: Hashing | | 
+20s: Hashing | |
 0x20 | hash | Pop a Value (A) off of the Data Stack. Push Hash(A) onto the Data Stack.
 | |
 30s: Stack, Memory, Storage and Flow Operations | |
@@ -199,7 +202,7 @@ Opcode | Nickname | Semantics
 0x43 | swap1 | Pop two values (A,B) off the Data Stack. Push A onto the Data Stack. Push B onto the Data Stack.
 0x44 | swap2 | Pop three values (A,B,C) off the data Stack. Push A,B,C onto the Data Stack, in that order.
 | |
-50s: Tuple Operations | | 
+50s: Tuple Operations | |
 0x50 | tget | Pop two values (A,B) off the Data Stack. If B is a Tuple, and A is an integer, and A>=0 and A is less than length(B), then Push the value in the A_th slot of B onto the Data Stack. Otherwise raise an Error.
 0x51 | tset | Pop three values (A,B,C) off of the Data Stack. If B is a Tuple, and A is an Integer, and A>=0, and A is less than length(B), then create a new Tuple that is identical to B, except that slot A has been set to C, then Push the new Tuple onto the Data Stack. Otherwise, raise an Error.
 0x52 | tlen | Pop a value (A) off the Data Stack. If A is a Tuple, push the length of A (i.e. the number of slots in A) onto the Data Stack. Otherwise, raise an Error.
@@ -213,5 +216,3 @@ Opcode | Nickname | Semantics
 0x70 | send | Pop a Value (A) off the Data Stack. If A is a 4-tuple ([B, C, D, E]), and C is an Integer, D is an Integer, and E is an Integer, then block until the VM’s balance, as supplied by the Runtime Environment, is greater than or equal to D, then tell the Runtime Environment to publish A as an outgoing message of this VM.  Otherwise, raise an Error. (One effect of this is to transfer D units of the currency identified by C from this VM to the Arbitrum identity E.)
 0x71 | nbsend | Pop a Value (A) off the Data Stack. If A is a 4-tuple ([B, C, D, E]), and C is an Integer, and D is an Integer, and E is an Integer, then (if D is a non-negative Integer less than or equal to this VM’s balance, as supplied by the Runtime Environment, in the currency identified by C, then tell the Runtime Environment to publish A as an outgoing message of this VM and Push 1 onto the Data Stack; otherwise Push 0 onto the Data Stack.)  Otherwise, raise an Error. (If the message is published, one effect of this is to transfer D units of the currency identified by C from this VM to the Arbitrum identity E.)
 0x74 | gettime | Push a 2-tuple [mintime, maxtime] onto the Data Stack, where mintime and maxtime are (Integer) lower and upper bounds on the current time, as supplied by the Runtime Environment.
-
-
