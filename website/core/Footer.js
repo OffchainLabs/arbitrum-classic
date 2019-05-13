@@ -61,10 +61,10 @@ class Footer extends React.Component {
           href="https://offchainlabs.com/"
           className="footerLogo">
           <img
-            src={`${this.props.config.baseUrl}img/logo.png`}
+            src={`${this.props.config.baseUrl}img/logo-white.png`}
             alt="Offchain Labs"
-            width="170"
-            height="48.33"
+            width="300"
+            height="250"
           />
         </a>
         <section className="copyright">{this.props.config.copyright}</section>
