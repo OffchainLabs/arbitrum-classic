@@ -166,7 +166,10 @@ Either use the [build script](#build-script) or build the demo app
     ``` bash
     docker-compose build
     ```
-
+  This will stop with an error, which is expected:
+    ```Step 13/20 : COPY --chown=node --from=arb-app contract.ao ./
+    ERROR: Service 'arb-validator-coordinator' failed to build: invalid from flag value arb-app: pull access denied for arb-app, repository does not exist or may require 'docker login'```
+    
     And build the frontend:
 
     ``` bash
