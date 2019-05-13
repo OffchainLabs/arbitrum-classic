@@ -21,27 +21,27 @@ const users = [
 ];
 
 const siteConfig = {
-  title: 'Test Site', // Title for your website.
-  tagline: 'A website for testing',
-  url: 'https://your-docusaurus-test-site.com', // Your website URL
+  title: 'Offchain Labs Dev Center', // Title for your website.
+  tagline: 'Build fast, private, secure dapps with Arbitrum',
+  url: 'https://developer.offchainlabs.com', // Your website URL
   baseUrl: '/', // Base URL for your project */
   // For github.io type URLs, you would set the url and baseUrl like:
   //   url: 'https://facebook.github.io',
   //   baseUrl: '/test-site/',
 
   // Used for publishing and more
-  projectName: 'test-site',
-  organizationName: 'facebook',
+  projectName: 'developer-website',
+  organizationName: 'OffchainLabs',
   // For top-level user or org sites, the organization is still the same.
   // e.g., for the https://JoelMarcey.github.io site, it would be set like...
   //   organizationName: 'JoelMarcey'
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
-    {doc: 'AVM_Specification', label: 'Docs'},
-    {doc: 'doc4', label: 'API'},
-    {page: 'help', label: 'Help'},
-    {blog: true, label: 'Blog'},
+    {doc: 'Developer_Quickstart', label: 'Developer Quickstart'},
+    {doc: 'AVM_Specification', label: 'Arbitrum Spec'},
+    {href: 'https://medium.com/offchainlabs', label: 'Blog', external: true},
+    {href: 'https://github.com/OffchainLabs', label: 'GitHub', external: true},
   ],
 
   // If you have users set above, you add it here:
