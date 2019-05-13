@@ -3,17 +3,45 @@
 "/><meta property="og:image" content="https://developer.offchainlabs.com/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://developer.offchainlabs.com/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/favicon.ico" alt="Offchain Labs Dev Center"/><h2 class="headerTitleWithLogo">Offchain Labs Dev Center</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavItemActive"><a href="/docs/Developer_Quickstart" target="_self">Developer Quickstart</a></li><li class=""><a href="/docs/AVM_Specification" target="_self">Arbitrum Spec</a></li><li class=""><a href="https://medium.com/offchainlabs" target="_blank">Blog</a></li><li class=""><a href="https://github.com/OffchainLabs" target="_blank">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Arbitrum Developer Quickstart</h1></header><article><div><span><p>Get started with Arbitrum by installing the dependencies, running the demo app,
 and porting your Solidity project.</p>
 <h2><a class="anchor" aria-hidden="true" id="install"></a><a href="#install" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install</h2>
+<p>Installing involves two steps: system dependencies including <code>docker-compose</code>
+and the Arbitrum compiler, <code>arbc-truffle-compile</code>.</p>
 <h3><a class="anchor" aria-hidden="true" id="dependencies"></a><a href="#dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependencies</h3>
 <p>Follow the instructions for supported operating systems or use the comprehensive
-list of dependencies</p>
+list of dependencies.</p>
 <h4><a class="anchor" aria-hidden="true" id="macos"></a><a href="#macos" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MacOS</h4>
 <pre><code class="hljs css language-bash">brew install python3 node docker docker-machine docker-compose
-npm install -g truffle yarn
+brew link docker
+brew link docker-compose
+</code></pre>
+<h5><a class="anchor" aria-hidden="true" id="change-npm-s-default-directory"></a><a href="#change-npm-s-default-directory" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Change npm's default directory</h5>
+<p>If you have not installed any npm global packages before,
+<a href="https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally">change npm's default directory</a>
+with the following commands:</p>
+<pre><code class="hljs css language-bash">mkdir ~/.npm-global
+npm config <span class="hljs-built_in">set</span> prefix <span class="hljs-string">'~/.npm-global'</span>
+<span class="hljs-built_in">echo</span> $<span class="hljs-string">'# npm\nexport PATH=~/.npm-global/bin:$PATH'</span> &gt;&gt; ~/.bash_profile
+<span class="hljs-built_in">source</span> ~/.bash_profile
+</code></pre>
+<h5><a class="anchor" aria-hidden="true" id="truffle-and-yarn"></a><a href="#truffle-and-yarn" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Truffle and Yarn</h5>
+<pre><code class="hljs css language-bash">npm install -g truffle yarn
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="ubuntu-1804"></a><a href="#ubuntu-1804" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Ubuntu 18.04</h4>
 <pre><code class="hljs css language-bash">sudo apt-get update
 sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
 sudo npm install -g truffle yarn
+</code></pre>
+<h5><a class="anchor" aria-hidden="true" id="docker-without-sudo"></a><a href="#docker-without-sudo" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Docker without sudo</h5>
+<p>Docker <a href="https://docs.docker.com/install/linux/linux-postinstall/">can be installed</a>
+to give permissions &quot;equivalent to the <code>roor</code> user&quot;, but without the <code>root</code> user group.
+You can skip this step by adding <code>sudo</code> in front of all of the <code>docker</code> and
+<code>docker-compose</code> commands.</p>
+<blockquote>
+<p>Warning: &quot;The docker group grants privileges equivalent to the <code>root</code> user.
+For details on how this impacts security in your system, see
+<a href="https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface">Docker Daemon Attack Surface</a>&quot;.</p>
+</blockquote>
+<pre><code class="hljs css language-bash">sudo groupadd docker
+sudo usermod -aG docker <span class="hljs-variable">$USER</span>
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="full-list"></a><a href="#full-list" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Full List</h4>
 <p>Here are the important dependencies in case you are not running on a supported OS:</p>
@@ -26,9 +54,6 @@ sudo npm install -g truffle yarn
 <li><a href="https://www.virtualbox.org/wiki/Downloads">virtualbox</a></li>
 <li><a href="https://yarnpkg.com/en/">yarn</a></li>
 </ul>
-<p>Note that Docker <a href="https://docs.docker.com/install/linux/linux-postinstall/">can be installed</a>
-to give permissions &quot;equivalent to the <code>roor</code> user&quot;, but without the <code>root</code> user group.
-In this case, do not use <code>sudo</code> in the following docker commands.</p>
 <h3><a class="anchor" aria-hidden="true" id="arbitrum-compiler"></a><a href="#arbitrum-compiler" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Arbitrum Compiler</h3>
 <p>Install the Arbitrum compiler (<code>arbc-compile</code> and <code>arbc-truffle-compile</code>) by
 building it from source.</p>
@@ -40,8 +65,17 @@ python3 -m venv venv
 <span class="hljs-built_in">source</span> venv/bin/activate
 pip3 install -r requirements.txt
 deactivate
-sudo python3 setup.py install
+python3 setup.py install
+<span class="hljs-built_in">cd</span> ..
 </code></pre>
+<h4><a class="anchor" aria-hidden="true" id="check-installation"></a><a href="#check-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Check installation</h4>
+<p>Verify the installation was successful. You may need to open a new shell if the
+<code>arbc-truffle-compile</code> command is not found.</p>
+<pre><code class="hljs css language-bash"><span class="hljs-built_in">which</span> arbc-truffle-compile
+</code></pre>
+<blockquote>
+<p>Expected output: <code>/usr/local/bin/arbc-truffle-compile</code></p>
+</blockquote>
 <h2><a class="anchor" aria-hidden="true" id="hello-arbitrum"></a><a href="#hello-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello, Arbitrum</h2>
 <p>There are two ways to get started running your first code on Arbitrum.
 Either use the <a href="#build-script">build script</a> or build the demo app
@@ -49,14 +83,18 @@ Either use the <a href="#build-script">build script</a> or build the demo app
 <h3><a class="anchor" aria-hidden="true" id="build-script"></a><a href="#build-script" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build Script</h3>
 <ol>
 <li><p>Build everything and launch the validators using <code>arb.py</code></p>
-<p>Note: sudo will require password</p>
+<blockquote>
+<p>Note: the <code>node -v</code> version must be before 12 since web3.js has a conflict
+with version 12. Otherwise <code>yarn</code> will produce a compile error. We
+recommend using <a href="https://github.com/nvm-sh/nvm">nvm</a> to switch versions.</p>
+</blockquote>
 <pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/demo-app.git
 <span class="hljs-built_in">cd</span> demo-app
 yarn
 python3 arb.py
 </code></pre></li>
 <li><p>Start the frontend</p>
-<p>In another bash shell go to <code>demo-app</code> and run:</p>
+<p>Open another shell and go to <code>demo-app</code> and run:</p>
 <pre><code class="hljs css language-bash">yarn start
 </code></pre>
 <p>The browser will open to <a href="http://localhost:8080">localhost:8080</a></p></li>
@@ -68,15 +106,15 @@ python3 arb.py
 <span class="hljs-built_in">cd</span> demo-app
 </code></pre>
 <p>And it's dependencies:</p>
-<pre><code class="hljs">mkdir compose
-git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
-git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
-git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
+<pre><code class="hljs css language-bash">mkdir compose
+git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
+git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
+git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
 </code></pre></li>
 <li><p>Build</p>
 <p>Note: This step may take about ten minutes the first time. Subsuquent builds
 are much, much faster because intermediate build images are cached.</p>
-<pre><code class="hljs css language-bash">sudo docker-compose build
+<pre><code class="hljs css language-bash">docker-compose build
 </code></pre>
 <p>And build the frontend:</p>
 <pre><code class="hljs css language-bash">yarn
@@ -84,10 +122,10 @@ are much, much faster because intermediate build images are cached.</p>
 <li><p>Compile the Fibonacci contract:</p>
 <pre><code class="hljs css language-bash">truffle migrate --network arbitrum
 arbc-truffle-compile compiled.json contract.ao
-sudo docker build -t arb-app -f .arb-app.Dockerfile .
+docker build -t arb-app -f .arb-app.Dockerfile .
 </code></pre></li>
 <li><p>Export the contract and build and run 3 Validators:</p>
-<pre><code class="hljs css language-bash">sudo docker-compose up --build
+<pre><code class="hljs css language-bash">docker-compose up --build
 </code></pre></li>
 <li><p>Run the Web3 frontend</p>
 <p>Make sure to open another bash prompt since step 4 is running the validators</p>
@@ -100,7 +138,7 @@ sudo docker build -t arb-app -f .arb-app.Dockerfile .
 <li><p>Check the validators are running</p>
 <p>You should see the following output from docker-compose at the very end of
 the log:</p>
-<pre><code class="hljs">arb-validator-coordinator_1  | Leader is creating VM
+<pre><code class="hljs css language-txt">arb-validator-coordinator_1  | Leader is creating VM
 arb-validator-coordinator_1  | Got wait request
 arb-validator-coordinator_1  | 2019/05/13 03:18:46 http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.19.0.3:40065: EOF
 arb-validator-coordinator_1  | 2019/05/13 03:18:47 http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.19.0.4:38229: EOF
@@ -208,12 +246,19 @@ arbc-truffle-compile compiled.json contract.ao
 <p>Next, the compiled Arbitrum bytecode is passed to the validators by creating
 the image <code>arb-app</code> with the single <code>contract.ao</code> file:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-built_in">echo</span> $<span class="hljs-string">"FROM scratch\nCOPY contract.ao ./"</span> &gt; .arb-app.Dockerfile
-sudo docker build -t arb-app -f arb-app.Dockerfile .
+docker build -t arb-app -f arb-app.Dockerfile .
 </code></pre></li>
+<li><p>Add the <code>docker-compose.yml</code></p>
+<p>Copy the <code>docker-compose.yml</code> file from the <a href="https://github.com/OffchainLabs/demo-app/blob/master/docker-compose.yml">demo-app</a>
+into the root directory and optionally edit the mnemonic:</p>
+<pre><code class="hljs css language-bash">        args:
+            MNEMONIC: <span class="hljs-string">"jar deny prosper gasp flush glass core corn alarm treat leg smart"</span>
+</code></pre>
+<p>This must be the same mnemonic used in the <code>truffle-config.js</code> file.</p></li>
 <li><p>Run multiple Validators:</p>
 <p>Now that the <code>contract.ao</code> is exported, we can launch three validators:</p>
-<pre><code class="hljs css language-bash">sudo docker-compose build
-sudo docker-compose up
+<pre><code class="hljs css language-bash">docker-compose build
+docker-compose up
 </code></pre></li>
 </ol>
 <h3><a class="anchor" aria-hidden="true" id="create-a-web3-frontend"></a><a href="#create-a-web3-frontend" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Create a Web3 frontend</h3>
