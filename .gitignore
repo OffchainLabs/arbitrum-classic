@@ -2,3 +2,8 @@
 node_modules
 dist/main.js
 compose
+compiled.js
+compiled.json
+package-lock.json
+yarn-error.log
+build/
