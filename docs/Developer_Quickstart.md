@@ -8,16 +8,38 @@ and porting your Solidity project.
 
 ## Install
 
+Installing involves two steps: system dependencies including `docker-compose`
+and the Arbitrum compiler, `arbc-truffle-compile`.
 
 ### Dependencies
 
 Follow the instructions for supported operating systems or use the comprehensive
-list of dependencies
+list of dependencies.
 
 #### MacOS
 
 ``` bash
 brew install python3 node docker docker-machine docker-compose
+brew link docker
+brew link docker-compose
+```
+
+##### Change npm's default directory
+
+If you have not installed any npm global packages before,
+[change npm's default directory](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally)
+with the following commands:
+
+``` bash
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo $'# npm\nexport PATH=~/.npm-global/bin:$PATH' >> ~/.bash_profile
+source ~/.bash_profile
+```
+
+##### Truffle and Yarn
+
+``` bash
 npm install -g truffle yarn
 ```
 
@@ -27,6 +49,22 @@ npm install -g truffle yarn
 sudo apt-get update
 sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
 sudo npm install -g truffle yarn
+```
+
+##### Docker without sudo
+
+Docker [can be installed](https://docs.docker.com/install/linux/linux-postinstall/)
+to give permissions "equivalent to the `roor` user", but without the `root` user group.
+You can skip this step by adding `sudo` in front of all of the `docker` and
+`docker-compose` commands.
+
+> Warning: "The docker group grants privileges equivalent to the `root` user.
+> For details on how this impacts security in your system, see
+> [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
+
+``` bash
+sudo groupadd docker
+sudo usermod -aG docker $USER
 ```
 
 #### Full List
@@ -40,10 +78,6 @@ Here are the important dependencies in case you are not running on a supported O
 - [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
 - [virtualbox](https://www.virtualbox.org/wiki/Downloads)
 - [yarn](https://yarnpkg.com/en/)
-
-Note that Docker [can be installed](https://docs.docker.com/install/linux/linux-postinstall/)
-to give permissions "equivalent to the `roor` user", but without the `root` user group.
-In this case, do not use `sudo` in the following docker commands.
 
 ### Arbitrum Compiler
 
@@ -60,8 +94,20 @@ python3 -m venv venv
 source venv/bin/activate
 pip3 install -r requirements.txt
 deactivate
-sudo python3 setup.py install
+python3 setup.py install
+cd ..
 ```
+
+#### Check installation
+
+Verify the installation was successful. You may need to open a new shell if the
+`arbc-truffle-compile` command is not found.
+
+``` bash
+which arbc-truffle-compile
+```
+
+> Expected output: `/usr/local/bin/arbc-truffle-compile`
 
 ## Hello, Arbitrum
 
@@ -73,7 +119,9 @@ Either use the [build script](#build-script) or build the demo app
 
 1. Build everything and launch the validators using `arb.py`
 
-    Note: sudo will require password
+    > Note: the `node -v` version must be before 12 since web3.js has a conflict
+    > with version 12. Otherwise `yarn` will produce a compile error. We
+    > recommend using [nvm](https://github.com/nvm-sh/nvm) to switch versions.
 
     ``` bash
     git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
@@ -84,7 +132,7 @@ Either use the [build script](#build-script) or build the demo app
 
 2. Start the frontend
 
-    In another bash shell go to `demo-app` and run:
+    Open another shell and go to `demo-app` and run:
 
     ``` bash
     yarn start
@@ -103,7 +151,7 @@ Either use the [build script](#build-script) or build the demo app
 
     And it's dependencies:
 
-    ```
+    ``` bash
     mkdir compose
     git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
     git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
@@ -116,7 +164,7 @@ Either use the [build script](#build-script) or build the demo app
     are much, much faster because intermediate build images are cached.
 
     ``` bash
-    sudo docker-compose build
+    docker-compose build
     ```
 
     And build the frontend:
@@ -130,13 +178,13 @@ Either use the [build script](#build-script) or build the demo app
     ``` bash
     truffle migrate --network arbitrum
     arbc-truffle-compile compiled.json contract.ao
-    sudo docker build -t arb-app -f .arb-app.Dockerfile .
+    docker build -t arb-app -f .arb-app.Dockerfile .
     ```
 
 4. Export the contract and build and run 3 Validators:
 
     ``` bash
-    sudo docker-compose up --build
+    docker-compose up --build
     ```
 
 5. Run the Web3 frontend
@@ -156,7 +204,7 @@ Either use the [build script](#build-script) or build the demo app
     You should see the following output from docker-compose at the very end of
     the log:
 
-    ```
+    ``` txt
     arb-validator-coordinator_1  | Leader is creating VM
     arb-validator-coordinator_1  | Got wait request
     arb-validator-coordinator_1  | 2019/05/13 03:18:46 http: TLS handshake error from 172.19.0.3:40065: EOF
@@ -288,16 +336,28 @@ Solidity files in the `contracts` folder.
 
     ``` bash
     echo $"FROM scratch\nCOPY contract.ao ./" > .arb-app.Dockerfile
-    sudo docker build -t arb-app -f arb-app.Dockerfile .
+    docker build -t arb-app -f arb-app.Dockerfile .
     ```
 
-3. Run multiple Validators:
+3. Add the `docker-compose.yml`
+
+    Copy the `docker-compose.yml` file from the [demo-app](https://github.com/OffchainLabs/demo-app/blob/master/docker-compose.yml)
+    into the root directory and optionally edit the mnemonic:
+
+    ``` bash
+            args:
+                MNEMONIC: "jar deny prosper gasp flush glass core corn alarm treat leg smart"
+    ```
+
+    This must be the same mnemonic used in the `truffle-config.js` file.
+
+4. Run multiple Validators:
 
     Now that the `contract.ao` is exported, we can launch three validators:
 
     ``` bash
-    sudo docker-compose build
-    sudo docker-compose up
+    docker-compose build
+    docker-compose up
     ```
 
 ### Create a Web3 frontend
