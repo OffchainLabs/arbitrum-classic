@@ -8,18 +8,11 @@ and porting your Solidity project.
 
 ## Install
 
+
 ### Dependencies
 
-Here is the complete list of dependencies; you may already have them all
-installed. If not, there are instructions for each supported operating system:
-
-- [docker](https://github.com/docker/docker-ce/releases) and
-  [docker-compose](https://github.com/docker/compose/releases)
-- [node and npm](https://nodejs.org/en/)
-- [python3 and pip3](https://www.python.org/downloads/)
-- [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
-- [virtualbox](https://www.virtualbox.org/wiki/Downloads)
-- [yarn](https://yarnpkg.com/en/)
+Follow the instructions for supported operating systems or use the comprehensive
+list of dependencies
 
 #### MacOS
 
@@ -31,13 +24,33 @@ npm install -g truffle yarn
 #### Ubuntu 18.04
 
 ``` bash
-sudo apt-get install -y python3 pip3 nodejs npm virtualbox docker docker-compose
-npm install -g truffle yarn
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
+sudo npm install -g truffle yarn
 ```
+
+#### Full List
+
+Here are the important dependencies in case you are not running on a supported OS:
+
+- [docker](https://github.com/docker/docker-ce/releases) and
+  [docker-compose](https://github.com/docker/compose/releases)
+- [node and npm](https://nodejs.org/en/)
+- [python3 and pip3](https://www.python.org/downloads/)
+- [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
+- [virtualbox](https://www.virtualbox.org/wiki/Downloads)
+- [yarn](https://yarnpkg.com/en/)
+
+Note that Docker [can be installed](https://docs.docker.com/install/linux/linux-postinstall/)
+to give permissions "equivalent to the `roor` user", but without the `root` user group.
+In this case, do not use `sudo` in the following docker commands.
 
 ### Arbitrum Compiler
 
-Install the Arbitrum compiler, `arbc-truffle-compile`, by building it from source:
+Install the Arbitrum compiler (`arbc-compile` and `arbc-truffle-compile`) by
+building it from source.
+
+#### Build from source
 
 ``` bash
 git clone --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
@@ -52,11 +65,13 @@ sudo python3 setup.py install
 
 ## Hello, Arbitrum
 
-Download and build the demo app to run your first app using Arbitrum.
+There are two ways to get started running your first code on Arbitrum.
+Either use the [build script](#build-script) or build the demo app
+[manually](#manually).
 
-### Super quick start
+### Build Script
 
-1. Build everything using `arb.py`
+1. Build everything and launch the validators using `arb.py`
 
     Note: sudo will require password
 
@@ -77,11 +92,7 @@ Download and build the demo app to run your first app using Arbitrum.
 
     The browser will open to [localhost:8080](http://localhost:8080)
 
-    Enter a number i.e. 50 under "Arbitrum" to generate the 50th Fibonacci
-    number. You should see "Successfully generated numbers". Then enter
-    49 under "Lookup numbers" and you should see the 50th Fibonacci number: 12586269025.
-
-### In depth details
+### Manually
 
 1. Download the demo app
 
@@ -101,8 +112,8 @@ Download and build the demo app to run your first app using Arbitrum.
 
 2. Build
 
-    Note: This step takes about seven minutes the first time. Subsuquent builds
-    are a matter of seconds.
+    Note: This step may take about ten minutes the first time. Subsuquent builds
+    are much, much faster because intermediate build images are cached.
 
     ``` bash
     sudo docker-compose build
@@ -119,7 +130,7 @@ Download and build the demo app to run your first app using Arbitrum.
     ``` bash
     truffle migrate --network arbitrum
     arbc-truffle-compile compiled.json contract.ao
-    docker build -t arb-app -f .arb-app.Dockerfile .
+    sudo docker build -t arb-app -f .arb-app.Dockerfile .
     ```
 
 4. Export the contract and build and run 3 Validators:
@@ -137,6 +148,72 @@ Download and build the demo app to run your first app using Arbitrum.
     ```
 
     The browser will open up [localhost:8080](http://localhost:8080).
+
+### Use the App
+
+1. Check the validators are running
+
+    You should see the following output from docker-compose at the very end of
+    the log:
+
+    ```
+    arb-validator-coordinator_1  | Leader is creating VM
+    arb-validator-coordinator_1  | Got wait request
+    arb-validator-coordinator_1  | 2019/05/13 03:18:46 http: TLS handshake error from 172.19.0.3:40065: EOF
+    arb-validator-coordinator_1  | 2019/05/13 03:18:47 http: TLS handshake error from 172.19.0.4:38229: EOF
+    arb-validator2_1             | Finished waiting for arb-validator-coordinator:1236...
+    arb-validator-coordinator_1  | Leader serving client
+    arb-validator-coordinator_1  | Leader upgraded client <nil>
+    arb-validator-coordinator_1  | Client registered
+    arb-ethbridge_1              | eth_getTransactionCount
+    arb-validator2_1             | Follower connected to leader <nil>
+    arb-ethbridge_1              | eth_subscribe
+    ...
+    arb-ethbridge_1              | eth_subscribe
+    arb-validator1_1             | Finished waiting for arb-validator-coordinator:1236...
+    arb-validator-coordinator_1  | Leader serving client
+    arb-validator-coordinator_1  | Leader upgraded client <nil>
+    arb-validator-coordinator_1  | Client registered
+    arb-validator-coordinator_1  | Getting PC 0
+    arb-ethbridge_1              | eth_getTransactionCount
+    arb-validator1_1             | Follower connected to leader <nil>
+    arb-ethbridge_1              | eth_subscribe
+    arb-ethbridge_1              | eth_sendRawTransaction
+    arb-ethbridge_1              | eth_subscribe
+    arb-ethbridge_1              |
+    arb-ethbridge_1              |   Transaction: 0x980498aa01a2fb89932dfa14df09fbe0d8c7cc460efc219a00b97fdf1b323887
+    arb-ethbridge_1              |   Gas usage: 292476
+    arb-ethbridge_1              |   Block Number: 18
+    arb-ethbridge_1              |   Block Time: Mon May 13 2019 03:18:52 GMT+0000 (UTC)
+    arb-ethbridge_1              |
+    arb-ethbridge_1              | eth_subscribe
+    ...
+    arb-ethbridge_1              | eth_subscribe
+    ```
+
+2. Enter number of Fibonacci numbers to generate under "Arbitrum" and "Generate numbers"
+
+    For example, 50. Then you should see:
+
+    > Executing transaction
+
+    Followed by:
+
+    > Successfully generated numbers
+
+    The Arbitrum contract, compiled from the Fibonacci.sol contract, calculated
+    the first 50 fibonacci numbers. These can be looked up at indices 0 to 49.
+    Generating again would lookup N fibonacci numbers from 1 to N. This next
+    sequence can be looked up at indices 50 to N-1. This is because the contract
+    stacks the return results in an accumulating fashion instead of overwriting
+    them at index 0 to N.
+
+3. Lookup a Fibonacci number
+
+    For exmaple enter 49 under "Lookup numbers". This is the 50th fibonacci
+    number and should return the correct result:
+
+    > 12586269025.
 
 The next step is porting your own solidity code to an Arbitrum app.
 
