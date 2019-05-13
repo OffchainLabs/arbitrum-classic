@@ -158,25 +158,7 @@ Either use the [build script](#build-script) or build the demo app
     git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
     ```
 
-2. Build
-
-    Note: This step may take about ten minutes the first time. Subsuquent builds
-    are much, much faster because intermediate build images are cached.
-
-    ``` bash
-    docker-compose build
-    ```
-  This will stop with an error, which is expected:
-    ```Step 13/20 : COPY --chown=node --from=arb-app contract.ao ./
-    ERROR: Service 'arb-validator-coordinator' failed to build: invalid from flag value arb-app: pull access denied for arb-app, repository does not exist or may require 'docker login'```
-    
-    And build the frontend:
-
-    ``` bash
-    yarn
-    ```
-
-3. Compile the Fibonacci contract:
+2. Compile the Fibonacci contract:
 
     ``` bash
     truffle migrate --network arbitrum
@@ -184,7 +166,25 @@ Either use the [build script](#build-script) or build the demo app
     docker build -t arb-app -f .arb-app.Dockerfile .
     ```
 
-4. Export the contract and build and run 3 Validators:
+3. Build
+
+    Note: This step may take about ten minutes the first time. Subsuquent builds
+    are much, much faster because intermediate build images are cached.
+
+    ``` bash
+    docker-compose build
+    ```
+
+    Next build the frontend:
+
+    ``` bash
+    yarn
+    ```
+
+4. Run the Validators:
+
+    Note: this step will run simultaneously with step 5, so you will need to
+    open another bash prompt and continue to step 5 in parallel.
 
     ``` bash
     docker-compose up --build
@@ -192,13 +192,12 @@ Either use the [build script](#build-script) or build the demo app
 
 5. Run the Web3 frontend
 
-    Make sure to open another bash prompt since step 4 is running the validators
+    The browser will open up [localhost:8080](http://localhost:8080) after
+    running the following command:
 
     ``` bash
     yarn start
     ```
-
-    The browser will open up [localhost:8080](http://localhost:8080).
 
 ### Use the App
 
