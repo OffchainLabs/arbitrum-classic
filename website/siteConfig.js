@@ -45,17 +45,17 @@ const siteConfig = {
   ],
 
   // If you have users set above, you add it here:
-  users,
+  // users,
 
   /* path to images for header/footer */
-  headerIcon: 'img/favicon.ico',
-  footerIcon: 'img/favicon.ico',
+  // headerIcon: 'img/favicon.ico',
+  // footerIcon: 'img/favicon.ico',
   favicon: 'img/favicon.ico',
 
   /* Colors for website */
   colors: {
-    primaryColor: '#045757',
-    secondaryColor: '#023c3c',
+    primaryColor: '#50a0ea',
+    secondaryColor: '#3d80be',
   },
 
   /* Custom fonts for website */
@@ -73,7 +73,7 @@ const siteConfig = {
   */
 
   // This copyright info is used in /core/Footer.js and blog RSS/Atom feeds.
-  copyright: `Copyright © ${new Date().getFullYear()} Your Name or Your Company Name`,
+  copyright: `Copyright © ${new Date().getFullYear()} Offchain Labs`,
 
   highlight: {
     // Highlight.js theme to use for syntax highlighting in code blocks.
@@ -96,7 +96,7 @@ const siteConfig = {
   // enableUpdateBy: true,
 
   // Show documentation's last update time.
-  // enableUpdateTime: true,
+  enableUpdateTime: true,
 
   // You may provide arbitrary config keys to be used as needed by your
   // template. For example, if you need your repo's URL...

@@ -1,5 +1,8 @@
 {
   "docs": {
-    "Documentation": ["AVM_Specification"]
+    "Documentation": [
+      "Developer_Quickstart",
+      "AVM_Specification"
+    ]
   }
 }

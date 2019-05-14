@@ -1,11 +1,106 @@
 <!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Arbitrum Developer Quickstart · Offchain Labs Dev Center</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Get started with Arbitrum by installing the dependencies, running the demo app,&lt;/p&gt;
 "/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Arbitrum Developer Quickstart · Offchain Labs Dev Center"/><meta property="og:type" content="website"/><meta property="og:url" content="https://developer.offchainlabs.com/"/><meta property="og:description" content="&lt;p&gt;Get started with Arbitrum by installing the dependencies, running the demo app,&lt;/p&gt;
-"/><meta property="og:image" content="https://developer.offchainlabs.com/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://developer.offchainlabs.com/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/favicon.ico" alt="Offchain Labs Dev Center"/><h2 class="headerTitleWithLogo">Offchain Labs Dev Center</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavItemActive"><a href="/docs/Developer_Quickstart" target="_self">Developer Quickstart</a></li><li class=""><a href="/docs/AVM_Specification" target="_self">Arbitrum Spec</a></li><li class=""><a href="https://medium.com/offchainlabs" target="_blank">Blog</a></li><li class=""><a href="https://github.com/OffchainLabs" target="_blank">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Arbitrum Developer Quickstart</h1></header><article><div><span><p>Get started with Arbitrum by installing the dependencies, running the demo app,
+"/><meta property="og:image" content="https://developer.offchainlabs.com/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://developer.offchainlabs.com/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><h2 class="headerTitle">Offchain Labs Dev Center</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive siteNavItemActive"><a href="/docs/Developer_Quickstart" target="_self">Developer Quickstart</a></li><li class="siteNavGroupActive"><a href="/docs/AVM_Specification" target="_self">Arbitrum Spec</a></li><li class=""><a href="https://medium.com/offchainlabs" target="_blank">Blog</a></li><li class=""><a href="https://github.com/OffchainLabs" target="_blank">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/docs/Developer_Quickstart">Arbitrum Developer Quickstart</a></li><li class="navListItem"><a class="navItem" href="/docs/AVM_Specification">Arbitrum Specification</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/OffchainLabs/developer-website/edit/master/docs/Developer_Quickstart.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Arbitrum Developer Quickstart</h1></header><article><div><span><p>Get started with Arbitrum by installing the dependencies, running the demo app,
 and porting your Solidity project.</p>
-<h2><a class="anchor" aria-hidden="true" id="install"></a><a href="#install" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install</h2>
-<h3><a class="anchor" aria-hidden="true" id="dependencies"></a><a href="#dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependencies</h3>
-<p>Here is the complete list of dependencies; you may already have them all
-installed. If not, there are instructions for each supported operating system:</p>
+<h2><a class="anchor" aria-hidden="true" id="install-dependencies"></a><a href="#install-dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install Dependencies</h2>
+<p>Follow the instructions for supported operating systems or use the comprehensive
+list of dependencies.</p>
+<h3><a class="anchor" aria-hidden="true" id="macos"></a><a href="#macos" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MacOS</h3>
+<ol>
+<li><p>Install Python, Node, &amp; Docker using <a href="https://brew.sh/">brew</a>:</p>
+<pre><code class="hljs css language-bash">brew install python3 node docker docker-machine docker-compose
+brew link docker
+brew link docker-compose
+</code></pre></li>
+<li><p>Change npm's default directory:</p>
+<p>If you have not installed any npm global packages before,
+<a href="https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally">change npm's default directory</a>
+with the following commands:</p>
+<pre><code class="hljs css language-bash">mkdir ~/.npm-global
+npm config <span class="hljs-built_in">set</span> prefix <span class="hljs-string">'~/.npm-global'</span>
+<span class="hljs-built_in">echo</span> $<span class="hljs-string">'# npm\nexport PATH=~/.npm-global/bin:$PATH'</span> &gt;&gt; ~/.bash_profile
+<span class="hljs-built_in">source</span> ~/.bash_profile
+</code></pre></li>
+<li><p>Install truffle and yarn</p>
+<pre><code class="hljs css language-bash">npm install -g truffle yarn
+</code></pre></li>
+</ol>
+<h3><a class="anchor" aria-hidden="true" id="ubuntu-1804"></a><a href="#ubuntu-1804" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Ubuntu 18.04</h3>
+<ol>
+<li><p>Install Python, Node, Docker, Truffle, and Yarn:</p>
+<pre><code class="hljs css language-bash">sudo apt-get update
+sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
+sudo npm install -g truffle yarn
+</code></pre></li>
+<li><p>Use docker without sudo</p>
+<p>Docker <a href="https://docs.docker.com/install/linux/linux-postinstall/">can be installed</a>
+to give permissions &quot;equivalent to the <code>roor</code> user&quot;, but without the <code>root</code>
+user group.</p>
+<blockquote>
+<p>Warning: &quot;The docker group grants privileges equivalent to the <code>root</code>
+user. For details on how this impacts security in your system, see
+<a href="https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface">Docker Daemon Attack Surface</a>&quot;.</p>
+</blockquote>
+<p>Run the following commands to use Docker without <code>sudo</code>:</p>
+<pre><code class="hljs css language-bash">sudo groupadd docker
+sudo usermod -aG docker <span class="hljs-variable">$USER</span>
+</code></pre>
+<p>Note: if you skip this step you will need to add <code>sudo</code> in front of all
+<code>docker</code> and <code>docker-compose</code> commands. You will also need to build the
+app <a href="#build-manually">manually</a> since <code>arb-deploy</code> does not use <code>sudo</code>.</p></li>
+</ol>
+<h3><a class="anchor" aria-hidden="true" id="full-list"></a><a href="#full-list" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Full List</h3>
+<p>Here are the important dependencies in case you are not running on a supported OS:</p>
 <ul>
 <li><a href="https://github.com/docker/docker-ce/releases">docker</a> and
 <a href="https://github.com/docker/compose/releases">docker-compose</a></li>
@@ -15,16 +110,9 @@ installed. If not, there are instructions for each supported operating system:</
 <li><a href="https://www.virtualbox.org/wiki/Downloads">virtualbox</a></li>
 <li><a href="https://yarnpkg.com/en/">yarn</a></li>
 </ul>
-<h4><a class="anchor" aria-hidden="true" id="macos"></a><a href="#macos" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MacOS</h4>
-<pre><code class="hljs css language-bash">brew install python3 node docker docker-machine docker-compose
-npm install -g truffle yarn
-</code></pre>
-<h4><a class="anchor" aria-hidden="true" id="ubuntu-1804"></a><a href="#ubuntu-1804" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Ubuntu 18.04</h4>
-<pre><code class="hljs css language-bash">sudo apt-get install -y python3 pip3 nodejs npm virtualbox docker docker-compose
-npm install -g truffle yarn
-</code></pre>
-<h3><a class="anchor" aria-hidden="true" id="arbitrum-compiler"></a><a href="#arbitrum-compiler" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Arbitrum Compiler</h3>
-<p>Install the Arbitrum compiler, <code>arbc-truffle-compile</code>, by building it from source:</p>
+<h2><a class="anchor" aria-hidden="true" id="install-the-arbitrum-compiler"></a><a href="#install-the-arbitrum-compiler" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install the Arbitrum Compiler</h2>
+<p>Install the Arbitrum compiler <code>arbc-truffle-compile</code> by building it from source:</p>
+<h3><a class="anchor" aria-hidden="true" id="build-from-source"></a><a href="#build-from-source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build from source</h3>
 <pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
 <span class="hljs-built_in">cd</span> arbc-solidity
 pip3 install virtualenv
@@ -32,61 +120,136 @@ python3 -m venv venv
 <span class="hljs-built_in">source</span> venv/bin/activate
 pip3 install -r requirements.txt
 deactivate
-sudo python3 setup.py install
+python3 setup.py install
+<span class="hljs-built_in">cd</span> ..
 </code></pre>
+<h3><a class="anchor" aria-hidden="true" id="check-installation"></a><a href="#check-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Check installation</h3>
+<p>Verify the installation was successful. You may need to open a new shell if the
+<code>arbc-truffle-compile</code> command is not found.</p>
+<pre><code class="hljs css language-bash"><span class="hljs-built_in">which</span> arbc-truffle-compile
+</code></pre>
+<p>The expected output is:</p>
+<blockquote>
+<p><code>/usr/local/bin/arbc-truffle-compile</code></p>
+</blockquote>
 <h2><a class="anchor" aria-hidden="true" id="hello-arbitrum"></a><a href="#hello-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello, Arbitrum</h2>
-<p>Download and build the demo app to run your first app using Arbitrum.</p>
-<h3><a class="anchor" aria-hidden="true" id="super-quick-start"></a><a href="#super-quick-start" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Super quick start</h3>
+<p>There are two ways to get started running your first code on Arbitrum.
+Either use the <a href="#build-script">build script</a> or build the demo app
+<a href="#build-manually">manually</a>.</p>
+<h3><a class="anchor" aria-hidden="true" id="build-script"></a><a href="#build-script" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build Script</h3>
 <ol>
-<li><p>Build everything using <code>arb.py</code></p>
-<p>Note: sudo will require password</p>
+<li><p>Build everything and launch the validators using <code>arb.py</code></p>
+<blockquote>
+<p>Note: the <code>node -v</code> version must be before 12 since web3.js has a conflict
+with version 12. Otherwise <code>yarn</code> will produce a compile error. We
+recommend using <a href="https://github.com/nvm-sh/nvm">nvm</a> to switch versions.</p>
+</blockquote>
 <pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/demo-app.git
 <span class="hljs-built_in">cd</span> demo-app
 yarn
 python3 arb.py
 </code></pre></li>
 <li><p>Start the frontend</p>
-<p>In another bash shell go to <code>demo-app</code> and run:</p>
+<p>Open another shell and go to <code>demo-app</code> and run:</p>
 <pre><code class="hljs css language-bash">yarn start
 </code></pre>
-<p>The browser will open to <a href="http://localhost:8080">localhost:8080</a></p>
-<p>Enter a number i.e. 50 under &quot;Arbitrum&quot; to generate the 50th Fibonacci
-number. You should see &quot;Successfully generated numbers&quot;. Then enter
-49 under &quot;Lookup numbers&quot; and you should see the 50th Fibonacci number: 12586269025.</p></li>
+<p>The browser will open to <a href="http://localhost:8080">localhost:8080</a></p></li>
 </ol>
-<h3><a class="anchor" aria-hidden="true" id="in-depth-details"></a><a href="#in-depth-details" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>In depth details</h3>
+<h3><a class="anchor" aria-hidden="true" id="build-manually"></a><a href="#build-manually" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build Manually</h3>
 <ol>
 <li><p>Download the demo app</p>
 <pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/demo-app.git
 <span class="hljs-built_in">cd</span> demo-app
 </code></pre>
 <p>And it's dependencies:</p>
-<pre><code class="hljs">mkdir compose
-git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
-git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
-git <span class="hljs-keyword">clone</span> <span class="hljs-title">https</span>://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
-</code></pre></li>
-<li><p>Build</p>
-<p>Note: This step takes about seven minutes the first time. Subsuquent builds
-are a matter of seconds.</p>
-<pre><code class="hljs css language-bash">sudo docker-compose build
-</code></pre>
-<p>And build the frontend:</p>
-<pre><code class="hljs css language-bash">yarn
+<pre><code class="hljs css language-bash">mkdir compose
+git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
+git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
+git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
 </code></pre></li>
 <li><p>Compile the Fibonacci contract:</p>
 <pre><code class="hljs css language-bash">truffle migrate --network arbitrum
 arbc-truffle-compile compiled.json contract.ao
 docker build -t arb-app -f .arb-app.Dockerfile .
 </code></pre></li>
-<li><p>Export the contract and build and run 3 Validators:</p>
-<pre><code class="hljs css language-bash">sudo docker-compose up --build
+<li><p>Build</p>
+<p>Note: This step may take about ten minutes the first time. Subsuquent builds
+are much, much faster because intermediate build images are cached.</p>
+<pre><code class="hljs css language-bash">docker-compose build
+</code></pre>
+<p>Next build the frontend:</p>
+<pre><code class="hljs css language-bash">yarn
+</code></pre></li>
+<li><p>Run the Validators:</p>
+<p>Note: this step will run simultaneously with step 5, so you will need to
+open another bash prompt and continue to step 5 in parallel.</p>
+<pre><code class="hljs css language-bash">docker-compose up --build
 </code></pre></li>
 <li><p>Run the Web3 frontend</p>
-<p>Make sure to open another bash prompt since step 4 is running the validators</p>
+<p>The browser will open up <a href="http://localhost:8080">localhost:8080</a> after
+running the following command:</p>
 <pre><code class="hljs css language-bash">yarn start
-</code></pre>
-<p>The browser will open up <a href="http://localhost:8080">localhost:8080</a>.</p></li>
+</code></pre></li>
+</ol>
+<h3><a class="anchor" aria-hidden="true" id="use-the-app"></a><a href="#use-the-app" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Use the App</h3>
+<ol>
+<li><p>Check the validators are running</p>
+<p>You should see the following output from docker-compose at the very end of
+the log:</p>
+<pre><code class="hljs css language-txt">arb-validator-coordinator_1  | Leader is creating VM
+arb-validator-coordinator_1  | Got wait request
+arb-validator-coordinator_1  | 2019/05/13 03:18:46 http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.19.0.3:40065: EOF
+arb-validator-coordinator_1  | 2019/05/13 03:18:47 http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.19.0.4:38229: EOF
+arb-validator2_1             | Finished waiting <span class="hljs-keyword">for</span> arb-validator-coordinator:1236<span class="hljs-built_in">..</span>.
+arb-validator-coordinator_1  | Leader serving<span class="hljs-built_in"> client
+</span>arb-validator-coordinator_1  | Leader upgraded<span class="hljs-built_in"> client </span>&lt;<span class="hljs-literal">nil</span>&gt;
+arb-validator-coordinator_1  |<span class="hljs-built_in"> Client </span>registered
+arb-ethbridge_1              | eth_getTransactionCount
+arb-validator2_1             | Follower connected <span class="hljs-keyword">to</span> leader &lt;<span class="hljs-literal">nil</span>&gt;
+arb-ethbridge_1              | eth_subscribe
+<span class="hljs-built_in">..</span>.
+arb-ethbridge_1              | eth_subscribe
+arb-validator1_1             | Finished waiting <span class="hljs-keyword">for</span> arb-validator-coordinator:1236<span class="hljs-built_in">..</span>.
+arb-validator-coordinator_1  | Leader serving<span class="hljs-built_in"> client
+</span>arb-validator-coordinator_1  | Leader upgraded<span class="hljs-built_in"> client </span>&lt;<span class="hljs-literal">nil</span>&gt;
+arb-validator-coordinator_1  |<span class="hljs-built_in"> Client </span>registered
+arb-validator-coordinator_1  | Getting PC 0
+arb-ethbridge_1              | eth_getTransactionCount
+arb-validator1_1             | Follower connected <span class="hljs-keyword">to</span> leader &lt;<span class="hljs-literal">nil</span>&gt;
+arb-ethbridge_1              | eth_subscribe
+arb-ethbridge_1              | eth_sendRawTransaction
+arb-ethbridge_1              | eth_subscribe
+arb-ethbridge_1              |
+arb-ethbridge_1              |   Transaction: 0x980498aa01a2fb89932dfa14df09fbe0d8c7cc460efc219a00b97fdf1b323887
+arb-ethbridge_1              |   Gas usage: 292476
+arb-ethbridge_1              |   Block Number: 18
+arb-ethbridge_1              |   Block Time: Mon May 13 2019 03:18:52 GMT+0000 (UTC)
+arb-ethbridge_1              |
+arb-ethbridge_1              | eth_subscribe
+<span class="hljs-built_in">..</span>.
+arb-ethbridge_1              | eth_subscribe
+</code></pre></li>
+<li><p>Enter number of Fibonacci numbers to generate under &quot;Arbitrum&quot; and &quot;Generate numbers&quot;</p>
+<p>For example, 50. Then you should see:</p>
+<blockquote>
+<p>Executing transaction</p>
+</blockquote>
+<p>Followed by:</p>
+<blockquote>
+<p>Successfully generated numbers</p>
+</blockquote>
+<p>The Arbitrum contract, compiled from the Fibonacci.sol contract, calculated
+the first 50 fibonacci numbers. These can be looked up at indices 0 to 49.
+Generating again would lookup N fibonacci numbers from 1 to N. This next
+sequence can be looked up at indices 50 to N-1. This is because the contract
+stacks the return results in an accumulating fashion instead of overwriting
+them at index 0 to N.</p></li>
+<li><p>Lookup a Fibonacci number</p>
+<p>For exmaple enter 49 under &quot;Lookup numbers&quot;. This is the 50th fibonacci
+number and should return the correct result:</p>
+<blockquote>
+<p>12586269025</p>
+</blockquote></li>
 </ol>
 <p>The next step is porting your own solidity code to an Arbitrum app.</p>
 <h2><a class="anchor" aria-hidden="true" id="porting-to-arbitrum"></a><a href="#porting-to-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Porting to Arbitrum</h2>
@@ -141,12 +304,19 @@ arbc-truffle-compile compiled.json contract.ao
 <p>Next, the compiled Arbitrum bytecode is passed to the validators by creating
 the image <code>arb-app</code> with the single <code>contract.ao</code> file:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-built_in">echo</span> $<span class="hljs-string">"FROM scratch\nCOPY contract.ao ./"</span> &gt; .arb-app.Dockerfile
-sudo docker build -t arb-app -f arb-app.Dockerfile .
+docker build -t arb-app -f arb-app.Dockerfile .
 </code></pre></li>
+<li><p>Add the <code>docker-compose.yml</code></p>
+<p>Copy the <code>docker-compose.yml</code> file from the <a href="https://github.com/OffchainLabs/demo-app/blob/master/docker-compose.yml">demo-app</a>
+into the root directory and optionally edit the mnemonic:</p>
+<pre><code class="hljs css language-bash">        args:
+            MNEMONIC: <span class="hljs-string">"jar deny prosper gasp flush glass core corn alarm treat leg smart"</span>
+</code></pre>
+<p>This must be the same mnemonic used in the <code>truffle-config.js</code> file.</p></li>
 <li><p>Run multiple Validators:</p>
 <p>Now that the <code>contract.ao</code> is exported, we can launch three validators:</p>
-<pre><code class="hljs css language-bash">sudo docker-compose build
-sudo docker-compose up
+<pre><code class="hljs css language-bash">docker-compose build
+docker-compose up
 </code></pre></li>
 </ol>
 <h3><a class="anchor" aria-hidden="true" id="create-a-web3-frontend"></a><a href="#create-a-web3-frontend" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Create a Web3 frontend</h3>
@@ -189,4 +359,4 @@ and its <a href="https://github.com/OffchainLabs/demo-app/blob/master/src/index.
 <pre><code class="hljs css language-bash">yarn start
 </code></pre></li>
 </ol>
-</span></div></article></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#install">Install</a><ul class="toc-headings"><li><a href="#dependencies">Dependencies</a></li><li><a href="#arbitrum-compiler">Arbitrum Compiler</a></li></ul></li><li><a href="#hello-arbitrum">Hello, Arbitrum</a><ul class="toc-headings"><li><a href="#super-quick-start">Super quick start</a></li><li><a href="#in-depth-details">In depth details</a></li></ul></li><li><a href="#porting-to-arbitrum">Porting to Arbitrum</a><ul class="toc-headings"><li><a href="#configure-truffle">Configure Truffle</a></li><li><a href="#compile-solidity-to-arbitrum-bytecode">Compile Solidity to Arbitrum bytecode</a></li><li><a href="#create-a-web3-frontend">Create a Web3 frontend</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/favicon.ico" alt="Offchain Labs Dev Center" width="66" height="58"/></a><div><h5>Docs</h5><a href="/docs/en/doc1.html">Getting Started (or other categories)</a><a href="/docs/en/doc2.html">Guides (or other categories)</a><a href="/docs/en/doc3.html">API Reference (or other categories)</a></div><div><h5>Community</h5><a href="/en/users.html">User Showcase</a><a href="http://stackoverflow.com/questions/tagged/" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://discordapp.com/">Project Chat</a><a href="https://twitter.com/" target="_blank" rel="noreferrer noopener">Twitter</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/">GitHub</a><a class="github-button" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><a href="https://opensource.facebook.com/" target="_blank" rel="noreferrer noopener" class="fbOpenSource"><img src="/img/oss_logo.png" alt="Facebook Open Source" width="170" height="45"/></a><section class="copyright">Copyright © 2019 Your Name or Your Company Name</section></footer></div></body></html>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 5/13/2019</em></div><div class="docs-prevnext"><a class="docs-next button" href="/docs/AVM_Specification"><span>Arbitrum Specification</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#install-dependencies">Install Dependencies</a><ul class="toc-headings"><li><a href="#macos">MacOS</a></li><li><a href="#ubuntu-1804">Ubuntu 18.04</a></li><li><a href="#full-list">Full List</a></li></ul></li><li><a href="#install-the-arbitrum-compiler">Install the Arbitrum Compiler</a><ul class="toc-headings"><li><a href="#build-from-source">Build from source</a></li><li><a href="#check-installation">Check installation</a></li></ul></li><li><a href="#hello-arbitrum">Hello, Arbitrum</a><ul class="toc-headings"><li><a href="#build-script">Build Script</a></li><li><a href="#build-manually">Build Manually</a></li><li><a href="#use-the-app">Use the App</a></li></ul></li><li><a href="#porting-to-arbitrum">Porting to Arbitrum</a><ul class="toc-headings"><li><a href="#configure-truffle">Configure Truffle</a></li><li><a href="#compile-solidity-to-arbitrum-bytecode">Compile Solidity to Arbitrum bytecode</a></li><li><a href="#create-a-web3-frontend">Create a Web3 frontend</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"></a><div><h5>Docs</h5><a href="/docs/en/Developer_Quickstart">Developer Quickstart</a><a href="/docs/en/AVM_Specification">AVM Specification</a></div><div><h5>Community</h5><a href="https://offchainlabs.com">Offchain Labs</a><a href="https://medium.com/OffchainLabs">Blog</a><a href="https://twitter.com/OffchainLabs">Twitter</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/OffchainLabs">GitHub</a></div></section><a href="https://offchainlabs.com/"><img src="/img/logo-white.png" alt="Offchain Labs" width="150" height="125" class="footerLogo"/></a><section class="copyright">Copyright © 2019 Offchain Labs</section></footer></div></body></html>
