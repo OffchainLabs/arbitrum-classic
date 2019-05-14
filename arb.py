@@ -6,8 +6,10 @@ import subprocess
 import sys
 
 # Constants
+CONTRACT="contract.ao"
 CONTRACT_IMAGE="arb-contract"
 CONTRACT_DOCKERFILE=".arb-contract.Dockerfile"
+CONTRACT_DOCKERFILE_CONTENTS=("FROM scratch\nCOPY %s ./\n" % CONTRACT)
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def build():
@@ -17,6 +19,10 @@ def build():
         run("git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge")
         run("git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator")
         run("git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm")
+
+    # Overwrite Dockerfile
+    with open(CONTRACT_DOCKERFILE, 'w') as f:
+        f.write(CONTRACT_DOCKERFILE_CONTENTS)
 
     run("truffle migrate --network arbitrum")
     run("arbc-truffle-compile compiled.json contract.ao")
