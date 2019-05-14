@@ -55,7 +55,7 @@ list of dependencies.
 
     Docker [can be installed](https://docs.docker.com/install/linux/linux-postinstall/)
     to give permissions "equivalent to the `roor` user", but without the `root`
-    user group. You can skip this step by adding `sudo` in front of all of the `docker` and `docker-compose` commands during the rest of this introduction.
+    user group.
 
     > Warning: "The docker group grants privileges equivalent to the `root`
     > user. For details on how this impacts security in your system, see
@@ -67,6 +67,10 @@ list of dependencies.
     sudo groupadd docker
     sudo usermod -aG docker $USER
     ```
+
+    Note: if you skip this step you will need to add `sudo` in front of all
+    `docker` and `docker-compose` commands. You will also need to build the
+    app [manually](#build-manually) since `arb-deploy` does not use `sudo`.
 
 ### Full List
 
