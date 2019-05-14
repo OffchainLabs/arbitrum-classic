@@ -6,7 +6,8 @@
     "tagline": "Build fast, private, secure dapps with Arbitrum",
     "docs": {
       "AVM_Specification": {
-        "title": "Arbitrum VM informal architecture spec"
+        "title": "Arbitrum VM informal architecture spec",
+        "sidebar_label": "Arbitrum Specification"
       },
       "Developer_Quickstart": {
         "title": "Arbitrum Developer Quickstart"
