@@ -388,7 +388,7 @@ Solidity files in the `contracts` folder.
 
 2. Import the provider in javascript:
 
-    This example uses a Solditiy contract "Fibonacci" and the `compiled.json`
+    This example uses a Solidity contract "Fibonacci" and the `compiled.json`
     output from running `truffle migrate --network arbitrum`. The `compiled.json`
     is in the top level folder of the project.
 
