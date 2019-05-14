@@ -1,41 +1,138 @@
 #!/usr/bin/env python
-# arb.py
+### ----------------------------------------------------------------------------
+### arb-deploy
+### ----------------------------------------------------------------------------
 
+import argparse
 import os
 import subprocess
 import sys
 
+PROG='Arbitrum Deploy'
+__version__ = 'Alpha'
+
 # Constants
-CONTRACT="contract.ao"
-CONTRACT_IMAGE="arb-contract"
-CONTRACT_DOCKERFILE=".arb-contract.Dockerfile"
-CONTRACT_DOCKERFILE_CONTENTS=("FROM scratch\nCOPY %s ./\n" % CONTRACT)
+CONTRACT_IMAGE='arb-contract'
+CONTRACT_DOCKERFILE='.arb-contract.Dockerfile'
+CONTRACT_DOCKERFILE_CONTENTS='FROM scratch\nCOPY %s ./\n'
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
-def build():
+def deploy(contract_name, n_validators, mnemonic):
+    # Set current working directory to contract's parent dir
+    cwd = os.path.dirname(contract_name)
+    os.chdir(cwd)
+
     # Check for compose folder and get dependencies
-    if not os.path.isdir("./compose"):
-        run("mkdir compose")
-        run("git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge")
-        run("git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator")
-        run("git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm")
+    if not os.path.isdir('compose'):
+        run('mkdir compose')
+        run('git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge')
+        run('git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator')
+        run('git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm')
 
-    # Overwrite Dockerfile
+    # Overwrite CONTRACT_DOCKERFILE and build CONTRACT_IMAGE
     with open(CONTRACT_DOCKERFILE, 'w') as f:
-        f.write(CONTRACT_DOCKERFILE_CONTENTS)
+        f.write(CONTRACT_DOCKERFILE_CONTENTS % contract_name)
+    run('docker build -t %s -f %s .' % CONTRACT_IMAGE, CONTRACT_DOCKERFILE)
 
-    run("truffle migrate --network arbitrum")
-    run("arbc-truffle-compile compiled.json contract.ao")
-    run("sudo docker build -t %s -f %s ." % (CONTRACT_IMAGE, CONTRACT_DOCKERFILE))
-    run("sudo docker-compose up --build")
+    # Overwrite docker-compose.yml
+    contents = (COMPOSE_HEADER % (mnemonic, n_validators)) +
+        [(COMPOSE_VALIDATOR % (i, i)) for i in range(1, n_validators)]
+    with open('docker-compose.yml') as f:
+        f.write(contents)
+
+    # Build and run
+    run('docker-compose up --build')
 
 # Run commands in shell
 def run(command):
-    print("\033[1m$ %s\n\033[0m" % command)
+    BOLD='\033[1m'
+    END='\033[0m'
+    print(BOLD + '$ %s\n' % command + END)
     subprocess.call(command.split())
 
-if __name__ == "__main__":
+### ----------------------------------------------------------------------------
+### Command line interface
+### ----------------------------------------------------------------------------
+
+def main():
+    # arb-deploy contract.ao 3
+    parser = argparse.ArgumentParser(
+        prog=PROG,
+        description='Deploy an Arbitrum contract')
+    parser.add_argument('contract', type=argparse.FileType('r'),
+        help='The Arbitrum bytecode contract to deploy.')
+    parser.add_argument('n_validators', type=int,
+        help='The number of validators to deploy.')
+    # Optional
+    parser.add_argument('-m', '--mnemonic', type=str, dest='mnemonic',
+        default='jar deny prosper gasp flush glass core corn alarm treat leg smart',
+        help='Specify the Mnemonic to use (make sure to use "quotes")')
+    parser.set_defaults(clean=False)
+    # Version
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
+    args = parser.parse_args()
+
+    # Deploy
+    deploy(args.contract, args.n_validators, args.mnemonic)
+
+if __name__ == '__main__':
     try:
-        build()
+        main()
     except KeyboardInterrupt:
         sys.exit(1)
+
+### ----------------------------------------------------------------------------
+### docker-compose.yml template
+### ----------------------------------------------------------------------------
+
+# Takes the Mnemonic and Number of Validators,
+COMPOSE_HEADER=(
+"""
+version: '3'
+services:
+    arb-ethbridge:
+        image: arb-ethbridge
+        build:
+#           context: https://github.com/OffchainLabs/arb-ethbridge.git#alpha
+            context: ./compose/arb-ethbridge
+            args:
+                MNEMONIC: '%s'
+                NUM_WALLETS: %d
+                PORT: 7545
+                CANARY_PORT: 17545
+        ports:
+            - '7545:7545'
+            - '17545:17545'
+
+    arb-validator-coordinator:
+        depends_on:
+            - arb-ethbridge
+        build:
+#           context: https://github.com/OffchainLabs/arb-validator.git#alpha
+            context: ./compose/arb-validator
+            args:
+                WAIT_FOR: 'arb-ethbridge:17545'
+                ETH_URL: 'ws://arb-ethbridge:7545'
+                ID: 0
+        ports:
+            - '1235:1235'
+            - '1236:1236'
+
+""")
+
+# Takes the Validator ID twice
+COMPOSE_VALIDATOR=(
+"""
+    arb-validator%d:
+        depends_on:
+            - arb-ethbridge
+        build:
+#           context: https://github.com/OffchainLabs/arb-validator.git#alpha
+            context: ./compose/arb-validator
+            args:
+                WAIT_FOR: 'arb-validator-coordinator:1236'
+                ETH_URL: 'ws://arb-ethbridge:7545'
+                COORDINATOR_URL: 'wss://arb-validator-coordinator:1236/ws'
+                ID: %d
+
+""")
