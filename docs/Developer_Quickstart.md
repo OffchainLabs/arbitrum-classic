@@ -1,6 +1,7 @@
 ---
 id: Developer_Quickstart
 title: Arbitrum Developer Quickstart
+custom_edit_url: https://github.com/OffchainLabs/developer-website/edit/master/docs/Developer_Quickstart.md
 ---
 
 Get started with Arbitrum by installing the dependencies, running the demo app,
