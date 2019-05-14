@@ -9,8 +9,10 @@ services:
                 MNEMONIC: "jar deny prosper gasp flush glass core corn alarm treat leg smart"
                 NUM_WALLETS: 3
                 PORT: 7545
+                CANARY_PORT: 17545
         ports:
             - "7545:7545"
+            - "17545:17545"
 
     arb-validator-coordinator:
         depends_on:
@@ -19,7 +21,7 @@ services:
 #           context: https://github.com/OffchainLabs/arb-validator.git#alpha
             context: ./compose/arb-validator
             args:
-                WAIT_FOR: "arb-ethbridge:7545"
+                WAIT_FOR: "arb-ethbridge:17545"
                 ETH_URL: "ws://arb-ethbridge:7545"
                 ID: 0
         ports:

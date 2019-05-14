@@ -6,8 +6,8 @@ import subprocess
 import sys
 
 # Constants
-CONTRACT_IMAGE="arb-app"
-CONTRACT_DOCKERFILE=".arb-app.Dockerfile"
+CONTRACT_IMAGE="arb-contract"
+CONTRACT_DOCKERFILE=".arb-contract.Dockerfile"
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def build():
