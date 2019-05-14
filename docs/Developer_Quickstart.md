@@ -359,6 +359,16 @@ Solidity files in the `contracts` folder.
 
     This must be the same mnemonic used in the `truffle-config.js` file.
 
+4. Install arbitrum packages
+
+    Clone Arbitrum packages needed as dependencies:
+
+    ``` bash
+    mkdir compose
+    git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
+    git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
+    git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
+    ```
 4. Run multiple Validators:
 
     Now that the `contract.ao` is exported, we can launch three validators:
