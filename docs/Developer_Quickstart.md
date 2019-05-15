@@ -61,7 +61,8 @@ sudo npm install -g truffle yarn
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
 > to give permissions "equivalent to the `roor` user", but without the `root`
-> user group. This increases the [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
+> user group. The impact is documented in the [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)"
+> article.
 
 ### Full List
 
@@ -93,8 +94,7 @@ or `python3 setup.py install --user` to install without root.
 
 ### Check installation
 
-Verify the installation was successful. You may need to open a new shell if the
-`arbc-truffle-compile` command is not found.
+Verify the installation was successful:
 
 ``` bash
 which arbc-truffle-compile
@@ -103,6 +103,9 @@ which arbc-truffle-compile
 The expected output is:
 
 > `/usr/local/bin/arbc-truffle-compile`
+
+You may need to open a new shell if the
+`arbc-truffle-compile` command is not found.
 
 ## Hello, Arbitrum
 
