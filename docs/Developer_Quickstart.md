@@ -14,7 +14,7 @@ list of dependencies.
 
 ### MacOS
 
-1. Install Python, Node, & Docker using [brew](https://brew.sh/):
+1. Install python3, nodejs, & docker using [brew](https://brew.sh/):
 
     ``` bash
     brew install python3 node docker docker-machine docker-compose
@@ -43,7 +43,7 @@ list of dependencies.
 
 ### Ubuntu 18.04
 
-1. Install Python, Node, Docker, Truffle, and Yarn:
+1. Install python3, nodejs, docker, truffle, and yarn:
 
     ``` bash
     sudo apt-get update
