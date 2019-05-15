@@ -308,7 +308,7 @@ and place your `*.sol` files in the `contracts` folder that is generated.
           networks: {
             arbitrum: {
               provider: ArbProvider.provider(
-                path.resolve(__dirname, 'compiled.json'),
+                __dirname,
                 null,
                 {
                   'mnemonic': mnemonic,
@@ -337,14 +337,15 @@ Solidity files in the `contracts` folder.
     The `contract.ao` is the Arbitrum bytecode compiled from the EVM bytecode in
     `compiled.json`.
 
-2. Export `contract.ao` as Docker image `arb-app`
+2. Export `contract.ao` as Docker image `arb-contract`
 
     Next, the compiled Arbitrum bytecode is passed to the validators by creating
-    the image `arb-app` with the single `contract.ao` file:
+    the image `arb-contract` with the single `contract.ao` file:
 
     ``` bash
-    echo $"FROM scratch\nCOPY contract.ao ./" > .arb-app.Dockerfile
-    docker build -t arb-app -f arb-app.Dockerfile .
+    echo "FROM scratch" > .arb-contract.Dockerfile
+    echo "COPY contract.ao ./" >>.arb-contract.Dockerfile
+    docker build -t arb-contract -f .arb-contract.Dockerfile .
     ```
 
 3. Add the `docker-compose.yml`
@@ -359,6 +360,16 @@ Solidity files in the `contracts` folder.
 
     This must be the same mnemonic used in the `truffle-config.js` file.
 
+4. Install arbitrum packages
+
+    Clone Arbitrum packages needed as dependencies:
+
+    ``` bash
+    mkdir compose
+    git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
+    git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
+    git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
+    ```
 4. Run multiple Validators:
 
     Now that the `contract.ao` is exported, we can launch three validators:
@@ -378,7 +389,7 @@ Solidity files in the `contracts` folder.
 
 2. Import the provider in javascript:
 
-    This example uses a Solditiy contract "Fibonacci" and the `compiled.json`
+    This example uses a Solidity contract "Fibonacci" and the `compiled.json`
     output from running `truffle migrate --network arbitrum`. The `compiled.json`
     is in the top level folder of the project.
 
