@@ -222,8 +222,8 @@ Opcode | Nickname | Semantics
 0x53 | istuple | Pop a value (A) off the Data Stack. If A is an Tuple, Push 1 onto the Data Stack. Otherwise (i.e., if A is an Integer), Push 0 onto the Data Stack.
 &nbsp; | | &nbsp;
 60s: Logging Operations | | &nbsp;
-0x60 | badvise | Pop a Value (A) off the Data Stack. (Additionally, convey A to the Runtime Environment. This is a convenience to give the Runtime Environment a hint about what is happening.) In an AVM emulator, return control to the Runtime Environment.
-0x61 | advise | Pop a Value (A) off the Data Stack. (Additionally, convey A to the Runtime Environment. This is a convenience to give the Runtime Environment a hint about what is happening.)
+0x60 | breakpoint | In an AVM emulator, return control to the Runtime Environment.
+0x61 | log | Pop a Value (A) off the Data Stack, and convey A to the Runtime Environment as a log event.
 &nbsp; | | &nbsp;
 70s: System operations | | &nbsp;
 0x70 | send | Pop a Value (A) off the Data Stack. If A is a 4-tuple ([B, C, D, E]), and C is an Integer, D is an Integer, and E is an Integer, then block until the VM’s balance, as supplied by the Runtime Environment, is greater than or equal to D, then tell the Runtime Environment to publish A as an outgoing message of this VM. Otherwise, raise an Error. (One effect of this is to transfer D units of the currency identified by C from this VM to the Arbitrum identity E.)
