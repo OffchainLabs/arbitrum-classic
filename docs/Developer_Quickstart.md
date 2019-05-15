@@ -337,7 +337,7 @@ Solidity files in the `contracts` folder.
     The `contract.ao` is the Arbitrum bytecode compiled from the EVM bytecode in
     `compiled.json`.
 
-2. Export `contract.ao` as Docker image `arb-app`
+2. Export `contract.ao` as Docker image `arb-contract`
 
     Next, the compiled Arbitrum bytecode is passed to the validators by creating
     the image `arb-app` with the single `contract.ao` file:
