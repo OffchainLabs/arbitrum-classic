@@ -97,14 +97,13 @@ Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
 ``` bash
 git clone --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
 cd arbc-solidity
-pip3 install virtualenv
-python3 -m venv venv
-source venv/bin/activate
 pip3 install -r requirements.txt
-deactivate
 python3 setup.py install
 cd ..
 ```
+
+Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu
+or `python3 setup.py install --user` to install without root.
 
 ### Check installation
 
