@@ -61,8 +61,7 @@ sudo npm install -g truffle yarn
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
 > to give permissions "equivalent to the `roor` user", but without the `root`
-> user group. The impact is documented in the [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)"
-> article.
+> user group. See: [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
 
 ### Full List
 
