@@ -6,7 +6,7 @@ custom_edit_url: https://github.com/OffchainLabs/developer-website/edit/master/d
 
 Get started with Arbitrum by installing the Arbitrum compiler,
 `arbc-truffle-compile`, and its dependencies. Next,
-[run the demo app](#hello-arbitrum) or
+[build and run the demo app](#hello-arbitrum) or
 [port your own dapp](#porting-to-arbitrum).
 
 ## Install Dependencies
@@ -14,14 +14,13 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
 
-    > Node version 8 is recommended. Must be below 12 to use the demo app
-    > because the frontend's web3.js dependency does not work with version 12.
-    > [nvm](https://github.com/nvm-sh/nvm) is recommended if it is necessary
-    > to switch between different node versions rapidly.
-
 ### MacOS
 
 1. Install python3, nodejs, & docker using [brew](https://brew.sh/):
+
+    > Node version < 12 is required for the demo-app frontend (web3.js).
+    > Please use homebrew to install an earlier version or 
+    > [nvm](https://github.com/nvm-sh/nvm) to switch versions.
 
     ``` bash
     brew install python3 node@8 docker docker-machine docker-compose
@@ -50,24 +49,19 @@ list of dependencies.
     npm install -g truffle yarn
     ```
 
-    > Note: we use `sudo` for `docker` and `docker-compose` commands on MacOS
-    > because published container ports are not always accessible on localhost
-    > without it. Building and running docker commands must either be run both
-    > as root or both as user to work properly.
-
 ### Ubuntu 18.04
 
-    Install python3, nodejs, docker, truffle, and yarn:
+Install python3, nodejs, docker, truffle, and yarn:
 
-    ``` bash
-    sudo apt-get update
-    sudo apt-get install -y python3 python3-pip nodejs npm docker docker-compose
-    sudo npm install -g truffle yarn
-    ```
+``` bash
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip nodejs npm docker docker-compose
+sudo npm install -g truffle yarn
+```
 
-    > Note: docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
-    > to give permissions "equivalent to the `roor` user", but without the `root`
-    > user group. This increases the [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
+> Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
+> to give permissions "equivalent to the `roor` user", but without the `root`
+> user group. This increases the [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
 
 ### Full List
 
@@ -153,10 +147,9 @@ yarn
 
 ### Run
 
-1. Check the validators are running
+1. Examine the Validator logs
 
-    You should see the following output from docker-compose at the very end of
-    the log:
+    You should see the following output at the end of the `arb-deploy` output:
 
     ``` txt
     arb-validator-coordinator_1  | Leader is creating VM
