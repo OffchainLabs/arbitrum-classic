@@ -1,9 +1,7 @@
 .DS_Store
-node_modules
-dist/main.js
-compose
-compiled.js
+build/
 compiled.json
+docker-compose.yml
+node_modules/
 package-lock.json
 yarn-error.log
-build/
