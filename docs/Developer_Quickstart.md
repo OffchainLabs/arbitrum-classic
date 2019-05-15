@@ -61,16 +61,20 @@ list of dependencies.
     > user. For details on how this impacts security in your system, see
     > [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
 
-    Run the following commands to use Docker without `sudo`:
+    Run the following command to use Docker without `sudo`:
 
     ``` bash
-    sudo groupadd docker
     sudo usermod -aG docker $USER
     ```
 
+    If the `docker` group does not already exist you can create it with:
+    `sudo groupadd docker`.
+
+    Finally: log out and log back in before using `docker` without `sudo`.
+
     Note: if you skip this step you will need to add `sudo` in front of all
     `docker` and `docker-compose` commands. You will also need to build the
-    app [manually](#build-manually) since `arb-deploy` does not use `sudo`.
+    app [manually](#build-manually).
 
 ### Full List
 
