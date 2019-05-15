@@ -11,84 +11,13 @@ import sys
 PROG='Arbitrum Deploy'
 __version__ = 'Alpha'
 
-# Constants
-CONTRACT_IMAGE='arb-contract'
-CONTRACT_DOCKERFILE='.arb-contract.Dockerfile'
-CONTRACT_DOCKERFILE_CONTENTS='FROM scratch\nCOPY %s ./\n'
-
-# Compile contracts to `contract.ao` and export to Docker and run validators
-def deploy(contract_name, n_validators, mnemonic):
-    # Set current working directory to contract's parent dir
-    cwd = os.path.dirname(contract_name)
-    os.chdir(cwd)
-
-    # Check for compose folder and get dependencies
-    if not os.path.isdir('compose'):
-        run('mkdir compose')
-        run('git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge')
-        run('git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator')
-        run('git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm')
-
-    # Overwrite CONTRACT_DOCKERFILE and build CONTRACT_IMAGE
-    with open(CONTRACT_DOCKERFILE, 'w') as f:
-        f.write(CONTRACT_DOCKERFILE_CONTENTS % contract_name)
-    run('docker build -t %s -f %s .' % CONTRACT_IMAGE, CONTRACT_DOCKERFILE)
-
-    # Overwrite docker-compose.yml
-    contents = (COMPOSE_HEADER % (mnemonic, n_validators)) +
-        [(COMPOSE_VALIDATOR % (i, i)) for i in range(1, n_validators)]
-    with open('docker-compose.yml') as f:
-        f.write(contents)
-
-    # Build and run
-    run('docker-compose up --build')
-
-# Run commands in shell
-def run(command):
-    BOLD='\033[1m'
-    END='\033[0m'
-    print(BOLD + '$ %s\n' % command + END)
-    subprocess.call(command.split())
-
-### ----------------------------------------------------------------------------
-### Command line interface
-### ----------------------------------------------------------------------------
-
-def main():
-    # arb-deploy contract.ao 3
-    parser = argparse.ArgumentParser(
-        prog=PROG,
-        description='Deploy an Arbitrum contract')
-    parser.add_argument('contract', type=argparse.FileType('r'),
-        help='The Arbitrum bytecode contract to deploy.')
-    parser.add_argument('n_validators', type=int,
-        help='The number of validators to deploy.')
-    # Optional
-    parser.add_argument('-m', '--mnemonic', type=str, dest='mnemonic',
-        default='jar deny prosper gasp flush glass core corn alarm treat leg smart',
-        help='Specify the Mnemonic to use (make sure to use "quotes")')
-    parser.set_defaults(clean=False)
-    # Version
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
-    args = parser.parse_args()
-
-    # Deploy
-    deploy(args.contract, args.n_validators, args.mnemonic)
-
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        sys.exit(1)
-
 ### ----------------------------------------------------------------------------
 ### docker-compose.yml template
 ### ----------------------------------------------------------------------------
 
-# Takes the Mnemonic and Number of Validators,
+# Parameters: Mnemonic, Number of validators, Absolute contract path
 COMPOSE_HEADER=(
-"""
-version: '3'
+"""version: '3'
 services:
     arb-ethbridge:
         image: arb-ethbridge
@@ -107,6 +36,8 @@ services:
     arb-validator-coordinator:
         depends_on:
             - arb-ethbridge
+        volumes:
+            - %s:/contract.ao
         build:
 #           context: https://github.com/OffchainLabs/arb-validator.git#alpha
             context: ./compose/arb-validator
@@ -117,15 +48,16 @@ services:
         ports:
             - '1235:1235'
             - '1236:1236'
-
 """)
 
-# Takes the Validator ID twice
+# Parameters: Validator ID, Absolute contract path, Validator ID (again)
 COMPOSE_VALIDATOR=(
 """
     arb-validator%d:
         depends_on:
             - arb-ethbridge
+        volumes:
+            - %s:/contract.ao
         build:
 #           context: https://github.com/OffchainLabs/arb-validator.git#alpha
             context: ./compose/arb-validator
@@ -136,3 +68,67 @@ COMPOSE_VALIDATOR=(
                 ID: %d
 
 """)
+
+### ----------------------------------------------------------------------------
+### Deploy
+### ----------------------------------------------------------------------------
+
+# Compile contracts to `contract.ao` and export to Docker and run validators
+def deploy(contract_name, n_validators, mnemonic, verbose):
+    # Check for compose folder and get dependencies
+    if not os.path.isdir('compose'):
+        run('mkdir compose')
+        run('git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge')
+        run('git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator')
+        run('git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm')
+
+    # Overwrite docker-compose.yml
+    contract = os.path.abspath(contract_name)
+    contents = ((COMPOSE_HEADER % (mnemonic, n_validators, contract)) +
+        ''.join([(COMPOSE_VALIDATOR % (i, contract, i)) for i in range(1, n_validators)]))
+    with open('docker-compose.yml', 'w') as f:
+        f.write(contents)
+
+    # Build and run
+    run('time docker-compose build')
+    run('docker-compose up')
+
+# Run commands in shell
+def run(command):
+    BOLD='\033[1m'
+    END='\033[0m'
+    print(BOLD + '$ %s\n' % command + END)
+    subprocess.call(command.split())
+
+### ----------------------------------------------------------------------------
+### Command line interface
+### ----------------------------------------------------------------------------
+
+def main():
+    # arb-deploy contract.ao 3
+    parser = argparse.ArgumentParser(
+        prog=PROG,
+        description='Deploy an Arbitrum contract')
+    # Required
+    parser.add_argument('contract',
+        help='The Arbitrum bytecode contract to deploy.')
+    parser.add_argument('n_validators', type=int,
+        help='The number of validators to deploy.')
+    # Optional
+    parser.add_argument('-m', '--mnemonic', type=str, dest='mnemonic',
+        default='jar deny prosper gasp flush glass core corn alarm treat leg smart',
+        help='Specify the Mnemonic to use (make sure to use "quotes")')
+    parser.add_argument('--verbose', dest='verbose', action='store_true')
+    parser.add_argument('-v', '--version', dest='version', action='version',
+        version='%(prog)s ' + __version__)
+    args = parser.parse_args()
+
+    # Deploy
+    deploy(args.contract, args.n_validators, args.mnemonic, args.verbose)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(1)
+
