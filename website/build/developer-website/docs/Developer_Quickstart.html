@@ -57,14 +57,14 @@
 <h2><a class="anchor" aria-hidden="true" id="install-dependencies"></a><a href="#install-dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install Dependencies</h2>
 <p>Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.</p>
-<pre><code class="hljs">&gt; Node version 8 is recommended. Must be below 12 to use the demo app
-&gt; because the frontend's web3.js dependency does not work with version 12.
-&gt; [nvm](https://github.com/nvm-sh/nvm) is recommended if it is necessary
-&gt; to switch between different node versions rapidly.
-</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="macos"></a><a href="#macos" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MacOS</h3>
 <ol>
 <li><p>Install python3, nodejs, &amp; docker using <a href="https://brew.sh/">brew</a>:</p>
+<blockquote>
+<p>Node version &lt; 12 is required for the demo-app frontend (web3.js).
+Please use homebrew to install an earlier version or
+<a href="https://github.com/nvm-sh/nvm">nvm</a> to switch versions.</p>
+</blockquote>
 <pre><code class="hljs css language-bash">brew install python3 node@8 docker docker-machine docker-compose
 brew link docker
 brew link docker-compose
@@ -82,27 +82,19 @@ npm config <span class="hljs-built_in">set</span> prefix <span class="hljs-strin
 </code></pre></li>
 <li><p>Install truffle and yarn</p>
 <pre><code class="hljs css language-bash">npm install -g truffle yarn
-</code></pre>
-<blockquote>
-<p>Note: we use <code>sudo</code> for <code>docker</code> and <code>docker-compose</code> commands on MacOS
-because published container ports are not always accessible on localhost
-without it. Building and running docker commands must either be run both
-as root or both as user to work properly.</p>
-</blockquote></li>
+</code></pre></li>
 </ol>
 <h3><a class="anchor" aria-hidden="true" id="ubuntu-1804"></a><a href="#ubuntu-1804" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Ubuntu 18.04</h3>
-<pre><code class="hljs">Install python3, nodejs, docker, truffle, and yarn:
-
-``` bash
-sudo apt-get update
+<p>Install python3, nodejs, docker, truffle, and yarn:</p>
+<pre><code class="hljs css language-bash">sudo apt-get update
 sudo apt-get install -y python3 python3-pip nodejs npm docker docker-compose
 sudo npm install -g truffle yarn
-```
-
-&gt; Note: docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
-&gt; to give permissions &quot;equivalent to the `roor` user&quot;, but without the `root`
-&gt; user group. This increases the [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)&quot;.
 </code></pre>
+<blockquote>
+<p>Docker <a href="https://docs.docker.com/install/linux/linux-postinstall/">can be used without sudo</a>
+to give permissions &quot;equivalent to the <code>roor</code> user&quot;, but without the <code>root</code>
+user group. This increases the <a href="https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface">Docker Daemon Attack Surface</a>&quot;.</p>
+</blockquote>
 <h3><a class="anchor" aria-hidden="true" id="full-list"></a><a href="#full-list" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Full List</h3>
 <p>Here are the important dependencies in case you are not running on a supported OS:</p>
 <ul>
