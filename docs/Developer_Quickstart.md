@@ -4,22 +4,31 @@ title: Arbitrum Developer Quickstart
 custom_edit_url: https://github.com/OffchainLabs/developer-website/edit/master/docs/Developer_Quickstart.md
 ---
 
-Get started with Arbitrum by installing the dependencies, running the demo app,
-and porting your Solidity project.
+Get started with Arbitrum by installing the Arbitrum compiler,
+`arbc-truffle-compile`, and its dependencies. Next,
+[run the demo app](#hello-arbitrum) or
+[port your own dapp](#porting-to-arbitrum).
 
 ## Install Dependencies
 
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
 
+    > Node version 8 is recommended. Must be below 12 to use the demo app
+    > because the frontend's web3.js dependency does not work with version 12.
+    > [nvm](https://github.com/nvm-sh/nvm) is recommended if it is necessary
+    > to switch between different node versions rapidly.
+
 ### MacOS
 
 1. Install python3, nodejs, & docker using [brew](https://brew.sh/):
 
     ``` bash
-    brew install python3 node docker docker-machine docker-compose
+    brew install python3 node@8 docker docker-machine docker-compose
     brew link docker
     brew link docker-compose
+    brew unlink node
+    brew link node@8
     ```
 
 2. Change npm's default directory:
@@ -41,40 +50,24 @@ list of dependencies.
     npm install -g truffle yarn
     ```
 
+    > Note: we use `sudo` for `docker` and `docker-compose` commands on MacOS
+    > because published container ports are not always accessible on localhost
+    > without it. Building and running docker commands must either be run both
+    > as root or both as user to work properly.
+
 ### Ubuntu 18.04
 
-1. Install python3, nodejs, docker, truffle, and yarn:
+    Install python3, nodejs, docker, truffle, and yarn:
 
     ``` bash
     sudo apt-get update
-    sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
+    sudo apt-get install -y python3 python3-pip nodejs npm docker docker-compose
     sudo npm install -g truffle yarn
     ```
 
-2. Use docker without sudo
-
-    Docker [can be installed](https://docs.docker.com/install/linux/linux-postinstall/)
-    to give permissions "equivalent to the `roor` user", but without the `root`
-    user group.
-
-    > Warning: "The docker group grants privileges equivalent to the `root`
-    > user. For details on how this impacts security in your system, see
-    > [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
-
-    Run the following command to use Docker without `sudo`:
-
-    ``` bash
-    sudo usermod -aG docker $USER
-    ```
-
-    If the `docker` group does not already exist you can create it with:
-    `sudo groupadd docker`.
-
-    Finally: log out and log back in before using `docker` without `sudo`.
-
-    Note: if you skip this step you will need to add `sudo` in front of all
-    `docker` and `docker-compose` commands. You will also need to build the
-    app [manually](#build-manually).
+    > Note: docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
+    > to give permissions "equivalent to the `roor` user", but without the `root`
+    > user group. This increases the [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface)".
 
 ### Full List
 
@@ -85,7 +78,6 @@ Here are the important dependencies in case you are not running on a supported O
 - [node and npm](https://nodejs.org/en/)
 - [python3 and pip3](https://www.python.org/downloads/)
 - [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
-- [virtualbox](https://www.virtualbox.org/wiki/Downloads)
 - [yarn](https://yarnpkg.com/en/)
 
 ## Install the Arbitrum Compiler
@@ -120,26 +112,36 @@ The expected output is:
 
 ## Hello, Arbitrum
 
-There are two ways to get started running your first code on Arbitrum.
-Either use the [build script](#build-script) or build the demo app
-[manually](#build-manually).
+### Install
 
-### Build Script
+You only need to run these commands once:
 
-1. Build everything and launch the validators using `arb.py`
+``` bash
+git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
+cd demo-app
+yarn
+```
 
-    > Note: the `node -v` version must be before 12 since web3.js has a conflict
-    > with version 12. Otherwise `yarn` will produce a compile error. We
-    > recommend using [nvm](https://github.com/nvm-sh/nvm) to switch versions.
+### Build
+
+1. Compile Solidity to Arbitrum:
+
+    Truffle will output the compiled contract as `contract.ao` after running:
 
     ``` bash
-    git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
-    cd demo-app
-    yarn
-    python3 arb.py
+    truffle migrate --network arbitrum
     ```
 
-2. Start the frontend
+2. Deploy `contract.ao` to 3 Validators
+
+    > Note: this step may take about 10 minutes the very first time. Subsequent
+    > builds are much, much faster because they are cached as Docker images.
+
+    ``` bash
+    ./arb-deploy contract.ao 3
+    ```
+
+3. Start the frontend
 
     Open another shell and go to `demo-app` and run:
 
@@ -149,66 +151,7 @@ Either use the [build script](#build-script) or build the demo app
 
     The browser will open to [localhost:8080](http://localhost:8080)
 
-### Build Manually
-
-1. Download the demo app
-
-    ``` bash
-    git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
-    cd demo-app
-    ```
-
-    And it's dependencies:
-
-    ``` bash
-    mkdir compose
-    git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
-    git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
-    git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
-    ```
-
-2. Compile the Fibonacci contract:
-
-    ``` bash
-    truffle migrate --network arbitrum
-    arbc-truffle-compile compiled.json contract.ao
-    docker build -t arb-app -f .arb-app.Dockerfile .
-    ```
-
-3. Build
-
-    Note: This step may take about ten minutes the first time. Subsuquent builds
-    are much, much faster because intermediate build images are cached.
-
-    ``` bash
-    docker-compose build
-    ```
-
-    Next build the frontend:
-
-    ``` bash
-    yarn
-    ```
-
-4. Run the Validators:
-
-    Note: this step will run simultaneously with step 5, so you will need to
-    open another bash prompt and continue to step 5 in parallel.
-
-    ``` bash
-    docker-compose up --build
-    ```
-
-5. Run the Web3 frontend
-
-    The browser will open up [localhost:8080](http://localhost:8080) after
-    running the following command:
-
-    ``` bash
-    yarn start
-    ```
-
-### Use the App
+### Run
 
 1. Check the validators are running
 
@@ -312,7 +255,7 @@ and place your `*.sol` files in the `contracts` folder that is generated.
             arbitrum: {
               provider: ArbProvider.provider(
                 __dirname,
-                null,
+                'build/contracts',
                 {
                   'mnemonic': mnemonic,
                 }
@@ -329,57 +272,20 @@ Solidity files in the `contracts` folder.
 
 1. Generate Arbitrum bytecode
 
-    Run the following commands to generate `compiled.json` and `contract.ao`,
-    respectively:
+    Run the following command to generate `compiled.json` and `contract.ao`:
 
     ``` bash
     truffle migrate --network arbitrum
-    arbc-truffle-compile compiled.json contract.ao
     ```
 
-    The `contract.ao` is the Arbitrum bytecode compiled from the EVM bytecode in
-    `compiled.json`.
+2. Run the Validators
 
-2. Export `contract.ao` as Docker image `arb-contract`
-
-    Next, the compiled Arbitrum bytecode is passed to the validators by creating
-    the image `arb-contract` with the single `contract.ao` file:
+    Make sure to copy in the [arb-deploy script](https://github.com/OffchainLabs/demo-app/blob/master/arb-deploy)
+    from the demo app.
 
     ``` bash
-    echo "FROM scratch" > .arb-contract.Dockerfile
-    echo "COPY contract.ao ./" >>.arb-contract.Dockerfile
-    docker build -t arb-contract -f .arb-contract.Dockerfile .
-    ```
-
-3. Add the `docker-compose.yml`
-
-    Copy the `docker-compose.yml` file from the [demo-app](https://github.com/OffchainLabs/demo-app/blob/master/docker-compose.yml)
-    into the root directory and optionally edit the mnemonic:
-
-    ``` bash
-            args:
-                MNEMONIC: "jar deny prosper gasp flush glass core corn alarm treat leg smart"
-    ```
-
-    This must be the same mnemonic used in the `truffle-config.js` file.
-
-4. Install arbitrum packages
-
-    Clone Arbitrum packages needed as dependencies:
-
-    ``` bash
-    mkdir compose
-    git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
-    git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
-    git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
-    ```
-4. Run multiple Validators:
-
-    Now that the `contract.ao` is exported, we can launch three validators:
-
-    ``` bash
-    docker-compose build
-    docker-compose up
+    MNEMONIC="jar deny prosper gasp flush glass core corn alarm treat leg smart"
+    ./arb-deploy contract.ao 3 -m "$MNEMONIC"
     ```
 
 ### Create a Web3 frontend
