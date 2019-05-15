@@ -11,8 +11,10 @@ import sys
 PROG='Arbitrum Deploy'
 __version__ = 'Alpha'
 
+DOCKER_COMPOSE_FILENAME='arb-docker-compose.yml'
+
 ### ----------------------------------------------------------------------------
-### docker-compose.yml template
+### docker-compose template
 ### ----------------------------------------------------------------------------
 
 # Parameters: Mnemonic, Number of validators, Absolute contract path
@@ -83,16 +85,17 @@ def deploy(contract_name, n_validators, mnemonic, verbose):
         run('git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator')
         run('git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm')
 
-    # Overwrite docker-compose.yml
+    # Overwrite DOCKER_COMPOSE_FILENAME
     contract = os.path.abspath(contract_name)
+    compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
     contents = ((COMPOSE_HEADER % (mnemonic, n_validators, contract)) +
         ''.join([(COMPOSE_VALIDATOR % (i, contract, i)) for i in range(1, n_validators)]))
-    with open('docker-compose.yml', 'w') as f:
+    with open(compose, 'w') as f:
         f.write(contents)
 
     # Build and run
-    run('time docker-compose build')
-    run('docker-compose up')
+    run('docker-compose build -f %s' % compose)
+    run('docker-compose up -f %s' % compose)
 
 # Run commands in shell
 def run(command):
@@ -106,7 +109,6 @@ def run(command):
 ### ----------------------------------------------------------------------------
 
 def main():
-    # arb-deploy contract.ao 3
     parser = argparse.ArgumentParser(
         prog=PROG,
         description='Deploy an Arbitrum contract')
