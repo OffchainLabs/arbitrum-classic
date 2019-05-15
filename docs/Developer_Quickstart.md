@@ -343,7 +343,8 @@ Solidity files in the `contracts` folder.
     the image `arb-app` with the single `contract.ao` file:
 
     ``` bash
-    echo $"FROM scratch\nCOPY contract.ao ./" > .arb-contract.Dockerfile
+    echo "FROM scratch" > .arb-contract.Dockerfile
+    echo "COPY contract.ao ./" >>.arb-contract.Dockerfile
     docker build -t arb-contract -f .arb-contract.Dockerfile .
     ```
 
