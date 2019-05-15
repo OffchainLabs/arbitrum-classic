@@ -4,8 +4,6 @@ title: Arbitrum VM informal architecture spec
 sidebar_label: Arbitrum Specification
 ---
 
-Version 3.9; May 3, 2019
-
 This document describes informally the semantics of the Arbitrum VM architecture. This version is simplified, compared to the one described in the Arbitrum paper published in USENIX Security 2018. This version is also tailored to more closely match the Ethereum data formats and instruction set, to ease implementation of an EVM-to-AVM translator.
 
 We expect that some implementations will optimize to save time and space, provided that the result is equivalent to what is described here.
