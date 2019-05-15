@@ -340,7 +340,7 @@ Solidity files in the `contracts` folder.
 2. Export `contract.ao` as Docker image `arb-contract`
 
     Next, the compiled Arbitrum bytecode is passed to the validators by creating
-    the image `arb-app` with the single `contract.ao` file:
+    the image `arb-contract` with the single `contract.ao` file:
 
     ``` bash
     echo "FROM scratch" > .arb-contract.Dockerfile
