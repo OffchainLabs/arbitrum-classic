@@ -344,7 +344,7 @@ Solidity files in the `contracts` folder.
 
     ``` bash
     echo $"FROM scratch\nCOPY contract.ao ./" > .arb-contract.Dockerfile
-    docker build -t arb-app -f .arb-contract.Dockerfile .
+    docker build -t arb-contract -f .arb-contract.Dockerfile .
     ```
 
 3. Add the `docker-compose.yml`
