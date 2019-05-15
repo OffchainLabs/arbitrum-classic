@@ -308,7 +308,7 @@ and place your `*.sol` files in the `contracts` folder that is generated.
           networks: {
             arbitrum: {
               provider: ArbProvider.provider(
-                path.resolve(__dirname, 'compiled.json'),
+                __dirname,
                 null,
                 {
                   'mnemonic': mnemonic,
