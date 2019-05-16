@@ -16,11 +16,11 @@ list of dependencies.
 
 ### MacOS
 
-1. Install python3, nodejs, & docker using [brew](https://brew.sh/):
+1. Install python3, nodejs, & docker using [Homebrew](https://brew.sh/):
 
-    > Node version < 12 is required for the demo-app frontend (web3.js).
-    > Please use homebrew to install an earlier version or 
-    > [nvm](https://github.com/nvm-sh/nvm) to switch versions.
+    > Requires `node -v` version less than 12 for the web3.js frontend in the
+    > demo app. You can use [nvm](https://github.com/nvm-sh/nvm) to switch
+    > between multiple node versions.
 
     ``` bash
     brew install python3 node@8 docker docker-machine docker-compose
@@ -88,8 +88,7 @@ python3 setup.py install
 cd ..
 ```
 
-Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu
-or `python3 setup.py install --user` to install without root.
+Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu.
 
 ### Check installation
 
@@ -102,9 +101,6 @@ which arbc-truffle-compile
 The expected output is:
 
 > `/usr/local/bin/arbc-truffle-compile`
-
-You may need to open a new shell if the
-`arbc-truffle-compile` command is not found.
 
 ## Hello, Arbitrum
 
