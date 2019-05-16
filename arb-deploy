@@ -101,9 +101,13 @@ def deploy(contract_name, n_validators, mnemonic, verbose):
         for i in range(n_validators):
             os.makedirs(states_path + str(i))
 
+    # Check for DOCKER_COMPOSE_FILENAME and halt if running
+    compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
+    if os.path.isfile(compose):
+        run('docker-compose -f %s down' % compose)
+
     # Overwrite DOCKER_COMPOSE_FILENAME
     contract = os.path.abspath(contract_name)
-    compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
     contents = ((COMPOSE_HEADER % (mnemonic, n_validators, contract, states_path + str(0))) +
         ''.join([compose_validator(i, contract, states_path + str(i)) for i in range(1, n_validators)]))
     with open(compose, 'w') as f:

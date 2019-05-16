@@ -1,7 +1,7 @@
 .DS_Store
+arb-docker-compose.yml
 build/
 compiled.json
-docker-compose.yml
 node_modules/
 package-lock.json
 yarn-error.log
