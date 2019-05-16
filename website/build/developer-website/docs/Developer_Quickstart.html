@@ -59,11 +59,11 @@
 list of dependencies.</p>
 <h3><a class="anchor" aria-hidden="true" id="macos"></a><a href="#macos" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MacOS</h3>
 <ol>
-<li><p>Install python3, nodejs, &amp; docker using <a href="https://brew.sh/">brew</a>:</p>
+<li><p>Install python3, nodejs, &amp; docker using <a href="https://brew.sh/">Homebrew</a>:</p>
 <blockquote>
-<p>Node version &lt; 12 is required for the demo-app frontend (web3.js).
-Please use homebrew to install an earlier version or
-<a href="https://github.com/nvm-sh/nvm">nvm</a> to switch versions.</p>
+<p>Requires <code>node -v</code> version less than 12 for the web3.js frontend in the
+demo app. You can use <a href="https://github.com/nvm-sh/nvm">nvm</a> to switch
+between multiple node versions.</p>
 </blockquote>
 <pre><code class="hljs css language-bash">brew install python3 node@8 docker docker-machine docker-compose
 brew link docker
@@ -114,8 +114,7 @@ pip3 install -r requirements.txt
 python3 setup.py install
 <span class="hljs-built_in">cd</span> ..
 </code></pre>
-<p>Note: you may need to run <code>sudo python3 setup.py install</code> if running on Ubuntu
-or <code>python3 setup.py install --user</code> to install without root.</p>
+<p>Note: you may need to run <code>sudo python3 setup.py install</code> if running on Ubuntu.</p>
 <h3><a class="anchor" aria-hidden="true" id="check-installation"></a><a href="#check-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Check installation</h3>
 <p>Verify the installation was successful:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-built_in">which</span> arbc-truffle-compile
@@ -124,8 +123,6 @@ or <code>python3 setup.py install --user</code> to install without root.</p>
 <blockquote>
 <p><code>/usr/local/bin/arbc-truffle-compile</code></p>
 </blockquote>
-<p>You may need to open a new shell if the
-<code>arbc-truffle-compile</code> command is not found.</p>
 <h2><a class="anchor" aria-hidden="true" id="hello-arbitrum"></a><a href="#hello-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello, Arbitrum</h2>
 <h3><a class="anchor" aria-hidden="true" id="install"></a><a href="#install" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install</h3>
 <p>You only need to run these commands once:</p>
