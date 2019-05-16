@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+
+import sys
+
+import solcx
+
+from arbitrum.evm.contract import ArbContract, create_evm_vm
+from arbitrum.marshall import marshall_vm
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3 and len(sys.argv) != 4:
+        raise Exception("Call as compile.py input_file output_file [debug_code_file]")
+
+    compiled = solcx.compile_files([sys.argv[1]])  # , optimize=True
+    output = compiled[list(compiled)[0]]
+    contract = ArbContract({
+        'address': '0xFcC598b3E3575CA937AF7F0E804a8BAb5E92a3f6',
+        'abi': output['abi'],
+        'name': sys.argv[1],
+        'code': output['bin-runtime'],
+        'storage': {}
+    })
+    vm = create_evm_vm([contract])
+    print(len(vm.code))
+
+    with open(sys.argv[2], "wb") as f:
+        marshall_vm(vm, f)
+
+    if len(sys.argv) == 4:
+        with open(sys.argv[3], "w") as f:
+            for instr in vm.code:
+                f.write(f"{instr} {instr.path}")
+                f.write("\n")
