@@ -1,0 +1,7 @@
+eth-utils
+eth-abi
+pyevmasm
+web3
+py-solc-x
+networkx
+nose

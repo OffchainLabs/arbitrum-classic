@@ -10,7 +10,6 @@
 /*.egg-info
 
 *.ao
-*.txt
 *.json
 htmlcov
 .coverage
