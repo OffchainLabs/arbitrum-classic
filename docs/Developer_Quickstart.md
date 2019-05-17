@@ -130,15 +130,15 @@ Either use the [build script](#build-script) or build the demo app
     > recommend using [nvm](https://github.com/nvm-sh/nvm) to switch versions.
 
     ``` bash
-    git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
-    cd demo-app
+    git clone --depth=1 https://github.com/OffchainLabs/demo-dapp-pet-shop.git
+    cd demo-dapp-pet-shop
     yarn
     python3 arb.py
     ```
 
 2. Start the frontend
 
-    Open another shell and go to `demo-app` and run:
+    Open another shell and go to `demo-dapp-pet-shop` and run:
 
     ``` bash
     yarn start
@@ -151,8 +151,8 @@ Either use the [build script](#build-script) or build the demo app
 1. Download the demo app
 
     ``` bash
-    git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
-    cd demo-app
+    git clone --depth=1 https://github.com/OffchainLabs/demo-dapp-pet-shop.git
+    cd demo-dapp-pet-shop
     ```
 
     And it's dependencies:
@@ -164,7 +164,7 @@ Either use the [build script](#build-script) or build the demo app
     git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
     ```
 
-2. Compile the Fibonacci contract:
+2. Compile the Pet Shop contract:
 
     ``` bash
     truffle migrate --network arbitrum
@@ -264,12 +264,9 @@ Either use the [build script](#build-script) or build the demo app
     stacks the return results in an accumulating fashion instead of overwriting
     them at index 0 to N.
 
-3. Lookup a Fibonacci number
+3. Adopt some pets
 
-    For exmaple enter 49 under "Lookup numbers". This is the 50th fibonacci
-    number and should return the correct result:
-
-    > 12586269025
+    Click the Adopt button for the pet(s) of your choice. 
 
 The next step is porting your own solidity code to an Arbitrum app.
 
