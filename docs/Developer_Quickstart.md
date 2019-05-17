@@ -104,7 +104,7 @@ The expected output is:
 
 ## Hello, Arbitrum
 
-Now you'll compile and run a demo dapp on Arbitrum. The dapp is based on 
+Now you'll compile and run a demo dapp on Arbitrum. The dapp is based on
 a simple Pet Shop dapp that is used in a Truffle tutorial.
 
 ### Install
@@ -117,14 +117,24 @@ cd demo-dapp-pet-shop
 yarn
 ```
 
-### Build
+### Build and Run
+
+You'll need to do these steps every time you make a change to the Solidity. For
+this dapp, you do not need to change any Solidity files.
 
 1. Compile Solidity to Arbitrum:
 
-    Truffle will output the compiled contract as `contract.ao` after running:
+    Truffle will output the compiled contract as `contract.ao` as well as a
+    `compiled.json` file needed for the frontend:
 
     ``` bash
     truffle migrate --network arbitrum
+    ```
+
+    Move the `compiled.json` folder into the frontend:
+
+    ``` bash
+    mv compiled.json src
     ```
 
 2. Deploy `contract.ao` to 3 Validators
@@ -189,7 +199,7 @@ yarn
 
 2. Adopt some pets
 
-    The pet shop dapp should now be running in your browser. Choose a pet or two and click the adopt 
+    The pet shop dapp should now be running in your browser. Choose a pet or two and click the adopt
     button to adopt your new animal friend(s).
 
 The next step is porting your own solidity code to an Arbitrum app.
