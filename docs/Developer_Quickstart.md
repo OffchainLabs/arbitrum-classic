@@ -104,13 +104,16 @@ The expected output is:
 
 ## Hello, Arbitrum
 
+Now you'll compile and run a demo dapp on Arbitrum. The dapp is based on 
+a simple Pet Shop dapp that is used in a Truffle tutorial.
+
 ### Install
 
 You only need to run these commands once:
 
 ``` bash
-git clone --depth=1 https://github.com/OffchainLabs/demo-app.git
-cd demo-app
+git clone --depth=1 https://github.com/OffchainLabs/demo-dapp-pet-shop.git
+cd demo-dapp-pet-shop
 yarn
 ```
 
@@ -184,29 +187,10 @@ yarn
     arb-ethbridge_1              | eth_subscribe
     ```
 
-2. Enter number of Fibonacci numbers to generate under "Arbitrum" and "Generate numbers"
+2. Adopt some pets
 
-    For example, 50. Then you should see:
-
-    > Executing transaction
-
-    Followed by:
-
-    > Successfully generated numbers
-
-    The Arbitrum contract, compiled from the Fibonacci.sol contract, calculated
-    the first 50 fibonacci numbers. These can be looked up at indices 0 to 49.
-    Generating again would lookup N fibonacci numbers from 1 to N. This next
-    sequence can be looked up at indices 50 to N-1. This is because the contract
-    stacks the return results in an accumulating fashion instead of overwriting
-    them at index 0 to N.
-
-3. Lookup a Fibonacci number
-
-    For exmaple enter 49 under "Lookup numbers". This is the 50th fibonacci
-    number and should return the correct result:
-
-    > 12586269025
+    The pet shop dapp should now be running in your browser. Choose a pet or two and click the adopt 
+    button to adopt your new animal friend(s).
 
 The next step is porting your own solidity code to an Arbitrum app.
 
