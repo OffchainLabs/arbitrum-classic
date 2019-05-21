@@ -40,10 +40,11 @@ class ArbContract:
         self.functions = []
         self.code = bytes.fromhex(contractInfo["code"][2:])
         self.storage = {}
-        raw_storage = contractInfo["storage"]
-        for item in raw_storage:
-            key = eth_utils.to_int(hexstr=item)
-            self.storage[key] = eth_utils.to_int(hexstr=raw_storage[item])
+        if "storage" in contractInfo:
+            raw_storage = contractInfo["storage"]
+            for item in raw_storage:
+                key = eth_utils.to_int(hexstr=item)
+                self.storage[key] = eth_utils.to_int(hexstr=raw_storage[item])
         self.address = eth_utils.to_int(hexstr=contractInfo["address"])
         for func_interface in self.interface.abi:
             if func_interface["type"] == "function":
@@ -91,16 +92,17 @@ def get_return_abi(func_info):
 
 def convert_log_raw(logVal):
     topics = []
-    for topic in logVal[2:]:
+    for topic in logVal[3:]:
         raw_bytes = eth_utils.int_to_big_endian(topic)
         raw_bytes = (32 - len(raw_bytes)) * b'\x00' + raw_bytes
         topics.append(raw_bytes)
 
-    output_byte_str = sized_byterange.tohex(logVal[0])
+    output_byte_str = sized_byterange.tohex(logVal[1])
     output_bytes = eth_utils.to_bytes(hexstr=output_byte_str)
 
     return {
-        "id": logVal[1],
+        "contract": logVal[0],
+        "id": logVal[2],
         "data": output_bytes,
         "topics": topics
     }

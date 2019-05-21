@@ -389,7 +389,9 @@ def evm_log1(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
-    std.tup.make(2)(vm)
+    get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    std.tup.make(3)(vm)
     add_log(vm)
 
 
@@ -400,7 +402,9 @@ def evm_log2(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
-    std.tup.make(3)(vm)
+    get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    std.tup.make(4)(vm)
     add_log(vm)
 
 
@@ -411,7 +415,9 @@ def evm_log3(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
-    std.tup.make(4)(vm)
+    get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    std.tup.make(5)(vm)
     add_log(vm)
 
 
@@ -426,7 +432,6 @@ def get_next_message(vm):
     chain_state.set_val("inbox")(vm)
     set_chain_state(vm)
     # msg
-
 
 # [code, data]
 @modifies_stack(2, 0)
