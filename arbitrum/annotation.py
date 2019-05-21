@@ -14,7 +14,7 @@ def modifies_stack(pop_count, push_count, func_suffix=None):
         else:
             pushes = push_count
 
-        if func_suffix:
+        if func_suffix is not None:
             func.__name__ = f"{func.__name__}_{func_suffix}"
 
         @functools.wraps(func)
@@ -50,7 +50,7 @@ def modifies_stack_unchecked(pop_count, push_count, func_suffix=None):
         else:
             pushes = push_count
 
-        if func_suffix:
+        if func_suffix is not None:
             func.__name__ = f"{func.__name__}_{func_suffix}"
 
         @functools.wraps(func)

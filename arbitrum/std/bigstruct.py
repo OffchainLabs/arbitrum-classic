@@ -78,6 +78,7 @@ class BigStruct:
             self.recipes = _generate_recipes(self.structure)
         else:
             self.initial_val = value.Tuple([])
+            self.recipes = []
 
     def _reduce(self, trees):
         size = ((len(trees)-1) % 7) + 1

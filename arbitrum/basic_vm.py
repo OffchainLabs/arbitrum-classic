@@ -223,9 +223,14 @@ class BasicVM:
         op1 = self.stack.pop()
         op2 = self.stack.pop()
         if op2 != 0:
-            self.push(op1 // op2)
+            try:
+                self.push(op1 // op2)
+            except:
+                print(op1)
+                print(op2)
+                raise
         else:
-            self.push(0)
+            raise Exception("Can't divide by zero")
 
     def sdiv(self):
         op1 = self.stack.pop()
@@ -234,7 +239,7 @@ class BasicVM:
         if s1 != 0:
             self.stack.push((abs(s0) // abs(s1) * (-1 if s0 * s1 < 0 else 1)) & TT256M1)
         else:
-            self.stack.push(0)
+            raise Exception("Can't divide by zero")
 
     def mod(self):
         op1 = self.stack.pop()
@@ -242,7 +247,7 @@ class BasicVM:
         if op2 != 0:
             self.stack.push(op1 % op2)
         else:
-            self.stack.push(0)
+            raise Exception("Can't mod by zero")
 
     def smod(self):
         op1 = self.stack.pop()
@@ -251,7 +256,7 @@ class BasicVM:
         if s1 == 0:
             self.stack.push((abs(s0) % abs(s1) * (-1 if s0 < 0 else 1)) & TT256M1)
         else:
-            self.stack.push(0)
+            raise Exception("Can't mod by zero")
 
     def exp(self):
         op1 = self.stack.pop()

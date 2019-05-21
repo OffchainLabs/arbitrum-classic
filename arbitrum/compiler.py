@@ -39,6 +39,8 @@ def generate_code_pointers(insns):
             val = insns[i].val
             if isinstance(val, ast.AVMLabeledPos):
                 immediate = code_points[total - val.pc - 1]
+                if immediate.pc != val.pc:
+                    raise Exception(f"Error calculating code points: Non matching pc {immediate.pc} and {val.pc}")
                 assert immediate.pc == val.pc
             else:
                 immediate = val

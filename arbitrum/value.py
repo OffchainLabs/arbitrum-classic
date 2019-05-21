@@ -14,6 +14,9 @@ class IntType:
     def empty_val(self):
         return 0
 
+    def typecode(self):
+        return 0
+
     def accepts(self, val):
         return isinstance(val, (IntType, int))
 
@@ -38,6 +41,9 @@ class TupleType:
 
     def empty_val(self):
         return Tuple([])
+
+    def typecode(self):
+        return 2
 
     def size(self):
         if self.types is None:
@@ -108,6 +114,9 @@ class CodePointType:
 
     def empty_val(self):
         return AVMCodePoint(-2, None, b'')
+
+    def typecode(self):
+        return 1
 
     def accepts(self, val):
         return isinstance(val, CodePointType)
@@ -181,7 +190,7 @@ class TypeStack:
             print(other[:])
             raise Exception(f"Can't merge stack's of different length {len(self)} and {len(other)}")
         for a_type, b_type in zip(self.stack, other.stack):
-            ret.append(arbtype(a_type).common(b_type))
+            ret.append(arbtype(a_type).common(arbtype(b_type)))
         self.stack = ret
 
     def pop(self, pop_type=None):
@@ -226,7 +235,7 @@ class Tuple:
         self.val = tuple(val)
 
     def __repr__(self):
-        return f"Tuple({', '.join([repr(v) for v in self.val])})"
+        return f"Tuple([{', '.join([repr(v) for v in self.val])}])"
 
     def __len__(self):
         return len(self.val)
