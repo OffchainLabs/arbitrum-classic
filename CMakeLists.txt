@@ -12,10 +12,10 @@ file(GLOB KECCAK_SOURCES
 )
 
 add_library(variant INTERFACE)
-target_include_directories(variant INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/variant/include/)
+target_include_directories(variant INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/variant/include/)
 
 add_library(optional INTERFACE)
-target_include_directories(optional INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/optional-lite/include/)
+target_include_directories(optional INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/optional-lite/include/)
 
 
 set(LIB_HEADERS
