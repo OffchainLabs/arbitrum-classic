@@ -238,7 +238,6 @@ def make_bigtuple_type(typ, default_val=None):
             ], lambda vm: [
                 vm.pop(),
                 vm.push(default_val),
-                vm.cast(typ)
             ])
 
         # [source_tuple, start offset, end offset, dest tuple, dest offset]
