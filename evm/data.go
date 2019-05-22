@@ -85,7 +85,7 @@ func getByteArray(val value.Value, index uint64) (*big.Int, error) {
 		secondBig := secondInt.BigInt()
 
 		firstBig = math.U256(firstBig.Lsh(firstBig, uint(extraBytes)))
-		secondBig = secondBig.Rsh(secondBig, uint(256-extraBytes))
+		secondBig = math.U256(secondBig.Rsh(secondBig, uint(256-extraBytes)))
 		return firstBig.Or(firstBig, secondBig), nil
 	}
 }
