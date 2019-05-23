@@ -60,7 +60,7 @@ sudo npm install -g truffle ganache-cli yarn
 ```
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
-> to give permissions "equivalent to the `roor` user", but without the `root`
+> to give permissions "equivalent to the `root` user", but without the `root`
 > user group. See: [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
 
 ### Full List
