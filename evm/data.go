@@ -15,7 +15,9 @@ func getBigTuple(val value.Value, index uint64) (value.Value, error) {
 	if !ok {
 		return nil, errors.New("not in bigtuple format")
 	}
-	if index == 0 {
+	if tup.Len() == 0 {
+		return value.NewInt64Value(0), nil
+	} else if index == 0 {
 		return tup.GetByInt64(7)
 	} else {
 		subTup, err := tup.GetByInt64(int64(index) % 7)
