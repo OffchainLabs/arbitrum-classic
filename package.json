@@ -1,22 +1,28 @@
 {
-  "name": "arb-web3-provider",
+  "name": "arb-ethers-provider",
   "version": "1.0.0",
-  "description": "Arbitrum provider for web3",
+  "description": "Arbitrum provider for ethers",
   "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OffchainLabs/arb-web3-provider.git"
+    "url": "git+https://github.com/OffchainLabs/arb-ethers-provider.git"
   },
   "author": "Offchain Labs",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/OffchainLabs/arb-web3-provider/issues"
+    "url": "https://github.com/OffchainLabs/arb-ethers-provider/issues"
   },
-  "homepage": "https://github.com/OffchainLabs/arb-web3-provider#readme",
+  "homepage": "https://github.com/OffchainLabs/arb-ethers-provider#readme",
   "dependencies": {
     "ethers": "^4.0.27",
     "jayson": "^2.1.2",
     "node-fetch": "^2.3.0",
     "promise-poller": "^1.7.0"
+  },
+  "devDependencies": {
+    "jest": "^24.8.0"
   }
 }
