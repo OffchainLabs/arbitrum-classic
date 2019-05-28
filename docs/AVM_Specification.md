@@ -205,6 +205,7 @@ Opcode | Nickname | Semantics
 0x3c | nop | Do nothing.
 0x3d | errpush | Push a copy of the Error Codepoint onto the Data Stack.
 0x3e | errset | Pop a Value (A) off of the Data Stack. Set the Error Codepoint to A.
+0x3f | error | Raise an Error.
 &nbsp; | | &nbsp;
 40s: Duplication and Exchange Operations | | &nbsp;
 0x40 | dup0 | Pop one value (A) off of the Data Stack. Push A onto the Data Stack. Push A onto the Data Stack.
