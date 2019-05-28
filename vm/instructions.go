@@ -58,6 +58,7 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.NOP, insnNop},
 	{code.ERRPUSH, insnErrPush},
 	{code.ERRSET, insnErrSet},
+	{code.ERROR, insnError},
 
 	{code.DUP0, insnDup0},
 	{code.DUP1, insnDup1},
@@ -657,6 +658,18 @@ func insnErrSet(state *Machine) (StackMods, error) {
 	state.errHandler.Set(rawTarget)
 	state.IncrPC()
 	return mods, err
+}
+
+type ErrorInstructionError struct {
+}
+
+func (w ErrorInstructionError) Error() string {
+	return "Executed error instruction"
+}
+
+func insnError(state *Machine) (StackMods, error) {
+        mods := NewStackMods(0, 0)
+	return mods, ErrorInstructionError{}
 }
 
 func insnJump(state *Machine) (StackMods, error) {

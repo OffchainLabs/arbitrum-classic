@@ -73,6 +73,7 @@ const (
 	NOP
 	ERRPUSH
 	ERRSET
+	ERROR
 )
 
 // 0x40 range.
@@ -151,6 +152,7 @@ var InstructionNames = map[Opcode]string{
 	NOP:        "nop",
 	ERRPUSH:    "errpush",
 	ERRSET:     "errset",
+	ERROR:	    "error",
 
 	DUP0:  "dup0",
 	DUP1:  "dup1",
@@ -215,6 +217,7 @@ var InstructionStackPops = map[Opcode][]byte{
 	NOP:        {},
 	ERRPUSH:    {},
 	ERRSET:     {1},
+	ERROR:	    {},
 
 	DUP0:  {0},
 	DUP1:  {0, 0},
@@ -279,6 +282,7 @@ var InstructionAuxStackPops = map[Opcode][]byte{
 	NOP:        {},
 	ERRPUSH:    {},
 	ERRSET:     {},
+	ERROR:	    {},
 
 	DUP0:  {},
 	DUP1:  {},
