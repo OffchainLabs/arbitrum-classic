@@ -112,7 +112,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
     # Check for DOCKER_COMPOSE_FILENAME and halt if running
     compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
     if os.path.isfile(compose):
-        run('docker-compose -f %s down' % compose)
+        run('sudo docker-compose -f %s down' % compose)
 
     # Overwrite DOCKER_COMPOSE_FILENAME
     contract = os.path.abspath(contract_name)
@@ -122,8 +122,8 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         f.write(contents)
 
     # Build and run
-    run('docker-compose -f %s build' % compose)
-    run('docker-compose -f %s up' % compose)
+    run('sudo docker-compose -f %s build' % compose)
+    run('sudo docker-compose -f %s up' % compose)
 
 # Run commands in shell
 def run(command):
