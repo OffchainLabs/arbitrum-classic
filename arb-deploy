@@ -107,7 +107,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
     states_path = os.path.abspath(VALIDATOR_STATE_DIRNAME)
     for i in range(n_validators):
         if not os.path.isdir(VALIDATOR_STATE_DIRNAME + str(i)):
-            os.makedirs(states_path + str(i), mode=0777)
+            os.makedirs(states_path + str(i))
 
     # Check for DOCKER_COMPOSE_FILENAME and halt if running
     compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
@@ -162,12 +162,13 @@ def main():
 
     # Set verbose to Ganache parameter
     verboseFlag = '-q'
-    if args.verbose == 1:
-        verboseFlag = ''
-    elif args.verbose == 2:
-        verboseFlag = '-v'
-    elif args.verbose > 2:
-        verboseFlag = '-v --debug'
+    if args.verbose is not None:
+        if args.verbose == 1:
+            verboseFlag = ''
+        elif args.verbose == 2:
+            verboseFlag = '-v'
+        elif args.verbose > 2:
+            verboseFlag = '-v --debug'
 
     # Deploy
     deploy(args.contract, args.n_validators, args.mnemonic, verboseFlag,
