@@ -103,11 +103,11 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         run('git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator')
         run('git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm')
 
-    # Check for first VALIDATOR_STATE_DIRNAME
+    # Create VALIDATOR_STATE_DIRNAME s if they don't exist
     states_path = os.path.abspath(VALIDATOR_STATE_DIRNAME)
-    if not os.path.isdir(VALIDATOR_STATE_DIRNAME + str(0)):
-        for i in range(n_validators):
-            os.makedirs(states_path + str(i))
+    for i in range(n_validators):
+        if not os.path.isdir(VALIDATOR_STATE_DIRNAME + str(i)):
+            os.makedirs(states_path + str(i), mode=0777)
 
     # Check for DOCKER_COMPOSE_FILENAME and halt if running
     compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
