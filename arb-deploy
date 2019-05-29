@@ -46,7 +46,7 @@ services:
             - arb-ethbridge
         volumes:
             - %s:/home/user/state
-            - %s:/home/user/state/contract.ao
+            - %s:/home/user/contract.ao
         image: arb-validator
         build:
 #           context: https://github.com/OffchainLabs/arb-validator.git#alpha
@@ -74,7 +74,7 @@ COMPOSE_VALIDATOR=(
             - arb-validator-coordinator
         volumes:
             - %s:/home/user/state
-            - %s:/home/user/state/contract.ao
+            - %s:/home/user/contract.ao
         image: arb-validator
         environment:
             WAIT_FOR: 'arb-validator-coordinator:1236'
