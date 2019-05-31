@@ -383,5 +383,6 @@ class BasicVM:
         self.atomic_count -= 1
 
     def cast(self, typ):
-        if not typ.accepts_cast(self.stack[0]):
-            raise Exception(f"Tried to perform incorrect cast of {self.stack[0]} to {typ}")
+        pass
+        # if not typ.accepts_cast(self.stack[0]):
+        #     raise Exception(f"Tried to perform incorrect cast of {self.stack[0]} to {typ}")
