@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/OffchainLabs/arb-ethers-provider#readme",
   "dependencies": {
-    "ethers": "^4.0.27",
+    "ethers": "^4.0.28",
     "jayson": "^2.1.2",
     "node-fetch": "^2.3.0",
     "promise-poller": "^1.7.0"
