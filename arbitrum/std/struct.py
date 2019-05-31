@@ -8,7 +8,6 @@ class Struct:
     # Makes a structmap object describing a struct
     # with the specified field names
     def __init__(self, name, fieldNames):
-        self.typ = value.NamedType(name)
         self.field_index = {}
         types = []
         for i, val in enumerate(fieldNames):
@@ -20,6 +19,7 @@ class Struct:
                 self.field_index[val] = i
 
         self.array = Array(types)
+        self.typ = value.NamedType(name, self.array.typ)
 
     def __len__(self):
         return len(self.field_index)

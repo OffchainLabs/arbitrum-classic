@@ -9,8 +9,8 @@ call_frame = std.struct.Struct("call_frame", [
     ("memory", std.sized_byterange.sized_byterange.typ),           # transient
     ('contract_state', types.contract_state.typ),   # record
     ("contracts", types.contract_store.typ),        # record
-    ("message", types.message.typ),          # transient
-    ("return_data", std.sized_byterange.sized_byterange.typ),       # transient
+    ("local_exec_state", types.local_exec_state.typ),  # transient
+    ("return_data", std.sized_byterange.sized_byterange.typ),  # transient
     ("sent_queue", std.queue_tup.typ),       # record
     ("logs", std.stack_tup.typ),             # record
     "parent_frame",
@@ -107,7 +107,7 @@ def merge(vm):
     [
         call_frame.typ,
         value.IntType(),
-        types.message.typ,
+        types.local_exec_state.typ,
         value.CodePointType()
     ], [call_frame.typ]
 )
@@ -122,7 +122,7 @@ def spawn(vm):
     # updated_frame parent_frame message return_location
     call_frame.set_val("parent_frame")(vm)
     # updated_frame message return_location
-    call_frame.set_val("message")(vm)
+    call_frame.set_val("local_exec_state")(vm)
     # frame return_location
     call_frame.set_val("return_location")(vm)
     # frame

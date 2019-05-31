@@ -2,7 +2,7 @@ from unittest import TestCase
 import random
 import eth_utils
 
-from arbitrum.std import byterange
+from arbitrum.std import byterange, sized_byterange
 from arbitrum import VM
 
 
@@ -51,14 +51,33 @@ class TestByteRange(TestCase):
 
     def test_get8(self):
         data = bytearray(random.getrandbits(8) for _ in range(100))
-        vm = VM()
-        vm.push(byterange.frombytes(data))
+        br = byterange.frombytes(data)
         for i in range(100):
-            vm.push(i)
-            vm.dup1()
-            byterange.get8(vm)
-            self.assertEqual(data[i], vm.stack[0])
-            vm.pop()
+            with self.subTest(index=i):
+                vm = VM()
+                vm.push(br)
+                vm.push(i)
+                vm.dup1()
+                byterange.get8(vm)
+                self.assertEqual(data[i], vm.stack[0])
+
+    def test_set8(self):
+        data = bytearray(random.getrandbits(8) for _ in range(100))
+        print()
+        print(data.hex())
+        br = byterange.frombytes(data)
+        update_bytes = random.getrandbits(8)
+        for i in range(100):
+            with self.subTest(index=i):
+                solution = data[:]
+                solution[i] = update_bytes
+                vm = VM()
+                vm.push(update_bytes)
+                vm.push(i)
+                vm.push(br)
+                byterange.set_val8(vm)
+                print(i, update_bytes, sized_byterange.tohex([vm.stack[0], 100]))
+                self.assertEqual(byterange.frombytes(solution), vm.stack[0])
 
     def test_frombytes(self):
         data = bytearray(random.getrandbits(8) for _ in range(500))

@@ -7,8 +7,6 @@ def make_stack_type(typ):
         "prev",
         ("val", typ)
     ])
-    stack_type.update_type('prev', stack_type.typ)
-    # stack_type.fields[]
 
     class Stack:
         # [] -> [stack]
@@ -38,6 +36,7 @@ def make_stack_type(typ):
         def pop(vm):
             vm.dup0()
             stack_type.get("prev")(vm)
+            vm.cast(stack_type.typ)
             vm.swap1()
             stack_type.get("val")(vm)
 

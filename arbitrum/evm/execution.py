@@ -44,7 +44,7 @@ def _perform_call(vm, dispatch_func, call_num):
     vm.eq()
 
     vm.ifelse(lambda vm: [
-        vm.halt()
+        vm.error()
     ], lambda vm: [
         vm.jump()
     ])
@@ -67,7 +67,7 @@ def _perform_call(vm, dispatch_func, call_num):
 
 @noreturn
 def setup_initial_call(vm, dispatch_func):
-    # msg
+    # contractID message
     vm.set_exception_handler(invalid_tx)
     os.get_chain_state(vm)
     os.chain_state.get("contracts")(vm)
@@ -75,9 +75,7 @@ def setup_initial_call(vm, dispatch_func):
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
-    os.setup_call_message(vm)
     
-    # contractID message
     _perform_call(vm, dispatch_func, "initial")
 
     vm.clear_exception_handler()
@@ -126,7 +124,7 @@ def call(vm, dispatch_func, call_num, contract_id):
         vm.tnewn(0),
         vm.eq(),
         vm.ifelse(lambda vm: [
-            vm.halt()
+            vm.error()
         ], lambda vm: [
             vm.dup0(),
             os.evm_call_to_send(vm),
@@ -189,7 +187,7 @@ def staticcall(vm, dispatch_func, call_num, contract_id):
     vm.tnewn(0)
     vm.eq()
     vm.ifelse(lambda vm: [
-        vm.halt()
+        vm.error()
     ], lambda vm: [
         vm.dup0(),
         os.evm_call_to_send(vm),

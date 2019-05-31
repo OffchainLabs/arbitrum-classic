@@ -4,7 +4,7 @@ from ..std.struct import Struct
 from ..annotation import modifies_stack
 from ..vm import VM
 from .. import value
-from .types import contract_store, contract_state, message
+from .types import contract_store, contract_state, message, message_blockchain_data, message_data, local_exec_state
 from . import call_frame
 
 # Blockchain Simulator
@@ -19,12 +19,88 @@ from . import call_frame
 # sent_queue - per call frame
 # logs - per call frame
 
+global_exec_state = Struct("global_execution_state", [
+    ("origin", value.IntType()),
+    ("block_number", value.IntType()),
+    ("timestamp", value.IntType()),
+    ("txhash", value.IntType()),
+    ("current_msg", message.typ)
+])
+
 chain_state = Struct("chain_state", [
     ("contracts", contract_store.typ),
     ("inbox", std.inboxctx.typ),
     ("call_frame", call_frame.typ),
+    ("sender_seq", std.keyvalue_int_int.typ),
+    ("global_exec_state", global_exec_state.typ),
     "scratch"
 ])
+
+
+def make_global_exec_state():
+    vm = VM()
+    vm.push(0)
+    vm.push(0)
+    vm.push(0)
+    vm.push(0)
+    message.new(vm)
+
+    global_exec_state.new(vm)
+    global_exec_state.set_val("current_msg")(vm)
+    global_exec_state.set_val("origin")(vm)
+    global_exec_state.set_val("block_number")(vm)
+    global_exec_state.set_val("timestamp")(vm)
+    global_exec_state.set_val("txhash")(vm)
+    return vm.stack.items[0]
+
+
+@modifies_stack(
+    [message.typ, global_exec_state.typ],
+    [global_exec_state.typ]
+)
+def update_global_execution_state(vm):
+    # msg exec_state
+    vm.dup0()
+    vm.auxpush()
+
+    vm.swap1()
+    vm.dup0()
+    global_exec_state.get("timestamp")(vm)
+    vm.swap1()
+    global_exec_state.get("block_number")(vm)
+    vm.swap2()
+    # msg old_timestamp old_block_number
+
+    message.get("data")(vm)
+    vm.cast(message_blockchain_data.typ)
+    vm.dup0()
+    message_blockchain_data.get("timestamp")(vm)
+    # timestamp msg old_timestamp old_block_number
+
+    vm.swap1()
+    vm.swap2()
+    std.arith.max(vm)
+    vm.swap2()
+    # old_block_number msg timestamp
+
+    vm.dup1()
+    message_blockchain_data.get("block_number")(vm)
+    std.arith.max(vm)
+    vm.swap1()
+    # msg block_number timestamp
+    message_blockchain_data.get("txhash")(vm)
+    vm.auxpop()
+    vm.dup0()
+    message.get("sender")(vm)
+
+    # origin msg txhash block_number timestamp
+    vm.push(global_exec_state.make())
+    vm.cast(global_exec_state.typ)
+    global_exec_state.set_val("origin")(vm)
+    global_exec_state.set_val("current_msg")(vm)
+    global_exec_state.set_val("txhash")(vm)
+    global_exec_state.set_val("block_number")(vm)
+    global_exec_state.set_val("timestamp")(vm)
 
 
 @modifies_stack([], [chain_state.typ])
@@ -38,20 +114,41 @@ def set_chain_state(vm):
     vm.rset()
 
 
+@modifies_stack([], [value.IntType()])
+def message_origin(vm):
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
+    global_exec_state.get("origin")(vm)
+
+
 @modifies_stack([], [call_frame.typ])
 def get_call_frame(vm):
     get_chain_state(vm)
     chain_state.get("call_frame")(vm)
 
 
+@modifies_stack([], [value.IntType()])
+def get_timestamp(vm):
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
+    global_exec_state.get("timestamp")(vm)
+
+
+@modifies_stack([], [value.IntType()])
+def get_block_number(vm):
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
+    global_exec_state.get("block_number")(vm)
+
+
 @modifies_stack(0, 0)
 def add_message_to_wallet(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("message")(vm)
+    call_frame.call_frame.get("local_exec_state")(vm)
     vm.dup0()
-    message.get("amount")(vm)
+    local_exec_state.get("amount")(vm)
     vm.swap1()
-    message.get("type")(vm)
+    local_exec_state.get("type")(vm)
     # amount type
     get_call_frame(vm)
     call_frame.call_frame.get("contract_state")(vm)
@@ -83,7 +180,11 @@ def create_initial_evm_state(contracts):
         std.keyvalue.set_val(vm)
 
     std.inboxctx.new(vm)
+    std.keyvalue_int_int.new(vm)
+    vm.push(make_global_exec_state())
     chain_state.new(vm)
+    chain_state.set_val("global_exec_state")(vm)
+    chain_state.set_val("sender_seq")(vm)
     chain_state.set_val("inbox")(vm)
     chain_state.set_val("contracts")(vm)
     return vm.stack.items[0]
@@ -200,8 +301,8 @@ def balance_get(vm):
 @modifies_stack([], [std.sized_byterange.sized_byterange.typ])
 def call_message_data(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("message")(vm)
-    message.get("data")(vm)
+    call_frame.call_frame.get("local_exec_state")(vm)
+    local_exec_state.get("data")(vm)
     vm.cast(std.sized_byterange.sized_byterange.typ)
 
 
@@ -217,25 +318,31 @@ def message_data_load(vm):
     std.sized_byterange.get(vm)
 
 
+@modifies_stack(0, [std.byterange.typ])
+def message_data_raw(vm):
+    call_message_data(vm)
+    std.sized_byterange.sized_byterange.get("data")(vm)
+
+@modifies_stack([
+    value.IntType(),
+    value.IntType(),
+    value.IntType()
+], 0)
+def message_data_copy(vm):
+    evm_copy_to_memory(vm, message_data_raw)
+
 @modifies_stack(0, 1)
 def message_value(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("message")(vm)
-    message.get("amount")(vm)
+    call_frame.call_frame.get("local_exec_state")(vm)
+    local_exec_state.get("amount")(vm)
 
 
 @modifies_stack(0, 1)
 def message_caller(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("message")(vm)
-    message.get("sender")(vm)
-
-
-@modifies_stack(0, 1)
-def message_timestamp(vm):
-    get_call_frame(vm)
-    call_frame.call_frame.get("message")(vm)
-    message.get("timestamp")(vm)
+    call_frame.call_frame.get("local_exec_state")(vm)
+    local_exec_state.get("sender")(vm)
 
 
 # [index]
@@ -262,6 +369,21 @@ def memory_store(vm):
     std.sized_byterange.set_val(vm)
     set_current_memory(vm)
 
+# [index, value]
+@modifies_stack([value.IntType(), value.IntType()], [])
+def memory_store8(vm):
+    get_call_frame(vm)
+    call_frame.call_frame.get("memory")(vm)
+    std.sized_byterange.set_val8(vm)
+    set_current_memory(vm)
+
+# # [index, value]
+# @modifies_stack([value.IntType(), value.IntType()], [])
+# def memory_store(vm):
+#     get_call_frame(vm)
+#     call_frame.call_frame.get("memory")(vm)
+#     std.sized_byterange.set_val(vm)
+#     set_current_memory(vm)
 
 # [index]
 @modifies_stack([value.IntType()], [value.IntType()])
@@ -421,40 +543,176 @@ def evm_log3(vm):
     add_log(vm)
 
 
-@modifies_stack(0, 1)
-def get_next_message(vm):
-    get_chain_state(vm)
-    chain_state.get("inbox")(vm)
-    std.inboxctx.getmsg(vm)
-    # msg updatedctx
+# [offset, length, topic0, topic1, topic2]
+@modifies_stack([value.IntType()]*5, 0)
+def evm_log4(vm):
+    vm.dup1()
     vm.swap1()
+    get_mem_segment(vm)
+    std.tup.make(2)(vm)
+    get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
+    std.tup.make(6)(vm)
+    add_log(vm)
+
+
+# [sender, sequence_num] -> # [approved]
+@modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
+def check_message_sequence(vm):
+    vm.dup1()
     get_chain_state(vm)
-    chain_state.set_val("inbox")(vm)
-    set_chain_state(vm)
+    chain_state.get("sender_seq")(vm)
+    std.keyvalue_int_int.get(vm)
+    # [current_seq, sender, seq]
+    vm.swap1()
+    vm.swap2()
+    # [seq, current_seq, sender]
+    vm.push(2)
+    vm.dup1()
+    vm.mod()
+    # [seq % 2, seq, current_seq, sender]
+    vm.swap1()
+    vm.push(2)
+    vm.swap1()
+    vm.div()
+    # [seq / 2, seq % 2, current_seq, sender]
+    vm.swap2()
+    vm.swap1()
+    # [seq % 2, current_seq, seq / 2, sender]
+    vm.debug()
+    vm.ifelse(lambda vm: [
+        # sequence must be incremented
+        # [current_seq, seq / 2, sender]
+        vm.push(1),
+        vm.add(),
+        vm.dup1(),
+        vm.eq()
+        # [seq / 2 == current_seq + 1, seq / 2, sender]
+    ], lambda vm: [
+        # sequence must be greater
+        # [current_seq, seq / 2, sender]
+        vm.dup1(),
+        vm.gt()
+        # [seq / 2 > current_seq, seq / 2, sender]
+    ])
+
+    # [seq_should_update, seq / 2, sender]
+    vm.ifelse(lambda vm: [
+        # [seq / 2, sender]
+        get_chain_state(vm),
+        chain_state.get("sender_seq")(vm),
+        std.keyvalue_int_int.set_val(vm),
+        get_chain_state(vm),
+        chain_state.set_val("sender_seq")(vm),
+        set_chain_state(vm),
+        vm.push(1)
+    ], lambda vm: [
+        std.sized_byterange.new(vm),
+        vm.push(4),
+        log_func_result(vm),
+        vm.pop(),
+        vm.pop(),
+        vm.push(0),
+    ])
+
+
+@modifies_stack(0, [value.IntType(), local_exec_state.typ])
+def get_next_message(vm):
+    vm.push(value.Tuple([1, value.Tuple([])]))
+    vm.while_loop(lambda vm: [
+        vm.dup0(),
+        vm.tgetn(0)
+    ], lambda vm: [
+        vm.pop(),
+        get_chain_state(vm),
+        chain_state.get("inbox")(vm),
+        std.inboxctx.getmsg(vm),
+        vm.cast(message.typ),
+        # msg updatedctx
+        vm.swap1(),
+        get_chain_state(vm),
+        chain_state.set_val("inbox")(vm),
+        set_chain_state(vm),
+
+        # msg
+        get_chain_state(vm),
+        chain_state.get("global_exec_state")(vm),
+        vm.dup1(),
+        update_global_execution_state(vm),
+        get_chain_state(vm),
+        chain_state.set_val("global_exec_state")(vm),
+        set_chain_state(vm),
+
+        # msg
+        vm.dup0(),
+        message.get("data")(vm),
+        vm.cast(message_blockchain_data.typ),
+        message_blockchain_data.get("data")(vm),
+        vm.cast(message_data.typ),
+        message_data.get("sequence_num")(vm),
+        vm.dup1(),
+        message.get("sender")(vm),
+        check_message_sequence(vm),
+        vm.iszero(),
+        # valid_seq msg
+        std.tup.make(2)(vm)
+    ])
+    vm.tgetn(1)
+
     # msg
+    vm.dup0()
+    message.get("data")(vm)
+    vm.cast(message_blockchain_data.typ)
+    message_blockchain_data.get("data")(vm)
+    vm.cast(message_data.typ)
+    vm.dup0()
+    # data data message
+    message_data.get("contract_id")(vm)
+    # contractID data message
+    vm.swap1()
+    message_data.get("data")(vm)
+    # calldata contractID message
+    vm.swap1()
+    vm.swap2()
+    # message calldata contractID
+
+    vm.dup0()
+    message.get("sender")(vm)
+    # sender message calldata contractID
+    vm.dup1()
+    message.get("amount")(vm)
+    # amount sender message calldata contractID
+    vm.swap2()
+    message.get("type")(vm)
+    # type sender amount calldata contractID
+
+    vm.push(local_exec_state.make())
+    vm.cast(local_exec_state.typ)
+    local_exec_state.set_val("type")(vm)
+    local_exec_state.set_val("sender")(vm)
+    local_exec_state.set_val("amount")(vm)
+    local_exec_state.set_val("data")(vm)
+
+    vm.swap1()
+    # contractID message
+
 
 # [code, data]
 @modifies_stack(2, 0)
 def log_func_result(vm):
     vm.swap1()
     # [data, code]
-    vm.push(224)
-    vm.push(0)
-    message_data_load(vm)
-    std.bitwise.shift_right(vm)
-    # [funcid, data, code]
-
-    get_call_frame(vm)
-    call_frame.call_frame.get("contractID")(vm)
-    # [contractid, funcid, data, code]
-
     get_call_frame(vm)
     call_frame.call_frame.get("logs")(vm)
     std.stack_tup.new(vm)
     set_current_logs(vm)
-    # [logs, contractid, funcid, data, code]
 
-    std.tup.make(5)(vm)
+    get_chain_state(vm)
+    chain_state.get("global_exec_state")(vm)
+    global_exec_state.get("current_msg")(vm)
+
+    # [msg, logs, data, code]
+    std.tup.make(4)(vm)
     vm.log()
 
 
@@ -512,27 +770,6 @@ def copy_return_data(vm):
     vm.swap1()
     # [destOffset, offset, length]
     evm_copy_to_memory(vm, get_current_return_data_raw)
-
-
-@modifies_stack([message.typ], [value.IntType(), message.typ])
-def setup_call_message(vm):
-    # message
-    vm.dup0()
-    message.get("data")(vm)
-    vm.cast(value.TupleType([value.IntType(), value.ValueType()]))
-    vm.dup0()
-    # data data message
-    vm.tgetn(0)
-    # contractID data message
-    vm.swap1()
-    vm.tgetn(1)
-    # calldata contractID message
-    vm.swap1()
-    vm.swap2()
-    # message calldata, contractID
-    message.set_val("data")(vm)
-    vm.swap1()
-    # contractID message
 
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]

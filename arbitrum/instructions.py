@@ -47,6 +47,7 @@ OP_CODES = [
     ('nop', 0x3c, [], []),
     ('errpush', 0x3d, [ValueType()], []),
     ('errset', 0x3e, [ValueType()], []),
+    ('error', 0x3f, [], []),
 
     # Duplication and Exchange Operations
     ('dup0', 0x40, [ValueType()], [ValueType(), ValueType()]),

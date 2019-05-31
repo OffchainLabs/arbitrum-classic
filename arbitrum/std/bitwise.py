@@ -78,3 +78,28 @@ def flip_endianness_impl(vm, numBytes):
         vm.push(mod)
         vm.mul()
         vm.bitwise_or()
+
+# [int, index, byte]
+@modifies_stack([value.IntType(), value.IntType(), value.IntType()], [value.IntType()])
+def set_byte(vm):
+    vm.dup0()
+    vm.dup2()
+    # [index, int, int, index, byte]
+    vm.byte()
+    # # [orig, int, index, byte]
+    vm.auxpush()
+    vm.swap2()
+    vm.push(0xff)
+    vm.bitwise_and()
+    vm.auxpop()
+    # # [orig, byte, index, int]
+    vm.bitwise_xor()
+    vm.swap1()
+    vm.push(8)
+    vm.mul()
+    vm.push(248)
+    vm.sub()
+    # # [bit index, updated_byte, int]
+    vm.swap1()
+    shift_left(vm)
+    vm.bitwise_xor()

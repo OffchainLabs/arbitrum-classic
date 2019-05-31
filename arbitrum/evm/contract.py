@@ -8,12 +8,12 @@ from ..std import sized_byterange, stack
 
 
 def generate_func(func_name, interface, address):
-    def impl(self, *args):
+    def impl(self, seq, *args):
         func = getattr(interface.functions, func_name)
         msg_data = sized_byterange.frombytes(
             bytes.fromhex(func(*args)._encode_transaction_data()[2:])
         )
-        return value.Tuple([eth_utils.to_int(hexstr=address), msg_data])
+        return value.Tuple([msg_data, eth_utils.to_int(hexstr=address), seq])
 
     return impl
 
@@ -135,6 +135,7 @@ REVERT_CODE = 0
 INVALID_CODE = 1
 RETURN_CODE = 2
 STOP_CODE = 3
+INVALID_SEQUENCE_CODE = 4
 
 
 # [logs, contract_num, func_code, return_val, return_code]
@@ -144,17 +145,20 @@ def create_output_handler(contracts):
         abis[contract.address] = contract
 
     def output_handler(val):
-        return_code = val[4]
-        contract_num = val[1]
+        return_code = val[3]
+
+        contract_num = val[0][0][0][1]
+        input_hex = sized_byterange.tohex(val[0][0][0][0])
+        func_id = int(input_hex[2:10], 16)
+
         try:
-            func_interface = abis[contract_num].funcs[val[2]]
+            func_interface = abis[contract_num].funcs[func_id]
         except KeyError:
-            print(f"Unknown function return code {return_code}")
+            print(f"Unknown function returned {return_code}")
             return True
 
         if return_code == RETURN_CODE:
-            return_val = val[3]
-            output_byte_str = sized_byterange.tohex(return_val)
+            output_byte_str = sized_byterange.tohex(val[2])
             output_bytes = eth_utils.to_bytes(hexstr=output_byte_str)
             decoded = eth_abi.decode_single(
                 get_return_abi(func_interface),
@@ -163,20 +167,22 @@ def create_output_handler(contracts):
             print(f"{func_interface['name']} returned {decoded}")
             logs = [
                 decode_log(convert_log_raw(logVal), abis[contract_num])
-                for logVal in stack.to_list(val[0])
+                for logVal in stack.to_list(val[1])
             ]
             for log in logs:
                 print(f"{func_interface['name']} logged event {log['name']}{log['args']}")
         elif return_code == REVERT_CODE:
-            output_byte_str = sized_byterange.tohex(val[3])
+            output_byte_str = sized_byterange.tohex(val[2])
             print(f"{func_interface['name']} failed with revert returning {output_byte_str}")
         elif return_code == INVALID_CODE:
             print(f"{func_interface['name']} failed with invalid op")
+        elif return_code == INVALID_SEQUENCE_CODE:
+            print(f"{func_interface['name']} failed with invalid sequence")
         elif return_code == STOP_CODE:
             print(f"{func_interface['name']} completed successfully")
             logs = [
                 decode_log(convert_log_raw(logVal), abis[contract_num])
-                for logVal in stack.to_list(val[0])
+                for logVal in stack.to_list(val[1])
             ]
             for log in logs:
                 print(f"{func_interface['name']} logged event {log['name']}{log['args']}")

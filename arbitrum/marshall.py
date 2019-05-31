@@ -16,6 +16,10 @@ def marshall_op(val, file):
         op_type = 0
         file.write(op_type.to_bytes(1, byteorder='little', signed=False))
         file.write(val.op_code.to_bytes(1, byteorder='little', signed=False))
+    elif isinstance(val, int):
+        op_type = 0
+        file.write(op_type.to_bytes(1, byteorder='little', signed=False))
+        file.write(val.to_bytes(1, byteorder='little', signed=False))
     elif isinstance(val, ImmediateOp):
         op_type = 1
         file.write(op_type.to_bytes(1, byteorder='little', signed=False))

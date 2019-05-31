@@ -364,13 +364,48 @@ def get8(vm):
     vm.swap1()
     vm.push(8)
     vm.add()
+    # [index % 32 + 8, index / 32, tuple]
     vm.swap2()
     byterange.get("bigtuple")(vm)
     bigtuple_int.get(vm)
+    # [val, index % 32 + 8]
     _get_second_half(vm)
     vm.push(8)
     bitwise.n_lowest_mask(vm)
     vm.bitwise_and()
+
+# [index, byte, old number] -> [new number]
+@modifies_stack([IntType(), IntType(), IntType()], [IntType()])
+def _update_byte(vm):
+    vm.swap1()
+    vm.swap2()
+    # [int, index, byte]
+    bitwise.set_byte(vm)
+
+
+# [tuple, index, value]
+@modifies_stack([typ, IntType(), IntType()], [typ])
+def set_val8(vm):
+    update_byte_closure = make_closure(_update_byte, 2)
+
+    vm.swap1()
+    _mod_div_impl(vm)
+    # [index / 32, index % 32, tuple, value]
+    vm.auxpush()
+    # [index % 32, tuple, value]
+    vm.swap1()
+    vm.swap2()
+    vm.swap1()
+    # [index % 32, value, tuple]
+    update_byte_closure.new(vm)
+    # [closure, tuple]
+    vm.swap1()
+    byterange.get("bigtuple")(vm)
+    # [tuple, closure]
+    vm.auxpop()
+    vm.swap1()
+    bigtuple_int.read_modify_write(update_byte_closure)(vm)
+    byterange.set_val("bigtuple")(vm)
 
 
 # [source_tuple, start offset, end offset]

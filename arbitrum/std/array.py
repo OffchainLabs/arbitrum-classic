@@ -69,7 +69,7 @@ class Array:
         self.length = len(types)
 
     def make(self):
-        return build_array([value.Tuple([])] * self.length)
+        return self.typ.empty_val()
 
     def update_type(self, index, typ):
         self.types[index] = typ

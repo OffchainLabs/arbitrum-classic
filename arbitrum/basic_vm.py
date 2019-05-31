@@ -96,7 +96,9 @@ class BasicVM:
         raise VMBlockedAdvance()
 
     def debug(self):
-        print("Debug:\nStack:", self.stack[:], "\nAux:", self.aux_stack[:])
+        print("Debug", self.stack[:])
+        # print("get", len(self.stack[0]), self.stack[1])
+        # print("Debug:\nStack:", self.stack[:], "\nAux:", self.aux_stack[:])
 
     def push(self, val):
         if isinstance(val, list):
@@ -151,6 +153,9 @@ class BasicVM:
             pc = err_handler.pc
 
         self.err_handler = pc
+
+    def error(self):
+        raise Exception("Error opcode called")
 
     def cjump(self):
         dest = self.stack.pop()
@@ -378,4 +383,5 @@ class BasicVM:
         self.atomic_count -= 1
 
     def cast(self, typ):
-        pass
+        if not typ.accepts_cast(self.stack[0]):
+            raise Exception(f"Tried to perform incorrect cast of {self.stack[0]} to {typ}")

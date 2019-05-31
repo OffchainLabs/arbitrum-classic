@@ -20,6 +20,9 @@ class IntType:
     def accepts(self, val):
         return isinstance(val, (IntType, int))
 
+    def accepts_cast(self, val):
+        return self.accepts(val)
+
     def common(self, other):
         if isinstance(other, (IntType, int)):
             return IntType()
@@ -29,7 +32,7 @@ class IntType:
 
 class TupleType:
     def __init__(self, types=None):
-        if types and isinstance(types, int):
+        if isinstance(types, int):
             types = [ValueType()]*types
         self.types = types
 
@@ -40,7 +43,10 @@ class TupleType:
         return f"TupleType({', '.join([repr(typ) for typ in self.types])})"
 
     def empty_val(self):
-        return Tuple([])
+        if self.types is None:
+            return Tuple([])
+        else:
+            return Tuple([typ.empty_val() for typ in self.types])
 
     def typecode(self):
         return 2
@@ -96,6 +102,18 @@ class TupleType:
 
         return False
 
+    def accepts_cast(self, val):
+        if not isinstance(val, (TupleType, Tuple)):
+            return False
+
+        if self.types is None:
+            return True
+
+        if isinstance(val, Tuple):
+            return all(typeA.accepts_cast(typeB) for (typeA, typeB) in zip(self.types, val.val))
+
+        return False
+
     def common(self, other):
         if isinstance(other, TupleType):
             if self.types is None or other.types is None:
@@ -113,13 +131,16 @@ class CodePointType:
         return "CodePointType()"
 
     def empty_val(self):
-        return AVMCodePoint(-2, None, b'')
+        return AVMCodePoint(-2, 0, b'')
 
     def typecode(self):
         return 1
 
     def accepts(self, val):
-        return isinstance(val, CodePointType)
+        return isinstance(val, CodePointType) or isinstance(val, AVMCodePoint)
+
+    def accepts_cast(self, val):
+        return self.accepts(val)
 
     def common(self, other):
         if isinstance(other, CodePointType):
@@ -129,8 +150,9 @@ class CodePointType:
 
 class NamedType:
 
-    def __init__(self, name):
+    def __init__(self, name, fields):
         self.name = name
+        self.fields = fields
 
     def __repr__(self):
         return f"Struct({self.name})"
@@ -146,6 +168,15 @@ class NamedType:
             return self.name == val.name
         return False
 
+    def empty_val(self):
+        return self.fields.empty_val()
+
+    def accepts_cast(self, val):
+        if isinstance(val, NamedType):
+            return self.name == val.name
+
+        return self.fields.accepts_cast(val)
+
 
 class ValueType:
     def __repr__(self):
@@ -156,6 +187,9 @@ class ValueType:
 
     def accepts(self, val):
         return True
+
+    def accepts_cast(self, val):
+        return self.accepts(val)
 
     def common(self, other):
         return ValueType()
@@ -268,7 +302,7 @@ class Tuple:
 
     def set_tup_val(self, index, value):
         if index >= len(self):
-            raise Exception(f"Can't set value {value} to index {index} of tuple {self.val}")
+            raise Exception(f"Can't set value {value} to index {index} of tuple {self}")
         new_tup = list(self.val)
         new_tup[index] = value
         return Tuple(new_tup)
@@ -307,6 +341,11 @@ def value_hash(val):
             return eth_utils.keccak(eth_abi.encode_single(
                 '(uint8,uint8,bytes32)',
                 [2, val.op.op_code, val.next_hash]
+            ))
+        if isinstance(val.op, int):
+            return eth_utils.keccak(eth_abi.encode_single(
+                '(uint8,uint8,bytes32)',
+                [2, val.op, val.next_hash]
             ))
         if hasattr(val.op, "val"):
             return eth_utils.keccak(eth_abi.encode_single(
