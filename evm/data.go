@@ -159,3 +159,23 @@ func BytesToSizedByteArray(val []byte) (value.Value, error) {
 	}
 	return value.NewTuple2(arr, value.NewInt64Value(int64(len(val)))), nil
 }
+
+func StackValueToList(val value.Value) ([]value.Value, error) {
+	values := make([]value.Value, 0)
+	for !val.Equal(value.NewEmptyTuple()) {
+		tupVal, ok := val.(value.TupleValue)
+		if !ok {
+			return nil, errors.New("Value was not in stack format")
+		}
+		member, err := tupVal.GetByInt64(1)
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, member)
+		val, err = tupVal.GetByInt64(0)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return values, nil
+}

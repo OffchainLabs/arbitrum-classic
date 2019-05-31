@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-avm/value"
@@ -70,6 +71,46 @@ func NewMessageFromReader(rd io.Reader) (Message, error) {
 	}
 
 	return NewMessage(data, tokenType, currency.BigInt(), dest), nil
+}
+
+func NewMessageFromValue(val value.Value) (Message, error) {
+	tup, ok := val.(value.TupleValue)
+	if !ok {
+		return Message{}, errors.New("msg must be tuple value")
+	}
+	if tup.Len() != 4 {
+		return Message{}, fmt.Errorf("advise expected tuple of length 5, but recieved %v", tup)
+	}
+	data, _ := tup.GetByInt64(0)
+	destVal, _ := tup.GetByInt64(1)
+	amountVal, _ := tup.GetByInt64(2)
+	typeVal, _ := tup.GetByInt64(3)
+
+	typeInt, ok := typeVal.(value.IntValue)
+	if !ok {
+		return Message{}, errors.New("type must be an int")
+	}
+
+	amountInt, ok := amountVal.(value.IntValue)
+	if !ok {
+		return Message{}, errors.New("value must be an int")
+	}
+
+	destInt, ok := destVal.(value.IntValue)
+	if !ok {
+		return Message{}, errors.New("value must be an int")
+	}
+
+	typeBytes := typeInt.ToBytes()
+	var tokenType [21]byte
+	copy(tokenType[:], typeBytes[:21])
+
+	return NewMessage(
+		data,
+		tokenType,
+		amountInt.BigInt(),
+		destInt.ToBytes(),
+	), nil
 }
 
 func (msg Message) Marshal(w io.Writer) error {
