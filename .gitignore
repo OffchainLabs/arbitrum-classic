@@ -5,3 +5,4 @@ build
 arb-docker-compose.yml
 compose
 validator-states
+.DS_Store
