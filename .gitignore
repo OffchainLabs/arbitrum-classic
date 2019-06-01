@@ -1,0 +1,7 @@
+node_modules
+*.ao
+compiled.json
+build
+arb-docker-compose.yml
+compose
+validator-states
