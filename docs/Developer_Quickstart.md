@@ -149,7 +149,7 @@ this dapp, you do not need to change any Solidity files.
 3. Examine the Validator logs
 
     Go back to the Validators, started with `./arb-deploy contract.ao 3`, and
-    examine the output of the logs. You should see the following output:
+    examine the output of the logs. You should see the output similar to this:
 
     ``` txt
     arb-ethbridge_1              | Summary
@@ -161,20 +161,20 @@ this dapp, you do not need to change any Solidity files.
     arb-ethbridge_1              | connect to [::ffff:172.23.0.2]:17545 from [TRUNCATED]
     arb-validator-coordinator_1  | Finished waiting for arb-ethbridge:17545...
     arb-validator-coordinator_1  | 0x81183C9C61bdf79DB7330BBcda47Be30c0a85064
-    arb-validator-coordinator_1  | Leader is creating VM
+    arb-validator-coordinator_1  | Coordinator is creating VM
     arb-validator-coordinator_1  | Got wait request
     arb-validator-coordinator_1  | [DATE] [TIMESTAMP] http: TLS handshake error from 172.23.0.3:39233: EOF
     arb-validator-coordinator_1  | [DATE] [TIMESTAMP] http: TLS handshake error from 172.23.0.4:40329: EOF
     arb-validator2_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator-coordinator_1  | Leader serving client
-    arb-validator-coordinator_1  | Leader upgraded client <nil>
-    arb-validator-coordinator_1  | Client registered
-    arb-validator2_1             | Follower connected to leader <nil>
+    arb-validator-coordinator_1  | Coordinator serving client
+    arb-validator-coordinator_1  | Coordinator upgraded client <nil>
+    arb-validator-coordinator_1  | Coordinator serving client
+    arb-validator2_1             | Follower connected to coordinator <nil>
     arb-validator1_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator-coordinator_1  | Leader serving client
-    arb-validator-coordinator_1  | Leader upgraded client <nil>
-    arb-validator-coordinator_1  | Client registered
-    arb-validator1_1             | Follower connected to leader <nil>
+    arb-validator-coordinator_1  | Coordinator serving client
+    arb-validator-coordinator_1  | Coordinator upgraded client <nil>
+    arb-validator-coordinator_1  | Coordinator serving client
+    arb-validator1_1             | Follower connected to coordinator <nil>
     ```
 
 ### Use the DApp
