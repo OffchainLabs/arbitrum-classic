@@ -22,9 +22,9 @@
   },
   "dependencies": {
     "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider.git",
-    "arb-web3-provider": "https://github.com/OffchainLabs/arb-ethers-provider.git",
+    "arb-ethers-provider": "https://github.com/OffchainLabs/arb-ethers-provider.git",
     "async-polling": "^0.2.1",
-    "ethers": "^4.0.27",
+    "ethers": "^4.0.28",
     "jquery": "^3.3.1",
     "promise-poller": "^1.7.0",
     "web3": "^1.0.0-beta.48",
