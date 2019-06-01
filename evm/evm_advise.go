@@ -175,7 +175,6 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 		}
 		logs = append(logs, log)
 	}
-	fmt.Println("Translated log stack", val, logs)
 	return logs, nil
 }
 

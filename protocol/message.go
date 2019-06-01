@@ -146,6 +146,15 @@ func (msg Message) Hash() [32]byte {
 	return ret
 }
 
+func (msg Message) Clone() Message {
+	return Message{
+		msg.Data.Clone(),
+		msg.TokenType,
+		msg.Currency,
+		msg.Destination,
+	}
+}
+
 func (msg Message) AsValue() value.Value {
 	destination := big.NewInt(0)
 	destination.SetBytes(msg.Destination[:])

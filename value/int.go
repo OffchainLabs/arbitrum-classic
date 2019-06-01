@@ -68,7 +68,7 @@ func (iv IntValue) InternalTypeCode() uint8 {
 }
 
 func (iv IntValue) Clone() Value {
-	return IntValue{iv.val}
+	return IntValue{new(big.Int).Set(iv.val)}
 }
 
 func (iv IntValue) CloneShallow() Value {
