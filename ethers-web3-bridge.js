@@ -373,7 +373,11 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(payload, c
                 if (utils.getAddress(params[0].from) !== address) {
                     respondError('invalid from address', Errors.InvalidParams);
                 }
-                return signer.sendTransaction(params[0])
+                signer.sendTransaction(params[0]).then(function(tx) {
+                    respond(tx.hash)
+                }, function(error) {
+                    respondError('eth_sendTransaction error', Errors.InternalError);
+                })
             }, function(error) {
                 respondError('eth_sendTransaction error', Errors.InternalError);
             });
@@ -437,6 +441,8 @@ utils.defineProperty(ProviderBridge.prototype, '_sendAsync', function(payload, c
         case 'eth_call':
             provider.call(makeTransaction(params[0]), params[1]).then(function(data) {
                 respond(data);
+            }, function(error) {
+                    respondError('eth_call error', Errors.InternalError);
             });
             break;
 
