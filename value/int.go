@@ -99,7 +99,7 @@ func (iv IntValue) String() string {
 
 func (iv IntValue) hashImpl() [32]byte {
 	hashVal := solsha3.SoliditySHA3(
-		solsha3.Uint256(iv.val),
+		solsha3.Uint256(iv.BigInt()),
 	)
 	ret := [32]byte{}
 	copy(ret[:], hashVal)
