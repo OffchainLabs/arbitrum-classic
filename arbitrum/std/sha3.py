@@ -567,6 +567,34 @@ def setword(vm, word_num):
     vm.swap1()
     vm.tsetn(word_num // 4)
 
+@modifies_stack([byterange.typ, value.IntType()], [value.TupleType(5)])
+def byterange_get136(vm):
+    # [br, offset]
+    vm.swap1()
+    vm.tnewn(5)
+    # [tup, index, br]
+    for i in range(5):
+        vm.dup2()
+        vm.dup2()
+        vm.swap1()
+        byterange.get(vm)
+        # [br[0], tup, index, br]
+        if i == 4:
+            vm.push(bitwise.n_highest_mask_static(64))
+            vm.bitwise_and()
+        vm.swap1()
+        vm.tsetn(i)
+        if i < 4:
+            # [tup, index, br]
+            vm.swap1()
+            vm.push(32)
+            vm.add()
+            vm.swap1()
+        # [tup, index, br]
+    vm.swap2()
+    vm.pop()
+    vm.pop()
+
 @modifies_stack([byterange.typ, value.IntType()], [value.IntType()])
 def hash_byterange(vm):
     # bytearray length
@@ -579,28 +607,56 @@ def hash_byterange(vm):
         vm.tgetn(3),
         vm.dup1(),
         vm.tgetn(1),
+        vm.push(135),
+        vm.add(),
         vm.lt()
     ], lambda vm: [
         vm.dup0(),
         vm.tgetn(1),
         vm.dup1(),
         vm.tgetn(2),
-        byterange.get8(vm),
+        byterange_get136(vm),
         # val [ctx, i, bytearray, length]
         vm.dup1(),
         vm.tgetn(0),
-        ctx_pushbyte(vm),
+        ctx_pushblock(vm),
         vm.swap1(),
         vm.tsetn(0),
 
         vm.dup0(),
         vm.tgetn(1),
-        vm.push(1),
+        vm.push(136),
         vm.add(),
         vm.swap1(),
         vm.tsetn(1)
     ])
-    vm.tgetn(0)
+    vm.dup0()
+    vm.tgetn(3)
+    vm.dup1()
+    vm.tgetn(1)
+    vm.add()
+    vm.lt()
+    vm.ifelse(lambda vm: [
+        vm.dup0(),
+        vm.tgetn(3),
+        vm.dup1(),
+        vm.tgetn(1),
+        vm.sub(),
+        # [bytes, [ctx, i, bytearray, length]]
+        vm.dup1(),
+        vm.tgetn(1),
+        vm.dup2(),
+        vm.tgetn(2),
+        byterange_get136(vm),
+        # [val, bytes, [ctx, i, bytearray, length]]
+        vm.swap1(),
+        vm.swap2(),
+        vm.tgetn(0),
+        # [ctx, val, bytes]
+        ctx_pushlastblock(vm)
+    ], lambda vm: [
+        vm.tgetn(0)
+    ])
     keccak_ctx_finish(vm)
 
 def print_nist_style(vm):
