@@ -115,7 +115,7 @@ def topological_sort(compiled_funcs):
             break
         cycle_nodes += bad_nodes
         digraph.remove_nodes_from(bad_nodes)
-    return list(set(cycle_nodes)) + list(nx.topological_sort(digraph))
+    return sorted(list(set(cycle_nodes))) + list(nx.topological_sort(digraph))
 
 
 class StaticTracker:
@@ -737,7 +737,7 @@ def compile_program(initialization, body):
         )
 
     function_order = topological_sort(compiled_funcs)
-    function_order += [x for x in compiled_funcs if x not in function_order]
+    function_order += sorted([x for x in compiled_funcs if x not in function_order])
 
     # transform remaining calls into jumps
     for func in compiled_funcs:
