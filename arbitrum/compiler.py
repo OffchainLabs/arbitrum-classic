@@ -613,7 +613,7 @@ def flatten_block(op):
     return ret
 
 
-def compile_program(initialization, body):
+def compile_program(initialization, body, should_optimize=True):
     compiled_funcs = {}
 
     # Iteratively resolve all function calls
@@ -689,47 +689,48 @@ def compile_program(initialization, body):
             CastRemover()
         )
 
-    # use cycle checking to figure out which functions are safe to inline
-    non_recursive = get_non_recursive(compiled_funcs)
-    non_recursive = [x for x in non_recursive if compiled_funcs[x].is_callable]
-    # IMPORTANT: Inling requires code cloning which only currently works
-    #            if the ast in the code includes no labels.
-    # # count how many times each function is called
-    counter = CallCounter()
-    for func in compiled_funcs:
-        compiled_funcs[func].modify_ast(counter)
-
-    # inline non-recursive functions that are called a single time
-    single_call = [
-        x for x in counter.call_counts
-        if counter.call_counts[x] == 1 and x in non_recursive
-    ]
-    for single_func in single_call:
-        func_to_inline = compiled_funcs[single_func]
+    if should_optimize:
+        # use cycle checking to figure out which functions are safe to inline
+        non_recursive = get_non_recursive(compiled_funcs)
+        non_recursive = [x for x in non_recursive if compiled_funcs[x].is_callable]
+        # IMPORTANT: Inling requires code cloning which only currently works
+        #            if the ast in the code includes no labels.
+        # # count how many times each function is called
+        counter = CallCounter()
         for func in compiled_funcs:
-            compiled_funcs[func] = compiled_funcs[func].modify_ast(
-                InlineCallTransformer(func_to_inline)
-            )
-        non_recursive.remove(single_func)
-        del compiled_funcs[single_func]
+            compiled_funcs[func].modify_ast(counter)
 
-    # inline short non-recursive functions
-    while True:
-        if not non_recursive:
-            break
-        shortest_non_recursive = min(
-            non_recursive,
-            key=lambda func: len(compiled_funcs[func])
-        )
-        if len(compiled_funcs[shortest_non_recursive]) >= 150:
-            break
-        func_to_inline = compiled_funcs[shortest_non_recursive]
-        del compiled_funcs[shortest_non_recursive]
-        for func in compiled_funcs:
-            compiled_funcs[func] = compiled_funcs[func].modify_ast(
-                InlineCallTransformer(func_to_inline)
+        # inline non-recursive functions that are called a single time
+        single_call = [
+            x for x in counter.call_counts
+            if counter.call_counts[x] == 1 and x in non_recursive
+        ]
+        for single_func in single_call:
+            func_to_inline = compiled_funcs[single_func]
+            for func in compiled_funcs:
+                compiled_funcs[func] = compiled_funcs[func].modify_ast(
+                    InlineCallTransformer(func_to_inline)
+                )
+            non_recursive.remove(single_func)
+            del compiled_funcs[single_func]
+
+        # inline short non-recursive functions
+        while True:
+            if not non_recursive:
+                break
+            shortest_non_recursive = min(
+                non_recursive,
+                key=lambda func: len(compiled_funcs[func])
             )
-        non_recursive.remove(shortest_non_recursive)
+            if len(compiled_funcs[shortest_non_recursive]) >= 150:
+                break
+            func_to_inline = compiled_funcs[shortest_non_recursive]
+            del compiled_funcs[shortest_non_recursive]
+            for func in compiled_funcs:
+                compiled_funcs[func] = compiled_funcs[func].modify_ast(
+                    InlineCallTransformer(func_to_inline)
+                )
+            non_recursive.remove(shortest_non_recursive)
 
     for func in compiled_funcs:
         compiled_funcs[func] = compiled_funcs[func].modify_ast(
@@ -765,8 +766,9 @@ def compile_program(initialization, body):
     full_code = full_code.modify_ast(PushTransformer(static_tracker))
     full_code = flatten_block(full_code)
 
-    transform_code_block(full_code, remove_nop_swaps, 2)
-    transform_code_block(full_code, compress_pushes, 2)
+    if should_optimize:
+        transform_code_block(full_code, remove_nop_swaps, 2)
+        transform_code_block(full_code, compress_pushes, 2)
 
     # replace all labels with code points
     # Warning: After this pass the number of instructions can't change

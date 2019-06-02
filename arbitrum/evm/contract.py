@@ -191,7 +191,7 @@ def create_output_handler(contracts):
     return output_handler
 
 
-def create_evm_vm(contracts):
+def create_evm_vm(contracts, should_optimize=True):
     code = {}
     storage = {}
     for contract in contracts:
@@ -199,7 +199,7 @@ def create_evm_vm(contracts):
         storage[contract.address] = contract.storage
 
     initial_block, code = generate_evm_code(code, storage)
-    vm = compile_program(initial_block, code)
+    vm = compile_program(initial_block, code, should_optimize)
     vm.output_handler = create_output_handler(contracts)
 
     return vm
