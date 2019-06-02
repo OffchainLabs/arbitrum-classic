@@ -86,6 +86,52 @@ def ctx_pushbyte(vm):
         # updatedCtx
     ])
 
+@modifies_stack(2, 1)  # sha3ctx block -> sha3ctx
+def ctx_pushblock(vm):
+    vm.tgetn(0)
+    absorb_block(vm)
+    # sha3ctx
+    make_buf_1600(vm)
+    vm.push(0)
+    vm.tnewn(3)
+    vm.tsetn(2)
+    vm.tsetn(1)
+    vm.tsetn(0)
+
+def set135(vm, val):
+    # block
+    vm.dup0()
+    vm.tgetn(135//32)
+    vm.push(val << (8*(135%32)))
+    vm.bitwise_or()
+    vm.swap1()
+    vm.tsetn(135//32)
+
+
+@modifies_stack(3, 1)  # sha3ctx block numBytes -> keccak256hash
+def ctx_pushlastblock(vm):
+    vm.swap2()
+    vm.dup0()
+    vm.push(135)
+    vm.eq()
+    vm.ifelse(lambda vm: [
+        vm.pop(),
+        set135(vm, 0x81)
+    ], lambda vm: [
+        # numBytes block sha3ctx
+        vm.push(0x01),
+        vm.swap2(),
+        set_byte_in_buf(vm),
+        # block sha3ctx
+        set135(vm, 0x80),
+    ])
+    # block sha3ctx
+    vm.swap1()
+    absorb_block(vm)
+    vm.tgetn(0)
+    vm.tgetn(0)
+    bitwise.flip_endianness(vm)
+
 
 @modifies_stack(1, 1)  # sha3ctx -> hashValue
 def ctx_finish(vm):
@@ -279,7 +325,7 @@ def absorb_block(vm):
     vm.swap1()
     vm.cast(value.TupleType(7))
     vm.swap1()
-    for i in range(7):
+    for i in range(5):
         vm.dup1()
         vm.dup1()
         # state newblock state newblock
