@@ -61,11 +61,11 @@ class TestSha3(TestCase):
         vm.push(byterange.frombytes(data))
         sha3.byterange_get136(vm)
         self.assertEqual(vm.stack[0], value.Tuple([
-            int.from_bytes(data[0:32], byteorder="big"),
-            int.from_bytes(data[32:64], byteorder="big"),
-            int.from_bytes(data[64:96], byteorder="big"),
-            int.from_bytes(data[96:128], byteorder="big"),
-            int.from_bytes(data[128:136] + bytearray([0 for x in range(24)]), byteorder="big")
+            int.from_bytes(data[0:32], byteorder="little"),
+            int.from_bytes(data[32:64], byteorder="little"),
+            int.from_bytes(data[64:96], byteorder="little"),
+            int.from_bytes(data[96:128], byteorder="little"),
+            int.from_bytes(data[128:136] + bytearray([0 for x in range(24)]), byteorder="little")
         ]))
 
     def test_pushblock(self):
@@ -83,18 +83,16 @@ class TestSha3(TestCase):
         sha3.byterange_get136(vm2)
         sha3.ctx_new(vm2)
         sha3.ctx_pushblock(vm2)
-        print()
-        print(vm1.stack[0])
-        print(vm2.stack[0])
         self.assertEqual(vm1.stack[0], vm2.stack[0])
 
 
     def test_byterange_keccak256(self):
-        data = bytearray(random.getrandbits(8) for _ in range(200))
-        vm = VM()
-        vm.push(len(data))
-        vm.push(byterange.frombytes(data))
-        sha3.hash_byterange(vm)
-        real_hash = int.from_bytes(eth_utils.crypto.keccak(data), byteorder="big")
-        self.assertEqual(real_hash, vm.stack[0])
+        for length in [64, 128, 200, 136, 135]:
+            data = bytearray(random.getrandbits(8) for _ in range(length))
+            vm = VM()
+            vm.push(len(data))
+            vm.push(byterange.frombytes(data))
+            sha3.hash_byterange(vm)
+            real_hash = int.from_bytes(eth_utils.crypto.keccak(data), byteorder="big")
+            self.assertEqual(real_hash, vm.stack[0])
 
