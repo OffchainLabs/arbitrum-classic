@@ -127,8 +127,8 @@ def ctx_pushlastblock(vm):
     ])
     # block sha3ctx
     vm.swap1()
-    absorb_block(vm)
     vm.tgetn(0)
+    absorb_block(vm)
     vm.tgetn(0)
     bitwise.flip_endianness(vm)
 
@@ -677,33 +677,22 @@ def hash_byterange(vm):
         vm.tsetn(1)
     ])
     vm.dup0()
+    vm.tgetn(1)
+    vm.dup1()
     vm.tgetn(3)
+    vm.sub()
+    # [bytes, [ctx, i, bytearray, length]]
     vm.dup1()
     vm.tgetn(1)
-    vm.add()
-    vm.lt()
-    vm.ifelse(lambda vm: [
-        vm.dup0(),
-        vm.tgetn(3),
-        vm.dup1(),
-        vm.tgetn(1),
-        vm.sub(),
-        # [bytes, [ctx, i, bytearray, length]]
-        vm.dup1(),
-        vm.tgetn(1),
-        vm.dup2(),
-        vm.tgetn(2),
-        byterange_get136(vm),
-        # [val, bytes, [ctx, i, bytearray, length]]
-        vm.swap1(),
-        vm.swap2(),
-        vm.tgetn(0),
-        # [ctx, val, bytes]
-        ctx_pushlastblock(vm)
-    ], lambda vm: [
-        vm.tgetn(0)
-    ])
-    keccak_ctx_finish(vm)
+    vm.dup2()
+    vm.tgetn(2)
+    byterange_get136(vm)
+    # [val, bytes, [ctx, i, bytearray, length]]
+    vm.swap1()
+    vm.swap2()
+    vm.tgetn(0)
+    # [ctx, val, bytes]
+    ctx_pushlastblock(vm)
 
 def print_nist_style(vm):
     # buf
