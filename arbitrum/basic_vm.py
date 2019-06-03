@@ -210,9 +210,15 @@ class BasicVM:
     def tget(self):
         instructions.tget(self.stack)
 
-    def istuple(self):
+    def type(self):
         item = self.stack.pop()
-        self.stack.push(int(isinstance(item, value.Tuple)))
+        if isinstance(item, int):
+            self.stack.push(0)
+        elif isinstance(item, value.Tuple):
+            self.stack.push(3)
+        else:
+            self.stack.push(1)
+        
 
     def spush(self):
         self.stack.push(self.static)

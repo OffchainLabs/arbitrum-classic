@@ -16,7 +16,6 @@ from .value import ValueType, IntType, TupleType, CodePointType, Tuple
 
 OP_CODES = [
     # Arithmetic
-    ('halt', 0x00, [], []),
     ('add', 0x01, [IntType(), IntType()], [IntType()]),
     ('mul', 0x02, [IntType(), IntType()], [IntType()]),
     ('sub', 0x03, [IntType(), IntType()], [IntType()]),
@@ -27,7 +26,6 @@ OP_CODES = [
     ('addmod', 0x08, [IntType(), IntType(), IntType()], [IntType()]),
     ('mulmod', 0x09, [IntType(), IntType(), IntType()], [IntType()]),
     ('exp', 0x0a, [IntType(), IntType()], [IntType()]),
-    ('signextend', 0x0b, [IntType(), IntType()], [IntType()]),
 
     # Comparison & Bitwise Logic Operations
     ('lt', 0x10, [IntType(), IntType()], [IntType()]),
@@ -41,27 +39,27 @@ OP_CODES = [
     ('bitwise_xor', 0x18, [IntType(), IntType()], [IntType()]),
     ('bitwise_not', 0x19, [IntType()], [IntType()]),
     ('byte', 0x1a, [IntType(), IntType()], [IntType()]),
+    ('signextend', 0x1b, [IntType(), IntType()], [IntType()]),
 
     # SHA3
     ('hash', 0x20, [ValueType()], [IntType()]),
+    ('type', 0x21, [ValueType()], [IntType()]),
 
     # Stack, Memory, Storage and Flow Operations
     ('pop', 0x30, [ValueType()], []),
     ('spush', 0x31, [], [ValueType()]),
     ('rpush', 0x32, [], [ValueType()]),
     ('rset', 0x33, [ValueType()], []),
-    ('inbox', 0x34, [TupleType()], [TupleType()]),
-    ('jump', 0x35, [CodePointType()], []),
-    ('cjump', 0x36, [CodePointType(), IntType()], []),
-    ('stackempty', 0x37, [], [IntType()]),
-    ('pcpush', 0x38, [], [CodePointType()]),
-    ('auxpush', 0x39, [ValueType()], []),
-    ('auxpop', 0x3a, [], [ValueType()]),
-    ('auxstackempty', 0x3b, [], [IntType()]),
-    ('nop', 0x3c, [], []),
-    ('errpush', 0x3d, [ValueType()], []),
-    ('errset', 0x3e, [ValueType()], []),
-    ('error', 0x3f, [], []),
+    ('jump', 0x34, [CodePointType()], []),
+    ('cjump', 0x35, [CodePointType(), IntType()], []),
+    ('stackempty', 0x36, [], [IntType()]),
+    ('pcpush', 0x37, [], [CodePointType()]),
+    ('auxpush', 0x38, [ValueType()], []),
+    ('auxpop', 0x39, [], [ValueType()]),
+    ('auxstackempty', 0x3a, [], [IntType()]),
+    ('nop', 0x3b, [], []),
+    ('errpush', 0x3c, [ValueType()], []),
+    ('errset', 0x3d, [ValueType()], []),
 
     # Duplication and Exchange Operations
     ('dup0', 0x40, [ValueType()], [ValueType(), ValueType()]),
@@ -94,7 +92,6 @@ OP_CODES = [
     ('tget', 0x50, [IntType(), TupleType()], [ValueType()]),
     ('tset', 0x51, [IntType(), TupleType(), ValueType()], [TupleType()]),
     ('tlen', 0x52, [TupleType()], [IntType()]),
-    ('istuple', 0x53, [ValueType()], [IntType()]),
 
     # Logging Operations
     ('breakpoint', 0x60, [ValueType()], []),
@@ -104,7 +101,10 @@ OP_CODES = [
     ('send', 0x70, [TupleType()], []),
     ('nbsend', 0x71, [TupleType()], [IntType()]),
     ('gettime', 0x72, [], [TupleType()]),
-    ('debug', 0x73, [], [])
+    ('inbox', 0x73, [TupleType()], [TupleType()]),
+    ('error', 0x74, [], []),
+    ('halt', 0x75, [], []),
+    ('debug', 0x76, [], [])
 ]
 
 
