@@ -159,7 +159,7 @@ The instructions are as follows:
 
 Opcode | Nickname | Semantics
 --- | --- | ---
-00s: Stop and Arithmetic Operations | | &nbsp;
+00s: Arithmetic Operations | | &nbsp;
 0x01 | add | Pop two values (A, B) off the Data Stack. If A and B are both Integers, Push the value A+B (truncated to 256 bits) onto the Data Stack. Otherwise, raise an Error.
 0x02 | mul | Same as add, except multiply rather than add.
 0x03 | sub | Same as add, except subtract rather than add.
@@ -170,7 +170,6 @@ Opcode | Nickname | Semantics
 0x08 | addmod | Pop three values (A, B, C) off the Data Stack. If A, B, and C are all Integers, and C is not zero, Push the value (A+B) % C (calculated without 256-bit truncation until end) onto the Data Stack. Otherwise, raise an Error.
 0x09 | mulmod | Same as addmod, except multiply rather than add.
 0x0a | exp | Same as add, except exponentiate rather than add.
-
 &nbsp; | | &nbsp;
 10s: Comparison & Bitwise Logic Operations | | &nbsp;
 0x10 | lt | Pop two values (A,B) off the Data Stack. If A and B are both Integers, then (treating A and B as unsigned integers, if A<B, push 1 on the Data Stack; otherwise push 0 on the Data Stack). Otherwise, raise an Error.
