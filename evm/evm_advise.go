@@ -154,7 +154,7 @@ func LogValToLog(val value.Value) (Log, error) {
 		return Log{}, errors.New("Log must be a tuple")
 	}
 	if tupVal.Len() < 3 {
-		return Log{}, fmt.Errorf("Log tuple must be at least size 3, but is", tupVal)
+		return Log{}, fmt.Errorf("Log tuple must be at least size 3, but is %v", tupVal)
 	}
 	contractIdVal, _ := tupVal.GetByInt64(0)
 	contractIdInt, ok := contractIdVal.(value.IntValue)

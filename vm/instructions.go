@@ -32,7 +32,6 @@ type Instruction struct {
 }
 
 var allInsns = []Instruction{ // code, not necessarily in order
-	{code.HALT, insnHalt},
 	{code.ADD, insnAdd},
 	{code.MUL, insnMul},
 	{code.SUB, insnSub},
@@ -43,7 +42,6 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.ADDMOD, insnAddmod},
 	{code.MULMOD, insnMulmod},
 	{code.EXP, insnExp},
-	{code.SIGNEXTEND, insnSignextend},
 
 	{code.LT, insnLt},
 	{code.GT, insnGt},
@@ -56,14 +54,15 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.XOR, insnXor},
 	{code.NOT, insnNot},
 	{code.BYTE, insnByte},
+	{code.SIGNEXTEND, insnSignextend},
 
 	{code.SHA3, insnHash},
+	{code.TYPE, insnType},
 
 	{code.POP, insnPop},
 	{code.SPUSH, insnSpush},
 	{code.RPUSH, insnRpush},
 	{code.RSET, insnRset},
-	{code.INBOX, insnInbox},
 	{code.JUMP, insnJump},
 	{code.CJUMP, insnCjump},
 	{code.STACKEMPTY, insnStackempty},
@@ -74,7 +73,6 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.NOP, insnNop},
 	{code.ERRPUSH, insnErrPush},
 	{code.ERRSET, insnErrSet},
-	{code.ERROR, insnError},
 
 	{code.DUP0, insnDup0},
 	{code.DUP1, insnDup1},
@@ -85,7 +83,6 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.TGET, insnTget},
 	{code.TSET, insnTset},
 	{code.TLEN, insnTlen},
-	{code.ISTUPLE, insnIstuple},
 
 	{code.BREAKPOINT, insnBreakpoint},
 	{code.LOG, insnLog},
@@ -93,6 +90,9 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.SEND, insnSend},
 	{code.NBSEND, insnNBSend},
 	{code.GETTIME, insnGettime},
+	{code.INBOX, insnInbox},
+	{code.ERROR, insnError},
+	{code.HALT, insnHalt},
 	{code.DEBUG, insnDebug},
 }
 
@@ -949,14 +949,13 @@ func insnTlen(state *Machine) (StackMods, error) {
 	return mods, nil
 }
 
-func insnIstuple(state *Machine) (StackMods, error) {
+func insnType(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 1)
 	val, mods, err := PopStackValue(state, mods)
 	if err != nil {
 		return mods, err
 	}
-	_, ok := val.(value.TupleValue)
-	mods = PushStackInt(state, mods, value.NewBooleanValue(ok))
+	mods = PushStackInt(state, mods, value.NewInt64Value(int64(val.TypeCode())))
 	state.IncrPC()
 	return mods, nil
 }

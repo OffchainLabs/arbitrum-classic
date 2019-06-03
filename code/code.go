@@ -29,7 +29,7 @@ func NewOpcodeFromReader(rd io.Reader) (Opcode, error) {
 	if err := binary.Read(rd, binary.LittleEndian, &ret); err!=nil {
 		return 0, err
 	}
-	if _,ok := InstructionNames[ret]; !ok {
+	if _,ok := InstructionNames[ret]; ret != 0 && !ok {
 		return ret, fmt.Errorf("Invalid opcode %v from reader", ret)
 	}
 	return ret, nil
@@ -41,8 +41,7 @@ func (o Opcode) Marshal(wr io.Writer) error {
 
 // 0x0 range - arithmetic ops.
 const (
-	HALT Opcode = iota
-	ADD
+	ADD Opcode = iota + 0x01
 	MUL
 	SUB
 	DIV
@@ -52,7 +51,6 @@ const (
 	ADDMOD
 	MULMOD
 	EXP
-	SIGNEXTEND
 )
 
 // 0x10 range - comparison ops.
@@ -68,8 +66,13 @@ const (
 	XOR
 	NOT
 	BYTE
+	SIGNEXTEND
+)
 
-	SHA3 = 0x20
+// 0x10 range - hash functions.
+const (
+	SHA3 = iota + 0x20
+	TYPE
 )
 
 // 0x50 range - 'storage' and execution.
@@ -78,7 +81,6 @@ const (
 	SPUSH
 	RPUSH
 	RSET
-	INBOX
 	JUMP
 	CJUMP
 	STACKEMPTY
@@ -89,7 +91,6 @@ const (
 	NOP
 	ERRPUSH
 	ERRSET
-	ERROR
 )
 
 // 0x40 range.
@@ -106,7 +107,6 @@ const (
 	TGET Opcode = 0x50 + iota
 	TSET
 	TLEN
-	ISTUPLE
 )
 
 // 0xa0 range.
@@ -120,13 +120,15 @@ const (
 	SEND Opcode = 0x70 + iota
 	NBSEND
 	GETTIME
+	INBOX
+	HALT
+	ERROR
 	DEBUG
 )
 
 const MaxOpcode = 0x7f
 
 var InstructionNames = map[Opcode]string{
-	HALT:       "halt",
 	ADD:        "add",
 	MUL:        "mul",
 	SUB:        "sub",
@@ -137,7 +139,6 @@ var InstructionNames = map[Opcode]string{
 	ADDMOD:     "addmod",
 	MULMOD:     "mulmod",
 	EXP:        "exp",
-	SIGNEXTEND: "signextend",
 
 	LT:     "lt",
 	GT:     "gt",
@@ -150,14 +151,15 @@ var InstructionNames = map[Opcode]string{
 	XOR:    "xor",
 	NOT:    "not",
 	BYTE:   "byte",
+	SIGNEXTEND: "signextend",
 
 	SHA3: "hash",
+	TYPE: "type",
 
 	POP:        "pop",
 	SPUSH:      "spush",
 	RPUSH:      "rpush",
 	RSET:       "rset",
-	INBOX:      "inbox",
 	JUMP:       "jump",
 	CJUMP:      "cjump",
 	STACKEMPTY: "stackempty",
@@ -168,7 +170,7 @@ var InstructionNames = map[Opcode]string{
 	NOP:        "nop",
 	ERRPUSH:    "errpush",
 	ERRSET:     "errset",
-	ERROR:	    "error",
+
 
 	DUP0:  "dup0",
 	DUP1:  "dup1",
@@ -179,7 +181,6 @@ var InstructionNames = map[Opcode]string{
 	TGET:    "tget",
 	TSET:    "tset",
 	TLEN:    "tlen",
-	ISTUPLE: "istuple",
 
 	BREAKPOINT:  "breakpoint",
 	LOG: "log",
@@ -187,11 +188,13 @@ var InstructionNames = map[Opcode]string{
 	SEND:      "send",
 	NBSEND:    "nbsend",
 	GETTIME:   "gettime",
+	INBOX:      "inbox",
+	ERROR:	    "error",
+	HALT:       "halt",
 	DEBUG:     "debug",
 }
 
 var InstructionStackPops = map[Opcode][]byte{
-	HALT:       {},
 	ADD:        {1, 1},
 	MUL:        {1, 1},
 	SUB:        {1, 1},
@@ -202,7 +205,6 @@ var InstructionStackPops = map[Opcode][]byte{
 	ADDMOD:     {1, 1, 1},
 	MULMOD:     {1, 1, 1},
 	EXP:        {1, 1},
-	SIGNEXTEND: {1, 1},
 
 	LT:     {1, 1},
 	GT:     {1, 1},
@@ -215,14 +217,16 @@ var InstructionStackPops = map[Opcode][]byte{
 	XOR:    {1, 1},
 	NOT:    {1},
 	BYTE:   {1, 1},
+	SIGNEXTEND: {1, 1},
 
 	SHA3: {0},
+	TYPE: {1},
 
 	POP:        {0},
 	SPUSH:      {},
 	RPUSH:      {},
 	RSET:       {0},
-	INBOX:      {0},
+
 	JUMP:       {0},
 	CJUMP:      {0, 1},
 	STACKEMPTY: {},
@@ -233,7 +237,6 @@ var InstructionStackPops = map[Opcode][]byte{
 	NOP:        {},
 	ERRPUSH:    {},
 	ERRSET:     {1},
-	ERROR:	    {},
 
 	DUP0:  {0},
 	DUP1:  {0, 0},
@@ -244,7 +247,6 @@ var InstructionStackPops = map[Opcode][]byte{
 	TGET:    {1, 1},
 	TSET:    {1, 1, 0},
 	TLEN:    {1},
-	ISTUPLE: {1},
 
 	BREAKPOINT:  {},
 	LOG: {0},
@@ -252,11 +254,13 @@ var InstructionStackPops = map[Opcode][]byte{
 	SEND:      {1},
 	NBSEND:      {1},
 	GETTIME:   {},
+	INBOX:      {0},
+	ERROR:	    {},
+	HALT:       {},
 	DEBUG:     {},
 }
 
 var InstructionAuxStackPops = map[Opcode][]byte{
-	HALT:       {},
 	ADD:        {},
 	MUL:        {},
 	SUB:        {},
@@ -267,7 +271,6 @@ var InstructionAuxStackPops = map[Opcode][]byte{
 	ADDMOD:     {},
 	MULMOD:     {},
 	EXP:        {},
-	SIGNEXTEND: {},
 
 	LT:     {},
 	GT:     {},
@@ -280,14 +283,16 @@ var InstructionAuxStackPops = map[Opcode][]byte{
 	XOR:    {},
 	NOT:    {},
 	BYTE:   {},
+	SIGNEXTEND: {},
 
 	SHA3: {},
+	TYPE: {},
 
 	POP:        {},
 	SPUSH:      {},
 	RPUSH:      {},
 	RSET:       {},
-	INBOX:      {},
+
 	JUMP:       {},
 	CJUMP:      {},
 	STACKEMPTY: {},
@@ -298,7 +303,6 @@ var InstructionAuxStackPops = map[Opcode][]byte{
 	NOP:        {},
 	ERRPUSH:    {},
 	ERRSET:     {},
-	ERROR:	    {},
 
 	DUP0:  {},
 	DUP1:  {},
@@ -309,7 +313,6 @@ var InstructionAuxStackPops = map[Opcode][]byte{
 	TGET:    {},
 	TSET:    {},
 	TLEN:    {},
-	ISTUPLE: {},
 
 	BREAKPOINT:  {},
 	LOG:   {},
@@ -317,5 +320,8 @@ var InstructionAuxStackPops = map[Opcode][]byte{
 	SEND:      {},
 	NBSEND:    {},
 	GETTIME:   {},
+	INBOX:      {},
+	ERROR:	    {},
+	HALT:       {},
 	DEBUG:     {},
 }

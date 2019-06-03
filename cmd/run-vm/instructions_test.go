@@ -1528,39 +1528,43 @@ func TestTlen(t *testing.T) {
 	}
 }
 
-func TestIstuple(t *testing.T) {
+func TestType(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
 	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-
-	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ISTUPLE}); err != nil {
-		tmp := "ISTUPLE failed - "
-		tmp += err.Error()
-		t.Error(tmp)
-	}
-	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
-		t.Error(err)
+	testValues := []value.Value{
+		value.NewEmptyTuple(),
+		value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)),
+		value.ErrorCodePoint,
+		value.NewInt64Value(100),
 	}
 
-	// stack should have int value of 1, now is tuple should return 0
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ISTUPLE}); err != nil {
-		tmp := "ISTUPLE failed - "
-		tmp += err.Error()
-		t.Error(tmp)
+	resultValues := []value.Value{
+		value.NewInt64Value(3),
+		value.NewInt64Value(3),
+		value.NewInt64Value(1),
+		value.NewInt64Value(0),
 	}
-	// verify known and unknown match
-	knownMachine.Stack().Pop()
-	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
-		t.Error(err)
+
+	for i := range testValues {
+		machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+		knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+
+		machine.Stack().Push(testValues[i])
+		if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TYPE}); err != nil {
+			tmp := "TYPE failed - "
+			tmp += err.Error()
+			t.Error(tmp)
+		}
+
+		knownMachine.Stack().Push(resultValues[i])
+
+		if ok, err := vm.Equal(knownMachine, machine); !ok {
+			t.Error(err)
+		}
 	}
 }
 
