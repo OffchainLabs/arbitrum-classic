@@ -76,7 +76,7 @@ func (op ImmediateOperation) GetOp() code.Opcode {
 
 func NewOperationFromReader(rd io.Reader) (Operation, error) {
 	var immediateCount uint8
-	err := binary.Read(rd, binary.LittleEndian, &immediateCount)
+	err := binary.Read(rd, binary.BigEndian, &immediateCount)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func NewOperationFromReader(rd io.Reader) (Operation, error) {
 
 func MarshalOperation(op Operation, wr io.Writer) error {
 	typ := op.TypeCode()
-	if err := binary.Write(wr, binary.LittleEndian, &typ); err != nil {
+	if err := binary.Write(wr, binary.BigEndian, &typ); err != nil {
 		return err
 	}
 	return op.Marshal(wr)
@@ -122,7 +122,7 @@ type CodePointValue struct {
 
 func NewCodePointValueFromReader(rd io.Reader) (CodePointValue, error) {
 	var insnNum int64
-	if err := binary.Read(rd, binary.LittleEndian, &insnNum); err != nil {
+	if err := binary.Read(rd, binary.BigEndian, &insnNum); err != nil {
 		return CodePointValue{}, err
 	}
 	var op Operation
@@ -225,7 +225,7 @@ func (cv CodePointValue) Hash() [32]byte {
 }
 
 func (cv CodePointValue) Marshal(w io.Writer) error {
-	if err := binary.Write(w, binary.LittleEndian, &cv.InsnNum); err != nil {
+	if err := binary.Write(w, binary.BigEndian, &cv.InsnNum); err != nil {
 		return err
 	}
 	if err := cv.Op.Marshal(w); err != nil {

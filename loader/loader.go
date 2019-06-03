@@ -40,7 +40,7 @@ func LoadMachine(rd io.Reader, warnMode bool) (*vm.Machine, []string, error) {
 
 func LoadInsnsStaticAndLocations(rd io.Reader) ([]value.Operation, value.Value, []string, error) {
 	var insnsLen int64
-	err := binary.Read(rd, binary.LittleEndian, &insnsLen)
+	err := binary.Read(rd, binary.BigEndian, &insnsLen)
 	if err != nil {
 		return nil, nil, nil, err
 	}
