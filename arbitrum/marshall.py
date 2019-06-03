@@ -89,8 +89,18 @@ def marshall_value(val, file):
         raise Exception(f"Can't marshall unexcepted value {val}")
 
 
-def marshall_vm(vm, file):
-    file.write(len(vm.code).to_bytes(8, byteorder='big', signed=True))
+AO_VERSION = 1
+
+
+def marshall_vm(vm, file, extensions=[]):
+    file.write(AO_VERSION.to_bytes(4, byteorder='big', signed=False))
+    for extension in extensions:
+        file.write(extension.id.to_bytes(4, byteorder='big', signed=False))
+        file.write(len(extension.data).to_bytes(4, byteorder='big', signed=False))
+        file.write(extension.data)
+    file.write((0).to_bytes(4, byteorder='big', signed=False))
+
+    file.write(len(vm.code).to_bytes(8, byteorder='big', signed=False))
     for instr in vm.code:
         marshall_op(instr.op, file)
     marshall_value(vm.static, file)
