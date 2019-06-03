@@ -58,7 +58,7 @@ An Integer marshals to
 A Codepoint marshals to:
 
 * byte val of 1
-* 8-byte little-endian representation of the pc.
+* 8-byte big-endian representation of the pc.
 * the marshalling of the operation
 * 32-byte nextHash value
 
@@ -105,7 +105,7 @@ If a VM is in the Halted state, its state hash is the Integer 0.
 
 If a VM is in the ErrorStop state, its state hash is the Integer 1.
 
-If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Data Stack, the hash of the Aux Stack, the hash of the Instruction Stack, the hash of the Static, the hash of the Register, and the hash of the Error Codepoint, hashing the result using Keccak-256, and encoding the result as an Integer in little-endian fashion.
+If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Data Stack, the hash of the Aux Stack, the hash of the Instruction Stack, the hash of the Static, the hash of the Register, and the hash of the Error Codepoint, hashing the result using Keccak-256.
 
 ## The Runtime Environment
 
