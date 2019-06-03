@@ -35,7 +35,6 @@ import (
 // There is no automated test check so pass/fail must be verified visually
 func TestMachineAdd(t *testing.T) {
 	insns := make([]value.Operation, 4)
-	locations := make([]string, 4)
 	fmt.Println("Setting up insns")
 	i := 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(2)}
@@ -46,7 +45,7 @@ func TestMachineAdd(t *testing.T) {
 	i++
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	runMachine := machine.Clone()
 	steps, msg := runMachine.Run(80000)
 	fmt.Println(steps, msg)
@@ -59,12 +58,11 @@ func TestMachineAdd(t *testing.T) {
 // Compare the two machines
 func unaryIntOpTest(x, expected *big.Int, oper code.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewIntValue(x))
 
@@ -85,12 +83,11 @@ func unaryIntOpTest(x, expected *big.Int, oper code.Opcode) (bool, string) {
 
 func binaryIntOpTest(x, y, expected *big.Int, oper code.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewIntValue(y))
 	machine.Stack().Push(value.NewIntValue(x))
@@ -112,12 +109,11 @@ func binaryIntOpTest(x, y, expected *big.Int, oper code.Opcode) (bool, string) {
 
 func binaryValueOpTest(x, y value.Value, expected *big.Int, oper code.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(y)
 	machine.Stack().Push(x)
@@ -139,12 +135,11 @@ func binaryValueOpTest(x, y value.Value, expected *big.Int, oper code.Opcode) (b
 
 func tertiaryIntOpTest(x, y, z, expected *big.Int, oper code.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewIntValue(z))
 	machine.Stack().Push(value.NewIntValue(y))
@@ -168,12 +163,11 @@ func tertiaryIntOpTest(x, y, z, expected *big.Int, oper code.Opcode) (bool, stri
 // This test is to test an operation missing the second value
 func TestAddMissingValue(t *testing.T) {
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(1))
 
@@ -660,11 +654,10 @@ func TestSha3(t *testing.T) {
 func TestPop(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(1))
 	a := machine.Stack().Count()
@@ -689,11 +682,10 @@ func TestPop(t *testing.T) {
 func TestSpush(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.SPUSH}); err != nil {
 		tmp := "SPUSH failed - "
@@ -710,11 +702,10 @@ func TestSpush(t *testing.T) {
 func TestRpush(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.RPUSH}); err != nil {
 		tmp := "RPUSH failed - "
@@ -737,12 +728,11 @@ func TestRset(t *testing.T) {
 	// 5. run RSET on known
 	// 6. verify machines match
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(5))
 
@@ -774,12 +764,11 @@ func TestRset(t *testing.T) {
 func TestInbox(t *testing.T) {
 	//test:
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
 	knowninbox := protocol.NewEmptyInbox()
@@ -825,7 +814,6 @@ func TestInbox(t *testing.T) {
 func TestJump(t *testing.T) {
 	//test:
 	insns := make([]value.Operation, 5)
-	locations := make([]string, 5)
 	i := 0 //insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
 	i++ //insn 1
@@ -837,8 +825,8 @@ func TestJump(t *testing.T) {
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// run NOP to push value 1
 	vm.RunInstruction(machine, machine.GetOperation())
@@ -860,7 +848,6 @@ func TestJump(t *testing.T) {
 func TestCJump(t *testing.T) {
 	//test:
 	insns := make([]value.Operation, 5)
-	locations := make([]string, 5)
 	i := 0 //insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
 	i++ //insn 1
@@ -872,8 +859,8 @@ func TestCJump(t *testing.T) {
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	saveMachine := machine.Clone()
 	saveKnownMachine := knownMachine.Clone()
 
@@ -919,12 +906,11 @@ func TestCJump(t *testing.T) {
 func TestStackempty(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
 		tmp := "STACKEMPTY failed - "
@@ -964,12 +950,11 @@ func TestStackempty(t *testing.T) {
 func TestPcpush(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.PCPUSH}); err != nil {
 		tmp := "PCPUSH failed - "
@@ -995,12 +980,11 @@ func TestPcpush(t *testing.T) {
 func TestAuxpush(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(4))
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.AUXPUSH}); err != nil {
@@ -1032,12 +1016,11 @@ func TestAuxpush(t *testing.T) {
 func TestAuxpop(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.AuxStack().Push(value.NewInt64Value(5))
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.AUXPOP}); err != nil {
@@ -1069,12 +1052,11 @@ func TestAuxpop(t *testing.T) {
 func TestAuxstckempty(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// auxstack should be empty
 	a := machine.AuxStack().Count()
@@ -1119,12 +1101,11 @@ func TestAuxstckempty(t *testing.T) {
 func TestNop(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, machine); !ok {
@@ -1158,7 +1139,6 @@ func TestNop(t *testing.T) {
 func TestErrpush(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 5)
-	locations := make([]string, 5)
 	i := 0 //insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
 	i++ //insn 1
@@ -1170,8 +1150,8 @@ func TestErrpush(t *testing.T) {
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// push codepoint onto stack
 	var nextHash [32]byte
@@ -1223,7 +1203,6 @@ func TestErrpush(t *testing.T) {
 func TestErrset(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 5)
-	locations := make([]string, 5)
 	i := 0 //insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
 	i++ //insn 1
@@ -1235,8 +1214,8 @@ func TestErrset(t *testing.T) {
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// push codepoint onto stack
 	var nextHash [32]byte
@@ -1272,12 +1251,11 @@ func TestErrset(t *testing.T) {
 func TestError(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, machine); !ok {
@@ -1297,12 +1275,11 @@ func TestError(t *testing.T) {
 func TestDup0(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
@@ -1321,12 +1298,11 @@ func TestDup0(t *testing.T) {
 func TestDup1(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(1))
 	machine.Stack().Push(value.NewInt64Value(2))
@@ -1347,12 +1323,11 @@ func TestDup1(t *testing.T) {
 func TestDup2(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(1))
 	machine.Stack().Push(value.NewInt64Value(2))
@@ -1375,12 +1350,11 @@ func TestDup2(t *testing.T) {
 func TestSwap2(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(1))
 	machine.Stack().Push(value.NewInt64Value(2))
@@ -1402,12 +1376,11 @@ func TestSwap2(t *testing.T) {
 func TestTget(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	tup := value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2))
 
@@ -1452,12 +1425,11 @@ func TestTget(t *testing.T) {
 func TestTset(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewInt64Value(3))
 	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
@@ -1499,12 +1471,11 @@ func TestTset(t *testing.T) {
 func TestTlen(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TLEN}); err != nil {
@@ -1531,7 +1502,6 @@ func TestTlen(t *testing.T) {
 func TestType(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
@@ -1550,8 +1520,8 @@ func TestType(t *testing.T) {
 	}
 
 	for i := range testValues {
-		machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-		knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+		machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 		machine.Stack().Push(testValues[i])
 		if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TYPE}); err != nil {
@@ -1571,12 +1541,11 @@ func TestType(t *testing.T) {
 func TestBreakpoint(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.BREAKPOINT}); err == nil {
 		t.Error("Breakpoint didn't block")
@@ -1590,12 +1559,11 @@ func TestBreakpoint(t *testing.T) {
 func TestLog(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	inbox := protocol.NewEmptyInbox()
 	balanceTracker := protocol.NewBalanceTracker()
 	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
@@ -1623,12 +1591,11 @@ func TestLog(t *testing.T) {
 func TestSend(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
 
@@ -1754,12 +1721,11 @@ func TestSend(t *testing.T) {
 func TestNbsend1(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
 
@@ -1802,12 +1768,11 @@ func TestNbsend1(t *testing.T) {
 func TestNbsend(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
 
@@ -1937,12 +1902,11 @@ func TestNbsend(t *testing.T) {
 func TestGettime(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
-	locations := make([]string, 2)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()

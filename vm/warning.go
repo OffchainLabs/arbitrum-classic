@@ -29,13 +29,12 @@ type WarningHandler interface {
 
 type VerboseWarningHandler struct {
 	pc          *MachinePC
-	locations   []string
 	anyWarnings bool
 	num         int
 }
 
-func NewVerboseWarningHandler(m *MachinePC, locations []string) *VerboseWarningHandler {
-	return &VerboseWarningHandler{m, locations, false, 0}
+func NewVerboseWarningHandler(m *MachinePC) *VerboseWarningHandler {
+	return &VerboseWarningHandler{m, false, 0}
 }
 
 func (hand *VerboseWarningHandler) AnyWarnings() bool {
@@ -48,12 +47,13 @@ func (hand *VerboseWarningHandler) Warn(wstr string) {
 		panic("Too many warnings")
 	}
 	if hand.pc != nil {
-		fmt.Println(hand.locations[hand.pc.pc], ":", wstr)
+		fmt.Println(hand.pc, ":", wstr)
+		//fmt.Println(hand.locations[hand.pc.pc], ":", wstr)
 	}
 }
 
 func (hand *VerboseWarningHandler) Clone() WarningHandler {
-	return &VerboseWarningHandler{hand.pc, hand.locations, hand.anyWarnings, hand.num}
+	return &VerboseWarningHandler{hand.pc, hand.anyWarnings, hand.num}
 }
 
 func (hand *VerboseWarningHandler) SwitchMachinePC(m *MachinePC) {

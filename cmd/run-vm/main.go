@@ -40,7 +40,7 @@ func main() {
 	candidates2, _ := evm.BytesToSizedByteArray(candidates2Bytes)
 
 	//var machine *vm.Machine
-	machine, _, err := loader.LoadMachineFromFile(os.Args[1], true)
+	machine, err := loader.LoadMachineFromFile(os.Args[1], true)
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}

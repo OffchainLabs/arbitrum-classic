@@ -130,7 +130,7 @@ func Equal(x, y *Machine) (bool, string) {
 	return true, ""
 }
 
-func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, locations []string, sizeLimit int64) *Machine {
+func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, sizeLimit int64) *Machine {
 	datastack := stack.NewEmptyFlat()
 	auxstack := stack.NewEmptyFlat()
 	//stack := NewTuple(value.NewEmptyTuple())
@@ -140,7 +140,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, loc
 	errHandler := value.ErrorCodePoint
 	var wh WarningHandler
 	if warn {
-		wh = NewVerboseWarningHandler(nil, locations)
+		wh = NewVerboseWarningHandler(nil)
 	} else {
 		wh = NewSilentWarningHandler()
 	}
