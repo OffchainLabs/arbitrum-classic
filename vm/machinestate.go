@@ -335,7 +335,7 @@ func (m *Machine) Hash() [32]byte {
 	case MACHINE_HALT:
 		return value.NewInt64Value(0).ToBytes()
 	}
-
+	panic("Machine::Hash: invalid machine status")
 }
 
 func (m *Machine) PrintState() {
