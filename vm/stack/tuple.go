@@ -40,6 +40,10 @@ func (m *Tuple) PushTuple(v value.TupleValue) {
 	m.Push(v)
 }
 
+func (m *Tuple) PushCodePoint(v value.CodePointValue) {
+	m.Push(v)
+}
+
 func (m *Tuple) Pop() (value.Value, error) {
 	topTuple, ok := m.stack.(value.TupleValue)
 	if !ok {
@@ -88,6 +92,18 @@ func (m *Tuple) PopTuple() (value.TupleValue, error) {
 	v, ok := val.(value.TupleValue)
 	if !ok {
 		return value.TupleValue{}, TypeError{"Tuple", val}
+	}
+	return v, nil
+}
+
+func (m *Tuple) PopCodePoint() (value.CodePointValue, error) {
+	val, err := m.Pop()
+	if err != nil {
+		return value.CodePointValue{}, err
+	}
+	v, ok := val.(value.CodePointValue)
+	if !ok {
+		return value.CodePointValue{}, TypeError{"CodePointValue", val}
 	}
 	return v, nil
 }

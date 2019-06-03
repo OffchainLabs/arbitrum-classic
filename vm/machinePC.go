@@ -70,22 +70,12 @@ func (m MachinePC) GetCurrentInsn() value.Operation {
 func (m MachinePC) GetCurrentInsnName() string {
 	if m.pc >= 0 {
 		return code.InstructionNames[m.flat[m.pc].GetOp()]
-	} else if m.pc == -1 {
-		return "HaltState"
-	} else if m.pc == -2 {
-		return "ErrorState"
 	} else {
 		panic("Bad pc")
 	}
 }
 
 func (m MachinePC) GetPC() value.CodePointValue {
-	//fmt.Println("Getting PC", m.pc)
-	if m.pc == -1 {
-		return value.HaltCodePoint
-	} else if m.pc == -2 {
-		return value.ErrorCodePoint
-	}
 	if m.pc >= int64(len(m.flat)) || m.pc < 0 {
 		panic(fmt.Sprintf("Invalid pc: %v", m.pc))
 	}
@@ -115,14 +105,12 @@ func (m MachinePC) GetCurrentCodePointHash() [32]byte {
 	}
 }
 
-func (m *MachinePC) IncrPC() {
-	if !m.IsHalted() {
-		m.pc = 1 + m.pc
-		if m.pc >= int64(len(m.flat)) {
-			m.warn.Warn("IncrPC: PC reached end and halted")
-			m.Halt()
-		}
+func (m *MachinePC) IncrPC() error {
+	m.pc = 1 + m.pc
+	if m.pc >= int64(len(m.flat)) {
+		return errors.New("IncrPC: PC reached end and halted")
 	}
+	return nil
 }
 
 func (m *MachinePC) SetPCForced(iv value.Value) error {
@@ -136,16 +124,4 @@ func (m *MachinePC) SetPCForced(iv value.Value) error {
 	}
 	m.pc = iv64
 	return nil
-}
-
-func (m *MachinePC) Halt() {
-	m.pc = -1
-}
-
-func (m MachinePC) IsHalted() bool {
-	return m.pc == -1
-}
-
-func (m MachinePC) IsErrored() bool {
-	return m.pc == -2
 }

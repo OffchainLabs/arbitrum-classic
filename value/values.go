@@ -6,7 +6,7 @@ import (
 
 const (
 	TypeCodeInt       uint8 = 0
-	TypeCodeCodePoint       = CodePointCode
+	TypeCodeCodePoint       = 1
 	TypeCodeHashOnly        = 2
 	TypeCodeTuple           = 3
 )

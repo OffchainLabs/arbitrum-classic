@@ -135,7 +135,11 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, error) {
 				break
 			}
 		}
-		m.pc.SetPCForced(m.errHandler.value)
+		if m.errHandler.Equal(value.ErrorCodePoint) {
+			m.ErrorStop()
+		} else {
+			m.pc.SetPCForced(m.errHandler)
+		}
 		return mods, err
 	}
 }
@@ -216,6 +220,12 @@ func PushStackTuple(m *Machine, mods StackMods, v value.TupleValue) StackMods {
 	return mods
 }
 
+func PushStackCodePoint(m *Machine, mods StackMods, v value.CodePointValue) StackMods {
+	mods.pushesRemaining--
+	m.Stack().PushCodePoint(v)
+	return mods
+}
+
 func PopAuxStack(m *Machine, mods StackMods) (value.Value, StackMods, error) {
 	if m.AuxStack().IsEmpty() {
 		return value.NewEmptyTuple(), mods, nil
@@ -272,6 +282,12 @@ func PopStackInt(m *Machine, mods StackMods) (value.IntValue, StackMods, error) 
 
 func PopStackTuple(m *Machine, mods StackMods) (value.TupleValue, StackMods, error) {
 	v, err := m.Stack().PopTuple()
+	mods.poppedValue()
+	return v, mods, err
+}
+
+func PopStackCodePoint(m *Machine, mods StackMods) (value.CodePointValue, StackMods, error) {
+	v, err := m.Stack().PopCodePoint()
 	mods.poppedValue()
 	return v, mods, err
 }
@@ -643,7 +659,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 
 func insnErrPush(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
-	mods = PushStackBox(state, mods, state.errHandler.value)
+	mods = PushStackCodePoint(state, mods, state.errHandler)
 	state.IncrPC()
 	return mods, nil
 }
@@ -651,11 +667,11 @@ func insnErrPush(state *Machine) (StackMods, error) {
 func insnErrSet(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 0)
 
-	rawTarget, mods, err := PopStackBox(state, mods)
+	rawTarget, mods, err := PopStackCodePoint(state, mods)
 	if err != nil {
 		return mods, err
 	}
-	state.errHandler.Set(rawTarget)
+	state.errHandler = rawTarget
 	state.IncrPC()
 	return mods, err
 }

@@ -63,6 +63,13 @@ func (m *MachineNoContext) NotifyStep() {
 
 }
 
+type MachineStatus int
+const (
+	MACHINE_EXTENSIVE MachineStatus = iota
+	MACHINE_ERRORSTOP
+	MACHINE_HALT
+)
+
 type Machine struct {
 	// implements Machinestate
 	stack      stack.Stack
@@ -70,8 +77,9 @@ type Machine struct {
 	register   *MachineValue
 	static     *MachineValue
 	pc         *MachinePC
-	errHandler *MachineValue
+	errHandler value.CodePointValue
 	context    MachineContext
+	status     MachineStatus
 
 	sizeLimit     int64
 	sizeException bool
@@ -100,10 +108,8 @@ func Equal(x, y *Machine) (bool, string) {
 		tmp += err
 		return false, tmp
 	}
-	if ok, err := x.errHandler.Equal(y.errHandler); !ok {
-		tmp := "errHandler error: "
-		tmp += err
-		return false, tmp
+	if ok := x.errHandler.Equal(y.errHandler); !ok {
+		return false, "err handlers not equal"
 	}
 	return true, ""
 }
@@ -115,7 +121,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, loc
 	//auxstack := NewTuple(value.NewEmptyTuple())
 	register := NewMachineValue(value.NewEmptyTuple())
 	static := NewMachineValue(staticVal)
-	errHandler := NewMachineValue(value.ErrorCodePoint)
+	errHandler := value.ErrorCodePoint
 	var wh WarningHandler
 	if warn {
 		wh = NewVerboseWarningHandler(nil, locations)
@@ -124,22 +130,21 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, loc
 	}
 	pc := NewMachinePC(opCodes, wh)
 	wh.SwitchMachinePC(pc)
-	ret := &Machine{datastack, auxstack, register, static, pc, errHandler, &MachineNoContext{}, sizeLimit, false, wh}
+	ret := &Machine{datastack, auxstack, register, static, pc, errHandler, &MachineNoContext{}, MACHINE_EXTENSIVE,sizeLimit, false, wh}
 	ret.checkSize()
 	return ret
 }
 
-func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal, errHandlerVal value.Value, sizeLimit int64) *Machine {
+func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal, errHandlerVal value.CodePointValue, sizeLimit int64) *Machine {
 	datastack := stack.FlatFromTupleChain(stackVal)
 	auxStack := stack.FlatFromTupleChain(auxStackVal)
 	register := NewMachineValue(registerVal)
 	static := NewMachineValue(staticVal)
-	errHandler := NewMachineValue(errHandlerVal)
 	wh := NewSilentWarningHandler()
 	pc := NewMachinePC(opCodes, wh)
 	wh.SwitchMachinePC(pc)
 	pc.SetPCForced(pcVal)
-	return &Machine{datastack, auxStack, register, static, pc, errHandler, &MachineNoContext{}, sizeLimit, false, wh}
+	return &Machine{datastack, auxStack, register, static, pc, errHandlerVal, &MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
 }
 
 func (m *Machine) Stack() stack.Stack {
@@ -168,7 +173,10 @@ func (m *Machine) SetContext(mc MachineContext) {
 
 func (m *Machine) IncrPC() {
 	if !m.HaveSizeException() {
-		m.pc.IncrPC()
+		err := m.pc.IncrPC()
+		if err != nil {
+			m.status = MACHINE_ERRORSTOP
+		}
 	}
 }
 
@@ -176,7 +184,7 @@ func (m *Machine) GetPC() value.Value {
 	return m.pc.GetPC()
 }
 
-func (m *Machine) GetErrHandler() *MachineValue {
+func (m *Machine) GetErrHandler() value.CodePointValue {
      return m.errHandler;
 }
 
@@ -191,22 +199,26 @@ func (m *Machine) GetAllOperations() []value.Operation {
 }
 
 func (m *Machine) SetPC(iv value.Value) error {
-	if !m.HaveSizeException() && !m.pc.IsHalted() {
+	if !m.HaveSizeException() && !m.IsHalted() {
 		return m.pc.SetPCForced(iv)
 	}
 	return nil
 }
 
 func (m *Machine) Halt() {
-	m.pc.Halt()
+	m.status = MACHINE_HALT
+}
+
+func (m *Machine) ErrorStop() {
+	m.status = MACHINE_ERRORSTOP
 }
 
 func (m *Machine) IsHalted() bool {
-	return m.pc.IsHalted()
+	return m.status == MACHINE_HALT
 }
 
 func (m *Machine) IsErrored() bool {
-	return m.pc.IsErrored()
+	return m.status == MACHINE_ERRORSTOP
 }
 
 func (m *Machine) HaveSizeException() bool {
@@ -214,7 +226,7 @@ func (m *Machine) HaveSizeException() bool {
 }
 
 func (m *Machine) checkSize() {
-	if !m.pc.IsHalted() && !m.HaveSizeException() {
+	if !m.IsHalted() && !m.HaveSizeException() {
 		if m.stack.Size()+m.register.Size()+m.static.Size() >= m.sizeLimit {
 			m.sizeException = true
 		}
@@ -244,7 +256,7 @@ func (m *Machine) run() (bool, bool, string) {
 		return true, false, "Halted"
 	}
 	if m.IsErrored() {
-		return true, false, "Halted"
+		return true, false, "ErrorStopped"
 	}
 	if m.HaveSizeException() {
 		return true, false, "SizeException"
@@ -306,17 +318,24 @@ func (m *Machine) Log(val value.Value) {
 }
 
 func (m *Machine) Hash() [32]byte {
-	val := solsha3.SoliditySHA3(
-		solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
-		solsha3.Bytes32(m.stack.StateValue().Hash()),
-		solsha3.Bytes32(m.auxstack.StateValue().Hash()),
-		solsha3.Bytes32(m.register.StateValue().Hash()),
-		solsha3.Bytes32(m.static.StateValue().Hash()),
-		solsha3.Bytes32(m.errHandler.StateValue().Hash()),
-	)
-	ret := [32]byte{}
-	copy(ret[:], val)
-	return ret
+	switch m.status {
+	case MACHINE_EXTENSIVE:
+		ret := [32]byte{}
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
+			solsha3.Bytes32(m.stack.StateValue().Hash()),
+			solsha3.Bytes32(m.auxstack.StateValue().Hash()),
+			solsha3.Bytes32(m.register.StateValue().Hash()),
+			solsha3.Bytes32(m.static.StateValue().Hash()),
+			solsha3.Bytes32(m.errHandler.Hash()),
+		))
+		return ret
+	case MACHINE_ERRORSTOP:
+		return value.NewInt64Value(1).ToBytes()
+	case MACHINE_HALT:
+		return value.NewInt64Value(0).ToBytes()
+	}
+
 }
 
 func (m *Machine) PrintState() {
@@ -325,7 +344,7 @@ func (m *Machine) PrintState() {
 	auxStackHash := m.auxstack.StateValue().Hash()
 	registerHash := m.register.StateValue().Hash()
 	staticHash := m.static.StateValue().Hash()
-	errHandlerHash := m.errHandler.StateValue().Hash()
+	errHandlerHash := m.errHandler.Hash()
 	fmt.Println("codePointHash", hexutil.Encode(codePointHash[:]))
 	fmt.Println("stackHash", hexutil.Encode(stackHash[:]))
 	fmt.Println("auxStackHash", hexutil.Encode(auxStackHash[:]))
@@ -349,7 +368,7 @@ func (m *Machine) MarshalForProof(wr io.Writer) error {
 	baseAuxStackValHash := baseAuxStackVal.Hash()
 	registerHash := m.register.ProofValue().Hash()
 	staticHash := m.static.ProofValue().Hash()
-	errHandlerHash := m.errHandler.StateValue().Hash()
+	errHandlerHash := m.errHandler.Hash()
 
 	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
 
@@ -393,7 +412,19 @@ func (m *Machine) Clone() *Machine { // clone machine state--new machine wll NOT
 	newPc.warn = newWarnHandler
 	newPcPointer := &newPc
 	newWarnHandler.SwitchMachinePC(newPcPointer)
-	ret := &Machine{m.stack.Clone(), m.auxstack.Clone(), m.register.Clone(), m.static.Clone(), newPcPointer, m.errHandler.Clone(), &MachineNoContext{}, m.sizeLimit, m.sizeException, newWarnHandler}
+	ret := &Machine{
+		m.stack.Clone(),
+		m.auxstack.Clone(),
+		m.register.Clone(),
+		m.static.Clone(),
+		newPcPointer,
+		m.errHandler,
+		&MachineNoContext{},
+		m.status,
+		m.sizeLimit,
+		m.sizeException,
+		newWarnHandler,
+	}
 	//WARNING: risk of bug here, because of shallow copy of stack, callstack
 	return ret
 }

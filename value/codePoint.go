@@ -1,7 +1,6 @@
 package value
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -97,8 +96,6 @@ func MarshalOperation(op Operation, wr io.Writer) error {
 	return op.Marshal(wr)
 }
 
-const CodePointCode = 1
-
 func NewCodePointForProofFromReader(rd io.Reader) (CodePointValue, error) {
 	var op Operation
 	op, err := NewOperationFromReader(rd)
@@ -115,10 +112,6 @@ type CodePointValue struct {
 	Op       Operation
 	NextHash [32]byte
 }
-
-//func NewCodePointValue(point CodePointValue) CodePointValue {
-//	return CodePointValue{point}
-//}
 
 func NewCodePointValueFromReader(rd io.Reader) (CodePointValue, error) {
 	var insnNum int64
@@ -175,31 +168,17 @@ func (cv CodePointValue) Size() int64 {
 	return 1
 }
 
-var ErrorCodePointHash [32]byte
-var HaltCodePointHash [32]byte
-
 var ErrorCodePoint CodePointValue
-var HaltCodePoint CodePointValue
 
 func init() {
-	ErrorCodePointHash = sha256.Sum256([]byte("ErrorCodePointHash"))
-	HaltCodePointHash = sha256.Sum256([]byte("HaltCodePointHash"))
-
-	HaltCodePoint = CodePointValue{-1, BasicOperation{code.NOP}, [32]byte{}}
-	ErrorCodePoint = CodePointValue{-2, BasicOperation{code.NOP}, [32]byte{}}
+	ErrorCodePoint = CodePointValue{0, BasicOperation{0}, [32]byte{}}
 }
 
 func (cv CodePointValue) Hash() [32]byte {
-	if cv.InsnNum == -1 {
-		return HaltCodePointHash
-	} else if cv.InsnNum == -2 {
-		return ErrorCodePointHash
-	}
-
 	switch op := cv.Op.(type) {
 	case ImmediateOperation:
 		var codePointData [66]byte
-		codePointData[0] = CodePointCode
+		codePointData[0] = TypeCodeCodePoint
 		codePointData[1] = byte(op.Op)
 		valHash := op.Val.Hash()
 		copy(codePointData[2:], valHash[:])
@@ -211,7 +190,7 @@ func (cv CodePointValue) Hash() [32]byte {
 		return ret
 	case BasicOperation:
 		var codePointData [34]byte
-		codePointData[0] = CodePointCode
+		codePointData[0] = TypeCodeCodePoint
 		codePointData[1] = byte(op.Op)
 		copy(codePointData[2:], cv.NextHash[:])
 		d := sha3.NewLegacyKeccak256()
