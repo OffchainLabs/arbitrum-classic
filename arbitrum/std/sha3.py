@@ -86,6 +86,55 @@ def ctx_pushbyte(vm):
         # updatedCtx
     ])
 
+@modifies_stack([value.TupleType(3), value.TupleType(5)], [value.TupleType(3)])  # sha3ctx block -> sha3ctx
+def ctx_pushblock(vm):
+    vm.tgetn(0)
+    absorb_block(vm)
+    # sha3ctx
+    make_buf_1600(vm)
+    vm.push(0)
+    vm.tnewn(3)
+    vm.tsetn(2)
+    vm.tsetn(1)
+    vm.tsetn(0)
+
+def set135(vm, val):
+    # block
+    vm.dup0()
+    vm.tgetn(135//32)
+    vm.cast(value.IntType())
+    vm.push(val << (8*(135%32)))
+    vm.bitwise_or()
+    vm.swap1()
+    vm.tsetn(135//32)
+
+
+@modifies_stack_unchecked([value.TupleType(3), value.TupleType(5), value.IntType()], [value.IntType()])  # sha3ctx block numBytes -> keccak256hash
+def ctx_pushlastblock(vm):
+    vm.swap2()
+    vm.dup0()
+    vm.push(135)
+    vm.eq()
+    vm.ifelse(lambda vm: [
+        vm.pop(),
+        set135(vm, 0x81)
+    ], lambda vm: [
+        # numBytes block sha3ctx
+        vm.push(0x01),
+        vm.swap2(),
+        set_byte_in_buf(vm),
+        # block sha3ctx
+        set135(vm, 0x80),
+    ])
+    # block sha3ctx
+    vm.swap1()
+    vm.cast(value.TupleType(3))
+    vm.tgetn(0)
+    absorb_block(vm)
+    vm.cast(value.TupleType(3))
+    vm.tgetn(0)
+    bitwise.flip_endianness(vm)
+
 
 @modifies_stack(1, 1)  # sha3ctx -> hashValue
 def ctx_finish(vm):
@@ -279,7 +328,7 @@ def absorb_block(vm):
     vm.swap1()
     vm.cast(value.TupleType(7))
     vm.swap1()
-    for i in range(7):
+    for i in range(5):
         vm.dup1()
         vm.dup1()
         # state newblock state newblock
@@ -567,6 +616,35 @@ def setword(vm, word_num):
     vm.swap1()
     vm.tsetn(word_num // 4)
 
+@modifies_stack([byterange.typ, value.IntType()], [value.TupleType(5)])
+def byterange_get136(vm):
+    # [br, offset]
+    vm.swap1()
+    vm.tnewn(5)
+    # [tup, index, br]
+    for i in range(5):
+        vm.dup2()
+        vm.dup2()
+        vm.swap1()
+        byterange.get(vm)
+        # [br[0], tup, index, br]
+        if i == 4:
+            vm.push(bitwise.n_highest_mask_static(64))
+            vm.bitwise_and()
+        bitwise.flip_endianness(vm)
+        vm.swap1()
+        vm.tsetn(i)
+        if i < 4:
+            # [tup, index, br]
+            vm.swap1()
+            vm.push(32)
+            vm.add()
+            vm.swap1()
+        # [tup, index, br]
+    vm.swap2()
+    vm.pop()
+    vm.pop()
+
 @modifies_stack([byterange.typ, value.IntType()], [value.IntType()])
 def hash_byterange(vm):
     # bytearray length
@@ -579,29 +657,48 @@ def hash_byterange(vm):
         vm.tgetn(3),
         vm.dup1(),
         vm.tgetn(1),
+        vm.push(135),
+        vm.add(),
         vm.lt()
     ], lambda vm: [
         vm.dup0(),
         vm.tgetn(1),
         vm.dup1(),
         vm.tgetn(2),
-        byterange.get8(vm),
+        byterange_get136(vm),
         # val [ctx, i, bytearray, length]
         vm.dup1(),
         vm.tgetn(0),
-        ctx_pushbyte(vm),
+        vm.cast(value.TupleType(3)),
+        ctx_pushblock(vm),
         vm.swap1(),
         vm.tsetn(0),
 
         vm.dup0(),
         vm.tgetn(1),
-        vm.push(1),
+        vm.push(136),
         vm.add(),
         vm.swap1(),
         vm.tsetn(1)
     ])
+    vm.dup0()
+    vm.tgetn(1)
+    vm.dup1()
+    vm.tgetn(3)
+    vm.sub()
+    # [bytes, [ctx, i, bytearray, length]]
+    vm.dup1()
+    vm.tgetn(1)
+    vm.dup2()
+    vm.tgetn(2)
+    byterange_get136(vm)
+    # [val, bytes, [ctx, i, bytearray, length]]
+    vm.swap1()
+    vm.swap2()
     vm.tgetn(0)
-    keccak_ctx_finish(vm)
+    vm.cast(value.TupleType(3))
+    # [ctx, val, bytes]
+    ctx_pushlastblock(vm)
 
 def print_nist_style(vm):
     # buf
