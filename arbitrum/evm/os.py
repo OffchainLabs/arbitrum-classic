@@ -579,7 +579,6 @@ def check_message_sequence(vm):
     vm.swap2()
     vm.swap1()
     # [seq % 2, current_seq, seq / 2, sender]
-    vm.debug()
     vm.ifelse(lambda vm: [
         # sequence must be incremented
         # [current_seq, seq / 2, sender]
