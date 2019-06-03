@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/evm"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
@@ -27,13 +26,13 @@ func TestMachineAdd(t *testing.T) {
 	i++
 	insns[1] = value.ImmediateOperation{Op: code.ADD, Val: value.NewInt64Value(4)}
 	i++
-	insns[i] = value.BasicOperation{Op: code.ADVISE}
+	insns[i] = value.BasicOperation{Op: code.LOG}
 	i++
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
 	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
 	runMachine := machine.Clone()
-	steps, _, msg := runMachine.Run(80000)
+	steps, msg := runMachine.Run(80000)
 	fmt.Println(steps, msg)
 }
 
@@ -781,8 +780,7 @@ func TestInbox(t *testing.T) {
 	inbox.DeliverMessages()
 	knowninbox.DeliverMessages()
 
-	adviseHandler := &evm.AdviseHandler{}
-	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive(), adviseHandler)
+	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -819,7 +817,7 @@ func TestJump(t *testing.T) {
 	i++ //insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
 	i++ //insn 3
-	insns[i] = value.BasicOperation{Op: code.ADVISE}
+	insns[i] = value.BasicOperation{Op: code.LOG}
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
@@ -854,7 +852,7 @@ func TestCJump(t *testing.T) {
 	i++ //insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
 	i++ //insn 3
-	insns[i] = value.BasicOperation{Op: code.ADVISE}
+	insns[i] = value.BasicOperation{Op: code.LOG}
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
@@ -1152,7 +1150,7 @@ func TestErrpush(t *testing.T) {
 	i++ //insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
 	i++ //insn 3
-	insns[i] = value.BasicOperation{Op: code.ADVISE}
+	insns[i] = value.BasicOperation{Op: code.LOG}
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
@@ -1217,7 +1215,7 @@ func TestErrset(t *testing.T) {
 	i++ //insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
 	i++ //insn 3
-	insns[i] = value.BasicOperation{Op: code.ADVISE}
+	insns[i] = value.BasicOperation{Op: code.LOG}
 	i++ //insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
@@ -1247,6 +1245,31 @@ func TestErrset(t *testing.T) {
 	if _, err := vm.RunInstruction(knownMachine, value.BasicOperation{Op: code.ERRSET}); err != nil {
 		tmp := "ERRSET failed - "
 		tmp += err.Error()
+		t.Error(tmp)
+	}
+	// verify known and unknown match
+	if ok, err := vm.Equal(knownMachine, machine); !ok {
+		t.Error(err)
+	}
+}
+
+func TestError(t *testing.T) {
+	//test
+	insns := make([]value.Operation, 1)
+	locations := make([]string, 2)
+	i := 0
+	insns[i] = value.BasicOperation{Op: code.HALT}
+
+	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+
+	// verify known and unknown match
+	if ok, err := vm.Equal(knownMachine, machine); !ok {
+		t.Error(err)
+	}
+	// check NOP does nothing
+	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ERROR}); err == nil {
+		tmp := "ERROR failed - should have generated error"
 		t.Error(tmp)
 	}
 	// verify known and unknown match
@@ -1397,6 +1420,9 @@ func TestTget(t *testing.T) {
 	// test A out of range
 	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 	machine.Stack().Push(value.NewInt64Value(3))
+	var nextHash [32]byte
+	codept := value.CodePointValue{0, value.BasicOperation{Op: code.HALT}, nextHash}
+	machine.SetPC(codept)
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TGET}); err == nil {
 		tmp := "TGET expected fail"
 		t.Error(tmp)
@@ -1522,7 +1548,7 @@ func TestIstuple(t *testing.T) {
 	}
 }
 
-func TestBadvise(t *testing.T) {
+func TestBreakpoint(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
 	locations := make([]string, 2)
@@ -1532,9 +1558,8 @@ func TestBadvise(t *testing.T) {
 	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
 
-	machine.Stack().Push(value.NewInt64Value(5))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.BADVISE}); err == nil {
-		t.Error("BAdvise didn't block")
+	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.BREAKPOINT}); err == nil {
+		t.Error("Breakpoint didn't block")
 	}
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, machine); !ok {
@@ -1542,7 +1567,7 @@ func TestBadvise(t *testing.T) {
 	}
 }
 
-func TestAdvise(t *testing.T) {
+func TestLog(t *testing.T) {
 	//test
 	insns := make([]value.Operation, 1)
 	locations := make([]string, 2)
@@ -1551,10 +1576,13 @@ func TestAdvise(t *testing.T) {
 
 	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, locations, 100)
+	inbox := protocol.NewEmptyInbox()
+	balanceTracker := protocol.NewBalanceTracker()
+	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	machine.Stack().Push(value.NewInt64Value(5))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ADVISE}); err != nil {
-		tmp := "ADVISE failed - "
+	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.LOG}); err != nil {
+		tmp := "LOG failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
@@ -1562,6 +1590,14 @@ func TestAdvise(t *testing.T) {
 	if ok, err := vm.Equal(knownMachine, machine); !ok {
 		t.Error(err)
 	}
+	// verify out message
+	if len(ctx.GetAssertion().Logs) != 1 {
+		t.Error("No log value generated")
+	}
+	if !ctx.GetAssertion().Logs[0].Equal(value.NewInt64Value(5)) {
+		t.Error("log value incorrect")
+	}
+
 }
 
 func TestSend(t *testing.T) {
@@ -1594,8 +1630,7 @@ func TestSend(t *testing.T) {
 	dest := [32]byte{}
 	dest[31] = 4
 	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	adviseHandler := &evm.AdviseHandler{}
-	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive(), adviseHandler)
+	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -1713,8 +1748,7 @@ func TestNbsend1(t *testing.T) {
 	tok[20] = 1
 	balanceTracker.Add(tok, big.NewInt(10))
 
-	adviseHandler := &evm.AdviseHandler{}
-	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive(), adviseHandler)
+	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -1775,8 +1809,7 @@ func TestNbsend(t *testing.T) {
 	dest := [32]byte{}
 	dest[31] = 4
 	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	adviseHandler := &evm.AdviseHandler{}
-	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive(), adviseHandler)
+	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -1894,8 +1927,7 @@ func TestGettime(t *testing.T) {
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
 
-	adviseHandler := &evm.AdviseHandler{}
-	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{5, 10}, inbox.Receive(), adviseHandler)
+	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{5, 10}, inbox.Receive())
 
 	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.GETTIME}); err != nil {
 		tmp := "GETTIME failed - "
