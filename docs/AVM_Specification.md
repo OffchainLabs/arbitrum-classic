@@ -56,7 +56,7 @@ An Integer marshals to
 A Codepoint marshals to:
 
 * byte val of 1
-* 8-byte little-endian representation of the pc.
+* 8-byte big-endian representation of the pc.
 * the marshalling of the operation
 * 32-byte nextHash value
 
@@ -88,11 +88,11 @@ The state of a VM is either a special state Halted, or a special state ErrorStop
 
 An extensive state of a VM contains the following:
 
+* Current Codepoint: a Codepoint that represents the current point of execution;
 * Data Stack: a Stack that is the primary working area for computation;
 * Aux Stack: a Stack that provides auxiliary storage;
-* Current Codepoint: a Codepoint that represents the current point of execution;
+* Register: a mutable storage cell that can hold a single Value;
 * Static: an immutable Value that is initialized when the VM is created;
-* Register: a mutable storage cell that can hold a single Value; and
 * Error Codepoint: a Codepoint that is meant to be used in response to an Error.
 
 When a VM is initialized, it is in an extensive state. The Data Stack, Aux Stack, Register, and Error Codepoint are initialized to None, None, None, and the Codepoint (0, 0, 0), respectively. The entity that creates the VM supplies the initial values of the Current Codepoint and Static.
@@ -103,7 +103,7 @@ If a VM is in the Halted state, its state hash is the Integer 0.
 
 If a VM is in the ErrorStop state, its state hash is the Integer 1.
 
-If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Data Stack, the hash of the Aux Stack, the hash of the Instruction Stack, the hash of the Static, the hash of the Register, and the hash of the Error Codepoint, hashing the result using Keccak-256, and encoding the result as an Integer in little-endian fashion.
+If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Instruction Stack, the hash of the Data Stack, the hash of the Aux Stack, the hash of the Register, the hash of the Static, and the hash of the Error Codepoint, hashing the result using Keccak-256.
 
 ## The Runtime Environment
 
