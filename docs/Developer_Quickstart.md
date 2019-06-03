@@ -131,12 +131,6 @@ this dapp, you do not need to change any Solidity files.
     truffle migrate --network arbitrum
     ```
 
-    Move the `compiled.json` folder into the frontend:
-
-    ``` bash
-    mv compiled.json src
-    ```
-
 2. Deploy `contract.ao` to 3 Validators
 
     > Note: this step may take about 10 minutes the very first time. Subsequent
