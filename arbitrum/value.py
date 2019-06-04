@@ -145,7 +145,7 @@ class CodePointType:
         return "CodePointType()"
 
     def empty_val(self):
-        return AVMCodePoint(-2, 0, b'')
+        return AVMCodePoint(0, 0, b'')
 
     def typecode(self):
         return 1

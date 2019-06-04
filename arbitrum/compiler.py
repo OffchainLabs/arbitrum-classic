@@ -570,7 +570,7 @@ class VMCompiler:
         self.block.append(ast.SetErrorHandlerFunctionStatement(func))
 
     def clear_exception_handler(self):
-        self.push(value.AVMCodePoint(-2, ast.BasicOp(0), b''))
+        self.push(value.AVMCodePoint(0, ast.BasicOp(0), b''))
         self.errset()
 
     def while_loop(self, cond_block, body_block):
