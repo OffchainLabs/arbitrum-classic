@@ -1,0 +1,70 @@
+syntax = "proto3";
+package ethvalidator;
+import "protocol/protocol.proto";
+import "value/value.proto";
+import "valmessage/valmessage.proto";
+option go_package = "github.com/offchainlabs/arb-validator/ethvalidator";
+
+message Signature {
+    value.HashBuf r = 1;
+    value.HashBuf s = 2;
+    uint32 v = 3;
+}
+
+message CreateVMValidatorRequest {
+    valmessage.VMConfiguration config = 1;
+    value.HashBuf vm_id = 2;
+    value.HashBuf vm_state = 3;
+    uint32 challengeManagerNum = 4;
+}
+
+message UnanimousAssertionValidatorNotification {
+    bool accepted = 1;
+    repeated Signature signatures = 2;
+}
+
+message CreateVMFinalizedValidatorNotification {
+    bool approved = 1;
+}
+
+message SignedMessage {
+    protocol.MessageBuf message = 1;
+    bytes signature = 2;
+}
+
+message UnanimousAssertionValidatorRequest {
+    value.HashBuf beforeHash = 1;
+    value.HashBuf beforeInbox = 2;
+    uint64 sequenceNum = 3;
+    protocol.TimeBoundsBuf timeBounds = 4;
+    repeated SignedMessage signedMessages = 5;
+}
+
+message ValidatorRequest {
+    value.HashBuf request_id = 1;
+    oneof request {
+        UnanimousAssertionValidatorRequest unanimous = 2;
+        UnanimousAssertionValidatorNotification unanimousNotification = 3;
+        CreateVMValidatorRequest create = 4;
+        CreateVMFinalizedValidatorNotification createNotification = 5;
+    }
+}
+
+message CreateVMFollowerResponse {
+    bool accepted = 1;
+    Signature signature = 2;
+}
+
+message UnanimousAssertionFollowerResponse {
+    bool accepted = 1;
+    Signature signature = 2;
+    value.HashBuf assertion_hash = 3;
+}
+
+message FollowerResponse {
+    value.HashBuf request_id = 1;
+    oneof response {
+        CreateVMFollowerResponse create = 2;
+        UnanimousAssertionFollowerResponse unanimous = 3;
+    }
+}

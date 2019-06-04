@@ -1,0 +1,88 @@
+/*
+ * Copyright 2019, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. 
+ */
+
+package valmessage
+
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arb-avm/protocol"
+	"github.com/offchainlabs/arb-avm/value"
+	"math/big"
+)
+
+//type VMConfiguration struct {
+//	GracePeriod           uint64
+//	EscrowRequired        *big.Int
+//	AssertKeys            []common.Address
+//	MaxExecutionStepCount uint32
+//}
+//
+func NewVMConfiguration(gracePeriod uint64, escrowRequired *big.Int, escrowCurrency common.Address, assertKeys []common.Address, maxSteps uint32, owner common.Address) *VMConfiguration {
+	keys := make([]*Address, 0, len(assertKeys))
+	for _, key := range assertKeys {
+		keys = append(keys, &Address{
+			Value: key.Bytes(),
+		})
+	}
+
+	return &VMConfiguration{
+		GracePeriod:           gracePeriod,
+		EscrowRequired:        value.NewBigIntBuf(escrowRequired),
+		EscrowCurrency:        &Address{Value: escrowCurrency.Bytes()},
+		AssertKeys:            keys,
+		MaxExecutionStepCount: maxSteps,
+		Owner:                 &Address{Value: owner.Bytes()},
+	}
+}
+
+type IncomingValidatorMessage interface {
+	IncomingValidatorMessage()
+	GetHeader() *types.Header
+}
+
+type BridgeMessage struct {
+	Message IncomingMessage
+	Header *types.Header
+}
+
+func (BridgeMessage) IncomingValidatorMessage() {}
+
+func (msg BridgeMessage) GetHeader() *types.Header {
+	return msg.Header
+}
+
+type TimeUpdateMessage struct {
+	Header *types.Header
+}
+
+func (TimeUpdateMessage) IncomingValidatorMessage() {}
+
+func (msg TimeUpdateMessage) GetHeader() *types.Header {
+	return msg.Header
+}
+
+
+type IncomingMessageMessage struct {
+	Msg  protocol.Message
+	Header *types.Header
+}
+
+func (IncomingMessageMessage) IncomingValidatorMessage() {}
+
+func (msg IncomingMessageMessage) GetHeader() *types.Header {
+	return msg.Header
+}

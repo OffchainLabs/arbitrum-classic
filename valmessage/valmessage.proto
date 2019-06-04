@@ -1,0 +1,21 @@
+syntax = "proto3";
+package valmessage;
+import "value/value.proto";
+option go_package = "github.com/offchainlabs/arb-validator/valmessage";
+
+message Address {
+    bytes value = 1;
+}
+
+message TokenTypeBuf {
+    bytes value = 1;
+}
+
+message VMConfiguration {
+    uint64 grace_period = 1;
+    value.BigIntegerBuf escrow_required = 2;
+    Address escrow_currency = 3;
+    repeated Address assert_keys = 4;
+    uint32 max_execution_step_count = 5;
+    Address owner = 6;
+}
