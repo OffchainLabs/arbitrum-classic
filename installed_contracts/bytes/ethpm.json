@@ -1,0 +1,23 @@
+{
+  "authors": [
+    "Gonçalo Sá <goncalo.sa@consensys.net>"
+  ],
+  "license": "MIT",
+  "description": "Solidity bytes tightly packed arrays utility library.",
+  "keywords": [
+    "bytes",
+    "utils",
+    "solidity",
+    "library"
+  ],
+  "links": {},
+  "sources": [
+    "./contracts/AssertBytes.sol",
+    "./contracts/BytesLib.sol",
+    "./contracts/Migrations.sol"
+  ],
+  "dependencies": {},
+  "manifest_version": 1,
+  "package_name": "bytes",
+  "version": "0.0.5"
+}
