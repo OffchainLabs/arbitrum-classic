@@ -102,7 +102,6 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         run('mkdir compose')
         run('git clone https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge')
         run('git clone https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator')
-        run('git clone https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm')
 
     # Create VALIDATOR_STATE_DIRNAME s if they don't exist
     states_path = os.path.abspath(VALIDATOR_STATE_DIRNAME)
