@@ -13,18 +13,15 @@ RUN apk add --no-cache gcc git libc-dev
 RUN addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash
 USER user
-RUN mkdir -p /home/user/arb-validator/arb-avm
 WORKDIR "/home/user/arb-validator"
 
 # Dependencies
-COPY --chown=user arb-avm/go.mod arb-avm/go.sum /home/user/arb-avm/
 COPY --chown=user go.mod go.sum /home/user/arb-validator/
 RUN go mod download
 
 # Source code
 COPY --chown=user ./ /home/user/arb-validator
-RUN mv arb-avm/* ../arb-avm && rm -rf arb-avm && \
-    export GOOS=linux GOARCH=amd64 && \
+RUN export GOOS=linux GOARCH=amd64 && \
     cd cmd/followerServer && go build -a -v -ldflags "-w -s" && \
     cd ../coordinatorServer && go build -a -v -ldflags "-w -s" && \
     mv coordinatorServer ../followerServer/followerServer /go/bin/

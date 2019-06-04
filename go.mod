@@ -28,7 +28,7 @@ require (
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.6 // indirect
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
-	github.com/offchainlabs/arb-avm v0.0.0-20190319161014-2d5f223ce76e
+	github.com/offchainlabs/arb-avm v0.1.0
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/rjeczalik/notify v0.9.2 // indirect
