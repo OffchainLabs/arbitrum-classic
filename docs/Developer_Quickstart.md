@@ -87,7 +87,6 @@ git clone --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
 cd arbc-solidity
 pip3 install -r requirements.txt
 python3 setup.py install
-cd ..
 ```
 
 Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu.
@@ -130,7 +129,7 @@ this dapp, you do not need to change any Solidity files.
     `compiled.json` file needed for the frontend:
 
     ``` bash
-    truffle migrate --network arbitrum
+    truffle migrate --reset --network arbitrum
     ```
 
 2. Deploy `contract.ao` to 3 Validators
@@ -151,26 +150,22 @@ this dapp, you do not need to change any Solidity files.
     arb-ethbridge_1              | Summary
     arb-ethbridge_1              | =======
     arb-ethbridge_1              | > Total deployments:   10
-    arb-ethbridge_1              | > Final cost:          0.229704442061650614 ETH
+    arb-ethbridge_1              | > Final cost:          0.229981374766015443 ETH
     arb-ethbridge_1              |
     arb-ethbridge_1              | listening on [::]:17545 ...
-    arb-ethbridge_1              | connect to [::ffff:172.23.0.2]:17545 from [TRUNCATED]
+    arb-ethbridge_1              | connect to [::ffff:192.168.112.2]:17545 from demo-dapp-pet-shop_arb-validator-coordinator_1.demo-dapp-pet-shop_default:34891 ([::ffff:192.168.112.3]:34891)
     arb-validator-coordinator_1  | Finished waiting for arb-ethbridge:17545...
-    arb-validator-coordinator_1  | 0x81183C9C61bdf79DB7330BBcda47Be30c0a85064
-    arb-validator-coordinator_1  | Coordinator is creating VM
-    arb-validator-coordinator_1  | Got wait request
-    arb-validator-coordinator_1  | [DATE] [TIMESTAMP] http: TLS handshake error from 172.23.0.3:39233: EOF
-    arb-validator-coordinator_1  | [DATE] [TIMESTAMP] http: TLS handshake error from 172.23.0.4:40329: EOF
+    arb-validator-coordinator_1  | 2019/06/04 07:10:18 Coordinator is trying to create the VM
+    arb-validator-coordinator_1  | 2019/06/04 07:10:19 http: TLS handshake error from 192.168.112.4:41587: EOF
+    arb-validator-coordinator_1  | 2019/06/04 07:10:19 http: TLS handshake error from 192.168.112.5:45429: EOF
     arb-validator2_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator-coordinator_1  | Coordinator serving client
-    arb-validator-coordinator_1  | Coordinator upgraded client <nil>
-    arb-validator-coordinator_1  | Coordinator serving client
-    arb-validator2_1             | Follower connected to coordinator <nil>
     arb-validator1_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator-coordinator_1  | Coordinator serving client
-    arb-validator-coordinator_1  | Coordinator upgraded client <nil>
-    arb-validator-coordinator_1  | Coordinator serving client
-    arb-validator1_1             | Follower connected to coordinator <nil>
+    arb-validator-coordinator_1  | 2019/06/04 07:10:21 Coordinator connected with follower 0x38299d74a169e68df4da85fb12c6fd22246add9f
+    arb-validator2_1             | 2019/06/04 07:10:21 Validator formed connected with coordinator
+    arb-validator-coordinator_1  | 2019/06/04 07:10:21 Coordinator connected with follower 0xc7711f36b2c13e00821ffd9ec54b04a60aefbd1b
+    arb-validator-coordinator_1  | 2019/06/04 07:10:21 Coordinator gathering signatures
+    arb-validator1_1             | 2019/06/04 07:10:21 Validator formed connected with coordinator
+    arb-validator-coordinator_1  | 2019/06/04 07:10:22 Coordinator created VM
     ```
 
 ### Use the DApp
@@ -255,7 +250,6 @@ and place your `*.sol` files in the `contracts` folder that is generated.
 
         ``` js
         const ArbProvider = require("arb-truffle-provider");
-        const path = require("path");
         const mnemonic = "jar deny prosper gasp flush glass core corn alarm treat leg smart";
         ```
 
@@ -265,13 +259,18 @@ and place your `*.sol` files in the `contracts` folder that is generated.
         module.exports = {
           networks: {
             arbitrum: {
-              provider: ArbProvider.provider(
-                __dirname,
-                'build/contracts',
-                {
-                  'mnemonic': mnemonic,
+              provider: function() {
+                if(typeof this.provider.prov == 'undefined') {
+                    this.provider.prov = ArbProvider.provider(
+                      __dirname,
+                      'build/contracts',
+                      {
+                        'mnemonic': mnemonic,
+                      }
+                    );
                 }
-              ),
+                return this.provider.prov
+              },
               network_id: "*",
             },
         },
@@ -287,7 +286,7 @@ the Solidity files in the `contracts` folder:
     Run the following command to generate `compiled.json` and `contract.ao`:
 
     ``` bash
-    truffle migrate --network arbitrum
+    truffle migrate --reset --network arbitrum
     ```
 
     Copy the `compiled.json` file into your frontend (i.e. a `src` folder).
@@ -304,13 +303,13 @@ the Solidity files in the `contracts` folder:
 
 ### Connect the Web3 frontend
 
-1. Add the Arbitrum Web3 Provider
+1. Add the Arbitrum `web3.js` Provider
 
     ``` bash
     yarn add https://github.com/OffchainLabs/arb-ethers-provider.git
     ```
 
-    Note: there is alternatively an `ethers` provider:
+    Note: there is alternatively an `ethers.js` provider:
 
     ``` bash
     yarn add https://github.com/OffchainLabs/arb-ethers-provider.git
@@ -328,16 +327,14 @@ the Solidity files in the `contracts` folder:
     Replace the existing provider with the Arbitrum Web3 provider:
 
     ``` js
-    const contracts_promise = new Promise(function(resolve, reject) {
+    const contracts = await new Promise(function(resolve, reject) {
         $.getJSON('compiled.json', function(data) {
-        resolve(data)
-        })
-        .fail(function (jqhr, textStatus, error) {
-        reject("Failed to load compiled.json. " + textStatus + ": " + error)
+            resolve(data)
+        }).fail(function (jqhr, textStatus, error) {
+            reject("Failed to load compiled.json. " + textStatus + ": " + error)
         });
     });
 
-    const contracts = await contracts_promise;
     const provider = new ArbProvider(
         'http://localhost:1235',
         contracts,
