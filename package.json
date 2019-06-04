@@ -1,14 +1,14 @@
 {
   "name": "arb-web3-provider",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Arbitrum provider for web3",
   "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OffchainLabs/arb-web3-provider.git"
   },
-  "author": "Offchain Labs",
-  "license": "UNLICENSED",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/OffchainLabs/arb-web3-provider/issues"
   },
