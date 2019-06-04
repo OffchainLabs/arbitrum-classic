@@ -173,34 +173,30 @@ this dapp, you do not need to change any Solidity files.
 1. Install [Metamask](https://metamask.io/)
 
     If you don't have Metamask already, download the extension and add it to
-    your browser following these steps:
+    your browser and create a new account.
 
-    - Select `Get Started`
-    - Select `Import Wallet` and you will asked if you want to share diagnostics
-    - Wallet Seed: `jar deny prosper gasp flush glass core corn alarm treat leg smart`
-    - Note: `password` happens to be 8 characters. Don't use a secure password
-      on this dummy seed.
-    - `All Done`
-    - Keep this browser window open for later
-
-    If you already have Metamask installed, then just import the wallet seed:
-    `jar deny prosper gasp flush glass core corn alarm treat leg smart`.
-
-2. Add ETH to Metamask wallet
-
-    You can do this by start Ganache on port 8545 with the mnemonic:
-
-    ``` bash
-    MNEMONIC="jar deny prosper gasp flush glass core corn alarm treat leg smart"
-    ganache-cli -p 8545 -m "$MNEMONIC"
-    ```
-
-3. Select Ganache local network in Metamask
+2. Select Ganache local network in Metamask
 
     - Go back to Metamask or click the extension icon
     - Select `Main Ethereum Network` top right hand side
-    - Choose `Localhost 8545` (if using another port will need to select `Custom RPC`)
-    - You should see `100 ETH` in `Account 1` with address `0x81183C9C61bdf79DB7330BBcda47Be30c0a85064`
+    - Choose `Custom RPC`
+    - Enter `Ganache` as the network name
+    - Enter `http://127.0.0.1:7545` as the RPC url
+    - Press the save button
+
+3. Add pre-funded accounts to metamask
+    - Go back to Metamask or click the extension icon
+    - Select the circle icon on the top right hand side
+    - Select `Import Account`
+    - Enter any of the following private keys
+        - `0x41a9550a0ae23fd52f3b99acab194db2e4474262db64dfd46807bca9e061e211`
+        - `0x77500b500284eab4d5201d230ca015b82c32752e42c79dc3d6ff3668ada9d340`
+        - `0x54f4370ee20fd563acaac3ea63eef5cc62d3e0cb11f7f03e70180e538c882bc8`
+        - `0xa36dd563650acd8305d222a68abcaa4b3db69f28cc40d0abba391ec58ac12fba`
+        - `0x2090bf383976cdcb04fc776585f5e65f71929be0e36d53ffc8eb066ef8ec2d18`
+        - `0x1b153b674c13af2974acbb66027fa4386b85b31cb27d159276d05e9542359f3f`
+    - Metamask should now have an Ganache testnet account holding ETH
+    ```
 
 4. Launch the frontend
 
