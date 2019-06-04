@@ -1,6 +1,6 @@
 {
   "name": "arb-truffle-provider",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Web3 Provider to plugin to truffle for Arbitrum deployment",
   "main": "index.js",
   "scripts": {
@@ -11,13 +11,13 @@
     "url": "git+https://github.com/OffchainLabs/arb-truffle-provider.git"
   },
   "author": "Offchain Labs, Inc.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/OffchainLabs/arb-truffle-provider/issues"
   },
   "homepage": "https://github.com/OffchainLabs/arb-truffle-provider#readme",
   "dependencies": {
     "callsite": "^1.0.0",
-    "ganache-core": "^2.5.3"
+    "ganache-core": "^2.5.5"
   }
 }
