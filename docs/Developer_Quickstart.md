@@ -9,6 +9,8 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 [build and run the demo app](#hello-arbitrum) or
 [port your own dapp](#porting-to-arbitrum).
 
+**Want to learn more? Join the team on [Discord](https://discord.gg/TjCu7bU)!**
+
 ## Install Dependencies
 
 Follow the instructions for supported operating systems or use the comprehensive
