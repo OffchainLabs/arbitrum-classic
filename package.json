@@ -1,6 +1,6 @@
 {
   "name": "pet-shop",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "truffle.js",
   "directories": {
@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "lite-server": "^2.3.0"
+    "lite-server": "^2.5.2"
   },
   "dependencies": {
     "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider.git",
