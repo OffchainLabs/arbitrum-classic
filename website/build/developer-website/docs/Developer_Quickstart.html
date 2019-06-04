@@ -1,5 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Arbitrum Developer Quickstart · Offchain Labs Dev Center</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Get started with Arbitrum by installing the dependencies, running the demo app,&lt;/p&gt;
-"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Arbitrum Developer Quickstart · Offchain Labs Dev Center"/><meta property="og:type" content="website"/><meta property="og:url" content="https://developer.offchainlabs.com/"/><meta property="og:description" content="&lt;p&gt;Get started with Arbitrum by installing the dependencies, running the demo app,&lt;/p&gt;
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Arbitrum Developer Quickstart · Offchain Labs Dev Center</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Get started with Arbitrum by installing the Arbitrum compiler,&lt;/p&gt;
+"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Arbitrum Developer Quickstart · Offchain Labs Dev Center"/><meta property="og:type" content="website"/><meta property="og:url" content="https://developer.offchainlabs.com/"/><meta property="og:description" content="&lt;p&gt;Get started with Arbitrum by installing the Arbitrum compiler,&lt;/p&gt;
 "/><meta property="og:image" content="https://developer.offchainlabs.com/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://developer.offchainlabs.com/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><h2 class="headerTitle">Offchain Labs Dev Center</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive siteNavItemActive"><a href="/docs/Developer_Quickstart" target="_self">Developer Quickstart</a></li><li class="siteNavGroupActive"><a href="/docs/AVM_Specification" target="_self">Arbitrum Spec</a></li><li class=""><a href="https://medium.com/offchainlabs" target="_blank">Blog</a></li><li class=""><a href="https://github.com/OffchainLabs" target="_blank">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/docs/Developer_Quickstart">Arbitrum Developer Quickstart</a></li><li class="navListItem"><a class="navItem" href="/docs/AVM_Specification">Arbitrum Specification</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
@@ -50,17 +50,26 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/OffchainLabs/developer-website/edit/master/docs/Developer_Quickstart.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Arbitrum Developer Quickstart</h1></header><article><div><span><p>Get started with Arbitrum by installing the dependencies, running the demo app,
-and porting your Solidity project.</p>
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/OffchainLabs/developer-website/edit/master/docs/Developer_Quickstart.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Arbitrum Developer Quickstart</h1></header><article><div><span><p>Get started with Arbitrum by installing the Arbitrum compiler,
+<code>arbc-truffle-compile</code>, and its dependencies. Next,
+<a href="#hello-arbitrum">build and run the demo app</a> or
+<a href="#porting-to-arbitrum">port your own dapp</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="install-dependencies"></a><a href="#install-dependencies" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install Dependencies</h2>
 <p>Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.</p>
 <h3><a class="anchor" aria-hidden="true" id="macos"></a><a href="#macos" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MacOS</h3>
 <ol>
-<li><p>Install Python, Node, &amp; Docker using <a href="https://brew.sh/">brew</a>:</p>
-<pre><code class="hljs css language-bash">brew install python3 node docker docker-machine docker-compose
+<li><p>Install python3, nodejs, &amp; docker using <a href="https://brew.sh/">Homebrew</a>:</p>
+<blockquote>
+<p>Requires <code>node -v</code> version less than 12 for the web3.js frontend in the
+demo app. You can use <a href="https://github.com/nvm-sh/nvm">nvm</a> to switch
+between multiple node versions.</p>
+</blockquote>
+<pre><code class="hljs css language-bash">brew install python3 node@8 docker docker-machine docker-compose
 brew link docker
 brew link docker-compose
+brew unlink node
+brew link node@8
 </code></pre></li>
 <li><p>Change npm's default directory:</p>
 <p>If you have not installed any npm global packages before,
@@ -72,33 +81,20 @@ npm config <span class="hljs-built_in">set</span> prefix <span class="hljs-strin
 <span class="hljs-built_in">source</span> ~/.bash_profile
 </code></pre></li>
 <li><p>Install truffle and yarn</p>
-<pre><code class="hljs css language-bash">npm install -g truffle yarn
+<pre><code class="hljs css language-bash">npm install -g truffle ganache-cli yarn
 </code></pre></li>
 </ol>
 <h3><a class="anchor" aria-hidden="true" id="ubuntu-1804"></a><a href="#ubuntu-1804" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Ubuntu 18.04</h3>
-<ol>
-<li><p>Install Python, Node, Docker, Truffle, and Yarn:</p>
+<p>Install python3, nodejs, docker, truffle, and yarn:</p>
 <pre><code class="hljs css language-bash">sudo apt-get update
-sudo apt-get install -y python3 python3-pip nodejs npm virtualbox docker docker-compose
-sudo npm install -g truffle yarn
-</code></pre></li>
-<li><p>Use docker without sudo</p>
-<p>Docker <a href="https://docs.docker.com/install/linux/linux-postinstall/">can be installed</a>
-to give permissions &quot;equivalent to the <code>roor</code> user&quot;, but without the <code>root</code>
-user group.</p>
-<blockquote>
-<p>Warning: &quot;The docker group grants privileges equivalent to the <code>root</code>
-user. For details on how this impacts security in your system, see
-<a href="https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface">Docker Daemon Attack Surface</a>&quot;.</p>
-</blockquote>
-<p>Run the following commands to use Docker without <code>sudo</code>:</p>
-<pre><code class="hljs css language-bash">sudo groupadd docker
-sudo usermod -aG docker <span class="hljs-variable">$USER</span>
+sudo apt-get install -y python3 python3-pip nodejs npm docker docker-compose
+sudo npm install -g truffle ganache-cli yarn
 </code></pre>
-<p>Note: if you skip this step you will need to add <code>sudo</code> in front of all
-<code>docker</code> and <code>docker-compose</code> commands. You will also need to build the
-app <a href="#build-manually">manually</a> since <code>arb-deploy</code> does not use <code>sudo</code>.</p></li>
-</ol>
+<blockquote>
+<p>Docker <a href="https://docs.docker.com/install/linux/linux-postinstall/">can be used without sudo</a>
+to give permissions &quot;equivalent to the <code>root</code> user&quot;, but without the <code>root</code>
+user group. See: <a href="https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface">Docker Daemon Attack Surface</a>.</p>
+</blockquote>
 <h3><a class="anchor" aria-hidden="true" id="full-list"></a><a href="#full-list" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Full List</h3>
 <p>Here are the important dependencies in case you are not running on a supported OS:</p>
 <ul>
@@ -107,7 +103,6 @@ app <a href="#build-manually">manually</a> since <code>arb-deploy</code> does no
 <li><a href="https://nodejs.org/en/">node and npm</a></li>
 <li><a href="https://www.python.org/downloads/">python3 and pip3</a></li>
 <li><a href="https://truffleframework.com/docs/truffle/getting-started/installation">truffle</a></li>
-<li><a href="https://www.virtualbox.org/wiki/Downloads">virtualbox</a></li>
 <li><a href="https://yarnpkg.com/en/">yarn</a></li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="install-the-arbitrum-compiler"></a><a href="#install-the-arbitrum-compiler" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install the Arbitrum Compiler</h2>
@@ -115,17 +110,13 @@ app <a href="#build-manually">manually</a> since <code>arb-deploy</code> does no
 <h3><a class="anchor" aria-hidden="true" id="build-from-source"></a><a href="#build-from-source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build from source</h3>
 <pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
 <span class="hljs-built_in">cd</span> arbc-solidity
-pip3 install virtualenv
-python3 -m venv venv
-<span class="hljs-built_in">source</span> venv/bin/activate
 pip3 install -r requirements.txt
-deactivate
 python3 setup.py install
 <span class="hljs-built_in">cd</span> ..
 </code></pre>
+<p>Note: you may need to run <code>sudo python3 setup.py install</code> if running on Ubuntu.</p>
 <h3><a class="anchor" aria-hidden="true" id="check-installation"></a><a href="#check-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Check installation</h3>
-<p>Verify the installation was successful. You may need to open a new shell if the
-<code>arbc-truffle-compile</code> command is not found.</p>
+<p>Verify the installation was successful:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-built_in">which</span> arbc-truffle-compile
 </code></pre>
 <p>The expected output is:</p>
@@ -133,130 +124,111 @@ python3 setup.py install
 <p><code>/usr/local/bin/arbc-truffle-compile</code></p>
 </blockquote>
 <h2><a class="anchor" aria-hidden="true" id="hello-arbitrum"></a><a href="#hello-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello, Arbitrum</h2>
-<p>There are two ways to get started running your first code on Arbitrum.
-Either use the <a href="#build-script">build script</a> or build the demo app
-<a href="#build-manually">manually</a>.</p>
-<h3><a class="anchor" aria-hidden="true" id="build-script"></a><a href="#build-script" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build Script</h3>
-<ol>
-<li><p>Build everything and launch the validators using <code>arb.py</code></p>
-<blockquote>
-<p>Note: the <code>node -v</code> version must be before 12 since web3.js has a conflict
-with version 12. Otherwise <code>yarn</code> will produce a compile error. We
-recommend using <a href="https://github.com/nvm-sh/nvm">nvm</a> to switch versions.</p>
-</blockquote>
-<pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/demo-app.git
-<span class="hljs-built_in">cd</span> demo-app
+<p>Now you'll compile and run a demo dapp on Arbitrum. The dapp is based on
+a simple Pet Shop dapp that is used in a Truffle tutorial.</p>
+<h3><a class="anchor" aria-hidden="true" id="install"></a><a href="#install" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install</h3>
+<p>You only need to run these commands once:</p>
+<pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/demo-dapp-pet-shop.git
+<span class="hljs-built_in">cd</span> demo-dapp-pet-shop
 yarn
-python3 arb.py
-</code></pre></li>
-<li><p>Start the frontend</p>
-<p>Open another shell and go to <code>demo-app</code> and run:</p>
-<pre><code class="hljs css language-bash">yarn start
 </code></pre>
-<p>The browser will open to <a href="http://localhost:8080">localhost:8080</a></p></li>
-</ol>
-<h3><a class="anchor" aria-hidden="true" id="build-manually"></a><a href="#build-manually" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build Manually</h3>
+<h3><a class="anchor" aria-hidden="true" id="build-and-run"></a><a href="#build-and-run" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build and Run</h3>
+<p>You'll need to do these steps every time you make a change to the Solidity. For
+this dapp, you do not need to change any Solidity files.</p>
 <ol>
-<li><p>Download the demo app</p>
-<pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> --depth=1 https://github.com/OffchainLabs/demo-app.git
-<span class="hljs-built_in">cd</span> demo-app
-</code></pre>
-<p>And it's dependencies:</p>
-<pre><code class="hljs css language-bash">mkdir compose
-git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-ethbridge.git ./compose/arb-ethbridge
-git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-validator.git ./compose/arb-validator
-git <span class="hljs-built_in">clone</span> https://github.com/OffchainLabs/arb-avm.git ./compose/arb-validator/arb-avm
-</code></pre></li>
-<li><p>Compile the Fibonacci contract:</p>
+<li><p>Compile Solidity to Arbitrum:</p>
+<p>Truffle will output the compiled contract as <code>contract.ao</code> as well as a
+<code>compiled.json</code> file needed for the frontend:</p>
 <pre><code class="hljs css language-bash">truffle migrate --network arbitrum
-arbc-truffle-compile compiled.json contract.ao
-docker build -t arb-app -f .arb-app.Dockerfile .
-</code></pre></li>
-<li><p>Build</p>
-<p>Note: This step may take about ten minutes the first time. Subsuquent builds
-are much, much faster because intermediate build images are cached.</p>
-<pre><code class="hljs css language-bash">docker-compose build
 </code></pre>
-<p>Next build the frontend:</p>
-<pre><code class="hljs css language-bash">yarn
+<p>Move the <code>compiled.json</code> folder into the frontend:</p>
+<pre><code class="hljs css language-bash">mv compiled.json src
 </code></pre></li>
-<li><p>Run the Validators:</p>
-<p>Note: this step will run simultaneously with step 5, so you will need to
-open another bash prompt and continue to step 5 in parallel.</p>
-<pre><code class="hljs css language-bash">docker-compose up --build
+<li><p>Deploy <code>contract.ao</code> to 3 Validators</p>
+<blockquote>
+<p>Note: this step may take about 10 minutes the very first time. Subsequent
+builds are much, much faster because they are cached as Docker images.</p>
+</blockquote>
+<pre><code class="hljs css language-bash">./arb-deploy contract.ao 3
 </code></pre></li>
-<li><p>Run the Web3 frontend</p>
-<p>The browser will open up <a href="http://localhost:8080">localhost:8080</a> after
-running the following command:</p>
-<pre><code class="hljs css language-bash">yarn start
-</code></pre></li>
-</ol>
-<h3><a class="anchor" aria-hidden="true" id="use-the-app"></a><a href="#use-the-app" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Use the App</h3>
-<ol>
-<li><p>Check the validators are running</p>
-<p>You should see the following output from docker-compose at the very end of
-the log:</p>
-<pre><code class="hljs css language-txt">arb-validator-coordinator_1  | Leader is creating VM
+<li><p>Examine the Validator logs</p>
+<p>Go back to the Validators, started with <code>./arb-deploy contract.ao 3</code>, and
+examine the output of the logs. You should see the following output:</p>
+<pre><code class="hljs css language-txt">arb-ethbridge_1              | Summary
+arb-ethbridge_1              | =======
+arb-ethbridge_1              | &gt; Total deployments:   10
+arb-ethbridge_1              | &gt; Final cost:          0.229704442061650614 ETH
+arb-ethbridge_1              |
+arb-ethbridge_1              | listening on [::]:17545 <span class="hljs-built_in">..</span>.
+arb-ethbridge_1              | connect <span class="hljs-keyword">to</span> [::ffff:172.23.0.2]:17545 <span class="hljs-keyword">from</span> [TRUNCATED]
+arb-validator-coordinator_1  | Finished waiting <span class="hljs-keyword">for</span> arb-ethbridge:17545<span class="hljs-built_in">..</span>.
+arb-validator-coordinator_1  | 0x81183C9C61bdf79DB7330BBcda47Be30c0a85064
+arb-validator-coordinator_1  | Leader is creating VM
 arb-validator-coordinator_1  | Got wait request
-arb-validator-coordinator_1  | 2019/05/13 03:18:46 http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.19.0.3:40065: EOF
-arb-validator-coordinator_1  | 2019/05/13 03:18:47 http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.19.0.4:38229: EOF
+arb-validator-coordinator_1  | [DATE] [TIMESTAMP] http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.23.0.3:39233: EOF
+arb-validator-coordinator_1  | [DATE] [TIMESTAMP] http: TLS handshake <span class="hljs-builtin-name">error</span> <span class="hljs-keyword">from</span> 172.23.0.4:40329: EOF
 arb-validator2_1             | Finished waiting <span class="hljs-keyword">for</span> arb-validator-coordinator:1236<span class="hljs-built_in">..</span>.
 arb-validator-coordinator_1  | Leader serving<span class="hljs-built_in"> client
 </span>arb-validator-coordinator_1  | Leader upgraded<span class="hljs-built_in"> client </span>&lt;<span class="hljs-literal">nil</span>&gt;
 arb-validator-coordinator_1  |<span class="hljs-built_in"> Client </span>registered
-arb-ethbridge_1              | eth_getTransactionCount
 arb-validator2_1             | Follower connected <span class="hljs-keyword">to</span> leader &lt;<span class="hljs-literal">nil</span>&gt;
-arb-ethbridge_1              | eth_subscribe
-<span class="hljs-built_in">..</span>.
-arb-ethbridge_1              | eth_subscribe
 arb-validator1_1             | Finished waiting <span class="hljs-keyword">for</span> arb-validator-coordinator:1236<span class="hljs-built_in">..</span>.
 arb-validator-coordinator_1  | Leader serving<span class="hljs-built_in"> client
 </span>arb-validator-coordinator_1  | Leader upgraded<span class="hljs-built_in"> client </span>&lt;<span class="hljs-literal">nil</span>&gt;
 arb-validator-coordinator_1  |<span class="hljs-built_in"> Client </span>registered
-arb-validator-coordinator_1  | Getting PC 0
-arb-ethbridge_1              | eth_getTransactionCount
 arb-validator1_1             | Follower connected <span class="hljs-keyword">to</span> leader &lt;<span class="hljs-literal">nil</span>&gt;
-arb-ethbridge_1              | eth_subscribe
-arb-ethbridge_1              | eth_sendRawTransaction
-arb-ethbridge_1              | eth_subscribe
-arb-ethbridge_1              |
-arb-ethbridge_1              |   Transaction: 0x980498aa01a2fb89932dfa14df09fbe0d8c7cc460efc219a00b97fdf1b323887
-arb-ethbridge_1              |   Gas usage: 292476
-arb-ethbridge_1              |   Block Number: 18
-arb-ethbridge_1              |   Block Time: Mon May 13 2019 03:18:52 GMT+0000 (UTC)
-arb-ethbridge_1              |
-arb-ethbridge_1              | eth_subscribe
-<span class="hljs-built_in">..</span>.
-arb-ethbridge_1              | eth_subscribe
 </code></pre></li>
-<li><p>Enter number of Fibonacci numbers to generate under &quot;Arbitrum&quot; and &quot;Generate numbers&quot;</p>
-<p>For example, 50. Then you should see:</p>
-<blockquote>
-<p>Executing transaction</p>
-</blockquote>
-<p>Followed by:</p>
-<blockquote>
-<p>Successfully generated numbers</p>
-</blockquote>
-<p>The Arbitrum contract, compiled from the Fibonacci.sol contract, calculated
-the first 50 fibonacci numbers. These can be looked up at indices 0 to 49.
-Generating again would lookup N fibonacci numbers from 1 to N. This next
-sequence can be looked up at indices 50 to N-1. This is because the contract
-stacks the return results in an accumulating fashion instead of overwriting
-them at index 0 to N.</p></li>
-<li><p>Lookup a Fibonacci number</p>
-<p>For exmaple enter 49 under &quot;Lookup numbers&quot;. This is the 50th fibonacci
-number and should return the correct result:</p>
-<blockquote>
-<p>12586269025</p>
-</blockquote></li>
 </ol>
-<p>The next step is porting your own solidity code to an Arbitrum app.</p>
+<h3><a class="anchor" aria-hidden="true" id="use-the-dapp"></a><a href="#use-the-dapp" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Use the DApp</h3>
+<ol>
+<li><p>Install <a href="https://metamask.io/">Metamask</a></p>
+<p>If you don't have Metamask already, download the extension and add it to
+your browser following these steps:</p>
+<ul>
+<li>Select <code>Get Started</code></li>
+<li>Select <code>Import Wallet</code> and you will asked if you want to share diagnostics</li>
+<li>Wallet Seed: <code>jar deny prosper gasp flush glass core corn alarm treat leg smart</code></li>
+<li>Note: <code>password</code> happens to be 8 characters. Don't use a secure password
+on this dummy seed.</li>
+<li><code>All Done</code></li>
+<li>Keep this browser window open for later</li>
+</ul>
+<p>If you already have Metamask installed, then just import the wallet seed:
+<code>jar deny prosper gasp flush glass core corn alarm treat leg smart</code>.</p></li>
+<li><p>Add ETH to Metamask wallet</p>
+<p>You can do this by start Ganache on port 8545 with the mnemonic:</p>
+<pre><code class="hljs css language-bash">MNEMONIC=<span class="hljs-string">"jar deny prosper gasp flush glass core corn alarm treat leg smart"</span>
+ganache-cli -p 8545 -m <span class="hljs-string">"<span class="hljs-variable">$MNEMONIC</span>"</span>
+</code></pre></li>
+<li><p>Select Ganache local network in Metamask</p>
+<ul>
+<li>Go back to Metamask or click the extension icon</li>
+<li>Select <code>Main Ethereum Network</code> top right hand side</li>
+<li>Choose <code>Localhost 8545</code> (if using another port will need to select <code>Custom RPC</code>)</li>
+<li>You should see <code>100 ETH</code> in <code>Account 1</code> with address <code>0x81183C9C61bdf79DB7330BBcda47Be30c0a85064</code></li>
+</ul></li>
+<li><p>Launch the frontend</p>
+<p>In another session navigate to <code>demo-dapp-pet-shop</code> and run:</p>
+<pre><code class="hljs css language-bash">yarn
+yarn dev
+</code></pre>
+<p>The browser will open to <a href="http://localhost:3000">localhost:3000</a></p>
+<p>In the popup window that appears, select <code>Connect</code></p></li>
+<li><p>Adopt some pets</p>
+<p>The pet shop dapp should now be running in your browser. Choose a pet or two
+and click the adopt button to adopt your new animal friend(s).</p></li>
+</ol>
+<p>The next step is to learn how to port an Ethereum dapp to Arbitrum.</p>
 <h2><a class="anchor" aria-hidden="true" id="porting-to-arbitrum"></a><a href="#porting-to-arbitrum" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Porting to Arbitrum</h2>
 <p>To get a project up and running on Arbitrum, configure the Truffle project to
 use the Arbitrum provider, compile the Solidity contracts to Arbitrum bytecode
-in <code>contract.ao</code>, launch validators, and use the Arbitrum Web3 provider to hook
-into the frontend.</p>
+in <code>contract.ao</code>, launch validators, and use the arbitrum web3 provider or
+arbitrum ethers provider to hook into the frontend depending on which provider
+approach is used in the existing dapp.</p>
+<blockquote>
+<p>Note: remember to successfully run your Ethereum dapp locally before
+attempting to port it to Arbitrum.</p>
+</blockquote>
 <h3><a class="anchor" aria-hidden="true" id="configure-truffle"></a><a href="#configure-truffle" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configure Truffle</h3>
 <p>If you are not already using a Truffle project, go ahead and run <code>truffle init</code>
 and place your <code>*.sol</code> files in the <code>contracts</code> folder that is generated.</p>
@@ -266,18 +238,18 @@ and place your <code>*.sol</code> files in the <code>contracts</code> folder tha
 </code></pre></li>
 <li><p>Edit the <code>truffle-config.js</code>:</p>
 <ul>
-<li><p>Import <code>arb-truffle-provider</code> and set a test mnemonic:</p>
+<li><p>Import <code>arb-truffle-provider</code> and set the mnemonic at the top of the file:</p>
 <pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> ArbProvider = <span class="hljs-built_in">require</span>(<span class="hljs-string">"arb-truffle-provider"</span>);
 <span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">"path"</span>);
 <span class="hljs-keyword">const</span> mnemonic = <span class="hljs-string">"jar deny prosper gasp flush glass core corn alarm treat leg smart"</span>;
 </code></pre></li>
-<li><p>Add the Arbitrum provider to <code>module.exports</code>:</p>
+<li><p>Add the <code>arbitrum</code> network to <code>module.exports</code>:</p>
 <pre><code class="hljs css language-js"><span class="hljs-built_in">module</span>.exports = {
   <span class="hljs-attr">networks</span>: {
     <span class="hljs-attr">arbitrum</span>: {
       <span class="hljs-attr">provider</span>: ArbProvider.provider(
-        path.resolve(__dirname, <span class="hljs-string">'compiled.json'</span>),
-        <span class="hljs-literal">null</span>,
+        __dirname,
+        <span class="hljs-string">'build/contracts'</span>,
         {
           <span class="hljs-string">'mnemonic'</span>: mnemonic,
         }
@@ -289,74 +261,64 @@ and place your <code>*.sol</code> files in the <code>contracts</code> folder tha
 </ul></li>
 </ol>
 <h3><a class="anchor" aria-hidden="true" id="compile-solidity-to-arbitrum-bytecode"></a><a href="#compile-solidity-to-arbitrum-bytecode" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Compile Solidity to Arbitrum bytecode</h3>
-<p>Now that the Arbitrum provider is setup correctly, we are ready to compile the
-Solidity files in the <code>contracts</code> folder.</p>
+<p>Now that the Arbitrum provider is setup correctly, the next step is to compile
+the Solidity files in the <code>contracts</code> folder:</p>
 <ol>
 <li><p>Generate Arbitrum bytecode</p>
-<p>Run the following commands to generate <code>compiled.json</code> and <code>contract.ao</code>,
-respectively:</p>
+<p>Run the following command to generate <code>compiled.json</code> and <code>contract.ao</code>:</p>
 <pre><code class="hljs css language-bash">truffle migrate --network arbitrum
-arbc-truffle-compile compiled.json contract.ao
 </code></pre>
-<p>The <code>contract.ao</code> is the Arbitrum bytecode compiled from the EVM bytecode in
-<code>compiled.json</code>.</p></li>
-<li><p>Export <code>contract.ao</code> as Docker image <code>arb-app</code></p>
-<p>Next, the compiled Arbitrum bytecode is passed to the validators by creating
-the image <code>arb-app</code> with the single <code>contract.ao</code> file:</p>
-<pre><code class="hljs css language-bash"><span class="hljs-built_in">echo</span> $<span class="hljs-string">"FROM scratch\nCOPY contract.ao ./"</span> &gt; .arb-app.Dockerfile
-docker build -t arb-app -f arb-app.Dockerfile .
-</code></pre></li>
-<li><p>Add the <code>docker-compose.yml</code></p>
-<p>Copy the <code>docker-compose.yml</code> file from the <a href="https://github.com/OffchainLabs/demo-app/blob/master/docker-compose.yml">demo-app</a>
-into the root directory and optionally edit the mnemonic:</p>
-<pre><code class="hljs css language-bash">        args:
-            MNEMONIC: <span class="hljs-string">"jar deny prosper gasp flush glass core corn alarm treat leg smart"</span>
-</code></pre>
-<p>This must be the same mnemonic used in the <code>truffle-config.js</code> file.</p></li>
-<li><p>Run multiple Validators:</p>
-<p>Now that the <code>contract.ao</code> is exported, we can launch three validators:</p>
-<pre><code class="hljs css language-bash">docker-compose build
-docker-compose up
+<p>Copy the <code>compiled.json</code> file into your frontend (i.e. a <code>src</code> folder).
+The frontend will need it to use with the arbitrum providers.</p></li>
+<li><p>Run the Validators</p>
+<p>Make sure to copy in the <a href="https://github.com/OffchainLabs/demo-dapp-pet-shop/blob/master/arb-deploy">arb-deploy script</a> from the demo app.</p>
+<pre><code class="hljs css language-bash">MNEMONIC=<span class="hljs-string">"jar deny prosper gasp flush glass core corn alarm treat leg smart"</span>
+./arb-deploy contract.ao 3 -m <span class="hljs-string">"<span class="hljs-variable">$MNEMONIC</span>"</span>
 </code></pre></li>
 </ol>
-<h3><a class="anchor" aria-hidden="true" id="create-a-web3-frontend"></a><a href="#create-a-web3-frontend" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Create a Web3 frontend</h3>
+<h3><a class="anchor" aria-hidden="true" id="connect-the-web3-frontend"></a><a href="#connect-the-web3-frontend" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Connect the Web3 frontend</h3>
 <ol>
-<li><p>Add the Arbitrum Web3 Provider:</p>
-<pre><code class="hljs css language-bash">yarn add https://github.com/OffchainLabs/arb-web3-provider.git
+<li><p>Add the Arbitrum Web3 Provider</p>
+<pre><code class="hljs css language-bash">yarn add https://github.com/OffchainLabs/arb-ethers-provider.git
+</code></pre>
+<p>Note: there is alternatively an <code>ethers</code> provider:</p>
+<pre><code class="hljs css language-bash">yarn add https://github.com/OffchainLabs/arb-ethers-provider.git
 </code></pre></li>
-<li><p>Import the provider in javascript:</p>
-<p>This example uses a Solditiy contract &quot;Fibonacci&quot; and the <code>compiled.json</code>
-output from running <code>truffle migrate --network arbitrum</code>. The <code>compiled.json</code>
-is in the top level folder of the project.</p>
-<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> ArbProvider = <span class="hljs-built_in">require</span>(<span class="hljs-string">'arb-web3-provider'</span>);
+<li><p>Import the provider in the javascript app</p>
+<p>First, find the existing provider in the project. It could look something
+like this:</p>
+<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> provider = <span class="hljs-keyword">new</span> Web3.providers.HttpProvider(<span class="hljs-string">'http://localhost:7545'</span>);
+</code></pre>
+<p>Replace the existing provider with the Arbitrum Web3 provider:</p>
+<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> contracts_promise = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">resolve, reject</span>) </span>{
+    $.getJSON(<span class="hljs-string">'compiled.json'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">data</span>) </span>{
+    resolve(data)
+    })
+    .fail(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">jqhr, textStatus, error</span>) </span>{
+    reject(<span class="hljs-string">"Failed to load compiled.json. "</span> + textStatus + <span class="hljs-string">": "</span> + error)
+    });
+});
 
-<span class="hljs-keyword">const</span> contracts = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../compiled.json'</span>);
-
-<span class="hljs-keyword">let</span> provider = <span class="hljs-keyword">new</span> ArbProvider(
+<span class="hljs-keyword">const</span> contracts = <span class="hljs-keyword">await</span> contracts_promise;
+<span class="hljs-keyword">const</span> provider = <span class="hljs-keyword">new</span> ArbProvider(
     <span class="hljs-string">'http://localhost:1235'</span>,
     contracts,
-    <span class="hljs-keyword">new</span> ethers.providers.JsonRpcProvider(url)
+    <span class="hljs-keyword">new</span> Web3.providers.HttpProvider(<span class="hljs-string">'http://localhost:7545'</span>)
+    <span class="hljs-comment">// // ether provider would be used as:</span>
+    <span class="hljs-comment">//new ethers.providers.JsonRpcProvider('http://localhost:7545')</span>
 );
-
-<span class="hljs-comment">// Find "Fibonacci" contract</span>
-<span class="hljs-keyword">var</span> contract = <span class="hljs-literal">null</span>
-<span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> c <span class="hljs-keyword">of</span> contracts) {
-    <span class="hljs-keyword">if</span> (c.name == <span class="hljs-string">"Fibonacci"</span>) {
-        contract = c
-        <span class="hljs-keyword">break</span>
-    }
-}
-
-<span class="hljs-keyword">let</span> wallet = provider.getSigner(<span class="hljs-number">0</span>);
-<span class="hljs-keyword">let</span> ContractRaw = <span class="hljs-keyword">new</span> ethers.Contract(contract.address, contract.abi, provider);
-<span class="hljs-keyword">let</span> myContract = myContractRaw.connect(wallet);
 </code></pre>
-<p>This <code>myContract</code> can now be used to as an interface to call functions in
-javascript with the same name as in the Solidity file.</p>
-<p>For more information see the demo <a href="https://github.com/OffchainLabs/demo-app/blob/master/contracts/Fibonacci.sol">Fibonacci contract</a>
-and its <a href="https://github.com/OffchainLabs/demo-app/blob/master/src/index.js">Web3 interface</a>.</p></li>
-<li><p>Run the frontend:</p>
+<p>Note: this code must either be in an asynchronous function or the const
+<code>contents</code> must be set synchronously. One way to do this is to paste the
+contents of <code>compiled.json</code> into the javascript file and set <code>contents</code> to
+have the json value.</p>
+<p>Finally, import <code>arb-web3-provider.js</code> in the <code>index.html</code> as a script. For
+example:</p>
+<pre><code class="hljs css language-html"><span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"js/arb-web3-provider.js"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+</code></pre></li>
+<li><p>Run the frontend</p>
+<p>For example the command might be:</p>
 <pre><code class="hljs css language-bash">yarn start
 </code></pre></li>
 </ol>
-</span></div></article></div><div class="docLastUpdate"><em>Last updated on 5/13/2019</em></div><div class="docs-prevnext"><a class="docs-next button" href="/docs/AVM_Specification"><span>Arbitrum Specification</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#install-dependencies">Install Dependencies</a><ul class="toc-headings"><li><a href="#macos">MacOS</a></li><li><a href="#ubuntu-1804">Ubuntu 18.04</a></li><li><a href="#full-list">Full List</a></li></ul></li><li><a href="#install-the-arbitrum-compiler">Install the Arbitrum Compiler</a><ul class="toc-headings"><li><a href="#build-from-source">Build from source</a></li><li><a href="#check-installation">Check installation</a></li></ul></li><li><a href="#hello-arbitrum">Hello, Arbitrum</a><ul class="toc-headings"><li><a href="#build-script">Build Script</a></li><li><a href="#build-manually">Build Manually</a></li><li><a href="#use-the-app">Use the App</a></li></ul></li><li><a href="#porting-to-arbitrum">Porting to Arbitrum</a><ul class="toc-headings"><li><a href="#configure-truffle">Configure Truffle</a></li><li><a href="#compile-solidity-to-arbitrum-bytecode">Compile Solidity to Arbitrum bytecode</a></li><li><a href="#create-a-web3-frontend">Create a Web3 frontend</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"></a><div><h5>Docs</h5><a href="/docs/en/Developer_Quickstart">Developer Quickstart</a><a href="/docs/en/AVM_Specification">AVM Specification</a></div><div><h5>Community</h5><a href="https://offchainlabs.com">Offchain Labs</a><a href="https://medium.com/OffchainLabs">Blog</a><a href="https://twitter.com/OffchainLabs">Twitter</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/OffchainLabs">GitHub</a></div></section><a href="https://offchainlabs.com/"><img src="/img/logo-white.png" alt="Offchain Labs" width="150" height="125" class="footerLogo"/></a><section class="copyright">Copyright © 2019 Offchain Labs</section></footer></div></body></html>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 5/17/2019</em></div><div class="docs-prevnext"><a class="docs-next button" href="/docs/AVM_Specification"><span>Arbitrum Specification</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#install-dependencies">Install Dependencies</a><ul class="toc-headings"><li><a href="#macos">MacOS</a></li><li><a href="#ubuntu-1804">Ubuntu 18.04</a></li><li><a href="#full-list">Full List</a></li></ul></li><li><a href="#install-the-arbitrum-compiler">Install the Arbitrum Compiler</a><ul class="toc-headings"><li><a href="#build-from-source">Build from source</a></li><li><a href="#check-installation">Check installation</a></li></ul></li><li><a href="#hello-arbitrum">Hello, Arbitrum</a><ul class="toc-headings"><li><a href="#install">Install</a></li><li><a href="#build-and-run">Build and Run</a></li><li><a href="#use-the-dapp">Use the DApp</a></li></ul></li><li><a href="#porting-to-arbitrum">Porting to Arbitrum</a><ul class="toc-headings"><li><a href="#configure-truffle">Configure Truffle</a></li><li><a href="#compile-solidity-to-arbitrum-bytecode">Compile Solidity to Arbitrum bytecode</a></li><li><a href="#connect-the-web3-frontend">Connect the Web3 frontend</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"></a><div><h5>Docs</h5><a href="/docs/en/Developer_Quickstart">Developer Quickstart</a><a href="/docs/en/AVM_Specification">AVM Specification</a></div><div><h5>Community</h5><a href="https://offchainlabs.com">Offchain Labs</a><a href="https://medium.com/OffchainLabs">Blog</a><a href="https://twitter.com/OffchainLabs">Twitter</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/OffchainLabs">GitHub</a></div></section><a href="https://offchainlabs.com/"><img src="/img/logo-white.png" alt="Offchain Labs" width="150" height="125" class="footerLogo"/></a><section class="copyright">Copyright © 2019 Offchain Labs</section></footer></div></body></html>

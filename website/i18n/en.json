@@ -7,7 +7,7 @@
     "docs": {
       "AVM_Specification": {
         "title": "Arbitrum VM informal architecture spec",
-        "sidebar_label": "Arbitrum Specification"
+        "sidebar_label": "Arbitrum VM Specification"
       },
       "Developer_Quickstart": {
         "title": "Arbitrum Developer Quickstart"
