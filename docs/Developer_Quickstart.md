@@ -196,7 +196,6 @@ this dapp, you do not need to change any Solidity files.
         - `0x2090bf383976cdcb04fc776585f5e65f71929be0e36d53ffc8eb066ef8ec2d18`
         - `0x1b153b674c13af2974acbb66027fa4386b85b31cb27d159276d05e9542359f3f`
     - Metamask should now have an Ganache testnet account holding ETH
-    ```
 
 4. Launch the frontend
 
