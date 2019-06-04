@@ -258,12 +258,12 @@ func (m *Machine) run() (bool, bool, string) {
 	if m.IsHalted() || m.IsErrored() || m.HaveSizeException() {
 		return false, false, "Can't run"
 	}
-	m.context.NotifyStep()
 	insnName := m.pc.GetCurrentInsnName()
 	_, err := RunInstruction(m, m.pc.GetCurrentInsn())
 	if _, blocked := err.(VMBlockedError); blocked {
 		return false, false, "Blocked"
 	}
+	m.context.NotifyStep()
 	if err != nil {
 		fmt.Printf("error running instruction %v: %v\n", insnName, err)
 		return false, false, "Error"
@@ -311,18 +311,17 @@ func (m *Machine) RunUntilStop() {
 }
 
 // run up to maxSteps steps, stop earlier if halt or advise instruction, return number of insns actually run, and advise string or ""
-func (m *Machine) Run(maxSteps int32) (int32, string) {
-	continueRun := true
-	ran := true
+func (m *Machine) Run(maxSteps int32) (int32) {
 	i := int32(0)
-	for i = int32(0); (i < maxSteps) && continueRun && ran; i++ {
-		var msg string
-		ran, continueRun, msg = m.run()
-		if !ran || !continueRun {
-			return i, msg
+	continueRun := true
+	var ran bool
+	for continueRun && i < maxSteps {
+		ran, continueRun, _ = m.run()
+		if ran {
+			i++
 		}
 	}
-	return i, "Success"
+	return i
 }
 
 func (m *Machine) Warn(str string) {
@@ -406,7 +405,7 @@ func (m *Machine) MarshalForProof(wr io.Writer) error {
 	if _, err := wr.Write(errHandlerHash[:]); err != nil {
 		return err
 	}
-	if err := value.MarshalOperation(codePoint.Op, wr); err != nil {
+	if err := value.MarshalOperationProof(codePoint.Op, wr, true); err != nil {
 		return err
 	}
 	for _, val := range stackVals {

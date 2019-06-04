@@ -29,6 +29,7 @@ type Operation interface {
 	GetOp() code.Opcode
 	TypeCode() uint8
 	Marshal(wr io.Writer) error
+	MarshalProof(wr io.Writer, includeVal bool) error
 }
 
 type BasicOperation struct {
@@ -58,11 +59,27 @@ func (op BasicOperation) Marshal(wr io.Writer) error {
 	return op.Op.Marshal(wr)
 }
 
+func (op BasicOperation) MarshalProof(wr io.Writer, includeVal bool) error {
+	return op.Op.Marshal(wr)
+}
+
 func (op ImmediateOperation) Marshal(wr io.Writer) error {
 	if err := op.Op.Marshal(wr); err != nil {
 		return err
 	}
 	return MarshalValue(op.Val, wr)
+}
+
+func (op ImmediateOperation) MarshalProof(wr io.Writer, includeVal bool) error {
+	if err := op.Op.Marshal(wr); err != nil {
+		return err
+	}
+	if includeVal {
+		return MarshalValue(op.Val.CloneShallow(), wr)
+	} else {
+		return MarshalValue(NewHashOnlyValueFromValue(op.Val), wr)
+	}
+
 }
 
 func (op BasicOperation) TypeCode() uint8 {
@@ -110,6 +127,14 @@ func MarshalOperation(op Operation, wr io.Writer) error {
 		return err
 	}
 	return op.Marshal(wr)
+}
+
+func MarshalOperationProof(op Operation, wr io.Writer, includeVal bool) error {
+	typ := op.TypeCode()
+	if err := binary.Write(wr, binary.BigEndian, &typ); err != nil {
+		return err
+	}
+	return op.MarshalProof(wr, includeVal)
 }
 
 func NewCodePointForProofFromReader(rd io.Reader) (CodePointValue, error) {

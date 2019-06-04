@@ -47,8 +47,8 @@ func TestMachineAdd(t *testing.T) {
 
 	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	runMachine := machine.Clone()
-	steps, msg := runMachine.Run(80000)
-	fmt.Println(steps, msg)
+	steps := runMachine.Run(80000)
+	fmt.Println(steps)
 }
 
 // base operation tests for one, two, or three operands

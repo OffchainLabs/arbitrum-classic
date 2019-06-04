@@ -55,8 +55,8 @@ func main() {
 	inbox.DeliverMessages()
 
 	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
-	steps, msg := machine.Run(800000)
-	fmt.Println(steps, msg)
+	steps := machine.Run(800000)
+	fmt.Println(steps)
 	ad := ctx.Finalize(machine)
 	assertion := ad.GetAssertion()
 	for _, val := range assertion.Logs {
@@ -71,8 +71,8 @@ func main() {
 	precondition := ad.GetAssertion().Stub().GeneratePostcondition(ad.GetPrecondition())
 
 	ctx = protocol.NewMachineAssertionContext(machine, precondition.BeforeBalance, precondition.TimeBounds, inbox.Receive())
-	steps, msg = machine.Run(110000)
-	fmt.Println(steps, msg)
+	steps = machine.Run(110000)
+	fmt.Println(steps)
 	ad = ctx.Finalize(machine)
 	assertion = ad.GetAssertion()
 	for _, val := range assertion.Logs {
