@@ -597,7 +597,10 @@ class BasicOp(ASTNode):
         return 1
 
     def __repr__(self):
-        return instructions.OP_NAMES[self.op_code]
+        if self.op_code in instructions.OP_NAMES:
+            return instructions.OP_NAMES[self.op_code]
+        else:
+            return "Unhandled OpCode"
 
     def get_op(self):
         return self.op_code
