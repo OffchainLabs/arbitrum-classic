@@ -205,7 +205,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
         if insn.name == "JUMPDEST":
             jump_table.append((
                 insn.pc,
-                AVMLabel(f"jumpdest_{contract_id}_{insn.pc}")
+                AVMLabel("jumpdest_{}_{}".format(contract_id, insn.pc))
             ))
 
     jump_table = sorted(jump_table, key=lambda x: x[0])
@@ -404,7 +404,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                 vm.push(9999999999)
                 # TODO: Fill in here
             elif instr.name == "JUMPDEST":
-                vm.set_label(AVMLabel(f"jumpdest_{contract_id}_{instr.pc}"))
+                vm.set_label(AVMLabel("jumpdest_{}_{}".format(contract_id, instr.pc)))
 
             # 60s & 70s: Push Operations
             elif instr.name[:4] == "PUSH":
@@ -462,13 +462,13 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
             elif instr.name == "SELFDESTRUCT":
                 execution.selfdestruct(vm)
             else:
-                raise Exception(f"Unhandled instruction {instr}")
+                raise Exception("Unhandled instruction {}".format(instr))
         return impl
 
     contract_code = [label]
     for insn in code:
         block = compile_block(run_op(insn))
-        block.add_node(f"EthOp({insn}, {insn.pc})")
+        block.add_node("EthOp({}, {})".format(insn, insn.pc))
         contract_code.append(block)
 
     return BlockStatement(contract_code)

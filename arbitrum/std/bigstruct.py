@@ -123,7 +123,7 @@ class BigStruct:
 
     def get(self, field_name, vm):  # bigstruct -> fieldVal
         if field_name not in self.recipes:
-            raise Exception(f"Can't find {field_name} in BigStruct")
+            raise Exception("Can't find {} in BigStruct".format(field_name))
         recipe = self.recipes[field_name]
         for idx in recipe:
             vm.tgetn(idx)

@@ -74,7 +74,7 @@ class Struct:
             @modifies_stack(
                 [struct_type],
                 types,
-                f"{self.typ.name}_{'_'.join(field_names)}"
+                "{}_{}".format(self.typ.name, '_'.join(field_names))
             )
             def get(vm):
                 vm.cast(self.array.typ)
@@ -98,7 +98,7 @@ class Struct:
             @modifies_stack(
                 [self.array.types[self.field_index[names[0]]]],
                 [self.typ],
-                f"{self.typ.name}_{names[0]}"
+                "{}_{}".format(self.typ.name, names[0])
             )
             def set_val(vm):
                 vm.cast(self.array.typ)
@@ -110,7 +110,7 @@ class Struct:
             @modifies_stack(
                 [struct_type] + types,
                 [struct_type],
-                f"{self.typ.name}_{'_'.join(field_names)}"
+                "{}_{}".format(self.typ.name, '_'.join(field_names))
             )
             def set_val(vm):
                 vm.cast(self.array.typ)

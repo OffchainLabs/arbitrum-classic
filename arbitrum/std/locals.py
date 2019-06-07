@@ -19,7 +19,7 @@ class Locals:
     def __init__(self, vm, fields):
         self.vm = vm
         self.struc = Struct(
-            f"Locals[{', '.join((str(x) for x in fields))}",
+            "Locals[{}]".format(', '.join((str(x) for x in fields))),
             fields
         )
 

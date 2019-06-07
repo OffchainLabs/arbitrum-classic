@@ -106,7 +106,7 @@ class Array:
             @modifies_stack(
                 [],
                 [],
-                f"{self.length}_0"
+                "{}_0".format(self.length)
             )
             def get(vm):
                 pass
@@ -116,7 +116,7 @@ class Array:
             @modifies_stack(
                 [self.typ],
                 [self.types[index]],
-                f"{self.length}_{index}"
+                "{}_{}".format(self.length, index)
             )
             def get(vm):
                 path = array_path(self.length, index)
@@ -130,7 +130,7 @@ class Array:
             @modifies_stack(
                 [],
                 [],
-                f"{self.length}_0"
+                "{}_0".format(self.length)
             )
             def set_val(vm):
                 pass
@@ -140,7 +140,7 @@ class Array:
             @modifies_stack(
                 [self.typ, self.types[index]],
                 [self.typ],
-                f"{self.length}_{index}"
+                "{}_{}".format(self.length, index)
             )
             def set_val(vm):
                 # [array, val]

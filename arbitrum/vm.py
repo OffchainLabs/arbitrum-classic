@@ -23,7 +23,7 @@ class AVMOp:
         self.name = name
 
     def __repr__(self):
-        return f"AVMOp({self.name})"
+        return "AVMOp({})".format(self.name)
 
 
 class VM(BasicVM):

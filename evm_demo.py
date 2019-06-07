@@ -52,7 +52,7 @@ def run_until_halt(vm):
             raise err
         if vm.halted:
             break
-    print(f"Ran VM for {i} steps")
+    print("Ran VM for {} steps".format(i))
     # print(push_counts)
     return log
 
@@ -72,7 +72,7 @@ def run_n_steps(vm, steps):
             raise err
         if vm.halted:
             break
-    print(f"Ran VM for {i} steps")
+    print("Ran VM for {} steps".format(i))
     return log
 
 

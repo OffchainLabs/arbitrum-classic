@@ -21,7 +21,7 @@ from .struct import Struct
 
 
 def make_keyvalue_type(key_type, value_type, default_val=None):
-    keyvalue_type = Struct(f"keyvalue[{key_type}][{value_type}]", [])
+    keyvalue_type = Struct("keyvalue[{}][{}]".format(key_type, value_type), [])
     if default_val is None:
         default_val = value.Tuple([])
 

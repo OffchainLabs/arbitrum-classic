@@ -17,7 +17,7 @@ from .. import value
 from .struct import Struct
 
 def make_stack_type(typ):
-    stack_type = Struct(f"stack[{typ}]", [
+    stack_type = Struct("stack[{}]".format(typ), [
         "prev",
         ("val", typ)
     ])

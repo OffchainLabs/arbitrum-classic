@@ -54,7 +54,7 @@ def generate_code_pointers(insns):
             if isinstance(val, ast.AVMLabeledPos):
                 immediate = code_points[total - val.pc - 1]
                 if immediate.pc != val.pc:
-                    raise Exception(f"Error calculating code points: Non matching pc {immediate.pc} and {val.pc}")
+                    raise Exception("Error calculating code points: Non matching pc {} and {}".format(immediate.pc, val.pc))
                 assert immediate.pc == val.pc
             else:
                 immediate = val
@@ -65,7 +65,7 @@ def generate_code_pointers(insns):
                 insns[i].path
             )
         else:
-            raise Exception(f"Can't generate code pointer at {i} from unexpected value {insns[i]}")
+            raise Exception("Can't generate code pointer at {} from unexpected value {}".format(i, insns[i]))
         prev_hash = value.value_hash(code_point)
         code_points.append(code_point)
     assert len(code_points) == len(insns)
@@ -78,7 +78,7 @@ def check_compiled(insns):
             insn,
             (ast.BasicOp, ast.AVMLabel, ast.AVMUniqueLabel)
         ):
-            raise Exception(f"Found not basic op {insn} at position {i}")
+            raise Exception("Found not basic op {} at position {}".format(insn, i))
 
 
 class TempCodePoint:
@@ -153,7 +153,7 @@ class StaticTracker:
 
         val = self.immediate_pushes[field_name]
         if val is None:
-            raise Exception(f"Static {field_name} has no value")
+            raise Exception("Static {} has no value".format(field_name))
         return val
 
     def __contains__(self, field_name):
@@ -174,13 +174,13 @@ class StaticTracker:
         if old_val in self.big_struct:
             cur_val = self.big_struct[old_val]
             if cur_val != old_val:
-                raise Exception(f"Tried to resolve label {old_val} with set value {cur_val} and new value {new_val}")
+                raise Exception("Tried to resolve label {} with set value {} and new value {}".format(old_val, cur_val, new_val))
             self.big_struct.set_static(old_val, new_val)
         elif old_val in self.immediate_pushes:
             cur_val = self.immediate_pushes[old_val]
             self.immediate_pushes[old_val] = new_val
         else:
-            raise Exception(f"Unhandled label update with old {old_val} and new {new_val}")
+            raise Exception("Unhandled label update with old {} and new {}".format(old_val, new_val))
 
 
 class ASTTransformer:
@@ -212,7 +212,7 @@ class ASTTransformer:
         if isinstance(op, ast.SetErrorHandlerFunctionStatement):
             return self.transform_set_error_handler(op)
 
-        raise Exception(f"Unhandled AST Type {type(op)}")
+        raise Exception("Unhandled AST Type {}".format(type(op)))
 
     def transform_ifelse(self, op):
         return op
@@ -394,7 +394,7 @@ class PushTransformer(ASTTransformer):
 
         return ast.add_label_to_ast(
             compile_block(replace_push(op.val)),
-            f"Push({op.val})"
+            "Push({})".format(op.val)
         )
 
 
@@ -415,7 +415,7 @@ class CallTransformer(ASTTransformer):
 
         return ast.add_label_to_ast(
             compile_block(impl),
-            f"FuncCall({op.func_name})"
+            "FuncCall({})".format(op.func_name)
         )
 
     def transform_set_error_handler(self, op):
@@ -425,7 +425,7 @@ class CallTransformer(ASTTransformer):
 
         return ast.add_label_to_ast(
             compile_block(impl),
-            f"SetErrorHandlerFunction({op.func_name})"
+            "SetErrorHandlerFunction({})".format(op.func_name)
         )
 
 
@@ -447,7 +447,7 @@ class FuncTransformer(ASTTransformer):
 
         return ast.add_label_to_ast(
             compile_block(impl),
-            f"FuncDefinition({op.name})"
+            "FuncDefinition({})".format(op.name)
         )
 
 
@@ -527,7 +527,7 @@ def resolve_immediate_ops(static_tracker):
         elif val in static_tracker:
             new_val = static_tracker[val]
             if isinstance(new_val, (ast.AVMLabel, ast.AVMUniqueLabel)):
-                raise Exception(f"Can't resolve {val}, got {new_val}")
+                raise Exception("Can't resolve {}, got {}".format(val, new_val))
             return new_val
         else:
             return val
@@ -562,7 +562,7 @@ class VMCompiler:
     def call(self, func):
         if not hasattr(func, "can_call") or not func.can_call:
             raise Exception(
-                f"Tried to call uncallable function {func.__name__}"
+                "Tried to call uncallable function {}".format(func.__name__)
             )
         self.block.append(ast.CallStatement(func))
 
@@ -681,16 +681,16 @@ def compile_program(initialization, body, should_optimize=True):
                 raise Exception("Unhandled expectation type")
 
         if uncountable:
-            raise Exception(f"{func} calculated as uncountable, but isn't labeled that way")
+            raise Exception("{} calculated as uncountable, but isn't labeled that way".format(func))
         elif incorrect:
-            raise Exception(f"Function '{func}'' violates constraints {expects}")
+            raise Exception("Function '{}'' violates constraints {}".format(func, expects))
         else:
             if not hasattr(compiled_funcs[func].func, "pops"):
-                raise Exception(f"{func} calculated {mods['pop']} but wasn't labeled with count")
+                raise Exception("{} calculated {} but wasn't labeled with count".format(func, mods['pop']))
             if mods["pop"] != len(compiled_funcs[func].func.pops):
-                raise Exception(f"{func} calculated {mods['pop']} pops but was labeled with {len(compiled_funcs[func].func.pops)}")
+                raise Exception("{} calculated {} pops but was labeled with {)}".format(func, mods['pop'], len(compiled_funcs[func].func.pops)))
             if mods["push"] != len(compiled_funcs[func].func.pushes):
-                raise Exception(f"{func} calculated {mods['push']} pushes but was labeled with {len(compiled_funcs[func].func.pushes)}")
+                raise Exception("{} calculated {} pushes but was labeled with {}".format(func, mods['push'], len(compiled_funcs[func].func.pushes)))
 
     for func in compiled_funcs:
         if func == "MAIN_FUNC":

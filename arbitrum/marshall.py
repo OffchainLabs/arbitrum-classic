@@ -41,7 +41,7 @@ def marshall_op(val, file):
         file.write(val.get_op().to_bytes(1, byteorder='big', signed=False))
         marshall_value(val.val, file)
     else:
-        raise Exception(f"Tried to marshall bad operation type {val}")
+        raise Exception("Tried to marshall bad operation type {}".format(val))
 
 
 def marshall_codepoint(val, file):
@@ -86,7 +86,7 @@ def marshall_value(val, file):
         ))
         marshall_codepoint(val.pc, file)
     else:
-        raise Exception(f"Can't marshall unexcepted value {val}")
+        raise Exception("Can't marshall unexcepted value {}".format(val))
 
 
 AO_VERSION = 1

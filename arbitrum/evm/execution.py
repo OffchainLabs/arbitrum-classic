@@ -23,7 +23,7 @@ from .. import value
 @noreturn
 def _perform_call(vm, dispatch_func, call_num):
     # destId message
-    vm.push(ast.AVMLabel(f"evm_call_{call_num}"))
+    vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
     vm.swap2()
     vm.swap1()
     # contractID message ret_pc
@@ -63,7 +63,7 @@ def _perform_call(vm, dispatch_func, call_num):
         vm.jump()
     ])
 
-    vm.set_label(ast.AVMLabel(f"evm_call_{call_num}"))
+    vm.set_label(ast.AVMLabel("evm_call_{}".format(call_num)))
     vm.auxpush()
 
     std.stack_manip.kill(vm)
@@ -221,7 +221,7 @@ def staticcall(vm, dispatch_func, call_num, contract_id):
         os.chain_state.set_val("call_frame")(vm),
         os.set_chain_state(vm),
 
-        _perform_call(vm, dispatch_func, f"static_{call_num}"),
+        _perform_call(vm, dispatch_func, "static_{}".format(call_num)),
         translate_ret_type(vm),
         # ret msg old_stack
         vm.swap1(),

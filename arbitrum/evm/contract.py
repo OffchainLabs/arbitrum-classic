@@ -96,7 +96,7 @@ class ArbContract:
             self.functions.append(func)
 
     def __repr__(self):
-        return f"ArbContract({self.name})"
+        return "ArbContract({})".format(self.name)
 
 
 def get_return_abi(func_info):
@@ -168,7 +168,7 @@ def create_output_handler(contracts):
         try:
             func_interface = abis[contract_num].funcs[func_id]
         except KeyError:
-            print(f"Unknown function returned {return_code}")
+            print("Unknown function returned {}".format(return_code))
             return True
 
         if return_code == RETURN_CODE:
@@ -178,30 +178,30 @@ def create_output_handler(contracts):
                 get_return_abi(func_interface),
                 output_bytes
             )
-            print(f"{func_interface['name']} returned {decoded}")
+            print("{} returned {}".format(func_interface['name'], decoded))
             logs = [
                 decode_log(convert_log_raw(logVal), abis[contract_num])
                 for logVal in stack.to_list(val[1])
             ]
             for log in logs:
-                print(f"{func_interface['name']} logged event {log['name']}{log['args']}")
+                print("{} logged event {}{}".format(func_interface['name'], log['name'], log['args']))
         elif return_code == REVERT_CODE:
             output_byte_str = sized_byterange.tohex(val[2])
-            print(f"{func_interface['name']} failed with revert returning {output_byte_str}")
+            print("{} failed with revert returning {}".format(func_interface['name'], output_byte_str))
         elif return_code == INVALID_CODE:
-            print(f"{func_interface['name']} failed with invalid op")
+            print("{} failed with invalid op".format(func_interface['name']))
         elif return_code == INVALID_SEQUENCE_CODE:
-            print(f"{func_interface['name']} failed with invalid sequence")
+            print("{} failed with invalid sequence".format(func_interface['name']))
         elif return_code == STOP_CODE:
-            print(f"{func_interface['name']} completed successfully")
+            print("{} completed successfully".format(func_interface['name']))
             logs = [
                 decode_log(convert_log_raw(logVal), abis[contract_num])
                 for logVal in stack.to_list(val[1])
             ]
             for log in logs:
-                print(f"{func_interface['name']} logged event {log['name']}{log['args']}")
+                print("{} logged event {}{}".format(func_interface['name'], log['name'], log['args']))
         else:
-            print(f"{func_interface['name']} had unknown error: {val}")
+            print("{} had unknown error: {}", func_interface['name'], val)
     return output_handler
 
 

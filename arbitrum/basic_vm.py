@@ -80,7 +80,7 @@ class Stack:
     def pop(self, typehint=None):
         val = self.items[0]
         if typehint and not typehint.accepts(val):
-            raise Exception(f"Pop expected {typehint}, but got {val}")
+            raise Exception("Pop expected {}, but got {}".format(typehint, val))
         del self.items[0]
         return val
 
@@ -180,7 +180,7 @@ class BasicVM:
         elif isinstance(dest, AVMLabeledCodePoint):
             dest = dest.pc
         else:
-            print(f"Conditional jumping to {dest.name}")
+            print("Conditional jumping to {}".format(dest.name))
             raise Exception("Cjump insn requires codepoint but recieved " + str(dest))
 
         if cond != 0:
@@ -405,4 +405,4 @@ class BasicVM:
     def cast(self, typ):
         pass
         # if not typ.accepts_cast(self.stack[0]):
-        #     raise Exception(f"Tried to perform incorrect cast of {self.stack[0]} to {typ}")
+        #     raise Exception("Tried to perform incorrect cast of {} to {}".format(self.stack[0], typ))

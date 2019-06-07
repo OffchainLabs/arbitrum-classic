@@ -162,14 +162,14 @@ def tget(stack):
     index = stack.pop(IntType())
     tup = stack.pop(TupleType())
     if not tup.has_member_at_index(index):
-        raise Exception(f"Tried to get index {index} from tuple {tup}")
+        raise Exception("Tried to get index {} from tuple {}".format(index, tup))
     stack.push(tup.get_tup(index))
 
 
 def tgetn(stack, index):
     tup = stack.pop(TupleType())
     if not tup.has_member_at_index(index):
-        raise Exception(f"Tried to get index {index} from tuple {tup}")
+        raise Exception("Tried to get index {} from tuple {}".format(index, tup))
     stack.push(tup.get_tup(index))
 
 

@@ -26,7 +26,7 @@ from . import make_bigtuple_type
 
 def make_boundedq_type(typ):
     bigtuple = make_bigtuple_type(typ, typ.empty_val())
-    boundedq_type = Struct(f"boundedq[{typ}]", [
+    boundedq_type = Struct("boundedq[{}]".format(typ), [
         ("bigtuple", bigtuple.typ),
         ("nextGetIndex", value.IntType()),
         ("nextPutIndex", value.IntType()),

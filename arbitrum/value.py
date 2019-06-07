@@ -54,7 +54,7 @@ class TupleType:
         if self.types is None:
             return "TupleType()"
 
-        return f"TupleType({', '.join([repr(typ) for typ in self.types])})"
+        return "TupleType({})".format(', '.join([repr(typ) for typ in self.types]))
 
     def empty_val(self):
         if self.types is None:
@@ -169,7 +169,7 @@ class NamedType:
         self.fields = fields
 
     def __repr__(self):
-        return f"Struct({self.name})"
+        return "Struct({})".format(self.name)
 
     def common(self, other):
         if isinstance(other, NamedType):
@@ -223,7 +223,7 @@ class TypeStack:
         return len(self.stack)
 
     def __repr__(self):
-        return f"TypeStack({self.stack}, {self.auxstack})"
+        return "TypeStack({}, {})".format(self.stack, self.auxstack)
 
     def __getitem__(self, index):
         return self.stack[index]
@@ -236,7 +236,7 @@ class TypeStack:
         if len(self) != len(other):
             print(self[:])
             print(other[:])
-            raise Exception(f"Can't merge stack's of different length {len(self)} and {len(other)}")
+            raise Exception("Can't merge stack's of different length {} and {}".format(len(self), len(other)))
         for a_type, b_type in zip(self.stack, other.stack):
             ret.append(arbtype(a_type).common(arbtype(b_type)))
         self.stack = ret
@@ -247,9 +247,9 @@ class TypeStack:
         typ = self.stack[0]
         try:
             if not pop_type.accepts(typ):
-                raise Exception(f"TypeStack wanted {pop_type} but got {self.stack[0]}")
+                raise Exception("TypeStack wanted {} but got {}".format(pop_type, self.stack[0]))
         except Exception as err:
-            raise Exception(f"TypeStack: included non-type {typ}. Got err {err}")
+            raise Exception("TypeStack: included non-type {}. Got err {}".format(typ, err))
         self.stack = self.stack[1:]
         return typ
 
@@ -259,9 +259,9 @@ class TypeStack:
         typ = self.auxstack[0]
         try:
             if not pop_type.accepts(typ):
-                raise Exception(f"TypeStack wanted {pop_type} but got {self.stack[0]}")
+                raise Exception("TypeStack wanted {} but got {}".format(pop_type, self.stack[0]))
         except Exception as err:
-            raise Exception(f"TypeStack: included non-type {typ}. Got err {err}")
+            raise Exception("TypeStack: included non-type {}. Got err {}".format(typ, err))
         self.auxstack = self.auxstack[1:]
         return typ
 
@@ -277,13 +277,13 @@ class Tuple:
         if val is None:
             val = []
         if not isinstance(val, list):
-            raise Exception(f"Tuple must be created from list not {type(val)}")
+            raise Exception("Tuple must be created from list not {}".format(type(val)))
         elif len(val) > 8:
             raise Exception("Tuple must be created from list of size <= 8")
         self.val = tuple(val)
 
     def __repr__(self):
-        return f"Tuple([{', '.join([repr(v) for v in self.val])}])"
+        return "Tuple([{}])".format(', '.join([repr(v) for v in self.val]))
 
     def __len__(self):
         return len(self.val)
@@ -316,7 +316,7 @@ class Tuple:
 
     def set_tup_val(self, index, value):
         if index >= len(self):
-            raise Exception(f"Can't set value {value} to index {index} of tuple {self}")
+            raise Exception("Can't set value {} to index {} of tuple {}".format(value, index, self))
         new_tup = list(self.val)
         new_tup[index] = value
         return Tuple(new_tup)
@@ -332,7 +332,7 @@ class AVMCodePoint:
         self.path = path
 
     def __repr__(self):
-        return f"AVMCodePoint({self.pc}, {self.op})"
+        return "AVMCodePoint({}, {})".format(self.pc, self.op)
 
 
 def value_hash(val):
@@ -366,9 +366,9 @@ def value_hash(val):
                 '(uint8,uint8,bytes32,bytes32)',
                 [2, val.op.op.op_code, value_hash(val.op.val), val.next_hash]
             ))
-        raise Exception(f"Bad op type {val.op}")
+        raise Exception("Bad op type {}".format(val.op))
 
-    raise Exception(f"Can't hash {val}")
+    raise Exception("Can't hash {}".format(val))
 
 
 def arbtype(val):

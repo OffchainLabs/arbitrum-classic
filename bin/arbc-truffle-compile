@@ -31,5 +31,5 @@ if __name__ == '__main__':
     if args.debug_output:
         with open(args.debug_output, "w") as f:
             for instr in vm.code:
-                f.write(f"{instr} {instr.path}")
+                f.write("{} {}".format(instr, instr.path))
                 f.write("\n")

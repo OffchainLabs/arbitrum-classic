@@ -21,7 +21,7 @@ def make_closure(func, capture_count):
     bound_types = func.pops[:capture_count]
     param_types = func.pops[capture_count:]
     struct = Struct(
-        f"closure[{func.__module__}_{func.__name__}_{capture_count}]",
+        "closure[{}_{}_{}]".format(func.__module__, func.__name__, capture_count),
         [
             ("capture", queue.typ),
         ]

@@ -29,7 +29,7 @@ def modifies_stack(pop_count, push_count, func_suffix=None):
             pushes = push_count
 
         if func_suffix is not None:
-            func.__name__ = f"{func.__name__}_{func_suffix}"
+            func.__name__ = "{}_{}".format(func.__name__, func_suffix)
 
         @functools.wraps(func)
         def wrapper_modifies_stack(vm, *args):
@@ -38,7 +38,7 @@ def modifies_stack(pop_count, push_count, func_suffix=None):
             else:
                 def real_func(vm):
                     func(vm, *args)
-                real_func.__name__ = f"{func.__name__}_{'_'.join(args)}"
+                real_func.__name__ = "{}_{}".format(func.__name__, '_'.join(args))
 
             real_func.pops = pops
             real_func.pushes = pushes
@@ -65,7 +65,7 @@ def modifies_stack_unchecked(pop_count, push_count, func_suffix=None):
             pushes = push_count
 
         if func_suffix is not None:
-            func.__name__ = f"{func.__name__}_{func_suffix}"
+            func.__name__ = "{}_{}".format(func.__name__, func_suffix)
 
         @functools.wraps(func)
         def wrapper_modifies_stack(vm, *args):
@@ -74,7 +74,7 @@ def modifies_stack_unchecked(pop_count, push_count, func_suffix=None):
             else:
                 def real_func(vm):
                     func(vm, *args)
-                real_func.__name__ = f"{func.__name__}_{'_'.join(args)}"
+                real_func.__name__ = "{}_{}".format(func.__name__, '_'.join(args))
 
             real_func.pops = pops
             real_func.pushes = pushes

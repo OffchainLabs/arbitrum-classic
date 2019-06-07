@@ -112,7 +112,7 @@ class IfElseStatement(ASTNode):
         )
 
     def __repr__(self):
-        return f"IfElse({self.true_code}, {self.false_code})"
+        return "IfElse({}, {})".format(self.true_code, self.false_code)
 
     def __len__(self):
         return len(self.true_code) + len(self.false_code) + 2 + 2*PUSH_WEIGHT
@@ -158,7 +158,7 @@ class CastStatement(ASTNode):
         return CastStatement(self.typ, list(self.path))
 
     def __repr__(self):
-        return f"CastStatement({self.typ})"
+        return "CastStatement({})".format(self.typ)
 
     def __len__(self):
         return 0
@@ -189,7 +189,7 @@ class IfStatement(ASTNode):
         return IfStatement(self.true_code.clone(), list(self.path))
 
     def __repr__(self):
-        return f"If({self.true_code})"
+        return "If({})".format(self.true_code)
 
     def __len__(self):
         return len(self.true_code) + 2 + PUSH_WEIGHT
@@ -232,7 +232,7 @@ class WhileStatement(ASTNode):
         )
 
     def __repr__(self):
-        return f"WhileStatement({self.cond_code}, {self.body_code})"
+        return "WhileStatement({}, {})".format(self.cond_code, self.body_code)
 
     def __len__(self):
         return len(self.cond_code) + len(self.body_code) + 3 + 2*PUSH_WEIGHT
@@ -245,7 +245,7 @@ class WhileStatement(ASTNode):
             'eq',
             cmod["push"] - cmod["pop"] - 1 + bmod["push"] - bmod["pop"],
             0,
-            f"while_loop({cmod['pop']}, {cmod['push']}, {bmod['pop']}, {bmod['push']})"
+            "while_loop({}, {}, {}, {})".format(cmod['pop'], cmod['push'], bmod['pop'], bmod['push'])
         ))
         pop_count = max(
             cmod["pop"],
@@ -290,7 +290,7 @@ class FuncDefinition(ASTNode):
         raise Exception("Func definitions aren't clonable")
 
     def __repr__(self):
-        return f"FuncDefinition({self.code})"
+        return "FuncDefinition({})".format(self.code)
 
     def __len__(self):
         return len(self.code)
@@ -305,13 +305,13 @@ class FuncDefinition(ASTNode):
         try:
             self.code.typecheck(stack)
         except Exception as err:
-            raise Exception(f"Error typechecking {self.name} body: {err}")
+            raise Exception("Error typechecking {} body: {}".format(self.name, err))
         
         try:
             for typ in self.func.pushes:
                 stack.pop(typ)
         except Exception as err:
-            raise Exception(f"Error typechecking {self.name} return vals: {err}")
+            raise Exception("Error typechecking {} return vals: {}".format(self.name, err))
 
     def traverse_ast(self, func):
         func(self)
@@ -326,7 +326,7 @@ class CallStatement(ASTNode):
     def __init__(self, func, path=None):
         super(CallStatement, self).__init__(path)
         self.func = func
-        self.func_name = f"{func.__module__}.{func.__name__}"
+        self.func_name = "{}.{}".format(func.__module__, func.__name__)
         self.is_callable = True
         if hasattr(self.func, "uncountable"):
             self.mods = {"pop": 0, "push": 0}, [('invalid',)]
@@ -335,7 +335,7 @@ class CallStatement(ASTNode):
                 not hasattr(self.func, "pushes") or
                 not hasattr(self.func, "pops")
         ):
-            raise Exception(f"Call {self.func_name} has unknown stack mods")
+            raise Exception("Call {} has unknown stack mods".format(self.func_name))
         else:
             self.mods = {
                 "pop": len(self.func.pops),
@@ -348,7 +348,7 @@ class CallStatement(ASTNode):
         return CallStatement(self.func, list(self.path))
 
     def __repr__(self):
-        return f"Call({self.func_name})"
+        return "Call({})".format(self.func_name)
 
     def __len__(self):
         # Approximation
@@ -364,7 +364,7 @@ class CallStatement(ASTNode):
             for typ in self.func.pushes[::-1]:
                 stack.push(typ)
         except Exception as err:
-            raise Exception(f"Type error calling func {self.func_name}: {err}")
+            raise Exception("Type error calling func {}: {}".format(self.func_name, err))
 
     def traverse_ast(self, func):
         func(self)
@@ -377,14 +377,14 @@ class SetErrorHandlerFunctionStatement(ASTNode):
     def __init__(self, func, path=None):
         super(SetErrorHandlerFunctionStatement, self).__init__(path)
         self.func = func
-        self.func_name = f"{func.__module__}.{func.__name__}"
+        self.func_name = "{}.{}".format(func.__module__, func.__name__)
         self.is_callable = False
 
     def clone(self):
         return SetErrorHandlerFunctionStatement(self.func, list(self.path))
 
     def __repr__(self):
-        return f"SetErrorHandlerFunction({self.func_name})"
+        return "SetErrorHandlerFunction({})".format(self.func_name)
 
     def __len__(self):
         # Approximation
@@ -436,7 +436,7 @@ class IndirectPushStatement(ASTNode):
         return func(self)
 
     def __repr__(self):
-        return f"Push({self.val})"
+        return "Push({})".format(self.val)
 
 
 class AVMLabel(ASTNode):
@@ -446,7 +446,7 @@ class AVMLabel(ASTNode):
         # print("Label", name)
 
     def clone(self):
-        raise Exception(f"You can't clone a label '{self.name}'")
+        raise Exception("You can't clone a label '{}'".format(self.name))
 
     def __len__(self):
         return 0
@@ -464,7 +464,7 @@ class AVMLabel(ASTNode):
         return func(self)
 
     def __repr__(self):
-        return f"AVMLabel({self.name})"
+        return "AVMLabel({})".format(self.name)
 
     def __eq__(self, other):
         if not isinstance(other, AVMLabel):
@@ -485,7 +485,7 @@ class AVMUniqueLabel(ASTNode):
         self.name = name
 
     def clone(self):
-        raise Exception(f"You can't clone a label '{self.name}'")
+        raise Exception("You can't clone a label '{}'".format(self.name))
 
     def __len__(self):
         return 0
@@ -503,7 +503,7 @@ class AVMUniqueLabel(ASTNode):
         return func(self)
 
     def __repr__(self):
-        return f"AVMUniqueLabel({self.name})"
+        return "AVMUniqueLabel({})".format(self.name)
 
     def __eq__(self, other):
         if not isinstance(other, AVMUniqueLabel):
@@ -544,7 +544,7 @@ class AVMLabeledPos(ASTNode):
         return func(self)
 
     def __repr__(self):
-        return f"AVMLabeledPos({self.name, self.pc})"
+        return "AVMLabeledPos({}, {})".format(self.name, self.pc)
 
     def __eq__(self, other):
         if not isinstance(other, AVMLabeledPos):
@@ -577,7 +577,7 @@ class AVMLabeledCodePoint(ASTNode):
         return func(self)
 
     def __repr__(self):
-        return f"AVMLabeledCodePoint({self.name, self.pc})"
+        return "AVMLabeledCodePoint({}, {})".format(self.name, self.pc)
 
     def __eq__(self, other):
         if not isinstance(other, AVMLabeledCodePoint):
@@ -644,7 +644,7 @@ class BasicOp(ASTNode):
                 index = stack.pop(value.IntType())
                 tup = stack.pop(value.TupleType())
                 if isinstance(index, int) and not tup.has_member_at_index(index):
-                    raise Exception(f"Tried to get index {index} from tuple {tup}")
+                    raise Exception("Tried to get index {} from tuple {}".format(index, tup))
                 stack.push(tup.get_tup(index))
             elif name[:4] == "tget":
                 instructions.tgetn(stack, int(name[4:]))
@@ -660,7 +660,7 @@ class BasicOp(ASTNode):
                     stack.push(push)
         except Exception as err:
             raise Exception(
-                f"Exception typechecking {instructions.OP_NAMES[self.op_code]}: {err}"
+                "Exception typechecking {}: {}".format(instructions.OP_NAMES[self.op_code], err)
             )
 
     def __eq__(self, other):
@@ -689,7 +689,7 @@ class ImmediateOp(ASTNode):
         return 1
 
     def __repr__(self):
-        return f"Immediate({self.op, self.val})"
+        return "Immediate({}, {})".format(self.op, self.val)
 
     def get_op(self):
         return self.op.get_op()

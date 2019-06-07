@@ -29,7 +29,6 @@ def run_until_halt(vm):
     push_counts = Counter()
     while True:
         try:
-            print(vm.pc)
             if vm.pc.op.get_op() == OPS["spush"]:
                 push_counts[vm.pc.path[-1][5:-1]] += 1
             run = arb.run_vm_once(vm)
@@ -43,7 +42,10 @@ def run_until_halt(vm):
             raise err
         if vm.halted:
             break
-    print(f"Ran VM for {i} steps")
+    for log in vm.logs:
+        vm.output_handler(log)
+    vm.logs = []
+    print("Ran VM for {} steps".format(i))
     # print(push_counts)
     return log
 
@@ -63,9 +65,11 @@ def run_n_steps(vm, steps):
             raise err
         if vm.halted:
             break
-    print(f"Ran VM for {i} steps")
+    print("Ran VM for {} steps".format(i))
     return log
 
+def make_msg_val(calldata):
+    return arb.value.Tuple([calldata, 0, 0, 0])
 
 if __name__ == '__main__':
     # tup = Tuple([Tuple([
@@ -96,7 +100,7 @@ if __name__ == '__main__':
     vm = create_evm_vm(contracts)
     with open("code.txt", "w") as f:
         for instr in vm.code:
-            f.write(f"{instr} {instr.path}")
+            f.write("{} {}".format(instr, instr.path))
             f.write("\n")
 
     elections = contracts[0]
@@ -106,7 +110,9 @@ if __name__ == '__main__':
     print(elections._candidates(2))
 
     # vm.env.send_message([elections.candidatesCount(), 2345, 0, 0, 0])
-    vm.env.send_message([elections.candidates(1), 2345, 0, 0, 0])
+    vm.env.send_message([make_msg_val(elections.candidates(14, 1)), 2345, 0, 0, 0])
+    vm.env.send_message([make_msg_val(elections.vote(14, 1)), 2345, 0, 0, 0])
+    vm.env.send_message([make_msg_val(elections.candidates(14, 1)), 2345, 0, 0, 0])
     # vm.env.send_message([elections.candidates(2), 2345, 0, 0, 0])
     vm.env.deliver_pending()
     run_until_halt(vm)

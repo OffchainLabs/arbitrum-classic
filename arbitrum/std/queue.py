@@ -23,7 +23,7 @@ from .struct import Struct
 
 def make_queue_type(typ):
     boundedq = make_boundedq_type(typ)
-    queue_type = Struct(f"queue[{typ}]", [
+    queue_type = Struct("queue[{}]".format(typ), [
         ("boundedq", boundedq.typ)
     ])
     # stack_type.fields[]

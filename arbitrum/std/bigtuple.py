@@ -30,7 +30,7 @@ def make_bigtuple_type(typ, default_val=None):
         value.TupleType(),
         typ
     ])
-    bigtuple_type = Struct(f"bigtuple[{typ}]", [
+    bigtuple_type = Struct("bigtuple[{}]".format(typ), [
         ("tup", base_typ)
     ])
 
@@ -133,7 +133,7 @@ def make_bigtuple_type(typ, default_val=None):
             @modifies_stack(
                 [TupleType(), IntType(), closure.typ],
                 [base_typ],
-                f"{default_val}_{closure.typ.name}"
+                "{}_{}".format(default_val, closure.typ.name)
             )
             def read_modify_write_impl(vm):
                 # check if tuple is empty
@@ -199,7 +199,7 @@ def make_bigtuple_type(typ, default_val=None):
             @modifies_stack(
                 [bigtuple_type.typ, IntType(), closure.typ],
                 [bigtuple_type.typ],
-                f"{default_val}_{closure.typ.name}"
+                "{}_{}".format(default_val, closure.typ.name)
             )
             def read_modify_write(vm):
                 bigtuple_type.get("tup")(vm)

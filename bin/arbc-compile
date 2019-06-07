@@ -30,5 +30,5 @@ if __name__ == '__main__':
     if len(sys.argv) == 4:
         with open(sys.argv[3], "w") as f:
             for instr in vm.code:
-                f.write(f"{instr} {instr.path}")
+                f.write("{} {}".format(instr, instr.path))
                 f.write("\n")
