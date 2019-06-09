@@ -415,7 +415,7 @@ class CallTransformer(ASTTransformer):
 
         return ast.add_label_to_ast(
             compile_block(impl),
-            "FuncCall({})".format(op.func_name)
+            op
         )
 
     def transform_set_error_handler(self, op):
@@ -499,7 +499,7 @@ def compress_pushes(ops, i):
             isinstance(ops[1], ast.BasicOp) and
             ops[1].get_op() != instructions.OPS["pcpush"]
     ):
-        return [ast.ImmediateOp(ops[1], ops[0].val)]
+        return [ast.ImmediateOp(ops[1], ops[0].val, ops[1].path)]
     else:
         return ops
 
