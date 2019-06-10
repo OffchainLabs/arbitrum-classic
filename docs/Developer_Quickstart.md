@@ -303,7 +303,7 @@ the Solidity files in the `contracts` folder:
 1. Add the Arbitrum `web3.js` Provider
 
     ``` bash
-    yarn add https://github.com/OffchainLabs/arb-ethers-provider.git
+    yarn add https://github.com/OffchainLabs/arb-web3-provider.git
     ```
 
     Note: there is alternatively an `ethers.js` provider:
