@@ -15,17 +15,22 @@
 extern "C" {
 #endif
 
-struct cmachine;
-typedef struct cmachine cmachine_t;
-    
-typedef struct {
-    uint64_t stepCount;
-} cassertion;
+void *machine_create(char *filename);
+//void machine_destroy(cmachine_t *m);
+//cassertion machine_run(cmachine_t *m, uint64_t maxSteps);
 
-cmachine_t *machine_create();
-void machine_destroy(cmachine_t *m);
-cassertion machine_run(cmachine_t *m, uint64_t maxSteps);
-    
+
+//struct cmachine;
+//typedef struct cmachine cmachine_t;
+//
+//typedef struct {
+//    uint64_t stepCount;
+//} cassertion;
+//
+//cmachine_t *machine_create();
+//void machine_destroy(cmachine_t *m);
+//cassertion machine_run(cmachine_t *m, uint64_t maxSteps);
+
 #ifdef __cplusplus
 }
 #endif

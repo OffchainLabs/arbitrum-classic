@@ -17,7 +17,7 @@
 //class codept{
 //public:
 //    int pc;
-//    int opcode;
+//    OpCode opcode;
 //    uint256_t nextCodeHash;
 //};
 

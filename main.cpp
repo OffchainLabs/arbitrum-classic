@@ -34,6 +34,7 @@ int main(int argc, const char * argv[]) {
 #include "datastack.hpp"
 #include "code.hpp"
 #include "machine.hpp"
+#include "cmachine.h"
 
 //struct stk{
 //    value *stkdata;
@@ -249,22 +250,22 @@ int main(int argc, const char * argv[]) {
 //
 //}
 
-Machine read_file (std::string filename) {
-    std::ifstream myfile;
-    
-    struct stat filestatus;
-    stat( filename.c_str(), &filestatus );
-
-    char *buf = (char *)malloc(filestatus.st_size);
-    
-    myfile.open(filename, std::ios::in);
-    if (myfile.is_open())
-    {
-        myfile.read((char *)buf, filestatus.st_size);
-        myfile.close();
-    }
-    return Machine(buf);
-}
+//Machine read_file (std::string filename) {
+//    std::ifstream myfile;
+//    
+//    struct stat filestatus;
+//    stat( filename.c_str(), &filestatus );
+//
+//    char *buf = (char *)malloc(filestatus.st_size);
+//    
+//    myfile.open(filename, std::ios::in);
+//    if (myfile.is_open())
+//    {
+//        myfile.read((char *)buf, filestatus.st_size);
+//        myfile.close();
+//    }
+//    return Machine(buf);
+//}
 
 //void oldread_file (string filename, vector<instr> &code, char *staticValue) {
 //    instr *op;
@@ -309,7 +310,7 @@ Machine read_file (std::string filename) {
 //    }
 ////    return Init_machine(buf, staticValue);
 //}
-
+Machine read_file (std::string filename);
 //int main() {
 int main(int argc, char *argv[])
 {
@@ -324,7 +325,7 @@ int main(int argc, char *argv[])
     } else {
         filename = argv[1];
     }
-
+//    machine_create();
 //    oldread_file(filename, code, staticValue);
     Machine mach = read_file(filename);
 

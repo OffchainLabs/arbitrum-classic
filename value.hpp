@@ -10,6 +10,7 @@
 #define value_h
 
 #include "bigint.hpp"
+#include "opcodes.hpp"
 #include <mpark/variant.hpp>
 
 class bad_tuple_index : public std::exception {
@@ -17,12 +18,13 @@ public:
     virtual const char *what() const noexcept override { return "bad_tuple_index"; }
 };
 
-enum types{ NUM, CODEPT, TUPLE };
+enum types{ NUM, CODEPT, TUPLE=3 };
 
 class TuplePool;
 class Tuple;
 struct CodePoint;
 
+// Note: uint256_t is actually 48 bytes long
 using value = mpark::variant<uint256_t, Tuple, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
@@ -46,11 +48,15 @@ public:
 
 struct CodePoint {
     uint64_t pc;
+    OpCode op;
+    uint256_t nexthash;
     
+    CodePoint() {}
     CodePoint(uint64_t pc_) : pc(pc_) {}
 };
 
 uint256_t deserialize_int(char *&srccode);
+CodePoint deserialize_codepoint(char *&srccode);
 Tuple deserialize_tuple(char *&bufptr, int size, TuplePool &pool);
 value deserialize_value(char *&srccode, TuplePool &pool);
 

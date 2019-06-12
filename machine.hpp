@@ -40,5 +40,6 @@ public:
     Assertion run(uint64_t stepCount);
     int runOne();
 };
+instr deserialize_opcode(uint64_t pc, char *&bufptr, TuplePool &pool);
 
 #endif /* machine_hpp */

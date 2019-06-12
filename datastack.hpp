@@ -28,7 +28,7 @@ public:
     
     void push(value && newdata);
     value pop();
-    value &peak();
+    value &peek();
     void popSet(value &val);
     uint64_t stacksize();
     

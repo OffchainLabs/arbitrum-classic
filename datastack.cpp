@@ -25,7 +25,7 @@ value datastack::pop() {
     return val;
 };
 
-value &datastack::peak() {
+value &datastack::peek() {
     if (basedatastack.size()==0){
         throw std::runtime_error("Stack is empty");
     }
@@ -33,7 +33,7 @@ value &datastack::peak() {
     return basedatastack.back();
 };
 
-value &peak();
+value &peek();
 
 void datastack::popSet(value &val) {
     if (basedatastack.size()==0){

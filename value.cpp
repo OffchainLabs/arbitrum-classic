@@ -9,12 +9,42 @@
 #include "value.hpp"
 #include "pool.hpp"
 #include "util.hpp"
+#include "code.hpp"
 
 #include <iostream>
 
+#define UINT256_SIZE 32
+
 uint256_t deserialize_int(char *&bufptr) {
-    uint256_t ret = from_big_endian(bufptr, bufptr + 32);
-    bufptr += 32;
+    uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
+    bufptr += UINT256_SIZE;
+    return ret;
+}
+
+OpCode deserialize_code_point_opcode(char *&bufptr, TuplePool &pool){
+    uint8_t immediateCount;
+    memcpy(&immediateCount, bufptr, sizeof(immediateCount));
+    bufptr+=sizeof(immediateCount);
+    
+    OpCode opcode;
+    memcpy(&opcode, bufptr, sizeof(opcode));
+    bufptr+=sizeof(opcode);
+    
+    if (immediateCount==1){
+        deserialize_value(bufptr, pool);
+    }
+    return opcode;
+}
+
+CodePoint deserialize_codepoint(char *&bufptr, TuplePool &pool) {
+    CodePoint ret;
+    memcpy(&ret.pc, bufptr, sizeof(ret.pc));
+    bufptr += sizeof(ret.pc);
+    ret.pc = __builtin_bswap64(ret.pc);
+    ret.op = deserialize_code_point_opcode(bufptr, pool);
+    memcpy(&ret.nexthash, bufptr, UINT256_SIZE);
+    bufptr+=UINT256_SIZE;
+
     return ret;
 }
 
@@ -26,19 +56,20 @@ Tuple deserialize_tuple(char *&bufptr, int size, TuplePool &pool) {
     return tup;
 }
 
-value deserialize_value(char *&srccode, TuplePool &pool) {
+value deserialize_value(char *&bufptr, TuplePool &pool) {
     uint8_t valType;
-    memcpy(&valType, srccode, sizeof(valType));
-    srccode += sizeof(valType);
+    memcpy(&valType, bufptr, sizeof(valType));
+    bufptr += sizeof(valType);
     switch (valType) {
         case NUM:
-            return deserialize_int(srccode);
+            return deserialize_int(bufptr);
         case CODEPT:
-            throw std::runtime_error("Tried to deserialize unhandled codepoint");
+            return deserialize_codepoint(bufptr, pool);
         default:
             if (valType >= TUPLE && valType <= TUPLE + 8) {
-                return deserialize_tuple(srccode, valType - TUPLE, pool);
+                return deserialize_tuple(bufptr, valType - TUPLE, pool);
             } else {
+                std::printf("in deserialize_value, unhandled type = %X\n", valType);
                 throw std::runtime_error("Tried to deserialize unhandled type");
             }
     }
@@ -148,7 +179,8 @@ struct ValuePrinter {
     }
     
     std::ostream &operator()(const CodePoint &val) {
-        os << "codept=" << val;
+        std::printf("in CodePoint ostream operator\n");
+        os << "codept pc=" << val.pc << " opcode="<<val.op;
         return os;
     }
 };
