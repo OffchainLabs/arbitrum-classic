@@ -194,16 +194,16 @@ Opcode | Nickname | Semantics
 0x31 | spush | Push a copy of Static onto the Data Stack.
 0x32 | rpush | Push a copy of Register onto the Data Stack.
 0x33 | rset | Pop a Value (A) off of the Data Stack. Set Register to A.
-0x35 | jump | Pop one value (A) off of the Data Stack. If A is a Codepoint, set the Instruction Stack to A. Otherwise raise an Error.
-0x36 | cjump | Pop two values (A, B) off of the Data Stack. If A is not a Codepoint or B is not an Integer, raise an Error. Otherwise (If B is zero, do Nothing. Otherwise set the Instruction Stack to A.).
-0x37 | stackempty | If the Data Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.
-0x38 | pcpush | Push the Codepoint of the currently executing operation to the Data Stack.
-0x39 | auxpush | Pop one value off the Aux Stack, and push it to the Data Stack.
-0x3a | auxpop | Pop one value off the Data Stack, and push it to the Aux Stack.
-0x3b | auxstackempty | If the Aux Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.
-0x3c | nop | Do nothing.
-0x3d | errpush | Push a copy of the Error Codepoint onto the Data Stack.
-0x3e | errset | Pop a Value (A) off of the Data Stack. Set the Error Codepoint to A.
+0x34 | jump | Pop one value (A) off of the Data Stack. If A is a Codepoint, set the Instruction Stack to A. Otherwise raise an Error.
+0x35 | cjump | Pop two values (A, B) off of the Data Stack. If A is not a Codepoint or B is not an Integer, raise an Error. Otherwise (If B is zero, do Nothing. Otherwise set the Instruction Stack to A.).
+0x36 | stackempty | If the Data Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.
+0x37 | pcpush | Push the Codepoint of the currently executing operation to the Data Stack.
+0x38 | auxpush | Pop one value off the Data Stack, and push it to the Aux Stack.
+0x39 | auxpop | Pop one value off the Aux Stack, and push it to the Data Stack.
+0x3a | auxstackempty | If the Aux Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.
+0x3b | nop | Do nothing.
+0x3c | errpush | Push a copy of the Error Codepoint onto the Data Stack.
+0x3d | errset | Pop a Value (A) off of the Data Stack. Set the Error Codepoint to A.
 &nbsp; | | &nbsp;
 40s: Duplication and Exchange Operations | | &nbsp;
 0x40 | dup0 | Pop one value (A) off of the Data Stack. Push A onto the Data Stack. Push A onto the Data Stack.
