@@ -164,7 +164,7 @@ int Machine::runOne() {
     try {
         std::cout<<"calling runInstruction"<<std::endl;
         runInstruction();
-        std::cout<<"after runInstruction"<<std::endl;
+        std::cout<<"after runInstruction stack size= "<<stack.stacksize()<< std::endl;
     } catch (const bad_pop_type &e) {
         state = ERROR;
     } catch (const bad_tuple_index &e) {
@@ -184,7 +184,7 @@ void Machine::runInstruction() {
     auto &instruction = code[pc];
     std::stringstream ss;
     ss << "in runInstruction, running " << std::hex << static_cast<int>(instruction.opcode);
-    std::cout << ss.str() << "\n";
+    std::cout << ss.str() <<", <"<< InstructionNames.at(instruction.opcode) <<">, stack size= "<<stack.stacksize()<< "\n";
     bool shouldIncrement = true;
     if (instruction.opcode == OpCode::JUMP) {
         shouldIncrement = false;
@@ -562,18 +562,42 @@ void Machine::runInstruction() {
     /*  Duplication and Exchange Operations */
     /****************************************/
         case OpCode::DUP0:{
-            value val1 = stack.peek();
-            stack.push(std::move(val1));
+            value valA = stack.peek();
+            stack.push(std::move(valA));
             break;
         }
-//        case OpCode::DUP1:
-//            break;
-//        case OpCode::DUP2:
-//            break;
-//        case OpCode::SWAP1:
-//            break;
-//        case OpCode::SWAP2:
-//            break;
+        case OpCode::DUP1:{
+            value valA = stack.pop();
+            value valB = stack.peek();
+            stack.push(std::move(valA));
+            stack.push(std::move(valB));
+            break;
+        }
+        case OpCode::DUP2:{
+            value valA = stack.pop();
+            value valB = stack.pop();
+            value valC = stack.peek();
+            stack.push(std::move(valB));
+            stack.push(std::move(valA));
+            stack.push(std::move(valC));
+            break;
+        }
+        case OpCode::SWAP1:{
+            value valA = stack.pop();
+            value valB = stack.pop();
+            stack.push(std::move(valA));
+            stack.push(std::move(valB));
+            break;
+        }
+        case OpCode::SWAP2:{
+            value valA = stack.pop();
+            value valB = stack.pop();
+            value valC = stack.pop();
+            stack.push(std::move(valA));
+            stack.push(std::move(valB));
+            stack.push(std::move(valC));
+            break;
+        }
     /*********************/
     /*  Tuple Operations */
     /*********************/
