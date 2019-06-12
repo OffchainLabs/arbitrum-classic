@@ -113,7 +113,8 @@ def get_non_recursive(compiled_funcs):
     digraph = build_call_graph(compiled_funcs)
 
     while True:
-        bad_nodes = [x for cycle in nx.simple_cycles(digraph) for x in cycle]
+        cycles = [cycle for cycle in nx.simple_cycles(digraph)]
+        bad_nodes = [x for cycle in cycles for x in cycle]
         if not bad_nodes:
             break
         digraph.remove_nodes_from(bad_nodes)
@@ -124,12 +125,15 @@ def topological_sort(compiled_funcs):
     digraph = build_call_graph(compiled_funcs)
     cycle_nodes = []
     while True:
-        bad_nodes = [x for cycle in nx.simple_cycles(digraph) for x in cycle]
+        cycles = [cycle for cycle in nx.simple_cycles(digraph)]
+        bad_nodes = [x for cycle in cycles for x in cycle]
         if not bad_nodes:
             break
         cycle_nodes += bad_nodes
         digraph.remove_nodes_from(bad_nodes)
-    return sorted(list(set(cycle_nodes))) + list(nx.topological_sort(digraph))
+    cycle_nodes = sorted(list(set(cycle_nodes)))
+    sorted_nodes = list(nx.lexicographical_topological_sort(digraph))
+    return cycle_nodes + sorted_nodes
 
 
 class StaticTracker:
@@ -141,6 +145,7 @@ class StaticTracker:
         items = []
         for item in counter.push_counts:
             items.append((counter.push_counts[item], item, item))
+        items = sorted(items, key=lambda x: (x[0], x[1]), reverse=True)
 
         self.immediate_pushes = {}
         for item in counter.immediate_push_counts:
@@ -752,7 +757,8 @@ def compile_program(initialization, body, should_optimize=True):
         )
 
     function_order = topological_sort(compiled_funcs)
-    function_order += sorted([x for x in compiled_funcs if x not in function_order])
+    other_funcs = sorted([x for x in compiled_funcs if x not in function_order])
+    function_order += other_funcs
 
     # transform remaining calls into jumps
     for func in compiled_funcs:

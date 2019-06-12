@@ -451,6 +451,9 @@ class AVMLabel(ASTNode):
     def __len__(self):
         return 0
 
+    def __lt__(self, other):
+        return self.name < other.name
+
     def stack_mod(self):
         return {"pop": 0, "push": 0}, []
 
