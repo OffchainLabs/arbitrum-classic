@@ -24,7 +24,7 @@ list of dependencies.
     > demo app. You can use [nvm](https://github.com/nvm-sh/nvm) to switch
     > between multiple node versions.
 
-    > Requires python3 to be at least version 3.6.
+    > Requires python3 to be at least version 3.5.3.
     
     ``` bash
     brew install python3 node@8 docker docker-machine docker-compose
