@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Arbitrum VM informal architecture spec · Offchain Labs Dev Center</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;This document describes informally the semantics of the Arbitrum VM architecture. This version is simplified, compared to the one described in the Arbitrum paper published in USENIX Security 2018. This version is also tailored to more closely match the Ethereum data formats and instruction set, to ease implementation of an EVM-to-AVM translator.&lt;/p&gt;
 "/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Arbitrum VM informal architecture spec · Offchain Labs Dev Center"/><meta property="og:type" content="website"/><meta property="og:url" content="https://developer.offchainlabs.com/"/><meta property="og:description" content="&lt;p&gt;This document describes informally the semantics of the Arbitrum VM architecture. This version is simplified, compared to the one described in the Arbitrum paper published in USENIX Security 2018. This version is also tailored to more closely match the Ethereum data formats and instruction set, to ease implementation of an EVM-to-AVM translator.&lt;/p&gt;
-"/><meta property="og:image" content="https://developer.offchainlabs.com/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://developer.offchainlabs.com/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><h2 class="headerTitle">Offchain Labs Dev Center</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/Developer_Quickstart" target="_self">Developer Quickstart</a></li><li class="siteNavGroupActive siteNavItemActive"><a href="/docs/AVM_Specification" target="_self">Arbitrum Spec</a></li><li class=""><a href="https://medium.com/offchainlabs" target="_blank">Blog</a></li><li class=""><a href="https://github.com/OffchainLabs" target="_blank">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/docs/Developer_Quickstart">Arbitrum Developer Quickstart</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/AVM_Specification">Arbitrum Specification</a></li></ul></div></div></section></div><script>
+"/><meta property="og:image" content="https://developer.offchainlabs.com/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://developer.offchainlabs.com/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><h2 class="headerTitle">Offchain Labs Dev Center</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/Developer_Quickstart" target="_self">Developer Quickstart</a></li><li class="siteNavGroupActive siteNavItemActive"><a href="/docs/AVM_Specification" target="_self">Arbitrum Spec</a></li><li class=""><a href="https://medium.com/offchainlabs" target="_blank">Blog</a></li><li class=""><a href="https://github.com/OffchainLabs" target="_blank">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/docs/Developer_Quickstart">Arbitrum Developer Quickstart</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/AVM_Specification">Arbitrum VM Specification</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
             for (var i = 0; i < coll.length; i++) {
@@ -28,10 +28,16 @@
               createToggler('#navToggler', '#docsNav', 'docsSliderActive');
               createToggler('#tocToggler', 'body', 'tocActive');
 
-              const headings = document.querySelector('.toc-headings');
+              var headings = document.querySelector('.toc-headings');
               headings && headings.addEventListener('click', function(event) {
-                if (event.target.tagName === 'A') {
-                  document.body.classList.remove('tocActive');
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
                 }
               }, false);
 
@@ -88,7 +94,7 @@
 <p>A Codepoint marshals to:</p>
 <ul>
 <li>byte val of 1</li>
-<li>8-byte little-endian representation of the pc.</li>
+<li>8-byte big-endian representation of the pc.</li>
 <li>the marshalling of the operation</li>
 <li>32-byte nextHash value</li>
 </ul>
@@ -115,18 +121,18 @@
 <p>The state of a VM is either a special state Halted, or a special state ErrorStop, or an extensive state.</p>
 <p>An extensive state of a VM contains the following:</p>
 <ul>
+<li>Current Codepoint: a Codepoint that represents the current point of execution;</li>
 <li>Data Stack: a Stack that is the primary working area for computation;</li>
 <li>Aux Stack: a Stack that provides auxiliary storage;</li>
-<li>Current Codepoint: a Codepoint that represents the current point of execution;</li>
+<li>Register: a mutable storage cell that can hold a single Value;</li>
 <li>Static: an immutable Value that is initialized when the VM is created;</li>
-<li>Register: a mutable storage cell that can hold a single Value; and</li>
 <li>Error Codepoint: a Codepoint that is meant to be used in response to an Error.</li>
 </ul>
 <p>When a VM is initialized, it is in an extensive state. The Data Stack, Aux Stack, Register, and Error Codepoint are initialized to None, None, None, and the Codepoint (0, 0, 0), respectively. The entity that creates the VM supplies the initial values of the Current Codepoint and Static.</p>
 <h2><a class="anchor" aria-hidden="true" id="hashing-a-vm-state"></a><a href="#hashing-a-vm-state" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hashing a VM State</h2>
 <p>If a VM is in the Halted state, its state hash is the Integer 0.</p>
 <p>If a VM is in the ErrorStop state, its state hash is the Integer 1.</p>
-<p>If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Data Stack, the hash of the Aux Stack, the hash of the Instruction Stack, the hash of the Static, the hash of the Register, and the hash of the Error Codepoint, hashing the result using Keccak-256, and encoding the result as an Integer in little-endian fashion.</p>
+<p>If a VM is in an extensive state, its state hash is computed by concatenating the hash of the Instruction Stack, the hash of the Data Stack, the hash of the Aux Stack, the hash of the Register, the hash of the Static, and the hash of the Error Codepoint, hashing the result using Keccak-256.</p>
 <h2><a class="anchor" aria-hidden="true" id="the-runtime-environment"></a><a href="#the-runtime-environment" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The Runtime Environment</h2>
 <p>The Runtime Environment is a VM’s interface to the outside world. Certain instructions are described as interacting with the Runtime Environment.</p>
 <p>The implementation of the Runtime Environment will vary in different scenarios. In standalone AVM emulators, the Runtime Environment might be controlled by command-line options or a configuration file. In production uses of Arbitrum, the Runtime Environment will be provided by an Arbitrum Validator, and will be specified by Preconditions that form part of Assertions in the Arbitrum Protocol.</p>
@@ -167,8 +173,7 @@
 <tr><th>Opcode</th><th>Nickname</th><th>Semantics</th></tr>
 </thead>
 <tbody>
-<tr><td>00s: Stop and Arithmetic Operations</td><td></td><td> </td></tr>
-<tr><td>0x00</td><td>halt</td><td>Enter the Halted state.</td></tr>
+<tr><td>00s: Arithmetic Operations</td><td></td><td> </td></tr>
 <tr><td>0x01</td><td>add</td><td>Pop two values (A, B) off the Data Stack. If A and B are both Integers, Push the value A+B (truncated to 256 bits) onto the Data Stack. Otherwise, raise an Error.</td></tr>
 <tr><td>0x02</td><td>mul</td><td>Same as add, except multiply rather than add.</td></tr>
 <tr><td>0x03</td><td>sub</td><td>Same as add, except subtract rather than add.</td></tr>
@@ -179,7 +184,6 @@
 <tr><td>0x08</td><td>addmod</td><td>Pop three values (A, B, C) off the Data Stack. If A, B, and C are all Integers, and C is not zero, Push the value (A+B) % C (calculated without 256-bit truncation until end) onto the Data Stack. Otherwise, raise an Error.</td></tr>
 <tr><td>0x09</td><td>mulmod</td><td>Same as addmod, except multiply rather than add.</td></tr>
 <tr><td>0x0a</td><td>exp</td><td>Same as add, except exponentiate rather than add.</td></tr>
-<tr><td>0x0b</td><td>signextend</td><td>Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B&lt;31 (interpreting B as unsigned), sign extend A from (B + 1) * 8 bits to 256 bits and Push the result onto the Data Stack; otherwise push A onto the Data Stack). Otherwise, raise an Error.</td></tr>
 <tr><td> </td><td></td><td> </td></tr>
 <tr><td>10s: Comparison &amp; Bitwise Logic Operations</td><td></td><td> </td></tr>
 <tr><td>0x10</td><td>lt</td><td>Pop two values (A,B) off the Data Stack. If A and B are both Integers, then (treating A and B as unsigned integers, if A&lt;B, push 1 on the Data Stack; otherwise push 0 on the Data Stack). Otherwise, raise an Error.</td></tr>
@@ -193,26 +197,27 @@
 <tr><td>0x18</td><td>xor</td><td>Same as and, except bitwise xor rather than bitwise and</td></tr>
 <tr><td>0x19</td><td>not</td><td>Pop one value (A) off the Data Stack. If A is an Integer, then push the bitwise negation of A on the Data Stack. Otherwise, raise an Error.</td></tr>
 <tr><td>0x1a</td><td>byte</td><td>Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B&lt;32 (interpreting B as unsigned), then push the B’th byte of A onto the Data Stack, otherwise push Integer 0 onto the Data Stack). Otherwise, raise an Error.</td></tr>
+<tr><td>0x1b</td><td>signextend</td><td>Pop two values (A, B) off the Data Stack. If A and B are both Integers, (if B&lt;31 (interpreting B as unsigned), sign extend A from (B + 1) * 8 bits to 256 bits and Push the result onto the Data Stack; otherwise push A onto the Data Stack). Otherwise, raise an Error.</td></tr>
 <tr><td> </td><td></td><td> </td></tr>
 <tr><td>20s: Hashing</td><td></td><td> </td></tr>
 <tr><td>0x20</td><td>hash</td><td>Pop a Value (A) off of the Data Stack. Push Hash(A) onto the Data Stack.</td></tr>
+<tr><td>0x21</td><td>type</td><td>Pop a Value (A) off of the Data Stack. If A is an Integer, Push Integer 0 onto the Data Stack. Otherwise, if A is a Codepoint, Push Integer 1 onto the Data Stack. Otherwise (A is a Tuple), push Integer 3 onto the Data Stack.</td></tr>
 <tr><td> </td><td></td><td> </td></tr>
 <tr><td>30s: Stack, Memory, Storage and Flow Operations</td><td></td><td> </td></tr>
 <tr><td>0x30</td><td>pop</td><td>Pop one value off of the Data Stack, and discard that value.</td></tr>
 <tr><td>0x31</td><td>spush</td><td>Push a copy of Static onto the Data Stack.</td></tr>
 <tr><td>0x32</td><td>rpush</td><td>Push a copy of Register onto the Data Stack.</td></tr>
 <tr><td>0x33</td><td>rset</td><td>Pop a Value (A) off of the Data Stack. Set Register to A.</td></tr>
-<tr><td>0x34</td><td>inbox</td><td>Pop a Value (A) off of the Data Stack. Block until this VM’s inbox, as provided by the Runtime Environment, is not equal to A. Then push the Inbox contents, as supplied by the Runtime Environment, onto the Data Stack.</td></tr>
-<tr><td>0x35</td><td>jump</td><td>Pop one value (A) off of the Data Stack. If A is a Codepoint, set the Instruction Stack to A. Otherwise raise an Error.</td></tr>
-<tr><td>0x36</td><td>cjump</td><td>Pop two values (A, B) off of the Data Stack. If A is not a Codepoint or B is not an Integer, raise an Error. Otherwise (If B is zero, do Nothing. Otherwise set the Instruction Stack to A.).</td></tr>
-<tr><td>0x37</td><td>stackempty</td><td>If the Data Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.</td></tr>
-<tr><td>0x38</td><td>pcpush</td><td>Push the Codepoint of the currently executing operation to the Data Stack.</td></tr>
-<tr><td>0x39</td><td>auxpush</td><td>Pop one value off the Aux Stack, and push it to the Data Stack.</td></tr>
-<tr><td>0x3a</td><td>auxpop</td><td>Pop one value off the Data Stack, and push it to the Aux Stack.</td></tr>
-<tr><td>0x3b</td><td>auxstackempty</td><td>If the Aux Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.</td></tr>
-<tr><td>0x3c</td><td>nop</td><td>Do nothing.</td></tr>
-<tr><td>0x3d</td><td>errpush</td><td>Push a copy of the Error Codepoint onto the Data Stack.</td></tr>
-<tr><td>0x3e</td><td>errset</td><td>Pop a Value (A) off of the Data Stack. Set the Error Codepoint to A.</td></tr>
+<tr><td>0x34</td><td>jump</td><td>Pop one value (A) off of the Data Stack. If A is a Codepoint, set the Instruction Stack to A. Otherwise raise an Error.</td></tr>
+<tr><td>0x35</td><td>cjump</td><td>Pop two values (A, B) off of the Data Stack. If A is not a Codepoint or B is not an Integer, raise an Error. Otherwise (If B is zero, do Nothing. Otherwise set the Instruction Stack to A.).</td></tr>
+<tr><td>0x36</td><td>stackempty</td><td>If the Data Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.</td></tr>
+<tr><td>0x37</td><td>pcpush</td><td>Push the Codepoint of the currently executing operation to the Data Stack.</td></tr>
+<tr><td>0x38</td><td>auxpush</td><td>Pop one value off the Data Stack, and push it to the Aux Stack.</td></tr>
+<tr><td>0x39</td><td>auxpop</td><td>Pop one value off the Aux Stack, and push it to the Data Stack.</td></tr>
+<tr><td>0x3a</td><td>auxstackempty</td><td>If the Aux Stack is empty, Push 1 on the Data Stack, otherwise Push 0 on the Data Stack.</td></tr>
+<tr><td>0x3b</td><td>nop</td><td>Do nothing.</td></tr>
+<tr><td>0x3c</td><td>errpush</td><td>Push a copy of the Error Codepoint onto the Data Stack.</td></tr>
+<tr><td>0x3d</td><td>errset</td><td>Pop a Value (A) off of the Data Stack. Set the Error Codepoint to A.</td></tr>
 <tr><td> </td><td></td><td> </td></tr>
 <tr><td>40s: Duplication and Exchange Operations</td><td></td><td> </td></tr>
 <tr><td>0x40</td><td>dup0</td><td>Pop one value (A) off of the Data Stack. Push A onto the Data Stack. Push A onto the Data Stack.</td></tr>
@@ -225,7 +230,6 @@
 <tr><td>0x50</td><td>tget</td><td>Pop two values (A,B) off the Data Stack. If B is a Tuple, and A is an integer, and A&gt;=0 and A is less than length(B), then Push the value in the A_th slot of B onto the Data Stack. Otherwise raise an Error.</td></tr>
 <tr><td>0x51</td><td>tset</td><td>Pop three values (A,B,C) off of the Data Stack. If B is a Tuple, and A is an Integer, and A&gt;=0, and A is less than length(B), then create a new Tuple that is identical to B, except that slot A has been set to C, then Push the new Tuple onto the Data Stack. Otherwise, raise an Error.</td></tr>
 <tr><td>0x52</td><td>tlen</td><td>Pop a value (A) off the Data Stack. If A is a Tuple, push the length of A (i.e. the number of slots in A) onto the Data Stack. Otherwise, raise an Error.</td></tr>
-<tr><td>0x53</td><td>istuple</td><td>Pop a value (A) off the Data Stack. If A is an Tuple, Push 1 onto the Data Stack. Otherwise (i.e., if A is an Integer), Push 0 onto the Data Stack.</td></tr>
 <tr><td> </td><td></td><td> </td></tr>
 <tr><td>60s: Logging Operations</td><td></td><td> </td></tr>
 <tr><td>0x60</td><td>breakpoint</td><td>In an AVM emulator, return control to the Runtime Environment.</td></tr>
@@ -235,6 +239,9 @@
 <tr><td>0x70</td><td>send</td><td>Pop a Value (A) off the Data Stack. If A is a 4-tuple ([B, C, D, E]), and C is an Integer, D is an Integer, and E is an Integer, then block until the VM’s balance, as supplied by the Runtime Environment, is greater than or equal to D, then tell the Runtime Environment to publish A as an outgoing message of this VM. Otherwise, raise an Error. (One effect of this is to transfer D units of the currency identified by C from this VM to the Arbitrum identity E.)</td></tr>
 <tr><td>0x71</td><td>nbsend</td><td>Pop a Value (A) off the Data Stack. If A is a 4-tuple ([B, C, D, E]), and C is an Integer, and D is an Integer, and E is an Integer, then (if D is a non-negative Integer less than or equal to this VM’s balance, as supplied by the Runtime Environment, in the currency identified by C, then tell the Runtime Environment to publish A as an outgoing message of this VM and Push 1 onto the Data Stack; otherwise Push 0 onto the Data Stack.) Otherwise, raise an Error. (If the message is published, one effect of this is to transfer D units of the currency identified by C from this VM to the Arbitrum identity E.)</td></tr>
 <tr><td>0x72</td><td>gettime</td><td>Push a 2-tuple [mintime, maxtime] onto the Data Stack, where mintime and maxtime are (Integer) lower and upper bounds on the current time, as supplied by the Runtime Environment.</td></tr>
+<tr><td>0x73</td><td>inbox</td><td>Pop a Value (A) off of the Data Stack. Block until this VM’s inbox, as provided by the Runtime Environment, is not equal to A. Then push the Inbox contents, as supplied by the Runtime Environment, onto the Data Stack.</td></tr>
+<tr><td>0x74</td><td>error</td><td>Raise an Error.</td></tr>
+<tr><td>0x75</td><td>halt</td><td>Enter the Halted state.</td></tr>
 </tbody>
 </table>
-</span></div></article></div><div class="docLastUpdate"><em>Last updated on 5/21/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/Developer_Quickstart"><span class="arrow-prev">← </span><span>Arbitrum Developer Quickstart</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#values">Values</a></li><li><a href="#operations">Operations</a></li><li><a href="#stacks">Stacks</a></li><li><a href="#marshaling">Marshaling</a></li><li><a href="#hashing-values">Hashing Values</a></li><li><a href="#virtual-machine-state">Virtual Machine State</a></li><li><a href="#hashing-a-vm-state">Hashing a VM State</a></li><li><a href="#the-runtime-environment">The Runtime Environment</a></li><li><a href="#inbox-and-messages">Inbox and Messages</a></li><li><a href="#errors">Errors</a></li><li><a href="#blocking">Blocking</a></li><li><a href="#instructions">Instructions</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"></a><div><h5>Docs</h5><a href="/docs/en/Developer_Quickstart">Developer Quickstart</a><a href="/docs/en/AVM_Specification">AVM Specification</a></div><div><h5>Community</h5><a href="https://offchainlabs.com">Offchain Labs</a><a href="https://medium.com/OffchainLabs">Blog</a><a href="https://twitter.com/OffchainLabs">Twitter</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/OffchainLabs">GitHub</a></div></section><a href="https://offchainlabs.com/"><img src="/img/logo-white.png" alt="Offchain Labs" width="150" height="125" class="footerLogo"/></a><section class="copyright">Copyright © 2019 Offchain Labs</section></footer></div></body></html>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 6/12/2019</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/Developer_Quickstart"><span class="arrow-prev">← </span><span>Arbitrum Developer Quickstart</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#values">Values</a></li><li><a href="#operations">Operations</a></li><li><a href="#stacks">Stacks</a></li><li><a href="#marshaling">Marshaling</a></li><li><a href="#hashing-values">Hashing Values</a></li><li><a href="#virtual-machine-state">Virtual Machine State</a></li><li><a href="#hashing-a-vm-state">Hashing a VM State</a></li><li><a href="#the-runtime-environment">The Runtime Environment</a></li><li><a href="#inbox-and-messages">Inbox and Messages</a></li><li><a href="#errors">Errors</a></li><li><a href="#blocking">Blocking</a></li><li><a href="#instructions">Instructions</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"></a><div><h5>Docs</h5><a href="/docs/en/Developer_Quickstart">Developer Quickstart</a><a href="/docs/en/AVM_Specification">AVM Specification</a></div><div><h5>Community</h5><a href="https://offchainlabs.com">Offchain Labs</a><a href="https://medium.com/OffchainLabs">Blog</a><a href="https://twitter.com/OffchainLabs">Twitter</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/OffchainLabs">GitHub</a></div></section><a href="https://offchainlabs.com/"><img src="/img/logo-white.png" alt="Offchain Labs" width="150" height="125" class="footerLogo"/></a><section class="copyright">Copyright © 2019 Offchain Labs</section></footer></div></body></html>
