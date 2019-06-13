@@ -37,10 +37,10 @@ class Footer extends React.Component {
           </a>
           <div>
             <h5>Docs</h5>
-            <a href={this.docUrl('Developer_Quickstart', this.props.language)}>
+            <a href={this.docUrl('Developer_Quickstart')}>
               Developer Quickstart
             </a>
-            <a href={this.docUrl('AVM_Specification', this.props.language)}>
+            <a href={this.docUrl('AVM_Specification')}>
               AVM Specification
             </a>
           </div>
@@ -52,7 +52,7 @@ class Footer extends React.Component {
           </div>
           <div>
             <h5>More</h5>
-            <a href={`${this.props.config.baseUrl}blog`}>Blog</a>
+            <a href="https://medium.com/OffchainLabs">Blog</a>
             <a href="https://github.com/OffchainLabs">GitHub</a>
           </div>
         </section>

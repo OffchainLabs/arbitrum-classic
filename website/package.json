@@ -1,4 +1,6 @@
 {
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
   "scripts": {
     "examples": "docusaurus-examples",
     "start": "docusaurus-start",
@@ -9,6 +11,6 @@
     "rename-version": "docusaurus-rename-version"
   },
   "devDependencies": {
-    "docusaurus": "^1.9.0"
+    "docusaurus": "^1.11.1"
   }
 }

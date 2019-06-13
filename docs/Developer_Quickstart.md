@@ -9,7 +9,8 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 [build and run the demo app](#hello-arbitrum) or
 [port your own dapp](#porting-to-arbitrum).
 
-**Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p)!**
+**Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
+read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
 
 ## Install Dependencies
 
@@ -89,6 +90,7 @@ git clone --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
 cd arbc-solidity
 pip3 install -r requirements.txt
 python3 setup.py install
+cd ..
 ```
 
 Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu.

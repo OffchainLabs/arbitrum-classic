@@ -1,3 +1,9 @@
+# MacOS
+.DS_Store
+
+# Build folder
+website/build/
+
 # Logs
 logs
 *.log
