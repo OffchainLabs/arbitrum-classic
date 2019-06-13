@@ -89,6 +89,7 @@ git clone --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
 cd arbc-solidity
 pip3 install -r requirements.txt
 python3 setup.py install
+cd ..
 ```
 
 Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu.
