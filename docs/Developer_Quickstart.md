@@ -1,7 +1,7 @@
 ---
 id: Developer_Quickstart
 title: Arbitrum Developer Quickstart
-custom_edit_url: https://github.com/OffchainLabs/developer-website/edit/master/docs/Developer_Quickstart.md
+custom_edit_url: https://github.com/OffchainLabs/developer-website/edit/staging/docs/Developer_Quickstart.md
 ---
 
 Get started with Arbitrum by installing the Arbitrum compiler,
@@ -17,23 +17,25 @@ read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
 
+> Requires `node -v` version less than 12 for the web3.js frontend in the
+> demo app. You can use [nvm](https://github.com/nvm-sh/nvm) to switch
+> between multiple node versions.
+
+> Requires python3 to be at least version 3.5.3.
+
 ### MacOS
 
 1. Install python3, nodejs, & docker using [Homebrew](https://brew.sh/):
-
-    > Requires `node -v` version less than 12 for the web3.js frontend in the
-    > demo app. You can use [nvm](https://github.com/nvm-sh/nvm) to switch
-    > between multiple node versions.
-
-    > Requires python3 to be at least version 3.5.3.
     
     ``` bash
-    brew install python3 node@8 docker docker-machine docker-compose
-    brew link docker
-    brew link docker-compose
+    brew install python3 node@8 docker docker-compose
     brew unlink node
     brew link node@8
+    brew cask install docker
     ```
+    
+    Open the installed docker app. The menu bar icon should appear and say
+    `Docker Desktop is running`.
 
 2. Change npm's default directory:
 
@@ -44,7 +46,7 @@ list of dependencies.
     ``` bash
     mkdir ~/.npm-global
     npm config set prefix '~/.npm-global'
-    echo $'# npm\nexport PATH=~/.npm-global/bin:$PATH' >> ~/.bash_profile
+    echo $'# npm\nexport PATH="~/.npm-global/bin:$PATH"' >> ~/.bash_profile
     source ~/.bash_profile
     ```
 
