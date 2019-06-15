@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package main
@@ -105,7 +105,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-
 	challenger, err := ethvalidator.NewValidatorFollower("Bob", machine, key2, config, true, connectionInfo, ethURL, "wss://127.0.0.1:1236/ws")
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
@@ -117,7 +116,6 @@ func main() {
 	}
 
 	err = challenger.Run()
-
 
 	retChan, errChan := coordinator.CreateVM(time.Second * 10)
 

@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package valmessage
@@ -74,14 +74,14 @@ type SendConfirmUnanimousAssertedMessage struct {
 func (SendConfirmUnanimousAssertedMessage) IsOutgoingMessage() {}
 
 type FinalizedAssertion struct {
-	Assertion *protocol.Assertion
+	Assertion   *protocol.Assertion
 	NewLogCount int
 }
 
 func (FinalizedAssertion) IsOutgoingMessage() {}
 
 func (f FinalizedAssertion) NewLogs() []value.Value {
-	return f.Assertion.Logs[len(f.Assertion.Logs) - f.NewLogCount:]
+	return f.Assertion.Logs[len(f.Assertion.Logs)-f.NewLogCount:]
 }
 
 type SendInitiateChallengeMessage struct {

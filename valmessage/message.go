@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package valmessage
@@ -56,7 +56,7 @@ type IncomingValidatorMessage interface {
 
 type BridgeMessage struct {
 	Message IncomingMessage
-	Header *types.Header
+	Header  *types.Header
 }
 
 func (BridgeMessage) IncomingValidatorMessage() {}
@@ -75,9 +75,8 @@ func (msg TimeUpdateMessage) GetHeader() *types.Header {
 	return msg.Header
 }
 
-
 type IncomingMessageMessage struct {
-	Msg  protocol.Message
+	Msg    protocol.Message
 	Header *types.Header
 }
 

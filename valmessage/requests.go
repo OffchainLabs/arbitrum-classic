@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package valmessage
@@ -69,9 +69,9 @@ type FollowUnanimousRequest struct {
 }
 
 type InitiateUnanimousRequest struct {
-	TimeLength      uint64
-	NewMessages     []protocol.Message
-	Final           bool
+	TimeLength  uint64
+	NewMessages []protocol.Message
+	Final       bool
 	RequestChan chan<- UnanimousRequest
 	ResultChan  chan<- UnanimousUpdateResults
 	ErrChan     chan<- error

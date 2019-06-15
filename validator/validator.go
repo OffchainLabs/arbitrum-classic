@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package validator
@@ -59,16 +59,15 @@ func (e *Error) Error() string {
 }
 
 type Validator struct {
-	Name                     string
-	requests                 chan interface{}
-	maybeAssert              chan bool
+	Name        string
+	requests    chan interface{}
+	maybeAssert chan bool
 
 	// Run loop only
 	bot                      validatorState
 	challengeBot             challengeState
 	latestHeader             *types.Header
 	pendingDisputableRequest *valmessage.DisputableAssertionRequest
-
 }
 
 func NewValidator(name string, address common.Address, inbox *protocol.Inbox, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine *vm.Machine, challengeEverything bool) *Validator {
@@ -139,7 +138,7 @@ func (validator *Validator) InitiateUnanimousRequest(
 	updateResultChan := make(chan valmessage.UnanimousUpdateResults, 1)
 	errChan := make(chan error, 1)
 	validator.requests <- valmessage.InitiateUnanimousRequest{
-		TimeLength: length,
+		TimeLength:  length,
 		NewMessages: messages,
 		Final:       final,
 		RequestChan: unanRequestChan,

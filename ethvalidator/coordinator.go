@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package ethvalidator
@@ -40,9 +40,9 @@ import (
 )
 
 type Client struct {
-	cm          *ClientManager
-	ToClient    chan *ValidatorRequest
-	FromClient  chan *FollowerResponse
+	cm         *ClientManager
+	ToClient   chan *ValidatorRequest
+	FromClient chan *FollowerResponse
 
 	conn    *websocket.Conn
 	Address common.Address
@@ -128,7 +128,6 @@ func (c *Client) writePump() {
 }
 
 type ValidatorLeaderRequest interface {
-
 }
 
 //type ValidatorMessageRequest interface {
@@ -140,7 +139,6 @@ type LabeledFollowerResponse struct {
 	response *FollowerResponse
 }
 
-
 type ClientManager struct {
 	clients         map[*Client]bool
 	broadcast       chan *ValidatorRequest
@@ -151,9 +149,9 @@ type ClientManager struct {
 	waitingChans    map[chan bool]bool
 	responses       map[[32]byte]chan LabeledFollowerResponse
 
-	key             *ecdsa.PrivateKey
-	vmId            [32]byte
-	validators      map[common.Address]validatorInfo
+	key        *ecdsa.PrivateKey
+	vmId       [32]byte
+	validators map[common.Address]validatorInfo
 }
 
 func NewClientManager(key *ecdsa.PrivateKey, vmId [32]byte, validators map[common.Address]validatorInfo) *ClientManager {
@@ -173,24 +171,24 @@ func NewClientManager(key *ecdsa.PrivateKey, vmId [32]byte, validators map[commo
 }
 
 type GatherSignatureRequest struct {
-	request *ValidatorRequest
+	request      *ValidatorRequest
 	responseChan chan LabeledFollowerResponse
-	requestID [32]byte
+	requestID    [32]byte
 }
 
 func (m *ClientManager) Run() {
 	aggResponseChan := make(chan LabeledFollowerResponse, 32)
 	for {
 		select {
-		case waitRequest := <- m.waitRequestChan:
-			if len(m.clients) == len(m.validators) - 1 {
+		case waitRequest := <-m.waitRequestChan:
+			if len(m.clients) == len(m.validators)-1 {
 				waitRequest <- true
-			}  else {
+			} else {
 				m.waitingChans[waitRequest] = true
 			}
-		case response := <- aggResponseChan:
+		case response := <-aggResponseChan:
 			m.responses[value.NewHashFromBuf(response.response.RequestId)] <- response
-		case request := <- m.sigRequestChan:
+		case request := <-m.sigRequestChan:
 			m.broadcast <- request.request
 			m.responses[request.requestID] = request.responseChan
 		case client := <-m.register:
@@ -200,7 +198,7 @@ func (m *ClientManager) Run() {
 					aggResponseChan <- LabeledFollowerResponse{client.Address, response}
 				}
 			}()
-			if len(m.clients) == len(m.validators) - 1 {
+			if len(m.clients) == len(m.validators)-1 {
 				for waitChan := range m.waitingChans {
 					waitChan <- true
 				}
@@ -228,14 +226,14 @@ func (m *ClientManager) gatherSignatures(
 	request *ValidatorRequest,
 	requestID [32]byte,
 ) []LabeledFollowerResponse {
-	responseChan := make(chan LabeledFollowerResponse, len(m.validators) - 1)
+	responseChan := make(chan LabeledFollowerResponse, len(m.validators)-1)
 	log.Println("Coordinator gathering signatures")
 	m.sigRequestChan <- GatherSignatureRequest{
 		request,
 		responseChan,
 		requestID,
 	}
-	responseList := make([]LabeledFollowerResponse, 0, len(m.validators) - 1)
+	responseList := make([]LabeledFollowerResponse, 0, len(m.validators)-1)
 	timer := time.NewTimer(20 * time.Second)
 	timedOut := false
 	defer timer.Stop()
@@ -247,7 +245,7 @@ func (m *ClientManager) gatherSignatures(
 			log.Println("Coordinator timed out gathering signatures")
 			timedOut = true
 		}
-		if len(responseList) == len(m.validators) - 1 || timedOut {
+		if len(responseList) == len(m.validators)-1 || timedOut {
 			break
 		}
 	}
@@ -281,7 +279,7 @@ func (m *ClientManager) RunServer() error {
 			return
 		}
 		address := crypto.PubkeyToAddress(*pubkey)
-		if _, ok := m.validators[address] ; !ok {
+		if _, ok := m.validators[address]; !ok {
 			log.Println("Follower tried to connect with bad pubkey")
 			return
 		}
@@ -322,7 +320,7 @@ type OffchainMessage struct {
 
 func (m *MessageProcessingQueue) Fetch() chan []OffchainMessage {
 	retChan := make(chan []OffchainMessage, 1)
-	m.requests <-  retChan
+	m.requests <- retChan
 	return retChan
 }
 
@@ -342,7 +340,7 @@ func (m *MessageProcessingQueue) Send(message OffchainMessage) {
 
 type MessageProcessingQueue struct {
 	queuedMessages []OffchainMessage
-	requests chan interface{}
+	requests       chan interface{}
 }
 
 func NewMessageProcessingQueue() *MessageProcessingQueue {
@@ -355,7 +353,7 @@ func NewMessageProcessingQueue() *MessageProcessingQueue {
 func (m *MessageProcessingQueue) run() {
 	go func() {
 		for {
-			request := <- m.requests
+			request := <-m.requests
 			switch request := request.(type) {
 			case chan []OffchainMessage:
 				request <- m.queuedMessages
@@ -375,11 +373,11 @@ func (m *MessageProcessingQueue) run() {
 
 type ValidatorCoordinator struct {
 	Val *EthValidator
-	cm *ClientManager
+	cm  *ClientManager
 
-	requestChan   chan ValidatorLeaderRequest
+	requestChan chan ValidatorLeaderRequest
 
-	mpq           *MessageProcessingQueue
+	mpq *MessageProcessingQueue
 }
 
 func NewValidatorCoordinator(
@@ -473,7 +471,7 @@ type CoordinatorDisputableRequest struct {
 }
 
 type CoordinatorUnanimousRequest struct {
-	final bool
+	final   bool
 	retChan chan bool
 	errChan chan error
 }
@@ -505,7 +503,6 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 		return false, errors.New("coordinator can only create VM when connected to all other validators")
 	}
 
-
 	notifyFollowers := func(allSigned bool) {
 		m.cm.broadcast <- &ValidatorRequest{
 			Request: &ValidatorRequest_CreateNotification{&CreateVMFinalizedValidatorNotification{
@@ -516,9 +513,9 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 	stateDataChan := m.Val.Bot.RequestVMState()
 	stateData := <-stateDataChan
 	createData := &CreateVMValidatorRequest{
-		Config: &stateData.Config,
-		VmId: value.NewHashBuf(m.Val.VmId),
-		VmState: value.NewHashBuf(stateData.MachineState),
+		Config:              &stateData.Config,
+		VmId:                value.NewHashBuf(m.Val.VmId),
+		VmState:             value.NewHashBuf(stateData.MachineState),
 		ChallengeManagerNum: 0,
 	}
 	createHash := CreateVMHash(createData)
@@ -529,7 +526,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 		},
 		createHash,
 	)
-	if len(responses) != m.Val.ValidatorCount() - 1 {
+	if len(responses) != m.Val.ValidatorCount()-1 {
 		notifyFollowers(false)
 		return false, errors.New("some Validators didn't respond")
 	}
@@ -568,9 +565,8 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	return res
 }
 
-
 func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool) (bool, error) {
-	queuedMessages := <- m.mpq.Fetch()
+	queuedMessages := <-m.mpq.Fetch()
 
 	isFinal, err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal)
 
@@ -631,10 +627,10 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 
 	go func() {
 		request := &UnanimousAssertionValidatorRequest{
-			BeforeHash:  value.NewHashBuf(unanRequest.BeforeHash),
-			BeforeInbox: value.NewHashBuf(unanRequest.BeforeInbox),
-			SequenceNum: unanRequest.SequenceNum,
-			TimeBounds:  protocol.NewTimeBoundsBuf(unanRequest.TimeBounds),
+			BeforeHash:     value.NewHashBuf(unanRequest.BeforeHash),
+			BeforeInbox:    value.NewHashBuf(unanRequest.BeforeInbox),
+			SequenceNum:    unanRequest.SequenceNum,
+			TimeBounds:     protocol.NewTimeBoundsBuf(unanRequest.TimeBounds),
 			SignedMessages: requestMessages,
 		}
 		responsesChan <- m.cm.gatherSignatures(&ValidatorRequest{
@@ -687,7 +683,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	}
 
 	responses := <-responsesChan
-	if len(responses) != m.Val.ValidatorCount() - 1 {
+	if len(responses) != m.Val.ValidatorCount()-1 {
 		log.Println("Coordinator failed to collect unanimous assertion sigs")
 		notifyFollowers(&UnanimousAssertionValidatorNotification{
 			Accepted: false,
@@ -745,4 +741,3 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	}
 	return unanUpdate.SequenceNum == math.MaxUint64, nil
 }
-

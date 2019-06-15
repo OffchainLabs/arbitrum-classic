@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package ethvalidator
@@ -45,10 +45,10 @@ type EthConnection struct {
 }
 
 type ArbAddresses struct {
-	TrackerAddress   string `json:"vmTracker"`
-	ChallengeAddress string `json:"ChallengeManager"`
-	OneStepAddress   string `json:"OneStepProof"`
-	BalanceTrackerAddress   string `json:"balanceTracker"`
+	TrackerAddress        string `json:"vmTracker"`
+	ChallengeAddress      string `json:"ChallengeManager"`
+	OneStepAddress        string `json:"OneStepProof"`
+	BalanceTrackerAddress string `json:"balanceTracker"`
 }
 
 func NewEthConnection(serverAddress string, a ArbAddresses) (*EthConnection, error) {

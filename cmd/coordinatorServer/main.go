@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package main
@@ -53,11 +53,10 @@ import (
 type TxInfo struct {
 	found          bool
 	assertionIndex int
-	RawVal    value.Value
+	RawVal         value.Value
 }
 
 type ValidatorRequest interface {
-
 }
 
 type AssertionCountRequest struct {
@@ -65,7 +64,7 @@ type AssertionCountRequest struct {
 }
 
 type TxRequest struct {
-	txHash    [32]byte
+	txHash     [32]byte
 	resultChan chan<- TxInfo
 }
 
@@ -108,7 +107,7 @@ func (m *CoordinatorServer) requestFindLogs(
 }
 
 type LogsInfo struct {
-	msg evm.EthMsg
+	msg  evm.EthMsg
 	Logs []evm.Log
 }
 
@@ -120,7 +119,6 @@ type LogResponse struct {
 	Log evm.Log
 	Msg evm.EthMsg
 }
-
 
 func (a *AssertionInfo) FindLogs(address *big.Int, topics [][32]byte) []LogResponse {
 	logs := make([]LogResponse, 0)
@@ -152,10 +150,10 @@ func NewAssertionInfo() *AssertionInfo {
 
 type TxTracker struct {
 	txRequestIndex int
-	transactions map[[32]byte]TxInfo
-	assertionInfo []*AssertionInfo
-	accountNonces map[common.Address]uint64
-	vmId [32]byte
+	transactions   map[[32]byte]TxInfo
+	assertionInfo  []*AssertionInfo
+	accountNonces  map[common.Address]uint64
+	vmId           [32]byte
 }
 
 func NewTxTracker(vmId [32]byte) *TxTracker {
@@ -309,21 +307,21 @@ func NewCoordinatorServer(
 }
 
 type FindLogsArgs struct {
-	FromHeight string `json:"fromHeight"`
-	ToHeight string `json:"toHeight"`
-	Address   string `json:"address"`
-	Topics    []string `json:"topics"`
+	FromHeight string   `json:"fromHeight"`
+	ToHeight   string   `json:"toHeight"`
+	Address    string   `json:"address"`
+	Topics     []string `json:"topics"`
 }
 
 type LogInfo struct {
-	Address string `json:"address"`
-	BlockHash string `json:"blockHash"`
-	BlockNumber string `json:"blockNumber"`
-	Data string `json:"data"`
-	LogIndex string `json:"logIndex"`
-	Topics []string `json:"topics"`
-	TransactionIndex string `json:"transactionIndex"`
-	TransactionHash string `json:"transactionHash"`
+	Address          string   `json:"address"`
+	BlockHash        string   `json:"blockHash"`
+	BlockNumber      string   `json:"blockNumber"`
+	Data             string   `json:"data"`
+	LogIndex         string   `json:"logIndex"`
+	Topics           []string `json:"topics"`
+	TransactionIndex string   `json:"transactionIndex"`
+	TransactionHash  string   `json:"transactionHash"`
 }
 
 type FindLogsReply struct {
@@ -367,14 +365,14 @@ func (m *CoordinatorServer) FindLogs(r *http.Request, args *FindLogsArgs, reply 
 		logsChan = m.requestFindLogs(&fromHeight, &toHeight, addressInt, topics)
 	}
 
-	ret := <- logsChan
+	ret := <-logsChan
 	reply.Logs = ret
 	return nil
 }
 
 type SendMessageArgs struct {
-	Data        string `json:"data"`
-	Signature   string `json:"signature"`
+	Data      string `json:"data"`
+	Signature string `json:"signature"`
 }
 
 type SendMessageReply struct {
@@ -430,9 +428,9 @@ func (m *CoordinatorServer) SendMessage(r *http.Request, args *SendMessageArgs, 
 
 	msg := protocol.Message{
 		dataVal,
-			tokenType,
-			amount,
-			senderArr,
+		tokenType,
+		amount,
+		senderArr,
 	}
 	m.coordinator.SendMessage(ethvalidator.OffchainMessage{
 		msg,
@@ -447,8 +445,8 @@ type GetMessageResultArgs struct {
 }
 
 type GetMessageResultReply struct {
-	Found     bool   `json:"found"`
-	RawVal    string `json:"rawVal"`
+	Found  bool   `json:"found"`
+	RawVal string `json:"rawVal"`
 }
 
 func (m *CoordinatorServer) GetMessageResult(r *http.Request, args *GetMessageResultArgs, reply *GetMessageResultReply) error {
@@ -476,7 +474,7 @@ type GetAssertionCountReply struct {
 
 func (m *CoordinatorServer) GetAssertionCount(r *http.Request, _ *struct{}, reply *GetAssertionCountReply) error {
 	req := m.requestAssertionCount()
-	reply.AssertionCount = <- req
+	reply.AssertionCount = <-req
 	return nil
 }
 
@@ -507,13 +505,13 @@ func (m *CoordinatorServer) TranslateToValue(r *http.Request, arg *string, reply
 }
 
 type CallMessageArgs struct {
-	Data    string `json:"data"`
-	Sender  string `json:"sender"`
+	Data   string `json:"data"`
+	Sender string `json:"sender"`
 }
 
 type CallMessageReply struct {
 	ReturnVal string
-	Success bool
+	Success   bool
 }
 
 func (m *CoordinatorServer) CallMessage(r *http.Request, args *CallMessageArgs, reply *CallMessageReply) error {
@@ -539,7 +537,7 @@ func (m *CoordinatorServer) CallMessage(r *http.Request, args *CallMessageArgs, 
 	resultChan, errChan := m.coordinator.Val.Bot.RequestCall(msg)
 
 	select {
-	case logVal := <- resultChan:
+	case logVal := <-resultChan:
 		result, err := evm.ProcessLog(logVal)
 		if err != nil {
 			log.Printf("Error %v while responding to message %v\n", err, msg)
@@ -555,7 +553,7 @@ func (m *CoordinatorServer) CallMessage(r *http.Request, args *CallMessageArgs, 
 			reply.Success = false
 		}
 		return nil
-	case err := <- errChan:
+	case err := <-errChan:
 		fmt.Println("Call failed")
 		return err
 	}

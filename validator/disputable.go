@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package validator
@@ -32,7 +32,7 @@ type proposedUpdate struct {
 	messages    *protocol.MessageQueue
 	assertion   *protocol.Assertion
 	sequenceNum uint64
-	newLogCount  int
+	newLogCount int
 }
 
 func (p *proposedUpdate) clone() *proposedUpdate {
@@ -297,19 +297,19 @@ func (bot WaitingObserver) FinalizePendingUnanimous(signatures []valmessage.Sign
 	balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.assertion.OutMsgs))
 
 	return WaitingObserver{
-		validatorConfig:     bot.validatorConfig,
-		proposed:            nil,
-		acceptedMachine:     bot.proposed.machine,
-		acceptedMessages:    core.inbox.Accepted.WithAddedQueue(bot.proposed.messages),
-		acceptedBalance:     balance,
-		assertion:           bot.proposed.assertion,
-		sequenceNum:         bot.proposed.sequenceNum,
-		signatures:          signatures,
-		timeBounds:          bot.timeBounds,
-		pendingMessages:     bot.pendingMessages,
-		origMessages:        bot.origMessages,
-		origBalance:         bot.origBalance,
-		origMachine:         bot.origMachine,
+		validatorConfig:  bot.validatorConfig,
+		proposed:         nil,
+		acceptedMachine:  bot.proposed.machine,
+		acceptedMessages: core.inbox.Accepted.WithAddedQueue(bot.proposed.messages),
+		acceptedBalance:  balance,
+		assertion:        bot.proposed.assertion,
+		sequenceNum:      bot.proposed.sequenceNum,
+		signatures:       signatures,
+		timeBounds:       bot.timeBounds,
+		pendingMessages:  bot.pendingMessages,
+		origMessages:     bot.origMessages,
+		origBalance:      bot.origBalance,
+		origMachine:      bot.origMachine,
 	}, bot.proposed, nil
 }
 
@@ -397,7 +397,6 @@ type WatchingAssertionObserver struct {
 	deadline     uint64
 	precondition *protocol.Precondition
 	assertion    *protocol.Assertion
-
 }
 
 func (bot WatchingAssertionObserver) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {

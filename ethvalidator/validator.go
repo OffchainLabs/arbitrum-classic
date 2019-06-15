@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package ethvalidator
@@ -55,7 +55,7 @@ func createAddressMerkleTree(addresses []common.Address) *MerkleTree {
 }
 
 type EthValidator struct {
-	key  *ecdsa.PrivateKey
+	key *ecdsa.PrivateKey
 
 	// Safe public interface
 	VmId              [32]byte
@@ -64,8 +64,8 @@ type EthValidator struct {
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
 	// Not in thread, but internal only
-	serverAddress     string
-	arbAddresses      ArbAddresses
+	serverAddress string
+	arbAddresses  ArbAddresses
 
 	// private thread only
 	con  *EthConnection
@@ -211,7 +211,6 @@ func (man *EthValidator) StartListening() error {
 	return nil
 }
 
-
 func (man *EthValidator) handleEvent(ev interface{}, outgoingChan chan valmessage.IncomingValidatorMessage) error {
 	switch ev := ev.(type) {
 	case *verifierRPC.VMTrackerVMCreated:
@@ -287,7 +286,6 @@ func (man *EthValidator) handleEvent(ev interface{}, outgoingChan chan valmessag
 			fmt.Println(hexutil.Encode(item[:]))
 		}
 
-
 	case *verifierRPC.VMTrackerConfirmedAssertion:
 		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
 		if err != nil {
@@ -360,7 +358,7 @@ func LogProof(a *protocol.Assertion, index int) ([][32]byte, error) {
 	if index < len(a.Logs) {
 		return nil, errors.New("Log index out of range")
 	}
-	proof := make([][32]byte, 0, len(a.Logs) - 1 - index)
+	proof := make([][32]byte, 0, len(a.Logs)-1-index)
 	for i := len(a.Logs) - 1; i > index; i-- {
 		proof = append(proof, a.Logs[i].Hash())
 	}
