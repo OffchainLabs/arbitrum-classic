@@ -3,6 +3,7 @@ package ethvalidator
 import (
 	"log"
 	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/websocket"
 )

@@ -18,6 +18,7 @@ package validator
 
 import (
 	"math/rand"
+
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"

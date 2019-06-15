@@ -22,7 +22,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/miguelmota/go-solidity-sha3"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 )

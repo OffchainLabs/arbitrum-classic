@@ -18,6 +18,7 @@ package validator
 
 import (
 	"errors"
+
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )

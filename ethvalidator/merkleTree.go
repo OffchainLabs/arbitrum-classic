@@ -16,7 +16,7 @@
 
 package ethvalidator
 
-import "github.com/miguelmota/go-solidity-sha3"
+import solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 type MerkleTree struct {
 	layers [][][32]byte

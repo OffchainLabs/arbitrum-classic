@@ -28,7 +28,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/miguelmota/go-solidity-sha3"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
