@@ -80,6 +80,15 @@ func NewEthConnection(serverAddress string, a ArbAddresses) (*EthConnection, err
 }
 
 func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan error, error) {
+	outChan := make(chan interface{}, 1024)
+	errChan := make(chan error, 1024)
+
+	start := uint64(0)
+	watch := &bind.WatchOpts{
+		Context: context.Background(),
+		Start:   &start,
+	}
+
 	headers := make(chan *types.Header)
 	headersSub, err := con.client.SubscribeNewHead(context.Background(), headers)
 	if err != nil {
@@ -87,12 +96,6 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 	}
 
 	vmCreatedChan := make(chan *verifierRPC.VMTrackerVMCreated)
-	start := uint64(0)
-	watch := &bind.WatchOpts{
-		Context: context.Background(),
-		Start:   &start,
-	}
-
 	vmCreatedSub, err := con.Tracker.WatchVMCreated(watch, vmCreatedChan)
 	if err != nil {
 		return nil, nil, err
@@ -182,8 +185,6 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 		return nil, nil, err
 	}
 
-	outChan := make(chan interface{}, 1024)
-	errChan := make(chan error, 1024)
 	go func() {
 		defer close(outChan)
 		defer close(errChan)
@@ -199,77 +200,81 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 		defer challengeInitiatedSub.Unsubscribe()
 		defer challengeContinuedSub.Unsubscribe()
 		defer oneStepProofSub.Unsubscribe()
-		// defer dispAssDebugSub.Unsubscribe()
-		// defer unanAssDebugSub.Unsubscribe()
 		defer challengeOneStepDebugSub.Unsubscribe()
-		err := func() error {
-			for {
-				select {
-				case header := <-headers:
-					outChan <- header
-				case val := <-messageDeliveredChan:
-					outChan <- val
-				case val := <-vmCreatedChan:
-					outChan <- val
-				case val := <-unanAssChan:
-					outChan <- val
-				case val := <-unanPropChan:
-					outChan <- val
-				case val := <-unanConfChan:
-					outChan <- val
-				case val := <-dispAssChan:
-					outChan <- val
-				case val := <-confAssChan:
-					outChan <- val
-				case val := <-challengeInitiatedChan:
-					outChan <- val
-				case val := <-challengeBisectedChan:
-					outChan <- val
-				case val := <-challengeTimedOutChan:
-					outChan <- val
-				case val := <-challengeContinuedChan:
-					outChan <- val
-				case val := <-oneStepProofChan:
-					outChan <- val
-				// case Val := <-dispAssDebugChan:
-				//	outChan <- Val
-				// case Val := <- unanAssDebugChan:
-				//	outChan <- Val
-				case val := <-challengeOneStepDebugChan:
-					outChan <- val
-				case err := <-headersSub.Err():
-					return err
-				case err := <-messageDeliveredSub.Err():
-					return err
-				case err := <-vmCreatedSub.Err():
-					return err
-				case err := <-unanAssSub.Err():
-					return err
-				case err := <-unanPropSub.Err():
-					return err
-				case err := <-unanConfSub.Err():
-					return err
-				case err := <-dispAssSub.Err():
-					return err
-				case err := <-confAssSub.Err():
-					return err
-				case err := <-challengeInitiatedSub.Err():
-					return err
-				case err := <-challengeBisectedSub.Err():
-					return err
-				case err := <-challengeContinuedSub.Err():
-					return err
-				case err := <-challengeTimedOutSub.Err():
-					return err
-				case err := <-oneStepProofSub.Err():
-					return err
-				case err := <-challengeOneStepDebugSub.Err():
-					return err
-				}
+		RunLoop:
+		for {
+			select {
+			case header := <-headers:
+				outChan <- header
+			case val := <-messageDeliveredChan:
+				outChan <- val
+			case val := <-vmCreatedChan:
+				outChan <- val
+			case val := <-unanAssChan:
+				outChan <- val
+			case val := <-unanPropChan:
+				outChan <- val
+			case val := <-unanConfChan:
+				outChan <- val
+			case val := <-dispAssChan:
+				outChan <- val
+			case val := <-confAssChan:
+				outChan <- val
+			case val := <-challengeInitiatedChan:
+				outChan <- val
+			case val := <-challengeBisectedChan:
+				outChan <- val
+			case val := <-challengeTimedOutChan:
+				outChan <- val
+			case val := <-challengeContinuedChan:
+				outChan <- val
+			case val := <-oneStepProofChan:
+				outChan <- val
+			case val := <-challengeOneStepDebugChan:
+				outChan <- val
+			case err := <-headersSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-messageDeliveredSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-vmCreatedSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-unanAssSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-unanPropSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-unanConfSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-dispAssSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-confAssSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-challengeInitiatedSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-challengeBisectedSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-challengeContinuedSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-challengeTimedOutSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-oneStepProofSub.Err():
+				errChan <- err
+				break RunLoop
+			case err := <-challengeOneStepDebugSub.Err():
+				errChan <- err
+				break RunLoop
 			}
-		}()
-		if err != nil {
-			errChan <- err
 		}
 	}()
 	return outChan, errChan, nil

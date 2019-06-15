@@ -293,7 +293,7 @@ func (m *ValidatorFollower) Run() error {
 			if done {
 				break
 			}
-			req := &ValidatorRequest{}
+			req := new(ValidatorRequest)
 			err := proto.Unmarshal(message, req)
 			if err != nil {
 				log.Printf("Validator recieved malformed message")

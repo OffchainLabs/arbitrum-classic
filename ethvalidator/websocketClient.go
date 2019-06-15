@@ -100,7 +100,7 @@ func (c *Client) writePump(readErrChan chan error) error {
 			}
 			if !ok {
 				// The hub closed the channel.
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.conn.WriteMessage(websocket.CloseMessage, make([]byte, 0))
 				// There's nothing much we can do if we fail send a close message
 				// Return an error if we fail to close the connection (occurs in the defer block)
 				return rerr

@@ -179,7 +179,7 @@ func (m *ClientManager) Run() {
 			m.clients[client] = true
 			go func() {
 				for message := range client.FromClient {
-					response := &FollowerResponse{}
+					response := new(FollowerResponse)
 					err := proto.Unmarshal(message, response)
 					if err != nil {
 						log.Println("Recieved bad message from follower")
@@ -601,12 +601,15 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 			TimeBounds:     protocol.NewTimeBoundsBuf(unanRequest.TimeBounds),
 			SignedMessages: requestMessages,
 		}
-		responsesChan <- m.cm.gatherSignatures(&ValidatorRequest{
-			RequestId: value.NewHashBuf(hashId),
-			Request: &ValidatorRequest_Unanimous{
-				request,
+		responsesChan <- m.cm.gatherSignatures(
+			&ValidatorRequest{
+				RequestId: value.NewHashBuf(hashId),
+				Request: &ValidatorRequest_Unanimous{
+					request,
+				},
 			},
-		}, hashId)
+			hashId,
+		)
 	}()
 
 	var unanUpdate valmessage.UnanimousUpdateResults
