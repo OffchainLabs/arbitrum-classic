@@ -32,14 +32,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
+	"os"
+	"time"
+
 	"github.com/dgraph-io/badger"
 	"github.com/offchainlabs/arb-avm/code"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
-	"io"
-	"os"
-	"time"
 )
 
 type Checkpointer struct {
@@ -76,7 +77,7 @@ func NewCheckpointer(machine *vm.Machine, destroyOldCheckpoints bool) (*Checkpoi
 	}
 	ret := &Checkpointer{db, make(chan struct{})}
 	if machine != nil {
-		//TODO: save the code asynchronously; have machine checkpoints wait for completion
+		// TODO: save the code asynchronously; have machine checkpoints wait for completion
 		//  open question: how to handle errors in saving the code; probably best to just retry
 		if err := ret.SaveCode(machine); err != nil {
 			return nil, err
@@ -319,7 +320,6 @@ func NewEventChainCheckpointer(
 	machine *vm.Machine,
 	timeBounds [2]uint64,
 	balances *protocol.BalanceTracker) (*EventChainCheckpointer, error) {
-
 	var buf bytes.Buffer
 	fullKey := append([]byte(_eventChainCheckpointerPrefix), keySuffix...)
 

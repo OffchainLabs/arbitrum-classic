@@ -18,10 +18,11 @@ package checkpoint
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
-	"testing"
 )
 
 func TestOpen(t *testing.T) {

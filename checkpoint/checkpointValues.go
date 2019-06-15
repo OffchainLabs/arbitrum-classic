@@ -19,14 +19,13 @@ package checkpoint
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
+
 	"github.com/dgraph-io/badger"
 	"github.com/offchainlabs/arb-avm/value"
-	"io"
 )
 
-const (
-	PrefixValue byte = iota
-)
+const PrefixValue byte = iota
 
 func (cp *Checkpointer) writeValue(wr io.Writer, val value.Value) ([]value.Value, error) {
 	typecode := val.TypeCode()

@@ -22,6 +22,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"log"
+	"math"
+	"net/http"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
@@ -29,10 +34,6 @@ import (
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
-	"log"
-	"math"
-	"net/http"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -43,7 +44,7 @@ import (
 type ValidatorLeaderRequest interface {
 }
 
-//type ValidatorMessageRequest interface {
+// type ValidatorMessageRequest interface {
 //	msg vm.
 //}
 
@@ -90,7 +91,7 @@ var upgrader = websocket.Upgrader{
 
 func (m *ClientManager) RunServer() error {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		c, err := func () (*Client, error) {
+		c, err := func() (*Client, error) {
 			conn, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				return nil, err
@@ -146,7 +147,6 @@ func (m *ClientManager) RunServer() error {
 		go func() {
 			if err := c.run(); err != nil {
 				log.Printf("Coordinator lost connection to client with error: %v\n", err)
-
 			}
 			m.unregister <- c
 		}()
@@ -394,9 +394,9 @@ func (m *ValidatorCoordinator) Run() error {
 				}
 			case <-time.After(time.Second):
 
-				var shouldUnan = false
-				var forceFinal = false
-				var newPending = false
+				shouldUnan := false
+				forceFinal := false
+				newPending := false
 				if <-m.Val.Bot.HasPendingMessages() {
 					// Force onchain assertion if there are pending on chain messages, then force an offchain assertion
 					shouldUnan = true
@@ -467,7 +467,6 @@ func (m *ValidatorCoordinator) InitiateUnanimousAssertion(final bool) (chan bool
 }
 
 func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error) {
-
 	gotAll := m.cm.WaitForFollowers(timeout)
 	if !gotAll {
 		return false, errors.New("coordinator can only create VM when connected to all other validators")
@@ -539,7 +538,6 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool) e
 	queuedMessages := <-m.mpq.Fetch()
 
 	err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal)
-
 	if err != nil {
 		m.mpq.Return(queuedMessages)
 		return err

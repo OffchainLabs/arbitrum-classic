@@ -1,10 +1,10 @@
 package ethvalidator
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/gorilla/websocket"
 	"log"
 	"time"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/gorilla/websocket"
 )
 
 type Client struct {

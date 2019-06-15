@@ -21,15 +21,15 @@ import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
-//type EventChainObserver struct {
+// type EventChainObserver struct {
 //	*validatorCore
 //}
 //
-//func (bot EventChainObserver) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
+// func (bot EventChainObserver) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 //	return bot, nil, nil
 //}
 //
-//func (bot EventChainObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
+// func (bot EventChainObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 //	switch ev := ev.(type) {
 //	case valmessage.AssertMessage:
 //
@@ -47,7 +47,7 @@ type WaitingChallengeObserver struct {
 
 func (bot WaitingChallengeObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
-		//timeoutMsg := SendAsserterTimedOutChallengeMessage{
+		// timeoutMsg := SendAsserterTimedOutChallengeMessage{
 		//	bot.deadline,
 		//	bot.precondition,
 		//	bot.assertion,
@@ -78,7 +78,7 @@ type WaitingBisectedObserver struct {
 
 func (bot WaitingBisectedObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
-		//msg := SendChallengerTimedOutChallengeMessage{
+		// msg := SendChallengerTimedOutChallengeMessage{
 		//	bot.deadline,
 		//	bot.preconditions,
 		//	bot.assertions,

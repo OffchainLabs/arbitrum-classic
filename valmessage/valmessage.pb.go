@@ -5,9 +5,10 @@ package valmessage
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	value "github.com/offchainlabs/arb-avm/value"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -38,15 +39,19 @@ func (*Address) Descriptor() ([]byte, []int) {
 func (m *Address) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Address.Unmarshal(m, b)
 }
+
 func (m *Address) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Address.Marshal(b, m, deterministic)
 }
+
 func (m *Address) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Address.Merge(m, src)
 }
+
 func (m *Address) XXX_Size() int {
 	return xxx_messageInfo_Address.Size(m)
 }
+
 func (m *Address) XXX_DiscardUnknown() {
 	xxx_messageInfo_Address.DiscardUnknown(m)
 }
@@ -77,15 +82,19 @@ func (*TokenTypeBuf) Descriptor() ([]byte, []int) {
 func (m *TokenTypeBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TokenTypeBuf.Unmarshal(m, b)
 }
+
 func (m *TokenTypeBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TokenTypeBuf.Marshal(b, m, deterministic)
 }
+
 func (m *TokenTypeBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TokenTypeBuf.Merge(m, src)
 }
+
 func (m *TokenTypeBuf) XXX_Size() int {
 	return xxx_messageInfo_TokenTypeBuf.Size(m)
 }
+
 func (m *TokenTypeBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_TokenTypeBuf.DiscardUnknown(m)
 }
@@ -121,15 +130,19 @@ func (*VMConfiguration) Descriptor() ([]byte, []int) {
 func (m *VMConfiguration) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VMConfiguration.Unmarshal(m, b)
 }
+
 func (m *VMConfiguration) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_VMConfiguration.Marshal(b, m, deterministic)
 }
+
 func (m *VMConfiguration) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VMConfiguration.Merge(m, src)
 }
+
 func (m *VMConfiguration) XXX_Size() int {
 	return xxx_messageInfo_VMConfiguration.Size(m)
 }
+
 func (m *VMConfiguration) XXX_DiscardUnknown() {
 	xxx_messageInfo_VMConfiguration.DiscardUnknown(m)
 }

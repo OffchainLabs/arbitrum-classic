@@ -18,14 +18,15 @@ package validator
 
 import (
 	"fmt"
+	"math"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/pkg/errors"
-	"math"
-	"math/big"
 
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/vm"
@@ -193,7 +194,7 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 		for {
 			select {
 			case event, ok := <-recvChan:
-				//fmt.Printf("Got valmessage %T: %v\n", event, event)
+				// fmt.Printf("Got valmessage %T: %v\n", event, event)
 				if !ok {
 					fmt.Printf("%v: Error in recvChan\n", validator.Name)
 					return
@@ -357,7 +358,6 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 					if bot, ok := validator.bot.(WaitingObserver); ok {
 						_ = bot.GetCore()
 						newBot, msgs, err := bot.CloseUnanimous(request.ResultChan)
-
 						if err != nil {
 							request.ErrChan <- err
 							break
@@ -443,7 +443,6 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 						} else {
 							request.ErrorChan <- errors.New("Call produced no output")
 						}
-
 					}()
 				default:
 					fmt.Printf("Unahandled validator request %T: %v\n", request, request)
@@ -452,7 +451,6 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 			case <-validator.maybeAssert:
 				validator.tryToAssert(sendChan)
 			}
-
 		}
 	}()
 }

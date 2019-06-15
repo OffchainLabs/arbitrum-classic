@@ -22,14 +22,15 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"log"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
-	"log"
-	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -102,14 +103,13 @@ func NewEthValidator(
 	connectionInfo ArbAddresses,
 	ethURL string,
 ) (*EthValidator, error) {
-
 	auth := bind.NewKeyedTransactor(key)
 
 	con, err := NewEthConnection(ethURL, connectionInfo)
 	if err != nil {
 		return nil, err
 	}
-	//auth.Value = big.NewInt(10000000)     // in wei
+	// auth.Value = big.NewInt(10000000)     // in wei
 	auth.GasLimit = uint64(0) // in units
 	auth.GasPrice = big.NewInt(10)
 
@@ -161,7 +161,6 @@ func (man *EthValidator) Sign(msgHash [32]byte) (valmessage.Signature, error) {
 }
 
 func (man *EthValidator) StartListening() error {
-
 	outChan, errChan, err := man.con.CreateListeners(man.VmId)
 	if err != nil {
 		return err
@@ -190,8 +189,8 @@ func (man *EthValidator) StartListening() error {
 				}
 			case <-errChan:
 				// Ignore error and try to reset connection
-				//log.Printf("Validator recieved error: %v", err)
-				//fmt.Println("Resetting channels")
+				// log.Printf("Validator recieved error: %v", err)
+				// fmt.Println("Resetting channels")
 				con, err := NewEthConnection(man.serverAddress, man.arbAddresses)
 				if err != nil {
 					panic(err)
@@ -216,7 +215,7 @@ func (man *EthValidator) StartListening() error {
 func (man *EthValidator) handleEvent(ev interface{}, outgoingChan chan valmessage.IncomingValidatorMessage) error {
 	switch ev := ev.(type) {
 	case *verifierRPC.VMTrackerVMCreated:
-		//fmt.Printf("Created vm with state %x\n", Val.VmState)
+		// fmt.Printf("Created vm with state %x\n", Val.VmState)
 	case *verifierRPC.VMTrackerMessageDelivered:
 		fmt.Println("VM recieved on-chain message")
 		rd := bytes.NewReader(ev.Data)
@@ -294,7 +293,7 @@ func (man *EthValidator) handleEvent(ev interface{}, outgoingChan chan valmessag
 			return err
 		}
 		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.ConfirmedAssertMessage{}, Header: header}
-		//protocol.ConfirmedAssertMessage{Val.}
+		// protocol.ConfirmedAssertMessage{Val.}
 	case *verifierRPC.VMTrackerInitiatedChallenge:
 		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
 		if err != nil {

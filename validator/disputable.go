@@ -19,12 +19,13 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"log"
+	"math"
+
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
 	"github.com/offchainlabs/arb-validator/valmessage"
-	"log"
-	"math"
 )
 
 type proposedUpdate struct {

@@ -17,11 +17,12 @@
 package validator
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+
 	"github.com/offchainlabs/arb-validator/valmessage"
 
-	"bytes"
-	"fmt"
 	"github.com/offchainlabs/arb-avm/protocol"
 )
 
@@ -59,7 +60,8 @@ func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, 
 				wholePrecondition: assDef.GetPrecondition(),
 				wholeAssertion:    assDef.GetAssertion().Stub(),
 				splitDefenders:    defenders,
-				deadline:          deadline}, []valmessage.OutgoingMessage{valmessage.SendBisectionMessage{
+				deadline:          deadline,
+			}, []valmessage.OutgoingMessage{valmessage.SendBisectionMessage{
 				Deadline:     deadline,
 				Precondition: assDef.GetPrecondition(),
 				Assertions:   assertions,
@@ -77,7 +79,7 @@ type BisectedAssertDefender struct {
 
 func (bot BisectedAssertDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
-		//timeoutMsg := SendAsserterTimedOutChallengeMessage{
+		// timeoutMsg := SendAsserterTimedOutChallengeMessage{
 		//	bot.deadline,
 		//	bot.wholePrecondition,
 		//	bot.wholeAssertion,
@@ -148,7 +150,7 @@ type OneStepChallengedAssertDefender struct {
 
 func (bot OneStepChallengedAssertDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
-		//timeoutMsg := SendAsserterTimedOutChallengeMessage{
+		// timeoutMsg := SendAsserterTimedOutChallengeMessage{
 		//	bot.deadline,
 		//	bot.precondition,
 		//	bot.assertion,

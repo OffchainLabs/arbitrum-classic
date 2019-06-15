@@ -20,17 +20,18 @@ import (
 	"crypto/rand"
 	jsonenc "encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arb-validator/valmessage"
 	"io/ioutil"
 	"log"
 	"math/big"
 	brand "math/rand"
 	"os"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/offchainlabs/arb-validator/valmessage"
 
 	"github.com/offchainlabs/arb-avm/evm"
 	"github.com/offchainlabs/arb-avm/loader"
@@ -41,7 +42,7 @@ import (
 
 func main() {
 	seed := time.Now().UnixNano()
-	//seed := int64(1559616168133477000)
+	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)
 	brand.Seed(seed)
 	jsonFile, err := os.Open(os.Args[1])
@@ -160,13 +161,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//fmt.Println("Send error", err)
-	//time.Sleep(2000 * time.Millisecond)
-	//successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
-	//select {
-	//case result := <-successChan:
+	// fmt.Println("Send error", err)
+	// time.Sleep(2000 * time.Millisecond)
+	// successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
+	// select {
+	// case result := <-successChan:
 	//	fmt.Println("ChallengeTest: Unanimous assertion successful", result)
-	//case err := <-errChan:
+	// case err := <-errChan:
 	//	panic(fmt.Sprintf("Error Running unanimous assertion: %v", err))
 	//}
 

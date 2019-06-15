@@ -22,15 +22,6 @@ import (
 	jsonenc "encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-validator/valmessage"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -40,6 +31,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arb-validator/valmessage"
 
 	"github.com/offchainlabs/arb-avm/evm"
 	"github.com/offchainlabs/arb-avm/loader"
@@ -559,7 +560,6 @@ func (m *CoordinatorServer) CallMessage(r *http.Request, args *CallMessageArgs, 
 		fmt.Println("Call failed")
 		return err
 	}
-
 }
 
 func AttachProfiler(router *mux.Router) {
@@ -584,7 +584,6 @@ func AttachProfiler(router *mux.Router) {
 // 4) Global EthBridge addresses json file
 // 5) ethURL
 func main() {
-
 	// Check number of args
 	if len(os.Args)-1 != 5 {
 		log.Fatalln("Expected five arguments")
@@ -678,5 +677,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 }

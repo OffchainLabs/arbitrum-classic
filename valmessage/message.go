@@ -17,14 +17,14 @@
 package valmessage
 
 import (
+	"math/big"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
-	"math/big"
 )
 
-//type VMConfiguration struct {
+// type VMConfiguration struct {
 //	GracePeriod           uint64
 //	EscrowRequired        *big.Int
 //	AssertKeys            []common.Address

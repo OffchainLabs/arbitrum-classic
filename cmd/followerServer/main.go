@@ -19,6 +19,13 @@ package main
 import (
 	"crypto/ecdsa"
 	jsonenc "encoding/json"
+	"io/ioutil"
+	"log"
+	"math/big"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/handlers"
@@ -28,12 +35,6 @@ import (
 	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-avm/vm"
 	"github.com/offchainlabs/arb-validator/valmessage"
-	"io/ioutil"
-	"log"
-	"math/big"
-	"net/http"
-	"os"
-	"strings"
 
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 )
@@ -90,7 +91,6 @@ func (m *FollowerServer) SendMessage(r *http.Request, args *bool, reply *bool) e
 // 5) ethURL
 // 6) coordinatorURL
 func main() {
-
 	// Check number of args
 	if len(os.Args)-1 != 6 {
 		log.Fatalln("Expected six arguments")
@@ -173,7 +173,7 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
-	//port := fmt.Sprintf(":%d", 1237 + index)
+	// port := fmt.Sprintf(":%d", 1237 + index)
 	err = http.ListenAndServe(":1237", handlers.CORS(headersOk, originsOk, methodsOk)(r))
 	if err != nil {
 		panic(err)

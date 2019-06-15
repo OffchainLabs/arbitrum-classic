@@ -17,9 +17,9 @@
 package valmessage
 
 import (
+	"math/big"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
-	"math/big"
 )
 
 type Signature struct {

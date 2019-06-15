@@ -20,9 +20,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-validator/valmessage"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -163,15 +164,15 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 		return nil, nil, err
 	}
 
-	//dispAssDebugChan := make(chan *verifierRPC.VMTrackerDisputableAssertionDebug)
-	//dispAssDebugSub, err := con.Tracker.WatchDisputableAssertionDebug(watch, dispAssDebugChan, [][32]byte{VmId})
-	//if err != nil {
+	// dispAssDebugChan := make(chan *verifierRPC.VMTrackerDisputableAssertionDebug)
+	// dispAssDebugSub, err := con.Tracker.WatchDisputableAssertionDebug(watch, dispAssDebugChan, [][32]byte{VmId})
+	// if err != nil {
 	//	return nil, nil, err
 	//}
 
-	//unanAssDebugChan := make(chan *verifierRPC.VMTrackerUnanimousAssertionDebug)
-	//unanAssDebugSub, err := con.Tracker.WatchUnanimousAssertionDebug(watch, unanAssDebugChan, [][32]byte{VmId})
-	//if err != nil {
+	// unanAssDebugChan := make(chan *verifierRPC.VMTrackerUnanimousAssertionDebug)
+	// unanAssDebugSub, err := con.Tracker.WatchUnanimousAssertionDebug(watch, unanAssDebugChan, [][32]byte{VmId})
+	// if err != nil {
 	//	return nil, nil, err
 	//}
 
@@ -198,10 +199,10 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 		defer challengeInitiatedSub.Unsubscribe()
 		defer challengeContinuedSub.Unsubscribe()
 		defer oneStepProofSub.Unsubscribe()
-		//defer dispAssDebugSub.Unsubscribe()
-		//defer unanAssDebugSub.Unsubscribe()
+		// defer dispAssDebugSub.Unsubscribe()
+		// defer unanAssDebugSub.Unsubscribe()
 		defer challengeOneStepDebugSub.Unsubscribe()
-		err := func () error {
+		err := func() error {
 			for {
 				select {
 				case header := <-headers:
@@ -230,9 +231,9 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 					outChan <- val
 				case val := <-oneStepProofChan:
 					outChan <- val
-				//case Val := <-dispAssDebugChan:
+				// case Val := <-dispAssDebugChan:
 				//	outChan <- Val
-				//case Val := <- unanAssDebugChan:
+				// case Val := <- unanAssDebugChan:
 				//	outChan <- Val
 				case val := <-challengeOneStepDebugChan:
 					outChan <- val

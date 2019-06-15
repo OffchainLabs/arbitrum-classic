@@ -20,6 +20,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/tls"
 	"errors"
+	"log"
+	"math"
+	"time"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -28,9 +32,6 @@ import (
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
-	"log"
-	"math"
-	"time"
 
 	"github.com/offchainlabs/arb-avm/vm"
 )
@@ -72,7 +73,6 @@ func NewValidatorFollower(
 	ethURL string,
 	coordinatorURL string,
 ) (*ValidatorFollower, error) {
-
 	dialer := websocket.DefaultDialer
 	dialer.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,

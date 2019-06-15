@@ -17,11 +17,11 @@
 package validator
 
 import (
+	"math/rand"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
 	"github.com/offchainlabs/arb-validator/valmessage"
-	"math/rand"
 )
 
 type WaitingContinuingChallenger struct {
@@ -66,7 +66,8 @@ func (bot WaitingContinuingChallenger) UpdateState(ev valmessage.IncomingMessage
 					deadline:        deadline,
 					preconditions:   preconditions,
 					assertions:      ev.Assertions,
-					challengedInbox: bot.challengedInbox},
+					challengedInbox: bot.challengedInbox,
+				},
 				[]valmessage.OutgoingMessage{valmessage.SendContinueChallengeMessage{
 					AssertionToChallenge: assertionNum,
 					Deadline:             deadline,
@@ -94,7 +95,7 @@ type ContinuingChallenger struct {
 
 func (bot ContinuingChallenger) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
-		//msg := SendChallengerTimedOutChallengeMessage{
+		// msg := SendChallengerTimedOutChallengeMessage{
 		//	bot.deadline,
 		//	bot.preconditions,
 		//	bot.assertions,
@@ -116,7 +117,8 @@ func (bot ContinuingChallenger) UpdateState(ev valmessage.IncomingMessage, time 
 			bot.assertions[ev.ChallengedAssertion],
 			bot.challengedInbox,
 			bot.challengedState,
-			deadline}, nil, nil
+			deadline,
+		}, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: ContinuingChallenger: VM state got unsynchronized"}
 	}
