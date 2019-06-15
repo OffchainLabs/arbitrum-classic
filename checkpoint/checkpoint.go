@@ -761,7 +761,7 @@ func (cp *Checkpointer) SaveCode(machine *vm.Machine) error {
 			return err
 		}
 		if val != nil {
-			cp.AddRefToValue(val) // accept that will be orphaned if txn below fails
+			_ = cp.AddRefToValue(val) // accept that will be orphaned if txn below fails
 		}
 	}
 	return cp.db.Update(func(txn *badger.Txn) error {

@@ -294,7 +294,9 @@ func (bot WaitingObserver) FinalizePendingUnanimous(signatures []valmessage.Sign
 
 	core := bot.GetCore()
 	balance := core.balance.Clone()
-	balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.assertion.OutMsgs))
+
+	// This spend is guaranteed to be correct since the VM made sure to only produce on outgoing if it could spend
+	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.assertion.OutMsgs))
 
 	return WaitingObserver{
 		validatorConfig:  bot.validatorConfig,

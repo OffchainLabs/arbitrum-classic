@@ -76,7 +76,8 @@ func (c *validatorCore) OffchainAssert(
 
 	newAssertion := assDef.GetAssertion()
 	newBalance := c.balance.Clone()
-	newBalance.SpendAll(protocol.NewBalanceTrackerFromMessages(newAssertion.OutMsgs))
+	// This spend is guaranteed to be correct since the VM made sure to only produce on outgoing if it could spend
+	_ = newBalance.SpendAll(protocol.NewBalanceTrackerFromMessages(newAssertion.OutMsgs))
 	return &validatorCore{
 		inbox:   inbox,
 		balance: newBalance,

@@ -49,10 +49,14 @@ func main() {
 		log.Fatalln(err)
 	}
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	jsonFile.Close()
+	if err := jsonFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 
 	var connectionInfo ethvalidator.ArbAddresses
-	jsonenc.Unmarshal(byteValue, &connectionInfo)
+	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		log.Fatalln(err)
+	}
 
 	machine, err := loader.LoadMachineFromFile(os.Args[2], true)
 	if err != nil {

@@ -111,7 +111,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	keyFile.Close()
+	if err := keyFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 	rawKey := strings.TrimSpace(string(byteValue))
 	key, err := crypto.HexToECDSA(rawKey)
 	if err != nil {
@@ -127,7 +129,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	addrFile.Close()
+	if err := addrFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 	validatorHexAddrs := strings.Split(strings.TrimSpace(string(byteValue)), "\n")
 	validators := make([]common.Address, len(validatorHexAddrs))
 	for i, v := range validatorHexAddrs {
@@ -140,9 +144,13 @@ func main() {
 		log.Fatalln(err)
 	}
 	byteValue, _ = ioutil.ReadAll(jsonFile)
-	jsonFile.Close()
+	if err := jsonFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 	var connectionInfo ethvalidator.ArbAddresses
-	jsonenc.Unmarshal(byteValue, &connectionInfo)
+	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		log.Fatalln(err)
+	}
 
 	// 5) ethURL 6) coordinatorURL
 	ethURL := os.Args[5]

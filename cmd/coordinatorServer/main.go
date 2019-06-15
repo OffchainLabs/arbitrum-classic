@@ -172,7 +172,7 @@ func (tr *TxTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	for _, res := range assertion.NewLogs() {
 		evmVal, err := evm.ProcessLog(res)
 		if err != nil {
-			log.Printf("VM produced invalid evm result\n", err)
+			log.Printf("VM produced invalid evm result: %v\n", err)
 		}
 
 		msg := evmVal.GetEthMsg()
@@ -289,7 +289,9 @@ func NewCoordinatorServer(
 		log.Fatal(err, tx)
 	}
 
-	man.Run()
+	if err := man.Run(); err != nil {
+		log.Fatalln(err)
+	}
 	log.Println("Coordinator is trying to create the VM")
 
 	retChan, errChan := man.CreateVM(time.Second * 60)
@@ -427,14 +429,14 @@ func (m *CoordinatorServer) SendMessage(r *http.Request, args *SendMessageArgs, 
 	copy(senderArr[12:], sender.Bytes())
 
 	msg := protocol.Message{
-		dataVal,
-		tokenType,
-		amount,
-		senderArr,
+		Data:        dataVal,
+		TokenType:   tokenType,
+		Currency:    amount,
+		Destination: senderArr,
 	}
 	m.coordinator.SendMessage(ethvalidator.OffchainMessage{
-		msg,
-		sigBytes,
+		Message:   msg,
+		Signature: sigBytes,
 	})
 	reply.TxHash = hexutil.Encode(messageHash)
 	return nil
@@ -462,7 +464,7 @@ func (m *CoordinatorServer) GetMessageResult(r *http.Request, args *GetMessageRe
 	reply.Found = txInfo.found
 	if txInfo.found {
 		var buf bytes.Buffer
-		value.MarshalValue(txInfo.RawVal, &buf)
+		_ = value.MarshalValue(txInfo.RawVal, &buf) // error can only occur from writes and bytes.Buffer is safe
 		reply.RawVal = hexutil.Encode(buf.Bytes())
 	}
 	return nil
@@ -603,7 +605,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	keyFile.Close()
+	if err := keyFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 	rawKey := strings.TrimSpace(string(byteValue))
 	key, err := crypto.HexToECDSA(rawKey)
 	if err != nil {
@@ -619,7 +623,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	addrFile.Close()
+	if err := addrFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 	validatorHexAddrs := strings.Split(strings.TrimSpace(string(byteValue)), "\n")
 	validators := make([]common.Address, len(validatorHexAddrs))
 	for i, v := range validatorHexAddrs {
@@ -632,10 +638,14 @@ func main() {
 		log.Fatalln(err)
 	}
 	byteValue, _ = ioutil.ReadAll(jsonFile)
-	jsonFile.Close()
+	if err := jsonFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 
 	var connectionInfo ethvalidator.ArbAddresses
-	jsonenc.Unmarshal(byteValue, &connectionInfo)
+	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		log.Fatalln(err)
+	}
 
 	// 5) URL
 	ethURL := os.Args[5]
