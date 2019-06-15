@@ -37,9 +37,9 @@ func (bot WaitingContinuingChallenger) UpdateTime(time uint64) (challengeState, 
 	if time > bot.deadline {
 		return TimedOutAsserterChallenger{bot.validatorConfig},
 			[]valmessage.OutgoingMessage{valmessage.SendAsserterTimedOutChallengeMessage{
-				bot.deadline,
-				bot.challengedPrecondition,
-				bot.challengedAssertion,
+				Deadline:     bot.deadline,
+				Precondition: bot.challengedPrecondition,
+				Assertion:    bot.challengedAssertion,
 			}}, nil
 	} else {
 		return bot, nil, nil
@@ -61,17 +61,17 @@ func (bot WaitingContinuingChallenger) UpdateState(ev valmessage.IncomingMessage
 		deadline := time + bot.config.GracePeriod
 		if assertionNum < uint16(len(ev.Assertions)) {
 			return ContinuingChallenger{
-					bot.validatorConfig,
-					machine,
-					deadline,
-					preconditions,
-					ev.Assertions,
-					bot.challengedInbox},
+					validatorConfig: bot.validatorConfig,
+					challengedState: machine,
+					deadline:        deadline,
+					preconditions:   preconditions,
+					assertions:      ev.Assertions,
+					challengedInbox: bot.challengedInbox},
 				[]valmessage.OutgoingMessage{valmessage.SendContinueChallengeMessage{
-					assertionNum,
-					deadline,
-					preconditions,
-					ev.Assertions,
+					AssertionToChallenge: assertionNum,
+					Deadline:             deadline,
+					Preconditions:        preconditions,
+					Assertions:           ev.Assertions,
 				}}, nil
 		} else {
 			return nil, nil, &Error{nil, "ERROR: WaitingContinuingChallenger: Critical bug: All segments in false assertion are valid"}

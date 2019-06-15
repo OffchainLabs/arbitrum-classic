@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	prefix_value byte = iota
+	PrefixValue byte = iota
 )
 
 func (cp *Checkpointer) writeValue(wr io.Writer, val value.Value) ([]value.Value, error) {
@@ -84,9 +84,9 @@ func (cp *Checkpointer) writeValue(wr io.Writer, val value.Value) ([]value.Value
 	}
 }
 
-func (cp *Checkpointer) addRefToValue_inTxn(txn *badger.Txn, val value.Value) error {
+func (cp *Checkpointer) addRefToValueInTxn(txn *badger.Txn, val value.Value) error {
 	h := val.Hash()
-	hkey := append([]byte{prefix_value}, h[:]...)
+	hkey := append([]byte{PrefixValue}, h[:]...)
 	item, err := txn.Get(hkey)
 	switch err {
 	case nil:
@@ -122,7 +122,7 @@ func (cp *Checkpointer) addRefToValue_inTxn(txn *badger.Txn, val value.Value) er
 		}
 		if more != nil {
 			for _, v := range more {
-				if err := cp.addRefToValue_inTxn(txn, v); err != nil {
+				if err := cp.addRefToValueInTxn(txn, v); err != nil {
 					return err
 				}
 			}
@@ -135,7 +135,7 @@ func (cp *Checkpointer) addRefToValue_inTxn(txn *badger.Txn, val value.Value) er
 
 func (cp *Checkpointer) AddRefToValue(val value.Value) error {
 	return cp.db.Update(func(txn *badger.Txn) error {
-		return cp.addRefToValue_inTxn(txn, val)
+		return cp.addRefToValueInTxn(txn, val)
 	})
 }
 
@@ -148,7 +148,7 @@ func (cp *Checkpointer) RemoveRefToValue(hash [32]byte) {
 func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
 	var more [][32]byte = nil
 	err := cp.db.Update(func(txn *badger.Txn) error {
-		key := append([]byte{prefix_value}, hash[:]...)
+		key := append([]byte{PrefixValue}, hash[:]...)
 		item, err := txn.Get(key)
 		if err != nil {
 			return err
@@ -203,11 +203,11 @@ func (cp *Checkpointer) RestoreValueFromHash(hash [32]byte) (value.Value, error)
 	txn := cp.db.NewTransaction(false) // open a read-only transaction
 	defer txn.Discard()
 
-	return cp.restoreValueFromHash_inTxn(txn, hash)
+	return cp.restoreValueFromHashInTxn(txn, hash)
 }
 
-func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byte) (value.Value, error) {
-	hkey := append([]byte{prefix_value}, hash[:]...)
+func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash [32]byte) (value.Value, error) {
+	hkey := append([]byte{PrefixValue}, hash[:]...)
 	item, err := txn.Get(hkey)
 	if err != nil {
 		return nil, err
@@ -244,7 +244,7 @@ func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byt
 		if _, err2 := io.ReadFull(rd, nextHash[:]); err2 != nil {
 			return nil, err2
 		}
-		return value.CodePointValue{insnNum, op, nextHash}, nil
+		return value.CodePointValue{InsnNum: insnNum, Op: op, NextHash: nextHash}, nil
 	case value.TypeCodeTuple:
 		var sizeAsByte byte
 		if err2 := binary.Read(rd, binary.LittleEndian, &sizeAsByte); err2 != nil {
@@ -257,7 +257,7 @@ func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byt
 			if _, err2 := io.ReadFull(rd, subHash[:]); err2 != nil {
 				return nil, err
 			}
-			contents[i], err = cp.restoreValueFromHash_inTxn(txn, subHash)
+			contents[i], err = cp.restoreValueFromHashInTxn(txn, subHash)
 			if err != nil {
 				return nil, err
 			}
@@ -270,6 +270,6 @@ func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byt
 		}
 		return value.NewHashOnlyValue(h, 32), nil
 	default:
-		return nil, CheckpointError{"Unexpected typecode in checkpoint"}
+		return nil, Error{"Unexpected typecode in checkpoint"}
 	}
 }

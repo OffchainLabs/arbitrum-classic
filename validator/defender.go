@@ -38,15 +38,15 @@ func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, 
 			return nil, nil, &Error{err, "AssertAndDefendBot: error generating one-step proof"}
 		}
 		return OneStepChallengedAssertDefender{
-				core,
-				assDef.GetPrecondition(),
-				assDef.GetAssertion().Stub(),
-				deadline,
+				validatorConfig: core,
+				precondition:    assDef.GetPrecondition(),
+				assertion:       assDef.GetAssertion().Stub(),
+				deadline:        deadline,
 			}, []valmessage.OutgoingMessage{valmessage.SendOneStepProofMessage{
-				assDef.GetPrecondition(),
-				assDef.GetAssertion(),
-				buf.Bytes(),
-				deadline,
+				Precondition: assDef.GetPrecondition(),
+				Assertion:    assDef.GetAssertion(),
+				Proof:        buf.Bytes(),
+				Deadline:     deadline,
 			}}, nil
 	} else {
 		defenders := assDef.NBisect(6)
@@ -55,14 +55,14 @@ func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, 
 			assertions = append(assertions, defender.GetAssertion())
 		}
 		return BisectedAssertDefender{
-				core,
-				assDef.GetPrecondition(),
-				assDef.GetAssertion().Stub(),
-				defenders,
-				deadline}, []valmessage.OutgoingMessage{valmessage.SendBisectionMessage{
-				deadline,
-				assDef.GetPrecondition(),
-				assertions,
+				validatorConfig:   core,
+				wholePrecondition: assDef.GetPrecondition(),
+				wholeAssertion:    assDef.GetAssertion().Stub(),
+				splitDefenders:    defenders,
+				deadline:          deadline}, []valmessage.OutgoingMessage{valmessage.SendBisectionMessage{
+				Deadline:     deadline,
+				Precondition: assDef.GetPrecondition(),
+				Assertions:   assertions,
 			}}, nil
 	}
 }
@@ -118,9 +118,9 @@ func (bot WaitingBisectedDefender) UpdateTime(time uint64) (challengeState, []va
 		}
 		return TimedOutChallengerDefender{bot.validatorConfig},
 			[]valmessage.OutgoingMessage{valmessage.SendChallengerTimedOutChallengeMessage{
-				bot.deadline,
-				preconditions,
-				assertions,
+				Deadline:      bot.deadline,
+				Preconditions: preconditions,
+				Assertions:    assertions,
 			}}, nil
 	} else {
 		return bot, nil, nil

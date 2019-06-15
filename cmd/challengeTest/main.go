@@ -104,12 +104,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	coordinator.Run()
-	if err != nil {
+	if err := coordinator.Run(); err != nil {
 		log.Fatal(err)
 	}
 
-	challenger, err := ethvalidator.NewValidatorFollower("Bob", machine, key2, config, true, connectionInfo, ethURL, "wss://127.0.0.1:1236/ws")
+	challenger, err := ethvalidator.NewValidatorFollower(
+		"Bob",
+		machine, key2,
+		config,
+		true,
+		connectionInfo,
+		ethURL,
+		"wss://127.0.0.1:1236/ws",
+	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}

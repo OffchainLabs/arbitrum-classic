@@ -103,7 +103,7 @@ func (bot WaitingObserver) FastCloseUnanimous() valmessage.SendUnanimousAssertMe
 
 func (bot WaitingObserver) CloseUnanimous(retChan chan<- bool) (validatorState, []valmessage.OutgoingMessage, error) {
 	if bot.assertion == nil {
-		return bot, nil, errors.New("Couldn't close since no assertion is open")
+		return bot, nil, errors.New("couldn't close since no assertion is open")
 	}
 
 	if bot.sequenceNum == math.MaxUint64 {
@@ -223,11 +223,11 @@ func (bot WaitingObserver) validateUnanimousRequest(request valmessage.Unanimous
 	core := bot.GetCore()
 
 	if request.BeforeHash != core.machine.Hash() {
-		return errors.New("Recieved unanimous request with invalid before hash")
+		return errors.New("recieved unanimous request with invalid before hash")
 	}
 	if request.BeforeInbox != core.inbox.Receive().Hash() {
 		fmt.Println("validateUnanimousRequest", core.inbox.Receive())
-		return errors.New("Recieved unanimous request with invalid before inbox")
+		return errors.New("recieved unanimous request with invalid before inbox")
 	}
 
 	var tb protocol.TimeBounds
@@ -241,11 +241,11 @@ func (bot WaitingObserver) validateUnanimousRequest(request valmessage.Unanimous
 	}
 
 	if request.TimeBounds != tb {
-		return errors.New("Recieved unanimous request with invalid timebounds")
+		return errors.New("recieved unanimous request with invalid timebounds")
 	}
 
 	if request.SequenceNum < seqNum {
-		return errors.New("Recieved unanimous request with invalid sequence number")
+		return errors.New("recieved unanimous request with invalid sequence number")
 	}
 	return nil
 }
@@ -289,7 +289,7 @@ func (bot WaitingObserver) PreparePendingUnanimous(request valmessage.UnanimousU
 
 func (bot WaitingObserver) FinalizePendingUnanimous(signatures []valmessage.Signature) (validatorState, *proposedUpdate, error) {
 	if bot.proposed == nil {
-		return nil, nil, errors.New("No pending assertion")
+		return nil, nil, errors.New("no pending assertion")
 	}
 
 	core := bot.GetCore()
@@ -323,14 +323,14 @@ func (bot WaitingObserver) UpdateState(ev valmessage.IncomingMessage, time uint6
 	switch ev := ev.(type) {
 	case valmessage.FinalUnanimousAssertMessage:
 		if bot.sequenceNum != math.MaxUint64 {
-			return nil, nil, nil, errors.New("Waiting observer saw signed final unanimous proposal that it doesn't remember")
+			return nil, nil, nil, errors.New("waiting observer saw signed final unanimous proposal that it doesn't remember")
 		}
 		core := bot.GetCore()
 		core.DeliverMessagesToVM()
 		return NewWaitingObserver(bot.validatorConfig, core), nil, nil, nil
 	case valmessage.ProposedUnanimousAssertMessage:
 		if bot.acceptedMachine == nil || ev.SequenceNum > bot.sequenceNum {
-			return nil, nil, nil, errors.New("Waiting observer saw signed unanimous proposal that it doesn't remember")
+			return nil, nil, nil, errors.New("waiting observer saw signed unanimous proposal that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
 			newBot, msgs, err := bot.CloseUnanimous(nil)
 			return newBot, nil, msgs, err
@@ -369,11 +369,11 @@ func (bot WaitingObserver) UpdateState(ev valmessage.IncomingMessage, time uint6
 			updatedState.Run(int32(ev.Assertion.NumSteps))
 			ad := actx.Finalize(updatedState)
 
-			msgs := []valmessage.OutgoingMessage{}
+			var msgs []valmessage.OutgoingMessage
 			if !ad.GetAssertion().Stub().Equals(ev.Assertion) || bot.challengeEverything {
 				msgs = append(msgs, valmessage.SendInitiateChallengeMessage{
-					ev.Precondition,
-					ev.Assertion,
+					Precondition: ev.Precondition,
+					Assertion:    ev.Assertion,
 				})
 			}
 			return WatchingAssertionObserver{
@@ -416,7 +416,7 @@ func (bot WatchingAssertionObserver) UpdateTime(time uint64) (validatorState, []
 			},
 			validatorConfig: bot.validatorConfig,
 			ResultChan:      nil,
-		}, []valmessage.OutgoingMessage{valmessage.FinalizedAssertion{bot.assertion, len(bot.assertion.Logs)}}, nil
+		}, []valmessage.OutgoingMessage{valmessage.FinalizedAssertion{Assertion: bot.assertion, NewLogCount: len(bot.assertion.Logs)}}, nil
 	} else {
 		return bot, nil, nil
 	}
@@ -491,10 +491,10 @@ type WaitingAssertDefender struct {
 func (bot WaitingAssertDefender) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
 		assertion := bot.request.Defender.GetAssertion()
-		evmRes := valmessage.FinalizedAssertion{assertion, len(assertion.Logs)}
+		evmRes := valmessage.FinalizedAssertion{Assertion: assertion, NewLogCount: len(assertion.Logs)}
 		conf := valmessage.SendConfirmedAssertMessage{
-			bot.request.Defender.GetPrecondition(),
-			bot.request.Defender.GetAssertion(),
+			Precondition: bot.request.Defender.GetPrecondition(),
+			Assertion:    bot.request.Defender.GetAssertion(),
 		}
 		newBalance := bot.balance.Clone()
 		err := newBalance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.request.Defender.GetAssertion().OutMsgs))

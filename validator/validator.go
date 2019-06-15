@@ -105,13 +105,13 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 
 func (validator *Validator) HasPendingMessages() chan bool {
 	retChan := make(chan bool, 1)
-	validator.requests <- valmessage.PendingMessageCheck{retChan}
+	validator.requests <- valmessage.PendingMessageCheck{ResultChan: retChan}
 	return retChan
 }
 
 func (validator *Validator) RequestVMState() <-chan valmessage.VMStateData {
 	resultChan := make(chan valmessage.VMStateData)
-	validator.requests <- valmessage.VMStateRequest{resultChan}
+	validator.requests <- valmessage.VMStateRequest{ResultChan: resultChan}
 	return resultChan
 }
 
@@ -251,16 +251,16 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 								value.NewIntValue(msgHashInt),
 							})
 							newMessages = append(newMessages, protocol.Message{
-								val,
-								msg.TokenType,
-								msg.Currency,
-								msg.Destination,
+								Data:        val,
+								TokenType:   msg.TokenType,
+								Currency:    msg.Currency,
+								Destination: msg.Destination,
 							})
 							messageRecords = append(messageRecords, protocol.Message{
-								val.Clone(),
-								msg.TokenType,
-								msg.Currency,
-								msg.Destination,
+								Data:        val.Clone(),
+								TokenType:   msg.TokenType,
+								Currency:    msg.Currency,
+								Destination: msg.Destination,
 							})
 						}
 						timeBounds := [2]uint64{validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64() + request.TimeLength}
@@ -273,7 +273,7 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 							TimeBounds:  tb,
 						}
 
-						request.RequestChan <- valmessage.UnanimousRequest{requestData, messageRecords}
+						request.RequestChan <- valmessage.UnanimousRequest{UnanimousRequestData: requestData, NewMessages: messageRecords}
 						go func() {
 							newCore, assertion := clonedCore.OffchainAssert(mq, timeBounds)
 							validator.requests <- valmessage.UnanimousUpdateRequest{
@@ -287,7 +287,7 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 							}
 						}()
 					} else {
-						request.ErrChan <- fmt.Errorf("Recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.bot)
+						request.ErrChan <- fmt.Errorf("recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 						break
 					}
 				case valmessage.FollowUnanimousRequest:
@@ -312,7 +312,7 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 							}
 						}()
 					} else {
-						request.ErrChan <- fmt.Errorf("Recieved follow unanimous request, but was in the wrong state to handle it: %T", validator.bot)
+						request.ErrChan <- fmt.Errorf("recieved follow unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 						break
 					}
 				case valmessage.UnanimousUpdateRequest:
@@ -331,7 +331,7 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 						validator.bot = newBot
 
 					} else {
-						request.ErrChan <- fmt.Errorf("Recieved unanimous update request, but was in the wrong state to handle it: %T", validator.bot)
+						request.ErrChan <- fmt.Errorf("recieved unanimous update request, but was in the wrong state to handle it: %T", validator.bot)
 						break
 					}
 				case valmessage.UnanimousConfirmRequest:
@@ -347,10 +347,10 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 							break
 						}
 						validator.bot = newBot
-						sendChan <- valmessage.FinalizedAssertion{proposal.assertion, proposal.newLogCount}
+						sendChan <- valmessage.FinalizedAssertion{Assertion: proposal.assertion, NewLogCount: proposal.newLogCount}
 						request.ResultChan <- true
 					} else {
-						request.ErrChan <- fmt.Errorf("Recieved unanimous confirm request, but was in the wrong state to handle it: %T", validator.bot)
+						request.ErrChan <- fmt.Errorf("recieved unanimous confirm request, but was in the wrong state to handle it: %T", validator.bot)
 						break
 					}
 				case valmessage.CloseUnanimousAssertionRequest:
@@ -368,7 +368,7 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 							sendChan <- msg
 						}
 					} else {
-						request.ErrChan <- fmt.Errorf("Can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
+						request.ErrChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 					}
 				case valmessage.DisputableDefenderRequest:
 					core := validator.bot.GetCore()
@@ -464,7 +464,10 @@ func (validator *Validator) tryToAssert(sendChan chan<- valmessage.OutgoingMessa
 			validator.bot.GetConfig(),
 			*validator.pendingDisputableRequest,
 		}
-		sendChan <- valmessage.SendAssertMessage{validator.pendingDisputableRequest.Defender.GetPrecondition(), validator.pendingDisputableRequest.Defender.GetAssertion()}
+		sendChan <- valmessage.SendAssertMessage{
+			Precondition: validator.pendingDisputableRequest.Defender.GetPrecondition(),
+			Assertion:    validator.pendingDisputableRequest.Defender.GetAssertion(),
+		}
 		validator.pendingDisputableRequest = nil
 	}
 }

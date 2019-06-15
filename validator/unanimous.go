@@ -115,13 +115,13 @@ type WaitingOffchainClosing struct {
 func (bot WaitingOffchainClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
 		return FinalizingOffchainClosing{
-				bot.validatorConfig,
-				bot.validatorCore,
-				bot.retChan,
+				validatorConfig: bot.validatorConfig,
+				validatorCore:   bot.validatorCore,
+				retChan:         bot.retChan,
 			},
 			[]valmessage.OutgoingMessage{valmessage.SendConfirmUnanimousAssertedMessage{
-				bot.validatorCore.inbox.Receive().Hash(),
-				bot.assertion,
+				NewInboxHash: bot.validatorCore.inbox.Receive().Hash(),
+				Assertion:    bot.assertion,
 			}},
 			nil
 	} else {
