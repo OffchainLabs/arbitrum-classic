@@ -43,6 +43,9 @@ func TestValues(t *testing.T) {
 
 	val38 := value.NewInt64Value(38)
 	err = cp.AddRefToValue(val38)
+	if err != nil {
+		t.Error(err)
+	}
 	hash38 := val38.Hash()
 	res38, err2 := cp.RestoreValueFromHash(hash38)
 
@@ -64,6 +67,9 @@ func TestValues(t *testing.T) {
 
 	hash2 := tup2.Hash()
 	err = cp.AddRefToValue(tup2)
+	if err != nil {
+		t.Error(err)
+	}
 
 	res2, err2 := cp.RestoreValueFromHash(hash2)
 	if err2 != nil {

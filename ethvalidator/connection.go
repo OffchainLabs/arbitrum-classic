@@ -201,83 +201,74 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 		//defer dispAssDebugSub.Unsubscribe()
 		//defer unanAssDebugSub.Unsubscribe()
 		defer challengeOneStepDebugSub.Unsubscribe()
-		for {
-			select {
-			case header := <-headers:
-				outChan <- header
-			case val := <-messageDeliveredChan:
-				outChan <- val
-			case val := <-vmCreatedChan:
-				outChan <- val
-			case val := <-unanAssChan:
-				outChan <- val
-			case val := <-unanPropChan:
-				outChan <- val
-			case val := <-unanConfChan:
-				outChan <- val
-			case val := <-dispAssChan:
-				outChan <- val
-			case val := <-confAssChan:
-				outChan <- val
-			case val := <-challengeInitiatedChan:
-				outChan <- val
-			case val := <-challengeBisectedChan:
-				outChan <- val
-			case val := <-challengeTimedOutChan:
-				outChan <- val
-			case val := <-challengeContinuedChan:
-				outChan <- val
-			case val := <-oneStepProofChan:
-				outChan <- val
-			//case Val := <-dispAssDebugChan:
-			//	outChan <- Val
-			//case Val := <- unanAssDebugChan:
-			//	outChan <- Val
-			case val := <-challengeOneStepDebugChan:
-				outChan <- val
-			case err := <-headersSub.Err():
-				errChan <- err
-				break
-			case err := <-messageDeliveredSub.Err():
-				errChan <- err
-				break
-			case err := <-vmCreatedSub.Err():
-				errChan <- err
-				break
-			case err := <-unanAssSub.Err():
-				errChan <- err
-				break
-			case err := <-unanPropSub.Err():
-				errChan <- err
-				break
-			case err := <-unanConfSub.Err():
-				errChan <- err
-				break
-			case err := <-dispAssSub.Err():
-				errChan <- err
-				break
-			case err := <-confAssSub.Err():
-				errChan <- err
-				break
-			case err := <-challengeInitiatedSub.Err():
-				errChan <- err
-				break
-			case err := <-challengeBisectedSub.Err():
-				errChan <- err
-				break
-			case err := <-challengeContinuedSub.Err():
-				errChan <- err
-				break
-			case err := <-challengeTimedOutSub.Err():
-				errChan <- err
-				break
-			case err := <-oneStepProofSub.Err():
-				errChan <- err
-				break
-			case err := <-challengeOneStepDebugSub.Err():
-				errChan <- err
-				break
+		err := func () error {
+			for {
+				select {
+				case header := <-headers:
+					outChan <- header
+				case val := <-messageDeliveredChan:
+					outChan <- val
+				case val := <-vmCreatedChan:
+					outChan <- val
+				case val := <-unanAssChan:
+					outChan <- val
+				case val := <-unanPropChan:
+					outChan <- val
+				case val := <-unanConfChan:
+					outChan <- val
+				case val := <-dispAssChan:
+					outChan <- val
+				case val := <-confAssChan:
+					outChan <- val
+				case val := <-challengeInitiatedChan:
+					outChan <- val
+				case val := <-challengeBisectedChan:
+					outChan <- val
+				case val := <-challengeTimedOutChan:
+					outChan <- val
+				case val := <-challengeContinuedChan:
+					outChan <- val
+				case val := <-oneStepProofChan:
+					outChan <- val
+				//case Val := <-dispAssDebugChan:
+				//	outChan <- Val
+				//case Val := <- unanAssDebugChan:
+				//	outChan <- Val
+				case val := <-challengeOneStepDebugChan:
+					outChan <- val
+				case err := <-headersSub.Err():
+					return err
+				case err := <-messageDeliveredSub.Err():
+					return err
+				case err := <-vmCreatedSub.Err():
+					return err
+				case err := <-unanAssSub.Err():
+					return err
+				case err := <-unanPropSub.Err():
+					return err
+				case err := <-unanConfSub.Err():
+					return err
+				case err := <-dispAssSub.Err():
+					return err
+				case err := <-confAssSub.Err():
+					return err
+				case err := <-challengeInitiatedSub.Err():
+					return err
+				case err := <-challengeBisectedSub.Err():
+					return err
+				case err := <-challengeContinuedSub.Err():
+					return err
+				case err := <-challengeTimedOutSub.Err():
+					return err
+				case err := <-oneStepProofSub.Err():
+					return err
+				case err := <-challengeOneStepDebugSub.Err():
+					return err
+				}
 			}
+		}()
+		if err != nil {
+			errChan <- err
 		}
 	}()
 	return outChan, errChan, nil
@@ -613,9 +604,7 @@ func (con *EthConnection) BisectChallenge(
 	}
 	for _, assertion := range stubs {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHash)
-		for _, val := range assertion.TotalVals {
-			totalMessageAmounts = append(totalMessageAmounts, val)
-		}
+		totalMessageAmounts = append(totalMessageAmounts, assertion.TotalVals...)
 		totalSteps += assertion.NumSteps
 	}
 	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, stubs[0].FirstMessageHash)

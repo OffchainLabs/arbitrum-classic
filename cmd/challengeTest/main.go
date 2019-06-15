@@ -127,6 +127,9 @@ func main() {
 	}
 
 	err = challenger.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	retChan, errChan := coordinator.CreateVM(time.Second * 10)
 
@@ -154,6 +157,9 @@ func main() {
 		tup,
 		big.NewInt(0),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 	//fmt.Println("Send error", err)
 	//time.Sleep(2000 * time.Millisecond)
 	//successChan, errChan := coordinator.InitiateUnanimousAssertion(true)

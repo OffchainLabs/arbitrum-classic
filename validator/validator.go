@@ -481,15 +481,6 @@ func (validator *Validator) canDisputableAssert() bool {
 	}
 }
 
-func (validator *Validator) canUnanimousAssert() bool {
-	switch validator.bot.(type) {
-	case WaitingObserver:
-		return true
-	default:
-		return false
-	}
-}
-
 func (validator *Validator) timeUpdate(sendChan chan<- valmessage.OutgoingMessage) {
 	if validator.challengeBot != nil {
 		newBot, msgs, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64())

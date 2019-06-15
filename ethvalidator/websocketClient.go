@@ -47,7 +47,7 @@ func (c *Client) run() error {
 		}
 	}()
 
-	if err :=c.readPump(writeErrChan); err != nil {
+	if err := c.readPump(writeErrChan); err != nil {
 		readErrChan <- err
 		return err
 	}
@@ -62,7 +62,7 @@ func (c *Client) readPump(writeErrChan chan error) error {
 
 	for {
 		select {
-		case err := <- writeErrChan:
+		case err := <-writeErrChan:
 			// Error writing to the client so break off this connection
 			return err
 		default:

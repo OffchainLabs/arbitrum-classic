@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-validator/valmessage"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"math/big"
 	"time"
@@ -187,7 +188,8 @@ func (man *EthValidator) StartListening() error {
 						log.Fatalf("Error handling send: %v", err)
 					}
 				}
-			case err := <-errChan:
+			case <-errChan:
+				// Ignore error and try to reset connection
 				//log.Printf("Validator recieved error: %v", err)
 				//fmt.Println("Resetting channels")
 				con, err := NewEthConnection(man.serverAddress, man.arbAddresses)
@@ -356,7 +358,7 @@ func buildBisectionTree(preconditions []*protocol.Precondition, assertions []*pr
 
 func LogProof(a *protocol.Assertion, index int) ([][32]byte, error) {
 	if index < len(a.Logs) {
-		return nil, errors.New("Log index out of range")
+		return nil, errors.New("log index out of range")
 	}
 	proof := make([][32]byte, 0, len(a.Logs)-1-index)
 	for i := len(a.Logs) - 1; i > index; i-- {
@@ -372,32 +374,32 @@ func (man *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 	case valmessage.SendProposeUnanimousAssertMessage:
 		_, err := man.ProposeUnanimousAssert(msg.NewInboxHash, msg.TimeBounds, msg.Assertion, msg.SequenceNum, msg.Signatures)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error proposing unanimous assertion: %v", err))
+			return errors2.Wrap(err, "failed proposing unanimous assertion")
 		}
 	case valmessage.SendConfirmUnanimousAssertedMessage:
 		_, err := man.ConfirmUnanimousAsserted(msg.NewInboxHash, msg.Assertion)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error confirming unanimous assertion: %v", err))
+			return errors2.Wrap(err, "failed confirming unanimous assertion")
 		}
 	case valmessage.SendUnanimousAssertMessage:
 		_, err := man.UnanimousAssert(msg.NewInboxHash, msg.TimeBounds, msg.Assertion, msg.Signatures)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error sending finalized unanimous assertion: %v", err))
+			return errors2.Wrap(err, "failed sending finalized unanimous assertion")
 		}
 	case valmessage.SendAssertMessage:
 		_, err := man.DisputableAssert(msg.Precondition, msg.Assertion)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error initiating disputable assertion: %v", err))
+			return errors2.Wrap(err, "failed initiating disputable assertion")
 		}
 	case valmessage.SendInitiateChallengeMessage:
 		_, err := man.InitiateChallenge(msg.Precondition, msg.Assertion)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error initiating challenge: %v", err))
+			return errors2.Wrap(err, "failed initiating challenge")
 		}
 	case valmessage.SendBisectionMessage:
 		_, err := man.BisectChallenge(msg.Deadline, msg.Precondition, msg.Assertions)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error initiating bisection: %v", err))
+			return errors2.Wrap(err, "failed initiating bisection")
 		}
 	case valmessage.SendContinueChallengeMessage:
 		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
@@ -410,7 +412,7 @@ func (man *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			msg.Deadline,
 		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error continuing challenge: %v", err))
+			return errors2.Wrap(err, "failed continuing challenge")
 		}
 	case valmessage.SendOneStepProofMessage:
 		_, err := man.OneStepProof(
@@ -420,13 +422,12 @@ func (man *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			msg.Deadline,
 		)
 		if err != nil {
-			log.Printf("Error with one step proof: %v", err)
-			return nil
+			return errors2.Wrap(err, "failed one step proof")
 		}
 	case valmessage.SendConfirmedAssertMessage:
 		_, err := man.ConfirmAsserted(msg.Precondition, msg.Assertion)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error confirming assertion: %v", err))
+			return errors2.Wrap(err, "failed confirming assertion")
 		}
 	case valmessage.SendAsserterTimedOutChallengeMessage:
 		preAssBytes := solsha3.SoliditySHA3(
@@ -440,16 +441,16 @@ func (man *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			msg.Deadline,
 		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error timing out challenge: %v", err))
+			return errors2.Wrap(err, "failed timing out challenge")
 		}
 	case valmessage.SendChallengerTimedOutChallengeMessage:
 		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
 		_, err := man.ChallengerTimedOut(tree.GetRoot(), msg.Deadline)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error timing out challenge: %v", err))
+			return errors2.Wrap(err, "failed timing out challenge")
 		}
 	default:
-		return errors.New(fmt.Sprintf("Unhandled valmessage %T: %+v", msg, msg))
+		return fmt.Errorf("unhandled valmessage %T: %+v", msg, msg)
 	}
 	return nil
 }

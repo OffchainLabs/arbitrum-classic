@@ -120,11 +120,9 @@ func (cp *Checkpointer) addRefToValueInTxn(txn *badger.Txn, val value.Value) err
 		if err := txn.Set(hkey, buf.Bytes()); err != nil {
 			return err
 		}
-		if more != nil {
-			for _, v := range more {
-				if err := cp.addRefToValueInTxn(txn, v); err != nil {
-					return err
-				}
+		for _, v := range more {
+			if err := cp.addRefToValueInTxn(txn, v); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -191,10 +189,8 @@ func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
 	if err != nil {
 		return err
 	}
-	if more != nil {
-		for _, h := range more {
-			cp.RemoveRefToValue(h)
-		}
+	for _, h := range more {
+		cp.RemoveRefToValue(h)
 	}
 	return nil
 }

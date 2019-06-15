@@ -28,6 +28,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
+	errors2 "github.com/pkg/errors"
 	"log"
 	"math"
 	"net/http"
@@ -89,53 +90,61 @@ var upgrader = websocket.Upgrader{
 
 func (m *ClientManager) RunServer() error {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
+		c, err := func () (*Client, error) {
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				return nil, err
+			}
+			tlsCon, ok := conn.UnderlyingConn().(*tls.Conn)
+			if !ok {
+				return nil, errors.New("made non tls connection")
+			}
+
+			_, signedUnique, err := conn.ReadMessage()
+			if err != nil {
+				return nil, errors2.Wrap(err, "failed to get message from follower")
+			}
+			uniqueVal := tlsCon.ConnectionState().TLSUnique
+			hashVal := crypto.Keccak256(uniqueVal)
+			pubkey, err := crypto.SigToPub(hashVal, signedUnique)
+			if err != nil {
+				return nil, err
+			}
+			address := crypto.PubkeyToAddress(*pubkey)
+			if _, ok := m.validators[address]; !ok {
+				return nil, errors.New("follower tried to connect with bad pubkey")
+			}
+			sigData, err := crypto.Sign(hashVal, m.key)
+			if err != nil {
+				return nil, err
+			}
+			wr, err := conn.NextWriter(websocket.BinaryMessage)
+			if err != nil {
+				return nil, err
+			}
+			if _, err := wr.Write(m.vmId[:]); err != nil {
+				return nil, err
+			}
+
+			if _, err := wr.Write(sigData); err != nil {
+				return nil, err
+			}
+
+			if err := wr.Close(); err != nil {
+				return nil, err
+			}
+			return NewClient(conn, address), nil
+		}()
 		if err != nil {
-			log.Println(err)
-			return
-		}
-		tlsCon, ok := conn.UnderlyingConn().(*tls.Conn)
-		if !ok {
-			log.Println("Made non tls connection")
+			log.Printf("Coordinator failed to connet with follower: %v\n", err)
 			return
 		}
 
-		_, signedUnique, err := conn.ReadMessage()
-		uniqueVal := tlsCon.ConnectionState().TLSUnique
-		hashVal := crypto.Keccak256(uniqueVal)
-		pubkey, err := crypto.SigToPub(hashVal, signedUnique)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		address := crypto.PubkeyToAddress(*pubkey)
-		if _, ok := m.validators[address]; !ok {
-			log.Println("Follower tried to connect with bad pubkey")
-			return
-		}
-		sigData, err := crypto.Sign(hashVal, m.key)
-		wr, err := conn.NextWriter(websocket.BinaryMessage)
-		if err != nil {
-			return
-		}
-		if _, err := wr.Write(m.vmId[:]); err != nil {
-			return
-		}
-
-		if _, err := wr.Write(sigData); err != nil {
-			return
-		}
-
-		if err := wr.Close(); err != nil {
-			log.Println(err)
-			return
-		}
-		c := NewClient(conn, address)
-		log.Println("Coordinator connected with follower", hexutil.Encode(address[:]))
+		log.Println("Coordinator connected with follower", hexutil.Encode(c.Address[:]))
 		m.register <- c
 
 		go func() {
-			if err :=c.run(); err != nil {
+			if err := c.run(); err != nil {
 				log.Printf("Coordinator lost connection to client with error: %v\n", err)
 
 			}
@@ -612,7 +621,6 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		})
 		return err
 	}
-	elapsed := time.Since(start)
 
 	// Force onchain assertion if there are outgoing messages
 	if len(unanUpdate.Assertion.OutMsgs) > 0 {
@@ -626,7 +634,6 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		unanUpdate.OriginalInboxHash,
 		unanUpdate.Assertion,
 	)
-	elapsed = time.Since(start)
 	if err != nil {
 		log.Println("Coordinator failed to hash unanimous assertion")
 		notifyFollowers(&UnanimousAssertionValidatorNotification{
@@ -682,7 +689,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		}
 	}
 
-	elapsed = time.Since(start)
+	elapsed := time.Since(start)
 	log.Printf("Coordinator succeeded signing unanimous assertion in %s\n", elapsed)
 	notifyFollowers(&UnanimousAssertionValidatorNotification{
 		Accepted:   true,

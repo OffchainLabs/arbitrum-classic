@@ -264,7 +264,7 @@ func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
 			return err
 		}
 		rd := bytes.NewReader(barr)
-		refs := make([][32]byte, 5)
+		refs = make([][32]byte, 5)
 		for i := 0; i < 5; i++ {
 			if _, err := rd.Read(refs[i][:]); err != nil {
 				return err
@@ -277,11 +277,9 @@ func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
 	}); err != nil {
 		return err
 	}
-	if refs != nil {
-		for _, h := range refs {
-			if err := vcp.cp.synchronousRemoveRefToValue(h); err != nil {
-				return err
-			}
+	for _, h := range refs {
+		if err := vcp.cp.synchronousRemoveRefToValue(h); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -561,7 +559,7 @@ func (ecc *EventChainCheckpointer) RestoreFromSeqNum(seqNum uint64) (*vm.Machine
 	intentKey := ecc.eccKeyForSeqNum(seqNum, "intentToSign")
 	var machineHash [32]byte
 	var inboxHash [32]byte
-	err := ecc.cp.db.View(func(txn *badger.Txn) error {
+	if err := ecc.cp.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(intentKey)
 		if err != nil {
 			return err
@@ -576,7 +574,9 @@ func (ecc *EventChainCheckpointer) RestoreFromSeqNum(seqNum uint64) (*vm.Machine
 		copy(machineHash[:], val[:32])
 		copy(inboxHash[:], val[32:])
 		return nil
-	})
+	}); err != nil {
+		return nil, nil, nil, err
+	}
 	machine, err := ecc.cp.RestoreMachine(intentKey)
 	if err != nil {
 		return nil, nil, nil, err

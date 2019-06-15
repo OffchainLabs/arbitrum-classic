@@ -77,7 +77,7 @@ func (bot AttemptingOffchainClosing) UpdateState(ev valmessage.IncomingMessage, 
 			if bot.retChan != nil {
 				bot.retChan <- false
 			}
-			return nil, nil, nil, errors.New("Unanimous assertion unexpectedly superseded")
+			return nil, nil, nil, errors.New("unanimous assertion unexpectedly superseded")
 		} else {
 			return WaitingOffchainClosing{
 				bot.validatorConfig,
@@ -95,7 +95,7 @@ func (bot AttemptingOffchainClosing) UpdateState(ev valmessage.IncomingMessage, 
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, nil, errors.New("Unanimous assertion unexpectedly superseded by final assert")
+		return nil, nil, nil, errors.New("unanimous assertion unexpectedly superseded by final assert")
 	default:
 		if bot.retChan != nil {
 			bot.retChan <- false
@@ -135,12 +135,12 @@ func (bot WaitingOffchainClosing) UpdateState(ev valmessage.IncomingMessage, tim
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, nil, errors.New("Unanimous assertion unexpectedly superseded by sequence number")
+		return nil, nil, nil, errors.New("unanimous assertion unexpectedly superseded by sequence number")
 	case valmessage.FinalUnanimousAssertMessage:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, nil, errors.New("Unanimous assertion unexpectedly superseded by final assert")
+		return nil, nil, nil, errors.New("unanimous assertion unexpectedly superseded by final assert")
 	default:
 		if bot.retChan != nil {
 			bot.retChan <- false
