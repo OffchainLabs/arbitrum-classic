@@ -39,105 +39,6 @@ import (
 	"github.com/offchainlabs/arb-avm/vm"
 )
 
-type Client struct {
-	cm         *ClientManager
-	ToClient   chan *ValidatorRequest
-	FromClient chan *FollowerResponse
-
-	conn    *websocket.Conn
-	Address common.Address
-}
-
-func NewClient(cm *ClientManager, conn *websocket.Conn, address common.Address) *Client {
-	return &Client{
-		cm,
-		make(chan *ValidatorRequest, 128),
-		make(chan *FollowerResponse, 128),
-		conn,
-		address,
-	}
-}
-
-func (c *Client) readPump() error {
-	defer func() error {
-		c.cm.unregister <- c
-		return c.conn.Close()
-	}()
-	c.conn.SetReadLimit(maxMessageSize)
-	if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		return err
-	}
-	c.conn.SetPongHandler(func(string) error {
-		return c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	})
-	for {
-		_, message, err := c.conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
-			}
-			break
-		}
-
-		r := &FollowerResponse{}
-		err = proto.Unmarshal(message, r)
-		if err != nil {
-			log.Println("Recieved bad message from follower")
-			continue
-		}
-		c.FromClient <- r
-	}
-	return nil
-}
-
-// writePump pumps messages from the hub to the websocket connection.
-//
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer to a connection by
-// executing all writes from this goroutine.
-func (c *Client) writePump() error {
-	ticker := time.NewTicker(pingPeriod)
-	defer func() error {
-		ticker.Stop()
-		return c.conn.Close()
-	}()
-	for {
-		select {
-		case message, ok := <-c.ToClient:
-			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return err
-			}
-			if !ok {
-				// The hub closed the channel.
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{}) // There's nothing much we can do if we can't send a close
-				return errors.New("client closed socket")
-			}
-
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return err
-			}
-			raw, err := proto.Marshal(message)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(raw); err != nil {
-				return err
-			}
-			if err := w.Close(); err != nil {
-				return err
-			}
-		case <-ticker.C:
-			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return err
-			}
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return err
-			}
-		}
-	}
-}
-
 type ValidatorLeaderRequest interface {
 }
 
@@ -179,88 +80,6 @@ func NewClientManager(key *ecdsa.PrivateKey, vmId [32]byte, validators map[commo
 		vmId:            vmId,
 		validators:      validators,
 	}
-}
-
-type GatherSignatureRequest struct {
-	request      *ValidatorRequest
-	responseChan chan LabeledFollowerResponse
-	requestID    [32]byte
-}
-
-func (m *ClientManager) Run() {
-	aggResponseChan := make(chan LabeledFollowerResponse, 32)
-	for {
-		select {
-		case waitRequest := <-m.waitRequestChan:
-			if len(m.clients) == len(m.validators)-1 {
-				waitRequest <- true
-			} else {
-				m.waitingChans[waitRequest] = true
-			}
-		case response := <-aggResponseChan:
-			m.responses[value.NewHashFromBuf(response.response.RequestId)] <- response
-		case request := <-m.sigRequestChan:
-			m.broadcast <- request.request
-			m.responses[request.requestID] = request.responseChan
-		case client := <-m.register:
-			m.clients[client] = true
-			go func() {
-				for response := range client.FromClient {
-					aggResponseChan <- LabeledFollowerResponse{client.Address, response}
-				}
-			}()
-			if len(m.clients) == len(m.validators)-1 {
-				for waitChan := range m.waitingChans {
-					waitChan <- true
-				}
-				m.waitingChans = make(map[chan bool]bool)
-			}
-		case client := <-m.unregister:
-			if _, ok := m.clients[client]; ok {
-				delete(m.clients, client)
-				close(client.ToClient)
-			}
-		case message := <-m.broadcast:
-			for client := range m.clients {
-				select {
-				case client.ToClient <- message:
-				default:
-					close(client.ToClient)
-					delete(m.clients, client)
-				}
-			}
-		}
-	}
-}
-
-func (m *ClientManager) gatherSignatures(
-	request *ValidatorRequest,
-	requestID [32]byte,
-) []LabeledFollowerResponse {
-	responseChan := make(chan LabeledFollowerResponse, len(m.validators)-1)
-	log.Println("Coordinator gathering signatures")
-	m.sigRequestChan <- GatherSignatureRequest{
-		request,
-		responseChan,
-		requestID,
-	}
-	responseList := make([]LabeledFollowerResponse, 0, len(m.validators)-1)
-	timer := time.NewTimer(20 * time.Second)
-	timedOut := false
-	defer timer.Stop()
-	for {
-		select {
-		case response := <-responseChan:
-			responseList = append(responseList, response)
-		case <-timer.C:
-			log.Println("Coordinator timed out gathering signatures")
-			timedOut = true
-		}
-		if len(responseList) == len(m.validators)-1 || timedOut {
-			break
-		}
-	}
-	return responseList
 }
 
 var upgrader = websocket.Upgrader{
@@ -311,14 +130,111 @@ func (m *ClientManager) RunServer() error {
 			log.Println(err)
 			return
 		}
-		c := NewClient(m, conn, address)
+		c := NewClient(conn, address)
 		log.Println("Coordinator connected with follower", hexutil.Encode(address[:]))
 		m.register <- c
 
-		go c.readPump()
-		go c.writePump()
+		go func() {
+			if err :=c.run(); err != nil {
+				log.Printf("Coordinator lost connection to client with error: %v\n", err)
+
+			}
+			m.unregister <- c
+		}()
 	})
 	return http.ListenAndServeTLS(":1236", "server.crt", "server.key", nil)
+}
+
+type GatherSignatureRequest struct {
+	request      *ValidatorRequest
+	responseChan chan LabeledFollowerResponse
+	requestID    [32]byte
+}
+
+func (m *ClientManager) Run() {
+	aggResponseChan := make(chan LabeledFollowerResponse, 32)
+	for {
+		select {
+		case waitRequest := <-m.waitRequestChan:
+			if len(m.clients) == len(m.validators)-1 {
+				waitRequest <- true
+			} else {
+				m.waitingChans[waitRequest] = true
+			}
+		case response := <-aggResponseChan:
+			m.responses[value.NewHashFromBuf(response.response.RequestId)] <- response
+		case request := <-m.sigRequestChan:
+			m.broadcast <- request.request
+			m.responses[request.requestID] = request.responseChan
+		case client := <-m.register:
+			m.clients[client] = true
+			go func() {
+				for message := range client.FromClient {
+					response := &FollowerResponse{}
+					err := proto.Unmarshal(message, response)
+					if err != nil {
+						log.Println("Recieved bad message from follower")
+						continue
+					}
+					aggResponseChan <- LabeledFollowerResponse{client.Address, response}
+				}
+			}()
+			if len(m.clients) == len(m.validators)-1 {
+				for waitChan := range m.waitingChans {
+					waitChan <- true
+				}
+				m.waitingChans = make(map[chan bool]bool)
+			}
+		case client := <-m.unregister:
+			if _, ok := m.clients[client]; ok {
+				delete(m.clients, client)
+				close(client.ToClient)
+			}
+		case message := <-m.broadcast:
+			raw, err := proto.Marshal(message)
+			if err != nil {
+				continue
+			}
+			for client := range m.clients {
+				select {
+				case client.ToClient <- raw:
+				default:
+					close(client.ToClient)
+					delete(m.clients, client)
+				}
+			}
+		}
+	}
+}
+
+func (m *ClientManager) gatherSignatures(
+	request *ValidatorRequest,
+	requestID [32]byte,
+) []LabeledFollowerResponse {
+	responseChan := make(chan LabeledFollowerResponse, len(m.validators)-1)
+	log.Println("Coordinator gathering signatures")
+	m.sigRequestChan <- GatherSignatureRequest{
+		request,
+		responseChan,
+		requestID,
+	}
+	responseList := make([]LabeledFollowerResponse, 0, len(m.validators)-1)
+	timer := time.NewTimer(20 * time.Second)
+	timedOut := false
+	defer timer.Stop()
+	for {
+		select {
+		case response := <-responseChan:
+			responseList = append(responseList, response)
+		case <-timer.C:
+			log.Println("Coordinator timed out gathering signatures")
+			timedOut = true
+		}
+		if len(responseList) == len(m.validators)-1 || timedOut {
+			break
+		}
+	}
+	return responseList
 }
 
 func (m *ClientManager) WaitForFollowers(timeout time.Duration) bool {
