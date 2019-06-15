@@ -132,17 +132,19 @@ func NewVersionedCheckpointer(cp *Checkpointer) (*VersionedCheckpointer, error) 
 				return err
 			}
 		}
-		err = item.Value(func(val []byte) error {
-			rd := bytes.NewReader(val)
-			if err := binary.Read(rd, binary.LittleEndian, &minVersion); err != nil {
-				return err
-			}
-			if err := binary.Read(rd, binary.LittleEndian, &maxVersion); err != nil {
-				return err
-			}
-			restoring = true
-			return nil
-		})
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		rd := bytes.NewReader(val)
+		if err := binary.Read(rd, binary.LittleEndian, &minVersion); err != nil {
+			return err
+		}
+		if err := binary.Read(rd, binary.LittleEndian, &maxVersion); err != nil {
+			return err
+		}
+		restoring = true
+		return nil
 		return nil
 	}); err != nil {
 		return nil, err
@@ -217,12 +219,11 @@ func (vcp *VersionedCheckpointer) RestoreVersion(versionNum int64) (machine *vm.
 
 		item, err := txn.Get(vcpStateDataKey(versionNum))
 		if err == nil {
-			if err := item.Value(func(val []byte) error {
-				stateData = append([]byte{}, val...)
-				return nil
-			}); err != nil {
+			val, err := item.Value()
+			if err != nil {
 				return err
 			}
+			stateData = append([]byte{}, val...)
 		} else {
 			if err != badger.ErrKeyNotFound {
 				return err
@@ -259,17 +260,16 @@ func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
 		if err != nil {
 			return nil
 		}
-		if err := item.Value(func(barr []byte) error {
-			rd := bytes.NewReader(barr)
-			refs := make([][32]byte, 5)
-			for i := 0; i < 5; i++ {
-				if _, err := rd.Read(refs[i][:]); err != nil {
-					return err
-				}
-			}
-			return nil
-		}); err != nil {
+		barr, err := item.Value()
+		if err != nil {
 			return err
+		}
+		rd := bytes.NewReader(barr)
+		refs := make([][32]byte, 5)
+		for i := 0; i < 5; i++ {
+			if _, err := rd.Read(refs[i][:]); err != nil {
+				return err
+			}
 		}
 		if err := txn.Delete(mkey); err != nil {
 			return err
@@ -382,16 +382,15 @@ func (ecc *EventChainCheckpointer) Discard() error {
 			if err != nil {
 				return err
 			}
-			if err := item.Value(func(val []byte) error {
-				if len(val) < 64 {
-					return errors.New("EventChainCheckpointer::Discard: checkpointed item is too small")
-				}
-				copy(inboxHash[:], val[32:64])
-				needToRemoveInboxRef = true
-				return nil
-			}); err != nil {
+			val, err := item.Value()
+			if err != nil {
 				return err
 			}
+			if len(val) < 64 {
+				return errors.New("EventChainCheckpointer::Discard: checkpointed item is too small")
+			}
+			copy(inboxHash[:], val[32:64])
+			needToRemoveInboxRef = true
 			return txn.Delete(ecc.fullKey)
 		}); err != nil {
 			return nil
@@ -411,11 +410,9 @@ func (ecc *EventChainCheckpointer) Discard() error {
 					keySigs := ecc.eccKeyForSeqNum(i, "recordSignatures")
 					item, err := txn.Get(keyIntent)
 					if err == nil {
-						_ = item.Value(func(bytes []byte) error {
-							needRemove = true
-							copy(inboxHash[:], bytes[32:64])
-							return nil
-						})
+						bytes, _ := item.Value()
+						needRemove = true
+						copy(inboxHash[:], bytes[32:64])
 					}
 					_ = txn.Delete(keyIntent)
 					_ = txn.Delete(keySigs)
@@ -494,10 +491,12 @@ func RestoreEventChainCheckpointer(cp *Checkpointer, keySuffix []byte) (*EventCh
 		if err != nil {
 			return err
 		}
-		return item.Value(func(byteArr []byte) error {
-			recordedBytes = append([]byte{}, byteArr...)
-			return nil
-		})
+		byteArr, err := item.Value()
+		if err != nil {
+			return err
+		}
+		recordedBytes = append([]byte{}, byteArr...)
+		return nil
 	}); err != nil {
 		return nil, err
 	}
@@ -528,10 +527,12 @@ func RestoreEventChainCheckpointer(cp *Checkpointer, keySuffix []byte) (*EventCh
 		if err != nil {
 			return err
 		}
-		return item.Value(func(byteArr []byte) error {
-			rd := bytes.NewReader(byteArr)
-			return binary.Read(rd, binary.LittleEndian, &nextSeqNum)
-		})
+		byteArr, err := item.Value()
+		if err != nil {
+			return err
+		}
+		rd := bytes.NewReader(byteArr)
+		return binary.Read(rd, binary.LittleEndian, &nextSeqNum)
 	}); err != nil {
 		return nil, err
 	}
@@ -566,14 +567,16 @@ func (ecc *EventChainCheckpointer) RestoreFromSeqNum(seqNum uint64) (*vm.Machine
 		if err != nil {
 			return err
 		}
-		return item.Value(func(val []byte) error {
-			if len(val) < 32 {
-				return errors.New("EventChainCheckpointer: intentToSign record is too small")
-			}
-			copy(machineHash[:], val[:32])
-			copy(inboxHash[:], val[32:])
-			return nil
-		})
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		if len(val) < 32 {
+			return errors.New("EventChainCheckpointer: intentToSign record is too small")
+		}
+		copy(machineHash[:], val[:32])
+		copy(inboxHash[:], val[32:])
+		return nil
 	})
 	machine, err := ecc.cp.RestoreMachine(intentKey)
 	if err != nil {
@@ -593,10 +596,12 @@ func (ecc *EventChainCheckpointer) RestoreFromSeqNum(seqNum uint64) (*vm.Machine
 		} else if err != nil {
 			return err
 		}
-		return item.Value(func(val []byte) error {
-			marshaledSigs = append([]byte{}, val...)
-			return nil
-		})
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		marshaledSigs = append([]byte{}, val...)
+		return nil
 	}); err != nil {
 		return nil, nil, nil, err
 	}
@@ -633,7 +638,7 @@ func (cp *Checkpointer) saveMachine_inTxn(txn *badger.Txn, keySuffix []byte, mac
 	vals[2] = machine.Register().Get()
 	vals[3] = machine.Static().Get()
 	vals[4] = machine.GetPC()
-	vals[5] = machine.GetErrHandler().Get()
+	vals[5] = machine.GetErrHandler()
 	for i := 0; i < len(vals); i++ {
 		if err := cp.addRefToValue_inTxn(txn, vals[i]); err != nil {
 			return err
@@ -665,12 +670,11 @@ func (cp *Checkpointer) restoreMachine_inTxn(txn *badger.Txn, keySuffix []byte) 
 		return nil, err
 	}
 	var machineBytes []byte
-	if err := item.Value(func(bytesVal []byte) error {
-		machineBytes = append([]byte{}, bytesVal...)
-		return nil
-	}); err != nil {
+	bytesVal, err := item.Value()
+	if err != nil {
 		return nil, err
 	}
+	machineBytes = append([]byte{}, bytesVal...)
 	rd := bytes.NewReader(machineBytes)
 	var vals [6]value.Value
 	var h [32]byte
@@ -693,7 +697,12 @@ func (cp *Checkpointer) restoreMachine_inTxn(txn *badger.Txn, keySuffix []byte) 
 		return nil, err
 	}
 
-	return vm.RestoreMachine(codeOps, vals[0], vals[1], vals[2], vals[3], vals[4], vals[5], sizeLimit), nil
+	errHandler, ok := vals[5].(value.CodePointValue)
+	if !ok {
+		return nil, errors.New("6th value must be a codepoint")
+	}
+
+	return vm.RestoreMachine(codeOps, vals[0], vals[1], vals[2], vals[3], vals[4], errHandler, sizeLimit), nil
 }
 
 func writeOp(wr io.Writer, op value.Operation) (value.Value, error) {
@@ -768,12 +777,11 @@ func (cp *Checkpointer) restoreCode_inTxn(txn *badger.Txn) ([]value.Operation, e
 		return nil, err
 	}
 	var codeBytes []byte
-	if err := item.Value(func(bytesVal []byte) error {
-		codeBytes = append([]byte{}, bytesVal...)
-		return nil
-	}); err != nil {
+	bytesVal, err := item.Value()
+	if err != nil {
 		return nil, err
 	}
+	codeBytes = append([]byte{}, bytesVal...)
 	rd := bytes.NewReader(codeBytes)
 
 	var numOps uint64
