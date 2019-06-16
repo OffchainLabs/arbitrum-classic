@@ -1,6 +1,6 @@
 package coordinator
 
-type LogInfo struct {
+type logInfo struct {
 	Address          string   `json:"address"`
 	BlockHash        string   `json:"blockHash"`
 	BlockNumber      string   `json:"blockNumber"`

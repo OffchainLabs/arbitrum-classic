@@ -40,7 +40,7 @@ import (
 
 
 
-func AttachProfiler(router *mux.Router) {
+func attachProfiler(router *mux.Router) {
 	router.HandleFunc("/debug/pprof/", pprof.Index)
 	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	router.HandleFunc("/debug/pprof/profile", pprof.Profile)
@@ -128,7 +128,7 @@ func main() {
 	ethURL := os.Args[5]
 
 	// Validator creation
-	server := coordinator.NewCoordinatorServer(machine, key, validators, connectionInfo, ethURL)
+	server := coordinator.NewServer(machine, key, validators, connectionInfo, ethURL)
 
 	// Run server
 	s := rpc.NewServer()
@@ -140,7 +140,7 @@ func main() {
 	}
 	r := mux.NewRouter()
 	r.Handle("/", s).Methods("GET", "POST", "OPTIONS")
-	AttachProfiler(r)
+	attachProfiler(r)
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})

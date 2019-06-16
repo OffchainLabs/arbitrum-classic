@@ -95,7 +95,7 @@ func main() {
 
 	ethURL := os.Args[3]
 
-	coordinator, err := ethvalidator.NewValidatorCoordinator("Alice", machine.Clone(), key1, config, false, connectionInfo, ethURL)
+	coordinator, err := ethvalidator.NewCoordinator("Alice", machine.Clone(), key1, config, false, connectionInfo, ethURL)
 	if err != nil {
 		log.Fatal(err)
 	}

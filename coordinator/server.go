@@ -2,14 +2,14 @@ package coordinator
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"errors"
+	"fmt"
 	"log"
 	"math/big"
 	"net/http"
 	"strconv"
 	"time"
-	"fmt"
-	"errors"
-	"crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -26,19 +26,21 @@ import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
-type CoordinatorServer struct {
+// Server provides an interface for interacting with a a running coordinator
+type Server struct {
 	coordinator *ethvalidator.ValidatorCoordinator
 
-	requests chan ValidatorRequest
+	requests chan validatorRequest
 }
 
-func NewCoordinatorServer(
+// NewServer returns a new instance of the Server class
+func NewServer(
 	machine *vm.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
 	connectionInfo ethvalidator.ArbAddresses,
 	ethURL string,
-) *CoordinatorServer {
+) *Server {
 	// Commit all pending transactions in the simulator and print the names again
 	escrowRequired := big.NewInt(10)
 	config := valmessage.NewVMConfiguration(
@@ -50,7 +52,7 @@ func NewCoordinatorServer(
 		common.Address{}, // Address 0 means no owner
 	)
 
-	man, err := ethvalidator.NewValidatorCoordinator("Alice", machine.Clone(), key, config, false, connectionInfo, ethURL)
+	man, err := ethvalidator.NewCoordinator("Alice", machine.Clone(), key, config, false, connectionInfo, ethURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,40 +77,41 @@ func NewCoordinatorServer(
 	}
 
 	time.Sleep(500 * time.Millisecond)
-	requests := make(chan ValidatorRequest, 100)
+	requests := make(chan validatorRequest, 100)
 
 	go func() {
-		tracker := NewTxTracker(man.Val.VmId)
-		tracker.HandleTxResults(man.Val.CompletedCallChan, requests)
+		tracker := newTxTracker(man.Val.VmId)
+		tracker.handleTxResults(man.Val.CompletedCallChan, requests)
 	}()
 
-	return &CoordinatorServer{man, requests}
+	return &Server{man, requests}
 }
 
-func (m *CoordinatorServer) requestAssertionCount() <-chan int {
+func (m *Server) requestAssertionCount() <-chan int {
 	req := make(chan int, 1)
-	m.requests <- AssertionCountRequest{req}
+	m.requests <- assertionCountRequest{req}
 	return req
 }
 
-func (m *CoordinatorServer) requestTxInfo(txHash [32]byte) <-chan TxInfo {
-	req := make(chan TxInfo, 1)
-	m.requests <- TxRequest{txHash, req}
+func (m *Server) requestTxInfo(txHash [32]byte) <-chan txInfo {
+	req := make(chan txInfo, 1)
+	m.requests <- txRequest{txHash, req}
 	return req
 }
 
-func (m *CoordinatorServer) requestFindLogs(
+func (m *Server) requestFindLogs(
 	fromHeight *int64,
 	toHeight *int64,
 	address *big.Int,
 	topics [][32]byte,
-) <-chan []LogInfo {
-	req := make(chan []LogInfo, 1)
-	m.requests <- FindLogsRequest{fromHeight, toHeight, address, topics, req}
+) <-chan []logInfo {
+	req := make(chan []logInfo, 1)
+	m.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
 	return req
 }
 
 
+// FindLogsArgs contains input data for FindLogs
 type FindLogsArgs struct {
 	FromHeight string   `json:"fromHeight"`
 	ToHeight   string   `json:"toHeight"`
@@ -116,11 +119,13 @@ type FindLogsArgs struct {
 	Topics     []string `json:"topics"`
 }
 
+// FindLogsReply contains output data for FindLogs
 type FindLogsReply struct {
-	Logs []LogInfo `json:"logs"`
+	Logs []logInfo `json:"logs"`
 }
 
-func (m *CoordinatorServer) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsReply) error {
+// FindLogs takes a set of parameters and return the list of all logs that match the query
+func (m *Server) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsReply) error {
 	addressBytes, err := hexutil.Decode(args.Address)
 	if err != nil {
 		fmt.Println("FindLogs error1", err)
@@ -145,7 +150,7 @@ func (m *CoordinatorServer) FindLogs(r *http.Request, args *FindLogsArgs, reply 
 		return err
 	}
 
-	var logsChan <-chan []LogInfo
+	var logsChan <-chan []logInfo
 	if args.ToHeight == "latest" {
 		logsChan = m.requestFindLogs(&fromHeight, nil, addressInt, topics)
 	} else {
@@ -162,16 +167,19 @@ func (m *CoordinatorServer) FindLogs(r *http.Request, args *FindLogsArgs, reply 
 	return nil
 }
 
+// SendMessageArgs contains input data for SendMessage
 type SendMessageArgs struct {
 	Data      string `json:"data"`
 	Signature string `json:"signature"`
 }
 
+// SendMessageReply contains output data for SendMessage
 type SendMessageReply struct {
 	TxHash string `json:"hash"`
 }
 
-func (m *CoordinatorServer) SendMessage(r *http.Request, args *SendMessageArgs, reply *SendMessageReply) error {
+// SendMessage takes a request from a client and sends it to the VM
+func (m *Server) SendMessage(r *http.Request, args *SendMessageArgs, reply *SendMessageReply) error {
 	sigBytes, err := hexutil.Decode(args.Signature)
 	if err != nil {
 		log.Printf("SendMessage: Failed to decode signature, %v\n", err)
@@ -232,16 +240,19 @@ func (m *CoordinatorServer) SendMessage(r *http.Request, args *SendMessageArgs, 
 	return nil
 }
 
+// GetMessageResultArgs contains input data for GetMessageResult
 type GetMessageResultArgs struct {
 	TxHash string `json:"txHash"`
 }
 
+// GetMessageResultReply contains output data for GetMessageResult
 type GetMessageResultReply struct {
 	Found  bool   `json:"found"`
 	RawVal string `json:"rawVal"`
 }
 
-func (m *CoordinatorServer) GetMessageResult(r *http.Request, args *GetMessageResultArgs, reply *GetMessageResultReply) error {
+// GetMessageResult returns the value output by the VM in response to the message with the given hash
+func (m *Server) GetMessageResult(r *http.Request, args *GetMessageResultArgs, reply *GetMessageResultReply) error {
 	txHashBytes, err := hexutil.Decode(args.TxHash)
 	if err != nil {
 		return err
@@ -260,53 +271,43 @@ func (m *CoordinatorServer) GetMessageResult(r *http.Request, args *GetMessageRe
 	return nil
 }
 
+// GetAssertionCountReply contains output data for GetAssertionCount
 type GetAssertionCountReply struct {
 	AssertionCount int `json:"assertionCount"`
 }
 
-func (m *CoordinatorServer) GetAssertionCount(r *http.Request, _ *struct{}, reply *GetAssertionCountReply) error {
+// GetAssertionCount returns the total number of finalized assertions
+func (m *Server) GetAssertionCount(r *http.Request, _ *struct{}, reply *GetAssertionCountReply) error {
 	req := m.requestAssertionCount()
 	reply.AssertionCount = <-req
 	return nil
 }
 
+// GetVMInfoReply contains output data for GetVMInfo
 type GetVMInfoReply struct {
-	VMId string `json:"vmId"`
+	VMId string `json:"vmID"`
 }
 
-func (m *CoordinatorServer) GetVMInfo(r *http.Request, _ *struct{}, reply *GetVMInfoReply) error {
+// GetVMInfo returns current metadata about this VM
+func (m *Server) GetVMInfo(r *http.Request, _ *struct{}, reply *GetVMInfoReply) error {
 	reply.VMId = hexutil.Encode(m.coordinator.Val.VmId[:])
 	return nil
 }
 
-func (m *CoordinatorServer) TranslateToValue(r *http.Request, arg *string, reply *string) error {
-	rawBytes, err := hexutil.Decode(*arg)
-	if err != nil {
-		return err
-	}
-	data, err := evm.BytesToSizedByteArray(rawBytes)
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	if err := value.MarshalValue(data, &buf); err != nil {
-		return err
-	}
-	*reply = hexutil.Encode(buf.Bytes())
-	return nil
-}
-
+// CallMessageArgs contains input data for CallMessage
 type CallMessageArgs struct {
 	Data   string `json:"data"`
 	Sender string `json:"sender"`
 }
 
+// CallMessageReply contains output data for CallMessage
 type CallMessageReply struct {
 	ReturnVal string
 	Success   bool
 }
 
-func (m *CoordinatorServer) CallMessage(r *http.Request, args *CallMessageArgs, reply *CallMessageReply) error {
+// CallMessage takes a request from a client to process in a temporary context and return the result
+func (m *Server) CallMessage(r *http.Request, args *CallMessageArgs, reply *CallMessageReply) error {
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return err

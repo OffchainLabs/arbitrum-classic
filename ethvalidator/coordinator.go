@@ -324,7 +324,7 @@ type ValidatorCoordinator struct {
 	mpq *MessageProcessingQueue
 }
 
-func NewValidatorCoordinator(
+func NewCoordinator(
 	name string,
 	machine *vm.Machine,
 	key *ecdsa.PrivateKey,
