@@ -18,6 +18,7 @@ package validator
 
 import (
 	"errors"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-validator/valmessage"
@@ -34,17 +35,17 @@ func (bot AttemptingUnanimousClosing) UpdateTime(time uint64) (validatorState, [
 	return bot, nil, nil
 }
 
-func (bot AttemptingUnanimousClosing) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot AttemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.ProposedUnanimousAssertMessage:
+	case ethbridge.ProposedUnanimousAssertEvent:
 		// Someone proposed an non-final update
 		// Final update has already been sent
 		return bot, nil, nil, nil
-	case valmessage.AssertMessage:
+	case ethbridge.DisputableAssertionEvent:
 		// Someone proposed a disputable assertion
 		// Final update has already been sent
 		return bot, nil, nil, nil
-	case valmessage.FinalUnanimousAssertMessage:
+	case ethbridge.FinalUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- true
 		}
@@ -67,9 +68,9 @@ func (bot AttemptingOffchainClosing) UpdateTime(time uint64) (validatorState, []
 	return bot, nil, nil
 }
 
-func (bot AttemptingOffchainClosing) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot AttemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.ProposedUnanimousAssertMessage:
+	case ethbridge.ProposedUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
 			// Someone proposed an old update
 			// Newer update has already been sent
@@ -88,11 +89,11 @@ func (bot AttemptingOffchainClosing) UpdateState(ev valmessage.IncomingMessage, 
 				bot.retChan,
 			}, nil, nil, nil
 		}
-	case valmessage.AssertMessage:
+	case ethbridge.DisputableAssertionEvent:
 		// Someone proposed a disputable assertion
 		// Unanimous proposal has already been sent
 		return bot, nil, nil, nil
-	case valmessage.FinalUnanimousAssertMessage:
+	case ethbridge.FinalUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
@@ -130,14 +131,14 @@ func (bot WaitingOffchainClosing) UpdateTime(time uint64) (validatorState, []val
 	}
 }
 
-func (bot WaitingOffchainClosing) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.ProposedUnanimousAssertMessage:
+	case ethbridge.ProposedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
 		return nil, nil, nil, errors.New("unanimous assertion unexpectedly superseded by sequence number")
-	case valmessage.FinalUnanimousAssertMessage:
+	case ethbridge.FinalUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
@@ -160,9 +161,9 @@ func (bot FinalizingOffchainClosing) UpdateTime(time uint64) (validatorState, []
 	return bot, nil, nil
 }
 
-func (bot FinalizingOffchainClosing) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot FinalizingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.ConfirmedUnanimousAssertMessage:
+	case ethbridge.ConfirmedUnanimousAssertEvent:
 		bot.GetCore().DeliverMessagesToVM()
 		if bot.retChan != nil {
 			bot.retChan <- true

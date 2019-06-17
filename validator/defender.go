@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arb-validator/valmessage"
 
@@ -90,9 +91,9 @@ func (bot BisectedAssertDefender) UpdateTime(time uint64) (challengeState, []val
 	}
 }
 
-func (bot BisectedAssertDefender) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot BisectedAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.BisectMessage:
+	case ethbridge.BisectionEvent:
 		deadline := time + bot.config.GracePeriod
 		return WaitingBisectedDefender{
 			bot.validatorConfig,
@@ -129,9 +130,9 @@ func (bot WaitingBisectedDefender) UpdateTime(time uint64) (challengeState, []va
 	}
 }
 
-func (bot WaitingBisectedDefender) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingBisectedDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.ContinueChallengeMessage:
+	case ethbridge.ContinueChallengeEvent:
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
 			return nil, nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
@@ -161,9 +162,9 @@ func (bot OneStepChallengedAssertDefender) UpdateTime(time uint64) (challengeSta
 	}
 }
 
-func (bot OneStepChallengedAssertDefender) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot OneStepChallengedAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.OneStepProofMessage:
+	case ethbridge.OneStepProofEvent:
 		fmt.Println("OneStepChallengedAssertDefender: Proof was accepted")
 		return nil, nil, nil
 	default:
@@ -179,9 +180,9 @@ func (bot TimedOutChallengerDefender) UpdateTime(time uint64) (challengeState, [
 	return bot, nil, nil
 }
 
-func (bot TimedOutChallengerDefender) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot TimedOutChallengerDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.ChallengerTimeoutMessage:
+	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: TimedOutChallengerDefender: VM state got unsynchronized"}
@@ -196,9 +197,9 @@ func (bot TimedOutAsserterDefender) UpdateTime(time uint64) (challengeState, []v
 	return bot, nil, nil
 }
 
-func (bot TimedOutAsserterDefender) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot TimedOutAsserterDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.AsserterTimeoutMessage:
+	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: TimedOutAsserterDefender: VM state got unsynchronized"}

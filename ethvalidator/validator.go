@@ -164,19 +164,13 @@ func (man *EthValidator) StartListening() error {
 	}
 
 	incomingChan := make(chan valmessage.OutgoingMessage, 1024)
-	outgoingChan := make(chan valmessage.IncomingValidatorMessage, 1024)
 
-	man.Bot.Run(outgoingChan, incomingChan)
+	man.Bot.Run(outChan, incomingChan)
 
 	go func() {
 		for {
 			time.Sleep(200 * time.Millisecond)
 			select {
-			case val := <-outChan:
-				err := man.handleEvent(val, outgoingChan)
-				if err != nil {
-					log.Fatalf("Error handling event: %v", err)
-				}
 			case event := <-incomingChan:
 				if event != nil {
 					err := man.handleSendRequest(event)
@@ -206,58 +200,6 @@ func (man *EthValidator) StartListening() error {
 		}
 	}()
 
-	return nil
-}
-
-func (man *EthValidator) handleEvent(note ethbridge.Notification, outgoingChan chan valmessage.IncomingValidatorMessage) error {
-	switch ev := note.Event.(type) {
-	case ethbridge.VMCreatedEvent:
-		// fmt.Printf("Created vm with state %x\n", Val.VmState)
-	case ethbridge.MessageDeliveredEvent:
-		fmt.Println("VM recieved on-chain message")
-		outgoingChan <- valmessage.IncomingMessageMessage{Msg: ev.Msg, Header: note.Header}
-	case ethbridge.FinalUnanimousAssertEvent:
-		msg := valmessage.FinalUnanimousAssertMessage{
-			UnanHash: ev.UnanHash,
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
-	case ethbridge.ProposedUnanimousAssertEvent:
-		msg := valmessage.ProposedUnanimousAssertMessage{
-			UnanHash:    ev.UnanHash,
-			SequenceNum: ev.SequenceNum,
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
-	case ethbridge.ConfirmedUnanimousAssertEvent:
-		msg := valmessage.ConfirmedUnanimousAssertMessage{
-			SequenceNum: ev.SequenceNum,
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
-	case ethbridge.DisputableAssertionEvent:
-		assertMessage := valmessage.AssertMessage{Precondition: ev.Precondition, Assertion: ev.Assertion, Asserter: ev.Asserter}
-		outgoingChan <- valmessage.BridgeMessage{Message: assertMessage, Header: note.Header}
-	case ethbridge.ConfirmedAssertEvent:
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.ConfirmedAssertMessage{}, Header: note.Header}
-	case ethbridge.InitiateChallengeEvent:
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.InitiateChallengeMessage{Challenger: ev.Challenger}, Header: note.Header}
-	case ethbridge.BisectionEvent:
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.BisectMessage{Assertions: ev.Assertions}, Header: note.Header}
-	case ethbridge.ContinueChallengeEvent:
-		challengeMessage := valmessage.ContinueChallengeMessage{ChallengedAssertion: uint16(ev.ChallengedAssertion)}
-		outgoingChan <- valmessage.BridgeMessage{Message: challengeMessage, Header: note.Header}
-	case ethbridge.AsserterTimeoutEvent:
-		msg := valmessage.AsserterTimeoutMessage{}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
-	case ethbridge.ChallengerTimeoutEvent:
-		msg := valmessage.ChallengerTimeoutMessage{}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
-	case ethbridge.OneStepProofEvent:
-		msg := valmessage.OneStepProofMessage{}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
-	case *types.Header:
-		outgoingChan <- valmessage.TimeUpdateMessage{Header: ev}
-	default:
-		fmt.Println("Unknown event: ", ev)
-	}
 	return nil
 }
 

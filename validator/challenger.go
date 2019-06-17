@@ -17,6 +17,7 @@
 package validator
 
 import (
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"math/rand"
 
 	"github.com/offchainlabs/arb-avm/protocol"
@@ -47,9 +48,9 @@ func (bot WaitingContinuingChallenger) UpdateTime(time uint64) (challengeState, 
 	}
 }
 
-func (bot WaitingContinuingChallenger) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingContinuingChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.BisectMessage:
+	case ethbridge.BisectionEvent:
 		preconditions := protocol.GeneratePreconditions(bot.challengedPrecondition, ev.Assertions)
 		assertionNum, machine := protocol.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions, bot.challengedInbox)
 		if assertionNum == uint16(len(ev.Assertions)) && bot.challengeEverything {
@@ -78,7 +79,7 @@ func (bot WaitingContinuingChallenger) UpdateState(ev valmessage.IncomingMessage
 		} else {
 			return nil, nil, &Error{nil, "ERROR: WaitingContinuingChallenger: Critical bug: All segments in false assertion are valid"}
 		}
-	case valmessage.OneStepProofMessage:
+	case ethbridge.OneStepProofEvent:
 		return nil, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: WaitingContinuingChallenger: VM state got unsynchronized"}
@@ -108,9 +109,9 @@ func (bot ContinuingChallenger) UpdateTime(time uint64) (challengeState, []valme
 	}
 }
 
-func (bot ContinuingChallenger) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot ContinuingChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.ContinueChallengeMessage:
+	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.config.GracePeriod
 		return WaitingContinuingChallenger{
 			bot.validatorConfig,
@@ -133,9 +134,9 @@ func (bot TimedOutAsserterChallenger) UpdateTime(time uint64) (challengeState, [
 	return bot, nil, nil
 }
 
-func (bot TimedOutAsserterChallenger) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot TimedOutAsserterChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.AsserterTimeoutMessage:
+	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: TimedOutAsserterChallenger: VM state got unsynchronized"}
@@ -150,9 +151,9 @@ func (bot TimedOutChallengerChallenger) UpdateTime(time uint64) (challengeState,
 	return bot, nil, nil
 }
 
-func (bot TimedOutChallengerChallenger) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot TimedOutChallengerChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.ChallengerTimeoutMessage:
+	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: TimedOutChallengerChallenger: VM state got unsynchronized"}

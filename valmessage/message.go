@@ -20,8 +20,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arb-avm/protocol"
+
 	"github.com/offchainlabs/arb-avm/value"
 )
 
@@ -48,41 +47,4 @@ func NewVMConfiguration(gracePeriod uint64, escrowRequired *big.Int, escrowCurre
 		MaxExecutionStepCount: maxSteps,
 		Owner:                 &Address{Value: owner.Bytes()},
 	}
-}
-
-type IncomingValidatorMessage interface {
-	IncomingValidatorMessage()
-	GetHeader() *types.Header
-}
-
-type BridgeMessage struct {
-	Message IncomingMessage
-	Header  *types.Header
-}
-
-func (BridgeMessage) IncomingValidatorMessage() {}
-
-func (msg BridgeMessage) GetHeader() *types.Header {
-	return msg.Header
-}
-
-type TimeUpdateMessage struct {
-	Header *types.Header
-}
-
-func (TimeUpdateMessage) IncomingValidatorMessage() {}
-
-func (msg TimeUpdateMessage) GetHeader() *types.Header {
-	return msg.Header
-}
-
-type IncomingMessageMessage struct {
-	Msg    protocol.Message
-	Header *types.Header
-}
-
-func (IncomingMessageMessage) IncomingValidatorMessage() {}
-
-func (msg IncomingMessageMessage) GetHeader() *types.Header {
-	return msg.Header
 }

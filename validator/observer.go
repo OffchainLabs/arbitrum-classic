@@ -18,25 +18,9 @@ package validator
 
 import (
 	"github.com/offchainlabs/arb-avm/protocol"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
-
-// type EventChainObserver struct {
-//	*validatorCore
-//}
-//
-// func (bot EventChainObserver) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
-//	return bot, nil, nil
-//}
-//
-// func (bot EventChainObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
-//	switch ev := ev.(type) {
-//	case valmessage.AssertMessage:
-//
-//	default:
-//		return nil, nil, &Error{nil, fmt.Sprintf("ERROR: EventChainObserver: VM state got unsynchronized with valmessage %T", ev)}
-//	}
-//}
 
 type WaitingChallengeObserver struct {
 	*validatorConfig
@@ -58,9 +42,9 @@ func (bot WaitingChallengeObserver) UpdateTime(time uint64) (challengeState, []v
 	}
 }
 
-func (bot WaitingChallengeObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingChallengeObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.BisectMessage:
+	case ethbridge.BisectionEvent:
 		deadline := time + bot.config.GracePeriod
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
 		return WaitingBisectedObserver{bot.validatorConfig, deadline, preconditions, ev.Assertions}, nil, nil
@@ -89,9 +73,9 @@ func (bot WaitingBisectedObserver) UpdateTime(time uint64) (challengeState, []va
 	}
 }
 
-func (bot WaitingBisectedObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.ContinueChallengeMessage:
+	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.config.GracePeriod
 		return WaitingChallengeObserver{
 			bot.validatorConfig,
@@ -112,9 +96,9 @@ func (bot WaitingChallengerTimeoutObserver) UpdateTime(time uint64) (challengeSt
 	return bot, nil, nil
 }
 
-func (bot WaitingChallengerTimeoutObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingChallengerTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.ChallengerTimeoutMessage:
+	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: WaitingChallengerTimeoutObserver: VM state got unsynchronized"}
@@ -129,9 +113,9 @@ func (bot WaitingAsserterTimeoutObserver) UpdateTime(time uint64) (challengeStat
 	return bot, nil, nil
 }
 
-func (bot WaitingAsserterTimeoutObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingAsserterTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.AsserterTimeoutMessage:
+	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: WaitingAsserterTimeoutObserver: VM state got unsynchronized"}

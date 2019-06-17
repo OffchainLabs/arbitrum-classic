@@ -18,6 +18,7 @@ package validator
 
 import (
 	"fmt"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"math"
 	"math/big"
 
@@ -34,7 +35,7 @@ import (
 
 type validatorState interface {
 	UpdateTime(uint64) (validatorState, []valmessage.OutgoingMessage, error)
-	UpdateState(valmessage.IncomingMessage, uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error)
+	UpdateState(ethbridge.Event, uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error)
 
 	SendMessageToVM(msg protocol.Message)
 	GetCore() *validatorCore
@@ -43,7 +44,7 @@ type validatorState interface {
 
 type challengeState interface {
 	UpdateTime(uint64) (challengeState, []valmessage.OutgoingMessage, error)
-	UpdateState(valmessage.IncomingMessage, uint64) (challengeState, []valmessage.OutgoingMessage, error)
+	UpdateState(ethbridge.Event, uint64) (challengeState, []valmessage.OutgoingMessage, error)
 }
 
 type Error struct {
@@ -187,20 +188,20 @@ func (validator *Validator) CloseUnanimousAssertionRequest() <-chan bool {
 	return resultChan
 }
 
-func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMessage, sendChan chan<- valmessage.OutgoingMessage) {
+func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan chan<- valmessage.OutgoingMessage) {
 	go func() {
 		defer fmt.Printf("%v: Exiting\n", validator.Name)
 		defer close(sendChan)
 		for {
 			select {
-			case event, ok := <-recvChan:
+			case notification, ok := <-recvChan:
 				// fmt.Printf("Got valmessage %T: %v\n", event, event)
 				if !ok {
 					fmt.Printf("%v: Error in recvChan\n", validator.Name)
 					return
 				}
 
-				newHeader := event.GetHeader()
+				newHeader := notification.Header
 				if validator.latestHeader == nil || newHeader.Number.Uint64() >= validator.latestHeader.Number.Uint64() && newHeader.Hash() != validator.latestHeader.Hash() {
 					validator.latestHeader = newHeader
 					validator.timeUpdate(sendChan)
@@ -214,12 +215,12 @@ func (validator *Validator) Run(recvChan <-chan valmessage.IncomingValidatorMess
 					}
 				}
 
-				switch ev := event.(type) {
-				case valmessage.TimeUpdateMessage:
+				switch ev := notification.Event.(type) {
+				case ethbridge.NewTimeEvent:
 					break
-				case valmessage.BridgeMessage:
-					validator.eventUpdate(ev, sendChan)
-				case valmessage.IncomingMessageMessage:
+				case ethbridge.VMEvent:
+					validator.eventUpdate(ev, notification.Header, sendChan)
+				case ethbridge.MessageDeliveredEvent:
 					validator.bot.SendMessageToVM(ev.Msg)
 
 					// Invalidate assertions that included pending messages
@@ -502,13 +503,13 @@ func (validator *Validator) timeUpdate(sendChan chan<- valmessage.OutgoingMessag
 	validator.bot = newBot
 }
 
-func (validator *Validator) eventUpdate(ev valmessage.BridgeMessage, sendChan chan<- valmessage.OutgoingMessage) {
-	if ev.Message.GetIncomingMessageType() == valmessage.ChallengeMessage {
+func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Header, sendChan chan<- valmessage.OutgoingMessage) {
+	if ev.GetIncomingMessageType() == ethbridge.ChallengeMessage {
 		if validator.challengeBot == nil {
 			panic("challengeBot can't be nil if challenge message is recieved")
 		}
 
-		newBot, msgs, err := validator.challengeBot.UpdateState(ev.Message, ev.GetHeader().Number.Uint64())
+		newBot, msgs, err := validator.challengeBot.UpdateState(ev, header.Number.Uint64())
 		if err != nil {
 			fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, newBot)
 			return
@@ -518,7 +519,7 @@ func (validator *Validator) eventUpdate(ev valmessage.BridgeMessage, sendChan ch
 		}
 		validator.challengeBot = newBot
 	} else {
-		newBot, challengeBot, msgs, err := validator.bot.UpdateState(ev.Message, ev.GetHeader().Number.Uint64())
+		newBot, challengeBot, msgs, err := validator.bot.UpdateState(ev, header.Number.Uint64())
 		if err != nil {
 			fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, validator.bot)
 			return

@@ -19,6 +19,7 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
 
@@ -320,16 +321,16 @@ func (bot WaitingObserver) UpdateTime(time uint64) (validatorState, []valmessage
 	return bot, nil, nil
 }
 
-func (bot WaitingObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingObserver) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.FinalUnanimousAssertMessage:
+	case ethbridge.FinalUnanimousAssertEvent:
 		if bot.sequenceNum != math.MaxUint64 {
 			return nil, nil, nil, errors.New("waiting observer saw signed final unanimous proposal that it doesn't remember")
 		}
 		core := bot.GetCore()
 		core.DeliverMessagesToVM()
 		return NewWaitingObserver(bot.validatorConfig, core), nil, nil, nil
-	case valmessage.ProposedUnanimousAssertMessage:
+	case ethbridge.ProposedUnanimousAssertEvent:
 		if bot.acceptedMachine == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, nil, errors.New("waiting observer saw signed unanimous proposal that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
@@ -344,7 +345,7 @@ func (bot WaitingObserver) UpdateState(ev valmessage.IncomingMessage, time uint6
 				nil,
 			}, nil, nil, nil
 		}
-	case valmessage.AssertMessage:
+	case ethbridge.DisputableAssertionEvent:
 		if bot.acceptedMachine != nil {
 			newBot, msgs, err := bot.CloseUnanimous(nil)
 			return newBot, nil, msgs, err
@@ -423,9 +424,9 @@ func (bot WatchingAssertionObserver) UpdateTime(time uint64) (validatorState, []
 	}
 }
 
-func (bot WatchingAssertionObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WatchingAssertionObserver) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.InitiateChallengeMessage:
+	case ethbridge.InitiateChallengeEvent:
 		deadline := time + bot.config.GracePeriod
 		var challenge challengeState = nil
 		if ev.Challenger == bot.address {
@@ -462,9 +463,9 @@ func (bot AttemptingAssertDefender) UpdateTime(time uint64) (validatorState, []v
 	return bot, nil, nil
 }
 
-func (bot AttemptingAssertDefender) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot AttemptingAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
-	case valmessage.AssertMessage:
+	case ethbridge.DisputableAssertionEvent:
 		if ev.Asserter == bot.address {
 			deadline := time + bot.config.GracePeriod
 			return WaitingAssertDefender{
@@ -516,9 +517,9 @@ func (bot WaitingAssertDefender) UpdateTime(time uint64) (validatorState, []valm
 	}
 }
 
-func (bot WaitingAssertDefender) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot WaitingAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.InitiateChallengeMessage:
+	case ethbridge.InitiateChallengeEvent:
 		bot.request.NotifyInvalid()
 		ct, msgs, err := NewDefendingValidator(bot.validatorConfig, bot.request.Defender, time)
 		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), ct, msgs, err
@@ -538,9 +539,9 @@ func (bot FinalizingAssertObserver) UpdateTime(time uint64) (validatorState, []v
 	return bot, nil, nil
 }
 
-func (bot FinalizingAssertObserver) UpdateState(ev valmessage.IncomingMessage, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot FinalizingAssertObserver) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
-	case valmessage.ConfirmedAssertMessage:
+	case ethbridge.ConfirmedAssertEvent:
 		if bot.ResultChan != nil {
 			bot.ResultChan <- true
 		}

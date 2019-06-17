@@ -32,8 +32,8 @@ import (
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 
-	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/offchainlabs/arb-validator/challengeRPC"
+	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/offchainlabs/arb-validator/verifierRPC"
 )
 
