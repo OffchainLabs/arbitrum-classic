@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math/big"
 	"net/http"
@@ -38,7 +39,7 @@ func NewServer(
 	machine *vm.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
-	connectionInfo ethvalidator.ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) *Server {
 	// Commit all pending transactions in the simulator and print the names again

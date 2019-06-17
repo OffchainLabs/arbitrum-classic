@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
 	"net/http"
@@ -50,12 +51,12 @@ type ValidatorLeaderRequest interface {
 
 type LabeledFollowerResponse struct {
 	address  common.Address
-	response *FollowerResponse
+	response *valmessage.FollowerResponse
 }
 
 type ClientManager struct {
 	clients         map[*Client]bool
-	broadcast       chan *ValidatorRequest
+	broadcast       chan *valmessage.ValidatorRequest
 	register        chan *Client
 	unregister      chan *Client
 	waitRequestChan chan chan bool
@@ -71,7 +72,7 @@ type ClientManager struct {
 func NewClientManager(key *ecdsa.PrivateKey, vmId [32]byte, validators map[common.Address]validatorInfo) *ClientManager {
 	return &ClientManager{
 		clients:         make(map[*Client]bool),
-		broadcast:       make(chan *ValidatorRequest, 10),
+		broadcast:       make(chan *valmessage.ValidatorRequest, 10),
 		register:        make(chan *Client, 10),
 		unregister:      make(chan *Client, 10),
 		waitRequestChan: make(chan chan bool, 128),
@@ -155,7 +156,7 @@ func (m *ClientManager) RunServer() error {
 }
 
 type GatherSignatureRequest struct {
-	request      *ValidatorRequest
+	request      *valmessage.ValidatorRequest
 	responseChan chan LabeledFollowerResponse
 	requestID    [32]byte
 }
@@ -179,7 +180,7 @@ func (m *ClientManager) Run() {
 			m.clients[client] = true
 			go func() {
 				for message := range client.FromClient {
-					response := new(FollowerResponse)
+					response := new(valmessage.FollowerResponse)
 					err := proto.Unmarshal(message, response)
 					if err != nil {
 						log.Println("Recieved bad message from follower")
@@ -217,7 +218,7 @@ func (m *ClientManager) Run() {
 }
 
 func (m *ClientManager) gatherSignatures(
-	request *ValidatorRequest,
+	request *valmessage.ValidatorRequest,
 	requestID [32]byte,
 ) []LabeledFollowerResponse {
 	responseChan := make(chan LabeledFollowerResponse, len(m.validators)-1)
@@ -330,7 +331,7 @@ func NewCoordinator(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
-	connectionInfo ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) (*ValidatorCoordinator, error) {
 	var vmId [32]byte
@@ -473,15 +474,15 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 	}
 
 	notifyFollowers := func(allSigned bool) {
-		m.cm.broadcast <- &ValidatorRequest{
-			Request: &ValidatorRequest_CreateNotification{&CreateVMFinalizedValidatorNotification{
+		m.cm.broadcast <- &valmessage.ValidatorRequest{
+			Request: &valmessage.ValidatorRequest_CreateNotification{&valmessage.CreateVMFinalizedValidatorNotification{
 				Approved: allSigned,
 			}},
 		}
 	}
 	stateDataChan := m.Val.Bot.RequestVMState()
 	stateData := <-stateDataChan
-	createData := &CreateVMValidatorRequest{
+	createData := &valmessage.CreateVMValidatorRequest{
 		Config:              &stateData.Config,
 		VmId:                value.NewHashBuf(m.Val.VmId),
 		VmState:             value.NewHashBuf(stateData.MachineState),
@@ -490,8 +491,8 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 	createHash := CreateVMHash(createData)
 
 	responses := m.cm.gatherSignatures(
-		&ValidatorRequest{
-			Request: &ValidatorRequest_Create{createData},
+		&valmessage.ValidatorRequest{
+			Request: &valmessage.ValidatorRequest_Create{createData},
 		},
 		createHash,
 	)
@@ -507,7 +508,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 		return false, err
 	}
 	for _, response := range responses {
-		r := response.response.Response.(*FollowerResponse_Create).Create
+		r := response.response.Response.(*valmessage.FollowerResponse_Create).Create
 		if !r.Accepted {
 			return false, errors.New("some Validators refused to sign")
 		}
@@ -577,24 +578,24 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		return err
 	}
 
-	requestMessages := make([]*SignedMessage, 0, len(unanRequest.NewMessages))
+	requestMessages := make([]*valmessage.SignedMessage, 0, len(unanRequest.NewMessages))
 	for i, msg := range unanRequest.NewMessages {
-		requestMessages = append(requestMessages, &SignedMessage{
+		requestMessages = append(requestMessages, &valmessage.SignedMessage{
 			Message:   protocol.NewMessageBuf(msg),
 			Signature: queuedMessages[i].Signature,
 		})
 	}
 	hashId := unanRequest.Hash()
 
-	notifyFollowers := func(msg *UnanimousAssertionValidatorNotification) {
-		m.cm.broadcast <- &ValidatorRequest{
+	notifyFollowers := func(msg *valmessage.UnanimousAssertionValidatorNotification) {
+		m.cm.broadcast <- &valmessage.ValidatorRequest{
 			RequestId: value.NewHashBuf(hashId),
-			Request:   &ValidatorRequest_UnanimousNotification{msg},
+			Request:   &valmessage.ValidatorRequest_UnanimousNotification{msg},
 		}
 	}
 
 	go func() {
-		request := &UnanimousAssertionValidatorRequest{
+		request := &valmessage.UnanimousAssertionValidatorRequest{
 			BeforeHash:     value.NewHashBuf(unanRequest.BeforeHash),
 			BeforeInbox:    value.NewHashBuf(unanRequest.BeforeInbox),
 			SequenceNum:    unanRequest.SequenceNum,
@@ -602,9 +603,9 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 			SignedMessages: requestMessages,
 		}
 		responsesChan <- m.cm.gatherSignatures(
-			&ValidatorRequest{
+			&valmessage.ValidatorRequest{
 				RequestId: value.NewHashBuf(hashId),
-				Request: &ValidatorRequest_Unanimous{
+				Request: &valmessage.ValidatorRequest_Unanimous{
 					request,
 				},
 			},
@@ -617,7 +618,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	case unanUpdate = <-resultsChan:
 		break
 	case err := <-unanErrChan:
-		notifyFollowers(&UnanimousAssertionValidatorNotification{
+		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
 		return err
@@ -637,7 +638,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	)
 	if err != nil {
 		log.Println("Coordinator failed to hash unanimous assertion")
-		notifyFollowers(&UnanimousAssertionValidatorNotification{
+		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
 		return err
@@ -645,7 +646,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	sig, err := m.Val.Sign(unanHash)
 	if err != nil {
 		log.Println("Coordinator failed to sign unanimous assertion")
-		notifyFollowers(&UnanimousAssertionValidatorNotification{
+		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
 		return err
@@ -654,30 +655,30 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	responses := <-responsesChan
 	if len(responses) != m.Val.ValidatorCount()-1 {
 		log.Println("Coordinator failed to collect unanimous assertion sigs")
-		notifyFollowers(&UnanimousAssertionValidatorNotification{
+		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
 		return errors.New("some Validators didn't respond")
 	}
 
 	signatures := make([]valmessage.Signature, m.Val.ValidatorCount())
-	rawSignatures := make([]*Signature, m.Val.ValidatorCount())
+	rawSignatures := make([]*valmessage.SignatureBuf, m.Val.ValidatorCount())
 	signatures[m.Val.Validators[m.Val.Address()].indexNum] = sig
-	rawSignatures[m.Val.Validators[m.Val.Address()].indexNum] = &Signature{
+	rawSignatures[m.Val.Validators[m.Val.Address()].indexNum] = &valmessage.SignatureBuf{
 		R: value.NewHashBuf(sig.R),
 		S: value.NewHashBuf(sig.S),
 		V: uint32(sig.V),
 	}
 	for _, response := range responses {
-		r := response.response.Response.(*FollowerResponse_Unanimous).Unanimous
+		r := response.response.Response.(*valmessage.FollowerResponse_Unanimous).Unanimous
 		if !r.Accepted {
-			notifyFollowers(&UnanimousAssertionValidatorNotification{
+			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 				Accepted: false,
 			})
 			return errors.New("some Validators refused to sign")
 		}
 		if value.NewHashFromBuf(r.AssertionHash) != unanHash {
-			notifyFollowers(&UnanimousAssertionValidatorNotification{
+			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 				Accepted: false,
 			})
 			return errors.New("some Validators signed the wrong assertion")
@@ -692,7 +693,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 
 	elapsed := time.Since(start)
 	log.Printf("Coordinator succeeded signing unanimous assertion in %s\n", elapsed)
-	notifyFollowers(&UnanimousAssertionValidatorNotification{
+	notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 		Accepted:   true,
 		Signatures: rawSignatures,
 	})

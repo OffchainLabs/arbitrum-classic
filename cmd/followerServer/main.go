@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/ecdsa"
 	jsonenc "encoding/json"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -47,7 +48,7 @@ func NewFollowerServer(
 	machine *vm.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
-	connectionInfo ethvalidator.ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
 ) *FollowerServer {
@@ -147,7 +148,7 @@ func main() {
 	if err := jsonFile.Close(); err != nil {
 		log.Fatalln(err)
 	}
-	var connectionInfo ethvalidator.ArbAddresses
+	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		log.Fatalln(err)
 	}

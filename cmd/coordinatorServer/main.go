@@ -19,6 +19,7 @@ package main
 import (
 	jsonenc "encoding/json"
 	"github.com/offchainlabs/arb-validator/coordinator"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,8 +35,6 @@ import (
 	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arb-avm/loader"
-
-	"github.com/offchainlabs/arb-validator/ethvalidator"
 )
 
 
@@ -119,7 +118,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var connectionInfo ethvalidator.ArbAddresses
+	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		log.Fatalln(err)
 	}

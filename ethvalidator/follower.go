@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/tls"
 	"errors"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
 	"time"
@@ -69,7 +70,7 @@ func NewValidatorFollower(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
-	connectionInfo ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
 ) (*ValidatorFollower, error) {
@@ -134,7 +135,7 @@ func NewValidatorFollower(
 }
 
 func (m *ValidatorFollower) HandleUnanimousRequest(
-	request *UnanimousAssertionValidatorRequest,
+	request *valmessage.UnanimousAssertionValidatorRequest,
 	requestId [32]byte,
 ) error {
 	unanRequest := valmessage.UnanimousRequestData{
@@ -215,16 +216,16 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		return sig, unanHash, nil
 	}()
 
-	var msg *UnanimousAssertionFollowerResponse
+	var msg *valmessage.UnanimousAssertionFollowerResponse
 	if err != nil {
 		log.Println(err)
-		msg = &UnanimousAssertionFollowerResponse{
+		msg = &valmessage.UnanimousAssertionFollowerResponse{
 			Accepted: false,
 		}
 	} else {
-		msg = &UnanimousAssertionFollowerResponse{
+		msg = &valmessage.UnanimousAssertionFollowerResponse{
 			Accepted: true,
-			Signature: &Signature{
+			Signature: &valmessage.SignatureBuf{
 				R: value.NewHashBuf(sig.R),
 				S: value.NewHashBuf(sig.S),
 				V: uint32(sig.V),
@@ -232,9 +233,9 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			AssertionHash: value.NewHashBuf(unanHash),
 		}
 	}
-	message := &FollowerResponse{
+	message := &valmessage.FollowerResponse{
 		RequestId: value.NewHashBuf(unanRequest.Hash()),
-		Response:  &FollowerResponse_Unanimous{msg},
+		Response:  &valmessage.FollowerResponse_Unanimous{Unanimous: msg},
 	}
 	raw, err := proto.Marshal(message)
 	if err != nil {
@@ -244,26 +245,26 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 	return nil
 }
 
-func (m *ValidatorFollower) HandleCreateVM(request *CreateVMValidatorRequest) {
+func (m *ValidatorFollower) HandleCreateVM(request *valmessage.CreateVMValidatorRequest) {
 	createHash := CreateVMHash(request)
 	sig, err := m.Sign(createHash)
-	var response *FollowerResponse
+	var response *valmessage.FollowerResponse
 	if err != nil {
 		log.Printf("Follower failed to sign1: %v", err)
-		response = &FollowerResponse{
-			Response: &FollowerResponse_Create{
-				&CreateVMFollowerResponse{
+		response = &valmessage.FollowerResponse{
+			Response: &valmessage.FollowerResponse_Create{
+				Create: &valmessage.CreateVMFollowerResponse{
 					Accepted: false,
 				},
 			},
 			RequestId: value.NewHashBuf(createHash),
 		}
 	} else {
-		response = &FollowerResponse{
-			Response: &FollowerResponse_Create{
-				&CreateVMFollowerResponse{
+		response = &valmessage.FollowerResponse{
+			Response: &valmessage.FollowerResponse_Create{
+				Create: &valmessage.CreateVMFollowerResponse{
 					Accepted: true,
-					Signature: &Signature{
+					Signature: &valmessage.SignatureBuf{
 						R: value.NewHashBuf(sig.R),
 						S: value.NewHashBuf(sig.S),
 						V: uint32(sig.V),
@@ -293,19 +294,19 @@ func (m *ValidatorFollower) Run() error {
 			if done {
 				break
 			}
-			req := new(ValidatorRequest)
+			req := new(valmessage.ValidatorRequest)
 			err := proto.Unmarshal(message, req)
 			if err != nil {
 				log.Printf("Validator recieved malformed message")
 				continue
 			}
 			switch request := req.Request.(type) {
-			case *ValidatorRequest_Unanimous:
+			case *valmessage.ValidatorRequest_Unanimous:
 				err := m.HandleUnanimousRequest(request.Unanimous, value.NewHashFromBuf(req.RequestId))
 				if err != nil {
 					log.Printf("Follower error while trying to handle unanimous assertion request from coordinator")
 				}
-			case *ValidatorRequest_UnanimousNotification:
+			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
 				if request.UnanimousNotification.Accepted {
 					sigs := make([]valmessage.Signature, len(request.UnanimousNotification.Signatures))
@@ -321,9 +322,9 @@ func (m *ValidatorFollower) Run() error {
 						sigs,
 					)
 				}
-			case *ValidatorRequest_Create:
+			case *valmessage.ValidatorRequest_Create:
 				m.HandleCreateVM(request.Create)
-			case *ValidatorRequest_CreateNotification:
+			case *valmessage.ValidatorRequest_CreateNotification:
 			}
 		}
 	}()

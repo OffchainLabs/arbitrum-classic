@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethvalidator
+package ethbridge
 
 import (
 	"bytes"
@@ -23,7 +23,6 @@ import (
 	"math/big"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-validator/valmessage"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,11 +32,12 @@ import (
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 
+	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/offchainlabs/arb-validator/challengeRPC"
 	"github.com/offchainlabs/arb-validator/verifierRPC"
 )
 
-type EthConnection struct {
+type Bridge struct {
 	client         *ethclient.Client
 	Tracker        *verifierRPC.VMTracker
 	Challenge      *challengeRPC.ChallengeManager
@@ -52,7 +52,7 @@ type ArbAddresses struct {
 	BalanceTrackerAddress string `json:"balanceTracker"`
 }
 
-func NewEthConnection(serverAddress string, a ArbAddresses) (*EthConnection, error) {
+func New(serverAddress string, a ArbAddresses) (*Bridge, error) {
 	client, err := ethclient.Dial(serverAddress)
 	if err != nil {
 		return nil, err
@@ -76,11 +76,11 @@ func NewEthConnection(serverAddress string, a ArbAddresses) (*EthConnection, err
 		return nil, err
 	}
 
-	return &EthConnection{client, trackerContract, challangeManagerContract, onestepProofContract, balanceTrackerContract}, nil
+	return &Bridge{client, trackerContract, challangeManagerContract, onestepProofContract, balanceTrackerContract}, nil
 }
 
-func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan error, error) {
-	outChan := make(chan interface{}, 1024)
+func (con *Bridge) CreateListeners(vmId [32]byte) (chan Notification, chan error, error) {
+	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
 
 	start := uint64(0)
@@ -167,24 +167,6 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 		return nil, nil, err
 	}
 
-	// dispAssDebugChan := make(chan *verifierRPC.VMTrackerDisputableAssertionDebug)
-	// dispAssDebugSub, err := con.Tracker.WatchDisputableAssertionDebug(watch, dispAssDebugChan, [][32]byte{VmId})
-	// if err != nil {
-	//	return nil, nil, err
-	//}
-
-	// unanAssDebugChan := make(chan *verifierRPC.VMTrackerUnanimousAssertionDebug)
-	// unanAssDebugSub, err := con.Tracker.WatchUnanimousAssertionDebug(watch, unanAssDebugChan, [][32]byte{VmId})
-	// if err != nil {
-	//	return nil, nil, err
-	//}
-
-	challengeOneStepDebugChan := make(chan *challengeRPC.ChallengeManagerOneStepProofDebug)
-	challengeOneStepDebugSub, err := con.Challenge.WatchOneStepProofDebug(watch, challengeOneStepDebugChan, [][32]byte{vmId})
-	if err != nil {
-		return nil, nil, err
-	}
-
 	go func() {
 		defer close(outChan)
 		defer close(errChan)
@@ -200,87 +182,284 @@ func (con *EthConnection) CreateListeners(vmId [32]byte) (chan interface{}, chan
 		defer challengeInitiatedSub.Unsubscribe()
 		defer challengeContinuedSub.Unsubscribe()
 		defer oneStepProofSub.Unsubscribe()
-		defer challengeOneStepDebugSub.Unsubscribe()
-		RunLoop:
+
 		for {
 			select {
 			case header := <-headers:
-				outChan <- header
+				outChan <- Notification{
+					Header: header,
+					Event:  NewTimeEvent{},
+				}
 			case val := <-messageDeliveredChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				rd := bytes.NewReader(val.Data)
+				msgData, err := value.UnmarshalValue(rd)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				messageHash := solsha3.SoliditySHA3(
+					solsha3.Bytes32(val.VmId),
+					solsha3.Bytes32(msgData.Hash()),
+					solsha3.Uint256(val.Value),
+					val.TokenType[:],
+				)
+				msgHashInt := new(big.Int).SetBytes(messageHash[:])
+
+				msgVal, _ := value.NewTupleFromSlice([]value.Value{
+					msgData,
+					value.NewIntValue(header.Time),
+					value.NewIntValue(header.Number),
+					value.NewIntValue(msgHashInt),
+				})
+
+				msg := protocol.NewMessage(msgVal, val.TokenType, val.Value, val.Destination)
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event: MessageDeliveredEvent{
+						Msg: msg,
+					},
+				}
 			case val := <-vmCreatedChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  VMCreatedEvent{
+						GracePeriod:         val.GracePeriod,
+						EscrowRequired:      val.EscrowRequired,
+						EscrowCurrency:      val.EscrowCurrency,
+						MaxExecutionSteps:   val.MaxExecutionSteps,
+						VmId:                val.VmId,
+						VmState:             val.VmState,
+						ChallengeManagerNum: val.ChallengeManagerNum,
+						Owner:               val.Owner,
+						Validators:          val.Validators,
+					},
+				}
 			case val := <-unanAssChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  FinalUnanimousAssertEvent{
+						UnanHash: val.UnanHash,
+					},
+				}
 			case val := <-unanPropChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  ProposedUnanimousAssertEvent{
+						UnanHash:    val.UnanHash,
+						SequenceNum: val.SequenceNum,
+					},
+				}
 			case val := <-unanConfChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  ConfirmedUnanimousAssertEvent{
+						SequenceNum: val.SequenceNum,
+					},
+				}
 			case val := <-dispAssChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				precondition, assertion := TranslateDisputableAssertionEvent(val)
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  DisputableAssertionEvent{
+						Precondition: precondition,
+						Assertion:    assertion,
+						Asserter:     val.Asserter,
+					},
+				}
 			case val := <-confAssChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  ConfirmedAssertEvent{},
+				}
 			case val := <-challengeInitiatedChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  InitiateChallengeEvent{
+						Challenger: val.Challenger,
+					},
+				}
 			case val := <-challengeBisectedChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  BisectionEvent{
+						Assertions: TranslateBisectionEvent(val),
+					},
+				}
 			case val := <-challengeTimedOutChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				if val.ChallengerWrong {
+					outChan <- Notification{
+						Header: header,
+						VmID:   val.VmId,
+						Event:  AsserterTimeoutEvent{},
+					}
+				} else {
+					outChan <- Notification{
+						Header: header,
+						VmID:   val.VmId,
+						Event:  ChallengerTimeoutEvent{},
+					}
+				}
 			case val := <-challengeContinuedChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  ContinueChallengeEvent{
+						ChallengedAssertion: uint16(val.AssertionIndex.Uint64()),
+					},
+				}
 			case val := <-oneStepProofChan:
-				outChan <- val
-			case val := <-challengeOneStepDebugChan:
-				outChan <- val
+				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VmID:   val.VmId,
+					Event:  OneStepProofEvent{},
+				}
 			case err := <-headersSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-messageDeliveredSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-vmCreatedSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-unanAssSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-unanPropSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-unanConfSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-dispAssSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-confAssSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-challengeInitiatedSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-challengeBisectedSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-challengeContinuedSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-challengeTimedOutSub.Err():
 				errChan <- err
-				break RunLoop
+				return
 			case err := <-oneStepProofSub.Err():
 				errChan <- err
-				break RunLoop
-			case err := <-challengeOneStepDebugSub.Err():
-				errChan <- err
-				break RunLoop
+				return
 			}
 		}
 	}()
 	return outChan, errChan, nil
 }
 
-func (con *EthConnection) SendMessage(
+func (con *Bridge) PendingNonceAt(account common.Address) (uint64, error) {
+	return con.client.PendingNonceAt(context.Background(), account)
+}
+
+func (con *Bridge) HeaderByHash(hash common.Hash) (*types.Header, error) {
+	return con.client.HeaderByHash(context.Background(), hash)
+}
+
+func (con *Bridge) AdvanceBlockchain(auth *bind.TransactOpts, blockCount int) error {
+	for i := 0; i < blockCount; i++ {
+		val := big.NewInt(100000000) // in wei (1 eth)
+		tx := types.NewTransaction(auth.Nonce.Uint64(), auth.From, val, auth.GasLimit, auth.GasPrice, nil)
+		chainID, err := con.client.NetworkID(context.Background())
+		if err != nil {
+			return err
+		}
+
+		signedTx, err := auth.Signer(types.NewEIP155Signer(chainID), auth.From, tx)
+		if err != nil {
+			return err
+		}
+		err = con.client.SendTransaction(context.Background(), signedTx)
+		if err != nil {
+			return err
+		}
+		auth.Nonce.Add(auth.Nonce, big.NewInt(1))
+	}
+	return nil
+}
+
+func (con *Bridge) SendMessage(
 	auth *bind.TransactOpts,
 	msg protocol.Message,
 ) (*types.Transaction, error) {
@@ -298,7 +477,7 @@ func (con *EthConnection) SendMessage(
 	)
 }
 
-func (con *EthConnection) SendEthMessage(
+func (con *Bridge) SendEthMessage(
 	auth *bind.TransactOpts,
 	data value.Value,
 	destination [32]byte,
@@ -320,9 +499,9 @@ func (con *EthConnection) SendEthMessage(
 	)
 }
 
-func (con *EthConnection) CreateVM(
+func (con *Bridge) CreateVM(
 	auth *bind.TransactOpts,
-	data *CreateVMValidatorRequest,
+	data *valmessage.CreateVMValidatorRequest,
 	messageHash [32]byte,
 	signatures []valmessage.Signature,
 ) (*types.Transaction, error) {
@@ -353,7 +532,7 @@ func (con *EthConnection) CreateVM(
 	)
 }
 
-func (con *EthConnection) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest [32]byte) (*types.Transaction, error) {
+func (con *Bridge) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest [32]byte) (*types.Transaction, error) {
 	return con.BalanceTracker.DepositEth(
 		&bind.TransactOpts{
 			From:     auth.From,
@@ -365,7 +544,7 @@ func (con *EthConnection) DepositFunds(auth *bind.TransactOpts, amount *big.Int,
 	)
 }
 
-func (con *EthConnection) UnanimousAssert(
+func (con *Bridge) UnanimousAssert(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	newInboxHash [32]byte,
@@ -411,7 +590,7 @@ func (con *EthConnection) UnanimousAssert(
 	)
 }
 
-func (con *EthConnection) ProposeUnanimousAssert(
+func (con *Bridge) ProposeUnanimousAssert(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	newInboxHash [32]byte,
@@ -447,7 +626,7 @@ func (con *EthConnection) ProposeUnanimousAssert(
 		solsha3.Bytes32(newInboxHash),
 		solsha3.Bytes32(assertion.AfterHash),
 		messageData.Bytes(),
-		bytes32ArrayEncoded(destinations),
+		value.Bytes32ArrayEncoded(destinations),
 	))
 
 	return con.Tracker.ProposeUnanimousAssert(
@@ -463,7 +642,7 @@ func (con *EthConnection) ProposeUnanimousAssert(
 	)
 }
 
-func (con *EthConnection) ConfirmUnanimousAsserted(
+func (con *Bridge) ConfirmUnanimousAsserted(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	newInboxHash [32]byte,
@@ -502,7 +681,7 @@ func (con *EthConnection) ConfirmUnanimousAsserted(
 	return tx, nil
 }
 
-func (con *EthConnection) DisputableAssert(
+func (con *Bridge) DisputableAssert(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	precondition *protocol.Precondition,
@@ -537,7 +716,7 @@ func (con *EthConnection) DisputableAssert(
 	)
 }
 
-func (con *EthConnection) ConfirmAsserted(
+func (con *Bridge) ConfirmAsserted(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	precondition *protocol.Precondition,
@@ -576,7 +755,7 @@ func (con *EthConnection) ConfirmAsserted(
 	return tx, nil
 }
 
-func (con *EthConnection) InitiateChallenge(
+func (con *Bridge) InitiateChallenge(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	precondition *protocol.Precondition,
@@ -594,7 +773,7 @@ func (con *EthConnection) InitiateChallenge(
 	)
 }
 
-func (con *EthConnection) BisectChallenge(
+func (con *Bridge) BisectChallenge(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	deadline uint64,
@@ -638,7 +817,7 @@ func (con *EthConnection) BisectChallenge(
 	)
 }
 
-func (con *EthConnection) ContinueChallenge(
+func (con *Bridge) ContinueChallenge(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	assertionToChallenge *big.Int,
@@ -658,7 +837,7 @@ func (con *EthConnection) ContinueChallenge(
 	)
 }
 
-func (con *EthConnection) OneStepProof(
+func (con *Bridge) OneStepProof(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	precondition *protocol.Precondition,
@@ -686,7 +865,7 @@ func (con *EthConnection) OneStepProof(
 	)
 }
 
-func (con *EthConnection) AsserterTimedOutChallenge(
+func (con *Bridge) AsserterTimedOutChallenge(
 	auth *bind.TransactOpts,
 	vmId [32]byte,
 	bisectionHash [32]byte,

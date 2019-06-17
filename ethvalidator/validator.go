@@ -18,31 +18,28 @@ package ethvalidator
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+
 	"log"
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arb-validator/challengeRPC"
-	"github.com/offchainlabs/arb-validator/verifierRPC"
-
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
 
+	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/validator"
 )
 
@@ -67,10 +64,10 @@ type EthValidator struct {
 
 	// Not in thread, but internal only
 	serverAddress string
-	arbAddresses  ArbAddresses
+	arbAddresses  ethbridge.ArbAddresses
 
 	// private thread only
-	con  *EthConnection
+	con  *ethbridge.Bridge
 	auth *bind.TransactOpts
 }
 
@@ -100,12 +97,12 @@ func NewEthValidator(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
-	connectionInfo ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) (*EthValidator, error) {
 	auth := bind.NewKeyedTransactor(key)
 
-	con, err := NewEthConnection(ethURL, connectionInfo)
+	con, err := ethbridge.New(ethURL, connectionInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +110,7 @@ func NewEthValidator(
 	auth.GasLimit = uint64(0) // in units
 	auth.GasPrice = big.NewInt(10)
 
-	nonce, err := con.client.PendingNonceAt(context.Background(), auth.From)
+	nonce, err := con.PendingNonceAt(auth.From)
 	if err != nil {
 		return nil, err
 	}
@@ -191,11 +188,11 @@ func (man *EthValidator) StartListening() error {
 				// Ignore error and try to reset connection
 				// log.Printf("Validator recieved error: %v", err)
 				// fmt.Println("Resetting channels")
-				con, err := NewEthConnection(man.serverAddress, man.arbAddresses)
+				con, err := ethbridge.New(man.serverAddress, man.arbAddresses)
 				if err != nil {
 					panic(err)
 				}
-				nonce, err := con.client.PendingNonceAt(context.Background(), man.auth.From)
+				nonce, err := con.PendingNonceAt(man.auth.From)
 				if err != nil {
 					panic(err)
 				}
@@ -212,127 +209,50 @@ func (man *EthValidator) StartListening() error {
 	return nil
 }
 
-func (man *EthValidator) handleEvent(ev interface{}, outgoingChan chan valmessage.IncomingValidatorMessage) error {
-	switch ev := ev.(type) {
-	case *verifierRPC.VMTrackerVMCreated:
+func (man *EthValidator) handleEvent(note ethbridge.Notification, outgoingChan chan valmessage.IncomingValidatorMessage) error {
+	switch ev := note.Event.(type) {
+	case ethbridge.VMCreatedEvent:
 		// fmt.Printf("Created vm with state %x\n", Val.VmState)
-	case *verifierRPC.VMTrackerMessageDelivered:
+	case ethbridge.MessageDeliveredEvent:
 		fmt.Println("VM recieved on-chain message")
-		rd := bytes.NewReader(ev.Data)
-		msgData, err := value.UnmarshalValue(rd)
-		if err != nil {
-			return err
-		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-
-		messageHash := solsha3.SoliditySHA3(
-			solsha3.Bytes32(ev.VmId),
-			solsha3.Bytes32(msgData.Hash()),
-			solsha3.Uint256(ev.Value),
-			ev.TokenType[:],
-		)
-		msgHashInt := new(big.Int).SetBytes(messageHash[:])
-
-		val, _ := value.NewTupleFromSlice([]value.Value{
-			msgData,
-			value.NewIntValue(header.Time),
-			value.NewIntValue(header.Number),
-			value.NewIntValue(msgHashInt),
-		})
-
-		msg := protocol.NewMessage(val, ev.TokenType, ev.Value, ev.Destination)
-		outgoingChan <- valmessage.IncomingMessageMessage{Msg: msg, Header: header}
-	case *verifierRPC.VMTrackerFinalUnanimousAssertion:
+		outgoingChan <- valmessage.IncomingMessageMessage{Msg: ev.Msg, Header: note.Header}
+	case ethbridge.FinalUnanimousAssertEvent:
 		msg := valmessage.FinalUnanimousAssertMessage{
 			UnanHash: ev.UnanHash,
 		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-	case *verifierRPC.VMTrackerProposedUnanimousAssertion:
+		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
+	case ethbridge.ProposedUnanimousAssertEvent:
 		msg := valmessage.ProposedUnanimousAssertMessage{
 			UnanHash:    ev.UnanHash,
 			SequenceNum: ev.SequenceNum,
 		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-	case *verifierRPC.VMTrackerConfirmedUnanimousAssertion:
+		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
+	case ethbridge.ConfirmedUnanimousAssertEvent:
 		msg := valmessage.ConfirmedUnanimousAssertMessage{
 			SequenceNum: ev.SequenceNum,
 		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-	case *verifierRPC.VMTrackerDisputableAssertion:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		precondition, assertion := TranslateDisputableAssertionEvent(ev)
-		assertMessage := valmessage.AssertMessage{Precondition: precondition, Assertion: assertion, Asserter: ev.Asserter}
-		outgoingChan <- valmessage.BridgeMessage{Message: assertMessage, Header: header}
-
-	case *challengeRPC.ChallengeManagerOneStepProofDebug:
-		for _, item := range ev.ProofData {
-			fmt.Println(hexutil.Encode(item[:]))
-		}
-
-	case *verifierRPC.VMTrackerConfirmedAssertion:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.ConfirmedAssertMessage{}, Header: header}
-		// protocol.ConfirmedAssertMessage{Val.}
-	case *verifierRPC.VMTrackerInitiatedChallenge:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.InitiateChallengeMessage{Challenger: ev.Challenger}, Header: header}
-	case *challengeRPC.ChallengeManagerBisectedAssertion:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		assertions := TranslateBisectionEvent(ev)
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.BisectMessage{Assertions: assertions}, Header: header}
-	case *challengeRPC.ChallengeManagerContinuedChallenge:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		challengeMessage := valmessage.ContinueChallengeMessage{ChallengedAssertion: uint16(ev.AssertionIndex.Int64())}
-		outgoingChan <- valmessage.BridgeMessage{Message: challengeMessage, Header: header}
-	case *challengeRPC.ChallengeManagerTimedOutChallenge:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		if ev.ChallengerWrong {
-			msg := valmessage.AsserterTimeoutMessage{}
-			outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-		} else {
-			msg := valmessage.ChallengerTimeoutMessage{}
-			outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-		}
-	case *challengeRPC.ChallengeManagerOneStepProofCompleted:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
+		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
+	case ethbridge.DisputableAssertionEvent:
+		assertMessage := valmessage.AssertMessage{Precondition: ev.Precondition, Assertion: ev.Assertion, Asserter: ev.Asserter}
+		outgoingChan <- valmessage.BridgeMessage{Message: assertMessage, Header: note.Header}
+	case ethbridge.ConfirmedAssertEvent:
+		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.ConfirmedAssertMessage{}, Header: note.Header}
+	case ethbridge.InitiateChallengeEvent:
+		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.InitiateChallengeMessage{Challenger: ev.Challenger}, Header: note.Header}
+	case ethbridge.BisectionEvent:
+		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.BisectMessage{Assertions: ev.Assertions}, Header: note.Header}
+	case ethbridge.ContinueChallengeEvent:
+		challengeMessage := valmessage.ContinueChallengeMessage{ChallengedAssertion: uint16(ev.ChallengedAssertion)}
+		outgoingChan <- valmessage.BridgeMessage{Message: challengeMessage, Header: note.Header}
+	case ethbridge.AsserterTimeoutEvent:
+		msg := valmessage.AsserterTimeoutMessage{}
+		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
+	case ethbridge.ChallengerTimeoutEvent:
+		msg := valmessage.ChallengerTimeoutMessage{}
+		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
+	case ethbridge.OneStepProofEvent:
 		msg := valmessage.OneStepProofMessage{}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
+		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: note.Header}
 	case *types.Header:
 		outgoingChan <- valmessage.TimeUpdateMessage{Header: ev}
 	default:
@@ -455,25 +375,7 @@ func (man *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 }
 
 func (man *EthValidator) AdvanceBlockchain(blockCount int) error {
-	for i := 0; i < blockCount; i++ {
-		val := big.NewInt(100000000) // in wei (1 eth)
-		tx := types.NewTransaction(man.auth.Nonce.Uint64(), man.auth.From, val, man.auth.GasLimit, man.auth.GasPrice, nil)
-		chainID, err := man.con.client.NetworkID(context.Background())
-		if err != nil {
-			return err
-		}
-
-		signedTx, err := man.auth.Signer(types.NewEIP155Signer(chainID), man.auth.From, tx)
-		if err != nil {
-			return err
-		}
-		err = man.con.client.SendTransaction(context.Background(), signedTx)
-		if err != nil {
-			return err
-		}
-		man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	}
-	return nil
+	return man.con.AdvanceBlockchain(man.auth, blockCount)
 }
 
 func (man *EthValidator) DepositEth(amount *big.Int) (*types.Transaction, error) {
@@ -484,7 +386,7 @@ func (man *EthValidator) DepositEth(amount *big.Int) (*types.Transaction, error)
 	return tx, err
 }
 
-func (man *EthValidator) CreateVM(createData *CreateVMValidatorRequest, signatures []valmessage.Signature) (*types.Transaction, error) {
+func (man *EthValidator) CreateVM(createData *valmessage.CreateVMValidatorRequest, signatures []valmessage.Signature) (*types.Transaction, error) {
 	tx, err := man.con.CreateVM(
 		man.auth,
 		createData,
@@ -650,11 +552,6 @@ func (man *EthValidator) ContinueChallenge(
 	bisectionHash [32]byte,
 	deadline uint64,
 ) (*types.Transaction, error) {
-	nonce, err := man.con.client.PendingNonceAt(context.Background(), man.auth.From)
-	if err != nil {
-		return nil, err
-	}
-	man.auth.Nonce = big.NewInt(int64(nonce))
 	tx, err := man.con.ContinueChallenge(
 		man.auth,
 		man.VmId,
