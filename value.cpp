@@ -114,6 +114,23 @@ value Tuple::get_element(int pos) const {
     return (*tpl)[pos];
 }
 
+bool operator==(const Tuple& val1, const Tuple& val2){
+    if (val1.tuple_size() != val2.tuple_size())
+        return false;
+    for (int i=0; i<val1.tuple_size(); i++){
+        if (!(val1.get_element(i)==val2.get_element(i)))
+            return false;
+    }
+    return true;
+}
+
+bool operator==(const CodePoint& val1, const CodePoint& val2){
+    if (val1.pc != val2.pc)
+        return false;
+    else
+        return true;
+}
+
 std::vector<unsigned char> value_hash_raw(const value &value) {
     return mpark::visit([](const auto &val) {
         return value_hash_raw(val);
@@ -179,7 +196,7 @@ struct ValuePrinter {
     }
     
     std::ostream &operator()(const CodePoint &val) {
-        std::printf("in CodePoint ostream operator\n");
+//        std::printf("in CodePoint ostream operator\n");
         os << "codept pc=" << val.pc << " opcode="<<val.op;
         return os;
     }
@@ -188,3 +205,4 @@ struct ValuePrinter {
 std::ostream& operator<<(std::ostream& os, const value& val) {
     return mpark::visit(ValuePrinter{os}, val);
 }
+

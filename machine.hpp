@@ -30,14 +30,18 @@ class Machine {
     datastack auxstack;
     int state;
     uint64_t pc;
+    CodePoint errpc;
+    value inbox;
     std::unique_ptr<TuplePool> pool;
     
-    void runInstruction();
+    void runInstruction(instr instruction);
+
 public:
     Machine();
-    Machine(char *&srccode);
+    Machine(char *&srccode, char *&inboxdata);
     
     Assertion run(uint64_t stepCount);
+    void opcodeTests();
     int runOne();
 };
 instr deserialize_opcode(uint64_t pc, char *&bufptr, TuplePool &pool);

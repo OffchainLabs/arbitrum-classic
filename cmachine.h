@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-void *machine_create(char *filename);
+void *machine_create(char *filename, char *inboxfile);
 //void machine_destroy(cmachine_t *m);
 //cassertion machine_run(cmachine_t *m, uint64_t maxSteps);
 

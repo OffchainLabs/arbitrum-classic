@@ -28,6 +28,8 @@ struct CodePoint;
 using value = mpark::variant<uint256_t, Tuple, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
+bool operator==(const Tuple& val1, const Tuple& val2);
+bool operator==(const CodePoint& val1, const CodePoint& val2);
 
 uint256_t value_hash(const value &value);
 

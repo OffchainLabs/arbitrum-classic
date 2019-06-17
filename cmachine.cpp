@@ -35,7 +35,7 @@ typedef struct {
 //void *machine_create();
 void machine_destroy(cmachine_t *m);
 
-Machine read_file (std::string filename) {
+Machine read_files (std::string filename, std::string inboxfile) {
     std::cout<<"In read_file. reading - "<<filename<<std::endl;
     std::ifstream myfile;
     
@@ -50,14 +50,32 @@ Machine read_file (std::string filename) {
         myfile.read((char *)buf, filestatus.st_size);
         myfile.close();
     }
-    return Machine(buf);
+    char *inbox=NULL;
+    std::cout<<"In read_files. Done reading "<<filename<<std::endl;
+    if (!inboxfile.empty()){
+        std::cout<<"In read_files. reading - "<<inboxfile<<std::endl;
+        std::ifstream myfile;
+    
+        struct stat filestatus;
+        stat( inboxfile.c_str(), &filestatus );
+    
+        inbox = (char *)malloc(filestatus.st_size);
+    
+        myfile.open(inboxfile, std::ios::in);
+        if (myfile.is_open())
+        {
+            myfile.read((char *)inbox, filestatus.st_size);
+            myfile.close();
+        }
+    }
+    return Machine(buf, inbox);
 }
 
 //cmachine_t *machine_create(char *data)
-void *machine_create(char *filename)
+void *machine_create(char *filename, char *inboxfile)
 {
     std::cout<<"In machine_create "<<std::endl;
-    Machine mach = read_file(filename);
+    Machine mach = read_files(filename, inboxfile);
     cmachine_t *m;
 //    Machine *obj;
     std::cout<<"In machine_create machine created"<<std::endl;

@@ -19,7 +19,7 @@ class datastack{
 public:
     
     std::vector<value> basedatastack;
-    std::unordered_map<uint64_t, uint64_t> pcmap;
+//    std::unordered_map<uint64_t, uint64_t> pcmap;
     unsigned int size;
     
     datastack() {
@@ -32,10 +32,10 @@ public:
     void popSet(value &val);
     uint64_t stacksize();
     
-    void pcpush(uint64_t i, uint64_t j);
-    std::pair<int,uint64_t> jmp();
-    int tget();
-    int tset();
+//    void pcpush(uint64_t i, uint64_t j);
+//    std::pair<int,uint64_t> jmp();
+//    int tget();
+//    int tset();
 };
 
 #endif /* datastack_hpp */

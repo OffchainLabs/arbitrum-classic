@@ -310,26 +310,31 @@ int main(int argc, const char * argv[]) {
 //    }
 ////    return Init_machine(buf, staticValue);
 //}
-Machine read_file (std::string filename);
+Machine read_files (std::string filename, std::string inboxfile);
 //int main() {
 int main(int argc, char *argv[])
 {
 //    int state=EXTENSIVE;
     std::string filename;
+    std::string inbox_file;
     unsigned long long stepCount=1000000;
-    if(argc!=2)
+    if(argc<2)
     {
         std::cout<<"Usage: AVMTest <ao file>"<<std::endl;
         std::cout<<"   defaulting to use add.ao"<<std::endl;
         filename = "add.ao";
     } else {
         filename = argv[1];
+        if (argc==3){
+            inbox_file = argv[2];
+        }
     }
 //    machine_create();
 //    oldread_file(filename, code, staticValue);
-    Machine mach = read_file(filename);
-
+    Machine mach = read_files(filename, inbox_file);
 //    setupCode( code );
+    //testing opcodes
+//    mach.opcodeTests();
     Assertion result = mach.run(stepCount);
     
 //    runMachine(code, state, 200);
