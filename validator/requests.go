@@ -58,7 +58,7 @@ type initiateUnanimousRequest struct {
 
 type unanimousConfirmRequest struct {
 	valmessage.UnanimousRequestData
-	Signatures []valmessage.Signature
+	Signatures [][]byte
 
 	ResultChan chan<- bool
 	ErrChan    chan<- error

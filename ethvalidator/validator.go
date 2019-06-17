@@ -140,21 +140,19 @@ func NewEthValidator(
 	return &EthValidator{key, vmId, manMap, bot, completedCallChan, ethURL, connectionInfo, con, auth}, nil
 }
 
-func (val *EthValidator) Sign(msgHash [32]byte) (valmessage.Signature, error) {
+//var rComp [32]byte
+//var sComp [32]byte
+//copy(rComp[:], signature[:32])
+//copy(sComp[:], signature[32:64])
+//return valmessage.Signature{
+//R: rComp,
+//S: sComp,
+//V: uint8(int(signature[64])) + 27, // Yes add 27, weird Ethereum quirk
+//}, nil
+
+func (val *EthValidator) Sign(msgHash [32]byte) ([]byte, error) {
 	data := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(msgHash))
-	signature, err := crypto.Sign(data, val.key)
-	if err != nil {
-		panic(err)
-	}
-	var rComp [32]byte
-	var sComp [32]byte
-	copy(rComp[:], signature[:32])
-	copy(sComp[:], signature[32:64])
-	return valmessage.Signature{
-		R: rComp,
-		S: sComp,
-		V: uint8(int(signature[64])) + 27, // Yes add 27, weird Ethereum quirk
-	}, nil
+	return crypto.Sign(data, val.key)
 }
 
 func (val *EthValidator) StartListening() error {
@@ -391,7 +389,7 @@ func (val *EthValidator) DepositEth(amount *big.Int) (*types.Transaction, error)
 	return tx, err
 }
 
-func (val *EthValidator) CreateVM(createData *valmessage.CreateVMValidatorRequest, signatures []valmessage.Signature) (*types.Transaction, error) {
+func (val *EthValidator) CreateVM(createData *valmessage.CreateVMValidatorRequest, signatures [][]byte) (*types.Transaction, error) {
 	tx, err := val.con.CreateVM(
 		val.auth,
 		createData,

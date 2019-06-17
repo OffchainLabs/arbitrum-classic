@@ -499,18 +499,25 @@ func (con *Bridge) SendEthMessage(
 	)
 }
 
+func sigsToBlock(signatures [][]byte) []byte {
+	sigData := make([]byte, 0, len(signatures)*65)
+	for _, sig := range signatures {
+		sigData = append(sigData, sig[:64]...)
+		v := uint8(int(sig[64]))
+		if v < 27 {
+			v += 27
+		}
+		sigData = append(sigData, v)
+	}
+	return sigData
+}
+
 func (con *Bridge) CreateVM(
 	auth *bind.TransactOpts,
 	data *valmessage.CreateVMValidatorRequest,
 	messageHash [32]byte,
-	signatures []valmessage.Signature,
+	signatures [][]byte,
 ) (*types.Transaction, error) {
-	sigData := make([]byte, 0, len(signatures)*65)
-	for _, sig := range signatures {
-		sigData = append(sigData, sig.R[:]...)
-		sigData = append(sigData, sig.S[:]...)
-		sigData = append(sigData, sig.V)
-	}
 	var owner common.Address
 	copy(owner[:], data.Config.Owner.Value)
 	var escrowCurrency common.Address
@@ -528,7 +535,7 @@ func (con *Bridge) CreateVM(
 		value.NewBigIntFromBuf(data.Config.EscrowRequired),
 		escrowCurrency,
 		owner,
-		sigData,
+		sigsToBlock(signatures),
 	)
 }
 
@@ -550,15 +557,8 @@ func (con *Bridge) UnanimousAssert(
 	newInboxHash [32]byte,
 	timeBounds protocol.TimeBounds,
 	assertion *protocol.Assertion,
-	signatures []valmessage.Signature,
+	signatures [][]byte,
 ) (*types.Transaction, error) {
-	sigData := make([]byte, 0, len(signatures)*65)
-	for _, sig := range signatures {
-		sigData = append(sigData, sig.R[:]...)
-		sigData = append(sigData, sig.S[:]...)
-		sigData = append(sigData, sig.V)
-	}
-
 	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
 	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
 	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
@@ -586,7 +586,7 @@ func (con *Bridge) UnanimousAssert(
 		tokenNums,
 		amounts,
 		destinations,
-		sigData,
+		sigsToBlock(signatures),
 	)
 }
 
@@ -597,15 +597,8 @@ func (con *Bridge) ProposeUnanimousAssert(
 	timeBounds protocol.TimeBounds,
 	assertion *protocol.Assertion,
 	sequenceNum uint64,
-	signatures []valmessage.Signature,
+	signatures [][]byte,
 ) (*types.Transaction, error) {
-	sigData := make([]byte, 0, len(signatures)*65)
-	for _, sig := range signatures {
-		sigData = append(sigData, sig.R[:]...)
-		sigData = append(sigData, sig.S[:]...)
-		sigData = append(sigData, sig.V)
-	}
-
 	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
 	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
 	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
@@ -638,7 +631,7 @@ func (con *Bridge) ProposeUnanimousAssert(
 		balance.TokenTypes,
 		tokenNums,
 		amounts,
-		sigData,
+		sigsToBlock(signatures),
 	)
 }
 

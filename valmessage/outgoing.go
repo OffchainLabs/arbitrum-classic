@@ -23,12 +23,6 @@ import (
 	"github.com/offchainlabs/arb-avm/value"
 )
 
-type Signature struct {
-	R [32]byte
-	S [32]byte
-	V uint8
-}
-
 type VMMessageRequest struct {
 	Data        value.Value
 	TokenType   [21]byte
@@ -52,7 +46,7 @@ type SendUnanimousAssertMessage struct {
 	NewInboxHash [32]byte
 	TimeBounds   protocol.TimeBounds
 	Assertion    *protocol.Assertion
-	Signatures   []Signature
+	Signatures   [][]byte
 }
 
 func (SendUnanimousAssertMessage) IsOutgoingMessage() {}
@@ -62,7 +56,7 @@ type SendProposeUnanimousAssertMessage struct {
 	TimeBounds   protocol.TimeBounds
 	Assertion    *protocol.Assertion
 	SequenceNum  uint64
-	Signatures   []Signature
+	Signatures   [][]byte
 }
 
 func (SendProposeUnanimousAssertMessage) IsOutgoingMessage() {}

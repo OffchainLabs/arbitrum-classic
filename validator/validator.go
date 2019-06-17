@@ -166,7 +166,7 @@ func (validator *Validator) RequestFollowUnanimous(
 
 func (validator *Validator) ConfirmOffchainUnanimousAssertion(
 	unanRequest valmessage.UnanimousRequestData,
-	signatures []valmessage.Signature,
+	signatures [][]byte,
 ) (<-chan bool, <-chan error) {
 	resultChan := make(chan bool, 1)
 	errChan := make(chan error, 1)

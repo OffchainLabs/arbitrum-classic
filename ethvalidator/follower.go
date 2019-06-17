@@ -145,16 +145,16 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		TimeBounds:  protocol.NewTimeBoundsFromBuf(request.TimeBounds),
 	}
 
-	sig, unanHash, err := func() (valmessage.Signature, [32]byte, error) {
+	sig, unanHash, err := func() ([]byte, [32]byte, error) {
 		messages := make([]protocol.Message, 0, len(request.SignedMessages))
 		for _, signedMsg := range request.SignedMessages {
 			msg, err := protocol.NewMessageFromBuf(signedMsg.Message)
 			if err != nil {
-				return valmessage.Signature{}, [32]byte{}, errors2.Wrap(err, "Follower recieved message in bad format")
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message in bad format")
 			}
 			tup, ok := msg.Data.(value.TupleValue)
 			if !ok || tup.Len() != 4 {
-				return valmessage.Signature{}, [32]byte{}, errors2.Wrap(err, "Follower recieved message in bad format")
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message in bad format")
 			}
 			// Access is safe since we already did a length check
 			signedVal, _ := tup.GetByInt64(0)
@@ -168,13 +168,13 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			signedMsgHash := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
 			pubkey, err := crypto.SigToPub(signedMsgHash, signedMsg.Signature)
 			if err != nil {
-				return valmessage.Signature{}, [32]byte{}, errors2.Wrap(err, "Follower recieved message with bad signature")
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message with bad signature")
 			}
 			sender := crypto.PubkeyToAddress(*pubkey)
 			senderArr := [32]byte{}
 			copy(senderArr[12:], sender.Bytes())
 			if senderArr != msg.Destination {
-				return valmessage.Signature{}, [32]byte{}, errors2.Wrap(err, "Follower recieved message with incorrect signature")
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message with incorrect signature")
 			}
 			messages = append(messages, msg)
 		}
@@ -185,7 +185,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		case unanUpdate = <-resultsChan:
 			break
 		case err := <-unanErrChan:
-			return valmessage.Signature{}, [32]byte{}, errors2.Wrap(err, "Follower failed to follow assertion")
+			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to follow assertion")
 		}
 
 		// Force onchain assertion if there are outgoing messages
@@ -202,11 +202,11 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			unanUpdate.Assertion,
 		)
 		if err != nil {
-			return valmessage.Signature{}, [32]byte{}, errors2.Wrap(err, "Follower failed to generate hash")
+			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to generate hash")
 		}
 		sig, err := m.Sign(unanHash)
 		if err != nil {
-			return valmessage.Signature{}, [32]byte{}, errors2.Wrap(err, "Follower failed to sign")
+			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to sign")
 		}
 
 		m.unanimousRequests[requestId] = UnanimousAssertionRequest{
@@ -225,11 +225,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 	} else {
 		msg = &valmessage.UnanimousAssertionFollowerResponse{
 			Accepted: true,
-			Signature: &valmessage.SignatureBuf{
-				R: value.NewHashBuf(sig.R),
-				S: value.NewHashBuf(sig.S),
-				V: uint32(sig.V),
-			},
+			Signature: sig,
 			AssertionHash: value.NewHashBuf(unanHash),
 		}
 	}
@@ -264,11 +260,7 @@ func (m *ValidatorFollower) HandleCreateVM(request *valmessage.CreateVMValidator
 			Response: &valmessage.FollowerResponse_Create{
 				Create: &valmessage.CreateVMFollowerResponse{
 					Accepted: true,
-					Signature: &valmessage.SignatureBuf{
-						R: value.NewHashBuf(sig.R),
-						S: value.NewHashBuf(sig.S),
-						V: uint32(sig.V),
-					},
+					Signature: sig,
 				},
 			},
 			RequestId: value.NewHashBuf(createHash),
@@ -309,13 +301,9 @@ func (m *ValidatorFollower) Run() error {
 			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
 				if request.UnanimousNotification.Accepted {
-					sigs := make([]valmessage.Signature, len(request.UnanimousNotification.Signatures))
+					sigs := make([][]byte, len(request.UnanimousNotification.Signatures))
 					for _, sig := range request.UnanimousNotification.Signatures {
-						sigs = append(sigs, valmessage.Signature{
-							R: value.NewHashFromBuf(sig.R),
-							S: value.NewHashFromBuf(sig.S),
-							V: uint8(sig.V),
-						})
+						sigs = append(sigs, sig)
 					}
 					_, _ = m.Bot.ConfirmOffchainUnanimousAssertion(
 						requestInfo.requestData,

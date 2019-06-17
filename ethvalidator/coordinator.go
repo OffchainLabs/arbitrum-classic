@@ -501,7 +501,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 		return false, errors.New("some Validators didn't respond")
 	}
 
-	signatures := make([]valmessage.Signature, m.Val.ValidatorCount())
+	signatures := make([][]byte, m.Val.ValidatorCount())
 	var err error
 	signatures[m.Val.Validators[m.Val.Address()].indexNum], err = m.Val.Sign(createHash)
 	if err != nil {
@@ -512,11 +512,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 		if !r.Accepted {
 			return false, errors.New("some Validators refused to sign")
 		}
-		signatures[m.Val.Validators[response.address].indexNum] = valmessage.Signature{
-			R: value.NewHashFromBuf(r.Signature.R),
-			S: value.NewHashFromBuf(r.Signature.S),
-			V: uint8(r.Signature.V),
-		}
+		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
 	}
 	_, err = m.Val.CreateVM(createData, signatures)
 	return true, err
@@ -660,14 +656,8 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		return errors.New("some Validators didn't respond")
 	}
 
-	signatures := make([]valmessage.Signature, m.Val.ValidatorCount())
-	rawSignatures := make([]*valmessage.SignatureBuf, m.Val.ValidatorCount())
+	signatures := make([][]byte, m.Val.ValidatorCount())
 	signatures[m.Val.Validators[m.Val.Address()].indexNum] = sig
-	rawSignatures[m.Val.Validators[m.Val.Address()].indexNum] = &valmessage.SignatureBuf{
-		R: value.NewHashBuf(sig.R),
-		S: value.NewHashBuf(sig.S),
-		V: uint32(sig.V),
-	}
 	for _, response := range responses {
 		r := response.response.Response.(*valmessage.FollowerResponse_Unanimous).Unanimous
 		if !r.Accepted {
@@ -682,19 +672,14 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 			})
 			return errors.New("some Validators signed the wrong assertion")
 		}
-		rawSignatures[m.Val.Validators[response.address].indexNum] = r.Signature
-		signatures[m.Val.Validators[response.address].indexNum] = valmessage.Signature{
-			R: value.NewHashFromBuf(r.Signature.R),
-			S: value.NewHashFromBuf(r.Signature.S),
-			V: uint8(r.Signature.V),
-		}
+		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
 	}
 
 	elapsed := time.Since(start)
 	log.Printf("Coordinator succeeded signing unanimous assertion in %s\n", elapsed)
 	notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 		Accepted:   true,
-		Signatures: rawSignatures,
+		Signatures: signatures,
 	})
 
 	confRetChan, confErrChan := m.Val.Bot.ConfirmOffchainUnanimousAssertion(

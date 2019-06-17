@@ -21,12 +21,6 @@ message VMConfiguration {
     Address owner = 6;
 }
 
-message SignatureBuf {
-    value.HashBuf r = 1;
-    value.HashBuf s = 2;
-    uint32 v = 3;
-}
-
 message CreateVMValidatorRequest {
     valmessage.VMConfiguration config = 1;
     value.HashBuf vm_id = 2;
@@ -36,7 +30,7 @@ message CreateVMValidatorRequest {
 
 message UnanimousAssertionValidatorNotification {
     bool accepted = 1;
-    repeated SignatureBuf signatures = 2;
+    repeated bytes signatures = 2;
 }
 
 message CreateVMFinalizedValidatorNotification {
@@ -68,12 +62,12 @@ message ValidatorRequest {
 
 message CreateVMFollowerResponse {
     bool accepted = 1;
-    SignatureBuf signature = 2;
+    bytes signature = 2;
 }
 
 message UnanimousAssertionFollowerResponse {
     bool accepted = 1;
-    SignatureBuf signature = 2;
+    bytes signature = 2;
     value.HashBuf assertion_hash = 3;
 }
 

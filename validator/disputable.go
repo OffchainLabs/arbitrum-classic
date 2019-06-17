@@ -56,7 +56,7 @@ type waitingObserver struct {
 	acceptedBalance  *protocol.BalanceTracker
 	assertion        *protocol.Assertion
 	sequenceNum      uint64
-	signatures       []valmessage.Signature
+	signatures       [][]byte
 
 	timeBounds      protocol.TimeBounds
 	pendingMessages *protocol.MessageQueue
@@ -287,7 +287,7 @@ func (bot waitingObserver) PreparePendingUnanimous(request unanimousUpdateReques
 	}, nil
 }
 
-func (bot waitingObserver) FinalizePendingUnanimous(signatures []valmessage.Signature) (validatorState, *proposedUpdate, error) {
+func (bot waitingObserver) FinalizePendingUnanimous(signatures [][]byte) (validatorState, *proposedUpdate, error) {
 	if bot.proposed == nil {
 		return nil, nil, errors.New("no pending assertion")
 	}
