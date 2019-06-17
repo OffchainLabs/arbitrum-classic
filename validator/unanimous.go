@@ -24,18 +24,18 @@ import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
-type AttemptingUnanimousClosing struct {
+type attemptingUnanimousClosing struct {
 	*validatorConfig
 	*validatorCore
 	assertion *protocol.Assertion
 	retChan   chan<- bool
 }
 
-func (bot AttemptingUnanimousClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
+func (bot attemptingUnanimousClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 	return bot, nil, nil
 }
 
-func (bot AttemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot attemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
 	case ethbridge.ProposedUnanimousAssertEvent:
 		// Someone proposed an non-final update
@@ -52,11 +52,11 @@ func (bot AttemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint6
 		bot.validatorCore.DeliverMessagesToVM()
 		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil, nil
 	default:
-		return nil, nil, nil, &Error{nil, "ERROR: WaitingAssertDefender: VM state got unsynchronized"}
+		return nil, nil, nil, &Error{nil, "ERROR: waitingAssertDefender: VM state got unsynchronized"}
 	}
 }
 
-type AttemptingOffchainClosing struct {
+type attemptingOffchainClosing struct {
 	*validatorConfig
 	*validatorCore
 	sequenceNum uint64
@@ -64,11 +64,11 @@ type AttemptingOffchainClosing struct {
 	retChan     chan<- bool
 }
 
-func (bot AttemptingOffchainClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
+func (bot attemptingOffchainClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 	return bot, nil, nil
 }
 
-func (bot AttemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot attemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ProposedUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
@@ -81,7 +81,7 @@ func (bot AttemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64
 			}
 			return nil, nil, nil, errors.New("unanimous assertion unexpectedly superseded")
 		} else {
-			return WaitingOffchainClosing{
+			return waitingOffchainClosing{
 				bot.validatorConfig,
 				bot.GetCore(),
 				bot.assertion,
@@ -102,11 +102,11 @@ func (bot AttemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, nil, &Error{nil, "ERROR: WaitingAssertDefender: VM state got unsynchronized"}
+		return nil, nil, nil, &Error{nil, "ERROR: waitingAssertDefender: VM state got unsynchronized"}
 	}
 }
 
-type WaitingOffchainClosing struct {
+type waitingOffchainClosing struct {
 	*validatorConfig
 	*validatorCore
 	assertion *protocol.Assertion
@@ -114,9 +114,9 @@ type WaitingOffchainClosing struct {
 	retChan   chan<- bool
 }
 
-func (bot WaitingOffchainClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
+func (bot waitingOffchainClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 	if time > bot.deadline {
-		return FinalizingOffchainClosing{
+		return finalizingOffchainClosing{
 				validatorConfig: bot.validatorConfig,
 				validatorCore:   bot.validatorCore,
 				retChan:         bot.retChan,
@@ -131,7 +131,7 @@ func (bot WaitingOffchainClosing) UpdateTime(time uint64) (validatorState, []val
 	}
 }
 
-func (bot WaitingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
 	case ethbridge.ProposedUnanimousAssertEvent:
 		if bot.retChan != nil {
@@ -147,21 +147,21 @@ func (bot WaitingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, nil, &Error{nil, "ERROR: WaitingAssertDefender: VM state got unsynchronized"}
+		return nil, nil, nil, &Error{nil, "ERROR: waitingAssertDefender: VM state got unsynchronized"}
 	}
 }
 
-type FinalizingOffchainClosing struct {
+type finalizingOffchainClosing struct {
 	*validatorConfig
 	*validatorCore
 	retChan chan<- bool
 }
 
-func (bot FinalizingOffchainClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
+func (bot finalizingOffchainClosing) UpdateTime(time uint64) (validatorState, []valmessage.OutgoingMessage, error) {
 	return bot, nil, nil
 }
 
-func (bot FinalizingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
+func (bot finalizingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error) {
 	switch ev.(type) {
 	case ethbridge.ConfirmedUnanimousAssertEvent:
 		bot.GetCore().DeliverMessagesToVM()
@@ -170,6 +170,6 @@ func (bot FinalizingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64
 		}
 		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil, nil
 	default:
-		return nil, nil, nil, &Error{nil, "ERROR: WaitingAssertDefender: VM state got unsynchronized"}
+		return nil, nil, nil, &Error{nil, "ERROR: waitingAssertDefender: VM state got unsynchronized"}
 	}
 }
