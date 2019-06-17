@@ -16,7 +16,6 @@
     "lite-server": "^2.5.2"
   },
   "dependencies": {
-    "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider.git",
-    "arb-web3-provider": "https://github.com/OffchainLabs/arb-ethers-provider.git"
+    "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider.git"
   }
 }
