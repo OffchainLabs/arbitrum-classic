@@ -35,7 +35,7 @@ ARG PORT=7545
 ARG CANARY_PORT=17545
 ENV MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS NUM_WALLETS=$NUM_WALLETS \
     GAS_PER_WALLET=$GAS_PER_WALLET PORT=$PORT CANARY_PORT=$CANARY_PORT \
-    GANACHE_FLAGS="-e ${GAS_PER_WALLET} -a ${NUM_WALLETS} -p ${PORT}"
+    GANACHE_FLAGS="0 -e ${GAS_PER_WALLET} -a ${NUM_WALLETS} -p ${PORT}"
 
 # Generate ethbrigde_addresses.json for export
 RUN ganache-cli ${GANACHE_FLAGS} -m "${MNEMONIC}" & \
@@ -52,7 +52,7 @@ RUN node -e "                                               \
     var addrs = new Array();                                \
     var privs = new Array();                                \
     var path = \"m/44'/60'/0'/0/\";                         \
-    for (var i = 0; i < ${NUM_VALIDATORS}; i++) {              \
+    for (var i = 100; i < 100 + ${NUM_VALIDATORS}; i++) {   \
         var acc = w.derivePath(path + i).getWallet();       \
         addrs.push(acc.getAddress().toString('hex'));       \
         privs.push(acc.getPrivateKey().toString('hex'));    \
