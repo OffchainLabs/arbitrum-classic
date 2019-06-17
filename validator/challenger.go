@@ -36,16 +36,16 @@ type waitingContinuingChallenger struct {
 }
 
 func (bot waitingContinuingChallenger) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	if time > bot.deadline {
-		return timedOutAsserterChallenger{bot.validatorConfig},
-			[]valmessage.OutgoingMessage{valmessage.SendAsserterTimedOutChallengeMessage{
-				Deadline:     bot.deadline,
-				Precondition: bot.challengedPrecondition,
-				Assertion:    bot.challengedAssertion,
-			}}, nil
-	} else {
+	if time <= bot.deadline {
 		return bot, nil, nil
 	}
+
+	return timedOutAsserterChallenger{bot.validatorConfig},
+		[]valmessage.OutgoingMessage{valmessage.SendAsserterTimedOutChallengeMessage{
+			Deadline:     bot.deadline,
+			Precondition: bot.challengedPrecondition,
+			Assertion:    bot.challengedAssertion,
+		}}, nil
 }
 
 func (bot waitingContinuingChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
@@ -60,25 +60,25 @@ func (bot waitingContinuingChallenger) UpdateState(ev ethbridge.Event, time uint
 				machine.Run(int32(ev.Assertions[i].NumSteps))
 			}
 		}
-		deadline := time + bot.config.GracePeriod
-		if assertionNum < uint16(len(ev.Assertions)) {
-			return continuingChallenger{
-					validatorConfig: bot.validatorConfig,
-					challengedState: machine,
-					deadline:        deadline,
-					preconditions:   preconditions,
-					assertions:      ev.Assertions,
-					challengedInbox: bot.challengedInbox,
-				},
-				[]valmessage.OutgoingMessage{valmessage.SendContinueChallengeMessage{
-					AssertionToChallenge: assertionNum,
-					Deadline:             deadline,
-					Preconditions:        preconditions,
-					Assertions:           ev.Assertions,
-				}}, nil
-		} else {
+		if assertionNum >= uint16(len(ev.Assertions)) {
 			return nil, nil, &Error{nil, "ERROR: waitingContinuingChallenger: Critical bug: All segments in false assertion are valid"}
+
 		}
+		deadline := time + bot.config.GracePeriod
+		return continuingChallenger{
+			validatorConfig: bot.validatorConfig,
+			challengedState: machine,
+			deadline:        deadline,
+			preconditions:   preconditions,
+			assertions:      ev.Assertions,
+			challengedInbox: bot.challengedInbox,
+		},
+			[]valmessage.OutgoingMessage{valmessage.SendContinueChallengeMessage{
+				AssertionToChallenge: assertionNum,
+				Deadline:             deadline,
+				Preconditions:        preconditions,
+				Assertions:           ev.Assertions,
+			}}, nil
 	case ethbridge.OneStepProofEvent:
 		return nil, nil, nil
 	default:
@@ -96,17 +96,17 @@ type continuingChallenger struct {
 }
 
 func (bot continuingChallenger) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	if time > bot.deadline {
-		// msg := SendChallengerTimedOutChallengeMessage{
-		//	bot.deadline,
-		//	bot.preconditions,
-		//	bot.assertions,
-		//}
-		// Currently not sending a timeout valmessage if this validator timed out
-		return timedOutChallengerChallenger{bot.validatorConfig}, nil, nil
-	} else {
+	if time <= bot.deadline {
 		return bot, nil, nil
 	}
+
+	// msg := SendChallengerTimedOutChallengeMessage{
+	//	bot.deadline,
+	//	bot.preconditions,
+	//	bot.assertions,
+	//}
+	// Currently not sending a timeout valmessage if this validator timed out
+	return timedOutChallengerChallenger{bot.validatorConfig}, nil, nil
 }
 
 func (bot continuingChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {

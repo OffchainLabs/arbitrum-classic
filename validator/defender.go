@@ -27,10 +27,6 @@ import (
 	"github.com/offchainlabs/arb-avm/protocol"
 )
 
-func NewDefendingValidator(core *validatorConfig, assDef protocol.AssertionDefender, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	return defenseValidator(core, assDef, time)
-}
-
 func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
 	deadline := time + core.config.GracePeriod
 	if assDef.GetAssertion().NumSteps == 1 {
@@ -50,24 +46,24 @@ func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, 
 				Proof:        buf.Bytes(),
 				Deadline:     deadline,
 			}}, nil
-	} else {
-		defenders := assDef.NBisect(6)
-		assertions := make([]*protocol.Assertion, 0, len(defenders))
-		for _, defender := range defenders {
-			assertions = append(assertions, defender.GetAssertion())
-		}
-		return bisectedAssertDefender{
-				validatorConfig:   core,
-				wholePrecondition: assDef.GetPrecondition(),
-				wholeAssertion:    assDef.GetAssertion().Stub(),
-				splitDefenders:    defenders,
-				deadline:          deadline,
-			}, []valmessage.OutgoingMessage{valmessage.SendBisectionMessage{
-				Deadline:     deadline,
-				Precondition: assDef.GetPrecondition(),
-				Assertions:   assertions,
-			}}, nil
 	}
+
+	defenders := assDef.NBisect(6)
+	assertions := make([]*protocol.Assertion, 0, len(defenders))
+	for _, defender := range defenders {
+		assertions = append(assertions, defender.GetAssertion())
+	}
+	return bisectedAssertDefender{
+			validatorConfig:   core,
+			wholePrecondition: assDef.GetPrecondition(),
+			wholeAssertion:    assDef.GetAssertion().Stub(),
+			splitDefenders:    defenders,
+			deadline:          deadline,
+		}, []valmessage.OutgoingMessage{valmessage.SendBisectionMessage{
+			Deadline:     deadline,
+			Precondition: assDef.GetPrecondition(),
+			Assertions:   assertions,
+		}}, nil
 }
 
 type bisectedAssertDefender struct {
@@ -79,16 +75,15 @@ type bisectedAssertDefender struct {
 }
 
 func (bot bisectedAssertDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	if time > bot.deadline {
-		// timeoutMsg := SendAsserterTimedOutChallengeMessage{
-		//	bot.deadline,
-		//	bot.wholePrecondition,
-		//	bot.wholeAssertion,
-		//}
-		return timedOutAsserterDefender{bot.validatorConfig}, nil, nil
-	} else {
+	if time <= bot.deadline {
 		return bot, nil, nil
 	}
+	// timeoutMsg := SendAsserterTimedOutChallengeMessage{
+	//	bot.deadline,
+	//	bot.wholePrecondition,
+	//	bot.wholeAssertion,
+	//}
+	return timedOutAsserterDefender{bot.validatorConfig}, nil, nil
 }
 
 func (bot bisectedAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
@@ -112,22 +107,22 @@ type waitingBisectedDefender struct {
 }
 
 func (bot waitingBisectedDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	if time > bot.deadline {
-		preconditions := make([]*protocol.Precondition, 0, len(bot.defenders))
-		assertions := make([]*protocol.AssertionStub, 0, len(bot.defenders))
-		for _, defender := range bot.defenders {
-			preconditions = append(preconditions, defender.GetPrecondition())
-			assertions = append(assertions, defender.GetAssertion().Stub())
-		}
-		return timedOutChallengerDefender{bot.validatorConfig},
-			[]valmessage.OutgoingMessage{valmessage.SendChallengerTimedOutChallengeMessage{
-				Deadline:      bot.deadline,
-				Preconditions: preconditions,
-				Assertions:    assertions,
-			}}, nil
-	} else {
+	if time <= bot.deadline {
 		return bot, nil, nil
 	}
+
+	preconditions := make([]*protocol.Precondition, 0, len(bot.defenders))
+	assertions := make([]*protocol.AssertionStub, 0, len(bot.defenders))
+	for _, defender := range bot.defenders {
+		preconditions = append(preconditions, defender.GetPrecondition())
+		assertions = append(assertions, defender.GetAssertion().Stub())
+	}
+	return timedOutChallengerDefender{bot.validatorConfig},
+		[]valmessage.OutgoingMessage{valmessage.SendChallengerTimedOutChallengeMessage{
+			Deadline:      bot.deadline,
+			Preconditions: preconditions,
+			Assertions:    assertions,
+		}}, nil
 }
 
 func (bot waitingBisectedDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
@@ -150,16 +145,16 @@ type oneStepChallengedAssertDefender struct {
 }
 
 func (bot oneStepChallengedAssertDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	if time > bot.deadline {
-		// timeoutMsg := SendAsserterTimedOutChallengeMessage{
-		//	bot.deadline,
-		//	bot.precondition,
-		//	bot.assertion,
-		//}
-		return timedOutAsserterDefender{bot.validatorConfig}, nil, nil
-	} else {
+	if time <= bot.deadline {
 		return bot, nil, nil
 	}
+
+	// timeoutMsg := SendAsserterTimedOutChallengeMessage{
+	//	bot.deadline,
+	//	bot.precondition,
+	//	bot.assertion,
+	//}
+	return timedOutAsserterDefender{bot.validatorConfig}, nil, nil
 }
 
 func (bot oneStepChallengedAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {

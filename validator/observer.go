@@ -30,16 +30,16 @@ type waitingChallengeObserver struct {
 }
 
 func (bot waitingChallengeObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	if time > bot.deadline {
-		// timeoutMsg := SendAsserterTimedOutChallengeMessage{
-		//	bot.deadline,
-		//	bot.precondition,
-		//	bot.assertion,
-		//}
-		return waitingAsserterTimeoutObserver{bot.validatorConfig}, nil, nil
-	} else {
+	if time <= bot.deadline {
 		return bot, nil, nil
 	}
+
+	// timeoutMsg := SendAsserterTimedOutChallengeMessage{
+	//	bot.deadline,
+	//	bot.precondition,
+	//	bot.assertion,
+	//}
+	return waitingAsserterTimeoutObserver{bot.validatorConfig}, nil, nil
 }
 
 func (bot waitingChallengeObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
@@ -61,16 +61,16 @@ type waitingBisectedObserver struct {
 }
 
 func (bot waitingBisectedObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	if time > bot.deadline {
-		// msg := SendChallengerTimedOutChallengeMessage{
-		//	bot.deadline,
-		//	bot.preconditions,
-		//	bot.assertions,
-		//}
-		return waitingChallengerTimeoutObserver{bot.validatorConfig}, nil, nil
-	} else {
+	if time <= bot.deadline {
 		return bot, nil, nil
 	}
+
+	// msg := SendChallengerTimedOutChallengeMessage{
+	//	bot.deadline,
+	//	bot.preconditions,
+	//	bot.assertions,
+	//}
+	return waitingChallengerTimeoutObserver{bot.validatorConfig}, nil, nil
 }
 
 func (bot waitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {

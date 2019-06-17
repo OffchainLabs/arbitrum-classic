@@ -55,9 +55,8 @@ type Error struct {
 func (e *Error) Error() string {
 	if e.err != nil {
 		return fmt.Sprintf("%v: %v", e.message, e.err)
-	} else {
-		return e.message
 	}
+	return e.message
 }
 
 type Validator struct {
@@ -87,7 +86,7 @@ func NewValidator(name string, address common.Address, inbox *protocol.Inbox, ba
 		name,
 		requests,
 		maybeAssert,
-		NewWaitingObserver(valConfig, core),
+		newWaitingObserver(valConfig, core),
 		nil,
 		nil,
 		nil,

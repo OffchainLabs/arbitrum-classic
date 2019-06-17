@@ -79,7 +79,7 @@ func New(serverAddress string, a ArbAddresses) (*Bridge, error) {
 	return &Bridge{client, trackerContract, challangeManagerContract, onestepProofContract, balanceTrackerContract}, nil
 }
 
-func (con *Bridge) CreateListeners(vmId [32]byte) (chan Notification, chan error, error) {
+func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error, error) {
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
 
@@ -102,67 +102,67 @@ func (con *Bridge) CreateListeners(vmId [32]byte) (chan Notification, chan error
 	}
 
 	messageDeliveredChan := make(chan *verifierRPC.VMTrackerMessageDelivered)
-	messageDeliveredSub, err := con.Tracker.WatchMessageDelivered(watch, messageDeliveredChan, [][32]byte{vmId})
+	messageDeliveredSub, err := con.Tracker.WatchMessageDelivered(watch, messageDeliveredChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	unanAssChan := make(chan *verifierRPC.VMTrackerFinalUnanimousAssertion)
-	unanAssSub, err := con.Tracker.WatchFinalUnanimousAssertion(watch, unanAssChan, [][32]byte{vmId})
+	unanAssSub, err := con.Tracker.WatchFinalUnanimousAssertion(watch, unanAssChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	unanPropChan := make(chan *verifierRPC.VMTrackerProposedUnanimousAssertion)
-	unanPropSub, err := con.Tracker.WatchProposedUnanimousAssertion(watch, unanPropChan, [][32]byte{vmId})
+	unanPropSub, err := con.Tracker.WatchProposedUnanimousAssertion(watch, unanPropChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	unanConfChan := make(chan *verifierRPC.VMTrackerConfirmedUnanimousAssertion)
-	unanConfSub, err := con.Tracker.WatchConfirmedUnanimousAssertion(watch, unanConfChan, [][32]byte{vmId})
+	unanConfSub, err := con.Tracker.WatchConfirmedUnanimousAssertion(watch, unanConfChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	dispAssChan := make(chan *verifierRPC.VMTrackerDisputableAssertion)
-	dispAssSub, err := con.Tracker.WatchDisputableAssertion(watch, dispAssChan, [][32]byte{vmId})
+	dispAssSub, err := con.Tracker.WatchDisputableAssertion(watch, dispAssChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	confAssChan := make(chan *verifierRPC.VMTrackerConfirmedAssertion)
-	confAssSub, err := con.Tracker.WatchConfirmedAssertion(watch, confAssChan, [][32]byte{vmId})
+	confAssSub, err := con.Tracker.WatchConfirmedAssertion(watch, confAssChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	challengeInitiatedChan := make(chan *verifierRPC.VMTrackerInitiatedChallenge)
-	challengeInitiatedSub, err := con.Tracker.WatchInitiatedChallenge(watch, challengeInitiatedChan, [][32]byte{vmId})
+	challengeInitiatedSub, err := con.Tracker.WatchInitiatedChallenge(watch, challengeInitiatedChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	challengeBisectedChan := make(chan *challengeRPC.ChallengeManagerBisectedAssertion)
-	challengeBisectedSub, err := con.Challenge.WatchBisectedAssertion(watch, challengeBisectedChan, [][32]byte{vmId})
+	challengeBisectedSub, err := con.Challenge.WatchBisectedAssertion(watch, challengeBisectedChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	challengeContinuedChan := make(chan *challengeRPC.ChallengeManagerContinuedChallenge)
-	challengeContinuedSub, err := con.Challenge.WatchContinuedChallenge(watch, challengeContinuedChan, [][32]byte{vmId})
+	challengeContinuedSub, err := con.Challenge.WatchContinuedChallenge(watch, challengeContinuedChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	challengeTimedOutChan := make(chan *challengeRPC.ChallengeManagerTimedOutChallenge)
-	challengeTimedOutSub, err := con.Challenge.WatchTimedOutChallenge(watch, challengeTimedOutChan, [][32]byte{vmId})
+	challengeTimedOutSub, err := con.Challenge.WatchTimedOutChallenge(watch, challengeTimedOutChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	oneStepProofChan := make(chan *challengeRPC.ChallengeManagerOneStepProofCompleted)
-	oneStepProofSub, err := con.Challenge.WatchOneStepProofCompleted(watch, oneStepProofChan, [][32]byte{vmId})
+	oneStepProofSub, err := con.Challenge.WatchOneStepProofCompleted(watch, oneStepProofChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -294,7 +294,7 @@ func (con *Bridge) CreateListeners(vmId [32]byte) (chan Notification, chan error
 					return
 				}
 
-				precondition, assertion := TranslateDisputableAssertionEvent(val)
+				precondition, assertion := translateDisputableAssertionEvent(val)
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
@@ -338,7 +338,7 @@ func (con *Bridge) CreateListeners(vmId [32]byte) (chan Notification, chan error
 					Header: header,
 					VmID:   val.VmId,
 					Event:  BisectionEvent{
-						Assertions: TranslateBisectionEvent(val),
+						Assertions: translateBisectionEvent(val),
 					},
 				}
 			case val := <-challengeTimedOutChan:
@@ -546,7 +546,7 @@ func (con *Bridge) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest [
 
 func (con *Bridge) UnanimousAssert(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	newInboxHash [32]byte,
 	timeBounds protocol.TimeBounds,
 	assertion *protocol.Assertion,
@@ -576,7 +576,7 @@ func (con *Bridge) UnanimousAssert(
 
 	return con.Tracker.UnanimousAssert(
 		auth,
-		vmId,
+		vmID,
 		assertion.AfterHash,
 		newInboxHash,
 		assertion.LogsHash(),
@@ -592,7 +592,7 @@ func (con *Bridge) UnanimousAssert(
 
 func (con *Bridge) ProposeUnanimousAssert(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	newInboxHash [32]byte,
 	timeBounds protocol.TimeBounds,
 	assertion *protocol.Assertion,
@@ -631,7 +631,7 @@ func (con *Bridge) ProposeUnanimousAssert(
 
 	return con.Tracker.ProposeUnanimousAssert(
 		auth,
-		vmId,
+		vmID,
 		unanRest,
 		sequenceNum,
 		timeBounds,
@@ -644,7 +644,7 @@ func (con *Bridge) ProposeUnanimousAssert(
 
 func (con *Bridge) ConfirmUnanimousAsserted(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
@@ -665,7 +665,7 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 
 	tx, err := con.Tracker.ConfirmUnanimousAsserted(
 		auth,
-		vmId,
+		vmID,
 		assertion.AfterHash,
 		assertion.LogsHash(),
 		newInboxHash,
@@ -683,7 +683,7 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 
 func (con *Bridge) DisputableAssert(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
@@ -700,7 +700,7 @@ func (con *Bridge) DisputableAssert(
 	return con.Tracker.DisputableAssert(
 		auth,
 		[5][32]byte{
-			vmId,
+			vmID,
 			precondition.BeforeHash,
 			precondition.BeforeInbox.Hash(),
 			assertion.AfterHash,
@@ -718,7 +718,7 @@ func (con *Bridge) DisputableAssert(
 
 func (con *Bridge) ConfirmAsserted(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
@@ -738,7 +738,7 @@ func (con *Bridge) ConfirmAsserted(
 
 	tx, err := con.Tracker.ConfirmAsserted(
 		auth,
-		vmId,
+		vmID,
 		precondition.Hash(),
 		assertion.AfterHash,
 		assertion.LogsHash(),
@@ -757,7 +757,7 @@ func (con *Bridge) ConfirmAsserted(
 
 func (con *Bridge) InitiateChallenge(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 ) (*types.Transaction, error) {
@@ -768,14 +768,14 @@ func (con *Bridge) InitiateChallenge(
 	))
 	return con.Tracker.InitiateChallenge(
 		auth,
-		vmId,
+		vmID,
 		preAssHash,
 	)
 }
 
 func (con *Bridge) BisectChallenge(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	deadline uint64,
 	precondition *protocol.Precondition,
 	assertions []*protocol.Assertion,
@@ -803,7 +803,7 @@ func (con *Bridge) BisectChallenge(
 	return con.Challenge.BisectAssertion(
 		auth,
 		[3][32]byte{
-			vmId,
+			vmID,
 			precondition.BeforeHash,
 			precondition.BeforeInbox.Hash(),
 		},
@@ -819,7 +819,7 @@ func (con *Bridge) BisectChallenge(
 
 func (con *Bridge) ContinueChallenge(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	assertionToChallenge *big.Int,
 	bisectionProof []byte,
 	bisectionRoot [32]byte,
@@ -828,7 +828,7 @@ func (con *Bridge) ContinueChallenge(
 ) (*types.Transaction, error) {
 	return con.Challenge.ContinueChallenge(
 		auth,
-		vmId,
+		vmID,
 		assertionToChallenge,
 		bisectionProof,
 		deadline,
@@ -839,7 +839,7 @@ func (con *Bridge) ContinueChallenge(
 
 func (con *Bridge) OneStepProof(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	proof []byte,
@@ -847,7 +847,7 @@ func (con *Bridge) OneStepProof(
 ) (*types.Transaction, error) {
 	return con.Challenge.OneStepProof(
 		auth,
-		vmId,
+		vmID,
 		[2][32]byte{precondition.BeforeHash, precondition.BeforeInbox.Hash()},
 		precondition.TimeBounds,
 		precondition.BeforeBalance.TokenTypes,
@@ -867,19 +867,19 @@ func (con *Bridge) OneStepProof(
 
 func (con *Bridge) AsserterTimedOutChallenge(
 	auth *bind.TransactOpts,
-	vmId [32]byte,
+	vmID [32]byte,
 	bisectionHash [32]byte,
 	deadline uint64,
 ) (*types.Transaction, error) {
 	return con.Challenge.AsserterTimedOut(
 		auth,
-		vmId,
+		vmID,
 		bisectionHash,
 		deadline,
 	)
 }
 
-func TranslateBisectionEvent(event *challengeRPC.ChallengeManagerBisectedAssertion) []*protocol.AssertionStub {
+func translateBisectionEvent(event *challengeRPC.ChallengeManagerBisectedAssertion) []*protocol.AssertionStub {
 	bisectionCount := (len(event.AfterHashAndMessageAndLogsBisections) - 2) / 3
 	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
 	stepCount := event.TotalSteps / uint32(bisectionCount)
@@ -903,7 +903,7 @@ func TranslateBisectionEvent(event *challengeRPC.ChallengeManagerBisectedAsserti
 	return assertions
 }
 
-func TranslateDisputableAssertionEvent(event *verifierRPC.VMTrackerDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
+func translateDisputableAssertionEvent(event *verifierRPC.VMTrackerDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	balanceTracker := protocol.NewBalanceTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],

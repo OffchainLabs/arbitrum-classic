@@ -65,11 +65,11 @@ type ClientManager struct {
 	responses       map[[32]byte]chan LabeledFollowerResponse
 
 	key        *ecdsa.PrivateKey
-	vmId       [32]byte
+	vmID       [32]byte
 	validators map[common.Address]validatorInfo
 }
 
-func NewClientManager(key *ecdsa.PrivateKey, vmId [32]byte, validators map[common.Address]validatorInfo) *ClientManager {
+func NewClientManager(key *ecdsa.PrivateKey, vmID [32]byte, validators map[common.Address]validatorInfo) *ClientManager {
 	return &ClientManager{
 		clients:         make(map[*Client]bool),
 		broadcast:       make(chan *valmessage.ValidatorRequest, 10),
@@ -80,7 +80,7 @@ func NewClientManager(key *ecdsa.PrivateKey, vmId [32]byte, validators map[commo
 		waitingChans:    make(map[chan bool]bool),
 		responses:       make(map[[32]byte]chan LabeledFollowerResponse),
 		key:             key,
-		vmId:            vmId,
+		vmID:            vmID,
 		validators:      validators,
 	}
 }
@@ -124,7 +124,7 @@ func (m *ClientManager) RunServer() error {
 			if err != nil {
 				return nil, err
 			}
-			if _, err := wr.Write(m.vmId[:]); err != nil {
+			if _, err := wr.Write(m.vmID[:]); err != nil {
 				return nil, err
 			}
 
@@ -334,19 +334,19 @@ func NewCoordinator(
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) (*ValidatorCoordinator, error) {
-	var vmId [32]byte
-	_, err := rand.Read(vmId[:])
+	var vmID [32]byte
+	_, err := rand.Read(vmID[:])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	c, err := NewEthValidator(name, vmId, machine, key, config, challengeEverything, connectionInfo, ethURL)
+	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, connectionInfo, ethURL)
 	if err != nil {
 		return nil, err
 	}
 	return &ValidatorCoordinator{
 		Val:         c,
-		cm:          NewClientManager(key, vmId, c.Validators),
+		cm:          NewClientManager(key, vmID, c.Validators),
 		requestChan: make(chan ValidatorLeaderRequest, 10),
 		mpq:         NewMessageProcessingQueue(),
 	}, nil
@@ -554,11 +554,10 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool) e
 		} else {
 			log.Println("Coordinator failed to close channel")
 		}
-		return nil
 	} else {
 		log.Println("Coordinator is keeping unanimous assertion chain open")
-		return nil
 	}
+	return nil
 }
 
 func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool) error {

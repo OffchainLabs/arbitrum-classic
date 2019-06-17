@@ -74,17 +74,6 @@ type SendConfirmUnanimousAssertedMessage struct {
 
 func (SendConfirmUnanimousAssertedMessage) IsOutgoingMessage() {}
 
-type FinalizedAssertion struct {
-	Assertion   *protocol.Assertion
-	NewLogCount int
-}
-
-func (FinalizedAssertion) IsOutgoingMessage() {}
-
-func (f FinalizedAssertion) NewLogs() []value.Value {
-	return f.Assertion.Logs[len(f.Assertion.Logs)-f.NewLogCount:]
-}
-
 type SendInitiateChallengeMessage struct {
 	Precondition *protocol.Precondition
 	Assertion    *protocol.AssertionStub
@@ -125,12 +114,6 @@ type SendConfirmedAssertMessage struct {
 
 func (SendConfirmedAssertMessage) IsOutgoingMessage() {}
 
-type ChallengeTimeoutMessage struct {
-	ChallengerWon bool
-}
-
-func (ChallengeTimeoutMessage) IsOutgoingMessage() {}
-
 type SendAsserterTimedOutChallengeMessage struct {
 	Deadline     uint64
 	Precondition *protocol.Precondition
@@ -146,3 +129,14 @@ type SendChallengerTimedOutChallengeMessage struct {
 }
 
 func (SendChallengerTimedOutChallengeMessage) IsOutgoingMessage() {}
+
+type FinalizedAssertion struct {
+	Assertion   *protocol.Assertion
+	NewLogCount int
+}
+
+func (FinalizedAssertion) IsOutgoingMessage() {}
+
+func (f FinalizedAssertion) NewLogs() []value.Value {
+	return f.Assertion.Logs[len(f.Assertion.Logs)-f.NewLogCount:]
+}
