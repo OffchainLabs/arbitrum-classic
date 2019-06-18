@@ -35,7 +35,7 @@ typedef struct {
 //void *machine_create();
 void machine_destroy(cmachine_t *m);
 
-Machine read_files (std::string filename, std::string inboxfile) {
+Machine *read_files (std::string filename, std::string inboxfile) {
     std::cout<<"In read_file. reading - "<<filename<<std::endl;
     std::ifstream myfile;
     
@@ -68,25 +68,25 @@ Machine read_files (std::string filename, std::string inboxfile) {
             myfile.close();
         }
     }
-    return Machine(buf, inbox);
+    return new Machine(buf, inbox);
 }
 
 //cmachine_t *machine_create(char *data)
-void *machine_create(char *filename, char *inboxfile)
+void *machine_create(const char *filename, const char *inboxfile)
 {
-    std::cout<<"In machine_create "<<std::endl;
-    Machine mach = read_files(filename, inboxfile);
+//    std::cout<<"In machine_create "<<std::endl;
+    Machine *mach = read_files(filename, inboxfile);
     cmachine_t *m;
 //    Machine *obj;
-    std::cout<<"In machine_create machine created"<<std::endl;
+//    std::cout<<"In machine_create machine created"<<std::endl;
 
     m      = (typeof(m))malloc(sizeof(*m));
-    std::cout<<"In machine_create m malloced"<<std::endl;
+//    std::cout<<"In machine_create m malloced"<<std::endl;
 //    obj    = new Machine(data);
-    m->obj = &mach;
-    std::cout<<"In machine_create m->obj set"<<std::endl;
+    m->obj = mach;
+//    std::cout<<"In machine_create m->obj set"<<std::endl;
 
-    return (void *)&mach;
+    return (void *)mach;
 }
 
 void machine_destroy(cmachine_t *m) {
@@ -96,13 +96,17 @@ void machine_destroy(cmachine_t *m) {
     free(m);
 }
 
-cassertion machine_run(cmachine_t *m, uint64_t maxSteps) {
+//cassertion machine_run(cmachine_t *m, uint64_t maxSteps) {
+uint64_t machine_run(void *m, uint64_t maxSteps) {
     Machine *obj;
     
     if (m == NULL)
-        return cassertion{0};
+        return 0;
+//        return cassertion{0};
     
-    obj = static_cast<Machine *>(m->obj);
+    obj = (Machine *)m;
+//    obj = static_cast<Machine *>(m->obj);
     Assertion assertion = obj->run(maxSteps);
-    return cassertion{assertion.stepCount};
+    return assertion.stepCount;
+//    return cassertion{assertion.stepCount};
 }

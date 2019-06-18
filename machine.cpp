@@ -108,10 +108,11 @@ Machine::Machine(char *&srccode, char *&inboxdata) : Machine() {
         std::cout<<"inbox value="<<inbox<<std::endl;
     }
 }
-//int stackcount=0;
 Assertion Machine::run(uint64_t stepCount) {
-    std::cout << "starting machine code size=" << code.size() << std::endl;
-    std::cout << "inbox=" << inbox << std::endl;
+    //testing opcodes
+//    opcodeTests();
+//    std::cout << "starting machine code size=" << code.size() << std::endl;
+//    std::cout << "inbox=" << inbox << std::endl;
     uint64_t i;
     for (i = 0; i < stepCount; i++) {
 //        std::cout << "Step #" << i << std::endl;
@@ -131,14 +132,14 @@ Assertion Machine::run(uint64_t stepCount) {
     }
     if (state==HALTED){
         //set error return
-        std::cout << "halted state" << std::endl;
+//        std::cout << "halted state" << std::endl;
     }
-    std::cout << "full stack - size=" << stack.stacksize() << std::endl;
-    while (stack.stacksize()>0){
-        value A=stack.pop();
-        std::cout << A << std::endl;
-    }
-    std::cout << "Total steps executed=" << i << std::endl;
+//    std::cout << "full stack - size=" << stack.stacksize() << std::endl;
+//    while (stack.stacksize()>0){
+//        value A=stack.pop();
+//        std::cout << A << std::endl;
+//    }
+//    std::cout << "Total steps executed=" << i << std::endl;
     
     return {i};
 }
@@ -167,13 +168,12 @@ int Machine::runOne() {
     if (immediateVal){
 //        std::cout<<"immediateVal = "<<*immediateVal<<std::endl;
         stack.push(std::move(*immediateVal));
-//        stackcount++;
     }
     
     try {
-//        std::cout<<"calling runInstruction"<<" stackcount="<<stackcount<<std::endl;
+//        std::cout<<"calling runInstruction"<<std::endl;
         runInstruction(instruction);
-//        std::cout<<"after runInstruction stack size= "<<stack.stacksize()<<" stackcount="<<stackcount<< std::endl;
+//        std::cout<<"after runInstruction stack size= "<<stack.stacksize()<< std::endl;
 //        if (stack.stacksize()>0){
 //            std::cout<<"top="<<stack.peek()<< std::endl;
 //        }
@@ -326,7 +326,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &aNum = assumeInt(val1);
             auto &bNum = assumeInt(val2);
             bNum += aNum;
-//            stackcount--;
             break;
         }
         case OpCode::MUL: {
@@ -335,7 +334,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &aNum = assumeInt(val1);
             auto &bNum = assumeInt(val2);
             bNum *= aNum;
-//            stackcount--;
             break;
         }
         case OpCode::SUB: {
@@ -346,7 +344,6 @@ void Machine::runInstruction( instr instruction ) {
             uint256_t ret;
             ret=aNum-bNum;
             stack.push(std::move(ret));
-//            stackcount--;
             break;
         }
         case OpCode::DIV: {
@@ -362,7 +359,6 @@ void Machine::runInstruction( instr instruction ) {
                 ret=aNum/bNum;
             }
             stack.push(std::move(ret));
-//            stackcount--;
             break;
         }
         case OpCode::SDIV: {
@@ -387,7 +383,6 @@ void Machine::runInstruction( instr instruction ) {
                 bNum = (aNum / bNum) * signA * signB;
             }
             stack.push(std::move(bNum));
-//            stackcount--;
             break;
         }
         case OpCode::MOD: {
@@ -400,7 +395,6 @@ void Machine::runInstruction( instr instruction ) {
             } else {
                 bNum = 0;
             }
-//            stackcount--;
             break;
         }
         case OpCode::SMOD: {
@@ -422,7 +416,6 @@ void Machine::runInstruction( instr instruction ) {
                 bNum = (aNum % bNum) * signA;
             }
             stack.push(std::move(bNum));
-//            stackcount--;
             break;
         }
         case OpCode::ADDMOD: {
@@ -441,7 +434,6 @@ void Machine::runInstruction( instr instruction ) {
                 
                 cNum = static_cast<uint256_t>((aBig + bBig) % cNum);
             }
-//            stackcount--;
             break;
         }
         case OpCode::MULMOD: {
@@ -460,7 +452,6 @@ void Machine::runInstruction( instr instruction ) {
                 
                 cNum = static_cast<uint256_t>((aBig * bBig) % cNum);
             }
-//            stackcount--;
             break;
         }
         case OpCode::EXP: {
@@ -471,7 +462,6 @@ void Machine::runInstruction( instr instruction ) {
             uint64_t bSmall = assumeInt64(bNum);
             
             bNum = power(aNum, bSmall);
-//            stackcount--;
            break;
         }
         /******************************************/
@@ -483,7 +473,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &aNum = assumeInt(val1);
             auto &bNum = assumeInt(val2);
             bNum = (aNum < bNum) ? 1 : 0;
-//            stackcount--;
            break;
         }
         case OpCode::GT: {
@@ -492,7 +481,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &aNum = assumeInt(val1);
             auto &bNum = assumeInt(val2);
             bNum = (aNum > bNum) ? 1 : 0;
-//            stackcount--;
             break;
         }
         case OpCode::SLT: {
@@ -516,7 +504,6 @@ void Machine::runInstruction( instr instruction ) {
                     bNum = (aNum < bNum) ? 1 : 0;
                 }
             }
-//            stackcount--;
             break;
         }
         case OpCode::SGT: {
@@ -541,7 +528,6 @@ void Machine::runInstruction( instr instruction ) {
                 }
             }
             break;
-//            stackcount--;
         }
         case OpCode::EQ: {
             value val1 = stack.pop();
@@ -554,7 +540,6 @@ void Machine::runInstruction( instr instruction ) {
             }
 //            std::cout << "in eq val1="<<val1<<" val2="<<val2<<" ret="<<ret <<std::endl;
             stack.push(std::move(ret));
-//            stackcount--;
             break;
         }
         case OpCode::ISZERO: {
@@ -569,7 +554,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &aNum = assumeInt(val1);
             auto &bNum = assumeInt(val2);
             bNum &= aNum;
-//            stackcount--;
             break;
         }
         case OpCode::BITWISE_OR: {
@@ -579,7 +563,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &bNum = assumeInt(val2);
 //            std::cout << "in or aNum="<<aNum<<" bNum="<<bNum <<std::endl;
             bNum |= aNum;
-//            stackcount--;
             break;
         }
         case OpCode::BITWISE_XOR: {
@@ -588,7 +571,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &aNum = assumeInt(val1);
             auto &bNum = assumeInt(val2);
             bNum ^= aNum;
-//            stackcount--;
             break;
         }
         case OpCode::BITWISE_NOT: {
@@ -610,7 +592,6 @@ void Machine::runInstruction( instr instruction ) {
                 const auto mask = uint256_t(255) << shift;
                 bNum = (bNum & mask) >> shift;
             }
-//            stackcount--;
             break;
         }
         case OpCode::SIGNEXTEND: {
@@ -627,7 +608,6 @@ void Machine::runInstruction( instr instruction ) {
                 const auto mask = uint256_t(-1) >> (256 - idx);
                 bNum = (uint256_t(-sign) << idx) | (bNum & mask);
             }
-//            stackcount--;
             break;
         }
             
@@ -646,25 +626,21 @@ void Machine::runInstruction( instr instruction ) {
         case OpCode::POP:
 //            std::cout << "in Pop" <<std::endl;
             stack.pop();
-//            stackcount--;
             break;
         case OpCode::SPUSH: {
             value copiedStatic = staticVal;
             stack.push(std::move(copiedStatic));
-//            stackcount++;
             break;
         }
         case OpCode::RPUSH: {
             value copiedRegister = registerVal;
             stack.push(std::move(copiedRegister));
-//            stackcount++;
             break;
         }
         case OpCode::RSET:
 //            std::cout << "in RSET" << std::endl;
             stack.popSet(registerVal);
 //            std::cout << "register set " << registerVal << std::endl;
-//            stackcount--;
             break;
         case OpCode::JUMP:{
             auto jumpDest = stack.pop();
@@ -676,7 +652,6 @@ void Machine::runInstruction( instr instruction ) {
             } else {
                 state = ERROR;
             }
-//            stackcount--;
             break;
         }
         case OpCode::CJUMP:{
@@ -694,8 +669,6 @@ void Machine::runInstruction( instr instruction ) {
             } else{
                 shouldIncrement=true;
             }
-//            stackcount--;
-//            stackcount--;
             break;
         }
         case OpCode::STACKEMPTY:{
@@ -706,25 +679,21 @@ void Machine::runInstruction( instr instruction ) {
                 ret=0;
             }
             stack.push(std::move(ret));
-//            stackcount++;
             break;
         }
         case OpCode::PCPUSH:{
 //            std::cout << "**** PCPUSH i=" << pc <<std::endl;
             stack.push(CodePoint{pc});
-//            stackcount++;
             break;
         }
         case OpCode::AUXPUSH:{
             value val1 = stack.pop();
             auxstack.push(std::move(val1));
-//            stackcount--;
             break;
         }
         case OpCode::AUXPOP:{
             value val1 = auxstack.pop();
             stack.push(std::move(val1));
-//            stackcount++;
             break;
         }
         case OpCode::AUXSTACKEMPTY:{
@@ -735,7 +704,6 @@ void Machine::runInstruction( instr instruction ) {
                 ret=0;
             }
             stack.push(std::move(ret));
-//            stackcount++;
             break;
         }
         case OpCode::NOP:
@@ -743,12 +711,10 @@ void Machine::runInstruction( instr instruction ) {
             break;
         case OpCode::ERRPUSH:
             stack.push(std::move(errpc));
-//            stackcount++;
             break;
         case OpCode::ERRSET:{
             value ret = stack.pop();
             auto errpc = mpark::get_if<CodePoint>(&ret);
-//            stackcount--;
             break;
         }
     /****************************************/
@@ -757,7 +723,6 @@ void Machine::runInstruction( instr instruction ) {
         case OpCode::DUP0:{
             value valA = stack.peek();
             stack.push(std::move(valA));
-//            stackcount++;
             break;
         }
         case OpCode::DUP1:{
@@ -765,7 +730,6 @@ void Machine::runInstruction( instr instruction ) {
             value valB = stack.peek();
             stack.push(std::move(valA));
             stack.push(std::move(valB));
-//            stackcount++;
             break;
         }
         case OpCode::DUP2:{
@@ -775,7 +739,6 @@ void Machine::runInstruction( instr instruction ) {
             stack.push(std::move(valB));
             stack.push(std::move(valA));
             stack.push(std::move(valC));
-//            stackcount++;
             break;
         }
         case OpCode::SWAP1:{
@@ -804,7 +767,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &index = assumeInt(indexVal);
             auto &tup = assumeTuple(tupVal);
             stack.push(tup.get_element(static_cast<uint32_t>(index)));
-//            stackcount--;
             break;
         }
         case OpCode::TSET: {
@@ -815,8 +777,6 @@ void Machine::runInstruction( instr instruction ) {
             auto &tup = assumeTuple(tupVal);
             tup.set_element(static_cast<uint32_t>(index), std::move(newVal));
             stack.push(std::move(tup));
-//            stackcount--;
-//            stackcount--;
             break;
         }
         case OpCode::TLEN: {

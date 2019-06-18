@@ -15,9 +15,10 @@
 extern "C" {
 #endif
 
-void *machine_create(char *filename, char *inboxfile);
+void *machine_create(const char *filename, const char *inboxfile);
 //void machine_destroy(cmachine_t *m);
 //cassertion machine_run(cmachine_t *m, uint64_t maxSteps);
+uint64_t machine_run(void *m, uint64_t maxSteps);
 
 
 //struct cmachine;

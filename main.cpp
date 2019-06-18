@@ -28,6 +28,7 @@ int main(int argc, const char * argv[]) {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <chrono>
 
 #include "pool.hpp"
 #include "value.hpp"
@@ -310,7 +311,7 @@ int main(int argc, const char * argv[]) {
 //    }
 ////    return Init_machine(buf, staticValue);
 //}
-Machine read_files (std::string filename, std::string inboxfile);
+//Machine *read_files (std::string filename, std::string inboxfile);
 //int main() {
 int main(int argc, char *argv[])
 {
@@ -329,14 +330,24 @@ int main(int argc, char *argv[])
             inbox_file = argv[2];
         }
     }
+    std::cout<<filename<<" "<<inbox_file<<std::endl;
 //    machine_create();
 //    oldread_file(filename, code, staticValue);
-    Machine mach = read_files(filename, inbox_file);
+//    Machine *mach = read_files(filename, inbox_file);
+    void *mach = machine_create(filename.c_str(), inbox_file.c_str());
+//    void *mach = machine_create("contract.ao", "inbox.dat");
 //    setupCode( code );
     //testing opcodes
 //    mach.opcodeTests();
-    Assertion result = mach.run(stepCount);
+//    Assertion result = mach->run(stepCount);
     
+    auto start = std::chrono::high_resolution_clock::now();
+
+    uint64_t steps = machine_run(mach, stepCount);
+
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    std::cout<< steps<<" steps in "<<elapsed.count()*1000<<" milliseconds"<<std::endl;
 //    runMachine(code, state, 200);
     
     exit(0);
