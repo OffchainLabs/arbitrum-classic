@@ -32,4 +32,6 @@
 *.app
 
 xcode
+release
+gcc9
 .DS_Store

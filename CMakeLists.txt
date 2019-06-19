@@ -34,7 +34,6 @@ set(LIB_SOURCES
   cmachine.cpp
   machine.cpp
   code.cpp
-  datastack.cpp
   value.cpp
   pool.cpp
   ${KECCAK_SOURCES}
