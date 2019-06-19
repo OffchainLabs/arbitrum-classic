@@ -11,6 +11,7 @@
 
 #include "value.hpp"
 #include "opcodes.hpp"
+#include "tuple.hpp"
 
 #include <nonstd/optional.hpp>
 

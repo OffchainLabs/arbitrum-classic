@@ -11,6 +11,7 @@
 
 #include "bigint.hpp"
 #include "opcodes.hpp"
+
 #include <mpark/variant.hpp>
 
 class bad_tuple_index : public std::exception {
@@ -28,24 +29,9 @@ struct CodePoint;
 using value = mpark::variant<uint256_t, Tuple, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
-bool operator==(const Tuple& val1, const Tuple& val2);
 bool operator==(const CodePoint& val1, const CodePoint& val2);
 
 uint256_t value_hash(const value &value);
-
-class Tuple {
-private:
-    TuplePool* tuplePool;
-    int size;
-    std::shared_ptr<std::vector<value>> tpl;
-public:
-    Tuple(int size_, TuplePool *pool);
-    ~Tuple();
-    
-    int tuple_size() const;
-    void set_element(int pos, value && newval);
-    value get_element(int pos) const;
-};
 
 struct CodePoint {
     uint64_t pc;

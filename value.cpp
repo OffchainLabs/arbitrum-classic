@@ -75,50 +75,6 @@ value deserialize_value(char *&bufptr, TuplePool &pool) {
     }
 }
 
-Tuple::Tuple(int size_, TuplePool *pool) :
-tuplePool(pool),
-size(size_ + 1),
-tpl(pool->getResource(size_)) {}
-
-Tuple::~Tuple(){
-    tuplePool->returnResource(std::move(tpl));
-}
-
-int Tuple::tuple_size() const {
-    return tpl->size();
-}
-
-void Tuple::set_element(int pos, value && newval) {
-    if (pos >= tuple_size()){
-        throw bad_tuple_index{};
-    }
-
-    if (tpl.use_count() > 1) {
-        //make new copy tuple
-        std::shared_ptr<std::vector<value>> tmp = tuplePool->getResource(tpl->size());
-        std::copy(tpl->begin(), tpl->end(), tmp->begin());
-        tpl=tmp;
-    }
-    (*tpl)[pos] = std::move(newval);
-}
-
-value Tuple::get_element(int pos) const {
-    if (pos >= tuple_size()){
-        throw bad_tuple_index{};
-    }
-    return (*tpl)[pos];
-}
-
-bool operator==(const Tuple& val1, const Tuple& val2){
-    if (val1.tuple_size() != val2.tuple_size())
-        return false;
-    for (int i=0; i<val1.tuple_size(); i++){
-        if (!(val1.get_element(i)==val2.get_element(i)))
-            return false;
-    }
-    return true;
-}
-
 bool operator==(const CodePoint& val1, const CodePoint& val2){
     if (val1.pc != val2.pc)
         return false;

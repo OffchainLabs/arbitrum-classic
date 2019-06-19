@@ -27,6 +27,7 @@ set(LIB_HEADERS
   value.hpp
   pool.hpp
   opcodes.hpp
+  tuple.hpp
 )
 
 set(LIB_SOURCES

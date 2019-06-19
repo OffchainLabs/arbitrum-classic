@@ -5,11 +5,15 @@
 //  Created by Timothy O'Bryan on 3/23/19.
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
+#include "pool.hpp"
+#include "value.hpp"
+#include "tuple.hpp"
+
+#include <boost/smart_ptr/make_local_shared.hpp>
+
 #include <iostream>
 #include <list>
 #include <array>
-#include "pool.hpp"
-#include "value.hpp"
 
 /**
  * Returns instance of Resource.
@@ -19,11 +23,11 @@
  *
  * @return Resource instance.
  */
-std::shared_ptr<std::vector<value>> TuplePool::getResource(int s)
+boost::local_shared_ptr<std::vector<value>> TuplePool::getResource(int s)
 {
     if (resources[s].empty())
     {
-        auto newTup = std::make_shared<std::vector<value>>();
+        auto newTup = boost::make_local_shared<std::vector<value>>();
         newTup->reserve(s);
         for (int i = 0; i < s; i++) {
             newTup->push_back(Tuple(0, this));
@@ -32,27 +36,12 @@ std::shared_ptr<std::vector<value>> TuplePool::getResource(int s)
     }
     else
     {
-        std::shared_ptr<std::vector<value>> resource = resources[s].back();
+        boost::local_shared_ptr<std::vector<value>> resource = resources[s].back();
         resources[s].pop_back();
         resource->clear();
         for (int i = 0; i < s; i++) {
             resource->push_back(Tuple(0, this));
         }
         return resource;
-    }
-}
-/**
- * Return resource back to the pool.
- *
- * The resource must be initialized back to
- * the default settings before someone else
- * attempts to use it.
- *
- * @param object Resource instance.
- */
-
-void TuplePool::returnResource(std::shared_ptr<std::vector<value>> && object) {
-    if (object.use_count() == 1){
-        resources[object->size()].push_back(std::move(object));
     }
 }
