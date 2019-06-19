@@ -80,11 +80,6 @@ tuplePool(pool),
 size(size_ + 1),
 tpl(pool->getResource(size_)) {}
 
-Tuple::Tuple(const Tuple &tup) :
-tuplePool(tup.tuplePool),
-size(tup.size),
-tpl(tup.tpl) {}
-
 Tuple::~Tuple(){
     tuplePool->returnResource(std::move(tpl));
 }

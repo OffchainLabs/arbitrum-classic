@@ -305,7 +305,7 @@ void Machine::runInstruction( instr instruction ) {
 //void Machine::runInstruction( ) {
 //    auto &instruction = testInstr;
 //    auto &instruction = code[pc];
-    std::stringstream ss;
+//    std::stringstream ss;
 //    ss << "in runInstruction, running " << std::hex << static_cast<int>(instruction.opcode);
 //    std::cout << ss.str() <<", <"<< InstructionNames.at(instruction.opcode) <<">, stack size= "<<stack.stacksize()<< "\n";
 //    if (stack.stacksize()>0){

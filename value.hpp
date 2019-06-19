@@ -40,7 +40,6 @@ private:
     std::shared_ptr<std::vector<value>> tpl;
 public:
     Tuple(int size_, TuplePool *pool);
-    Tuple(const Tuple &tup);
     ~Tuple();
     
     int tuple_size() const;
