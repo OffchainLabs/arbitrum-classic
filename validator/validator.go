@@ -18,6 +18,7 @@ package validator
 
 import (
 	"fmt"
+	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"math"
 	"math/big"
@@ -34,8 +35,8 @@ import (
 )
 
 type validatorState interface {
-	UpdateTime(uint64) (validatorState, []valmessage.OutgoingMessage, error)
-	UpdateState(ethbridge.Event, uint64) (validatorState, challengeState, []valmessage.OutgoingMessage, error)
+	UpdateTime(uint64, bridge.Bridge) (validatorState, error)
+	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (validatorState, challengeState, error)
 
 	SendMessageToVM(msg protocol.Message)
 	GetCore() *validatorCore
@@ -43,8 +44,8 @@ type validatorState interface {
 }
 
 type challengeState interface {
-	UpdateTime(uint64) (challengeState, []valmessage.OutgoingMessage, error)
-	UpdateState(ethbridge.Event, uint64) (challengeState, []valmessage.OutgoingMessage, error)
+	UpdateTime(uint64, bridge.Bridge) (challengeState, error)
+	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (challengeState, error)
 }
 
 type Error struct {
@@ -110,8 +111,8 @@ func (validator *Validator) HasPendingMessages() chan bool {
 	return retChan
 }
 
-func (validator *Validator) RequestVMState() <-chan vmStateData {
-	resultChan := make(chan vmStateData)
+func (validator *Validator) RequestVMState() <-chan valmessage.VMStateData {
+	resultChan := make(chan valmessage.VMStateData)
 	validator.requests <- vmStateRequest{ResultChan: resultChan}
 	return resultChan
 }
@@ -187,10 +188,9 @@ func (validator *Validator) CloseUnanimousAssertionRequest() <-chan bool {
 	return resultChan
 }
 
-func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan chan<- valmessage.OutgoingMessage) {
+func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge bridge.Bridge) {
 	go func() {
 		defer fmt.Printf("%v: Exiting\n", validator.Name)
-		defer close(sendChan)
 		for {
 			select {
 			case notification, ok := <-recvChan:
@@ -203,7 +203,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan
 				newHeader := notification.Header
 				if validator.latestHeader == nil || newHeader.Number.Uint64() >= validator.latestHeader.Number.Uint64() && newHeader.Hash() != validator.latestHeader.Hash() {
 					validator.latestHeader = newHeader
-					validator.timeUpdate(sendChan)
+					validator.timeUpdate(bridge)
 
 					if validator.pendingDisputableRequest != nil {
 						pre := validator.pendingDisputableRequest.GetPrecondition()
@@ -218,7 +218,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan
 				case ethbridge.NewTimeEvent:
 					break
 				case ethbridge.VMEvent:
-					validator.eventUpdate(ev, notification.Header, sendChan)
+					validator.eventUpdate(ev, notification.Header, bridge)
 				case ethbridge.MessageDeliveredEvent:
 					validator.bot.SendMessageToVM(ev.Msg)
 
@@ -230,7 +230,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan
 				default:
 					panic("Should never recieve other kinds of events")
 				}
-				validator.tryToAssert(sendChan)
+				validator.tryToAssert(bridge)
 			case request := <-validator.requests:
 				switch request := request.(type) {
 				case initiateUnanimousRequest:
@@ -348,7 +348,10 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan
 							break
 						}
 						validator.bot = newBot
-						sendChan <- valmessage.FinalizedAssertion{Assertion: proposal.assertion, NewLogCount: proposal.newLogCount}
+						bridge.FinalizedAssertion(
+							proposal.assertion,
+							proposal.newLogCount,
+						)
 						request.ResultChan <- true
 					} else {
 						request.ErrChan <- fmt.Errorf("recieved unanimous confirm request, but was in the wrong state to handle it: %T", validator.bot)
@@ -357,16 +360,13 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan
 				case closeUnanimousAssertionRequest:
 					if bot, ok := validator.bot.(waitingObserver); ok {
 						_ = bot.GetCore()
-						newBot, msgs, err := bot.CloseUnanimous(request.ResultChan)
+						newBot, err := bot.CloseUnanimous(bridge, request.ResultChan)
 						if err != nil {
 							request.ErrChan <- err
 							break
 						}
 
 						validator.bot = newBot
-						for _, msg := range msgs {
-							sendChan <- msg
-						}
 					} else {
 						request.ErrChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 					}
@@ -394,7 +394,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan
 				case vmStateRequest:
 					core := validator.bot.GetCore()
 					machineHash := core.machine.Hash()
-					request.ResultChan <- vmStateData{
+					request.ResultChan <- valmessage.VMStateData{
 						MachineState: machineHash,
 						Config:       *validator.bot.GetConfig().config,
 					}
@@ -447,25 +447,25 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, sendChan
 				default:
 					fmt.Printf("Unahandled validator request %T: %v\n", request, request)
 				}
-				validator.tryToAssert(sendChan)
+				validator.tryToAssert(bridge)
 			case <-validator.maybeAssert:
-				validator.tryToAssert(sendChan)
+				validator.tryToAssert(bridge)
 			}
 		}
 	}()
 }
 
-func (validator *Validator) tryToAssert(sendChan chan<- valmessage.OutgoingMessage) {
+func (validator *Validator) tryToAssert(bridge bridge.Bridge) {
 	if validator.pendingDisputableRequest != nil && validator.canDisputableAssert() {
 		validator.bot = attemptingAssertDefender{
 			validator.bot.GetCore(),
 			validator.bot.GetConfig(),
 			*validator.pendingDisputableRequest,
 		}
-		sendChan <- valmessage.SendAssertMessage{
-			Precondition: validator.pendingDisputableRequest.Defender.GetPrecondition(),
-			Assertion:    validator.pendingDisputableRequest.Defender.GetAssertion(),
-		}
+		bridge.DisputableAssert(
+			validator.pendingDisputableRequest.Defender.GetPrecondition(),
+			validator.pendingDisputableRequest.Defender.GetAssertion(),
+		)
 		validator.pendingDisputableRequest = nil
 	}
 }
@@ -479,52 +479,40 @@ func (validator *Validator) canDisputableAssert() bool {
 	}
 }
 
-func (validator *Validator) timeUpdate(sendChan chan<- valmessage.OutgoingMessage) {
+func (validator *Validator) timeUpdate(bridge bridge.Bridge) {
 	if validator.challengeBot != nil {
-		newBot, msgs, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64())
+		newBot, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64(), bridge)
 		if err != nil {
 			fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, newBot)
 			return
 		}
-		for _, msg := range msgs {
-			sendChan <- msg
-		}
 		validator.challengeBot = newBot
 	}
-	newBot, msgs, err := validator.bot.UpdateTime(validator.latestHeader.Number.Uint64())
+	newBot, err := validator.bot.UpdateTime(validator.latestHeader.Number.Uint64(), bridge)
 	if err != nil {
 		fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, newBot)
 		return
 	}
-	for _, msg := range msgs {
-		sendChan <- msg
-	}
 	validator.bot = newBot
 }
 
-func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Header, sendChan chan<- valmessage.OutgoingMessage) {
+func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Header, bridge bridge.Bridge) {
 	if ev.GetIncomingMessageType() == ethbridge.ChallengeMessage {
 		if validator.challengeBot == nil {
 			panic("challengeBot can't be nil if challenge message is recieved")
 		}
 
-		newBot, msgs, err := validator.challengeBot.UpdateState(ev, header.Number.Uint64())
+		newBot, err := validator.challengeBot.UpdateState(ev, header.Number.Uint64(), bridge)
 		if err != nil {
 			fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, newBot)
 			return
 		}
-		for _, msg := range msgs {
-			sendChan <- msg
-		}
 		validator.challengeBot = newBot
 	} else {
-		newBot, challengeBot, msgs, err := validator.bot.UpdateState(ev, header.Number.Uint64())
+		newBot, challengeBot, err := validator.bot.UpdateState(ev, header.Number.Uint64(), bridge)
 		if err != nil {
 			fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, validator.bot)
 			return
-		}
-		for _, msg := range msgs {
-			sendChan <- msg
 		}
 		validator.bot = newBot
 		if challengeBot != nil {

@@ -83,9 +83,8 @@ func NewValidatorFollower(
 	if err != nil {
 		if resp != nil {
 			return nil, errors2.Wrapf(err, "coordinator handshake failed with status %d", resp.StatusCode)
-		} else {
-			return nil, errors2.Wrap(err, "coordinator handshake failed with empty response")
 		}
+		return nil, errors2.Wrap(err, "coordinator handshake failed with empty response")
 	}
 	tlsCon, ok := coordinatorConn.UnderlyingConn().(*tls.Conn)
 	if !ok {
@@ -111,15 +110,15 @@ func NewValidatorFollower(
 	if err != nil {
 		return nil, err
 	}
-	var vmId [32]byte
-	copy(vmId[:], vmData)
+	var vmID [32]byte
+	copy(vmID[:], vmData)
 	pubkey, err := crypto.SigToPub(hashVal, vmData[32:])
 	if err != nil {
 		return nil, err
 	}
 	address := crypto.PubkeyToAddress(*pubkey)
 
-	c, err := NewEthValidator(name, vmId, machine, key, config, challengeEverything, connectionInfo, ethURL)
+	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, connectionInfo, ethURL)
 	if err != nil {
 		return nil, err
 	}

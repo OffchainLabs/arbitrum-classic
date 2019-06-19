@@ -75,17 +75,12 @@ type callRequest struct {
 	ErrorChan  chan<- error
 }
 
-type vmStateData struct {
-	MachineState [32]byte
-	Config       valmessage.VMConfiguration
-}
-
 type pendingMessageCheck struct {
 	ResultChan chan<- bool
 }
 
 type vmStateRequest struct {
-	ResultChan chan<- vmStateData
+	ResultChan chan<- valmessage.VMStateData
 }
 
 type disputableDefenderRequest struct {

@@ -37,3 +37,8 @@ type UnanimousUpdateResults struct {
 	OriginalInboxHash [32]byte
 	Assertion         *protocol.Assertion
 }
+
+type VMStateData struct {
+	MachineState [32]byte
+	Config       VMConfiguration
+}

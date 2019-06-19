@@ -17,13 +17,13 @@
 package validator
 
 import (
+	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"math/rand"
 
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
-	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type waitingContinuingChallenger struct {
@@ -35,20 +35,19 @@ type waitingContinuingChallenger struct {
 	deadline               uint64
 }
 
-func (bot waitingContinuingChallenger) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingContinuingChallenger) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
 	if time <= bot.deadline {
-		return bot, nil, nil
+		return bot, nil
 	}
-
-	return timedOutAsserterChallenger{bot.validatorConfig},
-		[]valmessage.OutgoingMessage{valmessage.SendAsserterTimedOutChallengeMessage{
-			Deadline:     bot.deadline,
-			Precondition: bot.challengedPrecondition,
-			Assertion:    bot.challengedAssertion,
-		}}, nil
+	bridge.TimeoutAsserter(
+		bot.challengedPrecondition,
+		bot.challengedAssertion,
+		bot.deadline,
+	)
+	return timedOutAsserterChallenger{bot.validatorConfig}, nil
 }
 
-func (bot waitingContinuingChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingContinuingChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		preconditions := protocol.GeneratePreconditions(bot.challengedPrecondition, ev.Assertions)
@@ -61,10 +60,16 @@ func (bot waitingContinuingChallenger) UpdateState(ev ethbridge.Event, time uint
 			}
 		}
 		if assertionNum >= uint16(len(ev.Assertions)) {
-			return nil, nil, &Error{nil, "ERROR: waitingContinuingChallenger: Critical bug: All segments in false assertion are valid"}
+			return nil, &Error{nil, "ERROR: waitingContinuingChallenger: Critical bug: All segments in false assertion are valid"}
 
 		}
 		deadline := time + bot.config.GracePeriod
+		bridge.ContinueChallenge(
+			assertionNum,
+			preconditions,
+			ev.Assertions,
+			deadline,
+		)
 		return continuingChallenger{
 			validatorConfig: bot.validatorConfig,
 			challengedState: machine,
@@ -72,17 +77,11 @@ func (bot waitingContinuingChallenger) UpdateState(ev ethbridge.Event, time uint
 			preconditions:   preconditions,
 			assertions:      ev.Assertions,
 			challengedInbox: bot.challengedInbox,
-		},
-			[]valmessage.OutgoingMessage{valmessage.SendContinueChallengeMessage{
-				AssertionToChallenge: assertionNum,
-				Deadline:             deadline,
-				Preconditions:        preconditions,
-				Assertions:           ev.Assertions,
-			}}, nil
+		}, nil
 	case ethbridge.OneStepProofEvent:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingContinuingChallenger: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: waitingContinuingChallenger: VM state got unsynchronized"}
 	}
 }
 
@@ -95,9 +94,9 @@ type continuingChallenger struct {
 	challengedInbox value.Value
 }
 
-func (bot continuingChallenger) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot continuingChallenger) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
 	if time <= bot.deadline {
-		return bot, nil, nil
+		return bot, nil
 	}
 
 	// msg := SendChallengerTimedOutChallengeMessage{
@@ -106,10 +105,10 @@ func (bot continuingChallenger) UpdateTime(time uint64) (challengeState, []valme
 	//	bot.assertions,
 	//}
 	// Currently not sending a timeout valmessage if this validator timed out
-	return timedOutChallengerChallenger{bot.validatorConfig}, nil, nil
+	return timedOutChallengerChallenger{bot.validatorConfig}, nil
 }
 
-func (bot continuingChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot continuingChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.config.GracePeriod
@@ -120,9 +119,9 @@ func (bot continuingChallenger) UpdateState(ev ethbridge.Event, time uint64) (ch
 			bot.challengedInbox,
 			bot.challengedState,
 			deadline,
-		}, nil, nil
+		}, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: continuingChallenger: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: continuingChallenger: VM state got unsynchronized"}
 	}
 }
 
@@ -130,16 +129,16 @@ type timedOutAsserterChallenger struct {
 	*validatorConfig
 }
 
-func (bot timedOutAsserterChallenger) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	return bot, nil, nil
+func (bot timedOutAsserterChallenger) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
+	return bot, nil
 }
 
-func (bot timedOutAsserterChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot timedOutAsserterChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.AsserterTimeoutEvent:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: timedOutAsserterChallenger: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: timedOutAsserterChallenger: VM state got unsynchronized"}
 	}
 }
 
@@ -147,15 +146,15 @@ type timedOutChallengerChallenger struct {
 	*validatorConfig
 }
 
-func (bot timedOutChallengerChallenger) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	return bot, nil, nil
+func (bot timedOutChallengerChallenger) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
+	return bot, nil
 }
 
-func (bot timedOutChallengerChallenger) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot timedOutChallengerChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.ChallengerTimeoutEvent:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: timedOutChallengerChallenger: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: timedOutChallengerChallenger: VM state got unsynchronized"}
 	}
 }

@@ -18,8 +18,8 @@ package validator
 
 import (
 	"github.com/offchainlabs/arb-avm/protocol"
+	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/ethbridge"
-	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type waitingChallengeObserver struct {
@@ -29,9 +29,9 @@ type waitingChallengeObserver struct {
 	deadline     uint64
 }
 
-func (bot waitingChallengeObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingChallengeObserver) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
 	if time <= bot.deadline {
-		return bot, nil, nil
+		return bot, nil
 	}
 
 	// timeoutMsg := SendAsserterTimedOutChallengeMessage{
@@ -39,17 +39,17 @@ func (bot waitingChallengeObserver) UpdateTime(time uint64) (challengeState, []v
 	//	bot.precondition,
 	//	bot.assertion,
 	//}
-	return waitingAsserterTimeoutObserver{bot.validatorConfig}, nil, nil
+	return waitingAsserterTimeoutObserver{bot.validatorConfig}, nil
 }
 
-func (bot waitingChallengeObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingChallengeObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		deadline := time + bot.config.GracePeriod
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
-		return waitingBisectedObserver{bot.validatorConfig, deadline, preconditions, ev.Assertions}, nil, nil
+		return waitingBisectedObserver{bot.validatorConfig, deadline, preconditions, ev.Assertions}, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingChallengeObserver: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: waitingChallengeObserver: VM state got unsynchronized"}
 	}
 }
 
@@ -60,9 +60,9 @@ type waitingBisectedObserver struct {
 	assertions    []*protocol.AssertionStub
 }
 
-func (bot waitingBisectedObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingBisectedObserver) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
 	if time <= bot.deadline {
-		return bot, nil, nil
+		return bot, nil
 	}
 
 	// msg := SendChallengerTimedOutChallengeMessage{
@@ -70,10 +70,10 @@ func (bot waitingBisectedObserver) UpdateTime(time uint64) (challengeState, []va
 	//	bot.preconditions,
 	//	bot.assertions,
 	//}
-	return waitingChallengerTimeoutObserver{bot.validatorConfig}, nil, nil
+	return waitingChallengerTimeoutObserver{bot.validatorConfig}, nil
 }
 
-func (bot waitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.config.GracePeriod
@@ -82,9 +82,9 @@ func (bot waitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64) 
 			bot.preconditions[ev.ChallengedAssertion],
 			bot.assertions[ev.ChallengedAssertion],
 			deadline,
-		}, nil, nil
+		}, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingBisectedObserver: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: waitingBisectedObserver: VM state got unsynchronized"}
 	}
 }
 
@@ -92,16 +92,16 @@ type waitingChallengerTimeoutObserver struct {
 	*validatorConfig
 }
 
-func (bot waitingChallengerTimeoutObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	return bot, nil, nil
+func (bot waitingChallengerTimeoutObserver) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
+	return bot, nil
 }
 
-func (bot waitingChallengerTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingChallengerTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.ChallengerTimeoutEvent:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingChallengerTimeoutObserver: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: waitingChallengerTimeoutObserver: VM state got unsynchronized"}
 	}
 }
 
@@ -109,15 +109,15 @@ type waitingAsserterTimeoutObserver struct {
 	*validatorConfig
 }
 
-func (bot waitingAsserterTimeoutObserver) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	return bot, nil, nil
+func (bot waitingAsserterTimeoutObserver) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
+	return bot, nil
 }
 
-func (bot waitingAsserterTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingAsserterTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.AsserterTimeoutEvent:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingAsserterTimeoutObserver: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: waitingAsserterTimeoutObserver: VM state got unsynchronized"}
 	}
 }

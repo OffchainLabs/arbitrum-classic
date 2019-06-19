@@ -20,32 +20,32 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/ethbridge"
-
-	"github.com/offchainlabs/arb-validator/valmessage"
 
 	"github.com/offchainlabs/arb-avm/protocol"
 )
 
-func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	deadline := time + core.config.GracePeriod
 	if assDef.GetAssertion().NumSteps == 1 {
 		fmt.Println("Generating proof")
 		var buf bytes.Buffer
 		if err := assDef.SolidityOneStepProof(&buf); err != nil {
-			return nil, nil, &Error{err, "AssertAndDefendBot: error generating one-step proof"}
+			return nil, &Error{err, "AssertAndDefendBot: error generating one-step proof"}
 		}
+		bridge.OneStepProof(
+			assDef.GetPrecondition(),
+			assDef.GetAssertion(),
+			buf.Bytes(),
+			deadline,
+		)
 		return oneStepChallengedAssertDefender{
 				validatorConfig: core,
 				precondition:    assDef.GetPrecondition(),
 				assertion:       assDef.GetAssertion().Stub(),
 				deadline:        deadline,
-			}, []valmessage.OutgoingMessage{valmessage.SendOneStepProofMessage{
-				Precondition: assDef.GetPrecondition(),
-				Assertion:    assDef.GetAssertion(),
-				Proof:        buf.Bytes(),
-				Deadline:     deadline,
-			}}, nil
+			}, nil
 	}
 
 	defenders := assDef.NBisect(6)
@@ -53,17 +53,18 @@ func defenseValidator(core *validatorConfig, assDef protocol.AssertionDefender, 
 	for _, defender := range defenders {
 		assertions = append(assertions, defender.GetAssertion())
 	}
+	bridge.BisectAssertion(
+		assDef.GetPrecondition(),
+		assertions,
+		deadline,
+	)
 	return bisectedAssertDefender{
 			validatorConfig:   core,
 			wholePrecondition: assDef.GetPrecondition(),
 			wholeAssertion:    assDef.GetAssertion().Stub(),
 			splitDefenders:    defenders,
 			deadline:          deadline,
-		}, []valmessage.OutgoingMessage{valmessage.SendBisectionMessage{
-			Deadline:     deadline,
-			Precondition: assDef.GetPrecondition(),
-			Assertions:   assertions,
-		}}, nil
+		}, nil
 }
 
 type bisectedAssertDefender struct {
@@ -74,19 +75,19 @@ type bisectedAssertDefender struct {
 	deadline          uint64
 }
 
-func (bot bisectedAssertDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot bisectedAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
 	if time <= bot.deadline {
-		return bot, nil, nil
+		return bot, nil
 	}
 	// timeoutMsg := SendAsserterTimedOutChallengeMessage{
 	//	bot.deadline,
 	//	bot.wholePrecondition,
 	//	bot.wholeAssertion,
 	//}
-	return timedOutAsserterDefender{bot.validatorConfig}, nil, nil
+	return timedOutAsserterDefender{bot.validatorConfig}, nil
 }
 
-func (bot bisectedAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot bisectedAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.BisectionEvent:
 		deadline := time + bot.config.GracePeriod
@@ -94,9 +95,9 @@ func (bot bisectedAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (
 			bot.validatorConfig,
 			bot.splitDefenders,
 			deadline,
-		}, nil, nil
+		}, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: bisectedAssertDefender: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: bisectedAssertDefender: VM state got unsynchronized"}
 	}
 }
 
@@ -106,9 +107,9 @@ type waitingBisectedDefender struct {
 	deadline  uint64
 }
 
-func (bot waitingBisectedDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingBisectedDefender) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
 	if time <= bot.deadline {
-		return bot, nil, nil
+		return bot, nil
 	}
 
 	preconditions := make([]*protocol.Precondition, 0, len(bot.defenders))
@@ -117,23 +118,23 @@ func (bot waitingBisectedDefender) UpdateTime(time uint64) (challengeState, []va
 		preconditions = append(preconditions, defender.GetPrecondition())
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
-	return timedOutChallengerDefender{bot.validatorConfig},
-		[]valmessage.OutgoingMessage{valmessage.SendChallengerTimedOutChallengeMessage{
-			Deadline:      bot.deadline,
-			Preconditions: preconditions,
-			Assertions:    assertions,
-		}}, nil
+	bridge.TimeoutChallenger(
+		preconditions,
+		assertions,
+		bot.deadline,
+	)
+	return timedOutChallengerDefender{bot.validatorConfig}, nil
 }
 
-func (bot waitingBisectedDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot waitingBisectedDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
-			return nil, nil, errors.New("ChallengedAssertion number is out of bounds")
+			return nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
-		return defenseValidator(bot.validatorConfig, bot.defenders[ev.ChallengedAssertion], time)
+		return defenseValidator(bot.validatorConfig, bot.defenders[ev.ChallengedAssertion], time, bridge)
 	default:
-		return nil, nil, &Error{nil, fmt.Sprintf("ERROR: waitingBisectedDefender: VM state got unsynchronized, %T", ev)}
+		return nil, &Error{nil, fmt.Sprintf("ERROR: waitingBisectedDefender: VM state got unsynchronized, %T", ev)}
 	}
 }
 
@@ -144,9 +145,9 @@ type oneStepChallengedAssertDefender struct {
 	deadline     uint64
 }
 
-func (bot oneStepChallengedAssertDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot oneStepChallengedAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
 	if time <= bot.deadline {
-		return bot, nil, nil
+		return bot, nil
 	}
 
 	// timeoutMsg := SendAsserterTimedOutChallengeMessage{
@@ -154,16 +155,16 @@ func (bot oneStepChallengedAssertDefender) UpdateTime(time uint64) (challengeSta
 	//	bot.precondition,
 	//	bot.assertion,
 	//}
-	return timedOutAsserterDefender{bot.validatorConfig}, nil, nil
+	return timedOutAsserterDefender{bot.validatorConfig}, nil
 }
 
-func (bot oneStepChallengedAssertDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot oneStepChallengedAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.OneStepProofEvent:
 		fmt.Println("oneStepChallengedAssertDefender: Proof was accepted")
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, fmt.Sprintf("ERROR: oneStepChallengedAssertDefender: VM state got unsynchronized, %T", ev)}
+		return nil, &Error{nil, fmt.Sprintf("ERROR: oneStepChallengedAssertDefender: VM state got unsynchronized, %T", ev)}
 	}
 }
 
@@ -171,16 +172,16 @@ type timedOutChallengerDefender struct {
 	*validatorConfig
 }
 
-func (bot timedOutChallengerDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	return bot, nil, nil
+func (bot timedOutChallengerDefender) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
+	return bot, nil
 }
 
-func (bot timedOutChallengerDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot timedOutChallengerDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.ChallengerTimeoutEvent:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: timedOutChallengerDefender: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: timedOutChallengerDefender: VM state got unsynchronized"}
 	}
 }
 
@@ -188,15 +189,15 @@ type timedOutAsserterDefender struct {
 	*validatorConfig
 }
 
-func (bot timedOutAsserterDefender) UpdateTime(time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
-	return bot, nil, nil
+func (bot timedOutAsserterDefender) UpdateTime(time uint64, bridge bridge.Bridge) (challengeState, error) {
+	return bot, nil
 }
 
-func (bot timedOutAsserterDefender) UpdateState(ev ethbridge.Event, time uint64) (challengeState, []valmessage.OutgoingMessage, error) {
+func (bot timedOutAsserterDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challengeState, error) {
 	switch ev.(type) {
 	case ethbridge.AsserterTimeoutEvent:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: timedOutAsserterDefender: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: timedOutAsserterDefender: VM state got unsynchronized"}
 	}
 }

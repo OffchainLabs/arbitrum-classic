@@ -60,6 +60,7 @@ type EthValidator struct {
 	VmId              [32]byte
 	Validators        map[common.Address]validatorInfo
 	Bot               *validator.Validator
+	incomingChan      chan valmessage.OutgoingMessage
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
 	// Not in thread, but internal only
@@ -135,20 +136,12 @@ func NewEthValidator(
 
 	bot := validator.NewValidator(name, auth.From, protocol.NewEmptyInbox(), protocol.NewBalanceTracker(), config, machine, challengeEverything)
 
+	incomingChan := make(chan valmessage.OutgoingMessage, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 
-	return &EthValidator{key, vmId, manMap, bot, completedCallChan, ethURL, connectionInfo, con, auth}, nil
+	val := &EthValidator{key, vmId, manMap, bot, incomingChan, completedCallChan, ethURL, connectionInfo, con, auth}
+	return val, nil
 }
-
-//var rComp [32]byte
-//var sComp [32]byte
-//copy(rComp[:], signature[:32])
-//copy(sComp[:], signature[32:64])
-//return valmessage.Signature{
-//R: rComp,
-//S: sComp,
-//V: uint8(int(signature[64])) + 27, // Yes add 27, weird Ethereum quirk
-//}, nil
 
 func (val *EthValidator) Sign(msgHash [32]byte) ([]byte, error) {
 	data := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(msgHash))
@@ -161,15 +154,13 @@ func (val *EthValidator) StartListening() error {
 		return err
 	}
 
-	incomingChan := make(chan valmessage.OutgoingMessage, 1024)
-
-	val.Bot.Run(outChan, incomingChan)
+	val.Bot.Run(outChan, val)
 
 	go func() {
 		for {
 			time.Sleep(200 * time.Millisecond)
 			select {
-			case event := <-incomingChan:
+			case event := <-val.incomingChan:
 				if event != nil {
 					err := val.handleSendRequest(event)
 					if err != nil {
@@ -226,11 +217,18 @@ func LogProof(a *protocol.Assertion, index int) ([][32]byte, error) {
 	return proof, nil
 }
 
+func (val *EthValidator) FinalizedAssertion(assertion *protocol.Assertion, newLogCount int) {
+	val.CompletedCallChan <- valmessage.FinalizedAssertion{
+		Assertion:   assertion,
+		NewLogCount: newLogCount,
+	}
+}
+
 func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error {
 	switch msg := msg.(type) {
 	case valmessage.FinalizedAssertion:
 		val.CompletedCallChan <- msg
-	case valmessage.SendProposeUnanimousAssertMessage:
+	case sendProposeUnanimousAssertMessage:
 		_, err := val.con.ProposeUnanimousAssert(
 			val.auth,
 			val.VmId,
@@ -244,7 +242,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed proposing unanimous assertion")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendConfirmUnanimousAssertedMessage:
+	case sendConfirmUnanimousAssertedMessage:
 		_, err := val.con.ConfirmUnanimousAsserted(
 			val.auth,
 			val.VmId,
@@ -255,7 +253,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed confirming unanimous assertion")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendUnanimousAssertMessage:
+	case sendUnanimousAssertMessage:
 		_, err := val.con.UnanimousAssert(
 			val.auth,
 			val.VmId,
@@ -268,7 +266,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed sending finalized unanimous assertion")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendAssertMessage:
+	case sendAssertMessage:
 		_, err := val.con.DisputableAssert(
 			val.auth,
 			val.VmId,
@@ -279,7 +277,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed initiating disputable assertion")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendInitiateChallengeMessage:
+	case sendInitiateChallengeMessage:
 		_, err := val.con.InitiateChallenge(
 			val.auth,
 			val.VmId,
@@ -290,7 +288,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed initiating challenge")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendBisectionMessage:
+	case sendBisectionMessage:
 		_, err := val.con.BisectChallenge(
 			val.auth,
 			val.VmId,
@@ -302,7 +300,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed initiating bisection")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendContinueChallengeMessage:
+	case sendContinueChallengeMessage:
 		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
 		root := tree.GetRoot()
 		_, err := val.con.ContinueChallenge(
@@ -318,7 +316,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed continuing challenge")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendOneStepProofMessage:
+	case sendOneStepProofMessage:
 		_, err := val.con.OneStepProof(
 			val.auth,
 			val.VmId,
@@ -331,7 +329,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed one step proof")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendConfirmedAssertMessage:
+	case sendConfirmedAssertMessage:
 		_, err := val.con.ConfirmAsserted(
 			val.auth,
 			val.VmId,
@@ -342,7 +340,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed confirming assertion")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendAsserterTimedOutChallengeMessage:
+	case sendAsserterTimedOutChallengeMessage:
 		preAssBytes := solsha3.SoliditySHA3(
 			solsha3.Bytes32(msg.Precondition.Hash()),
 			solsha3.Bytes32(msg.Assertion.Hash()),
@@ -359,7 +357,7 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			return errors2.Wrap(err, "failed timing out challenge")
 		}
 		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case valmessage.SendChallengerTimedOutChallengeMessage:
+	case sendChallengerTimedOutChallengeMessage:
 		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
 		_, err := val.con.Challenge.ChallengerTimedOut(
 			val.auth,
@@ -375,6 +373,95 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 		return fmt.Errorf("unhandled valmessage %T: %+v", msg, msg)
 	}
 	return nil
+}
+
+func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
+	val.incomingChan <- sendUnanimousAssertMessage{
+		NewInboxHash: newInboxHash,
+		TimeBounds:   timeBounds,
+		Assertion:    assertion,
+		Signatures:   signatures,
+	}
+}
+
+func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
+	val.incomingChan <- sendProposeUnanimousAssertMessage{
+		NewInboxHash: newInboxHash,
+		TimeBounds:   timeBounds,
+		Assertion:    assertion,
+		SequenceNum:  sequenceNum,
+		Signatures:   signatures,
+	}
+}
+
+func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assertion *protocol.Assertion) {
+	val.incomingChan <- sendConfirmUnanimousAssertedMessage{
+		NewInboxHash: newInboxHash,
+		Assertion:    assertion,
+	}
+}
+
+func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+	val.incomingChan <- sendAssertMessage{
+		Precondition: precondition,
+		Assertion:    assertion,
+	}
+}
+
+func (val *EthValidator) ConfirmDisputableAssertion(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+	val.incomingChan <- sendConfirmedAssertMessage{
+		Precondition: precondition,
+		Assertion:    assertion,
+	}
+}
+
+func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, assertion *protocol.AssertionStub) {
+	val.incomingChan <- sendInitiateChallengeMessage{
+		Precondition: precondition,
+		Assertion:    assertion,
+	}
+}
+
+func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.Assertion, deadline uint64) {
+	val.incomingChan <- sendBisectionMessage{
+		Deadline:     deadline,
+		Precondition: precondition,
+		Assertions:   assertions,
+	}
+}
+
+func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
+	val.incomingChan <- sendContinueChallengeMessage{
+		AssertionToChallenge: assertionToChallenge,
+		Deadline:             deadline,
+		Preconditions:        preconditions,
+		Assertions:           assertions,
+	}
+}
+
+func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.Assertion, proof []byte, deadline uint64) {
+	val.incomingChan <- sendOneStepProofMessage{
+		Precondition: precondition,
+		Assertion:    assertion,
+		Proof:        proof,
+		Deadline:     deadline,
+	}
+}
+
+func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
+	val.incomingChan <- sendAsserterTimedOutChallengeMessage{
+		Precondition: precondition,
+		Assertion:    assertion,
+		Deadline:     deadline,
+	}
+}
+
+func (val *EthValidator) TimeoutChallenger(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
+	val.incomingChan <- sendChallengerTimedOutChallengeMessage{
+		Deadline:             deadline,
+		Preconditions:        preconditions,
+		Assertions:           assertions,
+	}
 }
 
 func (val *EthValidator) AdvanceBlockchain(blockCount int) error {
