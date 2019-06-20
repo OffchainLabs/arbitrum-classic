@@ -11,17 +11,18 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package checkpoint
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
-	"testing"
 )
 
 func TestOpen(t *testing.T) {
@@ -43,6 +44,9 @@ func TestValues(t *testing.T) {
 
 	val38 := value.NewInt64Value(38)
 	err = cp.AddRefToValue(val38)
+	if err != nil {
+		t.Error(err)
+	}
 	hash38 := val38.Hash()
 	res38, err2 := cp.RestoreValueFromHash(hash38)
 
@@ -64,6 +68,9 @@ func TestValues(t *testing.T) {
 
 	hash2 := tup2.Hash()
 	err = cp.AddRefToValue(tup2)
+	if err != nil {
+		t.Error(err)
+	}
 
 	res2, err2 := cp.RestoreValueFromHash(hash2)
 	if err2 != nil {
@@ -81,11 +88,11 @@ func TestValues(t *testing.T) {
 const dotAOfile = "fibonacci.ao"
 
 func TestMachines(t *testing.T) {
-	machine, _, err := loader.LoadMachineFromFile(dotAOfile, false)
+	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _ = machine.Run(10)
+	_ = machine.Run(10)
 
 	cp, err := NewCheckpointer(machine, true)
 	if err != nil {
@@ -105,7 +112,7 @@ func TestMachines(t *testing.T) {
 		t.Errorf("restored machine hash doesn't match original")
 	}
 
-	_, _, _ = machine.Run(10)
+	_ = machine.Run(10)
 	if err := cp.SaveMachine([]byte("test"), machine); err != nil {
 		t.Error(err)
 	}
@@ -125,7 +132,7 @@ func TestMachines(t *testing.T) {
 }
 
 func TestMachinesAcrossRestart(t *testing.T) {
-	machine, _, err := loader.LoadMachineFromFile(dotAOfile, false)
+	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -162,7 +169,7 @@ func TestMachinesAcrossRestart(t *testing.T) {
 }
 
 func TestVersionedCp(t *testing.T) {
-	machine, _, err := loader.LoadMachineFromFile(dotAOfile, false)
+	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -183,7 +190,7 @@ func TestVersionedCp(t *testing.T) {
 		t.Errorf("unexpected maxVersionNum")
 	}
 
-	_, _, _ = machine.Run(10)
+	_ = machine.Run(10)
 	vnum, err := vcp.SaveVersion(machine, nil)
 	if err != nil {
 		t.Error(err)
@@ -191,7 +198,7 @@ func TestVersionedCp(t *testing.T) {
 	if vnum != 0 {
 		t.Errorf("unexpected version number return")
 	}
-	_, _, _ = machine.Run(10)
+	_ = machine.Run(10)
 	vnum, err = vcp.SaveVersion(machine, []byte("some state"))
 	if err != nil {
 		t.Error(err)
@@ -209,7 +216,7 @@ func TestVersionedCp(t *testing.T) {
 }
 
 func TestEventChainCp(t *testing.T) {
-	machine, _, err := loader.LoadMachineFromFile(dotAOfile, false)
+	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -228,7 +235,7 @@ func TestEventChainCp(t *testing.T) {
 
 	sigs := []byte{3, 1, 4, 1, 5, 9, 2, 6}
 	for i := uint64(0); i < 6; i++ {
-		_, _, _ = machine.Run(10)
+		_ = machine.Run(10)
 		err = ecc.RecordIntentToSign(i, machine, inbox)
 		if err != nil {
 			t.Error(err)
@@ -246,7 +253,7 @@ func TestEventChainCp(t *testing.T) {
 }
 
 func TestEventChainRestore(t *testing.T) {
-	machine, _, err := loader.LoadMachineFromFile(dotAOfile, false)
+	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -268,7 +275,7 @@ func TestEventChainRestore(t *testing.T) {
 	machineHashes := make([][32]byte, 0)
 	inboxHashes := make([][32]byte, 0)
 	for i := uint64(0); i < maxSeqNum; i++ {
-		_, _, _ = machine.Run(10)
+		_ = machine.Run(10)
 		machineHashes = append(machineHashes, machine.Hash())
 		inboxHashes = append(inboxHashes, inbox.Hash())
 		err = ecc.RecordIntentToSign(i, machine, inbox)

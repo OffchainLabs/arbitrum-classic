@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package main
@@ -19,6 +19,14 @@ package main
 import (
 	"crypto/ecdsa"
 	jsonenc "encoding/json"
+	"github.com/offchainlabs/arb-validator/ethbridge"
+	"io/ioutil"
+	"log"
+	"math/big"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/handlers"
@@ -28,12 +36,6 @@ import (
 	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-avm/vm"
 	"github.com/offchainlabs/arb-validator/valmessage"
-	"io/ioutil"
-	"log"
-	"math/big"
-	"net/http"
-	"os"
-	"strings"
 
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 )
@@ -46,7 +48,7 @@ func NewFollowerServer(
 	machine *vm.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
-	connectionInfo ethvalidator.ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
 ) *FollowerServer {
@@ -90,7 +92,6 @@ func (m *FollowerServer) SendMessage(r *http.Request, args *bool, reply *bool) e
 // 5) ethURL
 // 6) coordinatorURL
 func main() {
-
 	// Check number of args
 	if len(os.Args)-1 != 6 {
 		log.Fatalln("Expected six arguments")
@@ -111,7 +112,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	keyFile.Close()
+	if err := keyFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 	rawKey := strings.TrimSpace(string(byteValue))
 	key, err := crypto.HexToECDSA(rawKey)
 	if err != nil {
@@ -127,7 +130,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	addrFile.Close()
+	if err := addrFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 	validatorHexAddrs := strings.Split(strings.TrimSpace(string(byteValue)), "\n")
 	validators := make([]common.Address, len(validatorHexAddrs))
 	for i, v := range validatorHexAddrs {
@@ -140,9 +145,13 @@ func main() {
 		log.Fatalln(err)
 	}
 	byteValue, _ = ioutil.ReadAll(jsonFile)
-	jsonFile.Close()
-	var connectionInfo ethvalidator.ArbAddresses
-	jsonenc.Unmarshal(byteValue, &connectionInfo)
+	if err := jsonFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
+	var connectionInfo ethbridge.ArbAddresses
+	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		log.Fatalln(err)
+	}
 
 	// 5) ethURL 6) coordinatorURL
 	ethURL := os.Args[5]
@@ -165,7 +174,7 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
-	//port := fmt.Sprintf(":%d", 1237 + index)
+	// port := fmt.Sprintf(":%d", 1237 + index)
 	err = http.ListenAndServe(":1237", handlers.CORS(headersOk, originsOk, methodsOk)(r))
 	if err != nil {
 		panic(err)

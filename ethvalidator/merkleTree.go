@@ -11,14 +11,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package ethvalidator
 
-import (
-	"github.com/miguelmota/go-solidity-sha3"
-)
+import solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 type MerkleTree struct {
 	layers [][][32]byte

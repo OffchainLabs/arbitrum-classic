@@ -11,64 +11,53 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package ethvalidator
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-validator/valmessage"
+
 	"log"
 	"math/big"
 	"time"
+
+	"github.com/ethereum/go-ethereum/crypto"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arb-validator/challengeRPC"
-	"github.com/offchainlabs/arb-validator/verifierRPC"
-
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
 
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/validator"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
-func createAddressMerkleTree(addresses []common.Address) *MerkleTree {
-	converted := make([][32]byte, 0, len(addresses))
-	for _, a := range addresses {
-		data := [32]byte{}
-		copy(data[:], a.Bytes()[:])
-		converted = append(converted, data)
-	}
-	return NewMerkleTree(converted)
-}
-
 type EthValidator struct {
-	key  *ecdsa.PrivateKey
+	key *ecdsa.PrivateKey
 
 	// Safe public interface
 	VmId              [32]byte
 	Validators        map[common.Address]validatorInfo
 	Bot               *validator.Validator
+	actionChan        chan func(*EthValidator) error
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
 	// Not in thread, but internal only
-	serverAddress     string
-	arbAddresses      ArbAddresses
+	serverAddress string
+	arbAddresses  ethbridge.ArbAddresses
 
 	// private thread only
-	con  *EthConnection
+	con  *ethbridge.Bridge
 	auth *bind.TransactOpts
 }
 
@@ -81,7 +70,6 @@ func (val *EthValidator) ValidatorCount() int {
 }
 
 type validatorInfo struct {
-	proof    []byte
 	indexNum uint16
 }
 
@@ -98,21 +86,20 @@ func NewEthValidator(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
-	connectionInfo ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) (*EthValidator, error) {
-
 	auth := bind.NewKeyedTransactor(key)
 
-	con, err := NewEthConnection(ethURL, connectionInfo)
+	con, err := ethbridge.New(ethURL, connectionInfo)
 	if err != nil {
 		return nil, err
 	}
-	//auth.Value = big.NewInt(10000000)     // in wei
+	// auth.Value = big.NewInt(10000000)     // in wei
 	auth.GasLimit = uint64(0) // in units
 	auth.GasPrice = big.NewInt(10)
 
-	nonce, err := con.client.PendingNonceAt(context.Background(), auth.From)
+	nonce, err := con.PendingNonceAt(auth.From)
 	if err != nil {
 		return nil, err
 	}
@@ -125,9 +112,8 @@ func NewEthValidator(
 		copy(address[:], key.Value)
 		keys = append(keys, address)
 	}
-	manTree := createAddressMerkleTree(keys)
 	for i, add := range keys {
-		manMap[add] = validatorInfo{manTree.GetProofFlat(i), uint16(i)}
+		manMap[add] = validatorInfo{uint16(i)}
 	}
 
 	_, found := manMap[crypto.PubkeyToAddress(key.PublicKey)]
@@ -137,70 +123,51 @@ func NewEthValidator(
 
 	bot := validator.NewValidator(name, auth.From, protocol.NewEmptyInbox(), protocol.NewBalanceTracker(), config, machine, challengeEverything)
 
+	actionChan := make(chan func (*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 
-	return &EthValidator{key, vmId, manMap, bot, completedCallChan, ethURL, connectionInfo, con, auth}, nil
+	val := &EthValidator{key, vmId, manMap, bot, actionChan, completedCallChan, ethURL, connectionInfo, con, auth}
+	return val, nil
 }
 
-func (man *EthValidator) Sign(msgHash [32]byte) (valmessage.Signature, error) {
+func (val *EthValidator) Sign(msgHash [32]byte) ([]byte, error) {
 	data := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(msgHash))
-	signature, err := crypto.Sign(data, man.key)
-	if err != nil {
-		panic(err)
-	}
-	var rComp [32]byte
-	var sComp [32]byte
-	copy(rComp[:], signature[:32])
-	copy(sComp[:], signature[32:64])
-	return valmessage.Signature{
-		R: rComp,
-		S: sComp,
-		V: uint8(int(signature[64])) + 27, // Yes add 27, weird Ethereum quirk
-	}, nil
+	return crypto.Sign(data, val.key)
 }
 
-func (man *EthValidator) StartListening() error {
-
-	outChan, errChan, err := man.con.CreateListeners(man.VmId)
+func (val *EthValidator) StartListening() error {
+	outChan, errChan, err := val.con.CreateListeners(val.VmId)
 	if err != nil {
 		return err
 	}
 
-	incomingChan := make(chan valmessage.OutgoingMessage, 1024)
-	outgoingChan := make(chan valmessage.IncomingValidatorMessage, 1024)
-
-	man.Bot.Run(outgoingChan, incomingChan)
+	val.Bot.Run(outChan, val)
 
 	go func() {
 		for {
 			time.Sleep(200 * time.Millisecond)
 			select {
-			case val := <-outChan:
-				err := man.handleEvent(val, outgoingChan)
+			case event := <-val.actionChan:
+				err := event(val)
 				if err != nil {
-					log.Fatalf("Error handling event: %v", err)
+					log.Fatalf("Error handling send: %v", err)
 				}
-			case event := <-incomingChan:
-				if event != nil {
-					err := man.handleSendRequest(event)
-					if err != nil {
-						log.Fatalf("Error handling send: %v", err)
-					}
-				}
-			case err := <-errChan:
-				//log.Printf("Validator recieved error: %v", err)
-				//fmt.Println("Resetting channels")
-				con, err := NewEthConnection(man.serverAddress, man.arbAddresses)
+				val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
+			case <-errChan:
+				// Ignore error and try to reset connection
+				// log.Printf("Validator recieved error: %v", err)
+				// fmt.Println("Resetting channels")
+				con, err := ethbridge.New(val.serverAddress, val.arbAddresses)
 				if err != nil {
 					panic(err)
 				}
-				nonce, err := con.client.PendingNonceAt(context.Background(), man.auth.From)
+				nonce, err := con.PendingNonceAt(val.auth.From)
 				if err != nil {
 					panic(err)
 				}
-				man.auth.Nonce = big.NewInt(int64(nonce))
-				man.con = con
-				outChan, errChan, err = man.con.CreateListeners(man.VmId)
+				val.auth.Nonce = big.NewInt(int64(nonce))
+				val.con = con
+				outChan, errChan, err = val.con.CreateListeners(val.VmId)
 				if err != nil {
 					panic(err)
 				}
@@ -208,137 +175,6 @@ func (man *EthValidator) StartListening() error {
 		}
 	}()
 
-	return nil
-}
-
-
-func (man *EthValidator) handleEvent(ev interface{}, outgoingChan chan valmessage.IncomingValidatorMessage) error {
-	switch ev := ev.(type) {
-	case *verifierRPC.VMTrackerVMCreated:
-		//fmt.Printf("Created vm with state %x\n", Val.VmState)
-	case *verifierRPC.VMTrackerMessageDelivered:
-		fmt.Println("VM recieved on-chain message")
-		rd := bytes.NewReader(ev.Data)
-		msgData, err := value.UnmarshalValue(rd)
-		if err != nil {
-			return err
-		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-
-		messageHash := solsha3.SoliditySHA3(
-			solsha3.Bytes32(ev.VmId),
-			solsha3.Bytes32(msgData.Hash()),
-			solsha3.Uint256(ev.Value),
-			ev.TokenType[:],
-		)
-		msgHashInt := new(big.Int).SetBytes(messageHash[:])
-
-		val, _ := value.NewTupleFromSlice([]value.Value{
-			msgData,
-			value.NewIntValue(header.Time),
-			value.NewIntValue(header.Number),
-			value.NewIntValue(msgHashInt),
-		})
-
-		msg := protocol.NewMessage(val, ev.TokenType, ev.Value, ev.Destination)
-		outgoingChan <- valmessage.IncomingMessageMessage{Msg: msg, Header: header}
-	case *verifierRPC.VMTrackerFinalUnanimousAssertion:
-		msg := valmessage.FinalUnanimousAssertMessage{
-			UnanHash: ev.UnanHash,
-		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-	case *verifierRPC.VMTrackerProposedUnanimousAssertion:
-		msg := valmessage.ProposedUnanimousAssertMessage{
-			UnanHash:    ev.UnanHash,
-			SequenceNum: ev.SequenceNum,
-		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-	case *verifierRPC.VMTrackerConfirmedUnanimousAssertion:
-		msg := valmessage.ConfirmedUnanimousAssertMessage{
-			SequenceNum: ev.SequenceNum,
-		}
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-	case *verifierRPC.VMTrackerDisputableAssertion:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		precondition, assertion := TranslateDisputableAssertionEvent(ev)
-		assertMessage := valmessage.AssertMessage{Precondition: precondition, Assertion: assertion, Asserter: ev.Asserter}
-		outgoingChan <- valmessage.BridgeMessage{Message: assertMessage, Header: header}
-
-	case *challengeRPC.ChallengeManagerOneStepProofDebug:
-		for _, item := range ev.ProofData {
-			fmt.Println(hexutil.Encode(item[:]))
-		}
-
-
-	case *verifierRPC.VMTrackerConfirmedAssertion:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.ConfirmedAssertMessage{}, Header: header}
-		//protocol.ConfirmedAssertMessage{Val.}
-	case *verifierRPC.VMTrackerInitiatedChallenge:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.InitiateChallengeMessage{Challenger: ev.Challenger}, Header: header}
-	case *challengeRPC.ChallengeManagerBisectedAssertion:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		assertions := TranslateBisectionEvent(ev)
-		outgoingChan <- valmessage.BridgeMessage{Message: valmessage.BisectMessage{Assertions: assertions}, Header: header}
-	case *challengeRPC.ChallengeManagerContinuedChallenge:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		challengeMessage := valmessage.ContinueChallengeMessage{ChallengedAssertion: uint16(ev.AssertionIndex.Int64())}
-		outgoingChan <- valmessage.BridgeMessage{Message: challengeMessage, Header: header}
-	case *challengeRPC.ChallengeManagerTimedOutChallenge:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		if ev.ChallengerWrong {
-			msg := valmessage.AsserterTimeoutMessage{}
-			outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-		} else {
-			msg := valmessage.ChallengerTimeoutMessage{}
-			outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-		}
-	case *challengeRPC.ChallengeManagerOneStepProofCompleted:
-		header, err := man.con.client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-		if err != nil {
-			return err
-		}
-		msg := valmessage.OneStepProofMessage{}
-		outgoingChan <- valmessage.BridgeMessage{Message: msg, Header: header}
-	case *types.Header:
-		outgoingChan <- valmessage.TimeUpdateMessage{Header: ev}
-	default:
-		fmt.Println("Unknown event: ", ev)
-	}
 	return nil
 }
 
@@ -358,152 +194,237 @@ func buildBisectionTree(preconditions []*protocol.Precondition, assertions []*pr
 
 func LogProof(a *protocol.Assertion, index int) ([][32]byte, error) {
 	if index < len(a.Logs) {
-		return nil, errors.New("Log index out of range")
+		return nil, errors.New("log index out of range")
 	}
-	proof := make([][32]byte, 0, len(a.Logs) - 1 - index)
+	proof := make([][32]byte, 0, len(a.Logs)-1-index)
 	for i := len(a.Logs) - 1; i > index; i-- {
 		proof = append(proof, a.Logs[i].Hash())
 	}
 	return proof, nil
 }
 
-func (man *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error {
-	switch msg := msg.(type) {
-	case valmessage.FinalizedAssertion:
-		man.CompletedCallChan <- msg
-	case valmessage.SendProposeUnanimousAssertMessage:
-		_, err := man.ProposeUnanimousAssert(msg.NewInboxHash, msg.TimeBounds, msg.Assertion, msg.SequenceNum, msg.Signatures)
+func (val *EthValidator) FinalizedAssertion(assertion *protocol.Assertion, newLogCount int) {
+	val.CompletedCallChan <- valmessage.FinalizedAssertion{
+		Assertion:   assertion,
+		NewLogCount: newLogCount,
+	}
+}
+
+func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.UnanimousAssert(
+			val.auth,
+			val.VmId,
+			newInboxHash,
+			timeBounds,
+			assertion,
+			signatures,
+		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error proposing unanimous assertion: %v", err))
+			return errors2.Wrap(err, "failed sending finalized unanimous assertion")
 		}
-	case valmessage.SendConfirmUnanimousAssertedMessage:
-		_, err := man.ConfirmUnanimousAsserted(msg.NewInboxHash, msg.Assertion)
+		return nil
+	}
+}
+
+func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.ProposeUnanimousAssert(
+			val.auth,
+			val.VmId,
+			newInboxHash,
+			timeBounds,
+			assertion,
+			sequenceNum,
+			signatures,
+		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error confirming unanimous assertion: %v", err))
+			return errors2.Wrap(err, "failed proposing unanimous assertion")
 		}
-	case valmessage.SendUnanimousAssertMessage:
-		_, err := man.UnanimousAssert(msg.NewInboxHash, msg.TimeBounds, msg.Assertion, msg.Signatures)
+		return nil
+	}
+}
+
+func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assertion *protocol.Assertion) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.ConfirmUnanimousAsserted(
+			val.auth,
+			val.VmId,
+			newInboxHash,
+			assertion,
+		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error sending finalized unanimous assertion: %v", err))
+			return errors2.Wrap(err, "failed confirming unanimous assertion")
 		}
-	case valmessage.SendAssertMessage:
-		_, err := man.DisputableAssert(msg.Precondition, msg.Assertion)
+		return nil
+	}
+}
+
+func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.DisputableAssert(
+			val.auth,
+			val.VmId,
+			precondition,
+			assertion,
+		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error initiating disputable assertion: %v", err))
+			return errors2.Wrap(err, "failed initiating disputable assertion")
 		}
-	case valmessage.SendInitiateChallengeMessage:
-		_, err := man.InitiateChallenge(msg.Precondition, msg.Assertion)
+		return nil
+	}
+}
+
+func (val *EthValidator) ConfirmDisputableAssertion(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.ConfirmAsserted(
+			val.auth,
+			val.VmId,
+			precondition,
+			assertion,
+		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error initiating challenge: %v", err))
+			return errors2.Wrap(err, "failed confirming assertion")
 		}
-	case valmessage.SendBisectionMessage:
-		_, err := man.BisectChallenge(msg.Deadline, msg.Precondition, msg.Assertions)
+		return nil
+	}
+}
+
+func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, assertion *protocol.AssertionStub) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.InitiateChallenge(
+			val.auth,
+			val.VmId,
+			precondition,
+			assertion,
+		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error initiating bisection: %v", err))
+			return errors2.Wrap(err, "failed initiating challenge")
 		}
-	case valmessage.SendContinueChallengeMessage:
-		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
+		return nil
+	}
+}
+
+func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.Assertion, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.BisectChallenge(
+			val.auth,
+			val.VmId,
+			deadline,
+			precondition,
+			assertions,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed initiating bisection")
+		}
+		return nil
+	}
+}
+
+func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
+		tree := buildBisectionTree(preconditions, assertions)
 		root := tree.GetRoot()
-		_, err := man.ContinueChallenge(
-			big.NewInt(int64(msg.AssertionToChallenge)),
-			tree.GetProofFlat(int(msg.AssertionToChallenge)),
+		_, err := val.con.ContinueChallenge(
+			val.auth,
+			val.VmId,
+			big.NewInt(int64(assertionToChallenge)),
+			tree.GetProofFlat(int(assertionToChallenge)),
 			root,
-			tree.GetNode(int(msg.AssertionToChallenge)),
-			msg.Deadline,
+			tree.GetNode(int(assertionToChallenge)),
+			deadline,
 		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error continuing challenge: %v", err))
+			return errors2.Wrap(err, "failed continuing challenge")
 		}
-	case valmessage.SendOneStepProofMessage:
-		_, err := man.OneStepProof(
-			msg.Precondition,
-			msg.Assertion.Stub(),
-			msg.Proof,
-			msg.Deadline,
+		return nil
+	}
+}
+
+func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.Assertion, proof []byte, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.OneStepProof(
+			val.auth,
+			val.VmId,
+			precondition,
+			assertion.Stub(),
+			proof,
+			deadline,
 		)
 		if err != nil {
-			log.Printf("Error with one step proof: %v", err)
-			return nil
+			return errors2.Wrap(err, "failed one step proof")
 		}
-	case valmessage.SendConfirmedAssertMessage:
-		_, err := man.ConfirmAsserted(msg.Precondition, msg.Assertion)
-		if err != nil {
-			return errors.New(fmt.Sprintf("Error confirming assertion: %v", err))
-		}
-	case valmessage.SendAsserterTimedOutChallengeMessage:
+		return nil
+	}
+}
+
+func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
 		preAssBytes := solsha3.SoliditySHA3(
-			solsha3.Bytes32(msg.Precondition.Hash()),
-			solsha3.Bytes32(msg.Assertion.Hash()),
+			solsha3.Bytes32(precondition.Hash()),
+			solsha3.Bytes32(assertion.Hash()),
 		)
 		bisectionHash := [32]byte{}
 		copy(bisectionHash[:], preAssBytes)
-		_, err := man.AsserterTimedOutChallenge(
+		_, err := val.con.Challenge.AsserterTimedOut(
+			val.auth,
+			val.VmId,
 			bisectionHash,
-			msg.Deadline,
+			deadline,
 		)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error timing out challenge: %v", err))
+			return errors2.Wrap(err, "failed timing out challenge")
 		}
-	case valmessage.SendChallengerTimedOutChallengeMessage:
-		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
-		_, err := man.ChallengerTimedOut(tree.GetRoot(), msg.Deadline)
-		if err != nil {
-			return errors.New(fmt.Sprintf("Error timing out challenge: %v", err))
-		}
-	default:
-		return errors.New(fmt.Sprintf("Unhandled valmessage %T: %+v", msg, msg))
+		return nil
 	}
-	return nil
 }
 
-func (man *EthValidator) AdvanceBlockchain(blockCount int) error {
-	for i := 0; i < blockCount; i++ {
-		val := big.NewInt(100000000) // in wei (1 eth)
-		tx := types.NewTransaction(man.auth.Nonce.Uint64(), man.auth.From, val, man.auth.GasLimit, man.auth.GasPrice, nil)
-		chainID, err := man.con.client.NetworkID(context.Background())
+func (val *EthValidator) TimeoutChallenger(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
+		tree := buildBisectionTree(preconditions, assertions)
+		_, err := val.con.Challenge.ChallengerTimedOut(
+			val.auth,
+			val.VmId,
+			tree.GetRoot(),
+			deadline,
+		)
 		if err != nil {
-			return err
+			return errors2.Wrap(err, "failed timing out challenge")
 		}
-
-		signedTx, err := man.auth.Signer(types.NewEIP155Signer(chainID), man.auth.From, tx)
-		if err != nil {
-			return err
-		}
-		err = man.con.client.SendTransaction(context.Background(), signedTx)
-		if err != nil {
-			return err
-		}
-		man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
+		return nil
 	}
-	return nil
 }
 
-func (man *EthValidator) DepositEth(amount *big.Int) (*types.Transaction, error) {
+func (val *EthValidator) AdvanceBlockchain(blockCount int) error {
+	return val.con.AdvanceBlockchain(val.auth, blockCount)
+}
+
+func (val *EthValidator) DepositEth(amount *big.Int) (*types.Transaction, error) {
 	senderArr := [32]byte{}
-	copy(senderArr[:], man.Address().Bytes())
-	tx, err := man.con.DepositFunds(man.auth, amount, senderArr)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
+	copy(senderArr[:], val.Address().Bytes())
+	tx, err := val.con.DepositFunds(val.auth, amount, senderArr)
+	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 	return tx, err
 }
 
-func (man *EthValidator) CreateVM(createData *CreateVMValidatorRequest, signatures []valmessage.Signature) (*types.Transaction, error) {
-	tx, err := man.con.CreateVM(
-		man.auth,
+func (val *EthValidator) CreateVM(createData *valmessage.CreateVMValidatorRequest, signatures [][]byte) (*types.Transaction, error) {
+	tx, err := val.con.CreateVM(
+		val.auth,
 		createData,
 		CreateVMHash(createData),
 		signatures,
 	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
+	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 	return tx, err
 }
 
-func (man *EthValidator) SendMessage(data value.Value, tokenType [21]byte, currency *big.Int) (*types.Transaction, error) {
-	tx, err := man.con.SendMessage(man.auth, protocol.NewMessage(data, tokenType, currency, man.VmId))
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
+func (val *EthValidator) SendMessage(data value.Value, tokenType [21]byte, currency *big.Int) (*types.Transaction, error) {
+	tx, err := val.con.SendMessage(val.auth, protocol.NewMessage(data, tokenType, currency, val.VmId))
+	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 	return tx, err
 }
 
-func (man *EthValidator) SendEthMessage(
+func (val *EthValidator) SendEthMessage(
 	data value.Value,
 	amount *big.Int,
 ) (*types.Transaction, error) {
@@ -511,12 +432,12 @@ func (man *EthValidator) SendEthMessage(
 	if err := value.MarshalValue(data, &dataBuf); err != nil {
 		return nil, err
 	}
-	tx, err := man.con.SendEthMessage(man.auth, data, man.VmId, amount)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
+	tx, err := val.con.SendEthMessage(val.auth, data, val.VmId, amount)
+	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 	return tx, err
 }
 
-func (man *EthValidator) UnanimousAssertHash(
+func (val *EthValidator) UnanimousAssertHash(
 	sequenceNum uint64,
 	beforeHash [32]byte,
 	timeBounds protocol.TimeBounds,
@@ -525,7 +446,7 @@ func (man *EthValidator) UnanimousAssertHash(
 	assertion *protocol.Assertion,
 ) ([32]byte, error) {
 	return UnanimousAssertHash(
-		man.VmId,
+		val.VmId,
 		sequenceNum,
 		beforeHash,
 		timeBounds,
@@ -533,185 +454,4 @@ func (man *EthValidator) UnanimousAssertHash(
 		originalInboxHash,
 		assertion,
 	)
-}
-
-func (man *EthValidator) ProposeUnanimousAssert(
-	newInboxHash [32]byte,
-	timeBounds protocol.TimeBounds,
-	assertion *protocol.Assertion,
-	sequenceNum uint64,
-	signatures []valmessage.Signature,
-) (*types.Transaction, error) {
-	tx, err := man.con.ProposeUnanimousAssert(
-		man.auth,
-		man.VmId,
-		newInboxHash,
-		timeBounds,
-		assertion,
-		sequenceNum,
-		signatures,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) ConfirmUnanimousAsserted(
-	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
-) (*types.Transaction, error) {
-	tx, err := man.con.ConfirmUnanimousAsserted(
-		man.auth,
-		man.VmId,
-		newInboxHash,
-		assertion,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) UnanimousAssert(
-	newInboxHash [32]byte,
-	timeBounds protocol.TimeBounds,
-	assertion *protocol.Assertion,
-	signatures []valmessage.Signature,
-) (*types.Transaction, error) {
-	tx, err := man.con.UnanimousAssert(
-		man.auth,
-		man.VmId,
-		newInboxHash,
-		timeBounds,
-		assertion,
-		signatures,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) DisputableAssert(
-	precondition *protocol.Precondition,
-	assertion *protocol.Assertion,
-) (*types.Transaction, error) {
-	tx, err := man.con.DisputableAssert(
-		man.auth,
-		man.VmId,
-		precondition,
-		assertion,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) ConfirmAsserted(
-	precondition *protocol.Precondition,
-	assertion *protocol.Assertion,
-) (*types.Transaction, error) {
-	tx, err := man.con.ConfirmAsserted(
-		man.auth,
-		man.VmId,
-		precondition,
-		assertion,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) InitiateChallenge(
-	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
-) (*types.Transaction, error) {
-	tx, err := man.con.InitiateChallenge(
-		man.auth,
-		man.VmId,
-		precondition,
-		assertion,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) BisectChallenge(
-	deadline uint64,
-	precondition *protocol.Precondition,
-	assertions []*protocol.Assertion,
-) (*types.Transaction, error) {
-	tx, err := man.con.BisectChallenge(
-		man.auth,
-		man.VmId,
-		deadline,
-		precondition,
-		assertions,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) ContinueChallenge(
-	assertionToChallenge *big.Int,
-	bisectionProof []byte,
-	bisectionRoot [32]byte,
-	bisectionHash [32]byte,
-	deadline uint64,
-) (*types.Transaction, error) {
-	nonce, err := man.con.client.PendingNonceAt(context.Background(), man.auth.From)
-	if err != nil {
-		return nil, err
-	}
-	man.auth.Nonce = big.NewInt(int64(nonce))
-	tx, err := man.con.ContinueChallenge(
-		man.auth,
-		man.VmId,
-		assertionToChallenge,
-		bisectionProof,
-		bisectionRoot,
-		bisectionHash,
-		deadline,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) OneStepProof(
-	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
-	proof []byte,
-	deadline uint64,
-) (*types.Transaction, error) {
-	tx, err := man.con.OneStepProof(
-		man.auth,
-		man.VmId,
-		precondition,
-		assertion,
-		proof,
-		deadline,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) AsserterTimedOutChallenge(
-	bisectionHash [32]byte,
-	deadline uint64,
-) (*types.Transaction, error) {
-	tx, err := man.con.Challenge.AsserterTimedOut(
-		man.auth,
-		man.VmId,
-		bisectionHash,
-		deadline,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
-}
-
-func (man *EthValidator) ChallengerTimedOut(
-	bisectionRoot [32]byte,
-	deadline uint64,
-) (*types.Transaction, error) {
-	tx, err := man.con.Challenge.ChallengerTimedOut(
-		man.auth,
-		man.VmId,
-		bisectionRoot,
-		deadline,
-	)
-	man.auth.Nonce.Add(man.auth.Nonce, big.NewInt(1))
-	return tx, err
 }

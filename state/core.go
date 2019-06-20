@@ -14,6 +14,21 @@
  * limitations under the License.
  */
 
-package valmessage
+package state
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arb-avm) -I. --go_out=paths=source_relative:. *.proto"
+import (
+	"github.com/offchainlabs/arb-avm/protocol"
+	"github.com/offchainlabs/arb-validator/bridge"
+	"github.com/offchainlabs/arb-validator/challenge"
+	"github.com/offchainlabs/arb-validator/core"
+	"github.com/offchainlabs/arb-validator/ethbridge"
+)
+
+type State interface {
+	UpdateTime(uint64, bridge.Bridge) (State, error)
+	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (State, challenge.State, error)
+
+	SendMessageToVM(msg protocol.Message)
+	GetCore() *core.Core
+	GetConfig() *core.Config
+}

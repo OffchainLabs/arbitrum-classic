@@ -11,20 +11,20 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package valmessage
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/offchainlabs/arb-avm/value"
 )
 
-//type VMConfiguration struct {
+// type VMConfiguration struct {
 //	GracePeriod           uint64
 //	EscrowRequired        *big.Int
 //	AssertKeys            []common.Address
@@ -47,42 +47,4 @@ func NewVMConfiguration(gracePeriod uint64, escrowRequired *big.Int, escrowCurre
 		MaxExecutionStepCount: maxSteps,
 		Owner:                 &Address{Value: owner.Bytes()},
 	}
-}
-
-type IncomingValidatorMessage interface {
-	IncomingValidatorMessage()
-	GetHeader() *types.Header
-}
-
-type BridgeMessage struct {
-	Message IncomingMessage
-	Header *types.Header
-}
-
-func (BridgeMessage) IncomingValidatorMessage() {}
-
-func (msg BridgeMessage) GetHeader() *types.Header {
-	return msg.Header
-}
-
-type TimeUpdateMessage struct {
-	Header *types.Header
-}
-
-func (TimeUpdateMessage) IncomingValidatorMessage() {}
-
-func (msg TimeUpdateMessage) GetHeader() *types.Header {
-	return msg.Header
-}
-
-
-type IncomingMessageMessage struct {
-	Msg  protocol.Message
-	Header *types.Header
-}
-
-func (IncomingMessageMessage) IncomingValidatorMessage() {}
-
-func (msg IncomingMessageMessage) GetHeader() *types.Header {
-	return msg.Header
 }

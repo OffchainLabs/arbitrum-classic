@@ -11,19 +11,22 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package ethvalidator
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
 	"math"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arb-avm/protocol"
+	"github.com/offchainlabs/arb-avm/value"
+
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 func tokenTypeEncoded(input [21]byte) []byte {
@@ -46,7 +49,7 @@ func bytes32ArrayEncoded(input [][32]byte) []byte {
 	return values
 }
 
-func CreateVMHash(data *CreateVMValidatorRequest) [32]byte {
+func CreateVMHash(data *valmessage.CreateVMValidatorRequest) [32]byte {
 	var ret [32]byte
 	keys := make([]common.Address, 0, len(data.Config.AssertKeys))
 	for _, key := range data.Config.AssertKeys {

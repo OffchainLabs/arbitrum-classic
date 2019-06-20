@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package valmessage
@@ -19,27 +19,7 @@ package valmessage
 import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-avm/vm"
 )
-
-type UnanimousRequest struct {
-	UnanimousRequestData
-	NewMessages []protocol.Message
-}
-
-type UnanimousUpdateRequest struct {
-	UnanimousRequestData
-
-	NewMessages []protocol.Message
-
-	Inbox     *protocol.Inbox
-	Machine   *vm.Machine
-	Assertion *protocol.Assertion
-
-	ResultChan chan<- UnanimousUpdateResults
-	ErrChan    chan<- error
-}
 
 type UnanimousRequestData struct {
 	BeforeHash  [32]byte
@@ -60,34 +40,9 @@ func (r UnanimousRequestData) Hash() [32]byte {
 	return ret
 }
 
-type FollowUnanimousRequest struct {
+type UnanimousRequest struct {
 	UnanimousRequestData
 	NewMessages []protocol.Message
-
-	ResultChan chan<- UnanimousUpdateResults
-	ErrChan    chan<- error
-}
-
-type InitiateUnanimousRequest struct {
-	TimeLength      uint64
-	NewMessages     []protocol.Message
-	Final           bool
-	RequestChan chan<- UnanimousRequest
-	ResultChan  chan<- UnanimousUpdateResults
-	ErrChan     chan<- error
-}
-
-type UnanimousConfirmRequest struct {
-	UnanimousRequestData
-	Signatures []Signature
-
-	ResultChan chan<- bool
-	ErrChan    chan<- error
-}
-
-type CloseUnanimousAssertionRequest struct {
-	ResultChan chan<- bool
-	ErrChan    chan<- error
 }
 
 type UnanimousUpdateResults struct {
@@ -99,54 +54,7 @@ type UnanimousUpdateResults struct {
 	Assertion         *protocol.Assertion
 }
 
-type CallRequest struct {
-	Message    protocol.Message
-	ResultChan chan<- value.Value
-	ErrorChan  chan<- error
-}
-
 type VMStateData struct {
 	MachineState [32]byte
 	Config       VMConfiguration
-}
-
-type PendingMessageCheck struct {
-	ResultChan chan<- bool
-}
-
-type VMStateRequest struct {
-	ResultChan chan<- VMStateData
-}
-
-type DisputableDefenderRequest struct {
-	Length                 uint64
-	IncludePendingMessages bool
-	ResultChan             chan<- bool
-}
-
-type DisputableAssertionRequest struct {
-	State           *vm.Machine
-	Defender        protocol.AssertionDefender
-	IncludedPending bool
-	ResultChan      chan<- bool
-}
-
-func (r DisputableAssertionRequest) GetPrecondition() *protocol.Precondition {
-	return r.Defender.GetPrecondition()
-}
-
-func (r DisputableAssertionRequest) IncludedPendingInbox() bool {
-	return r.IncludedPending
-}
-
-func (r DisputableAssertionRequest) NotifyInvalid() {
-	go func() {
-		r.ResultChan <- false
-	}()
-}
-
-func (r DisputableAssertionRequest) NotifyAccepted() {
-	go func() {
-		r.ResultChan <- true
-	}()
 }

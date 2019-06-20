@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package main
@@ -20,11 +20,7 @@ import (
 	"crypto/rand"
 	jsonenc "encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -32,16 +28,22 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arb-avm/evm"
 	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-avm/value"
 
+	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 )
 
 func main() {
 	seed := time.Now().UnixNano()
-	//seed := int64(1559616168133477000)
+	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)
 	brand.Seed(seed)
 	jsonFile, err := os.Open(os.Args[1])
@@ -49,10 +51,14 @@ func main() {
 		log.Fatalln(err)
 	}
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	jsonFile.Close()
+	if err := jsonFile.Close(); err != nil {
+		log.Fatalln(err)
+	}
 
-	var connectionInfo ethvalidator.ArbAddresses
-	jsonenc.Unmarshal(byteValue, &connectionInfo)
+	var connectionInfo ethbridge.ArbAddresses
+	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		log.Fatalln(err)
+	}
 
 	machine, err := loader.LoadMachineFromFile(os.Args[2], true)
 	if err != nil {
@@ -90,7 +96,7 @@ func main() {
 
 	ethURL := os.Args[3]
 
-	coordinator, err := ethvalidator.NewValidatorCoordinator("Alice", machine.Clone(), key1, config, false, connectionInfo, ethURL)
+	coordinator, err := ethvalidator.NewCoordinator("Alice", machine.Clone(), key1, config, false, connectionInfo, ethURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -100,13 +106,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	coordinator.Run()
-	if err != nil {
+	if err := coordinator.Run(); err != nil {
 		log.Fatal(err)
 	}
 
-
-	challenger, err := ethvalidator.NewValidatorFollower("Bob", machine, key2, config, true, connectionInfo, ethURL, "wss://127.0.0.1:1236/ws")
+	challenger, err := ethvalidator.NewValidatorFollower(
+		"Bob",
+		machine, key2,
+		config,
+		true,
+		connectionInfo,
+		ethURL,
+		"wss://127.0.0.1:1236/ws",
+	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
@@ -117,7 +129,9 @@ func main() {
 	}
 
 	err = challenger.Run()
-
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	retChan, errChan := coordinator.CreateVM(time.Second * 10)
 
@@ -145,13 +159,16 @@ func main() {
 		tup,
 		big.NewInt(0),
 	)
-	//fmt.Println("Send error", err)
-	//time.Sleep(2000 * time.Millisecond)
-	//successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
-	//select {
-	//case result := <-successChan:
+	if err != nil {
+		log.Fatal(err)
+	}
+	// fmt.Println("Send error", err)
+	// time.Sleep(2000 * time.Millisecond)
+	// successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
+	// select {
+	// case result := <-successChan:
 	//	fmt.Println("ChallengeTest: Unanimous assertion successful", result)
-	//case err := <-errChan:
+	// case err := <-errChan:
 	//	panic(fmt.Sprintf("Error Running unanimous assertion: %v", err))
 	//}
 

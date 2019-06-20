@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package checkpoint
@@ -32,14 +32,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
+	"os"
+	"time"
+
 	"github.com/dgraph-io/badger"
 	"github.com/offchainlabs/arb-avm/code"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
-	"io"
-	"os"
-	"time"
 )
 
 type Checkpointer struct {
@@ -52,11 +53,11 @@ const (
 	vcpVersionNumsKey     = "VersionedCheckpointer:versionNums"
 )
 
-type CheckpointError struct {
+type Error struct {
 	str string
 }
 
-func (e CheckpointError) Error() string {
+func (e Error) Error() string {
 	return e.str
 }
 
@@ -76,7 +77,7 @@ func NewCheckpointer(machine *vm.Machine, destroyOldCheckpoints bool) (*Checkpoi
 	}
 	ret := &Checkpointer{db, make(chan struct{})}
 	if machine != nil {
-		//TODO: save the code asynchronously; have machine checkpoints wait for completion
+		// TODO: save the code asynchronously; have machine checkpoints wait for completion
 		//  open question: how to handle errors in saving the code; probably best to just retry
 		if err := ret.SaveCode(machine); err != nil {
 			return nil, err
@@ -132,17 +133,18 @@ func NewVersionedCheckpointer(cp *Checkpointer) (*VersionedCheckpointer, error) 
 				return err
 			}
 		}
-		err = item.Value(func(val []byte) error {
-			rd := bytes.NewReader(val)
-			if err := binary.Read(rd, binary.LittleEndian, &minVersion); err != nil {
-				return err
-			}
-			if err := binary.Read(rd, binary.LittleEndian, &maxVersion); err != nil {
-				return err
-			}
-			restoring = true
-			return nil
-		})
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		rd := bytes.NewReader(val)
+		if err := binary.Read(rd, binary.LittleEndian, &minVersion); err != nil {
+			return err
+		}
+		if err := binary.Read(rd, binary.LittleEndian, &maxVersion); err != nil {
+			return err
+		}
+		restoring = true
 		return nil
 	}); err != nil {
 		return nil, err
@@ -160,7 +162,7 @@ func (vcp *VersionedCheckpointer) Close() error {
 	return vcp.cp.Close()
 }
 
-func (vcp *VersionedCheckpointer) saveState_inTxn(txn *badger.Txn) error {
+func (vcp *VersionedCheckpointer) saveStateInTxn(txn *badger.Txn) error {
 	var buf bytes.Buffer
 	if err := binary.Write(&buf, binary.LittleEndian, &vcp.minVersion); err != nil {
 		return err
@@ -173,7 +175,7 @@ func (vcp *VersionedCheckpointer) saveState_inTxn(txn *badger.Txn) error {
 
 func (vcp *VersionedCheckpointer) saveState() error {
 	return vcp.cp.db.Update(func(txn *badger.Txn) error {
-		return vcp.saveState_inTxn(txn)
+		return vcp.saveStateInTxn(txn)
 	})
 }
 
@@ -189,7 +191,7 @@ func (vcp *VersionedCheckpointer) SaveVersion(machine *vm.Machine, stateData []b
 	returnErr = vcp.cp.db.Update(func(txn *badger.Txn) error {
 		versionNum = 1 + vcp.maxVersion
 		nameSuffix := vcpMachineVersionKey(versionNum)
-		if err := vcp.cp.saveMachine_inTxn(txn, []byte(nameSuffix), machine); err != nil {
+		if err := vcp.cp.saveMachineInTxn(txn, []byte(nameSuffix), machine); err != nil {
 			return err
 		}
 		if stateData != nil {
@@ -198,7 +200,7 @@ func (vcp *VersionedCheckpointer) SaveVersion(machine *vm.Machine, stateData []b
 			}
 		}
 		vcp.maxVersion = versionNum
-		if err := vcp.saveState_inTxn(txn); err != nil {
+		if err := vcp.saveStateInTxn(txn); err != nil {
 			vcp.maxVersion-- // revert maxVersion, because transaction will abort
 			return err
 		}
@@ -212,24 +214,23 @@ func (vcp *VersionedCheckpointer) RestoreVersion(versionNum int64) (machine *vm.
 	stateData = nil
 	retError = vcp.cp.db.View(func(txn *badger.Txn) error {
 		if !vcp.IsKnownVersion(versionNum) {
-			return CheckpointError{"Can't restore; invalid version number"}
+			return Error{"Can't restore; invalid version number"}
 		}
 
 		item, err := txn.Get(vcpStateDataKey(versionNum))
 		if err == nil {
-			if err := item.Value(func(val []byte) error {
-				stateData = append([]byte{}, val...)
-				return nil
-			}); err != nil {
+			val, err := item.Value()
+			if err != nil {
 				return err
 			}
+			stateData = append([]byte{}, val...)
 		} else {
 			if err != badger.ErrKeyNotFound {
 				return err
 			}
 		}
 
-		machine, err = vcp.cp.restoreMachine_inTxn(txn, []byte(vcpMachineVersionKey(versionNum)))
+		machine, err = vcp.cp.restoreMachineInTxn(txn, []byte(vcpMachineVersionKey(versionNum)))
 		if err != nil {
 			return err
 		}
@@ -259,17 +260,16 @@ func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
 		if err != nil {
 			return nil
 		}
-		if err := item.Value(func(barr []byte) error {
-			rd := bytes.NewReader(barr)
-			refs := make([][32]byte, 5)
-			for i := 0; i < 5; i++ {
-				if _, err := rd.Read(refs[i][:]); err != nil {
-					return err
-				}
-			}
-			return nil
-		}); err != nil {
+		barr, err := item.Value()
+		if err != nil {
 			return err
+		}
+		rd := bytes.NewReader(barr)
+		refs = make([][32]byte, 5)
+		for i := 0; i < 5; i++ {
+			if _, err := rd.Read(refs[i][:]); err != nil {
+				return err
+			}
 		}
 		if err := txn.Delete(mkey); err != nil {
 			return err
@@ -278,11 +278,9 @@ func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
 	}); err != nil {
 		return err
 	}
-	if refs != nil {
-		for _, h := range refs {
-			if err := vcp.cp.synchronousRemoveRefToValue(h); err != nil {
-				return err
-			}
+	for _, h := range refs {
+		if err := vcp.cp.synchronousRemoveRefToValue(h); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -290,7 +288,7 @@ func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
 
 func (vcp *VersionedCheckpointer) DiscardVersions(newMinVersionNum int64) error {
 	if newMinVersionNum > 1+vcp.maxVersion {
-		return CheckpointError{"Can't discard versions that don't yet exist"}
+		return Error{"Can't discard versions that don't yet exist"}
 	}
 	oldMinVersion := vcp.minVersion
 	vcp.minVersion = newMinVersionNum
@@ -322,7 +320,6 @@ func NewEventChainCheckpointer(
 	machine *vm.Machine,
 	timeBounds [2]uint64,
 	balances *protocol.BalanceTracker) (*EventChainCheckpointer, error) {
-
 	var buf bytes.Buffer
 	fullKey := append([]byte(_eventChainCheckpointerPrefix), keySuffix...)
 
@@ -348,7 +345,7 @@ func NewEventChainCheckpointer(
 	if err := cp.db.Update(func(txn *badger.Txn) error {
 		machineKey := append(fullKey, []byte(":machine:")...)
 		seqNumKey := append(fullKey, []byte(":nextseqnum:")...)
-		if err := cp.saveMachine_inTxn(txn, machineKey, machine); err != nil {
+		if err := cp.saveMachineInTxn(txn, machineKey, machine); err != nil {
 			return err
 		}
 		if err := txn.Set(seqNumKey, seqNumBuf.Bytes()); err != nil {
@@ -382,16 +379,15 @@ func (ecc *EventChainCheckpointer) Discard() error {
 			if err != nil {
 				return err
 			}
-			if err := item.Value(func(val []byte) error {
-				if len(val) < 64 {
-					return errors.New("EventChainCheckpointer::Discard: checkpointed item is too small")
-				}
-				copy(inboxHash[:], val[32:64])
-				needToRemoveInboxRef = true
-				return nil
-			}); err != nil {
+			val, err := item.Value()
+			if err != nil {
 				return err
 			}
+			if len(val) < 64 {
+				return errors.New("EventChainCheckpointer::Discard: checkpointed item is too small")
+			}
+			copy(inboxHash[:], val[32:64])
+			needToRemoveInboxRef = true
 			return txn.Delete(ecc.fullKey)
 		}); err != nil {
 			return nil
@@ -411,11 +407,9 @@ func (ecc *EventChainCheckpointer) Discard() error {
 					keySigs := ecc.eccKeyForSeqNum(i, "recordSignatures")
 					item, err := txn.Get(keyIntent)
 					if err == nil {
-						_ = item.Value(func(bytes []byte) error {
-							needRemove = true
-							copy(inboxHash[:], bytes[32:64])
-							return nil
-						})
+						itemBytes, _ := item.Value()
+						needRemove = true
+						copy(inboxHash[:], itemBytes[32:64])
 					}
 					_ = txn.Delete(keyIntent)
 					_ = txn.Delete(keySigs)
@@ -436,10 +430,10 @@ func (ecc *EventChainCheckpointer) eccKeyForSeqNum(seqNum uint64, kind string) [
 
 func (ecc *EventChainCheckpointer) RecordIntentToSign(seqNum uint64, machine *vm.Machine, inbox value.Value) error {
 	if ecc.discarded {
-		return errors.New("Can't record intent-to-sign on discarded EventChainCheckpointer")
+		return errors.New("can't record intent-to-sign on discarded EventChainCheckpointer")
 	}
 	if seqNum < ecc.nextSeqNo {
-		return errors.New("Can't reuse sequence number in EventChainCheckpointer")
+		return errors.New("can't reuse sequence number in EventChainCheckpointer")
 	}
 	machineHash := machine.Hash()
 	inboxHash := inbox.Hash()
@@ -460,10 +454,10 @@ func (ecc *EventChainCheckpointer) RecordIntentToSign(seqNum uint64, machine *vm
 	seqNumKey := append(ecc.fullKey, []byte(":nextseqnum:")...)
 	key := ecc.eccKeyForSeqNum(seqNum, "intentToSign")
 	return ecc.cp.db.Update(func(txn *badger.Txn) error {
-		if err := ecc.cp.addRefToValue_inTxn(txn, inbox); err != nil {
+		if err := ecc.cp.addRefToValueInTxn(txn, inbox); err != nil {
 			return err
 		}
-		if err := ecc.cp.saveMachine_inTxn(txn, key, machine); err != nil {
+		if err := ecc.cp.saveMachineInTxn(txn, key, machine); err != nil {
 			return err
 		}
 		if err := txn.Set(seqNumKey, seqNumBuf.Bytes()); err != nil {
@@ -475,7 +469,7 @@ func (ecc *EventChainCheckpointer) RecordIntentToSign(seqNum uint64, machine *vm
 
 func (ecc *EventChainCheckpointer) RecordSignatures(seqNum uint64, marshaledSigs []byte) error {
 	if ecc.discarded {
-		return errors.New("Can't record intent-to-sign on discarded EventChainCheckpointer")
+		return errors.New("can't record intent-to-sign on discarded EventChainCheckpointer")
 	}
 	if seqNum >= ecc.nextSeqNo {
 		return errors.New("EventChainCheckpointer::RecordSignatures: invalid sequence number")
@@ -494,10 +488,12 @@ func RestoreEventChainCheckpointer(cp *Checkpointer, keySuffix []byte) (*EventCh
 		if err != nil {
 			return err
 		}
-		return item.Value(func(byteArr []byte) error {
-			recordedBytes = append([]byte{}, byteArr...)
-			return nil
-		})
+		byteArr, err := item.Value()
+		if err != nil {
+			return err
+		}
+		recordedBytes = append([]byte{}, byteArr...)
+		return nil
 	}); err != nil {
 		return nil, err
 	}
@@ -528,10 +524,12 @@ func RestoreEventChainCheckpointer(cp *Checkpointer, keySuffix []byte) (*EventCh
 		if err != nil {
 			return err
 		}
-		return item.Value(func(byteArr []byte) error {
-			rd := bytes.NewReader(byteArr)
-			return binary.Read(rd, binary.LittleEndian, &nextSeqNum)
-		})
+		byteArr, err := item.Value()
+		if err != nil {
+			return err
+		}
+		rd := bytes.NewReader(byteArr)
+		return binary.Read(rd, binary.LittleEndian, &nextSeqNum)
 	}); err != nil {
 		return nil, err
 	}
@@ -552,29 +550,33 @@ func (ecc *EventChainCheckpointer) RestoreChainStartMachine() (*vm.Machine, erro
 
 func (ecc *EventChainCheckpointer) RestoreFromSeqNum(seqNum uint64) (*vm.Machine /*inbox*/, value.Value /*marshaledSigs*/, []byte, error) {
 	if ecc.discarded {
-		return nil, nil, nil, errors.New("Can't restore from discarded EventChainCheckpointer")
+		return nil, nil, nil, errors.New("can't restore from discarded EventChainCheckpointer")
 	}
 	if seqNum >= ecc.nextSeqNo {
-		return nil, nil, nil, errors.New("Invalid sequence number in EventChainCheckpointer::RestoreFromSeqNum")
+		return nil, nil, nil, errors.New("invalid sequence number in EventChainCheckpointer::RestoreFromSeqNum")
 	}
 
 	intentKey := ecc.eccKeyForSeqNum(seqNum, "intentToSign")
 	var machineHash [32]byte
 	var inboxHash [32]byte
-	err := ecc.cp.db.View(func(txn *badger.Txn) error {
+	if err := ecc.cp.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(intentKey)
 		if err != nil {
 			return err
 		}
-		return item.Value(func(val []byte) error {
-			if len(val) < 32 {
-				return errors.New("EventChainCheckpointer: intentToSign record is too small")
-			}
-			copy(machineHash[:], val[:32])
-			copy(inboxHash[:], val[32:])
-			return nil
-		})
-	})
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		if len(val) < 32 {
+			return errors.New("EventChainCheckpointer: intentToSign record is too small")
+		}
+		copy(machineHash[:], val[:32])
+		copy(inboxHash[:], val[32:])
+		return nil
+	}); err != nil {
+		return nil, nil, nil, err
+	}
 	machine, err := ecc.cp.RestoreMachine(intentKey)
 	if err != nil {
 		return nil, nil, nil, err
@@ -593,10 +595,12 @@ func (ecc *EventChainCheckpointer) RestoreFromSeqNum(seqNum uint64) (*vm.Machine
 		} else if err != nil {
 			return err
 		}
-		return item.Value(func(val []byte) error {
-			marshaledSigs = append([]byte{}, val...)
-			return nil
-		})
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		marshaledSigs = append([]byte{}, val...)
+		return nil
 	}); err != nil {
 		return nil, nil, nil, err
 	}
@@ -620,11 +624,11 @@ func (cp *Checkpointer) EntryExists(key []byte) (bool, error) {
 
 func (cp *Checkpointer) SaveMachine(keySuffix []byte, machine *vm.Machine) error {
 	return cp.db.Update(func(txn *badger.Txn) error {
-		return cp.saveMachine_inTxn(txn, keySuffix, machine)
+		return cp.saveMachineInTxn(txn, keySuffix, machine)
 	})
 }
 
-func (cp *Checkpointer) saveMachine_inTxn(txn *badger.Txn, keySuffix []byte, machine *vm.Machine) error {
+func (cp *Checkpointer) saveMachineInTxn(txn *badger.Txn, keySuffix []byte, machine *vm.Machine) error {
 	key := append([]byte("machine:"), keySuffix...)
 	var buf bytes.Buffer
 	var vals [6]value.Value
@@ -633,9 +637,9 @@ func (cp *Checkpointer) saveMachine_inTxn(txn *badger.Txn, keySuffix []byte, mac
 	vals[2] = machine.Register().Get()
 	vals[3] = machine.Static().Get()
 	vals[4] = machine.GetPC()
-	vals[5] = machine.GetErrHandler().Get()
+	vals[5] = machine.GetErrHandler()
 	for i := 0; i < len(vals); i++ {
-		if err := cp.addRefToValue_inTxn(txn, vals[i]); err != nil {
+		if err := cp.addRefToValueInTxn(txn, vals[i]); err != nil {
 			return err
 		}
 		h := vals[i].Hash()
@@ -654,10 +658,10 @@ func (cp *Checkpointer) RestoreMachine(keySuffix []byte) (*vm.Machine, error) {
 	txn := cp.db.NewTransaction(false)
 	defer txn.Discard()
 
-	return cp.restoreMachine_inTxn(txn, keySuffix)
+	return cp.restoreMachineInTxn(txn, keySuffix)
 }
 
-func (cp *Checkpointer) restoreMachine_inTxn(txn *badger.Txn, keySuffix []byte) (*vm.Machine, error) {
+func (cp *Checkpointer) restoreMachineInTxn(txn *badger.Txn, keySuffix []byte) (*vm.Machine, error) {
 	key := append([]byte("machine:"), keySuffix...)
 
 	item, err := txn.Get(key)
@@ -665,12 +669,11 @@ func (cp *Checkpointer) restoreMachine_inTxn(txn *badger.Txn, keySuffix []byte) 
 		return nil, err
 	}
 	var machineBytes []byte
-	if err := item.Value(func(bytesVal []byte) error {
-		machineBytes = append([]byte{}, bytesVal...)
-		return nil
-	}); err != nil {
+	bytesVal, err := item.Value()
+	if err != nil {
 		return nil, err
 	}
+	machineBytes = append([]byte{}, bytesVal...)
 	rd := bytes.NewReader(machineBytes)
 	var vals [6]value.Value
 	var h [32]byte
@@ -678,7 +681,7 @@ func (cp *Checkpointer) restoreMachine_inTxn(txn *badger.Txn, keySuffix []byte) 
 		if _, err := io.ReadFull(rd, h[:]); err != nil {
 			return nil, err
 		}
-		vals[i], err = cp.restoreValueFromHash_inTxn(txn, h)
+		vals[i], err = cp.restoreValueFromHashInTxn(txn, h)
 		if err != nil {
 			return nil, err
 		}
@@ -688,12 +691,17 @@ func (cp *Checkpointer) restoreMachine_inTxn(txn *badger.Txn, keySuffix []byte) 
 		return nil, err
 	}
 
-	codeOps, err := cp.restoreCode_inTxn(txn)
+	codeOps, err := cp.restoreCodeInTxn(txn)
 	if err != nil {
 		return nil, err
 	}
 
-	return vm.RestoreMachine(codeOps, vals[0], vals[1], vals[2], vals[3], vals[4], vals[5], sizeLimit), nil
+	errHandler, ok := vals[5].(value.CodePointValue)
+	if !ok {
+		return nil, errors.New("6th value must be a codepoint")
+	}
+
+	return vm.RestoreMachine(codeOps, vals[0], vals[1], vals[2], vals[3], vals[4], errHandler, sizeLimit), nil
 }
 
 func writeOp(wr io.Writer, op value.Operation) (value.Value, error) {
@@ -725,13 +733,13 @@ func (cp *Checkpointer) restoreOp(txn *badger.Txn, rd io.Reader) (value.Operatio
 		if _, err := io.ReadFull(rd, h[:]); err != nil {
 			return nil, err
 		}
-		immedVal, err := cp.restoreValueFromHash_inTxn(txn, h)
+		immedVal, err := cp.restoreValueFromHashInTxn(txn, h)
 		if err != nil {
 			return nil, err
 		}
-		return value.ImmediateOperation{code.Opcode(buf[1]), immedVal}, nil
+		return value.ImmediateOperation{Op: code.Opcode(buf[1]), Val: immedVal}, nil
 	} else {
-		return value.BasicOperation{code.Opcode(buf[1])}, nil
+		return value.BasicOperation{Op: code.Opcode(buf[1])}, nil
 	}
 }
 
@@ -752,7 +760,7 @@ func (cp *Checkpointer) SaveCode(machine *vm.Machine) error {
 			return err
 		}
 		if val != nil {
-			cp.AddRefToValue(val) // accept that will be orphaned if txn below fails
+			_ = cp.AddRefToValue(val) // accept that will be orphaned if txn below fails
 		}
 	}
 	return cp.db.Update(func(txn *badger.Txn) error {
@@ -760,7 +768,7 @@ func (cp *Checkpointer) SaveCode(machine *vm.Machine) error {
 	})
 }
 
-func (cp *Checkpointer) restoreCode_inTxn(txn *badger.Txn) ([]value.Operation, error) {
+func (cp *Checkpointer) restoreCodeInTxn(txn *badger.Txn) ([]value.Operation, error) {
 	key := []byte("code")
 
 	item, err := txn.Get(key)
@@ -768,12 +776,11 @@ func (cp *Checkpointer) restoreCode_inTxn(txn *badger.Txn) ([]value.Operation, e
 		return nil, err
 	}
 	var codeBytes []byte
-	if err := item.Value(func(bytesVal []byte) error {
-		codeBytes = append([]byte{}, bytesVal...)
-		return nil
-	}); err != nil {
+	bytesVal, err := item.Value()
+	if err != nil {
 		return nil, err
 	}
+	codeBytes = append([]byte{}, bytesVal...)
 	rd := bytes.NewReader(codeBytes)
 
 	var numOps uint64

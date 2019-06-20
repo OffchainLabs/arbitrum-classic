@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package checkpoint
@@ -19,14 +19,13 @@ package checkpoint
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
+
 	"github.com/dgraph-io/badger"
 	"github.com/offchainlabs/arb-avm/value"
-	"io"
 )
 
-const (
-	prefix_value byte = iota
-)
+const PrefixValue byte = iota
 
 func (cp *Checkpointer) writeValue(wr io.Writer, val value.Value) ([]value.Value, error) {
 	typecode := val.TypeCode()
@@ -84,26 +83,28 @@ func (cp *Checkpointer) writeValue(wr io.Writer, val value.Value) ([]value.Value
 	}
 }
 
-func (cp *Checkpointer) addRefToValue_inTxn(txn *badger.Txn, val value.Value) error {
+func (cp *Checkpointer) addRefToValueInTxn(txn *badger.Txn, val value.Value) error {
 	h := val.Hash()
-	hkey := append([]byte{prefix_value}, h[:]...)
+	hkey := append([]byte{PrefixValue}, h[:]...)
 	item, err := txn.Get(hkey)
 	switch err {
 	case nil:
 		// value found; increment its refcount
-		return item.Value(func(barr []byte) error {
-			var refCount uint64
-			rd := bytes.NewReader(barr[:8])
-			if err := binary.Read(rd, binary.LittleEndian, &refCount); err != nil {
-				return err
-			}
-			refCount++
-			var buf bytes.Buffer
-			if err := binary.Write(&buf, binary.LittleEndian, &refCount); err != nil {
-				return err
-			}
-			return txn.Set(hkey, append(buf.Bytes(), barr[8:]...))
-		})
+		barr, err := item.Value()
+		if err != nil {
+			return err
+		}
+		var refCount uint64
+		rd := bytes.NewReader(barr[:8])
+		if err := binary.Read(rd, binary.LittleEndian, &refCount); err != nil {
+			return err
+		}
+		refCount++
+		var buf bytes.Buffer
+		if err := binary.Write(&buf, binary.LittleEndian, &refCount); err != nil {
+			return err
+		}
+		return txn.Set(hkey, append(buf.Bytes(), barr[8:]...))
 	case badger.ErrKeyNotFound:
 		// value not found; create it with refcount=1, and add refs to its children
 		var buf bytes.Buffer
@@ -118,11 +119,9 @@ func (cp *Checkpointer) addRefToValue_inTxn(txn *badger.Txn, val value.Value) er
 		if err := txn.Set(hkey, buf.Bytes()); err != nil {
 			return err
 		}
-		if more != nil {
-			for _, v := range more {
-				if err := cp.addRefToValue_inTxn(txn, v); err != nil {
-					return err
-				}
+		for _, v := range more {
+			if err := cp.addRefToValueInTxn(txn, v); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -133,7 +132,7 @@ func (cp *Checkpointer) addRefToValue_inTxn(txn *badger.Txn, val value.Value) er
 
 func (cp *Checkpointer) AddRefToValue(val value.Value) error {
 	return cp.db.Update(func(txn *badger.Txn) error {
-		return cp.addRefToValue_inTxn(txn, val)
+		return cp.addRefToValueInTxn(txn, val)
 	})
 }
 
@@ -146,51 +145,51 @@ func (cp *Checkpointer) RemoveRefToValue(hash [32]byte) {
 func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
 	var more [][32]byte = nil
 	err := cp.db.Update(func(txn *badger.Txn) error {
-		key := append([]byte{prefix_value}, hash[:]...)
+		key := append([]byte{PrefixValue}, hash[:]...)
 		item, err := txn.Get(key)
 		if err != nil {
 			return err
 		}
-		return item.Value(func(val []byte) error {
-			var refCount uint64
-			rd := bytes.NewReader(val[:8])
-			if err := binary.Read(rd, binary.LittleEndian, &refCount); err != nil {
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		var refCount uint64
+		rd := bytes.NewReader(val[:8])
+		if err := binary.Read(rd, binary.LittleEndian, &refCount); err != nil {
+			return err
+		}
+		refCount--
+		if refCount == 0 {
+			if err := txn.Delete(key); err != nil {
 				return err
 			}
-			refCount--
-			if refCount == 0 {
-				if err := txn.Delete(key); err != nil {
-					return err
-				}
-				if val[8] == value.TypeCodeTuple {
-					size := int(val[9])
-					rd := bytes.NewReader(val[10:])
-					more = make([][32]byte, size)
-					for i := 0; i < size; i++ {
-						h := [32]byte{}
-						if _, err := io.ReadFull(rd, h[:]); err != nil {
-							return err
-						}
-						more[i] = h
+			if val[8] == value.TypeCodeTuple {
+				size := int(val[9])
+				rd := bytes.NewReader(val[10:])
+				more = make([][32]byte, size)
+				for i := 0; i < size; i++ {
+					h := [32]byte{}
+					if _, err := io.ReadFull(rd, h[:]); err != nil {
+						return err
 					}
+					more[i] = h
 				}
-				return nil
-			} else {
-				var buf bytes.Buffer
-				if err := binary.Write(&buf, binary.LittleEndian, &refCount); err != nil {
-					return err
-				}
-				return txn.Set(key, append(buf.Bytes(), val[8:]...))
 			}
-		})
+			return nil
+		} else {
+			var buf bytes.Buffer
+			if err := binary.Write(&buf, binary.LittleEndian, &refCount); err != nil {
+				return err
+			}
+			return txn.Set(key, append(buf.Bytes(), val[8:]...))
+		}
 	})
 	if err != nil {
 		return err
 	}
-	if more != nil {
-		for _, h := range more {
-			cp.RemoveRefToValue(h)
-		}
+	for _, h := range more {
+		cp.RemoveRefToValue(h)
 	}
 	return nil
 }
@@ -199,22 +198,21 @@ func (cp *Checkpointer) RestoreValueFromHash(hash [32]byte) (value.Value, error)
 	txn := cp.db.NewTransaction(false) // open a read-only transaction
 	defer txn.Discard()
 
-	return cp.restoreValueFromHash_inTxn(txn, hash)
+	return cp.restoreValueFromHashInTxn(txn, hash)
 }
 
-func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byte) (value.Value, error) {
-	hkey := append([]byte{prefix_value}, hash[:]...)
+func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash [32]byte) (value.Value, error) {
+	hkey := append([]byte{PrefixValue}, hash[:]...)
 	item, err := txn.Get(hkey)
 	if err != nil {
 		return nil, err
 	}
 	var bytesRead []byte
-	if err := item.Value(func(bytesVal []byte) error {
-		bytesRead = append([]byte{}, bytesVal...)
-		return nil
-	}); err != nil {
+	bytesVal, err := item.Value()
+	if err != nil {
 		return nil, err
 	}
+	bytesRead = append([]byte{}, bytesVal...)
 
 	rd := bytes.NewReader(bytesRead)
 	var unusedRefCount uint64
@@ -241,7 +239,7 @@ func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byt
 		if _, err2 := io.ReadFull(rd, nextHash[:]); err2 != nil {
 			return nil, err2
 		}
-		return value.CodePointValue{insnNum, op, nextHash}, nil
+		return value.CodePointValue{InsnNum: insnNum, Op: op, NextHash: nextHash}, nil
 	case value.TypeCodeTuple:
 		var sizeAsByte byte
 		if err2 := binary.Read(rd, binary.LittleEndian, &sizeAsByte); err2 != nil {
@@ -254,7 +252,7 @@ func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byt
 			if _, err2 := io.ReadFull(rd, subHash[:]); err2 != nil {
 				return nil, err
 			}
-			contents[i], err = cp.restoreValueFromHash_inTxn(txn, subHash)
+			contents[i], err = cp.restoreValueFromHashInTxn(txn, subHash)
 			if err != nil {
 				return nil, err
 			}
@@ -267,6 +265,6 @@ func (cp *Checkpointer) restoreValueFromHash_inTxn(txn *badger.Txn, hash [32]byt
 		}
 		return value.NewHashOnlyValue(h, 32), nil
 	default:
-		return nil, CheckpointError{"Unexpected typecode in checkpoint"}
+		return nil, Error{"Unexpected typecode in checkpoint"}
 	}
 }

@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package ethvalidator
@@ -20,7 +20,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/tls"
 	"errors"
-	"fmt"
+	"github.com/offchainlabs/arb-validator/ethbridge"
+	"log"
+	"math"
+	"time"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -28,9 +32,7 @@ import (
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
-	"log"
-	"math"
-	"time"
+	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arb-avm/vm"
 )
@@ -57,9 +59,7 @@ type UnanimousAssertionRequest struct {
 type ValidatorFollower struct {
 	*EthValidator
 
-	coordinatorConn *websocket.Conn
-	FromCoordinator chan *ValidatorRequest
-	ToCoordinator   chan *FollowerResponse
+	client *Client
 
 	unanimousRequests map[[32]byte]UnanimousAssertionRequest
 }
@@ -70,11 +70,10 @@ func NewValidatorFollower(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
-	connectionInfo ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
 ) (*ValidatorFollower, error) {
-
 	dialer := websocket.DefaultDialer
 	dialer.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
@@ -83,14 +82,13 @@ func NewValidatorFollower(
 	coordinatorConn, resp, err := dialer.Dial(coordinatorURL, nil)
 	if err != nil {
 		if resp != nil {
-			return nil, fmt.Errorf("Coordinator handshake failed with error %v and status %d", err, resp.StatusCode)
-		} else {
-			return nil, fmt.Errorf("Coordinator handshake failed with error %v and response <nil>", err)
+			return nil, errors2.Wrapf(err, "coordinator handshake failed with status %d", resp.StatusCode)
 		}
+		return nil, errors2.Wrap(err, "coordinator handshake failed with empty response")
 	}
 	tlsCon, ok := coordinatorConn.UnderlyingConn().(*tls.Conn)
 	if !ok {
-		return nil, errors.New("Must connect to coordinator with TLS")
+		return nil, errors.New("must connect to coordinator with TLS")
 	}
 	uniqueVal := tlsCon.ConnectionState().TLSUnique
 	hashVal := crypto.Keccak256(uniqueVal)
@@ -99,7 +97,12 @@ func NewValidatorFollower(
 		return nil, err
 	}
 	wr, err := coordinatorConn.NextWriter(websocket.BinaryMessage)
-	wr.Write(sigData)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := wr.Write(sigData); err != nil {
+		return nil, err
+	}
 	if err := wr.Close(); err != nil {
 		return nil, err
 	}
@@ -107,97 +110,33 @@ func NewValidatorFollower(
 	if err != nil {
 		return nil, err
 	}
-	var vmId [32]byte
-	copy(vmId[:], vmData)
+	var vmID [32]byte
+	copy(vmID[:], vmData)
 	pubkey, err := crypto.SigToPub(hashVal, vmData[32:])
 	if err != nil {
 		return nil, err
 	}
 	address := crypto.PubkeyToAddress(*pubkey)
 
-	c, err := NewEthValidator(name, vmId, machine, key, config, challengeEverything, connectionInfo, ethURL)
+	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, connectionInfo, ethURL)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := c.Validators[address] ; !ok {
-		return nil, errors.New("Coordinator had bad pubkey")
+	if _, ok := c.Validators[address]; !ok {
+		return nil, errors.New("coordinator had bad pubkey")
 	}
 
 	log.Println("Validator formed connected with coordinator")
-	fromCoordinator := make(chan *ValidatorRequest, 128)
-	toCoordinator := make(chan *FollowerResponse, 128)
 	unanimousRequests := make(map[[32]byte]UnanimousAssertionRequest)
-	return &ValidatorFollower{c, coordinatorConn, fromCoordinator, toCoordinator, unanimousRequests}, nil
-}
-
-func (m *ValidatorFollower) readPump() {
-	defer func() {
-		m.coordinatorConn.Close()
-	}()
-	m.coordinatorConn.SetReadLimit(maxMessageSize)
-	m.coordinatorConn.SetReadDeadline(time.Now().Add(pongWait))
-	m.coordinatorConn.SetPongHandler(func(string) error { m.coordinatorConn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-	for {
-		_, message, err := m.coordinatorConn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
-			}
-			break
-		}
-		req := &ValidatorRequest{}
-		err = proto.Unmarshal(message, req)
-		if err != nil {
-			log.Printf("Validator recieved malformed message")
-			continue
-		}
-		m.FromCoordinator <- req
-	}
-}
-
-func (m *ValidatorFollower) writePump() {
-	ticker := time.NewTicker(pingPeriod)
-	defer func() {
-		ticker.Stop()
-		m.coordinatorConn.Close()
-	}()
-	for {
-		select {
-		case message, ok := <-m.ToCoordinator:
-			m.coordinatorConn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				// The hub closed the channel.
-				m.coordinatorConn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			w, err := m.coordinatorConn.NextWriter(websocket.BinaryMessage)
-			if err != nil {
-				return
-			}
-
-			raw, err := proto.Marshal(message)
-			if err != nil {
-				log.Fatalln("Follower failed to marshal response")
-			}
-			w.Write(raw)
-			if err := w.Close(); err != nil {
-				return
-			}
-		case <-ticker.C:
-			m.coordinatorConn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := m.coordinatorConn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
-			}
-		}
-	}
+	client := NewClient(coordinatorConn, address)
+	return &ValidatorFollower{c, client, unanimousRequests}, nil
 }
 
 func (m *ValidatorFollower) HandleUnanimousRequest(
-	request *UnanimousAssertionValidatorRequest,
+	request *valmessage.UnanimousAssertionValidatorRequest,
 	requestId [32]byte,
-) {
+) error {
 	unanRequest := valmessage.UnanimousRequestData{
 		BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
 		BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
@@ -205,161 +144,170 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		TimeBounds:  protocol.NewTimeBoundsFromBuf(request.TimeBounds),
 	}
 
-	notifyCoordinator := func(msg *UnanimousAssertionFollowerResponse) {
-		m.ToCoordinator <- &FollowerResponse{
-			RequestId: value.NewHashBuf(unanRequest.Hash()),
-			Response:  &FollowerResponse_Unanimous{msg},
-		}
-	}
+	sig, unanHash, err := func() ([]byte, [32]byte, error) {
+		messages := make([]protocol.Message, 0, len(request.SignedMessages))
+		for _, signedMsg := range request.SignedMessages {
+			msg, err := protocol.NewMessageFromBuf(signedMsg.Message)
+			if err != nil {
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message in bad format")
+			}
+			tup, ok := msg.Data.(value.TupleValue)
+			if !ok || tup.Len() != 4 {
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message in bad format")
+			}
+			// Access is safe since we already did a length check
+			signedVal, _ := tup.GetByInt64(0)
+			messageHash := solsha3.SoliditySHA3(
+				solsha3.Bytes32(m.VmId),
+				solsha3.Bytes32(signedVal.Hash()),
+				solsha3.Uint256(msg.Currency),
+				msg.TokenType[:],
+			)
 
-	notifyFailed := func(err error) {
-		log.Println(err)
-		notifyCoordinator(&UnanimousAssertionFollowerResponse{
-			Accepted: false,
-		})
-	}
-
-	messages := make([]protocol.Message, 0, len(request.SignedMessages))
-	for _, signedMsg := range request.SignedMessages {
-		msg, err := protocol.NewMessageFromBuf(signedMsg.Message)
-		tup, ok := msg.Data.(value.TupleValue)
-		if !ok || tup.Len() != 4 {
-			notifyFailed(fmt.Errorf("Follower recieved message in bad format"))
-			return
+			signedMsgHash := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
+			pubkey, err := crypto.SigToPub(signedMsgHash, signedMsg.Signature)
+			if err != nil {
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message with bad signature")
+			}
+			sender := crypto.PubkeyToAddress(*pubkey)
+			senderArr := [32]byte{}
+			copy(senderArr[12:], sender.Bytes())
+			if senderArr != msg.Destination {
+				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message with incorrect signature")
+			}
+			messages = append(messages, msg)
 		}
-		signedVal, _ := tup.GetByInt64(0)
-		messageHash := solsha3.SoliditySHA3(
-			solsha3.Bytes32(m.VmId),
-			solsha3.Bytes32(signedVal.Hash()),
-			solsha3.Uint256(msg.Currency),
-			msg.TokenType[:],
+
+		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages)
+		var unanUpdate valmessage.UnanimousUpdateResults
+		select {
+		case unanUpdate = <-resultsChan:
+			break
+		case err := <-unanErrChan:
+			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to follow assertion")
+		}
+
+		// Force onchain assertion if there are outgoing messages
+		if len(unanUpdate.Assertion.OutMsgs) > 0 {
+			unanUpdate.SequenceNum = math.MaxUint64
+		}
+
+		unanHash, err := m.UnanimousAssertHash(
+			unanUpdate.SequenceNum,
+			unanUpdate.BeforeHash,
+			unanUpdate.TimeBounds,
+			unanUpdate.NewInboxHash,
+			unanUpdate.OriginalInboxHash,
+			unanUpdate.Assertion,
 		)
-
-		signedMsgHash := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
-		pubkey, err := crypto.SigToPub(signedMsgHash, signedMsg.Signature)
-		sender := crypto.PubkeyToAddress(*pubkey)
-		senderArr := [32]byte{}
-		copy(senderArr[12:], sender.Bytes())
-		if senderArr != msg.Destination {
-			notifyFailed(fmt.Errorf("Follower recieved message with incorrect signature"))
-			return
-		}
 		if err != nil {
-			notifyFailed(fmt.Errorf("Follower failed to unmarshal valmessage: %v", err))
-			return
+			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to generate hash")
 		}
-		messages = append(messages, msg)
-	}
+		sig, err := m.Sign(unanHash)
+		if err != nil {
+			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to sign")
+		}
 
-	resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages)
-	var unanUpdate valmessage.UnanimousUpdateResults
-	select {
-	case unanUpdate = <-resultsChan:
-		break
-	case err := <-unanErrChan:
-		notifyFailed(fmt.Errorf("Follower failed to follow assertion error: %v", err))
-		return
-	}
+		m.unanimousRequests[requestId] = UnanimousAssertionRequest{
+			unanRequest,
+			messages,
+		}
+		return sig, unanHash, nil
+	}()
 
-	// Force onchain assertion if there are outgoing messages
-	if len(unanUpdate.Assertion.OutMsgs) > 0 {
-		unanUpdate.SequenceNum = math.MaxUint64
-	}
-
-	unanHash, err := m.UnanimousAssertHash(
-		unanUpdate.SequenceNum,
-		unanUpdate.BeforeHash,
-		unanUpdate.TimeBounds,
-		unanUpdate.NewInboxHash,
-		unanUpdate.OriginalInboxHash,
-		unanUpdate.Assertion,
-	)
+	var msg *valmessage.UnanimousAssertionFollowerResponse
 	if err != nil {
-		notifyFailed(fmt.Errorf("Follower failed to generate hash: %v", err))
-		return
+		log.Println(err)
+		msg = &valmessage.UnanimousAssertionFollowerResponse{
+			Accepted: false,
+		}
+	} else {
+		msg = &valmessage.UnanimousAssertionFollowerResponse{
+			Accepted: true,
+			Signature: sig,
+			AssertionHash: value.NewHashBuf(unanHash),
+		}
 	}
-	sig, err := m.Sign(unanHash)
+	message := &valmessage.FollowerResponse{
+		RequestId: value.NewHashBuf(unanRequest.Hash()),
+		Response:  &valmessage.FollowerResponse_Unanimous{Unanimous: msg},
+	}
+	raw, err := proto.Marshal(message)
 	if err != nil {
-		notifyFailed(fmt.Errorf("Follower failed to sign: %v", err))
-		return
+		return err
 	}
-
-	notifyCoordinator(&UnanimousAssertionFollowerResponse{
-		Accepted: true,
-		Signature: &Signature{
-			R: value.NewHashBuf(sig.R),
-			S: value.NewHashBuf(sig.S),
-			V: uint32(sig.V),
-		},
-		AssertionHash: value.NewHashBuf(unanHash),
-	})
-	m.unanimousRequests[requestId] = UnanimousAssertionRequest{
-		unanRequest,
-		messages,
-	}
+	m.client.ToClient <- raw
+	return nil
 }
 
-func (m *ValidatorFollower) HandleCreateVM(request *CreateVMValidatorRequest) {
+func (m *ValidatorFollower) HandleCreateVM(request *valmessage.CreateVMValidatorRequest) {
 	createHash := CreateVMHash(request)
 	sig, err := m.Sign(createHash)
+	var response *valmessage.FollowerResponse
 	if err != nil {
 		log.Printf("Follower failed to sign1: %v", err)
-		m.ToCoordinator <- &FollowerResponse{
-			Response: &FollowerResponse_Create{
-				&CreateVMFollowerResponse{
+		response = &valmessage.FollowerResponse{
+			Response: &valmessage.FollowerResponse_Create{
+				Create: &valmessage.CreateVMFollowerResponse{
 					Accepted: false,
 				},
 			},
 			RequestId: value.NewHashBuf(createHash),
 		}
-	}
-
-	m.ToCoordinator <- &FollowerResponse{
-		Response: &FollowerResponse_Create{
-			&CreateVMFollowerResponse{
-				Accepted: true,
-				Signature: &Signature{
-					R: value.NewHashBuf(sig.R),
-					S: value.NewHashBuf(sig.S),
-					V: uint32(sig.V),
+	} else {
+		response = &valmessage.FollowerResponse{
+			Response: &valmessage.FollowerResponse_Create{
+				Create: &valmessage.CreateVMFollowerResponse{
+					Accepted: true,
+					Signature: sig,
 				},
 			},
-		},
-		RequestId: value.NewHashBuf(createHash),
+			RequestId: value.NewHashBuf(createHash),
+		}
 	}
+	raw, err := proto.Marshal(response)
+	if err != nil {
+		log.Fatalln("Follower failed to marshal response")
+	}
+	m.client.ToClient <- raw
 }
 
 func (m *ValidatorFollower) Run() error {
-	go m.readPump()
-	go m.writePump()
+	go func() {
+		if err := m.client.run(); err != nil {
+			log.Printf("Follower connection to coordinator ended with error %v\n", err)
+		}
+	}()
 
 	go func() {
 		for {
-			select {
-			case req := <-m.FromCoordinator:
-				switch request := req.Request.(type) {
-				case *ValidatorRequest_Unanimous:
-					m.HandleUnanimousRequest(request.Unanimous, value.NewHashFromBuf(req.RequestId))
-				case *ValidatorRequest_UnanimousNotification:
-					requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
-					if request.UnanimousNotification.Accepted {
-						sigs := make([]valmessage.Signature, len(request.UnanimousNotification.Signatures))
-						for _, sig := range request.UnanimousNotification.Signatures {
-							sigs = append(sigs, valmessage.Signature{
-								value.NewHashFromBuf(sig.R),
-								value.NewHashFromBuf(sig.S),
-								uint8(sig.V),
-							})
-						}
-						_, _ = m.Bot.ConfirmOffchainUnanimousAssertion(
-							requestInfo.requestData,
-							sigs,
-						)
-					}
-				case *ValidatorRequest_Create:
-					m.HandleCreateVM(request.Create)
-				case *ValidatorRequest_CreateNotification:
+			message, done := <-m.client.FromClient
+			if done {
+				break
+			}
+			req := new(valmessage.ValidatorRequest)
+			err := proto.Unmarshal(message, req)
+			if err != nil {
+				log.Printf("Validator recieved malformed message")
+				continue
+			}
+			switch request := req.Request.(type) {
+			case *valmessage.ValidatorRequest_Unanimous:
+				err := m.HandleUnanimousRequest(request.Unanimous, value.NewHashFromBuf(req.RequestId))
+				if err != nil {
+					log.Printf("Follower error while trying to handle unanimous assertion request from coordinator")
 				}
+			case *valmessage.ValidatorRequest_UnanimousNotification:
+				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
+				if request.UnanimousNotification.Accepted {
+					_, _ = m.Bot.ConfirmOffchainUnanimousAssertion(
+						requestInfo.requestData,
+						request.UnanimousNotification.Signatures,
+					)
+				}
+			case *valmessage.ValidatorRequest_Create:
+				m.HandleCreateVM(request.Create)
+			case *valmessage.ValidatorRequest_CreateNotification:
 			}
 		}
 	}()
