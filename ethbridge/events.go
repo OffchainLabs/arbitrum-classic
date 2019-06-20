@@ -23,7 +23,6 @@ import (
 	"math/big"
 )
 
-
 type IncomingMessageType int
 
 const (
@@ -32,7 +31,6 @@ const (
 )
 
 type Event interface {
-
 }
 
 type VMEvent interface {
@@ -80,7 +78,7 @@ func (DisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 
-type ConfirmedAssertEvent struct {}
+type ConfirmedAssertEvent struct{}
 
 func (ConfirmedAssertEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
@@ -110,19 +108,19 @@ func (ContinueChallengeEvent) GetIncomingMessageType() IncomingMessageType {
 	return ChallengeMessage
 }
 
-type ChallengerTimeoutEvent struct {}
+type ChallengerTimeoutEvent struct{}
 
 func (ChallengerTimeoutEvent) GetIncomingMessageType() IncomingMessageType {
 	return ChallengeMessage
 }
 
-type AsserterTimeoutEvent struct {}
+type AsserterTimeoutEvent struct{}
 
 func (AsserterTimeoutEvent) GetIncomingMessageType() IncomingMessageType {
 	return ChallengeMessage
 }
 
-type OneStepProofEvent struct {}
+type OneStepProofEvent struct{}
 
 func (OneStepProofEvent) GetIncomingMessageType() IncomingMessageType {
 	return ChallengeMessage
@@ -148,4 +146,4 @@ type MessageDeliveredEvent struct {
 	Msg protocol.Message
 }
 
-type NewTimeEvent struct {}
+type NewTimeEvent struct{}

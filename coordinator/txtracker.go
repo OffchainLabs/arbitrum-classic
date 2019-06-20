@@ -96,7 +96,6 @@ func newAssertionInfo() *assertionInfo {
 	return &assertionInfo{logs}
 }
 
-
 type txTracker struct {
 	txRequestIndex int
 	transactions   map[[32]byte]txInfo

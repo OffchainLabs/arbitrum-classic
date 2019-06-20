@@ -29,7 +29,7 @@ import (
 type Config struct {
 	Address             common.Address
 	ChallengeEverything bool
-	VMConfig              *valmessage.VMConfiguration
+	VMConfig            *valmessage.VMConfiguration
 }
 
 func NewValidatorConfig(address common.Address, config *valmessage.VMConfiguration, challengeEverything bool) *Config {

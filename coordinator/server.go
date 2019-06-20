@@ -127,7 +127,6 @@ func (m *Server) requestFindLogs(
 	return req
 }
 
-
 // FindLogsArgs contains input data for FindLogs
 type FindLogsArgs struct {
 	FromHeight string   `json:"fromHeight"`

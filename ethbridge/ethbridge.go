@@ -235,7 +235,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  VMCreatedEvent{
+					Event: VMCreatedEvent{
 						GracePeriod:         val.GracePeriod,
 						EscrowRequired:      val.EscrowRequired,
 						EscrowCurrency:      val.EscrowCurrency,
@@ -256,7 +256,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  FinalUnanimousAssertEvent{
+					Event: FinalUnanimousAssertEvent{
 						UnanHash: val.UnanHash,
 					},
 				}
@@ -269,7 +269,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  ProposedUnanimousAssertEvent{
+					Event: ProposedUnanimousAssertEvent{
 						UnanHash:    val.UnanHash,
 						SequenceNum: val.SequenceNum,
 					},
@@ -283,7 +283,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  ConfirmedUnanimousAssertEvent{
+					Event: ConfirmedUnanimousAssertEvent{
 						SequenceNum: val.SequenceNum,
 					},
 				}
@@ -298,7 +298,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  DisputableAssertionEvent{
+					Event: DisputableAssertionEvent{
 						Precondition: precondition,
 						Assertion:    assertion,
 						Asserter:     val.Asserter,
@@ -324,7 +324,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  InitiateChallengeEvent{
+					Event: InitiateChallengeEvent{
 						Challenger: val.Challenger,
 					},
 				}
@@ -337,7 +337,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  BisectionEvent{
+					Event: BisectionEvent{
 						Assertions: translateBisectionEvent(val),
 					},
 				}
@@ -369,7 +369,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  ContinueChallengeEvent{
+					Event: ContinueChallengeEvent{
 						ChallengedAssertion: uint16(val.AssertionIndex.Uint64()),
 					},
 				}

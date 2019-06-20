@@ -43,11 +43,11 @@ func New(core *core.Config, assDef protocol.AssertionDefender, time uint64, brid
 			deadline,
 		)
 		return oneStepChallenged{
-				Config:       core,
-				precondition: assDef.GetPrecondition(),
-				assertion:    assDef.GetAssertion().Stub(),
-				deadline:     deadline,
-			}, nil
+			Config:       core,
+			precondition: assDef.GetPrecondition(),
+			assertion:    assDef.GetAssertion().Stub(),
+			deadline:     deadline,
+		}, nil
 	}
 
 	defenders := assDef.NBisect(6)
@@ -61,12 +61,12 @@ func New(core *core.Config, assDef protocol.AssertionDefender, time uint64, brid
 		deadline,
 	)
 	return bisectedAssert{
-			Config:            core,
-			wholePrecondition: assDef.GetPrecondition(),
-			wholeAssertion:    assDef.GetAssertion().Stub(),
-			splitDefenders:    defenders,
-			deadline:          deadline,
-		}, nil
+		Config:            core,
+		wholePrecondition: assDef.GetPrecondition(),
+		wholeAssertion:    assDef.GetAssertion().Stub(),
+		splitDefenders:    defenders,
+		deadline:          deadline,
+	}, nil
 }
 
 type bisectedAssert struct {

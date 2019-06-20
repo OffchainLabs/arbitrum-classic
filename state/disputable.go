@@ -217,7 +217,7 @@ func (bot Waiting) GetCore() *core.Core {
 		protocol.NewInbox(bot.origMessages, bot.pendingMessages),
 		bot.origBalance,
 		bot.origMachine,
-		)
+	)
 }
 
 func (bot Waiting) SendMessageToVM(msg protocol.Message) {

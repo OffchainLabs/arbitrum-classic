@@ -37,8 +37,6 @@ import (
 	"github.com/offchainlabs/arb-avm/loader"
 )
 
-
-
 func attachProfiler(router *mux.Router) {
 	router.HandleFunc("/debug/pprof/", pprof.Index)
 	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)

@@ -100,6 +100,6 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge b
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{ Message: "ERROR: waitingBisected: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingBisected: VM state got unsynchronized"}
 	}
 }

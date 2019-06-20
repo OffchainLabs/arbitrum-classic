@@ -123,7 +123,7 @@ func NewEthValidator(
 
 	bot := validator.NewValidator(name, auth.From, protocol.NewEmptyInbox(), protocol.NewBalanceTracker(), config, machine, challengeEverything)
 
-	actionChan := make(chan func (*EthValidator) error, 1024)
+	actionChan := make(chan func(*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 
 	val := &EthValidator{key, vmId, manMap, bot, actionChan, completedCallChan, ethURL, connectionInfo, con, auth}
@@ -211,7 +211,7 @@ func (val *EthValidator) FinalizedAssertion(assertion *protocol.Assertion, newLo
 }
 
 func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.UnanimousAssert(
 			val.auth,
 			val.VmId,
@@ -228,7 +228,7 @@ func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds 
 }
 
 func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.ProposeUnanimousAssert(
 			val.auth,
 			val.VmId,
@@ -246,7 +246,7 @@ func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds proto
 }
 
 func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assertion *protocol.Assertion) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.ConfirmUnanimousAsserted(
 			val.auth,
 			val.VmId,
@@ -261,7 +261,7 @@ func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assert
 }
 
 func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.DisputableAssert(
 			val.auth,
 			val.VmId,
@@ -276,7 +276,7 @@ func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, a
 }
 
 func (val *EthValidator) ConfirmDisputableAssertion(precondition *protocol.Precondition, assertion *protocol.Assertion) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.ConfirmAsserted(
 			val.auth,
 			val.VmId,
@@ -291,7 +291,7 @@ func (val *EthValidator) ConfirmDisputableAssertion(precondition *protocol.Preco
 }
 
 func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, assertion *protocol.AssertionStub) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.InitiateChallenge(
 			val.auth,
 			val.VmId,
@@ -306,7 +306,7 @@ func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, 
 }
 
 func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.Assertion, deadline uint64) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.BisectChallenge(
 			val.auth,
 			val.VmId,
@@ -322,7 +322,7 @@ func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, as
 }
 
 func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		tree := buildBisectionTree(preconditions, assertions)
 		root := tree.GetRoot()
 		_, err := val.con.ContinueChallenge(
@@ -342,7 +342,7 @@ func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, precondi
 }
 
 func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.Assertion, proof []byte, deadline uint64) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.OneStepProof(
 			val.auth,
 			val.VmId,
@@ -359,7 +359,7 @@ func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, asser
 }
 
 func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		preAssBytes := solsha3.SoliditySHA3(
 			solsha3.Bytes32(precondition.Hash()),
 			solsha3.Bytes32(assertion.Hash()),
@@ -380,7 +380,7 @@ func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, as
 }
 
 func (val *EthValidator) TimeoutChallenger(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
-	val.actionChan <- func (val *EthValidator) error {
+	val.actionChan <- func(val *EthValidator) error {
 		tree := buildBisectionTree(preconditions, assertions)
 		_, err := val.con.Challenge.ChallengerTimedOut(
 			val.auth,

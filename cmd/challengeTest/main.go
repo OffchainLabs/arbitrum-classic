@@ -37,8 +37,8 @@ import (
 	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-avm/value"
 
-	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 func main() {

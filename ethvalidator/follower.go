@@ -223,8 +223,8 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		}
 	} else {
 		msg = &valmessage.UnanimousAssertionFollowerResponse{
-			Accepted: true,
-			Signature: sig,
+			Accepted:      true,
+			Signature:     sig,
 			AssertionHash: value.NewHashBuf(unanHash),
 		}
 	}
@@ -258,7 +258,7 @@ func (m *ValidatorFollower) HandleCreateVM(request *valmessage.CreateVMValidator
 		response = &valmessage.FollowerResponse{
 			Response: &valmessage.FollowerResponse_Create{
 				Create: &valmessage.CreateVMFollowerResponse{
-					Accepted: true,
+					Accepted:  true,
 					Signature: sig,
 				},
 			},
