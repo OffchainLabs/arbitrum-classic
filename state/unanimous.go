@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package validator
+package state
 
 import (
 	"errors"
@@ -31,18 +31,18 @@ type attemptingUnanimousClosing struct {
 	retChan   chan<- bool
 }
 
-func (bot attemptingUnanimousClosing) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot attemptingUnanimousClosing) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	return bot, nil
 }
 
-func (bot attemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot attemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev.(type) {
 	case ethbridge.ProposedUnanimousAssertEvent:
 		// Someone proposed an non-final update
 		// Final update has already been sent
 		return bot, nil, nil
 	case ethbridge.DisputableAssertionEvent:
-		// Someone proposed a disputable assertion
+		// Someone proposed a disputable Assertion
 		// Final update has already been sent
 		return bot, nil, nil
 	case ethbridge.FinalUnanimousAssertEvent:
@@ -50,7 +50,7 @@ func (bot attemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint6
 			bot.retChan <- true
 		}
 		bot.validatorCore.DeliverMessagesToVM()
-		return newWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil
+		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: waitingAssertDefender: VM state got unsynchronized"}
 	}
@@ -64,11 +64,11 @@ type attemptingOffchainClosing struct {
 	retChan     chan<- bool
 }
 
-func (bot attemptingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot attemptingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	return bot, nil
 }
 
-func (bot attemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot attemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ProposedUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
@@ -79,25 +79,25 @@ func (bot attemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64
 			if bot.retChan != nil {
 				bot.retChan <- false
 			}
-			return nil, nil, errors.New("unanimous assertion unexpectedly superseded")
+			return nil, nil, errors.New("unanimous Assertion unexpectedly superseded")
 		} else {
 			return waitingOffchainClosing{
 				bot.validatorConfig,
 				bot.GetCore(),
 				bot.assertion,
-				time + bot.config.GracePeriod,
+				time + bot.Config.GracePeriod,
 				bot.retChan,
 			}, nil, nil
 		}
 	case ethbridge.DisputableAssertionEvent:
-		// Someone proposed a disputable assertion
+		// Someone proposed a disputable Assertion
 		// Unanimous proposal has already been sent
 		return bot, nil, nil
 	case ethbridge.FinalUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, errors.New("unanimous assertion unexpectedly superseded by final assert")
+		return nil, nil, errors.New("unanimous Assertion unexpectedly superseded by final assert")
 	default:
 		if bot.retChan != nil {
 			bot.retChan <- false
@@ -114,12 +114,12 @@ type waitingOffchainClosing struct {
 	retChan   chan<- bool
 }
 
-func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
 	bridge.ConfirmUnanimousAssertion(
-		bot.validatorCore.inbox.Receive().Hash(),
+		bot.validatorCore.Inbox.Receive().Hash(),
 		bot.assertion,
 	)
 	return finalizingOffchainClosing{
@@ -129,18 +129,18 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 	}, nil
 }
 
-func (bot waitingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot waitingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev.(type) {
 	case ethbridge.ProposedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, errors.New("unanimous assertion unexpectedly superseded by sequence number")
+		return nil, nil, errors.New("unanimous Assertion unexpectedly superseded by sequence number")
 	case ethbridge.FinalUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, errors.New("unanimous assertion unexpectedly superseded by final assert")
+		return nil, nil, errors.New("unanimous Assertion unexpectedly superseded by final assert")
 	default:
 		if bot.retChan != nil {
 			bot.retChan <- false
@@ -155,18 +155,18 @@ type finalizingOffchainClosing struct {
 	retChan chan<- bool
 }
 
-func (bot finalizingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot finalizingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	return bot, nil
 }
 
-func (bot finalizingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot finalizingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev.(type) {
 	case ethbridge.ConfirmedUnanimousAssertEvent:
 		bot.GetCore().DeliverMessagesToVM()
 		if bot.retChan != nil {
 			bot.retChan <- true
 		}
-		return newWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil
+		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: waitingAssertDefender: VM state got unsynchronized"}
 	}

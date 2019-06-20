@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package validator
+package state
 
 import (
 	"errors"
@@ -33,21 +33,21 @@ import (
 type proposedUpdate struct {
 	machine     *vm.Machine
 	messages    *protocol.MessageQueue
-	assertion   *protocol.Assertion
+	Assertion   *protocol.Assertion
 	sequenceNum uint64
-	newLogCount int
+	NewLogCount int
 }
 
 func (p *proposedUpdate) clone() *proposedUpdate {
 	return &proposedUpdate{
 		machine:     p.machine.Clone(),
 		messages:    p.messages.Clone(),
-		assertion:   p.assertion,
+		Assertion:   p.Assertion,
 		sequenceNum: p.sequenceNum,
 	}
 }
 
-type waitingObserver struct {
+type WaitingObserver struct {
 	*validatorConfig
 
 	proposed *proposedUpdate
@@ -66,8 +66,8 @@ type waitingObserver struct {
 	origMachine     *vm.Machine
 }
 
-func newWaitingObserver(config *validatorConfig, core *validatorCore) waitingObserver {
-	return waitingObserver{
+func NewWaitingObserver(config *validatorConfig, core *validatorCore) WaitingObserver {
+	return WaitingObserver{
 		validatorConfig:  config,
 		proposed:         nil,
 		acceptedMachine:  nil,
@@ -77,16 +77,16 @@ func newWaitingObserver(config *validatorConfig, core *validatorCore) waitingObs
 		sequenceNum:      0,
 		signatures:       nil,
 		timeBounds:       protocol.TimeBounds{},
-		pendingMessages:  core.inbox.PendingQueue,
-		origMessages:     core.inbox.Accepted,
-		origBalance:      core.balance,
-		origMachine:      core.machine,
+		pendingMessages:  core.Inbox.PendingQueue,
+		origMessages:     core.Inbox.Accepted,
+		origBalance:      core.Balance,
+		origMachine:      core.Machine,
 	}
 }
 
-func (bot waitingObserver) SlowCloseUnanimous(bridge bridge.Bridge) {
+func (bot WaitingObserver) SlowCloseUnanimous(bridge bridge.Bridge) {
 	bridge.UnanimousAssert(
-		bot.GetCore().inbox.Receive().Hash(),
+		bot.GetCore().Inbox.Receive().Hash(),
 		bot.timeBounds,
 		bot.assertion,
 		bot.sequenceNum,
@@ -94,8 +94,8 @@ func (bot waitingObserver) SlowCloseUnanimous(bridge bridge.Bridge) {
 	)
 }
 
-func (bot waitingObserver) FastCloseUnanimous(bridge bridge.Bridge) {
-	inboxHash := bot.GetCore().inbox.Receive().Hash()
+func (bot WaitingObserver) FastCloseUnanimous(bridge bridge.Bridge) {
+	inboxHash := bot.GetCore().Inbox.Receive().Hash()
 	bridge.FinalUnanimousAssert(
 		inboxHash,
 		bot.timeBounds,
@@ -104,9 +104,9 @@ func (bot waitingObserver) FastCloseUnanimous(bridge bridge.Bridge) {
 	)
 }
 
-func (bot waitingObserver) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (validatorState, error) {
+func (bot WaitingObserver) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (ValidatorState, error) {
 	if bot.assertion == nil {
-		return bot, errors.New("couldn't close since no assertion is open")
+		return bot, errors.New("couldn't close since no Assertion is open")
 	}
 
 	if bot.sequenceNum == math.MaxUint64 {
@@ -130,15 +130,28 @@ func (bot waitingObserver) CloseUnanimous(bridge bridge.Bridge, retChan chan<- b
 		nil
 }
 
-func (bot waitingObserver) OrigInbox() *protocol.Inbox {
+func (bot WaitingObserver) AttemptAssertion(request DisputableAssertionRequest, bridge bridge.Bridge) ValidatorState {
+	bridge.DisputableAssert(
+		request.Defender.GetPrecondition(),
+		request.Defender.GetAssertion(),
+	)
+
+	return attemptingAssertDefender{
+		bot.GetCore(),
+		bot.GetConfig(),
+		request,
+	}
+}
+
+func (bot WaitingObserver) OrigInbox() *protocol.Inbox {
 	return protocol.NewInbox(
 		bot.origMessages,
 		bot.pendingMessages,
 	)
 }
 
-func (bot waitingObserver) ProposedInbox() *protocol.Inbox {
-	curInbox := bot.GetCore().inbox
+func (bot WaitingObserver) ProposedInbox() *protocol.Inbox {
+	curInbox := bot.GetCore().Inbox
 	updatedQueues := curInbox.Accepted.WithAddedQueue(bot.proposed.messages)
 	return protocol.NewInbox(
 		updatedQueues,
@@ -146,19 +159,19 @@ func (bot waitingObserver) ProposedInbox() *protocol.Inbox {
 	)
 }
 
-func (bot waitingObserver) ProposalResults() valmessage.UnanimousUpdateResults {
+func (bot WaitingObserver) ProposalResults() valmessage.UnanimousUpdateResults {
 	return valmessage.UnanimousUpdateResults{
 		SequenceNum:       bot.proposed.sequenceNum,
 		BeforeHash:        bot.origMachine.Hash(),
 		TimeBounds:        bot.timeBounds,
 		NewInboxHash:      bot.ProposedInbox().Receive().Hash(),
 		OriginalInboxHash: bot.OrigInbox().Receive().Hash(),
-		Assertion:         bot.proposed.assertion,
+		Assertion:         bot.proposed.Assertion,
 	}
 }
 
-func (bot waitingObserver) Clone() waitingObserver {
-	return waitingObserver{
+func (bot WaitingObserver) Clone() WaitingObserver {
+	return WaitingObserver{
 		validatorConfig:  bot.validatorConfig,
 		proposed:         bot.proposed.clone(),
 		acceptedMachine:  bot.acceptedMachine.Clone(),
@@ -175,26 +188,26 @@ func (bot waitingObserver) Clone() waitingObserver {
 	}
 }
 
-func (bot waitingObserver) GetCore() *validatorCore {
+func (bot WaitingObserver) GetCore() *validatorCore {
 	if bot.assertion != nil {
 		return &validatorCore{
-			inbox:   protocol.NewInbox(bot.acceptedMessages, bot.pendingMessages),
-			balance: bot.acceptedBalance,
-			machine: bot.acceptedMachine,
+			Inbox:   protocol.NewInbox(bot.acceptedMessages, bot.pendingMessages),
+			Balance: bot.acceptedBalance,
+			Machine: bot.acceptedMachine,
 		}
 	}
 	return &validatorCore{
-		inbox:   protocol.NewInbox(bot.origMessages, bot.pendingMessages),
-		balance: bot.origBalance,
-		machine: bot.origMachine,
+		Inbox:   protocol.NewInbox(bot.origMessages, bot.pendingMessages),
+		Balance: bot.origBalance,
+		Machine: bot.origMachine,
 	}
 }
 
-func (bot waitingObserver) SendMessageToVM(msg protocol.Message) {
+func (bot WaitingObserver) SendMessageToVM(msg protocol.Message) {
 	bot.pendingMessages.AddMessage(msg)
 }
 
-func (bot waitingObserver) OffchainContext(
+func (bot WaitingObserver) OffchainContext(
 	newMessages []protocol.Message,
 	timeBounds protocol.TimeBounds,
 	final bool,
@@ -220,15 +233,15 @@ func (bot waitingObserver) OffchainContext(
 	return mq, tb, seqNum
 }
 
-func (bot waitingObserver) validateUnanimousRequest(request valmessage.UnanimousRequestData) error {
+func (bot WaitingObserver) ValidateUnanimousRequest(request valmessage.UnanimousRequestData) error {
 	core := bot.GetCore()
 
-	if request.BeforeHash != core.machine.Hash() {
+	if request.BeforeHash != core.Machine.Hash() {
 		return errors.New("recieved unanimous request with invalid before hash")
 	}
-	if request.BeforeInbox != core.inbox.Receive().Hash() {
-		fmt.Println("validateUnanimousRequest", core.inbox.Receive())
-		return errors.New("recieved unanimous request with invalid before inbox")
+	if request.BeforeInbox != core.Inbox.Receive().Hash() {
+		fmt.Println("validateUnanimousRequest", core.Inbox.Receive())
+		return errors.New("recieved unanimous request with invalid before Inbox")
 	}
 
 	var tb protocol.TimeBounds
@@ -251,7 +264,7 @@ func (bot waitingObserver) validateUnanimousRequest(request valmessage.Unanimous
 	return nil
 }
 
-func (bot waitingObserver) PreparePendingUnanimous(request unanimousUpdateRequest) (waitingObserver, error) {
+func (bot WaitingObserver) PreparePendingUnanimous(request UnanimousUpdateRequest) (WaitingObserver, error) {
 	assertion := request.Assertion
 	newLogCount := len(assertion.Logs)
 	if bot.assertion != nil {
@@ -265,14 +278,14 @@ func (bot waitingObserver) PreparePendingUnanimous(request unanimousUpdateReques
 		mq.AddMessage(msg)
 	}
 
-	return waitingObserver{
+	return WaitingObserver{
 		validatorConfig: bot.validatorConfig,
 		proposed: &proposedUpdate{
 			machine:     request.Machine,
 			messages:    mq,
-			assertion:   assertion,
+			Assertion:   assertion,
 			sequenceNum: request.SequenceNum,
-			newLogCount: newLogCount,
+			NewLogCount: newLogCount,
 		},
 		acceptedMachine:  bot.acceptedMachine,
 		acceptedMessages: bot.acceptedMessages,
@@ -288,24 +301,24 @@ func (bot waitingObserver) PreparePendingUnanimous(request unanimousUpdateReques
 	}, nil
 }
 
-func (bot waitingObserver) FinalizePendingUnanimous(signatures [][]byte) (validatorState, *proposedUpdate, error) {
+func (bot WaitingObserver) FinalizePendingUnanimous(signatures [][]byte) (ValidatorState, *proposedUpdate, error) {
 	if bot.proposed == nil {
-		return nil, nil, errors.New("no pending assertion")
+		return nil, nil, errors.New("no pending Assertion")
 	}
 
 	core := bot.GetCore()
-	balance := core.balance.Clone()
+	balance := core.Balance.Clone()
 
 	// This spend is guaranteed to be correct since the VM made sure to only produce on outgoing if it could spend
-	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.assertion.OutMsgs))
+	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.Assertion.OutMsgs))
 
-	return waitingObserver{
+	return WaitingObserver{
 		validatorConfig:  bot.validatorConfig,
 		proposed:         nil,
 		acceptedMachine:  bot.proposed.machine,
-		acceptedMessages: core.inbox.Accepted.WithAddedQueue(bot.proposed.messages),
+		acceptedMessages: core.Inbox.Accepted.WithAddedQueue(bot.proposed.messages),
 		acceptedBalance:  balance,
-		assertion:        bot.proposed.assertion,
+		assertion:        bot.proposed.Assertion,
 		sequenceNum:      bot.proposed.sequenceNum,
 		signatures:       signatures,
 		timeBounds:       bot.timeBounds,
@@ -316,11 +329,11 @@ func (bot waitingObserver) FinalizePendingUnanimous(signatures [][]byte) (valida
 	}, bot.proposed, nil
 }
 
-func (bot waitingObserver) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot WaitingObserver) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	return bot, nil
 }
 
-func (bot waitingObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot WaitingObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.FinalUnanimousAssertEvent:
 		if bot.sequenceNum != math.MaxUint64 {
@@ -328,7 +341,7 @@ func (bot waitingObserver) UpdateState(ev ethbridge.Event, time uint64, bridge b
 		}
 		core := bot.GetCore()
 		core.DeliverMessagesToVM()
-		return newWaitingObserver(bot.validatorConfig, core), nil, nil
+		return NewWaitingObserver(bot.validatorConfig, core), nil, nil
 	case ethbridge.ProposedUnanimousAssertEvent:
 		if bot.acceptedMachine == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, errors.New("waiting observer saw signed unanimous proposal that it doesn't remember")
@@ -340,7 +353,7 @@ func (bot waitingObserver) UpdateState(ev ethbridge.Event, time uint64, bridge b
 				bot.validatorConfig,
 				bot.GetCore(),
 				bot.assertion,
-				time + bot.config.GracePeriod,
+				time + bot.Config.GracePeriod,
 				nil,
 			}, nil, nil
 		}
@@ -351,8 +364,8 @@ func (bot waitingObserver) UpdateState(ev ethbridge.Event, time uint64, bridge b
 		}
 
 		core := bot.GetCore()
-		deadline := time + bot.config.GracePeriod
-		inbox := core.inbox
+		deadline := time + bot.Config.GracePeriod
+		inbox := core.Inbox
 		var inboxVal value.Value
 		if inbox.Receive().Hash() == ev.Precondition.BeforeInbox.Hash() {
 			inboxVal = inbox.Receive()
@@ -361,17 +374,17 @@ func (bot waitingObserver) UpdateState(ev ethbridge.Event, time uint64, bridge b
 		} else {
 			return nil, nil, errors.New("waiting observer has incorrect valmessage")
 		}
-		updatedState := core.machine.Clone()
+		updatedState := core.Machine.Clone()
 		actx := protocol.NewMachineAssertionContext(
 			updatedState,
-			core.balance,
+			core.Balance,
 			ev.Precondition.TimeBounds,
 			inboxVal,
 		)
 		updatedState.Run(int32(ev.Assertion.NumSteps))
 		ad := actx.Finalize(updatedState)
 
-		if !ad.GetAssertion().Stub().Equals(ev.Assertion) || bot.challengeEverything {
+		if !ad.GetAssertion().Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
 			bridge.InitiateChallenge(
 				ev.Precondition,
 				ev.Assertion,
@@ -387,7 +400,7 @@ func (bot waitingObserver) UpdateState(ev ethbridge.Event, time uint64, bridge b
 			ad.GetAssertion(),
 		}, nil, nil
 	default:
-		return nil, nil, &Error{nil, fmt.Sprintf("ERROR: waitingObserver: VM state got unsynchronized with valmessage %T", ev)}
+		return nil, nil, &Error{nil, fmt.Sprintf("ERROR: WaitingObserver: VM state got unsynchronized with valmessage %T", ev)}
 	}
 }
 
@@ -401,40 +414,40 @@ type watchingAssertionObserver struct {
 	assertion    *protocol.Assertion
 }
 
-func (bot watchingAssertionObserver) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot watchingAssertionObserver) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
 
-	newBalance := bot.balance.Clone()
+	newBalance := bot.Balance.Clone()
 	err := newBalance.SpendAll(bot.precondition.BeforeBalance)
 	if err != nil {
-		log.Fatal("Ethbridge admited assertion with more than available balance")
+		log.Fatal("Ethbridge admited Assertion with more than available Balance")
 	}
 	bridge.FinalizedAssertion(bot.assertion, len(bot.assertion.Logs))
 	return finalizingAssertObserver{
 		validatorCore: &validatorCore{
-			inbox:   bot.inbox,
-			balance: newBalance,
-			machine: bot.machine,
+			Inbox:   bot.Inbox,
+			Balance: newBalance,
+			Machine: bot.Machine,
 		},
 		validatorConfig: bot.validatorConfig,
 		ResultChan:      nil,
 	}, nil
 }
 
-func (bot watchingAssertionObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot watchingAssertionObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
-		deadline := time + bot.config.GracePeriod
-		var challenge challengeState
-		if ev.Challenger == bot.address {
+		deadline := time + bot.Config.GracePeriod
+		var challenge ChallengeState
+		if ev.Challenger == bot.Address {
 			challenge = waitingContinuingChallenger{
 				bot.validatorConfig,
 				bot.precondition,
 				bot.assertion.Stub(),
 				bot.inboxVal,
-				bot.machine.Clone(),
+				bot.Machine.Clone(),
 				deadline,
 			}
 		} else {
@@ -445,7 +458,7 @@ func (bot watchingAssertionObserver) UpdateState(ev ethbridge.Event, time uint64
 				deadline,
 			}
 		}
-		return newWaitingObserver(bot.validatorConfig, bot.validatorCore), challenge, nil
+		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), challenge, nil
 
 	default:
 		return nil, nil, &Error{nil, "ERROR: WaitingValidObserver: VM state got unsynchronized"}
@@ -455,22 +468,22 @@ func (bot watchingAssertionObserver) UpdateState(ev ethbridge.Event, time uint64
 type attemptingAssertDefender struct {
 	*validatorCore
 	*validatorConfig
-	request disputableAssertionRequest
+	request DisputableAssertionRequest
 }
 
-func (bot attemptingAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot attemptingAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	return bot, nil
 }
 
-func (bot attemptingAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot attemptingAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.DisputableAssertionEvent:
-		if ev.Asserter != bot.address {
-			fmt.Println("attemptingAssertDefender: Other assertion got in before ours")
-			return newWaitingObserver(bot.validatorConfig, bot.validatorCore).UpdateState(ev, time, bridge)
+		if ev.Asserter != bot.Address {
+			fmt.Println("attemptingAssertDefender: Other Assertion got in before ours")
+			return NewWaitingObserver(bot.validatorConfig, bot.validatorCore).UpdateState(ev, time, bridge)
 		}
 
-		deadline := time + bot.config.GracePeriod
+		deadline := time + bot.Config.GracePeriod
 		return waitingAssertDefender{
 			bot.validatorCore,
 			bot.validatorConfig,
@@ -485,19 +498,19 @@ func (bot attemptingAssertDefender) UpdateState(ev ethbridge.Event, time uint64,
 type waitingAssertDefender struct {
 	*validatorCore
 	*validatorConfig
-	request  disputableAssertionRequest
+	request  DisputableAssertionRequest
 	deadline uint64
 }
 
-func (bot waitingAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot waitingAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
 
-	newBalance := bot.balance.Clone()
+	newBalance := bot.Balance.Clone()
 	err := newBalance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.request.Defender.GetAssertion().OutMsgs))
 	if err != nil {
-		log.Fatal("Ethbridge admited assertion with more than available balance")
+		log.Fatal("Ethbridge admited Assertion with more than available Balance")
 	}
 	bridge.ConfirmDisputableAssertion(
 		bot.request.Defender.GetPrecondition(),
@@ -507,21 +520,21 @@ func (bot waitingAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (
 	bridge.FinalizedAssertion(assertion, len(assertion.Logs))
 	return finalizingAssertObserver{
 		&validatorCore{
-			inbox:   bot.inbox,
-			balance: newBalance,
-			machine: bot.request.State,
+			Inbox:   bot.Inbox,
+			Balance: newBalance,
+			Machine: bot.request.State,
 		},
 		bot.validatorConfig,
 		bot.request.ResultChan,
 	}, nil
 }
 
-func (bot waitingAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot waitingAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
 		bot.request.NotifyInvalid()
 		ct, err := defenseValidator(bot.validatorConfig, bot.request.Defender, time, bridge)
-		return newWaitingObserver(bot.validatorConfig, bot.validatorCore), ct, err
+		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), ct, err
 
 	default:
 		return nil, nil, &Error{nil, "ERROR: waitingAssertDefender: VM state got unsynchronized"}
@@ -534,18 +547,18 @@ type finalizingAssertObserver struct {
 	ResultChan chan<- bool
 }
 
-func (bot finalizingAssertObserver) UpdateTime(time uint64, bridge bridge.Bridge) (validatorState, error) {
+func (bot finalizingAssertObserver) UpdateTime(time uint64, bridge bridge.Bridge) (ValidatorState, error) {
 	return bot, nil
 }
 
-func (bot finalizingAssertObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (validatorState, challengeState, error) {
+func (bot finalizingAssertObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ValidatorState, ChallengeState, error) {
 	switch ev.(type) {
 	case ethbridge.ConfirmedAssertEvent:
 		if bot.ResultChan != nil {
 			bot.ResultChan <- true
 		}
 		bot.GetCore().DeliverMessagesToVM()
-		return newWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil
+		return NewWaitingObserver(bot.validatorConfig, bot.validatorCore), nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: FinalizingAssertDefender: VM state got unsynchronized"}
 	}

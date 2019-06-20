@@ -14,22 +14,52 @@
  * limitations under the License.
  */
 
-package validator
+package state
 
 import (
-	"github.com/ethereum/go-ethereum/common"
+	"fmt"
 
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
+
+	"github.com/offchainlabs/arb-validator/bridge"
+	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
+type ValidatorState interface {
+	UpdateTime(uint64, bridge.Bridge) (ValidatorState, error)
+	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (ValidatorState, ChallengeState, error)
+
+	SendMessageToVM(msg protocol.Message)
+	GetCore() *validatorCore
+	GetConfig() *validatorConfig
+}
+
+type ChallengeState interface {
+	UpdateTime(uint64, bridge.Bridge) (ChallengeState, error)
+	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (ChallengeState, error)
+}
+
+type Error struct {
+	err     error
+	message string
+}
+
+func (e *Error) Error() string {
+	if e.err != nil {
+		return fmt.Sprintf("%v: %v", e.message, e.err)
+	}
+	return e.message
+}
+
 type validatorConfig struct {
-	address             common.Address
-	challengeEverything bool
-	config              *valmessage.VMConfiguration
+	Address             common.Address
+	ChallengeEverything bool
+	Config              *valmessage.VMConfiguration
 }
 
 func NewValidatorConfig(address common.Address, config *valmessage.VMConfiguration, challengeEverything bool) *validatorConfig {
@@ -45,16 +75,24 @@ func (c *validatorConfig) GetConfig() *validatorConfig {
 }
 
 type validatorCore struct {
-	inbox   *protocol.Inbox
-	balance *protocol.BalanceTracker
-	machine *vm.Machine
+	Inbox   *protocol.Inbox
+	Balance *protocol.BalanceTracker
+	Machine *vm.Machine
+}
+
+func NewValidatorCore(inbox *protocol.Inbox, balance *protocol.BalanceTracker, machine *vm.Machine) *validatorCore {
+	return &validatorCore{
+		Inbox:   inbox,
+		Balance: balance,
+		Machine: machine,
+	}
 }
 
 func (c *validatorCore) Clone() *validatorCore {
 	return &validatorCore{
-		inbox:   c.inbox.Clone(),
-		balance: c.balance.Clone(),
-		machine: c.machine.Clone(),
+		Inbox:   c.Inbox.Clone(),
+		Balance: c.Balance.Clone(),
+		Machine: c.Machine.Clone(),
 	}
 }
 
@@ -62,12 +100,12 @@ func (c *validatorCore) OffchainAssert(
 	mq *protocol.MessageQueue,
 	timeBounds protocol.TimeBounds,
 ) (*validatorCore, *protocol.Assertion) {
-	inbox := c.inbox.Clone()
+	inbox := c.Inbox.Clone()
 	inbox.InsertMessageQueue(mq)
-	newState := c.machine.Clone()
+	newState := c.Machine.Clone()
 	assCtx := protocol.NewMachineAssertionContext(
 		newState,
-		c.balance,
+		c.Balance,
 		timeBounds,
 		inbox.Receive(),
 	)
@@ -75,13 +113,13 @@ func (c *validatorCore) OffchainAssert(
 	assDef := assCtx.Finalize(newState)
 
 	newAssertion := assDef.GetAssertion()
-	newBalance := c.balance.Clone()
+	newBalance := c.Balance.Clone()
 	// This spend is guaranteed to be correct since the VM made sure to only produce on outgoing if it could spend
 	_ = newBalance.SpendAll(protocol.NewBalanceTrackerFromMessages(newAssertion.OutMsgs))
 	return &validatorCore{
-		inbox:   inbox,
-		balance: newBalance,
-		machine: newState,
+		Inbox:   inbox,
+		Balance: newBalance,
+		Machine: newState,
 	}, newAssertion
 }
 
@@ -90,67 +128,67 @@ func (c *validatorCore) GetCore() *validatorCore {
 }
 
 func (c *validatorCore) SendMessageToVM(msg protocol.Message) {
-	c.inbox.SendMessage(msg)
+	c.Inbox.SendMessage(msg)
 }
 
 func (c *validatorCore) DeliverMessagesToVM() {
-	c.balance.AddAll(c.inbox.PendingQueue.Balance)
-	c.inbox.DeliverMessages()
+	c.Balance.AddAll(c.Inbox.PendingQueue.Balance)
+	c.Inbox.DeliverMessages()
 }
 
 func (c *validatorCore) GetMachine() *vm.Machine {
-	return c.machine
+	return c.Machine
 }
 
 func (c *validatorCore) GetInbox() *protocol.Inbox {
-	return c.inbox
+	return c.Inbox
 }
 
 func (c *validatorCore) GetBalance() *protocol.BalanceTracker {
-	return c.balance
+	return c.Balance
 }
 
 func (c *validatorCore) GeneratePrecondition(beginTime, endTime uint64, includePendingMessages bool) *protocol.Precondition {
 	var inboxValue value.Value
 	if includePendingMessages {
-		inboxValue = c.inbox.ReceivePending()
+		inboxValue = c.Inbox.ReceivePending()
 	} else {
-		inboxValue = c.inbox.Receive()
+		inboxValue = c.Inbox.Receive()
 	}
 	return &protocol.Precondition{
-		BeforeHash:    c.machine.Hash(),
+		BeforeHash:    c.Machine.Hash(),
 		TimeBounds:    [2]uint64{beginTime, endTime},
-		BeforeBalance: c.balance,
+		BeforeBalance: c.Balance,
 		BeforeInbox:   value.NewHashOnlyValueFromValue(inboxValue),
 	}
 }
 
-func (c *validatorCore) createDisputableDefender(beginTime, length uint64, includePendingMessages bool, maxSteps int32) (*vm.Machine, protocol.AssertionDefender) {
+func (c *validatorCore) CreateDisputableDefender(beginTime, length uint64, includePendingMessages bool, maxSteps int32) (*vm.Machine, protocol.AssertionDefender) {
 	endTime := beginTime + length
 	var inboxValue value.Value
 	if includePendingMessages {
-		inboxValue = c.inbox.ReceivePending()
+		inboxValue = c.Inbox.ReceivePending()
 	} else {
-		inboxValue = c.inbox.Receive()
+		inboxValue = c.Inbox.Receive()
 	}
-	newState := c.machine.Clone()
+	newState := c.Machine.Clone()
 	assCtx := protocol.NewMachineAssertionContext(
 		newState,
-		c.balance,
+		c.Balance,
 		[2]uint64{beginTime, endTime},
 		inboxValue,
 	)
 	newState.Run(maxSteps)
-	assDef := assCtx.Finalize(c.machine)
+	assDef := assCtx.Finalize(c.Machine)
 	return newState, assDef
 }
 
 func (c *validatorCore) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
-	if pre.BeforeInbox.Hash() != c.inbox.ReceivePending().Hash() && pre.BeforeInbox.Hash() != c.inbox.Receive().Hash() {
+	if pre.BeforeInbox.Hash() != c.Inbox.ReceivePending().Hash() && pre.BeforeInbox.Hash() != c.Inbox.Receive().Hash() {
 		return false
 	}
 
-	if pre.BeforeHash != c.machine.Hash() {
+	if pre.BeforeHash != c.Machine.Hash() {
 		return false
 	}
 
@@ -158,7 +196,7 @@ func (c *validatorCore) ValidateAssertion(pre *protocol.Precondition, time uint6
 		return false
 	}
 
-	if !c.balance.CanSpendAll(pre.BeforeBalance) {
+	if !c.Balance.CanSpendAll(pre.BeforeBalance) {
 		return false
 	}
 	return true

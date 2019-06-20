@@ -1,73 +1,10 @@
-/*
- * Copyright 2019, Offchain Labs, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package validator
 
 import (
-	"github.com/offchainlabs/arb-validator/valmessage"
-
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
-
-
-
-type unanimousUpdateRequest struct {
-	valmessage.UnanimousRequestData
-
-	NewMessages []protocol.Message
-
-	Inbox     *protocol.Inbox
-	Machine   *vm.Machine
-	Assertion *protocol.Assertion
-
-	ResultChan chan<- valmessage.UnanimousUpdateResults
-	ErrChan    chan<- error
-}
-
-type followUnanimousRequest struct {
-	valmessage.UnanimousRequestData
-	NewMessages []protocol.Message
-
-	ResultChan chan<- valmessage.UnanimousUpdateResults
-	ErrChan    chan<- error
-}
-
-type initiateUnanimousRequest struct {
-	TimeLength  uint64
-	NewMessages []protocol.Message
-	Final       bool
-	RequestChan chan<- valmessage.UnanimousRequest
-	ResultChan  chan<- valmessage.UnanimousUpdateResults
-	ErrChan     chan<- error
-}
-
-type unanimousConfirmRequest struct {
-	valmessage.UnanimousRequestData
-	Signatures [][]byte
-
-	ResultChan chan<- bool
-	ErrChan    chan<- error
-}
-
-type closeUnanimousAssertionRequest struct {
-	ResultChan chan<- bool
-	ErrChan    chan<- error
-}
 
 type callRequest struct {
 	Message    protocol.Message
@@ -89,29 +26,32 @@ type disputableDefenderRequest struct {
 	ResultChan             chan<- bool
 }
 
-type disputableAssertionRequest struct {
-	State           *vm.Machine
-	Defender        protocol.AssertionDefender
-	IncludedPending bool
-	ResultChan      chan<- bool
+type initiateUnanimousRequest struct {
+	TimeLength  uint64
+	NewMessages []protocol.Message
+	Final       bool
+	RequestChan chan<- valmessage.UnanimousRequest
+	ResultChan  chan<- valmessage.UnanimousUpdateResults
+	ErrChan     chan<- error
 }
 
-func (r disputableAssertionRequest) GetPrecondition() *protocol.Precondition {
-	return r.Defender.GetPrecondition()
+type followUnanimousRequest struct {
+	valmessage.UnanimousRequestData
+	NewMessages []protocol.Message
+
+	ResultChan chan<- valmessage.UnanimousUpdateResults
+	ErrChan    chan<- error
 }
 
-func (r disputableAssertionRequest) IncludedPendingInbox() bool {
-	return r.IncludedPending
+type closeUnanimousAssertionRequest struct {
+	ResultChan chan<- bool
+	ErrChan    chan<- error
 }
 
-func (r disputableAssertionRequest) NotifyInvalid() {
-	go func() {
-		r.ResultChan <- false
-	}()
-}
+type unanimousConfirmRequest struct {
+	valmessage.UnanimousRequestData
+	Signatures [][]byte
 
-func (r disputableAssertionRequest) NotifyAccepted() {
-	go func() {
-		r.ResultChan <- true
-	}()
+	ResultChan chan<- bool
+	ErrChan    chan<- error
 }
