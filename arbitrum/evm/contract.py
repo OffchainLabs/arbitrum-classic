@@ -122,8 +122,8 @@ def convert_log_raw(logVal):
     }
 
 
-def decode_log(logVal, abi):
-    event_interface = abi.funcs[logVal["id"]]
+def decode_log(logVal, abis):
+    event_interface = abis[logVal["contract"]].funcs[logVal["id"]]
     ret = {}
     topics = [inp for inp in event_interface["inputs"] if inp["indexed"]]
     for (topic, topic_data) in zip(topics, logVal["topics"]):
@@ -180,7 +180,7 @@ def create_output_handler(contracts):
             )
             print("{} returned {}".format(func_interface['name'], decoded))
             logs = [
-                decode_log(convert_log_raw(logVal), abis[contract_num])
+                decode_log(convert_log_raw(logVal), abis)
                 for logVal in stack.to_list(val[1])
             ]
             for log in logs:
@@ -195,7 +195,7 @@ def create_output_handler(contracts):
         elif return_code == STOP_CODE:
             print("{} completed successfully".format(func_interface['name']))
             logs = [
-                decode_log(convert_log_raw(logVal), abis[contract_num])
+                decode_log(convert_log_raw(logVal), abis)
                 for logVal in stack.to_list(val[1])
             ]
             for log in logs:
