@@ -224,7 +224,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							msgHashInt := new(big.Int).SetBytes(messageHash[:])
 							val, _ := value.NewTupleFromSlice([]value.Value{
 								msg.Data,
-								value.NewIntValue(validator.latestHeader.Time),
+								value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
 								value.NewIntValue(validator.latestHeader.Number),
 								value.NewIntValue(msgHashInt),
 							})
@@ -394,7 +394,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					msgHashInt := new(big.Int).SetBytes(messageHash[:])
 					val, _ := value.NewTupleFromSlice([]value.Value{
 						msg.Data,
-						value.NewIntValue(validator.latestHeader.Time),
+						value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
 						value.NewIntValue(validator.latestHeader.Number),
 						value.NewIntValue(msgHashInt),
 					})

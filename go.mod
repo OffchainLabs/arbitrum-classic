@@ -27,13 +27,12 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
 	github.com/jessevdk/go-flags v1.4.0 // indirect
 	github.com/karalabe/hid v0.0.0-20181128192157-d815e0c1a2e2 // indirect
-	github.com/kisielk/errcheck v1.2.0 // indirect
 	github.com/kkdai/bstream v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.6 // indirect
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
-	github.com/offchainlabs/arb-avm v0.1.0
+	github.com/offchainlabs/arb-avm v0.1.1-0.20190620180800-aea2007ae532
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
@@ -46,7 +45,7 @@ require (
 	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b // indirect
 	golang.org/x/sys v0.0.0-20190620070143-6f217b454f45 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20190620154339-431033348dd0 // indirect
+	golang.org/x/tools v0.0.0-20190620191750-1fa568393b23 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
