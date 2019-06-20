@@ -127,7 +127,7 @@ func NewValidatorFollower(
 		return nil, errors.New("coordinator had bad pubkey")
 	}
 
-	log.Println("Validator formed connected with coordinator")
+	log.Println("Validator formed connection with coordinator")
 	unanimousRequests := make(map[[32]byte]UnanimousAssertionRequest)
 	client := NewClient(coordinatorConn, address)
 	return &ValidatorFollower{c, client, unanimousRequests}, nil

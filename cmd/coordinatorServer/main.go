@@ -82,7 +82,7 @@ func main() {
 	if err := keyFile.Close(); err != nil {
 		log.Fatalln(err)
 	}
-	rawKey := strings.TrimSpace(string(byteValue))
+	rawKey := strings.TrimPrefix(strings.TrimSpace(string(byteValue)), "0x")
 	key, err := crypto.HexToECDSA(rawKey)
 	if err != nil {
 		log.Fatal("HexToECDSA private key error: ", err)
@@ -100,7 +100,8 @@ func main() {
 	if err := addrFile.Close(); err != nil {
 		log.Fatalln(err)
 	}
-	validatorHexAddrs := strings.Split(strings.TrimSpace(string(byteValue)), "\n")
+	validatorHexAddrs := strings.Split(
+		strings.TrimPrefix(strings.TrimSpace(string(byteValue)), "0x"), "\n")
 	validators := make([]common.Address, len(validatorHexAddrs))
 	for i, v := range validatorHexAddrs {
 		validators[i] = common.HexToAddress(v)
