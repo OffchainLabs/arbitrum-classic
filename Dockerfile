@@ -50,9 +50,9 @@ COPY --chown=user --from=0 /go/bin/*Server /usr/bin/
 COPY --chown=user --from=0 /home/user/arb-validator/server* ../
 # Get EthBridge addresses and Validator private keys and addresses
 COPY --chown=user --from=arb-ethbridge      \
-    /home/node/ethbridge_addresses.json     \
-    /home/node/validator_private_keys.txt   \
-    /home/node/validator_addresses.txt ../
+    /home/user/ethbridge_addresses.json     \
+    /home/user/validator_private_keys.txt   \
+    /home/user/validator_addresses.txt ../
 
 # Arguments
 ARG WAIT_FOR
