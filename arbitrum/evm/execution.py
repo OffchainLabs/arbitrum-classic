@@ -31,11 +31,14 @@ def _get_call_location(vm, dispatch_func):
 
 @noreturn
 def _perform_call(vm, dispatch_func, call_num):
-    # destId message
+    # destCodePoint destId message
+    os.get_chain_state(vm)
+    os.chain_state.set_val("scratch")(vm)
+    os.set_chain_state(vm)
     vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
     vm.swap2()
     vm.swap1()
-    # contractID message ret_pc
+    # contractID message ret_pc destCodePoint
 
     # setup call frame
     os.get_call_frame(vm)
@@ -59,9 +62,8 @@ def _perform_call(vm, dispatch_func, call_num):
     os.set_chain_state(vm)
 
     # Enter call frame
-    os.get_call_frame(vm)
-    call_frame.call_frame.get("contractID")(vm)
-    _get_call_location(vm, dispatch_func)
+    os.get_chain_state(vm)
+    os.chain_state.get("scratch")(vm)
     vm.jump()
 
     vm.set_label(ast.AVMLabel("evm_call_{}".format(call_num)))
@@ -90,6 +92,9 @@ def setup_initial_call(vm, dispatch_func):
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
+
+    vm.dup0()
+    _get_call_location(vm, dispatch_func)
 
     _perform_call(vm, dispatch_func, "initial")
 
@@ -135,13 +140,10 @@ def call(vm, dispatch_func, call_num, contract_id):
         _inner_call(vm, dispatch_func, call_num, contract_id)
     ])
 
+
+# [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 @noreturn
 def _inner_call(vm, dispatch_func, call_num, contract_id):
-    vm.dup0()
-    vm.tgetn(1)
-    _get_call_location(vm, dispatch_func)
-    vm.pop()
-
     vm.dup0()
     os.evm_call_to_send(vm)
     # msg
@@ -159,6 +161,9 @@ def _inner_call(vm, dispatch_func, call_num, contract_id):
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
+
+    vm.dup0()
+    _get_call_location(vm, dispatch_func)
 
     _perform_call(vm, dispatch_func, call_num)
     translate_ret_type(vm)
@@ -193,38 +198,40 @@ def staticcall(vm, dispatch_func, call_num, contract_id):
     vm.swap1()
     # gas, dest, value
     std.tup.make(7)(vm)
-    vm.dup0()
-    vm.tgetn(1)
-    _get_call_location(vm, dispatch_func)
-    vm.pop()
 
+    # calltup
     vm.dup0()
     os.evm_call_to_send(vm)
-    # msg
+    # msg calltup
     vm.dup0()
     vm.tgetn(1)
-    # contractId msg
+    # contractId msg calltup
     vm.swap1()
     vm.push(contract_id)
     vm.swap1()
-    vm.tsetn(1)
+    vm.tsetn(1)  # update the sender to this contract
     vm.swap1()
-
+    # contractId msg calltup
     os.get_call_frame(vm)
     call_frame.save_state(vm)
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
 
+    # contractId msg calltup
+    vm.dup0()
+    _get_call_location(vm, dispatch_func)
     _perform_call(vm, dispatch_func, "static_{}".format(call_num))
     translate_ret_type(vm)
-    # ret msg old_stack
+    # ret calltup
     vm.swap1()
+
     os.get_call_frame(vm)
     call_frame.call_frame.get("parent_frame")(vm)
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
+    # calltup ret
     os.copy_return_data(vm)
 
 
