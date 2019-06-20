@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 
 	"log"
 	"math/big"
@@ -43,16 +42,6 @@ import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
-func createAddressMerkleTree(addresses []common.Address) *MerkleTree {
-	converted := make([][32]byte, 0, len(addresses))
-	for _, a := range addresses {
-		data := [32]byte{}
-		copy(data[:], a.Bytes()[:])
-		converted = append(converted, data)
-	}
-	return NewMerkleTree(converted)
-}
-
 type EthValidator struct {
 	key *ecdsa.PrivateKey
 
@@ -60,7 +49,7 @@ type EthValidator struct {
 	VmId              [32]byte
 	Validators        map[common.Address]validatorInfo
 	Bot               *validator.Validator
-	incomingChan      chan valmessage.OutgoingMessage
+	actionChan        chan func(*EthValidator) error
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
 	// Not in thread, but internal only
@@ -81,7 +70,6 @@ func (val *EthValidator) ValidatorCount() int {
 }
 
 type validatorInfo struct {
-	proof    []byte
 	indexNum uint16
 }
 
@@ -124,9 +112,8 @@ func NewEthValidator(
 		copy(address[:], key.Value)
 		keys = append(keys, address)
 	}
-	manTree := createAddressMerkleTree(keys)
 	for i, add := range keys {
-		manMap[add] = validatorInfo{manTree.GetProofFlat(i), uint16(i)}
+		manMap[add] = validatorInfo{uint16(i)}
 	}
 
 	_, found := manMap[crypto.PubkeyToAddress(key.PublicKey)]
@@ -136,10 +123,10 @@ func NewEthValidator(
 
 	bot := validator.NewValidator(name, auth.From, protocol.NewEmptyInbox(), protocol.NewBalanceTracker(), config, machine, challengeEverything)
 
-	incomingChan := make(chan valmessage.OutgoingMessage, 1024)
+	actionChan := make(chan func (*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 
-	val := &EthValidator{key, vmId, manMap, bot, incomingChan, completedCallChan, ethURL, connectionInfo, con, auth}
+	val := &EthValidator{key, vmId, manMap, bot, actionChan, completedCallChan, ethURL, connectionInfo, con, auth}
 	return val, nil
 }
 
@@ -160,13 +147,12 @@ func (val *EthValidator) StartListening() error {
 		for {
 			time.Sleep(200 * time.Millisecond)
 			select {
-			case event := <-val.incomingChan:
-				if event != nil {
-					err := val.handleSendRequest(event)
-					if err != nil {
-						log.Fatalf("Error handling send: %v", err)
-					}
+			case event := <-val.actionChan:
+				err := event(val)
+				if err != nil {
+					log.Fatalf("Error handling send: %v", err)
 				}
+				val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 			case <-errChan:
 				// Ignore error and try to reset connection
 				// log.Printf("Validator recieved error: %v", err)
@@ -224,126 +210,159 @@ func (val *EthValidator) FinalizedAssertion(assertion *protocol.Assertion, newLo
 	}
 }
 
-func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error {
-	switch msg := msg.(type) {
-	case valmessage.FinalizedAssertion:
-		val.CompletedCallChan <- msg
-	case sendProposeUnanimousAssertMessage:
-		_, err := val.con.ProposeUnanimousAssert(
-			val.auth,
-			val.VmId,
-			msg.NewInboxHash,
-			msg.TimeBounds,
-			msg.Assertion,
-			msg.SequenceNum,
-			msg.Signatures,
-		)
-		if err != nil {
-			return errors2.Wrap(err, "failed proposing unanimous assertion")
-		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendConfirmUnanimousAssertedMessage:
-		_, err := val.con.ConfirmUnanimousAsserted(
-			val.auth,
-			val.VmId,
-			msg.NewInboxHash,
-			msg.Assertion,
-		)
-		if err != nil {
-			return errors2.Wrap(err, "failed confirming unanimous assertion")
-		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendUnanimousAssertMessage:
+func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
+	val.actionChan <- func (val *EthValidator) error {
 		_, err := val.con.UnanimousAssert(
 			val.auth,
 			val.VmId,
-			msg.NewInboxHash,
-			msg.TimeBounds,
-			msg.Assertion,
-			msg.Signatures,
+			newInboxHash,
+			timeBounds,
+			assertion,
+			signatures,
 		)
 		if err != nil {
 			return errors2.Wrap(err, "failed sending finalized unanimous assertion")
 		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendAssertMessage:
+		return nil
+	}
+}
+
+func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.ProposeUnanimousAssert(
+			val.auth,
+			val.VmId,
+			newInboxHash,
+			timeBounds,
+			assertion,
+			sequenceNum,
+			signatures,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed proposing unanimous assertion")
+		}
+		return nil
+	}
+}
+
+func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assertion *protocol.Assertion) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.ConfirmUnanimousAsserted(
+			val.auth,
+			val.VmId,
+			newInboxHash,
+			assertion,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed confirming unanimous assertion")
+		}
+		return nil
+	}
+}
+
+func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+	val.actionChan <- func (val *EthValidator) error {
 		_, err := val.con.DisputableAssert(
 			val.auth,
 			val.VmId,
-			msg.Precondition,
-			msg.Assertion,
+			precondition,
+			assertion,
 		)
 		if err != nil {
 			return errors2.Wrap(err, "failed initiating disputable assertion")
 		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendInitiateChallengeMessage:
-		_, err := val.con.InitiateChallenge(
-			val.auth,
-			val.VmId,
-			msg.Precondition,
-			msg.Assertion,
-		)
-		if err != nil {
-			return errors2.Wrap(err, "failed initiating challenge")
-		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendBisectionMessage:
-		_, err := val.con.BisectChallenge(
-			val.auth,
-			val.VmId,
-			msg.Deadline,
-			msg.Precondition,
-			msg.Assertions,
-		)
-		if err != nil {
-			return errors2.Wrap(err, "failed initiating bisection")
-		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendContinueChallengeMessage:
-		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
-		root := tree.GetRoot()
-		_, err := val.con.ContinueChallenge(
-			val.auth,
-			val.VmId,
-			big.NewInt(int64(msg.AssertionToChallenge)),
-			tree.GetProofFlat(int(msg.AssertionToChallenge)),
-			root,
-			tree.GetNode(int(msg.AssertionToChallenge)),
-			msg.Deadline,
-		)
-		if err != nil {
-			return errors2.Wrap(err, "failed continuing challenge")
-		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendOneStepProofMessage:
-		_, err := val.con.OneStepProof(
-			val.auth,
-			val.VmId,
-			msg.Precondition,
-			msg.Assertion.Stub(),
-			msg.Proof,
-			msg.Deadline,
-		)
-		if err != nil {
-			return errors2.Wrap(err, "failed one step proof")
-		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendConfirmedAssertMessage:
+		return nil
+	}
+}
+
+func (val *EthValidator) ConfirmDisputableAssertion(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+	val.actionChan <- func (val *EthValidator) error {
 		_, err := val.con.ConfirmAsserted(
 			val.auth,
 			val.VmId,
-			msg.Precondition,
-			msg.Assertion,
+			precondition,
+			assertion,
 		)
 		if err != nil {
 			return errors2.Wrap(err, "failed confirming assertion")
 		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendAsserterTimedOutChallengeMessage:
+		return nil
+	}
+}
+
+func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, assertion *protocol.AssertionStub) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.InitiateChallenge(
+			val.auth,
+			val.VmId,
+			precondition,
+			assertion,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed initiating challenge")
+		}
+		return nil
+	}
+}
+
+func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.Assertion, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.BisectChallenge(
+			val.auth,
+			val.VmId,
+			deadline,
+			precondition,
+			assertions,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed initiating bisection")
+		}
+		return nil
+	}
+}
+
+func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
+		tree := buildBisectionTree(preconditions, assertions)
+		root := tree.GetRoot()
+		_, err := val.con.ContinueChallenge(
+			val.auth,
+			val.VmId,
+			big.NewInt(int64(assertionToChallenge)),
+			tree.GetProofFlat(int(assertionToChallenge)),
+			root,
+			tree.GetNode(int(assertionToChallenge)),
+			deadline,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed continuing challenge")
+		}
+		return nil
+	}
+}
+
+func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.Assertion, proof []byte, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
+		_, err := val.con.OneStepProof(
+			val.auth,
+			val.VmId,
+			precondition,
+			assertion.Stub(),
+			proof,
+			deadline,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed one step proof")
+		}
+		return nil
+	}
+}
+
+func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
+	val.actionChan <- func (val *EthValidator) error {
 		preAssBytes := solsha3.SoliditySHA3(
-			solsha3.Bytes32(msg.Precondition.Hash()),
-			solsha3.Bytes32(msg.Assertion.Hash()),
+			solsha3.Bytes32(precondition.Hash()),
+			solsha3.Bytes32(assertion.Hash()),
 		)
 		bisectionHash := [32]byte{}
 		copy(bisectionHash[:], preAssBytes)
@@ -351,116 +370,28 @@ func (val *EthValidator) handleSendRequest(msg valmessage.OutgoingMessage) error
 			val.auth,
 			val.VmId,
 			bisectionHash,
-			msg.Deadline,
+			deadline,
 		)
 		if err != nil {
 			return errors2.Wrap(err, "failed timing out challenge")
 		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	case sendChallengerTimedOutChallengeMessage:
-		tree := buildBisectionTree(msg.Preconditions, msg.Assertions)
-		_, err := val.con.Challenge.ChallengerTimedOut(
-			val.auth,
-			val.VmId,
-			tree.GetRoot(),
-			msg.Deadline,
-		)
-		if err != nil {
-			return errors2.Wrap(err, "failed timing out challenge")
-		}
-		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	default:
-		return fmt.Errorf("unhandled valmessage %T: %+v", msg, msg)
-	}
-	return nil
-}
-
-func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
-	val.incomingChan <- sendUnanimousAssertMessage{
-		NewInboxHash: newInboxHash,
-		TimeBounds:   timeBounds,
-		Assertion:    assertion,
-		Signatures:   signatures,
-	}
-}
-
-func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
-	val.incomingChan <- sendProposeUnanimousAssertMessage{
-		NewInboxHash: newInboxHash,
-		TimeBounds:   timeBounds,
-		Assertion:    assertion,
-		SequenceNum:  sequenceNum,
-		Signatures:   signatures,
-	}
-}
-
-func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assertion *protocol.Assertion) {
-	val.incomingChan <- sendConfirmUnanimousAssertedMessage{
-		NewInboxHash: newInboxHash,
-		Assertion:    assertion,
-	}
-}
-
-func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
-	val.incomingChan <- sendAssertMessage{
-		Precondition: precondition,
-		Assertion:    assertion,
-	}
-}
-
-func (val *EthValidator) ConfirmDisputableAssertion(precondition *protocol.Precondition, assertion *protocol.Assertion) {
-	val.incomingChan <- sendConfirmedAssertMessage{
-		Precondition: precondition,
-		Assertion:    assertion,
-	}
-}
-
-func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, assertion *protocol.AssertionStub) {
-	val.incomingChan <- sendInitiateChallengeMessage{
-		Precondition: precondition,
-		Assertion:    assertion,
-	}
-}
-
-func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.Assertion, deadline uint64) {
-	val.incomingChan <- sendBisectionMessage{
-		Deadline:     deadline,
-		Precondition: precondition,
-		Assertions:   assertions,
-	}
-}
-
-func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
-	val.incomingChan <- sendContinueChallengeMessage{
-		AssertionToChallenge: assertionToChallenge,
-		Deadline:             deadline,
-		Preconditions:        preconditions,
-		Assertions:           assertions,
-	}
-}
-
-func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.Assertion, proof []byte, deadline uint64) {
-	val.incomingChan <- sendOneStepProofMessage{
-		Precondition: precondition,
-		Assertion:    assertion,
-		Proof:        proof,
-		Deadline:     deadline,
-	}
-}
-
-func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
-	val.incomingChan <- sendAsserterTimedOutChallengeMessage{
-		Precondition: precondition,
-		Assertion:    assertion,
-		Deadline:     deadline,
+		return nil
 	}
 }
 
 func (val *EthValidator) TimeoutChallenger(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
-	val.incomingChan <- sendChallengerTimedOutChallengeMessage{
-		Deadline:             deadline,
-		Preconditions:        preconditions,
-		Assertions:           assertions,
+	val.actionChan <- func (val *EthValidator) error {
+		tree := buildBisectionTree(preconditions, assertions)
+		_, err := val.con.Challenge.ChallengerTimedOut(
+			val.auth,
+			val.VmId,
+			tree.GetRoot(),
+			deadline,
+		)
+		if err != nil {
+			return errors2.Wrap(err, "failed timing out challenge")
+		}
+		return nil
 	}
 }
 
