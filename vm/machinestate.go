@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package vm
@@ -80,6 +80,7 @@ func (m *MachineNoContext) NotifyStep() {
 }
 
 type MachineStatus int
+
 const (
 	MACHINE_EXTENSIVE MachineStatus = iota
 	MACHINE_ERRORSTOP
@@ -146,7 +147,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	}
 	pc := NewMachinePC(opCodes, wh)
 	wh.SwitchMachinePC(pc)
-	ret := &Machine{datastack, auxstack, register, static, pc, errHandler, &MachineNoContext{}, MACHINE_EXTENSIVE,sizeLimit, false, wh}
+	ret := &Machine{datastack, auxstack, register, static, pc, errHandler, &MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
 	ret.checkSize()
 	return ret
 }
@@ -201,7 +202,7 @@ func (m *Machine) GetPC() value.Value {
 }
 
 func (m *Machine) GetErrHandler() value.CodePointValue {
-     return m.errHandler;
+	return m.errHandler
 }
 
 func (m *Machine) GetOperation() value.Operation {
@@ -311,7 +312,7 @@ func (m *Machine) RunUntilStop() {
 }
 
 // run up to maxSteps steps, stop earlier if halt or advise instruction, return number of insns actually run, and advise string or ""
-func (m *Machine) Run(maxSteps int32) (int32) {
+func (m *Machine) Run(maxSteps int32) int32 {
 	i := int32(0)
 	continueRun := true
 	var ran bool

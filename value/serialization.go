@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package value
@@ -49,11 +49,11 @@ func NewOperationBuf(op Operation) *OperationBuf {
 	switch op := op.(type) {
 	case BasicOperation:
 		return &OperationBuf{
-			OpCode:uint32(op.GetOp()),
+			OpCode: uint32(op.GetOp()),
 		}
 	case ImmediateOperation:
 		return &OperationBuf{
-			OpCode:uint32(op.GetOp()),
+			OpCode:    uint32(op.GetOp()),
 			Immediate: NewValueBuf(op.Val),
 		}
 	default:
@@ -75,8 +75,8 @@ func NewOperationFromBuf(buf *OperationBuf) (Operation, error) {
 
 func NewCodePointBuf(val CodePointValue) *CodePointBuf {
 	return &CodePointBuf{
-		Pc: val.InsnNum,
-		Op: NewOperationBuf(val.Op),
+		Pc:       val.InsnNum,
+		Op:       NewOperationBuf(val.Op),
 		NextHash: NewHashBuf(val.NextHash),
 	}
 }
@@ -116,17 +116,17 @@ func NewValueBuf(val Value) *ValueBuf {
 	switch val := val.(type) {
 	case IntValue:
 		return &ValueBuf{
-			Type: uint32(TypeCodeInt),
+			Type:  uint32(TypeCodeInt),
 			Value: &ValueBuf_IntVal{NewBigIntBuf(val.val)},
 		}
 	case CodePointValue:
 		return &ValueBuf{
-			Type: TypeCodeCodePoint,
+			Type:  TypeCodeCodePoint,
 			Value: &ValueBuf_CodePointVal{NewCodePointBuf(val)},
 		}
 	case TupleValue:
 		return &ValueBuf{
-			Type: TypeCodeCodePoint,
+			Type:  TypeCodeCodePoint,
 			Value: &ValueBuf_TupleVal{NewTupleBuf(val)},
 		}
 	default:

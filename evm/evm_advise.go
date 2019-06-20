@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package evm
@@ -87,8 +87,8 @@ func (e Revert) String() string {
 }
 
 type Stop struct {
-	Msg       EthMsg
-	Logs      []Log
+	Msg  EthMsg
+	Logs []Log
 }
 
 func (e Stop) GetEthMsg() EthMsg {
@@ -118,10 +118,10 @@ type FuncCall struct {
 }
 
 const (
-	EVM_REVERT_CODE = 0
-	EVM_INVALID_CODE = 1
-	EVM_RETURN_CODE = 2
-	EVM_STOP_CODE = 3
+	EVM_REVERT_CODE       = 0
+	EVM_INVALID_CODE      = 1
+	EVM_RETURN_CODE       = 2
+	EVM_STOP_CODE         = 3
 	EVM_BAD_SEQUENCE_CODE = 4
 )
 
@@ -166,9 +166,9 @@ func LogValToLog(val value.Value) (Log, error) {
 	if err != nil {
 		return Log{}, err
 	}
-	topics := make([][32]byte, 0, tupVal.Len() - 2)
+	topics := make([][32]byte, 0, tupVal.Len()-2)
 	for _, topicVal := range tupVal.Contents()[2:] {
-		topicValInt, ok :=  topicVal.(value.IntValue)
+		topicValInt, ok := topicVal.(value.IntValue)
 		if !ok {
 			return Log{}, errors.New("Log topic must be an int")
 		}
@@ -240,7 +240,7 @@ type EthMsgData struct {
 	Number    *big.Int
 	TxHash    [32]byte
 
-	dataHash  [32]byte
+	dataHash [32]byte
 }
 
 func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
@@ -286,12 +286,10 @@ func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
 }
 
 type EthMsg struct {
-	Data        EthMsgData
-	TokenType   [21]byte
-	Currency    *big.Int
-	Caller      [32]byte
-
-
+	Data      EthMsgData
+	TokenType [21]byte
+	Currency  *big.Int
+	Caller    [32]byte
 }
 
 func (msg EthMsg) MsgHash(vmId [32]byte) [32]byte {

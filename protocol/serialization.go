@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 package protocol
@@ -23,10 +23,10 @@ import (
 
 //go:generate protoc -I.. -I. --go_out=paths=source_relative:. protocol.proto
 
-func NewTimeBoundsBuf(tb TimeBounds) *TimeBoundsBuf  {
+func NewTimeBoundsBuf(tb TimeBounds) *TimeBoundsBuf {
 	return &TimeBoundsBuf{
 		StartTime: tb[0],
-		EndTime: tb[1],
+		EndTime:   tb[1],
 	}
 }
 
@@ -60,7 +60,7 @@ func NewBalanceTrackerBuf(bt *BalanceTracker) *BalanceTrackerBuf {
 		})
 	}
 	return &BalanceTrackerBuf{
-		Types: types,
+		Types:   types,
 		Amounts: amounts,
 	}
 }
@@ -80,16 +80,16 @@ func NewBalanceTrackerFromBuf(buf *BalanceTrackerBuf) *BalanceTracker {
 	return NewBalanceTrackerFromLists(types, amounts)
 }
 
-func NewPreconditionBuf(pre *Precondition) *PreconditionBuf  {
+func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
 	return &PreconditionBuf{
-		BeforeHash: value.NewHashBuf(pre.BeforeHash),
-		TimeBounds: NewTimeBoundsBuf(pre.TimeBounds),
+		BeforeHash:     value.NewHashBuf(pre.BeforeHash),
+		TimeBounds:     NewTimeBoundsBuf(pre.TimeBounds),
 		BalanceTracker: NewBalanceTrackerBuf(pre.BeforeBalance),
-		BeforeInbox: value.NewHashBuf(pre.BeforeInbox.Hash()),
+		BeforeInbox:    value.NewHashBuf(pre.BeforeInbox.Hash()),
 	}
 }
 
-func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition  {
+func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition {
 	return &Precondition{
 		value.NewHashFromBuf(buf.BeforeHash),
 		NewTimeBoundsFromBuf(buf.TimeBounds),
@@ -98,16 +98,16 @@ func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition  {
 	}
 }
 
-func NewMessageBuf(val Message) *MessageBuf  {
+func NewMessageBuf(val Message) *MessageBuf {
 	return &MessageBuf{
-		Value: value.NewValueBuf(val.Data),
+		Value:     value.NewValueBuf(val.Data),
 		TokenType: NewTokenTypeBuf(val.TokenType),
-		Amount: value.NewBigIntBuf(val.Currency),
-		Sender: value.NewHashBuf(val.Destination),
+		Amount:    value.NewBigIntBuf(val.Currency),
+		Sender:    value.NewHashBuf(val.Destination),
 	}
 }
 
-func NewMessageFromBuf(buf *MessageBuf) (Message, error)  {
+func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 	val, err := value.NewValueFromBuf(buf.Value)
 	return NewMessage(
 		val,
@@ -124,8 +124,8 @@ func NewAssertionBuf(a *Assertion) *AssertionBuf {
 	}
 	return &AssertionBuf{
 		AfterHash: value.NewHashBuf(a.AfterHash),
-		NumSteps: a.NumSteps,
-		Messages: messages,
+		NumSteps:  a.NumSteps,
+		Messages:  messages,
 	}
 }
 
