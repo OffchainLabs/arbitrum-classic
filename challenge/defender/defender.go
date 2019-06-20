@@ -34,7 +34,7 @@ func New(core *core.Config, assDef protocol.AssertionDefender, time uint64, brid
 		fmt.Println("Generating proof")
 		var buf bytes.Buffer
 		if err := assDef.SolidityOneStepProof(&buf); err != nil {
-			return nil, &challenge.Error{err, "AssertAndDefendBot: error generating one-step proof"}
+			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
 		}
 		bridge.OneStepProof(
 			assDef.GetPrecondition(),
@@ -86,7 +86,7 @@ func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.Bridge) (challen
 	//	bot.wholePrecondition,
 	//	bot.wholeAssertion,
 	//}
-	return challenge.TimedOutAsserter{bot.Config}, nil
+	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
 func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -99,7 +99,7 @@ func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge br
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{nil, "ERROR: bisectedAssert: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: bisectedAssert: VM state got unsynchronized"}
 	}
 }
 
@@ -125,7 +125,7 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challe
 		assertions,
 		bot.deadline,
 	)
-	return challenge.TimedOutChallenger{bot.Config}, nil
+	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
 func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -136,7 +136,7 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge b
 		}
 		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
 	default:
-		return nil, &challenge.Error{nil, fmt.Sprintf("ERROR: waitingBisected: VM state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: VM state got unsynchronized, %T", ev)}
 	}
 }
 
@@ -157,7 +157,7 @@ func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 	//	bot.precondition,
 	//	bot.Assertion,
 	//}
-	return challenge.TimedOutAsserter{bot.Config}, nil
+	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
 func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -166,6 +166,6 @@ func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge
 		fmt.Println("oneStepChallenged: Proof was accepted")
 		return nil, nil
 	default:
-		return nil, &challenge.Error{nil, fmt.Sprintf("ERROR: oneStepChallenged: VM state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: VM state got unsynchronized, %T", ev)}
 	}
 }

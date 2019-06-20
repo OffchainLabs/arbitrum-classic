@@ -65,7 +65,7 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 		bot.challengedAssertion,
 		bot.deadline,
 	)
-	return challenge.TimedOutAsserter{bot.Config}, nil
+	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
 func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -81,7 +81,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 			}
 		}
 		if assertionNum >= uint16(len(ev.Assertions)) {
-			return nil, &challenge.Error{nil, "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
+			return nil, &challenge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
 		}
 		deadline := time + bot.VMConfig.GracePeriod
 		bridge.ContinueChallenge(
@@ -101,7 +101,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 	case ethbridge.OneStepProofEvent:
 		return nil, nil
 	default:
-		return nil, &challenge.Error{nil, "ERROR: waitingContinuing: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingContinuing: VM state got unsynchronized"}
 	}
 }
 
@@ -125,7 +125,7 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.S
 	//	bot.assertions,
 	//}
 	// Currently not sending a timeout valmessage if this validator timed out
-	return challenge.TimedOutChallenger{bot.Config}, nil
+	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
 func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -141,6 +141,6 @@ func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{nil, "ERROR: continuing: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: continuing: VM state got unsynchronized"}
 	}
 }

@@ -55,7 +55,7 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.Bridge) (chall
 	//	bot.precondition,
 	//	bot.Assertion,
 	//}
-	return challenge.TimedOutAsserter{bot.Config}, nil
+	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
 func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -65,7 +65,7 @@ func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, bridge 
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
 		return waitingBisected{bot.Config, deadline, preconditions, ev.Assertions}, nil
 	default:
-		return nil, &challenge.Error{nil, "ERROR: waitingChallenge: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingChallenge: VM state got unsynchronized"}
 	}
 }
 
@@ -86,7 +86,7 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challe
 	//	bot.preconditions,
 	//	bot.assertions,
 	//}
-	return challenge.TimedOutChallenger{bot.Config}, nil
+	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
 func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -100,6 +100,6 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge b
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{nil, "ERROR: waitingBisected: VM state got unsynchronized"}
+		return nil, &challenge.Error{ Message: "ERROR: waitingBisected: VM state got unsynchronized"}
 	}
 }
