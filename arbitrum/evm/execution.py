@@ -21,6 +21,15 @@ from .. import value
 
 
 @noreturn
+def _get_call_location(vm, dispatch_func):
+    # contract_id
+    dispatch_func(vm)
+    vm.dup0()
+    vm.tnewn(0)
+    vm.eq()
+    vm.ifelse(lambda vm: vm.error())
+
+@noreturn
 def _perform_call(vm, dispatch_func, call_num):
     # destId message
     vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
@@ -52,16 +61,8 @@ def _perform_call(vm, dispatch_func, call_num):
     # Enter call frame
     os.get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
-    dispatch_func(vm)
-    vm.dup0()
-    vm.tnewn(0)
-    vm.eq()
-
-    vm.ifelse(lambda vm: [
-        vm.error()
-    ], lambda vm: [
-        vm.jump()
-    ])
+    _get_call_location(vm, dispatch_func)
+    vm.jump()
 
     vm.set_label(ast.AVMLabel("evm_call_{}".format(call_num)))
     vm.auxpush()
@@ -89,7 +90,7 @@ def setup_initial_call(vm, dispatch_func):
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
-    
+
     _perform_call(vm, dispatch_func, "initial")
 
     vm.clear_exception_handler()
@@ -131,58 +132,57 @@ def call(vm, dispatch_func, call_num, contract_id):
         os.evm_call_to_send(vm),
         os.add_send_to_queue(vm)
     ], lambda vm: [
-        vm.dup0(),
-        vm.tgetn(1),
-        dispatch_func(vm),
-        vm.tnewn(0),
-        vm.eq(),
-        vm.ifelse(lambda vm: [
-            vm.error()
-        ], lambda vm: [
-            vm.dup0(),
-            os.evm_call_to_send(vm),
-            # msg
-            vm.dup0(),
-            vm.tgetn(1),
-            # contractId msg
-            vm.swap1(),
-            vm.push(contract_id),
-            vm.swap1(),
-            vm.tsetn(1),
-            vm.swap1(),
-            # destID msg
-            os.get_call_frame(vm),
-            call_frame.save_state(vm),
-            os.get_chain_state(vm),
-            os.chain_state.set_val("call_frame")(vm),
-            os.set_chain_state(vm),
-
-            _perform_call(vm, dispatch_func, call_num),
-            translate_ret_type(vm),
-            # return_val
-            vm.ifelse(lambda vm: [
-                os.get_call_frame(vm),
-                vm.dup0(),
-                call_frame.call_frame.get("parent_frame")(vm),
-                call_frame.merge(vm),
-                # parent_frame
-                os.get_chain_state(vm),
-                os.chain_state.set_val("call_frame")(vm),
-                os.set_chain_state(vm),
-                vm.push(1),
-            ], lambda vm: [
-                os.get_call_frame(vm),
-                call_frame.call_frame.get("parent_frame")(vm),
-                os.get_chain_state(vm),
-                os.chain_state.set_val("call_frame")(vm),
-                os.set_chain_state(vm),
-                vm.push(0)
-            ]),
-            vm.swap1(),
-            os.copy_return_data(vm),
-        ])
+        _inner_call(vm, dispatch_func, call_num, contract_id)
     ])
 
+@noreturn
+def _inner_call(vm, dispatch_func, call_num, contract_id):
+    vm.dup0()
+    vm.tgetn(1)
+    _get_call_location(vm, dispatch_func)
+    vm.pop()
+
+    vm.dup0()
+    os.evm_call_to_send(vm)
+    # msg
+    vm.dup0()
+    vm.tgetn(1)
+    # contractId msg
+    vm.swap1()
+    vm.push(contract_id)
+    vm.swap1()
+    vm.tsetn(1)
+    vm.swap1()
+    # destID msg
+    os.get_call_frame(vm)
+    call_frame.save_state(vm)
+    os.get_chain_state(vm)
+    os.chain_state.set_val("call_frame")(vm)
+    os.set_chain_state(vm)
+
+    _perform_call(vm, dispatch_func, call_num)
+    translate_ret_type(vm)
+    # return_val
+    vm.ifelse(lambda vm: [
+        os.get_call_frame(vm),
+        vm.dup0(),
+        call_frame.call_frame.get("parent_frame")(vm),
+        call_frame.merge(vm),
+        # parent_frame
+        os.get_chain_state(vm),
+        os.chain_state.set_val("call_frame")(vm),
+        os.set_chain_state(vm),
+        vm.push(1),
+    ], lambda vm: [
+        os.get_call_frame(vm),
+        call_frame.call_frame.get("parent_frame")(vm),
+        os.get_chain_state(vm),
+        os.chain_state.set_val("call_frame")(vm),
+        os.set_chain_state(vm),
+        vm.push(0)
+    ])
+    vm.swap1()
+    os.copy_return_data(vm)
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 @noreturn
@@ -195,42 +195,37 @@ def staticcall(vm, dispatch_func, call_num, contract_id):
     std.tup.make(7)(vm)
     vm.dup0()
     vm.tgetn(1)
-    dispatch_func(vm)
-    vm.tnewn(0)
-    vm.eq()
-    vm.ifelse(lambda vm: [
-        vm.error()
-    ], lambda vm: [
-        vm.dup0(),
-        os.evm_call_to_send(vm),
-        # msg
-        vm.dup0(),
-        vm.tgetn(1),
-        # contractId msg
-        vm.swap1(),
-        vm.push(contract_id),
-        vm.swap1(),
-        vm.tsetn(1),
-        vm.swap1(),
+    _get_call_location(vm, dispatch_func)
+    vm.pop()
 
-        os.get_call_frame(vm),
-        call_frame.save_state(vm),
-        os.get_chain_state(vm),
-        os.chain_state.set_val("call_frame")(vm),
-        os.set_chain_state(vm),
+    vm.dup0()
+    os.evm_call_to_send(vm)
+    # msg
+    vm.dup0()
+    vm.tgetn(1)
+    # contractId msg
+    vm.swap1()
+    vm.push(contract_id)
+    vm.swap1()
+    vm.tsetn(1)
+    vm.swap1()
 
-        _perform_call(vm, dispatch_func, "static_{}".format(call_num)),
-        translate_ret_type(vm),
-        # ret msg old_stack
-        vm.swap1(),
-        os.get_call_frame(vm),
-        call_frame.call_frame.get("parent_frame")(vm),
-        os.get_chain_state(vm),
-        os.chain_state.set_val("call_frame")(vm),
-        os.set_chain_state(vm),
-        os.copy_return_data(vm)
+    os.get_call_frame(vm)
+    call_frame.save_state(vm)
+    os.get_chain_state(vm)
+    os.chain_state.set_val("call_frame")(vm)
+    os.set_chain_state(vm)
 
-    ])
+    _perform_call(vm, dispatch_func, "static_{}".format(call_num))
+    translate_ret_type(vm)
+    # ret msg old_stack
+    vm.swap1()
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("parent_frame")(vm)
+    os.get_chain_state(vm)
+    os.chain_state.set_val("call_frame")(vm)
+    os.set_chain_state(vm)
+    os.copy_return_data(vm)
 
 
 @noreturn
