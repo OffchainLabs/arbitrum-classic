@@ -300,13 +300,9 @@ func (m *ValidatorFollower) Run() error {
 			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
 				if request.UnanimousNotification.Accepted {
-					sigs := make([][]byte, len(request.UnanimousNotification.Signatures))
-					for _, sig := range request.UnanimousNotification.Signatures {
-						sigs = append(sigs, sig)
-					}
 					_, _ = m.Bot.ConfirmOffchainUnanimousAssertion(
 						requestInfo.requestData,
-						sigs,
+						request.UnanimousNotification.Signatures,
 					)
 				}
 			case *valmessage.ValidatorRequest_Create:
