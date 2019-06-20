@@ -11,17 +11,25 @@ RUN apk add --no-cache gcc git libc-dev
 
 # Non-root user
 RUN addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash
+    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
+RUN mkdir -p /home/user/arb-validator/arb-avm
 WORKDIR "/home/user/arb-validator"
+
+# Debug and Go compilation
+ARG DEBUG=0
+ENV DEBUG=${DEBUG} GOOS=linux GOARCH=amd64 \
+    RULE="replace github.com/offchainlabs/arb-avm => ./arb-avm"
 
 # Dependencies
 COPY --chown=user go.mod go.sum /home/user/arb-validator/
-RUN go mod download
+COPY --chown=user arb-*/go.* /home/user/arb-validator/arb-avm/
+RUN if [[ ${DEBUG} == 1 ]]; then echo "${RULE}" >> go.mod; fi; \
+    go mod download
 
 # Source code
 COPY --chown=user ./ /home/user/arb-validator
-RUN export GOOS=linux GOARCH=amd64 && \
+RUN if [[ ${DEBUG} == 1 ]]; then echo "${RULE}" >> go.mod; fi; \
     cd cmd/followerServer && go build -a -v -ldflags "-w -s" && \
     cd ../coordinatorServer && go build -a -v -ldflags "-w -s" && \
     mv coordinatorServer ../followerServer/followerServer /go/bin/
@@ -31,7 +39,7 @@ FROM alpine:3.9
 
 # Non-root user
 RUN addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash
+    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
 # Note: state will be mounted as a volume and initially overwritten
 RUN mkdir -p /home/user/state

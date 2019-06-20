@@ -1,4 +1,6 @@
-.DS_Store
-.git
-.gitignore
-.idea
+**/.DS_Store
+**/.dockerignore
+**/.git
+**/.gitignore
+**/.idea
+**/Dockerfile
