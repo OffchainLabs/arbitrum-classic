@@ -281,8 +281,8 @@ func (m *ValidatorFollower) Run() error {
 
 	go func() {
 		for {
-			message, done := <-m.client.FromClient
-			if done {
+			message, more := <-m.client.FromClient
+			if !more {
 				break
 			}
 			req := new(valmessage.ValidatorRequest)

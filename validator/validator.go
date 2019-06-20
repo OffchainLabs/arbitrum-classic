@@ -194,6 +194,8 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 				switch ev := notification.Event.(type) {
 				case ethbridge.NewTimeEvent:
 					break
+				case ethbridge.VMCreatedEvent:
+					break
 				case ethbridge.VMEvent:
 					validator.eventUpdate(ev, notification.Header, bridge)
 				case ethbridge.MessageDeliveredEvent:
