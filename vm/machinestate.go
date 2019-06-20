@@ -151,7 +151,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	return ret
 }
 
-func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal, errHandlerVal value.CodePointValue, sizeLimit int64) *Machine {
+func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal value.Value, errHandlerVal value.CodePointValue, sizeLimit int64) *Machine {
 	datastack := stack.FlatFromTupleChain(stackVal)
 	auxStack := stack.FlatFromTupleChain(auxStackVal)
 	register := NewMachineValue(registerVal)
