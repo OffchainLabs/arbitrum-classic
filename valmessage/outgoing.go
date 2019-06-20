@@ -17,30 +17,14 @@
 package valmessage
 
 import (
-	"math/big"
-
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
 )
-
-type VMMessageRequest struct {
-	Data        value.Value
-	TokenType   [21]byte
-	Currency    *big.Int
-	Destination [32]byte
-	SequenceNum *big.Int
-}
-
-type OutgoingMessage interface {
-	IsOutgoingMessage()
-}
 
 type FinalizedAssertion struct {
 	Assertion   *protocol.Assertion
 	NewLogCount int
 }
-
-func (FinalizedAssertion) IsOutgoingMessage() {}
 
 func (f FinalizedAssertion) NewLogs() []value.Value {
 	return f.Assertion.Logs[len(f.Assertion.Logs)-f.NewLogCount:]
