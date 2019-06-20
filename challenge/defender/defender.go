@@ -14,26 +14,27 @@
  * limitations under the License.
  */
 
-package challenge
+package defender
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 	"github.com/offchainlabs/arb-validator/bridge"
+	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arb-avm/protocol"
 )
 
-func NewDefender(core *core.Config, assDef protocol.AssertionDefender, time uint64, bridge bridge.Bridge) (State, error) {
+func New(core *core.Config, assDef protocol.AssertionDefender, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	deadline := time + core.VMConfig.GracePeriod
 	if assDef.GetAssertion().NumSteps == 1 {
 		fmt.Println("Generating proof")
 		var buf bytes.Buffer
 		if err := assDef.SolidityOneStepProof(&buf); err != nil {
-			return nil, &Error{err, "AssertAndDefendBot: error generating one-step proof"}
+			return nil, &challenge.Error{err, "AssertAndDefendBot: error generating one-step proof"}
 		}
 		bridge.OneStepProof(
 			assDef.GetPrecondition(),
@@ -41,7 +42,7 @@ func NewDefender(core *core.Config, assDef protocol.AssertionDefender, time uint
 			buf.Bytes(),
 			deadline,
 		)
-		return oneStepChallengedAssertDefender{
+		return oneStepChallenged{
 				Config:       core,
 				precondition: assDef.GetPrecondition(),
 				assertion:    assDef.GetAssertion().Stub(),
@@ -59,7 +60,7 @@ func NewDefender(core *core.Config, assDef protocol.AssertionDefender, time uint
 		assertions,
 		deadline,
 	)
-	return bisectedAssertDefender{
+	return bisectedAssert{
 			Config:            core,
 			wholePrecondition: assDef.GetPrecondition(),
 			wholeAssertion:    assDef.GetAssertion().Stub(),
@@ -68,7 +69,7 @@ func NewDefender(core *core.Config, assDef protocol.AssertionDefender, time uint
 		}, nil
 }
 
-type bisectedAssertDefender struct {
+type bisectedAssert struct {
 	*core.Config
 	wholePrecondition *protocol.Precondition
 	wholeAssertion    *protocol.AssertionStub
@@ -76,7 +77,7 @@ type bisectedAssertDefender struct {
 	deadline          uint64
 }
 
-func (bot bisectedAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -85,30 +86,30 @@ func (bot bisectedAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) 
 	//	bot.wholePrecondition,
 	//	bot.wholeAssertion,
 	//}
-	return timedOutAsserterDefender{bot.Config}, nil
+	return challenge.TimedOutAsserter{bot.Config}, nil
 }
 
-func (bot bisectedAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
+func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev.(type) {
 	case ethbridge.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
-		return waitingBisectedDefender{
+		return waitingBisected{
 			bot.Config,
 			bot.splitDefenders,
 			deadline,
 		}, nil
 	default:
-		return nil, &Error{nil, "ERROR: bisectedAssertDefender: VM state got unsynchronized"}
+		return nil, &challenge.Error{nil, "ERROR: bisectedAssert: VM state got unsynchronized"}
 	}
 }
 
-type waitingBisectedDefender struct {
+type waitingBisected struct {
 	*core.Config
 	defenders []protocol.AssertionDefender
 	deadline  uint64
 }
 
-func (bot waitingBisectedDefender) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -124,29 +125,29 @@ func (bot waitingBisectedDefender) UpdateTime(time uint64, bridge bridge.Bridge)
 		assertions,
 		bot.deadline,
 	)
-	return timedOutChallengerDefender{bot.Config}, nil
+	return challenge.TimedOutChallenger{bot.Config}, nil
 }
 
-func (bot waitingBisectedDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
+func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
 			return nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
-		return NewDefender(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
+		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
 	default:
-		return nil, &Error{nil, fmt.Sprintf("ERROR: waitingBisectedDefender: VM state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{nil, fmt.Sprintf("ERROR: waitingBisected: VM state got unsynchronized, %T", ev)}
 	}
 }
 
-type oneStepChallengedAssertDefender struct {
+type oneStepChallenged struct {
 	*core.Config
 	precondition *protocol.Precondition
 	assertion    *protocol.AssertionStub
 	deadline     uint64
 }
 
-func (bot oneStepChallengedAssertDefender) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -156,49 +157,15 @@ func (bot oneStepChallengedAssertDefender) UpdateTime(time uint64, bridge bridge
 	//	bot.precondition,
 	//	bot.Assertion,
 	//}
-	return timedOutAsserterDefender{bot.Config}, nil
+	return challenge.TimedOutAsserter{bot.Config}, nil
 }
 
-func (bot oneStepChallengedAssertDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
+func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev.(type) {
 	case ethbridge.OneStepProofEvent:
-		fmt.Println("oneStepChallengedAssertDefender: Proof was accepted")
+		fmt.Println("oneStepChallenged: Proof was accepted")
 		return nil, nil
 	default:
-		return nil, &Error{nil, fmt.Sprintf("ERROR: oneStepChallengedAssertDefender: VM state got unsynchronized, %T", ev)}
-	}
-}
-
-type timedOutChallengerDefender struct {
-	*core.Config
-}
-
-func (bot timedOutChallengerDefender) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
-	return bot, nil
-}
-
-func (bot timedOutChallengerDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
-	switch ev.(type) {
-	case ethbridge.ChallengerTimeoutEvent:
-		return nil, nil
-	default:
-		return nil, &Error{nil, "ERROR: timedOutChallengerDefender: VM state got unsynchronized"}
-	}
-}
-
-type timedOutAsserterDefender struct {
-	*core.Config
-}
-
-func (bot timedOutAsserterDefender) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
-	return bot, nil
-}
-
-func (bot timedOutAsserterDefender) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
-	switch ev.(type) {
-	case ethbridge.AsserterTimeoutEvent:
-		return nil, nil
-	default:
-		return nil, &Error{nil, "ERROR: timedOutAsserterDefender: VM state got unsynchronized"}
+		return nil, &challenge.Error{nil, fmt.Sprintf("ERROR: oneStepChallenged: VM state got unsynchronized, %T", ev)}
 	}
 }

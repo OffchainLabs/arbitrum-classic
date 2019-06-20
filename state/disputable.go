@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
+	"github.com/offchainlabs/arb-validator/challenge/challenger"
+	"github.com/offchainlabs/arb-validator/challenge/defender"
+	"github.com/offchainlabs/arb-validator/challenge/observer"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
@@ -456,7 +459,7 @@ func (bot watchingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge
 		deadline := time + bot.VMConfig.GracePeriod
 		var challengeState challenge.State
 		if ev.Challenger == bot.Address {
-			challengeState = challenge.NewChallenger(
+			challengeState = challenger.New(
 				bot.Config,
 				bot.precondition,
 				bot.assertion.Stub(),
@@ -465,7 +468,7 @@ func (bot watchingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge
 				deadline,
 			)
 		} else {
-			challengeState = challenge.NewObserver(
+			challengeState = observer.New(
 				bot.Config,
 				bot.precondition,
 				bot.assertion.Stub(),
@@ -547,7 +550,7 @@ func (bot waitingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge 
 	switch ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
 		bot.request.NotifyInvalid()
-		ct, err := challenge.NewDefender(bot.Config, bot.request.Defender, time, bridge)
+		ct, err := defender.New(bot.Config, bot.request.Defender, time, bridge)
 		return NewWaiting(bot.Config, bot.Core), ct, err
 
 	default:
