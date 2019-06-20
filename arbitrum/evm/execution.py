@@ -99,7 +99,6 @@ def setup_initial_call(vm, dispatch_func):
     vm.dup0()
     call_frame.call_frame.get("parent_frame")
     call_frame.merge(vm)
-    vm.pop()
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
@@ -166,7 +165,6 @@ def call(vm, dispatch_func, call_num, contract_id):
                 vm.dup0(),
                 call_frame.call_frame.get("parent_frame")(vm),
                 call_frame.merge(vm),
-                vm.pop(),
                 # parent_frame
                 os.get_chain_state(vm),
                 os.chain_state.set_val("call_frame")(vm),
