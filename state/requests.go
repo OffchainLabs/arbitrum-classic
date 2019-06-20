@@ -23,8 +23,6 @@ import (
 	"github.com/offchainlabs/arb-avm/vm"
 )
 
-
-
 type UnanimousUpdateRequest struct {
 	valmessage.UnanimousRequestData
 

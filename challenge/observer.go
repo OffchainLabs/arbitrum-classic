@@ -14,22 +14,37 @@
  * limitations under the License.
  */
 
-package state
+package challenge
 
 import (
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-validator/bridge"
+	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 )
 
+func NewObserver(
+	config *core.Config,
+	precondition *protocol.Precondition,
+	assertion *protocol.AssertionStub,
+	deadline uint64,
+) State {
+	return waitingChallengeObserver{
+		Config:       config,
+		precondition: precondition,
+		assertion:    assertion,
+		deadline:     deadline,
+	}
+}
+
 type waitingChallengeObserver struct {
-	*validatorConfig
+	*core.Config
 	precondition *protocol.Precondition
 	assertion    *protocol.AssertionStub
 	deadline     uint64
 }
 
-func (bot waitingChallengeObserver) UpdateTime(time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingChallengeObserver) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -39,28 +54,28 @@ func (bot waitingChallengeObserver) UpdateTime(time uint64, bridge bridge.Bridge
 	//	bot.precondition,
 	//	bot.Assertion,
 	//}
-	return waitingAsserterTimeoutObserver{bot.validatorConfig}, nil
+	return waitingAsserterTimeoutObserver{bot.Config}, nil
 }
 
-func (bot waitingChallengeObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingChallengeObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
-		deadline := time + bot.Config.GracePeriod
+		deadline := time + bot.VMConfig.GracePeriod
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
-		return waitingBisectedObserver{bot.validatorConfig, deadline, preconditions, ev.Assertions}, nil
+		return waitingBisectedObserver{bot.Config, deadline, preconditions, ev.Assertions}, nil
 	default:
 		return nil, &Error{nil, "ERROR: waitingChallengeObserver: VM state got unsynchronized"}
 	}
 }
 
 type waitingBisectedObserver struct {
-	*validatorConfig
+	*core.Config
 	deadline      uint64
 	preconditions []*protocol.Precondition
 	assertions    []*protocol.AssertionStub
 }
 
-func (bot waitingBisectedObserver) UpdateTime(time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingBisectedObserver) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -70,15 +85,15 @@ func (bot waitingBisectedObserver) UpdateTime(time uint64, bridge bridge.Bridge)
 	//	bot.preconditions,
 	//	bot.assertions,
 	//}
-	return waitingChallengerTimeoutObserver{bot.validatorConfig}, nil
+	return waitingChallengerTimeoutObserver{bot.Config}, nil
 }
 
-func (bot waitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
-		deadline := time + bot.Config.GracePeriod
+		deadline := time + bot.VMConfig.GracePeriod
 		return waitingChallengeObserver{
-			bot.validatorConfig,
+			bot.Config,
 			bot.preconditions[ev.ChallengedAssertion],
 			bot.assertions[ev.ChallengedAssertion],
 			deadline,
@@ -89,14 +104,14 @@ func (bot waitingBisectedObserver) UpdateState(ev ethbridge.Event, time uint64, 
 }
 
 type waitingChallengerTimeoutObserver struct {
-	*validatorConfig
+	*core.Config
 }
 
-func (bot waitingChallengerTimeoutObserver) UpdateTime(time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingChallengerTimeoutObserver) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
 	return bot, nil
 }
 
-func (bot waitingChallengerTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingChallengerTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
 	switch ev.(type) {
 	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil
@@ -106,14 +121,14 @@ func (bot waitingChallengerTimeoutObserver) UpdateState(ev ethbridge.Event, time
 }
 
 type waitingAsserterTimeoutObserver struct {
-	*validatorConfig
+	*core.Config
 }
 
-func (bot waitingAsserterTimeoutObserver) UpdateTime(time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingAsserterTimeoutObserver) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
 	return bot, nil
 }
 
-func (bot waitingAsserterTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChallengeState, error) {
+func (bot waitingAsserterTimeoutObserver) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
 	switch ev.(type) {
 	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil

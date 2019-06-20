@@ -19,6 +19,8 @@ package validator
 import (
 	"fmt"
 	"github.com/offchainlabs/arb-validator/bridge"
+	"github.com/offchainlabs/arb-validator/challenge"
+	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/state"
 	"math"
@@ -41,8 +43,8 @@ type Validator struct {
 	maybeAssert chan bool
 
 	// Run loop only
-	bot                      state.ValidatorState
-	challengeBot             state.ChallengeState
+	bot                      state.State
+	challengeBot             challenge.State
 	latestHeader             *types.Header
 	pendingDisputableRequest *state.DisputableAssertionRequest
 }
@@ -50,19 +52,19 @@ type Validator struct {
 func NewValidator(name string, address common.Address, inbox *protocol.Inbox, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine *vm.Machine, challengeEverything bool) *Validator {
 	requests := make(chan interface{}, 10)
 	maybeAssert := make(chan bool, 100)
-	core := state.NewValidatorCore(
+	c := core.NewCore(
 		inbox,
 		balance,
 		machine,
 	)
 
 	// TODO: latestHeader starts as nil which isn't valid. This needs to be properly initialized
-	valConfig := state.NewValidatorConfig(address, config, challengeEverything)
+	valConfig := core.NewValidatorConfig(address, config, challengeEverything)
 	return &Validator{
 		name,
 		requests,
 		maybeAssert,
-		state.NewWaitingObserver(valConfig, core),
+		state.NewWaiting(valConfig, c),
 		nil,
 		nil,
 		nil,
@@ -209,7 +211,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 			case request := <-validator.requests:
 				switch request := request.(type) {
 				case initiateUnanimousRequest:
-					if bot, ok := validator.bot.(state.WaitingObserver); ok {
+					if bot, ok := validator.bot.(state.Waiting); ok {
 						newMessages := make([]protocol.Message, 0, len(request.NewMessages))
 						messageRecords := make([]protocol.Message, 0, len(request.NewMessages))
 						for _, msg := range request.NewMessages {
@@ -243,8 +245,8 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						mq, tb, seqNum := bot.OffchainContext(newMessages, timeBounds, request.Final)
 						clonedCore := bot.GetCore().Clone()
 						requestData := valmessage.UnanimousRequestData{
-							BeforeHash:  clonedCore.Machine.Hash(),
-							BeforeInbox: clonedCore.Inbox.Receive().Hash(),
+							BeforeHash:  clonedCore.GetMachine().Hash(),
+							BeforeInbox: clonedCore.GetInbox().Receive().Hash(),
 							SequenceNum: seqNum,
 							TimeBounds:  tb,
 						}
@@ -255,8 +257,8 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							validator.requests <- state.UnanimousUpdateRequest{
 								UnanimousRequestData: requestData,
 								NewMessages:          newMessages,
-								Inbox:                newCore.Inbox,
-								Machine:              newCore.Machine,
+								Inbox:                newCore.GetInbox(),
+								Machine:              newCore.GetMachine(),
 								Assertion:            assertion,
 								ResultChan:           request.ResultChan,
 								ErrChan:              request.ErrChan,
@@ -267,7 +269,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						break
 					}
 				case followUnanimousRequest:
-					if bot, ok := validator.bot.(state.WaitingObserver); ok {
+					if bot, ok := validator.bot.(state.Waiting); ok {
 						if err := bot.ValidateUnanimousRequest(request.UnanimousRequestData); err != nil {
 							request.ErrChan <- err
 							break
@@ -280,8 +282,8 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							validator.requests <- state.UnanimousUpdateRequest{
 								UnanimousRequestData: request.UnanimousRequestData,
 								NewMessages:          request.NewMessages,
-								Inbox:                newCore.Inbox,
-								Machine:              newCore.Machine,
+								Inbox:                newCore.GetInbox(),
+								Machine:              newCore.GetMachine(),
 								Assertion:            assertion,
 								ResultChan:           request.ResultChan,
 								ErrChan:              request.ErrChan,
@@ -292,7 +294,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						break
 					}
 				case state.UnanimousUpdateRequest:
-					if bot, ok := validator.bot.(state.WaitingObserver); ok {
+					if bot, ok := validator.bot.(state.Waiting); ok {
 						if err := bot.ValidateUnanimousRequest(request.UnanimousRequestData); err != nil {
 							request.ErrChan <- err
 							break
@@ -311,7 +313,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						break
 					}
 				case unanimousConfirmRequest:
-					if bot, ok := validator.bot.(state.WaitingObserver); ok {
+					if bot, ok := validator.bot.(state.Waiting); ok {
 						if err := bot.ValidateUnanimousRequest(request.UnanimousRequestData); err != nil {
 							request.ErrChan <- err
 							break
@@ -333,7 +335,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						break
 					}
 				case closeUnanimousAssertionRequest:
-					if bot, ok := validator.bot.(state.WaitingObserver); ok {
+					if bot, ok := validator.bot.(state.Waiting); ok {
 						_ = bot.GetCore()
 						newBot, err := bot.CloseUnanimous(bridge, request.ResultChan)
 						if err != nil {
@@ -347,7 +349,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					}
 				case disputableDefenderRequest:
 					core := validator.bot.GetCore()
-					maxSteps := validator.bot.GetConfig().Config.MaxExecutionStepCount
+					maxSteps := validator.bot.GetConfig().VMConfig.MaxExecutionStepCount
 					startTime := validator.latestHeader.Number.Uint64()
 					go func() {
 						machine, defender := core.CreateDisputableDefender(
@@ -368,19 +370,19 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					validator.maybeAssert <- true
 				case vmStateRequest:
 					core := validator.bot.GetCore()
-					machineHash := core.Machine.Hash()
+					machineHash := core.GetMachine().Hash()
 					request.ResultChan <- valmessage.VMStateData{
 						MachineState: machineHash,
-						Config:       *validator.bot.GetConfig().Config,
+						Config:       *validator.bot.GetConfig().VMConfig,
 					}
 				case pendingMessageCheck:
 					core := validator.bot.GetCore()
 					request.ResultChan <- !core.GetInbox().PendingQueue.IsEmpty()
 				case callRequest:
 					core := validator.bot.GetCore()
-					updatedState := core.Machine.Clone()
+					updatedState := core.GetMachine().Clone()
 					box := core.GetInbox().Clone()
-					balance := core.Balance.Clone()
+					balance := core.GetBalance().Clone()
 					startTime := validator.latestHeader.Number.Uint64()
 					msg := request.Message
 					messageHash := solsha3.SoliditySHA3(
@@ -431,7 +433,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 }
 
 func (validator *Validator) tryToAssert(bridge bridge.Bridge) {
-	if bot, ok := validator.bot.(state.WaitingObserver); ok && validator.pendingDisputableRequest != nil {
+	if bot, ok := validator.bot.(state.Waiting); ok && validator.pendingDisputableRequest != nil {
 		validator.bot = bot.AttemptAssertion(*validator.pendingDisputableRequest, bridge)
 		validator.pendingDisputableRequest = nil
 	}

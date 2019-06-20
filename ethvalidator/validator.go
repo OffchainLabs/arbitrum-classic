@@ -38,9 +38,9 @@ import (
 	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
 
-	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/validator"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 func createAddressMerkleTree(addresses []common.Address) *MerkleTree {

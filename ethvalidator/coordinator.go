@@ -475,9 +475,11 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 
 	notifyFollowers := func(allSigned bool) {
 		m.cm.broadcast <- &valmessage.ValidatorRequest{
-			Request: &valmessage.ValidatorRequest_CreateNotification{&valmessage.CreateVMFinalizedValidatorNotification{
-				Approved: allSigned,
-			}},
+			Request: &valmessage.ValidatorRequest_CreateNotification{
+				CreateNotification: &valmessage.CreateVMFinalizedValidatorNotification{
+					Approved: allSigned,
+				},
+			},
 		}
 	}
 	stateDataChan := m.Val.Bot.RequestVMState()
@@ -492,7 +494,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 
 	responses := m.cm.gatherSignatures(
 		&valmessage.ValidatorRequest{
-			Request: &valmessage.ValidatorRequest_Create{createData},
+			Request: &valmessage.ValidatorRequest_Create{Create: createData},
 		},
 		createHash,
 	)
@@ -585,7 +587,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	notifyFollowers := func(msg *valmessage.UnanimousAssertionValidatorNotification) {
 		m.cm.broadcast <- &valmessage.ValidatorRequest{
 			RequestId: value.NewHashBuf(hashId),
-			Request:   &valmessage.ValidatorRequest_UnanimousNotification{msg},
+			Request:   &valmessage.ValidatorRequest_UnanimousNotification{UnanimousNotification: msg},
 		}
 	}
 
@@ -601,7 +603,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 			&valmessage.ValidatorRequest{
 				RequestId: value.NewHashBuf(hashId),
 				Request: &valmessage.ValidatorRequest_Unanimous{
-					request,
+					Unanimous: request,
 				},
 			},
 			hashId,
