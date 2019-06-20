@@ -213,7 +213,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 
 				msgVal, _ := value.NewTupleFromSlice([]value.Value{
 					msgData,
-					value.NewIntValue(header.Time),
+					value.NewIntValue(new(big.Int).SetUint64(header.Time)),
 					value.NewIntValue(header.Number),
 					value.NewIntValue(msgHashInt),
 				})
