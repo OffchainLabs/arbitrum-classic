@@ -46,22 +46,22 @@ def get(vm):
 )
 def add(vm):
     # cstore currId delta -> updatedcstore
-    vm.dup1()
-    vm.dup1()
+    vm.swap1()
+    vm.swap2()
+    # delta cstore currId
+    vm.dup2()
+    vm.dup2()
     get(vm)
-    # oldval cstore currId delta
-    dup_n(3)(vm)
+    # oldval delta cstore currId
     vm.add()
-    # newval cstore currId delta
+    # newval cstore currId
     vm.swap2()
     vm.swap1()
-    # cstore currId newval delta
+    # cstore currId newvav
     currency_store.get("store")(vm)
     keyvalue_int_int.set_val(vm)
     currency_store.set_val("store")(vm)
-    # updatedcstore delta
-    vm.swap1()
-    vm.pop()
+    # updatedcstore
 
 
 @modifies_stack([
