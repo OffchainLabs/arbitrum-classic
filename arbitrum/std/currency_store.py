@@ -16,26 +16,35 @@ from ..annotation import modifies_stack
 from . import keyvalue_int_int
 from .stack_manip import dup_n
 from .struct import Struct
-from .. import value
+from .. import value, std
 
 # currencyStore keep track of balances of currencies
 # implemented as a keyvalue store, currencyid to balance
 
+non_fung_keyvalue = std.make_keyvalue_type(value.IntType(), keyvalue_int_int)
+
 currency_store = Struct("currency_store", [
-    ("store", keyvalue_int_int.typ)
+    ("fung", keyvalue_int_int.typ),
+    ("non_fung", non_fung_keyvalue.typ)
 ])
 
 typ = currency_store.typ
 
+
+def make():
+    return value.Tuple([keyvalue_int_int.make(), non_fung_keyvalue.make()])
+
+
 @modifies_stack(0, [typ])
 def new(vm):
-    keyvalue_int_int.new(vm)
+    vm.push(make())
+    vm.cast(typ)
 
 
 @modifies_stack([typ, value.IntType()], [value.IntType()])
 def get(vm):
     # cstore currId -> balance
-    currency_store.get("store")(vm)
+    currency_store.get("fung")(vm)
     keyvalue_int_int.get(vm)
     # value
 
@@ -58,9 +67,13 @@ def add(vm):
     vm.swap2()
     vm.swap1()
     # cstore currId newval
-    currency_store.get("store")(vm)
+    vm.swap2()
+    vm.swap1()
+    vm.dup2()
+    currency_store.get("fung")(vm)
     keyvalue_int_int.set_val(vm)
-    currency_store.set_val("store")(vm)
+    vm.swap1()
+    currency_store.set_val("fung")(vm)
     # updatedcstore
 
 
@@ -91,9 +104,13 @@ def deduct(vm):
         vm.swap2(),
         vm.swap1(),
         # cstore currId newval
-        currency_store.get("store")(vm),
+        vm.swap2(),
+        vm.swap1(),
+        vm.dup2(),
+        currency_store.get("fung")(vm),
         keyvalue_int_int.set_val(vm),
-        currency_store.set_val("store")(vm),
+        vm.swap1(),
+        currency_store.set_val("fung")(vm),
         # updatedcstore
         vm.push(1),
     ], lambda vm: [
