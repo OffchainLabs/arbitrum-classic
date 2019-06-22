@@ -238,7 +238,7 @@ def set_current_memory(vm):
     _set_call_frame_member_impl(vm, "memory")
 
 
-@modifies_stack([std.queue_tup.typ], 0)
+@modifies_stack([call_frame.sent_queue.typ], 0)
 def set_current_sent_queue(vm):
     _set_call_frame_member_impl(vm, "sent_queue")
 
@@ -272,19 +272,14 @@ def get_current_return_data_raw(vm):
 
 # [[data, dest, value, kind]] -> success
 @modifies_stack(
-    [value.TupleType([
-        value.ValueType(),
-        value.IntType(),
-        value.IntType(),
-        value.IntType()
-    ])],
+    [local_exec_state.typ],
     [value.IntType()]
 )
 def add_send_to_queue(vm):
     vm.dup0()
-    vm.tgetn(2)
+    local_exec_state.get("amount")(vm)
     vm.dup1()
-    vm.tgetn(3)
+    local_exec_state.get("type")(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contract_state")(vm)
     contract_state.get("wallet")(vm)
@@ -295,7 +290,7 @@ def add_send_to_queue(vm):
     vm.ifelse(lambda vm: [
         get_call_frame(vm),
         call_frame.call_frame.get("sent_queue")(vm),
-        std.queue_tup.put(vm),
+        call_frame.sent_queue.put(vm),
         set_current_sent_queue(vm),
         vm.push(1)
     ], lambda vm: [

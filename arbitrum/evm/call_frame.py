@@ -18,6 +18,8 @@ from . import types
 from ..vm import VM
 from ..annotation import modifies_stack
 
+sent_queue = std.make_queue_type(types.local_exec_state.typ)
+
 call_frame = std.struct.Struct("call_frame", [
     ("contractID", value.IntType()),       # transient
     ("memory", std.sized_byterange.sized_byterange.typ),           # transient
@@ -25,7 +27,7 @@ call_frame = std.struct.Struct("call_frame", [
     ("contracts", types.contract_store.typ),        # record
     ("local_exec_state", types.local_exec_state.typ),  # transient
     ("return_data", std.sized_byterange.sized_byterange.typ),  # transient
-    ("sent_queue", std.queue_tup.typ),       # record
+    ("sent_queue", sent_queue.typ),       # record
     ("logs", std.stack_tup.typ),             # record
     "parent_frame",
     ("return_location", value.CodePointType()),
