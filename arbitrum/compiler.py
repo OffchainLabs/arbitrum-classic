@@ -693,7 +693,13 @@ def compile_program(initialization, body, should_optimize=True):
             if not hasattr(compiled_funcs[func].func, "pops"):
                 raise Exception("{} calculated {} but wasn't labeled with count".format(func, mods['pop']))
             if mods["pop"] != len(compiled_funcs[func].func.pops):
-                raise Exception("{} calculated {} pops but was labeled with {)}".format(func, mods['pop'], len(compiled_funcs[func].func.pops)))
+                raise Exception(
+                    "{} calculated {} pops but was labeled with {}".format(
+                        func,
+                        mods['pop'],
+                        len(compiled_funcs[func].func.pops)
+                    )
+                )
             if mods["push"] != len(compiled_funcs[func].func.pushes):
                 raise Exception("{} calculated {} pushes but was labeled with {}".format(func, mods['push'], len(compiled_funcs[func].func.pushes)))
 
