@@ -787,7 +787,7 @@ def copy_return_data(vm):
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 # send tuple is [data, dest, value, kind]
-@modifies_stack([value.TupleType([value.IntType()]*7)], [value.TupleType(4)])
+@modifies_stack([value.TupleType([value.IntType()]*7)], [local_exec_state.typ])
 def evm_call_to_send(vm):
     vm.push(0)  # kind of currency
     vm.swap1()
@@ -820,4 +820,9 @@ def evm_call_to_send(vm):
     vm.swap1()
     std.tup.make(2)(vm)
     # [sized byte array, tup]
-    std.tup.make(4)(vm)
+    vm.push(local_exec_state.make())
+    vm.cast(local_exec_state.typ)
+    local_exec_state.set_val("data")(vm)
+    local_exec_state.set_val("sender")(vm)
+    local_exec_state.set_val("amount")(vm)
+    local_exec_state.set_val("type")(vm)

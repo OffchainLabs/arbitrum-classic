@@ -189,6 +189,7 @@ def _inner_call(vm, dispatch_func, call_num, contract_id):
     vm.swap1()
     vm.tsetn(1)
     vm.swap1()
+
     # destID msg
     _save_call_frame(vm)
 
@@ -198,10 +199,37 @@ def _inner_call(vm, dispatch_func, call_num, contract_id):
     _perform_call(vm, call_num)
     _mutable_call_ret(vm)
 
+# [gas, dest, value, arg offset, arg length, ret offset, ret length]
+@noreturn
+def callcode(vm, dispatch_func, call_num, contract_id):
+    std.tup.make(7)(vm)
+    # calltup
+    vm.dup0()
+    os.evm_call_to_send(vm)
+    # msg calltup
+    vm.dup0()
+    vm.tgetn(1)
+    _get_call_location(vm, dispatch_func)
+    # destCodePoint msg calltup
+    vm.swap1()
+    vm.push(contract_id)
+    vm.swap1()
+    vm.tsetn(1)
+    # msg destCodePoint calltup
+
+    vm.push(contract_id)
+    vm.swap1()
+    vm.swap2()
+
+    # destCodePoint destId message calltup
+    _save_call_frame(vm)
+    _perform_call(vm, call_num)
+    _mutable_call_ret(vm)
+
 # [[gas, dest, arg offset, arg length, ret offset, ret length]]
 @noreturn
 def delegatecall(vm, dispatch_func, call_num, contract_id):
-    vm.push(0)
+    os.message_value(vm)
     # value, gas, dest
     vm.swap2()
     vm.swap1()
@@ -216,7 +244,7 @@ def delegatecall(vm, dispatch_func, call_num, contract_id):
     _get_call_location(vm, dispatch_func)
     # destCodePoint msg calltup
     vm.swap1()
-    vm.push(contract_id)
+    os.message_caller(vm)
     vm.swap1()
     vm.tsetn(1)
     # msg destCodePoint calltup
