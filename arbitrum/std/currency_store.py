@@ -57,7 +57,7 @@ def add(vm):
     # newval cstore currId
     vm.swap2()
     vm.swap1()
-    # cstore currId newvav
+    # cstore currId newval
     currency_store.get("store")(vm)
     keyvalue_int_int.set_val(vm)
     currency_store.set_val("store")(vm)
@@ -74,34 +74,33 @@ def add(vm):
 ])
 def deduct(vm):
     # cstore currId delta -> success updatedcstore
-    vm.dup1()
-    vm.dup1()
+    vm.swap1()
+    vm.swap2()
+    vm.dup2()
+    vm.dup2()
     get(vm)
-    # oldval cstore currId delta
-    dup_n(3)(vm)
-    # delta oldval cstore currId delta
+    vm.swap1()
+    # oldval delta cstore currId
     vm.dup1()
     vm.dup1()
     vm.gt()
     vm.iszero()
     vm.ifelse(lambda vm: [
         vm.add(),
-        # newval cstore currId delta
+        # newval cstore currId
         vm.swap2(),
         vm.swap1(),
-        # cstore currId newval delta
+        # cstore currId newval
         currency_store.get("store")(vm),
         keyvalue_int_int.set_val(vm),
         currency_store.set_val("store")(vm),
-        # updatedcstore delta
-        vm.swap1(),
-        vm.pop(),
+        # updatedcstore
         vm.push(1),
     ], lambda vm: [
+        # oldval delta cstore currId
         vm.pop(),
         vm.pop(),
-        vm.swap2(),
-        vm.pop(),
+        vm.swap1(),
         vm.pop(),
         vm.push(0)
     ])
