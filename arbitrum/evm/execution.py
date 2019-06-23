@@ -202,6 +202,12 @@ def _send_interupt(vm):
 
 def send_erc20_interupt(vm):
     _send_interupt(vm)
+    vm.dup0()
+    local_exec_state.get("type")(vm)
+    vm.push(256)
+    vm.mul()
+    vm.swap1()
+    local_exec_state.set_val("type")(vm)
     os.add_send_to_queue(vm)
 
 def send_erc721_interupt(vm):
