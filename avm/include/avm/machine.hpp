@@ -8,13 +8,12 @@
 #ifndef machine_hpp
 #define machine_hpp
 
-#include "value.hpp"
-#include "datastack.hpp"
 #include "code.hpp"
+#include "datastack.hpp"
+#include "value.hpp"
 
 #include <memory>
 #include <vector>
-#include <stdio.h>
 
 class datastack;
 
@@ -33,22 +32,23 @@ struct MachineState {
     CodePoint errpc;
     value inbox;
     std::unique_ptr<TuplePool> pool;
-    
+
     MachineState();
     MachineState(std::vector<instr> code);
-    MachineState(char *&srccode, char *&inboxdata);
-    
+    MachineState(char*& srccode, char*& inboxdata);
+
     void runOp(OpCode opcode);
 };
 
 class Machine {
     MachineState m;
-public:
-    Machine(char *&srccode, char *&inboxdata) : m(srccode, inboxdata) {}
-    
+
+   public:
+    Machine(char*& srccode, char*& inboxdata) : m(srccode, inboxdata) {}
+
     Assertion run(uint64_t stepCount);
     int runOne();
 };
-instr deserialize_opcode(uint64_t pc, char *&bufptr, TuplePool &pool);
+instr deserialize_opcode(uint64_t pc, char*& bufptr, TuplePool& pool);
 
 #endif /* machine_hpp */

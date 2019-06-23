@@ -7,14 +7,13 @@
 //
 
 #include <avm/pool.hpp>
-#include <avm/value.hpp>
+
 #include <avm/tuple.hpp>
+#include <avm/value.hpp>
 
 #include <boost/smart_ptr/make_local_shared.hpp>
 
 #include <iostream>
-#include <list>
-#include <array>
 
 /**
  * Returns instance of Resource.
@@ -24,20 +23,17 @@
  *
  * @return Resource instance.
  */
-boost::local_shared_ptr<std::vector<value>> TuplePool::getResource(int s)
-{
-    if (resources[s].empty())
-    {
+boost::local_shared_ptr<std::vector<value>> TuplePool::getResource(int s) {
+    if (resources[s].empty()) {
         auto newTup = boost::make_local_shared<std::vector<value>>();
         newTup->reserve(s);
         for (int i = 0; i < s; i++) {
             newTup->push_back(Tuple(0, this));
         }
         return newTup;
-    }
-    else
-    {
-        boost::local_shared_ptr<std::vector<value>> resource = resources[s].back();
+    } else {
+        boost::local_shared_ptr<std::vector<value>> resource =
+            resources[s].back();
         resources[s].pop_back();
         resource->clear();
         for (int i = 0; i < s; i++) {

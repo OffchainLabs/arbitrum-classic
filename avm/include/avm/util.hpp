@@ -3,24 +3,18 @@
 
 #pragma once
 
-extern "C"
-{
+extern "C" {
 #include <keccak/KeccakHash.h>
 }
-//#include "address.h"
 
 #include <limits>
-//#include <nlohmann/json.hpp>
 #include <sstream>
 #include <vector>
 
-namespace evm
-{
-  inline void Keccak_256(
-    const unsigned char* input,
-    unsigned int inputByteLen,
-    unsigned char* output)
-  {
+namespace evm {
+inline void Keccak_256(const unsigned char* input,
+                       unsigned int inputByteLen,
+                       unsigned char* output) {
     // Ethereum started using Keccak and called it SHA3 before it was finalised.
     // Standard SHA3-256 (the FIPS accepted version) uses padding 0x06, but
     // Ethereum's "Keccak-256" uses padding 0x01.
@@ -29,14 +23,14 @@ namespace evm
     Keccak_HashInstance hi;
     Keccak_HashInitialize(&hi, 1088, 512, 256, 0x01);
     Keccak_HashUpdate(
-      &hi, input, inputByteLen * std::numeric_limits<unsigned char>::digits);
+        &hi, input, inputByteLen * std::numeric_limits<unsigned char>::digits);
     Keccak_HashFinal(&hi, output);
-  }
+}
 
-  std::string strip(const std::string& s);
-  std::vector<uint8_t> to_bytes(const std::string& s);
-  std::string to_hex_string(const std::vector<uint8_t>& bytes);
+std::string strip(const std::string& s);
+std::vector<uint8_t> to_bytes(const std::string& s);
+std::string to_hex_string(const std::vector<uint8_t>& bytes);
 
 //  Address generate_address(const Address& sender, uint64_t nonce);
 
-} // namespace evm
+}  // namespace evm

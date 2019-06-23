@@ -6,48 +6,19 @@
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
 
-/*#include <iostream>
-
-struct value{
-    
-};
-
-int main(int argc, const char * argv[]) {
-    // insert code here...
-    std::cout << "Hello, World!\n";
-    return 0;
-}*/
-
-#include <iostream>
-#include <stack>
-#include <list>
-#include <unordered_map>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <chrono>
-
-#include <avm/pool.hpp>
-#include <avm/value.hpp>
-#include <avm/datastack.hpp>
-#include <avm/code.hpp>
-#include <avm/machine.hpp>
 #include <avm/cmachine.h>
 
-//struct stk{
+#include <iostream>
+#include <string>
+
+// struct stk{
 //    value *stkdata;
 //    stk* rest;
 //};
 
-
-
-
-
 //
-//void push_num(vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp, uint256_t num){
+// void push_num(vector<instr> &code, unsigned long long &pc, value *tpl, value
+// *tmp, uint256_t num){
 //    instr *op;
 //    //push(1)
 //    pc++;
@@ -59,9 +30,10 @@ int main(int argc, const char * argv[]) {
 //    op = new instr(pc,PRTTOP,NULL);
 //    code.push_back(*op);
 //}
-//void push_tuple(vector<instr> &code, unsigned long long &pc, int size, value *tpl, value *tmp){
+// void push_tuple(vector<instr> &code, unsigned long long &pc, int size, value
+// *tpl, value *tmp){
 //    instr *op;
-//    
+//
 //    if (size==5){
 //        tmp->set_num((uint256_t)11);
 //        tpl->set_tuple_elem(0, tmp);
@@ -91,14 +63,16 @@ int main(int argc, const char * argv[]) {
 //    op = new instr(pc,PRTTOP,NULL);
 //    code.push_back(*op);
 //}
-//void print_stack(vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void print_stack(vector<instr> &code, unsigned long long &pc, value *tpl,
+// value *tmp){
 //    instr *op;
 //    pc++;
 //    op = new instr(pc,PRTSTK,NULL);
 //    code.push_back(*op);
 //}
 //
-//void rset(vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void rset(vector<instr> &code, unsigned long long &pc, value *tpl, value
+// *tmp){
 //    instr *op;
 //    //rset
 //    tmp->set_num((uint256_t)31);
@@ -111,14 +85,16 @@ int main(int argc, const char * argv[]) {
 //    pc++;
 //}
 //
-//void test_pop(vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void test_pop(vector<instr> &code, unsigned long long &pc, value *tpl, value
+// *tmp){
 //    instr *op;
 //    pc++;
 //    op = new instr(pc,POP,NULL);
 //    code.push_back(*op);
 //}
 //
-//void test_tget( vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void test_tget( vector<instr> &code, unsigned long long &pc, value *tpl,
+// value *tmp){
 //    instr *op;
 //
 //    //test tget
@@ -135,7 +111,8 @@ int main(int argc, const char * argv[]) {
 //    code.push_back(*op);
 //}
 //
-//void test_add( vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void test_add( vector<instr> &code, unsigned long long &pc, value *tpl, value
+// *tmp){
 //    instr *op;
 //    //test add
 //    //push(10)
@@ -149,7 +126,8 @@ int main(int argc, const char * argv[]) {
 //    code.push_back(*op);
 //}
 //
-//void test_tset( vector<instr> &code, unsigned long long &pc, value *tpl, value *tpl2, value *tmp){
+// void test_tset( vector<instr> &code, unsigned long long &pc, value *tpl,
+// value *tpl2, value *tmp){
 //    instr *op;
 //    //test tset
 //    //push(10)
@@ -167,7 +145,8 @@ int main(int argc, const char * argv[]) {
 //    op = new instr(pc,PRTSTK,NULL);
 //    code.push_back(*op);
 //}
-//void test_pcpush( vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void test_pcpush( vector<instr> &code, unsigned long long &pc, value *tpl,
+// value *tmp){
 //    instr *op;
 //    //test pcpush
 //    //pcpush
@@ -187,7 +166,8 @@ int main(int argc, const char * argv[]) {
 //    op = new instr(pc,PRTTOP,NULL);
 //    code.push_back(*op);
 //}
-//void test_jump( vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void test_jump( vector<instr> &code, unsigned long long &pc, value *tpl,
+// value *tmp){
 //    instr *op;
 //    //test jump
 ////    rset( code, pc, tpl, tmp);
@@ -207,7 +187,8 @@ int main(int argc, const char * argv[]) {
 //    code.push_back(*op);
 //}
 //
-//void test_mul( vector<instr> &code, unsigned long long &pc, value *tpl, value *tmp){
+// void test_mul( vector<instr> &code, unsigned long long &pc, value *tpl, value
+// *tmp){
 //    instr *op;
 //    //test mul
 //    push_num( code, pc, tpl, tmp, (uint256_t)10);
@@ -222,10 +203,10 @@ int main(int argc, const char * argv[]) {
 //
 //}
 //
-//void setupCode( vector<instr> &code){
+// void setupCode( vector<instr> &code){
 //    unsigned long long pc=0;
 //    instr *op;
-//    
+//
 //    value *tpl=new value((int)5);
 //    value *tpl3=new value((int)3);
 //    //print stack
@@ -251,14 +232,14 @@ int main(int argc, const char * argv[]) {
 //
 //}
 
-//Machine read_file (std::string filename) {
+// Machine read_file (std::string filename) {
 //    std::ifstream myfile;
-//    
+//
 //    struct stat filestatus;
 //    stat( filename.c_str(), &filestatus );
 //
 //    char *buf = (char *)malloc(filestatus.st_size);
-//    
+//
 //    myfile.open(filename, std::ios::in);
 //    if (myfile.is_open())
 //    {
@@ -268,7 +249,7 @@ int main(int argc, const char * argv[]) {
 //    return Machine(buf);
 //}
 
-//void oldread_file (string filename, vector<instr> &code, char *staticValue) {
+// void oldread_file (string filename, vector<instr> &code, char *staticValue) {
 //    instr *op;
 //    ifstream myfile;
 //
@@ -311,44 +292,42 @@ int main(int argc, const char * argv[]) {
 //    }
 ////    return Init_machine(buf, staticValue);
 //}
-//Machine *read_files (std::string filename, std::string inboxfile);
-//int main() {
-int main(int argc, char *argv[])
-{
-//    int state=EXTENSIVE;
+// Machine *read_files (std::string filename, std::string inboxfile);
+// int main() {
+int main(int argc, char* argv[]) {
+    //    int state=EXTENSIVE;
     std::string filename;
     std::string inbox_file;
-    unsigned long long stepCount=1000000;
-    if(argc<2)
-    {
-        std::cout<<"Usage: AVMTest <ao file>"<<std::endl;
-        std::cout<<"   defaulting to use add.ao"<<std::endl;
+    unsigned long long stepCount = 1000000;
+    if (argc < 2) {
+        std::cout << "Usage: AVMTest <ao file>" << std::endl;
+        std::cout << "   defaulting to use add.ao" << std::endl;
         filename = "add.ao";
     } else {
         filename = argv[1];
-        if (argc==3){
+        if (argc == 3) {
             inbox_file = argv[2];
         }
     }
-    std::cout<<filename<<" "<<inbox_file<<std::endl;
-//    machine_create();
-//    oldread_file(filename, code, staticValue);
-//    Machine *mach = read_files(filename, inbox_file);
-    void *mach = machine_create(filename.c_str(), inbox_file.c_str());
-//    void *mach = machine_create("contract.ao", "inbox.dat");
-//    setupCode( code );
-    //testing opcodes
-//    Assertion result = mach->run(stepCount);
-    
+    std::cout << filename << " " << inbox_file << std::endl;
+    //    machine_create();
+    //    oldread_file(filename, code, staticValue);
+    //    Machine *mach = read_files(filename, inbox_file);
+    void* mach = machine_create(filename.c_str(), inbox_file.c_str());
+    //    void *mach = machine_create("contract.ao", "inbox.dat");
+    //    setupCode( code );
+    // testing opcodes
+    //    Assertion result = mach->run(stepCount);
+
     auto start = std::chrono::high_resolution_clock::now();
 
     uint64_t steps = machine_run(mach, stepCount);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    std::cout<< steps<<" steps in "<<elapsed.count()*1000<<" milliseconds"<<std::endl;
-//    runMachine(code, state, 200);
-    
+    std::cout << steps << " steps in " << elapsed.count() * 1000
+              << " milliseconds" << std::endl;
+    //    runMachine(code, state, 200);
+
     exit(0);
-    
 }

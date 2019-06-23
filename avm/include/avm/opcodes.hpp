@@ -10,7 +10,11 @@
 
 #define CURRENT_AO_VERSION 1
 
-enum states{EXTENSIVE, HALTED, ERROR};
+#include <cstdint>
+#include <map>
+#include <string>
+
+enum states { EXTENSIVE, HALTED, ERROR };
 
 enum class OpCode : uint8_t {
     ADD = 0x01,
@@ -23,7 +27,7 @@ enum class OpCode : uint8_t {
     ADDMOD,
     MULMOD,
     EXP,
-    
+
     LT = 0x10,
     GT,
     SLT,
@@ -39,33 +43,33 @@ enum class OpCode : uint8_t {
 
     HASH = 0x20,
     TYPE,
-    
+
     POP = 0x30,
-    SPUSH,//31
-    RPUSH,//32
-    RSET,//33
-//    UNUSED, // place holder for old .ao opcodes
-    JUMP,//34
-    CJUMP,//35
-    STACKEMPTY,//36
-    PCPUSH,//37
-    AUXPUSH,//38
-    AUXPOP,//39
-    AUXSTACKEMPTY,//3a
-    NOP,//3b
+    SPUSH,  // 31
+    RPUSH,  // 32
+    RSET,   // 33
+    //    UNUSED, // place holder for old .ao opcodes
+    JUMP,           // 34
+    CJUMP,          // 35
+    STACKEMPTY,     // 36
+    PCPUSH,         // 37
+    AUXPUSH,        // 38
+    AUXPOP,         // 39
+    AUXSTACKEMPTY,  // 3a
+    NOP,            // 3b
     ERRPUSH,
     ERRSET,
-    
+
     DUP0 = 0x40,
     DUP1,
     DUP2,
     SWAP1,
     SWAP2,
-    
+
     TGET = 0x50,
     TSET,
     TLEN,
-    
+
     BREAKPOINT = 0x60,
     LOG,
 
@@ -75,73 +79,71 @@ enum class OpCode : uint8_t {
     INBOX,
     HALT = 0x00,
     ERROR = 0x75,
-    DEBUG =0x076
+    DEBUG = 0x076
 };
 
 const std::map<OpCode, std::string> InstructionNames = {
-    {OpCode::ADD,        "add"},
-    {OpCode::MUL,        "mul"},
-    {OpCode::SUB,        "sub"},
-    {OpCode::DIV,        "div"},
-    {OpCode::SDIV,       "sdiv"},
-    {OpCode::MOD,        "mod"},
-    {OpCode::SMOD,       "smod"},
-    {OpCode::ADDMOD,     "addmod"},
-    {OpCode::MULMOD,     "mulmod"},
-    {OpCode::EXP,        "exp"},
-    
-    {OpCode::LT,     "lt"},
-    {OpCode::GT,     "gt"},
-    {OpCode::SLT,    "slt"},
-    {OpCode::SGT,    "sgt"},
-    {OpCode::EQ,     "eq"},
+    {OpCode::ADD, "add"},
+    {OpCode::MUL, "mul"},
+    {OpCode::SUB, "sub"},
+    {OpCode::DIV, "div"},
+    {OpCode::SDIV, "sdiv"},
+    {OpCode::MOD, "mod"},
+    {OpCode::SMOD, "smod"},
+    {OpCode::ADDMOD, "addmod"},
+    {OpCode::MULMOD, "mulmod"},
+    {OpCode::EXP, "exp"},
+
+    {OpCode::LT, "lt"},
+    {OpCode::GT, "gt"},
+    {OpCode::SLT, "slt"},
+    {OpCode::SGT, "sgt"},
+    {OpCode::EQ, "eq"},
     {OpCode::ISZERO, "iszero"},
-    {OpCode::BITWISE_AND,    "and"},
-    {OpCode::BITWISE_OR,     "or"},
-    {OpCode::BITWISE_XOR,    "xor"},
-    {OpCode::BITWISE_NOT,    "not"},
-    {OpCode::BYTE,   "byte"},
+    {OpCode::BITWISE_AND, "and"},
+    {OpCode::BITWISE_OR, "or"},
+    {OpCode::BITWISE_XOR, "xor"},
+    {OpCode::BITWISE_NOT, "not"},
+    {OpCode::BYTE, "byte"},
     {OpCode::SIGNEXTEND, "signextend"},
-    
+
     {OpCode::HASH, "hash"},
     {OpCode::TYPE, "type"},
-    
-    {OpCode::POP,        "pop"},
-    {OpCode::SPUSH,      "spush"},
-    {OpCode::RPUSH,      "rpush"},
-    {OpCode::RSET,       "rset"},
-    {OpCode::JUMP,       "jump"},
-    {OpCode::CJUMP,      "cjump"},
+
+    {OpCode::POP, "pop"},
+    {OpCode::SPUSH, "spush"},
+    {OpCode::RPUSH, "rpush"},
+    {OpCode::RSET, "rset"},
+    {OpCode::JUMP, "jump"},
+    {OpCode::CJUMP, "cjump"},
     {OpCode::STACKEMPTY, "stackempty"},
-    {OpCode::PCPUSH,     "pcpush"},
-    {OpCode::AUXPUSH,    "auxpush"},
-    {OpCode::AUXPOP,     "auxpop"},
+    {OpCode::PCPUSH, "pcpush"},
+    {OpCode::AUXPUSH, "auxpush"},
+    {OpCode::AUXPOP, "auxpop"},
     {OpCode::AUXSTACKEMPTY, "auxstackempty"},
-    {OpCode::NOP,        "nop"},
-    {OpCode::ERRPUSH,    "errpush"},
-    {OpCode::ERRSET,     "errset"},
-    
-    
-    {OpCode::DUP0,  "dup0"},
-    {OpCode::DUP1,  "dup1"},
-    {OpCode::DUP2,  "dup2"},
+    {OpCode::NOP, "nop"},
+    {OpCode::ERRPUSH, "errpush"},
+    {OpCode::ERRSET, "errset"},
+
+    {OpCode::DUP0, "dup0"},
+    {OpCode::DUP1, "dup1"},
+    {OpCode::DUP2, "dup2"},
     {OpCode::SWAP1, "swap1"},
     {OpCode::SWAP2, "swap2"},
-    
-    {OpCode::TGET,    "tget"},
-    {OpCode::TSET,    "tset"},
-    {OpCode::TLEN,    "tlen"},
-    
-    {OpCode::BREAKPOINT,  "breakpoint"},
+
+    {OpCode::TGET, "tget"},
+    {OpCode::TSET, "tset"},
+    {OpCode::TLEN, "tlen"},
+
+    {OpCode::BREAKPOINT, "breakpoint"},
     {OpCode::LOG, "log"},
-    
-    {OpCode::SEND,      "send"},
-    {OpCode::NBSEND,    "nbsend"},
-    {OpCode::GETTIME,   "gettime"},
-    {OpCode::INBOX,      "inbox"},
-    {OpCode::ERROR,        "error"},
-    {OpCode::HALT,       "halt"},
-    {OpCode::DEBUG,     "debug"}
-};
+
+    {OpCode::SEND, "send"},
+    {OpCode::NBSEND, "nbsend"},
+    {OpCode::GETTIME, "gettime"},
+    {OpCode::INBOX, "inbox"},
+    {OpCode::ERROR, "error"},
+    {OpCode::HALT, "halt"},
+    {OpCode::DEBUG, "debug"}};
 
 #endif /* opcodes_h */

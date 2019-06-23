@@ -8,13 +8,15 @@
 
 #include <avm/code.hpp>
 
-#include <iostream>
+#include <ostream>
 
 std::ostream& operator<<(std::ostream& os, const instr& instruction) {
     if (instruction.immediate.has_value()) {
-        os << "ImmediateInstruction(" << static_cast<int>(instruction.opcode) << ", " << *instruction.immediate << ")";
+        os << "ImmediateInstruction(" << static_cast<int>(instruction.opcode)
+           << ", " << *instruction.immediate << ")";
     } else {
-        os << "BasicInstruction(" << static_cast<int>(instruction.opcode) << ")";
+        os << "BasicInstruction(" << static_cast<int>(instruction.opcode)
+           << ")";
     }
     return os;
 }

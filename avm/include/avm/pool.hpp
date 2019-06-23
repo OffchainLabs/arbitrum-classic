@@ -13,16 +13,15 @@
 
 #include <boost/smart_ptr/local_shared_ptr.hpp>
 
-#include <stdio.h>
-#include <list>
 #include <array>
 #include <vector>
 
-class TuplePool
-{
-private:
-    std::array<std::vector<boost::local_shared_ptr<std::vector<value>>>,9> resources;
-public:
+class TuplePool {
+   private:
+    std::array<std::vector<boost::local_shared_ptr<std::vector<value>>>, 9>
+        resources;
+
+   public:
     /**
      * Returns instance of Resource.
      *
@@ -42,7 +41,7 @@ public:
      *
      * @param object Resource instance.
      */
-    void returnResource(boost::local_shared_ptr<std::vector<value>> && object) {
+    void returnResource(boost::local_shared_ptr<std::vector<value>>&& object) {
         resources[object->size()].push_back(std::move(object));
     }
 };
