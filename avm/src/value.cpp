@@ -118,7 +118,7 @@ std::vector<unsigned char> value_hash_raw(const Tuple &tup) {
     return hashData;
 }
 
-std::vector<unsigned char> value_hash_raw(const CodePoint &cp) {
+std::vector<unsigned char> value_hash_raw(const CodePoint &) {
     throw std::runtime_error("CodePoint hash not supported");
 }
 

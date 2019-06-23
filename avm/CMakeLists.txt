@@ -28,6 +28,8 @@ set(LIB_SOURCES
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} )
 
+target_compile_options(avm PRIVATE -Wall -Wextra -Wpedantic)
+
 target_include_directories(avm PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -40,4 +42,4 @@ target_include_directories(avm PRIVATE
 
 target_link_libraries(avm variant optional Boost::boost)
 
-source_group(core FILES ${LIB_HEADERS} ${LIB_SOURCES})
+source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES})

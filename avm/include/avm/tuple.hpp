@@ -18,12 +18,10 @@
 class Tuple {
 private:
     TuplePool* tuplePool;
-    int size;
     boost::local_shared_ptr<std::vector<value>> tpl;
 public:
     Tuple(int size_, TuplePool *pool) :
     tuplePool(pool),
-    size(size_ + 1),
     tpl(pool->getResource(size_)) {}
     
     ~Tuple() {

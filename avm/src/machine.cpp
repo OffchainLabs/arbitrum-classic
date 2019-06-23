@@ -488,17 +488,17 @@ void MachineState::runOp(OpCode opcode) {
         }
         case OpCode::SIGNEXTEND: {
             value val1 = stack.pop();
-            value &val2 = stack.peek();
+            value val2 = stack.pop();
             auto &aNum = assumeInt(val1);
             auto &bNum = assumeInt(val2);
             if (aNum >= 32)
             {
-                bNum = bNum;
+                stack.push(std::move(val2));
             } else {
                 const uint8_t idx = 8 * shrink<uint8_t>(aNum) + 7;
                 const auto sign = static_cast<uint8_t>((bNum >> idx) & 1);
                 const auto mask = uint256_t(-1) >> (256 - idx);
-                bNum = (uint256_t(-sign) << idx) | (bNum & mask);
+                stack.push(uint256_t{-sign} << idx | (bNum & mask));
             }
             break;
         }
@@ -606,7 +606,12 @@ void MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::ERRSET:{
             value ret = stack.pop();
-            auto errpc = mpark::get_if<CodePoint>(&ret);
+            auto codePointVal = mpark::get_if<CodePoint>(&ret);
+            if (!codePointVal) {
+                state = ERROR;
+            } else {
+                errpc = *codePointVal;
+            }
             break;
         }
     /****************************************/

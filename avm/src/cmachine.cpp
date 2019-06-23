@@ -72,21 +72,11 @@ Machine *read_files (std::string filename, std::string inboxfile) {
 }
 
 //cmachine_t *machine_create(char *data)
-void *machine_create(const char *filename, const char *inboxfile)
-{
-//    std::cout<<"In machine_create "<<std::endl;
+void *machine_create(const char *filename, const char *inboxfile) {
     Machine *mach = read_files(filename, inboxfile);
-    cmachine_t *m;
-//    Machine *obj;
-//    std::cout<<"In machine_create machine created"<<std::endl;
-
-    m      = (typeof(m))malloc(sizeof(*m));
-//    std::cout<<"In machine_create m malloced"<<std::endl;
-//    obj    = new Machine(data);
+    cmachine_t *m = new cmachine{};
     m->obj = mach;
-//    std::cout<<"In machine_create m->obj set"<<std::endl;
-
-    return (void *)mach;
+    return static_cast<void *>(mach);
 }
 
 void machine_destroy(cmachine_t *m) {
