@@ -6,7 +6,7 @@
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
 
-#include "code.hpp"
+#include <avm/code.hpp>
 
 #include <iostream>
 

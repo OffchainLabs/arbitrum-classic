@@ -5,9 +5,10 @@
 //  Created by Timothy O'Bryan on 3/23/19.
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
-#include "pool.hpp"
-#include "value.hpp"
-#include "tuple.hpp"
+
+#include <avm/pool.hpp>
+#include <avm/value.hpp>
+#include <avm/tuple.hpp>
 
 #include <boost/smart_ptr/make_local_shared.hpp>
 

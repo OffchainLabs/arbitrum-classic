@@ -5,9 +5,9 @@
 //  Created by Harry Kalodner on 4/2/19.
 //
 
-#include "machine.hpp"
-#include "code.hpp"
-#include "opcodes.hpp"
+#include <avm/machine.hpp>
+#include <avm/code.hpp>
+#include <avm/opcodes.hpp>
 
 #include <keccak/KeccakHash.h>
 
@@ -62,9 +62,11 @@ instr deserialize_opcode(uint64_t pc, char *&bufptr, TuplePool &pool){
     }
 }
 
-Machine::Machine() : pool(std::make_unique<TuplePool>()) {}
+MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
 
-Machine::Machine(char *&srccode, char *&inboxdata) : Machine() {
+MachineState::MachineState(std::vector<instr> code) : code(std::move(code)), pool(std::make_unique<TuplePool>()) {}
+
+MachineState::MachineState(char *&srccode, char *&inboxdata) : MachineState() {
     char *bufptr=srccode;
     char *inboxbuf=inboxdata;
 
@@ -110,7 +112,6 @@ Machine::Machine(char *&srccode, char *&inboxdata) : Machine() {
 }
 Assertion Machine::run(uint64_t stepCount) {
     //testing opcodes
-//    opcodeTests();
 //    std::cout << "starting machine code size=" << code.size() << std::endl;
 //    std::cout << "inbox=" << inbox << std::endl;
     uint64_t i;
@@ -119,18 +120,18 @@ Assertion Machine::run(uint64_t stepCount) {
         auto ret = runOne();
         if (ret < 0) {
             break;
-        } else if (state==ERROR) {
+        } else if (m.state==ERROR) {
             break;
-        } else if (state==HALTED) {
+        } else if (m.state==HALTED) {
             break;
         }
     }
     
-    if (state==ERROR){
+    if (m.state==ERROR){
         //set error return
         std::cout << "error state" << std::endl;
     }
-    if (state==HALTED){
+    if (m.state==HALTED){
         //set error return
 //        std::cout << "halted state" << std::endl;
     }
@@ -146,41 +147,41 @@ Assertion Machine::run(uint64_t stepCount) {
 
 int Machine::runOne() {
 //    std::cout<<"in runOne"<<std::endl;
-    if (state == ERROR){
+    if (m.state == ERROR){
         //set error return
         std::cout<<"error state"<<std::endl;
         return -1;
     }
     
-    if (state==HALTED){
+    if (m.state==HALTED){
         //set error return
         std::cout<<"halted state"<<std::endl;
-        std::cout<<"full stack - size="<< stack.stacksize()<<std::endl;
-        while (stack.stacksize()>0){
-            value A=stack.pop();
+        std::cout<<"full stack - size="<< m.stack.stacksize()<<std::endl;
+        while (m.stack.stacksize()>0){
+            value A= m.stack.pop();
             std::cout << A << std::endl;
         }
         return -2;
     }
 //    std::cout<<"pc="<<pc<<std::endl;
-    auto &instruction = code[pc];
-    auto immediateVal = instruction.immediate;
-    if (immediateVal){
+    auto &instruction = m.code[m.pc];
+    if (instruction.immediate){
 //        std::cout<<"immediateVal = "<<*immediateVal<<std::endl;
-        stack.push(std::move(*immediateVal));
+        auto imm = *instruction.immediate;
+        m.stack.push(std::move(imm));
     }
     
     try {
 //        std::cout<<"calling runInstruction"<<std::endl;
-        runInstruction(instruction);
+        m.runOp(instruction.opcode);
 //        std::cout<<"after runInstruction stack size= "<<stack.stacksize()<< std::endl;
 //        if (stack.stacksize()>0){
 //            std::cout<<"top="<<stack.peek()<< std::endl;
 //        }
     } catch (const bad_pop_type &e) {
-        state = ERROR;
+        m.state = ERROR;
     } catch (const bad_tuple_index &e) {
-        state = ERROR;
+        m.state = ERROR;
     }
     
     return 0;
@@ -191,117 +192,8 @@ static T shrink(uint256_t i)
 {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
-void Machine::opcodeTests(){
-    //TEST SUB
-    {
-        std::cout<<"TESTING sub "<<std::endl;
-        instr inst(1, OpCode::SUB, 0);
-        uint256_t val1 = 3;
-        stack.push(std::move(val1));
-        uint256_t val2= 4;
-        stack.push(std::move(val2));
-        runInstruction(inst);
-        value res = stack.pop();
-        auto &resNum = assumeInt(res);
-        if (resNum != 1){
-            std::cout<<"ERROR - sub failed - expected 1 received "<<resNum<<std::endl;
-        }
-    }
-    //TEST SUB -1
-    {
-        std::cout<<"TESTING sub -1 "<<std::endl;
-        instr inst(1, OpCode::SUB, 0);
-        uint256_t val1 = 4;
-        stack.push(std::move(val1));
-        uint256_t val2= 3;
-        stack.push(std::move(val2));
-        runInstruction(inst);
-        value res = stack.pop();
-        auto &resNum = assumeInt(res);
-        uint256_t expect=(uint256_t)(-1);
-        if (resNum != expect){
-            std::cout<<"ERROR - sub failed - expected "<<expect<<" received "<<resNum<<std::endl;
-        }
-    }
-    //TEST DIV
-    {
-        std::cout<<"TESTING div"<<std::endl;
-        instr inst(1, OpCode::DIV, 0);
-        uint256_t val1 = 3;
-        stack.push(std::move(val1));
-        uint256_t val2= 12;
-        stack.push(std::move(val2));
-        runInstruction(inst);
-        value res = stack.pop();
-        auto &resNum = assumeInt(res);
-        if (resNum != 4){
-            std::cout<<"ERROR - div failed - expected 4 received "<<resNum<<std::endl;
-        }
-    }
-    //TEST DIV divide by 0
-    {
-        std::cout<<"TESTING div"<<std::endl;
-        instr inst(1, OpCode::DIV, 0);
-        uint256_t val1 = 0;
-        stack.push(std::move(val1));
-        uint256_t val2= 3;
-        stack.push(std::move(val2));
-        runInstruction(inst);
-        if (state!=ERROR){
-            std::cout<<"ERROR - div failed - expected ERROR state"<<std::endl;
-        }
-    }
-    //TEST SDIV
-    {
-        std::cout<<"TESTING sdiv"<<std::endl;
-        instr inst(1, OpCode::SDIV, 0);
-        uint256_t val1 = (uint256_t)-3;
-        stack.push(std::move(val1));
-        uint256_t val2= 12;
-        stack.push(std::move(val2));
-        runInstruction(inst);
-        value res = stack.pop();
-        auto &resNum = assumeInt(res);
-        if (resNum != (uint256_t)-4){
-            std::cout<<"ERROR - div failed - expected -4 received "<<resNum<<std::endl;
-        }
-    }
-    //TEST SDIV
-    {
-        std::cout<<"TESTING sdiv"<<std::endl;
-        instr inst(1, OpCode::SDIV, 0);
-        uint256_t val1 = (uint256_t)-3;
-        stack.push(std::move(val1));
-        uint256_t val2= (uint256_t)-12;
-        stack.push(std::move(val2));
-        runInstruction(inst);
-        value res = stack.pop();
-        auto &resNum = assumeInt(res);
-        if (resNum != 4){
-            std::cout<<"ERROR - div failed - expected 4 received "<<resNum<<std::endl;
-        }
-    }
-    //TEST MOD
-    {
-        std::cout<<"TESTING smod"<<std::endl;
-        instr inst(1, OpCode::SMOD, 0);
-        uint256_t val1 = 3;
-        stack.push(std::move(val1));
-        uint256_t val2 = (uint256_t)-8;
-        stack.push(std::move(val2));
-        runInstruction(inst);
-        value res = stack.pop();
-        auto &resNum = assumeInt(res);
-        if (resNum != (uint256_t)-2){
-            std::cout<<"ERROR - smod failed - expected -2 received "<<resNum<<std::endl;
-        }
-    }
 
-
-
-}
-
-void Machine::runInstruction( instr instruction ) {
+void MachineState::runOp(OpCode opcode) {
 //void Machine::runInstruction( ) {
 //    auto &instruction = testInstr;
 //    auto &instruction = code[pc];
@@ -312,7 +204,7 @@ void Machine::runInstruction( instr instruction ) {
 //        std::cout<<"top="<<stack.peek()<< std::endl;
 //    }
     bool shouldIncrement = true;
-    switch (instruction.opcode) {
+    switch (opcode) {
         /**************************/
         /*  Arithmetic Operations */
         /**************************/
@@ -839,7 +731,7 @@ void Machine::runInstruction( instr instruction ) {
 //            break;
         default:
             std::stringstream ss;
-            ss << "Unhandled opcode <"<< InstructionNames.at(instruction.opcode) <<">" << std::hex << static_cast<int>(instruction.opcode);
+            ss << "Unhandled opcode <"<< InstructionNames.at(opcode) <<">" << std::hex << static_cast<int>(opcode);
             throw std::runtime_error(ss.str());
     }
     if (shouldIncrement) {

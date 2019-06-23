@@ -1,11 +1,32 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.5)
 
 set (CMAKE_CXX_STANDARD 14)
 
 project (AVMtest)
 
-set(Boost_ADDITIONAL_VERSIONS "1.67" "1.67.0")
-find_package(Boost 1.60.0 REQUIRED)
+enable_testing()
+
+find_package(Boost 1.67 REQUIRED)
+
+#from https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+# Update submodules as needed
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Submodule update")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+endif()
+
+add_subdirectory(external/Catch2)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib/")
 
 file(GLOB KECCAK_SOURCES
   external/keccak/*.c
@@ -17,37 +38,7 @@ target_include_directories(variant INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/externa
 add_library(optional INTERFACE)
 target_include_directories(optional INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/optional-lite/include/)
 
+add_subdirectory(avm)
+add_subdirectory(app)
 
-set(LIB_HEADERS
-  bigint.hpp
-  cmachine.h
-  machine.hpp
-  code.hpp
-  datastack.hpp
-  value.hpp
-  pool.hpp
-  opcodes.hpp
-  tuple.hpp
-)
-
-set(LIB_SOURCES
-  cmachine.cpp
-  machine.cpp
-  code.cpp
-  value.cpp
-  pool.cpp
-  ${KECCAK_SOURCES}
-)
-
-
-add_library(libAVMtest STATIC ${LIB_HEADERS} ${LIB_SOURCES} )
-
-target_include_directories(libAVMtest PUBLIC
-  ${Boost_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/external
-)
-
-target_link_libraries(libAVMtest variant optional)
-
-add_executable(AVMtest main.cpp)
-target_link_libraries(AVMtest libAVMtest)
+add_subdirectory(tests)

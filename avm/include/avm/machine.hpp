@@ -22,7 +22,7 @@ struct Assertion {
     uint64_t stepCount;
 };
 
-class Machine {
+struct MachineState {
     std::vector<instr> code;
     value staticVal;
     value registerVal;
@@ -34,14 +34,19 @@ class Machine {
     value inbox;
     std::unique_ptr<TuplePool> pool;
     
-    void runInstruction(instr instruction);
+    MachineState();
+    MachineState(std::vector<instr> code);
+    MachineState(char *&srccode, char *&inboxdata);
+    
+    void runOp(OpCode opcode);
+};
 
+class Machine {
+    MachineState m;
 public:
-    Machine();
-    Machine(char *&srccode, char *&inboxdata);
+    Machine(char *&srccode, char *&inboxdata) : m(srccode, inboxdata) {}
     
     Assertion run(uint64_t stepCount);
-    void opcodeTests();
     int runOne();
 };
 instr deserialize_opcode(uint64_t pc, char *&bufptr, TuplePool &pool);

@@ -6,10 +6,10 @@
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
 
-#include "value.hpp"
-#include "pool.hpp"
-#include "util.hpp"
-#include "code.hpp"
+#include <avm/value.hpp>
+#include <avm/pool.hpp>
+#include <avm/util.hpp>
+#include <avm/code.hpp>
 
 #include <iostream>
 

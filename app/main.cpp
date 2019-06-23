@@ -30,12 +30,12 @@ int main(int argc, const char * argv[]) {
 #include <unistd.h>
 #include <chrono>
 
-#include "pool.hpp"
-#include "value.hpp"
-#include "datastack.hpp"
-#include "code.hpp"
-#include "machine.hpp"
-#include "cmachine.h"
+#include <avm/pool.hpp>
+#include <avm/value.hpp>
+#include <avm/datastack.hpp>
+#include <avm/code.hpp>
+#include <avm/machine.hpp>
+#include <avm/cmachine.h>
 
 //struct stk{
 //    value *stkdata;
@@ -338,7 +338,6 @@ int main(int argc, char *argv[])
 //    void *mach = machine_create("contract.ao", "inbox.dat");
 //    setupCode( code );
     //testing opcodes
-//    mach.opcodeTests();
 //    Assertion result = mach->run(stepCount);
     
     auto start = std::chrono::high_resolution_clock::now();
