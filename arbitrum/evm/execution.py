@@ -210,6 +210,7 @@ def send_erc20_interupt(vm):
     local_exec_state.set_val("type")(vm)
     os.add_send_to_queue(vm)
 
+
 def send_erc721_interupt(vm):
     _send_interupt(vm)
     vm.dup0()
@@ -456,7 +457,6 @@ def stop(vm):
 # [memory offset, memory length]
 @noreturn
 def revert(vm):
-    vm.debug()
     vm.dup1()
     vm.swap1()
     os.get_mem_segment(vm)
