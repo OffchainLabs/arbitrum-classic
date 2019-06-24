@@ -10,7 +10,8 @@
 /*.egg-info
 
 *.ao
-*.json
+compiled.json
 htmlcov
 .coverage
 build
+node_modules
