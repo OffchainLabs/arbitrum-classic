@@ -143,10 +143,10 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         run('docker-compose -f ./%s down -t 0' % DOCKER_COMPOSE_FILENAME,
             sudo=sudo_flag)
     # Kill and rm all docker containers and images created by any `arb-deploy`
-    ps = 'docker ps | grep "arb-validator\|arb-ethbridge" | awk "{ print $1 }"'
+    ps = "grep 'arb-validator\|arb-ethbridge' | awk '{ print $1 }'"
     if subprocess.check_output(sudo_cmd + ps, shell=True).decode("utf-8") != '':
-        run(sudo_cmd + 'docker kill $(' + sudo_cmd + ps + ')', shell=True)
-        run(sudo_cmd + 'docker rm $(' + sudo_cmd + ps + ')', shell=True)
+        run(sudo_cmd + 'docker kill $(' + sudo_cmd + 'docker ps | ' + ps + ')')
+        run(sudo_cmd + 'docker rm $(' + sudo_cmd + 'docker ps -a | ' + ps + ')')
 
     # number of wallets
     n_wallets = n_validators + 100
@@ -220,31 +220,28 @@ def install_dev_mode():
     symlink = ('rm -rf node_modules/%s && ln -sf ../' + DEPLOY_DIR +
         '/%s node_modules/%s')
     link = lambda x: symlink % (x, x, x)
-    run(link('arb-web3-provider'), shell=True)
-    run(link('arb-ethers-provider'), shell=True)
-    run(link('arb-truffle-provider'), shell=True)
+    run(link('arb-web3-provider'))
+    run(link('arb-ethers-provider'))
+    run(link('arb-truffle-provider'))
 
 # Create special Dockerfile for dev-mode if required
 def dockerfile_dev_mode(dev_flag, name):
     SUB = 'awk \'{ sub(/%s/, "%s") }1\' ' + ('%s/arb-validator/Dockerfile > ' +
         '%s/arb-validator/%s') % (DEPLOY_DIR, DEPLOY_DIR, name)
     if dev_flag or os.path.isdir(DEPLOY_DIR):
-        run(SUB % ('##DEV_', '##DEV_\\n'), shell=True)
+        run(SUB % ('##DEV_', '##DEV_\\n'))
         return name
     else:
         return 'Dockerfile'
 
 # Run commands in shell
-def run(command, shell=False, sudo=False):
+def run(command, sudo=False):
     BOLD='\033[1m'
     END='\033[0m'
     if sudo:
         command = 'sudo ' + command
     print(BOLD + '$ %s\n' % command + END)
-    if shell:
-        return os.system(command)
-    else:
-        return subprocess.call(command.split())
+    return os.system(command)
 
 ### ----------------------------------------------------------------------------
 ### Command line interface
