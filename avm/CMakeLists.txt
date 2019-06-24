@@ -19,10 +19,11 @@ set(LIB_HEADERS
 
 set(LIB_SOURCES
   src/cmachine.cpp
-  src/machine.cpp
   src/code.cpp
-  src/value.cpp
+  src/machine.cpp
   src/pool.cpp
+  src/value.cpp
+  
   ${KECCAK_SOURCES}
 )
 

@@ -26,6 +26,9 @@ endif()
 
 add_subdirectory(external/Catch2)
 
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory(external/json)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib/")
 
 file(GLOB KECCAK_SOURCES

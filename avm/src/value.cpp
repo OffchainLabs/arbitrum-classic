@@ -84,7 +84,12 @@ bool operator==(const CodePoint& val1, const CodePoint& val2) {
         return true;
 }
 
-std::vector<unsigned char> value_hash_raw(const value& value) {
+std::vector<unsigned char> value_hash_raw(const uint256_t& value);
+std::vector<unsigned char> value_hash_raw(const Tuple& tup);
+std::vector<unsigned char> value_hash_raw(const CodePoint& codePoint);
+
+
+std::vector<unsigned char> value_hash_raw_val(const value& value) {
     return mpark::visit([](const auto& val) { return value_hash_raw(val); },
                         value);
 }
@@ -107,14 +112,14 @@ std::vector<unsigned char> value_hash_raw(const Tuple& tup) {
     tupData[0] = TUPLE + tup.tuple_size();
     ++oit;
     for (int i = 0; i < tup.tuple_size(); i++) {
-        auto valHash = value_hash_raw(tup.get_element(i));
+        auto valHash = value_hash_raw_val(tup.get_element(i));
         std::copy(valHash.begin(), valHash.end(), oit);
         oit += 32;
     }
 
     std::vector<unsigned char> hashData;
     hashData.resize(32);
-    evm::Keccak_256(tupData.data(), 32, hashData.data());
+    evm::Keccak_256(tupData.data(), tupData.size(), hashData.data());
     return hashData;
 }
 
@@ -123,12 +128,8 @@ std::vector<unsigned char> value_hash_raw(const CodePoint&) {
 }
 
 uint256_t value_hash(const value& value) {
-    return mpark::visit(
-        [](const auto& val) {
-            auto raw = value_hash_raw(val);
-            return from_big_endian(raw.begin(), raw.end());
-        },
-        value);
+    auto raw = value_hash_raw_val(value);
+    return from_big_endian(raw.begin(), raw.end());
 }
 
 struct ValuePrinter {

@@ -1,0 +1,13 @@
+//
+//  config.hpp.in
+//  AVMtest
+//
+//  Created by Harry Kalodner on 6/23/19.
+//
+
+#ifndef config_hpp_in
+#define config_hpp_in
+
+const char *test_cases_path = "@TEST_CASES_PATH@";
+
+#endif /* config_hpp_in */

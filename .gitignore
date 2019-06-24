@@ -35,3 +35,4 @@ xcode
 release
 gcc9
 .DS_Store
+tests/config.hpp

@@ -49,4 +49,6 @@ CodePoint deserialize_codepoint(char*& srccode);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(char*& srccode, TuplePool& pool);
 
+uint256_t value_hash(const value& value);
+
 #endif /* value_h */
