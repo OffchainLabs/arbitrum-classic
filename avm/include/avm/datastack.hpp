@@ -15,43 +15,56 @@
 #include <vector>
 
 class datastack {
+    static constexpr int lazyCount = 100;
+
+    void addHash() const;
    public:
-    std::vector<value> basedatastack;
+    std::vector<value> values;
+    mutable std::vector<uint256_t> hashes;
     unsigned int size;
 
-    datastack() { basedatastack.reserve(1000); }
+    datastack() {
+        values.reserve(1000);
+        hashes.reserve(1000);
+    }
 
-    void push(value&& newdata) { basedatastack.push_back(std::move(newdata)); };
+    void push(value&& newdata) {
+        values.push_back(std::move(newdata));
+        if (values.size() > hashes.size() + lazyCount) {
+            addHash();
+        }
+    };
 
     value pop() {
-        auto stackEmpty = basedatastack.empty();
+        auto stackEmpty = values.empty();
         if (stackEmpty) {
             throw std::runtime_error("Stack is empty");
         }
 
-        auto val = std::move(basedatastack.back());
-        basedatastack.pop_back();
+        auto val = std::move(values.back());
+        values.pop_back();
+        if (hashes.size() > values.size()) {
+            hashes.pop_back();
+        }
         return val;
     }
 
     value& peek() {
-        if (basedatastack.size() == 0) {
+        if (values.size() == 0) {
             throw std::runtime_error("Stack is empty");
         }
 
-        return basedatastack.back();
+        return values.back();
     }
 
-    void popSet(value& val) {
-        if (basedatastack.size() == 0) {
-            throw std::runtime_error("Stack is empty");
+    uint64_t stacksize() { return values.size(); }
+    
+    uint256_t hash() const {
+        while(hashes.size() < values.size()) {
+            addHash();
         }
-
-        val = std::move(basedatastack.back());
-        basedatastack.pop_back();
+        return hashes.back();
     }
-
-    uint64_t stacksize() { return basedatastack.size(); }
 };
 
 #endif /* datastack_hpp */

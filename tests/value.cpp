@@ -36,7 +36,7 @@ TEST_CASE("Value hashing") {
             uint256_t givenHash = from_hex_str(valtest["hash"]);
             TuplePool pool;
             auto val = deserialize_value(valRaw, pool);
-            auto calcHash = value_hash(val);
+            auto calcHash = hash(val);
             REQUIRE(givenHash == calcHash);
         }
     }

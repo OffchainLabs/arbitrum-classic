@@ -13,6 +13,7 @@
 #include "opcodes.hpp"
 
 #include <mpark/variant.hpp>
+#include <nonstd/optional.hpp>
 
 class bad_tuple_index : public std::exception {
    public:
@@ -25,30 +26,26 @@ enum types { NUM, CODEPT, TUPLE = 3 };
 
 class TuplePool;
 class Tuple;
+struct Operation;
 struct CodePoint;
 
 // Note: uint256_t is actually 48 bytes long
-using value = mpark::variant<uint256_t, Tuple, CodePoint>;
+using value = mpark::variant<
+    Tuple,
+    uint256_t,
+    CodePoint
+>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 bool operator==(const CodePoint& val1, const CodePoint& val2);
 
-uint256_t value_hash(const value& value);
-
-struct CodePoint {
-    uint64_t pc;
-    OpCode op;
-    uint256_t nexthash;
-
-    CodePoint() {}
-    CodePoint(uint64_t pc_) : pc(pc_) {}
-};
+uint256_t hash(const value& value);
 
 uint256_t deserialize_int(char*& srccode);
-CodePoint deserialize_codepoint(char*& srccode);
+Operation deserializeOperation(char*& bufptr, TuplePool& pool);
+CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(char*& srccode, TuplePool& pool);
 
-uint256_t value_hash(const value& value);
 
 #endif /* value_h */

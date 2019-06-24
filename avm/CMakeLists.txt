@@ -7,7 +7,7 @@ project (avm LANGUAGES CXX)
 set(LIB_HEADERS
   include/avm/bigint.hpp
   include/avm/cmachine.h
-  include/avm/code.hpp
+  include/avm/codepoint.hpp
   include/avm/datastack.hpp
   include/avm/machine.hpp
   include/avm/opcodes.hpp
@@ -18,10 +18,13 @@ set(LIB_HEADERS
 )
 
 set(LIB_SOURCES
+  src/bigint.cpp
   src/cmachine.cpp
-  src/code.cpp
+  src/codepoint.cpp
+  src/datastack.cpp
   src/machine.cpp
   src/pool.cpp
+  src/tuple.cpp
   src/value.cpp
   
   ${KECCAK_SOURCES}

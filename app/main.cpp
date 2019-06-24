@@ -6,10 +6,13 @@
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
 
-#include <avm/cmachine.h>
+#include <avm/machine.hpp>
 
+#include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
+#include <sys/stat.h>
 
 // struct stk{
 //    value *stkdata;
@@ -295,9 +298,10 @@
 // Machine *read_files (std::string filename, std::string inboxfile);
 // int main() {
 int main(int argc, char* argv[]) {
+    using namespace std::chrono_literals;
     //    int state=EXTENSIVE;
     std::string filename;
-    std::string inbox_file;
+    std::string inboxfile;
     unsigned long long stepCount = 1000000;
     if (argc < 2) {
         std::cout << "Usage: AVMTest <ao file>" << std::endl;
@@ -306,28 +310,56 @@ int main(int argc, char* argv[]) {
     } else {
         filename = argv[1];
         if (argc == 3) {
-            inbox_file = argv[2];
+            inboxfile = argv[2];
         }
     }
-    std::cout << filename << " " << inbox_file << std::endl;
+    std::cout << filename << " " << inboxfile << std::endl;
     //    machine_create();
     //    oldread_file(filename, code, staticValue);
     //    Machine *mach = read_files(filename, inbox_file);
-    void* mach = machine_create(filename.c_str(), inbox_file.c_str());
-    //    void *mach = machine_create("contract.ao", "inbox.dat");
-    //    setupCode( code );
-    // testing opcodes
-    //    Assertion result = mach->run(stepCount);
-
+    
+    std::ifstream myfile;
+    
+    struct stat filestatus;
+    stat(filename.c_str(), &filestatus);
+    
+    char* buf = (char*)malloc(filestatus.st_size);
+    
+    myfile.open(filename, std::ios::in);
+    if (myfile.is_open()) {
+        myfile.read((char*)buf, filestatus.st_size);
+        myfile.close();
+    }
+    char* inbox = NULL;
+    std::cout << "In read_files. Done reading " << filename << std::endl;
+    if (!inboxfile.empty()) {
+        std::cout << "In read_files. reading - " << inboxfile << std::endl;
+        std::ifstream myfile;
+        
+        struct stat filestatus;
+        stat(inboxfile.c_str(), &filestatus);
+        
+        inbox = (char*)malloc(filestatus.st_size);
+        
+        myfile.open(inboxfile, std::ios::in);
+        if (myfile.is_open()) {
+            myfile.read((char*)inbox, filestatus.st_size);
+            myfile.close();
+        }
+    }
+    Machine *mach = new Machine(buf, inbox);
+    
+    
     auto start = std::chrono::high_resolution_clock::now();
 
-    uint64_t steps = machine_run(mach, stepCount);
+    Assertion assertion = mach->run(stepCount);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    std::cout << steps << " steps in " << elapsed.count() * 1000
+    std::cout << assertion.stepCount << " steps in " << elapsed.count() * 1000
               << " milliseconds" << std::endl;
     //    runMachine(code, state, 200);
-
-    exit(0);
+    std::cout << *mach;
+    std::this_thread::sleep_for(1s);
+    return 0;
 }

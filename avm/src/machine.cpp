@@ -7,12 +7,27 @@
 
 #include <avm/machine.hpp>
 
-#include <avm/code.hpp>
 #include <avm/opcodes.hpp>
 
 #include <keccak/KeccakHash.h>
 
 #include <iostream>
+
+namespace {
+    std::vector<CodePoint> opsToCodePoints(const std::vector<Operation> &ops) {
+        std::vector<CodePoint> cps;
+        cps.reserve(ops.size());
+        uint64_t pc = 0;
+        for (auto &op : ops) {
+            cps.emplace_back(pc, std::move(op), 0);
+            pc++;
+        }
+        for (uint64_t i = 0; i < cps.size() - 1; i++) {
+            cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
+        }
+        return cps;
+    }
+}
 
 class bad_pop_type : public std::exception {
    public:
@@ -27,6 +42,21 @@ class int_out_of_bounds : public std::exception {
         return "int_out_of_bounds";
     }
 };
+
+std::ostream& operator<<(std::ostream& os, const MachineState& val) {
+    os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
+    os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
+    os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";
+    os << "registerHash " << to_hex_str(hash(val.registerVal)) << "\n";
+    os << "staticHash " << to_hex_str(hash(val.staticVal)) << "\n";
+    os << "errHandlerHash " << to_hex_str(hash(val.errpc)) << "\n";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Machine& val) {
+    os << val.m;
+    return os;
+}
 
 uint256_t& assumeInt(value& val) {
     auto aNum = mpark::get_if<uint256_t>(&val);
@@ -51,26 +81,10 @@ Tuple& assumeTuple(value& val) {
     return *tup;
 }
 
-instr deserialize_opcode(uint64_t pc, char*& bufptr, TuplePool& pool) {
-    uint8_t immediateCount;
-    memcpy(&immediateCount, bufptr, sizeof(immediateCount));
-    bufptr += sizeof(immediateCount);
-
-    OpCode opcode;
-    memcpy(&opcode, bufptr, sizeof(opcode));
-    bufptr += sizeof(opcode);
-
-    if (immediateCount == 0x01) {
-        return instr(pc, opcode, 0, deserialize_value(bufptr, pool));
-    } else {
-        return instr(pc, opcode, 0);
-    }
-}
-
 MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
 
-MachineState::MachineState(std::vector<instr> code)
-    : code(std::move(code)), pool(std::make_unique<TuplePool>()) {}
+MachineState::MachineState(std::vector<CodePoint> code)
+    : pool(std::make_unique<TuplePool>()), code(std::move(code)) {}
 
 MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
     char* bufptr = srccode;
@@ -100,13 +114,17 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
     uint64_t codeCount;
     memcpy(&codeCount, bufptr, sizeof(codeCount));
     bufptr += sizeof(codeCount);
-    codeCount = __builtin_bswap64(codeCount);
+    codeCount = boost::endian::big_to_native(codeCount);
     code.reserve(codeCount);
     std::cout << "codeCount=" << codeCount << std::endl;
 
+    
+    std::vector<Operation> ops;
     for (uint64_t i = 0; i < codeCount; i++) {
-        code.push_back(deserialize_opcode(i, bufptr, *pool));
+        ops.emplace_back(deserializeOperation(bufptr, *pool));
     }
+    code = opsToCodePoints(ops);
+    
     std::cout << "code read" << std::endl;
     staticVal = deserialize_value(bufptr, *pool);
     std::cout << "static read" << std::endl;
@@ -117,6 +135,7 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
         std::cout << "inbox value=" << inbox << std::endl;
     }
 }
+
 Assertion Machine::run(uint64_t stepCount) {
     // testing opcodes
     //    std::cout << "starting machine code size=" << code.size() <<
@@ -172,15 +191,15 @@ int Machine::runOne() {
     }
     //    std::cout<<"pc="<<pc<<std::endl;
     auto& instruction = m.code[m.pc];
-    if (instruction.immediate) {
+    if (instruction.op.immediate) {
         //        std::cout<<"immediateVal = "<<*immediateVal<<std::endl;
-        auto imm = *instruction.immediate;
+        auto imm = *instruction.op.immediate;
         m.stack.push(std::move(imm));
     }
 
     try {
         //        std::cout<<"calling runInstruction"<<std::endl;
-        m.runOp(instruction.opcode);
+        m.runOp(instruction.op.opcode);
         //        std::cout<<"after runInstruction stack size=
         //        "<<stack.stacksize()<< std::endl; if (stack.stacksize()>0){
         //            std::cout<<"top="<<stack.peek()<< std::endl;
@@ -516,7 +535,7 @@ void MachineState::runOp(OpCode opcode) {
         /***********************/
         case OpCode::HASH: {
             value& val1 = stack.peek();
-            val1 = value_hash(val1);
+            val1 = hash(val1);
             break;
         }
 
@@ -538,10 +557,7 @@ void MachineState::runOp(OpCode opcode) {
             break;
         }
         case OpCode::RSET:
-            //            std::cout << "in RSET" << std::endl;
-            stack.popSet(registerVal);
-            //            std::cout << "register set " << registerVal <<
-            //            std::endl;
+            registerVal = stack.pop();
             break;
         case OpCode::JUMP: {
             auto jumpDest = stack.pop();
@@ -584,7 +600,7 @@ void MachineState::runOp(OpCode opcode) {
         }
         case OpCode::PCPUSH: {
             //            std::cout << "**** PCPUSH i=" << pc <<std::endl;
-            stack.push(CodePoint{pc});
+            stack.push(code[pc]);
             break;
         }
         case OpCode::AUXPUSH: {
