@@ -186,9 +186,8 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
     if dev_flag or os.path.isdir(DEPLOY_DIR):
         run('cd %s/arb-validator && go mod vendor' % DEPLOY_DIR)
 
-    # Build and stop if exit code is not zero
-    if run('docker-compose -f %s build' % compose, sudo=sudo_flag) != 0:
-        sys.exit(1)
+    # Build
+    run('docker-compose -f %s build' % compose, sudo=sudo_flag)
 
     # Run
     if not build_flag:
@@ -242,7 +241,8 @@ def run(command, sudo=False):
     if sudo:
         command = 'sudo ' + command
     print(BOLD + '$ %s\n' % command + END)
-    return os.system(command)
+    if os.system(command) != 0:
+        sys.exit(1)
 
 ### ----------------------------------------------------------------------------
 ### Command line interface
