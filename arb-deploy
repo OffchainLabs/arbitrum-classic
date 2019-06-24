@@ -145,8 +145,8 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
     # Kill and rm all docker containers and images created by any `arb-deploy`
     ps = 'docker ps | grep "arb-validator\|arb-ethbridge" | awk "{ print $1 }"'
     if subprocess.check_output(sudo_cmd + ps, shell=True).decode("utf-8") != '':
-        run(sudo_cmd + 'docker kill $(' + sudo_cmd + ps + ')')
-        run(sudo_cmd + 'docker rm $(' + sudo_cmd + ps + ')')
+        run(sudo_cmd + 'docker kill $(' + sudo_cmd + ps + ')', shell=True)
+        run(sudo_cmd + 'docker rm $(' + sudo_cmd + ps + ')', shell=True)
 
     # number of wallets
     n_wallets = n_validators + 100
