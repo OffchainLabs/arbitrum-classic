@@ -1,2 +1,5 @@
 .DS_Store
 .idea
+arb-avm
+dev-mode.Dockerfile
+vendor

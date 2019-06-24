@@ -4,3 +4,4 @@
 **/.gitignore
 **/.idea
 **/Dockerfile
+**/dev-mode.Dockerfile
