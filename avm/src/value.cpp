@@ -31,7 +31,7 @@ Operation deserializeOperation(char*& bufptr, TuplePool& pool) {
     OpCode opcode;
     memcpy(&opcode, bufptr, sizeof(opcode));
     bufptr += sizeof(opcode);
-    
+
     if (immediateCount == 1) {
         return {opcode, deserialize_value(bufptr, pool)};
     } else {
@@ -86,20 +86,19 @@ bool operator==(const CodePoint& val1, const CodePoint& val2) {
         return true;
 }
 
-
 uint256_t hash(const value& value) {
     return mpark::visit([](const auto& val) { return hash(val); }, value);
 }
 
 std::ostream& operator<<(std::ostream& os, const Operation& val) {
     if (val.immediate) {
-        os << "Immediate(" << InstructionNames.at(val.opcode) << ", " << *val.immediate << ")";
+        os << "Immediate(" << InstructionNames.at(val.opcode) << ", "
+           << *val.immediate << ")";
     } else {
         os << "Basic(" << InstructionNames.at(val.opcode) << ")";
     }
     return os;
 }
-
 
 struct ValuePrinter {
     std::ostream& os;
@@ -122,7 +121,8 @@ struct ValuePrinter {
 
     std::ostream& operator()(const CodePoint& val) {
         //        std::printf("in CodePoint ostream operator\n");
-        os << "CodePoint(" << val.pc << ", " << val.op << ", " << to_hex_str(val.nextHash) << ")";
+        os << "CodePoint(" << val.pc << ", " << val.op << ", "
+           << to_hex_str(val.nextHash) << ")";
         return os;
     }
 };

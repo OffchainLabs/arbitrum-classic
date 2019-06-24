@@ -41,7 +41,7 @@ struct MachineState {
 
 class Machine {
     MachineState m;
-    
+
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
    public:

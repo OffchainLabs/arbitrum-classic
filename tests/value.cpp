@@ -7,8 +7,8 @@
 
 #include "config.hpp"
 
-#include <avm/value.hpp>
 #include <avm/tuple.hpp>
+#include <avm/value.hpp>
 
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>
@@ -18,7 +18,7 @@
 #include <fstream>
 #include <iostream>
 
-std::vector<char> hexStringToBytes(const std::string &hexstr) {
+std::vector<char> hexStringToBytes(const std::string& hexstr) {
     std::vector<char> bytes;
     bytes.reserve(hexstr.size() / 2);
     boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
@@ -30,8 +30,9 @@ TEST_CASE("Value hashing") {
     nlohmann::json j;
     i >> j;
     for (auto valtest : j) {
-        DYNAMIC_SECTION( "Test " << valtest["name"]) {
-            auto valBytes = hexStringToBytes(valtest["value"].get<std::string>());
+        DYNAMIC_SECTION("Test " << valtest["name"]) {
+            auto valBytes =
+                hexStringToBytes(valtest["value"].get<std::string>());
             auto valRaw = valBytes.data();
             uint256_t givenHash = from_hex_str(valtest["hash"]);
             TuplePool pool;
@@ -40,8 +41,9 @@ TEST_CASE("Value hashing") {
             REQUIRE(givenHash == calcHash);
         }
     }
-    
-//    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 1, OpCode::SUB); }
-//
-//    SECTION("Overlow is correct") { testBinaryOp(3, 4, -1, OpCode::SUB); }
+
+    //    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 1,
+    //    OpCode::SUB); }
+    //
+    //    SECTION("Overlow is correct") { testBinaryOp(3, 4, -1, OpCode::SUB); }
 }

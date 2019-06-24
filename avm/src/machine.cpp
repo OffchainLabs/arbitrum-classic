@@ -14,20 +14,20 @@
 #include <iostream>
 
 namespace {
-    std::vector<CodePoint> opsToCodePoints(const std::vector<Operation> &ops) {
-        std::vector<CodePoint> cps;
-        cps.reserve(ops.size());
-        uint64_t pc = 0;
-        for (auto &op : ops) {
-            cps.emplace_back(pc, std::move(op), 0);
-            pc++;
-        }
-        for (uint64_t i = 0; i < cps.size() - 1; i++) {
-            cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
-        }
-        return cps;
+std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
+    std::vector<CodePoint> cps;
+    cps.reserve(ops.size());
+    uint64_t pc = 0;
+    for (auto& op : ops) {
+        cps.emplace_back(pc, std::move(op), 0);
+        pc++;
     }
+    for (uint64_t i = 0; i < cps.size() - 1; i++) {
+        cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
+    }
+    return cps;
 }
+}  // namespace
 
 class bad_pop_type : public std::exception {
    public:
@@ -118,13 +118,12 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
     code.reserve(codeCount);
     std::cout << "codeCount=" << codeCount << std::endl;
 
-    
     std::vector<Operation> ops;
     for (uint64_t i = 0; i < codeCount; i++) {
         ops.emplace_back(deserializeOperation(bufptr, *pool));
     }
     code = opsToCodePoints(ops);
-    
+
     std::cout << "code read" << std::endl;
     staticVal = deserialize_value(bufptr, *pool);
     std::cout << "static read" << std::endl;

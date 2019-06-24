@@ -8,11 +8,11 @@
 
 #include <avm/machine.hpp>
 
+#include <sys/stat.h>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
-#include <sys/stat.h>
 
 // struct stk{
 //    value *stkdata;
@@ -317,14 +317,14 @@ int main(int argc, char* argv[]) {
     //    machine_create();
     //    oldread_file(filename, code, staticValue);
     //    Machine *mach = read_files(filename, inbox_file);
-    
+
     std::ifstream myfile;
-    
+
     struct stat filestatus;
     stat(filename.c_str(), &filestatus);
-    
+
     char* buf = (char*)malloc(filestatus.st_size);
-    
+
     myfile.open(filename, std::ios::in);
     if (myfile.is_open()) {
         myfile.read((char*)buf, filestatus.st_size);
@@ -335,21 +335,20 @@ int main(int argc, char* argv[]) {
     if (!inboxfile.empty()) {
         std::cout << "In read_files. reading - " << inboxfile << std::endl;
         std::ifstream myfile;
-        
+
         struct stat filestatus;
         stat(inboxfile.c_str(), &filestatus);
-        
+
         inbox = (char*)malloc(filestatus.st_size);
-        
+
         myfile.open(inboxfile, std::ios::in);
         if (myfile.is_open()) {
             myfile.read((char*)inbox, filestatus.st_size);
             myfile.close();
         }
     }
-    Machine *mach = new Machine(buf, inbox);
-    
-    
+    Machine* mach = new Machine(buf, inbox);
+
     auto start = std::chrono::high_resolution_clock::now();
 
     Assertion assertion = mach->run(stepCount);

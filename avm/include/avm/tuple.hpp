@@ -8,9 +8,9 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
+#include "codepoint.hpp"
 #include "pool.hpp"
 #include "value.hpp"
-#include "codepoint.hpp"
 
 #include <boost/smart_ptr/local_shared_ptr.hpp>
 
@@ -19,16 +19,16 @@ class Tuple {
     TuplePool* tuplePool;
     boost::local_shared_ptr<std::vector<value>> tpl;
     mutable uint256_t cachedHash;
-    
-    friend uint256_t hash(const Tuple &);
-    
+
+    friend uint256_t hash(const Tuple&);
+
     uint256_t calculateHash() const;
 
    public:
     Tuple() {}
     Tuple(int size_, TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(size_)) {}
-    
+
     ~Tuple() {
         if (tpl.local_use_count() == 1) {
             tuplePool->returnResource(std::move(tpl));
@@ -66,7 +66,7 @@ class Tuple {
     }
 };
 
-inline uint256_t hash(const Tuple &tup) {
+inline uint256_t hash(const Tuple& tup) {
     if (!tup.cachedHash) {
         tup.cachedHash = tup.calculateHash();
     }

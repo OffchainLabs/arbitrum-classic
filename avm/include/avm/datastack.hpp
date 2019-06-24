@@ -18,6 +18,7 @@ class datastack {
     static constexpr int lazyCount = 100;
 
     void addHash() const;
+
    public:
     std::vector<value> values;
     mutable std::vector<uint256_t> hashes;
@@ -58,9 +59,9 @@ class datastack {
     }
 
     uint64_t stacksize() { return values.size(); }
-    
+
     uint256_t hash() const {
-        while(hashes.size() < values.size()) {
+        while (hashes.size() < values.size()) {
             addHash();
         }
         return hashes.back();

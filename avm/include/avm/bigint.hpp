@@ -68,4 +68,4 @@ inline auto power(uint256_t b, uint64_t e) {
     return boost::multiprecision::pow(b, static_cast<unsigned int>(e));
 }
 
-uint256_t hash(const uint256_t &val);
+uint256_t hash(const uint256_t& val);

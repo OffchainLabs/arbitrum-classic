@@ -30,11 +30,7 @@ struct Operation;
 struct CodePoint;
 
 // Note: uint256_t is actually 48 bytes long
-using value = mpark::variant<
-    Tuple,
-    uint256_t,
-    CodePoint
->;
+using value = mpark::variant<Tuple, uint256_t, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 bool operator==(const CodePoint& val1, const CodePoint& val2);
@@ -46,6 +42,5 @@ Operation deserializeOperation(char*& bufptr, TuplePool& pool);
 CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(char*& srccode, TuplePool& pool);
-
 
 #endif /* value_h */
