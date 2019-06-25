@@ -1,8 +1,8 @@
-node_modules
-validator-states
+*.ao
 .DS_Store
 arb-docker-compose.yml
 build
-compose
-*.ao
 compiled.json
+compose
+node_modules
+validator-states
