@@ -231,15 +231,23 @@ def install_dev_mode():
     add_commit_hook(DEPLOY_DIR + '/arb-validator')
     add_commit_hook(DEPLOY_DIR + '/arb-avm')
     # Link providers locally
-    run(GC % ('arb-web3-provider', 'arb-web3-provider'))
-    run(GC % ('arb-ethers-provider', 'arb-ethers-provider'))
     run(GC % ('arb-truffle-provider', 'arb-truffle-provider'))
+    run(GC % ('arb-ethers-provider', 'arb-ethers-provider'))
+    run(GC % ('arb-web3-provider', 'arb-web3-provider'))
+    run('yarn --cwd ' + DEPLOY_DIR + '/arb-truffle-provider')
+    run('yarn --cwd ' + DEPLOY_DIR + '/arb-ethers-provider')
+    run('yarn --cwd ' + DEPLOY_DIR + '/arb-web3-provider')
+    # symlink ethers into web3
+    run('rm -rf ' + DEPLOY_DIR + '/arb-web3-provider/node_modules/' +
+        'arb-ethers-provider && ln -sf ../../arb-ethers-provider ' + DEPLOY_DIR +
+        '/arb-web3-provider/node_modules/arb-ethers-provider')
+    # symlink providers into project
     symlink = ('rm -rf node_modules/%s && ln -sf ../' + DEPLOY_DIR +
         '/%s node_modules/%s')
     link = lambda x: symlink % (x, x, x)
-    run(link('arb-web3-provider'))
-    run(link('arb-ethers-provider'))
     run(link('arb-truffle-provider'))
+    run(link('arb-ethers-provider'))
+    run(link('arb-web3-provider'))
 
 # Create special Dockerfile for dev-mode if required
 def dockerfile_dev_mode(dev_flag, name):
