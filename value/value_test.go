@@ -45,7 +45,7 @@ func TestTupleHash(t *testing.T) {
 			}
 
 			if !bytes.Equal(valHash[:], hashBytes) {
-				t.Error("Calculated wrong hash value")
+				t.Errorf("Calculated wrong hash value: %v, expected hash value is: %v", hexutil.Encode(valHash[:]), hexutil.Encode(hashBytes[:]))
 			}
 		})
 	}
