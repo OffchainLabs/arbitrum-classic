@@ -103,6 +103,7 @@ def merge(vm):
     # parent_frame current_frame
     vm.swap1()
     vm.pop()
+    # parent_frame
 
 # update:
 #   contractID

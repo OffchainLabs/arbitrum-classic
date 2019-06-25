@@ -28,6 +28,7 @@ def _get_call_location(vm, dispatch_func):
     vm.tnewn(0)
     vm.eq()
     vm.ifelse(lambda vm: vm.error())
+    # call_location
 
 @noreturn
 def _perform_call(vm, call_num):
@@ -142,6 +143,7 @@ def call(vm, dispatch_func, call_num, contract_id):
 
 @modifies_stack([value.IntType(), value.TupleType([value.IntType()]*7)], [value.IntType()])
 def _mutable_call_ret(vm):
+    # ret_type calltup
     translate_ret_type(vm)
     # return_val calltup
     vm.ifelse(lambda vm: [
@@ -199,6 +201,7 @@ def _inner_call(vm, dispatch_func, call_num, contract_id):
     _perform_call(vm, call_num)
     _mutable_call_ret(vm)
 
+
 # [gas, dest, value, arg offset, arg length, ret offset, ret length]
 @noreturn
 def callcode(vm, dispatch_func, call_num, contract_id):
@@ -226,7 +229,8 @@ def callcode(vm, dispatch_func, call_num, contract_id):
     _perform_call(vm, call_num)
     _mutable_call_ret(vm)
 
-# [[gas, dest, arg offset, arg length, ret offset, ret length]]
+
+# [gas, dest, arg offset, arg length, ret offset, ret length]
 @noreturn
 def delegatecall(vm, dispatch_func, call_num, contract_id):
     os.message_value(vm)
@@ -282,11 +286,7 @@ def staticcall(vm, dispatch_func, call_num, contract_id):
     vm.tsetn(1)  # update the sender to this contract
     vm.swap1()
     # contractId msg calltup
-    os.get_call_frame(vm)
-    call_frame.save_state(vm)
-    os.get_chain_state(vm)
-    os.chain_state.set_val("call_frame")(vm)
-    os.set_chain_state(vm)
+    _save_call_frame(vm)
 
     # contractId msg calltup
     vm.dup0()
