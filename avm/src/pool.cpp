@@ -28,7 +28,7 @@ boost::local_shared_ptr<std::vector<value>> TuplePool::getResource(int s) {
         auto newTup = boost::make_local_shared<std::vector<value>>();
         newTup->reserve(s);
         for (int i = 0; i < s; i++) {
-            newTup->push_back(Tuple(0, this));
+            newTup->push_back(Tuple{});
         }
         return newTup;
     } else {
@@ -37,7 +37,7 @@ boost::local_shared_ptr<std::vector<value>> TuplePool::getResource(int s) {
         resources[s].pop_back();
         resource->clear();
         for (int i = 0; i < s; i++) {
-            resource->push_back(Tuple(0, this));
+            resource->push_back(Tuple{});
         }
         return resource;
     }

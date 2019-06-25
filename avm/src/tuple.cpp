@@ -28,3 +28,15 @@ uint256_t Tuple::calculateHash() const {
     evm::Keccak_256(tupData.data(), 1 + 32 * tuple_size(), hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
 }
+
+std::ostream& operator<<(std::ostream& os, const Tuple& val) {
+    os << "Tuple(";
+    for (int i = 0; i < val.tuple_size(); i++) {
+        std::cout << val.get_element(i);
+        if (i < val.tuple_size() - 1) {
+            os << ", ";
+        }
+    }
+    os << ")";
+    return os;
+}

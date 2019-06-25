@@ -33,3 +33,25 @@ void datastack::addHash() const {
     evm::Keccak_256(tupData.data(), 1 + 32 * 2, hashData.data());
     hashes.emplace_back(from_big_endian(hashData.begin(), hashData.end()));
 }
+
+uint256_t datastack::hash() const {
+    if (values.empty()) {
+        return ::hash(Tuple());
+    }
+    while (hashes.size() < values.size()) {
+        addHash();
+    }
+    return hashes.back();
+}
+
+std::ostream& operator<<(std::ostream& os, const datastack& val) {
+    os << "[";
+    for (uint64_t i = 0; i < val.values.size(); i++) {
+        os << val.values[val.values.size() - 1 - i];
+        if (i < val.values.size() - 1) {
+            os << ", ";
+        }
+    }
+    os << "]";
+    return os;
+}

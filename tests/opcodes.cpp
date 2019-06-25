@@ -23,6 +23,7 @@ void testBinaryOp(uint256_t arg1, uint256_t arg2, uint256_t result, OpCode op) {
     auto num = mpark::get_if<uint256_t>(&res);
     REQUIRE(num);
     REQUIRE(*num == result);
+    REQUIRE(m.stack.stacksize() == 0);
 }
 
 TEST_CASE("SUB opcode is correct") {
@@ -55,3 +56,28 @@ TEST_CASE("SMOD opcode is correct") {
         testBinaryOp(-8, -3, -2, OpCode::SMOD);
     }
 }
+
+TEST_CASE("TSET opcode is correct") {
+    SECTION("2 tup") {
+        MachineState m;
+        m.stack.push(3);
+        m.stack.push(Tuple{1, 2, m.pool.get()});
+        m.stack.push(1);
+        m.runOp(OpCode::TSET);
+        value res = m.stack.pop();
+        REQUIRE(res == value{Tuple{1, 3, m.pool.get()}});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+    
+    SECTION("8 tup") {
+        MachineState m;
+        m.stack.push(3);
+        m.stack.push(Tuple{9, 9, 9, 9, 9, 9, 9, 9, m.pool.get()});
+        m.stack.push(7);
+        m.runOp(OpCode::TSET);
+        value res = m.stack.pop();
+        REQUIRE(res == value{Tuple{9, 9, 9, 9, 9, 9, 9, 3, m.pool.get()}});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+

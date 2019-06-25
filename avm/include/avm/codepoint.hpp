@@ -37,4 +37,6 @@ struct CodePoint {
 
 uint256_t hash(const CodePoint& cp);
 
+std::ostream& operator<<(std::ostream& os, const Operation& val);
+
 #endif /* codepoint_h */

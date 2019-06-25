@@ -351,14 +351,14 @@ int main(int argc, char* argv[]) {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    Assertion assertion = mach->run(stepCount);
+    Assertion assertion = mach->run(267289);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     std::cout << assertion.stepCount << " steps in " << elapsed.count() * 1000
               << " milliseconds" << std::endl;
     //    runMachine(code, state, 200);
-    std::cout << *mach;
+    std::cout << to_hex_str(mach->hash()) << "\n" << *mach << std::endl;
     std::this_thread::sleep_for(1s);
     return 0;
 }

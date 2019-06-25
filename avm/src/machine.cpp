@@ -8,8 +8,7 @@
 #include <avm/machine.hpp>
 
 #include <avm/opcodes.hpp>
-
-#include <keccak/KeccakHash.h>
+#include <avm/util.hpp>
 
 #include <iostream>
 
@@ -42,6 +41,63 @@ class int_out_of_bounds : public std::exception {
         return "int_out_of_bounds";
     }
 };
+
+uint256_t MachineState::hash() const {
+    std::array<unsigned char, 32*6> data;
+    auto oit = data.begin();
+    {
+        auto val = ::hash(code[pc]);
+        std::array<uint64_t, 4> hashInts;
+        to_big_endian(val, hashInts.begin());
+        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
+                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
+        oit += 32;
+    }
+    {
+        auto val = stack.hash();
+        std::array<uint64_t, 4> hashInts;
+        to_big_endian(val, hashInts.begin());
+        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
+                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
+        oit += 32;
+    }
+    {
+        auto val = auxstack.hash();
+        std::array<uint64_t, 4> hashInts;
+        to_big_endian(val, hashInts.begin());
+        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
+                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
+        oit += 32;
+    }
+    {
+        auto val = ::hash(registerVal);
+        std::array<uint64_t, 4> hashInts;
+        to_big_endian(val, hashInts.begin());
+        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
+                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
+        oit += 32;
+    }
+    {
+        auto val = ::hash(staticVal);
+        std::array<uint64_t, 4> hashInts;
+        to_big_endian(val, hashInts.begin());
+        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
+                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
+        oit += 32;
+    }
+    {
+        auto val = ::hash(errpc);
+        std::array<uint64_t, 4> hashInts;
+        to_big_endian(val, hashInts.begin());
+        std::copy(reinterpret_cast<unsigned char*>(hashInts.data()),
+                  reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
+        oit += 32;
+    }
+    
+    std::array<unsigned char, 32> hashData;
+    evm::Keccak_256(data.data(), 32 * 6, hashData.data());
+    return from_big_endian(hashData.begin(), hashData.end());
+}
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
@@ -108,7 +164,7 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
         extentionId = __builtin_bswap32(extentionId);
         bufptr += sizeof(extentionId);
         if (extentionId > 0) {
-            std::cout << "found exetention" << std::endl;
+            std::cout << "found extention" << std::endl;
         }
     }
     uint64_t codeCount;
@@ -116,7 +172,6 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
     bufptr += sizeof(codeCount);
     codeCount = boost::endian::big_to_native(codeCount);
     code.reserve(codeCount);
-    std::cout << "codeCount=" << codeCount << std::endl;
 
     std::vector<Operation> ops;
     for (uint64_t i = 0; i < codeCount; i++) {
@@ -124,14 +179,10 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
     }
     code = opsToCodePoints(ops);
 
-    std::cout << "code read" << std::endl;
     staticVal = deserialize_value(bufptr, *pool);
-    std::cout << "static read" << std::endl;
     pc = 0;
     if (inboxbuf) {
-        std::cout << "reading inbox" << std::endl;
         inbox = deserialize_value(inboxbuf, *pool);
-        std::cout << "inbox value=" << inbox << std::endl;
     }
 }
 
@@ -171,6 +222,8 @@ Assertion Machine::run(uint64_t stepCount) {
 }
 
 int Machine::runOne() {
+//    std::cout << to_hex_str(hash()) << " " << m.code[m.pc].op << std::endl;
+//    std::cout << *this << std::endl;
     //    std::cout<<"in runOne"<<std::endl;
     if (m.state == ERROR) {
         // set error return
@@ -187,6 +240,10 @@ int Machine::runOne() {
             std::cout << A << std::endl;
         }
         return -2;
+    }
+    
+    if (m.state == BLOCKED) {
+        return -1;
     }
     //    std::cout<<"pc="<<pc<<std::endl;
     auto& instruction = m.code[m.pc];
@@ -233,24 +290,25 @@ void MachineState::runOp(OpCode opcode) {
         /**************************/
         /*  Arithmetic Operations */
         /**************************/
-        case OpCode::HALT:
+        case OpCode::HALT: {
             std::cout << "Hit halt opcode at instruction " << pc << "\n";
             state = HALTED;
             break;
+        }
         case OpCode::ADD: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            bNum += aNum;
+            stack.push(aNum + bNum);
             break;
         }
         case OpCode::MUL: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            bNum *= aNum;
+            stack.push(aNum * bNum);
             break;
         }
         case OpCode::SUB: {
@@ -258,9 +316,7 @@ void MachineState::runOp(OpCode opcode) {
             value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            uint256_t ret;
-            ret = aNum - bNum;
-            stack.push(std::move(ret));
+            stack.push(aNum - bNum);
             break;
         }
         case OpCode::DIV: {
@@ -268,14 +324,11 @@ void MachineState::runOp(OpCode opcode) {
             value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            uint256_t ret;
             if (bNum == 0) {
-                ret = 0;
                 state = ERROR;
             } else {
-                ret = aNum / bNum;
+                stack.push(aNum / bNum);
             }
-            stack.push(std::move(ret));
             break;
         }
         case OpCode::SDIV: {
@@ -288,7 +341,7 @@ void MachineState::runOp(OpCode opcode) {
             if (bNum == 0) {
                 state = ERROR;
             } else if (aNum == min && bNum == -1) {
-                bNum = aNum;
+                stack.push(aNum);
             } else {
                 const auto signA = get_sign(aNum);
                 const auto signB = get_sign(bNum);
@@ -296,21 +349,19 @@ void MachineState::runOp(OpCode opcode) {
                     aNum = 0 - aNum;
                 if (signB == -1)
                     bNum = 0 - bNum;
-
-                bNum = (aNum / bNum) * signA * signB;
+                stack.push((aNum / bNum) * signA * signB);
             }
-            stack.push(std::move(bNum));
             break;
         }
         case OpCode::MOD: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
             if (bNum != 0) {
-                bNum = aNum % bNum;
+                stack.push(aNum % bNum);
             } else {
-                bNum = 0;
+                state = ERROR;
             }
             break;
         }
@@ -329,56 +380,51 @@ void MachineState::runOp(OpCode opcode) {
                     aNum = 0 - aNum;
                 if (signB == -1)
                     bNum = 0 - bNum;
-
-                bNum = (aNum % bNum) * signA;
+                stack.push((aNum % bNum) * signA);
             }
-            stack.push(std::move(bNum));
             break;
         }
         case OpCode::ADDMOD: {
             value val1 = stack.pop();
             value val2 = stack.pop();
-            value& val3 = stack.peek();
+            value val3 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
             auto& cNum = assumeInt(val3);
 
             if (cNum == 0) {
-                cNum = 0;
+                state = ERROR;
             } else {
                 uint512_t aBig = aNum;
                 uint512_t bBig = bNum;
-
-                cNum = static_cast<uint256_t>((aBig + bBig) % cNum);
+                stack.push(static_cast<uint256_t>((aBig + bBig) % cNum));
             }
             break;
         }
         case OpCode::MULMOD: {
             value val1 = stack.pop();
             value val2 = stack.pop();
-            value& val3 = stack.peek();
+            value val3 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
             auto& cNum = assumeInt(val3);
 
             if (cNum == 0) {
-                cNum = 0;
+                state = ERROR;
             } else {
                 uint512_t aBig = aNum;
                 uint512_t bBig = bNum;
-
-                cNum = static_cast<uint256_t>((aBig * bBig) % cNum);
+                stack.push(static_cast<uint256_t>((aBig * bBig) % cNum));
             }
             break;
         }
         case OpCode::EXP: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
             uint64_t bSmall = assumeInt64(bNum);
-
-            bNum = power(aNum, bSmall);
+            stack.push(power(aNum, bSmall));
             break;
         }
         /******************************************/
@@ -386,62 +432,54 @@ void MachineState::runOp(OpCode opcode) {
         /******************************************/
         case OpCode::LT: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            bNum = (aNum < bNum) ? 1 : 0;
+            stack.push((aNum < bNum) ? 1 : 0);
             break;
         }
         case OpCode::GT: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            bNum = (aNum > bNum) ? 1 : 0;
+            stack.push((aNum > bNum) ? 1 : 0);
             break;
         }
         case OpCode::SLT: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
             if (aNum == bNum) {
-                bNum = 0;
+                stack.push(0);
             } else {
                 uint8_t signA = aNum.sign();
                 uint8_t signB = bNum.sign();
 
                 if (signA != signB) {
-                    if (signA == 1) {
-                        bNum = 1;
-                    } else {
-                        bNum = 0;
-                    }
+                    stack.push(signA == 1 ? 1 : 0);
                 } else {
-                    bNum = (aNum < bNum) ? 1 : 0;
+                    stack.push(aNum < bNum ? 1 : 0);
                 }
             }
             break;
         }
         case OpCode::SGT: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
             if (aNum == bNum) {
-                bNum = 0;
+                stack.push(0);
             } else {
                 uint8_t signA = aNum.sign();
                 uint8_t signB = bNum.sign();
 
                 if (signA != signB) {
-                    if (signA == 1) {
-                        bNum = 0;
-                    } else {
-                        bNum = 1;
-                    }
+                    stack.push(signA == 1 ? 0 : 1);
                 } else {
-                    bNum = (aNum > bNum) ? 1 : 0;
+                    stack.push(aNum > bNum ? 1 : 0);
                 }
             }
             break;
@@ -449,67 +487,57 @@ void MachineState::runOp(OpCode opcode) {
         case OpCode::EQ: {
             value val1 = stack.pop();
             value val2 = stack.pop();
-            uint256_t ret;
-            if (val1 == val2) {
-                ret = 1;
-            } else {
-                ret = 0;
-            }
-            //            std::cout << "in eq val1="<<val1<<" val2="<<val2<<"
-            //            ret="<<ret <<std::endl;
-            stack.push(std::move(ret));
+            stack.push(val1 == val2 ? 1 : 0);
             break;
         }
         case OpCode::ISZERO: {
-            value& val1 = stack.peek();
+            value val1 = stack.pop();
             auto& aNum = assumeInt(val1);
-            aNum = (aNum == 0) ? 1 : 0;
+            stack.push((aNum == 0) ? 1 : 0);
             break;
         }
         case OpCode::BITWISE_AND: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            bNum &= aNum;
+            stack.push(aNum & bNum);
             break;
         }
         case OpCode::BITWISE_OR: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            //            std::cout << "in or aNum="<<aNum<<" bNum="<<bNum
-            //            <<std::endl;
-            bNum |= aNum;
+            stack.push(aNum | bNum);
             break;
         }
         case OpCode::BITWISE_XOR: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
-            bNum ^= aNum;
+            stack.push(aNum ^ bNum);
             break;
         }
         case OpCode::BITWISE_NOT: {
-            value& val1 = stack.peek();
+            value val1 = stack.pop();
             auto& aNum = assumeInt(val1);
-            aNum = ~aNum;
+            stack.push(~aNum);
             break;
         }
         case OpCode::BYTE: {
             value val1 = stack.pop();
-            value& val2 = stack.peek();
+            value val2 = stack.pop();
             auto& aNum = assumeInt(val1);
             auto& bNum = assumeInt(val2);
 
             if (aNum >= 32) {
-                bNum = 0;
+                stack.push(0);
             } else {
                 const auto shift = 256 - 8 - 8 * shrink<uint8_t>(aNum);
                 const auto mask = uint256_t(255) << shift;
-                bNum = (bNum & mask) >> shift;
+                stack.push((bNum & mask) >> shift);
             }
             break;
         }
@@ -533,18 +561,18 @@ void MachineState::runOp(OpCode opcode) {
         /*  Hashing Operations */
         /***********************/
         case OpCode::HASH: {
-            value& val1 = stack.peek();
-            val1 = hash(val1);
+            value val1 = stack.pop();
+            stack.push(::hash(val1));
             break;
         }
 
         /***********************************************/
         /*  Stack, Memory, Storage and Flow Operations */
         /***********************************************/
-        case OpCode::POP:
-            //            std::cout << "in Pop" <<std::endl;
+        case OpCode::POP: {
             stack.pop();
             break;
+        }
         case OpCode::SPUSH: {
             value copiedStatic = staticVal;
             stack.push(std::move(copiedStatic));
@@ -555,16 +583,16 @@ void MachineState::runOp(OpCode opcode) {
             stack.push(std::move(copiedRegister));
             break;
         }
-        case OpCode::RSET:
+        case OpCode::RSET: {
             registerVal = stack.pop();
             break;
+        }
         case OpCode::JUMP: {
             auto jumpDest = stack.pop();
             auto target = mpark::get_if<CodePoint>(&jumpDest);
             if (target) {
                 pc = target->pc;
                 shouldIncrement = false;
-                //                std::cout << "jumping to "<< pc <<std::endl;
             } else {
                 state = ERROR;
             }
@@ -588,17 +616,14 @@ void MachineState::runOp(OpCode opcode) {
             break;
         }
         case OpCode::STACKEMPTY: {
-            uint256_t ret;
             if (stack.stacksize() == 0) {
-                ret = 1;
+                stack.push(1);
             } else {
-                ret = 0;
+                stack.push(0);
             }
-            stack.push(std::move(ret));
             break;
         }
         case OpCode::PCPUSH: {
-            //            std::cout << "**** PCPUSH i=" << pc <<std::endl;
             stack.push(code[pc]);
             break;
         }
@@ -613,21 +638,20 @@ void MachineState::runOp(OpCode opcode) {
             break;
         }
         case OpCode::AUXSTACKEMPTY: {
-            uint256_t ret;
             if (auxstack.stacksize() == 0) {
-                ret = 1;
+                stack.push(1);
             } else {
-                ret = 0;
+                stack.push(0);
             }
-            stack.push(std::move(ret));
             break;
         }
-        case OpCode::NOP:
-            // nop
+        case OpCode::NOP: {
             break;
-        case OpCode::ERRPUSH:
-            stack.push(std::move(errpc));
+        }
+        case OpCode::ERRPUSH: {
+            stack.push(errpc);
             break;
+        }
         case OpCode::ERRSET: {
             value ret = stack.pop();
             auto codePointVal = mpark::get_if<CodePoint>(&ret);
@@ -642,24 +666,30 @@ void MachineState::runOp(OpCode opcode) {
             /*  Duplication and Exchange Operations */
             /****************************************/
         case OpCode::DUP0: {
-            value valA = stack.peek();
+            value valA = stack.pop();
+            value valACopy = valA;
             stack.push(std::move(valA));
+            stack.push(std::move(valACopy));
             break;
         }
         case OpCode::DUP1: {
             value valA = stack.pop();
-            value valB = stack.peek();
-            stack.push(std::move(valA));
+            value valB = stack.pop();
+            value valBCopy = valB;
             stack.push(std::move(valB));
+            stack.push(std::move(valA));
+            stack.push(std::move(valBCopy));
             break;
         }
         case OpCode::DUP2: {
             value valA = stack.pop();
             value valB = stack.pop();
-            value valC = stack.peek();
+            value valC = stack.pop();
+            value valCCopy = valC;
+            stack.push(std::move(valC));
             stack.push(std::move(valB));
             stack.push(std::move(valA));
-            stack.push(std::move(valC));
+            stack.push(std::move(valCCopy));
             break;
         }
         case OpCode::SWAP1: {
@@ -676,7 +706,6 @@ void MachineState::runOp(OpCode opcode) {
             stack.push(std::move(valA));
             stack.push(std::move(valB));
             stack.push(std::move(valC));
-
             break;
         }
             /*********************/
@@ -703,8 +732,7 @@ void MachineState::runOp(OpCode opcode) {
         case OpCode::TLEN: {
             auto tupVal = stack.pop();  // tuple
             auto& tup = assumeTuple(tupVal);
-            uint256_t size = tup.tuple_size();
-            stack.push(std::move(size));
+            stack.push(tup.tuple_size());
             break;
         }
             /***********************/
@@ -716,8 +744,6 @@ void MachineState::runOp(OpCode opcode) {
         }
         case OpCode::LOG: {
             value val = stack.pop();
-            //            std::cout << "log val=" << val << std::endl <<
-            //            std::endl;
             break;
         }
         case OpCode::DEBUG: {
@@ -748,13 +774,12 @@ void MachineState::runOp(OpCode opcode) {
             //            break;
         case OpCode::INBOX: {
             value val = stack.pop();
-            //            std::cout<<"In inbox. val="<<val<<"
-            //            inbox="<<inbox<<std::endl;
             if (inbox == val) {
-                state = HALTED;
-            } else {
-                stack.push(std::move(inbox));
+                state = BLOCKED;
+                shouldIncrement = false;
             }
+            value inboxCopy = inbox;
+            stack.push(std::move(inboxCopy));
             break;
         }
             //        case OpCode::ERROR:

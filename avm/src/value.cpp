@@ -52,7 +52,7 @@ CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool) {
 }
 
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool) {
-    Tuple tup(size, &pool);
+    Tuple tup(&pool, size);
     for (int i = 0; i < size; i++) {
         tup.set_element(i, deserialize_value(bufptr, pool));
     }
@@ -90,33 +90,15 @@ uint256_t hash(const value& value) {
     return mpark::visit([](const auto& val) { return hash(val); }, value);
 }
 
-std::ostream& operator<<(std::ostream& os, const Operation& val) {
-    if (val.immediate) {
-        os << "Immediate(" << InstructionNames.at(val.opcode) << ", "
-           << *val.immediate << ")";
-    } else {
-        os << "Basic(" << InstructionNames.at(val.opcode) << ")";
-    }
-    return os;
-}
-
 struct ValuePrinter {
     std::ostream& os;
 
     std::ostream& operator()(const Tuple& val) {
-        os << "tuple="
-           << " [";
-        for (int i = 0; i < val.tuple_size(); i++) {
-            std::cout << val.get_element(i)
-                      << ((i < val.tuple_size() - 1) ? "," : "");
-        }
-        std::cout << "]";
-        return os;
+        return os << val;
     }
 
     std::ostream& operator()(const uint256_t& val) {
-        os << "num=" << val;
-        return os;
+        return os << val;
     }
 
     std::ostream& operator()(const CodePoint& val) {

@@ -13,6 +13,7 @@
 #include "value.hpp"
 
 #include <vector>
+#include <iostream>
 
 class datastack {
     static constexpr int lazyCount = 100;
@@ -60,12 +61,9 @@ class datastack {
 
     uint64_t stacksize() { return values.size(); }
 
-    uint256_t hash() const {
-        while (hashes.size() < values.size()) {
-            addHash();
-        }
-        return hashes.back();
-    }
+    uint256_t hash() const;
 };
+
+std::ostream& operator<<(std::ostream& os, const datastack& val);
 
 #endif /* datastack_hpp */

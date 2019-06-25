@@ -63,3 +63,13 @@ uint256_t hash(const CodePoint& cp) {
         return from_big_endian(hashData.begin(), hashData.end());
     }
 }
+
+std::ostream& operator<<(std::ostream& os, const Operation& val) {
+    if (val.immediate) {
+        os << "Immediate(" << InstructionNames.at(val.opcode) << ", "
+        << *val.immediate << ")";
+    } else {
+        os << "Basic(" << InstructionNames.at(val.opcode) << ")";
+    }
+    return os;
+}

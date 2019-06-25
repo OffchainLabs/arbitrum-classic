@@ -14,7 +14,7 @@
 #include <map>
 #include <string>
 
-enum states { EXTENSIVE, HALTED, ERROR };
+enum states { EXTENSIVE, HALTED, ERROR, BLOCKED };
 
 enum class OpCode : uint8_t {
     ADD = 0x01,
@@ -48,7 +48,6 @@ enum class OpCode : uint8_t {
     SPUSH,  // 31
     RPUSH,  // 32
     RSET,   // 33
-    //    UNUSED, // place holder for old .ao opcodes
     JUMP,           // 34
     CJUMP,          // 35
     STACKEMPTY,     // 36
@@ -77,12 +76,13 @@ enum class OpCode : uint8_t {
     NBSEND,
     GETTIME,
     INBOX,
-    HALT = 0x00,
-    ERROR = 0x75,
-    DEBUG = 0x076
+    HALT,
+    ERROR,
+    DEBUG
 };
 
 const std::map<OpCode, std::string> InstructionNames = {
+    {static_cast<OpCode>(0), "unhandled opcode"},
     {OpCode::ADD, "add"},
     {OpCode::MUL, "mul"},
     {OpCode::SUB, "sub"},

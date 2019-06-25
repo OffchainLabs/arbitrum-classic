@@ -25,9 +25,78 @@ class Tuple {
     uint256_t calculateHash() const;
 
    public:
-    Tuple() {}
-    Tuple(int size_, TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(size_)) {}
+    Tuple() = default;
+
+    Tuple(TuplePool* pool, size_t size)
+    : tuplePool(pool), tpl(pool->getResource(size)) {}
+    
+    Tuple(value val, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(1)) {
+        tpl->at(0) = std::move(val);
+    }
+    
+    Tuple(value val1, value val2, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(2)) {
+        tpl->at(0) = std::move(val1);
+        tpl->at(1) = std::move(val2);
+    }
+    
+    Tuple(value val1, value val2, value val3, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(3)) {
+        tpl->at(0) = std::move(val1);
+        tpl->at(1) = std::move(val2);
+        tpl->at(2) = std::move(val3);
+    }
+    
+    Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(4)) {
+        tpl->at(0) = std::move(val1);
+        tpl->at(1) = std::move(val2);
+        tpl->at(2) = std::move(val3);
+        tpl->at(3) = std::move(val4);
+    }
+    
+    Tuple(value val1, value val2, value val3, value val4, value val5, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(5)) {
+        tpl->at(0) = std::move(val1);
+        tpl->at(1) = std::move(val2);
+        tpl->at(2) = std::move(val3);
+        tpl->at(3) = std::move(val4);
+        tpl->at(4) = std::move(val5);
+    }
+    
+    Tuple(value val1, value val2, value val3, value val4, value val5, value val6, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(6)) {
+        tpl->at(0) = std::move(val1);
+        tpl->at(1) = std::move(val2);
+        tpl->at(2) = std::move(val3);
+        tpl->at(3) = std::move(val4);
+        tpl->at(4) = std::move(val5);
+        tpl->at(5) = std::move(val6);
+    }
+    
+    Tuple(value val1, value val2, value val3, value val4, value val5, value val6, value val7, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(7)) {
+        tpl->at(0) = std::move(val1);
+        tpl->at(1) = std::move(val2);
+        tpl->at(2) = std::move(val3);
+        tpl->at(3) = std::move(val4);
+        tpl->at(4) = std::move(val5);
+        tpl->at(5) = std::move(val6);
+        tpl->at(6) = std::move(val7);
+    }
+    
+    Tuple(value val1, value val2, value val3, value val4, value val5, value val6, value val7, value val8, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(8)) {
+        tpl->at(0) = std::move(val1);
+        tpl->at(1) = std::move(val2);
+        tpl->at(2) = std::move(val3);
+        tpl->at(3) = std::move(val4);
+        tpl->at(4) = std::move(val5);
+        tpl->at(5) = std::move(val6);
+        tpl->at(6) = std::move(val7);
+        tpl->at(7) = std::move(val8);
+    }
 
     ~Tuple() {
         if (tpl.local_use_count() == 1) {
@@ -56,6 +125,7 @@ class Tuple {
             tpl = tmp;
         }
         (*tpl)[pos] = std::move(newval);
+        cachedHash = 0;
     }
 
     value get_element(int pos) const {
@@ -82,5 +152,7 @@ inline bool operator==(const Tuple& val1, const Tuple& val2) {
     }
     return true;
 }
+
+std::ostream& operator<<(std::ostream& os, const Tuple& val);
 
 #endif /* tuple_hpp */
