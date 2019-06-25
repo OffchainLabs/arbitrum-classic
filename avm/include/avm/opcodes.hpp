@@ -45,9 +45,9 @@ enum class OpCode : uint8_t {
     TYPE,
 
     POP = 0x30,
-    SPUSH,  // 31
-    RPUSH,  // 32
-    RSET,   // 33
+    SPUSH,          // 31
+    RPUSH,          // 32
+    RSET,           // 33
     JUMP,           // 34
     CJUMP,          // 35
     STACKEMPTY,     // 36

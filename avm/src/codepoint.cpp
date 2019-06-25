@@ -67,7 +67,7 @@ uint256_t hash(const CodePoint& cp) {
 std::ostream& operator<<(std::ostream& os, const Operation& val) {
     if (val.immediate) {
         os << "Immediate(" << InstructionNames.at(val.opcode) << ", "
-        << *val.immediate << ")";
+           << *val.immediate << ")";
     } else {
         os << "Basic(" << InstructionNames.at(val.opcode) << ")";
     }

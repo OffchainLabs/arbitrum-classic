@@ -68,7 +68,7 @@ TEST_CASE("TSET opcode is correct") {
         REQUIRE(res == value{Tuple{1, 3, m.pool.get()}});
         REQUIRE(m.stack.stacksize() == 0);
     }
-    
+
     SECTION("8 tup") {
         MachineState m;
         m.stack.push(3);
@@ -80,4 +80,3 @@ TEST_CASE("TSET opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
-

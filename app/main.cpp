@@ -351,7 +351,7 @@ int main(int argc, char* argv[]) {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    Assertion assertion = mach->run(267289);
+    Assertion assertion = mach->run(stepCount);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;

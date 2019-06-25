@@ -12,8 +12,8 @@
 #include "tuple.hpp"
 #include "value.hpp"
 
-#include <vector>
 #include <iostream>
+#include <vector>
 
 class datastack {
     static constexpr int lazyCount = 100;

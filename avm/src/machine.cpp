@@ -43,7 +43,7 @@ class int_out_of_bounds : public std::exception {
 };
 
 uint256_t MachineState::hash() const {
-    std::array<unsigned char, 32*6> data;
+    std::array<unsigned char, 32 * 6> data;
     auto oit = data.begin();
     {
         auto val = ::hash(code[pc]);
@@ -93,7 +93,7 @@ uint256_t MachineState::hash() const {
                   reinterpret_cast<unsigned char*>(hashInts.data()) + 32, oit);
         oit += 32;
     }
-    
+
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(data.data(), 32 * 6, hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
@@ -222,9 +222,9 @@ Assertion Machine::run(uint64_t stepCount) {
 }
 
 int Machine::runOne() {
-//    std::cout << to_hex_str(hash()) << " " << m.code[m.pc].op << std::endl;
-//    std::cout << *this << std::endl;
-    //    std::cout<<"in runOne"<<std::endl;
+    //    std::cout << to_hex_str(hash()) << " " << m.code[m.pc].op <<
+    //    std::endl; std::cout << *this << std::endl; std::cout<<"in
+    //    runOne"<<std::endl;
     if (m.state == ERROR) {
         // set error return
         std::cout << "error state" << std::endl;
@@ -241,7 +241,7 @@ int Machine::runOne() {
         }
         return -2;
     }
-    
+
     if (m.state == BLOCKED) {
         return -1;
     }

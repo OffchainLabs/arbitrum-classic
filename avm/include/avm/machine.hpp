@@ -50,9 +50,7 @@ class Machine {
 
     Assertion run(uint64_t stepCount);
     int runOne();
-    uint256_t hash() const {
-        return m.hash();
-    }
+    uint256_t hash() const { return m.hash(); }
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

@@ -93,13 +93,9 @@ uint256_t hash(const value& value) {
 struct ValuePrinter {
     std::ostream& os;
 
-    std::ostream& operator()(const Tuple& val) {
-        return os << val;
-    }
+    std::ostream& operator()(const Tuple& val) { return os << val; }
 
-    std::ostream& operator()(const uint256_t& val) {
-        return os << val;
-    }
+    std::ostream& operator()(const uint256_t& val) { return os << val; }
 
     std::ostream& operator()(const CodePoint& val) {
         //        std::printf("in CodePoint ostream operator\n");
