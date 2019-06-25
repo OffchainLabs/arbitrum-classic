@@ -25,5 +25,14 @@ setup(name='arbc-solidity',
       zip_safe=False,
       scripts=['bin/arbc-truffle-compile', 'bin/arbc-compile'],
       test_suite='nose.collector',
-      tests_require=['nose']
+      tests_require=['nose'],
+      python_requires='>=3.6',
+      install_requires=[
+          "eth-utils",
+          "eth-abi>=2.0.0b0",
+          "pyevmasm",
+          "web3>=5.0.0b1",
+          "py-solc-x",
+          "networkx"
+      ]
 )

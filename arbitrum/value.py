@@ -15,6 +15,8 @@
 import eth_utils
 import eth_abi
 
+from eth_abi.packed import encode_single_packed
+
 INT_TYPE_CODE = 0
 CODE_POINT_CODE = 1
 HASH_ONLY_CODE = 2
@@ -337,34 +339,34 @@ class AVMCodePoint:
 
 def value_hash(val):
     if isinstance(val, int):
-        return eth_utils.keccak(eth_abi.encode_single(
+        return eth_utils.keccak(encode_single_packed(
             '(uint256)',
             [val]
         ))
-        # return eth_utils.keccak(eth_abi.encode_single(
+        # return eth_utils.keccak(encode_single_packed(
         #     '(uint8,uint256)',
         #     [INT_TYPE_CODE, val]
         # ))
     if isinstance(val, Tuple):
-        return eth_utils.keccak(eth_abi.encode_single(
+        return eth_utils.keccak(encode_single_packed(
             '(uint8' + ',bytes32'*len(val) + ')',
-            [TUPLE_TYPE_CODE] + [value_hash(v) for v in val.val]
+            [TUPLE_TYPE_CODE + len(val)] + [value_hash(v) for v in val.val]
         ))
     if isinstance(val, AVMCodePoint):
         if hasattr(val.op, "op_code"):
-            return eth_utils.keccak(eth_abi.encode_single(
+            return eth_utils.keccak(encode_single_packed(
                 '(uint8,uint8,bytes32)',
-                [2, val.op.op_code, val.next_hash]
+                [CODE_POINT_CODE, val.op.op_code, val.next_hash]
             ))
         if isinstance(val.op, int):
-            return eth_utils.keccak(eth_abi.encode_single(
+            return eth_utils.keccak(encode_single_packed(
                 '(uint8,uint8,bytes32)',
-                [2, val.op, val.next_hash]
+                [CODE_POINT_CODE, val.op, val.next_hash]
             ))
         if hasattr(val.op, "val"):
-            return eth_utils.keccak(eth_abi.encode_single(
+            return eth_utils.keccak(encode_single_packed(
                 '(uint8,uint8,bytes32,bytes32)',
-                [2, val.op.op.op_code, value_hash(val.op.val), val.next_hash]
+                [CODE_POINT_CODE, val.op.op.op_code, value_hash(val.op.val), val.next_hash]
             ))
         raise Exception("Bad op type {}".format(val.op))
 
