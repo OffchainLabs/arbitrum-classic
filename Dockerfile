@@ -72,8 +72,8 @@ RUN node -e "                                               \
     let base = ${NUM_WALLETS} - ${NUM_VALIDATORS};          \
     for (let i = base; i < base + ${NUM_VALIDATORS}; i++) { \
         let a = ethers.Wallet.fromMnemonic(m, path=(p+i));  \
-        addrs.push(a.address);                              \
-        privs.push(a.privateKey);                           \
+        addrs.push(a.address.toLowerCase().slice(2));       \
+        privs.push(a.privateKey.toLowerCase().slice(2));    \
     }                                                       \
     console.log(addrs.join('\n'));                          \
     console.error(privs.join('\n'));                        \
