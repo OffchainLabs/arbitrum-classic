@@ -26,14 +26,14 @@ list of dependencies.
 ### MacOS
 
 1. Install python3, nodejs, & docker using [Homebrew](https://brew.sh/):
-    
+
     ``` bash
     brew install python3 node@8 docker docker-compose
     brew unlink node
     brew link node@8
     brew cask install docker
     ```
-    
+
     Open the installed docker app. The menu bar icon should appear and say
     `Docker Desktop is running`.
 
@@ -88,7 +88,7 @@ Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
 ### Build from source
 
 ``` bash
-git clone --depth=1 https://github.com/OffchainLabs/arbc-solidity.git
+git clone -b v0.1.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbc-solidity.git
 cd arbc-solidity
 pip3 install -r requirements.txt
 python3 setup.py install
@@ -119,7 +119,7 @@ a simple Pet Shop dapp that is used in a Truffle tutorial.
 You only need to run these commands once:
 
 ``` bash
-git clone --depth=1 https://github.com/OffchainLabs/demo-dapp-pet-shop.git
+git clone -b v0.1.0 --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/demo-dapp-pet-shop.git
 cd demo-dapp-pet-shop
 yarn
 ```
@@ -242,7 +242,7 @@ and place your `*.sol` files in the `contracts` folder that is generated.
 1. Add the `arb-truffle-provider`:
 
     ``` bash
-    yarn add https://github.com/OffchainLabs/arb-truffle-provider.git
+    yarn add https://github.com/OffchainLabs/arb-truffle-provider#v0.1.0
     ```
 
 2. Edit the `truffle-config.js`:
@@ -307,13 +307,13 @@ the Solidity files in the `contracts` folder:
 1. Add the Arbitrum `web3.js` Provider
 
     ``` bash
-    yarn add https://github.com/OffchainLabs/arb-web3-provider.git
+    yarn add https://github.com/OffchainLabs/arb-web3-provider#v0.1.0
     ```
 
     Note: there is alternatively an `ethers.js` provider:
 
     ``` bash
-    yarn add https://github.com/OffchainLabs/arb-ethers-provider.git
+    yarn add https://github.com/OffchainLabs/arb-ethers-provider#v0.1.0
     ```
 
 2. Import the provider in the javascript app
