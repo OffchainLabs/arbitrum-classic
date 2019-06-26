@@ -1,0 +1,269 @@
+//
+//  balanceTracker.cpp
+//  tests
+//
+//  Created by Timothy O'Bryan on 6/26/19.
+//
+#include <avm/machine.hpp>
+
+#include <catch2/catch.hpp>
+
+#include <stdio.h>
+
+void pushMessage(MachineState &m, value data, TokenType tokType, uint256_t currency, uint256_t dest, TuplePool& pool){
+    Tuple msgTup(&pool, 4);
+    msgTup.set_element(0, data);
+    msgTup.set_element(1, fromTokenType(tokType));
+    msgTup.set_element(2, currency);
+    msgTup.set_element(3, dest);
+    m.stack.push(std::move(msgTup));
+}
+
+void sendInboxMessage(MachineState &m, value data, TokenType tokType, uint256_t currency, uint256_t dest){
+    Message msg;
+    msg.data = data;
+    msg.currency = currency;
+    msg.destination = dest;
+    msg.token = tokType;
+    m.addInboxMessage(msg);
+}
+
+MachineState setupMachine(value data, TokenType tokType, uint256_t currency, uint256_t dest){
+    MachineState m;
+    
+    return m;
+}
+
+TEST_CASE("SEND") {
+    SECTION("Successful send") {
+        value data;
+        TokenType token={};
+        token[0]=15;
+        token[20]=0;
+        uint256_t currency = 20;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+        sendInboxMessage(m, data, token, currency, destination);
+        
+        currency = 4;
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::SEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 16);
+        REQUIRE(m.state==EXTENSIVE);
+    }
+
+    SECTION("Not enough funds send") {
+        value data;
+        TokenType token={};
+        token[0]=15;
+        token[20]=0;
+        uint256_t currency = 20;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+        sendInboxMessage(m, data, token, currency, destination);
+        
+        currency = 25;
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::SEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 20);
+        REQUIRE(m.state==BLOCKED);
+    }
+    
+    SECTION("Successful NF send") {
+        value data;
+        TokenType token={};
+        token.fill(0);
+        token[0]=15;
+        token[20]=1;
+        uint256_t currency = 1;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+        sendInboxMessage(m, data, token, currency, destination);
+        
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::SEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 0);
+        REQUIRE(m.state==EXTENSIVE);
+    }
+    
+    SECTION("send unowned NF token") {
+        value data;
+        TokenType token={};
+        token[0]=15;
+        token[20]=1;
+        uint256_t currency = 1;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::SEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 0);
+        REQUIRE(m.state==BLOCKED);
+    }
+}
+
+TEST_CASE("NBSEND") {
+    SECTION("Successful nbsend") {
+        value data;
+        TokenType token={};
+        token[0]=15;
+        token[20]=0;
+        uint256_t currency = 20;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+        sendInboxMessage(m, data, token, currency, destination);
+        
+        currency = 4;
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::NBSEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 16);
+        value retval = m.stack.pop();
+        auto ret = mpark::get_if<uint256_t>(&retval);
+        REQUIRE(*ret == 1);
+        REQUIRE(m.state==EXTENSIVE);
+    }
+    
+    SECTION("Not enough funds nbsend") {
+        value data;
+        TokenType token={};
+        token[0]=15;
+        token[20]=0;
+        uint256_t currency = 20;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+        sendInboxMessage(m, data, token, currency, destination);
+        
+        currency = 25;
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::NBSEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 20);
+        value retval = m.stack.pop();
+        auto ret = mpark::get_if<uint256_t>(&retval);
+        REQUIRE(*ret == 0);
+        REQUIRE(m.state==EXTENSIVE);
+    }
+    SECTION("Successful NF nbsend") {
+        value data;
+        TokenType token={};
+        token.fill(0);
+        token[0]=15;
+        token[20]=1;
+        uint256_t currency = 1;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+        sendInboxMessage(m, data, token, currency, destination);
+        
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::NBSEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 0);
+        value retval = m.stack.pop();
+        auto ret = mpark::get_if<uint256_t>(&retval);
+        REQUIRE(*ret == 1);
+        REQUIRE(m.state==EXTENSIVE);
+    }
+    
+    SECTION("nbsend unowned NF token") {
+        value data;
+        TokenType token={};
+        token[0]=15;
+        token[20]=1;
+        uint256_t currency = 1;
+        uint256_t destination = 25;
+        MachineState m;
+        m.state=EXTENSIVE;
+
+        pushMessage(m, data, token, currency, destination, *(m.pool.get()));
+        m.runOp(OpCode::NBSEND);
+        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        REQUIRE(resNum == 0);
+        value retval = m.stack.pop();
+        auto ret = mpark::get_if<uint256_t>(&retval);
+        REQUIRE(*ret == 0);
+        REQUIRE(m.state==EXTENSIVE);
+    }
+}
+
+/*{
+    value data;
+    Message msg;
+    msg.data = data;
+    msg.token[0]=15;
+    msg.token[20]=0;
+    msg.currency = 20;
+    msg.destination = 25;
+    
+    uint256_t tokval =fromTokenType(msg.token);
+    TokenType tokenval;
+    toTokenType(tokval, tokenval);
+    std::cout<<tokval<<std::endl;
+    std::cout<<"token value="<<tokval<<" tokenval[0]={"<<tokenval[0]<<"}"<<std::endl;
+    m.addInboxMessage(msg);
+    
+    Tuple msgTup(4, m.pool.get());
+    msgTup.set_element(0, msg.data);
+    msgTup.set_element(1, fromTokenType(msg.token));
+    msg.currency = 4;
+    msgTup.set_element(2, msg.currency);
+    msgTup.set_element(3, msg.destination);
+    m.stack.push(std::move(msgTup));
+    m.runOp(OpCode::SEND);
+    uint256_t resNum = m.context.afterBalance.tokenValue(msg.token);
+    if (resNum != 16){
+        std::cout<<"ERROR - send failed - expected 16 received "<<resNum<<std::endl;
+    }
+    
+    msg.currency = 18;
+    msgTup.set_element(2, msg.currency);
+    m.stack.push(std::move(msgTup));
+    m.runOp(OpCode::SEND);
+    if (m.state != HALTED){
+        std::cout<<"ERROR - send failed - expected state HALTED received "<<m.state<<std::endl;
+    }
+    resNum = m.context.afterBalance.tokenValue(msg.token);
+    if (resNum != 16){
+        std::cout<<"ERROR - send failed - expected 16 received "<<resNum<<std::endl;
+    }
+    
+    msg.currency = 4;
+    msgTup.set_element(2, msg.currency);
+    m.stack.push(std::move(msgTup));
+    m.runOp(OpCode::NBSEND);
+    resNum = m.context.afterBalance.tokenValue(msg.token);
+    if (resNum != 12){
+        std::cout<<"ERROR - send failed - expected 12 received "<<resNum<<std::endl;
+    }
+    value res = m.stack.pop();
+    resNum = assumeInt(res);
+    if (resNum != 1){
+        std::cout<<"ERROR - sub failed - expected 1 received "<<resNum<<std::endl;
+    }
+    
+    msg.currency = 14;
+    msgTup.set_element(2, msg.currency);
+    m.stack.push(std::move(msgTup));
+    m.runOp(OpCode::NBSEND);
+    resNum = m.context.afterBalance.tokenValue(msg.token);
+    if (resNum != 12){
+        std::cout<<"ERROR - send failed - expected 12 received "<<resNum<<std::endl;
+    }
+    res = m.stack.pop();
+    resNum = assumeInt(res);
+    if (resNum != 0){
+        std::cout<<"ERROR - sub failed - expected 1 received "<<resNum<<std::endl;
+    }
+    }
+*/

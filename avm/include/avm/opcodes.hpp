@@ -14,7 +14,7 @@
 #include <map>
 #include <string>
 
-enum states { EXTENSIVE, HALTED, ERROR, BLOCKED };
+enum states { EXTENSIVE, BLOCKED, HALTED, ERROR };
 
 enum class OpCode : uint8_t {
     ADD = 0x01,

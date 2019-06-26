@@ -186,24 +186,85 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
     }
 }
 
-Assertion Machine::run(uint64_t stepCount) {
-    // testing opcodes
+void MachineState::addInboxMessage(char *newMsg){
+    value msg=deserialize_value(newMsg, *pool);
+    Tuple tup(pool.get(), 3);
+    tup.set_element(0, uint256_t(0));
+    tup.set_element(1, std::move(pendingInbox));
+    tup.set_element(2, std::move(msg));
+    pendingInbox = tup;
+    auto &msgTup = assumeTuple(msg);
+    TokenType tokType;
+    value val=msgTup.get_element(1);
+    auto &tokTypeVal=assumeInt(val);
+    toTokenType(tokTypeVal, tokType);
+    val=msgTup.get_element(2);
+    auto &amt = assumeInt(val);
+    context.afterBalance.add(tokType, amt);
+}
+
+void MachineState::addInboxMessage(value msg){
+    Tuple tup(pool.get(), 3);
+    tup.set_element(0, uint256_t(0));
+    tup.set_element(1, std::move(pendingInbox));
+    tup.set_element(2, std::move(msg));
+    pendingInbox = tup;
+    auto &msgTup = assumeTuple(msg);
+    TokenType tokType;
+    value val=msgTup.get_element(1);
+    auto &tokTypeVal=assumeInt(val);
+    toTokenType(tokTypeVal, tokType);
+    val=msgTup.get_element(2);
+    auto &amt = assumeInt(val);
+    context.afterBalance.add(tokType, amt);
+}
+
+void MachineState::addInboxMessage(Message &msg){
+    Tuple msgTup(pool.get(), 4);
+    msgTup.set_element(0, msg.data);
+    msgTup.set_element(1, fromTokenType(msg.token));
+    msgTup.set_element(2, msg.currency);
+    msgTup.set_element(3, msg.destination);
+    addInboxMessage(msgTup);
+}
+
+void MachineState::deliverMessages(){
+    inbox = pendingInbox;
+    pendingInbox = Tuple();
+}
+
+void MachineState::setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd){
+    context.precondition.timeBounds[0] = timeBoundStart;
+    context.precondition.timeBounds[1] = timeBoundEnd;
+}
+
+void Machine::addInboxMessage(char *msg){
+    m.addInboxMessage(msg);
+}
+
+void Machine::deliverMessages(){
+    m.deliverMessages();
+}
+
+Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd) {
     //    std::cout << "starting machine code size=" << code.size() <<
     //    std::endl; std::cout << "inbox=" << inbox << std::endl;
+    m.setTimebounds(timeBoundStart, timeBoundEnd);
     uint64_t i;
     for (i = 0; i < stepCount; i++) {
         //        std::cout << "Step #" << i << std::endl;
         auto ret = runOne();
-        if (ret < 0) {
-            break;
-        } else if (m.state == ERROR) {
-            break;
-        } else if (m.state == HALTED) {
+        if ((ret < 0) ||
+            (m.state == ERROR)||
+            (m.state == HALTED)||
+            (m.state == BLOCKED))
+        {
             break;
         }
     }
 
     if (m.state == ERROR) {
+        //TODO: check if error handler set - jump there
         // set error return
         std::cout << "error state" << std::endl;
     }
@@ -290,11 +351,6 @@ void MachineState::runOp(OpCode opcode) {
         /**************************/
         /*  Arithmetic Operations */
         /**************************/
-        case OpCode::HALT: {
-            std::cout << "Hit halt opcode at instruction " << pc << "\n";
-            state = HALTED;
-            break;
-        }
         case OpCode::ADD: {
             value val1 = stack.pop();
             value val2 = stack.pop();
@@ -766,12 +822,74 @@ void MachineState::runOp(OpCode opcode) {
             /**********************/
             /*  System Operations */
             /**********************/
-            //        case OpCode::SEND:
-            //            break;
-            //        case OpCode::NBSEND:
-            //            break;
-            //        case OpCode::GETTIME:
-            //            break;
+        case OpCode::SEND:{
+            value tupVal=stack.pop();
+            auto &tup = assumeTuple(tupVal);
+            if (tup.tuple_size() != 4){
+                    state=ERROR;
+                    break;
+                }
+            Message outMsg;
+            outMsg.data =tup.get_element(0);
+            value tokVal =tup.get_element(1);
+            auto &tokTypeVal = assumeInt(tokVal);
+            value amt =tup.get_element(2);
+            outMsg.currency = assumeInt(amt);
+            value dest =tup.get_element(3);
+            outMsg.destination = assumeInt(dest);
+
+            toTokenType(tokTypeVal, outMsg.token);
+
+            if (!context.afterBalance.Spend(outMsg.token, outMsg.currency)){
+                stack.push(std::move(tupVal));
+                state=BLOCKED;
+                break;
+            }
+
+            context.outMessage.push_back(outMsg);
+
+            break;
+        }
+        case OpCode::NBSEND:{
+            value tupVal=stack.pop();
+            auto &tup = assumeTuple(tupVal);
+            if (tup.tuple_size() != 4){
+                state=ERROR;
+                break;
+            }
+            Message outMsg;
+            outMsg.data =tup.get_element(0);
+            value tokVal =tup.get_element(1);
+            auto &tokTypeVal = assumeInt(tokVal);
+            value amt =tup.get_element(2);
+            outMsg.currency = assumeInt(amt);
+            value dest =tup.get_element(3);
+            outMsg.destination = assumeInt(dest);
+            
+            toTokenType(tokTypeVal, outMsg.token);
+
+            if (!context.afterBalance.CanSpend(outMsg.token, outMsg.currency)){
+                uint256_t ret = 0;
+                stack.push(std::move(ret));
+                break;
+            } else {
+                if (!context.afterBalance.Spend(outMsg.token, outMsg.currency)){
+                    uint256_t ret = 0;
+                    stack.push(std::move(ret));
+                }
+                context.outMessage.push_back(outMsg);
+                uint256_t ret = 1;
+                stack.push(std::move(ret));
+            }
+            break;
+        }
+        case OpCode::GETTIME:{
+            Tuple tup(2, pool.get());
+            tup.set_element(0, context.precondition.timeBounds[0]);
+            tup.set_element(1, context.precondition.timeBounds[1]);
+            stack.push(std::move(tup));
+            break;
+        }
         case OpCode::INBOX: {
             value val = stack.pop();
             if (inbox == val) {
@@ -782,10 +900,14 @@ void MachineState::runOp(OpCode opcode) {
             stack.push(std::move(inboxCopy));
             break;
         }
-            //        case OpCode::ERROR:
-            //            break;
-            //        case OpCode::HALT:
-            //            break;
+        case OpCode::ERROR:
+            //TODO: add error handler support
+            state=ERROR;
+            break;
+        case OpCode::HALT:
+            std::cout << "Hit halt opcode at instruction " << pc << "\n";
+            state=HALTED;
+            break;
         default:
             std::stringstream ss;
             ss << "Unhandled opcode <" << InstructionNames.at(opcode) << ">"

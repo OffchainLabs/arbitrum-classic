@@ -18,8 +18,8 @@ extern "C" {
 void* machine_create(const char* filename, const char* inboxfile);
 // void machine_destroy(cmachine_t *m);
 // cassertion machine_run(cmachine_t *m, uint64_t maxSteps);
-uint64_t machine_run(void* m, uint64_t maxSteps);
-
+uint64_t machine_run(void* m, uint64_t maxSteps, uint64_t timeBoundStart, uint64_t timeBoundEnd);
+void machine_add_to_inbox(void *machine, char *inbox);
 // struct cmachine;
 // typedef struct cmachine cmachine_t;
 //

@@ -89,7 +89,14 @@ uint64_t machine_run(void* m, uint64_t maxSteps) {
 
     obj = (Machine*)m;
     //    obj = static_cast<Machine *>(m->obj);
-    Assertion assertion = obj->run(maxSteps);
+    Assertion assertion = obj->run(maxSteps, 0, 0);
     return assertion.stepCount;
     //    return cassertion{assertion.stepCount};
 }
+
+void inbox_add_message(void *machine, char *inbox){
+    Machine *mach = (Machine *)machine;
+    
+    mach->addInboxMessage(inbox);
+}
+
