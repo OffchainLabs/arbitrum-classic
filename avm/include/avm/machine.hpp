@@ -80,6 +80,7 @@ class Machine {
     uint256_t hash() const { return m.hash(); }
     void addInboxMessage(char *msg);
     void deliverMessages();
+    void setTimebounds(uint64_t timeboundStart, uint64_t timeboundEnd) {m.setTimebounds(timeboundStart, timeboundEnd);};
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

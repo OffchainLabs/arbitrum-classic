@@ -7,7 +7,7 @@
 //
 
 #include <avm/machine.hpp>
-
+#include <avm/cmachine.h>
 #include <sys/stat.h>
 #include <fstream>
 #include <iostream>
@@ -317,7 +317,8 @@ int main(int argc, char* argv[]) {
     //    machine_create();
     //    oldread_file(filename, code, staticValue);
     //    Machine *mach = read_files(filename, inbox_file);
-
+    void *tmpmach = machine_create(filename.c_str(), inboxfile.c_str());
+    uint64_t steps = machine_run(tmpmach, stepCount);
     std::ifstream myfile;
 
     struct stat filestatus;

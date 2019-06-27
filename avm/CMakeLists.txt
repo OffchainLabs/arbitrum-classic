@@ -15,6 +15,7 @@ set(LIB_HEADERS
   include/avm/tuple.hpp
   include/avm/util.hpp
   include/avm/value.hpp
+  include/avm/tokenTracker.hpp
 )
 
 set(LIB_SOURCES
@@ -26,6 +27,7 @@ set(LIB_SOURCES
   src/pool.cpp
   src/tuple.cpp
   src/value.cpp
+  src/tokenTracker.cpp
   
   ${KECCAK_SOURCES}
 )

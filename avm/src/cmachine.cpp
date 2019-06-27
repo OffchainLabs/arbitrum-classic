@@ -14,21 +14,9 @@
 #include <fstream>
 #include <iostream>
 
-struct cmachine {
-    void* obj;
-};
-
-// cassertion machine_run(cmachine_t *m, uint64_t maxSteps);
-
-struct cmachine;
-typedef struct cmachine cmachine_t;
-
 typedef struct {
     uint64_t stepCount;
 } cassertion;
-
-// void *machine_create();
-void machine_destroy(cmachine_t* m);
 
 Machine* read_files(std::string filename, std::string inboxfile) {
     std::cout << "In read_file. reading - " << filename << std::endl;
@@ -67,36 +55,32 @@ Machine* read_files(std::string filename, std::string inboxfile) {
 // cmachine_t *machine_create(char *data)
 void* machine_create(const char* filename, const char* inboxfile) {
     Machine* mach = read_files(filename, inboxfile);
-    cmachine_t* m = new cmachine{};
-    m->obj = mach;
     return static_cast<void*>(mach);
 }
 
-void machine_destroy(cmachine_t* m) {
+void machine_destroy(void* m) {
     if (m == NULL)
         return;
-    delete static_cast<Machine*>(m->obj);
+    delete static_cast<Machine*>(m);
     free(m);
 }
 
 // cassertion machine_run(cmachine_t *m, uint64_t maxSteps) {
 uint64_t machine_run(void* m, uint64_t maxSteps) {
-    Machine* obj;
-
     if (m == NULL)
         return 0;
-    //        return cassertion{0};
-
-    obj = (Machine*)m;
-    //    obj = static_cast<Machine *>(m->obj);
-    Assertion assertion = obj->run(maxSteps, 0, 0);
+    Machine* mach = static_cast<Machine*>(m);
+    Assertion assertion = mach->run(maxSteps, 0, 0);
+    printf("%llu steps ran\n", assertion.stepCount);
     return assertion.stepCount;
-    //    return cassertion{assertion.stepCount};
 }
 
-void inbox_add_message(void *machine, char *inbox){
-    Machine *mach = (Machine *)machine;
-    
+void inbox_add_message(void *m, char *inbox){
+    Machine *mach = static_cast<Machine*>(m);
     mach->addInboxMessage(inbox);
 }
 
+void machineSettime_bounds(void* m, uint64_t timeboundStart, uint64_t timeboundEnd){
+    Machine *mach = static_cast<Machine*>(m);
+    mach->setTimebounds(timeboundStart, timeboundEnd);
+}

@@ -12,7 +12,7 @@ configure_file (
 
 configure_file(test_cases.json ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json COPYONLY)
 
-add_executable(tests main.cpp opcodes.cpp value.cpp)
+add_executable(tests main.cpp opcodes.cpp value.cpp balanceTracker.cpp)
 target_link_libraries(
 	tests
 PRIVATE
