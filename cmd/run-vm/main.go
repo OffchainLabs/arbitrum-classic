@@ -23,12 +23,17 @@ import (
 	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-avm/vm"
 	"log"
 	"math/big"
 	"os"
 )
 
 func main() {
+
+	cMac := vm.CreateVM(os.Args[1], os.Args[2])
+	cSteps := vm.RunVM(cMac, 1000000)
+	fmt.Println("cMachine ended ", cSteps, " steps run.")
 
 	candidatesCountBytes, _ := hexutil.Decode("0x2d35a8a2")
 	candidatesCount, _ := evm.BytesToSizedByteArray(candidatesCountBytes)
