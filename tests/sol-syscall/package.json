@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider"
+  }
+}

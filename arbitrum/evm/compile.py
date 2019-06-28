@@ -140,12 +140,14 @@ def generate_evm_code(raw_code, storage):
         ))
 
     code_sizes = []
-    for contract in sorted(contracts):
+    for contract in contracts:
         code_sizes.append((contract, len(contracts[contract])))
         contract_dispatch.append((
             contract,
             AVMLabel("contract_entry_" + str(contract))
         ))
+    code_sizes.append((0x01, 1))
+    code_sizes = sorted(code_sizes, key=lambda x: x[0])
 
     contract_dispatch_impl = make_bst_lookup(contract_dispatch)
 

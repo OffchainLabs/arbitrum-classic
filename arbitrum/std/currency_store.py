@@ -14,54 +14,177 @@
 
 from ..annotation import modifies_stack
 from . import keyvalue_int_int
-from .stack_manip import dup_n
 from .struct import Struct
-from .. import value
+from .. import value, std
 
 # currencyStore keep track of balances of currencies
 # implemented as a keyvalue store, currencyid to balance
 
+non_fung_keyvalue = std.make_keyvalue_type(value.IntType(), keyvalue_int_int.typ)
+
 currency_store = Struct("currency_store", [
-    ("store", keyvalue_int_int.typ)
+    ("fung", keyvalue_int_int.typ),
+    ("non_fung", non_fung_keyvalue.typ)
 ])
 
 typ = currency_store.typ
 
+
+def make():
+    return value.Tuple([keyvalue_int_int.make(), non_fung_keyvalue.make()])
+
+
 @modifies_stack(0, [typ])
 def new(vm):
-    keyvalue_int_int.new(vm)
+    vm.push(make())
+    vm.cast(typ)
 
 
 @modifies_stack([typ, value.IntType()], [value.IntType()])
-def get(vm):
+def get_fung(vm):
     # cstore currId -> balance
-    currency_store.get("store")(vm)
+    currency_store.get("fung")(vm)
     keyvalue_int_int.get(vm)
     # value
 
+@modifies_stack([typ, value.IntType()], [keyvalue_int_int.typ])
+def get_non_fung(vm):
+    # cstore currId -> balance
+    currency_store.get("non_fung")(vm)
+    non_fung_keyvalue.get(vm)
+    # value
 
 @modifies_stack(
     [typ, value.IntType(), value.IntType()],
     [typ]
 )
 def add(vm):
+    vm.dup1()
+    vm.push(31)
+    vm.byte()
+    vm.push(0)
+    vm.eq()
+    vm.ifelse(lambda vm: [
+        add_erc20(vm)
+    ], lambda vm: [
+        add_erc721(vm)
+    ])
+
+@modifies_stack(
+    [typ, value.IntType(), value.IntType()],
+    [typ]
+)
+def add_erc20(vm):
     # cstore currId delta -> updatedcstore
-    vm.dup1()
-    vm.dup1()
-    get(vm)
-    # oldval cstore currId delta
-    dup_n(3)(vm)
+    vm.swap1()
+    vm.swap2()
+    # delta cstore currId
+    vm.dup2()
+    vm.dup2()
+    get_fung(vm)
+    # oldval delta cstore currId
     vm.add()
-    # newval cstore currId delta
+    # newval cstore currId
     vm.swap2()
     vm.swap1()
-    # cstore currId newval delta
-    currency_store.get("store")(vm)
-    keyvalue_int_int.set_val(vm)
-    currency_store.set_val("store")(vm)
-    # updatedcstore delta
+    # cstore currId newval
+    vm.swap2()
     vm.swap1()
-    vm.pop()
+    vm.dup2()
+    currency_store.get("fung")(vm)
+    keyvalue_int_int.set_val(vm)
+    vm.swap1()
+    currency_store.set_val("fung")(vm)
+    # updatedcstore
+
+
+@modifies_stack(
+    [typ, value.IntType(), value.IntType()],
+    [typ]
+)
+def add_erc721(vm):
+    # cstore currId coinid -> updatedcstore
+    vm.swap1()
+    vm.swap2()
+    # coinid cstore currId
+    vm.dup2()
+    vm.dup2()
+    get_non_fung(vm)
+    # nfkeyval coinid cstore currId
+    vm.push(1)
+    vm.swap2()
+    vm.swap1()
+    keyvalue_int_int.set_val(vm)
+    # nfkeyval cstore currId
+    vm.swap1()
+    vm.swap2()
+    # currId nfkeyval cstore
+    vm.dup2()
+    # cstore currId nfkeyval cstore
+    currency_store.get("non_fung")(vm)
+    non_fung_keyvalue.set_val(vm)
+    # non_fung cstore
+    vm.swap1()
+    currency_store.set_val("non_fung")(vm)
+    # updatedcstore
+
+@modifies_stack(
+    [typ, value.IntType(), value.IntType()],
+    [value.IntType(), typ]
+)
+def deduct(vm):
+    vm.dup1()
+    vm.push(31)
+    vm.byte()
+    vm.push(0)
+    vm.eq()
+    vm.ifelse(lambda vm: [
+        deduct_erc20(vm)
+    ], lambda vm: [
+        deduct_erc721(vm)
+    ])
+
+@modifies_stack([
+    typ,
+    value.IntType(),
+    value.IntType()
+], [
+    value.IntType(),
+    typ
+])
+def deduct_erc20(vm):
+    # cstore currId delta -> success updatedcstore
+    vm.swap1()
+    vm.swap2()
+    vm.dup2()
+    vm.dup2()
+    get_fung(vm)
+    # balance delta cstore currId
+    vm.dup1()
+    vm.dup1()
+    vm.lt()
+    vm.ifelse(lambda vm: [
+        # balance delta cstore currId
+        vm.pop(),
+        vm.pop(),
+        vm.swap1(),
+        vm.pop(),
+        vm.push(0)
+    ], lambda vm: [
+        # balance delta cstore currId
+        vm.sub(),
+        # balance cstore currId
+        vm.swap1(),
+        vm.swap2(),
+        vm.dup2(),
+        # cstore currId balance cstore
+        currency_store.get("fung")(vm),
+        keyvalue_int_int.set_val(vm),
+        vm.swap1(),
+        currency_store.set_val("fung")(vm),
+        # updatedcstore
+        vm.push(1)
+    ])
 
 
 @modifies_stack([
@@ -72,36 +195,41 @@ def add(vm):
     value.IntType(),
     typ
 ])
-def deduct(vm):
-    # cstore currId delta -> success updatedcstore
+def deduct_erc721(vm):
+    # cstore currId coinid -> success updatedcstore
+    vm.swap1()
+    vm.swap2()
+    vm.dup2()
+    vm.dup2()
+    get_non_fung(vm)
+    # nfkeyval coinid cstore currId
     vm.dup1()
     vm.dup1()
-    get(vm)
-    # oldval cstore currId delta
-    dup_n(3)(vm)
-    # delta oldval cstore currId delta
-    vm.dup1()
-    vm.dup1()
-    vm.gt()
-    vm.iszero()
+    # nfkeyval coinid nfkeyval coinid cstore currId
+    keyvalue_int_int.get(vm)
+    # has_coin nfkeyval coinid cstore currId
     vm.ifelse(lambda vm: [
-        vm.add(),
-        # newval cstore currId delta
+        # nfkeyval coinid cstore currId
+        vm.push(0),
         vm.swap2(),
         vm.swap1(),
-        # cstore currId newval delta
-        currency_store.get("store")(vm),
+        # nfkeyval coinid 0 cstore currId
         keyvalue_int_int.set_val(vm),
-        currency_store.set_val("store")(vm),
-        # updatedcstore delta
+        # nfkeyval cstore currId
         vm.swap1(),
-        vm.pop(),
-        vm.push(1),
-    ], lambda vm: [
-        vm.pop(),
-        vm.pop(),
         vm.swap2(),
+        vm.dup2(),
+        # cstore currId nfkeyval cstore
+        currency_store.get("non_fung")(vm),
+        non_fung_keyvalue.set_val(vm),
+        vm.swap1(),
+        currency_store.set_val("non_fung")(vm),
+        vm.push(1)
+    ], lambda vm: [
+        # nfkeyval coinid cstore currId
         vm.pop(),
+        vm.pop(),
+        vm.swap1(),
         vm.pop(),
         vm.push(0)
     ])

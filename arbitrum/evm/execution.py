@@ -18,6 +18,7 @@ from . import call_frame
 from . import os
 from .. import ast
 from .. import value
+from .types import local_exec_state
 
 
 @noreturn
@@ -138,8 +139,91 @@ def call(vm, dispatch_func, call_num, contract_id):
         os.evm_call_to_send(vm),
         os.add_send_to_queue(vm)
     ], lambda vm: [
-        _inner_call(vm, dispatch_func, call_num, contract_id)
+        vm.dup0(),
+        vm.tgetn(1),
+        vm.push(1),
+        vm.eq(),
+        vm.ifelse(lambda vm: [
+            os.evm_call_to_send(vm),
+            vm.dup0(),
+            local_exec_state.get("data")(vm),
+            vm.push(0),
+            vm.swap1(),
+            std.sized_byterange.get(vm),
+            vm.push(224),
+            vm.swap1(),
+            std.bitwise.shift_right(vm),
+            vm.dup0(),
+            vm.push(0xda795ea3),
+            vm.eq(),
+            vm.ifelse(lambda vm: [
+                vm.pop(),
+                send_erc20_interupt(vm)
+            ], lambda vm: [
+                vm.push(0x8e725ee1),
+                vm.eq(),
+                vm.ifelse(send_erc721_interupt, lambda vm: vm.error())
+            ])
+        ], lambda vm: [
+            _inner_call(vm, dispatch_func, call_num, contract_id)
+        ])
     ])
+
+def _send_interupt(vm):
+    def get_dest(vm):
+        vm.push(4)
+        vm.swap1()
+        std.sized_byterange.get(vm)
+
+    def get_token_type(vm):
+        vm.push(36)
+        vm.swap1()
+        std.sized_byterange.get(vm)
+
+    def get_token_val(vm):
+        vm.push(68)
+        vm.swap1()
+        std.sized_byterange.get(vm)
+    vm.tgetn(0)
+    # data
+    vm.dup0()
+    get_token_val(vm)
+    # val data
+    vm.dup1()
+    get_token_type(vm)
+    # type val data
+    vm.swap2()
+    get_dest(vm)
+    # dest val type
+    vm.push(local_exec_state.make())
+    vm.cast(local_exec_state.typ)
+    local_exec_state.set_val("sender")(vm)
+    local_exec_state.set_val("amount")(vm)
+    local_exec_state.set_val("type")(vm)
+
+def send_erc20_interupt(vm):
+    _send_interupt(vm)
+    vm.dup0()
+    local_exec_state.get("type")(vm)
+    vm.push(256)
+    vm.mul()
+    vm.swap1()
+    local_exec_state.set_val("type")(vm)
+    os.add_send_to_queue(vm)
+
+
+def send_erc721_interupt(vm):
+    _send_interupt(vm)
+    vm.dup0()
+    local_exec_state.get("type")(vm)
+    vm.push(256)
+    vm.mul()
+    vm.push(1)
+    vm.add()
+    vm.swap1()
+    local_exec_state.set_val("type")(vm)
+    os.add_send_to_queue(vm)
+
 
 @modifies_stack([value.IntType(), value.TupleType([value.IntType()]*7)], [value.IntType()])
 def _mutable_call_ret(vm):
@@ -373,7 +457,6 @@ def stop(vm):
 # [memory offset, memory length]
 @noreturn
 def revert(vm):
-    vm.debug()
     vm.dup1()
     vm.swap1()
     os.get_mem_segment(vm)
