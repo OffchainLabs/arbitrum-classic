@@ -24,7 +24,6 @@ setup(
     description='Manage Arbitrum dockerized deployments',
     url='https://github.com/OffchainLabs/arb-sdk',
     license='Apache-2.0',
-    packages=['arb-deploy'],
-    scripts=['arb-deploy/arb-deploy'],
+    scripts=['bin/arb-deploy'],
     zip_safe=False,
 )
