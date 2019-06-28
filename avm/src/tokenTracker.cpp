@@ -12,31 +12,35 @@ bool isToken(TokenType tok){
 }
 
 uint256_t fromTokenType(TokenType &tok){
-    std::vector<unsigned char> val;
-    val.resize(32);
-    std::copy(tok.begin(), tok.end(), val.begin());
-    return from_big_endian(val.begin(), val.end());
+    uint256_t val;
+    val.backend().resize(3,3);
+    memcpy(val.backend().limbs(), &tok[0], 21);
+    val.backend().normalize();
+    return val;
 }
 
 void toTokenType(uint256_t tokTypeVal, TokenType &tok){
-    std::vector<unsigned char> val;
-    val.resize(32);
-    to_big_endian(tokTypeVal, val.begin());
-    std::copy(val.begin(), val.begin()+21, tok.begin());
+    auto count = tokTypeVal.backend().size();
+    auto tsize = sizeof(boost::serialization::mp::limb_type);
+    if (count > 2){
+        memcpy(&tok[0], tokTypeVal.backend().limbs(), 21);
+    } else {
+        memcpy(&tok[0], tokTypeVal.backend().limbs(), count*tsize);
+        memset(&tok[0], 0, 21-count*tsize);
+    }
 }
 
-bool BalanceTracker::CanSpend(TokenType tokType, uint256_t amount){
+bool BalanceTracker::CanSpend(const TokenType tokType, const uint256_t amount) const {
     // if token is fungible check that the spend amount <= the amount assigned to that token
     if(isToken(tokType)){
-        return (amount <= tokenAmounts[tokenLookup[tokType]]);
+        return (amount <= tokenAmounts[tokenLookup.at(tokType)]);
     } else {
         // for non-fungible tokens, check that amount == amount assigned to that token
         nftKey key = {tokType, amount};
-        std::map<nftKey,int>::iterator it = NFTLookup.find(key);
-        if (it == NFTLookup.end()){
+        if (NFTLookup.find(key) == NFTLookup.end()){
             return false;
         }
-        return tokenAmounts[it->second] == amount;
+        return tokenAmounts[NFTLookup.at(key)] == amount;
     }
 }
 
@@ -86,17 +90,16 @@ void BalanceTracker::add(TokenType tokType, uint256_t amount){
     }
 }
 
-uint256_t BalanceTracker::tokenValue(TokenType tokType){
+uint256_t BalanceTracker::tokenValue(const TokenType tokType) const{
     // if token is fungible check that the spend amount <= the amount assigned to that token
     if(isToken(tokType)){
-        return tokenAmounts[tokenLookup[tokType]];
+        return tokenAmounts[tokenLookup.at(tokType)];
     } else {
         // for non-fungible tokens, check that amount == amount assigned to that token
         nftKey key = {tokType, 1};
-        std::map<nftKey,int>::iterator it = NFTLookup.find(key);
-        if (it == NFTLookup.end()){
+        if (NFTLookup.find(key) == NFTLookup.end()){
             return 0;
         }
-        return tokenAmounts[it->second];
+        return tokenAmounts[NFTLookup.at(key)];
     }
 }

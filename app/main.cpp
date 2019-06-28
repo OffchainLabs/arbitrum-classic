@@ -322,6 +322,7 @@ int main(int argc, char* argv[]) {
     std::ifstream myfile;
 
     struct stat filestatus;
+    struct stat inboxfilestatus;
     stat(filename.c_str(), &filestatus);
 
     char* buf = (char*)malloc(filestatus.st_size);
@@ -337,18 +338,17 @@ int main(int argc, char* argv[]) {
         std::cout << "In read_files. reading - " << inboxfile << std::endl;
         std::ifstream myfile;
 
-        struct stat filestatus;
-        stat(inboxfile.c_str(), &filestatus);
+        stat(inboxfile.c_str(), &inboxfilestatus);
 
-        inbox = (char*)malloc(filestatus.st_size);
+        inbox = (char*)malloc(inboxfilestatus.st_size);
 
         myfile.open(inboxfile, std::ios::in);
         if (myfile.is_open()) {
-            myfile.read((char*)inbox, filestatus.st_size);
+            myfile.read((char*)inbox, inboxfilestatus.st_size);
             myfile.close();
         }
     }
-    Machine* mach = new Machine(buf, inbox);
+    Machine* mach = new Machine(buf, inbox, inboxfilestatus.st_size);
 
     auto start = std::chrono::high_resolution_clock::now();
 

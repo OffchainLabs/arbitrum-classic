@@ -55,10 +55,10 @@ struct MachineState {
 		
     MachineState();
     MachineState(std::vector<CodePoint> code);
-    MachineState(char*& srccode, char*& inboxdata);
+    MachineState(char*& srccode, char*& inboxdata, int inbox_sz);
 
     void readInbox(char *newInbox);
-    void addInboxMessage(char *newMsg);
+    void addInboxMessage(char*& newMsg);
     void addInboxMessage(value msg);
     void addInboxMessage(Message &msg);
     void deliverMessages();
@@ -73,7 +73,7 @@ class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
    public:
-    Machine(char*& srccode, char*& inboxdata) : m(srccode, inboxdata) {}
+    Machine(char*& srccode, char*& inboxdata, int inbox_sz) : m(srccode, inboxdata, inbox_sz) {}
 
     Assertion run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd);
     int runOne();

@@ -43,10 +43,10 @@ class BalanceTracker {
     std::map<nftKey, int> NFTLookup;
     
 public:
-    bool CanSpend(TokenType tokType, uint256_t amount);
+    bool CanSpend(const TokenType tokType, const uint256_t amount) const;
     bool Spend(TokenType tokType, uint256_t amount);
     void add(TokenType tokType, uint256_t amount);
-    uint256_t tokenValue(TokenType tokType);
+    uint256_t tokenValue(const TokenType tokType) const;
 };
 
 #endif /* tokenTracker_hpp */

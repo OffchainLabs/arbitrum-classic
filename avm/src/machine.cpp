@@ -142,7 +142,7 @@ MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
 MachineState::MachineState(std::vector<CodePoint> code)
     : pool(std::make_unique<TuplePool>()), code(std::move(code)) {}
 
-MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
+MachineState::MachineState(char*& srccode, char*& inboxdata, int inbox_sz) : MachineState() {
     char* bufptr = srccode;
     char* inboxbuf = inboxdata;
 
@@ -181,12 +181,17 @@ MachineState::MachineState(char*& srccode, char*& inboxdata) : MachineState() {
 
     staticVal = deserialize_value(bufptr, *pool);
     pc = 0;
-    if (inboxbuf) {
-        inbox = deserialize_value(inboxbuf, *pool);
+    while (inboxbuf < inboxdata+inbox_sz) {
+        if (*inboxbuf == 3){
+            inbox = deserialize_value(inboxbuf, *pool);
+        } else {
+            addInboxMessage(inboxbuf);
+        }
     }
+    deliverMessages();
 }
 
-void MachineState::addInboxMessage(char *newMsg){
+void MachineState::addInboxMessage(char*& newMsg){
     value msg=deserialize_value(newMsg, *pool);
     Tuple tup(pool.get(), 3);
     tup.set_element(0, uint256_t(0));
