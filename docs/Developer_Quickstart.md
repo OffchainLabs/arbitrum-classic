@@ -10,7 +10,7 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 [port your own dapp](#porting-to-arbitrum).
 
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
-read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
+read the [white paper](https://OffchainLabs.com/arbitrum.pdf)!**
 
 ## Install Dependencies
 
@@ -21,7 +21,7 @@ list of dependencies.
 > demo app. You can use [nvm](https://github.com/nvm-sh/nvm) to switch
 > between multiple node versions.
 
-> Requires python3 to be at least version 3.5.3.
+> Requires python3 to be at least version 3.6
 
 ### MacOS
 
@@ -30,12 +30,14 @@ list of dependencies.
     ``` bash
     brew install python3 node@8 docker docker-compose
     brew unlink node
-    brew link node@8
+    brew link --force --overwrite node@8
     brew cask install docker
+    open -a Docker
     ```
 
-    Open the installed docker app. The menu bar icon should appear and say
-    `Docker Desktop is running`.
+    Once the Docker app appears in the menu bar, wait until the yellow light turns
+    green (no need to log into Docker). Also check that node version 8 is installed
+    correctly by running `node --version`.
 
 2. Change npm's default directory:
 
@@ -88,7 +90,7 @@ Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
 ### Build from source
 
 ``` bash
-git clone -b v0.1.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbc-solidity.git
+git clone -b v0.1.0 --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/arbc-solidity.git
 cd arbc-solidity
 pip3 install -r requirements.txt
 python3 setup.py install
@@ -119,7 +121,7 @@ a simple Pet Shop dapp that is used in a Truffle tutorial.
 You only need to run these commands once:
 
 ``` bash
-git clone -b v0.1.0 --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/demo-dapp-pet-shop.git
+git clone -b v0.1.1 --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/demo-dapp-pet-shop.git
 cd demo-dapp-pet-shop
 yarn
 ```
