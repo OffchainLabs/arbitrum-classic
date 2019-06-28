@@ -79,7 +79,7 @@ def setup_state(vm):
     vm.swap1()
     call_frame.set_val("contract_state")(vm)
 
-@modifies_stack([call_frame.typ, call_frame.typ], [value.CodePointType(), call_frame.typ])
+@modifies_stack([call_frame.typ, call_frame.typ], [call_frame.typ])
 def merge(vm):
     # parent_frame current_frame
     vm.swap1()
@@ -102,8 +102,8 @@ def merge(vm):
     call_frame.set_val("logs")(vm)
     # parent_frame current_frame
     vm.swap1()
-    call_frame.get("return_location")(vm)
-    # return_location parent_frame
+    vm.pop()
+    # parent_frame
 
 # update:
 #   contractID

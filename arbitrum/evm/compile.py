@@ -23,7 +23,7 @@ from ..ast import BlockStatement
 from ..compiler import compile_block
 from .. import value
 
-from . import os
+from . import os, call_frame
 from . import execution
 
 
@@ -311,9 +311,10 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
 
             # 30s: Environmental Information
             elif instr.name == "ADDRESS":
-                vm.push(contract_id)
+                os.get_call_frame(vm)
+                call_frame.call_frame.get("contractID")(vm)
             elif instr.name == "BALANCE":
-                raise EVMNotSupported()
+                raise EVMNotSupported(instr.name)
             elif instr.name == "ORIGIN":
                 os.message_origin(vm)
             elif instr.name == "CALLER":
@@ -342,7 +343,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                     vm.error()
                 ])
             elif instr.name == "EXTCODECOPY":
-                raise EVMNotSupported()
+                raise EVMNotSupported(instr.name)
             elif instr.name == "RETURNDATASIZE":
                 os.return_data_size(vm)
             elif instr.name == "RETURNDATACOPY":
@@ -350,7 +351,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
 
             # 40s: Block Information
             elif instr.name == "BLOCKHASH":
-                raise EVMNotSupported()
+                raise EVMNotSupported(instr.name)
             elif instr.name == "COINBASE":
                 raise EVMNotSupported()
             elif instr.name == "TIMESTAMP":
@@ -358,10 +359,10 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
             elif instr.name == "NUMBER":
                 os.get_block_number(vm)
             elif instr.name == "DIFFICULTY":
-                raise EVMNotSupported()
+                raise EVMNotSupported(instr.name)
             elif instr.name == "GASLIMIT":
                 # TODO: Arbitrary value
-                raise EVMNotSupported()
+                raise EVMNotSupported(instr.name)
 
             # 50s: Stack, Memory, Storage and Flow Operations
             elif instr.name == "POP":
@@ -397,7 +398,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                     vm.cjump()
                 ])
             elif instr.name == "PC":
-                raise EVMNotSupported()
+                raise EVMNotSupported(instr.name)
             elif instr.name == "MSIZE":
                 os.memory_length(vm)
             elif instr.name == "GAS":
@@ -431,7 +432,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                     vm.swap2()
                 else:
                     stack_manip.swap_n(swap_num)(vm)
-            
+
             # a0s: Logging Operations
             elif instr.name == "LOG1":
                 os.evm_log1(vm)
@@ -441,18 +442,18 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                 os.evm_log3(vm)
             elif instr.name == "LOG4":
                 os.evm_log4(vm)
-            
-            # f0s: System operations    
+
+            # f0s: System operations
             elif instr.name == "CREATE":
-                raise EVMNotSupported()
+                raise EVMNotSupported(instr.name)
             elif instr.name == "CALL":
                 execution.call(vm, dispatch_contract, instr.pc, contract_id)
             elif instr.name == "CALLCODE":
-                raise EVMNotSupported()
+                execution.callcode(vm, dispatch_contract, instr.pc, contract_id)
             elif instr.name == "RETURN":
                 execution.ret(vm)
             elif instr.name == "DELEGATECALL":
-                raise EVMNotSupported()
+                execution.delegatecall(vm, dispatch_contract, instr.pc, contract_id)
             elif instr.name == "STATICCALL":
                 execution.staticcall(vm, dispatch_contract, instr.pc, contract_id)
             elif instr.name == "REVERT":
