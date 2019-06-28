@@ -200,7 +200,7 @@ void MachineState::addInboxMessage(char*& newMsg){
     pendingInbox = tup;
     auto &msgTup = assumeTuple(msg);
     TokenType tokType;
-    value val=msgTup.get_element(1);
+    value val=msgTup.get_element(3);
     auto &tokTypeVal=assumeInt(val);
     toTokenType(tokTypeVal, tokType);
     val=msgTup.get_element(2);
@@ -216,7 +216,7 @@ void MachineState::addInboxMessage(value msg){
     pendingInbox = tup;
     auto &msgTup = assumeTuple(msg);
     TokenType tokType;
-    value val=msgTup.get_element(1);
+    value val=msgTup.get_element(3);
     auto &tokTypeVal=assumeInt(val);
     toTokenType(tokTypeVal, tokType);
     val=msgTup.get_element(2);
@@ -227,9 +227,9 @@ void MachineState::addInboxMessage(value msg){
 void MachineState::addInboxMessage(Message &msg){
     Tuple msgTup(pool.get(), 4);
     msgTup.set_element(0, msg.data);
-    msgTup.set_element(1, fromTokenType(msg.token));
+    msgTup.set_element(1, msg.destination);
     msgTup.set_element(2, msg.currency);
-    msgTup.set_element(3, msg.destination);
+    msgTup.set_element(3, fromTokenType(msg.token));
     addInboxMessage(msgTup);
 }
 
@@ -836,12 +836,12 @@ void MachineState::runOp(OpCode opcode) {
                 }
             Message outMsg;
             outMsg.data =tup.get_element(0);
-            value tokVal =tup.get_element(1);
-            auto &tokTypeVal = assumeInt(tokVal);
+            value dest =tup.get_element(1);
+            outMsg.destination = assumeInt(dest);
             value amt =tup.get_element(2);
             outMsg.currency = assumeInt(amt);
-            value dest =tup.get_element(3);
-            outMsg.destination = assumeInt(dest);
+            value tokVal =tup.get_element(3);
+            auto &tokTypeVal = assumeInt(tokVal);
 
             toTokenType(tokTypeVal, outMsg.token);
 
@@ -864,13 +864,13 @@ void MachineState::runOp(OpCode opcode) {
             }
             Message outMsg;
             outMsg.data =tup.get_element(0);
-            value tokVal =tup.get_element(1);
-            auto &tokTypeVal = assumeInt(tokVal);
+            value dest =tup.get_element(1);
+            outMsg.destination = assumeInt(dest);
             value amt =tup.get_element(2);
             outMsg.currency = assumeInt(amt);
-            value dest =tup.get_element(3);
-            outMsg.destination = assumeInt(dest);
-            
+            value tokVal =tup.get_element(3);
+            auto &tokTypeVal = assumeInt(tokVal);
+
             toTokenType(tokTypeVal, outMsg.token);
 
             if (!context.afterBalance.CanSpend(outMsg.token, outMsg.currency)){

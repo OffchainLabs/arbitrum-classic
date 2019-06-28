@@ -12,25 +12,39 @@ bool isToken(TokenType tok){
 }
 
 uint256_t fromTokenType(TokenType &tok){
-    uint256_t val;
-    val.backend().resize(3,3);
-    memcpy(val.backend().limbs(), &tok[0], 21);
-    val.backend().normalize();
-    return val;
+    std::vector<unsigned char> val;
+    val.resize(32);
+    std::copy(tok.begin(), tok.end(), val.begin());
+    return from_big_endian(val.begin(), val.end());
 }
 
 void toTokenType(uint256_t tokTypeVal, TokenType &tok){
-    auto count = tokTypeVal.backend().size();
-    auto tsize = sizeof(boost::serialization::mp::limb_type);
-    if (count > 2){
-        memcpy(&tok[0], tokTypeVal.backend().limbs(), 21);
-    } else {
-        memcpy(&tok[0], tokTypeVal.backend().limbs(), count*tsize);
-        memset(&tok[0], 0, 21-count*tsize);
-    }
+    std::vector<unsigned char> val;
+    val.resize(32);
+    to_big_endian(tokTypeVal, val.begin());
+    std::copy(val.begin(), val.begin()+21, tok.begin());
 }
 
-bool BalanceTracker::CanSpend(const TokenType tokType, const uint256_t amount) const {
+//uint256_t fromTokenType(TokenType &tok){
+//    uint256_t val;
+//    val.backend().resize(3,3);
+//    memcpy(val.backend().limbs(), &tok[0], 21);
+//    val.backend().normalize();
+//    return val;
+//}
+//
+//void toTokenType(uint256_t tokTypeVal, TokenType &tok){
+//    auto count = tokTypeVal.backend().size();
+//    auto tsize = sizeof(boost::serialization::mp::limb_type);
+//    if (count > 2){
+//        memcpy(&tok[0], tokTypeVal.backend().limbs(), 21);
+//    } else {
+//        memcpy(&tok[0], tokTypeVal.backend().limbs(), count*tsize);
+//        memset(&tok[0], 0, 21-count*tsize);
+//    }
+//}
+
+bool BalanceTracker::CanSpend(const TokenType &tokType, const uint256_t &amount) const {
     // if token is fungible check that the spend amount <= the amount assigned to that token
     if(isToken(tokType)){
         return (amount <= tokenAmounts[tokenLookup.at(tokType)]);
@@ -44,7 +58,7 @@ bool BalanceTracker::CanSpend(const TokenType tokType, const uint256_t amount) c
     }
 }
 
-bool BalanceTracker::Spend(TokenType tokType, uint256_t amount){
+bool BalanceTracker::Spend(const TokenType &tokType, const uint256_t &amount){
     if (!CanSpend(tokType, amount)) {
         //        errors.New("not enough balance to spend")
         return false;
@@ -65,7 +79,7 @@ bool BalanceTracker::Spend(TokenType tokType, uint256_t amount){
     }
 }
 
-void BalanceTracker::add(TokenType tokType, uint256_t amount){
+void BalanceTracker::add(const TokenType &tokType, const uint256_t &amount){
     if(isToken(tokType)){
         std::map<TokenType,int>::iterator it = tokenLookup.find(tokType);
         if (it == tokenLookup.end()){
@@ -90,7 +104,7 @@ void BalanceTracker::add(TokenType tokType, uint256_t amount){
     }
 }
 
-uint256_t BalanceTracker::tokenValue(const TokenType tokType) const{
+uint256_t BalanceTracker::tokenValue(const TokenType &tokType) const{
     // if token is fungible check that the spend amount <= the amount assigned to that token
     if(isToken(tokType)){
         return tokenAmounts[tokenLookup.at(tokType)];

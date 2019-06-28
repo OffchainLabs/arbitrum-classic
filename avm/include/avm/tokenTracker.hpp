@@ -21,9 +21,9 @@ uint256_t fromTokenType(TokenType &tok);
 
 struct Message {
     value data;
-    TokenType token;
-    uint256_t currency;
     uint256_t destination;
+    uint256_t currency;
+    TokenType token;
 };
 
 struct nftKey {
@@ -43,10 +43,10 @@ class BalanceTracker {
     std::map<nftKey, int> NFTLookup;
     
 public:
-    bool CanSpend(const TokenType tokType, const uint256_t amount) const;
-    bool Spend(TokenType tokType, uint256_t amount);
-    void add(TokenType tokType, uint256_t amount);
-    uint256_t tokenValue(const TokenType tokType) const;
+    bool CanSpend(const TokenType &tokType, const uint256_t &amount) const;
+    bool Spend(const TokenType &tokType, const uint256_t &amount);
+    void add(const TokenType &tokType, const uint256_t &amount);
+    uint256_t tokenValue(const TokenType &tokType) const;
 };
 
 #endif /* tokenTracker_hpp */
