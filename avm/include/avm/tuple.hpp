@@ -147,6 +147,8 @@ class Tuple {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
+        
+        ::warmHash(newval);
 
         if (tpl.local_use_count() > 1) {
             // make new copy tuple
@@ -165,6 +167,12 @@ class Tuple {
             throw bad_tuple_index{};
         }
         return tpl->data[pos];
+    }
+    
+    void warmHash() {
+        if (tpl && !tpl->cachedHash) {
+            tpl->cachedHash = calculateHash();
+        }
     }
 };
 

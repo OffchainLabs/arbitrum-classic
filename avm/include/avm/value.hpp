@@ -36,6 +36,7 @@ std::ostream& operator<<(std::ostream& os, const value& val);
 bool operator==(const CodePoint& val1, const CodePoint& val2);
 
 uint256_t hash(const value& value);
+void warmHash(value& val);
 
 uint256_t deserialize_int(char*& srccode);
 Operation deserializeOperation(char*& bufptr, TuplePool& pool);

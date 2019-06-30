@@ -108,3 +108,15 @@ struct ValuePrinter {
 std::ostream& operator<<(std::ostream& os, const value& val) {
     return mpark::visit(ValuePrinter{os}, val);
 }
+
+struct HashWarmer {
+    void operator()(Tuple& val) { val.warmHash(); }
+    
+    void operator()(uint256_t&) {}
+    
+    void operator()(CodePoint&) {}
+};
+
+void warmHash(value& val) {
+    mpark::visit(HashWarmer{}, val);
+}
