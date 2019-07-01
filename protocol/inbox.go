@@ -52,6 +52,24 @@ func (in *MessageQueue) AddMessage(msg Message) {
 	in.Balance.Add(msg.TokenType, msg.Currency)
 }
 
+func (in *MessageQueue) AddRawMessage(msgVal value.Value) {
+	in.msg, _ = value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(0),
+		in.msg,
+		msgVal,
+	})
+	tup := msgVal.(value.TupleValue)
+	typeVal, _ := tup.GetByInt64(3)
+	typeInt, _ := typeVal.(value.IntValue)
+	typeBytes := typeInt.ToBytes()
+	var tokenType [21]byte
+	copy(tokenType[:], typeBytes[:21])
+	curVal, _ := tup.GetByInt64(2)
+	cur, _ := curVal.(value.IntValue)
+
+	in.Balance.Add(tokenType, cur.BigInt())
+}
+
 type MessageQueues struct {
 	queues value.TupleValue
 }
@@ -100,6 +118,10 @@ func (in *Inbox) Clone() *Inbox {
 
 func (in *Inbox) SendMessage(msg Message) {
 	in.PendingQueue.AddMessage(msg)
+}
+
+func (in *Inbox) SendRawMessage(msg value.Value) {
+	in.PendingQueue.AddRawMessage(msg)
 }
 
 func (in *Inbox) InsertMessageGroup(msgs []Message) {
