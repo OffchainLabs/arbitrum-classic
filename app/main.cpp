@@ -302,7 +302,7 @@ int main(int argc, char* argv[]) {
     //    int state=EXTENSIVE;
     std::string filename;
     std::string inboxfile;
-    unsigned long long stepCount = 1000000;
+    unsigned long long stepCount = 10000000000;
     if (argc < 2) {
         std::cout << "Usage: AVMTest <ao file>" << std::endl;
         std::cout << "   defaulting to use add.ao" << std::endl;
@@ -317,8 +317,8 @@ int main(int argc, char* argv[]) {
     //    machine_create();
     //    oldread_file(filename, code, staticValue);
     //    Machine *mach = read_files(filename, inbox_file);
-    void *tmpmach = machine_create(filename.c_str(), inboxfile.c_str());
-    uint64_t steps = machine_run(tmpmach, stepCount);
+//    void *tmpmach = machine_create(filename.c_str(), inboxfile.c_str());
+//    uint64_t steps = machine_run(tmpmach, stepCount);
     std::ifstream myfile;
 
     struct stat filestatus;
