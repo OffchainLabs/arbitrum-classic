@@ -149,6 +149,7 @@ def generate_evm_code(raw_code, storage):
     code_sizes.append((0x01, 1))
     code_sizes = sorted(code_sizes, key=lambda x: x[0])
 
+    contract_dispatch = sorted(contract_dispatch, key=lambda x: x[0])
     contract_dispatch_impl = make_bst_lookup(contract_dispatch)
 
     @modifies_stack([value.IntType()], 1)
