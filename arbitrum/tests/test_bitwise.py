@@ -18,6 +18,13 @@ import random
 from arbitrum.std import bitwise
 from arbitrum import VM
 
+TT256 = 2 ** 256
+TT256M1 = 2 ** 256 - 1
+TT255 = 2 ** 255
+
+
+def to_signed(i):
+    return i if i < TT255 else i - TT256
 
 class TestArray(TestCase):
     def test_flip_endianness(self):
@@ -44,3 +51,11 @@ class TestArray(TestCase):
             finalstring[i] = new_val
             self.assertEqual(vm.stack[0], int.from_bytes(finalstring, byteorder="big"))
         
+    def test_arithmetic_right_shift(self):
+        cases = [(2 ** 256 - 100, 2), (100, 2)]
+        for case in cases:
+            vm = VM()
+            vm.push(case[1])
+            vm.push(case[0])
+            bitwise.arithmetic_shift_right(vm)
+            self.assertEqual(to_signed(case[0]) >> case[1], to_signed(vm.stack[0]))
