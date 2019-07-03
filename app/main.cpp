@@ -302,6 +302,7 @@ int main(int argc, char* argv[]) {
     //    int state=EXTENSIVE;
     std::string filename;
     std::string inboxfile;
+//    unsigned long long stepCount = 100;
     unsigned long long stepCount = 1000000;
     if (argc < 2) {
         std::cout << "Usage: AVMTest <ao file>" << std::endl;
@@ -318,7 +319,11 @@ int main(int argc, char* argv[]) {
     //    oldread_file(filename, code, staticValue);
     //    Machine *mach = read_files(filename, inbox_file);
     void *tmpmach = machine_create(filename.c_str(), inboxfile.c_str());
+    void *mach2 = machine_clone(tmpmach);
     uint64_t steps = machine_run(tmpmach, stepCount);
+    machine_destroy(tmpmach);
+    std::cout << "Running clone"<<std::endl;
+    steps = machine_run(mach2, stepCount);
     std::ifstream myfile;
 
     struct stat filestatus;

@@ -142,6 +142,20 @@ MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
 MachineState::MachineState(std::vector<CodePoint> code)
     : pool(std::make_unique<TuplePool>()), code(std::move(code)) {}
 
+MachineState::MachineState(MachineState const &m):
+    pool(m.pool),
+    code(m.code),
+    staticVal(m.staticVal),
+    registerVal(m.registerVal),
+    stack(m.stack),
+    auxstack(m.auxstack),
+    state(m.state),
+    pc(m.pc),
+    errpc(m.errpc),
+    pendingInbox(m.pendingInbox),
+    inbox(m.inbox),
+    context(m.context){}
+
 MachineState::MachineState(char*& srccode, char*& inboxdata, int inbox_sz) : MachineState() {
     char* bufptr = srccode;
     char* inboxbuf = inboxdata;
@@ -181,14 +195,14 @@ MachineState::MachineState(char*& srccode, char*& inboxdata, int inbox_sz) : Mac
 
     staticVal = deserialize_value(bufptr, *pool);
     pc = 0;
-    while (inboxbuf < inboxdata+inbox_sz) {
-        if (*inboxbuf == 3){
-            inbox = deserialize_value(inboxbuf, *pool);
-        } else {
+    if (*inboxbuf == 6){
+        inbox = deserialize_value(inboxbuf, *pool);
+    } else {
+        while (inboxbuf < inboxdata+inbox_sz) {
             addInboxMessage(inboxbuf);
         }
+        deliverMessages();
     }
-    deliverMessages();
 }
 
 void MachineState::addInboxMessage(char*& newMsg){
@@ -234,7 +248,13 @@ void MachineState::addInboxMessage(Message &msg){
 }
 
 void MachineState::deliverMessages(){
-    inbox = pendingInbox;
+    Tuple empty;
+    Tuple tup(pool.get(), 3);
+    tup.set_element(0, uint256_t(1));
+    tup.set_element(1, std::move(empty));
+    tup.set_element(2, std::move(pendingInbox));
+
+    inbox = tup;
     pendingInbox = Tuple();
 }
 
@@ -257,7 +277,8 @@ Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t tim
     m.setTimebounds(timeBoundStart, timeBoundEnd);
     uint64_t i;
     for (i = 0; i < stepCount; i++) {
-        //        std::cout << "Step #" << i << std::endl;
+//        std::cout << "Step #" << i << std::endl;
+//        std::cout<<i<<" ";
         auto ret = runOne();
         if ((ret < 0) ||
             (m.state == ERROR)||
@@ -277,13 +298,41 @@ Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t tim
         // set error return
         //        std::cout << "halted state" << std::endl;
     }
-    //    std::cout << "full stack - size=" << stack.stacksize() << std::endl;
-    //    while (stack.stacksize()>0){
-    //        value A=stack.pop();
-    //        std::cout << A << std::endl;
-    //    }
-    //    std::cout << "Total steps executed=" << i << std::endl;
+    std::cout<<to_hex_str(hash())<<std::endl;
+    std::cout<<m<<std::endl;
+    return {i};
+}
 
+Assertion Machine::runUntilStop(uint64_t timeBoundStart, uint64_t timeBoundEnd) {
+    //    std::cout << "starting machine code size=" << code.size() <<
+    //    std::endl; std::cout << "inbox=" << inbox << std::endl;
+    m.setTimebounds(timeBoundStart, timeBoundEnd);
+    uint64_t i=0;
+    while (true) {
+        //        std::cout << "Step #" << i << std::endl;
+        //        std::cout<<i<<" ";
+        i++;
+        auto ret = runOne();
+        if ((ret < 0) ||
+            (m.state == ERROR)||
+            (m.state == HALTED)||
+            (m.state == BLOCKED))
+        {
+            break;
+        }
+    }
+    
+    if (m.state == ERROR) {
+        //TODO: check if error handler set - jump there
+        // set error return
+        std::cout << "error state" << std::endl;
+    }
+    if (m.state == HALTED) {
+        // set error return
+        //        std::cout << "halted state" << std::endl;
+    }
+    std::cout<<to_hex_str(hash())<<std::endl;
+    std::cout<<m<<std::endl;
     return {i};
 }
 
@@ -311,8 +360,10 @@ int Machine::runOne() {
     if (m.state == BLOCKED) {
         return -1;
     }
-    //    std::cout<<"pc="<<pc<<std::endl;
     auto& instruction = m.code[m.pc];
+//    std::cout<<m.pc<<" "<<InstructionNames.at(instruction.op.opcode)<<std::endl;
+//    std::cout << to_hex_str(m.hash()) << "\n" << m << std::endl;
+//    std::cout << m << std::endl;
     if (instruction.op.immediate) {
         //        std::cout<<"immediateVal = "<<*immediateVal<<std::endl;
         auto imm = *instruction.op.immediate;

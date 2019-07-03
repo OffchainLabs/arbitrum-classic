@@ -60,11 +60,16 @@ void* machine_create(const char* filename, const char* inboxfile) {
     return static_cast<void*>(mach);
 }
 
+void* machine_clone(void* m) {
+    Machine *mach = new Machine(*(static_cast<Machine*>(m)));
+    return static_cast<void*>(mach);
+}
+
 void machine_destroy(void* m) {
+    std::cout << "In machine_destroy"<<std::endl;
     if (m == NULL)
         return;
     delete static_cast<Machine*>(m);
-    free(m);
 }
 
 // cassertion machine_run(cmachine_t *m, uint64_t maxSteps) {
@@ -73,6 +78,15 @@ uint64_t machine_run(void* m, uint64_t maxSteps) {
         return 0;
     Machine* mach = static_cast<Machine*>(m);
     Assertion assertion = mach->run(maxSteps, 0, 0);
+    printf("%llu steps ran\n", assertion.stepCount);
+    return assertion.stepCount;
+}
+
+uint64_t machine_run_until_stop(void* m) {
+    if (m == NULL)
+        return 0;
+    Machine* mach = static_cast<Machine*>(m);
+    Assertion assertion = mach->runUntilStop(0, 0);
     printf("%llu steps ran\n", assertion.stepCount);
     return assertion.stepCount;
 }

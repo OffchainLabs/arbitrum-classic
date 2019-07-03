@@ -26,7 +26,7 @@ struct Precondition {
     value beforeInbox;
 };
 
-struct Context {
+struct AssertionContext {
     uint64_t stepCount;
     Precondition precondition;
     value beforeInbox;
@@ -39,8 +39,18 @@ struct Assertion {
     uint64_t stepCount;
 };
 
+struct MsgQueue {
+    value msg;
+    BalanceTracker balance;
+};
+
+struct Inbox {
+    Tuple *accepted;
+    MsgQueue pending;
+};
+
 struct MachineState {
-    std::unique_ptr<TuplePool> pool;
+    std::shared_ptr<TuplePool> pool;
     std::vector<CodePoint> code;
     value staticVal;
     value registerVal;
@@ -51,11 +61,12 @@ struct MachineState {
     CodePoint errpc;
     value pendingInbox;
     value inbox;
-    Context context;
+    AssertionContext context;
 		
     MachineState();
     MachineState(std::vector<CodePoint> code);
     MachineState(char*& srccode, char*& inboxdata, int inbox_sz);
+    MachineState(MachineState const &m);
 
     void readInbox(char *newInbox);
     void addInboxMessage(char*& newMsg);
@@ -74,8 +85,10 @@ class Machine {
 
    public:
     Machine(char*& srccode, char*& inboxdata, int inbox_sz) : m(srccode, inboxdata, inbox_sz) {}
-
+    Machine(){}
+    Machine(Machine const &msrc) : m(msrc.m){}
     Assertion run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd);
+    Assertion runUntilStop(uint64_t timeBoundStart, uint64_t timeBoundEnd);
     int runOne();
     uint256_t hash() const { return m.hash(); }
     void addInboxMessage(char *msg);
