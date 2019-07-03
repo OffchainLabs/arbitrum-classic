@@ -2,20 +2,24 @@
   "name": "pet-shop",
   "version": "0.1.0",
   "description": "",
-  "main": "truffle.js",
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
-    "dev": "lite-server",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "start": "webpack-dev-server --open",
+    "dev": "webpack-dev-server --open",
+    "watch": "webpack --watch"
   },
-  "author": "",
+  "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
   "devDependencies": {
-    "lite-server": "^2.5.2"
+    "webpack": "^4.35.2",
+    "webpack-cli": "^3.3.5",
+    "webpack-dev-server": "^3.7.2"
   },
   "dependencies": {
-    "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider.git"
+    "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider.git",
+    "arb-web3-provider": "https://github.com/offchainlabs/arb-web3-provider",
+    "truffle-contract": "^4.0.23",
+    "web3": "^1.0.0-beta.55"
   }
 }
