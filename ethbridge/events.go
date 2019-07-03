@@ -19,7 +19,7 @@ package ethbridge
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arb-avm/protocol"
+	"github.com/offchainlabs/arb-util/protocol"
 	"math/big"
 )
 

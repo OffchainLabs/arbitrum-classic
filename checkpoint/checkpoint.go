@@ -38,9 +38,9 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Checkpointer struct {

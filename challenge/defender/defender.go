@@ -25,7 +25,7 @@ import (
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 
-	"github.com/offchainlabs/arb-avm/protocol"
+	"github.com/offchainlabs/arb-util/protocol"
 )
 
 func New(core *core.Config, assDef protocol.AssertionDefender, time uint64, bridge bridge.Bridge) (challenge.State, error) {

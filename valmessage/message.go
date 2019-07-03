@@ -21,7 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 // type VMConfiguration struct {

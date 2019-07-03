@@ -19,9 +19,9 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/valmessage"
 )

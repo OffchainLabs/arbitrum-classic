@@ -34,10 +34,10 @@ import (
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arb-avm/evm"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/evm"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/valmessage"

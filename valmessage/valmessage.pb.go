@@ -6,8 +6,8 @@ package valmessage
 import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
-	protocol "github.com/offchainlabs/arb-avm/protocol"
-	value "github.com/offchainlabs/arb-avm/value"
+	protocol "github.com/offchainlabs/arb-util/protocol"
+	value "github.com/offchainlabs/arb-util/value"
 	math "math"
 )
 

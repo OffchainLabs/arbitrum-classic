@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arb-avm/loader"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 func TestOpen(t *testing.T) {

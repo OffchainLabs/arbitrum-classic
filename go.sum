@@ -89,10 +89,10 @@ github.com/mattn/go-isatty v0.0.6 h1:SrwhHcpV4nWrMGdNcC2kXpMfcBVYGDuTArqyhocJgvA
 github.com/mattn/go-isatty v0.0.6/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
 github.com/miguelmota/go-solidity-sha3 v0.1.0 h1:RoRqUD/qKqZCZIoAGVJhX6gEHeD6333uQv+jhBGpRDk=
 github.com/miguelmota/go-solidity-sha3 v0.1.0/go.mod h1:FuaBKCJUkJcmPqCuKvPFYfzK1auYGr5+8i2evSBIm/Q=
-github.com/offchainlabs/arb-avm v0.1.0 h1:aqUSk4SpT0ttH+csSxsxayc6hK9z7jAzXtRpwWu49Vc=
-github.com/offchainlabs/arb-avm v0.1.0/go.mod h1:kKVmBGAotp9E74w7QTkDnLbBgnHE3XF0tUb49ChK2XQ=
-github.com/offchainlabs/arb-avm v0.1.1-0.20190620180800-aea2007ae532 h1:o9zzaNVCiE2PdS0DpEirjXk9ZceYPTY2d2fQIKQaTqw=
-github.com/offchainlabs/arb-avm v0.1.1-0.20190620180800-aea2007ae532/go.mod h1:kKVmBGAotp9E74w7QTkDnLbBgnHE3XF0tUb49ChK2XQ=
+github.com/offchainlabs/arb-util v0.1.0 h1:aqUSk4SpT0ttH+csSxsxayc6hK9z7jAzXtRpwWu49Vc=
+github.com/offchainlabs/arb-util v0.1.0/go.mod h1:kKVmBGAotp9E74w7QTkDnLbBgnHE3XF0tUb49ChK2XQ=
+github.com/offchainlabs/arb-util v0.1.1-0.20190620180800-aea2007ae532 h1:o9zzaNVCiE2PdS0DpEirjXk9ZceYPTY2d2fQIKQaTqw=
+github.com/offchainlabs/arb-util v0.1.1-0.20190620180800-aea2007ae532/go.mod h1:kKVmBGAotp9E74w7QTkDnLbBgnHE3XF0tUb49ChK2XQ=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0 h1:WSHQ+IS43OoUrWtD1/bbclrwK8TTH5hzp+umCiuxHgs=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

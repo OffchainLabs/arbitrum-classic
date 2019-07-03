@@ -29,12 +29,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arb-avm/protocol"
 	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/protocol"
 )
 
 type Validator struct {

@@ -33,6 +33,7 @@ require (
 	github.com/mattn/go-isatty v0.0.6 // indirect
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
 	github.com/offchainlabs/arb-avm v0.1.1-0.20190620180800-aea2007ae532
+	github.com/offchainlabs/arb-util v0.1.1-0.20190620180800-aea2007ae532
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
@@ -51,3 +52,7 @@ require (
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
+
+replace github.com/offchainlabs/arb-avm => ../arb-avm
+
+replace github.com/offchainlabs/arb-util => ../arb-util

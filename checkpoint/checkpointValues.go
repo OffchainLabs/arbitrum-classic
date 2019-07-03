@@ -22,7 +22,7 @@ import (
 	"io"
 
 	"github.com/dgraph-io/badger"
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 const PrefixValue byte = iota
