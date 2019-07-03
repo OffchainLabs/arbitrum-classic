@@ -77,21 +77,19 @@ class TestByteRange(TestCase):
 
     def test_set8(self):
         data = bytearray(random.getrandbits(8) for _ in range(100))
-        print()
-        print(data.hex())
         br = byterange.frombytes(data)
         update_bytes = random.getrandbits(8)
         for i in range(100):
             with self.subTest(index=i):
-                solution = data[:]
-                solution[i] = update_bytes
                 vm = VM()
                 vm.push(update_bytes)
                 vm.push(i)
                 vm.push(br)
                 byterange.set_val8(vm)
-                print(i, update_bytes, sized_byterange.tohex([vm.stack[0], 100]))
-                self.assertEqual(byterange.frombytes(solution), vm.stack[0])
+
+                solution = bytearray(data)
+                solution[i] = update_bytes
+                self.assertEqual(solution.hex(), sized_byterange.tohex([vm.stack[0], 100])[2:])
 
     def test_frombytes(self):
         data = bytearray(random.getrandbits(8) for _ in range(500))

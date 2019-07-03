@@ -130,6 +130,19 @@ def _mod_div_impl(vm):
     vm.div()
 
 
+@modifies_stack([IntType()], [IntType(), IntType()])
+def _mod_div_byte_impl(vm):
+    vm.dup0()
+    vm.push(32)
+    vm.swap1()
+    vm.mod()
+
+    vm.swap1()
+    vm.push(32)
+    vm.swap1()
+    vm.div()
+
+
 # # [tuple, index, value]
 @modifies_stack([typ, IntType(), IntType()], [typ])
 def _set_impl(vm):
@@ -403,13 +416,12 @@ def set_val8(vm):
     update_byte_closure = make_closure(_update_byte, 2)
 
     vm.swap1()
-    _mod_div_impl(vm)
+    _mod_div_byte_impl(vm)
     # [index / 32, index % 32, tuple, value]
     vm.auxpush()
     # [index % 32, tuple, value]
     vm.swap1()
     vm.swap2()
-    vm.swap1()
     # [index % 32, value, tuple]
     update_byte_closure.new(vm)
     # [closure, tuple]
