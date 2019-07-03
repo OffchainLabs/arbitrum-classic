@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm/warning"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Tuple struct {

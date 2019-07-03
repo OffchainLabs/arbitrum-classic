@@ -20,8 +20,8 @@ import (
 	"errors"
 	"github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm/stack"
+	"github.com/offchainlabs/arb-util/value"
 
 	"crypto/sha256"
 	"fmt"

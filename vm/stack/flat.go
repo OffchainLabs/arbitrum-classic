@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Flat struct {

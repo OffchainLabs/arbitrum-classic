@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
 	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 	"math/big"
 	"strconv"
 
@@ -46,8 +46,7 @@ func TestMachineAdd(t *testing.T) {
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
 	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	runMachine := machine.Clone()
-	steps := runMachine.Run(80000)
+	steps := machine.Run(80000)
 	fmt.Println(steps)
 }
 

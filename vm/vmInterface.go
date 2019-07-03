@@ -13,14 +13,18 @@ import (
 	"fmt"
 	"unsafe"
 	//"github.com/ethereum/go-ethereum/common/hexutil"
-	//"github.com/offchainlabs/arb-avm/evm"
+	//"github.com/offchainlabs/arb-util/evm"
 	//"github.com/offchainlabs/arb-avm/loader"
-	//"github.com/offchainlabs/arb-avm/protocol"
-	//"github.com/offchainlabs/arb-avm/value"
+	//"github.com/offchainlabs/arb-util/protocol"
+	//"github.com/offchainlabs/arb-util/value"
 	//"log"
 	//"math/big"
 	//"os"
 )
+
+type VM struct {
+	m unsafe.Pointer
+}
 
 func CreateVM(codeFile string, inboxFile string) unsafe.Pointer {
 
@@ -31,6 +35,8 @@ func CreateVM(codeFile string, inboxFile string) unsafe.Pointer {
 
 	cMachine := C.machine_create(cFilename, cInboxFilename)
 
+	C.free(unsafe.Pointer(cFilename))
+	C.free(unsafe.Pointer(cInboxFilename))
 	return cMachine
 }
 
@@ -43,8 +49,6 @@ func RunVM(cMachine unsafe.Pointer, steps uint64) uint64 {
 	//cEnd := time.Now()
 	//cSteps := 0
 	fmt.Println("cMachine ended ", cSteps, " steps run.")
-	//C.free(unsafe.Pointer(cFilename))
-	//C.free(unsafe.Pointer(cInboxFilename))
 	// C stuff
 	//*************
 	return uint64(cSteps)

@@ -17,7 +17,7 @@
 package vm
 
 import (
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type MachineValue struct {

@@ -17,10 +17,9 @@
 package vm
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/value"
 
 	"errors"
 )
@@ -30,7 +29,7 @@ const CodeSaveFrequency = 2
 var HashOfLastInstruction [32]byte
 
 func init() {
-	HashOfLastInstruction = sha256.Sum256([]byte("This is the hash of the last instruction"))
+	//HashOfLastInstruction = sha256.Sum256([]byte("This is the hash of the last instruction"))
 }
 
 type MachinePC struct {

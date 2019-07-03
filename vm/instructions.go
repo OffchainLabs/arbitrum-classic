@@ -17,12 +17,12 @@
 package vm
 
 import (
-	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/value"
-
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arb-avm/code"
+	//"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arb-util/value"
 	"math/big"
 )
 
