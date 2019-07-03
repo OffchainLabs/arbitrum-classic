@@ -35,6 +35,26 @@ def shift_right(vm):
     vm.div()
 
 
+# [number, bits]
+@modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
+def arithmetic_shift_right(vm):
+    vm.dup0()
+    vm.push(2**255)
+    vm.bitwise_and()
+    vm.push(0)
+    vm.eq()
+    vm.ifelse(lambda vm: [
+        shift_right(vm)
+    ], lambda vm: [
+        vm.dup1(),
+        vm.swap1(),
+        shift_right(vm),
+        vm.swap1(),
+        n_highest_mask(vm),
+        vm.bitwise_or()
+    ])
+
+
 # [bits]
 # 2 ** bits - 1
 @modifies_stack([value.IntType()], [value.IntType()])

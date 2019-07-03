@@ -16,7 +16,7 @@ import pyevmasm
 
 from ..annotation import modifies_stack
 from ..std import stack_manip
-from ..std import byterange
+from ..std import byterange, bitwise
 from ..vm import AVMOp
 from ..ast import AVMLabel
 from ..ast import BlockStatement
@@ -307,6 +307,15 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                 vm.bitwise_not()
             elif instr.name == "BYTE":
                 vm.byte()
+            elif instr.opcode == 0x1b:
+                vm.swap1()
+                bitwise.shift_left(vm)
+            elif instr.opcode == 0x1c:
+                vm.swap1()
+                bitwise.shift_right(vm)
+            elif instr.opcode == 0x1d:
+                vm.swap1()
+                bitwise.arithmetic_shift_right(vm)
 
             # 20s: SHA3
             elif instr.name == "SHA3":
