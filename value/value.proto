@@ -1,0 +1,36 @@
+syntax = "proto3";
+package value;
+option go_package = "github.com/offchainlabs/arb-util/value";
+
+message BigIntegerBuf {
+    bytes value = 1;
+}
+
+message HashBuf {
+    bytes value = 1;
+}
+
+message OperationBuf {
+    uint32 opCode = 1;
+    ValueBuf immediate = 2;
+}
+
+message CodePointBuf {
+    int64 pc = 1;
+    OperationBuf op = 2;
+    HashBuf nextHash = 3;
+}
+
+message TupleBuf {
+    repeated ValueBuf values = 1;
+}
+
+message ValueBuf {
+    uint32 type = 1;
+    oneof value {
+        BigIntegerBuf intVal = 2;
+        TupleBuf tupleVal = 3;
+        CodePointBuf codePointVal = 4;
+    }
+
+}
