@@ -23,22 +23,18 @@
  *
  * @return Resource instance.
  */
-boost::local_shared_ptr<std::vector<value>> TuplePool::getResource(int s) {
-    if (resources[s].empty()) {
-        auto newTup = boost::make_local_shared<std::vector<value>>();
-        newTup->reserve(s);
-        for (int i = 0; i < s; i++) {
-            newTup->push_back(Tuple{});
-        }
-        return newTup;
-    } else {
-        boost::local_shared_ptr<std::vector<value>> resource =
-            resources[s].back();
-        resources[s].pop_back();
-        resource->clear();
-        for (int i = 0; i < s; i++) {
-            resource->push_back(Tuple{});
-        }
-        return resource;
+boost::local_shared_ptr<RawTuple> TuplePool::getResource(int s) {
+    if (s == 0) {
+        return nullptr;
     }
+    boost::local_shared_ptr<RawTuple> resource;
+    if (resources[s].empty()) {
+        resource = boost::make_local_shared<RawTuple>();
+    } else {
+        resource = resources[s].back();
+        resources[s].pop_back();
+    }
+    resource->data.clear();
+    resource->data.reserve(s);
+    return resource;
 }

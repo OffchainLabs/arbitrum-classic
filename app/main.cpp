@@ -302,8 +302,7 @@ int main(int argc, char* argv[]) {
     //    int state=EXTENSIVE;
     std::string filename;
     std::string inboxfile;
-//    unsigned long long stepCount = 100;
-    unsigned long long stepCount = 1000000;
+    unsigned long long stepCount = 10000000000;
     if (argc < 2) {
         std::cout << "Usage: AVMTest <ao file>" << std::endl;
         std::cout << "   defaulting to use add.ao" << std::endl;

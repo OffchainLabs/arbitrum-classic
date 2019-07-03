@@ -16,9 +16,14 @@
 #include <array>
 #include <vector>
 
+struct RawTuple {
+    std::vector<value> data;
+    uint256_t cachedHash = 0;
+};
+
 class TuplePool {
    private:
-    std::array<std::vector<boost::local_shared_ptr<std::vector<value>>>, 9>
+    std::array<std::vector<boost::local_shared_ptr<RawTuple>>, 9>
         resources;
 
    public:
@@ -30,7 +35,7 @@ class TuplePool {
      *
      * @return Resource instance.
      */
-    boost::local_shared_ptr<std::vector<value>> getResource(int s);
+    boost::local_shared_ptr<RawTuple> getResource(int s);
 
     /**
      * Return resource back to the pool.
@@ -41,8 +46,8 @@ class TuplePool {
      *
      * @param object Resource instance.
      */
-    void returnResource(boost::local_shared_ptr<std::vector<value>>&& object) {
-        resources[object->size()].push_back(std::move(object));
+    void returnResource(boost::local_shared_ptr<RawTuple>&& object) {
+        resources[object->data.size()].push_back(std::move(object));
     }
 };
 

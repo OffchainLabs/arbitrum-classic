@@ -36,6 +36,14 @@ class datastack {
             addHash();
         }
     };
+    
+    const value &operator[](size_t index) const {
+        return values[values.size() - 1 - index];
+    }
+    
+    value &operator[](size_t index) {
+        return values[values.size() - 1 - index];
+    }
 
     value pop() {
         auto stackEmpty = values.empty();
@@ -44,11 +52,21 @@ class datastack {
         }
 
         auto val = std::move(values.back());
+        popClear();
+        return val;
+    }
+    
+    void prepForMod(int count) {
+        while(hashes.size() > values.size() - count) {
+            hashes.pop_back();
+        }
+    }
+    
+    void popClear() {
         values.pop_back();
         if (hashes.size() > values.size()) {
             hashes.pop_back();
         }
-        return val;
     }
 
     value& peek() {
