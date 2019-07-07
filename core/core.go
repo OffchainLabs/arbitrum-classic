@@ -19,7 +19,7 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
 
@@ -47,10 +47,10 @@ func (c *Config) GetConfig() *Config {
 type Core struct {
 	inbox   *protocol.Inbox
 	balance *protocol.BalanceTracker
-	machine *vm.Machine
+	machine vm.Machine
 }
 
-func NewCore(inbox *protocol.Inbox, balance *protocol.BalanceTracker, machine *vm.Machine) *Core {
+func NewCore(inbox *protocol.Inbox, balance *protocol.BalanceTracker, machine vm.Machine) *Core {
 	return &Core{
 		inbox:   inbox,
 		balance: balance,
@@ -69,6 +69,7 @@ func (c *Core) Clone() *Core {
 func (c *Core) OffchainAssert(
 	mq *protocol.MessageQueue,
 	timeBounds protocol.TimeBounds,
+	maxSteps int32,
 ) (*Core, *protocol.Assertion) {
 	inbox := c.inbox.Clone()
 	inbox.InsertMessageQueue(mq)
@@ -79,7 +80,7 @@ func (c *Core) OffchainAssert(
 		timeBounds,
 		inbox.Receive(),
 	)
-	newState.RunUntilStop()
+	newState.Run(maxSteps)
 	assDef := assCtx.Finalize(newState)
 
 	newAssertion := assDef.GetAssertion()
@@ -106,7 +107,7 @@ func (c *Core) DeliverMessagesToVM() {
 	c.inbox.DeliverMessages()
 }
 
-func (c *Core) GetMachine() *vm.Machine {
+func (c *Core) GetMachine() vm.Machine {
 	return c.machine
 }
 
@@ -133,7 +134,7 @@ func (c *Core) GeneratePrecondition(beginTime, endTime uint64, includePendingMes
 	}
 }
 
-func (c *Core) CreateDisputableDefender(beginTime, length uint64, includePendingMessages bool, maxSteps int32) (*vm.Machine, protocol.AssertionDefender) {
+func (c *Core) CreateDisputableDefender(beginTime, length uint64, includePendingMessages bool, maxSteps int32) (vm.Machine, protocol.AssertionDefender) {
 	endTime := beginTime + length
 	var inboxValue value.Value
 	if includePendingMessages {

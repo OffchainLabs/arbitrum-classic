@@ -19,7 +19,7 @@ package state
 import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 )
 
@@ -29,7 +29,7 @@ type UnanimousUpdateRequest struct {
 	NewMessages []protocol.Message
 
 	Inbox     *protocol.Inbox
-	Machine   *vm.Machine
+	Machine   vm.Machine
 	Assertion *protocol.Assertion
 
 	ResultChan chan<- valmessage.UnanimousUpdateResults
@@ -37,7 +37,7 @@ type UnanimousUpdateRequest struct {
 }
 
 type DisputableAssertionRequest struct {
-	State           *vm.Machine
+	State           vm.Machine
 	Defender        protocol.AssertionDefender
 	IncludedPending bool
 	ResultChan      chan<- bool

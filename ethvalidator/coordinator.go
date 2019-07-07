@@ -38,7 +38,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 )
 
@@ -323,16 +323,18 @@ type ValidatorCoordinator struct {
 	requestChan chan ValidatorLeaderRequest
 
 	mpq *MessageProcessingQueue
+	maxSteps int32
 }
 
 func NewCoordinator(
 	name string,
-	machine *vm.Machine,
+	machine vm.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
+	maxSteps int32,
 ) (*ValidatorCoordinator, error) {
 	var vmID [32]byte
 	_, err := rand.Read(vmID[:])
@@ -349,6 +351,7 @@ func NewCoordinator(
 		cm:          NewClientManager(key, vmID, c.Validators),
 		requestChan: make(chan ValidatorLeaderRequest, 10),
 		mpq:         NewMessageProcessingQueue(),
+		maxSteps:    maxSteps,
 	}, nil
 }
 
@@ -385,7 +388,7 @@ func (m *ValidatorCoordinator) Run() error {
 				case CoordinatorDisputableRequest:
 					request.retChan <- m.initiateDisputableAssertionImpl()
 				case CoordinatorUnanimousRequest:
-					err := m.initiateUnanimousAssertionImpl(request.final)
+					err := m.initiateUnanimousAssertionImpl(request.final, m.maxSteps)
 					if err != nil {
 						request.errChan <- err
 					} else {
@@ -410,7 +413,7 @@ func (m *ValidatorCoordinator) Run() error {
 				}
 
 				if shouldUnan {
-					err := m.initiateUnanimousAssertionImpl(forceFinal)
+					err := m.initiateUnanimousAssertionImpl(forceFinal, m.maxSteps)
 					if err != nil {
 						log.Println("Coordinator is closing unanimous assertion")
 						closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
@@ -533,10 +536,10 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	return res
 }
 
-func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool) error {
+func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, maxSteps int32) error {
 	queuedMessages := <-m.mpq.Fetch()
 
-	err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal)
+	err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal, maxSteps)
 	if err != nil {
 		m.mpq.Return(queuedMessages)
 		return err
@@ -558,13 +561,13 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool) e
 	return nil
 }
 
-func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool) error {
+func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool, maxSteps int32) error {
 	newMessages := make([]protocol.Message, 0, len(queuedMessages))
 	for _, msg := range queuedMessages {
 		newMessages = append(newMessages, msg.Message)
 	}
 	start := time.Now()
-	requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, forceFinal)
+	requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, forceFinal, maxSteps)
 	responsesChan := make(chan []LabeledFollowerResponse, 1)
 
 	var unanRequest valmessage.UnanimousRequest

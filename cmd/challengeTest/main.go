@@ -23,6 +23,7 @@ import (
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/big"
 	brand "math/rand"
 	"os"
@@ -96,7 +97,15 @@ func main() {
 
 	ethURL := os.Args[3]
 
-	coordinator, err := ethvalidator.NewCoordinator("Alice", machine.Clone(), key1, config, false, connectionInfo, ethURL)
+	coordinator, err := ethvalidator.NewCoordinator(
+		"Alice",
+		machine.Clone(),
+		key1, config,
+		false,
+		connectionInfo,
+		ethURL,
+		math.MaxInt32,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -118,6 +127,7 @@ func main() {
 		connectionInfo,
 		ethURL,
 		"wss://127.0.0.1:1236/ws",
+		math.MaxInt32,
 	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)

@@ -29,7 +29,7 @@ import (
 	"log"
 	"math"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
@@ -48,7 +48,7 @@ func (e *Error) Error() string {
 }
 
 type proposedUpdate struct {
-	machine     *vm.Machine
+	machine     vm.Machine
 	messages    *protocol.MessageQueue
 	Assertion   *protocol.Assertion
 	sequenceNum uint64
@@ -69,7 +69,7 @@ type Waiting struct {
 
 	proposed *proposedUpdate
 
-	acceptedMachine  *vm.Machine
+	acceptedMachine  vm.Machine
 	acceptedMessages *protocol.MessageQueues
 	acceptedBalance  *protocol.BalanceTracker
 	assertion        *protocol.Assertion
@@ -80,7 +80,7 @@ type Waiting struct {
 	pendingMessages *protocol.MessageQueue
 	origMessages    *protocol.MessageQueues
 	origBalance     *protocol.BalanceTracker
-	origMachine     *vm.Machine
+	origMachine     vm.Machine
 }
 
 func NewWaiting(config *core.Config, c *core.Core) Waiting {
@@ -425,7 +425,7 @@ type watchingAssertion struct {
 	*core.Core
 	*core.Config
 	inboxVal     value.Value
-	pendingState *vm.Machine
+	pendingState vm.Machine
 	deadline     uint64
 	precondition *protocol.Precondition
 	assertion    *protocol.Assertion

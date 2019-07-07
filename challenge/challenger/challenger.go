@@ -21,7 +21,7 @@ import (
 	"github.com/offchainlabs/arb-validator/core"
 	"math/rand"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
 
@@ -34,7 +34,7 @@ func New(
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	inbox value.Value,
-	machine *vm.Machine,
+	machine vm.Machine,
 	deadline uint64,
 ) challenge.State {
 	return waitingContinuing{
@@ -52,7 +52,7 @@ type waitingContinuing struct {
 	challengedPrecondition *protocol.Precondition
 	challengedAssertion    *protocol.AssertionStub
 	challengedInbox        value.Value
-	startState             *vm.Machine
+	startState             vm.Machine
 	deadline               uint64
 }
 
@@ -107,7 +107,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 
 type continuing struct {
 	*core.Config
-	challengedState *vm.Machine
+	challengedState vm.Machine
 	deadline        uint64
 	preconditions   []*protocol.Precondition
 	assertions      []*protocol.AssertionStub

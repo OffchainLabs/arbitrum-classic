@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/big"
 	"net/http"
 	"os"
@@ -34,7 +35,7 @@ import (
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 	"github.com/offchainlabs/arb-avm/loader"
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-validator/valmessage"
 
 	"github.com/offchainlabs/arb-validator/ethvalidator"
@@ -45,7 +46,7 @@ type FollowerServer struct {
 }
 
 func NewFollowerServer(
-	machine *vm.Machine,
+	machine vm.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
 	connectionInfo ethbridge.ArbAddresses,
@@ -62,7 +63,17 @@ func NewFollowerServer(
 		common.Address{}, // Address 0 means no owner
 	)
 
-	man, err := ethvalidator.NewValidatorFollower("Bob", machine, key, config, false, connectionInfo, ethURL, coordinatorURL)
+	man, err := ethvalidator.NewValidatorFollower(
+		"Bob",
+		machine,
+		key,
+		config,
+		false,
+		connectionInfo,
+		ethURL,
+		coordinatorURL,
+		math.MaxInt32,
+	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}

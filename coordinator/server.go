@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
+	"math"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -34,7 +35,7 @@ import (
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
@@ -52,7 +53,7 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(
-	machine *vm.Machine,
+	machine vm.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
 	connectionInfo ethbridge.ArbAddresses,
@@ -69,7 +70,16 @@ func NewServer(
 		common.Address{}, // Address 0 means no owner
 	)
 
-	man, err := ethvalidator.NewCoordinator("Alice", machine.Clone(), key, config, false, connectionInfo, ethURL)
+	man, err := ethvalidator.NewCoordinator(
+		"Alice",
+		machine.Clone(),
+		key,
+		config,
+		false,
+		connectionInfo,
+		ethURL,
+		math.MaxInt32,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

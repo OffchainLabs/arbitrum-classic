@@ -33,7 +33,7 @@ import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 )
 
@@ -49,7 +49,7 @@ type Validator struct {
 	pendingDisputableRequest *state.DisputableAssertionRequest
 }
 
-func NewValidator(name string, address common.Address, inbox *protocol.Inbox, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine *vm.Machine, challengeEverything bool) *Validator {
+func NewValidator(name string, address common.Address, inbox *protocol.Inbox, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine vm.Machine, challengeEverything bool) *Validator {
 	requests := make(chan interface{}, 10)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
@@ -108,6 +108,7 @@ func (validator *Validator) InitiateUnanimousRequest(
 	length uint64,
 	messages []protocol.Message,
 	final bool,
+	maxSteps int32,
 ) (
 	<-chan valmessage.UnanimousRequest,
 	<-chan valmessage.UnanimousUpdateResults,
@@ -120,6 +121,7 @@ func (validator *Validator) InitiateUnanimousRequest(
 		TimeLength:  length,
 		NewMessages: messages,
 		Final:       final,
+		MaxSteps:    maxSteps,
 		RequestChan: unanRequestChan,
 		ResultChan:  updateResultChan,
 		ErrChan:     errChan,
@@ -130,12 +132,14 @@ func (validator *Validator) InitiateUnanimousRequest(
 func (validator *Validator) RequestFollowUnanimous(
 	request valmessage.UnanimousRequestData,
 	messages []protocol.Message,
+	maxSteps int32,
 ) (<-chan valmessage.UnanimousUpdateResults, <-chan error) {
 	resultChan := make(chan valmessage.UnanimousUpdateResults, 1)
 	errChan := make(chan error, 1)
 	validator.requests <- followUnanimousRequest{
 		UnanimousRequestData: request,
 		NewMessages:          messages,
+		MaxSteps:             maxSteps,
 		ResultChan:           resultChan,
 		ErrChan:              errChan,
 	}
@@ -164,6 +168,8 @@ func (validator *Validator) CloseUnanimousAssertionRequest() <-chan bool {
 	}
 	return resultChan
 }
+
+const maxCallSteps int32 = math.MaxInt32
 
 func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge bridge.Bridge) {
 	go func() {
@@ -255,7 +261,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 
 						request.RequestChan <- valmessage.UnanimousRequest{UnanimousRequestData: requestData, NewMessages: messageRecords}
 						go func() {
-							newCore, assertion := clonedCore.OffchainAssert(mq, timeBounds)
+							newCore, assertion := clonedCore.OffchainAssert(mq, timeBounds, request.MaxSteps)
 							validator.requests <- state.UnanimousUpdateRequest{
 								UnanimousRequestData: requestData,
 								NewMessages:          newMessages,
@@ -280,7 +286,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						mq, _, _ := bot.OffchainContext(request.NewMessages, request.TimeBounds, request.SequenceNum == math.MaxUint64)
 						clonedCore := bot.GetCore().Clone()
 						go func() {
-							newCore, assertion := clonedCore.OffchainAssert(mq, request.TimeBounds)
+							newCore, assertion := clonedCore.OffchainAssert(mq, request.TimeBounds, request.MaxSteps)
 							validator.requests <- state.UnanimousUpdateRequest{
 								UnanimousRequestData: request.UnanimousRequestData,
 								NewMessages:          request.NewMessages,
@@ -414,13 +420,15 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							[2]uint64{startTime, startTime + 1},
 							box.Receive(),
 						)
-						updatedState.RunUntilStop()
+						_, finished := updatedState.Run(maxCallSteps)
 						ad := actx.Finalize(updatedState)
 						results := ad.GetAssertion().Logs
-						if len(results) > 0 {
-							request.ResultChan <- results[len(results)-1]
-						} else {
+						if !finished {
+							request.ErrorChan <- errors.New("Call took too long to execute")
+						} else if len(results) == 0 {
 							request.ErrorChan <- errors.New("Call produced no output")
+						} else {
+							request.ResultChan <- results[len(results)-1]
 						}
 					}()
 				default:

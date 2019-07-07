@@ -33,7 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
 
@@ -82,7 +82,7 @@ type VMResponse struct {
 func NewEthValidator(
 	name string,
 	vmId [32]byte,
-	machine *vm.Machine,
+	machine vm.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
@@ -126,7 +126,17 @@ func NewEthValidator(
 	actionChan := make(chan func(*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 
-	val := &EthValidator{key, vmId, manMap, bot, actionChan, completedCallChan, ethURL, connectionInfo, con, auth}
+	val := &EthValidator{
+		key,
+		vmId,
+		manMap,
+		bot,
+		actionChan,
+		completedCallChan,
+		ethURL,
+		connectionInfo,
+		con,
+		auth}
 	return val, nil
 }
 

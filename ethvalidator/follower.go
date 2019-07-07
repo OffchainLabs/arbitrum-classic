@@ -23,7 +23,6 @@ import (
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
-	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
@@ -34,21 +33,7 @@ import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arb-avm/vm"
-)
-
-const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 8192
+	"github.com/offchainlabs/arb-util/vm"
 )
 
 type UnanimousAssertionRequest struct {
@@ -62,17 +47,19 @@ type ValidatorFollower struct {
 	client *Client
 
 	unanimousRequests map[[32]byte]UnanimousAssertionRequest
+	maxSteps int32
 }
 
 func NewValidatorFollower(
 	name string,
-	machine *vm.Machine,
+	machine vm.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
+	maxSteps int32,
 ) (*ValidatorFollower, error) {
 	dialer := websocket.DefaultDialer
 	dialer.TLSClientConfig = &tls.Config{
@@ -130,7 +117,12 @@ func NewValidatorFollower(
 	log.Println("Validator formed connection with coordinator")
 	unanimousRequests := make(map[[32]byte]UnanimousAssertionRequest)
 	client := NewClient(coordinatorConn, address)
-	return &ValidatorFollower{c, client, unanimousRequests}, nil
+	return &ValidatorFollower{
+		EthValidator:      c,
+		client:            client,
+		unanimousRequests: unanimousRequests,
+		maxSteps:          maxSteps,
+	}, nil
 }
 
 func (m *ValidatorFollower) HandleUnanimousRequest(
@@ -178,7 +170,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			messages = append(messages, msg)
 		}
 
-		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages)
+		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages, m.maxSteps)
 		var unanUpdate valmessage.UnanimousUpdateResults
 		select {
 		case unanUpdate = <-resultsChan:

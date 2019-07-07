@@ -46,6 +46,7 @@ type initiateUnanimousRequest struct {
 	TimeLength  uint64
 	NewMessages []protocol.Message
 	Final       bool
+	MaxSteps    int32
 	RequestChan chan<- valmessage.UnanimousRequest
 	ResultChan  chan<- valmessage.UnanimousUpdateResults
 	ErrChan     chan<- error
@@ -54,6 +55,7 @@ type initiateUnanimousRequest struct {
 type followUnanimousRequest struct {
 	valmessage.UnanimousRequestData
 	NewMessages []protocol.Message
+	MaxSteps int32
 
 	ResultChan chan<- valmessage.UnanimousUpdateResults
 	ErrChan    chan<- error
