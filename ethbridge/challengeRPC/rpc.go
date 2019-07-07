@@ -192,9 +192,8 @@ func (_ArbMachine *ArbMachineTransactorRaw) Transact(opts *bind.TransactOpts, me
 //
 // Solidity: function machineHash(bytes32 instructionStackHash, bytes32 dataStackHash, bytes32 auxStackHash, bytes32 registerHash, bytes32 staticHash, bytes32 errHandlerHash) constant returns(bytes32)
 func (_ArbMachine *ArbMachineCaller) MachineHash(opts *bind.CallOpts, instructionStackHash [32]byte, dataStackHash [32]byte, auxStackHash [32]byte, registerHash [32]byte, staticHash [32]byte, errHandlerHash [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbMachine.contract.Call(opts, out, "machineHash", instructionStackHash, dataStackHash, auxStackHash, registerHash, staticHash, errHandlerHash)
 	return *ret0, err
@@ -379,9 +378,8 @@ func (_ArbProtocol *ArbProtocolTransactorRaw) Transact(opts *bind.TransactOpts, 
 //
 // Solidity: function appendInboxMessages(bytes32 _inboxHash, bytes32 _pendingMessages) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) AppendInboxMessages(opts *bind.CallOpts, _inboxHash [32]byte, _pendingMessages [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "appendInboxMessages", _inboxHash, _pendingMessages)
 	return *ret0, err
@@ -405,9 +403,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) AppendInboxMessages(_inboxHash [32
 //
 // Solidity: function appendInboxPendingMessage(bytes32 _pendingMessages, bytes32 _newMessage) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) AppendInboxPendingMessage(opts *bind.CallOpts, _pendingMessages [32]byte, _newMessage [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "appendInboxPendingMessage", _pendingMessages, _newMessage)
 	return *ret0, err
@@ -431,9 +428,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) AppendInboxPendingMessage(_pending
 //
 // Solidity: function calculateBeforeValues(bytes21[] _tokenTypes, uint16[] _messageTokenNums, uint256[] _messageAmounts) constant returns(uint256[])
 func (_ArbProtocol *ArbProtocolCaller) CalculateBeforeValues(opts *bind.CallOpts, _tokenTypes [][21]byte, _messageTokenNums []uint16, _messageAmounts []*big.Int) ([]*big.Int, error) {
-	var (
-		ret0 = new([]*big.Int)
-	)
+	ret0 := new([]*big.Int)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "calculateBeforeValues", _tokenTypes, _messageTokenNums, _messageAmounts)
 	return *ret0, err
@@ -457,9 +453,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) CalculateBeforeValues(_tokenTypes 
 //
 // Solidity: function countSignatures(bytes _signatures) constant returns(uint256)
 func (_ArbProtocol *ArbProtocolCaller) CountSignatures(opts *bind.CallOpts, _signatures []byte) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "countSignatures", _signatures)
 	return *ret0, err
@@ -483,9 +478,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) CountSignatures(_signatures []byte
 //
 // Solidity: function createVMHash(uint32 _gracePeriod, uint128 _escrowRequired, uint32 _maxExecutionSteps, bytes32 _vmState, uint16 _challengeManagerNum, address[] _assertKeys) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) CreateVMHash(opts *bind.CallOpts, _gracePeriod uint32, _escrowRequired *big.Int, _maxExecutionSteps uint32, _vmState [32]byte, _challengeManagerNum uint16, _assertKeys []common.Address) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "createVMHash", _gracePeriod, _escrowRequired, _maxExecutionSteps, _vmState, _challengeManagerNum, _assertKeys)
 	return *ret0, err
@@ -509,9 +503,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) CreateVMHash(_gracePeriod uint32, 
 //
 // Solidity: function generateAssertionHash(bytes32 _afterHash, uint32 _numSteps, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash, uint256[] _totalMessageValueAmounts) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateAssertionHash(opts *bind.CallOpts, _afterHash [32]byte, _numSteps uint32, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte, _totalMessageValueAmounts []*big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateAssertionHash", _afterHash, _numSteps, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash, _totalMessageValueAmounts)
 	return *ret0, err
@@ -535,9 +528,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateAssertionHash(_afterHash [
 //
 // Solidity: function generateLastMessageHash(bytes21[] _tokenTypes, bytes _messageData, uint16[] _messageTokenNum, uint256[] _messageAmount, bytes32[] _messageDestination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateLastMessageHash(opts *bind.CallOpts, _tokenTypes [][21]byte, _messageData []byte, _messageTokenNum []uint16, _messageAmount []*big.Int, _messageDestination [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateLastMessageHash", _tokenTypes, _messageData, _messageTokenNum, _messageAmount, _messageDestination)
 	return *ret0, err
@@ -561,9 +553,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateLastMessageHash(_tokenType
 //
 // Solidity: function generateLastMessageHashStub(bytes21[] _tokenTypes, bytes32[] _messageDataHashes, uint16[] _messageTokenNum, uint256[] _messageValueAmounts, bytes32[] _messageDestination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateLastMessageHashStub(opts *bind.CallOpts, _tokenTypes [][21]byte, _messageDataHashes [][32]byte, _messageTokenNum []uint16, _messageValueAmounts []*big.Int, _messageDestination [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateLastMessageHashStub", _tokenTypes, _messageDataHashes, _messageTokenNum, _messageValueAmounts, _messageDestination)
 	return *ret0, err
@@ -587,9 +578,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateLastMessageHashStub(_token
 //
 // Solidity: function generateMessageStubHash(bytes32 _data, bytes21 _tokenType, uint256 _value, bytes32 _destination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateMessageStubHash(opts *bind.CallOpts, _data [32]byte, _tokenType [21]byte, _value *big.Int, _destination [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateMessageStubHash", _data, _tokenType, _value, _destination)
 	return *ret0, err
@@ -613,9 +603,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateMessageStubHash(_data [32]
 //
 // Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint64[2] _timeBounds, bytes32 _beforeInbox, bytes21[] _tokenTypes, uint256[] _beforeBalances) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GeneratePreconditionHash(opts *bind.CallOpts, _beforeHash [32]byte, _timeBounds [2]uint64, _beforeInbox [32]byte, _tokenTypes [][21]byte, _beforeBalances []*big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generatePreconditionHash", _beforeHash, _timeBounds, _beforeInbox, _tokenTypes, _beforeBalances)
 	return *ret0, err
@@ -639,9 +628,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GeneratePreconditionHash(_beforeHa
 //
 // Solidity: function generateSentMessageHash(bytes32 _dest, bytes32 _data, bytes21 _tokenType, uint256 _value, bytes32 _sender) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateSentMessageHash(opts *bind.CallOpts, _dest [32]byte, _data [32]byte, _tokenType [21]byte, _value *big.Int, _sender [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateSentMessageHash", _dest, _data, _tokenType, _value, _sender)
 	return *ret0, err
@@ -705,9 +693,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) ParseSignature(_signatures []byte,
 //
 // Solidity: function recoverAddresses(bytes32 _messageHash, bytes _signatures) constant returns(address[])
 func (_ArbProtocol *ArbProtocolCaller) RecoverAddresses(opts *bind.CallOpts, _messageHash [32]byte, _signatures []byte) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "recoverAddresses", _messageHash, _signatures)
 	return *ret0, err
@@ -731,9 +718,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) RecoverAddresses(_messageHash [32]
 //
 // Solidity: function unanimousAssertHash(bytes32[5] _fields, uint64[2] _timeBounds, bytes21[] _tokenTypes, bytes _messageData, uint16[] _messageTokenNum, uint256[] _messageAmount, bytes32[] _messageDestination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) UnanimousAssertHash(opts *bind.CallOpts, _fields [5][32]byte, _timeBounds [2]uint64, _tokenTypes [][21]byte, _messageData []byte, _messageTokenNum []uint16, _messageAmount []*big.Int, _messageDestination [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "unanimousAssertHash", _fields, _timeBounds, _tokenTypes, _messageData, _messageTokenNum, _messageAmount, _messageDestination)
 	return *ret0, err
@@ -948,9 +934,8 @@ func (_ArbValue *ArbValueCallerSession) DeserializeValidValueHash(data []byte, o
 //
 // Solidity: function deserialize_value_hash(bytes data) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) DeserializeValueHash(opts *bind.CallOpts, data []byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "deserialize_value_hash", data)
 	return *ret0, err
@@ -1004,9 +989,8 @@ func (_ArbValue *ArbValueCallerSession) GetNextValidValue(data []byte, offset *b
 //
 // Solidity: function hashCodePointBasicValue(uint8 opcode, bytes32 nextCodePoint) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashCodePointBasicValue(opts *bind.CallOpts, opcode uint8, nextCodePoint [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashCodePointBasicValue", opcode, nextCodePoint)
 	return *ret0, err
@@ -1030,9 +1014,8 @@ func (_ArbValue *ArbValueCallerSession) HashCodePointBasicValue(opcode uint8, ne
 //
 // Solidity: function hashCodePointImmediateValue(uint8 opcode, bytes32 immediateVal, bytes32 nextCodePoint) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashCodePointImmediateValue(opts *bind.CallOpts, opcode uint8, immediateVal [32]byte, nextCodePoint [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashCodePointImmediateValue", opcode, immediateVal, nextCodePoint)
 	return *ret0, err
@@ -1056,9 +1039,8 @@ func (_ArbValue *ArbValueCallerSession) HashCodePointImmediateValue(opcode uint8
 //
 // Solidity: function hashEmptyTuple() constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashEmptyTuple(opts *bind.CallOpts) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashEmptyTuple")
 	return *ret0, err
@@ -1082,9 +1064,8 @@ func (_ArbValue *ArbValueCallerSession) HashEmptyTuple() ([32]byte, error) {
 //
 // Solidity: function hashIntValue(uint256 val) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashIntValue(opts *bind.CallOpts, val *big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashIntValue", val)
 	return *ret0, err
@@ -1108,9 +1089,8 @@ func (_ArbValue *ArbValueCallerSession) HashIntValue(val *big.Int) ([32]byte, er
 //
 // Solidity: function isValidTupleSize(uint256 size) constant returns(bool)
 func (_ArbValue *ArbValueCaller) IsValidTupleSize(opts *bind.CallOpts, size *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "isValidTupleSize", size)
 	return *ret0, err
@@ -1659,7 +1639,6 @@ type ChallengeManagerBisectedAssertion struct {
 //
 // Solidity: event BisectedAssertion(bytes32 indexed vmId, address bisecter, bytes32[] afterHashAndMessageAndLogsBisections, uint32 totalSteps, uint256[] totalMessageAmounts)
 func (_ChallengeManager *ChallengeManagerFilterer) FilterBisectedAssertion(opts *bind.FilterOpts, vmId [][32]byte) (*ChallengeManagerBisectedAssertionIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -1676,7 +1655,6 @@ func (_ChallengeManager *ChallengeManagerFilterer) FilterBisectedAssertion(opts 
 //
 // Solidity: event BisectedAssertion(bytes32 indexed vmId, address bisecter, bytes32[] afterHashAndMessageAndLogsBisections, uint32 totalSteps, uint256[] totalMessageAmounts)
 func (_ChallengeManager *ChallengeManagerFilterer) WatchBisectedAssertion(opts *bind.WatchOpts, sink chan<- *ChallengeManagerBisectedAssertion, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -1793,7 +1771,6 @@ type ChallengeManagerContinuedChallenge struct {
 //
 // Solidity: event ContinuedChallenge(bytes32 indexed vmId, address challenger, uint256 assertionIndex)
 func (_ChallengeManager *ChallengeManagerFilterer) FilterContinuedChallenge(opts *bind.FilterOpts, vmId [][32]byte) (*ChallengeManagerContinuedChallengeIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -1810,7 +1787,6 @@ func (_ChallengeManager *ChallengeManagerFilterer) FilterContinuedChallenge(opts
 //
 // Solidity: event ContinuedChallenge(bytes32 indexed vmId, address challenger, uint256 assertionIndex)
 func (_ChallengeManager *ChallengeManagerFilterer) WatchContinuedChallenge(opts *bind.WatchOpts, sink chan<- *ChallengeManagerContinuedChallenge, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -1927,7 +1903,6 @@ type ChallengeManagerOneStepProofCompleted struct {
 //
 // Solidity: event OneStepProofCompleted(bytes32 indexed vmId, address asserter, bytes proof)
 func (_ChallengeManager *ChallengeManagerFilterer) FilterOneStepProofCompleted(opts *bind.FilterOpts, vmId [][32]byte) (*ChallengeManagerOneStepProofCompletedIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -1944,7 +1919,6 @@ func (_ChallengeManager *ChallengeManagerFilterer) FilterOneStepProofCompleted(o
 //
 // Solidity: event OneStepProofCompleted(bytes32 indexed vmId, address asserter, bytes proof)
 func (_ChallengeManager *ChallengeManagerFilterer) WatchOneStepProofCompleted(opts *bind.WatchOpts, sink chan<- *ChallengeManagerOneStepProofCompleted, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -2060,7 +2034,6 @@ type ChallengeManagerOneStepProofDebug struct {
 //
 // Solidity: event OneStepProofDebug(bytes32 indexed vmId, bytes32[10] proofData)
 func (_ChallengeManager *ChallengeManagerFilterer) FilterOneStepProofDebug(opts *bind.FilterOpts, vmId [][32]byte) (*ChallengeManagerOneStepProofDebugIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -2077,7 +2050,6 @@ func (_ChallengeManager *ChallengeManagerFilterer) FilterOneStepProofDebug(opts 
 //
 // Solidity: event OneStepProofDebug(bytes32 indexed vmId, bytes32[10] proofData)
 func (_ChallengeManager *ChallengeManagerFilterer) WatchOneStepProofDebug(opts *bind.WatchOpts, sink chan<- *ChallengeManagerOneStepProofDebug, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -2193,7 +2165,6 @@ type ChallengeManagerTimedOutChallenge struct {
 //
 // Solidity: event TimedOutChallenge(bytes32 indexed vmId, bool challengerWrong)
 func (_ChallengeManager *ChallengeManagerFilterer) FilterTimedOutChallenge(opts *bind.FilterOpts, vmId [][32]byte) (*ChallengeManagerTimedOutChallengeIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -2210,7 +2181,6 @@ func (_ChallengeManager *ChallengeManagerFilterer) FilterTimedOutChallenge(opts 
 //
 // Solidity: event TimedOutChallenge(bytes32 indexed vmId, bool challengerWrong)
 func (_ChallengeManager *ChallengeManagerFilterer) WatchTimedOutChallenge(opts *bind.WatchOpts, sink chan<- *ChallengeManagerTimedOutChallenge, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -2777,9 +2747,8 @@ func (_MerkleLib *MerkleLibTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function generateAddressRoot(address[] _addresses) constant returns(bytes32)
 func (_MerkleLib *MerkleLibCaller) GenerateAddressRoot(opts *bind.CallOpts, _addresses []common.Address) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _MerkleLib.contract.Call(opts, out, "generateAddressRoot", _addresses)
 	return *ret0, err
@@ -2803,9 +2772,8 @@ func (_MerkleLib *MerkleLibCallerSession) GenerateAddressRoot(_addresses []commo
 //
 // Solidity: function generateRoot(bytes32[] _hashes) constant returns(bytes32)
 func (_MerkleLib *MerkleLibCaller) GenerateRoot(opts *bind.CallOpts, _hashes [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _MerkleLib.contract.Call(opts, out, "generateRoot", _hashes)
 	return *ret0, err
@@ -2829,9 +2797,8 @@ func (_MerkleLib *MerkleLibCallerSession) GenerateRoot(_hashes [][32]byte) ([32]
 //
 // Solidity: function verifyProof(bytes proof, bytes32 root, bytes32 hash, uint256 index) constant returns(bool)
 func (_MerkleLib *MerkleLibCaller) VerifyProof(opts *bind.CallOpts, proof []byte, root [32]byte, hash [32]byte, index *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _MerkleLib.contract.Call(opts, out, "verifyProof", proof, root, hash, index)
 	return *ret0, err
@@ -3016,9 +2983,8 @@ func (_OneStepProof *OneStepProofTransactorRaw) Transact(opts *bind.TransactOpts
 //
 // Solidity: function validateProof(bytes32[7] fields, uint64[2] timeBounds, bytes21[] tokenTypes, uint256[] beforeValues, uint256[] messageValue, bytes proof) constant returns(uint256)
 func (_OneStepProof *OneStepProofCaller) ValidateProof(opts *bind.CallOpts, fields [7][32]byte, timeBounds [2]uint64, tokenTypes [][21]byte, beforeValues []*big.Int, messageValue []*big.Int, proof []byte) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _OneStepProof.contract.Call(opts, out, "validateProof", fields, timeBounds, tokenTypes, beforeValues, messageValue, proof)
 	return *ret0, err
@@ -3120,7 +3086,6 @@ type OneStepProofSawMachine struct {
 //
 // Solidity: event SawMachine(bytes32 instructionStack, bytes32 dataStack, bytes32 auxStack, bytes32 register, bytes32 staticHash, bytes32 errHandler)
 func (_OneStepProof *OneStepProofFilterer) FilterSawMachine(opts *bind.FilterOpts) (*OneStepProofSawMachineIterator, error) {
-
 	logs, sub, err := _OneStepProof.contract.FilterLogs(opts, "SawMachine")
 	if err != nil {
 		return nil, err
@@ -3132,7 +3097,6 @@ func (_OneStepProof *OneStepProofFilterer) FilterSawMachine(opts *bind.FilterOpt
 //
 // Solidity: event SawMachine(bytes32 instructionStack, bytes32 dataStack, bytes32 auxStack, bytes32 register, bytes32 staticHash, bytes32 errHandler)
 func (_OneStepProof *OneStepProofFilterer) WatchSawMachine(opts *bind.WatchOpts, sink chan<- *OneStepProofSawMachine) (event.Subscription, error) {
-
 	logs, sub, err := _OneStepProof.contract.WatchLogs(opts, "SawMachine")
 	if err != nil {
 		return nil, err

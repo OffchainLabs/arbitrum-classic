@@ -33,9 +33,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arb-util/vm"
 
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/validator"
@@ -136,7 +136,8 @@ func NewEthValidator(
 		ethURL,
 		connectionInfo,
 		con,
-		auth}
+		auth,
+	}
 	return val, nil
 }
 

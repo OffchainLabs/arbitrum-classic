@@ -353,9 +353,8 @@ func (_ArbBalanceTracker *ArbBalanceTrackerTransactorRaw) Transact(opts *bind.Tr
 //
 // Solidity: function allowance(address owner, address spender) constant returns(uint256)
 func (_ArbBalanceTracker *ArbBalanceTrackerCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ArbBalanceTracker.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -379,9 +378,8 @@ func (_ArbBalanceTracker *ArbBalanceTrackerCallerSession) Allowance(owner common
 //
 // Solidity: function balanceOf(address owner) constant returns(uint256)
 func (_ArbBalanceTracker *ArbBalanceTrackerCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ArbBalanceTracker.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -435,9 +433,8 @@ func (_ArbBalanceTracker *ArbBalanceTrackerCallerSession) GetNFTTokens(_owner [3
 //
 // Solidity: function getTokenBalance(address _tokenContract, bytes32 _owner) constant returns(uint256)
 func (_ArbBalanceTracker *ArbBalanceTrackerCaller) GetTokenBalance(opts *bind.CallOpts, _tokenContract common.Address, _owner [32]byte) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ArbBalanceTracker.contract.Call(opts, out, "getTokenBalance", _tokenContract, _owner)
 	return *ret0, err
@@ -491,9 +488,8 @@ func (_ArbBalanceTracker *ArbBalanceTrackerCallerSession) GetTokenBalances(_owne
 //
 // Solidity: function hasNFT(address _tokenContract, bytes32 _owner, uint256 _tokenId) constant returns(bool)
 func (_ArbBalanceTracker *ArbBalanceTrackerCaller) HasNFT(opts *bind.CallOpts, _tokenContract common.Address, _owner [32]byte, _tokenId *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _ArbBalanceTracker.contract.Call(opts, out, "hasNFT", _tokenContract, _owner, _tokenId)
 	return *ret0, err
@@ -517,9 +513,8 @@ func (_ArbBalanceTracker *ArbBalanceTrackerCallerSession) HasNFT(_tokenContract 
 //
 // Solidity: function isOwner() constant returns(bool)
 func (_ArbBalanceTracker *ArbBalanceTrackerCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _ArbBalanceTracker.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -543,9 +538,8 @@ func (_ArbBalanceTracker *ArbBalanceTrackerCallerSession) IsOwner() (bool, error
 //
 // Solidity: function owner() constant returns(address)
 func (_ArbBalanceTracker *ArbBalanceTrackerCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
+
 	out := ret0
 	err := _ArbBalanceTracker.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -569,9 +563,8 @@ func (_ArbBalanceTracker *ArbBalanceTrackerCallerSession) Owner() (common.Addres
 //
 // Solidity: function totalSupply() constant returns(uint256)
 func (_ArbBalanceTracker *ArbBalanceTrackerCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ArbBalanceTracker.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -1090,7 +1083,6 @@ type ArbBalanceTrackerApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ArbBalanceTrackerApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1111,7 +1103,6 @@ func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) FilterApproval(opts *bind.F
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ArbBalanceTrackerApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1231,7 +1222,6 @@ type ArbBalanceTrackerOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ArbBalanceTrackerOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1252,7 +1242,6 @@ func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ArbBalanceTrackerOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1373,7 +1362,6 @@ type ArbBalanceTrackerTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ArbBalanceTrackerTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1394,7 +1382,6 @@ func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) FilterTransfer(opts *bind.F
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ArbBalanceTracker *ArbBalanceTrackerFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ArbBalanceTrackerTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1601,9 +1588,8 @@ func (_ArbProtocol *ArbProtocolTransactorRaw) Transact(opts *bind.TransactOpts, 
 //
 // Solidity: function appendInboxMessages(bytes32 _inboxHash, bytes32 _pendingMessages) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) AppendInboxMessages(opts *bind.CallOpts, _inboxHash [32]byte, _pendingMessages [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "appendInboxMessages", _inboxHash, _pendingMessages)
 	return *ret0, err
@@ -1627,9 +1613,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) AppendInboxMessages(_inboxHash [32
 //
 // Solidity: function appendInboxPendingMessage(bytes32 _pendingMessages, bytes32 _newMessage) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) AppendInboxPendingMessage(opts *bind.CallOpts, _pendingMessages [32]byte, _newMessage [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "appendInboxPendingMessage", _pendingMessages, _newMessage)
 	return *ret0, err
@@ -1653,9 +1638,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) AppendInboxPendingMessage(_pending
 //
 // Solidity: function calculateBeforeValues(bytes21[] _tokenTypes, uint16[] _messageTokenNums, uint256[] _messageAmounts) constant returns(uint256[])
 func (_ArbProtocol *ArbProtocolCaller) CalculateBeforeValues(opts *bind.CallOpts, _tokenTypes [][21]byte, _messageTokenNums []uint16, _messageAmounts []*big.Int) ([]*big.Int, error) {
-	var (
-		ret0 = new([]*big.Int)
-	)
+	ret0 := new([]*big.Int)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "calculateBeforeValues", _tokenTypes, _messageTokenNums, _messageAmounts)
 	return *ret0, err
@@ -1679,9 +1663,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) CalculateBeforeValues(_tokenTypes 
 //
 // Solidity: function countSignatures(bytes _signatures) constant returns(uint256)
 func (_ArbProtocol *ArbProtocolCaller) CountSignatures(opts *bind.CallOpts, _signatures []byte) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "countSignatures", _signatures)
 	return *ret0, err
@@ -1705,9 +1688,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) CountSignatures(_signatures []byte
 //
 // Solidity: function generateAssertionHash(bytes32 _afterHash, uint32 _numSteps, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash, uint256[] _totalMessageValueAmounts) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateAssertionHash(opts *bind.CallOpts, _afterHash [32]byte, _numSteps uint32, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte, _totalMessageValueAmounts []*big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateAssertionHash", _afterHash, _numSteps, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash, _totalMessageValueAmounts)
 	return *ret0, err
@@ -1731,9 +1713,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateAssertionHash(_afterHash [
 //
 // Solidity: function generateLastMessageHash(bytes21[] _tokenTypes, bytes _messageData, uint16[] _messageTokenNum, uint256[] _messageAmount, bytes32[] _messageDestination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateLastMessageHash(opts *bind.CallOpts, _tokenTypes [][21]byte, _messageData []byte, _messageTokenNum []uint16, _messageAmount []*big.Int, _messageDestination [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateLastMessageHash", _tokenTypes, _messageData, _messageTokenNum, _messageAmount, _messageDestination)
 	return *ret0, err
@@ -1757,9 +1738,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateLastMessageHash(_tokenType
 //
 // Solidity: function generateLastMessageHashStub(bytes21[] _tokenTypes, bytes32[] _messageDataHashes, uint16[] _messageTokenNum, uint256[] _messageValueAmounts, bytes32[] _messageDestination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateLastMessageHashStub(opts *bind.CallOpts, _tokenTypes [][21]byte, _messageDataHashes [][32]byte, _messageTokenNum []uint16, _messageValueAmounts []*big.Int, _messageDestination [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateLastMessageHashStub", _tokenTypes, _messageDataHashes, _messageTokenNum, _messageValueAmounts, _messageDestination)
 	return *ret0, err
@@ -1783,9 +1763,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateLastMessageHashStub(_token
 //
 // Solidity: function generateMessageStubHash(bytes32 _data, bytes21 _tokenType, uint256 _value, bytes32 _destination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateMessageStubHash(opts *bind.CallOpts, _data [32]byte, _tokenType [21]byte, _value *big.Int, _destination [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateMessageStubHash", _data, _tokenType, _value, _destination)
 	return *ret0, err
@@ -1809,9 +1788,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GenerateMessageStubHash(_data [32]
 //
 // Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint64[2] _timeBounds, bytes32 _beforeInbox, bytes21[] _tokenTypes, uint256[] _beforeBalances) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GeneratePreconditionHash(opts *bind.CallOpts, _beforeHash [32]byte, _timeBounds [2]uint64, _beforeInbox [32]byte, _tokenTypes [][21]byte, _beforeBalances []*big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generatePreconditionHash", _beforeHash, _timeBounds, _beforeInbox, _tokenTypes, _beforeBalances)
 	return *ret0, err
@@ -1835,9 +1813,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) GeneratePreconditionHash(_beforeHa
 //
 // Solidity: function generateSentMessageHash(bytes32 _dest, bytes32 _data, bytes21 _tokenType, uint256 _value, bytes32 _sender) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) GenerateSentMessageHash(opts *bind.CallOpts, _dest [32]byte, _data [32]byte, _tokenType [21]byte, _value *big.Int, _sender [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "generateSentMessageHash", _dest, _data, _tokenType, _value, _sender)
 	return *ret0, err
@@ -1901,9 +1878,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) ParseSignature(_signatures []byte,
 //
 // Solidity: function recoverAddresses(bytes32 _messageHash, bytes _signatures) constant returns(address[])
 func (_ArbProtocol *ArbProtocolCaller) RecoverAddresses(opts *bind.CallOpts, _messageHash [32]byte, _signatures []byte) ([]common.Address, error) {
-	var (
-		ret0 = new([]common.Address)
-	)
+	ret0 := new([]common.Address)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "recoverAddresses", _messageHash, _signatures)
 	return *ret0, err
@@ -1927,9 +1903,8 @@ func (_ArbProtocol *ArbProtocolCallerSession) RecoverAddresses(_messageHash [32]
 //
 // Solidity: function unanimousAssertHash(bytes32[5] _fields, uint64[2] _timeBounds, bytes21[] _tokenTypes, bytes _messageData, uint16[] _messageTokenNum, uint256[] _messageAmount, bytes32[] _messageDestination) constant returns(bytes32)
 func (_ArbProtocol *ArbProtocolCaller) UnanimousAssertHash(opts *bind.CallOpts, _fields [5][32]byte, _timeBounds [2]uint64, _tokenTypes [][21]byte, _messageData []byte, _messageTokenNum []uint16, _messageAmount []*big.Int, _messageDestination [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbProtocol.contract.Call(opts, out, "unanimousAssertHash", _fields, _timeBounds, _tokenTypes, _messageData, _messageTokenNum, _messageAmount, _messageDestination)
 	return *ret0, err
@@ -2144,9 +2119,8 @@ func (_ArbValue *ArbValueCallerSession) DeserializeValidValueHash(data []byte, o
 //
 // Solidity: function deserialize_value_hash(bytes data) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) DeserializeValueHash(opts *bind.CallOpts, data []byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "deserialize_value_hash", data)
 	return *ret0, err
@@ -2200,9 +2174,8 @@ func (_ArbValue *ArbValueCallerSession) GetNextValidValue(data []byte, offset *b
 //
 // Solidity: function hashCodePointBasicValue(uint8 opcode, bytes32 nextCodePoint) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashCodePointBasicValue(opts *bind.CallOpts, opcode uint8, nextCodePoint [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashCodePointBasicValue", opcode, nextCodePoint)
 	return *ret0, err
@@ -2226,9 +2199,8 @@ func (_ArbValue *ArbValueCallerSession) HashCodePointBasicValue(opcode uint8, ne
 //
 // Solidity: function hashCodePointImmediateValue(uint8 opcode, bytes32 immediateVal, bytes32 nextCodePoint) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashCodePointImmediateValue(opts *bind.CallOpts, opcode uint8, immediateVal [32]byte, nextCodePoint [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashCodePointImmediateValue", opcode, immediateVal, nextCodePoint)
 	return *ret0, err
@@ -2252,9 +2224,8 @@ func (_ArbValue *ArbValueCallerSession) HashCodePointImmediateValue(opcode uint8
 //
 // Solidity: function hashEmptyTuple() constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashEmptyTuple(opts *bind.CallOpts) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashEmptyTuple")
 	return *ret0, err
@@ -2278,9 +2249,8 @@ func (_ArbValue *ArbValueCallerSession) HashEmptyTuple() ([32]byte, error) {
 //
 // Solidity: function hashIntValue(uint256 val) constant returns(bytes32)
 func (_ArbValue *ArbValueCaller) HashIntValue(opts *bind.CallOpts, val *big.Int) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "hashIntValue", val)
 	return *ret0, err
@@ -2304,9 +2274,8 @@ func (_ArbValue *ArbValueCallerSession) HashIntValue(val *big.Int) ([32]byte, er
 //
 // Solidity: function isValidTupleSize(uint256 size) constant returns(bool)
 func (_ArbValue *ArbValueCaller) IsValidTupleSize(opts *bind.CallOpts, size *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _ArbValue.contract.Call(opts, out, "isValidTupleSize", size)
 	return *ret0, err
@@ -2652,9 +2621,8 @@ func (_ERC165 *ERC165TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
 func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _ERC165.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -2839,9 +2807,8 @@ func (_ERC20 *ERC20TransactorRaw) Transact(opts *bind.TransactOpts, method strin
 //
 // Solidity: function allowance(address owner, address spender) constant returns(uint256)
 func (_ERC20 *ERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -2865,9 +2832,8 @@ func (_ERC20 *ERC20CallerSession) Allowance(owner common.Address, spender common
 //
 // Solidity: function balanceOf(address owner) constant returns(uint256)
 func (_ERC20 *ERC20Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -2891,9 +2857,8 @@ func (_ERC20 *ERC20CallerSession) BalanceOf(owner common.Address) (*big.Int, err
 //
 // Solidity: function totalSupply() constant returns(uint256)
 func (_ERC20 *ERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ERC20.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -3097,7 +3062,6 @@ type ERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3118,7 +3082,6 @@ func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []commo
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3239,7 +3202,6 @@ type ERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3260,7 +3222,6 @@ func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3467,9 +3428,8 @@ func (_ERC721 *ERC721TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function balanceOf(address owner) constant returns(uint256)
 func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -3493,9 +3453,8 @@ func (_ERC721 *ERC721CallerSession) BalanceOf(owner common.Address) (*big.Int, e
 //
 // Solidity: function getApproved(uint256 tokenId) constant returns(address)
 func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
+
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -3519,9 +3478,8 @@ func (_ERC721 *ERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addres
 //
 // Solidity: function isApprovedForAll(address owner, address operator) constant returns(bool)
 func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -3545,9 +3503,8 @@ func (_ERC721 *ERC721CallerSession) IsApprovedForAll(owner common.Address, opera
 //
 // Solidity: function ownerOf(uint256 tokenId) constant returns(address)
 func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
+
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -3571,9 +3528,8 @@ func (_ERC721 *ERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address, e
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
 func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _ERC721.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -3756,7 +3712,6 @@ type ERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3781,7 +3736,6 @@ func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3906,7 +3860,6 @@ type ERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3927,7 +3880,6 @@ func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4048,7 +4000,6 @@ type ERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4073,7 +4024,6 @@ func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4466,9 +4416,8 @@ func (_IERC165 *IERC165TransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
 func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _IERC165.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -4653,9 +4602,8 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 //
 // Solidity: function allowance(address owner, address spender) constant returns(uint256)
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "allowance", owner, spender)
 	return *ret0, err
@@ -4679,9 +4627,8 @@ func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender comm
 //
 // Solidity: function balanceOf(address who) constant returns(uint256)
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, who common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "balanceOf", who)
 	return *ret0, err
@@ -4705,9 +4652,8 @@ func (_IERC20 *IERC20CallerSession) BalanceOf(who common.Address) (*big.Int, err
 //
 // Solidity: function totalSupply() constant returns(uint256)
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _IERC20.contract.Call(opts, out, "totalSupply")
 	return *ret0, err
@@ -4869,7 +4815,6 @@ type IERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*IERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4890,7 +4835,6 @@ func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5011,7 +4955,6 @@ type IERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*IERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5032,7 +4975,6 @@ func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5239,9 +5181,8 @@ func (_IERC721 *IERC721TransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function balanceOf(address owner) constant returns(uint256 balance)
 func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
+	ret0 := new(*big.Int)
+
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "balanceOf", owner)
 	return *ret0, err
@@ -5265,9 +5206,8 @@ func (_IERC721 *IERC721CallerSession) BalanceOf(owner common.Address) (*big.Int,
 //
 // Solidity: function getApproved(uint256 tokenId) constant returns(address operator)
 func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
+
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "getApproved", tokenId)
 	return *ret0, err
@@ -5291,9 +5231,8 @@ func (_IERC721 *IERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addr
 //
 // Solidity: function isApprovedForAll(address owner, address operator) constant returns(bool)
 func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "isApprovedForAll", owner, operator)
 	return *ret0, err
@@ -5317,9 +5256,8 @@ func (_IERC721 *IERC721CallerSession) IsApprovedForAll(owner common.Address, ope
 //
 // Solidity: function ownerOf(uint256 tokenId) constant returns(address owner)
 func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
+
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "ownerOf", tokenId)
 	return *ret0, err
@@ -5343,9 +5281,8 @@ func (_IERC721 *IERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address,
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) constant returns(bool)
 func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _IERC721.contract.Call(opts, out, "supportsInterface", interfaceId)
 	return *ret0, err
@@ -5528,7 +5465,6 @@ type IERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*IERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5553,7 +5489,6 @@ func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []c
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5678,7 +5613,6 @@ type IERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*IERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5699,7 +5633,6 @@ func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, own
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *IERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5820,7 +5753,6 @@ type IERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*IERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5845,7 +5777,6 @@ func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []co
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -6238,9 +6169,8 @@ func (_MerkleLib *MerkleLibTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function generateAddressRoot(address[] _addresses) constant returns(bytes32)
 func (_MerkleLib *MerkleLibCaller) GenerateAddressRoot(opts *bind.CallOpts, _addresses []common.Address) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _MerkleLib.contract.Call(opts, out, "generateAddressRoot", _addresses)
 	return *ret0, err
@@ -6264,9 +6194,8 @@ func (_MerkleLib *MerkleLibCallerSession) GenerateAddressRoot(_addresses []commo
 //
 // Solidity: function generateRoot(bytes32[] _hashes) constant returns(bytes32)
 func (_MerkleLib *MerkleLibCaller) GenerateRoot(opts *bind.CallOpts, _hashes [][32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
+	ret0 := new([32]byte)
+
 	out := ret0
 	err := _MerkleLib.contract.Call(opts, out, "generateRoot", _hashes)
 	return *ret0, err
@@ -6290,9 +6219,8 @@ func (_MerkleLib *MerkleLibCallerSession) GenerateRoot(_hashes [][32]byte) ([32]
 //
 // Solidity: function verifyProof(bytes proof, bytes32 root, bytes32 hash, uint256 index) constant returns(bool)
 func (_MerkleLib *MerkleLibCaller) VerifyProof(opts *bind.CallOpts, proof []byte, root [32]byte, hash [32]byte, index *big.Int) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _MerkleLib.contract.Call(opts, out, "verifyProof", proof, root, hash, index)
 	return *ret0, err
@@ -6477,9 +6405,8 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 //
 // Solidity: function isOwner() constant returns(bool)
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _Ownable.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -6503,9 +6430,8 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function owner() constant returns(address)
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
+
 	out := ret0
 	err := _Ownable.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -6645,7 +6571,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -6666,7 +6591,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7034,9 +6958,8 @@ func (_VMTracker *VMTrackerTransactorRaw) Transact(opts *bind.TransactOpts, meth
 //
 // Solidity: function isOwner() constant returns(bool)
 func (_VMTracker *VMTrackerCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _VMTracker.contract.Call(opts, out, "isOwner")
 	return *ret0, err
@@ -7060,9 +6983,8 @@ func (_VMTracker *VMTrackerCallerSession) IsOwner() (bool, error) {
 //
 // Solidity: function owner() constant returns(address)
 func (_VMTracker *VMTrackerCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
+	ret0 := new(common.Address)
+
 	out := ret0
 	err := _VMTracker.contract.Call(opts, out, "owner")
 	return *ret0, err
@@ -7086,9 +7008,8 @@ func (_VMTracker *VMTrackerCallerSession) Owner() (common.Address, error) {
 //
 // Solidity: function withinTimeBounds(uint64[2] _timeBounds) constant returns(bool)
 func (_VMTracker *VMTrackerCaller) WithinTimeBounds(opts *bind.CallOpts, _timeBounds [2]uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
+	ret0 := new(bool)
+
 	out := ret0
 	err := _VMTracker.contract.Call(opts, out, "withinTimeBounds", _timeBounds)
 	return *ret0, err
@@ -7480,7 +7401,6 @@ type VMTrackerConfirmedAssertion struct {
 //
 // Solidity: event ConfirmedAssertion(bytes32 indexed vmId, bytes32 newState)
 func (_VMTracker *VMTrackerFilterer) FilterConfirmedAssertion(opts *bind.FilterOpts, vmId [][32]byte) (*VMTrackerConfirmedAssertionIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -7497,7 +7417,6 @@ func (_VMTracker *VMTrackerFilterer) FilterConfirmedAssertion(opts *bind.FilterO
 //
 // Solidity: event ConfirmedAssertion(bytes32 indexed vmId, bytes32 newState)
 func (_VMTracker *VMTrackerFilterer) WatchConfirmedAssertion(opts *bind.WatchOpts, sink chan<- *VMTrackerConfirmedAssertion, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -7613,7 +7532,6 @@ type VMTrackerConfirmedUnanimousAssertion struct {
 //
 // Solidity: event ConfirmedUnanimousAssertion(bytes32 indexed vmId, uint64 sequenceNum)
 func (_VMTracker *VMTrackerFilterer) FilterConfirmedUnanimousAssertion(opts *bind.FilterOpts, vmId [][32]byte) (*VMTrackerConfirmedUnanimousAssertionIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -7630,7 +7548,6 @@ func (_VMTracker *VMTrackerFilterer) FilterConfirmedUnanimousAssertion(opts *bin
 //
 // Solidity: event ConfirmedUnanimousAssertion(bytes32 indexed vmId, uint64 sequenceNum)
 func (_VMTracker *VMTrackerFilterer) WatchConfirmedUnanimousAssertion(opts *bind.WatchOpts, sink chan<- *VMTrackerConfirmedUnanimousAssertion, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -7753,7 +7670,6 @@ type VMTrackerDisputableAssertion struct {
 //
 // Solidity: event DisputableAssertion(bytes32 indexed vmId, bytes32[3] fields, address asserter, uint64[2] timeBounds, bytes21[] tokenTypes, uint32 numSteps, bytes32 lastMessageHash, bytes32 logsHash, uint256[] amounts)
 func (_VMTracker *VMTrackerFilterer) FilterDisputableAssertion(opts *bind.FilterOpts, vmId [][32]byte) (*VMTrackerDisputableAssertionIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -7770,7 +7686,6 @@ func (_VMTracker *VMTrackerFilterer) FilterDisputableAssertion(opts *bind.Filter
 //
 // Solidity: event DisputableAssertion(bytes32 indexed vmId, bytes32[3] fields, address asserter, uint64[2] timeBounds, bytes21[] tokenTypes, uint32 numSteps, bytes32 lastMessageHash, bytes32 logsHash, uint256[] amounts)
 func (_VMTracker *VMTrackerFilterer) WatchDisputableAssertion(opts *bind.WatchOpts, sink chan<- *VMTrackerDisputableAssertion, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -7886,7 +7801,6 @@ type VMTrackerFinalUnanimousAssertion struct {
 //
 // Solidity: event FinalUnanimousAssertion(bytes32 indexed vmId, bytes32 unanHash)
 func (_VMTracker *VMTrackerFilterer) FilterFinalUnanimousAssertion(opts *bind.FilterOpts, vmId [][32]byte) (*VMTrackerFinalUnanimousAssertionIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -7903,7 +7817,6 @@ func (_VMTracker *VMTrackerFilterer) FilterFinalUnanimousAssertion(opts *bind.Fi
 //
 // Solidity: event FinalUnanimousAssertion(bytes32 indexed vmId, bytes32 unanHash)
 func (_VMTracker *VMTrackerFilterer) WatchFinalUnanimousAssertion(opts *bind.WatchOpts, sink chan<- *VMTrackerFinalUnanimousAssertion, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -8019,7 +7932,6 @@ type VMTrackerInitiatedChallenge struct {
 //
 // Solidity: event InitiatedChallenge(bytes32 indexed vmId, address challenger)
 func (_VMTracker *VMTrackerFilterer) FilterInitiatedChallenge(opts *bind.FilterOpts, vmId [][32]byte) (*VMTrackerInitiatedChallengeIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -8036,7 +7948,6 @@ func (_VMTracker *VMTrackerFilterer) FilterInitiatedChallenge(opts *bind.FilterO
 //
 // Solidity: event InitiatedChallenge(bytes32 indexed vmId, address challenger)
 func (_VMTracker *VMTrackerFilterer) WatchInitiatedChallenge(opts *bind.WatchOpts, sink chan<- *VMTrackerInitiatedChallenge, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -8155,7 +8066,6 @@ type VMTrackerMessageDelivered struct {
 //
 // Solidity: event MessageDelivered(bytes32 indexed vmId, bytes32 destination, bytes21 tokenType, uint256 value, bytes data)
 func (_VMTracker *VMTrackerFilterer) FilterMessageDelivered(opts *bind.FilterOpts, vmId [][32]byte) (*VMTrackerMessageDeliveredIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -8172,7 +8082,6 @@ func (_VMTracker *VMTrackerFilterer) FilterMessageDelivered(opts *bind.FilterOpt
 //
 // Solidity: event MessageDelivered(bytes32 indexed vmId, bytes32 destination, bytes21 tokenType, uint256 value, bytes data)
 func (_VMTracker *VMTrackerFilterer) WatchMessageDelivered(opts *bind.WatchOpts, sink chan<- *VMTrackerMessageDelivered, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -8288,7 +8197,6 @@ type VMTrackerOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_VMTracker *VMTrackerFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*VMTrackerOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -8309,7 +8217,6 @@ func (_VMTracker *VMTrackerFilterer) FilterOwnershipTransferred(opts *bind.Filte
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_VMTracker *VMTrackerFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *VMTrackerOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -8430,7 +8337,6 @@ type VMTrackerProposedUnanimousAssertion struct {
 //
 // Solidity: event ProposedUnanimousAssertion(bytes32 indexed vmId, bytes32 unanHash, uint64 sequenceNum)
 func (_VMTracker *VMTrackerFilterer) FilterProposedUnanimousAssertion(opts *bind.FilterOpts, vmId [][32]byte) (*VMTrackerProposedUnanimousAssertionIterator, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -8447,7 +8353,6 @@ func (_VMTracker *VMTrackerFilterer) FilterProposedUnanimousAssertion(opts *bind
 //
 // Solidity: event ProposedUnanimousAssertion(bytes32 indexed vmId, bytes32 unanHash, uint64 sequenceNum)
 func (_VMTracker *VMTrackerFilterer) WatchProposedUnanimousAssertion(opts *bind.WatchOpts, sink chan<- *VMTrackerProposedUnanimousAssertion, vmId [][32]byte) (event.Subscription, error) {
-
 	var vmIdRule []interface{}
 	for _, vmIdItem := range vmId {
 		vmIdRule = append(vmIdRule, vmIdItem)
@@ -8570,7 +8475,6 @@ type VMTrackerVMCreated struct {
 //
 // Solidity: event VMCreated(uint32 _gracePeriod, uint128 _escrowRequired, address _escrowCurrency, uint32 _maxExecutionSteps, bytes32 _vmId, bytes32 _vmState, uint16 _challengeManagerNum, address _owner, address[] validators)
 func (_VMTracker *VMTrackerFilterer) FilterVMCreated(opts *bind.FilterOpts) (*VMTrackerVMCreatedIterator, error) {
-
 	logs, sub, err := _VMTracker.contract.FilterLogs(opts, "VMCreated")
 	if err != nil {
 		return nil, err
@@ -8582,7 +8486,6 @@ func (_VMTracker *VMTrackerFilterer) FilterVMCreated(opts *bind.FilterOpts) (*VM
 //
 // Solidity: event VMCreated(uint32 _gracePeriod, uint128 _escrowRequired, address _escrowCurrency, uint32 _maxExecutionSteps, bytes32 _vmId, bytes32 _vmState, uint16 _challengeManagerNum, address _owner, address[] validators)
 func (_VMTracker *VMTrackerFilterer) WatchVMCreated(opts *bind.WatchOpts, sink chan<- *VMTrackerVMCreated) (event.Subscription, error) {
-
 	logs, sub, err := _VMTracker.contract.WatchLogs(opts, "VMCreated")
 	if err != nil {
 		return nil, err

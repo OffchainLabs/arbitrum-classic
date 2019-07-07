@@ -22,11 +22,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -38,8 +39,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/vm"
 )
 
 type ValidatorLeaderRequest interface {
@@ -322,7 +323,7 @@ type ValidatorCoordinator struct {
 
 	requestChan chan ValidatorLeaderRequest
 
-	mpq *MessageProcessingQueue
+	mpq      *MessageProcessingQueue
 	maxSteps int32
 }
 

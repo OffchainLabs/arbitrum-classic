@@ -55,7 +55,7 @@ type initiateUnanimousRequest struct {
 type followUnanimousRequest struct {
 	valmessage.UnanimousRequestData
 	NewMessages []protocol.Message
-	MaxSteps int32
+	MaxSteps    int32
 
 	ResultChan chan<- valmessage.UnanimousUpdateResults
 	ErrChan    chan<- error

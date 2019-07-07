@@ -19,8 +19,8 @@ package state
 import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 
-	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/vm"
 )
 
 type UnanimousUpdateRequest struct {

@@ -19,6 +19,9 @@ package state
 import (
 	"errors"
 	"fmt"
+	"log"
+	"math"
+
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/challenge/challenger"
@@ -26,12 +29,10 @@ import (
 	"github.com/offchainlabs/arb-validator/challenge/observer"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
-	"log"
-	"math"
 
-	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 

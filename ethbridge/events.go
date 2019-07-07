@@ -17,10 +17,11 @@
 package ethbridge
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arb-util/protocol"
-	"math/big"
 )
 
 type IncomingMessageType int

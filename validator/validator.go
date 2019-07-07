@@ -18,13 +18,14 @@ package validator
 
 import (
 	"fmt"
+	"math"
+	"math/big"
+
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/state"
-	"math"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -33,8 +34,8 @@ import (
 	"github.com/offchainlabs/arb-validator/valmessage"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/vm"
 )
 
 type Validator struct {

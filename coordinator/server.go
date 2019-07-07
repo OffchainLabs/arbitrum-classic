@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
 	"math/big"
@@ -29,16 +28,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/offchainlabs/arb-validator/ethbridge"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arb-util/vm"
 
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/valmessage"

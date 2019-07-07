@@ -24,7 +24,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-
 const (
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
@@ -38,7 +37,6 @@ const (
 	// Maximum message size allowed from peer.
 	maxMessageSize = 8192
 )
-
 
 type Client struct {
 	ToClient   chan []byte

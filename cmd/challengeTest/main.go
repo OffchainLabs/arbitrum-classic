@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	jsonenc "encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
 	"math"
@@ -28,6 +27,8 @@ import (
 	brand "math/rand"
 	"os"
 	"time"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"

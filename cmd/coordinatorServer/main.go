@@ -18,14 +18,15 @@ package main
 
 import (
 	jsonenc "encoding/json"
-	"github.com/offchainlabs/arb-validator/coordinator"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"strings"
+
+	"github.com/offchainlabs/arb-validator/coordinator"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -59,9 +60,9 @@ func attachProfiler(router *mux.Router) {
 // 4) Global EthBridge addresses json file
 // 5) ethURL
 func main() {
-	//cFilename := C.CString("contract.ao")
-	//C.machine_create(cFilename)
-	//C.free(unsafe.Pointer(cFilename))
+	// cFilename := C.CString("contract.ao")
+	// C.machine_create(cFilename)
+	// C.free(unsafe.Pointer(cFilename))
 
 	// Check number of args
 	if len(os.Args)-1 != 5 {
@@ -152,5 +153,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 }

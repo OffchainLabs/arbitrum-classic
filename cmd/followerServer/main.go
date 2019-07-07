@@ -19,7 +19,6 @@ package main
 import (
 	"crypto/ecdsa"
 	jsonenc "encoding/json"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
 	"math"
@@ -27,6 +26,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

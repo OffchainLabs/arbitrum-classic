@@ -20,9 +20,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/tls"
 	"errors"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
@@ -47,7 +48,7 @@ type ValidatorFollower struct {
 	client *Client
 
 	unanimousRequests map[[32]byte]UnanimousAssertionRequest
-	maxSteps int32
+	maxSteps          int32
 }
 
 func NewValidatorFollower(
