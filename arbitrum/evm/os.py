@@ -135,6 +135,18 @@ def message_origin(vm):
     global_exec_state.get("origin")(vm)
 
 
+@modifies_stack(1, 0)
+def set_scratch(vm):
+    get_chain_state(vm)
+    chain_state.set_val("scratch")(vm)
+    set_chain_state(vm)
+
+@modifies_stack(0, 1)
+def get_scratch(vm):
+    get_chain_state(vm)
+    chain_state.get("scratch")(vm)
+
+
 @modifies_stack([], [call_frame.typ])
 def get_call_frame(vm):
     get_chain_state(vm)
@@ -304,7 +316,23 @@ def balance_get(vm):
     get_call_frame(vm)
     call_frame.call_frame.get("contract_state")(vm)
     contract_state.get("wallet")(vm)
-    std.currency_store.get(vm)
+    std.currency_store.get_fung(vm)
+
+@modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
+def ext_balance(vm):
+    # address token_type
+    get_call_frame(vm)
+    call_frame.call_frame.get("contracts")(vm)
+    contract_store.get(vm)
+    vm.dup0()
+    vm.tnewn(0)
+    vm.eq()
+    vm.ifelse(lambda vm: [
+        vm.error()
+    ])
+    contract_state.get("wallet")(vm)
+    std.currency_store.get_fung(vm)
+
 
 
 @modifies_stack([], [std.sized_byterange.sized_byterange.typ])

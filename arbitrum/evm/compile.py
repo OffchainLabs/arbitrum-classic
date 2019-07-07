@@ -26,6 +26,8 @@ from .. import value
 from . import os, call_frame
 from . import execution
 
+import eth_utils
+
 
 class EVMNotSupported(Exception):
     """VM tried to run opcode that blocks"""
@@ -125,58 +127,74 @@ def make_bst_lookup(items):
 
 
 def generate_evm_code(raw_code, storage):
-    contract_dispatch = []
-    impls = []
-    contract_info = []
-
     contracts = {}
-    code_tuples = {}
     for contract in raw_code:
-        code_tuples[contract] = byterange.frombytes(
-            bytes.fromhex(raw_code[contract].hex())
-        )
         contracts[contract] = list(pyevmasm.disassemble_all(
             raw_code[contract]
         ))
 
-    code_sizes = []
-    for contract in contracts:
-        code_sizes.append((contract, len(contracts[contract])))
+    code_tuples_data = {}
+    for contract in raw_code:
+        code_tuples_data[contract] = byterange.frombytes(
+            bytes.fromhex(raw_code[contract].hex())
+        )
+    code_tuples_func = make_bst_lookup([(x, code_tuples_data[x]) for x in sorted(code_tuples_data)])
+
+    @modifies_stack([value.IntType()], 1)
+    def code_tuples(vm):
+        code_tuples_func(vm)
+
+    code_hashes_data = []
+    for contract in sorted(raw_code):
+        code_hashes_data.append((contract, int.from_bytes(eth_utils.crypto.keccak(raw_code[contract]), byteorder="big")))
+    code_hashes_func = make_bst_lookup(code_hashes_data)
+
+    @modifies_stack([value.IntType()], [value.ValueType()])
+    def code_hashes(vm):
+        code_hashes_func(vm)
+
+    contract_dispatch = []
+    for contract in sorted(contracts):
         contract_dispatch.append((
             contract,
             AVMLabel("contract_entry_" + str(contract))
         ))
-    code_sizes.append((0x01, 1))
-    code_sizes = sorted(code_sizes, key=lambda x: x[0])
-
-    contract_dispatch = sorted(contract_dispatch, key=lambda x: x[0])
-    contract_dispatch_impl = make_bst_lookup(contract_dispatch)
+    contract_dispatch_func = make_bst_lookup(contract_dispatch)
 
     @modifies_stack([value.IntType()], 1)
     def dispatch_contract(vm):
-        contract_dispatch_impl(vm)
+        contract_dispatch_func(vm)
 
+    code_sizes = []
+    for contract in contracts:
+        code_sizes.append((contract,
+            len(contracts[contract]) + sum(op.operand_size for op in contracts[contract])
+        ))
+
+    # Give the interrupt contract address a nonzero size
+    code_sizes.append((0x01, 1))
+    code_sizes = sorted(code_sizes, key=lambda x: x[0])
     code_size_func = make_bst_lookup(code_sizes)
 
     @modifies_stack([value.IntType()], 1)
     def code_size(vm):
         code_size_func(vm)
 
+    impls = []
+    contract_info = []
     for contract in sorted(contracts):
         if contract not in storage:
             storage[contract] = {}
-        code = contracts[contract]
-        label = AVMLabel("contract_entry_" + str(contract))
-        code = generate_contract_code(
-            label,
-            code,
-            code_tuples[contract],
+        impls.append(generate_contract_code(
+            AVMLabel("contract_entry_" + str(contract)),
+            contracts[contract],
+            code_tuples_data[contract],
             contract,
             code_size,
+            code_tuples,
+            code_hashes,
             dispatch_contract
-        )
-        impls.append(code)
-        contract_dispatch.append((contract, label))
+        ))
         contract_info.append({
             "contractID": contract,
             "storage": storage[contract]
@@ -199,7 +217,7 @@ def generate_evm_code(raw_code, storage):
     return compile_block(initialization), BlockStatement(main_code)
 
 
-def generate_contract_code(label, code, code_tuple, contract_id, code_size, dispatch_contract):
+def generate_contract_code(label, code, code_tuple, contract_id, code_size, code_tuples, code_hashes, dispatch_contract):
     code = remove_metadata(code)
     code = replace_self_balance(code)
 
@@ -325,8 +343,6 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
             elif instr.name == "ADDRESS":
                 os.get_call_frame(vm)
                 call_frame.call_frame.get("contractID")(vm)
-            elif instr.name == "BALANCE":
-                raise EVMNotSupported(instr.name)
             elif instr.name == "ORIGIN":
                 os.message_origin(vm)
             elif instr.name == "CALLER":
@@ -345,17 +361,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                 os.evm_copy_to_memory(vm, get_contract_code)
             elif instr.name == "GASPRICE":
                 # TODO: Arbitrary value
-                vm.push(0)
-            elif instr.name == "EXTCODESIZE":
-                code_size(vm)
-                vm.dup0()
-                vm.tnewn(0)
-                vm.eq()
-                vm.ifelse(lambda vm: [
-                    vm.error()
-                ])
-            elif instr.name == "EXTCODECOPY":
-                raise EVMNotSupported(instr.name)
+                vm.push(1)
             elif instr.name == "RETURNDATASIZE":
                 os.return_data_size(vm)
             elif instr.name == "RETURNDATACOPY":
@@ -458,6 +464,8 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
             # f0s: System operations
             elif instr.name == "CREATE":
                 raise EVMNotSupported(instr.name)
+            elif instr.opcode == 0xf5:
+                raise EVMNotSupported("CREATE2")
             elif instr.name == "CALL":
                 execution.call(vm, dispatch_contract, instr.pc, contract_id)
             elif instr.name == "CALLCODE":
@@ -470,10 +478,46 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, disp
                 execution.staticcall(vm, dispatch_contract, instr.pc, contract_id)
             elif instr.name == "REVERT":
                 execution.revert(vm)
-            elif instr.name == "INVALID":
-                execution.revert(vm)
             elif instr.name == "SELFDESTRUCT":
                 execution.selfdestruct(vm)
+            elif instr.name == "BALANCE":
+                print("Warning: BALANCE was used which may lead to an error")
+                vm.push(0)
+                vm.swap1()
+                os.ext_balance(vm)
+            elif instr.name == "EXTCODESIZE":
+                print("Warning: EXTCODESIZE was used which may lead to an error")
+                code_size(vm)
+                vm.dup0()
+                vm.tnewn(0)
+                vm.eq()
+                vm.ifelse(lambda vm: [
+                    vm.error()
+                ])
+            elif instr.name == "EXTCODECOPY":
+                print("Warning: EXTCODECOPY was used which may lead to an error")
+                code_tuples(vm)
+                vm.dup0()
+                vm.tnewn(0)
+                vm.eq()
+                vm.ifelse(lambda vm: [
+                    vm.error()
+                ])
+                os.set_scratch(vm)
+                os.evm_copy_to_memory(vm, os.get_scratch)
+            elif instr.opcode == 0x3f:  # EXTCODEHASH
+                print("Warning: EXTCODEHASH was used which may lead to an error")
+                code_hashes(vm)
+                vm.dup0()
+                vm.tnewn(0)
+                vm.eq()
+                vm.ifelse(lambda vm: [
+                    vm.error()
+                ])
+            elif instr.name == "INVALID":
+                if instr.opcode != 0xfe:
+                    print("Warning: Source code contained nonstandard invalid opcode {}".format(hex(instr.opcode)))
+                execution.revert(vm)
             else:
                 raise Exception("Unhandled instruction {}".format(instr))
         return impl

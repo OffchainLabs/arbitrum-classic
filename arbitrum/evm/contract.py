@@ -152,6 +152,113 @@ STOP_CODE = 3
 INVALID_SEQUENCE_CODE = 4
 
 
+class EVMCall:
+    def __init__(self, abis, func_interface, val):
+        output_byte_str = sized_byterange.tohex(val[2])
+        output_bytes = eth_utils.to_bytes(hexstr=output_byte_str)
+        self.interface = func_interface
+        self.output_values = eth_abi.decode_single(
+            get_return_abi(func_interface),
+            output_bytes
+        )
+        self.logs = [
+            decode_log(convert_log_raw(logVal), abis)
+            for logVal in stack.to_list(val[1])
+        ]
+
+    def __str__(self):
+        ret = "{} returned {}".format(self.interface["name"], self.output_values)
+        for log in self.logs:
+            ret += "\n{} logged event {}{}".format(
+                self.interface['name'],
+                log['name'],
+                log['args']
+            )
+        return ret
+
+
+class EVMRevert:
+    def __init__(self, func_interface, val):
+        self.interface = func_interface
+        self.output_byte_str = sized_byterange.tohex(val[2])
+
+    def __str__(self):
+        return "{} failed with revert returning {}".format(
+            self.interface['name'],
+            self.output_byte_str
+        )
+
+
+class EVMInvalid:
+    def __init__(self, func_interface):
+        self.interface = func_interface
+
+    def __str__(self):
+        return "{} failed with invalid op".format(self.interface['name'])
+
+
+class EVMInvalidSequence:
+    def __init__(self, func_interface):
+        self.interface = func_interface
+
+    def __str__(self):
+        return "{} failed with invalid sequence".format(self.interface['name'])
+
+
+class EVMUnknownResponseError:
+    def __init__(self, func_interface, val):
+        self.interface = func_interface
+        self.val = val
+
+    def __str__(self):
+        return "{} had unknown error: {}".format(self.func_interface['name'], self.val)
+
+
+class EVMStop:
+    def __init__(self, abis, func_interface, val):
+        self.interface = func_interface
+        self.logs = [
+            decode_log(convert_log_raw(logVal), abis)
+            for logVal in stack.to_list(val[1])
+        ]
+
+    def __str__(self):
+        ret = "{} completed successfully".format(self.interface['name'])
+        for log in self.logs:
+            ret += "\n{} logged event {}{}".format(
+                self.interface['name'],
+                log['name'],
+                log['args']
+            )
+        return ret
+
+
+def parse_output(val, abis):
+    return_code = val[3]
+
+    contract_num = val[0][0][0][1]
+    input_hex = sized_byterange.tohex(val[0][0][0][0])
+    func_id = int(input_hex[2:10], 16)
+
+    try:
+        func_interface = abis[contract_num].funcs[func_id]
+    except KeyError:
+        print("Unknown function returned {}".format(return_code))
+        return True
+
+    if return_code == RETURN_CODE:
+        return EVMCall(abis, func_interface, val)
+    elif return_code == REVERT_CODE:
+        return EVMRevert(func_interface, val)
+    elif return_code == INVALID_CODE:
+        return EVMInvalid(func_interface)
+    elif return_code == INVALID_SEQUENCE_CODE:
+        return EVMInvalidSequence(func_interface)
+    elif return_code == STOP_CODE:
+        return EVMStop(abis, func_interface, val)
+    else:
+        return EVMUnknownResponseError(func_interface, val)
+
 # [logs, contract_num, func_code, return_val, return_code]
 def create_output_handler(contracts):
     abis = {}
@@ -159,49 +266,8 @@ def create_output_handler(contracts):
         abis[contract.address] = contract
 
     def output_handler(val):
-        return_code = val[3]
+        return parse_output(val, abis)
 
-        contract_num = val[0][0][0][1]
-        input_hex = sized_byterange.tohex(val[0][0][0][0])
-        func_id = int(input_hex[2:10], 16)
-
-        try:
-            func_interface = abis[contract_num].funcs[func_id]
-        except KeyError:
-            print("Unknown function returned {}".format(return_code))
-            return True
-
-        if return_code == RETURN_CODE:
-            output_byte_str = sized_byterange.tohex(val[2])
-            output_bytes = eth_utils.to_bytes(hexstr=output_byte_str)
-            decoded = eth_abi.decode_single(
-                get_return_abi(func_interface),
-                output_bytes
-            )
-            print("{} returned {}".format(func_interface['name'], decoded))
-            logs = [
-                decode_log(convert_log_raw(logVal), abis)
-                for logVal in stack.to_list(val[1])
-            ]
-            for log in logs:
-                print("{} logged event {}{}".format(func_interface['name'], log['name'], log['args']))
-        elif return_code == REVERT_CODE:
-            output_byte_str = sized_byterange.tohex(val[2])
-            print("{} failed with revert returning {}".format(func_interface['name'], output_byte_str))
-        elif return_code == INVALID_CODE:
-            print("{} failed with invalid op".format(func_interface['name']))
-        elif return_code == INVALID_SEQUENCE_CODE:
-            print("{} failed with invalid sequence".format(func_interface['name']))
-        elif return_code == STOP_CODE:
-            print("{} completed successfully".format(func_interface['name']))
-            logs = [
-                decode_log(convert_log_raw(logVal), abis)
-                for logVal in stack.to_list(val[1])
-            ]
-            for log in logs:
-                print("{} logged event {}{}".format(func_interface['name'], log['name'], log['args']))
-        else:
-            print("{} had unknown error: {}", func_interface['name'], val)
     return output_handler
 
 

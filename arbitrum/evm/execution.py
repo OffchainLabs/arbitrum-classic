@@ -49,6 +49,7 @@ def _perform_call(vm, call_num):
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
     os.add_message_to_wallet(vm)
+    _save_call_frame(vm)
 
     std.stack_manip.compress(vm)
     std.stack_manip.compress_aux(vm)
