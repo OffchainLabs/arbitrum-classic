@@ -27,19 +27,21 @@ import (
 	"os"
 	"strings"
 
-	"github.com/offchainlabs/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
-	"github.com/offchainlabs/arb-avm/loader"
-	"github.com/offchainlabs/arb-util/vm"
-	"github.com/offchainlabs/arb-validator/valmessage"
 
+	"github.com/offchainlabs/arb-util/machine"
+
+	"github.com/offchainlabs/arb-avm/loader"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type FollowerServer struct {
@@ -47,7 +49,7 @@ type FollowerServer struct {
 }
 
 func NewFollowerServer(
-	machine vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
 	connectionInfo ethbridge.ArbAddresses,

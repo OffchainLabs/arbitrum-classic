@@ -20,22 +20,21 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
-
 	"log"
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-	"github.com/offchainlabs/arb-util/vm"
 
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/validator"
@@ -82,7 +81,7 @@ type VMResponse struct {
 func NewEthValidator(
 	name string,
 	vmId [32]byte,
-	machine vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,

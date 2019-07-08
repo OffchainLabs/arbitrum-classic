@@ -22,6 +22,10 @@ import (
 	"log"
 	"math"
 
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
+
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/challenge/challenger"
@@ -29,10 +33,6 @@ import (
 	"github.com/offchainlabs/arb-validator/challenge/observer"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
-
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
-	"github.com/offchainlabs/arb-util/vm"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -49,7 +49,7 @@ func (e *Error) Error() string {
 }
 
 type proposedUpdate struct {
-	machine     vm.Machine
+	machine     machine.Machine
 	messages    *protocol.MessageQueue
 	Assertion   *protocol.Assertion
 	sequenceNum uint64
@@ -70,7 +70,7 @@ type Waiting struct {
 
 	proposed *proposedUpdate
 
-	acceptedMachine  vm.Machine
+	acceptedMachine  machine.Machine
 	acceptedMessages *protocol.MessageQueues
 	acceptedBalance  *protocol.BalanceTracker
 	assertion        *protocol.Assertion
@@ -81,7 +81,7 @@ type Waiting struct {
 	pendingMessages *protocol.MessageQueue
 	origMessages    *protocol.MessageQueues
 	origBalance     *protocol.BalanceTracker
-	origMachine     vm.Machine
+	origMachine     machine.Machine
 }
 
 func NewWaiting(config *core.Config, c *core.Core) Waiting {
@@ -393,15 +393,12 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 			return nil, nil, errors.New("waiting observer has incorrect valmessage")
 		}
 		updatedState := core.GetMachine().Clone()
-		actx := protocol.NewMachineAssertionContext(
-			updatedState,
+		ad, _ := updatedState.ExecuteAssertion(
+			int32(ev.Assertion.NumSteps),
 			core.GetBalance(),
 			ev.Precondition.TimeBounds,
 			inboxVal,
 		)
-		updatedState.Run(int32(ev.Assertion.NumSteps))
-		ad := actx.Finalize(updatedState)
-
 		if !ad.GetAssertion().Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
 			bridge.InitiateChallenge(
 				ev.Precondition,
@@ -426,7 +423,7 @@ type watchingAssertion struct {
 	*core.Core
 	*core.Config
 	inboxVal     value.Value
-	pendingState vm.Machine
+	pendingState machine.Machine
 	deadline     uint64
 	precondition *protocol.Precondition
 	assertion    *protocol.Assertion

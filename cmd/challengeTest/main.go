@@ -28,17 +28,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/offchainlabs/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arb-avm/loader"
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/value"
 
+	"github.com/offchainlabs/arb-avm/loader"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )

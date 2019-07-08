@@ -27,20 +27,20 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/offchainlabs/arb-validator/ethbridge"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"github.com/offchainlabs/arb-util/value"
-	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/vm"
+	"github.com/offchainlabs/arb-util/value"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type ValidatorLeaderRequest interface {
@@ -329,7 +329,7 @@ type ValidatorCoordinator struct {
 
 func NewCoordinator(
 	name string,
-	machine vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,

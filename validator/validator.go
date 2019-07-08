@@ -21,21 +21,21 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
+
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/state"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-util/value"
 	"github.com/offchainlabs/arb-validator/valmessage"
-	"github.com/pkg/errors"
-
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/vm"
 )
 
 type Validator struct {
@@ -50,7 +50,7 @@ type Validator struct {
 	pendingDisputableRequest *state.DisputableAssertionRequest
 }
 
-func NewValidator(name string, address common.Address, inbox *protocol.Inbox, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine vm.Machine, challengeEverything bool) *Validator {
+func NewValidator(name string, address common.Address, inbox *protocol.Inbox, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool) *Validator {
 	requests := make(chan interface{}, 10)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
@@ -415,14 +415,12 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					}
 					go func() {
 						box.InsertMessageGroup([]protocol.Message{callingMessage})
-						actx := protocol.NewMachineAssertionContext(
-							updatedState,
+						ad, finished := updatedState.ExecuteAssertion(
+							maxCallSteps,
 							balance,
 							[2]uint64{startTime, startTime + 1},
 							box.Receive(),
 						)
-						_, finished := updatedState.Run(maxCallSteps)
-						ad := actx.Finalize(updatedState)
 						results := ad.GetAssertion().Logs
 						if !finished {
 							request.ErrorChan <- errors.New("Call took too long to execute")

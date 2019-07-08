@@ -25,17 +25,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/offchainlabs/arb-validator/coordinator"
-	"github.com/offchainlabs/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arb-avm/loader"
+
+	"github.com/offchainlabs/arb-validator/coordinator"
+	"github.com/offchainlabs/arb-validator/ethbridge"
 )
 
 func attachProfiler(router *mux.Router) {

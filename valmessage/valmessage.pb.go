@@ -5,10 +5,11 @@ package valmessage
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	protocol "github.com/offchainlabs/arb-util/protocol"
 	value "github.com/offchainlabs/arb-util/value"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -39,15 +40,19 @@ func (*Address) Descriptor() ([]byte, []int) {
 func (m *Address) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Address.Unmarshal(m, b)
 }
+
 func (m *Address) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Address.Marshal(b, m, deterministic)
 }
+
 func (m *Address) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Address.Merge(m, src)
 }
+
 func (m *Address) XXX_Size() int {
 	return xxx_messageInfo_Address.Size(m)
 }
+
 func (m *Address) XXX_DiscardUnknown() {
 	xxx_messageInfo_Address.DiscardUnknown(m)
 }
@@ -78,15 +83,19 @@ func (*TokenTypeBuf) Descriptor() ([]byte, []int) {
 func (m *TokenTypeBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TokenTypeBuf.Unmarshal(m, b)
 }
+
 func (m *TokenTypeBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TokenTypeBuf.Marshal(b, m, deterministic)
 }
+
 func (m *TokenTypeBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TokenTypeBuf.Merge(m, src)
 }
+
 func (m *TokenTypeBuf) XXX_Size() int {
 	return xxx_messageInfo_TokenTypeBuf.Size(m)
 }
+
 func (m *TokenTypeBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_TokenTypeBuf.DiscardUnknown(m)
 }
@@ -122,15 +131,19 @@ func (*VMConfiguration) Descriptor() ([]byte, []int) {
 func (m *VMConfiguration) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VMConfiguration.Unmarshal(m, b)
 }
+
 func (m *VMConfiguration) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_VMConfiguration.Marshal(b, m, deterministic)
 }
+
 func (m *VMConfiguration) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VMConfiguration.Merge(m, src)
 }
+
 func (m *VMConfiguration) XXX_Size() int {
 	return xxx_messageInfo_VMConfiguration.Size(m)
 }
+
 func (m *VMConfiguration) XXX_DiscardUnknown() {
 	xxx_messageInfo_VMConfiguration.DiscardUnknown(m)
 }
@@ -199,15 +212,19 @@ func (*CreateVMValidatorRequest) Descriptor() ([]byte, []int) {
 func (m *CreateVMValidatorRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateVMValidatorRequest.Unmarshal(m, b)
 }
+
 func (m *CreateVMValidatorRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CreateVMValidatorRequest.Marshal(b, m, deterministic)
 }
+
 func (m *CreateVMValidatorRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CreateVMValidatorRequest.Merge(m, src)
 }
+
 func (m *CreateVMValidatorRequest) XXX_Size() int {
 	return xxx_messageInfo_CreateVMValidatorRequest.Size(m)
 }
+
 func (m *CreateVMValidatorRequest) XXX_DiscardUnknown() {
 	xxx_messageInfo_CreateVMValidatorRequest.DiscardUnknown(m)
 }
@@ -262,15 +279,19 @@ func (*UnanimousAssertionValidatorNotification) Descriptor() ([]byte, []int) {
 func (m *UnanimousAssertionValidatorNotification) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnanimousAssertionValidatorNotification.Unmarshal(m, b)
 }
+
 func (m *UnanimousAssertionValidatorNotification) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_UnanimousAssertionValidatorNotification.Marshal(b, m, deterministic)
 }
+
 func (m *UnanimousAssertionValidatorNotification) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_UnanimousAssertionValidatorNotification.Merge(m, src)
 }
+
 func (m *UnanimousAssertionValidatorNotification) XXX_Size() int {
 	return xxx_messageInfo_UnanimousAssertionValidatorNotification.Size(m)
 }
+
 func (m *UnanimousAssertionValidatorNotification) XXX_DiscardUnknown() {
 	xxx_messageInfo_UnanimousAssertionValidatorNotification.DiscardUnknown(m)
 }
@@ -310,15 +331,19 @@ func (*CreateVMFinalizedValidatorNotification) Descriptor() ([]byte, []int) {
 func (m *CreateVMFinalizedValidatorNotification) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateVMFinalizedValidatorNotification.Unmarshal(m, b)
 }
+
 func (m *CreateVMFinalizedValidatorNotification) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CreateVMFinalizedValidatorNotification.Marshal(b, m, deterministic)
 }
+
 func (m *CreateVMFinalizedValidatorNotification) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CreateVMFinalizedValidatorNotification.Merge(m, src)
 }
+
 func (m *CreateVMFinalizedValidatorNotification) XXX_Size() int {
 	return xxx_messageInfo_CreateVMFinalizedValidatorNotification.Size(m)
 }
+
 func (m *CreateVMFinalizedValidatorNotification) XXX_DiscardUnknown() {
 	xxx_messageInfo_CreateVMFinalizedValidatorNotification.DiscardUnknown(m)
 }
@@ -350,15 +375,19 @@ func (*SignedMessage) Descriptor() ([]byte, []int) {
 func (m *SignedMessage) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedMessage.Unmarshal(m, b)
 }
+
 func (m *SignedMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignedMessage.Marshal(b, m, deterministic)
 }
+
 func (m *SignedMessage) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SignedMessage.Merge(m, src)
 }
+
 func (m *SignedMessage) XXX_Size() int {
 	return xxx_messageInfo_SignedMessage.Size(m)
 }
+
 func (m *SignedMessage) XXX_DiscardUnknown() {
 	xxx_messageInfo_SignedMessage.DiscardUnknown(m)
 }
@@ -400,15 +429,19 @@ func (*UnanimousAssertionValidatorRequest) Descriptor() ([]byte, []int) {
 func (m *UnanimousAssertionValidatorRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnanimousAssertionValidatorRequest.Unmarshal(m, b)
 }
+
 func (m *UnanimousAssertionValidatorRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_UnanimousAssertionValidatorRequest.Marshal(b, m, deterministic)
 }
+
 func (m *UnanimousAssertionValidatorRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_UnanimousAssertionValidatorRequest.Merge(m, src)
 }
+
 func (m *UnanimousAssertionValidatorRequest) XXX_Size() int {
 	return xxx_messageInfo_UnanimousAssertionValidatorRequest.Size(m)
 }
+
 func (m *UnanimousAssertionValidatorRequest) XXX_DiscardUnknown() {
 	xxx_messageInfo_UnanimousAssertionValidatorRequest.DiscardUnknown(m)
 }
@@ -473,15 +506,19 @@ func (*ValidatorRequest) Descriptor() ([]byte, []int) {
 func (m *ValidatorRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ValidatorRequest.Unmarshal(m, b)
 }
+
 func (m *ValidatorRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ValidatorRequest.Marshal(b, m, deterministic)
 }
+
 func (m *ValidatorRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_ValidatorRequest.Merge(m, src)
 }
+
 func (m *ValidatorRequest) XXX_Size() int {
 	return xxx_messageInfo_ValidatorRequest.Size(m)
 }
+
 func (m *ValidatorRequest) XXX_DiscardUnknown() {
 	xxx_messageInfo_ValidatorRequest.DiscardUnknown(m)
 }
@@ -586,15 +623,19 @@ func (*CreateVMFollowerResponse) Descriptor() ([]byte, []int) {
 func (m *CreateVMFollowerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateVMFollowerResponse.Unmarshal(m, b)
 }
+
 func (m *CreateVMFollowerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_CreateVMFollowerResponse.Marshal(b, m, deterministic)
 }
+
 func (m *CreateVMFollowerResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CreateVMFollowerResponse.Merge(m, src)
 }
+
 func (m *CreateVMFollowerResponse) XXX_Size() int {
 	return xxx_messageInfo_CreateVMFollowerResponse.Size(m)
 }
+
 func (m *CreateVMFollowerResponse) XXX_DiscardUnknown() {
 	xxx_messageInfo_CreateVMFollowerResponse.DiscardUnknown(m)
 }
@@ -634,15 +675,19 @@ func (*UnanimousAssertionFollowerResponse) Descriptor() ([]byte, []int) {
 func (m *UnanimousAssertionFollowerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnanimousAssertionFollowerResponse.Unmarshal(m, b)
 }
+
 func (m *UnanimousAssertionFollowerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_UnanimousAssertionFollowerResponse.Marshal(b, m, deterministic)
 }
+
 func (m *UnanimousAssertionFollowerResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_UnanimousAssertionFollowerResponse.Merge(m, src)
 }
+
 func (m *UnanimousAssertionFollowerResponse) XXX_Size() int {
 	return xxx_messageInfo_UnanimousAssertionFollowerResponse.Size(m)
 }
+
 func (m *UnanimousAssertionFollowerResponse) XXX_DiscardUnknown() {
 	xxx_messageInfo_UnanimousAssertionFollowerResponse.DiscardUnknown(m)
 }
@@ -691,15 +736,19 @@ func (*FollowerResponse) Descriptor() ([]byte, []int) {
 func (m *FollowerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FollowerResponse.Unmarshal(m, b)
 }
+
 func (m *FollowerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_FollowerResponse.Marshal(b, m, deterministic)
 }
+
 func (m *FollowerResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FollowerResponse.Merge(m, src)
 }
+
 func (m *FollowerResponse) XXX_Size() int {
 	return xxx_messageInfo_FollowerResponse.Size(m)
 }
+
 func (m *FollowerResponse) XXX_DiscardUnknown() {
 	xxx_messageInfo_FollowerResponse.DiscardUnknown(m)
 }

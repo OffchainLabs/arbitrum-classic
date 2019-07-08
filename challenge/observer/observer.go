@@ -18,6 +18,7 @@ package observer
 
 import (
 	"github.com/offchainlabs/arb-util/protocol"
+
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/core"

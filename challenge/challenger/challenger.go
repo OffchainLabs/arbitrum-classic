@@ -19,14 +19,13 @@ package challenger
 import (
 	"math/rand"
 
-	"github.com/offchainlabs/arb-validator/challenge"
-	"github.com/offchainlabs/arb-validator/core"
-
+	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-	"github.com/offchainlabs/arb-util/vm"
 
 	"github.com/offchainlabs/arb-validator/bridge"
+	"github.com/offchainlabs/arb-validator/challenge"
+	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 )
 
@@ -35,7 +34,7 @@ func New(
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	inbox value.Value,
-	machine vm.Machine,
+	machine machine.Machine,
 	deadline uint64,
 ) challenge.State {
 	return waitingContinuing{
@@ -53,7 +52,7 @@ type waitingContinuing struct {
 	challengedPrecondition *protocol.Precondition
 	challengedAssertion    *protocol.AssertionStub
 	challengedInbox        value.Value
-	startState             vm.Machine
+	startState             machine.Machine
 	deadline               uint64
 }
 
@@ -73,15 +72,21 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		preconditions := protocol.GeneratePreconditions(bot.challengedPrecondition, ev.Assertions)
-		assertionNum, machine := protocol.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions, bot.challengedInbox)
-		if assertionNum == uint16(len(ev.Assertions)) && bot.ChallengeEverything {
+		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions, bot.challengedInbox)
+		if err != nil && bot.ChallengeEverything {
 			assertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
-			machine = bot.startState.Clone()
+			m = bot.startState.Clone()
 			for i := uint16(0); i < assertionNum; i++ {
-				machine.Run(int32(ev.Assertions[i].NumSteps))
+				m.ExecuteAssertion(
+					int32(ev.Assertions[i].NumSteps),
+					preconditions[i].BeforeBalance,
+					preconditions[i].TimeBounds,
+					bot.challengedInbox,
+				)
 			}
+			err = nil
 		}
-		if assertionNum >= uint16(len(ev.Assertions)) {
+		if err != nil {
 			return nil, &challenge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
 		}
 		deadline := time + bot.VMConfig.GracePeriod
@@ -93,7 +98,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 		)
 		return continuing{
 			Config:          bot.Config,
-			challengedState: machine,
+			challengedState: m,
 			deadline:        deadline,
 			preconditions:   preconditions,
 			assertions:      ev.Assertions,
@@ -108,7 +113,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 
 type continuing struct {
 	*core.Config
-	challengedState vm.Machine
+	challengedState machine.Machine
 	deadline        uint64
 	preconditions   []*protocol.Precondition
 	assertions      []*protocol.AssertionStub

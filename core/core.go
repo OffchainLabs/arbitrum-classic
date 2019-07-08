@@ -19,9 +19,9 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-	"github.com/offchainlabs/arb-util/vm"
 
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
@@ -47,10 +47,10 @@ func (c *Config) GetConfig() *Config {
 type Core struct {
 	inbox   *protocol.Inbox
 	balance *protocol.BalanceTracker
-	machine vm.Machine
+	machine machine.Machine
 }
 
-func NewCore(inbox *protocol.Inbox, balance *protocol.BalanceTracker, machine vm.Machine) *Core {
+func NewCore(inbox *protocol.Inbox, balance *protocol.BalanceTracker, machine machine.Machine) *Core {
 	return &Core{
 		inbox:   inbox,
 		balance: balance,
@@ -74,15 +74,12 @@ func (c *Core) OffchainAssert(
 	inbox := c.inbox.Clone()
 	inbox.InsertMessageQueue(mq)
 	newState := c.machine.Clone()
-	assCtx := protocol.NewMachineAssertionContext(
-		newState,
+	assDef, _ := newState.ExecuteAssertion(
+		maxSteps,
 		c.balance,
 		timeBounds,
 		inbox.Receive(),
 	)
-	newState.Run(maxSteps)
-	assDef := assCtx.Finalize(newState)
-
 	newAssertion := assDef.GetAssertion()
 	newBalance := c.balance.Clone()
 	// This spend is guaranteed to be correct since the VM made sure to only produce on outgoing if it could spend
@@ -107,7 +104,7 @@ func (c *Core) DeliverMessagesToVM() {
 	c.inbox.DeliverMessages()
 }
 
-func (c *Core) GetMachine() vm.Machine {
+func (c *Core) GetMachine() machine.Machine {
 	return c.machine
 }
 
@@ -134,7 +131,7 @@ func (c *Core) GeneratePrecondition(beginTime, endTime uint64, includePendingMes
 	}
 }
 
-func (c *Core) CreateDisputableDefender(beginTime, length uint64, includePendingMessages bool, maxSteps int32) (vm.Machine, protocol.AssertionDefender) {
+func (c *Core) CreateDisputableDefender(beginTime, length uint64, includePendingMessages bool, maxSteps int32) (machine.Machine, machine.AssertionDefender) {
 	endTime := beginTime + length
 	var inboxValue value.Value
 	if includePendingMessages {
@@ -143,14 +140,12 @@ func (c *Core) CreateDisputableDefender(beginTime, length uint64, includePending
 		inboxValue = c.inbox.Receive()
 	}
 	newState := c.machine.Clone()
-	assCtx := protocol.NewMachineAssertionContext(
-		newState,
+	assDef, _ := newState.ExecuteAssertion(
+		maxSteps,
 		c.balance,
 		[2]uint64{beginTime, endTime},
 		inboxValue,
 	)
-	newState.Run(maxSteps)
-	assDef := assCtx.Finalize(c.machine)
 	return newState, assDef
 }
 

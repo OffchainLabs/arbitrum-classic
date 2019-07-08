@@ -23,8 +23,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/value"
+
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
