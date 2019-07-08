@@ -3,10 +3,11 @@ package value
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type TestCase struct {

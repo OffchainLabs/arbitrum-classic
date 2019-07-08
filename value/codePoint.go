@@ -20,34 +20,48 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arb-avm/code"
-	"golang.org/x/crypto/sha3"
 	"io"
+
+	"golang.org/x/crypto/sha3"
 )
 
+type Opcode uint8
+
 type Operation interface {
-	GetOp() code.Opcode
+	GetOp() Opcode
 	TypeCode() uint8
 	Marshal(wr io.Writer) error
 	MarshalProof(wr io.Writer, includeVal bool) error
 }
 
 type BasicOperation struct {
-	Op code.Opcode
+	Op Opcode
 }
 
 type ImmediateOperation struct {
-	Op  code.Opcode
+	Op  Opcode
 	Val Value
 }
 
+func NewOpcodeFromReader(rd io.Reader) (Opcode, error) {
+	var ret Opcode
+	if err := binary.Read(rd, binary.LittleEndian, &ret); err != nil {
+		return 0, err
+	}
+	return ret, nil
+}
+
+func (o Opcode) Marshal(wr io.Writer) error {
+	return binary.Write(wr, binary.LittleEndian, &o)
+}
+
 func NewBasicOperationFromReader(rd io.Reader) (BasicOperation, error) {
-	op, err := code.NewOpcodeFromReader(rd)
+	op, err := NewOpcodeFromReader(rd)
 	return BasicOperation{op}, err
 }
 
 func NewImmediateOperationFromReader(rd io.Reader) (ImmediateOperation, error) {
-	op, err := code.NewOpcodeFromReader(rd)
+	op, err := NewOpcodeFromReader(rd)
 	if err != nil {
 		return ImmediateOperation{}, err
 	}
@@ -79,7 +93,6 @@ func (op ImmediateOperation) MarshalProof(wr io.Writer, includeVal bool) error {
 	} else {
 		return MarshalValue(NewHashOnlyValueFromValue(op.Val), wr)
 	}
-
 }
 
 func (op BasicOperation) TypeCode() uint8 {
@@ -90,19 +103,19 @@ func (op ImmediateOperation) TypeCode() uint8 {
 	return 1
 }
 
-func (op BasicOperation) GetOp() code.Opcode {
+func (op BasicOperation) GetOp() Opcode {
 	return op.Op
 }
 
-func (op BasicOperation) String() string {
-	return fmt.Sprintf("Basic(%v)", code.InstructionNames[op.Op])
-}
+// func (op BasicOperation) String() string {
+//	return fmt.Sprintf("Basic(%v)", code.InstructionNames[op.Op])
+//}
+//
+// func (op ImmediateOperation) String() string {
+//	return fmt.Sprintf("Immediate(%v, %v)", code.InstructionNames[op.Op], op.Val)
+//}
 
-func (op ImmediateOperation) String() string {
-	return fmt.Sprintf("Immediate(%v, %v)", code.InstructionNames[op.Op], op.Val)
-}
-
-func (op ImmediateOperation) GetOp() code.Opcode {
+func (op ImmediateOperation) GetOp() Opcode {
 	return op.Op
 }
 
@@ -195,10 +208,10 @@ func (cv CodePointValue) Equal(val Value) bool {
 			return false
 		}
 		// for now only check InsnNum
-		//if cv.Op != val.(CodePointValue).Op {
+		// if cv.Op != val.(CodePointValue).Op {
 		//	return false
 		//}
-		//if cv.NextHash != val.(CodePointValue).NextHash {
+		// if cv.NextHash != val.(CodePointValue).NextHash {
 		//	return false
 		//}
 		return true

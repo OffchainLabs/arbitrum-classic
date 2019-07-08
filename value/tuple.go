@@ -20,10 +20,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/miguelmota/go-solidity-sha3"
 	"io"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
 const MaxTupleSize = 8

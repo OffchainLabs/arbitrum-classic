@@ -18,7 +18,6 @@ package value
 
 import (
 	"errors"
-	"github.com/offchainlabs/arb-avm/code"
 	"math/big"
 )
 
@@ -39,6 +38,7 @@ func NewHashBuf(h [32]byte) *HashBuf {
 		Value: h[:],
 	}
 }
+
 func NewHashFromBuf(buf *HashBuf) [32]byte {
 	var ret [32]byte
 	copy(ret[:], buf.Value)
@@ -65,11 +65,11 @@ func NewOperationFromBuf(buf *OperationBuf) (Operation, error) {
 	if buf.Immediate != nil {
 		val, err := NewValueFromBuf(buf.Immediate)
 		return ImmediateOperation{
-			code.Opcode(buf.OpCode),
+			Opcode(buf.OpCode),
 			val,
 		}, err
 	} else {
-		return BasicOperation{code.Opcode(buf.OpCode)}, nil
+		return BasicOperation{Opcode(buf.OpCode)}, nil
 	}
 }
 
@@ -135,7 +135,6 @@ func NewValueBuf(val Value) *ValueBuf {
 }
 
 func NewValueFromBuf(buf *ValueBuf) (Value, error) {
-
 	switch val := buf.Value.(type) {
 	case *ValueBuf_IntVal:
 		return NewIntValue(NewBigIntFromBuf(val.IntVal)), nil

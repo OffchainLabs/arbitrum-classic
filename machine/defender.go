@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-package protocol
+package machine
 
 import (
+	"errors"
 	"io"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
 )
 
 type AssertionDefender struct {
-	assertion    *Assertion
-	precondition *Precondition
+	assertion    *protocol.Assertion
+	precondition *protocol.Precondition
 	beforeInbox  value.Value
-	initState    *vm.Machine
+	initState    Machine
 }
 
-func NewAssertionDefender(assertion *Assertion, precondition *Precondition, beforeInbox value.Value, initState *vm.Machine) AssertionDefender {
+func NewAssertionDefender(assertion *protocol.Assertion, precondition *protocol.Precondition, beforeInbox value.Value, initState Machine) AssertionDefender {
 	return AssertionDefender{assertion, precondition, beforeInbox, initState.Clone()}
 }
 
@@ -38,11 +39,11 @@ func (ad AssertionDefender) NumSteps() uint32 {
 	return ad.assertion.NumSteps
 }
 
-func (ad AssertionDefender) GetAssertion() *Assertion {
+func (ad AssertionDefender) GetAssertion() *protocol.Assertion {
 	return ad.assertion
 }
 
-func (ad AssertionDefender) GetPrecondition() *Precondition {
+func (ad AssertionDefender) GetPrecondition() *protocol.Precondition {
 	return ad.precondition
 }
 
@@ -50,7 +51,7 @@ func (ad AssertionDefender) GetInbox() value.Value {
 	return ad.beforeInbox
 }
 
-func (ad AssertionDefender) GetMachineState() *vm.Machine {
+func (ad AssertionDefender) GetMachineState() Machine {
 	return ad.initState
 }
 
@@ -66,13 +67,17 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 	precondition := ad.precondition
 	for i := uint32(0); i < slices; i++ {
 		runState := machine.Clone()
-		ctx1 := NewMachineAssertionContext(runState, precondition.BeforeBalance, precondition.TimeBounds, ad.beforeInbox)
+
 		stepCount := sliceSize
 		if i < nsteps%slices {
 			stepCount++
 		}
-		runState.Run(int32(stepCount))
-		defender := ctx1.Finalize(machine)
+		defender, _ := runState.ExecuteAssertion(
+			int32(stepCount),
+			precondition.BeforeBalance,
+			precondition.TimeBounds,
+			ad.beforeInbox,
+		)
 		defenders = append(defenders, defender)
 		precondition = defender.GetAssertion().Stub().GeneratePostcondition(precondition)
 		machine = runState
@@ -82,4 +87,22 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 
 func (ad AssertionDefender) SolidityOneStepProof(proofWr io.Writer) error {
 	return ad.initState.MarshalForProof(proofWr)
+}
+
+func ChooseAssertionToChallenge(machine Machine, assertions []*protocol.AssertionStub, preconditions []*protocol.Precondition, inbox value.Value) (uint16, Machine, error) {
+	for i := range assertions {
+		newState := machine.Clone()
+		ad, _ := newState.ExecuteAssertion(
+			int32(assertions[i].NumSteps),
+			preconditions[i].BeforeBalance,
+			preconditions[i].TimeBounds,
+			inbox,
+		)
+		generatedAssertion := ad.GetAssertion()
+		if !generatedAssertion.Stub().Equals(assertions[i]) {
+			return uint16(i), machine, nil
+		}
+		machine = newState
+	}
+	return 0, nil, errors.New("all segments in false Assertion are valid")
 }

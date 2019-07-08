@@ -16,9 +16,7 @@
 
 package value
 
-import (
-	"io"
-)
+import "io"
 
 const (
 	TypeCodeInt       uint8 = 0
@@ -55,9 +53,9 @@ type Value interface {
 
 func Eq(x, y Value) bool {
 	return x.Equal(y)
-	//xt := x.TypeCode()
-	//yt := y.TypeCode()
-	//if xt == TypeCodeHashOnly || yt == TypeCodeHashOnly {
+	// xt := x.TypeCode()
+	// yt := y.TypeCode()
+	// if xt == TypeCodeHashOnly || yt == TypeCodeHashOnly {
 	//	return x.Hash() == y.Hash()
 	//} else if xt != yt {
 	//	return false

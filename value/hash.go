@@ -19,8 +19,9 @@ package value
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"io"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type HashOnlyValue struct {
@@ -50,7 +51,7 @@ func NewHashOnlyValueFromReader(rd io.Reader) (HashOnlyValue, error) {
 }
 
 func (nv HashOnlyValue) Marshal(wr io.Writer) error {
-	//if err := binary.Write(wr, binary.LittleEndian, &nv.size); err != nil {
+	// if err := binary.Write(wr, binary.LittleEndian, &nv.size); err != nil {
 	//	return err
 	//}
 	_, err := wr.Write(nv.hash[:])

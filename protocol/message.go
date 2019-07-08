@@ -19,12 +19,13 @@ package protocol
 import (
 	"errors"
 	"fmt"
-	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-util/value"
 	"io"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Identity [32]byte

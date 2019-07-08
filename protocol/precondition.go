@@ -17,14 +17,15 @@
 package protocol
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-util/value"
-
 	"encoding/binary"
 	"errors"
 	"io"
 	"math/big"
+
+	"github.com/golang/protobuf/proto"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type TimeBounds [2]uint64

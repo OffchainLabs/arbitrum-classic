@@ -19,11 +19,11 @@ package protocol
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/miguelmota/go-solidity-sha3"
 	"io"
 	"math/big"
 
-	"github.com/offchainlabs/arb-avm/vm"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
 	"github.com/offchainlabs/arb-util/value"
 )
 
@@ -163,13 +163,6 @@ func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
 	return NewPrecondition(a.AfterHash, pre.TimeBounds, bt, pre.BeforeInbox)
 }
 
-func RunAndGenerateAssertion(stepCount uint32, runState *vm.Machine, beforeBalance *BalanceTracker, timeBounds TimeBounds, beforeInbox value.Value) *Assertion {
-	actx := NewMachineAssertionContext(runState, beforeBalance, timeBounds, beforeInbox)
-	runState.Run(int32(stepCount))
-	actx.EndContext()
-	return actx.GetAssertion()
-}
-
 func GeneratePreconditions(pre *Precondition, assertions []*AssertionStub) []*Precondition {
 	preconditions := make([]*Precondition, 0, len(assertions))
 	for _, assertion := range assertions {
@@ -177,16 +170,4 @@ func GeneratePreconditions(pre *Precondition, assertions []*AssertionStub) []*Pr
 		pre = assertion.GeneratePostcondition(pre)
 	}
 	return preconditions
-}
-
-func ChooseAssertionToChallenge(machine *vm.Machine, assertions []*AssertionStub, preconditions []*Precondition, inbox value.Value) (uint16, *vm.Machine) {
-	for i := range assertions {
-		newState := machine.Clone()
-		generatedAssertion := RunAndGenerateAssertion(assertions[i].NumSteps, newState, preconditions[i].BeforeBalance, preconditions[i].TimeBounds, inbox)
-		if !generatedAssertion.Stub().Equals(assertions[i]) {
-			return uint16(i), machine
-		}
-		machine = newState
-	}
-	return uint16(len(assertions)), machine
 }

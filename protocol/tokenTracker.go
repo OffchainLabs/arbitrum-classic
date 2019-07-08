@@ -17,13 +17,13 @@
 package protocol
 
 import (
-	"github.com/offchainlabs/arb-util/value"
-
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
 	"math/big"
+
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type nftKey struct {
@@ -209,7 +209,10 @@ func (b *BalanceTracker) Add(tokenType TokenType, amount *big.Int) {
 
 func (b *BalanceTracker) SpendAll(o *BalanceTracker) error {
 	for i := range o.TokenTypes {
-		b.Spend(o.TokenTypes[i], o.TokenAmounts[i])
+		err := b.Spend(o.TokenTypes[i], o.TokenAmounts[i])
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

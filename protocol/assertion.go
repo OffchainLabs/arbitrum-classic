@@ -18,10 +18,12 @@ package protocol
 
 import (
 	"encoding/binary"
-	"github.com/golang/protobuf/proto"
-	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-util/value"
 	"io"
+
+	"github.com/golang/protobuf/proto"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Assertion struct {

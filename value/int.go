@@ -17,15 +17,14 @@
 package value
 
 import (
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/miguelmota/go-solidity-sha3"
 	"io"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/math"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
-const (
-	BytesPerInt = 32
-)
+const BytesPerInt = 32
 
 var hashOfOne [32]byte
 var hashOfZero [32]byte

@@ -5,9 +5,10 @@ package protocol
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	value "github.com/offchainlabs/arb-util/value"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -38,15 +39,19 @@ func (*TokenTypeBuf) Descriptor() ([]byte, []int) {
 func (m *TokenTypeBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TokenTypeBuf.Unmarshal(m, b)
 }
+
 func (m *TokenTypeBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TokenTypeBuf.Marshal(b, m, deterministic)
 }
+
 func (m *TokenTypeBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TokenTypeBuf.Merge(m, src)
 }
+
 func (m *TokenTypeBuf) XXX_Size() int {
 	return xxx_messageInfo_TokenTypeBuf.Size(m)
 }
+
 func (m *TokenTypeBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_TokenTypeBuf.DiscardUnknown(m)
 }
@@ -80,15 +85,19 @@ func (*MessageBuf) Descriptor() ([]byte, []int) {
 func (m *MessageBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MessageBuf.Unmarshal(m, b)
 }
+
 func (m *MessageBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MessageBuf.Marshal(b, m, deterministic)
 }
+
 func (m *MessageBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_MessageBuf.Merge(m, src)
 }
+
 func (m *MessageBuf) XXX_Size() int {
 	return xxx_messageInfo_MessageBuf.Size(m)
 }
+
 func (m *MessageBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_MessageBuf.DiscardUnknown(m)
 }
@@ -141,15 +150,19 @@ func (*TimeBoundsBuf) Descriptor() ([]byte, []int) {
 func (m *TimeBoundsBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TimeBoundsBuf.Unmarshal(m, b)
 }
+
 func (m *TimeBoundsBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TimeBoundsBuf.Marshal(b, m, deterministic)
 }
+
 func (m *TimeBoundsBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TimeBoundsBuf.Merge(m, src)
 }
+
 func (m *TimeBoundsBuf) XXX_Size() int {
 	return xxx_messageInfo_TimeBoundsBuf.Size(m)
 }
+
 func (m *TimeBoundsBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_TimeBoundsBuf.DiscardUnknown(m)
 }
@@ -188,15 +201,19 @@ func (*BalanceTrackerBuf) Descriptor() ([]byte, []int) {
 func (m *BalanceTrackerBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BalanceTrackerBuf.Unmarshal(m, b)
 }
+
 func (m *BalanceTrackerBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BalanceTrackerBuf.Marshal(b, m, deterministic)
 }
+
 func (m *BalanceTrackerBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BalanceTrackerBuf.Merge(m, src)
 }
+
 func (m *BalanceTrackerBuf) XXX_Size() int {
 	return xxx_messageInfo_BalanceTrackerBuf.Size(m)
 }
+
 func (m *BalanceTrackerBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_BalanceTrackerBuf.DiscardUnknown(m)
 }
@@ -237,15 +254,19 @@ func (*PreconditionBuf) Descriptor() ([]byte, []int) {
 func (m *PreconditionBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PreconditionBuf.Unmarshal(m, b)
 }
+
 func (m *PreconditionBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PreconditionBuf.Marshal(b, m, deterministic)
 }
+
 func (m *PreconditionBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_PreconditionBuf.Merge(m, src)
 }
+
 func (m *PreconditionBuf) XXX_Size() int {
 	return xxx_messageInfo_PreconditionBuf.Size(m)
 }
+
 func (m *PreconditionBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_PreconditionBuf.DiscardUnknown(m)
 }
@@ -300,15 +321,19 @@ func (*AssertionBuf) Descriptor() ([]byte, []int) {
 func (m *AssertionBuf) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AssertionBuf.Unmarshal(m, b)
 }
+
 func (m *AssertionBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AssertionBuf.Marshal(b, m, deterministic)
 }
+
 func (m *AssertionBuf) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AssertionBuf.Merge(m, src)
 }
+
 func (m *AssertionBuf) XXX_Size() int {
 	return xxx_messageInfo_AssertionBuf.Size(m)
 }
+
 func (m *AssertionBuf) XXX_DiscardUnknown() {
 	xxx_messageInfo_AssertionBuf.DiscardUnknown(m)
 }

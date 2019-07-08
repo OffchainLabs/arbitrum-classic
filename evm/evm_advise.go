@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/miguelmota/go-solidity-sha3"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 

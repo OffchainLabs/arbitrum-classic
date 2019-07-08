@@ -18,6 +18,7 @@ package protocol
 
 import (
 	"fmt"
+
 	"github.com/offchainlabs/arb-util/value"
 )
 
