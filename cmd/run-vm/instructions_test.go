@@ -18,16 +18,16 @@ package main
 
 import (
 	"fmt"
+	"math/big"
+	"strconv"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arb-avm/code"
 	"github.com/offchainlabs/arb-avm/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-	"math/big"
-	"strconv"
-
 	//"math/rand"
-	"testing"
 )
 
 // This is to test that a machine can be built and run
@@ -45,8 +45,8 @@ func TestMachineAdd(t *testing.T) {
 	i++
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	steps := machine.Run(80000)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	steps, _ := m.Execute(80000)
 	fmt.Println(steps)
 }
 
@@ -55,23 +55,23 @@ func TestMachineAdd(t *testing.T) {
 // Run the given instruction
 // Push the expected result to the stack of a second machine
 // Compare the two machines
-func unaryIntOpTest(x, expected *big.Int, oper code.Opcode) (bool, string) {
+func unaryIntOpTest(x, expected *big.Int, oper value.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewIntValue(x))
+	m.Stack().Push(value.NewIntValue(x))
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.Opcode(oper)}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -80,24 +80,24 @@ func unaryIntOpTest(x, expected *big.Int, oper code.Opcode) (bool, string) {
 	return true, ""
 }
 
-func binaryIntOpTest(x, y, expected *big.Int, oper code.Opcode) (bool, string) {
+func binaryIntOpTest(x, y, expected *big.Int, oper value.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewIntValue(y))
-	machine.Stack().Push(value.NewIntValue(x))
+	m.Stack().Push(value.NewIntValue(y))
+	m.Stack().Push(value.NewIntValue(x))
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.Opcode(oper)}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -106,24 +106,24 @@ func binaryIntOpTest(x, y, expected *big.Int, oper code.Opcode) (bool, string) {
 	return true, ""
 }
 
-func binaryValueOpTest(x, y value.Value, expected *big.Int, oper code.Opcode) (bool, string) {
+func binaryValueOpTest(x, y value.Value, expected *big.Int, oper value.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(y)
-	machine.Stack().Push(x)
+	m.Stack().Push(y)
+	m.Stack().Push(x)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.Opcode(oper)}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -132,25 +132,25 @@ func binaryValueOpTest(x, y value.Value, expected *big.Int, oper code.Opcode) (b
 	return true, ""
 }
 
-func tertiaryIntOpTest(x, y, z, expected *big.Int, oper code.Opcode) (bool, string) {
+func tertiaryIntOpTest(x, y, z, expected *big.Int, oper value.Opcode) (bool, string) {
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewIntValue(z))
-	machine.Stack().Push(value.NewIntValue(y))
-	machine.Stack().Push(value.NewIntValue(x))
+	m.Stack().Push(value.NewIntValue(z))
+	m.Stack().Push(value.NewIntValue(y))
+	m.Stack().Push(value.NewIntValue(x))
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.Opcode(oper)}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -165,16 +165,16 @@ func TestAddMissingValue(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(1))
+	m.Stack().Push(value.NewInt64Value(1))
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ADD}); err == nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ADD}); err == nil {
 		t.Error("tried to pop empty stack expected")
 	}
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if ok, _ := vm.Equal(knownMachine, machine); ok {
+	if ok, _ := vm.Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
@@ -261,7 +261,7 @@ func TestDiv(t *testing.T) {
 	if res {
 		t.Error("should not be -3")
 	}
-	//test 6/0=0
+	// test 6/0=0
 	res, err = binaryIntOpTest(big.NewInt(6), big.NewInt(0), big.NewInt(0), code.DIV)
 	if res {
 		t.Error("Divide by 0 expected")
@@ -369,12 +369,12 @@ func TestMulMod(t *testing.T) {
 }
 
 func TestExp(t *testing.T) {
-	//test 3^2=9
+	// test 3^2=9
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(2), big.NewInt(9), code.EXP)
 	if !res {
 		t.Error(err)
 	}
-	//test 2 exp 256 = 0 - test wrap
+	// test 2 exp 256 = 0 - test wrap
 	res, err = binaryIntOpTest(big.NewInt(2), big.NewInt(256), big.NewInt(0), code.EXP)
 	if !res {
 		t.Error(err)
@@ -382,12 +382,12 @@ func TestExp(t *testing.T) {
 }
 
 func TestSignextend(t *testing.T) {
-	//test
+	// test
 	res, err := binaryIntOpTest(big.NewInt(-1), big.NewInt(0), math.U256(big.NewInt(-1)), code.SIGNEXTEND)
 	if !res {
 		t.Error(err)
 	}
-	//test
+	// test
 	res, err = binaryIntOpTest(big.NewInt(1), big.NewInt(0), math.U256(big.NewInt(-1)), code.SIGNEXTEND)
 	if res {
 		t.Error(err)
@@ -395,27 +395,27 @@ func TestSignextend(t *testing.T) {
 }
 
 func TestLt(t *testing.T) {
-	//test 3<9 res 1
+	// test 3<9 res 1
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(1), code.LT)
 	if !res {
 		t.Error(err)
 	}
-	//test 9<3 res 0
+	// test 9<3 res 0
 	res, err = binaryIntOpTest(big.NewInt(9), big.NewInt(3), big.NewInt(0), code.LT)
 	if !res {
 		t.Error(err)
 	}
-	//test 3<3 res 0
+	// test 3<3 res 0
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.LT)
 	if !res {
 		t.Error(err)
 	}
-	//test 0xfffffffffffffffffffffffffffffffc((2**256)-4)<9 res 0
+	// test 0xfffffffffffffffffffffffffffffffc((2**256)-4)<9 res 0
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-4)), big.NewInt(9), big.NewInt(0), code.LT)
 	if !res {
 		t.Error(err)
 	}
-	//test 9< tuple res 0
+	// test 9< tuple res 0
 	res, err = binaryValueOpTest(value.NewInt64Value(9), value.NewEmptyTuple(), big.NewInt(0), code.LT)
 	if res {
 		t.Error("expected error")
@@ -423,22 +423,22 @@ func TestLt(t *testing.T) {
 }
 
 func TestGt(t *testing.T) {
-	//test 3>9 res 0
+	// test 3>9 res 0
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(0), code.GT)
 	if !res {
 		t.Error(err)
 	}
-	//test 9>3 res 1
+	// test 9>3 res 1
 	res, err = binaryIntOpTest(big.NewInt(9), big.NewInt(3), big.NewInt(1), code.GT)
 	if !res {
 		t.Error(err)
 	}
-	//test 3>3 res 0
+	// test 3>3 res 0
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.GT)
 	if !res {
 		t.Error(err)
 	}
-	//test 0xfffffffffffffffffffffffffffffffc(-4)>9 res 1
+	// test 0xfffffffffffffffffffffffffffffffc(-4)>9 res 1
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-4)), big.NewInt(9), big.NewInt(1), code.GT)
 	if !res {
 		t.Error(err)
@@ -446,32 +446,32 @@ func TestGt(t *testing.T) {
 }
 
 func TestSlt(t *testing.T) {
-	//test 3 < 9 = 1
+	// test 3 < 9 = 1
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(1), code.SLT)
 	if !res {
 		t.Error(err)
 	}
-	//test 9 < 3 = 0
+	// test 9 < 3 = 0
 	res, err = binaryIntOpTest(big.NewInt(9), big.NewInt(3), big.NewInt(0), code.SLT)
 	if !res {
 		t.Error(err)
 	}
-	//test 3 < 3 = 0
+	// test 3 < 3 = 0
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.SLT)
 	if !res {
 		t.Error(err)
 	}
-	//test -3 < 3 = 1
+	// test -3 < 3 = 1
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-3)), big.NewInt(3), big.NewInt(1), code.SLT)
 	if !res {
 		t.Error(err)
 	}
-	//test -3 < -4 = 0
+	// test -3 < -4 = 0
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-3)), math.U256(big.NewInt(-4)), big.NewInt(0), code.SLT)
 	if !res {
 		t.Error(err)
 	}
-	//test -3 < -2 = 1
+	// test -3 < -2 = 1
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), big.NewInt(1), code.SLT)
 	if !res {
 		t.Error(err)
@@ -479,32 +479,32 @@ func TestSlt(t *testing.T) {
 }
 
 func TestSgt(t *testing.T) {
-	//test 3 > 9 = 0
+	// test 3 > 9 = 0
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(0), code.SGT)
 	if !res {
 		t.Error(err)
 	}
-	//test 9 > 3 = 1
+	// test 9 > 3 = 1
 	res, err = binaryIntOpTest(big.NewInt(9), big.NewInt(3), big.NewInt(1), code.SGT)
 	if !res {
 		t.Error(err)
 	}
-	//test 3 > 3 = 0
+	// test 3 > 3 = 0
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.SGT)
 	if !res {
 		t.Error(err)
 	}
-	//test -3 > 3 = 0
+	// test -3 > 3 = 0
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-3)), big.NewInt(3), big.NewInt(0), code.SGT)
 	if !res {
 		t.Error(err)
 	}
-	//test -3 > -4 = 1
+	// test -3 > -4 = 1
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-3)), math.U256(big.NewInt(-4)), big.NewInt(1), code.SGT)
 	if !res {
 		t.Error(err)
 	}
-	//test -3 > -2 = 0
+	// test -3 > -2 = 0
 	res, err = binaryIntOpTest(math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), big.NewInt(0), code.SGT)
 	if !res {
 		t.Error(err)
@@ -512,12 +512,12 @@ func TestSgt(t *testing.T) {
 }
 
 func TestEq(t *testing.T) {
-	//test 3==9 = 0
+	// test 3==9 = 0
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(0), code.EQ)
 	if !res {
 		t.Error(err)
 	}
-	//test 3==3 = 1
+	// test 3==3 = 1
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(1), code.EQ)
 	if !res {
 		t.Error(err)
@@ -559,12 +559,12 @@ func TestEq(t *testing.T) {
 }
 
 func TestIszero(t *testing.T) {
-	//test 0 isZero = 1
+	// test 0 isZero = 1
 	res, err := unaryIntOpTest(big.NewInt(0), big.NewInt(1), code.ISZERO)
 	if !res {
 		t.Error(err)
 	}
-	//test 2 isZero = 0
+	// test 2 isZero = 0
 	res, err = unaryIntOpTest(big.NewInt(3), big.NewInt(0), code.ISZERO)
 	if !res {
 		t.Error(err)
@@ -572,12 +572,12 @@ func TestIszero(t *testing.T) {
 }
 
 func TestAnd(t *testing.T) {
-	//test 0x03 and 0x09 = 0x01
+	// test 0x03 and 0x09 = 0x01
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(1), code.AND)
 	if !res {
 		t.Error(err)
 	}
-	//test 0x03 and 0x03 = 0x03
+	// test 0x03 and 0x03 = 0x03
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(3), code.AND)
 	if !res {
 		t.Error(err)
@@ -585,12 +585,12 @@ func TestAnd(t *testing.T) {
 }
 
 func TestOr(t *testing.T) {
-	//test 0x03 or 0x09 = 0x0b
+	// test 0x03 or 0x09 = 0x0b
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(11), code.OR)
 	if !res {
 		t.Error(err)
 	}
-	//test 0x03 or 0x03 = 0x03
+	// test 0x03 or 0x03 = 0x03
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(3), code.OR)
 	if !res {
 		t.Error(err)
@@ -598,12 +598,12 @@ func TestOr(t *testing.T) {
 }
 
 func TestXor(t *testing.T) {
-	//test 0x03 xor 0x09 = 0x0a
+	// test 0x03 xor 0x09 = 0x0a
 	res, err := binaryIntOpTest(big.NewInt(3), big.NewInt(9), big.NewInt(10), code.XOR)
 	if !res {
 		t.Error(err)
 	}
-	//test 0x03 xor 0x03 = 0x00
+	// test 0x03 xor 0x03 = 0x00
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.XOR)
 	if !res {
 		t.Error(err)
@@ -611,17 +611,17 @@ func TestXor(t *testing.T) {
 }
 
 func TestNot(t *testing.T) {
-	//test !0x00 = 0xffffffffffffffffffffffffffffffff(-1)
+	// test !0x00 = 0xffffffffffffffffffffffffffffffff(-1)
 	res, err := unaryIntOpTest(big.NewInt(0), math.U256(big.NewInt(-1)), code.NOT)
 	if !res {
 		t.Error(err)
 	}
-	//test !0x03 = 0xfffffffffffffffffffffffffffffffc(-4)
+	// test !0x03 = 0xfffffffffffffffffffffffffffffffc(-4)
 	res, err = unaryIntOpTest(big.NewInt(3), math.U256(big.NewInt(-4)), code.NOT)
 	if !res {
 		t.Error(err)
 	}
-	//test !0xfffffffffffffffffffffffffffffffc(-4) = 0x03(3)
+	// test !0xfffffffffffffffffffffffffffffffc(-4) = 0x03(3)
 	res, err = unaryIntOpTest(math.U256(big.NewInt(-4)), math.U256(big.NewInt(3)), code.NOT)
 	if !res {
 		t.Error(err)
@@ -629,12 +629,12 @@ func TestNot(t *testing.T) {
 }
 
 func TestByte(t *testing.T) {
-	//test 31st byte of 16 = 16
+	// test 31st byte of 16 = 16
 	res, err := binaryIntOpTest(big.NewInt(16), big.NewInt(31), big.NewInt(16), code.BYTE)
 	if !res {
 		t.Error(err)
 	}
-	//test 3rd byte of 3 = 0
+	// test 3rd byte of 3 = 0
 	res, err = binaryIntOpTest(big.NewInt(3), big.NewInt(3), big.NewInt(0), code.BYTE)
 	if !res {
 		t.Error(err)
@@ -642,7 +642,7 @@ func TestByte(t *testing.T) {
 }
 
 func TestSha3(t *testing.T) {
-	//test
+	// test
 	hash, _ := new(big.Int).SetString("80084422859880547211683076133703299733277748156566366325829078699459944778998", 10)
 	res, err := unaryIntOpTest(big.NewInt(1), hash, code.SHA3)
 	if !res {
@@ -651,27 +651,27 @@ func TestSha3(t *testing.T) {
 }
 
 func TestPop(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(1))
-	a := machine.Stack().Count()
+	m.Stack().Push(value.NewInt64Value(1))
+	a := m.Stack().Count()
 	if a != 1 {
 		tmp := "PUSH failed stack size = "
 		tmp += strconv.FormatInt(a, 10)
 		t.Error(tmp)
 	}
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.POP}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.POP}); err != nil {
 		tmp := "POP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	a = machine.Stack().Count()
+	a = m.Stack().Count()
 	if a != 0 {
 		tmp := "POP stack size check failed"
 		t.Error(tmp)
@@ -679,19 +679,19 @@ func TestPop(t *testing.T) {
 }
 
 func TestSpush(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.SPUSH}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SPUSH}); err != nil {
 		tmp := "SPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	a := machine.Stack().Count()
+	a := m.Stack().Count()
 	if a != 1 {
 		tmp := "SPUSH stack size check failed"
 		t.Error(tmp)
@@ -699,19 +699,19 @@ func TestSpush(t *testing.T) {
 }
 
 func TestRpush(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.RPUSH}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.RPUSH}); err != nil {
 		tmp := "RPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	a := machine.Stack().Count()
+	a := m.Stack().Count()
 	if a != 1 {
 		tmp := "RPUSH stack size check failed"
 		t.Error(tmp)
@@ -730,22 +730,22 @@ func TestRset(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(5))
+	m.Stack().Push(value.NewInt64Value(5))
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.RSET}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.RSET}); err != nil {
 		tmp := "RSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	a := machine.Stack().Count()
+	a := m.Stack().Count()
 	if a != 0 {
 		tmp := "RSET stack size check failed"
 		t.Error(tmp)
 	}
-	if ok, _ := vm.Equal(knownMachine, machine); ok {
+	if ok, _ := vm.Equal(knownMachine, m); ok {
 		t.Error("machines equal expected different")
 	}
 
@@ -755,7 +755,7 @@ func TestRset(t *testing.T) {
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -766,7 +766,7 @@ func TestInbox(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
@@ -784,7 +784,7 @@ func TestInbox(t *testing.T) {
 	inbox.DeliverMessages()
 	knowninbox.DeliverMessages()
 
-	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
+	vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -798,14 +798,14 @@ func TestInbox(t *testing.T) {
 	vals[3] = value.NewInt64Value(4)
 	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
 
-	machine.Stack().Push(tup)
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.INBOX}); err != nil {
+	m.Stack().Push(tup)
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.INBOX}); err != nil {
 		tmp := "INBOX failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	knownMachine.Stack().Push(knowninbox.Receive())
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -813,33 +813,33 @@ func TestInbox(t *testing.T) {
 func TestJump(t *testing.T) {
 	//test:
 	insns := make([]value.Operation, 5)
-	i := 0 //insn 0
+	i := 0 // insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
-	i++ //insn 1
+	i++ // insn 1
 	insns[i] = value.ImmediateOperation{Op: code.ADD, Val: value.NewInt64Value(4)}
-	i++ //insn 2
+	i++ // insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
-	i++ //insn 3
+	i++ // insn 3
 	insns[i] = value.BasicOperation{Op: code.LOG}
-	i++ //insn 4
+	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// run NOP to push value 1
-	vm.RunInstruction(machine, machine.GetOperation())
+	vm.RunInstruction(m, m.GetOperation())
 	// push 2 to set jump point
 	var nextHash [32]byte
 	codept := value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
-	machine.Stack().Push(codept)
+	m.Stack().Push(codept)
 	// JUMP
-	vm.RunInstruction(machine, value.BasicOperation{Op: code.JUMP})
+	vm.RunInstruction(m, value.BasicOperation{Op: code.JUMP})
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	vm.RunInstruction(machine, machine.GetOperation())
+	vm.RunInstruction(m, m.GetOperation())
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -847,77 +847,77 @@ func TestJump(t *testing.T) {
 func TestCJump(t *testing.T) {
 	//test:
 	insns := make([]value.Operation, 5)
-	i := 0 //insn 0
+	i := 0 // insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
-	i++ //insn 1
+	i++ // insn 1
 	insns[i] = value.ImmediateOperation{Op: code.ADD, Val: value.NewInt64Value(4)}
-	i++ //insn 2
+	i++ // insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
-	i++ //insn 3
+	i++ // insn 3
 	insns[i] = value.BasicOperation{Op: code.LOG}
-	i++ //insn 4
+	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	saveMachine := machine.Clone()
-	saveKnownMachine := knownMachine.Clone()
+	saveMachine := m.Clone().(*vm.Machine)
+	saveKnownMachine := knownMachine.Clone().(*vm.Machine)
 
 	// run NOP to push value 1
-	vm.RunInstruction(machine, machine.GetOperation())
+	vm.RunInstruction(m, m.GetOperation())
 	// push 0 for conditional
-	machine.Stack().Push(value.NewInt64Value(0))
+	m.Stack().Push(value.NewInt64Value(0))
 	// push 2 to set jump point
 	var nextHash [32]byte
 	codept := value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
-	machine.Stack().Push(codept)
+	m.Stack().Push(codept)
 	// CJUMP
-	vm.RunInstruction(machine, value.BasicOperation{Op: code.CJUMP})
+	vm.RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	vm.RunInstruction(machine, machine.GetOperation())
+	vm.RunInstruction(m, m.GetOperation())
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 
 	// repeat test with conditional set to 1
-	machine = saveMachine
+	m = saveMachine
 	knownMachine = saveKnownMachine
 	// run NOP to push value 1
-	vm.RunInstruction(machine, machine.GetOperation())
+	vm.RunInstruction(m, m.GetOperation())
 	// push 1 for conditional
-	machine.Stack().Push(value.NewInt64Value(1))
+	m.Stack().Push(value.NewInt64Value(1))
 	// push 2 to set jump point
 	codept = value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
-	machine.Stack().Push(codept)
+	m.Stack().Push(codept)
 	// CJUMP
-	vm.RunInstruction(machine, value.BasicOperation{Op: code.CJUMP})
+	vm.RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	vm.RunInstruction(machine, machine.GetOperation())
+	vm.RunInstruction(m, m.GetOperation())
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestStackempty(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
 		tmp := "STACKEMPTY failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// stack should have value 1 - stack was empty
-	a := machine.Stack().Count()
+	a := m.Stack().Count()
 	if a != 1 {
 		tmp := "STACKEMPTY stack size check failed expected 3 found "
 		tmp += strconv.FormatInt(a, 10)
@@ -925,15 +925,15 @@ func TestStackempty(t *testing.T) {
 	}
 	// verify known and unknown match one item value = 1
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
 		tmp := "STACKEMPTY failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	a = machine.Stack().Count()
+	a = m.Stack().Count()
 	if a != 2 {
 		tmp := "STACKEMPTY stack size check failed expected 7 found "
 		tmp += strconv.FormatInt(a, 10)
@@ -941,27 +941,27 @@ func TestStackempty(t *testing.T) {
 	}
 	// push 0 to knownMachine as result of second STACKEMPTY call
 	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestPcpush(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.PCPUSH}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.PCPUSH}); err != nil {
 		tmp := "PCPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// stack should have one item - current codepoint
-	a := machine.Stack().Count()
+	a := m.Stack().Count()
 	if a != 1 {
 		tmp := "PCPUSH stack size check failed expected 3 found "
 		tmp += strconv.FormatInt(a, 10)
@@ -971,35 +971,35 @@ func TestPcpush(t *testing.T) {
 	var nextHash [32]byte
 	codept := value.CodePointValue{0, value.BasicOperation{Op: code.HALT}, nextHash}
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestAuxpush(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(4))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.AUXPUSH}); err != nil {
+	m.Stack().Push(value.NewInt64Value(4))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXPUSH}); err != nil {
 		tmp := "AUXPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// auxstack should have one item - value popped from stack
-	a := machine.AuxStack().Count()
+	a := m.AuxStack().Count()
 	if a != 1 {
 		tmp := "AUXPUSH stack size check failed expected 1 found "
 		tmp += strconv.FormatInt(a, 10)
 		t.Error(tmp)
 	}
 	// stack should be empty
-	a = machine.Stack().Count()
+	a = m.Stack().Count()
 	if a != 0 {
 		tmp := "AUXPUSH stack size check failed expected 3 found "
 		tmp += strconv.FormatInt(a, 10)
@@ -1007,35 +1007,35 @@ func TestAuxpush(t *testing.T) {
 	}
 	// verify known and unknown match one item value = 4
 	knownMachine.AuxStack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestAuxpop(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.AuxStack().Push(value.NewInt64Value(5))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.AUXPOP}); err != nil {
+	m.AuxStack().Push(value.NewInt64Value(5))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXPOP}); err != nil {
 		tmp := "AUXPOP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// auxstack should be empty
-	a := machine.AuxStack().Count()
+	a := m.AuxStack().Count()
 	if a != 0 {
 		tmp := "AUXPOP stack size check failed expected 1 found "
 		tmp += strconv.FormatInt(a, 10)
 		t.Error(tmp)
 	}
 	// stack should have one item - value popped from auxstack
-	a = machine.Stack().Count()
+	a = m.Stack().Count()
 	if a != 1 {
 		tmp := "AUXPOP stack size check failed expected 3 found "
 		tmp += strconv.FormatInt(a, 10)
@@ -1043,48 +1043,48 @@ func TestAuxpop(t *testing.T) {
 	}
 	// verify known and unknown match one item value = 5
 	knownMachine.Stack().Push(value.NewInt64Value(5))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestAuxstckempty(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// auxstack should be empty
-	a := machine.AuxStack().Count()
+	a := m.AuxStack().Count()
 	if a != 0 {
 		tmp := "AUXPOP stack size check failed expected 1 found "
 		tmp += strconv.FormatInt(a, 10)
 		t.Error(tmp)
 	}
 	// check aux stack empty and push results on data stack
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
 		tmp := "AUXSTACKEMPTY failed"
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match one item value = 1
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 
-	machine.AuxStack().Push(value.NewInt64Value(5))
+	m.AuxStack().Push(value.NewInt64Value(5))
 	// auxstack should not be empty
-	a = machine.AuxStack().Count()
+	a = m.AuxStack().Count()
 	if a != 1 {
 		tmp := "AUXSTACKEMPTY stack size check failed expected 3 found "
 		tmp += strconv.FormatInt(a, 10)
 		t.Error(tmp)
 	}
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
 		tmp := "AUXSTACKEMPTY failed"
 		tmp += err.Error()
 		t.Error(err)
@@ -1092,82 +1092,82 @@ func TestAuxstckempty(t *testing.T) {
 	// verify known and unknown match
 	knownMachine.AuxStack().Push(value.NewInt64Value(5))
 	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestNop(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// check NOP does nothing
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.NOP}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NOP}); err != nil {
 		tmp := "NOP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 
 	// check NOP does nothing
 	// immediate operation pushes value then does nothing
-	if _, err := vm.RunInstruction(machine, value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}); err != nil {
+	if _, err := vm.RunInstruction(m, value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}); err != nil {
 		tmp := "NOP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestErrpush(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 5)
-	i := 0 //insn 0
+	i := 0 // insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
-	i++ //insn 1
+	i++ // insn 1
 	insns[i] = value.ImmediateOperation{Op: code.ADD, Val: value.NewInt64Value(4)}
-	i++ //insn 2
+	i++ // insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
-	i++ //insn 3
+	i++ // insn 3
 	insns[i] = value.BasicOperation{Op: code.LOG}
-	i++ //insn 4
+	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// push codepoint onto stack
 	var nextHash [32]byte
 	codept := value.CodePointValue{4, value.BasicOperation{Op: code.HALT}, nextHash}
-	machine.Stack().Push(codept)
+	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// run errset to set the error handler
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ERRSET}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERRSET}); err != nil {
 		tmp := "ERRSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown different
-	if ok, _ := vm.Equal(knownMachine, machine); ok {
+	if ok, _ := vm.Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
@@ -1178,60 +1178,60 @@ func TestErrpush(t *testing.T) {
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// run errpush to push error handler to data stack
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ERRPUSH}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERRPUSH}); err != nil {
 		tmp := "ERRPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown different
-	if ok, _ := vm.Equal(knownMachine, machine); ok {
+	if ok, _ := vm.Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
 	// push error handler code point to known data stack
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestErrset(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 5)
-	i := 0 //insn 0
+	i := 0 // insn 0
 	insns[i] = value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}
-	i++ //insn 1
+	i++ // insn 1
 	insns[i] = value.ImmediateOperation{Op: code.ADD, Val: value.NewInt64Value(4)}
-	i++ //insn 2
+	i++ // insn 2
 	insns[i] = value.ImmediateOperation{Op: code.SUB, Val: value.NewInt64Value(5)}
-	i++ //insn 3
+	i++ // insn 3
 	insns[i] = value.BasicOperation{Op: code.LOG}
-	i++ //insn 4
+	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// push codepoint onto stack
 	var nextHash [32]byte
 	codept := value.CodePointValue{4, value.BasicOperation{Op: code.HALT}, nextHash}
-	machine.Stack().Push(codept)
+	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// run errset to set the error handler
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ERRSET}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERRSET}); err != nil {
 		tmp := "ERRSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown different
-	if ok, _ := vm.Equal(knownMachine, machine); ok {
+	if ok, _ := vm.Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
@@ -1242,123 +1242,123 @@ func TestErrset(t *testing.T) {
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestError(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// check NOP does nothing
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.ERROR}); err == nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERROR}); err == nil {
 		tmp := "ERROR failed - should have generated error"
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestDup0(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(1))
+	m.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.DUP0}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.DUP0}); err != nil {
 		tmp := "DUP0 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestDup1(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(1))
-	machine.Stack().Push(value.NewInt64Value(2))
+	m.Stack().Push(value.NewInt64Value(1))
+	m.Stack().Push(value.NewInt64Value(2))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.DUP1}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.DUP1}); err != nil {
 		tmp := "DUP1 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestDup2(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(1))
-	machine.Stack().Push(value.NewInt64Value(2))
-	machine.Stack().Push(value.NewInt64Value(3))
+	m.Stack().Push(value.NewInt64Value(1))
+	m.Stack().Push(value.NewInt64Value(2))
+	m.Stack().Push(value.NewInt64Value(3))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(2))
 	knownMachine.Stack().Push(value.NewInt64Value(3))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.DUP2}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.DUP2}); err != nil {
 		tmp := "DUP2 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestSwap2(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(1))
-	machine.Stack().Push(value.NewInt64Value(2))
-	machine.Stack().Push(value.NewInt64Value(3))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.SWAP2}); err != nil {
+	m.Stack().Push(value.NewInt64Value(1))
+	m.Stack().Push(value.NewInt64Value(2))
+	m.Stack().Push(value.NewInt64Value(3))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SWAP2}); err != nil {
 		tmp := "SWAP2 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -1367,139 +1367,139 @@ func TestSwap2(t *testing.T) {
 	knownMachine.Stack().Push(value.NewInt64Value(3))
 	knownMachine.Stack().Push(value.NewInt64Value(2))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestTget(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	tup := value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2))
 
-	machine.Stack().Push(tup)
-	machine.Stack().Push(value.NewInt64Value(1))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TGET}); err != nil {
+	m.Stack().Push(tup)
+	m.Stack().Push(value.NewInt64Value(1))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TGET}); err != nil {
 		tmp := "TGET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match one item value = 1
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test with only int on stack
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TGET}); err == nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
 		tmp := "TGET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
 	knownMachine.Stack().Pop()
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test A out of range
-	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
-	machine.Stack().Push(value.NewInt64Value(3))
+	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
+	m.Stack().Push(value.NewInt64Value(3))
 	var nextHash [32]byte
 	codept := value.CodePointValue{0, value.BasicOperation{Op: code.HALT}, nextHash}
-	machine.SetPC(codept)
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TGET}); err == nil {
+	m.SetPC(codept)
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
 		tmp := "TGET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestTset(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewInt64Value(3))
-	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
-	machine.Stack().Push(value.NewInt64Value(1))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TSET}); err != nil {
+	m.Stack().Push(value.NewInt64Value(3))
+	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
+	m.Stack().Push(value.NewInt64Value(1))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TSET}); err != nil {
 		tmp := "TSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(3)))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test with only tuple on stack
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TSET}); err == nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TSET}); err == nil {
 		tmp := "TSET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
 	knownMachine.Stack().Pop()
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test incorrect A
-	machine.Stack().Push(value.NewInt64Value(3))
-	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
-	machine.Stack().Push(value.NewInt64Value(4))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TSET}); err == nil {
+	m.Stack().Push(value.NewInt64Value(3))
+	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
+	m.Stack().Push(value.NewInt64Value(4))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TSET}); err == nil {
 		tmp := "TSET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestTlen(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	machine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TLEN}); err != nil {
+	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TLEN}); err != nil {
 		tmp := "TLEN failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test A not a tuple
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TLEN}); err == nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TLEN}); err == nil {
 		t.Error("TLEN expected fail")
 	}
 	// verify known and unknown match expect empty stack
 	knownMachine.Stack().Pop()
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestType(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
@@ -1519,11 +1519,11 @@ func TestType(t *testing.T) {
 	}
 
 	for i := range testValues {
-		machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+		m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 		knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-		machine.Stack().Push(testValues[i])
-		if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.TYPE}); err != nil {
+		m.Stack().Push(testValues[i])
+		if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TYPE}); err != nil {
 			tmp := "TYPE failed - "
 			tmp += err.Error()
 			t.Error(tmp)
@@ -1531,50 +1531,50 @@ func TestType(t *testing.T) {
 
 		knownMachine.Stack().Push(resultValues[i])
 
-		if ok, err := vm.Equal(knownMachine, machine); !ok {
+		if ok, err := vm.Equal(knownMachine, m); !ok {
 			t.Error(err)
 		}
 	}
 }
 
 func TestBreakpoint(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.BREAKPOINT}); err == nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.BREAKPOINT}); err == nil {
 		t.Error("Breakpoint didn't block")
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
 
 func TestLog(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	inbox := protocol.NewEmptyInbox()
 	balanceTracker := protocol.NewBalanceTracker()
-	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
+	ctx := vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
-	machine.Stack().Push(value.NewInt64Value(5))
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.LOG}); err != nil {
+	m.Stack().Push(value.NewInt64Value(5))
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.LOG}); err != nil {
 		tmp := "LOG failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
@@ -1584,16 +1584,15 @@ func TestLog(t *testing.T) {
 	if !ctx.GetAssertion().Logs[0].Equal(value.NewInt64Value(5)) {
 		t.Error("log value incorrect")
 	}
-
 }
 
 func TestSend(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
@@ -1616,7 +1615,7 @@ func TestSend(t *testing.T) {
 	dest := [32]byte{}
 	dest[31] = 4
 	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
+	ctx := vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -1629,19 +1628,19 @@ func TestSend(t *testing.T) {
 	vals[2] = value.NewInt64Value(7)
 	vals[3] = value.NewInt64Value(4)
 	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
-	machine.Stack().Push(tup)
+	m.Stack().Push(tup)
 	// send token 15 value=7 to dest 4
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.SEND}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SEND}); err != nil {
 		tmp := "SEND failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	//verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	// verify known and unknown match
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	if machine.Context().OutMessageCount() != 1 {
+	if m.Context().OutMessageCount() != 1 {
 		t.Error("No out message generated")
 	}
 
@@ -1661,19 +1660,19 @@ func TestSend(t *testing.T) {
 	vals[2] = value.NewInt64Value(7)
 	vals[3] = value.NewInt64Value(4)
 	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
-	machine.Stack().Push(tup)
+	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.SEND}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SEND}); err != nil {
 		tmp := "SEND failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	//verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	// verify known and unknown match
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	if machine.Context().OutMessageCount() != 2 {
+	if m.Context().OutMessageCount() != 2 {
 		t.Error("No out message generated")
 	}
 
@@ -1693,19 +1692,19 @@ func TestSend(t *testing.T) {
 	vals[2] = value.NewInt64Value(17)
 	vals[3] = value.NewInt64Value(4)
 	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
-	machine.Stack().Push(tup)
+	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.SEND}); err == nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SEND}); err == nil {
 		tmp := "SEND expected FAIL"
 		t.Error(tmp)
 	}
-	//verify known and unknown match
+	// verify known and unknown match
 	knownMachine.Stack().Push(tup)
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	if machine.Context().OutMessageCount() != 2 {
+	if m.Context().OutMessageCount() != 2 {
 		t.Error("No out message generated")
 	}
 
@@ -1718,12 +1717,12 @@ func TestSend(t *testing.T) {
 }
 
 func TestNbsend1(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
@@ -1733,7 +1732,7 @@ func TestNbsend1(t *testing.T) {
 	tok[20] = 1
 	balanceTracker.Add(tok, big.NewInt(10))
 
-	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
+	vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -1747,30 +1746,30 @@ func TestNbsend1(t *testing.T) {
 	vals[3] = value.NewInt64Value(4)
 	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
 
-	machine.Stack().Push(tup)
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.NBSEND}); err != nil {
+	m.Stack().Push(tup)
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
 		tmp := "NBSEND failed - "
 		tmp += err.Error()
 		t.Error(err)
 	}
-	//verify known and unknown match
+	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	if machine.Context().OutMessageCount() != 1 {
+	if m.Context().OutMessageCount() != 1 {
 		t.Error("No out message generated")
 	}
 }
 
 func TestNbsend(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
@@ -1793,7 +1792,7 @@ func TestNbsend(t *testing.T) {
 	dest := [32]byte{}
 	dest[31] = 4
 	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	ctx := protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
+	ctx := vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -1806,26 +1805,26 @@ func TestNbsend(t *testing.T) {
 	vals[2] = value.NewInt64Value(7)
 	vals[3] = value.NewInt64Value(4)
 	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
-	machine.Stack().Push(tup)
+	m.Stack().Push(tup)
 	// send token 15 value=7 to dest 4
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.NBSEND}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
 		tmp := "NBSEND failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	//verify known and unknown match
+	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	if machine.Context().OutMessageCount() != 1 {
+	if m.Context().OutMessageCount() != 1 {
 		t.Error("No out message generated")
 	}
 
-	//var tok1 protocol.TokenType
-	//tok1[0] = 15
-	//knownmessage = protocol.NewMessage(value.NewInt64Value(1), tok1, big.NewInt(7), dest)
+	// var tok1 protocol.TokenType
+	// tok1[0] = 15
+	// knownmessage = protocol.NewMessage(value.NewInt64Value(1), tok1, big.NewInt(7), dest)
 	knownmessage.TokenType[0] = 15
 	knownmessage.TokenType[20] = 0
 	msg := ctx.GetAssertion().OutMsgs[0]
@@ -1842,20 +1841,20 @@ func TestNbsend(t *testing.T) {
 	vals[2] = value.NewInt64Value(7)
 	vals[3] = value.NewInt64Value(4)
 	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
-	machine.Stack().Push(tup)
+	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.NBSEND}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
 		tmp := "NBSEND failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	//verify known and unknown match
+	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	if machine.Context().OutMessageCount() != 2 {
+	if m.Context().OutMessageCount() != 2 {
 		t.Error("No out message generated")
 	}
 
@@ -1875,20 +1874,20 @@ func TestNbsend(t *testing.T) {
 	vals[2] = value.NewInt64Value(17)
 	vals[3] = value.NewInt64Value(4)
 	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
-	machine.Stack().Push(tup)
+	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.NBSEND}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
 		tmp := "NBSEND failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	//verify known and unknown match
+	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, _ := vm.Equal(knownMachine, machine); ok {
+	if ok, _ := vm.Equal(knownMachine, m); ok {
 		t.Error("Expected different")
 	}
 	// verify out message did not change
-	if machine.Context().OutMessageCount() != 2 {
+	if m.Context().OutMessageCount() != 2 {
 		t.Error("No out message generated")
 	}
 
@@ -1899,27 +1898,27 @@ func TestNbsend(t *testing.T) {
 }
 
 func TestGettime(t *testing.T) {
-	//test
+	// test
 	insns := make([]value.Operation, 1)
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	machine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	balanceTracker := protocol.NewBalanceTracker()
 	inbox := protocol.NewEmptyInbox()
 
-	protocol.NewMachineAssertionContext(machine, balanceTracker, [2]uint64{5, 10}, inbox.Receive())
+	vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{5, 10}, inbox.Receive())
 
-	if _, err := vm.RunInstruction(machine, value.BasicOperation{Op: code.GETTIME}); err != nil {
+	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.GETTIME}); err != nil {
 		tmp := "GETTIME failed - "
 		tmp += err.Error()
 		t.Error(err)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
-	if ok, err := vm.Equal(knownMachine, machine); !ok {
+	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }

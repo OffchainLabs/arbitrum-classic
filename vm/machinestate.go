@@ -17,17 +17,19 @@
 package vm
 
 import (
-	"errors"
-	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/vm/stack"
-	"github.com/offchainlabs/arb-util/value"
-
 	"crypto/sha256"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"io"
 	"time"
+
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arb-avm/code"
+	"github.com/offchainlabs/arb-avm/vm/stack"
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 var HashOfHaltedMachine [32]byte
@@ -36,47 +38,6 @@ var HashOfSizeExceptionMachine [32]byte
 func init() {
 	HashOfHaltedMachine = sha256.Sum256([]byte("This is the hash of a halted Arbitrum VM"))
 	HashOfSizeExceptionMachine = sha256.Sum256([]byte("This is the hash of an Arbitrum VM with a size exception"))
-}
-
-type MachineContext interface {
-	CanSpend(tokenType value.IntValue, currency value.IntValue) bool
-	Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error
-	ReadInbox() value.Value
-	GetTimeBounds() value.Value
-	NotifyStep()
-	LoggedValue(value.Value) error
-
-	OutMessageCount() int
-}
-
-type MachineNoContext struct{}
-
-func (m *MachineNoContext) LoggedValue(data value.Value) error {
-	return errors.New("can't log values outside of assertion mode")
-}
-
-func (m *MachineNoContext) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
-	return false
-}
-
-func (m *MachineNoContext) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
-	return errors.New("can't send message outside of assertion mode")
-}
-
-func (m *MachineNoContext) OutMessageCount() int {
-	return 0
-}
-
-func (m *MachineNoContext) ReadInbox() value.Value {
-	return value.NewEmptyTuple()
-}
-
-func (m *MachineNoContext) GetTimeBounds() value.Value {
-	return value.NewEmptyTuple()
-}
-
-func (m *MachineNoContext) NotifyStep() {
-
 }
 
 type MachineStatus int
@@ -95,7 +56,7 @@ type Machine struct {
 	static     *MachineValue
 	pc         *MachinePC
 	errHandler value.CodePointValue
-	context    MachineContext
+	context    machine.MachineContext
 	status     MachineStatus
 
 	sizeLimit     int64
@@ -134,8 +95,8 @@ func Equal(x, y *Machine) (bool, string) {
 func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, sizeLimit int64) *Machine {
 	datastack := stack.NewEmptyFlat()
 	auxstack := stack.NewEmptyFlat()
-	//stack := NewTuple(value.NewEmptyTuple())
-	//auxstack := NewTuple(value.NewEmptyTuple())
+	// stack := NewTuple(value.NewEmptyTuple())
+	// auxstack := NewTuple(value.NewEmptyTuple())
 	register := NewMachineValue(value.NewEmptyTuple())
 	static := NewMachineValue(staticVal)
 	errHandler := value.ErrorCodePoint
@@ -147,7 +108,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	}
 	pc := NewMachinePC(opCodes, wh)
 	wh.SwitchMachinePC(pc)
-	ret := &Machine{datastack, auxstack, register, static, pc, errHandler, &MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
+	ret := &Machine{datastack, auxstack, register, static, pc, errHandler, &machine.MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
 	ret.checkSize()
 	return ret
 }
@@ -161,7 +122,7 @@ func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVa
 	pc := NewMachinePC(opCodes, wh)
 	wh.SwitchMachinePC(pc)
 	pc.SetPCForced(pcVal)
-	return &Machine{datastack, auxStack, register, static, pc, errHandlerVal, &MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
+	return &Machine{datastack, auxStack, register, static, pc, errHandlerVal, &machine.MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
 }
 
 func (m *Machine) Stack() stack.Stack {
@@ -180,12 +141,24 @@ func (m *Machine) Static() *MachineValue {
 	return m.static
 }
 
-func (m *Machine) Context() MachineContext {
-	return m.context
+func (m *Machine) SetContext(mc machine.MachineContext) {
+	m.context = mc
 }
 
-func (m *Machine) SetContext(mc MachineContext) {
-	m.context = mc
+func (m *Machine) ReadInbox() value.Value {
+	return m.context.ReadInbox()
+}
+
+func (m *Machine) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
+	return m.context.Send(data, tokenType, currency, dest)
+}
+
+func (m *Machine) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
+	return m.CanSpend(tokenType, currency)
+}
+
+func (m *Machine) GetTimeBounds() value.Value {
+	return m.context.GetTimeBounds()
 }
 
 func (m *Machine) IncrPC() {
@@ -255,7 +228,7 @@ func (m *Machine) GetSizeLimit() int64 {
 }
 
 func (m *Machine) run() (bool, bool, string) {
-	//fmt.Println("BEFORE", m.pc.GetPC().Op, m.stack.(*stack.Flat))
+	// fmt.Println("BEFORE", m.pc.GetPC().Op, m.stack.(*stack.Flat))
 	if m.IsHalted() || m.IsErrored() || m.HaveSizeException() {
 		return false, false, "Can't run"
 	}
@@ -278,15 +251,15 @@ func (m *Machine) run() (bool, bool, string) {
 	if m.HaveSizeException() {
 		return true, false, "SizeException"
 	}
-	//fmt.Println("AFTER", m.pc.GetPC().Op, m.stack.(*stack.Flat))
+	// fmt.Println("AFTER", m.pc.GetPC().Op, m.stack.(*stack.Flat))
 	return true, true, "Success"
 }
 
 func (m *Machine) RunUntilStop() {
-	//start := time.Now()
+	// start := time.Now()
 	i := 0
 	continueRun := true
-	timings := make(map[code.Opcode][]time.Duration)
+	timings := make(map[value.Opcode][]time.Duration)
 	var ran bool
 	for continueRun {
 		s1 := time.Now()
@@ -297,9 +270,9 @@ func (m *Machine) RunUntilStop() {
 		}
 
 	}
-	//elapsed := time.Since(start)
-	//fmt.Printf("Execution took %s\n", elapsed)
-	//for key, vals := range timings {
+	// elapsed := time.Since(start)
+	// fmt.Printf("Execution took %s\n", elapsed)
+	// for key, vals := range timings {
 	//	var total time.Duration
 	//	for _, val := range vals {
 	//		total += val
@@ -312,7 +285,7 @@ func (m *Machine) RunUntilStop() {
 }
 
 // run up to maxSteps steps, stop earlier if halt or advise instruction, return number of insns actually run, and advise string or ""
-func (m *Machine) Run(maxSteps int32) int32 {
+func (m *Machine) Execute(maxSteps int32) (int32, bool) {
 	i := int32(0)
 	continueRun := true
 	var ran bool
@@ -322,7 +295,26 @@ func (m *Machine) Run(maxSteps int32) int32 {
 			i++
 		}
 	}
-	return i
+	return i, !continueRun
+}
+
+func (m *Machine) ExecuteAssertion(maxSteps int32, beforeBalance *protocol.BalanceTracker, timeBounds protocol.TimeBounds, beforeInbox value.Value) (machine.AssertionDefender, bool) {
+	assCtx := NewMachineAssertionContext(
+		m,
+		beforeBalance,
+		timeBounds,
+		beforeInbox,
+	)
+	i := int32(0)
+	continueRun := true
+	var ran bool
+	for continueRun && i < maxSteps {
+		ran, continueRun, _ = m.run()
+		if ran {
+			i++
+		}
+	}
+	return assCtx.Finalize(m), !continueRun
 }
 
 func (m *Machine) Warn(str string) {
@@ -422,7 +414,7 @@ func (m *Machine) MarshalForProof(wr io.Writer) error {
 	return nil
 }
 
-func (m *Machine) Clone() *Machine { // clone machine state--new machine wll NOT be in proving mode
+func (m *Machine) Clone() machine.Machine { // clone machine state--new machine wll NOT be in proving mode
 	newWarnHandler := m.warnHandler.Clone()
 	newPc := *m.pc
 	newPc.warn = newWarnHandler
@@ -435,12 +427,12 @@ func (m *Machine) Clone() *Machine { // clone machine state--new machine wll NOT
 		m.static.Clone(),
 		newPcPointer,
 		m.errHandler,
-		&MachineNoContext{},
+		&machine.MachineNoContext{},
 		m.status,
 		m.sizeLimit,
 		m.sizeException,
 		newWarnHandler,
 	}
-	//WARNING: risk of bug here, because of shallow copy of stack, callstack
+	// WARNING: risk of bug here, because of shallow copy of stack, callstack
 	return ret
 }

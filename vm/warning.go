@@ -16,9 +16,7 @@
 
 package vm
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type WarningHandler interface {
 	AnyWarnings() bool
@@ -48,7 +46,7 @@ func (hand *VerboseWarningHandler) Warn(wstr string) {
 	}
 	if hand.pc != nil {
 		fmt.Println(hand.pc, ":", wstr)
-		//fmt.Println(hand.locations[hand.pc.pc], ":", wstr)
+		// fmt.Println(hand.locations[hand.pc.pc], ":", wstr)
 	}
 }
 

@@ -19,7 +19,8 @@ package stack
 import (
 	"bytes"
 	"fmt"
-	"github.com/miguelmota/go-solidity-sha3"
+
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-util/value"
 )
 
