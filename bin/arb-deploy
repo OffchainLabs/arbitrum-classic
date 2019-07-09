@@ -214,7 +214,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         run('docker-compose -f %s up --abort-on-container-exit' % compose,
             sudo=sudo_flag)
 
-# Istalls arb-ethbridge, arb-validator, arb-avm, arb-web3-provider,
+# Installs arb-ethbridge, arb-validator, arb-avm, arb-web3-provider,
 # arb-ethers-provider, and arb-truffle-provider and link them correctly.
 # Note: arb-avm must be inside arb-validator for Docker. Adds replace rule to
 # go.mod for local development. Also adds pre-commit hook to prevent committing
@@ -237,6 +237,7 @@ def install_dev_mode():
     run(GC % ('arb-truffle-provider', 'arb-truffle-provider'))
     run(GC % ('arb-ethers-provider', 'arb-ethers-provider'))
     run(GC % ('arb-web3-provider', 'arb-web3-provider'))
+    run('yarn --cwd ' + DEPLOY_DIR + '/arb-ethbridge')
     run('yarn --cwd ' + DEPLOY_DIR + '/arb-truffle-provider')
     run('yarn --cwd ' + DEPLOY_DIR + '/arb-ethers-provider')
     run('yarn --cwd ' + DEPLOY_DIR + '/arb-web3-provider')
