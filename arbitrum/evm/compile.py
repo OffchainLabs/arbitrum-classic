@@ -63,6 +63,10 @@ def remove_metadata(instrs):
 
 
 def make_bst_lookup(items):
+    return _make_bst_lookup([(x, items[x]) for x in sorted(items)])
+
+
+def _make_bst_lookup(items):
     def handle_bad_jump(vm):
         vm.tnewn(0)
 
@@ -80,14 +84,14 @@ def make_bst_lookup(items):
             # index < pivot, index
             vm.ifelse(lambda vm: [
                 # index < pivot
-                make_bst_lookup(left)(vm)
+                _make_bst_lookup(left)(vm)
             ], lambda vm: [
                 vm.push(pivot),
                 vm.dup1(),
                 vm.gt(),
                 vm.ifelse(lambda vm: [
                     # index > pivot
-                    make_bst_lookup(right)(vm)
+                    _make_bst_lookup(right)(vm)
                 ], lambda vm: [
                     # index == pivot
                     vm.pop(),
@@ -138,42 +142,39 @@ def generate_evm_code(raw_code, storage):
         code_tuples_data[contract] = byterange.frombytes(
             bytes.fromhex(raw_code[contract].hex())
         )
-    code_tuples_func = make_bst_lookup([(x, code_tuples_data[x]) for x in sorted(code_tuples_data)])
+    code_tuples_func = make_bst_lookup(code_tuples_data)
 
     @modifies_stack([value.IntType()], 1)
     def code_tuples(vm):
         code_tuples_func(vm)
 
-    code_hashes_data = []
-    for contract in sorted(raw_code):
-        code_hashes_data.append((contract, int.from_bytes(eth_utils.crypto.keccak(raw_code[contract]), byteorder="big")))
+    code_hashes_data = {}
+    for contract in raw_code:
+        code_hashes_data[contract] = int.from_bytes(
+            eth_utils.crypto.keccak(raw_code[contract]),
+            byteorder="big"
+        )
     code_hashes_func = make_bst_lookup(code_hashes_data)
 
     @modifies_stack([value.IntType()], [value.ValueType()])
     def code_hashes(vm):
         code_hashes_func(vm)
 
-    contract_dispatch = []
-    for contract in sorted(contracts):
-        contract_dispatch.append((
-            contract,
-            AVMLabel("contract_entry_" + str(contract))
-        ))
+    contract_dispatch = {}
+    for contract in contracts:
+        contract_dispatch[contract] = AVMLabel("contract_entry_" + str(contract))
     contract_dispatch_func = make_bst_lookup(contract_dispatch)
 
     @modifies_stack([value.IntType()], 1)
     def dispatch_contract(vm):
         contract_dispatch_func(vm)
 
-    code_sizes = []
+    code_sizes = {}
     for contract in contracts:
-        code_sizes.append((contract,
-            len(contracts[contract]) + sum(op.operand_size for op in contracts[contract])
-        ))
+        code_sizes[contract] = len(contracts[contract]) + sum(op.operand_size for op in contracts[contract])
 
     # Give the interrupt contract address a nonzero size
-    code_sizes.append((0x01, 1))
-    code_sizes = sorted(code_sizes, key=lambda x: x[0])
+    code_sizes[0x01] = 1
     code_size_func = make_bst_lookup(code_sizes)
 
     @modifies_stack([value.IntType()], 1)
@@ -221,15 +222,10 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, code
     code = remove_metadata(code)
     code = replace_self_balance(code)
 
-    jump_table = []
+    jump_table = {}
     for insn in code:
         if insn.name == "JUMPDEST":
-            jump_table.append((
-                insn.pc,
-                AVMLabel("jumpdest_{}_{}".format(contract_id, insn.pc))
-            ))
-
-    jump_table = sorted(jump_table, key=lambda x: x[0])
+            jump_table[insn.pc] = AVMLabel("jumpdest_{}_{}".format(contract_id, insn.pc))
     dispatch_func = make_bst_lookup(jump_table)
 
     @modifies_stack([value.IntType()], [value.ValueType()], contract_id)

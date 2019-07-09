@@ -47,8 +47,16 @@ def run_vm_once(vm):
         else:
             vm.ops[instr.op_code]()
 
-        if vm.pc.pc == old_pc.pc and vm.pc.pc + 1 >= len(vm.code):
+        # We only incremement the PC if the operation has not
+        # otherwise modified the PC (JUMP, CJUMP)
+        if vm.pc.pc == old_pc.pc:
+            next_pc = vm.pc.pc + 1
+        else:
+            next_pc = vm.pc.pc
+
+        if next_pc >= len(vm.code):
             raise InstructionOutOfBounds()
+
     except VMBlocked:
         return False
     except VMBlockedAdvance:
