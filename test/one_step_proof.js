@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 import advanceToBlock from 'zeppelin-solidity/test/helpers/advanceToBlock';
@@ -38,8 +38,8 @@ contract('OneStepProof', function(accounts) {
 
   it("addition proof", async function() {
   	let beforeMachine = new Machine(
-  		new Stack([new ArbInt(25)]), 
-  		new Stack([new ArbInt(1), new ArbInt(1)]), 
+  		new Stack([new ArbInt(25)]),
+  		new Stack([new ArbInt(1), new ArbInt(1)]),
   		new Stack([]),
   		new ArbNone(),
   		new ArbNone()
@@ -54,8 +54,8 @@ contract('OneStepProof', function(accounts) {
   	);
 
   	let baseMachine = new Machine(
-  		new Stack([]), 
-  		new Stack([]), 
+  		new Stack([]),
+  		new Stack([]),
   		new Stack([]),
   		new ArbNone(),
   		new ArbNone()

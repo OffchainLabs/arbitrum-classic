@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 const utils = require('ethereumjs-util');
@@ -132,7 +132,7 @@ contract('VMTracker', function(accounts) {
 
     let signature0 = utils.fromRpcSig(web3.eth.sign(accounts[0], createHash));
     let signature1 = utils.fromRpcSig(web3.eth.sign(accounts[1], createHash));
-    
+
     vm = await manager1.createVm(vmId, vmConfig, vmStartState, [signature0, signature1], cMan);
   });
   it("it should be able to get an existing vm ", async function() {

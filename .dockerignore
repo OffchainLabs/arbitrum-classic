@@ -3,5 +3,6 @@
 **/.git
 **/.gitignore
 **/Dockerfile
+.editorconfig
 build
 node_modules

@@ -34,9 +34,9 @@ export class Machine {
 
 	hash() {
 		return '0x' + abi.soliditySHA3(
-			['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'], 
+			['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
 			[
-				this.instructionStack.hash(), 
+				this.instructionStack.hash(),
 				this.dataStack.hash(),
 				this.callStack.hash(),
 				this.registerVal.hash(),

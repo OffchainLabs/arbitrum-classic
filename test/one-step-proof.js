@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 const utils = require('ethereumjs-util');
@@ -40,7 +40,7 @@ function checkOneStepProof(oneStepProofLib, precondition, assertion, proof) {
 contract('One step proof', function(accounts) {
   it("proof test", async function() {
 	let oneStepProof = await OneStepProof.deployed();
-	
+
 	var client = jayson.client.http('http://localhost:1235/rpc');
 
 	for (var i = 0; i < 508; i++) {
@@ -49,8 +49,8 @@ contract('One step proof', function(accounts) {
 			throw data.error;
 		}
 		let proofResult = await checkOneStepProof(
-		  	oneStepProof, 
-		  	response.result.precondition, 
+		  	oneStepProof,
+		  	response.result.precondition,
 		  	response.result.assertion,
 		  	response.result.proof
 		);

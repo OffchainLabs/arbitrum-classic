@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 import MerkleTree, { checkProof, merkleRoot, checkProofSolidityFactory } from 'merkle-tree-solidity'
@@ -553,7 +553,7 @@ export class ArbVM {
     for (var i = 0; i < assertion.messages.length; i++) {
       messageHashes.push(await hashMessage(assertion.messages[i], this.arbMachineLib));
     }
-    
+
 
     var [messageData, messageAmount, messageDestination] = breakUpMessages(assertion.messages);
     return this.vmTracker.unanimousAssertHash(
@@ -610,10 +610,10 @@ export class ArbVM {
     );
 
     var [
-      tokenTracker, 
-      messageData, 
-      messageTokenNum, 
-      messageAmount, 
+      tokenTracker,
+      messageData,
+      messageTokenNum,
+      messageAmount,
       messageDestinations
     ] = this.myAssertion.breakUpMessages();
 
@@ -641,10 +641,10 @@ export class ArbVM {
       throw("Must have assertion pending");
     }
     var [
-      tokenTracker, 
-      messageData, 
-      messageTokenNum, 
-      messageAmount, 
+      tokenTracker,
+      messageData,
+      messageTokenNum,
+      messageAmount,
       messageDestinations
     ] = this.myAssertion.breakUpMessages();
     var [messageData, messageTokens, messageAmount, messageDestination] = await this.myAssertion.breakUpMessageHashes(this.arbValueLib);
@@ -710,7 +710,7 @@ export class ArbVM {
     let assertions = await this.myAssertion.bisect(fullFirstHalfAssertion, this.arbMachineLib, this.arbValueLib);
     return this._bisectAssertion(this.myAssertion, assertions);
   }
-  
+
   async _bisectAssertion(fullAssertion, assertions) {
     this.myBisections = assertions;
     var self = this;
@@ -788,7 +788,7 @@ export class ArbVM {
   }
 
   async _oneStepProof(assertion, proof) {
-      
+
       var tokenTypes = [];
       var amounts = [];
       if (assertion.messages.length == 1) {

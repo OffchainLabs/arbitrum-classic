@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 import MerkleTree from 'merkle-tree-solidity'
@@ -253,7 +253,7 @@ export class RPCManager {
 
       let amounts = result.args.totalMessageAmounts.map(b => b.toString(10));
       var bisections = [];
-      
+
       var count = 0;
       for (var i = 0; i < bisectionCount; i++) {
         let numSteps = stepCount;
@@ -348,17 +348,17 @@ export class RPCManager {
       "timeBounds": [web3.eth.blockNumber, web3.eth.blockNumber + 2].map(val => val.toString())
     };
     let response = await this.client.request('RPCInterface.GenerateDisputableAssertion', [data]);
-    var [ 
-      messageData, 
-      messageTokenNum, 
-      messageAmount, 
+    var [
+      messageData,
+      messageTokenNum,
+      messageAmount,
       messageDestinations
     ] = breakUpMessages(response.result.messages);
     let disputableResult = await self.vmTracker.disputableAssert(
       [
-        self.vmId, 
-        response.result.beforeHash, 
-        response.result.beforeInbox, 
+        self.vmId,
+        response.result.beforeHash,
+        response.result.beforeInbox,
         response.result.afterHash
       ],
       [self.managerNum, response.result.numSteps, data.timeBounds[0], data.timeBounds[1]],
@@ -379,10 +379,10 @@ export class RPCManager {
       response.result.tokenTypes,
       response.result.beforeValues
     );
-    var [ 
-      messageDataHashes, 
-      messageTokenNum, 
-      messageAmount, 
+    var [
+      messageDataHashes,
+      messageTokenNum,
+      messageAmount,
       messageDestinations
     ] = breakUpMessageHashes(response.result.messages);
     self.waitForBlock(blockNumber + self.config.gracePeriod).then(function() {

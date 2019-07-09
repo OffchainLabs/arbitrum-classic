@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 import advanceToBlock from 'zeppelin-solidity/test/helpers/advanceToBlock';
@@ -33,48 +33,48 @@ var OneStepProof = artifacts.require("OneStepProof");
 var ChallengeManager = artifacts.require("ChallengeManager");
 
 let s1n = new Machine(
-	new Stack([new ArbInt(25), new ArbInt(25), new ArbInt(25), new ArbInt(25), new ArbInt(10)]), 
-	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(10)]), 
+	new Stack([new ArbInt(25), new ArbInt(25), new ArbInt(25), new ArbInt(25), new ArbInt(10)]),
+	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(10)]),
 	new Stack([]),
 	new ArbNone(),
 	new ArbNone()
 );
 
 let s0 = new Machine(
-	new Stack([new ArbInt(25), new ArbInt(25), new ArbInt(25), new ArbInt(25)]), 
-	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1)]), 
+	new Stack([new ArbInt(25), new ArbInt(25), new ArbInt(25), new ArbInt(25)]),
+	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(1)]),
 	new Stack([]),
 	new ArbNone(),
 	new ArbNone()
 );
 
 let s1 = new Machine(
-	new Stack([new ArbInt(25), new ArbInt(25), new ArbInt(25)]), 
-	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(2)]), 
+	new Stack([new ArbInt(25), new ArbInt(25), new ArbInt(25)]),
+	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(1), new ArbInt(2)]),
 	new Stack([]),
 	new ArbNone(),
 	new ArbNone()
 );
 
 let s2 = new Machine(
-	new Stack([new ArbInt(25), new ArbInt(25)]), 
-	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(3)]), 
+	new Stack([new ArbInt(25), new ArbInt(25)]),
+	new Stack([new ArbInt(1), new ArbInt(1), new ArbInt(3)]),
 	new Stack([]),
 	new ArbNone(),
 	new ArbNone()
 );
 
 let s3 = new Machine(
-	new Stack([new ArbInt(25)]), 
-	new Stack([new ArbInt(1), new ArbInt(4)]), 
+	new Stack([new ArbInt(25)]),
+	new Stack([new ArbInt(1), new ArbInt(4)]),
 	new Stack([]),
 	new ArbNone(),
 	new ArbNone()
 );
 
 let s4 = new Machine(
-	new Stack([]), 
-	new Stack([new ArbInt(5)]), 
+	new Stack([]),
+	new Stack([new ArbInt(5)]),
 	new Stack([]),
 	new ArbNone(),
 	new ArbNone()
@@ -123,8 +123,8 @@ contract('End to end', function(accounts) {
 	let assertion3 = {"afterHash":"0xc511a6068c16661a469d646c37e33e206820ad59b62aaa0ea09c3711938a7afe","numSteps":1,"messages":[]};
 
   	let baseMachine = new Machine(
-			new Stack([new ArbInt(25), new ArbInt(25)]), 
-			new Stack([new ArbInt(1), new ArbInt(1)]), 
+			new Stack([new ArbInt(25), new ArbInt(25)]),
+			new Stack([new ArbInt(1), new ArbInt(1)]),
 			new Stack([]),
 			new ArbNone(),
 			new ArbNone()
@@ -160,7 +160,7 @@ contract('End to end', function(accounts) {
     let vm2 = await manager2.getVm(vmId, challengeManager, managers, challengeManager);
     let vm3 = await manager3.getVm(vmId, challengeManager, managers, challengeManager);
     let vm4 = await manager4.getVm(vmId, challengeManager, managers, challengeManager);
-  	
+
   	await pause();
 	await vm2.disputableAssert(await vm.getVmInfo(), assertionN1);
 	await advanceToBlock(web3.eth.blockNumber + 11);
