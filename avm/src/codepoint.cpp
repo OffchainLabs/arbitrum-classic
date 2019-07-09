@@ -31,6 +31,29 @@ Operation& Operation::operator=(const Operation& cp) {
 
 Operation& Operation::operator=(Operation&&) = default;
 Operation::~Operation() = default;
+void Operation::marshal(std::vector<unsigned char>& buf) const {
+    if (immediate){
+        buf.push_back(1);
+        buf.push_back((uint8_t)opcode);
+        marshal_value(*immediate, buf);
+    } else {
+        buf.push_back(0);
+        buf.push_back((uint8_t)opcode);
+    }
+}
+
+void CodePoint::marshal(std::vector<unsigned char>& buf) const {
+    buf.push_back(CODEPT);
+    uint64_t bepc = boost::endian::native_to_big(pc);
+    std::copy(static_cast<const char*>(static_cast<const void*>(&bepc)),
+              static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
+              std::back_inserter(buf));
+    op.marshal(buf);
+    std::vector<unsigned char> val;
+    val.resize(32);
+    to_big_endian(nextHash, val.begin());
+    buf.insert(buf.end(), val.begin(), val.end());
+}
 
 uint256_t hash(const CodePoint& cp) {
     std::array<uint64_t, 4> nextHashInts;

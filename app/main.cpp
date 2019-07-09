@@ -320,9 +320,23 @@ int main(int argc, char* argv[]) {
     void *tmpmach = machine_create(filename.c_str(), inboxfile.c_str());
     void *mach2 = machine_clone(tmpmach);
     uint64_t steps = machine_run(tmpmach, stepCount);
+    char *tmpbuf=(char *)malloc(32);
+    machine_hash(tmpmach, &tmpbuf[0]);
     machine_destroy(tmpmach);
     std::cout << "Running clone"<<std::endl;
     steps = machine_run(mach2, stepCount);
+    char *tmpbuf2=(char *)malloc(32);
+    machine_hash(mach2, &tmpbuf2[0]);
+    bool success=true;
+    for (int i=0; i<32; i++){
+        if(tmpbuf[i] != tmpbuf2[i]){
+            success=false;
+            std::cout << "Machine hash error"<<std::endl;
+        }
+    }
+    if (success){
+        std::cout << "Machine hash success"<<std::endl;
+    }
     std::ifstream myfile;
 
     struct stat filestatus;

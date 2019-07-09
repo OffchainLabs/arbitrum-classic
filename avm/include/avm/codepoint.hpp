@@ -23,6 +23,7 @@ struct Operation {
     Operation& operator=(const Operation&);
     Operation& operator=(Operation&&);
     ~Operation();
+    void marshal(std::vector<unsigned char>& buf) const;
 };
 
 struct CodePoint {
@@ -33,6 +34,7 @@ struct CodePoint {
     CodePoint() {}
     CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
         : pc(pc_), op(op_), nextHash(nextHash_) {}
+    void marshal(std::vector<unsigned char>& buf) const;
 };
 
 uint256_t hash(const CodePoint& cp);

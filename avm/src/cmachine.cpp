@@ -65,6 +65,14 @@ void* machine_clone(void* m) {
     return static_cast<void*>(mach);
 }
 
+void machine_hash(void* m, char *ret) {
+    uint256_t retHash = static_cast<Machine*>(m)->hash();
+    std::vector<unsigned char> val;
+    val.resize(32);
+    to_big_endian(retHash, val.begin());
+    std::copy(val.begin(), val.end(), ret);
+}
+
 void machine_destroy(void* m) {
     std::cout << "In machine_destroy"<<std::endl;
     if (m == NULL)

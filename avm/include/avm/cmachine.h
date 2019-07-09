@@ -18,6 +18,7 @@ extern "C" {
     void* machine_create(const char* filename, const char* inboxfile);
     void machine_destroy(void *m);
     void* machine_clone(void *m);
+    void machine_hash(void *m, char *ret);
     uint64_t machine_run(void* m, uint64_t maxSteps);
     uint64_t machine_run_until_stop(void* m);
     

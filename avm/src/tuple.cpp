@@ -9,6 +9,13 @@
 
 #include <avm/util.hpp>
 
+void Tuple::marshal(std::vector<unsigned char>& buf) const {
+    buf.push_back(TUPLE+tuple_size());
+    for (int i = 0; i < tuple_size(); i++) {
+        marshal_value(get_element(i), buf);
+    }
+}
+
 uint256_t Tuple::calculateHash() const {
     std::array<unsigned char, 1 + 8 * 32> tupData;
     auto oit = tupData.begin();

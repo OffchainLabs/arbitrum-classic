@@ -43,5 +43,6 @@ Operation deserializeOperation(char*& bufptr, TuplePool& pool);
 CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(char*& srccode, TuplePool& pool);
+void marshal_value(const value val, std::vector<unsigned char>& buf);
 
 #endif /* value_h */

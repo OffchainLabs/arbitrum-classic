@@ -492,6 +492,7 @@ namespace {
                 bNum = 0 - bNum;
             m.stack[1] = (aNum % bNum) * signA;
         }
+        m.stack.popClear();
         ++m.pc;
     }
     
