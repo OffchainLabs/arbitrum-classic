@@ -25,6 +25,10 @@ def is_zero(vm):
     vm.push(0)
     vm.eq()
 
+class InstructionOutOfBounds(Exception):
+    """VM tried to run opcode that blocks"""
+    pass
+
 
 def run_vm_once(vm):
     if vm.halted:
@@ -38,15 +42,29 @@ def run_vm_once(vm):
         if isinstance(instr, ImmediateOp):
             vm.push(instr.val)
             vm.ops[instr.op.op_code]()
+        elif isinstance(instr, int):
+            vm.ops[instr]()
         else:
             vm.ops[instr.op_code]()
+
+        # We only incremement the PC if the operation has not
+        # otherwise modified the PC (JUMP, CJUMP)
+        if vm.pc.pc == old_pc.pc:
+            next_pc = vm.pc.pc + 1
+        else:
+            next_pc = vm.pc.pc
+
+        if next_pc >= len(vm.code):
+            raise InstructionOutOfBounds()
+
     except VMBlocked:
         return False
     except VMBlockedAdvance:
         vm.pc = vm.code[vm.pc.pc + 1]
         return False
     except Exception as err:
-        print("Hit exception", err, vm.err_handler, traceback.print_tb(err.__traceback__))
+        print("Hit exception {} while running {}".format(err, vm.pc))
+        traceback.print_tb(err.__traceback__)
         if isinstance(vm.err_handler, value.CodePointType):
             vm.pc = vm.err_handler
         elif isinstance(vm.err_handler, AVMLabeledCodePoint):

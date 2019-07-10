@@ -59,6 +59,7 @@ def get_non_fung(vm):
     [typ]
 )
 def add(vm):
+    # cstore currID amount
     vm.dup1()
     vm.push(31)
     vm.byte()
@@ -85,11 +86,9 @@ def add_erc20(vm):
     # oldval delta cstore currId
     vm.add()
     # newval cstore currId
-    vm.swap2()
     vm.swap1()
-    # cstore currId newval
     vm.swap2()
-    vm.swap1()
+    # currId newval cstore
     vm.dup2()
     currency_store.get("fung")(vm)
     keyvalue_int_int.set_val(vm)
