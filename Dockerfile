@@ -1,12 +1,11 @@
 ### --------------------------------------------------------------------
 ### Dockerfile
 ### arb-validator
-### Note: depends on mounting `/home/user/contract.ao` as a volume
-### When arb-deploy runs in --dev-mode a separate dev-mode.Dockerfile is
-### created with the commented DEV_COPYs changed to COPY
+### Note: `##DEV_` commands are run in dev-mode. They are not comments
+### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM alpine:3.9 as dev
+FROM alpine:3.9
 
 # Alpine dependencies
 RUN apk add --no-cache git go libc-dev
@@ -19,41 +18,38 @@ WORKDIR "/home/user/"
 
 # Dependencies
 COPY --chown=user go.mod go.sum /home/user/
-##DEV_COPY --chown=user vendor ./vendor
-RUN if [[ -d vendor ]]; then \
-    rm -rf ./vendor/github.com/offchainlabs/arb-avm && \
-    go build -v ./vendor/... ; fi
+RUN go mod download
 
-# arb-avm
+# Build cache
+##DEV_COPY --from=arb-validator --chown=user /home/user/.cache/go-build /home/user/.cache/go-build
+
+# Build arb-avm
 ##DEV_COPY --chown=user arb-avm /home/user/arb-avm
 RUN if [[ -d arb-avm ]]; then cd arb-avm && go build -v ./... ; fi
 
-# arb-validator
-# if dev-mode build quickly else make the smallest binary possible
+# Build arb-validator
 COPY --chown=user ./ /home/user/
 RUN if [[ -d arb-avm ]]; then \
-    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod && \
+    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod; fi; \
     go build -v ./cmd/followerServer ./cmd/coordinatorServer && \
-    go install ./cmd/followerServer ./cmd/coordinatorServer && \
-    go clean -cache -modcache -r ./cmd/followerServer ./cmd/coordinatorServer; \
-    else \
-    export GOOS=linux GOARCH=amd64 && \
-    cd cmd/followerServer && go build -a -v -ldflags "-w -s" && \
-    cd ../coordinatorServer && go build -a -v -ldflags "-w -s" && \
-    rm -rf /home/user/go && mkdir -p /home/user/go/bin && \
-    mv coordinatorServer ../followerServer/followerServer /home/user/go/bin/; fi
+    go install ./cmd/followerServer ./cmd/coordinatorServer
 
 
 # Minimize
 FROM alpine:3.9
-# Non root user
+# Non-root user
 RUN addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
 # Note: state will be mounted as a volume and initially overwritten
 RUN mkdir -p /home/user/state
 WORKDIR "/home/user/"
-COPY --chown=user --from=0 /home/user/go /home/user/go
+
+# Compiled code
+COPY --chown=user --from=0 /home/user/go/bin /home/user/go/bin
+
+# Build cache
+COPY --chown=user --from=0 /home/user/.cache/go-build /home/user/.cache/go-build
 
 # Get EthBridge addresses and Validator private keys and addresses
 COPY --chown=user --from=arb-ethbridge      \
