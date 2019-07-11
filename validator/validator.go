@@ -50,11 +50,12 @@ type Validator struct {
 	pendingDisputableRequest *state.DisputableAssertionRequest
 }
 
-func NewValidator(name string, address common.Address, inbox *protocol.Inbox, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool) *Validator {
+func NewValidator(name string, address common.Address, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool) *Validator {
 	requests := make(chan interface{}, 10)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
 		machine,
+		balance,
 	)
 
 	// TODO: latestHeader starts as nil which isn't valid. This needs to be properly initialized
@@ -350,10 +351,16 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					mClone := c.GetMachine().Clone()
 					maxSteps := validator.bot.GetConfig().VMConfig.MaxExecutionStepCount
 					startTime := validator.latestHeader.Number.Uint64()
+					balance := c.GetBalance().Clone()
 					go func() {
 						endTime := startTime + request.Length
 						tb := [2]uint64{startTime, endTime}
-						pre := machine.CurrentPrecondition(mClone, tb)
+						pre := &protocol.Precondition{
+							BeforeHash:    mClone.Hash(),
+							TimeBounds:    tb,
+							BeforeBalance: balance,
+							BeforeInbox:   mClone.InboxHash(),
+						}
 						assertion, _ := mClone.ExecuteAssertion(int32(maxSteps), tb)
 						validator.requests <- state.DisputableAssertionRequest{
 							AfterState:   mClone,

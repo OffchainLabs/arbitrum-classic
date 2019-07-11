@@ -68,25 +68,25 @@ type Waiting struct {
 	*core.Config
 
 	proposed *proposedUpdate
-	acceptedMachine  machine.Machine
+	accepted         *core.Core
 	assertion        *protocol.Assertion
 	sequenceNum      uint64
 	signatures       [][]byte
 
 	timeBounds      protocol.TimeBounds
-	origMachine     machine.Machine
+	orig            *core.Core
 }
 
 func NewWaiting(config *core.Config, c *core.Core) Waiting {
 	return Waiting{
 		Config:           config,
 		proposed:         nil,
-		acceptedMachine:  nil,
+		accepted:         nil,
 		assertion:        nil,
 		sequenceNum:      0,
 		signatures:       nil,
 		timeBounds:       protocol.TimeBounds{},
-		origMachine:      c.GetMachine(),
+		orig:             c,
 	}
 }
 
@@ -151,46 +151,42 @@ func (bot Waiting) AttemptAssertion(request DisputableAssertionRequest, bridge b
 
 func (bot Waiting) GetCore() *core.Core {
 	if bot.assertion != nil {
-		return core.NewCore(
-			bot.acceptedMachine,
-		)
+		return bot.accepted
 	}
-	return core.NewCore(
-		bot.origMachine,
-	)
+	return bot.orig
 }
 
 func (bot Waiting) SendMessageToVM(msg protocol.Message) {
-	bot.origMachine.SendOnchainMessage(msg)
+	bot.orig.SendMessageToVM(msg)
 	if bot.proposed != nil {
 		bot.proposed.machine.SendOnchainMessage(msg)
 	}
-	if bot.acceptedMachine != nil {
-		bot.acceptedMachine.SendOnchainMessage(msg)
+	if bot.accepted != nil {
+		bot.accepted.SendMessageToVM(msg)
 	}
 }
 
 func (bot Waiting) ProposalResults() valmessage.UnanimousUpdateResults {
 	return valmessage.UnanimousUpdateResults{
 		SequenceNum:       bot.proposed.sequenceNum,
-		BeforeHash:        bot.origMachine.Hash(),
+		BeforeHash:        bot.orig.GetMachine().Hash(),
 		TimeBounds:        bot.timeBounds,
 		NewInboxHash:      bot.proposed.machine.InboxHash().Hash(),
-		OriginalInboxHash: bot.origMachine.InboxHash().Hash(),
+		OriginalInboxHash: bot.orig.GetMachine().InboxHash().Hash(),
 		Assertion:         bot.proposed.Assertion,
 	}
 }
 
 func (bot Waiting) Clone() Waiting {
 	return Waiting{
-		Config:           bot.Config,
-		proposed:         bot.proposed.clone(),
-		acceptedMachine:  bot.acceptedMachine.Clone(),
-		assertion:        bot.assertion,
-		sequenceNum:      bot.sequenceNum,
-		signatures:       bot.signatures,
-		timeBounds:       bot.timeBounds,
-		origMachine:      bot.origMachine,
+		Config:      bot.Config,
+		proposed:    bot.proposed.clone(),
+		accepted:    bot.accepted.Clone(),
+		assertion:   bot.assertion,
+		sequenceNum: bot.sequenceNum,
+		signatures:  bot.signatures,
+		timeBounds:  bot.timeBounds,
+		orig:        bot.orig,
 	}
 }
 
@@ -200,7 +196,7 @@ func (bot Waiting) OffchainContext(
 ) (protocol.TimeBounds, uint64) {
 	var tb protocol.TimeBounds
 	var seqNum uint64
-	if bot.acceptedMachine != nil {
+	if bot.accepted != nil {
 		tb = bot.timeBounds
 		seqNum = bot.sequenceNum + 1
 	} else {
@@ -227,7 +223,7 @@ func (bot Waiting) ValidateUnanimousRequest(request valmessage.UnanimousRequestD
 
 	var tb protocol.TimeBounds
 	var seqNum uint64
-	if bot.acceptedMachine != nil {
+	if bot.accepted != nil {
 		tb = bot.timeBounds
 		seqNum = bot.sequenceNum + 1
 	} else {
@@ -262,18 +258,18 @@ func (bot Waiting) PreparePendingUnanimous(request UnanimousUpdateRequest) (Wait
 	return Waiting{
 		Config: bot.Config,
 		proposed: &proposedUpdate{
-			machine:     request.Machine,
+			machine:        request.Machine,
 			messages:    mq,
 			Assertion:   assertion,
 			sequenceNum: request.SequenceNum,
 			NewLogCount: newLogCount,
 		},
-		acceptedMachine:  bot.acceptedMachine,
-		assertion:        bot.assertion,
-		sequenceNum:      bot.sequenceNum,
-		signatures:       bot.signatures,
-		timeBounds:       request.TimeBounds,
-		origMachine:      bot.origMachine,
+		accepted:    bot.accepted,
+		assertion:   bot.assertion,
+		sequenceNum: bot.sequenceNum,
+		signatures:  bot.signatures,
+		timeBounds:  request.TimeBounds,
+		orig:        bot.orig,
 	}, nil
 }
 
@@ -282,15 +278,21 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (State, *propos
 		return nil, nil, errors.New("no pending Assertion")
 	}
 
+	balance := bot.accepted.GetBalance()
+	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.Assertion.OutMsgs))
+
 	return Waiting{
 		Config:           bot.Config,
 		proposed:         nil,
-		acceptedMachine:  bot.proposed.machine,
+		accepted:         core.NewCore(
+			bot.proposed.machine,
+			balance,
+		),
 		assertion:        bot.proposed.Assertion,
 		sequenceNum:      bot.proposed.sequenceNum,
 		signatures:       signatures,
 		timeBounds:       bot.timeBounds,
-		origMachine:      bot.origMachine,
+		orig:             bot.orig,
 	}, bot.proposed, nil
 }
 
@@ -308,7 +310,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 		c.DeliverMessagesToVM()
 		return NewWaiting(bot.Config, c), nil, nil
 	case ethbridge.ProposedUnanimousAssertEvent:
-		if bot.acceptedMachine == nil || ev.SequenceNum > bot.sequenceNum {
+		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, errors.New("waiting observer saw signed unanimous proposal that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
 			newBot, err := bot.CloseUnanimous(bridge, nil)
@@ -323,7 +325,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 			}, nil, nil
 		}
 	case ethbridge.DisputableAssertionEvent:
-		if bot.acceptedMachine != nil {
+		if bot.accepted != nil {
 			newBot, err := bot.CloseUnanimous(bridge, nil)
 			return newBot, nil, err
 		}
@@ -375,8 +377,11 @@ func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (Stat
 	}
 
 	bridge.FinalizedAssertion(bot.assertion, len(bot.assertion.Logs))
+
+	balance := bot.GetBalance()
+	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.assertion.OutMsgs))
 	return finalizingAssertion{
-		Core: core.NewCore(bot.pendingState),
+		Core: core.NewCore(bot.pendingState, balance),
 		Config:     bot.Config,
 		ResultChan: nil,
 	}, nil
@@ -457,10 +462,13 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 		bot.request.Assertion,
 	)
 	assertion := bot.request.Assertion
+	balance := bot.GetBalance()
+	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 	bridge.FinalizedAssertion(assertion, len(assertion.Logs))
 	return finalizingAssertion{
 		core.NewCore(
 			bot.request.AfterState,
+			balance,
 		),
 		bot.Config,
 		bot.request.ResultChan,

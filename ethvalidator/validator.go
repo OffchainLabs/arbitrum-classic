@@ -120,7 +120,7 @@ func NewEthValidator(
 		return nil, errors.New("key is not a validator of chosen VM")
 	}
 
-	bot := validator.NewValidator(name, auth.From, protocol.NewEmptyInbox(), protocol.NewBalanceTracker(), config, machine, challengeEverything)
+	bot := validator.NewValidator(name, auth.From, protocol.NewBalanceTracker(), config, machine, challengeEverything)
 
 	actionChan := make(chan func(*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)

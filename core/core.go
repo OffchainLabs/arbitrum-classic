@@ -45,17 +45,20 @@ func (c *Config) GetConfig() *Config {
 
 type Core struct {
 	machine machine.Machine
+	balance *protocol.BalanceTracker
 }
 
-func NewCore(machine machine.Machine) *Core {
+func NewCore(machine machine.Machine, balance *protocol.BalanceTracker) *Core {
 	return &Core{
 		machine: machine,
+		balance: balance,
 	}
 }
 
 func (c *Core) Clone() *Core {
 	return &Core{
 		machine: c.machine.Clone(),
+		balance: c.balance.Clone(),
 	}
 }
 
@@ -70,6 +73,7 @@ func (c *Core) OffchainAssert(
 		maxSteps,
 		timeBounds,
 	)
+	_ = c.balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 	return &Core{
 		machine: newState,
 	}, assertion
@@ -81,6 +85,7 @@ func (c *Core) GetCore() *Core {
 
 func (c *Core) SendMessageToVM(msg protocol.Message) {
 	c.machine.SendOnchainMessage(msg)
+	c.balance.Add(msg.TokenType, msg.Currency)
 }
 
 func (c *Core) DeliverMessagesToVM() {
@@ -89,6 +94,10 @@ func (c *Core) DeliverMessagesToVM() {
 
 func (c *Core) GetMachine() machine.Machine {
 	return c.machine
+}
+
+func (c *Core) GetBalance() *protocol.BalanceTracker {
+	return c.balance
 }
 
 func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
@@ -100,7 +109,7 @@ func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
 		return false
 	}
 
-	if c.machine.CurrentBalance().CanSpendAll(pre.BeforeBalance) {
+	if c.balance.CanSpendAll(pre.BeforeBalance) {
 		return false
 	}
 
