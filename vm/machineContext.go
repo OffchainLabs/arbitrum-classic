@@ -24,40 +24,23 @@ import (
 
 type MachineAssertionContext struct {
 	machine      *Machine
-	precondition *protocol.Precondition
-	beforeInbox  value.Value
+	timeBounds   protocol.TimeBounds
 	numSteps     uint32
-	afterBalance *protocol.BalanceTracker
 	outMsgs      []protocol.Message
 	logs         []value.Value
 }
 
-func NewMachineAssertionContext(m *Machine, beforeBalance *protocol.BalanceTracker, timeBounds protocol.TimeBounds, beforeInbox value.Value) *MachineAssertionContext {
+func NewMachineAssertionContext(m *Machine, timeBounds protocol.TimeBounds) *MachineAssertionContext {
 	outMsgs := make([]protocol.Message, 0)
 	ret := &MachineAssertionContext{
 		m,
-		&protocol.Precondition{
-			BeforeHash:    m.Hash(),
-			TimeBounds:    timeBounds,
-			BeforeBalance: beforeBalance,
-			BeforeInbox:   value.NewHashOnlyValueFromValue(beforeInbox),
-		},
-		beforeInbox,
+		timeBounds,
 		0,
-		beforeBalance.Clone(),
 		outMsgs,
 		make([]value.Value, 0),
 	}
 	ret.machine.SetContext(ret)
 	return ret
-}
-
-func (ac *MachineAssertionContext) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
-	tokenTypeBytes := tokenType.ToBytes()
-	var tok protocol.TokenType
-	// Cut off at 21 bytes
-	copy(tok[:], tokenTypeBytes[:])
-	return ac.afterBalance.CanSpend(tok, currency.BigInt())
 }
 
 func (ac *MachineAssertionContext) LoggedValue(data value.Value) error {
@@ -70,10 +53,6 @@ func (ac *MachineAssertionContext) Send(data value.Value, tokenType value.IntVal
 	tokBytes := tokenType.ToBytes()
 	copy(tokType[:], tokBytes[:])
 	newMsg := protocol.NewMessage(data, tokType, currency.BigInt(), dest.ToBytes())
-	err := ac.afterBalance.Spend(tokType, newMsg.Currency)
-	if err != nil {
-		return err
-	}
 	ac.outMsgs = append(ac.outMsgs, newMsg)
 	return nil
 }
@@ -82,39 +61,17 @@ func (ac *MachineAssertionContext) OutMessageCount() int {
 	return len(ac.outMsgs)
 }
 
-func (ac *MachineAssertionContext) ReadInbox() value.Value {
-	return ac.beforeInbox
-}
-
 func (ac *MachineAssertionContext) GetTimeBounds() value.Value {
-	return ac.precondition.TimeBounds.AsValue()
+	return ac.timeBounds.AsValue()
 }
 
 func (ac *MachineAssertionContext) NotifyStep() {
 	ac.numSteps++
 }
 
-func (ac *MachineAssertionContext) GetAssertion() *protocol.Assertion {
-	return protocol.NewAssertion(ac.machine.Hash(), ac.numSteps, ac.outMsgs, ac.logs)
-}
-
-func (ac *MachineAssertionContext) GetPostcondition() *protocol.Precondition {
-	return protocol.NewPrecondition(ac.machine.Hash(), ac.precondition.TimeBounds, ac.afterBalance, ac.beforeInbox)
-}
-
-func (ac *MachineAssertionContext) Finalize(m *Machine) machine.AssertionDefender {
+func (ac *MachineAssertionContext) Finalize(m *Machine) *protocol.Assertion {
 	ac.machine.SetContext(&machine.MachineNoContext{})
-	return machine.NewAssertionDefender(
-		ac.GetAssertion(),
-		protocol.NewPrecondition(
-			ac.precondition.BeforeHash,
-			ac.precondition.TimeBounds,
-			protocol.NewBalanceTrackerFromMessages(ac.outMsgs),
-			ac.precondition.BeforeInbox,
-		),
-		ac.beforeInbox,
-		m,
-	)
+	return protocol.NewAssertion(ac.machine.Hash(), ac.numSteps, ac.outMsgs, ac.logs)
 }
 
 func (ac *MachineAssertionContext) EndContext() {

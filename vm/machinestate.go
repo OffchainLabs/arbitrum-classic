@@ -19,15 +19,13 @@ package vm
 import (
 	"crypto/sha256"
 	"fmt"
-	"io"
-	"time"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-avm/code"
 	"github.com/offchainlabs/arb-avm/vm/stack"
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
+	"io"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -58,6 +56,8 @@ type Machine struct {
 	errHandler value.CodePointValue
 	context    machine.MachineContext
 	status     MachineStatus
+	inbox      *protocol.Inbox
+	balance    *protocol.BalanceTracker
 
 	sizeLimit     int64
 	sizeException bool
@@ -100,6 +100,8 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	register := NewMachineValue(value.NewEmptyTuple())
 	static := NewMachineValue(staticVal)
 	errHandler := value.ErrorCodePoint
+	inbox := protocol.NewEmptyInbox()
+	balance := protocol.NewBalanceTracker()
 	var wh WarningHandler
 	if warn {
 		wh = NewVerboseWarningHandler(nil)
@@ -108,22 +110,36 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	}
 	pc := NewMachinePC(opCodes, wh)
 	wh.SwitchMachinePC(pc)
-	ret := &Machine{datastack, auxstack, register, static, pc, errHandler, &machine.MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
+	ret := &Machine{
+		datastack,
+		auxstack,
+		register,
+		static,
+		pc,
+		errHandler,
+		&machine.MachineNoContext{},
+		MACHINE_EXTENSIVE,
+		inbox,
+		balance,
+		sizeLimit,
+		false,
+		wh,
+	}
 	ret.checkSize()
 	return ret
 }
 
-func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal value.Value, errHandlerVal value.CodePointValue, sizeLimit int64) *Machine {
-	datastack := stack.FlatFromTupleChain(stackVal)
-	auxStack := stack.FlatFromTupleChain(auxStackVal)
-	register := NewMachineValue(registerVal)
-	static := NewMachineValue(staticVal)
-	wh := NewSilentWarningHandler()
-	pc := NewMachinePC(opCodes, wh)
-	wh.SwitchMachinePC(pc)
-	pc.SetPCForced(pcVal)
-	return &Machine{datastack, auxStack, register, static, pc, errHandlerVal, &machine.MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
-}
+//func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal value.Value, errHandlerVal value.CodePointValue, sizeLimit int64) *Machine {
+//	datastack := stack.FlatFromTupleChain(stackVal)
+//	auxStack := stack.FlatFromTupleChain(auxStackVal)
+//	register := NewMachineValue(registerVal)
+//	static := NewMachineValue(staticVal)
+//	wh := NewSilentWarningHandler()
+//	pc := NewMachinePC(opCodes, wh)
+//	wh.SwitchMachinePC(pc)
+//	pc.SetPCForced(pcVal)
+//	return &Machine{datastack, auxStack, register, static, pc, errHandlerVal, &machine.MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
+//}
 
 func (m *Machine) Stack() stack.Stack {
 	return m.stack
@@ -146,15 +162,15 @@ func (m *Machine) SetContext(mc machine.MachineContext) {
 }
 
 func (m *Machine) ReadInbox() value.Value {
-	return m.context.ReadInbox()
-}
-
-func (m *Machine) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
-	return m.context.Send(data, tokenType, currency, dest)
+	return m.inbox.Receive()
 }
 
 func (m *Machine) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
-	return m.CanSpend(tokenType, currency)
+	tokenTypeBytes := tokenType.ToBytes()
+	var tok protocol.TokenType
+	// Cut off at 21 bytes
+	copy(tok[:], tokenTypeBytes[:])
+	return m.balance.CanSpend(tok, currency.BigInt())
 }
 
 func (m *Machine) GetTimeBounds() value.Value {
@@ -255,55 +271,35 @@ func (m *Machine) run() (bool, bool, string) {
 	return true, true, "Success"
 }
 
-func (m *Machine) RunUntilStop() {
-	// start := time.Now()
-	i := 0
-	continueRun := true
-	timings := make(map[value.Opcode][]time.Duration)
-	var ran bool
-	for continueRun {
-		s1 := time.Now()
-		ran, continueRun, _ = m.run()
-		if ran {
-			i++
-			timings[m.pc.GetCurrentInsn().GetOp()] = append(timings[m.pc.GetCurrentInsn().GetOp()], time.Since(s1))
-		}
-
+func (m *Machine) CheckPrecondition(pre *protocol.Precondition) bool {
+	if pre.BeforeHash != m.Hash() {
+		return false
 	}
-	// elapsed := time.Since(start)
-	// fmt.Printf("Execution took %s\n", elapsed)
-	// for key, vals := range timings {
-	//	var total time.Duration
-	//	for _, val := range vals {
-	//		total += val
-	//	}
-	//	average := total / time.Duration(int64(len(vals)))
-	//	if total > 1*time.Millisecond {
-	//		fmt.Printf("%v: (count: %v, total: %v, average: %v)\n", code.InstructionNames[key], len(vals), total, average)
-	//	}
-	//}
+
+	if !pre.BeforeInbox.Equal(m.inbox.Receive()) {
+		return false
+	}
+
+	if m.balance.CanSpendAll(pre.BeforeBalance) {
+		return false
+	}
+
+	return true
 }
 
-// run up to maxSteps steps, stop earlier if halt or advise instruction, return number of insns actually run, and advise string or ""
-func (m *Machine) Execute(maxSteps int32) (int32, bool) {
-	i := int32(0)
-	continueRun := true
-	var ran bool
-	for continueRun && i < maxSteps {
-		ran, continueRun, _ = m.run()
-		if ran {
-			i++
-		}
-	}
-	return i, !continueRun
-}
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, beforeBalance *protocol.BalanceTracker, timeBounds protocol.TimeBounds, beforeInbox value.Value) (machine.AssertionDefender, bool) {
+// run up to maxSteps steps, stop earlier if halted, errored or blocked
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (machine.AssertionDefender, bool) {
+	initState := m.Clone()
+	pre := &protocol.Precondition{
+		BeforeHash:    m.Hash(),
+		TimeBounds:    timeBounds,
+		BeforeBalance: m.balance.Clone(),
+		BeforeInbox:   value.NewHashOnlyValueFromValue(m.inbox.Receive()),
+	}
 	assCtx := NewMachineAssertionContext(
 		m,
-		beforeBalance,
 		timeBounds,
-		beforeInbox,
 	)
 	i := int32(0)
 	continueRun := true
@@ -314,7 +310,44 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, beforeBalance *protocol.Balan
 			i++
 		}
 	}
-	return assCtx.Finalize(m), !continueRun
+	return machine.NewAssertionDefender(
+		assCtx.Finalize(m),
+		pre,
+		m.inbox.Receive(),
+		initState,
+	), !continueRun
+}
+
+func (m *Machine) SendOnchainMessage(msg protocol.Message) {
+	m.inbox.SendMessage(msg)
+	m.balance.Add(msg.TokenType, msg.Currency)
+}
+
+func (m *Machine) DeliverOnchainMessage() {
+	m.inbox.DeliverMessages()
+}
+
+func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
+	m.inbox.InsertMessageGroup(msgs)
+}
+
+func (m *Machine) InboxHash() [32]byte {
+	return m.inbox.Receive().Hash()
+}
+
+func (m *Machine) HasPendingMessages() bool {
+	return !m.inbox.PendingQueue.IsEmpty()
+}
+
+func (m *Machine) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
+	tokType := [21]byte{}
+	tokBytes := tokenType.ToBytes()
+	copy(tokType[:], tokBytes[:])
+	err := m.balance.Spend(tokType,  currency.BigInt())
+	if err != nil {
+		return err
+	}
+	return m.context.Send(data, tokenType, currency, dest)
 }
 
 func (m *Machine) Warn(str string) {
@@ -429,6 +462,8 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.errHandler,
 		&machine.MachineNoContext{},
 		m.status,
+		m.inbox.Clone(),
+		m.balance.Clone(),
 		m.sizeLimit,
 		m.sizeException,
 		newWarnHandler,

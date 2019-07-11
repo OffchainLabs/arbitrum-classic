@@ -27,7 +27,6 @@ import (
 	"github.com/offchainlabs/arb-avm/vm"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-	//"math/rand"
 )
 
 // This is to test that a machine can be built and run
@@ -46,7 +45,7 @@ func TestMachineAdd(t *testing.T) {
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	steps, _ := m.Execute(80000)
+	steps, _ := m.ExecuteAssertion(80000, protocol.NewTimeBounds(0, 100000))
 	fmt.Println(steps)
 }
 
@@ -768,23 +767,22 @@ func TestInbox(t *testing.T) {
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	balanceTracker := protocol.NewBalanceTracker()
-	inbox := protocol.NewEmptyInbox()
 	knowninbox := protocol.NewEmptyInbox()
 
 	var tok protocol.TokenType
 	tok[0] = 15
 	tok[20] = 1
-	balanceTracker.Add(tok, big.NewInt(10))
 
 	dest := [32]byte{}
 	copy(dest[:], math.U256(big.NewInt(7)).Bytes())
-	inbox.SendMessage(protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(3), dest))
+
+	m.SendOnchainMessage(protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(3), dest))
+	m.DeliverOnchainMessage()
+
 	knowninbox.SendMessage(protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(3), dest))
-	inbox.DeliverMessages()
 	knowninbox.DeliverMessages()
 
-	vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
+	vm.NewMachineAssertionContext(m, [2]uint64{0, 10000})
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -1557,365 +1555,351 @@ func TestBreakpoint(t *testing.T) {
 
 func TestLog(t *testing.T) {
 	// test
-	insns := make([]value.Operation, 1)
-	i := 0
-	insns[i] = value.BasicOperation{Op: code.HALT}
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.LOG},
+		value.BasicOperation{Op: code.HALT},
+	}
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	inbox := protocol.NewEmptyInbox()
-	balanceTracker := protocol.NewBalanceTracker()
-	ctx := vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
-
 	m.Stack().Push(value.NewInt64Value(5))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.LOG}); err != nil {
-		tmp := "LOG failed - "
-		tmp += err.Error()
-		t.Error(tmp)
-	}
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	if len(ctx.GetAssertion().Logs) != 1 {
+	logs := ad.GetAssertion().Logs
+	if len(logs) != 1 {
 		t.Error("No log value generated")
 	}
-	if !ctx.GetAssertion().Logs[0].Equal(value.NewInt64Value(5)) {
+	if !logs[0].Equal(value.NewInt64Value(5)) {
 		t.Error("log value incorrect")
 	}
 }
 
-func TestSend(t *testing.T) {
+func TestSendFungible(t *testing.T) {
 	// test
-	insns := make([]value.Operation, 1)
-	i := 0
-	insns[i] = value.BasicOperation{Op: code.HALT}
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.SEND},
+		value.BasicOperation{Op: code.HALT},
+	}
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	balanceTracker := protocol.NewBalanceTracker()
-	inbox := protocol.NewEmptyInbox()
 
-	// add tokens to balanceTracker
-	var tok protocol.TokenType
 	// fungible value=10
+	var tok protocol.TokenType
 	tok[0] = 15
 	tok[20] = 0
-	balanceTracker.Add(tok, big.NewInt(10))
-	// non fungible id=7
-	tok[0] = 16
-	tok[20] = 1
-	balanceTracker.Add(tok, big.NewInt(7))
-	// fungible value=10
-	tok[0] = 17
-	tok[20] = 0
-	balanceTracker.Add(tok, big.NewInt(10))
+	var bigtok [32]byte
+	copy(bigtok[:], tok[:])
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		value.NewInt64Value(7),
+		value.NewInt64Value(4),
+	})
+	m.Stack().Push(tup)
+
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+
+	// send token 15 value=7 to dest 4
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	// verify known and unknown match
+	if ok, err := vm.Equal(knownMachine, m); !ok {
+		t.Error(err)
+	}
+	msgs := ad.GetAssertion().OutMsgs
+	// verify out message
+	if len(msgs) != 1 {
+		t.Error("No out message generated")
+	}
 
 	dest := [32]byte{}
 	dest[31] = 4
 	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	ctx := vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
-
-	var tokint big.Int
-	var bigtok [32]byte
-	bigtok[0] = 15
-	bigtok[20] = 0
-	tokint.SetBytes(bigtok[:])
-	var vals [8]value.Value
-	vals[0] = value.NewInt64Value(1)
-	vals[1] = value.NewIntValue(&tokint)
-	vals[2] = value.NewInt64Value(7)
-	vals[3] = value.NewInt64Value(4)
-	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
-	m.Stack().Push(tup)
-	// send token 15 value=7 to dest 4
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SEND}); err != nil {
-		tmp := "SEND failed - "
-		tmp += err.Error()
-		t.Error(tmp)
-	}
-	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-	// verify out message
-	if m.Context().OutMessageCount() != 1 {
-		t.Error("No out message generated")
-	}
-
-	knownmessage.TokenType[0] = 15
-	knownmessage.TokenType[20] = 0
-	msg := ctx.GetAssertion().OutMsgs[0]
-	if !msg.Equals(knownmessage) {
+	if !msgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
+}
+
+func TestSendNonFungible(t *testing.T) {
+	// test
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.SEND},
+		value.BasicOperation{Op: code.HALT},
+	}
+
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send of non fungible
-	bigtok[0] = 16
-	bigtok[20] = 1
-	tokint.SetBytes(bigtok[:])
-	vals[0] = value.NewInt64Value(1)
-	vals[1] = value.NewIntValue(&tokint)
-	vals[2] = value.NewInt64Value(7)
-	vals[3] = value.NewInt64Value(4)
-	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
+	var tok protocol.TokenType
+	tok[0] = 16
+	tok[20] = 1
+	var bigtok [32]byte
+	copy(bigtok[:], tok[:])
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		value.NewInt64Value(7),
+		value.NewInt64Value(4),
+	})
 	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SEND}); err != nil {
-		tmp := "SEND failed - "
-		tmp += err.Error()
-		t.Error(tmp)
-	}
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(7), [32]byte{}))
+
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
+	msgs := ad.GetAssertion().OutMsgs
 	// verify out message
-	if m.Context().OutMessageCount() != 2 {
+	if len(msgs) != 1 {
 		t.Error("No out message generated")
 	}
 
-	knownmessage.TokenType[0] = 16
-	knownmessage.TokenType[20] = 1
-	msg = ctx.GetAssertion().OutMsgs[1]
-	if !msg.Equals(knownmessage) {
+	dest := [32]byte{}
+	dest[31] = 4
+	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
+	if !msgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
+}
+
+func TestSendLowBalance(t *testing.T) {
+	// test
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.SEND},
+		value.BasicOperation{Op: code.HALT},
+	}
+
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send with insufficient funds
-	bigtok[0] = 17
-	bigtok[20] = 0
-	tokint.SetBytes(bigtok[:])
-	vals[0] = value.NewInt64Value(1)
-	vals[1] = value.NewIntValue(&tokint)
-	vals[2] = value.NewInt64Value(17)
-	vals[3] = value.NewInt64Value(4)
-	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
+	var tok protocol.TokenType
+	tok[0] = 17
+	tok[20] = 0
+	var bigtok [32]byte
+	copy(bigtok[:], tok[:])
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		value.NewInt64Value(17),
+		value.NewInt64Value(4),
+	})
 	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SEND}); err == nil {
-		tmp := "SEND expected FAIL"
-		t.Error(tmp)
-	}
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(tup)
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
+	msgs := ad.GetAssertion().OutMsgs
 	// verify out message
-	if m.Context().OutMessageCount() != 2 {
+	if len(msgs) != 0 {
 		t.Error("No out message generated")
-	}
-
-	knownmessage.TokenType[0] = 16
-	knownmessage.TokenType[20] = 1
-	msg = ctx.GetAssertion().OutMsgs[1]
-	if !msg.Equals(knownmessage) {
-		t.Error("Out message incorrect")
 	}
 }
 
 func TestNbsend1(t *testing.T) {
 	// test
-	insns := make([]value.Operation, 1)
-	i := 0
-	insns[i] = value.BasicOperation{Op: code.HALT}
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.NBSEND},
+		value.BasicOperation{Op: code.HALT},
+	}
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	balanceTracker := protocol.NewBalanceTracker()
-	inbox := protocol.NewEmptyInbox()
 
 	var tok protocol.TokenType
 	tok[0] = 15
 	tok[20] = 1
-	balanceTracker.Add(tok, big.NewInt(10))
-
-	vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
-
-	var tokint big.Int
 	var bigtok [32]byte
-	bigtok[0] = 15
-	bigtok[20] = 1
-	tokint.SetBytes(bigtok[:])
-	var vals [8]value.Value
-	vals[0] = value.NewInt64Value(1)
-	vals[1] = value.NewIntValue(&tokint)
-	vals[2] = value.NewInt64Value(10)
-	vals[3] = value.NewInt64Value(4)
-	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
+	copy(bigtok[:], tok[:])
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		value.NewInt64Value(10),
+		value.NewInt64Value(4),
+	})
 
 	m.Stack().Push(tup)
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
-		tmp := "NBSEND failed - "
-		tmp += err.Error()
-		t.Error(err)
-	}
+
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
+
+	msgs := ad.GetAssertion().OutMsgs
 	// verify out message
-	if m.Context().OutMessageCount() != 1 {
+	if len(msgs) != 1 {
 		t.Error("No out message generated")
 	}
 }
 
-func TestNbsend(t *testing.T) {
+func TestNBSendFungible(t *testing.T) {
 	// test
-	insns := make([]value.Operation, 1)
-	i := 0
-	insns[i] = value.BasicOperation{Op: code.HALT}
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.NBSEND},
+		value.BasicOperation{Op: code.HALT},
+	}
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	balanceTracker := protocol.NewBalanceTracker()
-	inbox := protocol.NewEmptyInbox()
 
-	// add tokens to balanceTracker
-	var tok protocol.TokenType
 	// fungible value=10
+	var tok protocol.TokenType
 	tok[0] = 15
 	tok[20] = 0
-	balanceTracker.Add(tok, big.NewInt(10))
-	// non fungible id=7
-	tok[0] = 16
-	tok[20] = 1
-	balanceTracker.Add(tok, big.NewInt(7))
-	// fungible value=10
-	tok[0] = 17
-	tok[20] = 0
-	balanceTracker.Add(tok, big.NewInt(10))
+	var bigtok [32]byte
+	copy(bigtok[:], tok[:])
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		value.NewInt64Value(7),
+		value.NewInt64Value(4),
+	})
+	m.Stack().Push(tup)
+
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+
+	// send token 15 value=7 to dest 4
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	// verify known and unknown match
+	knownMachine.Stack().Push(value.NewInt64Value(1))
+	if ok, err := vm.Equal(knownMachine, m); !ok {
+		t.Error(err)
+	}
+	msgs := ad.GetAssertion().OutMsgs
+	// verify out message
+	if len(msgs) != 1 {
+		t.Error("No out message generated")
+	}
 
 	dest := [32]byte{}
 	dest[31] = 4
 	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	ctx := vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{0, 10000}, inbox.Receive())
-
-	var tokint big.Int
-	var bigtok [32]byte
-	bigtok[0] = 15
-	bigtok[20] = 0
-	tokint.SetBytes(bigtok[:])
-	var vals [8]value.Value
-	vals[0] = value.NewInt64Value(1)
-	vals[1] = value.NewIntValue(&tokint)
-	vals[2] = value.NewInt64Value(7)
-	vals[3] = value.NewInt64Value(4)
-	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
-	m.Stack().Push(tup)
-	// send token 15 value=7 to dest 4
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
-		tmp := "NBSEND failed - "
-		tmp += err.Error()
-		t.Error(tmp)
-	}
-	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-	// verify out message
-	if m.Context().OutMessageCount() != 1 {
-		t.Error("No out message generated")
-	}
-
-	// var tok1 protocol.TokenType
-	// tok1[0] = 15
-	// knownmessage = protocol.NewMessage(value.NewInt64Value(1), tok1, big.NewInt(7), dest)
-	knownmessage.TokenType[0] = 15
-	knownmessage.TokenType[20] = 0
-	msg := ctx.GetAssertion().OutMsgs[0]
-	if !msg.Equals(knownmessage) {
+	if !msgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
+}
+
+func TestNBSendNonFungible(t *testing.T) {
+	// test
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.NBSEND},
+		value.BasicOperation{Op: code.HALT},
+	}
+
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send of non fungible
-	bigtok[0] = 16
-	bigtok[20] = 1
-	tokint.SetBytes(bigtok[:])
-	vals[0] = value.NewInt64Value(1)
-	vals[1] = value.NewIntValue(&tokint)
-	vals[2] = value.NewInt64Value(7)
-	vals[3] = value.NewInt64Value(4)
-	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
+	var tok protocol.TokenType
+	tok[0] = 16
+	tok[20] = 1
+	var bigtok [32]byte
+	copy(bigtok[:], tok[:])
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		value.NewInt64Value(7),
+		value.NewInt64Value(4),
+	})
 	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
-		tmp := "NBSEND failed - "
-		tmp += err.Error()
-		t.Error(tmp)
-	}
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(7), [32]byte{}))
+
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
+	msgs := ad.GetAssertion().OutMsgs
 	// verify out message
-	if m.Context().OutMessageCount() != 2 {
+	if len(msgs) != 1 {
 		t.Error("No out message generated")
 	}
 
-	knownmessage.TokenType[0] = 16
-	knownmessage.TokenType[20] = 1
-	msg = ctx.GetAssertion().OutMsgs[1]
-	if !msg.Equals(knownmessage) {
+	dest := [32]byte{}
+	dest[31] = 4
+	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
+	if !msgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
+}
+
+func TestNBSendLowBalance(t *testing.T) {
+	// test
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.NBSEND},
+		value.BasicOperation{Op: code.HALT},
+	}
+
+	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send with insufficient funds
-	bigtok[0] = 17
-	bigtok[20] = 0
-	tokint.SetBytes(bigtok[:])
-	vals[0] = value.NewInt64Value(1)
-	vals[1] = value.NewIntValue(&tokint)
-	vals[2] = value.NewInt64Value(17)
-	vals[3] = value.NewInt64Value(4)
-	tup, _ = value.NewTupleOfSizeWithContents(vals, 4)
+	var tok protocol.TokenType
+	tok[0] = 17
+	tok[20] = 0
+	var bigtok [32]byte
+	copy(bigtok[:], tok[:])
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		value.NewInt64Value(17),
+		value.NewInt64Value(4),
+	})
 	m.Stack().Push(tup)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NBSEND}); err != nil {
-		tmp := "NBSEND failed - "
-		tmp += err.Error()
-		t.Error(tmp)
-	}
-	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, _ := vm.Equal(knownMachine, m); ok {
-		t.Error("Expected different")
-	}
-	// verify out message did not change
-	if m.Context().OutMessageCount() != 2 {
-		t.Error("No out message generated")
-	}
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
 
-	msg = ctx.GetAssertion().OutMsgs[1]
-	if !msg.Equals(knownmessage) {
-		t.Error("Out message incorrect")
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	// verify known and unknown match
+	knownMachine.Stack().Push(value.NewInt64Value(0))
+	if ok, err := vm.Equal(knownMachine, m); !ok {
+		t.Error(err)
+	}
+	msgs := ad.GetAssertion().OutMsgs
+	// verify out message
+	if len(msgs) != 0 {
+		t.Error("No out message generated")
 	}
 }
 
 func TestGettime(t *testing.T) {
 	// test
-	insns := make([]value.Operation, 1)
-	i := 0
-	insns[i] = value.BasicOperation{Op: code.HALT}
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.GETTIME},
+		value.BasicOperation{Op: code.HALT},
+	}
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	balanceTracker := protocol.NewBalanceTracker()
-	inbox := protocol.NewEmptyInbox()
+	_, _ = m.ExecuteAssertion(10, [2]uint64{5, 10})
 
-	vm.NewMachineAssertionContext(m, balanceTracker, [2]uint64{5, 10}, inbox.Receive())
-
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.GETTIME}); err != nil {
-		tmp := "GETTIME failed - "
-		tmp += err.Error()
-		t.Error(err)
-	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
 	if ok, err := vm.Equal(knownMachine, m); !ok {

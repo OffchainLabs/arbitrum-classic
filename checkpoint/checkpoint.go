@@ -696,17 +696,18 @@ func (cp *Checkpointer) restoreMachineInTxn(txn *badger.Txn, keySuffix []byte) (
 		return nil, err
 	}
 
-	codeOps, err := cp.restoreCodeInTxn(txn)
-	if err != nil {
-		return nil, err
-	}
+	//codeOps, err := cp.restoreCodeInTxn(txn)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//errHandler, ok := vals[5].(value.CodePointValue)
+	//if !ok {
+	//	return nil, errors.New("6th value must be a codepoint")
+	//}
 
-	errHandler, ok := vals[5].(value.CodePointValue)
-	if !ok {
-		return nil, errors.New("6th value must be a codepoint")
-	}
-
-	return vm.RestoreMachine(codeOps, vals[0], vals[1], vals[2], vals[3], vals[4], errHandler, sizeLimit), nil
+	return nil, errors.New("ERROR: Unimplemented")
+	//return vm.RestoreMachine(codeOps, vals[0], vals[1], vals[2], vals[3], vals[4], errHandler, sizeLimit), nil
 }
 
 func writeOp(wr io.Writer, op value.Operation) (value.Value, error) {
