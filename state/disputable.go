@@ -92,7 +92,7 @@ func NewWaiting(config *core.Config, c *core.Core) Waiting {
 
 func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
 	bridge.UnanimousAssert(
-		bot.GetCore().GetMachine().InboxHash(),
+		bot.GetCore().GetMachine().InboxHash().Hash(),
 		bot.timeBounds,
 		bot.assertion,
 		bot.sequenceNum,
@@ -103,7 +103,7 @@ func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
 func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) {
 	inboxHash := bot.GetCore().GetMachine().InboxHash()
 	bridge.FinalUnanimousAssert(
-		inboxHash,
+		inboxHash.Hash(),
 		bot.timeBounds,
 		bot.assertion,
 		bot.signatures,
@@ -175,8 +175,8 @@ func (bot Waiting) ProposalResults() valmessage.UnanimousUpdateResults {
 		SequenceNum:       bot.proposed.sequenceNum,
 		BeforeHash:        bot.origMachine.Hash(),
 		TimeBounds:        bot.timeBounds,
-		NewInboxHash:      bot.proposed.machine.InboxHash(),
-		OriginalInboxHash: bot.origMachine.InboxHash(),
+		NewInboxHash:      bot.proposed.machine.InboxHash().Hash(),
+		OriginalInboxHash: bot.origMachine.InboxHash().Hash(),
 		Assertion:         bot.proposed.Assertion,
 	}
 }
@@ -221,7 +221,7 @@ func (bot Waiting) ValidateUnanimousRequest(request valmessage.UnanimousRequestD
 	if request.BeforeHash != c.GetMachine().Hash() {
 		return errors.New("recieved unanimous request with invalid before hash")
 	}
-	if request.BeforeInbox != c.GetMachine().InboxHash() {
+	if request.BeforeInbox != c.GetMachine().InboxHash().Hash() {
 		return errors.New("recieved unanimous request with invalid before inbox")
 	}
 
@@ -331,11 +331,11 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 		c := bot.GetCore()
 		deadline := time + bot.VMConfig.GracePeriod
 		var inboxVal value.Value
-		if c.GetMachine().InboxHash() != ev.Precondition.BeforeInbox.Hash() {
+		if c.GetMachine().InboxHash().Hash() != ev.Precondition.BeforeInbox.Hash() {
 			return nil, nil, errors.New("waiting observer has incorrect valmessage")
 		}
 		updatedState := c.GetMachine().Clone()
-		_, assertion, _ := updatedState.ExecuteAssertion(
+		assertion, _ := updatedState.ExecuteAssertion(
 			int32(ev.Assertion.NumSteps),
 			ev.Precondition.TimeBounds,
 		)

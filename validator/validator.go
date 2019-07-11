@@ -246,7 +246,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						clonedCore := bot.GetCore().Clone()
 						requestData := valmessage.UnanimousRequestData{
 							BeforeHash:  clonedCore.GetMachine().Hash(),
-							BeforeInbox: clonedCore.GetMachine().InboxHash(),
+							BeforeInbox: clonedCore.GetMachine().InboxHash().Hash(),
 							SequenceNum: seqNum,
 							TimeBounds:  tb,
 						}
@@ -400,7 +400,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					}
 					go func() {
 						updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
-						_, assertion, finished := updatedState.ExecuteAssertion(
+						assertion, finished := updatedState.ExecuteAssertion(
 							maxCallSteps,
 							[2]uint64{startTime, startTime + 1},
 						)

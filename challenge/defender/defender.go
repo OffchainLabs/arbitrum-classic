@@ -17,7 +17,6 @@
 package defender
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 
@@ -34,14 +33,14 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 	deadline := time + core.VMConfig.GracePeriod
 	if assDef.GetAssertion().NumSteps == 1 {
 		fmt.Println("Generating proof")
-		var buf bytes.Buffer
-		if err := assDef.SolidityOneStepProof(&buf); err != nil {
+		proofData, err := assDef.SolidityOneStepProof()
+		if err != nil {
 			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
 		}
 		bridge.OneStepProof(
 			assDef.GetPrecondition(),
 			assDef.GetAssertion(),
-			buf.Bytes(),
+			proofData,
 			deadline,
 		)
 		return oneStepChallenged{

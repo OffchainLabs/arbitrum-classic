@@ -66,7 +66,7 @@ func (c *Core) OffchainAssert(
 ) (*Core, *protocol.Assertion) {
 	newState := c.machine.Clone()
 	newState.SendOffchainMessages(messages)
-	_, assertion, _ := newState.ExecuteAssertion(
+	assertion, _ := newState.ExecuteAssertion(
 		maxSteps,
 		timeBounds,
 	)
@@ -91,14 +91,6 @@ func (c *Core) GetMachine() machine.Machine {
 	return c.machine
 }
 
-//func (c *Core) GetInbox() *protocol.Inbox {
-//	return c.inbox
-//}
-//
-//func (c *Core) GetBalance() *protocol.BalanceTracker {
-//	return c.balance
-//}
-
 func (c *Core) CreateDisputableDefender(beginTime, length uint64, maxSteps int32) (machine.Machine, machine.AssertionDefender) {
 	endTime := beginTime + length
 	assDef, _ := machine.ExecuteMachineAssertion(
@@ -112,7 +104,15 @@ func (c *Core) CreateDisputableDefender(beginTime, length uint64, maxSteps int32
 }
 
 func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
-	if !c.machine.CheckPrecondition(pre) {
+	if pre.BeforeHash != c.machine.Hash() {
+		return false
+	}
+
+	if !pre.BeforeInbox.Equal(c.machine.InboxHash()) {
+		return false
+	}
+
+	if c.machine.CurrentBalance().CanSpendAll(pre.BeforeBalance) {
 		return false
 	}
 
