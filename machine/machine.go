@@ -2,8 +2,6 @@ package machine
 
 import (
 	"errors"
-	"io"
-
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
 )
@@ -46,23 +44,29 @@ type Machine interface {
 	Hash() [32]byte
 	Clone() Machine
 
-	InboxHash() [32]byte
+	InboxHash() value.HashOnlyValue
+	CurrentBalance() *protocol.BalanceTracker
 	HasPendingMessages() bool
 	SendOnchainMessage(protocol.Message)
 	DeliverOnchainMessage()
 	SendOffchainMessages([]protocol.Message)
 
-	CheckPrecondition(pre *protocol.Precondition) bool
-	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Precondition, *protocol.Assertion, bool)
-	MarshalForProof(wr io.Writer) error
+	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Assertion, bool)
+	MarshalForProof() ([]byte, error)
 }
 
 func ExecuteMachineAssertion(m Machine, maxSteps int32, timeBounds protocol.TimeBounds) (AssertionDefender, bool) {
 	mClone := m.Clone()
-	precondition, assertion, finished := m.ExecuteAssertion(maxSteps, timeBounds)
+	pre := &protocol.Precondition{
+		BeforeHash:    m.Hash(),
+		TimeBounds:    timeBounds,
+		BeforeBalance: m.CurrentBalance(),
+		BeforeInbox:   m.InboxHash(),
+	}
+	assertion, finished := m.ExecuteAssertion(maxSteps, timeBounds)
 	return NewAssertionDefender(
 		assertion,
-		precondition,
+		pre,
 		mClone,
 	), finished
 }

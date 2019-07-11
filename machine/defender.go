@@ -18,8 +18,6 @@ package machine
 
 import (
 	"errors"
-	"io"
-
 	"github.com/offchainlabs/arb-util/protocol"
 )
 
@@ -73,8 +71,8 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 	return defenders
 }
 
-func (ad AssertionDefender) SolidityOneStepProof(proofWr io.Writer) error {
-	return ad.initState.MarshalForProof(proofWr)
+func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
+	return ad.initState.MarshalForProof()
 }
 
 func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, preconditions []*protocol.Precondition) (uint16, Machine, error) {
