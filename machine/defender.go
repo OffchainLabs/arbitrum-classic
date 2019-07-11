@@ -72,11 +72,10 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 		if i < nsteps%slices {
 			stepCount++
 		}
+
 		defender, _ := runState.ExecuteAssertion(
 			int32(stepCount),
-			precondition.BeforeBalance,
 			precondition.TimeBounds,
-			ad.beforeInbox,
 		)
 		defenders = append(defenders, defender)
 		precondition = defender.GetAssertion().Stub().GeneratePostcondition(precondition)
@@ -89,20 +88,16 @@ func (ad AssertionDefender) SolidityOneStepProof(proofWr io.Writer) error {
 	return ad.initState.MarshalForProof(proofWr)
 }
 
-func ChooseAssertionToChallenge(machine Machine, assertions []*protocol.AssertionStub, preconditions []*protocol.Precondition, inbox value.Value) (uint16, Machine, error) {
+func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, preconditions []*protocol.Precondition) (uint16, Machine, error) {
 	for i := range assertions {
-		newState := machine.Clone()
-		ad, _ := newState.ExecuteAssertion(
+		ad, _ := m.ExecuteAssertion(
 			int32(assertions[i].NumSteps),
-			preconditions[i].BeforeBalance,
 			preconditions[i].TimeBounds,
-			inbox,
 		)
 		generatedAssertion := ad.GetAssertion()
 		if !generatedAssertion.Stub().Equals(assertions[i]) {
-			return uint16(i), machine, nil
+			return uint16(i), ad.initState, nil
 		}
-		machine = newState
 	}
 	return 0, nil, errors.New("all segments in false Assertion are valid")
 }

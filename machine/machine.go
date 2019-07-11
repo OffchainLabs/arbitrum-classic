@@ -9,9 +9,7 @@ import (
 )
 
 type MachineContext interface {
-	CanSpend(tokenType value.IntValue, currency value.IntValue) bool
 	Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error
-	ReadInbox() value.Value
 	GetTimeBounds() value.Value
 	NotifyStep()
 	LoggedValue(value.Value) error
@@ -37,10 +35,6 @@ func (m *MachineNoContext) OutMessageCount() int {
 	return 0
 }
 
-func (m *MachineNoContext) ReadInbox() value.Value {
-	return value.NewEmptyTuple()
-}
-
 func (m *MachineNoContext) GetTimeBounds() value.Value {
 	return value.NewEmptyTuple()
 }
@@ -51,6 +45,14 @@ func (m *MachineNoContext) NotifyStep() {
 type Machine interface {
 	Hash() [32]byte
 	Clone() Machine
-	ExecuteAssertion(maxSteps int32, beforeBalance *protocol.BalanceTracker, timeBounds protocol.TimeBounds, beforeInbox value.Value) (AssertionDefender, bool)
+
+	InboxHash() [32]byte
+	HasPendingMessages() bool
+	SendOnchainMessage(protocol.Message)
+	DeliverOnchainMessage()
+	SendOffchainMessages([]protocol.Message)
+
+	CheckPrecondition(pre *protocol.Precondition) bool
+	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (AssertionDefender, bool)
 	MarshalForProof(wr io.Writer) error
 }

@@ -24,15 +24,14 @@ import (
 
 type MessageQueue struct {
 	msg     value.TupleValue
-	Balance *BalanceTracker
 }
 
 func NewMessageQueue() *MessageQueue {
-	return &MessageQueue{value.NewEmptyTuple(), NewBalanceTracker()}
+	return &MessageQueue{value.NewEmptyTuple()}
 }
 
 func (in *MessageQueue) Clone() *MessageQueue {
-	return &MessageQueue{in.msg, in.Balance.Clone()}
+	return &MessageQueue{in.msg}
 }
 
 func (in *MessageQueue) String() string {
@@ -44,13 +43,7 @@ func (in *MessageQueue) IsEmpty() bool {
 }
 
 func (in *MessageQueue) AddMessage(msg Message) {
-	msgVal := msg.AsValue()
-	in.msg, _ = value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(0),
-		in.msg,
-		msgVal,
-	})
-	in.Balance.Add(msg.TokenType, msg.Currency)
+	in.AddRawMessage(msg.AsValue())
 }
 
 func (in *MessageQueue) AddRawMessage(msgVal value.Value) {
@@ -59,16 +52,6 @@ func (in *MessageQueue) AddRawMessage(msgVal value.Value) {
 		in.msg,
 		msgVal,
 	})
-	tup := msgVal.(value.TupleValue)
-	typeVal, _ := tup.GetByInt64(3)
-	typeInt, _ := typeVal.(value.IntValue)
-	typeBytes := typeInt.ToBytes()
-	var tokenType [21]byte
-	copy(tokenType[:], typeBytes[:21])
-	curVal, _ := tup.GetByInt64(2)
-	cur, _ := curVal.(value.IntValue)
-
-	in.Balance.Add(tokenType, cur.BigInt())
 }
 
 type MessageQueues struct {
