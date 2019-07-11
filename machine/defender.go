@@ -21,18 +21,16 @@ import (
 	"io"
 
 	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
 )
 
 type AssertionDefender struct {
 	assertion    *protocol.Assertion
 	precondition *protocol.Precondition
-	beforeInbox  value.Value
 	initState    Machine
 }
 
-func NewAssertionDefender(assertion *protocol.Assertion, precondition *protocol.Precondition, beforeInbox value.Value, initState Machine) AssertionDefender {
-	return AssertionDefender{assertion, precondition, beforeInbox, initState.Clone()}
+func NewAssertionDefender(assertion *protocol.Assertion, precondition *protocol.Precondition, initState Machine) AssertionDefender {
+	return AssertionDefender{assertion, precondition, initState.Clone()}
 }
 
 func (ad AssertionDefender) NumSteps() uint32 {
@@ -45,10 +43,6 @@ func (ad AssertionDefender) GetAssertion() *protocol.Assertion {
 
 func (ad AssertionDefender) GetPrecondition() *protocol.Precondition {
 	return ad.precondition
-}
-
-func (ad AssertionDefender) GetInbox() value.Value {
-	return ad.beforeInbox
 }
 
 func (ad AssertionDefender) GetMachineState() Machine {
@@ -64,7 +58,7 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 	defenders := make([]AssertionDefender, 0, slices)
 	machine := ad.initState.Clone()
 
-	precondition := ad.precondition
+	timeBounds := ad.precondition.TimeBounds
 	for i := uint32(0); i < slices; i++ {
 		runState := machine.Clone()
 
@@ -72,13 +66,8 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 		if i < nsteps%slices {
 			stepCount++
 		}
-
-		defender, _ := runState.ExecuteAssertion(
-			int32(stepCount),
-			precondition.TimeBounds,
-		)
+		defender, _ := ExecuteMachineAssertion(runState, int32(stepCount), timeBounds)
 		defenders = append(defenders, defender)
-		precondition = defender.GetAssertion().Stub().GeneratePostcondition(precondition)
 		machine = runState
 	}
 	return defenders
@@ -90,7 +79,8 @@ func (ad AssertionDefender) SolidityOneStepProof(proofWr io.Writer) error {
 
 func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, preconditions []*protocol.Precondition) (uint16, Machine, error) {
 	for i := range assertions {
-		ad, _ := m.ExecuteAssertion(
+		ad, _ := ExecuteMachineAssertion(
+			m,
 			int32(assertions[i].NumSteps),
 			preconditions[i].TimeBounds,
 		)

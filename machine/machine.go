@@ -53,6 +53,16 @@ type Machine interface {
 	SendOffchainMessages([]protocol.Message)
 
 	CheckPrecondition(pre *protocol.Precondition) bool
-	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (AssertionDefender, bool)
+	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Precondition, *protocol.Assertion, bool)
 	MarshalForProof(wr io.Writer) error
+}
+
+func ExecuteMachineAssertion(m Machine, maxSteps int32, timeBounds protocol.TimeBounds) (AssertionDefender, bool) {
+	mClone := m.Clone()
+	precondition, assertion, finished := m.ExecuteAssertion(maxSteps, timeBounds)
+	return NewAssertionDefender(
+		assertion,
+		precondition,
+		mClone,
+	), finished
 }
