@@ -400,11 +400,11 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					}
 					go func() {
 						updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
-						ad, finished := updatedState.ExecuteAssertion(
+						_, assertion, finished := updatedState.ExecuteAssertion(
 							maxCallSteps,
 							[2]uint64{startTime, startTime + 1},
 						)
-						results := ad.GetAssertion().Logs
+						results := assertion.Logs
 						if !finished {
 							request.ErrorChan <- errors.New("Call took too long to execute")
 						} else if len(results) == 0 {

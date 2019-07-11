@@ -66,13 +66,13 @@ func (c *Core) OffchainAssert(
 ) (*Core, *protocol.Assertion) {
 	newState := c.machine.Clone()
 	newState.SendOffchainMessages(messages)
-	assDef, _ := newState.ExecuteAssertion(
+	_, assertion, _ := newState.ExecuteAssertion(
 		maxSteps,
 		timeBounds,
 	)
 	return &Core{
 		machine: newState,
-	}, assDef.GetAssertion()
+	}, assertion
 }
 
 func (c *Core) GetCore() *Core {
@@ -101,7 +101,8 @@ func (c *Core) GetMachine() machine.Machine {
 
 func (c *Core) CreateDisputableDefender(beginTime, length uint64, maxSteps int32) (machine.Machine, machine.AssertionDefender) {
 	endTime := beginTime + length
-	assDef, _ := c.machine.ExecuteAssertion(
+	assDef, _ := machine.ExecuteMachineAssertion(
+		c.machine,
 		maxSteps,
 		[2]uint64{beginTime, endTime},
 	)

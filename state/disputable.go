@@ -335,11 +335,11 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 			return nil, nil, errors.New("waiting observer has incorrect valmessage")
 		}
 		updatedState := c.GetMachine().Clone()
-		ad, _ := updatedState.ExecuteAssertion(
+		_, assertion, _ := updatedState.ExecuteAssertion(
 			int32(ev.Assertion.NumSteps),
 			ev.Precondition.TimeBounds,
 		)
-		if !ad.GetAssertion().Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
+		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
 			bridge.InitiateChallenge(
 				ev.Precondition,
 				ev.Assertion,
@@ -352,7 +352,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 			updatedState,
 			deadline,
 			ev.Precondition,
-			ad.GetAssertion(),
+			assertion,
 		}, nil, nil
 	default:
 		return nil, nil, &Error{nil, fmt.Sprintf("ERROR: Waiting: VM state got unsynchronized with valmessage %T", ev)}
