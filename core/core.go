@@ -91,18 +91,6 @@ func (c *Core) GetMachine() machine.Machine {
 	return c.machine
 }
 
-func (c *Core) CreateDisputableDefender(beginTime, length uint64, maxSteps int32) (machine.Machine, machine.AssertionDefender) {
-	endTime := beginTime + length
-	assDef, _ := machine.ExecuteMachineAssertion(
-		c.machine,
-		maxSteps,
-		[2]uint64{beginTime, endTime},
-	)
-	newState := c.machine
-	c.machine = assDef.GetMachineState()
-	return newState, assDef
-}
-
 func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
 	if pre.BeforeHash != c.machine.Hash() {
 		return false

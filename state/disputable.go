@@ -138,8 +138,8 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (St
 
 func (bot Waiting) AttemptAssertion(request DisputableAssertionRequest, bridge bridge.Bridge) State {
 	bridge.DisputableAssert(
-		request.Defender.GetPrecondition(),
-		request.Defender.GetAssertion(),
+		request.Precondition,
+		request.Assertion,
 	)
 
 	return attemptingAssertion{
@@ -453,14 +453,14 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 	}
 
 	bridge.ConfirmDisputableAssertion(
-		bot.request.Defender.GetPrecondition(),
-		bot.request.Defender.GetAssertion(),
+		bot.request.Precondition,
+		bot.request.Assertion,
 	)
-	assertion := bot.request.Defender.GetAssertion()
+	assertion := bot.request.Assertion
 	bridge.FinalizedAssertion(assertion, len(assertion.Logs))
 	return finalizingAssertion{
 		core.NewCore(
-			bot.request.State,
+			bot.request.AfterState,
 		),
 		bot.Config,
 		bot.request.ResultChan,
@@ -471,7 +471,16 @@ func (bot waitingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge 
 	switch ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
 		bot.request.NotifyInvalid()
-		ct, err := defender.New(bot.Config, bot.request.Defender, time, bridge)
+		ct, err := defender.New(
+			bot.Config,
+			machine.NewAssertionDefender(
+				bot.request.Assertion,
+				bot.request.Precondition,
+				bot.GetMachine().Clone(),
+			),
+			time,
+			bridge,
+		)
 		return NewWaiting(bot.Config, bot.Core), ct, err
 
 	default:

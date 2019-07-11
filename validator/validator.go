@@ -347,18 +347,19 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					}
 				case disputableDefenderRequest:
 					c := validator.bot.GetCore()
+					mClone := c.GetMachine().Clone()
 					maxSteps := validator.bot.GetConfig().VMConfig.MaxExecutionStepCount
 					startTime := validator.latestHeader.Number.Uint64()
 					go func() {
-						m, defender := c.CreateDisputableDefender(
-							startTime,
-							request.Length,
-							int32(maxSteps),
-						)
+						endTime := startTime + request.Length
+						tb := [2]uint64{startTime, endTime}
+						pre := machine.CurrentPrecondition(mClone, tb)
+						assertion, _ := mClone.ExecuteAssertion(int32(maxSteps), tb)
 						validator.requests <- state.DisputableAssertionRequest{
-							State:           m,
-							Defender:        defender,
-							ResultChan:      request.ResultChan,
+							AfterState:   mClone,
+							Precondition: pre,
+							Assertion:    assertion,
+							ResultChan:   request.ResultChan,
 						}
 					}()
 				case state.DisputableAssertionRequest:
