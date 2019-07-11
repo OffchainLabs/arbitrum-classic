@@ -266,6 +266,49 @@ void MachineState::deliverMessages(){
     pendingInbox = Tuple();
 }
 
+void uint256_t_to_buf(uint256_t val, std::vector<unsigned char>& buf){
+    std::vector<unsigned char> tmpbuf;
+    tmpbuf.resize(32);
+    to_big_endian(val, tmpbuf.begin());
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+}
+
+void MachineState::marshalForProof(std::vector<unsigned char>& buf){
+    std::vector<bool> stackPops = InstructionStackPops.at(code[pc].op.opcode);
+    if (code[pc].op.immediate){
+        stackPops.erase(stackPops.begin());
+    }
+    std::vector<bool> auxStackPops = InstructionAuxStackPops.at(code[pc].op.opcode);
+    std::vector<value> stackVals;
+    uint256_t baseStackHash = stack.SolidityProofValue(stackPops, stackVals);
+    std::vector<value> auxStackVals;
+    uint256_t baseAuxStackHash = auxstack.SolidityProofValue(auxStackPops, auxStackVals);
+    uint256_t registerHash = ::hash(registerVal);
+    uint256_t staticHash = ::hash(staticVal);
+    uint256_t errHandlerHash = ::hash(errpc);
+    std::cout<<"Proof of "<<code[pc]<<" has "<<stackVals.size()<<" stack vals and "<<auxStackVals.size()<<" aux stack vals"<<std::endl;
+    std::cout<<"pc next hash "<<to_hex_str(code[pc].nextHash)<<std::endl;
+    std::cout<<"baseStackHash "<<to_hex_str(baseStackHash)<<std::endl;
+    std::cout<<"baseAuxStackHash "<<to_hex_str(baseAuxStackHash)<<std::endl;
+    std::cout<<"registerHash "<<to_hex_str(registerHash)<<std::endl;
+    std::cout<<"staticHash "<<to_hex_str(staticHash)<<std::endl;
+    std::cout<<"errHandlerHash "<<to_hex_str(errHandlerHash)<<std::endl;
+    uint256_t_to_buf(code[pc].nextHash, buf);
+    uint256_t_to_buf(baseStackHash, buf);
+    uint256_t_to_buf(baseAuxStackHash, buf);
+    uint256_t_to_buf(registerHash, buf);
+    uint256_t_to_buf(staticHash, buf);
+    uint256_t_to_buf(errHandlerHash, buf);
+    code[pc].op.marshal(buf);
+    for (auto const& stackval: stackVals){
+        marshal_value(stackval, buf);
+    }
+    for (auto const& auxstackval: auxStackVals){
+        marshal_value(auxstackval, buf);
+    }
+    std::cout<<"marshal size "<<buf.size()<<std::endl;
+}
+
 void MachineState::setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd){
     context.precondition.timeBounds[0] = timeBoundStart;
     context.precondition.timeBounds[1] = timeBoundEnd;

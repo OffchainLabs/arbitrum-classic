@@ -104,6 +104,12 @@ void inbox_add_message(void *m, char *inbox){
     mach->addInboxMessage(inbox);
 }
 
+void marshal_for_proof(void *m, char *ret){
+    Machine *mach = static_cast<Machine*>(m);
+    std::vector<unsigned char> buffer;
+    mach->marshalForProof(buffer);
+}
+
 void machineSettime_bounds(void* m, uint64_t timeboundStart, uint64_t timeboundEnd){
     Machine *mach = static_cast<Machine*>(m);
     mach->setTimebounds(timeboundStart, timeboundEnd);

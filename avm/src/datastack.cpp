@@ -44,6 +44,23 @@ uint256_t datastack::hash() const {
     return hashes.back();
 }
 
+uint256_t datastack::SolidityProofValue(std::vector<bool>& stackInfo, std::vector<value>& vals){
+    datastack c = *this;
+    for (auto const& si: stackInfo){
+        value val = c.pop();
+        if (si){
+            if (mpark::holds_alternative<Tuple>(val)){
+                vals.push_back(mpark::get<Tuple>(val).clone_shallow());
+            } else {
+                vals.push_back(val);
+            }
+        } else {
+            vals.push_back(::hash(val));
+        }
+    }
+    return c.hash();
+}
+
 std::ostream& operator<<(std::ostream& os, const datastack& val) {
     os << "[";
     for (uint64_t i = 0; i < val.values.size(); i++) {

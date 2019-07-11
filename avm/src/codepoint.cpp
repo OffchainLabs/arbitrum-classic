@@ -48,7 +48,7 @@ void CodePoint::marshal(std::vector<unsigned char>& buf) const {
     std::copy(static_cast<const char*>(static_cast<const void*>(&bepc)),
               static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
               std::back_inserter(buf));
-    op.marshal(buf);
+    buf.push_back(static_cast<unsigned char>(op.opcode));
     std::vector<unsigned char> val;
     val.resize(32);
     to_big_endian(nextHash, val.begin());

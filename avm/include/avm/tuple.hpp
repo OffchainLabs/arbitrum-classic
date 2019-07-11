@@ -176,6 +176,7 @@ class Tuple {
     }
 
     void marshal(std::vector<unsigned char>& buf) const;
+    value clone_shallow();
 };
 
 inline uint256_t hash(const Tuple& tup) {

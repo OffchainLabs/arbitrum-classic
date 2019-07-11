@@ -73,6 +73,7 @@ struct MachineState {
     void addInboxMessage(value msg);
     void addInboxMessage(Message &msg);
     void deliverMessages();
+    void marshalForProof(std::vector<unsigned char>& buf);
     void setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd);
     void runOp(OpCode opcode);
     uint256_t hash() const;
@@ -93,6 +94,7 @@ class Machine {
     uint256_t hash() const { return m.hash(); }
     void addInboxMessage(char *msg);
     void deliverMessages();
+    void marshalForProof(std::vector<unsigned char>& buf) {m.marshalForProof(buf);}
     void setTimebounds(uint64_t timeboundStart, uint64_t timeboundEnd) {m.setTimebounds(timeboundStart, timeboundEnd);};
 };
 

@@ -23,7 +23,6 @@ class datastack {
    public:
     std::vector<value> values;
     mutable std::vector<uint256_t> hashes;
-    unsigned int size;
 
     datastack() {
         values.reserve(1000);
@@ -68,6 +67,8 @@ class datastack {
             hashes.pop_back();
         }
     }
+    
+    uint256_t SolidityProofValue(std::vector<bool>& stackInfo, std::vector<value>& vals);
 
     value& peek() {
         if (values.size() == 0) {

@@ -16,6 +16,15 @@ void Tuple::marshal(std::vector<unsigned char>& buf) const {
     }
 }
 
+value Tuple::clone_shallow(){
+    Tuple tup(tuplePool, tuple_size());
+    for (int i = 0; i < tuple_size(); i++) {
+        auto valHash = hash(get_element(i));
+        tup.set_element(i, valHash);
+    }
+    return tup;
+}
+
 uint256_t Tuple::calculateHash() const {
     std::array<unsigned char, 1 + 8 * 32> tupData;
     auto oit = tupData.begin();

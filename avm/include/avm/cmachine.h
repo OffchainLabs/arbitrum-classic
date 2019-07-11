@@ -24,7 +24,7 @@ extern "C" {
     
     void machine_add_to_inbox(void *m, char *inbox);
     void machine_set_time_bounds(void* m, uint64_t timeboundStart, uint64_t timeboundEnd);
-
+    void marshal_for_proof(void *m, char *inbox);
 #ifdef __cplusplus
 }
 #endif

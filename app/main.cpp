@@ -319,7 +319,10 @@ int main(int argc, char* argv[]) {
     //    Machine *mach = read_files(filename, inbox_file);
     void *tmpmach = machine_create(filename.c_str(), inboxfile.c_str());
     void *mach2 = machine_clone(tmpmach);
-    uint64_t steps = machine_run(tmpmach, stepCount);
+//    uint64_t steps = machine_run(tmpmach, stepCount);
+    uint64_t steps = machine_run(tmpmach, 25);
+    char* proofbuf;
+    marshal_for_proof(tmpmach, proofbuf);
     char *tmpbuf=(char *)malloc(32);
     machine_hash(tmpmach, &tmpbuf[0]);
     machine_destroy(tmpmach);
@@ -332,6 +335,7 @@ int main(int argc, char* argv[]) {
         if(tmpbuf[i] != tmpbuf2[i]){
             success=false;
             std::cout << "Machine hash error"<<std::endl;
+            break;
         }
     }
     if (success){

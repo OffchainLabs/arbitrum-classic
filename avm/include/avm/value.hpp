@@ -44,5 +44,9 @@ CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(char*& srccode, TuplePool& pool);
 void marshal_value(const value val, std::vector<unsigned char>& buf);
+void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
+void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
+void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
+
 
 #endif /* value_h */
