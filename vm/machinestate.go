@@ -287,10 +287,8 @@ func (m *Machine) CheckPrecondition(pre *protocol.Precondition) bool {
 	return true
 }
 
-
 // run up to maxSteps steps, stop earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (machine.AssertionDefender, bool) {
-	initState := m.Clone()
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Precondition, *protocol.Assertion, bool) {
 	pre := &protocol.Precondition{
 		BeforeHash:    m.Hash(),
 		TimeBounds:    timeBounds,
@@ -310,12 +308,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 			i++
 		}
 	}
-	return machine.NewAssertionDefender(
-		assCtx.Finalize(m),
-		pre,
-		m.inbox.Receive(),
-		initState,
-	), !continueRun
+	return pre, assCtx.Finalize(m), !continueRun
 }
 
 func (m *Machine) SendOnchainMessage(msg protocol.Message) {
