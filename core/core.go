@@ -21,7 +21,6 @@ import (
 
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
@@ -45,50 +44,35 @@ func (c *Config) GetConfig() *Config {
 }
 
 type Core struct {
-	inbox   *protocol.Inbox
-	balance *protocol.BalanceTracker
 	machine machine.Machine
 }
 
-func NewCore(inbox *protocol.Inbox, balance *protocol.BalanceTracker, machine machine.Machine) *Core {
+func NewCore(machine machine.Machine) *Core {
 	return &Core{
-		inbox:   inbox,
-		balance: balance,
 		machine: machine,
 	}
 }
 
 func (c *Core) Clone() *Core {
 	return &Core{
-		inbox:   c.inbox.Clone(),
-		balance: c.balance.Clone(),
 		machine: c.machine.Clone(),
 	}
 }
 
 func (c *Core) OffchainAssert(
-	mq *protocol.MessageQueue,
+	messages []protocol.Message,
 	timeBounds protocol.TimeBounds,
 	maxSteps int32,
 ) (*Core, *protocol.Assertion) {
-	inbox := c.inbox.Clone()
-	inbox.InsertMessageQueue(mq)
 	newState := c.machine.Clone()
+	newState.SendOffchainMessages(messages)
 	assDef, _ := newState.ExecuteAssertion(
 		maxSteps,
-		c.balance,
 		timeBounds,
-		inbox.Receive(),
 	)
-	newAssertion := assDef.GetAssertion()
-	newBalance := c.balance.Clone()
-	// This spend is guaranteed to be correct since the VM made sure to only produce on outgoing if it could spend
-	_ = newBalance.SpendAll(protocol.NewBalanceTrackerFromMessages(newAssertion.OutMsgs))
 	return &Core{
-		inbox:   inbox,
-		balance: newBalance,
 		machine: newState,
-	}, newAssertion
+	}, assDef.GetAssertion()
 }
 
 func (c *Core) GetCore() *Core {
@@ -96,65 +80,38 @@ func (c *Core) GetCore() *Core {
 }
 
 func (c *Core) SendMessageToVM(msg protocol.Message) {
-	c.inbox.SendMessage(msg)
+	c.machine.SendOnchainMessage(msg)
 }
 
 func (c *Core) DeliverMessagesToVM() {
-	c.balance.AddAll(c.inbox.PendingQueue.Balance)
-	c.inbox.DeliverMessages()
+	c.machine.DeliverOnchainMessage()
 }
 
 func (c *Core) GetMachine() machine.Machine {
 	return c.machine
 }
 
-func (c *Core) GetInbox() *protocol.Inbox {
-	return c.inbox
-}
+//func (c *Core) GetInbox() *protocol.Inbox {
+//	return c.inbox
+//}
+//
+//func (c *Core) GetBalance() *protocol.BalanceTracker {
+//	return c.balance
+//}
 
-func (c *Core) GetBalance() *protocol.BalanceTracker {
-	return c.balance
-}
-
-func (c *Core) GeneratePrecondition(beginTime, endTime uint64, includePendingMessages bool) *protocol.Precondition {
-	var inboxValue value.Value
-	if includePendingMessages {
-		inboxValue = c.inbox.ReceivePending()
-	} else {
-		inboxValue = c.inbox.Receive()
-	}
-	return &protocol.Precondition{
-		BeforeHash:    c.machine.Hash(),
-		TimeBounds:    [2]uint64{beginTime, endTime},
-		BeforeBalance: c.balance,
-		BeforeInbox:   value.NewHashOnlyValueFromValue(inboxValue),
-	}
-}
-
-func (c *Core) CreateDisputableDefender(beginTime, length uint64, includePendingMessages bool, maxSteps int32) (machine.Machine, machine.AssertionDefender) {
+func (c *Core) CreateDisputableDefender(beginTime, length uint64, maxSteps int32) (machine.Machine, machine.AssertionDefender) {
 	endTime := beginTime + length
-	var inboxValue value.Value
-	if includePendingMessages {
-		inboxValue = c.inbox.ReceivePending()
-	} else {
-		inboxValue = c.inbox.Receive()
-	}
-	newState := c.machine.Clone()
-	assDef, _ := newState.ExecuteAssertion(
+	assDef, _ := c.machine.ExecuteAssertion(
 		maxSteps,
-		c.balance,
 		[2]uint64{beginTime, endTime},
-		inboxValue,
 	)
+	newState := c.machine
+	c.machine = assDef.GetMachineState()
 	return newState, assDef
 }
 
 func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
-	if pre.BeforeInbox.Hash() != c.inbox.ReceivePending().Hash() && pre.BeforeInbox.Hash() != c.inbox.Receive().Hash() {
-		return false
-	}
-
-	if pre.BeforeHash != c.machine.Hash() {
+	if !c.machine.CheckPrecondition(pre) {
 		return false
 	}
 
@@ -162,8 +119,5 @@ func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
 		return false
 	}
 
-	if !c.balance.CanSpendAll(pre.BeforeBalance) {
-		return false
-	}
 	return true
 }

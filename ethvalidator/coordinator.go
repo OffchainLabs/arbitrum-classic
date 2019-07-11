@@ -526,7 +526,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	start := time.Now()
-	resultChan := m.Val.Bot.RequestDisputableAssertion(10000, false)
+	resultChan := m.Val.Bot.RequestDisputableAssertion(10000)
 	res := <-resultChan
 
 	if res {

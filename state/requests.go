@@ -28,7 +28,6 @@ type UnanimousUpdateRequest struct {
 
 	NewMessages []protocol.Message
 
-	Inbox     *protocol.Inbox
 	Machine   machine.Machine
 	Assertion *protocol.Assertion
 
@@ -39,16 +38,11 @@ type UnanimousUpdateRequest struct {
 type DisputableAssertionRequest struct {
 	State           machine.Machine
 	Defender        machine.AssertionDefender
-	IncludedPending bool
 	ResultChan      chan<- bool
 }
 
 func (r DisputableAssertionRequest) GetPrecondition() *protocol.Precondition {
 	return r.Defender.GetPrecondition()
-}
-
-func (r DisputableAssertionRequest) IncludedPendingInbox() bool {
-	return r.IncludedPending
 }
 
 func (r DisputableAssertionRequest) NotifyInvalid() {

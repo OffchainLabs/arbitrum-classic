@@ -122,7 +122,7 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 		return bot, nil
 	}
 	bridge.ConfirmUnanimousAssertion(
-		bot.Core.GetInbox().Receive().Hash(),
+		bot.Core.GetMachine().InboxHash(),
 		bot.assertion,
 	)
 	return finalizingOffchainClosing{

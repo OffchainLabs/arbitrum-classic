@@ -21,7 +21,6 @@ import (
 
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
@@ -33,7 +32,6 @@ func New(
 	config *core.Config,
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
-	inbox value.Value,
 	machine machine.Machine,
 	deadline uint64,
 ) challenge.State {
@@ -41,7 +39,6 @@ func New(
 		config,
 		precondition,
 		assertion,
-		inbox,
 		machine,
 		deadline,
 	}
@@ -51,7 +48,6 @@ type waitingContinuing struct {
 	*core.Config
 	challengedPrecondition *protocol.Precondition
 	challengedAssertion    *protocol.AssertionStub
-	challengedInbox        value.Value
 	startState             machine.Machine
 	deadline               uint64
 }
@@ -72,16 +68,14 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		preconditions := protocol.GeneratePreconditions(bot.challengedPrecondition, ev.Assertions)
-		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions, bot.challengedInbox)
+		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions)
 		if err != nil && bot.ChallengeEverything {
 			assertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
-			m = bot.startState.Clone()
+			m = bot.startState
 			for i := uint16(0); i < assertionNum; i++ {
 				m.ExecuteAssertion(
 					int32(ev.Assertions[i].NumSteps),
-					preconditions[i].BeforeBalance,
 					preconditions[i].TimeBounds,
-					bot.challengedInbox,
 				)
 			}
 			err = nil
@@ -102,7 +96,6 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 			deadline:        deadline,
 			preconditions:   preconditions,
 			assertions:      ev.Assertions,
-			challengedInbox: bot.challengedInbox,
 		}, nil
 	case ethbridge.OneStepProofEvent:
 		return nil, nil
@@ -117,7 +110,6 @@ type continuing struct {
 	deadline        uint64
 	preconditions   []*protocol.Precondition
 	assertions      []*protocol.AssertionStub
-	challengedInbox value.Value
 }
 
 func (bot continuing) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -142,7 +134,6 @@ func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge
 			bot.Config,
 			bot.preconditions[ev.ChallengedAssertion],
 			bot.assertions[ev.ChallengedAssertion],
-			bot.challengedInbox,
 			bot.challengedState,
 			deadline,
 		}, nil

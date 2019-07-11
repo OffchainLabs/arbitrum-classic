@@ -39,7 +39,6 @@ type vmStateRequest struct {
 
 type disputableDefenderRequest struct {
 	Length                 uint64
-	IncludePendingMessages bool
 	ResultChan             chan<- bool
 }
 
