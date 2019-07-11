@@ -307,10 +307,6 @@ func (m *Machine) InboxHash() value.HashOnlyValue {
 	return value.NewHashOnlyValueFromValue(m.inbox.Receive())
 }
 
-func (m *Machine) CurrentBalance() *protocol.BalanceTracker{
-	return m.balance.Clone()
-}
-
 func (m *Machine) HasPendingMessages() bool {
 	return !m.inbox.PendingQueue.IsEmpty()
 }
