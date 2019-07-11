@@ -54,19 +54,23 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 	}
 	sliceSize := nsteps / slices
 	defenders := make([]AssertionDefender, 0, slices)
-	machine := ad.initState.Clone()
+	m := ad.initState.Clone()
 
-	timeBounds := ad.precondition.TimeBounds
+	pre := ad.precondition
 	for i := uint32(0); i < slices; i++ {
-		runState := machine.Clone()
+		initState := m.Clone()
 
 		stepCount := sliceSize
 		if i < nsteps%slices {
 			stepCount++
 		}
-		defender, _ := ExecuteMachineAssertion(runState, int32(stepCount), timeBounds)
-		defenders = append(defenders, defender)
-		machine = runState
+		assertion, _ := m.ExecuteAssertion(int32(stepCount), pre.TimeBounds)
+		defenders = append(defenders, NewAssertionDefender(
+			assertion,
+			pre,
+			initState,
+		))
+		pre = assertion.Stub().GeneratePostcondition(pre)
 	}
 	return defenders
 }
@@ -77,14 +81,13 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 
 func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, preconditions []*protocol.Precondition) (uint16, Machine, error) {
 	for i := range assertions {
-		ad, _ := ExecuteMachineAssertion(
-			m,
+		initState := m.Clone()
+		generatedAssertion, _ := m.ExecuteAssertion(
 			int32(assertions[i].NumSteps),
 			preconditions[i].TimeBounds,
 		)
-		generatedAssertion := ad.GetAssertion()
 		if !generatedAssertion.Stub().Equals(assertions[i]) {
-			return uint16(i), ad.initState, nil
+			return uint16(i), initState, nil
 		}
 	}
 	return 0, nil, errors.New("all segments in false Assertion are valid")

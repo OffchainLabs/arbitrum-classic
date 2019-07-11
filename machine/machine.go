@@ -45,7 +45,6 @@ type Machine interface {
 	Clone() Machine
 
 	InboxHash() value.HashOnlyValue
-	CurrentBalance() *protocol.BalanceTracker
 	HasPendingMessages() bool
 	SendOnchainMessage(protocol.Message)
 	DeliverOnchainMessage()
@@ -53,20 +52,4 @@ type Machine interface {
 
 	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Assertion, bool)
 	MarshalForProof() ([]byte, error)
-}
-
-func ExecuteMachineAssertion(m Machine, maxSteps int32, timeBounds protocol.TimeBounds) (AssertionDefender, bool) {
-	mClone := m.Clone()
-	pre := &protocol.Precondition{
-		BeforeHash:    m.Hash(),
-		TimeBounds:    timeBounds,
-		BeforeBalance: m.CurrentBalance(),
-		BeforeInbox:   m.InboxHash(),
-	}
-	assertion, finished := m.ExecuteAssertion(maxSteps, timeBounds)
-	return NewAssertionDefender(
-		assertion,
-		pre,
-		mClone,
-	), finished
 }
