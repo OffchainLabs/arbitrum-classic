@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -271,30 +272,8 @@ func (m *Machine) run() (bool, bool, string) {
 	return true, true, "Success"
 }
 
-func (m *Machine) CheckPrecondition(pre *protocol.Precondition) bool {
-	if pre.BeforeHash != m.Hash() {
-		return false
-	}
-
-	if !pre.BeforeInbox.Equal(m.inbox.Receive()) {
-		return false
-	}
-
-	if m.balance.CanSpendAll(pre.BeforeBalance) {
-		return false
-	}
-
-	return true
-}
-
 // run up to maxSteps steps, stop earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Precondition, *protocol.Assertion, bool) {
-	pre := &protocol.Precondition{
-		BeforeHash:    m.Hash(),
-		TimeBounds:    timeBounds,
-		BeforeBalance: m.balance.Clone(),
-		BeforeInbox:   value.NewHashOnlyValueFromValue(m.inbox.Receive()),
-	}
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Assertion, bool) {
 	assCtx := NewMachineAssertionContext(
 		m,
 		timeBounds,
@@ -308,7 +287,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 			i++
 		}
 	}
-	return pre, assCtx.Finalize(m), !continueRun
+	return assCtx.Finalize(m), !continueRun
 }
 
 func (m *Machine) SendOnchainMessage(msg protocol.Message) {
@@ -324,8 +303,12 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	m.inbox.InsertMessageGroup(msgs)
 }
 
-func (m *Machine) InboxHash() [32]byte {
-	return m.inbox.Receive().Hash()
+func (m *Machine) InboxHash() value.HashOnlyValue {
+	return value.NewHashOnlyValueFromValue(m.inbox.Receive())
+}
+
+func (m *Machine) CurrentBalance() *protocol.BalanceTracker{
+	return m.balance.Clone()
 }
 
 func (m *Machine) HasPendingMessages() bool {
@@ -387,7 +370,15 @@ func (m *Machine) PrintState() {
 	fmt.Println("errHandlerHash", hexutil.Encode(errHandlerHash[:]))
 }
 
-func (m *Machine) MarshalForProof(wr io.Writer) error {
+func (m *Machine) MarshalForProof() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	if err := m.marshalForProof(buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (m *Machine) marshalForProof(wr io.Writer) error {
 	codePoint := m.pc.GetPC()
 
 	stackPops := code.InstructionStackPops[codePoint.Op.GetOp()]
