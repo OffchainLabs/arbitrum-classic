@@ -47,6 +47,7 @@ struct MachineState {
     Tuple inbox;
     BalanceTracker balance;
     
+    MachineState();
     
     void deserialize(char *data);
 
@@ -70,7 +71,6 @@ class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
    public:
-    MachineState();
     
     void deserialize(char *data) {
         m.deserialize(data);
