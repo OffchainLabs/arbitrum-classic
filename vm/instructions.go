@@ -17,17 +17,19 @@
 package vm
 
 import (
-	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/value"
-
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arb-avm/code"
+
+	//"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Instruction struct {
-	code code.Opcode
+	code value.Opcode
 	impl func(*Machine) (StackMods, error)
 }
 
@@ -164,7 +166,7 @@ func (insn Instruction) GetName() string {
 	return code.InstructionNames[insn.code]
 }
 
-func (insn Instruction) GetCode() code.Opcode {
+func (insn Instruction) GetCode() value.Opcode {
 	return insn.code
 }
 
@@ -663,7 +665,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 	if err != nil {
 		return mods, err
 	}
-	inboxVal := state.Context().ReadInbox()
+	inboxVal := state.ReadInbox()
 	mods = PushStackBox(state, mods, inboxVal)
 	if value.Eq(x, inboxVal) {
 		return mods, VMBlockedError{}
@@ -788,7 +790,7 @@ func insnNop(state *Machine) (StackMods, error) {
 
 func insnDup0(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 2)
-	//if s, ok := state.Stack().(*FlatStack); ok {
+	// if s, ok := state.Stack().(*FlatStack); ok {
 	//	mods.popsRemaining = 0
 	//	mods.pushesRemaining = 0
 	//	mods.callStackPopsPerformed = 0
@@ -981,12 +983,12 @@ func sendImpl(state *Machine) (value.TupleValue, value.Value, value.IntValue, va
 	mods := NewStackMods(1, 0)
 	sendData, mods, err := PopStackTuple(state, mods)
 	if err != nil {
-		//mods, err := handlePopError(state, mods, err)
+		// mods, err := handlePopError(state, mods, err)
 		return value.NewEmptyTuple(), nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
 	}
 
 	if sendData.Len() != 4 {
-		//mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
+		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
 		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
 	}
 
@@ -1015,7 +1017,7 @@ func sendImpl(state *Machine) (value.TupleValue, value.Value, value.IntValue, va
 	destination, ok4 := val4.(value.IntValue)
 
 	if !ok2 || !ok3 || !ok4 {
-		//mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
+		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
 		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
 	}
 
@@ -1028,7 +1030,7 @@ func insnSend(state *Machine) (StackMods, error) {
 		return mods, err
 	}
 
-	err = state.Context().Send(data, tokenType, amount, destination)
+	err = state.Send(data, tokenType, amount, destination)
 	if err != nil {
 		state.stack.PushTuple(sendData)
 		return mods, VMBlockedError{}
@@ -1044,10 +1046,10 @@ func insnNBSend(state *Machine) (StackMods, error) {
 		return mods, err
 	}
 
-	if !state.Context().CanSpend(tokenType, amount) {
+	if !state.CanSpend(tokenType, amount) {
 		mods = PushStackInt(state, mods, value.NewInt64Value(0))
 	} else {
-		err := state.Context().Send(data, tokenType, amount, destination)
+		err := state.Send(data, tokenType, amount, destination)
 		if err != nil {
 			state.Warn(err.Error())
 			mods = PushStackInt(state, mods, value.NewInt64Value(0))
@@ -1061,7 +1063,7 @@ func insnNBSend(state *Machine) (StackMods, error) {
 
 func insnGettime(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
-	mods = PushStackBox(state, mods, state.Context().GetTimeBounds())
+	mods = PushStackBox(state, mods, state.GetTimeBounds())
 	state.IncrPC()
 	return mods, nil
 }

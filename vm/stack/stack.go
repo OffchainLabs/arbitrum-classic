@@ -19,7 +19,7 @@ package stack
 import (
 	"fmt"
 
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type EmptyError struct{}

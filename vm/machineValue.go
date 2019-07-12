@@ -16,9 +16,7 @@
 
 package vm
 
-import (
-	"github.com/offchainlabs/arb-avm/value"
-)
+import "github.com/offchainlabs/arb-util/value"
 
 type MachineValue struct {
 	value value.Value

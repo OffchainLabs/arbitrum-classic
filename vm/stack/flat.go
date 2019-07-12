@@ -19,8 +19,9 @@ package stack
 import (
 	"bytes"
 	"fmt"
-	"github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-avm/value"
+
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Flat struct {

@@ -17,13 +17,13 @@
 package loader
 
 import (
-	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-avm/vm"
-
 	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type RawExtension struct {

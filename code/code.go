@@ -16,32 +16,11 @@
 
 package code
 
-import (
-	"encoding/binary"
-	"fmt"
-	"io"
-)
-
-type Opcode uint8
-
-func NewOpcodeFromReader(rd io.Reader) (Opcode, error) {
-	var ret Opcode
-	if err := binary.Read(rd, binary.LittleEndian, &ret); err != nil {
-		return 0, err
-	}
-	if _, ok := InstructionNames[ret]; ret != 0 && !ok {
-		return ret, fmt.Errorf("Invalid opcode %v from reader", ret)
-	}
-	return ret, nil
-}
-
-func (o Opcode) Marshal(wr io.Writer) error {
-	return binary.Write(wr, binary.LittleEndian, &o)
-}
+import "github.com/offchainlabs/arb-util/value"
 
 // 0x0 range - arithmetic ops.
 const (
-	ADD Opcode = iota + 0x01
+	ADD value.Opcode = iota + 0x01
 	MUL
 	SUB
 	DIV
@@ -55,7 +34,7 @@ const (
 
 // 0x10 range - comparison ops.
 const (
-	LT Opcode = iota + 0x10
+	LT value.Opcode = iota + 0x10
 	GT
 	SLT
 	SGT
@@ -77,7 +56,7 @@ const (
 
 // 0x50 range - 'storage' and execution.
 const (
-	POP Opcode = 0x30 + iota
+	POP value.Opcode = 0x30 + iota
 	SPUSH
 	RPUSH
 	RSET
@@ -95,7 +74,7 @@ const (
 
 // 0x40 range.
 const (
-	DUP0 Opcode = 0x40 + iota
+	DUP0 value.Opcode = 0x40 + iota
 	DUP1
 	DUP2
 	SWAP1
@@ -104,20 +83,20 @@ const (
 
 // 0x50 range.
 const (
-	TGET Opcode = 0x50 + iota
+	TGET value.Opcode = 0x50 + iota
 	TSET
 	TLEN
 )
 
 // 0xa0 range.
 const (
-	BREAKPOINT Opcode = 0x60 + iota
+	BREAKPOINT value.Opcode = 0x60 + iota
 	LOG
 )
 
 // 0xf0 range.
 const (
-	SEND Opcode = 0x70 + iota
+	SEND value.Opcode = 0x70 + iota
 	NBSEND
 	GETTIME
 	INBOX
@@ -128,7 +107,7 @@ const (
 
 const MaxOpcode = 0x7f
 
-var InstructionNames = map[Opcode]string{
+var InstructionNames = map[value.Opcode]string{
 	ADD:    "add",
 	MUL:    "mul",
 	SUB:    "sub",
@@ -193,7 +172,7 @@ var InstructionNames = map[Opcode]string{
 	DEBUG:   "debug",
 }
 
-var InstructionStackPops = map[Opcode][]byte{
+var InstructionStackPops = map[value.Opcode][]byte{
 	ADD:    {1, 1},
 	MUL:    {1, 1},
 	SUB:    {1, 1},
@@ -259,7 +238,7 @@ var InstructionStackPops = map[Opcode][]byte{
 	DEBUG:   {},
 }
 
-var InstructionAuxStackPops = map[Opcode][]byte{
+var InstructionAuxStackPops = map[value.Opcode][]byte{
 	ADD:    {},
 	MUL:    {},
 	SUB:    {},
