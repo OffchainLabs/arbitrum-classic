@@ -34,13 +34,12 @@ type Machine struct {
 
 func New(codeFile string) *Machine {
 	fmt.Println("CCreartVM codeFile=", codeFile)
-	var ret *Machine
 	//****************
 	// C stuff
 	cFilename := C.CString(codeFile)
 
 	cMachine := C.machineCreate(cFilename)
-	ret.c = cMachine
+	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
 	C.free(unsafe.Pointer(cFilename))
 	return ret
