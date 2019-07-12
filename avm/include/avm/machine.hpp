@@ -15,38 +15,19 @@
 #include <memory>
 #include <vector>
 
-class datastack;
-
 typedef uint256_t TimeBounds[2];
-
-struct Precondition {
-    uint256_t BeforeHash;
-    TimeBounds timeBounds;
-    BalanceTracker beforeBalance;
-    value beforeInbox;
-};
 
 struct AssertionContext {
     uint64_t stepCount;
-    Precondition precondition;
-    value beforeInbox;
-    BalanceTracker afterBalance;
+    TimeBounds timeBounds;
     std::vector<Message> outMessage;
     std::vector<value> logs;
 };
 
 struct Assertion {
     uint64_t stepCount;
-};
-
-struct MsgQueue {
-    value msg;
-    BalanceTracker balance;
-};
-
-struct Inbox {
-    Tuple *accepted;
-    MsgQueue pending;
+    std::vector<Message> outMessages;
+    std::vector<value> logs;
 };
 
 struct MachineState {
@@ -60,13 +41,13 @@ struct MachineState {
     uint64_t pc;
     CodePoint errpc;
     Tuple pendingInbox;
-    Tuple inbox;
     AssertionContext context;
+    Tuple inbox;
+    BalanceTracker balance;
 		
     MachineState();
     MachineState(std::vector<CodePoint> code);
     MachineState(char*& srccode, char*& inboxdata, int inbox_sz);
-    MachineState(MachineState const &m);
 
     void readInbox(char *newInbox);
     std::vector<unsigned char> marshalForProof();

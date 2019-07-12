@@ -150,20 +150,6 @@ MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
 MachineState::MachineState(std::vector<CodePoint> code)
     : pool(std::make_unique<TuplePool>()), code(std::move(code)) {}
 
-MachineState::MachineState(MachineState const &m):
-    pool(m.pool),
-    code(m.code),
-    staticVal(m.staticVal),
-    registerVal(m.registerVal),
-    stack(m.stack),
-    auxstack(m.auxstack),
-    state(m.state),
-    pc(m.pc),
-    errpc(m.errpc),
-    pendingInbox(m.pendingInbox),
-    inbox(m.inbox),
-    context(m.context){}
-
 MachineState::MachineState(char*& srccode, char*& inboxdata, int inbox_sz) : MachineState() {
     char* bufptr = srccode;
     char* inboxbuf = inboxdata;
@@ -233,7 +219,7 @@ void MachineState::sendOnchainMessage(const Message &msg) {
         msg.toValue(*pool),
         pool.get()
     };
-    context.afterBalance.add(msg.token, msg.currency);
+    balance.add(msg.token, msg.currency);
 }
 
 void MachineState::sendOffchainMessages(const std::vector<Message> &messages) {
@@ -305,8 +291,8 @@ void MachineState::deliverMessageStack(value messages) {
 }
 
 void MachineState::setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd){
-    context.precondition.timeBounds[0] = timeBoundStart;
-    context.precondition.timeBounds[1] = timeBoundEnd;
+    context.timeBounds[0] = timeBoundStart;
+    context.timeBounds[1] = timeBoundEnd;
 }
 
 void Machine::sendOnchainMessage(const Message &msg){
@@ -330,11 +316,12 @@ Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t tim
 //        std::cout << "Step #" << i << std::endl;
 //        std::cout<<i<<" ";
         auto ret = runOne();
-        if ((ret < 0) ||
-            (m.state == ERROR)||
-            (m.state == HALTED)||
-            (m.state == BLOCKED))
-        {
+        if (
+            ret < 0 ||
+            m.state == ERROR ||
+            m.state == HALTED ||
+            m.state == BLOCKED
+        ) {
             break;
         }
     }
@@ -350,7 +337,7 @@ Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t tim
     }
     std::cout<<to_hex_str(hash())<<std::endl;
     std::cout<<m<<std::endl;
-    return {i};
+    return {i, std::move(m.context.outMessage), std::move(m.context.logs)};
 }
 
 int Machine::runOne() {
@@ -869,7 +856,7 @@ namespace {
 
     static void log(MachineState &m) {
         m.stack.prepForMod(1);
-        value val = m.stack[0];
+        m.context.logs.push_back(std::move(m.stack[0]));
         m.stack.popClear();
         ++m.pc;
     }
@@ -900,7 +887,7 @@ namespace {
             m.state=ERROR;
             return;
         }
-        if (!m.context.afterBalance.Spend(outMsg.token, outMsg.currency)){
+        if (!m.balance.Spend(outMsg.token, outMsg.currency)){
             m.state = BLOCKED;
         } else {
             m.stack.popClear();
@@ -919,7 +906,7 @@ namespace {
             return;
         }
         
-        bool spent = m.context.afterBalance.Spend(outMsg.token, outMsg.currency);
+        bool spent = m.balance.Spend(outMsg.token, outMsg.currency);
         if (!spent){
             m.stack[0] = 0;
         } else {
@@ -931,8 +918,8 @@ namespace {
 
     static void getTime(MachineState &m) {
         Tuple tup(2, m.pool.get());
-        tup.set_element(0, m.context.precondition.timeBounds[0]);
-        tup.set_element(1, m.context.precondition.timeBounds[1]);
+        tup.set_element(0, m.context.timeBounds[0]);
+        tup.set_element(1, m.context.timeBounds[1]);
         m.stack.push(std::move(tup));
         ++m.pc;
     }

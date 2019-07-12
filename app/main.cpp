@@ -320,13 +320,13 @@ int main(int argc, char* argv[]) {
     void *tmpmach = machineCreate(filename.c_str(), inboxfile.c_str());
     void *mach2 = machineClone(tmpmach);
 //    uint64_t steps = machine_run(tmpmach, stepCount);
-    uint64_t steps = machineExecuteAssertion(tmpmach, stepCount, 0, 1000);
+    auto rawAssertion = machineExecuteAssertion(tmpmach, stepCount, 0, 1000);
     auto proof = machineMarshallForProof(tmpmach);
     char *tmpbuf=(char *)malloc(32);
     machineHash(tmpmach, &tmpbuf[0]);
     machineDestroy(tmpmach);
     std::cout << "Running clone"<<std::endl;
-    steps = machineExecuteAssertion(mach2, stepCount, 0, 1000);
+    rawAssertion = machineExecuteAssertion(mach2, stepCount, 0, 1000);
     char *tmpbuf2=(char *)malloc(32);
     machineHash(mach2, &tmpbuf2[0]);
     bool success=true;

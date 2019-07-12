@@ -16,9 +16,17 @@ extern "C" {
 #endif
     
     typedef struct {
-        unsigned char *data;
+        void *data;
         int length;
     } ByteSlice;
+    
+    typedef struct {
+        unsigned char *outMessageData;
+        int outMessageLength;
+        unsigned char *logData;
+        int logLength;
+        uint64_t numSteps;
+    } RawAssertion;
     
     typedef void CMachine;
     
@@ -26,18 +34,18 @@ extern "C" {
     void machineDestroy(CMachine *m);
     
     // Ret must have 32 bytes of storage allocated for returned hash
-    void machineHash(CMachine *m, char *ret);
+    void machineHash(CMachine *m, void *ret);
     CMachine* machineClone(CMachine *m);
     
     // Ret must have 32 bytes of storage allocated for returned hash
-    void machineInboxHash(CMachine *m, char *ret);
+    void machineInboxHash(CMachine *m, void *ret);
     
-    bool machineHasPendingMessages(CMachine *m);
-    void machineSendOnchainMessage(CMachine *m, char *data, int size);
-    void machineDeliverOnchainMessage(CMachine *m);
-    void machineSendOffchainMessages(CMachine *m, char *data, int size);
+    int machineHasPendingMessages(CMachine *m);
+    void machineSendOnchainMessage(CMachine *m, void *data);
+    void machineDeliverOnchainMessages(CMachine *m);
+    void machineSendOffchainMessages(CMachine *m, void *data, int size);
     
-    uint64_t machineExecuteAssertion(CMachine* m, uint64_t maxSteps, uint64_t timeboundStart, uint64_t timeboundEnd);
+    RawAssertion machineExecuteAssertion(CMachine* m, uint64_t maxSteps, uint64_t timeboundStart, uint64_t timeboundEnd);
     
     ByteSlice machineMarshallForProof(CMachine *m);
 

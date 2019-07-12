@@ -49,7 +49,7 @@ TEST_CASE("SEND") {
         currency = 4;
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::SEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 16);
         REQUIRE(m.state==EXTENSIVE);
     }
@@ -68,7 +68,7 @@ TEST_CASE("SEND") {
         currency = 25;
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::SEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 20);
         REQUIRE(m.state==BLOCKED);
     }
@@ -87,7 +87,7 @@ TEST_CASE("SEND") {
         
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::SEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
         REQUIRE(m.state==EXTENSIVE);
     }
@@ -104,7 +104,7 @@ TEST_CASE("SEND") {
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::SEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
         REQUIRE(m.state==BLOCKED);
     }
@@ -125,7 +125,7 @@ TEST_CASE("NBSEND") {
         currency = 4;
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::NBSEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 16);
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
@@ -147,7 +147,7 @@ TEST_CASE("NBSEND") {
         currency = 25;
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::NBSEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 20);
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
@@ -168,7 +168,7 @@ TEST_CASE("NBSEND") {
         
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::NBSEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
@@ -188,7 +188,7 @@ TEST_CASE("NBSEND") {
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::NBSEND);
-        uint256_t resNum = m.context.afterBalance.tokenValue(token);
+        uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
