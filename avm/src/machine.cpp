@@ -42,6 +42,8 @@ class int_out_of_bounds : public std::exception {
     }
 };
 
+MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
+
 uint256_t MachineState::hash() const {
     std::array<unsigned char, 32 * 6> data;
     auto oit = data.begin();
