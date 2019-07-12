@@ -18,6 +18,7 @@ package validator
 
 import (
 	"fmt"
+	"github.com/offchainlabs/arb-util/evm"
 	"math"
 	"math/big"
 
@@ -361,7 +362,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							BeforeBalance: balance,
 							BeforeInbox:   mClone.InboxHash(),
 						}
-						assertion, _ := mClone.ExecuteAssertion(int32(maxSteps), tb)
+						assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
 						validator.requests <- state.DisputableAssertionRequest{
 							AfterState:   mClone,
 							Precondition: pre,
@@ -406,20 +407,41 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						Currency:    msg.Currency,
 						Destination: msg.Destination,
 					}
+					ethMsgData, err := evm.NewEthMsgDataFromValue(val)
+					if err != nil {
+						request.ErrorChan <- err
+						break
+					}
+					ethMsg := evm.EthMsg{
+						ethMsgData,
+						msg.TokenType,
+						msg.Currency,
+						msg.Destination,
+					}
 					go func() {
 						updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
-						assertion, finished := updatedState.ExecuteAssertion(
+						assertion := updatedState.ExecuteAssertion(
 							maxCallSteps,
 							[2]uint64{startTime, startTime + 1},
 						)
 						results := assertion.Logs
-						if !finished {
-							request.ErrorChan <- errors.New("Call took too long to execute")
-						} else if len(results) == 0 {
+						if len(results) == 0 {
 							request.ErrorChan <- errors.New("Call produced no output")
-						} else {
-							request.ResultChan <- results[len(results)-1]
+							return
 						}
+						lastLogVal := results[len(results) - 1]
+						lastLog, err := evm.ProcessLog(lastLogVal)
+						if err != nil {
+							request.ErrorChan <- err
+							return
+						}
+						if !lastLog.GetEthMsg().Equals(ethMsg) {
+							// Last produced log is not the call we sent
+							request.ErrorChan <- errors.New("Call took too long to execute")
+							return
+						}
+
+						request.ResultChan <- results[len(results)-1]
 					}()
 				default:
 					fmt.Printf("Unahandled validator request %T: %v\n", request, request)

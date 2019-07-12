@@ -69,7 +69,7 @@ func (c *Core) OffchainAssert(
 ) (*Core, *protocol.Assertion) {
 	newState := c.machine.Clone()
 	newState.SendOffchainMessages(messages)
-	assertion, _ := newState.ExecuteAssertion(
+	assertion := newState.ExecuteAssertion(
 		maxSteps,
 		timeBounds,
 	)

@@ -337,7 +337,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 			return nil, nil, errors.New("waiting observer has incorrect valmessage")
 		}
 		updatedState := c.GetMachine().Clone()
-		assertion, _ := updatedState.ExecuteAssertion(
+		assertion := updatedState.ExecuteAssertion(
 			int32(ev.Assertion.NumSteps),
 			ev.Precondition.TimeBounds,
 		)
