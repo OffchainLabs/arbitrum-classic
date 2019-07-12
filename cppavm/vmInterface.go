@@ -32,19 +32,17 @@ type Machine struct {
 	c unsafe.Pointer
 }
 
-func New(codeFile string, inboxFile string) *Machine {
+func New(codeFile string) *Machine {
 	fmt.Println("CCreartVM codeFile=", codeFile)
 	var ret *Machine
 	//****************
 	// C stuff
 	cFilename := C.CString(codeFile)
-	cInboxFilename := C.CString(inboxFile)
 
-	cMachine := C.machineCreate(cFilename, cInboxFilename)
+	cMachine := C.machineCreate(cFilename)
 	ret.c = cMachine
 	runtime.SetFinalizer(ret, cdestroyVM)
 	C.free(unsafe.Pointer(cFilename))
-	C.free(unsafe.Pointer(cInboxFilename))
 	return ret
 }
 
