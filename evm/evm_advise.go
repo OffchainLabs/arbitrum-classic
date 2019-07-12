@@ -17,6 +17,7 @@
 package evm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
@@ -234,6 +235,12 @@ func NewEthCallDataFromValue(val value.Value) (EthCallData, error) {
 	}, nil
 }
 
+func (data EthCallData) Equals(data2 EthCallData) bool {
+	return bytes.Equal(data.Data, data2.Data) &&
+		data.ContractId.Cmp(data2.ContractId) == 0 &&
+		data.SequenceNum.Cmp(data2.SequenceNum) == 0
+}
+
 type EthMsgData struct {
 	CallData  EthCallData
 	Timestamp *big.Int
@@ -285,6 +292,14 @@ func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
 	}, nil
 }
 
+func (data EthMsgData) Equals(data2 EthMsgData) bool {
+	return data.CallData.Equals(data2.CallData) &&
+		data.Timestamp.Cmp(data2.Timestamp) == 0 &&
+		data.Number.Cmp(data2.Number) == 0 &&
+		data.TxHash == data2.TxHash &&
+		data.dataHash == data2.dataHash
+}
+
 type EthMsg struct {
 	Data      EthMsgData
 	TokenType [21]byte
@@ -318,6 +333,13 @@ func NewEthMsgFromValue(val value.Value) (EthMsg, error) {
 		msg.Currency,
 		msg.Destination,
 	}, nil
+}
+
+func (msg EthMsg) Equals(msg2 EthMsg) bool {
+	return msg.Data.Equals(msg2.Data) &&
+		msg.TokenType == msg2.TokenType &&
+		msg.Currency.Cmp(msg2.Currency) == 0 &&
+		msg.Caller == msg2.Caller
 }
 
 // [logs, contract_num, func_code, return_val, return_code]

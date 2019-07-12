@@ -64,7 +64,7 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 		if i < nsteps%slices {
 			stepCount++
 		}
-		assertion, _ := m.ExecuteAssertion(int32(stepCount), pre.TimeBounds)
+		assertion := m.ExecuteAssertion(int32(stepCount), pre.TimeBounds)
 		defenders = append(defenders, NewAssertionDefender(
 			assertion,
 			pre,
@@ -82,7 +82,7 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, preconditions []*protocol.Precondition) (uint16, Machine, error) {
 	for i := range assertions {
 		initState := m.Clone()
-		generatedAssertion, _ := m.ExecuteAssertion(
+		generatedAssertion := m.ExecuteAssertion(
 			int32(assertions[i].NumSteps),
 			preconditions[i].TimeBounds,
 		)

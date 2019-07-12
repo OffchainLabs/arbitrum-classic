@@ -50,6 +50,6 @@ type Machine interface {
 	DeliverOnchainMessage()
 	SendOffchainMessages([]protocol.Message)
 
-	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Assertion, bool)
+	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion
 	MarshalForProof() ([]byte, error)
 }
