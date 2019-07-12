@@ -85,6 +85,7 @@ func NewEthValidator(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
+	maxCallSteps int32,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) (*EthValidator, error) {
@@ -120,7 +121,7 @@ func NewEthValidator(
 		return nil, errors.New("key is not a validator of chosen VM")
 	}
 
-	bot := validator.NewValidator(name, auth.From, protocol.NewBalanceTracker(), config, machine, challengeEverything)
+	bot := validator.NewValidator(name, auth.From, protocol.NewBalanceTracker(), config, machine, challengeEverything, maxCallSteps)
 
 	actionChan := make(chan func(*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)

@@ -323,8 +323,8 @@ type ValidatorCoordinator struct {
 
 	requestChan chan ValidatorLeaderRequest
 
-	mpq      *MessageProcessingQueue
-	maxSteps int32
+	mpq               *MessageProcessingQueue
+	maxStepsUnanSteps int32
 }
 
 func NewCoordinator(
@@ -333,9 +333,10 @@ func NewCoordinator(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
+	maxCallSteps int32,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
-	maxSteps int32,
+	maxStepsUnanSteps int32,
 ) (*ValidatorCoordinator, error) {
 	var vmID [32]byte
 	_, err := rand.Read(vmID[:])
@@ -343,16 +344,16 @@ func NewCoordinator(
 		log.Fatal(err)
 	}
 
-	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, connectionInfo, ethURL)
+	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, maxCallSteps, connectionInfo, ethURL)
 	if err != nil {
 		return nil, err
 	}
 	return &ValidatorCoordinator{
-		Val:         c,
-		cm:          NewClientManager(key, vmID, c.Validators),
-		requestChan: make(chan ValidatorLeaderRequest, 10),
-		mpq:         NewMessageProcessingQueue(),
-		maxSteps:    maxSteps,
+		Val:               c,
+		cm:                NewClientManager(key, vmID, c.Validators),
+		requestChan:       make(chan ValidatorLeaderRequest, 10),
+		mpq:               NewMessageProcessingQueue(),
+		maxStepsUnanSteps: maxStepsUnanSteps,
 	}, nil
 }
 
@@ -389,7 +390,7 @@ func (m *ValidatorCoordinator) Run() error {
 				case CoordinatorDisputableRequest:
 					request.retChan <- m.initiateDisputableAssertionImpl()
 				case CoordinatorUnanimousRequest:
-					err := m.initiateUnanimousAssertionImpl(request.final, m.maxSteps)
+					err := m.initiateUnanimousAssertionImpl(request.final, m.maxStepsUnanSteps)
 					if err != nil {
 						request.errChan <- err
 					} else {
@@ -414,7 +415,7 @@ func (m *ValidatorCoordinator) Run() error {
 				}
 
 				if shouldUnan {
-					err := m.initiateUnanimousAssertionImpl(forceFinal, m.maxSteps)
+					err := m.initiateUnanimousAssertionImpl(forceFinal, m.maxStepsUnanSteps)
 					if err != nil {
 						log.Println("Coordinator is closing unanimous assertion")
 						closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()

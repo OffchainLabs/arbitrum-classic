@@ -76,9 +76,10 @@ func NewServer(
 		key,
 		config,
 		false,
+		math.MaxInt32, // maxCallSteps
 		connectionInfo,
 		ethURL,
-		math.MaxInt32,
+		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		log.Fatal(err)

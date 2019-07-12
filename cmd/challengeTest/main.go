@@ -103,9 +103,10 @@ func main() {
 		machine.Clone(),
 		key1, config,
 		false,
+		math.MaxInt32, // maxCallSteps
 		connectionInfo,
 		ethURL,
-		math.MaxInt32,
+		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -126,10 +127,11 @@ func main() {
 		key2,
 		config,
 		true,
+		math.MaxInt32, // maxCallSteps
 		connectionInfo,
 		ethURL,
 		"wss://127.0.0.1:1236/ws",
-		math.MaxInt32,
+		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)

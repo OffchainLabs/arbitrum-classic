@@ -48,7 +48,7 @@ type ValidatorFollower struct {
 	client *Client
 
 	unanimousRequests map[[32]byte]UnanimousAssertionRequest
-	maxSteps          int32
+	maxStepsUnanSteps int32
 }
 
 func NewValidatorFollower(
@@ -57,10 +57,11 @@ func NewValidatorFollower(
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
+	maxCallSteps int32,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
-	maxSteps int32,
+	maxStepsUnanSteps int32,
 ) (*ValidatorFollower, error) {
 	dialer := websocket.DefaultDialer
 	dialer.TLSClientConfig = &tls.Config{
@@ -106,7 +107,7 @@ func NewValidatorFollower(
 	}
 	address := crypto.PubkeyToAddress(*pubkey)
 
-	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, connectionInfo, ethURL)
+	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, maxCallSteps, connectionInfo, ethURL)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func NewValidatorFollower(
 		EthValidator:      c,
 		client:            client,
 		unanimousRequests: unanimousRequests,
-		maxSteps:          maxSteps,
+		maxStepsUnanSteps: maxStepsUnanSteps,
 	}, nil
 }
 
@@ -171,7 +172,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			messages = append(messages, msg)
 		}
 
-		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages, m.maxSteps)
+		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages, m.maxStepsUnanSteps)
 		var unanUpdate valmessage.UnanimousUpdateResults
 		select {
 		case unanUpdate = <-resultsChan:

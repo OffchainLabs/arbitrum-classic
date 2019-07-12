@@ -72,10 +72,11 @@ func NewFollowerServer(
 		key,
 		config,
 		false,
+		math.MaxInt32, // maxCallSteps
 		connectionInfo,
 		ethURL,
 		coordinatorURL,
-		math.MaxInt32,
+		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
@@ -173,7 +174,14 @@ func main() {
 	coordinatorURL := os.Args[6]
 
 	// Validator creation
-	rpcInterface := NewFollowerServer(machine, key, validators, connectionInfo, ethURL, coordinatorURL)
+	rpcInterface := NewFollowerServer(
+		machine,
+		key,
+		validators,
+		connectionInfo,
+		ethURL,
+		coordinatorURL,
+	)
 
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")

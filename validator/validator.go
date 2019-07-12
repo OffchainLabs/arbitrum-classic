@@ -52,7 +52,7 @@ type Validator struct {
 	pendingDisputableRequest *state.DisputableAssertionRequest
 }
 
-func NewValidator(name string, address common.Address, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool) *Validator {
+func NewValidator(name string, address common.Address, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool, maxCallSteps int32) *Validator {
 	requests := make(chan interface{}, 10)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
@@ -61,7 +61,7 @@ func NewValidator(name string, address common.Address, balance *protocol.Balance
 	)
 
 	// TODO: latestHeader starts as nil which isn't valid. This needs to be properly initialized
-	valConfig := core.NewValidatorConfig(address, config, challengeEverything)
+	valConfig := core.NewValidatorConfig(address, config, challengeEverything, maxCallSteps)
 	return &Validator{
 		name,
 		requests,
@@ -169,8 +169,6 @@ func (validator *Validator) CloseUnanimousAssertionRequest() <-chan bool {
 	}
 	return resultChan
 }
-
-const maxCallSteps int32 = math.MaxInt32
 
 func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge bridge.Bridge) {
 	go func() {
@@ -419,6 +417,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						msg.Currency,
 						msg.Destination,
 					}
+					maxCallSteps := validator.bot.GetConfig().MaxCallSteps
 					go func() {
 						updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
 						assertion := updatedState.ExecuteAssertion(

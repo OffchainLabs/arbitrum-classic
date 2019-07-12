@@ -29,13 +29,15 @@ type Config struct {
 	Address             common.Address
 	ChallengeEverything bool
 	VMConfig            *valmessage.VMConfiguration
+	MaxCallSteps        int32
 }
 
-func NewValidatorConfig(address common.Address, config *valmessage.VMConfiguration, challengeEverything bool) *Config {
+func NewValidatorConfig(address common.Address, config *valmessage.VMConfiguration, challengeEverything bool, maxCallSteps int32) *Config {
 	return &Config{
 		address,
 		challengeEverything,
 		config,
+		maxCallSteps,
 	}
 }
 
