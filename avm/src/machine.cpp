@@ -186,7 +186,7 @@ void MachineState::deserialize(char *bufptr) {
 }
 
 bool MachineState::hasPendingMessages() const {
-    return pendingInbox == Tuple();
+    return !(pendingInbox == Tuple());
 }
 
 void MachineState::sendOnchainMessage(const Message &msg) {
