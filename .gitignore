@@ -1,11 +1,11 @@
+*.ao
 .DS_Store
-arb-docker-compose.yml
 build/
 compiled.json
-node_modules/
-package-lock.json
-yarn-error.log
-validator-states
-*.ao
 compose
 dist/main.js
+docker-compose.arb-deploy.yml
+node_modules/
+package-lock.json
+validator-states
+yarn-error.log
