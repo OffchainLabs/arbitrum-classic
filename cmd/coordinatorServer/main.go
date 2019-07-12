@@ -61,10 +61,6 @@ func attachProfiler(router *mux.Router) {
 // 4) Global EthBridge addresses json file
 // 5) ethURL
 func main() {
-	// cFilename := C.CString("contract.ao")
-	// C.machine_create(cFilename)
-	// C.free(unsafe.Pointer(cFilename))
-
 	// Check number of args
 	if len(os.Args)-1 != 5 {
 		log.Fatalln("Expected five arguments")

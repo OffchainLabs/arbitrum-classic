@@ -64,22 +64,6 @@ func (c *Core) Clone() *Core {
 	}
 }
 
-func (c *Core) OffchainAssert(
-	messages []protocol.Message,
-	timeBounds protocol.TimeBounds,
-	maxSteps int32,
-) (*Core, *protocol.Assertion) {
-	newState := c.machine.Clone()
-	newState.SendOffchainMessages(messages)
-	assertion := newState.ExecuteAssertion(
-		maxSteps,
-		timeBounds,
-	)
-	return &Core{
-		machine: newState,
-	}, assertion
-}
-
 func (c *Core) GetCore() *Core {
 	return c
 }

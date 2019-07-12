@@ -244,21 +244,25 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						}
 						timeBounds := [2]uint64{validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64() + request.TimeLength}
 						tb, seqNum := bot.OffchainContext(timeBounds, request.Final)
-						clonedCore := bot.GetCore().Clone()
+						clonedMachine := bot.GetCore().GetMachine().Clone()
 						requestData := valmessage.UnanimousRequestData{
-							BeforeHash:  clonedCore.GetMachine().Hash(),
-							BeforeInbox: clonedCore.GetMachine().InboxHash().Hash(),
+							BeforeHash:  clonedMachine.Hash(),
+							BeforeInbox: clonedMachine.InboxHash().Hash(),
 							SequenceNum: seqNum,
 							TimeBounds:  tb,
 						}
 
 						request.RequestChan <- valmessage.UnanimousRequest{UnanimousRequestData: requestData, NewMessages: messageRecords}
 						go func() {
-							newCore, assertion := clonedCore.OffchainAssert(newMessages, timeBounds, request.MaxSteps)
+							clonedMachine.SendOffchainMessages(newMessages)
+							assertion := clonedMachine.ExecuteAssertion(
+								request.MaxSteps,
+								timeBounds,
+							)
 							validator.requests <- state.UnanimousUpdateRequest{
 								UnanimousRequestData: requestData,
 								NewMessages:          newMessages,
-								Machine:              newCore.GetMachine(),
+								Machine:              clonedMachine,
 								Assertion:            assertion,
 								ResultChan:           request.ResultChan,
 								ErrChan:              request.ErrChan,
@@ -276,13 +280,17 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						}
 
 						_, _ = bot.OffchainContext(request.TimeBounds, request.SequenceNum == math.MaxUint64)
-						clonedCore := bot.GetCore().Clone()
+						clonedMachine := bot.GetCore().GetMachine().Clone()
 						go func() {
-							newCore, assertion := clonedCore.OffchainAssert(request.NewMessages, request.TimeBounds, request.MaxSteps)
+							clonedMachine.SendOffchainMessages(request.NewMessages)
+							assertion := clonedMachine.ExecuteAssertion(
+								request.MaxSteps,
+								request.TimeBounds,
+							)
 							validator.requests <- state.UnanimousUpdateRequest{
 								UnanimousRequestData: request.UnanimousRequestData,
 								NewMessages:          request.NewMessages,
-								Machine:              newCore.GetMachine(),
+								Machine:              clonedMachine,
 								Assertion:            assertion,
 								ResultChan:           request.ResultChan,
 								ErrChan:              request.ErrChan,
