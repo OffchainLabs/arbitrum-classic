@@ -18,12 +18,11 @@ typedef struct {
     uint64_t stepCount;
 } cassertion;
 
-Machine* read_files(std::string filename, std::string inboxfile) {
+Machine* read_files(std::string filename) {
     std::cout << "In read_file. reading - " << filename << std::endl;
     std::ifstream myfile;
 
     struct stat filestatus;
-    struct stat inboxfilestatus;
     stat(filename.c_str(), &filestatus);
 
     char* buf = (char*)malloc(filestatus.st_size);
@@ -33,30 +32,14 @@ Machine* read_files(std::string filename, std::string inboxfile) {
         myfile.read((char*)buf, filestatus.st_size);
         myfile.close();
     }
-    char* inbox = NULL;
-    std::cout << "In read_files. Done reading " << filename << std::endl;
-    if (!inboxfile.empty()) {
-        std::cout << "In read_files. reading - " << inboxfile << std::endl;
-        std::ifstream myfile;
-
-        stat(inboxfile.c_str(), &inboxfilestatus);
-
-        inbox = (char*)malloc(inboxfilestatus.st_size);
-
-        myfile.open(inboxfile, std::ios::in);
-        if (myfile.is_open()) {
-            myfile.read((char*)inbox, inboxfilestatus.st_size);
-            myfile.close();
-        } else {
-            std::cout << "In read_files. " << inboxfile << " not found" << std::endl;
-        }
-    }
-    return new Machine(buf, inbox, inboxfilestatus.st_size);
+    auto machine = new Machine();
+    machine->deserialize(buf);
+    return machine;
 }
 
 // cmachine_t *machine_create(char *data)
-CMachine* machineCreate(const char* filename, const char* inboxfile) {
-    Machine* mach = read_files(filename, inboxfile);
+CMachine* machineCreate(const char* filename) {
+    Machine* mach = read_files(filename);
     return static_cast<void*>(mach);
 }
 

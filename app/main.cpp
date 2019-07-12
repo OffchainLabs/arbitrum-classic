@@ -317,7 +317,7 @@ int main(int argc, char* argv[]) {
     //    machine_create();
     //    oldread_file(filename, code, staticValue);
     //    Machine *mach = read_files(filename, inbox_file);
-    void *tmpmach = machineCreate(filename.c_str(), inboxfile.c_str());
+    void *tmpmach = machineCreate(filename.c_str());
     void *mach2 = machineClone(tmpmach);
 //    uint64_t steps = machine_run(tmpmach, stepCount);
     auto rawAssertion = machineExecuteAssertion(tmpmach, stepCount, 0, 1000);
@@ -369,18 +369,20 @@ int main(int argc, char* argv[]) {
             myfile.close();
         }
     }
-    Machine* mach = new Machine(buf, inbox, inboxfilestatus.st_size);
+    
+    Machine mach;
+    mach.deserialize(buf);
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    Assertion assertion = mach->run(stepCount, 0, 0);
+    Assertion assertion = mach.run(stepCount, 0, 0);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     std::cout << assertion.stepCount << " steps in " << elapsed.count() * 1000
               << " milliseconds" << std::endl;
     //    runMachine(code, state, 200);
-    std::cout << to_hex_str(mach->hash()) << "\n" << *mach << std::endl;
+    std::cout << to_hex_str(mach.hash()) << "\n" << mach << std::endl;
     std::this_thread::sleep_for(1s);
     return 0;
 }

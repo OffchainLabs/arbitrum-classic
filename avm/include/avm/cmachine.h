@@ -30,7 +30,7 @@ extern "C" {
     
     typedef void CMachine;
     
-    CMachine* machineCreate(const char* filename, const char* inboxfile);
+    CMachine* machineCreate(const char* filename);
     void machineDestroy(CMachine *m);
     
     // Ret must have 32 bytes of storage allocated for returned hash

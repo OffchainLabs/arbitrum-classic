@@ -37,7 +37,7 @@ TEST_CASE("DIV opcode is correct") {
 
     SECTION("Divide by zero") {
         MachineState m = runBinaryOp(3, 0, OpCode::DIV);
-        REQUIRE(m.state == ERROR);
+        REQUIRE(m.state == Status::Error);
     }
 }
 

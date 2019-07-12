@@ -145,27 +145,19 @@ Tuple& assumeTuple(value& val) {
     return *tup;
 }
 
-MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
-
-MachineState::MachineState(std::vector<CodePoint> code)
-    : pool(std::make_unique<TuplePool>()), code(std::move(code)) {}
-
-MachineState::MachineState(char*& srccode, char*& inboxdata, int inbox_sz) : MachineState() {
-    char* bufptr = srccode;
-    char* inboxbuf = inboxdata;
-
+void MachineState::deserialize(char *bufptr) {    
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
     version = __builtin_bswap32(version);
     bufptr += sizeof(version);
-
+    
     if (version != CURRENT_AO_VERSION) {
         std::cout << "incorrect version of .ao file" << std::endl;
         std::cout << "expected version " << CURRENT_AO_VERSION
-                  << " found version " << version << std::endl;
+        << " found version " << version << std::endl;
         return;
     }
-
+    
     uint32_t extentionId = 1;
     while (extentionId != 0) {
         memcpy(&extentionId, bufptr, sizeof(extentionId));
@@ -180,32 +172,15 @@ MachineState::MachineState(char*& srccode, char*& inboxdata, int inbox_sz) : Mac
     bufptr += sizeof(codeCount);
     codeCount = boost::endian::big_to_native(codeCount);
     code.reserve(codeCount);
-
+    
     std::vector<Operation> ops;
     for (uint64_t i = 0; i < codeCount; i++) {
         ops.emplace_back(deserializeOperation(bufptr, *pool));
     }
     code = opsToCodePoints(ops);
-
+    
     staticVal = deserialize_value(bufptr, *pool);
     pc = 0;
-    if (*inboxbuf == 6){
-        auto inboxVal = deserialize_value(inboxbuf, *pool);
-        auto inboxPtr = mpark::get_if<Tuple>(&inboxVal);
-        assert(inboxPtr);
-        inbox = *inboxPtr;
-    } else {
-        while (inboxbuf < inboxdata+inbox_sz) {
-            auto msgVal = deserialize_value(inboxbuf, *pool);
-            Message msg;
-            auto success = msg.deserialize(msgVal);
-            if (!success) {
-                throw std::runtime_error("Machine recieved invalid message");
-            }
-            sendOnchainMessage(msg);
-        }
-        deliverOnchainMessages();
-    }
 }
 
 bool MachineState::hasPendingMessages() const {
@@ -318,20 +293,20 @@ Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t tim
         auto ret = runOne();
         if (
             ret < 0 ||
-            m.state == ERROR ||
-            m.state == HALTED ||
-            m.state == BLOCKED
+            m.state == Status::Error ||
+            m.state == Status::Halted ||
+            m.state == Status::Blocked
         ) {
             break;
         }
     }
 
-    if (m.state == ERROR) {
+    if (m.state == Status::Error) {
         //TODO: check if error handler set - jump there
         // set error return
         std::cout << "error state" << std::endl;
     }
-    if (m.state == HALTED) {
+    if (m.state == Status::Halted) {
         // set error return
         //        std::cout << "halted state" << std::endl;
     }
@@ -344,13 +319,13 @@ int Machine::runOne() {
     //    std::cout << to_hex_str(hash()) << " " << m.code[m.pc].op <<
     //    std::endl; std::cout << *this << std::endl; std::cout<<"in
     //    runOne"<<std::endl;
-    if (m.state == ERROR) {
+    if (m.state == Status::Error) {
         // set error return
         std::cout << "error state" << std::endl;
         return -1;
     }
 
-    if (m.state == HALTED) {
+    if (m.state == Status::Halted) {
         // set error return
         std::cout << "halted state" << std::endl;
         std::cout << "full stack - size=" << m.stack.stacksize() << std::endl;
@@ -361,7 +336,7 @@ int Machine::runOne() {
         return -2;
     }
 
-    if (m.state == BLOCKED) {
+    if (m.state == Status::Blocked) {
         return -1;
     }
     auto& instruction = m.code[m.pc];
@@ -382,9 +357,9 @@ int Machine::runOne() {
         //            std::cout<<"top="<<stack.peek()<< std::endl;
         //        }
     } catch (const bad_pop_type& e) {
-        m.state = ERROR;
+        m.state = Status::Error;
     } catch (const bad_tuple_index& e) {
-        m.state = ERROR;
+        m.state = Status::Error;
     }
 
     return 0;
@@ -428,7 +403,7 @@ namespace {
         auto& aNum = assumeInt(m.stack[0]);
         auto& bNum = assumeInt(m.stack[1]);
         if (bNum == 0) {
-            m.state = ERROR;
+            m.state = Status::Error;
         } else {
             m.stack[1] = aNum / bNum;
         }
@@ -443,7 +418,7 @@ namespace {
         const auto min = (std::numeric_limits<uint256_t>::max() / 2) + 1;
         
         if (bNum == 0) {
-            m.state = ERROR;
+            m.state = Status::Error;
         } else if (aNum == min && bNum == -1) {
             m.stack[1] = aNum;
         } else {
@@ -466,7 +441,7 @@ namespace {
         if (bNum != 0) {
             m.stack[1] = aNum % bNum;
         } else {
-            m.state = ERROR;
+            m.state = Status::Error;
         }
         m.stack.popClear();
         ++m.pc;
@@ -478,7 +453,7 @@ namespace {
         auto& bNum = assumeInt(m.stack[1]);
         
         if (bNum == 0) {
-            m.state = ERROR;
+            m.state = Status::Error;
         } else {
             const auto signA = get_sign(aNum);
             const auto signB = get_sign(bNum);
@@ -499,7 +474,7 @@ namespace {
         auto& cNum = assumeInt(m.stack[2]);
         
         if (cNum == 0) {
-            m.state = ERROR;
+            m.state = Status::Error;
         } else {
             uint512_t aBig = aNum;
             uint512_t bBig = bNum;
@@ -517,7 +492,7 @@ namespace {
         auto& cNum = assumeInt(m.stack[2]);
         
         if (cNum == 0) {
-            m.state = ERROR;
+            m.state = Status::Error;
         } else {
             uint512_t aBig = aNum;
             uint512_t bBig = bNum;
@@ -714,7 +689,7 @@ namespace {
         if (target) {
             m.pc = target->pc;
         } else {
-            m.state = ERROR;
+            m.state = Status::Error;
         }
         m.stack.popClear();
     }
@@ -727,7 +702,7 @@ namespace {
             if (target) {
                 m.pc = target->pc;
             } else {
-                m.state = ERROR;
+                m.state = Status::Error;
             }
         } else {
             ++m.pc;
@@ -782,7 +757,7 @@ namespace {
         m.stack.prepForMod(1);
         auto codePointVal = mpark::get_if<CodePoint>(&m.stack[0]);
         if (!codePointVal) {
-            m.state = ERROR;
+            m.state = Status::Error;
         } else {
             m.errpc = *codePointVal;
         }
@@ -851,7 +826,7 @@ namespace {
     }
 
     static void breakpoint(MachineState &m) {
-        m.state = HALTED;
+        m.state = Status::Halted;
     }
 
     static void log(MachineState &m) {
@@ -884,11 +859,11 @@ namespace {
         Message outMsg;
         auto success = outMsg.deserialize(m.stack[0]);
         if (!success){
-            m.state=ERROR;
+            m.state=Status::Error;
             return;
         }
         if (!m.balance.Spend(outMsg.token, outMsg.currency)){
-            m.state = BLOCKED;
+            m.state = Status::Blocked;
         } else {
             m.stack.popClear();
             m.context.outMessage.push_back(outMsg);
@@ -902,7 +877,7 @@ namespace {
         Message outMsg;
         auto success = outMsg.deserialize(m.stack[0]);
         if (!success){
-            m.state=ERROR;
+            m.state=Status::Error;
             return;
         }
         
@@ -928,7 +903,7 @@ namespace {
         m.stack.prepForMod(1);
         auto stackTop = mpark::get_if<Tuple>(&m.stack[0]);
         if (stackTop && m.inbox == *stackTop) {
-            m.state = BLOCKED;
+            m.state = Status::Blocked;
         } else {
             value inboxCopy = m.inbox;
             m.stack[0] = std::move(inboxCopy);
@@ -1125,11 +1100,11 @@ void MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::ERROR:
             //TODO: add error handler support
-            state=ERROR;
+            state=Status::Error;
             break;
         case OpCode::HALT:
             std::cout << "Hit halt opcode at instruction " << pc << "\n";
-            state=HALTED;
+            state=Status::Halted;
             break;
         default:
             std::stringstream ss;

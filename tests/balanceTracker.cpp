@@ -43,7 +43,7 @@ TEST_CASE("SEND") {
         uint256_t currency = 20;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
         sendInboxMessage(m, data, destination, currency, token);
         
         currency = 4;
@@ -51,7 +51,7 @@ TEST_CASE("SEND") {
         m.runOp(OpCode::SEND);
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 16);
-        REQUIRE(m.state==EXTENSIVE);
+        REQUIRE(m.state==Status::Extensive);
     }
 
     SECTION("Not enough funds send") {
@@ -62,7 +62,7 @@ TEST_CASE("SEND") {
         uint256_t currency = 20;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
         sendInboxMessage(m, data, destination, currency, token);
         
         currency = 25;
@@ -70,7 +70,7 @@ TEST_CASE("SEND") {
         m.runOp(OpCode::SEND);
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 20);
-        REQUIRE(m.state==BLOCKED);
+        REQUIRE(m.state==Status::Blocked);
     }
     
     SECTION("Successful NF send") {
@@ -82,14 +82,14 @@ TEST_CASE("SEND") {
         uint256_t currency = 1;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
         sendInboxMessage(m, data, destination, currency, token);
         
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::SEND);
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
-        REQUIRE(m.state==EXTENSIVE);
+        REQUIRE(m.state==Status::Extensive);
     }
     
     SECTION("send unowned NF token") {
@@ -100,13 +100,13 @@ TEST_CASE("SEND") {
         uint256_t currency = 1;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::SEND);
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
-        REQUIRE(m.state==BLOCKED);
+        REQUIRE(m.state==Status::Blocked);
     }
 }
 
@@ -119,7 +119,7 @@ TEST_CASE("NBSEND") {
         uint256_t currency = 20;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
         sendInboxMessage(m, data, destination, currency, token);
         
         currency = 4;
@@ -130,7 +130,7 @@ TEST_CASE("NBSEND") {
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 1);
-        REQUIRE(m.state==EXTENSIVE);
+        REQUIRE(m.state==Status::Extensive);
     }
     
     SECTION("Not enough funds nbsend") {
@@ -141,7 +141,7 @@ TEST_CASE("NBSEND") {
         uint256_t currency = 20;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
         sendInboxMessage(m, data, destination, currency, token);
         
         currency = 25;
@@ -152,7 +152,7 @@ TEST_CASE("NBSEND") {
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 0);
-        REQUIRE(m.state==EXTENSIVE);
+        REQUIRE(m.state==Status::Extensive);
     }
     SECTION("Successful NF nbsend") {
         value data;
@@ -163,7 +163,7 @@ TEST_CASE("NBSEND") {
         uint256_t currency = 1;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
         sendInboxMessage(m, data, destination, currency, token);
         
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
@@ -173,7 +173,7 @@ TEST_CASE("NBSEND") {
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 1);
-        REQUIRE(m.state==EXTENSIVE);
+        REQUIRE(m.state==Status::Extensive);
     }
     
     SECTION("nbsend unowned NF token") {
@@ -184,7 +184,7 @@ TEST_CASE("NBSEND") {
         uint256_t currency = 1;
         uint256_t destination = 25;
         MachineState m;
-        m.state=EXTENSIVE;
+        m.state=Status::Extensive;
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         m.runOp(OpCode::NBSEND);
@@ -193,7 +193,7 @@ TEST_CASE("NBSEND") {
         value retval = m.stack.pop();
         auto ret = mpark::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 0);
-        REQUIRE(m.state==EXTENSIVE);
+        REQUIRE(m.state==Status::Extensive);
     }
 }
 

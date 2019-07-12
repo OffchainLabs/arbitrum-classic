@@ -17,6 +17,8 @@
 
 typedef uint256_t TimeBounds[2];
 
+enum class Status { Extensive, Blocked, Halted, Error };
+
 struct AssertionContext {
     uint64_t stepCount;
     TimeBounds timeBounds;
@@ -37,17 +39,16 @@ struct MachineState {
     value registerVal;
     datastack stack;
     datastack auxstack;
-    int state;
-    uint64_t pc;
+    Status state = Status::Extensive;
+    uint64_t pc = 0;
     CodePoint errpc;
     Tuple pendingInbox;
     AssertionContext context;
     Tuple inbox;
     BalanceTracker balance;
-		
-    MachineState();
-    MachineState(std::vector<CodePoint> code);
-    MachineState(char*& srccode, char*& inboxdata, int inbox_sz);
+    
+    
+    void deserialize(char *data);
 
     void readInbox(char *newInbox);
     std::vector<unsigned char> marshalForProof();
@@ -69,9 +70,10 @@ class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
    public:
-    Machine(char*& srccode, char*& inboxdata, int inbox_sz) : m(srccode, inboxdata, inbox_sz) {}
-    Machine(){}
-    Machine(Machine const &msrc) : m(msrc.m){}
+    void deserialize(char *data) {
+        m.deserialize(data);
+    }
+    
     Assertion run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd);
     int runOne();
     uint256_t hash() const { return m.hash(); }
