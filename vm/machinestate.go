@@ -273,7 +273,7 @@ func (m *Machine) run() (bool, bool, string) {
 }
 
 // run up to maxSteps steps, stop earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) (*protocol.Assertion, bool) {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	assCtx := NewMachineAssertionContext(
 		m,
 		timeBounds,
@@ -287,7 +287,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 			i++
 		}
 	}
-	return assCtx.Finalize(m), !continueRun
+	return assCtx.Finalize(m)
 }
 
 func (m *Machine) SendOnchainMessage(msg protocol.Message) {
