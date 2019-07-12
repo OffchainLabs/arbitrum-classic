@@ -93,15 +93,17 @@ func (m *Machine) SendOffchainMessages(msgs[]protocol.Message) {
 		}
 	}
 	msgsData := buf.Bytes()
-	C.machineSendOffchainMessages(m.c, unsafe.Pointer(&msgsData[0]), C.int(len(msgsData)))
+	if len(msgsData) > 0 {
+		C.machineSendOffchainMessages(m.c, unsafe.Pointer(&msgsData[0]), C.int(len(msgsData)))
+	}
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	assertion := C.machineExecuteAssertion(
 		m.c,
-		C.ulonglong(maxSteps),
-		C.ulonglong(timeBounds[0]),
-		C.ulonglong(timeBounds[1]),
+		C.uint64_t(maxSteps),
+		C.uint64_t(timeBounds[0]),
+		C.uint64_t(timeBounds[1]),
 	)
 
 	fmt.Println("Finished raw assertion", assertion.outMessageLength, assertion.logLength)
