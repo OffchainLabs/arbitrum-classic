@@ -10,7 +10,11 @@ package cppavm
 import "C"
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 	"runtime"
 	"unsafe"
 	//"github.com/offchainlabs/arb-avm/loader"
@@ -36,7 +40,7 @@ func New(codeFile string, inboxFile string) *Machine {
 	cFilename := C.CString(codeFile)
 	cInboxFilename := C.CString(inboxFile)
 
-	cMachine := C.machine_create(cFilename, cInboxFilename)
+	cMachine := C.machineCreate(cFilename, cInboxFilename)
 	ret.c = cMachine
 	runtime.SetFinalizer(ret, cdestroyVM)
 	C.free(unsafe.Pointer(cFilename))
@@ -46,68 +50,104 @@ func New(codeFile string, inboxFile string) *Machine {
 
 func cdestroyVM(cMachine *Machine) {
 	fmt.Println("Calling C.machine_destroy")
-	C.machine_destroy(cMachine.c)
+	C.machineDestroy(cMachine.c)
 }
 
-func (m *Machine) Clone() *Machine {
+func (m *Machine) Hash() (ret [32]byte) {
+	C.machineHash(m.c, unsafe.Pointer(&ret[0]))
+	return
+}
+
+
+func (m *Machine) Clone() machine.Machine {
 	var ret *Machine
-	cMach := C.machine_clone(m.c)
+	cMach := C.machineClone(m.c)
 	ret.c = cMach
 	return ret
 }
 
-// func RunVM(cMachine unsafe.Pointer, steps int, timebounds protocol.TimeBounds) int {
-func (m *Machine) Run(steps uint64) uint64 {
-	fmt.Println("Starting cMachine")
-	// cStart := time.Now()
-
-	cSteps := C.machine_run(m.c, C.ulonglong(steps))
-	// cEnd := time.Now()
-	// cSteps := 0
-	fmt.Println("cMachine ended ", cSteps, " steps run.")
-	// C stuff
-	//*************
-	return uint64(cSteps)
+func (m *Machine) InboxHash() (value.HashOnlyValue) {
+	var hash [32]byte
+	C.machineInboxHash(m.c, unsafe.Pointer(&hash[0]))
+	return value.NewHashOnlyValue(hash, 0)
 }
 
-// func CreateVM(codeFile string) *VM {
-//	var ret *Machine
-//	machine, err := loader.LoadMachineFromFile(codeFile, true)
-//	if err != nil {
-//		log.Fatal("Loader Error: ", err)
-//	}
-//	retptr.g = machine
-//
-//	return retptr
-//}
-//
-// func CreateVMwithMessages(codeFile string, inboxFile string) *VM {
-//	var ret VM
-//	retptr := &ret
-//	machine, err := loader.LoadMachineFromFile(codeFile, true)
-//	if err != nil {
-//		log.Fatal("Loader Error: ", err)
-//	}
-//	retptr.g = machine
-//
-//	return retptr
-//}
-//
-// func RunVM(cMachine unsafe.Pointer, steps int, timebounds protocol.TimeBounds) int {
-// func RunVM(machine *VM, steps uint64) uint64 {
-//	fmt.Println("Starting machine")
-// cStart := time.Now()
-//            machine_run(void *m, uint64_t maxSteps);
-// cSteps := C.machine_run(cMachine.m, C.ulonglong(steps))
-// cEnd := time.Now()
-// cSteps := 0
-// fmt.Println("cMachine ended ", cSteps, " steps run.")
-// C stuff
-//*************
-// return uint64(cSteps)
-// return 0
-//}
+func (m *Machine) HasPendingMessages() bool {
+	return C.machineHasPendingMessages(m.c) != 0
+}
 
-// func SendMessageToVM(machine *VM, msg protocol.Message) {
-//	machine.g.
-//}
+func (m *Machine) SendOnchainMessage(msg protocol.Message) {
+	var buf bytes.Buffer
+	err := value.MarshalValue(msg.AsValue(), &buf)
+	if err != nil {
+		panic(err)
+	}
+	msgData := buf.Bytes()
+	C.machineSendOnchainMessage(m.c, unsafe.Pointer(&msgData[0]))
+}
+
+func (m *Machine) DeliverOnchainMessage() {
+	C.machineDeliverOnchainMessages(m.c)
+}
+
+func (m *Machine) SendOffchainMessages(msgs[]protocol.Message) {
+	var buf bytes.Buffer
+	for _, msg := range msgs {
+		err := value.MarshalValue(msg.AsValue(), &buf)
+		if err != nil {
+			panic(err)
+		}
+	}
+	msgsData := buf.Bytes()
+	C.machineSendOffchainMessages(m.c, unsafe.Pointer(&msgsData[0]), C.int(len(msgsData)))
+}
+
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+	assertion := C.machineExecuteAssertion(
+		m.c,
+		C.ulonglong(maxSteps),
+		C.ulonglong(timeBounds[0]),
+		C.ulonglong(timeBounds[1]),
+	)
+
+	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
+	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)
+
+	outMessageVals := bytesArrayToVals(outMessagesRaw)
+	outMessages := make([]protocol.Message, 0, len(outMessageVals))
+	for _, msgVal := range outMessageVals {
+		msg, err := protocol.NewMessageFromValue(msgVal)
+		if err != nil {
+			panic(err)
+		}
+		outMessages = append(outMessages, msg)
+	}
+
+	logVals := bytesArrayToVals(logsRaw)
+
+
+	return protocol.NewAssertion(
+		m.Hash(),
+		uint32(assertion.numSteps),
+		outMessages,
+		logVals,
+	)
+}
+
+func (m *Machine) MarshalForProof() ([]byte, error) {
+	rawProof := C.machineMarshallForProof(m.c)
+	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
+}
+
+func bytesArrayToVals(data []byte) []value.Value {
+	rd := bytes.NewReader(data)
+	vals := []value.Value{}
+	for {
+		if val, err := value.UnmarshalValue(rd); err != nil {
+			vals = append(vals, val)
+		} else {
+			break
+		}
+	}
+	return vals
+}
