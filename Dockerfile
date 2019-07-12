@@ -23,6 +23,10 @@ RUN go mod download
 # Build cache
 ##DEV_COPY --from=arb-validator --chown=user /home/user/.cache/go-build /home/user/.cache/go-build
 
+# Build arb-util
+##DEV_COPY --chown=user arb-util /home/user/arb-util
+RUN if [[ -d arb-util ]]; then cd arb-util && go build -v ./... ; fi
+
 # Build arb-avm
 ##DEV_COPY --chown=user arb-avm /home/user/arb-avm
 RUN if [[ -d arb-avm ]]; then cd arb-avm && go build -v ./... ; fi
@@ -30,7 +34,9 @@ RUN if [[ -d arb-avm ]]; then cd arb-avm && go build -v ./... ; fi
 # Build arb-validator
 COPY --chown=user ./ /home/user/
 RUN if [[ -d arb-avm ]]; then \
-    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod; fi; \
+    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod && \
+    echo "replace github.com/offchainlabs/arb-util => ./arb-util" >> go.mod; \
+    fi; \
     go build -v ./cmd/followerServer ./cmd/coordinatorServer && \
     go install ./cmd/followerServer ./cmd/coordinatorServer
 
