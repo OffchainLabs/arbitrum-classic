@@ -21,7 +21,7 @@ COPY --chown=user go.mod go.sum /home/user/
 RUN go mod download
 
 # Build cache
-##DEV_COPY --from=arb-validator --chown=user /home/user/.cache/go-build /home/user/.cache/go-build
+##DEV_COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 
 # Build arb-util
 ##DEV_COPY --chown=user arb-util /home/user/arb-util
@@ -55,7 +55,7 @@ WORKDIR "/home/user/"
 COPY --chown=user --from=0 /home/user/go/bin /home/user/go/bin
 
 # Build cache
-COPY --chown=user --from=0 /home/user/.cache/go-build /home/user/.cache/go-build
+COPY --chown=user --from=0 /home/user/.cache/go-build /build
 
 # Get EthBridge addresses and Validator private keys and addresses
 COPY --chown=user --from=arb-ethbridge      \
