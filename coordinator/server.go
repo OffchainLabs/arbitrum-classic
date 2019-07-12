@@ -21,8 +21,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
+	"math"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -34,11 +34,12 @@ import (
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arb-avm/evm"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/evm"
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
@@ -52,7 +53,7 @@ type Server struct {
 
 // NewServer returns a new instance of the Server class
 func NewServer(
-	machine *vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
 	connectionInfo ethbridge.ArbAddresses,
@@ -69,7 +70,17 @@ func NewServer(
 		common.Address{}, // Address 0 means no owner
 	)
 
-	man, err := ethvalidator.NewCoordinator("Alice", machine.Clone(), key, config, false, connectionInfo, ethURL)
+	man, err := ethvalidator.NewCoordinator(
+		"Alice",
+		machine.Clone(),
+		key,
+		config,
+		false,
+		math.MaxInt32, // maxCallSteps
+		connectionInfo,
+		ethURL,
+		math.MaxInt32, // maxUnanSteps
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

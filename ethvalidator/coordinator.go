@@ -22,24 +22,25 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
 	"net/http"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type ValidatorLeaderRequest interface {
@@ -322,17 +323,20 @@ type ValidatorCoordinator struct {
 
 	requestChan chan ValidatorLeaderRequest
 
-	mpq *MessageProcessingQueue
+	mpq               *MessageProcessingQueue
+	maxStepsUnanSteps int32
 }
 
 func NewCoordinator(
 	name string,
-	machine *vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
+	maxCallSteps int32,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
+	maxStepsUnanSteps int32,
 ) (*ValidatorCoordinator, error) {
 	var vmID [32]byte
 	_, err := rand.Read(vmID[:])
@@ -340,15 +344,16 @@ func NewCoordinator(
 		log.Fatal(err)
 	}
 
-	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, connectionInfo, ethURL)
+	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, maxCallSteps, connectionInfo, ethURL)
 	if err != nil {
 		return nil, err
 	}
 	return &ValidatorCoordinator{
-		Val:         c,
-		cm:          NewClientManager(key, vmID, c.Validators),
-		requestChan: make(chan ValidatorLeaderRequest, 10),
-		mpq:         NewMessageProcessingQueue(),
+		Val:               c,
+		cm:                NewClientManager(key, vmID, c.Validators),
+		requestChan:       make(chan ValidatorLeaderRequest, 10),
+		mpq:               NewMessageProcessingQueue(),
+		maxStepsUnanSteps: maxStepsUnanSteps,
 	}, nil
 }
 
@@ -385,7 +390,7 @@ func (m *ValidatorCoordinator) Run() error {
 				case CoordinatorDisputableRequest:
 					request.retChan <- m.initiateDisputableAssertionImpl()
 				case CoordinatorUnanimousRequest:
-					err := m.initiateUnanimousAssertionImpl(request.final)
+					err := m.initiateUnanimousAssertionImpl(request.final, m.maxStepsUnanSteps)
 					if err != nil {
 						request.errChan <- err
 					} else {
@@ -410,7 +415,7 @@ func (m *ValidatorCoordinator) Run() error {
 				}
 
 				if shouldUnan {
-					err := m.initiateUnanimousAssertionImpl(forceFinal)
+					err := m.initiateUnanimousAssertionImpl(forceFinal, m.maxStepsUnanSteps)
 					if err != nil {
 						log.Println("Coordinator is closing unanimous assertion")
 						closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
@@ -522,7 +527,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	start := time.Now()
-	resultChan := m.Val.Bot.RequestDisputableAssertion(10000, false)
+	resultChan := m.Val.Bot.RequestDisputableAssertion(10000)
 	res := <-resultChan
 
 	if res {
@@ -533,10 +538,10 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	return res
 }
 
-func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool) error {
+func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, maxSteps int32) error {
 	queuedMessages := <-m.mpq.Fetch()
 
-	err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal)
+	err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal, maxSteps)
 	if err != nil {
 		m.mpq.Return(queuedMessages)
 		return err
@@ -558,13 +563,13 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool) e
 	return nil
 }
 
-func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool) error {
+func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool, maxSteps int32) error {
 	newMessages := make([]protocol.Message, 0, len(queuedMessages))
 	for _, msg := range queuedMessages {
 		newMessages = append(newMessages, msg.Message)
 	}
 	start := time.Now()
-	requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, forceFinal)
+	requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, forceFinal, maxSteps)
 	responsesChan := make(chan []LabeledFollowerResponse, 1)
 
 	var unanRequest valmessage.UnanimousRequest

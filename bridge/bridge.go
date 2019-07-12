@@ -16,9 +16,7 @@
 
 package bridge
 
-import (
-	"github.com/offchainlabs/arb-avm/protocol"
-)
+import "github.com/offchainlabs/arb-util/protocol"
 
 type Bridge interface {
 	FinalizedAssertion(assertion *protocol.Assertion, newLogCount int)

@@ -19,9 +19,9 @@ package main
 import (
 	"crypto/ecdsa"
 	jsonenc "encoding/json"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/big"
 	"net/http"
 	"os"
@@ -29,15 +29,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
-	"github.com/offchainlabs/arb-avm/loader"
-	"github.com/offchainlabs/arb-avm/vm"
-	"github.com/offchainlabs/arb-validator/valmessage"
 
+	"github.com/offchainlabs/arb-util/machine"
+
+	"github.com/offchainlabs/arb-avm/loader"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type FollowerServer struct {
@@ -45,7 +49,7 @@ type FollowerServer struct {
 }
 
 func NewFollowerServer(
-	machine *vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
 	connectionInfo ethbridge.ArbAddresses,
@@ -62,7 +66,18 @@ func NewFollowerServer(
 		common.Address{}, // Address 0 means no owner
 	)
 
-	man, err := ethvalidator.NewValidatorFollower("Bob", machine, key, config, false, connectionInfo, ethURL, coordinatorURL)
+	man, err := ethvalidator.NewValidatorFollower(
+		"Bob",
+		machine,
+		key,
+		config,
+		false,
+		math.MaxInt32, // maxCallSteps
+		connectionInfo,
+		ethURL,
+		coordinatorURL,
+		math.MaxInt32, // maxUnanSteps
+	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
@@ -159,7 +174,14 @@ func main() {
 	coordinatorURL := os.Args[6]
 
 	// Validator creation
-	rpcInterface := NewFollowerServer(machine, key, validators, connectionInfo, ethURL, coordinatorURL)
+	rpcInterface := NewFollowerServer(
+		machine,
+		key,
+		validators,
+		connectionInfo,
+		ethURL,
+		coordinatorURL,
+	)
 
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")

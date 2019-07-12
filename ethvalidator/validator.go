@@ -20,22 +20,21 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
-
 	"log"
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/validator"
@@ -82,10 +81,11 @@ type VMResponse struct {
 func NewEthValidator(
 	name string,
 	vmId [32]byte,
-	machine *vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
+	maxCallSteps int32,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) (*EthValidator, error) {
@@ -121,12 +121,23 @@ func NewEthValidator(
 		return nil, errors.New("key is not a validator of chosen VM")
 	}
 
-	bot := validator.NewValidator(name, auth.From, protocol.NewEmptyInbox(), protocol.NewBalanceTracker(), config, machine, challengeEverything)
+	bot := validator.NewValidator(name, auth.From, protocol.NewBalanceTracker(), config, machine, challengeEverything, maxCallSteps)
 
 	actionChan := make(chan func(*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 
-	val := &EthValidator{key, vmId, manMap, bot, actionChan, completedCallChan, ethURL, connectionInfo, con, auth}
+	val := &EthValidator{
+		key,
+		vmId,
+		manMap,
+		bot,
+		actionChan,
+		completedCallChan,
+		ethURL,
+		connectionInfo,
+		con,
+		auth,
+	}
 	return val, nil
 }
 

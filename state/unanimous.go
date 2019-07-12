@@ -18,12 +18,13 @@ package state
 
 import (
 	"errors"
+
+	"github.com/offchainlabs/arb-util/protocol"
+
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
-
-	"github.com/offchainlabs/arb-avm/protocol"
 )
 
 type attemptingUnanimousClosing struct {
@@ -121,7 +122,7 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 		return bot, nil
 	}
 	bridge.ConfirmUnanimousAssertion(
-		bot.Core.GetInbox().Receive().Hash(),
+		bot.Core.GetMachine().InboxHash().Hash(),
 		bot.assertion,
 	)
 	return finalizingOffchainClosing{

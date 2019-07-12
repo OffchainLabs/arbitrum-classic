@@ -17,8 +17,9 @@
 package validator
 
 import (
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
+
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -37,15 +38,15 @@ type vmStateRequest struct {
 }
 
 type disputableDefenderRequest struct {
-	Length                 uint64
-	IncludePendingMessages bool
-	ResultChan             chan<- bool
+	Length     uint64
+	ResultChan chan<- bool
 }
 
 type initiateUnanimousRequest struct {
 	TimeLength  uint64
 	NewMessages []protocol.Message
 	Final       bool
+	MaxSteps    int32
 	RequestChan chan<- valmessage.UnanimousRequest
 	ResultChan  chan<- valmessage.UnanimousUpdateResults
 	ErrChan     chan<- error
@@ -54,6 +55,7 @@ type initiateUnanimousRequest struct {
 type followUnanimousRequest struct {
 	valmessage.UnanimousRequestData
 	NewMessages []protocol.Message
+	MaxSteps    int32
 
 	ResultChan chan<- valmessage.UnanimousUpdateResults
 	ErrChan    chan<- error

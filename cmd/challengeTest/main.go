@@ -20,9 +20,9 @@ import (
 	"crypto/rand"
 	jsonenc "encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/big"
 	brand "math/rand"
 	"os"
@@ -33,10 +33,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arb-avm/evm"
-	"github.com/offchainlabs/arb-avm/loader"
-	"github.com/offchainlabs/arb-avm/value"
+	"github.com/offchainlabs/arb-util/evm"
+	"github.com/offchainlabs/arb-util/value"
 
+	"github.com/offchainlabs/arb-avm/loader"
+
+	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
@@ -96,7 +98,16 @@ func main() {
 
 	ethURL := os.Args[3]
 
-	coordinator, err := ethvalidator.NewCoordinator("Alice", machine.Clone(), key1, config, false, connectionInfo, ethURL)
+	coordinator, err := ethvalidator.NewCoordinator(
+		"Alice",
+		machine.Clone(),
+		key1, config,
+		false,
+		math.MaxInt32, // maxCallSteps
+		connectionInfo,
+		ethURL,
+		math.MaxInt32, // maxUnanSteps
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,12 +123,15 @@ func main() {
 
 	challenger, err := ethvalidator.NewValidatorFollower(
 		"Bob",
-		machine, key2,
+		machine,
+		key2,
 		config,
 		true,
+		math.MaxInt32, // maxCallSteps
 		connectionInfo,
 		ethURL,
 		"wss://127.0.0.1:1236/ws",
+		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)

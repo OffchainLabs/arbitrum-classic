@@ -17,14 +17,17 @@
 package coordinator
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arb-avm/evm"
-	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-validator/valmessage"
 	"log"
 	"math/big"
 	"strconv"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arb-util/evm"
+	"github.com/offchainlabs/arb-util/value"
+
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type validatorRequest interface {

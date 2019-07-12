@@ -17,10 +17,10 @@
 package state
 
 import (
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
 
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/vm"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type UnanimousUpdateRequest struct {
@@ -28,8 +28,7 @@ type UnanimousUpdateRequest struct {
 
 	NewMessages []protocol.Message
 
-	Inbox     *protocol.Inbox
-	Machine   *vm.Machine
+	Machine   machine.Machine
 	Assertion *protocol.Assertion
 
 	ResultChan chan<- valmessage.UnanimousUpdateResults
@@ -37,18 +36,14 @@ type UnanimousUpdateRequest struct {
 }
 
 type DisputableAssertionRequest struct {
-	State           *vm.Machine
-	Defender        protocol.AssertionDefender
-	IncludedPending bool
-	ResultChan      chan<- bool
+	AfterState   machine.Machine
+	Precondition *protocol.Precondition
+	Assertion    *protocol.Assertion
+	ResultChan   chan<- bool
 }
 
 func (r DisputableAssertionRequest) GetPrecondition() *protocol.Precondition {
-	return r.Defender.GetPrecondition()
-}
-
-func (r DisputableAssertionRequest) IncludedPendingInbox() bool {
-	return r.IncludedPending
+	return r.Precondition
 }
 
 func (r DisputableAssertionRequest) NotifyInvalid() {

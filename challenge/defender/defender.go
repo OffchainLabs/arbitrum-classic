@@ -17,29 +17,30 @@
 package defender
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
-
-	"github.com/offchainlabs/arb-avm/protocol"
 )
 
-func New(core *core.Config, assDef protocol.AssertionDefender, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	deadline := time + core.VMConfig.GracePeriod
 	if assDef.GetAssertion().NumSteps == 1 {
 		fmt.Println("Generating proof")
-		var buf bytes.Buffer
-		if err := assDef.SolidityOneStepProof(&buf); err != nil {
+		proofData, err := assDef.SolidityOneStepProof()
+		if err != nil {
 			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
 		}
 		bridge.OneStepProof(
 			assDef.GetPrecondition(),
 			assDef.GetAssertion(),
-			buf.Bytes(),
+			proofData,
 			deadline,
 		)
 		return oneStepChallenged{
@@ -73,7 +74,7 @@ type bisectedAssert struct {
 	*core.Config
 	wholePrecondition *protocol.Precondition
 	wholeAssertion    *protocol.AssertionStub
-	splitDefenders    []protocol.AssertionDefender
+	splitDefenders    []machine.AssertionDefender
 	deadline          uint64
 }
 
@@ -105,7 +106,7 @@ func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge br
 
 type waitingBisected struct {
 	*core.Config
-	defenders []protocol.AssertionDefender
+	defenders []machine.AssertionDefender
 	deadline  uint64
 }
 

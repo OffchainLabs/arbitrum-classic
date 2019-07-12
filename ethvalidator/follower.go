@@ -20,35 +20,21 @@ import (
 	"crypto/ecdsa"
 	"crypto/tls"
 	"errors"
-	"github.com/offchainlabs/arb-validator/ethbridge"
 	"log"
 	"math"
-	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-avm/protocol"
-	"github.com/offchainlabs/arb-avm/value"
-	"github.com/offchainlabs/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arb-avm/vm"
-)
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 
-const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 8192
+	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
 type UnanimousAssertionRequest struct {
@@ -62,17 +48,20 @@ type ValidatorFollower struct {
 	client *Client
 
 	unanimousRequests map[[32]byte]UnanimousAssertionRequest
+	maxStepsUnanSteps int32
 }
 
 func NewValidatorFollower(
 	name string,
-	machine *vm.Machine,
+	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
+	maxCallSteps int32,
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
+	maxStepsUnanSteps int32,
 ) (*ValidatorFollower, error) {
 	dialer := websocket.DefaultDialer
 	dialer.TLSClientConfig = &tls.Config{
@@ -118,7 +107,7 @@ func NewValidatorFollower(
 	}
 	address := crypto.PubkeyToAddress(*pubkey)
 
-	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, connectionInfo, ethURL)
+	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, maxCallSteps, connectionInfo, ethURL)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +119,12 @@ func NewValidatorFollower(
 	log.Println("Validator formed connection with coordinator")
 	unanimousRequests := make(map[[32]byte]UnanimousAssertionRequest)
 	client := NewClient(coordinatorConn, address)
-	return &ValidatorFollower{c, client, unanimousRequests}, nil
+	return &ValidatorFollower{
+		EthValidator:      c,
+		client:            client,
+		unanimousRequests: unanimousRequests,
+		maxStepsUnanSteps: maxStepsUnanSteps,
+	}, nil
 }
 
 func (m *ValidatorFollower) HandleUnanimousRequest(
@@ -178,7 +172,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			messages = append(messages, msg)
 		}
 
-		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages)
+		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages, m.maxStepsUnanSteps)
 		var unanUpdate valmessage.UnanimousUpdateResults
 		select {
 		case unanUpdate = <-resultsChan:
