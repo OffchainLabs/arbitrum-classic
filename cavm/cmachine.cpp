@@ -6,7 +6,7 @@
 //  Copyright © 2019 Timothy O'Bryan. All rights reserved.
 //
 
-#include <avm/cmachine.h>
+#include "cmachine.h"
 
 #include <avm/machine.hpp>
 

@@ -7,7 +7,6 @@
 //
 
 #include <avm/machine.hpp>
-#include <avm/cmachine.h>
 #include <sys/stat.h>
 #include <fstream>
 #include <iostream>
@@ -313,37 +312,11 @@ int main(int argc, char* argv[]) {
             inboxfile = argv[2];
         }
     }
-    std::cout << filename << " " << inboxfile << std::endl;
-    //    machine_create();
-    //    oldread_file(filename, code, staticValue);
-    //    Machine *mach = read_files(filename, inbox_file);
-    void *tmpmach = machineCreate(filename.c_str());
-    void *mach2 = machineClone(tmpmach);
-//    uint64_t steps = machine_run(tmpmach, stepCount);
-    auto rawAssertion = machineExecuteAssertion(tmpmach, stepCount, 0, 1000);
-    auto proof = machineMarshallForProof(tmpmach);
-    char *tmpbuf=(char *)malloc(32);
-    machineHash(tmpmach, &tmpbuf[0]);
-    machineDestroy(tmpmach);
-    std::cout << "Running clone"<<std::endl;
-    rawAssertion = machineExecuteAssertion(mach2, stepCount, 0, 1000);
-    char *tmpbuf2=(char *)malloc(32);
-    machineHash(mach2, &tmpbuf2[0]);
-    bool success=true;
-    for (int i=0; i<32; i++){
-        if(tmpbuf[i] != tmpbuf2[i]){
-            success=false;
-            std::cout << "Machine hash error"<<std::endl;
-            break;
-        }
-    }
-    if (success){
-        std::cout << "Machine hash success"<<std::endl;
-    }
+    std::cout << filename << std::endl;
+
     std::ifstream myfile;
 
     struct stat filestatus;
-    struct stat inboxfilestatus;
     stat(filename.c_str(), &filestatus);
 
     char* buf = (char*)malloc(filestatus.st_size);
@@ -353,22 +326,7 @@ int main(int argc, char* argv[]) {
         myfile.read((char*)buf, filestatus.st_size);
         myfile.close();
     }
-    char* inbox = NULL;
     std::cout << "In read_files. Done reading " << filename << std::endl;
-    if (!inboxfile.empty()) {
-        std::cout << "In read_files. reading - " << inboxfile << std::endl;
-        std::ifstream myfile;
-
-        stat(inboxfile.c_str(), &inboxfilestatus);
-
-        inbox = (char*)malloc(inboxfilestatus.st_size);
-
-        myfile.open(inboxfile, std::ios::in);
-        if (myfile.is_open()) {
-            myfile.read((char*)inbox, inboxfilestatus.st_size);
-            myfile.close();
-        }
-    }
     
     Machine mach;
     mach.deserialize(buf);

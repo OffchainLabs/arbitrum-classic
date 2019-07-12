@@ -42,6 +42,7 @@ add_library(optional INTERFACE)
 target_include_directories(optional INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/optional-lite/include/)
 
 add_subdirectory(avm)
+add_subdirectory(cavm)
 add_subdirectory(app)
 
 add_subdirectory(tests)
