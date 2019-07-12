@@ -142,12 +142,12 @@ gofmt -l $(git diff-index --cached --name-only HEAD | grep ".go") | \
 ### Build cache starter
 ### ----------------------------------------------------------------------------
 
-DOCKERFILE_GO_CACHE=(
+DOCKERFILE_CACHE=(
 """
 FROM alpine:3.9
-RUN mkdir -p /go-build
+RUN mkdir -p /build
 FROM scratch
-COPY --from=0 /go-build /home/user/.cache/go-build
+COPY --from=0 /build /build
 """
 )
 
@@ -166,13 +166,15 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
 
     # In dev-mode, create empty build caches if necessary
     if dev_flag or os.path.isdir(DEPLOY_DIR):
-        if subprocess.check_output(sudo_cmd + 'docker images -q arb-validator',
-            shell=True).decode("utf-8") == '':
-            # warm build cache
-            run('mkdir -p %s/.tmp' % DEPLOY_DIR)
-            run('echo "%s" > %s/.tmp/Dockerfile' % (DOCKERFILE_GO_CACHE, DEPLOY_DIR))
-            run('docker build -t arb-validator %s/.tmp' % DEPLOY_DIR, sudo=sudo_flag)
-            run('rm -rf %s/.tmp' % DEPLOY_DIR)
+        def warm_build_cache(name):
+            if subprocess.check_output(sudo_cmd + 'docker images -q %s' % name,
+                shell=True).decode("utf-8") == '':
+                run('mkdir -p %s/.tmp' % DEPLOY_DIR)
+                run('echo "%s" > %s/.tmp/Dockerfile' % (DOCKERFILE_CACHE, DEPLOY_DIR))
+                run('docker build -t %s %s/.tmp' % (name, DEPLOY_DIR), sudo=sudo_flag)
+                run('rm -rf %s/.tmp' % DEPLOY_DIR)
+        warm_build_cache('arb-validator')
+        warm_build_cache('arb-avm-cpp')
 
     # Create VALIDATOR_STATE_DIRNAME s if they don't exist
     states_path = os.path.abspath(VALIDATOR_STATE_DIRNAME)
@@ -239,7 +241,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
 # updated with replace rule. Also adds pre-commit hook to prevent committing
 # this development rule and does go formatting check
 def install_dev_mode(sudo_flag):
-    GC = 'git clone https://github.com/OffchainLabs/%s.git ./' + DEPLOY_DIR + '/%s'
+    GC = 'git clone --recurse-submodules https://github.com/OffchainLabs/%s.git ./' + DEPLOY_DIR + '/%s'
     run('mkdir ' + DEPLOY_DIR)
     run(GC % ('arb-ethbridge', 'arb-ethbridge'))
     run(GC % ('arb-validator', 'arb-validator'))
