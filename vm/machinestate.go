@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"io"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arb-avm/code"
 	"github.com/offchainlabs/arb-avm/vm/stack"
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-	"io"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -130,7 +131,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	return ret
 }
 
-//func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal value.Value, errHandlerVal value.CodePointValue, sizeLimit int64) *Machine {
+// func RestoreMachine(opCodes []value.Operation, stackVal, auxStackVal, registerVal, staticVal, pcVal value.Value, errHandlerVal value.CodePointValue, sizeLimit int64) *Machine {
 //	datastack := stack.FlatFromTupleChain(stackVal)
 //	auxStack := stack.FlatFromTupleChain(auxStackVal)
 //	register := NewMachineValue(registerVal)
@@ -315,7 +316,7 @@ func (m *Machine) Send(data value.Value, tokenType value.IntValue, currency valu
 	tokType := [21]byte{}
 	tokBytes := tokenType.ToBytes()
 	copy(tokType[:], tokBytes[:])
-	err := m.balance.Spend(tokType,  currency.BigInt())
+	err := m.balance.Spend(tokType, currency.BigInt())
 	if err != nil {
 		return err
 	}

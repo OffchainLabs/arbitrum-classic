@@ -17,7 +17,7 @@
 package checkpoint
 
 //
-//func TestOpen(t *testing.T) {
+// func TestOpen(t *testing.T) {
 //	cp, err := NewCheckpointer(nil, true)
 //	if err != nil {
 //		t.Error(err)
@@ -28,7 +28,7 @@ package checkpoint
 //	}
 //}
 //
-//func TestValues(t *testing.T) {
+// func TestValues(t *testing.T) {
 //	cp, err := NewCheckpointer(nil, true)
 //	if err != nil {
 //		t.Error(err)
@@ -77,9 +77,9 @@ package checkpoint
 //	}
 //}
 //
-//const dotAOfile = "fibonacci.ao"
+// const dotAOfile = "fibonacci.ao"
 //
-//func TestMachines(t *testing.T) {
+// func TestMachines(t *testing.T) {
 //	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 //	if err != nil {
 //		t.Error(err)
@@ -123,7 +123,7 @@ package checkpoint
 //	}
 //}
 //
-//func TestMachinesAcrossRestart(t *testing.T) {
+// func TestMachinesAcrossRestart(t *testing.T) {
 //	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 //	if err != nil {
 //		t.Error(err)
@@ -160,7 +160,7 @@ package checkpoint
 //	}
 //}
 //
-//func TestVersionedCp(t *testing.T) {
+// func TestVersionedCp(t *testing.T) {
 //	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 //	if err != nil {
 //		t.Error(err)
@@ -207,7 +207,7 @@ package checkpoint
 //	}
 //}
 //
-//func TestEventChainCp(t *testing.T) {
+// func TestEventChainCp(t *testing.T) {
 //	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 //	if err != nil {
 //		t.Error(err)
@@ -244,7 +244,7 @@ package checkpoint
 //	}
 //}
 //
-//func TestEventChainRestore(t *testing.T) {
+// func TestEventChainRestore(t *testing.T) {
 //	machine, err := loader.LoadMachineFromFile(dotAOfile, false)
 //	if err != nil {
 //		t.Error(err)
