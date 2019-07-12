@@ -139,8 +139,10 @@ RawAssertion machineExecuteAssertion(CMachine* m, uint64_t maxSteps, uint64_t ti
     return {
         cMessageData,
         static_cast<int>(outMsgData.size()),
+        static_cast<int>(assertion.outMessages.size()),
         cLogData,
         static_cast<int>(logData.size()),
+        static_cast<int>(assertion.logs.size()),
         assertion.stepCount
     };
 }
