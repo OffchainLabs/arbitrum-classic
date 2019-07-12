@@ -73,7 +73,6 @@ func (c *Core) OffchainAssert(
 		maxSteps,
 		timeBounds,
 	)
-	_ = c.balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 	return &Core{
 		machine: newState,
 	}, assertion

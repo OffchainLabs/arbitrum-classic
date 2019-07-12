@@ -278,7 +278,7 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (State, *propos
 		return nil, nil, errors.New("no pending Assertion")
 	}
 
-	balance := bot.accepted.GetBalance()
+	balance := bot.GetCore().GetBalance()
 	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.Assertion.OutMsgs))
 
 	return Waiting{
