@@ -18,7 +18,6 @@ package vm
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"io"
 
@@ -31,14 +30,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
-
-var HashOfHaltedMachine [32]byte
-var HashOfSizeExceptionMachine [32]byte
-
-func init() {
-	HashOfHaltedMachine = sha256.Sum256([]byte("This is the hash of a halted Arbitrum VM"))
-	HashOfSizeExceptionMachine = sha256.Sum256([]byte("This is the hash of an Arbitrum VM with a size exception"))
-}
 
 type MachineStatus int
 

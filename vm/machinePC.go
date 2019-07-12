@@ -28,10 +28,6 @@ const CodeSaveFrequency = 2
 
 var HashOfLastInstruction [32]byte
 
-func init() {
-	// HashOfLastInstruction = sha256.Sum256([]byte("This is the hash of the last instruction"))
-}
-
 type MachinePC struct {
 	// implements Machinestate
 	warn        WarningHandler
