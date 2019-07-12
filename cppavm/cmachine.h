@@ -23,8 +23,10 @@ extern "C" {
     typedef struct {
         unsigned char *outMessageData;
         int outMessageLength;
+        int outMessageCount;
         unsigned char *logData;
         int logLength;
+        int logCount;
         uint64_t numSteps;
     } RawAssertion;
     

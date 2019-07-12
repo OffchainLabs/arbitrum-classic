@@ -57,10 +57,7 @@ func (m *Machine) Hash() (ret [32]byte) {
 
 
 func (m *Machine) Clone() machine.Machine {
-	var ret *Machine
-	cMach := C.machineClone(m.c)
-	ret.c = cMach
-	return ret
+	return &Machine{C.machineClone(m.c)}
 }
 
 func (m *Machine) InboxHash() (value.HashOnlyValue) {
@@ -107,10 +104,12 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		C.ulonglong(timeBounds[1]),
 	)
 
+	fmt.Println("Finished raw assertion", assertion.outMessageLength, assertion.logLength)
+
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
 	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)
 
-	outMessageVals := bytesArrayToVals(outMessagesRaw)
+	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
 	outMessages := make([]protocol.Message, 0, len(outMessageVals))
 	for _, msgVal := range outMessageVals {
 		msg, err := protocol.NewMessageFromValue(msgVal)
@@ -120,7 +119,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		outMessages = append(outMessages, msg)
 	}
 
-	logVals := bytesArrayToVals(logsRaw)
+	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
 
 
 	return protocol.NewAssertion(
@@ -136,15 +135,15 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
 }
 
-func bytesArrayToVals(data []byte) []value.Value {
+func bytesArrayToVals(data []byte, valCount int) []value.Value {
 	rd := bytes.NewReader(data)
 	vals := []value.Value{}
-	for {
-		if val, err := value.UnmarshalValue(rd); err != nil {
-			vals = append(vals, val)
-		} else {
-			break
+	for i := 0; i < valCount; i++ {
+		val, err := value.UnmarshalValue(rd)
+		if err != nil {
+			panic(err)
 		}
+		vals = append(vals, val)
 	}
 	return vals
 }
