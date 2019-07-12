@@ -122,7 +122,8 @@ func main() {
 
 	challenger, err := ethvalidator.NewValidatorFollower(
 		"Bob",
-		machine, key2,
+		machine,
+		key2,
 		config,
 		true,
 		connectionInfo,

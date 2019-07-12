@@ -67,26 +67,26 @@ func (p *proposedUpdate) clone() *proposedUpdate {
 type Waiting struct {
 	*core.Config
 
-	proposed *proposedUpdate
-	accepted         *core.Core
-	assertion        *protocol.Assertion
-	sequenceNum      uint64
-	signatures       [][]byte
+	proposed    *proposedUpdate
+	accepted    *core.Core
+	assertion   *protocol.Assertion
+	sequenceNum uint64
+	signatures  [][]byte
 
-	timeBounds      protocol.TimeBounds
-	orig            *core.Core
+	timeBounds protocol.TimeBounds
+	orig       *core.Core
 }
 
 func NewWaiting(config *core.Config, c *core.Core) Waiting {
 	return Waiting{
-		Config:           config,
-		proposed:         nil,
-		accepted:         nil,
-		assertion:        nil,
-		sequenceNum:      0,
-		signatures:       nil,
-		timeBounds:       protocol.TimeBounds{},
-		orig:             c,
+		Config:      config,
+		proposed:    nil,
+		accepted:    nil,
+		assertion:   nil,
+		sequenceNum: 0,
+		signatures:  nil,
+		timeBounds:  protocol.TimeBounds{},
+		orig:        c,
 	}
 }
 
@@ -258,7 +258,7 @@ func (bot Waiting) PreparePendingUnanimous(request UnanimousUpdateRequest) (Wait
 	return Waiting{
 		Config: bot.Config,
 		proposed: &proposedUpdate{
-			machine:        request.Machine,
+			machine:     request.Machine,
 			messages:    mq,
 			Assertion:   assertion,
 			sequenceNum: request.SequenceNum,
@@ -282,17 +282,17 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (State, *propos
 	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.Assertion.OutMsgs))
 
 	return Waiting{
-		Config:           bot.Config,
-		proposed:         nil,
-		accepted:         core.NewCore(
+		Config:   bot.Config,
+		proposed: nil,
+		accepted: core.NewCore(
 			bot.proposed.machine,
 			balance,
 		),
-		assertion:        bot.proposed.Assertion,
-		sequenceNum:      bot.proposed.sequenceNum,
-		signatures:       signatures,
-		timeBounds:       bot.timeBounds,
-		orig:             bot.orig,
+		assertion:   bot.proposed.Assertion,
+		sequenceNum: bot.proposed.sequenceNum,
+		signatures:  signatures,
+		timeBounds:  bot.timeBounds,
+		orig:        bot.orig,
 	}, bot.proposed, nil
 }
 
@@ -381,7 +381,7 @@ func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (Stat
 	balance := bot.GetBalance()
 	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.assertion.OutMsgs))
 	return finalizingAssertion{
-		Core: core.NewCore(bot.pendingState, balance),
+		Core:       core.NewCore(bot.pendingState, balance),
 		Config:     bot.Config,
 		ResultChan: nil,
 	}, nil

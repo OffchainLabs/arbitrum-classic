@@ -36,10 +36,10 @@ type UnanimousUpdateRequest struct {
 }
 
 type DisputableAssertionRequest struct {
-	AfterState      machine.Machine
-	Precondition    *protocol.Precondition
-	Assertion       *protocol.Assertion
-	ResultChan      chan<- bool
+	AfterState   machine.Machine
+	Precondition *protocol.Precondition
+	Assertion    *protocol.Assertion
+	ResultChan   chan<- bool
 }
 
 func (r DisputableAssertionRequest) GetPrecondition() *protocol.Precondition {

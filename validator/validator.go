@@ -18,9 +18,10 @@ package validator
 
 import (
 	"fmt"
-	"github.com/offchainlabs/arb-util/evm"
 	"math"
 	"math/big"
+
+	"github.com/offchainlabs/arb-util/evm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -98,8 +99,8 @@ func (validator *Validator) RequestVMState() <-chan valmessage.VMStateData {
 func (validator *Validator) RequestDisputableAssertion(length uint64) <-chan bool {
 	resultChan := make(chan bool)
 	validator.requests <- disputableDefenderRequest{
-		Length:                 length,
-		ResultChan:             resultChan,
+		Length:     length,
+		ResultChan: resultChan,
 	}
 	return resultChan
 }
@@ -429,7 +430,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							request.ErrorChan <- errors.New("Call produced no output")
 							return
 						}
-						lastLogVal := results[len(results) - 1]
+						lastLogVal := results[len(results)-1]
 						lastLog, err := evm.ProcessLog(lastLogVal)
 						if err != nil {
 							request.ErrorChan <- err

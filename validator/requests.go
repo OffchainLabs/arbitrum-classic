@@ -38,8 +38,8 @@ type vmStateRequest struct {
 }
 
 type disputableDefenderRequest struct {
-	Length                 uint64
-	ResultChan             chan<- bool
+	Length     uint64
+	ResultChan chan<- bool
 }
 
 type initiateUnanimousRequest struct {
