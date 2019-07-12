@@ -34,7 +34,7 @@ __version__ = pkg_resources.require(NAME)[0].version
 RELEASE_VERSION='v0.1.0'
 
 # filename constants
-DOCKER_COMPOSE_FILENAME='arb-docker-compose.yml'
+DOCKER_COMPOSE_FILENAME='docker-compose.arb-deploy.yml'
 VALIDATOR_STATE_DIRNAME='validator-states/validator'
 
 # Relative dir name for deployment dependencies
@@ -139,6 +139,19 @@ gofmt -l $(git diff-index --cached --name-only HEAD | grep ".go") | \
 """)
 
 ### ----------------------------------------------------------------------------
+### Build cache starter
+### ----------------------------------------------------------------------------
+
+DOCKERFILE_GO_CACHE=(
+"""
+FROM alpine:3.9
+RUN mkdir -p /go-build
+FROM scratch
+COPY --from=0 /go-build /home/user/.cache/go-build
+"""
+)
+
+### ----------------------------------------------------------------------------
 ### Deploy
 ### ----------------------------------------------------------------------------
 
@@ -149,7 +162,17 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
 
     # Install dev_mode if flag set and doesn't exist already
     if dev_flag and not os.path.isdir(DEPLOY_DIR):
-        install_dev_mode()
+        install_dev_mode(sudo_flag)
+
+    # In dev-mode, create empty build caches if necessary
+    if dev_flag or os.path.isdir(DEPLOY_DIR):
+        if subprocess.check_output(sudo_cmd + 'docker images -q arb-validator',
+            shell=True).decode("utf-8") == '':
+            # warm build cache
+            run('mkdir -p %s/.tmp' % DEPLOY_DIR)
+            run('echo "%s" > %s/.tmp/Dockerfile' % (DOCKERFILE_GO_CACHE, DEPLOY_DIR))
+            run('docker build -t arb-validator %s/.tmp' % DEPLOY_DIR, sudo=sudo_flag)
+            run('rm -rf %s/.tmp' % DEPLOY_DIR)
 
     # Create VALIDATOR_STATE_DIRNAME s if they don't exist
     states_path = os.path.abspath(VALIDATOR_STATE_DIRNAME)
@@ -219,7 +242,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
 # Note: arb-avm must be inside arb-validator for Docker. Adds replace rule to
 # go.mod for local development. Also adds pre-commit hook to prevent committing
 # this development rule and does go fmt check
-def install_dev_mode():
+def install_dev_mode(sudo_flag):
     GC = 'git clone https://github.com/OffchainLabs/%s.git ./' + DEPLOY_DIR + '/%s'
     run('mkdir ' + DEPLOY_DIR)
     run(GC % ('arb-ethbridge', 'arb-ethbridge'))
@@ -258,7 +281,7 @@ def dockerfile_dev_mode(dev_flag, name):
     SUB = 'awk \'{ sub(/%s/, "%s") }1\' ' + ('%s/arb-validator/Dockerfile > ' +
         '%s/arb-validator/%s') % (DEPLOY_DIR, DEPLOY_DIR, name)
     if dev_flag or os.path.isdir(DEPLOY_DIR):
-        run(SUB % ('##DEV_', '##DEV_\\n'))
+        run(SUB % ('##DEV_', ''))
         return name
     else:
         return 'Dockerfile'
