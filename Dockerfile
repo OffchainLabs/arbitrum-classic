@@ -15,16 +15,19 @@ RUN addgroup -g 1000 -S user && \
 USER user
 WORKDIR "/home/user/"
 
+# Copy source code
+COPY --chown=user . ./
+
 # Build cache
 ##DEV_COPY --from=arb-avm-cpp --chown=user /build build/
 
-# Build
-COPY --chown=user . ./
 RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja && cmake --build .
 
+RUN cp cavm/cmachine.h build/cavm/libcavm.a build/avm/libavm.a avm-go/cavm
+    
+
 # Export library binary and header
 FROM scratch
-COPY --from=0 \
-    /home/user/avm/include/avm/cmachine.h \
-    /home/user/build build/
+COPY --from=0 /home/user/avm-go avm-go/
+COPY --from=0 /home/user/build build/
