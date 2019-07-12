@@ -15,15 +15,18 @@
 
 using TokenType = std::array<unsigned char, 21>;
 
-bool isToken(TokenType tok);
-void toTokenType(uint256_t tokTypeVal, TokenType &tok);
-uint256_t fromTokenType(TokenType &tok);
+bool isToken(const TokenType &tok);
+TokenType toTokenType(const uint256_t &tokTypeVal);
+uint256_t fromTokenType(const TokenType &tok);
 
 struct Message {
     value data;
     uint256_t destination;
     uint256_t currency;
     TokenType token;
+    
+    bool deserialize(const value &val);
+    value toValue(TuplePool &pool) const;
 };
 
 struct nftKey {

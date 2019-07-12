@@ -7,42 +7,69 @@
 
 #include "avm/tokenTracker.hpp"
 
-bool isToken(TokenType tok){
+bool isToken(const TokenType &tok){
     return tok[20] == 0;
 }
 
-uint256_t fromTokenType(TokenType &tok){
+uint256_t fromTokenType(const TokenType &tok) {
     std::vector<unsigned char> val;
     val.resize(32);
     std::copy(tok.begin(), tok.end(), val.begin());
     return from_big_endian(val.begin(), val.end());
 }
 
-void toTokenType(uint256_t tokTypeVal, TokenType &tok){
+TokenType toTokenType(const uint256_t &tokTypeVal) {
+    TokenType tok;
     std::vector<unsigned char> val;
     val.resize(32);
     to_big_endian(tokTypeVal, val.begin());
     std::copy(val.begin(), val.begin()+21, tok.begin());
+    return tok;
 }
 
-//uint256_t fromTokenType(TokenType &tok){
-//    uint256_t val;
-//    val.backend().resize(3,3);
-//    memcpy(val.backend().limbs(), &tok[0], 21);
-//    val.backend().normalize();
-//    return val;
-//}
-//
-//void toTokenType(uint256_t tokTypeVal, TokenType &tok){
-//    auto count = tokTypeVal.backend().size();
-//    auto tsize = sizeof(boost::serialization::mp::limb_type);
-//    if (count > 2){
-//        memcpy(&tok[0], tokTypeVal.backend().limbs(), 21);
-//    } else {
-//        memcpy(&tok[0], tokTypeVal.backend().limbs(), count*tsize);
-//        memset(&tok[0], 0, 21-count*tsize);
-//    }
-//}
+bool Message::deserialize(const value &val) {
+    auto msgTup = mpark::get_if<Tuple>(&val);
+    if (!msgTup) {
+        return false;
+    }
+    if (msgTup->tuple_size() != 4) {
+        return false;
+    }
+    
+    auto destVal = msgTup->get_element(1);
+    auto destInt = mpark::get_if<uint256_t>(&destVal);
+    if (!destInt) {
+        return false;
+    }
+    
+    auto currencyAmountVal = msgTup->get_element(2);
+    auto currencyAmountInt = mpark::get_if<uint256_t>(&currencyAmountVal);
+    if (!currencyAmountInt) {
+        return false;
+    }
+    
+    auto tokTypeVal = msgTup->get_element(3);
+    auto tokTypeInt = mpark::get_if<uint256_t>(&tokTypeVal);
+    if (!tokTypeInt) {
+        return false;
+    }
+
+    data = msgTup->get_element(0);
+    destination = *destInt;
+    currency = *currencyAmountInt;
+    token = toTokenType(*tokTypeInt);
+    return true;
+}
+
+value Message::toValue(TuplePool &pool) const {
+    return Tuple{
+        data,
+        destination,
+        currency,
+        fromTokenType(token),
+        &pool
+    };
+}
 
 bool BalanceTracker::CanSpend(const TokenType &tokType, const uint256_t &amount) const {
     // if token is fungible check that the spend amount <= the amount assigned to that token

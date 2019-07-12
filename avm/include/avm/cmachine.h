@@ -14,17 +14,33 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-    void* machine_create(const char* filename, const char* inboxfile);
-    void machine_destroy(void *m);
-    void* machine_clone(void *m);
-    void machine_hash(void *m, char *ret);
-    uint64_t machine_run(void* m, uint64_t maxSteps);
-    uint64_t machine_run_until_stop(void* m);
     
-    void machine_add_to_inbox(void *m, char *inbox);
-    void machine_set_time_bounds(void* m, uint64_t timeboundStart, uint64_t timeboundEnd);
-    void marshal_for_proof(void *m, char *inbox);
+    typedef struct {
+        unsigned char *data;
+        int length;
+    } ByteSlice;
+    
+    typedef void CMachine;
+    
+    CMachine* machineCreate(const char* filename, const char* inboxfile);
+    void machineDestroy(CMachine *m);
+    
+    // Ret must have 32 bytes of storage allocated for returned hash
+    void machineHash(CMachine *m, char *ret);
+    CMachine* machineClone(CMachine *m);
+    
+    // Ret must have 32 bytes of storage allocated for returned hash
+    void machineInboxHash(CMachine *m, char *ret);
+    
+    bool machineHasPendingMessages(CMachine *m);
+    void machineSendOnchainMessage(CMachine *m, char *data, int size);
+    void machineDeliverOnchainMessage(CMachine *m);
+    void machineSendOffchainMessages(CMachine *m, char *data, int size);
+    
+    uint64_t machineExecuteAssertion(CMachine* m, uint64_t maxSteps, uint64_t timeboundStart, uint64_t timeboundEnd);
+    
+    ByteSlice machineMarshallForProof(CMachine *m);
+
 #ifdef __cplusplus
 }
 #endif

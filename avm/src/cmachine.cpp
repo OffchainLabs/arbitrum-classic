@@ -55,62 +55,85 @@ Machine* read_files(std::string filename, std::string inboxfile) {
 }
 
 // cmachine_t *machine_create(char *data)
-void* machine_create(const char* filename, const char* inboxfile) {
+CMachine* machineCreate(const char* filename, const char* inboxfile) {
     Machine* mach = read_files(filename, inboxfile);
     return static_cast<void*>(mach);
 }
 
-void* machine_clone(void* m) {
-    Machine *mach = new Machine(*(static_cast<Machine*>(m)));
-    return static_cast<void*>(mach);
-}
-
-void machine_hash(void* m, char *ret) {
-    uint256_t retHash = static_cast<Machine*>(m)->hash();
-    std::vector<unsigned char> val;
-    val.resize(32);
-    to_big_endian(retHash, val.begin());
-    std::copy(val.begin(), val.end(), ret);
-}
-
-void machine_destroy(void* m) {
+void machineDestroy(CMachine* m) {
     std::cout << "In machine_destroy"<<std::endl;
     if (m == NULL)
         return;
     delete static_cast<Machine*>(m);
 }
 
-// cassertion machine_run(cmachine_t *m, uint64_t maxSteps) {
-uint64_t machine_run(void* m, uint64_t maxSteps) {
-    if (m == NULL)
-        return 0;
-    Machine* mach = static_cast<Machine*>(m);
-    Assertion assertion = mach->run(maxSteps, 0, 0);
-    printf("%llu steps ran\n", assertion.stepCount);
-    return assertion.stepCount;
+void machineHash(CMachine* m, char *ret) {
+    uint256_t retHash = static_cast<Machine*>(m)->hash();
+    std::array<unsigned char, 32> val;
+    to_big_endian(retHash, val.begin());
+    std::copy(val.begin(), val.end(), ret);
 }
 
-uint64_t machine_run_until_stop(void* m) {
-    if (m == NULL)
-        return 0;
-    Machine* mach = static_cast<Machine*>(m);
-    Assertion assertion = mach->runUntilStop(0, 0);
-    printf("%llu steps ran\n", assertion.stepCount);
-    return assertion.stepCount;
+void* machineClone(CMachine* m) {
+    Machine *mach = new Machine(*(static_cast<Machine*>(m)));
+    return static_cast<void*>(mach);
 }
 
-void inbox_add_message(void *m, char *inbox){
+void machineInboxHash(CMachine *m, char *ret) {
+    uint256_t retHash = static_cast<Machine*>(m)->inboxHash();
+    std::array<unsigned char, 32> val;
+    to_big_endian(retHash, val.begin());
+    std::copy(val.begin(), val.end(), ret);
+}
+
+bool machineHasPendingMessages(CMachine *m) {
     Machine *mach = static_cast<Machine*>(m);
-    mach->addInboxMessage(inbox);
+    return mach->hasPendingMessages();
 }
 
-void marshal_for_proof(void *m, char *ret){
+void machineSendOnchainMessage(CMachine *m, char *data) {
+    Machine *mach = static_cast<Machine*>(m);
+    auto val = deserialize_value(data, mach->getPool());
+    Message msg;
+    auto success = msg.deserialize(val);
+    if (!success) {
+        throw std::runtime_error("Machine recieved invalid message");
+    }
+    mach->sendOnchainMessage(msg);
+}
+
+void machineDeliverOnchainMessages(CMachine *m) {
+    Machine *mach = static_cast<Machine*>(m);
+    mach->deliverOnchainMessages();
+}
+
+ByteSlice machineMarshallForProof(CMachine *m) {
     Machine *mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
-    mach->marshalForProof(buffer);
+    auto proof = mach->marshalForProof();
+    auto proofData = (unsigned char *)malloc(proof.size());
+    std::copy(proof.begin(), proof.end(), proofData);
+    return {proofData, static_cast<int>(proof.size())};
 }
 
-void machineSettime_bounds(void* m, uint64_t timeboundStart, uint64_t timeboundEnd){
+void machineSendOffchainMessages(CMachine *m, char *data, int size) {
     Machine *mach = static_cast<Machine*>(m);
-    mach->setTimebounds(timeboundStart, timeboundEnd);
+    std::vector<Message> messages;
+    auto end = data + size;
+    while(data < end) {
+        auto val = deserialize_value(data, mach->getPool());
+        messages.emplace_back();
+        auto success = messages.back().deserialize(val);
+        if (!success) {
+            throw std::runtime_error("Machine recieved invalid message");
+        }
+    }
+    mach->sendOffchainMessages(messages);
+}
+
+uint64_t machineExecuteAssertion(CMachine* m, uint64_t maxSteps, uint64_t timeboundStart, uint64_t timeboundEnd) {
+    Machine* mach = static_cast<Machine*>(m);
+    Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd);
+    printf("%llu steps ran\n", assertion.stepCount);
+    return assertion.stepCount;
 }

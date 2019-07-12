@@ -204,65 +204,53 @@ MachineState::MachineState(char*& srccode, char*& inboxdata, int inbox_sz) : Mac
     staticVal = deserialize_value(bufptr, *pool);
     pc = 0;
     if (*inboxbuf == 6){
-        inbox = deserialize_value(inboxbuf, *pool);
+        auto inboxVal = deserialize_value(inboxbuf, *pool);
+        auto inboxPtr = mpark::get_if<Tuple>(&inboxVal);
+        assert(inboxPtr);
+        inbox = *inboxPtr;
     } else {
         while (inboxbuf < inboxdata+inbox_sz) {
-            addInboxMessage(inboxbuf);
+            auto msgVal = deserialize_value(inboxbuf, *pool);
+            Message msg;
+            auto success = msg.deserialize(msgVal);
+            if (!success) {
+                throw std::runtime_error("Machine recieved invalid message");
+            }
+            sendOnchainMessage(msg);
         }
-        deliverMessages();
+        deliverOnchainMessages();
     }
 }
 
-void MachineState::addInboxMessage(char*& newMsg){
-    value msg=deserialize_value(newMsg, *pool);
-    Tuple tup(pool.get(), 3);
-    tup.set_element(0, uint256_t(0));
-    tup.set_element(1, std::move(pendingInbox));
-    tup.set_element(2, std::move(msg));
-    pendingInbox = tup;
-    auto &msgTup = assumeTuple(msg);
-    TokenType tokType;
-    value val=msgTup.get_element(3);
-    auto &tokTypeVal=assumeInt(val);
-    toTokenType(tokTypeVal, tokType);
-    val=msgTup.get_element(2);
-    auto &amt = assumeInt(val);
-    context.afterBalance.add(tokType, amt);
+bool MachineState::hasPendingMessages() const {
+    return pendingInbox == Tuple();
 }
 
-void MachineState::addInboxMessage(value msg){
-    Tuple tup(pool.get(), 3);
-    tup.set_element(0, uint256_t(0));
-    tup.set_element(1, std::move(pendingInbox));
-    tup.set_element(2, std::move(msg));
-    pendingInbox = tup;
-    auto &msgTup = assumeTuple(msg);
-    TokenType tokType;
-    value val=msgTup.get_element(3);
-    auto &tokTypeVal=assumeInt(val);
-    toTokenType(tokTypeVal, tokType);
-    val=msgTup.get_element(2);
-    auto &amt = assumeInt(val);
-    context.afterBalance.add(tokType, amt);
+void MachineState::sendOnchainMessage(const Message &msg) {
+    pendingInbox = Tuple{
+        uint256_t{0},
+        std::move(pendingInbox),
+        msg.toValue(*pool),
+        pool.get()
+    };
+    context.afterBalance.add(msg.token, msg.currency);
 }
 
-void MachineState::addInboxMessage(Message &msg){
-    Tuple msgTup(pool.get(), 4);
-    msgTup.set_element(0, msg.data);
-    msgTup.set_element(1, msg.destination);
-    msgTup.set_element(2, msg.currency);
-    msgTup.set_element(3, fromTokenType(msg.token));
-    addInboxMessage(msgTup);
+void MachineState::sendOffchainMessages(const std::vector<Message> &messages) {
+    Tuple messageStack;
+    for (const auto &message : messages) {
+        messageStack = Tuple{
+            uint256_t{0},
+            std::move(messageStack),
+            message.toValue(*pool),
+            pool.get()
+        };
+    }
+    deliverMessageStack(std::move(messageStack));
 }
 
-void MachineState::deliverMessages(){
-    Tuple empty;
-    Tuple tup(pool.get(), 3);
-    tup.set_element(0, uint256_t(1));
-    tup.set_element(1, std::move(empty));
-    tup.set_element(2, std::move(pendingInbox));
-
-    inbox = tup;
+void MachineState::deliverOnchainMessages() {
+    deliverMessageStack(std::move(pendingInbox));
     pendingInbox = Tuple();
 }
 
@@ -273,7 +261,8 @@ void uint256_t_to_buf(uint256_t val, std::vector<unsigned char>& buf){
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-void MachineState::marshalForProof(std::vector<unsigned char>& buf){
+std::vector<unsigned char> MachineState::marshalForProof(){
+    std::vector<unsigned char> buf;
     std::vector<bool> stackPops = InstructionStackPops.at(code[pc].op.opcode);
     if (code[pc].op.immediate){
         stackPops.erase(stackPops.begin());
@@ -307,6 +296,12 @@ void MachineState::marshalForProof(std::vector<unsigned char>& buf){
         marshal_value(auxstackval, buf);
     }
     std::cout<<"marshal size "<<buf.size()<<std::endl;
+    return buf;
+}
+
+void MachineState::deliverMessageStack(value messages) {
+    Tuple empty;
+    inbox = Tuple(uint256_t(1), std::move(empty), std::move(messages), pool.get());
 }
 
 void MachineState::setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd){
@@ -314,12 +309,16 @@ void MachineState::setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd)
     context.precondition.timeBounds[1] = timeBoundEnd;
 }
 
-void Machine::addInboxMessage(char *msg){
-    m.addInboxMessage(msg);
+void Machine::sendOnchainMessage(const Message &msg){
+    m.sendOnchainMessage(msg);
 }
 
-void Machine::deliverMessages(){
-    m.deliverMessages();
+void Machine::deliverOnchainMessages(){
+    m.deliverOnchainMessages();
+}
+
+void Machine::sendOffchainMessages(const std::vector<Message> &messages) {
+    m.sendOffchainMessages(messages);
 }
 
 Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd) {
@@ -340,39 +339,6 @@ Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t tim
         }
     }
 
-    if (m.state == ERROR) {
-        //TODO: check if error handler set - jump there
-        // set error return
-        std::cout << "error state" << std::endl;
-    }
-    if (m.state == HALTED) {
-        // set error return
-        //        std::cout << "halted state" << std::endl;
-    }
-    std::cout<<to_hex_str(hash())<<std::endl;
-    std::cout<<m<<std::endl;
-    return {i};
-}
-
-Assertion Machine::runUntilStop(uint64_t timeBoundStart, uint64_t timeBoundEnd) {
-    //    std::cout << "starting machine code size=" << code.size() <<
-    //    std::endl; std::cout << "inbox=" << inbox << std::endl;
-    m.setTimebounds(timeBoundStart, timeBoundEnd);
-    uint64_t i=0;
-    while (true) {
-        //        std::cout << "Step #" << i << std::endl;
-        //        std::cout<<i<<" ";
-        i++;
-        auto ret = runOne();
-        if ((ret < 0) ||
-            (m.state == ERROR)||
-            (m.state == HALTED)||
-            (m.state == BLOCKED))
-        {
-            break;
-        }
-    }
-    
     if (m.state == ERROR) {
         //TODO: check if error handler set - jump there
         // set error return
@@ -928,22 +894,12 @@ namespace {
 
     static void send(MachineState &m) {
         m.stack.prepForMod(1);
-        auto &tup = assumeTuple(m.stack[0]);
-        if (tup.tuple_size() != 4){
+        Message outMsg;
+        auto success = outMsg.deserialize(m.stack[0]);
+        if (!success){
             m.state=ERROR;
             return;
         }
-        Message outMsg;
-        outMsg.data =tup.get_element(0);
-        value dest =tup.get_element(1);
-        outMsg.destination = assumeInt(dest);
-        value amt =tup.get_element(2);
-        outMsg.currency = assumeInt(amt);
-        value tokVal =tup.get_element(3);
-        auto &tokTypeVal = assumeInt(tokVal);
-        
-        toTokenType(tokTypeVal, outMsg.token);
-        
         if (!m.context.afterBalance.Spend(outMsg.token, outMsg.currency)){
             m.state = BLOCKED;
         } else {
@@ -955,27 +911,18 @@ namespace {
 
     static void nbsend(MachineState &m) {
         m.stack.prepForMod(1);
-        auto &tup = assumeTuple(m.stack[0]);
-        if (tup.tuple_size() != 4){
+        
+        Message outMsg;
+        auto success = outMsg.deserialize(m.stack[0]);
+        if (!success){
             m.state=ERROR;
             return;
         }
-        Message outMsg;
-        outMsg.data =tup.get_element(0);
-        value dest =tup.get_element(1);
-        outMsg.destination = assumeInt(dest);
-        value amt =tup.get_element(2);
-        outMsg.currency = assumeInt(amt);
-        value tokVal =tup.get_element(3);
-        auto &tokTypeVal = assumeInt(tokVal);
         
-        toTokenType(tokTypeVal, outMsg.token);
-        
-        if (!m.context.afterBalance.CanSpend(outMsg.token, outMsg.currency)){
+        bool spent = m.context.afterBalance.Spend(outMsg.token, outMsg.currency);
+        if (!spent){
             m.stack[0] = 0;
         } else {
-            bool spent = m.context.afterBalance.Spend(outMsg.token, outMsg.currency);
-            assert(spent);
             m.context.outMessage.push_back(outMsg);
             m.stack[0] = 1;
         }
@@ -992,7 +939,8 @@ namespace {
 
     static void inboxOp(MachineState &m) {
         m.stack.prepForMod(1);
-        if (m.inbox == m.stack[0]) {
+        auto stackTop = mpark::get_if<Tuple>(&m.stack[0]);
+        if (stackTop && m.inbox == *stackTop) {
             m.state = BLOCKED;
         } else {
             value inboxCopy = m.inbox;

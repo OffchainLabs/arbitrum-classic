@@ -25,7 +25,7 @@ void sendInboxMessage(MachineState &m, value data, uint256_t dest, uint256_t cur
     msg.token = tokType;
     msg.currency = currency;
     msg.destination = dest;
-    m.addInboxMessage(msg);
+    m.sendOnchainMessage(msg);
 }
 
 MachineState setupMachine(value data, uint256_t dest, uint256_t currency, TokenType tokType){

@@ -317,19 +317,18 @@ int main(int argc, char* argv[]) {
     //    machine_create();
     //    oldread_file(filename, code, staticValue);
     //    Machine *mach = read_files(filename, inbox_file);
-    void *tmpmach = machine_create(filename.c_str(), inboxfile.c_str());
-    void *mach2 = machine_clone(tmpmach);
+    void *tmpmach = machineCreate(filename.c_str(), inboxfile.c_str());
+    void *mach2 = machineClone(tmpmach);
 //    uint64_t steps = machine_run(tmpmach, stepCount);
-    uint64_t steps = machine_run(tmpmach, 25);
-    char* proofbuf;
-    marshal_for_proof(tmpmach, proofbuf);
+    uint64_t steps = machineExecuteAssertion(tmpmach, stepCount, 0, 1000);
+    auto proof = machineMarshallForProof(tmpmach);
     char *tmpbuf=(char *)malloc(32);
-    machine_hash(tmpmach, &tmpbuf[0]);
-    machine_destroy(tmpmach);
+    machineHash(tmpmach, &tmpbuf[0]);
+    machineDestroy(tmpmach);
     std::cout << "Running clone"<<std::endl;
-    steps = machine_run(mach2, stepCount);
+    steps = machineExecuteAssertion(mach2, stepCount, 0, 1000);
     char *tmpbuf2=(char *)malloc(32);
-    machine_hash(mach2, &tmpbuf2[0]);
+    machineHash(mach2, &tmpbuf2[0]);
     bool success=true;
     for (int i=0; i<32; i++){
         if(tmpbuf[i] != tmpbuf2[i]){

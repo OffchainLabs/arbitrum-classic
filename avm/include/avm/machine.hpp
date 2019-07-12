@@ -59,8 +59,8 @@ struct MachineState {
     int state;
     uint64_t pc;
     CodePoint errpc;
-    value pendingInbox;
-    value inbox;
+    Tuple pendingInbox;
+    Tuple inbox;
     AssertionContext context;
 		
     MachineState();
@@ -69,14 +69,17 @@ struct MachineState {
     MachineState(MachineState const &m);
 
     void readInbox(char *newInbox);
-    void addInboxMessage(char*& newMsg);
-    void addInboxMessage(value msg);
-    void addInboxMessage(Message &msg);
-    void deliverMessages();
-    void marshalForProof(std::vector<unsigned char>& buf);
+    std::vector<unsigned char> marshalForProof();
+    bool hasPendingMessages() const;
+    void sendOnchainMessage(const Message &msg);
+    void deliverOnchainMessages();
+    void sendOffchainMessages(const std::vector<Message> &messages);
     void setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd);
     void runOp(OpCode opcode);
     uint256_t hash() const;
+    
+private:
+    void deliverMessageStack(value messages);
 };
 
 class Machine {
@@ -89,13 +92,25 @@ class Machine {
     Machine(){}
     Machine(Machine const &msrc) : m(msrc.m){}
     Assertion run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd);
-    Assertion runUntilStop(uint64_t timeBoundStart, uint64_t timeBoundEnd);
     int runOne();
     uint256_t hash() const { return m.hash(); }
-    void addInboxMessage(char *msg);
-    void deliverMessages();
-    void marshalForProof(std::vector<unsigned char>& buf) {m.marshalForProof(buf);}
+    std::vector<unsigned char> marshalForProof() {return m.marshalForProof(); }
+    bool hasPendingMessages() const {
+        return m.hasPendingMessages();
+    }
+    
+    uint256_t inboxHash() const {
+        return ::hash(m.inbox);
+    }
+    
+    void sendOnchainMessage(const Message &msg);
+    void deliverOnchainMessages();
+    void sendOffchainMessages(const std::vector<Message> &messages);
     void setTimebounds(uint64_t timeboundStart, uint64_t timeboundEnd) {m.setTimebounds(timeboundStart, timeboundEnd);};
+    
+    TuplePool &getPool() {
+        return *m.pool;
+    }
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);
