@@ -225,10 +225,6 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
     with open(compose, 'w') as f:
         f.write(contents)
 
-    # Warm build cache
-    if dev_flag or os.path.isdir(DEPLOY_DIR):
-        run('cd %s/arb-validator && go mod vendor' % DEPLOY_DIR)
-
     # Build
     run('docker-compose -f %s build' % compose, sudo=sudo_flag)
 
@@ -237,11 +233,11 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         run('docker-compose -f %s up --abort-on-container-exit' % compose,
             sudo=sudo_flag)
 
-# Installs arb-ethbridge, arb-validator, arb-avm, arb-web3-provider,
+# Installs arb-ethbridge, arb-validator, arb-avm, arb-util, arb-web3-provider,
 # arb-ethers-provider, and arb-truffle-provider and link them correctly.
-# Note: arb-avm must be inside arb-validator for Docker. Adds replace rule to
-# go.mod for local development. Also adds pre-commit hook to prevent committing
-# this development rule and does go fmt check
+# Note: arb-avm and arb-util must be inside arb-validator for Docker. go.mod is
+# updated with replace rule. Also adds pre-commit hook to prevent committing
+# this development rule and does go formatting check
 def install_dev_mode(sudo_flag):
     GC = 'git clone https://github.com/OffchainLabs/%s.git ./' + DEPLOY_DIR + '/%s'
     run('mkdir ' + DEPLOY_DIR)
@@ -249,6 +245,10 @@ def install_dev_mode(sudo_flag):
     run(GC % ('arb-validator', 'arb-validator'))
     run(GC % ('arb-avm', 'arb-validator/arb-avm'))
     run('ln -sf arb-validator/arb-avm ' + DEPLOY_DIR + '/arb-avm')
+    run(GC % ('arb-avm-cpp', 'arb-validator/arb-avm-cpp'))
+    run('ln -sf arb-validator/arb-avm-cpp ' + DEPLOY_DIR + '/arb-avm-cpp')
+    run(GC % ('arb-util', 'arb-validator/arb-util'))
+    run('ln -sf arb-validator/arb-util ' + DEPLOY_DIR + '/arb-util')
     # Add git pre-commit hooks to golang repos
     def add_commit_hook(repo):
         with open(repo + '/.git/hooks/pre-commit', 'w') as f:
@@ -256,6 +256,7 @@ def install_dev_mode(sudo_flag):
         run('chmod +x ' + repo + '/.git/hooks/pre-commit')
     add_commit_hook(DEPLOY_DIR + '/arb-validator')
     add_commit_hook(DEPLOY_DIR + '/arb-avm')
+    add_commit_hook(DEPLOY_DIR + '/arb-util')
     # Link providers locally
     run(GC % ('arb-truffle-provider', 'arb-truffle-provider'))
     run(GC % ('arb-ethers-provider', 'arb-ethers-provider'))
