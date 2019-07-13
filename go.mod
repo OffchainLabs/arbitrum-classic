@@ -1,4 +1,4 @@
-module arb-avm-cpp
+module github.com/offchainlabs/arb-avm-cpp
 
 go 1.12
 
