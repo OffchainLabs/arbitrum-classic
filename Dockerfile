@@ -24,11 +24,10 @@ COPY --chown=user . ./
 RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -GNinja && cmake --build .
 
-RUN cp cavm/cmachine.h build/cavm/libcavm.a build/avm/libavm.a avm-go/cavm
-    
+RUN cp cavm/cmachine.h build/cavm/libcavm.a build/avm/libavm.a cmachine
 
 # Export library binary and header
 FROM alpine:3.9
-COPY --from=0 /home/user/avm-go avm-go/
+COPY --from=0 /home/user/cmachine cmachine/
 COPY --from=0 /home/user/build build/
 CMD /bin/true
