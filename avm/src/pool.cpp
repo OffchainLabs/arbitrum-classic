@@ -11,8 +11,6 @@
 #include <avm/tuple.hpp>
 #include <avm/value.hpp>
 
-#include <boost/smart_ptr/make_local_shared.hpp>
-
 #include <iostream>
 
 /**
@@ -23,13 +21,13 @@
  *
  * @return Resource instance.
  */
-boost::local_shared_ptr<RawTuple> TuplePool::getResource(int s) {
+std::shared_ptr<RawTuple> TuplePool::getResource(int s) {
     if (s == 0) {
         return nullptr;
     }
-    boost::local_shared_ptr<RawTuple> resource;
+    std::shared_ptr<RawTuple> resource;
     if (resources[s].empty()) {
-        resource = boost::make_local_shared<RawTuple>();
+        resource = std::make_shared<RawTuple>();
     } else {
         resource = resources[s].back();
         resources[s].pop_back();

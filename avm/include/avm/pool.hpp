@@ -11,9 +11,8 @@
 
 #include "value.hpp"
 
-#include <boost/smart_ptr/local_shared_ptr.hpp>
-
 #include <array>
+#include <memory>
 #include <vector>
 
 struct RawTuple {
@@ -23,7 +22,7 @@ struct RawTuple {
 
 class TuplePool {
    private:
-    std::array<std::vector<boost::local_shared_ptr<RawTuple>>, 9>
+    std::array<std::vector<std::shared_ptr<RawTuple>>, 9>
         resources;
 
    public:
@@ -35,7 +34,7 @@ class TuplePool {
      *
      * @return Resource instance.
      */
-    boost::local_shared_ptr<RawTuple> getResource(int s);
+    std::shared_ptr<RawTuple> getResource(int s);
 
     /**
      * Return resource back to the pool.
@@ -46,7 +45,7 @@ class TuplePool {
      *
      * @param object Resource instance.
      */
-    void returnResource(boost::local_shared_ptr<RawTuple>&& object) {
+    void returnResource(std::shared_ptr<RawTuple>&& object) {
         resources[object->data.size()].push_back(std::move(object));
     }
 };

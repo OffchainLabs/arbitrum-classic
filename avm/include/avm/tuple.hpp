@@ -12,14 +12,14 @@
 #include "pool.hpp"
 #include "value.hpp"
 
-#include <boost/smart_ptr/local_shared_ptr.hpp>
+#include <memory>
 
 uint256_t zeroHash();
 
 class Tuple {
    private:
     TuplePool* tuplePool;
-    boost::local_shared_ptr<RawTuple> tpl;
+    std::shared_ptr<RawTuple> tpl;
 
     friend uint256_t hash(const Tuple&);
 
@@ -130,7 +130,7 @@ class Tuple {
     }
 
     ~Tuple() {
-        if (tpl.local_use_count() == 1) {
+        if (tpl.use_count() == 1) {
             tuplePool->returnResource(std::move(tpl));
         }
     }
@@ -150,9 +150,9 @@ class Tuple {
         
         ::warmHash(newval);
 
-        if (tpl.local_use_count() > 1) {
+        if (tpl.use_count() > 1) {
             // make new copy tuple
-            boost::local_shared_ptr<RawTuple> tmp =
+            std::shared_ptr<RawTuple> tmp =
                 tuplePool->getResource(tuple_size());
             
             std::copy(tpl->data.begin(), tpl->data.end(), std::back_inserter(tmp->data));
