@@ -37,10 +37,9 @@ import (
 
 	"github.com/offchainlabs/arb-util/machine"
 
-	"github.com/offchainlabs/arb-avm/loader"
-
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arb-validator/loader"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -113,7 +112,7 @@ func main() {
 	}
 
 	// 1) Compiled Arbitrum bytecode
-	machine, err := loader.LoadMachineFromFile(os.Args[1], true)
+	machine, err := loader.LoadMachineFromFile(os.Args[1], true, "go")
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}

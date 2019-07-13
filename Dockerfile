@@ -8,7 +8,7 @@
 FROM alpine:3.9
 
 # Alpine dependencies
-RUN apk add --no-cache git go libc-dev
+RUN apk add --no-cache git go libc-dev build-base
 
 # Non-root user
 RUN addgroup -g 1000 -S user && \
@@ -31,10 +31,13 @@ RUN if [[ -d arb-util ]]; then cd arb-util && go build -v ./... ; fi
 ##DEV_COPY --chown=user arb-avm /home/user/arb-avm
 RUN if [[ -d arb-avm ]]; then cd arb-avm && go build -v ./... ; fi
 
+COPY --from=arb-avm-cpp --chown=user /arb-avm-cpp /home/user/arb-avm-cpp/
+
 # Build arb-validator
 COPY --chown=user ./ /home/user/
 RUN if [[ -d arb-avm ]]; then \
     echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod && \
+    echo "replace github.com/offchainlabs/arb-avm-cpp => ./arb-avm-cpp" >> go.mod && \
     echo "replace github.com/offchainlabs/arb-util => ./arb-util" >> go.mod; \
     fi; \
     go build -v ./cmd/followerServer ./cmd/coordinatorServer && \
@@ -43,6 +46,10 @@ RUN if [[ -d arb-avm ]]; then \
 
 # Minimize
 FROM alpine:3.9
+
+# Alpine dependencies
+RUN apk add --no-cache libstdc++ libgcc
+
 # Non-root user
 RUN addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
