@@ -22,14 +22,11 @@ struct RawTuple {
 
 class TuplePool {
    private:
-    std::array<std::vector<std::shared_ptr<RawTuple>>, 9>
-        resources;
+    std::array<std::vector<std::shared_ptr<RawTuple>>, 9> resources;
     bool shuttingDown = false;
+
    public:
-    
-    ~TuplePool() {
-        shuttingDown = true;
-    }
+    ~TuplePool() { shuttingDown = true; }
     /**
      * Returns instance of Resource.
      *

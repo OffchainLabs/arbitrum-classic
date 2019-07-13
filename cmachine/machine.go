@@ -11,21 +11,12 @@ import "C"
 
 import (
 	"bytes"
-	"fmt"
+	"runtime"
+	"unsafe"
+
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-	"runtime"
-	"unsafe"
-	//"github.com/offchainlabs/arb-avm/loader"
-	//"github.com/ethereum/go-ethereum/common/hexutil"
-	//"github.com/offchainlabs/arb-util/evm"
-	//"github.com/offchainlabs/arb-avm/loader"
-	//"github.com/offchainlabs/arb-util/protocol"
-	//"github.com/offchainlabs/arb-util/value"
-	//"log"
-	//"math/big"
-	//"os"
 )
 
 type Machine struct {
@@ -33,9 +24,6 @@ type Machine struct {
 }
 
 func New(codeFile string) *Machine {
-	fmt.Println("CCreartVM codeFile=", codeFile)
-	//****************
-	// C stuff
 	cFilename := C.CString(codeFile)
 
 	cMachine := C.machineCreate(cFilename)
@@ -46,7 +34,6 @@ func New(codeFile string) *Machine {
 }
 
 func cdestroyVM(cMachine *Machine) {
-	fmt.Println("Calling C.machine_destroy")
 	C.machineDestroy(cMachine.c)
 }
 
@@ -94,7 +81,7 @@ func (m *Machine) SendOffchainMessages(msgs[]protocol.Message) {
 	}
 	msgsData := buf.Bytes()
 	if len(msgsData) > 0 {
-		C.machineSendOffchainMessages(m.c, unsafe.Pointer(&msgsData[0]), C.int(len(msgsData)))
+		C.machineSendOffchainMessages(m.c, unsafe.Pointer(&msgsData[0]), C.int(len(msgs)))
 	}
 }
 
@@ -105,8 +92,6 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		C.uint64_t(timeBounds[0]),
 		C.uint64_t(timeBounds[1]),
 	)
-
-	fmt.Println("Finished raw assertion", assertion.outMessageLength, assertion.logLength)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
 	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)

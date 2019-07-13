@@ -35,12 +35,12 @@ class datastack {
             addHash();
         }
     };
-    
-    const value &operator[](size_t index) const {
+
+    const value& operator[](size_t index) const {
         return values[values.size() - 1 - index];
     }
-    
-    value &operator[](size_t index) {
+
+    value& operator[](size_t index) {
         return values[values.size() - 1 - index];
     }
 
@@ -54,21 +54,22 @@ class datastack {
         popClear();
         return val;
     }
-    
+
     void prepForMod(int count) {
-        while(hashes.size() > values.size() - count) {
+        while (hashes.size() > values.size() - count) {
             hashes.pop_back();
         }
     }
-    
+
     void popClear() {
         values.pop_back();
         if (hashes.size() > values.size()) {
             hashes.pop_back();
         }
     }
-    
-    uint256_t SolidityProofValue(std::vector<bool>& stackInfo, std::vector<value>& vals);
+
+    uint256_t SolidityProofValue(std::vector<bool>& stackInfo,
+                                 std::vector<value>& vals);
 
     value& peek() {
         if (values.size() == 0) {

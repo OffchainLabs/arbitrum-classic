@@ -59,15 +59,15 @@ Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool) {
     return tup;
 }
 
-void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf){
+void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf) {
     val.marshal(buf);
 }
 
-void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf){
+void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf) {
     val.marshal(buf);
 }
 
-void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf){
+void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.push_back(NUM);
     std::vector<unsigned char> tmpbuf;
     tmpbuf.resize(32);
@@ -75,7 +75,7 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf){
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-void marshal_value(const value val, std::vector<unsigned char>& buf){
+void marshal_value(const value val, std::vector<unsigned char>& buf) {
     if (mpark::holds_alternative<Tuple>(val))
         marshal_Tuple(mpark::get<Tuple>(val), buf);
     else if (mpark::holds_alternative<uint256_t>(val))
@@ -132,16 +132,4 @@ struct ValuePrinter {
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
     return mpark::visit(ValuePrinter{os}, val);
-}
-
-struct HashWarmer {
-    void operator()(Tuple& val) { val.warmHash(); }
-    
-    void operator()(uint256_t&) {}
-    
-    void operator()(CodePoint&) {}
-};
-
-void warmHash(value& val) {
-    mpark::visit(HashWarmer{}, val);
 }

@@ -32,7 +32,7 @@ Operation& Operation::operator=(const Operation& cp) {
 Operation& Operation::operator=(Operation&&) = default;
 Operation::~Operation() = default;
 void Operation::marshal(std::vector<unsigned char>& buf) const {
-    if (immediate){
+    if (immediate) {
         buf.push_back(1);
         buf.push_back((uint8_t)opcode);
         marshal_value(*immediate, buf);
@@ -45,9 +45,10 @@ void Operation::marshal(std::vector<unsigned char>& buf) const {
 void CodePoint::marshal(std::vector<unsigned char>& buf) const {
     buf.push_back(CODEPT);
     uint64_t bepc = boost::endian::native_to_big(pc);
-    std::copy(static_cast<const char*>(static_cast<const void*>(&bepc)),
-              static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
-              std::back_inserter(buf));
+    std::copy(
+        static_cast<const char*>(static_cast<const void*>(&bepc)),
+        static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
+        std::back_inserter(buf));
     buf.push_back(static_cast<unsigned char>(op.opcode));
     std::vector<unsigned char> val;
     val.resize(32);

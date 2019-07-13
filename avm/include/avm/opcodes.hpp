@@ -156,7 +156,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::ADDMOD, {true, true}},
     {OpCode::MULMOD, {true, true}},
     {OpCode::EXP, {true, true}},
-    
+
     {OpCode::LT, {true, true}},
     {OpCode::GT, {true, true}},
     {OpCode::SLT, {true, true}},
@@ -221,7 +221,7 @@ const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::ADDMOD, {}},
     {OpCode::MULMOD, {}},
     {OpCode::EXP, {}},
-    
+
     {OpCode::LT, {}},
     {OpCode::GT, {}},
     {OpCode::SLT, {}},
@@ -234,10 +234,10 @@ const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::BITWISE_NOT, {}},
     {OpCode::BYTE, {}},
     {OpCode::SIGNEXTEND, {}},
-    
+
     {OpCode::HASH, {}},
     {OpCode::TYPE, {}},
-    
+
     {OpCode::POP, {}},
     {OpCode::SPUSH, {}},
     {OpCode::RPUSH, {}},
@@ -252,20 +252,20 @@ const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::NOP, {}},
     {OpCode::ERRPUSH, {}},
     {OpCode::ERRSET, {}},
-    
+
     {OpCode::DUP0, {}},
     {OpCode::DUP1, {}},
     {OpCode::DUP2, {}},
     {OpCode::SWAP1, {}},
     {OpCode::SWAP2, {}},
-    
+
     {OpCode::TGET, {}},
     {OpCode::TSET, {}},
     {OpCode::TLEN, {}},
-    
+
     {OpCode::BREAKPOINT, {}},
     {OpCode::LOG, {}},
-    
+
     {OpCode::SEND, {}},
     {OpCode::NBSEND, {}},
     {OpCode::GETTIME, {}},

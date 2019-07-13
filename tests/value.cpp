@@ -42,7 +42,6 @@ TEST_CASE("Value hashing") {
         }
     }
 
-
     //    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 1,
     //    OpCode::SUB); }
     //
@@ -56,13 +55,13 @@ TEST_CASE("Value marshaling") {
     for (auto valtest : j) {
         DYNAMIC_SECTION("Test " << valtest["name"]) {
             auto valBytes =
-            hexStringToBytes(valtest["value"].get<std::string>());
+                hexStringToBytes(valtest["value"].get<std::string>());
             auto valRaw = valBytes.data();
             TuplePool pool;
             auto val = deserialize_value(valRaw, pool);
             std::vector<unsigned char> buf;
             marshal_value(val, buf);
-            char *valptr = (char *)&buf[0];
+            char* valptr = (char*)&buf[0];
             auto newval = deserialize_value(valptr, pool);
             REQUIRE(val == newval);
         }

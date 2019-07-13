@@ -52,17 +52,11 @@ TEST_CASE("SDIV opcode is correct") {
 }
 
 TEST_CASE("SMOD opcode is correct") {
-    SECTION("Positive mod negative") {
-        testBinaryOp(8, -3, 2, OpCode::SMOD);
-    }
+    SECTION("Positive mod negative") { testBinaryOp(8, -3, 2, OpCode::SMOD); }
 
-    SECTION("Negative mod positive") {
-        testBinaryOp(-8, 3, -2, OpCode::SMOD);
-    }
+    SECTION("Negative mod positive") { testBinaryOp(-8, 3, -2, OpCode::SMOD); }
 
-    SECTION("Negative mod negative") {
-        testBinaryOp(-8, -3, -2, OpCode::SMOD);
-    }
+    SECTION("Negative mod negative") { testBinaryOp(-8, -3, -2, OpCode::SMOD); }
 }
 
 TEST_CASE("TSET opcode is correct") {

@@ -10,13 +10,13 @@
 #include <avm/util.hpp>
 
 void Tuple::marshal(std::vector<unsigned char>& buf) const {
-    buf.push_back(TUPLE+tuple_size());
+    buf.push_back(TUPLE + tuple_size());
     for (int i = 0; i < tuple_size(); i++) {
         marshal_value(get_element(i), buf);
     }
 }
 
-value Tuple::clone_shallow(){
+value Tuple::clone_shallow() {
     Tuple tup(tuplePool, tuple_size());
     for (int i = 0; i < tuple_size(); i++) {
         auto valHash = hash(get_element(i));

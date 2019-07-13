@@ -28,37 +28,45 @@ class Tuple {
    public:
     Tuple() = default;
 
-    Tuple(TuplePool* pool, size_t size)
-        : tuplePool(pool), tpl(pool->getResource(size)) {
+    Tuple(TuplePool* pool, size_t size) {
+        if (size > 0) {
+            tuplePool = pool;
+            tpl = pool->getResource(size);
             for (size_t i = 0; i < size; i++) {
                 tpl->data.push_back(Tuple{});
             }
+            tpl->cachedHash = calculateHash();
         }
+    }
 
     Tuple(value val, TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(1)) {
         tpl->data.push_back(std::move(val));
+        tpl->cachedHash = calculateHash();
     }
 
     Tuple(value val1, value val2, TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(2)) {
         tpl->data.push_back(std::move(val1));
         tpl->data.push_back(std::move(val2));
+        tpl->cachedHash = calculateHash();
     }
 
     Tuple(value val1, value val2, value val3, TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(3)) {
-            tpl->data.push_back(std::move(val1));
-            tpl->data.push_back(std::move(val2));
-            tpl->data.push_back(std::move(val3));
+        tpl->data.push_back(std::move(val1));
+        tpl->data.push_back(std::move(val2));
+        tpl->data.push_back(std::move(val3));
+        tpl->cachedHash = calculateHash();
     }
 
     Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(4)) {
-            tpl->data.push_back(std::move(val1));
-            tpl->data.push_back(std::move(val2));
-            tpl->data.push_back(std::move(val3));
-            tpl->data.push_back(std::move(val4));
+        tpl->data.push_back(std::move(val1));
+        tpl->data.push_back(std::move(val2));
+        tpl->data.push_back(std::move(val3));
+        tpl->data.push_back(std::move(val4));
+        tpl->cachedHash = calculateHash();
     }
 
     Tuple(value val1,
@@ -68,11 +76,12 @@ class Tuple {
           value val5,
           TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(5)) {
-            tpl->data.push_back(std::move(val1));
-            tpl->data.push_back(std::move(val2));
-            tpl->data.push_back(std::move(val3));
-            tpl->data.push_back(std::move(val4));
-            tpl->data.push_back(std::move(val5));
+        tpl->data.push_back(std::move(val1));
+        tpl->data.push_back(std::move(val2));
+        tpl->data.push_back(std::move(val3));
+        tpl->data.push_back(std::move(val4));
+        tpl->data.push_back(std::move(val5));
+        tpl->cachedHash = calculateHash();
     }
 
     Tuple(value val1,
@@ -83,12 +92,13 @@ class Tuple {
           value val6,
           TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(6)) {
-            tpl->data.push_back(std::move(val1));
-            tpl->data.push_back(std::move(val2));
-            tpl->data.push_back(std::move(val3));
-            tpl->data.push_back(std::move(val4));
-            tpl->data.push_back(std::move(val5));
-            tpl->data.push_back(std::move(val6));
+        tpl->data.push_back(std::move(val1));
+        tpl->data.push_back(std::move(val2));
+        tpl->data.push_back(std::move(val3));
+        tpl->data.push_back(std::move(val4));
+        tpl->data.push_back(std::move(val5));
+        tpl->data.push_back(std::move(val6));
+        tpl->cachedHash = calculateHash();
     }
 
     Tuple(value val1,
@@ -100,13 +110,14 @@ class Tuple {
           value val7,
           TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(7)) {
-            tpl->data.push_back(std::move(val1));
-            tpl->data.push_back(std::move(val2));
-            tpl->data.push_back(std::move(val3));
-            tpl->data.push_back(std::move(val4));
-            tpl->data.push_back(std::move(val5));
-            tpl->data.push_back(std::move(val6));
-            tpl->data.push_back(std::move(val7));
+        tpl->data.push_back(std::move(val1));
+        tpl->data.push_back(std::move(val2));
+        tpl->data.push_back(std::move(val3));
+        tpl->data.push_back(std::move(val4));
+        tpl->data.push_back(std::move(val5));
+        tpl->data.push_back(std::move(val6));
+        tpl->data.push_back(std::move(val7));
+        tpl->cachedHash = calculateHash();
     }
 
     Tuple(value val1,
@@ -119,14 +130,15 @@ class Tuple {
           value val8,
           TuplePool* pool)
         : tuplePool(pool), tpl(pool->getResource(8)) {
-            tpl->data.push_back(std::move(val1));
-            tpl->data.push_back(std::move(val2));
-            tpl->data.push_back(std::move(val3));
-            tpl->data.push_back(std::move(val4));
-            tpl->data.push_back(std::move(val5));
-            tpl->data.push_back(std::move(val6));
-            tpl->data.push_back(std::move(val7));
-            tpl->data.push_back(std::move(val8));
+        tpl->data.push_back(std::move(val1));
+        tpl->data.push_back(std::move(val2));
+        tpl->data.push_back(std::move(val3));
+        tpl->data.push_back(std::move(val4));
+        tpl->data.push_back(std::move(val5));
+        tpl->data.push_back(std::move(val6));
+        tpl->data.push_back(std::move(val7));
+        tpl->data.push_back(std::move(val8));
+        tpl->cachedHash = calculateHash();
     }
 
     ~Tuple() {
@@ -147,19 +159,18 @@ class Tuple {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
-        
-        ::warmHash(newval);
 
         if (tpl.use_count() > 1) {
             // make new copy tuple
             std::shared_ptr<RawTuple> tmp =
                 tuplePool->getResource(tuple_size());
-            
-            std::copy(tpl->data.begin(), tpl->data.end(), std::back_inserter(tmp->data));
+
+            std::copy(tpl->data.begin(), tpl->data.end(),
+                      std::back_inserter(tmp->data));
             tpl = tmp;
         }
         tpl->data[pos] = std::move(newval);
-        tpl->cachedHash = 0;
+        tpl->cachedHash = calculateHash();
     }
 
     value get_element(int pos) const {
@@ -168,12 +179,6 @@ class Tuple {
         }
         return tpl->data[pos];
     }
-    
-    void warmHash() {
-        if (tpl && !tpl->cachedHash) {
-            tpl->cachedHash = calculateHash();
-        }
-    }
 
     void marshal(std::vector<unsigned char>& buf) const;
     value clone_shallow();
@@ -181,15 +186,11 @@ class Tuple {
 
 inline uint256_t hash(const Tuple& tup) {
     if (tup.tpl) {
-        if (!tup.tpl->cachedHash) {
-            tup.tpl->cachedHash = tup.calculateHash();
-        }
         return tup.tpl->cachedHash;
     } else {
         static uint256_t zeroHashVal = zeroHash();
         return zeroHashVal;
     }
-    
 }
 
 inline bool operator==(const Tuple& val1, const Tuple& val2) {

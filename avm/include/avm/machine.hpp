@@ -9,8 +9,8 @@
 #define machine_hpp
 
 #include "datastack.hpp"
-#include "value.hpp"
 #include "tokenTracker.hpp"
+#include "value.hpp"
 
 #include <memory>
 #include <vector>
@@ -23,8 +23,8 @@ struct AssertionContext {
     TimeBounds timeBounds;
     std::vector<Message> outMessage;
     std::vector<value> logs;
-    
-    explicit AssertionContext(const TimeBounds &tb) : timeBounds(tb) {}
+
+    explicit AssertionContext(const TimeBounds& tb) : timeBounds(tb) {}
 };
 
 struct Assertion {
@@ -47,21 +47,21 @@ struct MachineState {
     AssertionContext context;
     Tuple inbox;
     BalanceTracker balance;
-    
-    MachineState();
-    
-    void deserialize(char *data);
 
-    void readInbox(char *newInbox);
+    MachineState();
+
+    void deserialize(char* data);
+
+    void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
     bool hasPendingMessages() const;
-    void sendOnchainMessage(const Message &msg);
+    void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message> &messages);
+    void sendOffchainMessages(const std::vector<Message>& messages);
     void runOp(OpCode opcode);
     uint256_t hash() const;
-    
-private:
+
+   private:
     void deliverMessageStack(value messages);
 };
 
@@ -71,30 +71,23 @@ class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
    public:
-    
-    void deserialize(char *data) {
-        m.deserialize(data);
-    }
-    
-    Assertion run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd);
+    void deserialize(char* data) { m.deserialize(data); }
+
+    Assertion run(uint64_t stepCount,
+                  uint64_t timeBoundStart,
+                  uint64_t timeBoundEnd);
     int runOne();
     uint256_t hash() const { return m.hash(); }
-    std::vector<unsigned char> marshalForProof() {return m.marshalForProof(); }
-    bool hasPendingMessages() const {
-        return m.hasPendingMessages();
-    }
-    
-    uint256_t inboxHash() const {
-        return ::hash(m.inbox);
-    }
-    
-    void sendOnchainMessage(const Message &msg);
+    std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
+    bool hasPendingMessages() const { return m.hasPendingMessages(); }
+
+    uint256_t inboxHash() const { return ::hash(m.inbox); }
+
+    void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message> &messages);
-    
-    TuplePool &getPool() {
-        return *m.pool;
-    }
+    void sendOffchainMessages(const std::vector<Message>& messages);
+
+    TuplePool& getPool() { return *m.pool; }
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);
