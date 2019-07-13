@@ -199,6 +199,10 @@ void MachineState::sendOnchainMessage(const Message &msg) {
     balance.add(msg.token, msg.currency);
 }
 
+void MachineState::deliverMessageStack(value messages) {
+    inbox = Tuple(uint256_t(1), std::move(inbox), std::move(messages), pool.get());
+}
+
 void MachineState::sendOffchainMessages(const std::vector<Message> &messages) {
     Tuple messageStack;
     for (const auto &message : messages) {
@@ -262,11 +266,6 @@ std::vector<unsigned char> MachineState::marshalForProof(){
     return buf;
 }
 
-void MachineState::deliverMessageStack(value messages) {
-    Tuple empty;
-    inbox = Tuple(uint256_t(1), std::move(empty), std::move(messages), pool.get());
-}
-
 void MachineState::setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd){
     context.timeBounds[0] = timeBoundStart;
     context.timeBounds[1] = timeBoundEnd;
@@ -285,13 +284,9 @@ void Machine::sendOffchainMessages(const std::vector<Message> &messages) {
 }
 
 Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd) {
-    //    std::cout << "starting machine code size=" << code.size() <<
-    //    std::endl; std::cout << "inbox=" << inbox << std::endl;
     m.setTimebounds(timeBoundStart, timeBoundEnd);
     uint64_t i;
     for (i = 0; i < stepCount; i++) {
-//        std::cout << "Step #" << i << std::endl;
-//        std::cout<<i<<" ";
         auto ret = runOne();
         if (
             ret < 0 ||
@@ -312,8 +307,6 @@ Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t tim
         // set error return
         //        std::cout << "halted state" << std::endl;
     }
-    std::cout<<to_hex_str(hash())<<std::endl;
-    std::cout<<m<<std::endl;
     return {i, std::move(m.context.outMessage), std::move(m.context.logs)};
 }
 

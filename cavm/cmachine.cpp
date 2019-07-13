@@ -120,7 +120,7 @@ void machineSendOffchainMessages(CMachine *m, void *rawData, int size) {
 RawAssertion machineExecuteAssertion(CMachine* m, uint64_t maxSteps, uint64_t timeboundStart, uint64_t timeboundEnd) {
     Machine* mach = static_cast<Machine*>(m);
     Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd);
-    printf("%llu steps ran\n", assertion.stepCount);
+    std::cout << assertion.stepCount << " steps ran" << std::endl;
     std::vector<unsigned char> outMsgData;
     for (const auto &outMsg : assertion.outMessages) {
         marshal_value(outMsg.toValue(mach->getPool()), outMsgData);
