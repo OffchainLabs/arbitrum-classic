@@ -66,7 +66,7 @@ func main() {
 	}
 
 	// 1) Compiled Arbitrum bytecode
-	machine, err := loader.LoadMachineFromFile(os.Args[1], true, "go")
+	machine, err := loader.LoadMachineFromFile(os.Args[1], true, "cpp")
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
