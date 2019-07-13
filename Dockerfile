@@ -28,6 +28,8 @@ RUN cp cavm/cmachine.h build/cavm/libcavm.a build/avm/libavm.a cmachine
 
 # Export library binary and header
 FROM alpine:3.9
-COPY --from=0 /home/user/cmachine cmachine/
+COPY --from=0 /home/user/go.mod arb-avm-cpp/
+COPY --from=0 /home/user/go.sum arb-avm-cpp/
+COPY --from=0 /home/user/cmachine arb-avm-cpp/cmachine/
 COPY --from=0 /home/user/build build/
 CMD /bin/true

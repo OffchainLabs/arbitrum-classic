@@ -1,4 +1,4 @@
-module avm-go
+module arb-avm-cpp
 
 go 1.12
 
