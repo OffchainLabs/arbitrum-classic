@@ -42,7 +42,7 @@ class int_out_of_bounds : public std::exception {
     }
 };
 
-MachineState::MachineState() : pool(std::make_unique<TuplePool>()) {}
+MachineState::MachineState() : pool(std::make_unique<TuplePool>()), context({0, 0}) {}
 
 uint256_t MachineState::hash() const {
     std::array<unsigned char, 32 * 6> data;
@@ -266,11 +266,6 @@ std::vector<unsigned char> MachineState::marshalForProof(){
     return buf;
 }
 
-void MachineState::setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd){
-    context.timeBounds[0] = timeBoundStart;
-    context.timeBounds[1] = timeBoundEnd;
-}
-
 void Machine::sendOnchainMessage(const Message &msg){
     m.sendOnchainMessage(msg);
 }
@@ -284,16 +279,21 @@ void Machine::sendOffchainMessages(const std::vector<Message> &messages) {
 }
 
 Assertion Machine::run(uint64_t stepCount, uint64_t timeBoundStart, uint64_t timeBoundEnd) {
-    m.setTimebounds(timeBoundStart, timeBoundEnd);
+    m.context = AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
     uint64_t i;
+    if (m.state == Status::Blocked) {
+        m.state = Status::Extensive;
+    }
     for (i = 0; i < stepCount; i++) {
-        auto ret = runOne();
         if (
-            ret < 0 ||
             m.state == Status::Error ||
             m.state == Status::Halted ||
             m.state == Status::Blocked
         ) {
+            break;
+        }
+        auto ret = runOne();
+        if (ret < 0) {
             break;
         }
     }

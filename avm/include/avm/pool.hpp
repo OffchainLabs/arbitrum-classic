@@ -24,8 +24,12 @@ class TuplePool {
    private:
     std::array<std::vector<std::shared_ptr<RawTuple>>, 9>
         resources;
-
+    bool shuttingDown = false;
    public:
+    
+    ~TuplePool() {
+        shuttingDown = true;
+    }
     /**
      * Returns instance of Resource.
      *
@@ -46,7 +50,9 @@ class TuplePool {
      * @param object Resource instance.
      */
     void returnResource(std::shared_ptr<RawTuple>&& object) {
-        resources[object->data.size()].push_back(std::move(object));
+        if (!shuttingDown) {
+            resources[object->data.size()].push_back(std::move(object));
+        }
     }
 };
 

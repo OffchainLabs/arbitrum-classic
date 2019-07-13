@@ -15,15 +15,16 @@
 #include <memory>
 #include <vector>
 
-typedef uint256_t TimeBounds[2];
+typedef std::array<uint256_t, 2> TimeBounds;
 
 enum class Status { Extensive, Blocked, Halted, Error };
 
 struct AssertionContext {
-    uint64_t stepCount;
     TimeBounds timeBounds;
     std::vector<Message> outMessage;
     std::vector<value> logs;
+    
+    explicit AssertionContext(const TimeBounds &tb) : timeBounds(tb) {}
 };
 
 struct Assertion {
@@ -57,7 +58,6 @@ struct MachineState {
     void sendOnchainMessage(const Message &msg);
     void deliverOnchainMessages();
     void sendOffchainMessages(const std::vector<Message> &messages);
-    void setTimebounds(uint64_t timeBoundStart, uint64_t timeBoundEnd);
     void runOp(OpCode opcode);
     uint256_t hash() const;
     
@@ -91,7 +91,6 @@ class Machine {
     void sendOnchainMessage(const Message &msg);
     void deliverOnchainMessages();
     void sendOffchainMessages(const std::vector<Message> &messages);
-    void setTimebounds(uint64_t timeboundStart, uint64_t timeboundEnd) {m.setTimebounds(timeboundStart, timeboundEnd);};
     
     TuplePool &getPool() {
         return *m.pool;
