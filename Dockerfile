@@ -28,6 +28,7 @@ RUN cp cavm/cmachine.h build/cavm/libcavm.a build/avm/libavm.a avm-go/cavm
     
 
 # Export library binary and header
-FROM scratch
+FROM alpine:3.9
 COPY --from=0 /home/user/avm-go avm-go/
 COPY --from=0 /home/user/build build/
+CMD /bin/true
