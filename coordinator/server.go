@@ -132,8 +132,8 @@ func (m *Server) requestFindLogs(
 	toHeight *int64,
 	address *big.Int,
 	topics [][32]byte,
-) <-chan []logInfo {
-	req := make(chan []logInfo, 1)
+) <-chan []LogInfo {
+	req := make(chan []LogInfo, 1)
 	m.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
 	return req
 }
@@ -148,7 +148,7 @@ type FindLogsArgs struct {
 
 // FindLogsReply contains output data for FindLogs
 type FindLogsReply struct {
-	Logs []logInfo `json:"logs"`
+	Logs []LogInfo `json:"logs"`
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -177,7 +177,7 @@ func (m *Server) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsRe
 		return err
 	}
 
-	var logsChan <-chan []logInfo
+	var logsChan <-chan []LogInfo
 	if args.ToHeight == "latest" {
 		logsChan = m.requestFindLogs(&fromHeight, nil, addressInt, topics)
 	} else {

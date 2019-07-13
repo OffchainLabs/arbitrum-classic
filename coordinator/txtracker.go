@@ -48,7 +48,7 @@ type findLogsRequest struct {
 	address    *big.Int
 	topics     [][32]byte
 
-	resultChan chan<- []logInfo
+	resultChan chan<- []LogInfo
 }
 
 type logsInfo struct {
@@ -168,7 +168,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 		if request.toHeight != nil {
 			endHeight = *request.toHeight + 1
 		}
-		logs := make([]logInfo, 0)
+		logs := make([]LogInfo, 0)
 		if startHeight >= int64(len(tr.assertionInfo)) {
 			request.resultChan <- logs
 			break
@@ -184,7 +184,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 					topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
 				}
 				txHash := evmLog.Msg.MsgHash(tr.vmID)
-				logs = append(logs, logInfo{
+				logs = append(logs, LogInfo{
 					Address:          hexutil.Encode(addressBytes[12:]),
 					BlockHash:        hexutil.Encode(txHash[:]),
 					BlockNumber:      "0x" + strconv.FormatInt(int64(i), 16),
