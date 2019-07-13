@@ -49,6 +49,11 @@ def set_val(vm):
     sized_common.set_val(vm, sized_byterange, byterange.set_val, 32)
 
 
+@modifies_stack([typ, value.IntType(), value.IntType()], [typ])
+def set_val8(vm):
+    sized_common.set_val(vm, sized_byterange, byterange.set_val8, 1)
+
+
 # [tuple, index] -> [value]
 @modifies_stack([typ, value.IntType()], [value.IntType()])
 def get(vm):
