@@ -399,7 +399,6 @@ func (m *ValidatorCoordinator) Run() error {
 					}
 				}
 			case <-time.After(time.Second):
-
 				shouldUnan := false
 				forceFinal := false
 				newPending := false
@@ -564,6 +563,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, m
 }
 
 func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool, maxSteps int32) (bool, error) {
+	log.Println("Coordinator making unanimous assertion with", len(queuedMessages), "messages")
 	newMessages := make([]protocol.Message, 0, len(queuedMessages))
 	for _, msg := range queuedMessages {
 		newMessages = append(newMessages, msg.Message)
