@@ -112,12 +112,11 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return {voidData, static_cast<int>(proof.size())};
 }
 
-void machineSendOffchainMessages(CMachine* m, void* rawData, int size) {
+void machineSendOffchainMessages(CMachine* m, void* rawData, int messageCount) {
     Machine* mach = static_cast<Machine*>(m);
     std::vector<Message> messages;
     auto data = reinterpret_cast<char*>(rawData);
-    auto end = data + size;
-    while (data < end) {
+    for (int i = 0; i < messageCount; i++) {
         auto val = deserialize_value(data, mach->getPool());
         messages.emplace_back();
         auto success = messages.back().deserialize(val);
