@@ -53,7 +53,7 @@ void machineInboxHash(CMachine* m, void* ret);
 int machineHasPendingMessages(CMachine* m);
 void machineSendOnchainMessage(CMachine* m, void* data);
 void machineDeliverOnchainMessages(CMachine* m);
-void machineSendOffchainMessages(CMachine* m, void* data, int size);
+void machineSendOffchainMessages(CMachine* m, void* data, int messageCount);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
