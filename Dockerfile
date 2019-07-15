@@ -29,6 +29,11 @@ RUN if [[ -d arb-util ]]; then cd arb-util && go build -v ./... ; fi
 
 # Build arb-avm
 ##DEV_COPY --chown=user arb-avm /home/user/arb-avm
+
+RUN if [[ -d arb-avm ]]; then \
+    echo "replace github.com/offchainlabs/arb-util => ../arb-util" >> arb-avm/go.mod; \
+    fi;
+
 RUN if [[ -d arb-avm ]]; then cd arb-avm && go build -v ./... ; fi
 
 COPY --from=arb-avm-cpp --chown=user /arb-avm-cpp /home/user/arb-avm-cpp/
