@@ -166,7 +166,10 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 			startHeight = *request.fromHeight
 		}
 		if request.toHeight != nil {
-			endHeight = *request.toHeight + 1
+			altEndHeight := *request.toHeight + 1
+			if endHeight > altEndHeight {
+				endHeight = altEndHeight
+			}
 		}
 		logs := make([]LogInfo, 0)
 		if startHeight >= int64(len(tr.assertionInfo)) {
