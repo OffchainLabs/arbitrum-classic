@@ -191,7 +191,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 					Data:             hexutil.Encode(evmLog.Log.Data[:]),
 					LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
 					Topics:           topicStrings,
-					TransactionIndex: "0x00",
+					TransactionIndex: "0x0",
 					TransactionHash:  hexutil.Encode(txHash[:]),
 				})
 			}
