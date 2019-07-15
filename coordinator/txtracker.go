@@ -133,7 +133,6 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		msg := evmVal.GetEthMsg()
 		msgHash := msg.MsgHash(tr.vmID)
 
-		log.Println("Coordinator got response for", hexutil.Encode(msgHash[:]))
 		txInfo := txInfo{
 			Found:          true,
 			assertionIndex: 0,
