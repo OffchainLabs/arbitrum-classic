@@ -168,8 +168,8 @@ class Tuple {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
-
-        if (tpl.use_count() > 1) {
+// turned off because this optimization may not be thread safe
+//        if (tpl.use_count() > 1) {
             // make new copy tuple
             std::shared_ptr<RawTuple> tmp =
                 tuplePool->getResource(tuple_size());
@@ -177,7 +177,7 @@ class Tuple {
             std::copy(tpl->data.begin(), tpl->data.end(),
                       std::back_inserter(tmp->data));
             tpl = tmp;
-        }
+//        }
         tpl->data[pos] = std::move(newval);
         tpl->cachedHash = calculateHash();
     }

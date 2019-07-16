@@ -58,9 +58,11 @@ func (m *Machine) Hash() (ret [32]byte) {
 	return
 }
 
-
 func (m *Machine) Clone() machine.Machine {
-	return &Machine{C.machineClone(m.c)}
+	cMachine := C.machineClone(m.c)
+	ret := &Machine{cMachine}
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret
 }
 
 func (m *Machine) InboxHash() (value.HashOnlyValue) {
