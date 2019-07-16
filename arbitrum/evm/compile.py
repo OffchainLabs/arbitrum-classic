@@ -283,14 +283,14 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, code
                 vm.dup2()
                 vm.iszero()
                 vm.ifelse(
-                    lambda vm: vm.pop(),
+                    lambda vm: [vm.pop(), vm.pop()],
                     lambda vm: vm.addmod()
                 )
             elif instr.name == "MULMOD":
                 vm.dup2()
                 vm.iszero()
                 vm.ifelse(
-                    lambda vm: vm.pop(),
+                    lambda vm: [vm.pop(), vm.pop()],
                     lambda vm: vm.mulmod()
                 )
             elif instr.name == "EXP":
