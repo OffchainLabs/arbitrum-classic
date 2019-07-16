@@ -581,7 +581,7 @@ def evm_log3(vm):
 
 
 # [offset, length, topic0, topic1, topic2]
-@modifies_stack([value.IntType()]*5, 0)
+@modifies_stack([value.IntType()]*6, 0)
 def evm_log4(vm):
     vm.dup1()
     vm.swap1()
