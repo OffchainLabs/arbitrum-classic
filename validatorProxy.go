@@ -64,7 +64,7 @@ func (vp *ValidatorProxyImpl) doCall(methodName string, request interface{}, res
 
 func (vp *ValidatorProxyImpl) SendMessage(val value.Value, signature []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := val.Marshal(&buf); err!=nil {
+	if err := value.MarshalValue(val, &buf); err!=nil {
 		return nil, err
 	}
 	request := &coordinator.SendMessageArgs{
@@ -132,7 +132,7 @@ func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byt
 
 func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address) (value.Value, bool, error) {
 	var buf bytes.Buffer
-	if err := val.Marshal(&buf); err!=nil {
+	if err := value.MarshalValue(val, &buf); err!=nil {
 		return nil, false, err
 	}
 	request := &coordinator.CallMessageArgs{
@@ -144,6 +144,7 @@ func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address
 		return nil, false, err
 	}
 	if response.Success {
+		fmt.Println("===== call returnVal:", response.ReturnVal)
 		buf, err := hexutil.Decode(response.ReturnVal)
 		if err != nil {
 			return nil, false, err
