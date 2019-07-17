@@ -205,11 +205,7 @@ inline uint256_t hash(const Tuple& tup) {
 inline bool operator==(const Tuple& val1, const Tuple& val2) {
     if (val1.tuple_size() != val2.tuple_size())
         return false;
-    for (int i = 0; i < val1.tuple_size(); i++) {
-        if (!(val1.get_element(i) == val2.get_element(i)))
-            return false;
-    }
-    return true;
+    return hash(val1) == hash(val2);
 }
 
 std::ostream& operator<<(std::ostream& os, const Tuple& val);
