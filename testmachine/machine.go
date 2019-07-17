@@ -18,6 +18,7 @@ package testmachine
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/offchainlabs/arb-avm/goloader"
 	"log"
 
@@ -91,27 +92,17 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
-	for i := int32(0); i < maxSteps; i += 1000 {
-		start1 := m.cppmachine.Clone()
-		start2 := m.gomachine.Clone()
-
+	for i := int32(0); i < maxSteps; i += 100 {
 		steps := maxSteps - i
-		if steps > 1000 {
-			steps = 1000
+		if steps > 100 {
+			steps = 100
 		}
 		a1 := m.cppmachine.ExecuteAssertion(steps, timeBounds)
 		a2 := m.gomachine.ExecuteAssertion(steps, timeBounds)
 
 		if !a1.Equals(a2) {
-			for i := int32(0); i < steps; i++ {
-				pc := m.gomachine.GetPC()
-				a1 := start1.ExecuteAssertion(1, timeBounds)
-				a2 := start2.ExecuteAssertion(1, timeBounds)
-
-				if !a1.Equals(a2) {
-					log.Fatalln("ExecuteAssertion error after running step", pc, a1, a2)
-				}
-			}
+			pc := m.gomachine.GetPC()
+			log.Fatalln("ExecuteAssertion error after running step", pc, a1, a2)
 		}
 		a.AfterHash = a1.AfterHash
 		a.NumSteps += a1.NumSteps
@@ -121,6 +112,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 			break
 		}
 	}
+	fmt.Println("Ran", a.NumSteps, "steps")
 	return a
 }
 
