@@ -12,7 +12,8 @@ ARG NUM_WALLETS=110
 FROM alpine:3.9
 
 # Alpine dependencies and Non-root user
-RUN apk add --no-cache g++ git make python nodejs npm && \
+# Check dependencies
+RUN apk add --no-cache g++ git make nodejs npm python && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -38,45 +39,24 @@ ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS \
 
 # Generate ethbrigde_addresses.json for export
 RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
-    ganache-cli -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
+    mkdir db && ganache-cli --db db --acctKeys keys.json \
+        -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset && [ -f ethbridge_addresses.json ]
-
-
-# Calculate validator_addresses.txt and validator_private_keys.txt
-FROM alpine:3.9 as keys
-
-# Alpine dependencies and Non-root user
-RUN apk add --no-cache g++ git make python nodejs npm && \
-    addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
-USER user
-WORKDIR "/home/user"
-RUN echo "{}" > package.json && npm install ethers
-
-# Global arguments
-ARG MNEMONIC
-ARG NUM_VALIDATORS
-ARG NUM_WALLETS
-ENV MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS \
-    NUM_WALLETS=$NUM_WALLETS
-
-# Generates validator_addresses.txt and validator_private_keys.txt
-RUN node -e "                                               \
-    const ethers = require('ethers');                       \
-    let m = '${MNEMONIC}';                                  \
-    let addrs = new Array();                                \
-    let privs = new Array();                                \
-    let p = \"m/44'/60'/0'/0/\";                            \
-    let base = ${NUM_WALLETS} - ${NUM_VALIDATORS};          \
-    for (let i = base; i < base + ${NUM_VALIDATORS}; i++) { \
-        let a = ethers.Wallet.fromMnemonic(m, path=(p+i));  \
-        addrs.push(a.address.toLowerCase().slice(2));       \
-        privs.push(a.privateKey.toLowerCase().slice(2));    \
+    truffle migrate --reset && [ -f ethbridge_addresses.json ] && \
+    node -e "                                               \
+    const data = require('./keys.json')['addresses'];       \
+    const addresses = new Array(0);                         \
+    const privates = new Array(0);                          \
+    let start = ${NUM_WALLETS} - ${NUM_VALIDATORS};         \
+    for (const address of Object.keys(data).slice(start)) { \
+        addresses.push(address.slice(2));                   \
+        let pk = data[address]['secretKey']['data'].reduce( \
+        (a, B) => a+(B).toString(16).padStart(2, '0'), ''); \
+        privates.push(pk);                                  \
     }                                                       \
-    console.log(addrs.join('\n'));                          \
-    console.error(privs.join('\n'));                        \
+    console.log(addresses.join('\n'));                      \
+    console.error(privates.join('\n'));                     \
     " > validator_addresses.txt 2> validator_private_keys.txt
 
 
@@ -91,15 +71,17 @@ RUN addgroup -g 1000 -S user && \
 USER user
 WORKDIR "/home/user"
 
+# Addresses and keys
+COPY --from=0 --chown=user /home/user/ethbridge_addresses.json \
+    /home/user/validator_*.txt ./
+
+# ganache-cli and truffle (placed in /bin and /lib) and build folder
+COPY --from=0 --chown=user /home/user/.npm-global /
+COPY --from=0 --chown=user /home/user/build /home/user/build
+COPY --from=0 --chown=user /home/user/db /home/user/db
+
 # Source files
 COPY --chown=user . ./
-# Build files
-COPY --chown=user --from=0 /home/user/build /home/user/build
-# addresses
-COPY --chown=user --from=0 /home/user/ethbridge_addresses.json ./
-COPY --chown=user --from=keys /home/user/validator_*.txt ./
-# ganache-cli and truffle (placed in /bin and /lib)
-COPY --chown=user --from=0 /home/user/.npm-global /
 
 # Global arguments
 ARG MNEMONIC
@@ -118,8 +100,8 @@ ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS \
 
 # Wait for ganache-cli to launch and then deploy the EthBridge contract
 CMD sed -i "s/port: [0-9]*,/port: ${P},/p" truffle-config.js && \
-    (while ! nc -z localhost ${P}; do sleep 2; done &&           \
-    echo "Finished waiting for ganache on localhost:${P}..." &&  \
-    truffle migrate && nc -lvp ${CP} -w 360) & \
-    ganache-cli -p $P -l $GL -e $GPW -a $NUM_WALLETS -m "${MNEMONIC}" $V
+    (while ! nc -z localhost ${P}; do sleep 2; done &&          \
+    echo "Finished waiting for ganache on localhost:${P}..." && \
+    nc -lvp ${CP} -w 362) & \
+    ganache-cli --db db -p $P -l $GL -e $GPW -a $NUM_WALLETS -m "${MNEMONIC}" $V
 EXPOSE ${P}
