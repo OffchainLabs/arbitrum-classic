@@ -7,12 +7,13 @@ import (
 	"github.com/gorilla/rpc/json"
 	"github.com/offchainlabs/arb-util/value"
 	"github.com/offchainlabs/arb-validator/coordinator"
+	"log"
 	"net/http"
 	"strconv"
 )
 
 type ValidatorProxy interface {
-	SendMessage(val value.Value, signature []byte) ([]byte, error)
+	SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error)
 	GetMessageResult(txHash []byte) (value.Value, bool, error)
 	GetAssertionCount() (int, error)
 	GetVMInfo() (string, error)
@@ -46,6 +47,7 @@ func _encodeByteArraySlice(slice [][32]byte) []string {
 func (vp *ValidatorProxyImpl) doCall(methodName string, request interface{}, response interface{}) error {
 	message, err := json.EncodeClientRequest("Validator."+methodName, request)
 	if err != nil {
+		log.Println("ValProxy.doCall: error in json.Enc:", err)
 		return err
 	}
 	req, err := http.NewRequest("POST", vp.url, bytes.NewBuffer(message))
@@ -56,26 +58,38 @@ func (vp *ValidatorProxyImpl) doCall(methodName string, request interface{}, res
 	client := new(http.Client)
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Println("doCall error:", err)
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	return json.DecodeClientResponse(resp.Body, response)
+	ret := json.DecodeClientResponse(resp.Body, response)
+	if ret != nil {
+		log.Println("ValProxy.doCall: error in json.Dec from", methodName, ":", ret)
+	}
+	return ret
 }
 
-func (vp *ValidatorProxyImpl) SendMessage(val value.Value, signature []byte) ([]byte, error) {
+func (vp *ValidatorProxyImpl) SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := value.MarshalValue(val, &buf); err!=nil {
+		log.Println("ValProxy.SendMessage: marshaling error:", err)
 		return nil, err
 	}
 	request := &coordinator.SendMessageArgs{
 		Data:      hexutil.Encode(buf.Bytes()),
+		Pubkey:    hexPubkey,
 		Signature: hexutil.Encode(signature),
 	}
 	var response coordinator.SendMessageReply
 	if err := vp.doCall("SendMessage", request, &response); err!=nil {
+		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
 		return nil, err
 	}
-	return hexutil.Decode(response.TxHash)
+	bs, err := hexutil.Decode(response.TxHash)
+	if err != nil {
+		log.Println("ValProxy.SendMessage error:", err)
+	}
+	return bs, err
 }
 
 func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (value.Value, bool, error) {
@@ -84,14 +98,19 @@ func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (value.Value, bool
 	}
 	var response coordinator.GetMessageResultReply
 	if err := vp.doCall("GetMessageResult", request, &response); err!=nil {
+		log.Println("ValProxy.GetMessageResult: doCall returned error:", err)
 		return nil, false, err
 	}
 	if response.Found {
 		buf, err := hexutil.Decode(response.RawVal)
 		if err != nil {
+			log.Println("GetMessageResult error:", err)
 			return nil, false, err
 		}
 		val, err := value.UnmarshalValue(bytes.NewReader(buf))
+		if err != nil {
+			log.Println("ValProxy.GetMessageResult: UnmarshalValue returned error:", err)
+		}
 		return val, true, err
 	} else {
 		return nil, false, nil
@@ -144,7 +163,6 @@ func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address
 		return nil, false, err
 	}
 	if response.Success {
-		fmt.Println("===== call returnVal:", response.ReturnVal)
 		buf, err := hexutil.Decode(response.ReturnVal)
 		if err != nil {
 			return nil, false, err

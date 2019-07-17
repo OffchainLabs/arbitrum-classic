@@ -24,9 +24,10 @@ type ArbConnection struct {
 	myAddress  common.Address
 	vmId       []byte
 	privateKey []byte
+	hexPubkey  string
 }
 
-func Dial(url string, myAddress common.Address, privateKey []byte) (*ArbConnection, error) {
+func Dial(url string, myAddress common.Address, privateKey []byte, hexPubkey string) (*ArbConnection, error) {
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo()
 	if err != nil {
@@ -36,7 +37,7 @@ func Dial(url string, myAddress common.Address, privateKey []byte) (*ArbConnecti
 	if err != nil {
 		return nil, err
 	}
-	return &ArbConnection{ proxy, myAddress, vmId, append([]byte{}, privateKey...) }, nil
+	return &ArbConnection{ proxy, myAddress, vmId, append([]byte{}, privateKey...), hexPubkey }, nil
 }
 
 func _nyiError(funcname string) error {
@@ -165,8 +166,9 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 		return err
 	}
 
-	txHash, err := conn.proxy.SendMessage(arbCallValue, sig)
+	txHash, err := conn.proxy.SendMessage(arbCallValue, conn.hexPubkey, sig)
 	if err != nil {
+		log.Println("SendTransaction: error returned from proxy.SendMessage:", err)
 		return err
 	}
 
@@ -174,6 +176,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 		for {
 			resultVal, ok, err := conn.proxy.GetMessageResult(txHash)
 			if err != nil {
+				log.Println("GetMessageResult error:", err)
 				return err
 			}
 			if !ok {
@@ -181,6 +184,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 			} else {
 				result, err := evm.ProcessLog(resultVal)
 				if err != nil {
+					log.Println("GetMessageResultLog error:", err)
 					return err
 				}
 				switch res := result.(type) {
