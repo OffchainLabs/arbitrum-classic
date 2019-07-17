@@ -68,6 +68,13 @@ TEST_CASE("SMOD opcode is correct") {
     SECTION("Negative mod negative") { testBinaryOp(-8, -3, -2, OpCode::SMOD); }
 }
 
+TEST_CASE("SLT opcode is correct") {
+    SECTION("All positive") { testBinaryOp(7, 3, 0, OpCode::SLT); }
+    SECTION("All negative") { testBinaryOp(-7, -3, 1, OpCode::SLT); }
+    SECTION("First pos, second neg") { testBinaryOp(-7, 3, 1, OpCode::SLT); }
+    SECTION("First neg, second pos") { testBinaryOp(7, -3, 0, OpCode::SLT); }
+}
+
 TEST_CASE("TSET opcode is correct") {
     SECTION("2 tup") {
         MachineState m;
