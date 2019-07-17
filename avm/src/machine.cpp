@@ -305,6 +305,10 @@ Assertion Machine::run(uint64_t stepCount,
             break;
         }
     }
+    
+    if (m.state == Status::Blocked) {
+        i--;
+    }
 
     if (m.state == Status::Error) {
         // TODO: check if error handler set - jump there
@@ -339,9 +343,6 @@ int Machine::runOne() {
         return -2;
     }
 
-    if (m.state == Status::Blocked) {
-        return -1;
-    }
     auto& instruction = m.code[m.pc];
     //    std::cout<<m.pc<<"
     //    "<<InstructionNames.at(instruction.op.opcode)<<std::endl; std::cout <<
@@ -585,9 +586,9 @@ static void eq(MachineState& m) {
 }
 
 static void iszero(MachineState& m) {
-    m.stack.prepForMod(2);
+    m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
-    m.stack[0] = (aNum == 0) ? 1 : 0;
+    m.stack[0] = aNum.is_zero() ? 1 : 0;
     ++m.pc;
 }
 
