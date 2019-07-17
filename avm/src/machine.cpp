@@ -563,11 +563,11 @@ static void sgt(MachineState& m) {
     if (aNum == bNum) {
         m.stack[1] = 0;
     } else {
-        uint8_t signA = aNum.sign();
-        uint8_t signB = bNum.sign();
+        uint8_t signA = get_sign(aNum);
+        uint8_t signB = get_sign(bNum);
 
         if (signA != signB) {
-            m.stack[1] = signA == 1 ? 0 : 1;
+            m.stack[1] = signA == 1 ? 1 : 0;
         } else {
             m.stack[1] = aNum > bNum ? 1 : 0;
         }
