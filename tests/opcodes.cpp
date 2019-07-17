@@ -51,16 +51,23 @@ TEST_CASE("DIV opcode is correct") {
 }
 
 TEST_CASE("SDIV opcode is correct") {
+    SECTION("Positive divided by positive") {
+        testBinaryOp(12, 3, 4, OpCode::SDIV);
+    }
     SECTION("Positive divided by negative") {
         testBinaryOp(12, -3, -4, OpCode::SDIV);
     }
-
+    SECTION("Negative divided by positive") {
+        testBinaryOp(-12, 3, -4, OpCode::SDIV);
+    }
     SECTION("Negative divided by negative") {
         testBinaryOp(-12, -3, 4, OpCode::SDIV);
     }
 }
 
 TEST_CASE("SMOD opcode is correct") {
+    SECTION("Positive mod positive") { testBinaryOp(8, 3, 2, OpCode::SMOD); }
+    
     SECTION("Positive mod negative") { testBinaryOp(8, -3, 2, OpCode::SMOD); }
 
     SECTION("Negative mod positive") { testBinaryOp(-8, 3, -2, OpCode::SMOD); }
