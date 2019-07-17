@@ -92,17 +92,19 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
-	for i := int32(0); i < maxSteps; i += 100 {
+	for i := int32(0); i < maxSteps; i += 50 {
 		steps := maxSteps - i
-		if steps > 100 {
-			steps = 100
+		if steps > 50 {
+			steps = 50
 		}
+
+		pcStart := m.gomachine.GetPC()
 		a1 := m.cppmachine.ExecuteAssertion(steps, timeBounds)
 		a2 := m.gomachine.ExecuteAssertion(steps, timeBounds)
 
 		if !a1.Equals(a2) {
-			pc := m.gomachine.GetPC()
-			log.Fatalln("ExecuteAssertion error after running step", pc, a1, a2)
+			pcEnd := m.gomachine.GetPC()
+			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcStart, a1, a2)
 		}
 		a.AfterHash = a1.AfterHash
 		a.NumSteps += a1.NumSteps
