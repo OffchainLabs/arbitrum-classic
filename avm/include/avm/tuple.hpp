@@ -150,11 +150,11 @@ class Tuple {
         tpl->cachedHash = calculateHash();
     }
 
-    ~Tuple() {
-        if (tpl.use_count() == 1) {
-            tuplePool->returnResource(std::move(tpl));
-        }
-    }
+//    ~Tuple() {
+//        if (tpl.use_count() == 1) {
+//            tuplePool->returnResource(std::move(tpl));
+//        }
+//    }
 
     int tuple_size() const {
         if (tpl) {

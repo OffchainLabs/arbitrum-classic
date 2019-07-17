@@ -54,11 +54,7 @@ class TuplePool {
      *
      * @param object Resource instance.
      */
-    void returnResource(std::shared_ptr<RawTuple>&& object) {
-        if (!shuttingDown) {
-            resources[object->data.size()].push_back(std::move(object));
-        }
-    }
+    void returnResource(std::shared_ptr<RawTuple>&& object);
 };
 
 #endif /* pool_hpp */

@@ -44,3 +44,9 @@ std::shared_ptr<RawTuple> TuplePool::getResource(int s) {
     resource->data.reserve(s);
     return resource;
 }
+
+void TuplePool::returnResource(std::shared_ptr<RawTuple>&& object) {
+    if (!shuttingDown) {
+        resources[object->data.size()].push_back(std::move(object));
+    }
+}
