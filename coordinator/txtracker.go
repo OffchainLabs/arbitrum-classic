@@ -190,7 +190,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 				logs = append(logs, LogInfo{
 					Address:          hexutil.Encode(addressBytes[12:]),
 					BlockHash:        hexutil.Encode(txHash[:]),
-					BlockNumber:      "0x" + strconv.FormatInt(int64(i), 16),
+					BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),
 					Data:             hexutil.Encode(evmLog.Log.Data[:]),
 					LogIndex:         "0x" + strconv.FormatInt(int64(j), 16),
 					Topics:           topicStrings,
