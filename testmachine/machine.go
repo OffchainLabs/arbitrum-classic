@@ -59,7 +59,7 @@ func (m *Machine) Clone() machine.Machine {
 func (m *Machine) InboxHash() value.HashOnlyValue {
 	h1 := m.cppmachine.InboxHash()
 	h2 := m.gomachine.InboxHash()
-	if h1.Equal(h2) {
+	if !h1.Equal(h2) {
 		log.Fatalln("InboxHash error at pc", m.gomachine.GetPC())
 	}
 	return h1
@@ -92,11 +92,12 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
 	for i := int32(0); i < maxSteps; i++ {
+		pc := m.gomachine.GetPC()
 		a1 := m.cppmachine.ExecuteAssertion(1, timeBounds)
 		a2 := m.gomachine.ExecuteAssertion(1, timeBounds)
 
 		if !a1.Equals(a2) {
-			log.Fatalln("ExecuteAssertion error at pc", m.gomachine.GetPC())
+			log.Fatalln("ExecuteAssertion error after running step", pc, a1, a2)
 		}
 		a.AfterHash = a1.AfterHash
 		a.NumSteps++
