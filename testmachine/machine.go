@@ -59,7 +59,7 @@ func (m *Machine) Clone() machine.Machine {
 func (m *Machine) InboxHash() value.HashOnlyValue {
 	h1 := m.cppmachine.InboxHash()
 	h2 := m.gomachine.InboxHash()
-	if h1 != h2 {
+	if h1.Equal(h2) {
 		log.Fatalln("InboxHash error at pc", m.gomachine.GetPC())
 	}
 	return h1
