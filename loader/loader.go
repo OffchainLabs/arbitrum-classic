@@ -17,6 +17,8 @@
 package loader
 
 import (
+	"github.com/offchainlabs/arb-validator/testmachine"
+	"log"
 	"strings"
 
 	"github.com/offchainlabs/arb-util/machine"
@@ -29,8 +31,12 @@ import (
 func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine.Machine, error) {
 	if strings.EqualFold(vmtype, "go") {
 		return goloader.LoadMachineFromFile(fileName, warnMode)
-	} else {
+	} else if strings.EqualFold(vmtype, "cpp") {
 		ret := cmachine.New(fileName)
 		return ret, nil
+	} else if strings.EqualFold(vmtype, "test") {
+		return testmachine.New(fileName, warnMode)
+	} else {
+		log.Fatalln("Invalid machine type specified", vmtype)
 	}
 }
