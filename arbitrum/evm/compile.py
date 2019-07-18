@@ -53,12 +53,25 @@ def replace_self_balance(instrs):
     return out
 
 
+def contains_endcode(val):
+    if not isinstance(val, int):
+        return False
+    while val >= 0xa265:
+        if (val&0xffff == 0xa165) or (val&0xffff == 0xa265):
+            return True
+        val = val//256
+    return False
+
+
 def remove_metadata(instrs):
     for i in range(len(instrs) - 2, -1, -1):
         first_byte = instrs[i].opcode
         second_byte = instrs[i + 1].opcode
-        if first_byte == 0xa1 and second_byte == 0x65:
+        if ((first_byte == 0xa1) or (first_byte == 0xa2)) and second_byte == 0x65:
             return instrs[:i]
+        if hasattr(instrs[i], 'operand') and contains_endcode(instrs[i].operand):
+            # leave the boundary instruction in--it's probably valid and minimal testing suggests this reduces errors
+            return instrs[:i+1]
     return instrs
 
 
