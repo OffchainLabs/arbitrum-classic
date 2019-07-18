@@ -411,7 +411,7 @@ def generate_contract_code(label, code, code_tuple, contract_id, code_size, code
                 ], lambda vm: [
                     vm.cjump()
                 ])
-            elif instr.name == "PC":
+            elif instr.name == "GETPC":
                 raise EVMNotSupported(instr.name)
             elif instr.name == "MSIZE":
                 os.memory_length(vm)
