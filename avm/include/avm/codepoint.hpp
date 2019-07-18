@@ -44,6 +44,7 @@ struct CodePoint {
     CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
         : pc(pc_), op(op_), nextHash(nextHash_) {}
     void marshal(std::vector<unsigned char>& buf) const;
+    bool isSet() {return ((op.opcode!=static_cast<OpCode>(0)) || (pc!=0) || (nextHash!=0));}
 };
 
 uint256_t hash(const CodePoint& cp);

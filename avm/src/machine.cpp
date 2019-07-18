@@ -55,6 +55,9 @@ MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()), context({0, 0}) {}
 
 uint256_t MachineState::hash() const {
+    if (state == Status::Halted) return 0;
+    if (state == Status::Error) return 1;
+
     std::array<unsigned char, 32 * 6> data;
     auto oit = data.begin();
     {
@@ -311,9 +314,10 @@ Assertion Machine::run(uint64_t stepCount,
     }
 
     if (m.state == Status::Error) {
-        // TODO: check if error handler set - jump there
-        // set error return
         std::cout << "error state" << std::endl;
+        if (m.errpc.isSet()){
+            m.pc = m.errpc.pc;
+        }
     }
     if (m.state == Status::Halted) {
         // set error return
@@ -1101,8 +1105,10 @@ void MachineState::runOp(OpCode opcode) {
             inboxOp(*this);
             break;
         case OpCode::ERROR:
-            // TODO: add error handler support
             state = Status::Error;
+            if (errpc.isSet()){
+                pc = errpc.pc;
+            }
             break;
         case OpCode::HALT:
             std::cout << "Hit halt opcode at instruction " << pc << "\n";
@@ -1115,213 +1121,3 @@ void MachineState::runOp(OpCode opcode) {
             throw std::runtime_error(ss.str());
     }
 }
-
-/***********************************/
-// test code
-// void push_num(vector<instr> &code, unsigned long long &pc, value *tpl, value
-// *tmp, uint256_t num){
-//    instr *op;
-//    //push(1)
-//    pc++;
-//    *tmp = num;
-//    op = new instr(pc,NOP,tmp);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//}
-// void push_tuple(vector<instr> &code, unsigned long long &pc, int size, value
-// *tpl, value *tmp){
-//    instr *op;
-//
-//    if (size==5){
-//        tpl->set_tuple_elem(0, (uint256_t)11);
-//        tpl->set_tuple_elem(1, (uint256_t)12);
-//        tpl->set_tuple_elem(2, (uint256_t)13);
-//        tpl->set_tuple_elem(3, (uint256_t)14);
-//        tpl->set_tuple_elem(4, (uint256_t)15);
-//    } else {
-//        tpl->set_tuple_elem(0, (uint256_t)21);
-//        tpl->set_tuple_elem(1, (uint256_t)22);
-//        tpl->set_tuple_elem(2, (uint256_t)23);
-//    }
-//    //push Tuple
-//    pc++;
-//    op = new instr(pc,NOP,tpl);
-//    code.push_back(*op);
-//    delete op;
-//    // print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//}
-// void print_stack(vector<instr> &code, unsigned long long &pc, value *tpl,
-// value *tmp){
-//    instr *op;
-//    pc++;
-//    op = new instr(pc,PRTSTK,NULL);
-//    code.push_back(*op);
-//}
-//
-// void rset(vector<instr> &code, unsigned long long &pc, value *tpl, value
-// *tmp){
-//    instr *op;
-//    //rset
-//    tmp->set_num((uint256_t)31);
-//    op = new instr(pc,RSET,tmp);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//    pc++;
-//}
-//
-// void test_pop(vector<instr> &code, unsigned long long &pc, value *tpl, value
-// *tmp){
-//    instr *op;
-//    pc++;
-//    op = new instr(pc,POP,NULL);
-//    code.push_back(*op);
-//}
-//
-// void test_tget( vector<instr> &code, unsigned long long &pc, value *tpl,
-// value *tmp){
-//    instr *op;
-//
-//    //test tget
-//    push_tuple( code, pc, 5, tpl, tmp);
-//    push_num( code, pc, tpl, tmp, (uint256_t)2);
-//
-//    // tget()
-//    pc++;
-//    op = new instr(pc,TGET,NULL);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//}
-//
-// void test_add( vector<instr> &code, unsigned long long &pc, value *tpl, value
-// *tmp){
-//    instr *op;
-//    //test add
-//    //push(10)
-//    push_num( code, pc, tpl, tmp, (uint256_t)10);
-//    push_num( code, pc, tpl, tmp, (uint256_t)20);
-//    op = new instr(pc,ADD,NULL);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//}
-//
-// void test_tset( vector<instr> &code, unsigned long long &pc, value *tpl,
-// value *tpl2, value *tmp){
-//    instr *op;
-//    //test tset
-//    //push(10)
-//    //    push_num( code, pc, tpl, tmp, (uint256_t)10);
-//    push_tuple( code, pc, 5, tpl, tmp);
-//    push_tuple( code, pc, 3, tpl2, tmp);
-//    push_num( code, pc, tpl, tmp, (uint256_t)1);
-//    op = new instr(pc,TSET,NULL);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//    pc++;
-//    op = new instr(pc,PRTSTK,NULL);
-//    code.push_back(*op);
-//}
-// void test_pcpush( vector<instr> &code, unsigned long long &pc, value *tpl,
-// value *tmp){
-//    instr *op;
-//    //test pcpush
-//    //pcpush
-//    pc++;
-//    op = new instr(pc,PCPUSH,NULL);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//    //rset
-//    pc++;
-//    op = new instr(pc,RSET,NULL);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//}
-// void test_jump( vector<instr> &code, unsigned long long &pc, value *tpl,
-// value *tmp){
-//    instr *op;
-//    //test jump
-//    //    rset( code, pc, tpl, tmp);
-//    op = new instr(pc,RPUSH,NULL); //rpush
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL); //print
-//    code.push_back(*op);
-//    pc++;
-//    op = new instr(pc,JUMP,NULL); //jmp
-//    //    op = new instr(pc,NOP,NULL); //jmp
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//}
-//
-// void test_mul( vector<instr> &code, unsigned long long &pc, value *tpl, value
-// *tmp){
-//    instr *op;
-//    //test mul
-//    push_num( code, pc, tpl, tmp, (uint256_t)10);
-//    push_num( code, pc, tpl, tmp, (uint256_t)20);
-//
-//    op = new instr(pc,MUL,NULL);
-//    code.push_back(*op);
-//    //print top
-//    pc++;
-//    op = new instr(pc,PRTTOP,NULL);
-//    code.push_back(*op);
-//
-//}
-//
-// void setupCode( vector<instr> &code){
-//    unsigned long long pc=0;
-//    instr *op;
-//
-//    value *tpl=new value((int)5);
-//    value *tpl3=new value((int)3);
-//    //print stack
-//    pc++;
-//    op = new instr(pc,PRTSTK,NULL);
-//    code.push_back(*op);
-//    value *tmp=new value;
-//
-//    push_tuple(code, pc, 3, tpl3, tmp);
-//    test_tget(code, pc, tpl, tmp);
-//    print_stack(code, pc, tpl, tmp);
-//    //    test_tget( code, pc, tpl, tmp);
-//    //    print_stack(code, pc, tpl, tmp);
-//    //    test_add( code, pc, tpl, tmp);
-//    test_pcpush( code, pc, tpl, tmp);
-//    test_tset( code, pc, tpl, tpl3, tmp);
-//    print_stack(code, pc, tpl, tmp);
-//    test_pop( code, pc, tpl, tmp);
-//
-//    test_jump( code, pc, tpl, tmp);
-//    //    test_mul( code, pc, tpl, tmp);
-//    //    test_pcpush( code, pc, tpl, tmp);
-//
-//}
-/***********************************/
