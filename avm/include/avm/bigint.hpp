@@ -69,3 +69,7 @@ inline auto power(uint256_t b, uint64_t e) {
 }
 
 uint256_t hash(const uint256_t& val);
+
+inline bool bit( uint256_t x, int i ){
+    return boost::multiprecision::bit_test(x, i);
+}

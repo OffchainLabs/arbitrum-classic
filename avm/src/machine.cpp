@@ -650,13 +650,19 @@ static void signExtend(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
-    if (aNum >= 32) {
+
+    if (bNum >= 32) {
         m.stack[1] = m.stack[0];
     } else {
-        const uint8_t idx = 8 * shrink<uint8_t>(aNum) + 7;
-        const auto sign = static_cast<uint8_t>((bNum >> idx) & 1);
-        const auto mask = uint256_t(-1) >> (256 - idx);
-        m.stack[1] = uint256_t{-sign} << idx | (bNum & mask);
+        uint256_t t = 248-8*bNum;
+        int signBit = bit(aNum, (int)(255-t));
+        uint256_t mask = power(uint256_t(2), uint64_t(255-t)) - 1;
+        if (signBit ==0){
+            m.stack[1] = aNum & mask;
+        } else {
+            mask ^= -1;
+            m.stack[1] = aNum | mask;
+        }
     }
     m.stack.popClear();
     ++m.pc;
