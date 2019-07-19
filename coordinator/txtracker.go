@@ -83,12 +83,16 @@ func (a *assertionInfo) FindLogs(address *big.Int, topics [][32]byte) []logRespo
 				continue
 			}
 
+			match := true
 			for i, topic := range topics {
 				if topic != evmLog.Topics[i] {
-					continue
+					match = false
+					break
 				}
 			}
-			logs = append(logs, logResponse{evmLog, txLogs.msg})
+			if match {
+				logs = append(logs, logResponse{evmLog, txLogs.msg})
+			}
 		}
 	}
 	return logs
