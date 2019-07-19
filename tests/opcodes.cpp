@@ -190,18 +190,6 @@ TEST_CASE("EXP opcode is correct") {
     SECTION("wrap") { testBinaryOp(2, 256, 0, OpCode::EXP); }
 }
 
-TEST_CASE("SIGNEXTEND opcode is correct") {
-    SECTION("test1") { testBinaryOp(-1, 0, -1, OpCode::SIGNEXTEND); }
-    SECTION("test2") { testBinaryOp(1, 0, 1, OpCode::SIGNEXTEND); }
-    SECTION("test3") { testBinaryOp(127, 0, 127, OpCode::SIGNEXTEND); }
-    SECTION("test4") { testBinaryOp(128, 0, -128, OpCode::SIGNEXTEND); }
-    SECTION("test5") { testBinaryOp(254, 0, -2, OpCode::SIGNEXTEND); }
-    SECTION("test6") { testBinaryOp(257, 0, 1, OpCode::SIGNEXTEND); }
-    SECTION("test7") { testBinaryOp(65534, 1, -2, OpCode::SIGNEXTEND); }
-    SECTION("test8") { testBinaryOp(65537, 1, 1, OpCode::SIGNEXTEND); }
-    SECTION("test8") { testBinaryOp(65537, 2, 65537, OpCode::SIGNEXTEND); }
-}
-
 TEST_CASE("LT opcode is correct") {
     SECTION("less") { testBinaryOp(3, 9, 1, OpCode::LT); }
     SECTION("greater") { testBinaryOp(9, 3, 0, OpCode::LT); }
@@ -294,8 +282,336 @@ TEST_CASE("BYTE opcode is correct") {
     SECTION("3rd byte of 3 = 0") { testBinaryOp(3, 3, 0, OpCode::BYTE); }
 }
 
+TEST_CASE("SIGNEXTEND opcode is correct") {
+    SECTION("test1") { testBinaryOp(-1, 0, -1, OpCode::SIGNEXTEND); }
+    SECTION("test2") { testBinaryOp(1, 0, 1, OpCode::SIGNEXTEND); }
+    SECTION("test3") { testBinaryOp(127, 0, 127, OpCode::SIGNEXTEND); }
+    SECTION("test4") { testBinaryOp(128, 0, -128, OpCode::SIGNEXTEND); }
+    SECTION("test5") { testBinaryOp(254, 0, -2, OpCode::SIGNEXTEND); }
+    SECTION("test6") { testBinaryOp(257, 0, 1, OpCode::SIGNEXTEND); }
+    SECTION("test7") { testBinaryOp(65534, 1, -2, OpCode::SIGNEXTEND); }
+    SECTION("test8") { testBinaryOp(65537, 1, 1, OpCode::SIGNEXTEND); }
+    SECTION("test8") { testBinaryOp(65537, 2, 65537, OpCode::SIGNEXTEND); }
+}
+
 TEST_CASE("HASH opcode is correct") {
     SECTION("10") { testUnaryOp(10, from_hex_str("c65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a8"), OpCode::HASH); }
+}
+
+TEST_CASE("TYPE opcode is correct") {
+    SECTION("type int") {
+        MachineState m;
+        m.stack.push(value{uint256_t(3)});
+        REQUIRE(m.stack.stacksize() == 1);
+        m.runOp(OpCode::TYPE);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(0)});
+        REQUIRE(m.stack.stacksize() == 0);
+   }
+    SECTION("type codepoint") {
+        MachineState m;
+        m.stack.push(value{CodePoint()});
+        REQUIRE(m.stack.stacksize() == 1);
+        m.runOp(OpCode::TYPE);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(1)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+    SECTION("type tuple") {
+        MachineState m;
+        m.stack.push(Tuple{1, 2, m.pool.get()});
+        REQUIRE(m.stack.stacksize() == 1);
+        m.runOp(OpCode::TYPE);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(3)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+
+TEST_CASE("POP opcode is correct") {
+    SECTION("pop") {
+        MachineState m;
+        m.stack.push(3);
+        REQUIRE(m.stack.stacksize() == 1);
+        m.runOp(OpCode::POP);
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("SPUSH opcode is correct") {
+    SECTION("pop") {
+        MachineState m;
+        m.staticVal = uint256_t(5);
+        m.runOp(OpCode::SPUSH);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("RPUSH opcode is correct") {
+    SECTION("pop") {
+        MachineState m;
+        m.registerVal = uint256_t(5);
+        m.runOp(OpCode::RPUSH);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("RSET opcode is correct") {
+    SECTION("pop") {
+        MachineState m;
+        m.stack.push(value{uint256_t(5)});
+        m.runOp(OpCode::RSET);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.registerVal == value{uint256_t(5)});
+    }
+}
+
+TEST_CASE("JUMP opcode is correct") {
+    SECTION("jump") {
+        MachineState m;
+        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.runOp(OpCode::JUMP);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.pc == 2);
+    }
+}
+
+TEST_CASE("CJUMP opcode is correct") {
+    SECTION("cjump true") {
+        MachineState m;
+        m.pc = 3;
+        m.stack.push(0);
+        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.runOp(OpCode::CJUMP);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.pc == 4);
+    }
+    SECTION("cjump false") {
+        MachineState m;
+        m.pc = 3;
+        m.stack.push(1);
+        m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
+        m.runOp(OpCode::CJUMP);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.pc == 2);
+    }
+}
+
+TEST_CASE("STACKEMPTY opcode is correct") {
+    SECTION("empty") {
+        MachineState m;
+        m.runOp(OpCode::STACKEMPTY);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(1)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+    SECTION("not empty") {
+        MachineState m;
+        m.stack.push(1);
+        m.runOp(OpCode::STACKEMPTY);
+        REQUIRE(m.stack.stacksize() == 2);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(0)});
+        REQUIRE(m.stack.stacksize() == 1);
+    }
+}
+
+TEST_CASE("PCPUSH opcode is correct") {
+    SECTION("pcpush") {
+        MachineState m;
+        m.code.push_back(CodePoint(0, OpCode::ADD, 0));
+        m.runOp(OpCode::PCPUSH);
+        REQUIRE(m.stack.stacksize() == 1);
+        REQUIRE(m.pc == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{CodePoint(0, OpCode::ADD, 0)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("AUXPUSH opcode is correct") {
+    SECTION("auxpush") {
+        MachineState m;
+        m.stack.push(value{uint256_t(5)});
+        m.runOp(OpCode::AUXPUSH);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.auxstack.stacksize() == 1);
+        value res = m.auxstack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+    }
+}
+
+TEST_CASE("AUXPOP opcode is correct") {
+    SECTION("auxpush") {
+        MachineState m;
+        m.auxstack.push(value{uint256_t(5)});
+        m.runOp(OpCode::AUXPOP);
+        REQUIRE(m.auxstack.stacksize() == 0);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+    }
+}
+
+TEST_CASE("AUXSTACKEMPTY opcode is correct") {
+    SECTION("empty") {
+        MachineState m;
+        m.runOp(OpCode::AUXSTACKEMPTY);
+        REQUIRE(m.auxstack.stacksize() == 0);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(1)});
+    }
+    SECTION("not empty") {
+        MachineState m;
+        m.auxstack.push(value{uint256_t(5)});
+        m.runOp(OpCode::AUXSTACKEMPTY);
+        REQUIRE(m.auxstack.stacksize() == 1);
+        REQUIRE(m.stack.stacksize() == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(0)});
+    }
+}
+
+TEST_CASE("NOP opcode is correct") {
+    SECTION("nop") {
+        MachineState m;
+        m.runOp(OpCode::NOP);
+        REQUIRE(m.auxstack.stacksize() == 0);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.pc == 1);
+    }
+}
+
+TEST_CASE("ERRPUSH opcode is correct") {
+    SECTION("errpush") {
+        MachineState m;
+        m.errpc = CodePoint(0, OpCode::ADD, 0);
+        m.runOp(OpCode::ERRPUSH);
+        REQUIRE(m.stack.stacksize() == 1);
+        REQUIRE(m.pc == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{CodePoint(0, OpCode::ADD, 0)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("ERRSET opcode is correct") {
+    SECTION("errpush") {
+        MachineState m;
+        m.stack.push(value{CodePoint(0, OpCode::ADD, 0)});
+        m.runOp(OpCode::ERRSET);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.pc == 1);
+        REQUIRE(m.errpc == CodePoint(0, OpCode::ADD, 0));
+    }
+}
+
+TEST_CASE("DUP0 opcode is correct") {
+    SECTION("dup") {
+        MachineState m;
+        m.stack.push(5);
+        m.runOp(OpCode::DUP0);
+        REQUIRE(m.stack.stacksize() == 2);
+        REQUIRE(m.pc == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+    }
+}
+
+TEST_CASE("DUP1 opcode is correct") {
+    SECTION("dup") {
+        MachineState m;
+        m.stack.push(5);
+        m.stack.push(3);
+        m.runOp(OpCode::DUP1);
+        REQUIRE(m.stack.stacksize() == 3);
+        REQUIRE(m.pc == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(3)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+    }
+}
+
+TEST_CASE("DUP2 opcode is correct") {
+    SECTION("dup") {
+        MachineState m;
+        m.stack.push(7);
+        m.stack.push(5);
+        m.stack.push(3);
+        m.runOp(OpCode::DUP2);
+        REQUIRE(m.stack.stacksize() == 4);
+        REQUIRE(m.pc == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(7)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(3)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(7)});
+    }
+}
+
+TEST_CASE("SWAP1 opcode is correct") {
+    SECTION("swap") {
+        MachineState m;
+        m.stack.push(5);
+        m.stack.push(3);
+        m.runOp(OpCode::SWAP1);
+        REQUIRE(m.stack.stacksize() == 2);
+        REQUIRE(m.pc == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(3)});
+    }
+}
+
+TEST_CASE("SWAP2 opcode is correct") {
+    SECTION("dup") {
+        MachineState m;
+        m.stack.push(7);
+        m.stack.push(5);
+        m.stack.push(3);
+        m.runOp(OpCode::SWAP2);
+        REQUIRE(m.stack.stacksize() == 3);
+        REQUIRE(m.pc == 1);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(7)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(5)});
+        res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(3)});
+    }
+}
+
+TEST_CASE("TGET opcode is correct") {
+    SECTION("tget") {
+        MachineState m;
+        m.stack.push(Tuple{9, 8, 7, 6, m.pool.get()});
+        m.stack.push(1);
+        m.runOp(OpCode::TGET);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(8)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
 }
 
 TEST_CASE("TSET opcode is correct") {
@@ -319,5 +635,71 @@ TEST_CASE("TSET opcode is correct") {
         value res = m.stack.pop();
         REQUIRE(res == value{Tuple{9, 9, 9, 9, 9, 9, 9, 3, m.pool.get()}});
         REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("TLEN opcode is correct") {
+    SECTION("tlen") {
+        MachineState m;
+        m.stack.push(Tuple{9, 8, 7, 6, m.pool.get()});
+        m.runOp(OpCode::TLEN);
+        value res = m.stack.pop();
+        REQUIRE(res == value{uint256_t(4)});
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("BREAKPOINT opcode is correct") {
+    SECTION("break") {
+        MachineState m;
+        m.runOp(OpCode::BREAKPOINT);
+        REQUIRE(m.state == Status::Blocked);
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("LOG opcode is correct") {
+    SECTION("log") {
+        MachineState m;
+        m.stack.push(3);
+        m.runOp(OpCode::LOG);
+        REQUIRE(m.stack.stacksize() == 0);
+        REQUIRE(m.context.logs[0] == value{uint256_t(3)});
+    }
+}
+
+TEST_CASE("SEND opcode is correct") {
+    SECTION("send") {
+        // TODO: fill in send test
+    }
+}
+
+TEST_CASE("NBSEND opcode is correct") {
+    SECTION("nbsend") {
+        // TODO: fill in nbsend test
+    }
+}
+
+TEST_CASE("GETTIME opcode is correct") {
+    SECTION("time") {
+        // TODO: fill in gettime test
+    }
+}
+
+TEST_CASE("INBOX opcode is correct") {
+    SECTION("inbox") {
+        // TODO: fill in inbox test
+    }
+}
+
+TEST_CASE("ERROR opcode is correct") {
+    SECTION("error") {
+        // TODO: fill in error test
+    }
+}
+
+TEST_CASE("HALT opcode is correct") {
+    SECTION("halt") {
+        // TODO: fill in halt test
     }
 }

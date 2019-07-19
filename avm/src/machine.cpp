@@ -674,6 +674,17 @@ static void hashOp(MachineState& m) {
     ++m.pc;
 }
 
+static void typeOp(MachineState& m) {
+    m.stack.prepForMod(1);
+    if (mpark::holds_alternative<uint256_t>(m.stack[0]))
+        m.stack[0] = NUM;
+    else if (mpark::holds_alternative<CodePoint>(m.stack[0]))
+        m.stack[0] = CODEPT;
+    else if (mpark::holds_alternative<Tuple>(m.stack[0]))
+        m.stack[0] = TUPLE;
+    ++m.pc;
+}
+
 static void pop(MachineState& m) {
     m.stack.popClear();
     ++m.pc;
@@ -841,7 +852,7 @@ static void tlen(MachineState& m) {
 }
 
 static void breakpoint(MachineState& m) {
-    m.state = Status::Halted;
+    m.state = Status::Blocked;
 }
 
 static void log(MachineState& m) {
@@ -1008,6 +1019,10 @@ void MachineState::runOp(OpCode opcode) {
             hashOp(*this);
             break;
 
+        case OpCode::TYPE:
+            typeOp(*this);
+            break;
+            
         /***********************************************/
         /*  Stack, Memory, Storage and Flow Operations */
         /***********************************************/
