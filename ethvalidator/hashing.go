@@ -37,7 +37,7 @@ func tokenTypeEncoded(input [21]byte) []byte {
 func tokenTypeArrayEncoded(input [][21]byte) []byte {
 	var values []byte
 	for _, val := range input {
-		values = append(values, tokenTypeEncoded(val)...)
+		values = append(values, common.RightPadBytes(val[:], 32)...)
 	}
 	return values
 }
