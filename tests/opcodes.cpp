@@ -205,22 +205,97 @@ TEST_CASE("SIGNEXTEND opcode is correct") {
 TEST_CASE("LT opcode is correct") {
     SECTION("less") { testBinaryOp(3, 9, 1, OpCode::LT); }
     SECTION("greater") { testBinaryOp(9, 3, 0, OpCode::LT); }
-    SECTION("equal") { testBinaryOp(3, 3, 0	, OpCode::LT); }
+    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::LT); }
     SECTION("First neg, second pos") { testBinaryOp(-3, 9, 0, OpCode::LT); }
 }
 
+TEST_CASE("GT opcode is correct") {
+    SECTION("less") { testBinaryOp(3, 9, 0, OpCode::GT); }
+    SECTION("greater") { testBinaryOp(9, 3, 1, OpCode::GT); }
+    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::GT); }
+    SECTION("First neg, second pos") { testBinaryOp(-3, 9, 1, OpCode::GT); }
+}
+
 TEST_CASE("SLT opcode is correct") {
-    SECTION("All positive") { testBinaryOp(7, 3, 0, OpCode::SLT); }
-    SECTION("All negative") { testBinaryOp(-7, -3, 1, OpCode::SLT); }
-    SECTION("First pos, second neg") { testBinaryOp(-7, 3, 1, OpCode::SLT); }
-    SECTION("First neg, second pos") { testBinaryOp(7, -3, 0, OpCode::SLT); }
+    SECTION("All positive true") { testBinaryOp(7, 3, 0, OpCode::SLT); }
+    SECTION("All positive false") { testBinaryOp(3, 7, 1, OpCode::SLT); }
+    SECTION("All negative true") { testBinaryOp(-3, -7, 0, OpCode::SLT); }
+    SECTION("All negative false") { testBinaryOp(-7, -3, 1, OpCode::SLT); }
+    SECTION("First pos, second neg true") { testBinaryOp(3, -7, 0, OpCode::SLT); }
+    SECTION("First neg, second pos false") { testBinaryOp(-3, 7, 1, OpCode::SLT); }
+    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::SLT); }
 }
 
 TEST_CASE("SGT opcode is correct") {
-    SECTION("All positive") { testBinaryOp(7, 3, 1, OpCode::SGT); }
-    SECTION("All negative") { testBinaryOp(-7, -3, 0, OpCode::SGT); }
-    SECTION("First pos, second neg") { testBinaryOp(-7, 3, 0, OpCode::SGT); }
-    SECTION("First neg, second pos") { testBinaryOp(7, -3, 1, OpCode::SGT); }
+    SECTION("All positive true") { testBinaryOp(7, 3, 1, OpCode::SGT); }
+    SECTION("All positive false") { testBinaryOp(3, 7, 0, OpCode::SGT); }
+    SECTION("All negative true") { testBinaryOp(-3, -7, 1, OpCode::SGT); }
+    SECTION("All negative false") { testBinaryOp(-7, -3, 0, OpCode::SGT); }
+    SECTION("First pos, second neg true") { testBinaryOp(3, -7, 1, OpCode::SGT); }
+    SECTION("First neg, second pos false") { testBinaryOp(-7, 3, 0, OpCode::SGT); }
+    SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::SGT); }
+}
+
+TEST_CASE("EQ opcode is correct") {
+    SECTION("Not equal") { testBinaryOp(7, 3, 0, OpCode::EQ); }
+    SECTION("equal") { testBinaryOp(3, 3, 1, OpCode::EQ); }
+    SECTION("matching tuples") {
+        MachineState m;
+        m.stack.push(Tuple{1, 2, m.pool.get()});
+        m.stack.push(Tuple{1, 2, m.pool.get()});
+        m.runOp(OpCode::EQ);
+        value res = m.stack.pop();
+        auto actual = mpark::get_if<uint256_t>(&res);
+        REQUIRE(actual);
+        REQUIRE(*actual == 1);
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+    SECTION("different tuples") {
+        MachineState m;
+        m.stack.push(Tuple{1, 2, m.pool.get()});
+        m.stack.push(Tuple{1, 3, m.pool.get()});
+        m.runOp(OpCode::EQ);
+        value res = m.stack.pop();
+        auto actual = mpark::get_if<uint256_t>(&res);
+        REQUIRE(actual);
+        REQUIRE(*actual == 0);
+        REQUIRE(m.stack.stacksize() == 0);
+    }
+}
+
+TEST_CASE("ISZERO opcode is correct") {
+    SECTION("true") { testUnaryOp(0, 1, OpCode::ISZERO); }
+    SECTION("false") { testUnaryOp(2, 0, OpCode::ISZERO); }
+}
+
+TEST_CASE("AND opcode is correct") {
+    SECTION("3 and 9 = 1") { testBinaryOp(3, 9, 1, OpCode::BITWISE_AND); }
+    SECTION("3 and 3 = 3") { testBinaryOp(3, 3, 3, OpCode::BITWISE_AND); }
+}
+
+TEST_CASE("OR opcode is correct") {
+    SECTION("3 or 9 = 11") { testBinaryOp(3, 9, 11, OpCode::BITWISE_OR); }
+    SECTION("3 or 3 = 3") { testBinaryOp(3, 3, 3, OpCode::BITWISE_OR); }
+}
+
+TEST_CASE("XOR opcode is correct") {
+    SECTION("3 or 9 = 11") { testBinaryOp(3, 9, 10, OpCode::BITWISE_XOR); }
+    SECTION("3 or 3 = 3") { testBinaryOp(3, 3, 0, OpCode::BITWISE_XOR); }
+}
+
+TEST_CASE("NOT opcode is correct") {
+    SECTION("0") { testUnaryOp(0, -1, OpCode::BITWISE_NOT); }
+    SECTION("3") { testUnaryOp(3, -4, OpCode::BITWISE_NOT); }
+    SECTION("-4") { testUnaryOp(-4, 3, OpCode::BITWISE_NOT); }
+}
+
+TEST_CASE("BYTE opcode is correct") {
+    SECTION("31st byte of 16 = 16") { testBinaryOp(16, 31, 16, OpCode::BYTE); }
+    SECTION("3rd byte of 3 = 0") { testBinaryOp(3, 3, 0, OpCode::BYTE); }
+}
+
+TEST_CASE("HASH opcode is correct") {
+    SECTION("10") { testUnaryOp(10, from_hex_str("c65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a8"), OpCode::HASH); }
 }
 
 TEST_CASE("TSET opcode is correct") {

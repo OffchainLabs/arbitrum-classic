@@ -635,12 +635,12 @@ static void byte(MachineState& m) {
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    if (aNum >= 32) {
+    if (bNum >= 32) {
         m.stack[1] = 0;
     } else {
-        const auto shift = 256 - 8 - 8 * shrink<uint8_t>(aNum);
+        const auto shift = 256 - 8 - 8 * shrink<uint8_t>(bNum);
         const auto mask = uint256_t(255) << shift;
-        m.stack[1] = (bNum & mask) >> shift;
+        m.stack[1] = (aNum & mask) >> shift;
     }
     m.stack.popClear();
     ++m.pc;
