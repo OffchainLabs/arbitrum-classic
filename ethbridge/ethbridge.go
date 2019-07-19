@@ -568,7 +568,7 @@ func (con *Bridge) UnanimousAssert(
 		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
 		amounts = append(amounts, msg.Currency)
 		destinations = append(destinations, msg.Destination)
-		err := msg.Data.Marshal(&messageData)
+		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
 		}
@@ -578,8 +578,8 @@ func (con *Bridge) UnanimousAssert(
 		auth,
 		vmID,
 		assertion.AfterHash,
-		newInboxHash,
 		assertion.LogsHash(),
+		newInboxHash,
 		timeBounds,
 		balance.TokenTypes,
 		messageData.Bytes(),
@@ -608,7 +608,7 @@ func (con *Bridge) ProposeUnanimousAssert(
 		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
 		amounts = append(amounts, msg.Currency)
 		destinations = append(destinations, msg.Destination)
-		err := msg.Data.Marshal(&messageData)
+		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
 		}
@@ -650,7 +650,7 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
 		amounts = append(amounts, msg.Currency)
 		destinations = append(destinations, msg.Destination)
-		err := msg.Data.Marshal(&messageData)
+		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
 		}
@@ -723,7 +723,7 @@ func (con *Bridge) ConfirmAsserted(
 		tokenNums = append(tokenNums, uint16(precondition.BeforeBalance.TokenIndex(msg.TokenType, msg.Currency)))
 		amounts = append(amounts, msg.Currency)
 		destinations = append(destinations, msg.Destination)
-		err := msg.Data.Marshal(&messageData)
+		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
 		}

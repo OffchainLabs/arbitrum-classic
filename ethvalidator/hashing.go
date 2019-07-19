@@ -96,7 +96,7 @@ func UnanimousAssertHash(
 		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
 		amounts = append(amounts, msg.Currency)
 		destinations = append(destinations, msg.Destination)
-		err := msg.Data.Marshal(&messageData)
+		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return [32]byte{}, err
 		}
