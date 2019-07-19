@@ -202,6 +202,8 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to sign")
 		}
 
+		unanRequest.SequenceNum = unanUpdate.SequenceNum
+
 		m.unanimousRequests[requestId] = UnanimousAssertionRequest{
 			unanRequest,
 			messages,
@@ -223,7 +225,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		}
 	}
 	message := &valmessage.FollowerResponse{
-		RequestId: value.NewHashBuf(unanRequest.Hash()),
+		RequestId: value.NewHashBuf(requestId),
 		Response:  &valmessage.FollowerResponse_Unanimous{Unanimous: msg},
 	}
 	raw, err := proto.Marshal(message)

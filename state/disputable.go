@@ -273,7 +273,7 @@ func (bot Waiting) PreparePendingUnanimous(request UnanimousUpdateRequest) (Wait
 	}, nil
 }
 
-func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (State, *proposedUpdate, error) {
+func (bot Waiting) FinalizePendingUnanimous(sequenceNum uint64, signatures [][]byte) (State, *proposedUpdate, error) {
 	if bot.proposed == nil {
 		return nil, nil, errors.New("no pending Assertion")
 	}
@@ -289,7 +289,7 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (State, *propos
 			balance,
 		),
 		assertion:   bot.proposed.Assertion,
-		sequenceNum: bot.proposed.sequenceNum,
+		sequenceNum: sequenceNum,
 		signatures:  signatures,
 		timeBounds:  bot.timeBounds,
 		orig:        bot.orig,
