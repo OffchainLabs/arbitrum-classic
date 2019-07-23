@@ -208,9 +208,11 @@ void MachineState::sendOnchainMessage(const Message& msg) {
     balance.add(msg.token, msg.currency);
 }
 
-void MachineState::deliverMessageStack(value messages) {
-    inbox =
-        Tuple(uint256_t(1), std::move(inbox), std::move(messages), pool.get());
+void MachineState::deliverMessageStack(Tuple && messages) {
+    if (!(messages == Tuple())) {
+        inbox =
+            Tuple(uint256_t(1), std::move(inbox), std::move(messages), pool.get());
+    }
 }
 
 void MachineState::sendOffchainMessages(const std::vector<Message>& messages) {
