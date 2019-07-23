@@ -18,7 +18,7 @@ from arbitrum.std import arith
 from arbitrum import VM
 
 
-class TestArish(TestCase):
+class TestArith(TestCase):
     def test_max(self):
         vm = VM()
         vm.push(10)
