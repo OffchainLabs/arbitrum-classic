@@ -37,7 +37,7 @@ func tokenTypeEncoded(input [21]byte) []byte {
 func tokenTypeArrayEncoded(input [][21]byte) []byte {
 	var values []byte
 	for _, val := range input {
-		values = append(values, tokenTypeEncoded(val)...)
+		values = append(values, common.RightPadBytes(val[:], 32)...)
 	}
 	return values
 }
@@ -96,7 +96,7 @@ func UnanimousAssertHash(
 		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
 		amounts = append(amounts, msg.Currency)
 		destinations = append(destinations, msg.Destination)
-		err := msg.Data.Marshal(&messageData)
+		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return [32]byte{}, err
 		}

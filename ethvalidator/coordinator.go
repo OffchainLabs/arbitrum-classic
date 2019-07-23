@@ -417,7 +417,7 @@ func (m *ValidatorCoordinator) Run() error {
 				if shouldUnan {
 					err := m.initiateUnanimousAssertionImpl(forceFinal, m.maxStepsUnanSteps)
 					if err != nil {
-						log.Println("Coordinator is closing unanimous assertion")
+						log.Println("Coordinator hit problem and is closing channel")
 						closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
 
 						closed := <-closedChan
@@ -541,13 +541,13 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, maxSteps int32) error {
 	queuedMessages := <-m.mpq.Fetch()
 
-	err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal, maxSteps)
+	wasFinal, err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal, maxSteps)
 	if err != nil {
 		m.mpq.Return(queuedMessages)
 		return err
 	}
 
-	if forceFinal {
+	if wasFinal {
 		log.Println("Coordinator is closing unanimous assertion")
 		closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
 
@@ -563,7 +563,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, m
 	return nil
 }
 
-func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool, maxSteps int32) error {
+func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool, maxSteps int32) (bool, error) {
 	newMessages := make([]protocol.Message, 0, len(queuedMessages))
 	for _, msg := range queuedMessages {
 		newMessages = append(newMessages, msg.Message)
@@ -577,7 +577,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	case unanRequest = <-requestChan:
 		break
 	case err := <-unanErrChan:
-		return err
+		return false, err
 	}
 
 	requestMessages := make([]*valmessage.SignedMessage, 0, len(unanRequest.NewMessages))
@@ -623,7 +623,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
-		return err
+		return false, err
 	}
 
 	// Force onchain assertion if there are outgoing messages
@@ -643,7 +643,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
-		return err
+		return false, err
 	}
 	sig, err := m.Val.Sign(unanHash)
 	if err != nil {
@@ -651,7 +651,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
-		return err
+		return false, err
 	}
 
 	responses := <-responsesChan
@@ -660,7 +660,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 			Accepted: false,
 		})
-		return errors.New("some Validators didn't respond")
+		return false, errors.New("some Validators didn't respond")
 	}
 
 	signatures := make([][]byte, m.Val.ValidatorCount())
@@ -671,13 +671,13 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 				Accepted: false,
 			})
-			return errors.New("some Validators refused to sign")
+			return false, errors.New("some Validators refused to sign")
 		}
 		if value.NewHashFromBuf(r.AssertionHash) != unanHash {
 			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 				Accepted: false,
 			})
-			return errors.New("some Validators signed the wrong assertion")
+			return false, errors.New("some Validators signed the wrong assertion")
 		}
 		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
 	}
@@ -689,6 +689,8 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		Signatures: signatures,
 	})
 
+	unanRequest.SequenceNum = unanUpdate.SequenceNum
+
 	confRetChan, confErrChan := m.Val.Bot.ConfirmOffchainUnanimousAssertion(
 		unanRequest.UnanimousRequestData,
 		signatures,
@@ -698,7 +700,7 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 	case <-confRetChan:
 		break
 	case err := <-confErrChan:
-		return err
+		return false, err
 	}
-	return nil
+	return unanUpdate.SequenceNum == math.MaxUint64, nil
 }

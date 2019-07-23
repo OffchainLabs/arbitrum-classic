@@ -326,7 +326,7 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							break
 						}
 
-						newBot, proposal, err := bot.FinalizePendingUnanimous(request.Signatures)
+						newBot, proposal, err := bot.FinalizePendingUnanimous(request.SequenceNum, request.Signatures)
 						if err != nil {
 							request.ErrChan <- err
 							break
