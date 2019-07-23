@@ -197,6 +197,7 @@ func (m *Server) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsRe
 // SendMessageArgs contains input data for SendMessage
 type SendMessageArgs struct {
 	Data      string `json:"data"`
+	Pubkey    string `json:"pubkey"`
 	Signature string `json:"signature"`
 }
 
@@ -241,29 +242,37 @@ func (m *Server) SendMessage(r *http.Request, args *SendMessageArgs, reply *Send
 		solsha3.Uint256(amount),
 		tokenType[:],
 	)
+	reply.TxHash = hexutil.Encode(messageHash)
 
-	signedMsg := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
-	pubkey, err := crypto.SigToPub(signedMsg, sigBytes)
+	pubkey, err := hexutil.Decode(args.Pubkey)
 	if err != nil {
-		log.Printf("SendMessage: Failed to convert signature to pubkey, %v\n", err)
 		return err
 	}
-	sender := crypto.PubkeyToAddress(*pubkey)
-	log.Printf("Coordinator recieved transaction from %v\n", hexutil.Encode(sender[:]))
-	senderArr := [32]byte{}
-	copy(senderArr[12:], sender.Bytes())
-
-	msg := protocol.Message{
-		Data:        dataVal,
-		TokenType:   tokenType,
-		Currency:    amount,
-		Destination: senderArr,
+	pub, err := crypto.UnmarshalPubkey(pubkey)
+	if err != nil {
+		return err
 	}
-	m.coordinator.SendMessage(ethvalidator.OffchainMessage{
-		Message:   msg,
-		Signature: sigBytes,
-	})
-	reply.TxHash = hexutil.Encode(messageHash)
+
+	go func() {
+		signedMsg := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
+		if !crypto.VerifySignature(pubkey, signedMsg, sigBytes[:len(sigBytes)-1]) {
+			return
+		}
+
+		senderArr := [32]byte{}
+		copy(senderArr[12:], crypto.PubkeyToAddress(*pub).Bytes())
+
+		m.coordinator.SendMessage(ethvalidator.OffchainMessage{
+			Message: protocol.Message{
+				Data:        dataVal,
+				TokenType:   tokenType,
+				Currency:    amount,
+				Destination: senderArr,
+			},
+			Signature: sigBytes,
+		})
+	}()
+
 	return nil
 }
 
@@ -351,7 +360,6 @@ func (m *Server) CallMessage(r *http.Request, args *CallMessageArgs, reply *Call
 	}
 	var sender common.Address
 	copy(sender[:], senderBytes)
-	log.Printf("Coordinator recieved call from %v\n", hexutil.Encode(sender[:]))
 
 	msg := protocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
 	resultChan, errChan := m.coordinator.Val.Bot.RequestCall(msg)

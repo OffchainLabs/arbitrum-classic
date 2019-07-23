@@ -17,6 +17,7 @@
 package validator
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"math/big"
@@ -414,17 +415,6 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 						Currency:    msg.Currency,
 						Destination: msg.Destination,
 					}
-					ethMsgData, err := evm.NewEthMsgDataFromValue(val)
-					if err != nil {
-						request.ErrorChan <- err
-						break
-					}
-					ethMsg := evm.EthMsg{
-						ethMsgData,
-						msg.TokenType,
-						msg.Currency,
-						msg.Destination,
-					}
 					maxCallSteps := validator.bot.GetConfig().MaxCallSteps
 					go func() {
 						updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
@@ -443,7 +433,8 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							request.ErrorChan <- err
 							return
 						}
-						if !lastLog.GetEthMsg().Equals(ethMsg) {
+						logHash := lastLog.GetEthMsg().Data.TxHash
+						if !bytes.Equal(logHash[:], messageHash) {
 							// Last produced log is not the call we sent
 							request.ErrorChan <- errors.New("Call took too long to execute")
 							return

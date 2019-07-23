@@ -18,6 +18,7 @@ package main
 
 import (
 	jsonenc "encoding/json"
+	"flag"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -33,10 +34,9 @@ import (
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	"github.com/offchainlabs/arb-avm/loader"
-
 	"github.com/offchainlabs/arb-validator/coordinator"
 	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/loader"
 )
 
 func attachProfiler(router *mux.Router) {
@@ -61,19 +61,23 @@ func attachProfiler(router *mux.Router) {
 // 4) Global EthBridge addresses json file
 // 5) ethURL
 func main() {
+
+	vmType := flag.String("avm", "cpp", "Select the AVM implementation")
+	flag.Parse()
+
 	// Check number of args
-	if len(os.Args)-1 != 5 {
+	if len(flag.Args()) != 5 {
 		log.Fatalln("Expected five arguments")
 	}
 
 	// 1) Compiled Arbitrum bytecode
-	machine, err := loader.LoadMachineFromFile(os.Args[1], true)
+	machine, err := loader.LoadMachineFromFile(flag.Arg(0), true, *vmType)
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
 
 	// 2) Private key
-	keyFile, err := os.Open(os.Args[2])
+	keyFile, err := os.Open(flag.Arg(1))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -91,7 +95,7 @@ func main() {
 	}
 
 	// 3) All public key addresses
-	addrFile, err := os.Open(os.Args[3])
+	addrFile, err := os.Open(flag.Arg(2))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -110,7 +114,7 @@ func main() {
 	}
 
 	// 4) Global EthBridge addresses json
-	jsonFile, err := os.Open(os.Args[4])
+	jsonFile, err := os.Open(flag.Arg(3))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -125,7 +129,7 @@ func main() {
 	}
 
 	// 5) URL
-	ethURL := os.Args[5]
+	ethURL := flag.Arg(4)
 
 	// Validator creation
 	server := coordinator.NewServer(machine, key, validators, connectionInfo, ethURL)

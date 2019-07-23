@@ -8,7 +8,7 @@
 FROM alpine:3.9
 
 # Alpine dependencies
-RUN apk add --no-cache git go libc-dev
+RUN apk add --no-cache git go libc-dev build-base
 
 # Non-root user
 RUN addgroup -g 1000 -S user && \
@@ -18,31 +18,40 @@ WORKDIR "/home/user/"
 
 # Dependencies
 COPY --chown=user go.mod go.sum /home/user/
-RUN go mod download
+##DEV_COPY --chown=user arb-avm/go.mod arb-avm/go.sum /home/user/arb-avm/
+##DEV_COPY --chown=user arb-util/go.mod arb-util/go.sum /home/user/arb-util/
+##DEV_COPY --chown=user arb-avm-cpp/go.mod arb-avm-cpp/go.sum /home/user/arb-avm-cpp/
+RUN if [[ -d arb-avm ]]; then                                                           \
+    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod &&            \
+    echo "replace github.com/offchainlabs/arb-util => ./arb-util" >> go.mod &&          \
+    echo "replace github.com/offchainlabs/arb-avm-cpp => ./arb-avm-cpp" >> go.mod &&    \
+    echo "replace github.com/offchainlabs/arb-util => ../arb-util" >> arb-avm/go.mod;fi;\
+    go mod download
+
+##DEV_COPY --chown=user arb-util /home/user/arb-util
+##DEV_COPY --chown=user arb-avm /home/user/arb-avm
+COPY --from=arb-avm-cpp --chown=user /arb-avm-cpp /home/user/arb-avm-cpp/
+COPY --chown=user ./ /home/user/
 
 # Build cache
 ##DEV_COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 
-# Build arb-util
-##DEV_COPY --chown=user arb-util /home/user/arb-util
-RUN if [[ -d arb-util ]]; then cd arb-util && go build -v ./... ; fi
-
-# Build arb-avm
-##DEV_COPY --chown=user arb-avm /home/user/arb-avm
-RUN if [[ -d arb-avm ]]; then cd arb-avm && go build -v ./... ; fi
-
 # Build arb-validator
-COPY --chown=user ./ /home/user/
 RUN if [[ -d arb-avm ]]; then \
-    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod && \
-    echo "replace github.com/offchainlabs/arb-util => ./arb-util" >> go.mod; \
-    fi; \
+    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod &&            \
+    echo "replace github.com/offchainlabs/arb-util => ./arb-util" >> go.mod &&          \
+    echo "replace github.com/offchainlabs/arb-avm-cpp => ./arb-avm-cpp" >> go.mod &&    \
+    echo "replace github.com/offchainlabs/arb-util => ../arb-util" >> arb-avm/go.mod;fi;\
     go build -v ./cmd/followerServer ./cmd/coordinatorServer && \
     go install ./cmd/followerServer ./cmd/coordinatorServer
 
 
 # Minimize
 FROM alpine:3.9
+
+# Alpine dependencies
+RUN apk add --no-cache libstdc++ libgcc
+
 # Non-root user
 RUN addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
@@ -53,9 +62,6 @@ WORKDIR "/home/user/"
 
 # Compiled code
 COPY --chown=user --from=0 /home/user/go/bin /home/user/go/bin
-
-# Build cache
-COPY --chown=user --from=0 /home/user/.cache/go-build /build
 
 # Get EthBridge addresses and Validator private keys and addresses
 COPY --chown=user --from=arb-ethbridge      \
@@ -72,6 +78,9 @@ ARG COORDINATOR_URL
 ENV WAIT_FOR=$WAIT_FOR ID=$ID ETH_URL=$ETH_URL \
     COORDINATOR_URL=$COORDINATOR_URL \
     PATH="/home/user/go/bin:${PATH}"
+
+# Build cache
+COPY --chown=user --from=0 /home/user/.cache/go-build /build
 
 # 1) Waits for host:port if $WAIT_FOR is set
 # 2) Copies address files from ../ to ./ (state volume)

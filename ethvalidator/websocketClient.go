@@ -35,7 +35,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 8192
+	maxMessageSize = 10000000
 )
 
 type Client struct {
@@ -59,7 +59,6 @@ func (c *Client) run() error {
 	var rerr error
 	defer func() {
 		rerr = c.conn.Close()
-		close(c.ToClient)
 		close(c.FromClient)
 	}()
 	c.conn.SetReadLimit(maxMessageSize)

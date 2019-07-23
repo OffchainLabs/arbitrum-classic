@@ -36,10 +36,9 @@ import (
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/value"
 
-	"github.com/offchainlabs/arb-avm/loader"
-
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arb-validator/loader"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -62,7 +61,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(os.Args[2], true)
+	machine, err := loader.LoadMachineFromFile(os.Args[2], true, "go")
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
