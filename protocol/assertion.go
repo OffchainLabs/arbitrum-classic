@@ -84,6 +84,11 @@ func (a *Assertion) Equals(b *Assertion) bool {
 			return false
 		}
 	}
+	for i, ao := range a.Logs {
+		if !value.Eq(ao, b.Logs[i]) {
+			return false
+		}
+	}
 	return true
 }
 
