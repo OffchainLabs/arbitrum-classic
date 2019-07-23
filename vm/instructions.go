@@ -992,29 +992,14 @@ func sendImpl(state *Machine) (value.TupleValue, value.Value, value.IntValue, va
 		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
 	}
 
-	data, err := sendData.GetByInt64(0)
-	if err != nil {
-		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
-	}
+	data, _ := sendData.GetByInt64(0)
+	val2, _ := sendData.GetByInt64(1)
+	val3, _ := sendData.GetByInt64(2)
+	val4, _ := sendData.GetByInt64(3)
 
-	val2, err := sendData.GetByInt64(1)
-	if err != nil {
-		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
-	}
-
-	val3, err := sendData.GetByInt64(2)
-	if err != nil {
-		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
-	}
-
-	val4, err := sendData.GetByInt64(3)
-	if err != nil {
-		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
-	}
-
-	tokenType, ok2 := val2.(value.IntValue)
+	destination, ok2 := val2.(value.IntValue)
 	amount, ok3 := val3.(value.IntValue)
-	destination, ok4 := val4.(value.IntValue)
+	tokenType, ok4 := val4.(value.IntValue)
 
 	if !ok2 || !ok3 || !ok4 {
 		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
