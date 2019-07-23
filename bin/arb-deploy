@@ -19,8 +19,10 @@
 ### ----------------------------------------------------------------------------
 
 import argparse
+import datetime
 import os
 import pkg_resources
+import platform
 import subprocess
 import sys
 
@@ -39,6 +41,31 @@ VALIDATOR_STATE_DIRNAME='validator-states/validator'
 
 # Relative dir name for deployment dependencies
 DEPLOY_DIR='compose'
+
+# Language types
+JS = 'js'
+GO = 'go'
+CPP = 'cpp'
+
+# Dependencies ('repository', LANG, ['DirectDependencies',])
+DEPS = [('arb-ethbridge', JS, []),
+        ('arb-validator', GO, ['arb-util', 'arb-avm']),
+        ('arb-avm-cpp', CPP, []),
+        ('arb-truffle-provider', JS, []),
+        ('arb-web3-provider', JS, ['arb-ethers-provider']),
+ ]
+EXTERNAL_DEPS = [
+    ('arb-sdk', 'arb-deploy'),
+    ('arbc-solidity', 'arbc-truffle-compile'),
+]
+ALL_REPOS = ([d[0] for d in DEPS] +
+             [d for ds in DEPS for d in ds[2]] +
+             [d[0] for d in EXTERNAL_DEPS])
+
+# Formatting
+RED= '\033[91m'
+BOLD='\033[1m'
+END='\033[0m'
 
 ### ----------------------------------------------------------------------------
 ### docker-compose template
@@ -157,9 +184,7 @@ COPY --from=0 /build /build
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
-           gas_limit, dev_flag, sudo_flag, build_flag):
-    sudo_cmd = 'sudo ' if sudo_flag else ''
-
+           gas_limit, dev_flag, sudo_flag, build_flag, up_flag):
     # Install dev_mode if flag set and doesn't exist already
     if dev_flag and not os.path.isdir(DEPLOY_DIR):
         install_dev_mode(sudo_flag)
@@ -167,8 +192,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
     # In dev-mode, create empty build caches if necessary
     if dev_flag or os.path.isdir(DEPLOY_DIR):
         def warm_build_cache(name):
-            if subprocess.check_output(sudo_cmd + 'docker images -q %s' % name,
-                shell=True).decode("utf-8") == '':
+            if run('docker images -q %s' % name, check_output=True, sudo=sudo_flag) == '':
                 run('mkdir -p %s/.tmp' % DEPLOY_DIR)
                 run('echo "%s" > %s/.tmp/Dockerfile' % (DOCKERFILE_CACHE, DEPLOY_DIR))
                 run('docker build -t %s %s/.tmp' % (name, DEPLOY_DIR), sudo=sudo_flag)
@@ -188,12 +212,11 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
             sudo=sudo_flag, exit_on_error=False)
     # Kill and rm all docker containers and images created by any `arb-deploy`
     ps = "grep 'arb-validator\|arb-ethbridge' | awk '{ print $1 }'"
-    if subprocess.check_output(sudo_cmd + 'docker ps | ' + ps, shell=True
-        ).decode("utf-8") != '':
-        run(sudo_cmd + 'docker kill $(' + sudo_cmd + 'docker ps | ' + ps + ')',
-            exit_on_error=False)
-        run(sudo_cmd + 'docker rm $(' + sudo_cmd + 'docker ps -a | ' + ps + ')',
-            exit_on_error=False)
+    if run('docker ps | ' + ps, check_output=True, sudo=sudo_flag) != '':
+        run('docker kill $(' + ('sudo ' if sudo_flag else '') + 'docker ps | ' + ps + ')',
+            exit_on_error=False, sudo=sudo_flag)
+        run('docker rm $(' + ('sudo ' if sudo_flag else '') + 'docker ps -a | ' + ps + ')',
+            exit_on_error=False, sudo=sudo_flag)
 
     # number of wallets
     n_wallets = n_validators + 100
@@ -228,56 +251,45 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         f.write(contents)
 
     # Build
-    run('docker-compose -f %s build' % compose, sudo=sudo_flag)
+    if not up_flag or build_flag:
+        run('docker-compose -f %s build' % compose, sudo=sudo_flag)
 
     # Run
-    if not build_flag:
+    if not build_flag or up_flag:
         run('docker-compose -f %s up --abort-on-container-exit' % compose,
             sudo=sudo_flag)
 
-# Installs arb-ethbridge, arb-validator, arb-avm, arb-util, arb-web3-provider,
-# arb-ethers-provider, and arb-truffle-provider and link them correctly.
-# Note: arb-avm and arb-util must be inside arb-validator for Docker. go.mod is
-# updated with replace rule. Also adds pre-commit hook to prevent committing
+# Installs DEPS and links them correctly
+# Also adds pre-commit hook to prevent committing
 # this development rule and does go formatting check
 def install_dev_mode(sudo_flag):
     GC = 'git clone --recurse-submodules https://github.com/OffchainLabs/%s.git ./' + DEPLOY_DIR + '/%s'
     run('mkdir ' + DEPLOY_DIR)
-    run(GC % ('arb-ethbridge', 'arb-ethbridge'))
-    run(GC % ('arb-validator', 'arb-validator'))
-    run(GC % ('arb-avm', 'arb-validator/arb-avm'))
-    run('ln -sf arb-validator/arb-avm ' + DEPLOY_DIR + '/arb-avm')
-    run(GC % ('arb-avm-cpp', 'arb-validator/arb-avm-cpp'))
-    run('ln -sf arb-validator/arb-avm-cpp ' + DEPLOY_DIR + '/arb-avm-cpp')
-    run(GC % ('arb-util', 'arb-validator/arb-util'))
-    run('ln -sf arb-validator/arb-util ' + DEPLOY_DIR + '/arb-util')
     # Add git pre-commit hooks to golang repos
     def add_commit_hook(repo):
         with open(repo + '/.git/hooks/pre-commit', 'w') as f:
             f.write(GIT_PRE_COMMIT_HOOK)
         run('chmod +x ' + repo + '/.git/hooks/pre-commit')
-    add_commit_hook(DEPLOY_DIR + '/arb-validator')
-    add_commit_hook(DEPLOY_DIR + '/arb-avm')
-    add_commit_hook(DEPLOY_DIR + '/arb-util')
-    # Link providers locally
-    run(GC % ('arb-truffle-provider', 'arb-truffle-provider'))
-    run(GC % ('arb-ethers-provider', 'arb-ethers-provider'))
-    run(GC % ('arb-web3-provider', 'arb-web3-provider'))
-    run('yarn --cwd ' + DEPLOY_DIR + '/arb-ethbridge')
-    run('yarn --cwd ' + DEPLOY_DIR + '/arb-truffle-provider')
-    run('yarn --cwd ' + DEPLOY_DIR + '/arb-ethers-provider')
-    run('yarn --cwd ' + DEPLOY_DIR + '/arb-web3-provider')
-    # symlink ethers into web3
-    run('rm -rf ' + DEPLOY_DIR + '/arb-web3-provider/node_modules/' +
-        'arb-ethers-provider && ln -sf ../../arb-ethers-provider ' + DEPLOY_DIR +
-        '/arb-web3-provider/node_modules/arb-ethers-provider')
-    # symlink providers into project
-    symlink = ('rm -rf node_modules/%s && ln -sf ../' + DEPLOY_DIR +
-        '/%s node_modules/%s')
-    link = lambda x: symlink % (x, x, x)
-    run(link('arb-truffle-provider'))
-    run(link('arb-ethers-provider'))
-    run(link('arb-web3-provider'))
+    def symlink(repo, parent=None):
+        if os.path.isdir('node_modules'):
+            run('rm -rf node_modules/%s && ln -sf ../%s/%s node_modules/%s' %
+                (repo, DEPLOY_DIR, repo, repo))
+            if parent is not None:
+                run('rm -rf %s/%s/node_modules/%s && ln -sf ../../%s %s/%s/node_modules/%s' %
+                    (DEPLOY_DIR, parent, repo, repo, DEPLOY_DIR, parent, repo))
+    def language_setup(lang, repo, parent=None):
+        if lang == JS:
+            run('yarn --cwd %s/%s' % (DEPLOY_DIR, repo))
+            symlink(repo, parent=parent)
+        else: # lang == GO or CPP
+            add_commit_hook('%s/%s' % (DEPLOY_DIR, repo))
+    for (dep, lang, sub_deps) in DEPS:
+        run(GC % (dep, dep))
+        for sub_dep in sub_deps:
+            run(GC % (sub_dep, dep + '/' + sub_dep))
+            run('ln -sf %s/%s %s/%s' % (dep, sub_dep, DEPLOY_DIR, sub_dep))
+            language_setup(lang, sub_dep, parent=dep)
+        language_setup(lang, dep)
 
 # Create special Dockerfile for dev-mode if required
 def dockerfile_dev_mode(dev_flag, name):
@@ -290,18 +302,115 @@ def dockerfile_dev_mode(dev_flag, name):
         return 'Dockerfile'
 
 # Run commands in shell
-def run(command, sudo=False, exit_on_error=True):
-    BOLD='\033[1m'
-    END='\033[0m'
+def run(command, sudo=False, exit_on_error=True, quiet=False, check_output=False):
     if sudo:
         command = 'sudo ' + command
-    print(BOLD + '$ %s\n' % command + END)
-    if os.system(command) != 0 and exit_on_error:
-        sys.exit(1)
+    if not quiet:
+        print(BOLD + '$ %s\n' % command + END)
+    if check_output:
+        try:
+            return subprocess.check_output(command, shell=True).decode('utf-8')
+        except subprocess.CalledProcessError as e:
+            if exit_on_error:
+                sys.exit(1)
+            else:
+                return ''
+    else:
+        retval = os.system(command)
+        if exit_on_error and retval != 0:
+            sys.exit(1)
+        else:
+            return retval
 
 ### ----------------------------------------------------------------------------
 ### Command line interface
 ### ----------------------------------------------------------------------------
+
+# Status
+class get_git_status(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        msg = ''
+        deploy_dir = ''
+        if os.path.isdir(DEPLOY_DIR):
+            deploy_dir = os.path.abspath(DEPLOY_DIR)
+        elif '/' + DEPLOY_DIR + '/' in (os.path.abspath('.') + '/'):
+            deploy_dir = os.path.abspath('.').rsplit(DEPLOY_DIR, 1)[0] + DEPLOY_DIR
+        if deploy_dir != '':
+            headers = ['Repo', 'Branch', 'Commit ', ' M ']
+            def git_status(path):
+                """ Returns (branch name, short hash, if is modified) """
+                return (run('cd %s && git rev-parse --abbrev-ref HEAD' %
+                            path, check_output=True, quiet=True).strip(),
+                        run('cd %s && git rev-parse --short HEAD' % path,
+                            check_output=True, quiet=True).strip(),
+                        run('cd %s && git diff --stat'
+                                 % path, exit_on_error=False, quiet=True, check_output=True) != '')
+            def find(repo):
+                if os.path.isdir(deploy_dir + '/' + repo):
+                    path = deploy_dir + '/' + repo
+                else:
+                    return [repo, '', '???????', '']
+                (branch_nom, short_hash, is_modified) = git_status(path)
+                return [repo, branch_nom, short_hash, is_modified]
+            data = []
+            for (dep, lang, sub_deps) in DEPS:
+                data += [find(dep)]
+                for sub_dep in sub_deps:
+                    data += [find(sub_dep)]
+            def find_ext_dep(name, cmd):
+                bin_path = run('which %s' % cmd, check_output=True, quiet=True).strip()
+                file_path = run('cat %s | grep "__file__ ="' % bin_path, check_output=True,
+                            quiet=True, exit_on_error=False)[len("__file__ = '"):-1]
+                if file_path:
+                    parent_dir = os.path.dirname(file_path)
+                    (branch_nom, short_hash, is_modified) = git_status(parent_dir)
+                else:
+                    (branch_nom, short_hash, is_modified) = ("", "???????", False)
+                return [name, branch_nom, short_hash, is_modified]
+            ext_data = []
+            for (name, dep) in EXTERNAL_DEPS:
+                ext_data += [find_ext_dep(name, dep)]
+            # get status of current project i.e. demo-dapp-pet-shop
+            current_name = os.path.splitext(os.path.basename(
+                run('git config --get remote.origin.url', check_output=True,
+                    quiet=True, exit_on_error=False)))[0].strip()
+            if current_name != '' and current_name not in ALL_REPOS:
+                (branch_nom, short_hash, is_modified) = git_status(os.getcwd())
+                ext_data += [[current_name, branch_nom, short_hash, is_modified]]
+            repo_width = max(len(row[0]) for row in [headers] + data + ext_data) + 2
+            branch_width = max(len(row[1]) for row in [headers] + data + ext_data) + 2
+            commit_width = len('175e1d0') + 2
+            total_width = repo_width + branch_width + commit_width + len('[+]')
+            msg += ' DEV MODE '.center(total_width, '-') + '\n'
+            msg += (headers[0].ljust(repo_width) + headers[1].ljust(branch_width) +
+                    headers[2].ljust(commit_width) + headers[3] + '\n')
+            def format_row(row):
+                return ((RED if '?' in row[2] else BOLD if row[3] else '') +
+                        row[0].ljust(repo_width) + row[1].ljust(branch_width) +
+                        row[2].ljust(commit_width) + ('[+]' if row[3] else '') +
+                        END + '\n')
+            for row in data:
+                msg += format_row(row)
+            msg += ''.center(total_width, '-') + '\n'
+            for row in ext_data:
+                msg += format_row(row)
+            msg += ''.center(total_width, '-') + '\n'
+            msg += 'Path: %s\n' % deploy_dir
+        else:
+            adv = run('arb-deploy --version', check_output=True, quiet=True,
+                       exit_on_error=False).strip()
+            acv = run('arbc-truffle-compile --version', check_output=True,
+                       quiet=True, exit_on_error=False).strip()
+            ts = 'Timestamp: %s' % datetime.datetime.now()
+            p = ' Platform: %s' % platform.platform()
+            total_width = max([len(adv), len(acv), len(ts), len(p)])
+            msg += ' arb-deploy '.center(total_width, '-') + '\n'
+            msg += adv + '\n' + acv + '\n' + ts + '\n' + p + '\n'
+            msg += ' truffle version '.center(total_width, '-') + '\n'
+            msg += run('truffle version', check_output=True, quiet=True, exit_on_error=False).strip() + '\n'
+            msg += ''.center(total_width, '-') + '\n'
+        parser._print_message(msg, sys.stdout)
+        parser.exit()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -318,8 +427,11 @@ def main():
         'not already exist. Note: if `%s` does exist in the current working ' +
         'directory then dev-mode will always be used, even without this flag')
         % (DEPLOY_DIR, DEPLOY_DIR, DEPLOY_DIR)))
-    parser.add_argument('-b', '--build', action='store_true', dest='build',
-        help='Build only. Do not run')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-b', '--build-only', action='store_true', dest='build_only',
+        help='Run docker-compose build only')
+    group.add_argument('-u', '--up-only', action='store_true', dest='up_only',
+        help='Run docker-compose up only')
     parser.add_argument('-s', '--sudo', action='store_true', dest='sudo',
         help='Run docker-compose with sudo. May be helpful for some platforms')
     # Ganache Options
@@ -333,8 +445,10 @@ def main():
         default='jar deny prosper gasp flush glass core corn alarm treat leg smart',
         help='Specify the Mnemonic to use (make sure to use "quotes")')
     parser.add_argument('-v', '--verbose', dest='verbose', action='count')
+    parser.add_argument('--status', action=get_git_status, nargs=0)
     # Version
-    parser.add_argument('--version', dest='version', action='version',
+    # TODO attach commit hash to version if one exists in dev mode
+    parser.add_argument('--version', action='version',
         version='%(prog)s ' + __version__)
     args = parser.parse_args()
 
@@ -350,7 +464,8 @@ def main():
 
     # Deploy
     deploy(args.contract, args.n_validators, args.mnemonic, verboseFlag,
-           args.gas_per_wallet, args.gas_limit, args.dev, args.sudo, args.build)
+           args.gas_per_wallet, args.gas_limit, args.dev, args.sudo,
+           args.build_only, args.up_only)
 
 if __name__ == '__main__':
     try:
