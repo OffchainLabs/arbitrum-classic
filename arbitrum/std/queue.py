@@ -57,7 +57,7 @@ def make_queue_type(typ):
             vm.ifelse(lambda vm: [
                 # bq item
                 vm.dup0(),
-                boundedq.struct.get("nextPutIndex")(vm),
+                boundedq.struct.get("capacity")(vm),
                 vm.push(2),
                 vm.mul(),
                 boundedq.new(vm),
