@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/ecdsa"
 	jsonenc "encoding/json"
+	"flag"
 	"io/ioutil"
 	"log"
 	"math"
@@ -106,19 +107,22 @@ func (m *FollowerServer) SendMessage(r *http.Request, args *bool, reply *bool) e
 // 5) ethURL
 // 6) coordinatorURL
 func main() {
+	vmType := flag.String("avm", "cpp", "Select the AVM implementation")
+	flag.Parse()
+
 	// Check number of args
-	if len(os.Args)-1 != 6 {
+	if len(flag.Args()) != 6 {
 		log.Fatalln("Expected six arguments")
 	}
 
 	// 1) Compiled Arbitrum bytecode
-	machine, err := loader.LoadMachineFromFile(os.Args[1], true, "cpp")
+	machine, err := loader.LoadMachineFromFile(flag.Arg(0), true, *vmType)
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
 
 	// 2) Private key
-	keyFile, err := os.Open(os.Args[2])
+	keyFile, err := os.Open(flag.Arg(1))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -136,7 +140,7 @@ func main() {
 	}
 
 	// 3) All public key addresses
-	addrFile, err := os.Open(os.Args[3])
+	addrFile, err := os.Open(flag.Arg(2))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -155,7 +159,7 @@ func main() {
 	}
 
 	// 4) Global EthBridge addresses json
-	jsonFile, err := os.Open(os.Args[4])
+	jsonFile, err := os.Open(flag.Arg(3))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -169,8 +173,8 @@ func main() {
 	}
 
 	// 5) ethURL 6) coordinatorURL
-	ethURL := os.Args[5]
-	coordinatorURL := os.Args[6]
+	ethURL := flag.Arg(4)
+	coordinatorURL := flag.Arg(5)
 
 	// Validator creation
 	rpcInterface := NewFollowerServer(
