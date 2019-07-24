@@ -17,7 +17,7 @@ script:
   - ctest .
 after_success:
   # Create lcov report
-  - lcov --capture --directory . --output-file coverage.info --exclude 
+  - lcov --capture --directory . --output-file coverage.info
   - lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
   - lcov --remove coverage.info 'tests/*' --output-file coverage.info # filter test files
   - lcov --remove coverage.info 'external/*' --output-file coverage.info # filter external files
