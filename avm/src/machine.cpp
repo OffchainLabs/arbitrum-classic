@@ -55,8 +55,10 @@ MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()), context({0, 0}) {}
 
 uint256_t MachineState::hash() const {
-    if (state == Status::Halted) return 0;
-    if (state == Status::Error) return 1;
+    if (state == Status::Halted)
+        return 0;
+    if (state == Status::Error)
+        return 1;
 
     std::array<unsigned char, 32 * 6> data;
     auto oit = data.begin();
@@ -208,10 +210,10 @@ void MachineState::sendOnchainMessage(const Message& msg) {
     balance.add(msg.token, msg.currency);
 }
 
-void MachineState::deliverMessageStack(Tuple && messages) {
+void MachineState::deliverMessageStack(Tuple&& messages) {
     if (!(messages == Tuple())) {
-        inbox =
-            Tuple(uint256_t(1), std::move(inbox), std::move(messages), pool.get());
+        inbox = Tuple(uint256_t(1), std::move(inbox), std::move(messages),
+                      pool.get());
     }
 }
 
@@ -310,14 +312,14 @@ Assertion Machine::run(uint64_t stepCount,
             break;
         }
     }
-    
+
     if (m.state == Status::Blocked) {
         i--;
     }
 
     if (m.state == Status::Error) {
         std::cout << "error state" << std::endl;
-        if (m.errpc.isSet()){
+        if (m.errpc.isSet()) {
             m.pc = m.errpc.pc;
         }
     }
@@ -656,10 +658,10 @@ static void signExtend(MachineState& m) {
     if (bNum >= 32) {
         m.stack[1] = m.stack[0];
     } else {
-        uint256_t t = 248-8*bNum;
-        int signBit = bit(aNum, (int)(255-t));
-        uint256_t mask = power(uint256_t(2), uint64_t(255-t)) - 1;
-        if (signBit ==0){
+        uint256_t t = 248 - 8 * bNum;
+        int signBit = bit(aNum, (int)(255 - t));
+        uint256_t mask = power(uint256_t(2), uint64_t(255 - t)) - 1;
+        if (signBit == 0) {
             m.stack[1] = aNum & mask;
         } else {
             mask ^= -1;
@@ -1024,7 +1026,7 @@ void MachineState::runOp(OpCode opcode) {
         case OpCode::TYPE:
             typeOp(*this);
             break;
-            
+
         /***********************************************/
         /*  Stack, Memory, Storage and Flow Operations */
         /***********************************************/
@@ -1129,7 +1131,7 @@ void MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::ERROR:
             state = Status::Error;
-            if (errpc.isSet()){
+            if (errpc.isSet()) {
                 pc = errpc.pc;
             }
             break;

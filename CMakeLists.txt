@@ -21,6 +21,15 @@ project (AVMtest)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 include(CodeCoverage)
+include(Formatting)
+
+file(GLOB_RECURSE ALL_CODE_FILES
+    ${PROJECT_SOURCE_DIR}/avm/*.[ch]pp
+    ${PROJECT_SOURCE_DIR}/app/*.[ch]pp
+    ${PROJECT_SOURCE_DIR}/tests/*.[h]pp
+)
+
+clang_format(TARGET_NAME ${ALL_CODE_FILES})
 
 # Code Coverage Configuration
 # add_library(coverage_config INTERFACE)

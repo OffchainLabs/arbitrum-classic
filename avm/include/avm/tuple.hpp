@@ -150,11 +150,11 @@ class Tuple {
         tpl->cachedHash = calculateHash();
     }
 
-//    ~Tuple() {
-//        if (tpl.use_count() == 1) {
-//            tuplePool->returnResource(std::move(tpl));
-//        }
-//    }
+    //    ~Tuple() {
+    //        if (tpl.use_count() == 1) {
+    //            tuplePool->returnResource(std::move(tpl));
+    //        }
+    //    }
 
     int tuple_size() const {
         if (tpl) {
@@ -168,16 +168,15 @@ class Tuple {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
-// turned off because this optimization may not be thread safe
-//        if (tpl.use_count() > 1) {
-            // make new copy tuple
-            std::shared_ptr<RawTuple> tmp =
-                tuplePool->getResource(tuple_size());
+        // turned off because this optimization may not be thread safe
+        //        if (tpl.use_count() > 1) {
+        // make new copy tuple
+        std::shared_ptr<RawTuple> tmp = tuplePool->getResource(tuple_size());
 
-            std::copy(tpl->data.begin(), tpl->data.end(),
-                      std::back_inserter(tmp->data));
-            tpl = tmp;
-//        }
+        std::copy(tpl->data.begin(), tpl->data.end(),
+                  std::back_inserter(tmp->data));
+        tpl = tmp;
+        //        }
         tpl->data[pos] = std::move(newval);
         tpl->cachedHash = calculateHash();
     }

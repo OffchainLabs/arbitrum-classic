@@ -42,7 +42,10 @@ MachineState runBinaryOp(uint256_t arg1, uint256_t arg2, OpCode op) {
     return m;
 }
 
-void testBinaryOp(uint256_t arg1, uint256_t arg2, uint256_t expected, OpCode op) {
+void testBinaryOp(uint256_t arg1,
+                  uint256_t arg2,
+                  uint256_t expected,
+                  OpCode op) {
     MachineState m = runBinaryOp(arg1, arg2, op);
     value res = m.stack.pop();
     auto actual = mpark::get_if<uint256_t>(&res);
@@ -51,7 +54,10 @@ void testBinaryOp(uint256_t arg1, uint256_t arg2, uint256_t expected, OpCode op)
     REQUIRE(m.stack.stacksize() == 0);
 }
 
-MachineState runTertiaryOp(uint256_t arg1, uint256_t arg2, uint256_t arg3, OpCode op) {
+MachineState runTertiaryOp(uint256_t arg1,
+                           uint256_t arg2,
+                           uint256_t arg3,
+                           OpCode op) {
     MachineState m;
     m.stack.push(arg3);
     m.stack.push(arg2);
@@ -60,7 +66,11 @@ MachineState runTertiaryOp(uint256_t arg1, uint256_t arg2, uint256_t arg3, OpCod
     return m;
 }
 
-void testTertiaryOp(uint256_t arg1, uint256_t arg2, uint256_t arg3, uint256_t result, OpCode op) {
+void testTertiaryOp(uint256_t arg1,
+                    uint256_t arg2,
+                    uint256_t arg3,
+                    uint256_t result,
+                    OpCode op) {
     MachineState m = runTertiaryOp(arg1, arg2, arg3, op);
     value res = m.stack.pop();
     auto num = mpark::get_if<uint256_t>(&res);
@@ -81,11 +91,11 @@ TEST_CASE("ADD opcode is correct") {
 
 TEST_CASE("MUL opcode is correct") {
     SECTION("Non overlow is correct") { testBinaryOp(4, 3, 12, OpCode::MUL); }
-    
+
     SECTION("3*0 is correct") { testBinaryOp(3, 0, 0, OpCode::MUL); }
-    
+
     SECTION("-1*1 is correct") { testBinaryOp(-1, 1, -1, OpCode::MUL); }
-    
+
     SECTION("-2+1 is correct") { testBinaryOp(-2, 1, -2, OpCode::MUL); }
 }
 
@@ -97,7 +107,7 @@ TEST_CASE("SUB opcode is correct") {
 
 TEST_CASE("DIV opcode is correct") {
     SECTION("Non overlow is correct") { testBinaryOp(12, 3, 4, OpCode::DIV); }
-    
+
     SECTION("unsigned division is correct") {
         MachineState m = runBinaryOp(-6, 2, OpCode::DIV);
         value res = m.stack.pop();
@@ -134,7 +144,7 @@ TEST_CASE("SDIV opcode is correct") {
 
 TEST_CASE("MOD opcode is correct") {
     SECTION("8 mod 3") { testBinaryOp(8, 3, 2, OpCode::MOD); }
-    
+
     SECTION("8 mod very large") { testBinaryOp(8, -3, 8, OpCode::MOD); }
 
     SECTION("0 mod 3") { testBinaryOp(0, 3, 0, OpCode::MOD); }
@@ -147,7 +157,7 @@ TEST_CASE("MOD opcode is correct") {
 
 TEST_CASE("SMOD opcode is correct") {
     SECTION("Positive mod positive") { testBinaryOp(8, 3, 2, OpCode::SMOD); }
-    
+
     SECTION("Positive mod negative") { testBinaryOp(8, -3, 2, OpCode::SMOD); }
 
     SECTION("Negative mod positive") { testBinaryOp(-8, 3, -2, OpCode::SMOD); }
@@ -161,11 +171,11 @@ TEST_CASE("SMOD opcode is correct") {
 
 TEST_CASE("ADDMOD opcode is correct") {
     SECTION("(8+5)%3") { testTertiaryOp(8, 5, 3, 1, OpCode::ADDMOD); }
-    
+
     SECTION("(-1+1)%7") { testTertiaryOp(-1, 1, 7, 2, OpCode::ADDMOD); }
-    
+
     SECTION("(0+0)%7") { testTertiaryOp(0, 0, 7, 0, OpCode::ADDMOD); }
-    
+
     SECTION("Mod by zero") {
         MachineState m = runTertiaryOp(8, 3, 0, OpCode::ADDMOD);
         REQUIRE(m.state == Status::Error);
@@ -174,11 +184,11 @@ TEST_CASE("ADDMOD opcode is correct") {
 
 TEST_CASE("MULMOD opcode is correct") {
     SECTION("(8*2)%3") { testTertiaryOp(8, 2, 3, 1, OpCode::MULMOD); }
-    
+
     SECTION("(-1*2)%7") { testTertiaryOp(-1, 2, 7, 2, OpCode::MULMOD); }
-    
+
     SECTION("(0*0)%7") { testTertiaryOp(0, 0, 7, 0, OpCode::MULMOD); }
-    
+
     SECTION("Mod by zero") {
         MachineState m = runTertiaryOp(8, 3, 0, OpCode::MULMOD);
         REQUIRE(m.state == Status::Error);
@@ -209,8 +219,12 @@ TEST_CASE("SLT opcode is correct") {
     SECTION("All positive false") { testBinaryOp(3, 7, 1, OpCode::SLT); }
     SECTION("All negative true") { testBinaryOp(-3, -7, 0, OpCode::SLT); }
     SECTION("All negative false") { testBinaryOp(-7, -3, 1, OpCode::SLT); }
-    SECTION("First pos, second neg true") { testBinaryOp(3, -7, 0, OpCode::SLT); }
-    SECTION("First neg, second pos false") { testBinaryOp(-3, 7, 1, OpCode::SLT); }
+    SECTION("First pos, second neg true") {
+        testBinaryOp(3, -7, 0, OpCode::SLT);
+    }
+    SECTION("First neg, second pos false") {
+        testBinaryOp(-3, 7, 1, OpCode::SLT);
+    }
     SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::SLT); }
 }
 
@@ -219,8 +233,12 @@ TEST_CASE("SGT opcode is correct") {
     SECTION("All positive false") { testBinaryOp(3, 7, 0, OpCode::SGT); }
     SECTION("All negative true") { testBinaryOp(-3, -7, 1, OpCode::SGT); }
     SECTION("All negative false") { testBinaryOp(-7, -3, 0, OpCode::SGT); }
-    SECTION("First pos, second neg true") { testBinaryOp(3, -7, 1, OpCode::SGT); }
-    SECTION("First neg, second pos false") { testBinaryOp(-7, 3, 0, OpCode::SGT); }
+    SECTION("First pos, second neg true") {
+        testBinaryOp(3, -7, 1, OpCode::SGT);
+    }
+    SECTION("First neg, second pos false") {
+        testBinaryOp(-7, 3, 0, OpCode::SGT);
+    }
     SECTION("equal") { testBinaryOp(3, 3, 0, OpCode::SGT); }
 }
 
@@ -295,7 +313,12 @@ TEST_CASE("SIGNEXTEND opcode is correct") {
 }
 
 TEST_CASE("HASH opcode is correct") {
-    SECTION("10") { testUnaryOp(10, from_hex_str("c65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a8"), OpCode::HASH); }
+    SECTION("10") {
+        testUnaryOp(10,
+                    from_hex_str("c65a7bb8d6351c1cf70c95a316cc6a92839c986682d98"
+                                 "bc35f958f4883f9d2a8"),
+                    OpCode::HASH);
+    }
 }
 
 TEST_CASE("TYPE opcode is correct") {
@@ -308,7 +331,7 @@ TEST_CASE("TYPE opcode is correct") {
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(0)});
         REQUIRE(m.stack.stacksize() == 0);
-   }
+    }
     SECTION("type codepoint") {
         MachineState m;
         m.stack.push(value{CodePoint()});
@@ -330,7 +353,6 @@ TEST_CASE("TYPE opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
-
 
 TEST_CASE("POP opcode is correct") {
     SECTION("pop") {

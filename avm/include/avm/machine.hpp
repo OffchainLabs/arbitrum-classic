@@ -71,7 +71,7 @@ struct MachineState {
     uint256_t hash() const;
 
    private:
-    void deliverMessageStack(Tuple &&messages);
+    void deliverMessageStack(Tuple&& messages);
 };
 
 class Machine {
