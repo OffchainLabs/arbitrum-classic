@@ -17,9 +17,10 @@ script:
   - ctest .
 after_success:
   # Create lcov report
-  - cd release
-  - lcov --capture --directory . --output-file coverage.info
+  - lcov --capture --directory . --output-file coverage.info --exclude 
   - lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
+  - lcov --remove coverage.info 'tests/*' --output-file coverage.info # filter test files
+  - lcov --remove coverage.info 'external/*' --output-file coverage.info # filter external files
   - lcov --list coverage.info # debug info
   # Uploading report to CodeCov
   - bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"

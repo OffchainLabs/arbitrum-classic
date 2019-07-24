@@ -20,4 +20,4 @@ project (avm_runner LANGUAGES CXX)
 add_executable(avm_runner main.cpp)
 target_link_libraries(avm_runner PUBLIC avm)
 
-target_code_coverage(avm_runner AUTO ALL)
+target_code_coverage(avm_runner AUTO ALL EXCLUDE external/* tests/*)
