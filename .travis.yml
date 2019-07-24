@@ -18,9 +18,7 @@ script:
 after_success:
   # Create lcov report
   - lcov --capture --directory . --output-file coverage.info
-  - lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
-  - lcov --remove coverage.info 'tests/*' --output-file coverage.info # filter test files
-  - lcov --remove coverage.info 'external/*' --output-file coverage.info # filter external files
+  - lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*' # filter system-files
   - lcov --list coverage.info # debug info
   # Uploading report to CodeCov
   - bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"
