@@ -10,7 +10,7 @@ compiler:
 script:
   - mkdir release
   - cd release
-  - cmake .
+  - cmake ..
   - cmake  --build .
   - ctest .
 after_success:
