@@ -59,6 +59,8 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm variant optional Boost::boost)
+target_link_libraries(avm PUBLIC variant optional Boost::boost)
+
+target_code_coverage(avm AUTO ALL)
 
 source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES})

@@ -28,6 +28,7 @@
 *.app
 
 xcode
+debug
 release
 gcc9
 .DS_Store

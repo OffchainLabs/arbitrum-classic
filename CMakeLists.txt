@@ -18,9 +18,43 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (AVMtest)
 
-enable_testing()
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-find_package(Boost 1.67 REQUIRED)
+include(CodeCoverage)
+
+# Code Coverage Configuration
+# add_library(coverage_config INTERFACE)
+
+# option(CODE_COVERAGE "Enable coverage reporting" OFF)
+# if(CODE_COVERAGE)
+#     if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
+#         message("Building with llvm Code Coverage Tools")
+
+#         # Warning/Error messages
+#         if(NOT LLVM_COV_PATH)
+#             message(FATAL_ERROR "llvm-cov not found! Aborting.")
+#         endif()
+#         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+#         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+#     endif()
+
+#   # # Add required flags (GCC & LLVM/Clang)
+#   # target_compile_options(coverage_config INTERFACE
+#   #   -O0        # no optimization
+#   #   -g         # generate debug info
+#   #   --coverage # sets all required flags
+#   # )
+#   # if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
+#   #   target_link_options(coverage_config INTERFACE --coverage)
+#   # else()
+#   #   target_link_libraries(coverage_config INTERFACE --coverage)
+#   # endif()
+# endif()
+
+find_package(Boost 1.65 REQUIRED)
+
+enable_testing()
+add_code_coverage_all_targets()
 
 #from https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 find_package(Git QUIET)
@@ -60,3 +94,4 @@ add_subdirectory(cavm)
 add_subdirectory(app)
 
 add_subdirectory(tests)
+

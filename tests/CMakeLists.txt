@@ -26,9 +26,10 @@ configure_file (
 
 configure_file(test_cases.json ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json COPYONLY)
 
-add_executable(tests main.cpp opcodes.cpp value.cpp balanceTracker.cpp)
+add_executable(avm_tests main.cpp opcodes.cpp value.cpp balanceTracker.cpp)
+
 target_link_libraries(
-	tests
+	avm_tests
 PRIVATE
 	avm
 	Catch2::Catch2
@@ -37,4 +38,6 @@ PRIVATE
 
 include(CTest)
 include(Catch)
-catch_discover_tests(tests)
+catch_discover_tests(avm_tests)
+
+target_code_coverage(avm_tests AUTO ALL EXCLUDE external/* tests/*)

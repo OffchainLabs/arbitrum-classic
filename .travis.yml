@@ -4,17 +4,20 @@ os:
   - linux
 addons:
   apt:
-    packages: lcov
+    update: true
 compiler:
   - gcc
+before_install:
+  - sudo apt-get install -y libboost-dev lcov
 script:
   - mkdir release
   - cd release
-  - cmake ..
+  - cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
   - cmake  --build .
   - ctest .
 after_success:
   # Create lcov report
+  - cd release
   - lcov --capture --directory . --output-file coverage.info
   - lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
   - lcov --list coverage.info # debug info
