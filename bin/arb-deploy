@@ -44,16 +44,15 @@ DEPLOY_DIR='compose'
 
 # Language types
 JS = 'js'
-GO = 'go'
-CPP = 'cpp'
+GO_OR_CPP = 'go_or_cpp'
 
 # Dependencies ('repository', LANG, ['DirectDependencies',])
 DEPS = [('arb-ethbridge', JS, []),
-        ('arb-validator', GO, ['arb-util', 'arb-avm']),
-        ('arb-avm-cpp', CPP, []),
+        ('arb-validator', GO_OR_CPP, ['arb-util', 'arb-avm', 'arb-avm-cpp']),
         ('arb-truffle-provider', JS, []),
         ('arb-web3-provider', JS, ['arb-ethers-provider']),
- ]
+]
+# Format: ('repository name', 'command executable name')
 EXTERNAL_DEPS = [
     ('arb-sdk', 'arb-deploy'),
     ('arbc-solidity', 'arbc-truffle-compile'),
@@ -281,15 +280,15 @@ def install_dev_mode(sudo_flag):
         if lang == JS:
             run('yarn --cwd %s/%s' % (DEPLOY_DIR, repo))
             symlink(repo, parent=parent)
-        else: # lang == GO or CPP
+        else: # lang == GO_OR_CPP
             add_commit_hook('%s/%s' % (DEPLOY_DIR, repo))
     for (dep, lang, sub_deps) in DEPS:
         run(GC % (dep, dep))
+        language_setup(lang, dep)
         for sub_dep in sub_deps:
             run(GC % (sub_dep, dep + '/' + sub_dep))
             run('ln -sf %s/%s %s/%s' % (dep, sub_dep, DEPLOY_DIR, sub_dep))
             language_setup(lang, sub_dep, parent=dep)
-        language_setup(lang, dep)
 
 # Create special Dockerfile for dev-mode if required
 def dockerfile_dev_mode(dev_flag, name):
