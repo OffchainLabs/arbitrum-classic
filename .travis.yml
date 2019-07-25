@@ -9,7 +9,7 @@ compiler:
   - gcc
 before_install:
   - sudo apt-get install -y libboost-dev lcov python3
-  - pip3 install conan
+  - pip install conan
   - mkdir release
   - cd release
 install:
