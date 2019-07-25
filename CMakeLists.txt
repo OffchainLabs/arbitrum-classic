@@ -19,15 +19,13 @@ set (CMAKE_CXX_STANDARD 14)
 project (AVMtest)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+conan_basic_setup(TARGETS)
 
 find_package(Boost 1.65 REQUIRED)
-find_package(variant-lite 1.2.2 REQUIRED)
-find_package(Catch2 2.9.1 REQUIRED)
-find_package(nlohmann_json 3.6.1 REQUIRED)
-
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
+
+message(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")
 
 include(CodeCoverage)
 include(Formatting)

@@ -3,7 +3,6 @@
 
 #pragma once
 #include <boost/endian/conversion.hpp>
-#include <boost/functional/hash/hash.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include <limits>

@@ -32,12 +32,12 @@ target_link_libraries(
 	avm_tests
 PRIVATE
 	avm
-	Catch2::Catch2
-	nlohmann_json::nlohmann_json
+	CONAN_PKG::Catch2
+	CONAN_PKG::jsonformoderncpp
 )
 
 include(CTest)
-include(Catch)
+include(lib/cmake/Catch2/Catch)
 catch_discover_tests(avm_tests)
 
 target_code_coverage(avm_tests AUTO ALL EXCLUDE external/* tests/*)
