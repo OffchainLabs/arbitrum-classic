@@ -1,12 +1,3 @@
-[submodule "variant"]
-	path = external/variant
-	url = https://github.com/mpark/variant
 [submodule "optional-lite"]
 	path = external/optional-lite
 	url = https://github.com/martinmoene/optional-lite
-[submodule "external/Catch2"]
-	path = external/Catch2
-	url = https://github.com/catchorg/Catch2
-[submodule "external/json"]
-	path = external/json
-	url = https://github.com/nlohmann/json

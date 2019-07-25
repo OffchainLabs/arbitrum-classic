@@ -84,12 +84,12 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
 }
 
 void marshal_value(const value val, std::vector<unsigned char>& buf) {
-    if (mpark::holds_alternative<Tuple>(val))
-        marshal_Tuple(mpark::get<Tuple>(val), buf);
-    else if (mpark::holds_alternative<uint256_t>(val))
-        marshal_uint256_t(mpark::get<uint256_t>(val), buf);
-    else if (mpark::holds_alternative<CodePoint>(val))
-        marshal_CodePoint(mpark::get<CodePoint>(val), buf);
+    if (nonstd::holds_alternative<Tuple>(val))
+        marshal_Tuple(nonstd::get<Tuple>(val), buf);
+    else if (nonstd::holds_alternative<uint256_t>(val))
+        marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
+    else if (nonstd::holds_alternative<CodePoint>(val))
+        marshal_CodePoint(nonstd::get<CodePoint>(val), buf);
 }
 
 value deserialize_value(char*& bufptr, TuplePool& pool) {
@@ -120,24 +120,30 @@ bool operator==(const CodePoint& val1, const CodePoint& val2) {
 }
 
 uint256_t hash(const value& value) {
-    return mpark::visit([](const auto& val) { return hash(val); }, value);
+    return nonstd::visit([](const auto& val) { return hash(val); }, value);
 }
 
 struct ValuePrinter {
     std::ostream& os;
 
-    std::ostream& operator()(const Tuple& val) { return os << val; }
+    std::ostream* operator()(const Tuple& val) const {
+        os << val;
+        return &os;
+    }
 
-    std::ostream& operator()(const uint256_t& val) { return os << val; }
+    std::ostream* operator()(const uint256_t& val) const {
+        os << val;
+        return &os;
+    }
 
-    std::ostream& operator()(const CodePoint& val) {
+    std::ostream* operator()(const CodePoint& val) const {
         //        std::printf("in CodePoint ostream operator\n");
         os << "CodePoint(" << val.pc << ", " << val.op << ", "
            << to_hex_str(val.nextHash) << ")";
-        return os;
+        return &os;
     }
 };
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
-    return mpark::visit(ValuePrinter{os}, val);
+    return *nonstd::visit(ValuePrinter{os}, val);
 }

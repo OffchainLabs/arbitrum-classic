@@ -20,8 +20,7 @@
 #include "bigint.hpp"
 #include "opcodes.hpp"
 
-#include <mpark/variant.hpp>
-#include <nonstd/optional.hpp>
+#include <nonstd/variant.hpp>
 
 class bad_tuple_index : public std::exception {
    public:
@@ -38,7 +37,7 @@ struct Operation;
 struct CodePoint;
 
 // Note: uint256_t is actually 48 bytes long
-using value = mpark::variant<Tuple, uint256_t, CodePoint>;
+using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 bool operator==(const CodePoint& val1, const CodePoint& val2);

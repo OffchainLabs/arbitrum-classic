@@ -150,7 +150,7 @@ TEST_CASE("NBSEND") {
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 16);
         value retval = m.stack.pop();
-        auto ret = mpark::get_if<uint256_t>(&retval);
+        auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 1);
         REQUIRE(m.state == Status::Extensive);
     }
@@ -172,7 +172,7 @@ TEST_CASE("NBSEND") {
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 20);
         value retval = m.stack.pop();
-        auto ret = mpark::get_if<uint256_t>(&retval);
+        auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 0);
         REQUIRE(m.state == Status::Extensive);
     }
@@ -193,7 +193,7 @@ TEST_CASE("NBSEND") {
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
         value retval = m.stack.pop();
-        auto ret = mpark::get_if<uint256_t>(&retval);
+        auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 1);
         REQUIRE(m.state == Status::Extensive);
     }
@@ -213,7 +213,7 @@ TEST_CASE("NBSEND") {
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
         value retval = m.stack.pop();
-        auto ret = mpark::get_if<uint256_t>(&retval);
+        auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 0);
         REQUIRE(m.state == Status::Extensive);
     }

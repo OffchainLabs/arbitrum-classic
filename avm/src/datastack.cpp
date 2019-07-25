@@ -59,8 +59,8 @@ uint256_t datastack::SolidityProofValue(std::vector<bool>& stackInfo,
     for (auto const& si : stackInfo) {
         value val = c.pop();
         if (si) {
-            if (mpark::holds_alternative<Tuple>(val)) {
-                vals.push_back(mpark::get<Tuple>(val).clone_shallow());
+            if (nonstd::holds_alternative<Tuple>(val)) {
+                vals.push_back(nonstd::get<Tuple>(val).clone_shallow());
             } else {
                 vals.push_back(val);
             }

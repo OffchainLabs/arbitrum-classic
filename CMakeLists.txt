@@ -18,7 +18,16 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (AVMtest)
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+# ${CONAN_LIBS}
+find_package(Boost 1.65 REQUIRED)
+find_package(variant-lite 1.2.2 REQUIRED)
+find_package(Catch2 2.9.1 REQUIRED)
+find_package(nlohmann_json 3.6.1 REQUIRED)
+
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CONAN_CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
 include(CodeCoverage)
 include(Formatting)
@@ -31,39 +40,12 @@ file(GLOB_RECURSE ALL_CODE_FILES
 
 clang_format(TARGET_NAME ${ALL_CODE_FILES})
 
-# Code Coverage Configuration
-# add_library(coverage_config INTERFACE)
 
-# option(CODE_COVERAGE "Enable coverage reporting" OFF)
-# if(CODE_COVERAGE)
-#     if("${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
-#         message("Building with llvm Code Coverage Tools")
-
-#         # Warning/Error messages
-#         if(NOT LLVM_COV_PATH)
-#             message(FATAL_ERROR "llvm-cov not found! Aborting.")
-#         endif()
-#         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
-#         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
-#     endif()
-
-#   # # Add required flags (GCC & LLVM/Clang)
-#   # target_compile_options(coverage_config INTERFACE
-#   #   -O0        # no optimization
-#   #   -g         # generate debug info
-#   #   --coverage # sets all required flags
-#   # )
-#   # if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
-#   #   target_link_options(coverage_config INTERFACE --coverage)
-#   # else()
-#   #   target_link_libraries(coverage_config INTERFACE --coverage)
-#   # endif()
-# endif()
-
-find_package(Boost 1.65 REQUIRED)
 
 enable_testing()
 add_code_coverage_all_targets()
+
+
 
 #from https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 find_package(Git QUIET)
@@ -81,22 +63,11 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
-add_subdirectory(external/Catch2)
-
-set(JSON_BuildTests OFF CACHE INTERNAL "")
-add_subdirectory(external/json)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib/")
 
 file(GLOB KECCAK_SOURCES
   external/keccak/*.c
 )
-
-add_library(variant INTERFACE)
-target_include_directories(variant INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/variant/include/)
-
-add_library(optional INTERFACE)
-target_include_directories(optional INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/external/optional-lite/include/)
 
 add_subdirectory(avm)
 add_subdirectory(cavm)
