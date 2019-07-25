@@ -921,7 +921,7 @@ static void nbsend(MachineState& m) {
 }
 
 static void getTime(MachineState& m) {
-    Tuple tup(2, m.pool.get());
+    Tuple tup(m.pool.get(), 2);
     tup.set_element(0, m.context.timeBounds[0]);
     tup.set_element(1, m.context.timeBounds[1]);
     m.stack.push(std::move(tup));
