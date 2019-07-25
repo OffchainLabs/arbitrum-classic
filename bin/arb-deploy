@@ -190,14 +190,18 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
 
     # In dev-mode, create empty build caches if necessary
     if dev_flag or os.path.isdir(DEPLOY_DIR):
-        def warm_build_cache(name):
-            if run('docker images -q %s' % name, check_output=True, sudo=sudo_flag) == '':
+        def bootstrap_build_cache(name):
+            # Create dev-mode.Dockerfile to use the build cache
+            run('awk \'{ sub(/##DEV_/, "") }1\' %s/%s/Dockerfile > %s/%s/%s'
+                % (DEPLOY_DIR, name, DEPLOY_DIR, name, 'dev-mode.Dockerfile'))
+            # Bootstrap cache if doesn't exist
+            if run('docker images -q %s' % name, check_output=True, quiet=True, sudo=sudo_flag) == '':
                 run('mkdir -p %s/.tmp' % DEPLOY_DIR)
                 run('echo "%s" > %s/.tmp/Dockerfile' % (DOCKERFILE_CACHE, DEPLOY_DIR))
                 run('docker build -t %s %s/.tmp' % (name, DEPLOY_DIR), sudo=sudo_flag)
                 run('rm -rf %s/.tmp' % DEPLOY_DIR)
-        warm_build_cache('arb-validator')
-        warm_build_cache('arb-avm-cpp')
+        bootstrap_build_cache('arb-validator')
+        bootstrap_build_cache('arb-avm-cpp')
 
     # Create VALIDATOR_STATE_DIRNAME s if they don't exist
     states_path = os.path.abspath(VALIDATOR_STATE_DIRNAME)
@@ -211,7 +215,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
             sudo=sudo_flag, exit_on_error=False)
     # Kill and rm all docker containers and images created by any `arb-deploy`
     ps = "grep 'arb-validator\|arb-ethbridge' | awk '{ print $1 }'"
-    if run('docker ps | ' + ps, check_output=True, sudo=sudo_flag) != '':
+    if run('docker ps | ' + ps, check_output=True, quiet=True, sudo=sudo_flag) != '':
         run('docker kill $(' + ('sudo ' if sudo_flag else '') + 'docker ps | ' + ps + ')',
             exit_on_error=False, sudo=sudo_flag)
         run('docker rm $(' + ('sudo ' if sudo_flag else '') + 'docker ps -a | ' + ps + ')',
@@ -226,7 +230,10 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
         context = './' + DEPLOY_DIR + '/' + '%s'
 
     # dockerfile_dev_mode
-    dockerfile = dockerfile_dev_mode(dev_flag, 'dev-mode.Dockerfile')
+    if dev_flag or os.path.isdir(DEPLOY_DIR):
+        dockerfile = 'dev-mode.Dockerfile'
+    else:
+        dockerfile = 'Dockerfile'
 
     # Overwrite DOCKER_COMPOSE_FILENAME
     compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
@@ -248,6 +255,13 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
                         for i in range(1, n_validators)]))
     with open(compose, 'w') as f:
         f.write(contents)
+
+    # Build arb-avm-cpp
+    if not up_flag or build_flag:
+        use_build_cache = ''
+        if dev_flag or os.path.isdir(DEPLOY_DIR):
+            use_build_cache = '-f %s/arb-avm-cpp/%s ' % (DEPLOY_DIR, 'dev-mode.Dockerfile')
+        run('docker build -t arb-avm-cpp %s%s' % (use_build_cache, context % 'arb-avm-cpp'))
 
     # Build
     if not up_flag or build_flag:
@@ -290,16 +304,6 @@ def install_dev_mode(sudo_flag):
             run('ln -sf %s/%s %s/%s' % (dep, sub_dep, DEPLOY_DIR, sub_dep))
             language_setup(lang, sub_dep, parent=dep)
 
-# Create special Dockerfile for dev-mode if required
-def dockerfile_dev_mode(dev_flag, name):
-    SUB = 'awk \'{ sub(/%s/, "%s") }1\' ' + ('%s/arb-validator/Dockerfile > ' +
-        '%s/arb-validator/%s') % (DEPLOY_DIR, DEPLOY_DIR, name)
-    if dev_flag or os.path.isdir(DEPLOY_DIR):
-        run(SUB % ('##DEV_', ''))
-        return name
-    else:
-        return 'Dockerfile'
-
 # Run commands in shell
 def run(command, sudo=False, exit_on_error=True, quiet=False, check_output=False):
     if sudo:
@@ -326,7 +330,19 @@ def run(command, sudo=False, exit_on_error=True, quiet=False, check_output=False
 ### ----------------------------------------------------------------------------
 
 # Status
-class get_git_status(argparse.Action):
+class GitStatusAction(argparse.Action):
+    def __init__(self,
+                 option_strings,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help=None):
+        super(GitStatusAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+
     def __call__(self, parser, namespace, values, option_string=None):
         msg = ''
         deploy_dir = ''
@@ -444,9 +460,8 @@ def main():
         default='jar deny prosper gasp flush glass core corn alarm treat leg smart',
         help='Specify the Mnemonic to use (make sure to use "quotes")')
     parser.add_argument('-v', '--verbose', dest='verbose', action='count')
-    parser.add_argument('--status', action=get_git_status, nargs=0)
+    parser.add_argument('--status', action=GitStatusAction)
     # Version
-    # TODO attach commit hash to version if one exists in dev mode
     parser.add_argument('--version', action='version',
         version='%(prog)s ' + __version__)
     args = parser.parse_args()
