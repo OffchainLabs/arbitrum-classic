@@ -37,7 +37,7 @@ TokenType toTokenType(const uint256_t& tokTypeVal) {
 }
 
 bool Message::deserialize(const value& val) {
-    auto msgTup = mpark::get_if<Tuple>(&val);
+    auto msgTup = nonstd::get_if<Tuple>(&val);
     if (!msgTup) {
         return false;
     }
@@ -46,19 +46,19 @@ bool Message::deserialize(const value& val) {
     }
 
     auto destVal = msgTup->get_element(1);
-    auto destInt = mpark::get_if<uint256_t>(&destVal);
+    auto destInt = nonstd::get_if<uint256_t>(&destVal);
     if (!destInt) {
         return false;
     }
 
     auto currencyAmountVal = msgTup->get_element(2);
-    auto currencyAmountInt = mpark::get_if<uint256_t>(&currencyAmountVal);
+    auto currencyAmountInt = nonstd::get_if<uint256_t>(&currencyAmountVal);
     if (!currencyAmountInt) {
         return false;
     }
 
     auto tokTypeVal = msgTup->get_element(3);
-    auto tokTypeInt = mpark::get_if<uint256_t>(&tokTypeVal);
+    auto tokTypeInt = nonstd::get_if<uint256_t>(&tokTypeVal);
     if (!tokTypeInt) {
         return false;
     }

@@ -59,7 +59,7 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm PUBLIC variant optional Boost::boost)
+target_link_libraries(avm PUBLIC Boost::boost CONAN_PKG::variant-lite)
 
 target_code_coverage(avm AUTO ALL)
 

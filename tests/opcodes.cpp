@@ -28,7 +28,7 @@ MachineState runUnaryOp(uint256_t arg1, OpCode op) {
 void testUnaryOp(uint256_t arg1, uint256_t result, OpCode op) {
     MachineState m = runUnaryOp(arg1, op);
     value res = m.stack.pop();
-    auto num = mpark::get_if<uint256_t>(&res);
+    auto num = nonstd::get_if<uint256_t>(&res);
     REQUIRE(num);
     REQUIRE(*num == result);
     REQUIRE(m.stack.stacksize() == 0);
@@ -48,7 +48,7 @@ void testBinaryOp(uint256_t arg1,
                   OpCode op) {
     MachineState m = runBinaryOp(arg1, arg2, op);
     value res = m.stack.pop();
-    auto actual = mpark::get_if<uint256_t>(&res);
+    auto actual = nonstd::get_if<uint256_t>(&res);
     REQUIRE(actual);
     REQUIRE(*actual == expected);
     REQUIRE(m.stack.stacksize() == 0);
@@ -73,7 +73,7 @@ void testTertiaryOp(uint256_t arg1,
                     OpCode op) {
     MachineState m = runTertiaryOp(arg1, arg2, arg3, op);
     value res = m.stack.pop();
-    auto num = mpark::get_if<uint256_t>(&res);
+    auto num = nonstd::get_if<uint256_t>(&res);
     REQUIRE(num);
     REQUIRE(*num == result);
     REQUIRE(m.stack.stacksize() == 0);
@@ -111,7 +111,7 @@ TEST_CASE("DIV opcode is correct") {
     SECTION("unsigned division is correct") {
         MachineState m = runBinaryOp(-6, 2, OpCode::DIV);
         value res = m.stack.pop();
-        auto num = mpark::get_if<uint256_t>(&res);
+        auto num = nonstd::get_if<uint256_t>(&res);
         REQUIRE(num);
         REQUIRE(*num != 3);
         REQUIRE(m.stack.stacksize() == 0);
@@ -247,22 +247,22 @@ TEST_CASE("EQ opcode is correct") {
     SECTION("equal") { testBinaryOp(3, 3, 1, OpCode::EQ); }
     SECTION("matching tuples") {
         MachineState m;
-        m.stack.push(Tuple{1, 2, m.pool.get()});
-        m.stack.push(Tuple{1, 2, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
-        auto actual = mpark::get_if<uint256_t>(&res);
+        auto actual = nonstd::get_if<uint256_t>(&res);
         REQUIRE(actual);
         REQUIRE(*actual == 1);
         REQUIRE(m.stack.stacksize() == 0);
     }
     SECTION("different tuples") {
         MachineState m;
-        m.stack.push(Tuple{1, 2, m.pool.get()});
-        m.stack.push(Tuple{1, 3, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{3}, m.pool.get()});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
-        auto actual = mpark::get_if<uint256_t>(&res);
+        auto actual = nonstd::get_if<uint256_t>(&res);
         REQUIRE(actual);
         REQUIRE(*actual == 0);
         REQUIRE(m.stack.stacksize() == 0);
@@ -344,7 +344,7 @@ TEST_CASE("TYPE opcode is correct") {
     }
     SECTION("type tuple") {
         MachineState m;
-        m.stack.push(Tuple{1, 2, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::TYPE);
         REQUIRE(m.stack.stacksize() == 1);
@@ -357,7 +357,7 @@ TEST_CASE("TYPE opcode is correct") {
 TEST_CASE("POP opcode is correct") {
     SECTION("pop") {
         MachineState m;
-        m.stack.push(3);
+        m.stack.push(uint256_t{3});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::POP);
         REQUIRE(m.stack.stacksize() == 0);
@@ -412,7 +412,7 @@ TEST_CASE("CJUMP opcode is correct") {
     SECTION("cjump true") {
         MachineState m;
         m.pc = 3;
-        m.stack.push(0);
+        m.stack.push(uint256_t{0});
         m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
@@ -421,7 +421,7 @@ TEST_CASE("CJUMP opcode is correct") {
     SECTION("cjump false") {
         MachineState m;
         m.pc = 3;
-        m.stack.push(1);
+        m.stack.push(uint256_t{1});
         m.stack.push(value{CodePoint(2, OpCode::ADD, 0)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
@@ -440,7 +440,7 @@ TEST_CASE("STACKEMPTY opcode is correct") {
     }
     SECTION("not empty") {
         MachineState m;
-        m.stack.push(1);
+        m.stack.push(uint256_t{1});
         m.runOp(OpCode::STACKEMPTY);
         REQUIRE(m.stack.stacksize() == 2);
         value res = m.stack.pop();
@@ -543,7 +543,7 @@ TEST_CASE("ERRSET opcode is correct") {
 TEST_CASE("DUP0 opcode is correct") {
     SECTION("dup") {
         MachineState m;
-        m.stack.push(5);
+        m.stack.push(uint256_t{5});
         m.runOp(OpCode::DUP0);
         REQUIRE(m.stack.stacksize() == 2);
         REQUIRE(m.pc == 1);
@@ -557,8 +557,8 @@ TEST_CASE("DUP0 opcode is correct") {
 TEST_CASE("DUP1 opcode is correct") {
     SECTION("dup") {
         MachineState m;
-        m.stack.push(5);
-        m.stack.push(3);
+        m.stack.push(uint256_t{5});
+        m.stack.push(uint256_t{3});
         m.runOp(OpCode::DUP1);
         REQUIRE(m.stack.stacksize() == 3);
         REQUIRE(m.pc == 1);
@@ -574,9 +574,9 @@ TEST_CASE("DUP1 opcode is correct") {
 TEST_CASE("DUP2 opcode is correct") {
     SECTION("dup") {
         MachineState m;
-        m.stack.push(7);
-        m.stack.push(5);
-        m.stack.push(3);
+        m.stack.push(uint256_t{7});
+        m.stack.push(uint256_t{5});
+        m.stack.push(uint256_t{3});
         m.runOp(OpCode::DUP2);
         REQUIRE(m.stack.stacksize() == 4);
         REQUIRE(m.pc == 1);
@@ -594,8 +594,8 @@ TEST_CASE("DUP2 opcode is correct") {
 TEST_CASE("SWAP1 opcode is correct") {
     SECTION("swap") {
         MachineState m;
-        m.stack.push(5);
-        m.stack.push(3);
+        m.stack.push(uint256_t{5});
+        m.stack.push(uint256_t{3});
         m.runOp(OpCode::SWAP1);
         REQUIRE(m.stack.stacksize() == 2);
         REQUIRE(m.pc == 1);
@@ -609,9 +609,9 @@ TEST_CASE("SWAP1 opcode is correct") {
 TEST_CASE("SWAP2 opcode is correct") {
     SECTION("dup") {
         MachineState m;
-        m.stack.push(7);
-        m.stack.push(5);
-        m.stack.push(3);
+        m.stack.push(uint256_t{7});
+        m.stack.push(uint256_t{5});
+        m.stack.push(uint256_t{3});
         m.runOp(OpCode::SWAP2);
         REQUIRE(m.stack.stacksize() == 3);
         REQUIRE(m.pc == 1);
@@ -627,8 +627,8 @@ TEST_CASE("SWAP2 opcode is correct") {
 TEST_CASE("TGET opcode is correct") {
     SECTION("tget") {
         MachineState m;
-        m.stack.push(Tuple{9, 8, 7, 6, m.pool.get()});
-        m.stack.push(1);
+        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}, m.pool.get()});
+        m.stack.push(uint256_t{1});
         m.runOp(OpCode::TGET);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(8)});
@@ -639,23 +639,23 @@ TEST_CASE("TGET opcode is correct") {
 TEST_CASE("TSET opcode is correct") {
     SECTION("2 tup") {
         MachineState m;
-        m.stack.push(3);
-        m.stack.push(Tuple{1, 2, m.pool.get()});
-        m.stack.push(1);
+        m.stack.push(uint256_t{3});
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2}, m.pool.get()});
+        m.stack.push(uint256_t{1});
         m.runOp(OpCode::TSET);
         value res = m.stack.pop();
-        REQUIRE(res == value{Tuple{1, 3, m.pool.get()}});
+        REQUIRE(res == value{Tuple{uint256_t{1}, uint256_t{3}, m.pool.get()}});
         REQUIRE(m.stack.stacksize() == 0);
     }
 
     SECTION("8 tup") {
         MachineState m;
-        m.stack.push(3);
-        m.stack.push(Tuple{9, 9, 9, 9, 9, 9, 9, 9, m.pool.get()});
-        m.stack.push(7);
+        m.stack.push(uint256_t{3});
+        m.stack.push(Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, m.pool.get()});
+        m.stack.push(uint256_t{7});
         m.runOp(OpCode::TSET);
         value res = m.stack.pop();
-        REQUIRE(res == value{Tuple{9, 9, 9, 9, 9, 9, 9, 3, m.pool.get()}});
+        REQUIRE(res == value{Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{3}, m.pool.get()}});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -663,7 +663,7 @@ TEST_CASE("TSET opcode is correct") {
 TEST_CASE("TLEN opcode is correct") {
     SECTION("tlen") {
         MachineState m;
-        m.stack.push(Tuple{9, 8, 7, 6, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}, m.pool.get()});
         m.runOp(OpCode::TLEN);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(4)});
@@ -683,7 +683,7 @@ TEST_CASE("BREAKPOINT opcode is correct") {
 TEST_CASE("LOG opcode is correct") {
     SECTION("log") {
         MachineState m;
-        m.stack.push(3);
+        m.stack.push(uint256_t{3});
         m.runOp(OpCode::LOG);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.context.logs[0] == value{uint256_t(3)});

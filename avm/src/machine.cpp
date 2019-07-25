@@ -132,7 +132,7 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
 }
 
 uint256_t& assumeInt(value& val) {
-    auto aNum = mpark::get_if<uint256_t>(&val);
+    auto aNum = nonstd::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -140,7 +140,7 @@ uint256_t& assumeInt(value& val) {
 }
 
 const uint256_t& assumeInt(const value& val) {
-    auto aNum = mpark::get_if<uint256_t>(&val);
+    auto aNum = nonstd::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -155,7 +155,7 @@ uint64_t assumeInt64(uint256_t& val) {
 }
 
 Tuple& assumeTuple(value& val) {
-    auto tup = mpark::get_if<Tuple>(&val);
+    auto tup = nonstd::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
     }
@@ -680,11 +680,11 @@ static void hashOp(MachineState& m) {
 
 static void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    if (mpark::holds_alternative<uint256_t>(m.stack[0]))
+    if (nonstd::holds_alternative<uint256_t>(m.stack[0]))
         m.stack[0] = NUM;
-    else if (mpark::holds_alternative<CodePoint>(m.stack[0]))
+    else if (nonstd::holds_alternative<CodePoint>(m.stack[0]))
         m.stack[0] = CODEPT;
-    else if (mpark::holds_alternative<Tuple>(m.stack[0]))
+    else if (nonstd::holds_alternative<Tuple>(m.stack[0]))
         m.stack[0] = TUPLE;
     ++m.pc;
 }
@@ -715,7 +715,7 @@ static void rset(MachineState& m) {
 
 static void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto target = mpark::get_if<CodePoint>(&m.stack[0]);
+    auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
     if (target) {
         m.pc = target->pc;
     } else {
@@ -726,7 +726,7 @@ static void jump(MachineState& m) {
 
 static void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = mpark::get_if<CodePoint>(&m.stack[0]);
+    auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
     if (bNum != 0) {
         if (target) {
@@ -743,9 +743,9 @@ static void cjump(MachineState& m) {
 
 static void stackEmpty(MachineState& m) {
     if (m.stack.stacksize() == 0) {
-        m.stack.push(1);
+        m.stack.push(uint256_t{1});
     } else {
-        m.stack.push(0);
+        m.stack.push(uint256_t{0});
     }
     ++m.pc;
 }
@@ -771,9 +771,9 @@ static void auxPop(MachineState& m) {
 
 static void auxStackEmpty(MachineState& m) {
     if (m.auxstack.stacksize() == 0) {
-        m.stack.push(1);
+        m.stack.push(uint256_t{1});
     } else {
-        m.stack.push(0);
+        m.stack.push(uint256_t{0});
     }
     ++m.pc;
 }
@@ -785,7 +785,7 @@ static void errPush(MachineState& m) {
 
 static void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = mpark::get_if<CodePoint>(&m.stack[0]);
+    auto codePointVal = nonstd::get_if<CodePoint>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
@@ -921,7 +921,7 @@ static void nbsend(MachineState& m) {
 }
 
 static void getTime(MachineState& m) {
-    Tuple tup(2, m.pool.get());
+    Tuple tup(m.pool.get(), 2);
     tup.set_element(0, m.context.timeBounds[0]);
     tup.set_element(1, m.context.timeBounds[1]);
     m.stack.push(std::move(tup));
@@ -930,7 +930,7 @@ static void getTime(MachineState& m) {
 
 static void inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
-    auto stackTop = mpark::get_if<Tuple>(&m.stack[0]);
+    auto stackTop = nonstd::get_if<Tuple>(&m.stack[0]);
     if (stackTop && m.inbox == *stackTop) {
         m.state = Status::Blocked;
     } else {
