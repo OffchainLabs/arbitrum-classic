@@ -429,9 +429,9 @@ class GitStatusAction(argparse.Action):
                 (branch_nom, short_hash, is_modified) = git_status(path)
                 return [repo, branch_nom, short_hash, is_modified]
             data = []
-            for (dep, lang, sub_deps) in DEPS:
+            for dep in DEPS_HIERARCHY:
                 data += [find(dep)]
-                for sub_dep in sub_deps:
+                for sub_dep in DEPS_HIERARCHY[dep]:
                     data += [find(sub_dep)]
             def find_ext_dep(name, cmd):
                 bin_path = run('which %s' % cmd, check_output=True, quiet=True).strip()
