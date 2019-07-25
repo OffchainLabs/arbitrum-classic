@@ -75,8 +75,9 @@ ARG WAIT_FOR
 ARG ID
 ARG ETH_URL
 ARG COORDINATOR_URL
+ARG AVM
 ENV WAIT_FOR=$WAIT_FOR ID=$ID ETH_URL=$ETH_URL \
-    COORDINATOR_URL=$COORDINATOR_URL \
+    COORDINATOR_URL=$COORDINATOR_URL AVM=$AVM \
     PATH="/home/user/go/bin:${PATH}"
 
 # Build cache
@@ -92,6 +93,6 @@ echo "Finished waiting for ${WAIT_FOR}..."; else echo "Starting..."; fi \
     server.* contract.ao ./state/ && touch ./state/contract.ao && \
 sed -n $((${ID}+1))p validator_private_keys.txt > ./state/private_key.txt && \
 T=follower; if [[ -z ${COORDINATOR_URL} ]]; then T=coordinator; fi; cd state &&\
-${T}Server contract.ao private_key.txt validator_addresses.txt \
+${T}Server --avm=${AVM} contract.ao private_key.txt validator_addresses.txt \
     ethbridge_addresses.json ${ETH_URL} ${COORDINATOR_URL}
 EXPOSE 1235 1236
