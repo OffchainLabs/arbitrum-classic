@@ -8,10 +8,13 @@ addons:
 compiler:
   - gcc
 before_install:
-  - sudo apt-get install -y libboost-dev lcov
-script:
+  - sudo apt-get install -y libboost-dev lcov python3
+  - pip3 install conan
   - mkdir release
   - cd release
+install:
+  - conan install ..
+script:
   - cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
   - cmake  --build .
   - ctest .
