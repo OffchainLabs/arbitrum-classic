@@ -27,8 +27,7 @@ COPY --chown=user . ./
 # Build cache
 ##DEV_COPY --from=arb-avm-cpp --chown=user /build build/
 
-RUN mkdir -p build && cd build && \
-    conan install .. && \
+RUN cd build && conan install .. && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . && \
     cp ../cavm/cmachine.h lib/* ../cmachine
