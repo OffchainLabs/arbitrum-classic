@@ -80,7 +80,10 @@ func (DisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 
-type ConfirmedAssertEvent struct{}
+type ConfirmedAssertEvent struct {
+	TxHash   [32]byte
+	LogsHash [32]byte
+}
 
 func (ConfirmedAssertEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage

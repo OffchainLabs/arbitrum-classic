@@ -22,13 +22,12 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/offchainlabs/arb-util/evm"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
@@ -333,9 +332,13 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 							break
 						}
 						validator.bot = newBot
+						proposalResults := bot.ProposalResults()
 						bridge.FinalizedAssertion(
 							proposal.Assertion,
 							proposal.NewLogCount,
+							request.Signatures,
+							&proposalResults,
+							[]byte{},
 						)
 						request.ResultChan <- true
 					} else {

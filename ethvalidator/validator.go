@@ -37,6 +37,7 @@ import (
 	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/validator"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
@@ -214,10 +215,19 @@ func LogProof(a *protocol.Assertion, index int) ([][32]byte, error) {
 	return proof, nil
 }
 
-func (val *EthValidator) FinalizedAssertion(assertion *protocol.Assertion, newLogCount int) {
+func (val *EthValidator) FinalizedAssertion(
+	assertion *protocol.Assertion,
+	newLogCount int,
+	signatures [][]byte,
+	proposalResults *valmessage.UnanimousUpdateResults,
+	onChainTxHash []byte,
+) {
 	val.CompletedCallChan <- valmessage.FinalizedAssertion{
-		Assertion:   assertion,
-		NewLogCount: newLogCount,
+		Assertion:       assertion,
+		NewLogCount:     newLogCount,
+		Signatures:      signatures,
+		ProposalResults: proposalResults,
+		OnChainTxHash:   onChainTxHash,
 	}
 }
 
@@ -286,7 +296,10 @@ func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, a
 	}
 }
 
-func (val *EthValidator) ConfirmDisputableAssertion(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+func (val *EthValidator) ConfirmDisputableAssertion(
+	precondition *protocol.Precondition,
+	assertion *protocol.Assertion,
+) {
 	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.ConfirmAsserted(
 			val.auth,
@@ -422,7 +435,7 @@ func (val *EthValidator) CreateVM(createData *valmessage.CreateVMValidatorReques
 	tx, err := val.con.CreateVM(
 		val.auth,
 		createData,
-		CreateVMHash(createData),
+		hashing.CreateVMHash(createData),
 		signatures,
 	)
 	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
@@ -456,7 +469,7 @@ func (val *EthValidator) UnanimousAssertHash(
 	originalInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) ([32]byte, error) {
-	return UnanimousAssertHash(
+	return hashing.UnanimousAssertHash(
 		val.VmId,
 		sequenceNum,
 		beforeHash,

@@ -31,14 +31,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/valmessage"
@@ -283,8 +280,14 @@ type GetMessageResultArgs struct {
 
 // GetMessageResultReply contains output data for GetMessageResult
 type GetMessageResultReply struct {
-	Found  bool   `json:"found"`
-	RawVal string `json:"rawVal"`
+	Found         bool     `json:"found"`
+	RawVal        string   `json:"rawVal"`
+	LogPreHash    string   `json:"logPreHash"`    // Acc hash before RawVal
+	LogPostHash   string   `json:"logPostHash"`   // Acc hash to prove
+	LogValHashes  []string `json:"logValHashes"`  // Intermediate value hashes
+	ValidatorSigs []string `json:"validatorSigs"` // Unanimous signatures
+	PartialHash   string   `json:"partialHash"`   // Unanimous partial hash
+	OnChainTxHash string   `json:"onChainTxHash"` // Disputable Tx hash
 }
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
@@ -303,6 +306,16 @@ func (m *Server) GetMessageResult(r *http.Request, args *GetMessageResultArgs, r
 		var buf bytes.Buffer
 		_ = value.MarshalValue(txInfo.RawVal, &buf) // error can only occur from writes and bytes.Buffer is safe
 		reply.RawVal = hexutil.Encode(buf.Bytes())
+
+		// Log Proof pieces
+		reply.LogPreHash = txInfo.LogsPreHash
+		reply.LogPostHash = txInfo.LogsPostHash
+		reply.LogValHashes = txInfo.LogsValHashes
+
+		// Unanimous or Disputable assertion proof info
+		reply.ValidatorSigs = txInfo.ValidatorSigs
+		reply.PartialHash = txInfo.PartialHash
+		reply.OnChainTxHash = txInfo.OnChainTxHash
 	}
 	return nil
 }

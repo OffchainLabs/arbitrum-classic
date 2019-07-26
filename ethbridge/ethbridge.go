@@ -34,6 +34,7 @@ import (
 
 	"github.com/offchainlabs/arb-validator/ethbridge/challengeRPC"
 	"github.com/offchainlabs/arb-validator/ethbridge/verifierRPC"
+	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -96,7 +97,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 	}
 
 	vmCreatedChan := make(chan *verifierRPC.VMTrackerVMCreated)
-	vmCreatedSub, err := con.Tracker.WatchVMCreated(watch, vmCreatedChan)
+	vmCreatedSub, err := con.Tracker.WatchVMCreated(watch, vmCreatedChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -236,11 +237,11 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Header: header,
 					VmID:   val.VmId,
 					Event: VMCreatedEvent{
+						VmId:                val.VmId,
 						GracePeriod:         val.GracePeriod,
 						EscrowRequired:      val.EscrowRequired,
 						EscrowCurrency:      val.EscrowCurrency,
 						MaxExecutionSteps:   val.MaxExecutionSteps,
-						VmId:                val.VmId,
 						VmState:             val.VmState,
 						ChallengeManagerNum: val.ChallengeManagerNum,
 						Owner:               val.Owner,
@@ -313,7 +314,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  ConfirmedAssertEvent{},
+					Event:  ConfirmedAssertEvent{val.Raw.TxHash, val.LogsAccHash},
 				}
 			case val := <-challengeInitiatedChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -559,15 +560,14 @@ func (con *Bridge) UnanimousAssert(
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (*types.Transaction, error) {
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
-	var messageData bytes.Buffer
 	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		balance,
+	)
+
+	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
@@ -578,7 +578,6 @@ func (con *Bridge) UnanimousAssert(
 		auth,
 		vmID,
 		assertion.AfterHash,
-		assertion.LogsHash(),
 		newInboxHash,
 		timeBounds,
 		balance.TokenTypes,
@@ -586,6 +585,7 @@ func (con *Bridge) UnanimousAssert(
 		tokenNums,
 		amounts,
 		destinations,
+		assertion.LogsHash(),
 		sigsToBlock(signatures),
 	)
 }
@@ -600,14 +600,13 @@ func (con *Bridge) ProposeUnanimousAssert(
 	signatures [][]byte,
 ) (*types.Transaction, error) {
 	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		balance,
+	)
+
 	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
@@ -615,22 +614,23 @@ func (con *Bridge) ProposeUnanimousAssert(
 	}
 
 	var unanRest [32]byte
-	copy(unanRest[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(newInboxHash),
-		solsha3.Bytes32(assertion.AfterHash),
-		messageData.Bytes(),
-		value.Bytes32ArrayEncoded(destinations),
+	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
+		newInboxHash,
+		assertion,
+		messageData,
+		destinations,
 	))
 
 	return con.Tracker.ProposeUnanimousAssert(
 		auth,
 		vmID,
 		unanRest,
-		sequenceNum,
 		timeBounds,
 		balance.TokenTypes,
 		tokenNums,
 		amounts,
+		sequenceNum,
+		assertion.LogsHash(),
 		sigsToBlock(signatures),
 	)
 }
@@ -641,15 +641,14 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
-	var messageData bytes.Buffer
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
 	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		balance,
+	)
+
+	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
@@ -660,7 +659,6 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 		auth,
 		vmID,
 		assertion.AfterHash,
-		assertion.LogsHash(),
 		newInboxHash,
 		balance.TokenTypes,
 		messageData.Bytes(),
@@ -680,16 +678,16 @@ func (con *Bridge) DisputableAssert(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		precondition.BeforeBalance,
+	)
+
 	dataHashes := make([][32]byte, 0, len(assertion.OutMsgs))
 	for _, msg := range assertion.OutMsgs {
 		dataHashes = append(dataHashes, msg.Data.Hash())
-		tokenNums = append(tokenNums, uint16(precondition.BeforeBalance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 	}
+
 	return con.Tracker.DisputableAssert(
 		auth,
 		[5][32]byte{
@@ -715,14 +713,13 @@ func (con *Bridge) ConfirmAsserted(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		precondition.BeforeBalance,
+	)
+
 	var messageData bytes.Buffer
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(precondition.BeforeBalance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
@@ -734,13 +731,13 @@ func (con *Bridge) ConfirmAsserted(
 		vmID,
 		precondition.Hash(),
 		assertion.AfterHash,
-		assertion.LogsHash(),
 		assertion.NumSteps,
 		precondition.BeforeBalance.TokenTypes,
 		messageData.Bytes(),
 		tokenNums,
 		amounts,
 		destinations,
+		assertion.LogsHash(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't confirm assertion: %v", err)

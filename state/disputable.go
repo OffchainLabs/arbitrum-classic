@@ -21,10 +21,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
-
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/challenge/challenger"
@@ -33,6 +29,10 @@ import (
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/valmessage"
+
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Error struct {
@@ -376,14 +376,14 @@ func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (Stat
 		return bot, nil
 	}
 
-	bridge.FinalizedAssertion(bot.assertion, len(bot.assertion.Logs))
-
 	balance := bot.GetBalance()
 	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.assertion.OutMsgs))
+
 	return finalizingAssertion{
 		Core:       core.NewCore(bot.pendingState, balance),
 		Config:     bot.Config,
 		ResultChan: nil,
+		assertion:  bot.assertion,
 	}, nil
 }
 
@@ -464,14 +464,14 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 	assertion := bot.request.Assertion
 	balance := bot.GetBalance()
 	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
-	bridge.FinalizedAssertion(assertion, len(assertion.Logs))
 	return finalizingAssertion{
-		core.NewCore(
+		Core: core.NewCore(
 			bot.request.AfterState,
 			balance,
 		),
-		bot.Config,
-		bot.request.ResultChan,
+		Config:     bot.Config,
+		ResultChan: bot.request.ResultChan,
+		assertion:  assertion,
 	}, nil
 }
 
@@ -500,6 +500,7 @@ type finalizingAssertion struct {
 	*core.Core
 	*core.Config
 	ResultChan chan<- bool
+	assertion  *protocol.Assertion
 }
 
 func (bot finalizingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
@@ -507,11 +508,18 @@ func (bot finalizingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (St
 }
 
 func (bot finalizingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
-	switch ev.(type) {
+	switch ev := ev.(type) {
 	case ethbridge.ConfirmedAssertEvent:
 		if bot.ResultChan != nil {
 			bot.ResultChan <- true
 		}
+		bridge.FinalizedAssertion(
+			bot.assertion,
+			len(bot.assertion.Logs),
+			[][]byte{},
+			nil,
+			ev.TxHash[:],
+		)
 		bot.GetCore().DeliverMessagesToVM()
 		return NewWaiting(bot.Config, bot.Core), nil, nil
 	default:

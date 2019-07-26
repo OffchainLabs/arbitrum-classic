@@ -26,7 +26,7 @@ require (
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.6 // indirect
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
-	github.com/offchainlabs/arb-avm v0.1.1-0.20190620180800-aea2007ae532
+	github.com/offchainlabs/arb-avm v0.1.1-0.20190712201655-27d606eb8978
 	github.com/offchainlabs/arb-avm-cpp v0.0.0-20190713192252-9fb4b8cac60c
 	github.com/offchainlabs/arb-util v0.0.0-20190712173843-593cab1d8e9c
 	github.com/onsi/ginkgo v1.8.0 // indirect

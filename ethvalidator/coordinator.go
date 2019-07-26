@@ -40,6 +40,7 @@ import (
 	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -494,7 +495,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 		VmState:             value.NewHashBuf(stateData.MachineState),
 		ChallengeManagerNum: 0,
 	}
-	createHash := CreateVMHash(createData)
+	createHash := hashing.CreateVMHash(createData)
 
 	responses := m.cm.gatherSignatures(
 		&valmessage.ValidatorRequest{

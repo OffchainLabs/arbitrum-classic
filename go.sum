@@ -94,9 +94,8 @@ github.com/miguelmota/go-solidity-sha3 v0.1.0 h1:RoRqUD/qKqZCZIoAGVJhX6gEHeD6333
 github.com/miguelmota/go-solidity-sha3 v0.1.0/go.mod h1:FuaBKCJUkJcmPqCuKvPFYfzK1auYGr5+8i2evSBIm/Q=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
-github.com/offchainlabs/arb-avm v0.1.0 h1:aqUSk4SpT0ttH+csSxsxayc6hK9z7jAzXtRpwWu49Vc=
-github.com/offchainlabs/arb-avm v0.1.1-0.20190620180800-aea2007ae532 h1:o9zzaNVCiE2PdS0DpEirjXk9ZceYPTY2d2fQIKQaTqw=
-github.com/offchainlabs/arb-avm v0.1.1-0.20190620180800-aea2007ae532/go.mod h1:kKVmBGAotp9E74w7QTkDnLbBgnHE3XF0tUb49ChK2XQ=
+github.com/offchainlabs/arb-avm v0.1.1-0.20190712201655-27d606eb8978 h1:Xqe/rT+lIXMbZ/pn5LXmLepmN4QkXUbLeM3CdmQ7pV4=
+github.com/offchainlabs/arb-avm v0.1.1-0.20190712201655-27d606eb8978/go.mod h1:Tx+xaltW8wgmrqD5s30hHe1B9u+usgB7HQcLkK6HHok=
 github.com/offchainlabs/arb-avm-cpp v0.0.0-20190713192252-9fb4b8cac60c h1:JsYpiobB5cwPfPbDQG3mbWomeJe+CFocrnn0TcVmeSw=
 github.com/offchainlabs/arb-avm-cpp v0.0.0-20190713192252-9fb4b8cac60c/go.mod h1:lhs+aQ9Yqqxaw4gdfi+/ii8bNZaON/rJgD0wer2KSsI=
 github.com/offchainlabs/arb-util v0.0.0-20190712143801-c5fee02ee788/go.mod h1:AQV5OkKOhOHAk+SQNtjNmm+dik3lGlzg+my4zbxyTDw=

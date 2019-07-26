@@ -27,6 +27,9 @@ import (
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/value"
 
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -60,10 +63,18 @@ type txInfo struct {
 	Found          bool
 	assertionIndex int
 	RawVal         value.Value
+	LogsPreHash    string
+	LogsPostHash   string
+	LogsValHashes  []string
+	ValidatorSigs  []string
+	PartialHash    string
+	OnChainTxHash  string
 }
 
 type assertionInfo struct {
-	TxLogs []logsInfo
+	TxLogs        []logsInfo
+	LogsAccHashes []string
+	LogsValHashes []string
 }
 
 type logResponse struct {
@@ -100,7 +111,9 @@ func (a *assertionInfo) FindLogs(address *big.Int, topics [][32]byte) []logRespo
 
 func newAssertionInfo() *assertionInfo {
 	logs := make([]logsInfo, 0)
-	return &assertionInfo{logs}
+	logsAccHashes := make([]string, 0)
+	logsValHashes := make([]string, 0)
+	return &assertionInfo{logs, logsAccHashes, logsValHashes}
 }
 
 type txTracker struct {
@@ -124,7 +137,43 @@ func newTxTracker(vmID [32]byte) *txTracker {
 func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAssertion) {
 	log.Println("Coordinator produced finalized assertion")
 	info := newAssertionInfo()
-	for _, res := range assertion.NewLogs() {
+
+	if assertion.Assertion != assertion.ProposalResults.Assertion {
+		panic("assertion should be the same assertion in ProposalResults")
+	}
+	partialHashBytes, err := hashing.UnanimousAssertPartialHash(
+		tr.vmID,
+		assertion.ProposalResults.SequenceNum,
+		assertion.ProposalResults.BeforeHash,
+		assertion.ProposalResults.TimeBounds,
+		assertion.ProposalResults.NewInboxHash,
+		assertion.ProposalResults.OriginalInboxHash,
+		assertion.ProposalResults.Assertion,
+	)
+	if err != nil {
+		panic("Could not create partial hash")
+	}
+	partialHash := hexutil.Encode(partialHashBytes[:])
+
+	// TODO: cache calculations (only need to calculate for NewLogs()
+	info.LogsValHashes = make([]string, 0, len(assertion.Assertion.Logs))
+	info.LogsAccHashes = make([]string, 0, len(assertion.Assertion.Logs))
+	var acc []byte
+	for _, logsVal := range assertion.Assertion.Logs {
+		logsValHash := logsVal.Hash()
+		info.LogsValHashes = append(info.LogsValHashes,
+			hexutil.Encode(logsValHash[:]))
+		acc = solsha3.SoliditySHA3(
+			solsha3.Bytes32(acc),
+			solsha3.Bytes32(logsVal.Hash()),
+		)
+		info.LogsAccHashes = append(info.LogsAccHashes,
+			hexutil.Encode(acc))
+	}
+
+	logsPostHash := info.LogsAccHashes[len(info.LogsAccHashes)-1]
+	logsPreHash := hexutil.Encode(solsha3.Bytes32(0))
+	for i, res := range assertion.NewLogs() {
 		evmVal, err := evm.ProcessLog(res)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
@@ -133,10 +182,32 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		msg := evmVal.GetEthMsg()
 		msgHash := msg.MsgHash(tr.vmID)
 
+		log.Println("Coordinator got response for", hexutil.Encode(msgHash[:]))
+
+		// pre hash index phi can only be < 0 on the first loop
+		phi := len(info.LogsAccHashes) - assertion.NewLogCount - (i + 1)
+		if phi >= 0 {
+			logsPreHash = info.LogsAccHashes[phi]
+		} // else logsPreHash is zero (32 bytes)
+		logsValHashes := info.LogsValHashes[len(info.LogsValHashes)-
+			assertion.NewLogCount-(i-1):]
+
+		// Encode assertion.Signatures as []string
+		sigs := make([]string, 0, len(assertion.Signatures))
+		for _, sig := range assertion.Signatures {
+			sigs = append(sigs, hexutil.Encode(sig))
+		}
+
 		txInfo := txInfo{
 			Found:          true,
 			assertionIndex: 0,
 			RawVal:         res,
+			LogsPreHash:    logsPreHash,
+			LogsPostHash:   logsPostHash,
+			LogsValHashes:  logsValHashes,
+			ValidatorSigs:  sigs,
+			PartialHash:    partialHash,
+			OnChainTxHash:  hexutil.Encode(assertion.OnChainTxHash),
 		}
 		txInfo.assertionIndex = len(tr.assertionInfo)
 		switch evmVal := evmVal.(type) {

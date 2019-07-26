@@ -22,8 +22,11 @@ import (
 )
 
 type FinalizedAssertion struct {
-	Assertion   *protocol.Assertion
-	NewLogCount int
+	Assertion       *protocol.Assertion
+	NewLogCount     int
+	Signatures      [][]byte // Unanimous Validator signatures
+	ProposalResults *UnanimousUpdateResults
+	OnChainTxHash   []byte // Disputable assertion on-chain Tx hash
 }
 
 func (f FinalizedAssertion) NewLogs() []value.Value {
