@@ -8,7 +8,7 @@
 FROM alpine:3.9
 
 # Alpine dependencies
-RUN apk add --no-cache git go libc-dev build-base
+RUN apk add --no-cache build-base git go libc-dev linux-headers
 
 # Non-root user
 RUN addgroup -g 1000 -S user && \
