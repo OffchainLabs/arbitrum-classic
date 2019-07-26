@@ -29,7 +29,7 @@ COPY --chown=user . ./
 
 RUN cd build && conan install .. && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build . && \
+    cmake --build . -j $(nproc) && \
     cp ../cavm/cmachine.h lib/* ../cmachine
 
 # Export library binary and header
