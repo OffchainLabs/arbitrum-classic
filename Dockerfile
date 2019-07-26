@@ -33,7 +33,7 @@ RUN cd build && conan install .. && \
     cp ../cavm/cmachine.h lib/* ../cmachine
 
 # Export library binary and header
-FROM alpine:3.9
+FROM scratch
 COPY --from=0 /home/user/go.mod /home/user/go.sum arb-avm-cpp/
 COPY --from=0 /home/user/cmachine arb-avm-cpp/cmachine/
 COPY --from=0 /home/user/build build/
