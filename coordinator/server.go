@@ -106,7 +106,10 @@ func NewServer(
 
 	go func() {
 		tracker := newTxTracker(man.Val.VmId)
-		tracker.handleTxResults(man.Val.CompletedCallChan, requests)
+		tracker.handleTxResults(
+			man.Val,
+			requests,
+		)
 	}()
 
 	return &Server{man, requests}
@@ -115,6 +118,12 @@ func NewServer(
 func (m *Server) requestAssertionCount() <-chan int {
 	req := make(chan int, 1)
 	m.requests <- assertionCountRequest{req}
+	return req
+}
+
+func (m *Server) requestVMCreatedEventTxHashChan() <-chan [32]byte {
+	req := make(chan [32]byte, 1)
+	m.requests <- unanVMCreatedEventTxHashRequest{req}
 	return req
 }
 
@@ -329,6 +338,22 @@ type GetAssertionCountReply struct {
 func (m *Server) GetAssertionCount(r *http.Request, _ *struct{}, reply *GetAssertionCountReply) error {
 	req := m.requestAssertionCount()
 	reply.AssertionCount = <-req
+	return nil
+}
+
+// GetVMCreatedEventTxHashReply contains output data for GetVMCreatedEventTxHash
+type GetVMCreatedEventTxHashReply struct {
+	VMCreatedEventTxHash string `json:"unanVMCreatedEventTxHash"`
+}
+
+// GetVMCreatedEventTxHash returns the txHash containing the CreateVM Event
+func (m *Server) GetVMCreatedEventTxHash(
+	r *http.Request,
+	_ *struct{},
+	reply *GetVMCreatedEventTxHashReply,
+) error {
+	res := <-m.requestVMCreatedEventTxHashChan()
+	reply.VMCreatedEventTxHash = hexutil.Encode(res[:])
 	return nil
 }
 

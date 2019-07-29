@@ -46,11 +46,12 @@ type EthValidator struct {
 	key *ecdsa.PrivateKey
 
 	// Safe public interface
-	VmId              [32]byte
-	Validators        map[common.Address]validatorInfo
-	Bot               *validator.Validator
-	actionChan        chan func(*EthValidator) error
-	CompletedCallChan chan valmessage.FinalizedAssertion
+	VmId                     [32]byte
+	Validators               map[common.Address]validatorInfo
+	Bot                      *validator.Validator
+	actionChan               chan func(*EthValidator) error
+	CompletedCallChan        chan valmessage.FinalizedAssertion
+	VMCreatedEventTxHashChan chan [32]byte
 
 	// Not in thread, but internal only
 	serverAddress string
@@ -126,6 +127,7 @@ func NewEthValidator(
 
 	actionChan := make(chan func(*EthValidator) error, 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
+	unanVMCreatedEventTxHashChan := make(chan [32]byte, 1)
 
 	val := &EthValidator{
 		key,
@@ -134,6 +136,7 @@ func NewEthValidator(
 		bot,
 		actionChan,
 		completedCallChan,
+		unanVMCreatedEventTxHashChan,
 		ethURL,
 		connectionInfo,
 		con,
@@ -152,13 +155,21 @@ func (val *EthValidator) StartListening() error {
 	if err != nil {
 		return err
 	}
+	parsedChan := make(chan ethbridge.Notification, 1024)
 
-	val.Bot.Run(outChan, val)
+	val.Bot.Run(parsedChan, val)
 
 	go func() {
 		for {
 			time.Sleep(200 * time.Millisecond)
 			select {
+			case parse := <-outChan:
+				switch parse.Event.(type) {
+				case ethbridge.VMCreatedEvent:
+					val.VMCreatedEventTxHashChan <- parse.TxHash
+				default:
+					parsedChan <- parse
+				}
 			case event := <-val.actionChan:
 				err := event(val)
 				if err != nil {

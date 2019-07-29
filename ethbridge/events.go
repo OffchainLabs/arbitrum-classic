@@ -43,6 +43,7 @@ type Notification struct {
 	Header *types.Header
 	VmID   [32]byte
 	Event  Event
+	TxHash [32]byte
 }
 
 type FinalUnanimousAssertEvent struct {

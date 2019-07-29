@@ -29,6 +29,7 @@ import (
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
@@ -38,6 +39,10 @@ type validatorRequest interface {
 
 type assertionCountRequest struct {
 	resultChan chan<- int
+}
+
+type unanVMCreatedEventTxHashRequest struct {
+	resultChan chan<- [32]byte
 }
 
 type txRequest struct {
@@ -222,8 +227,10 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	tr.assertionInfo = append(tr.assertionInfo, info)
 }
 
-func (tr *txTracker) processRequest(request validatorRequest) {
+func (tr *txTracker) processRequest(request validatorRequest, val *ethvalidator.EthValidator) {
 	switch request := request.(type) {
+	case unanVMCreatedEventTxHashRequest:
+		request.resultChan <- <-val.VMCreatedEventTxHashChan
 	case assertionCountRequest:
 		request.resultChan <- len(tr.assertionInfo) - 1
 	case txRequest:
@@ -277,14 +284,16 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 	}
 }
 
-func (tr *txTracker) handleTxResults(completedCalls chan valmessage.FinalizedAssertion, requests chan validatorRequest) {
+func (tr *txTracker) handleTxResults(
+	val *ethvalidator.EthValidator,
+	requests chan validatorRequest,
+) {
 	for {
 		select {
-		case finalizedAssertion := <-completedCalls:
+		case finalizedAssertion := <-val.CompletedCallChan:
 			tr.processFinalizedAssertion(finalizedAssertion)
 		case request := <-requests:
-			tr.processRequest(request)
-
+			tr.processRequest(request, val)
 		}
 	}
 }
