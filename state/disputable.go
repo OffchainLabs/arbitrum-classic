@@ -302,16 +302,16 @@ func (bot Waiting) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) 
 
 func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.FinalUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.sequenceNum != math.MaxUint64 {
 			return nil, nil, errors.New("waiting observer saw signed final unanimous proposal that it doesn't remember")
 		}
 		c := bot.GetCore()
 		c.DeliverMessagesToVM()
 		return NewWaiting(bot.Config, c), nil, nil
-	case ethbridge.ProposedUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
-			return nil, nil, errors.New("waiting observer saw signed unanimous proposal that it doesn't remember")
+			return nil, nil, errors.New("waiting observer saw pending unanimous assertion that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
 			newBot, err := bot.CloseUnanimous(bridge, nil)
 			return newBot, nil, err
@@ -324,7 +324,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 				nil,
 			}, nil, nil
 		}
-	case ethbridge.DisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		if bot.accepted != nil {
 			newBot, err := bot.CloseUnanimous(bridge, nil)
 			return newBot, nil, err
@@ -427,7 +427,7 @@ func (bot attemptingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (St
 
 func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.DisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
 			fmt.Println("attemptingAssertion: Other Assertion got in before ours")
 			return NewWaiting(bot.Config, bot.Core).UpdateState(ev, time, bridge)

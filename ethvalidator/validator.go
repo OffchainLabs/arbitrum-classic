@@ -242,9 +242,10 @@ func (val *EthValidator) FinalizedAssertion(
 	}
 }
 
+// TODO: FinalUnanimousAssert should be FinalizedUnanimousAssert
 func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
 	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.UnanimousAssert(
+		_, err := val.con.FinalizedUnanimousAssert(
 			val.auth,
 			val.VmId,
 			newInboxHash,
@@ -259,9 +260,10 @@ func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds 
 	}
 }
 
+// TODO: UnanimousAssert should be PendingUnanimousAssert
 func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
 	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.ProposeUnanimousAssert(
+		_, err := val.con.PendingUnanimousAssert(
 			val.auth,
 			val.VmId,
 			newInboxHash,
@@ -294,7 +296,7 @@ func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assert
 
 func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
 	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.DisputableAssert(
+		_, err := val.con.PendingDisputableAssert(
 			val.auth,
 			val.VmId,
 			precondition,
