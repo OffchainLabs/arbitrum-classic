@@ -29,7 +29,6 @@ import (
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
@@ -41,7 +40,7 @@ type assertionCountRequest struct {
 	resultChan chan<- int
 }
 
-type unanVMCreatedEventTxHashRequest struct {
+type vmCreatedTxHashRequest struct {
 	resultChan chan<- [32]byte
 }
 
@@ -122,20 +121,25 @@ func newAssertionInfo() *assertionInfo {
 }
 
 type txTracker struct {
-	txRequestIndex int
-	transactions   map[[32]byte]txInfo
-	assertionInfo  []*assertionInfo
-	accountNonces  map[common.Address]uint64
-	vmID           [32]byte
+	txRequestIndex  int
+	transactions    map[[32]byte]txInfo
+	assertionInfo   []*assertionInfo
+	accountNonces   map[common.Address]uint64
+	vmID            [32]byte
+	vmCreatedTxHash [32]byte
 }
 
-func newTxTracker(vmID [32]byte) *txTracker {
+func newTxTracker(
+	vmID [32]byte,
+	vmCreatedTxHash [32]byte,
+) *txTracker {
 	return &txTracker{
-		txRequestIndex: 0,
-		transactions:   make(map[[32]byte]txInfo),
-		assertionInfo:  make([]*assertionInfo, 0),
-		accountNonces:  make(map[common.Address]uint64),
-		vmID:           vmID,
+		txRequestIndex:  0,
+		transactions:    make(map[[32]byte]txInfo),
+		assertionInfo:   make([]*assertionInfo, 0),
+		accountNonces:   make(map[common.Address]uint64),
+		vmID:            vmID,
+		vmCreatedTxHash: vmCreatedTxHash,
 	}
 }
 
@@ -227,10 +231,10 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	tr.assertionInfo = append(tr.assertionInfo, info)
 }
 
-func (tr *txTracker) processRequest(request validatorRequest, val *ethvalidator.EthValidator) {
+func (tr *txTracker) processRequest(request validatorRequest) {
 	switch request := request.(type) {
-	case unanVMCreatedEventTxHashRequest:
-		request.resultChan <- <-val.VMCreatedEventTxHashChan
+	case vmCreatedTxHashRequest:
+		request.resultChan <- tr.vmCreatedTxHash
 	case assertionCountRequest:
 		request.resultChan <- len(tr.assertionInfo) - 1
 	case txRequest:
@@ -285,15 +289,15 @@ func (tr *txTracker) processRequest(request validatorRequest, val *ethvalidator.
 }
 
 func (tr *txTracker) handleTxResults(
-	val *ethvalidator.EthValidator,
+	completedCalls chan valmessage.FinalizedAssertion,
 	requests chan validatorRequest,
 ) {
 	for {
 		select {
-		case finalizedAssertion := <-val.CompletedCallChan:
+		case finalizedAssertion := <-completedCalls:
 			tr.processFinalizedAssertion(finalizedAssertion)
 		case request := <-requests:
-			tr.processRequest(request, val)
+			tr.processRequest(request)
 		}
 	}
 }

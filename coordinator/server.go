@@ -105,11 +105,8 @@ func NewServer(
 	requests := make(chan validatorRequest, 100)
 
 	go func() {
-		tracker := newTxTracker(man.Val.VmId)
-		tracker.handleTxResults(
-			man.Val,
-			requests,
-		)
+		tracker := newTxTracker(man.Val.VmId, <-man.Val.VMCreatedTxHashChan)
+		tracker.handleTxResults(man.Val.CompletedCallChan, requests)
 	}()
 
 	return &Server{man, requests}
@@ -121,9 +118,9 @@ func (m *Server) requestAssertionCount() <-chan int {
 	return req
 }
 
-func (m *Server) requestVMCreatedEventTxHashChan() <-chan [32]byte {
+func (m *Server) requestVMCreatedTxHashChan() <-chan [32]byte {
 	req := make(chan [32]byte, 1)
-	m.requests <- unanVMCreatedEventTxHashRequest{req}
+	m.requests <- vmCreatedTxHashRequest{req}
 	return req
 }
 
@@ -341,19 +338,19 @@ func (m *Server) GetAssertionCount(r *http.Request, _ *struct{}, reply *GetAsser
 	return nil
 }
 
-// GetVMCreatedEventTxHashReply contains output data for GetVMCreatedEventTxHash
-type GetVMCreatedEventTxHashReply struct {
-	VMCreatedEventTxHash string `json:"unanVMCreatedEventTxHash"`
+// GetVMCreatedTxHashReply contains output data for GetVMCreatedTxHash
+type GetVMCreatedTxHashReply struct {
+	VMCreatedTxHash string `json:"vmCreatedTxHash"`
 }
 
-// GetVMCreatedEventTxHash returns the txHash containing the CreateVM Event
-func (m *Server) GetVMCreatedEventTxHash(
+// GetVMCreatedTxHash returns the txHash containing the CreateVM Event
+func (m *Server) GetVMCreatedTxHash(
 	r *http.Request,
 	_ *struct{},
-	reply *GetVMCreatedEventTxHashReply,
+	reply *GetVMCreatedTxHashReply,
 ) error {
-	res := <-m.requestVMCreatedEventTxHashChan()
-	reply.VMCreatedEventTxHash = hexutil.Encode(res[:])
+	res := <-m.requestVMCreatedTxHashChan()
+	reply.VMCreatedTxHash = hexutil.Encode(res[:])
 	return nil
 }
 

@@ -46,12 +46,12 @@ type EthValidator struct {
 	key *ecdsa.PrivateKey
 
 	// Safe public interface
-	VmId                     [32]byte
-	Validators               map[common.Address]validatorInfo
-	Bot                      *validator.Validator
-	actionChan               chan func(*EthValidator) error
-	CompletedCallChan        chan valmessage.FinalizedAssertion
-	VMCreatedEventTxHashChan chan [32]byte
+	VmId                [32]byte
+	Validators          map[common.Address]validatorInfo
+	Bot                 *validator.Validator
+	actionChan          chan func(*EthValidator) error
+	CompletedCallChan   chan valmessage.FinalizedAssertion
+	VMCreatedTxHashChan chan [32]byte
 
 	// Not in thread, but internal only
 	serverAddress string
@@ -166,7 +166,7 @@ func (val *EthValidator) StartListening() error {
 			case parse := <-outChan:
 				switch parse.Event.(type) {
 				case ethbridge.VMCreatedEvent:
-					val.VMCreatedEventTxHashChan <- parse.TxHash
+					val.VMCreatedTxHashChan <- parse.TxHash
 				default:
 					parsedChan <- parse
 				}
