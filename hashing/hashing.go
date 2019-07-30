@@ -108,7 +108,6 @@ func UnanimousAssertPartialPartialHash(
 }
 
 func UnanimousAssertPartialHash(
-	vmId [32]byte,
 	sequenceNum uint64,
 	beforeHash [32]byte,
 	timeBounds protocol.TimeBounds,
@@ -133,7 +132,6 @@ func UnanimousAssertPartialHash(
 	var ret [32]byte
 	if sequenceNum == math.MaxUint64 {
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(vmId),
 			UnanimousAssertPartialPartialHash(
 				newInboxHash,
 				assertion,
@@ -149,7 +147,6 @@ func UnanimousAssertPartialHash(
 		))
 	} else {
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(vmId),
 			UnanimousAssertPartialPartialHash(
 				newInboxHash,
 				assertion,
@@ -178,7 +175,6 @@ func UnanimousAssertHash(
 	assertion *protocol.Assertion,
 ) ([32]byte, error) {
 	partialHash, err := UnanimousAssertPartialHash(
-		vmId,
 		sequenceNum,
 		beforeHash,
 		timeBounds,
@@ -192,6 +188,7 @@ func UnanimousAssertHash(
 
 	var hash [32]byte
 	copy(hash[:], solsha3.SoliditySHA3(
+		solsha3.Bytes32(vmId),
 		solsha3.Bytes32(partialHash),
 		solsha3.Bytes32(assertion.LogsHash()),
 	))

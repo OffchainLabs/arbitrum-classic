@@ -151,7 +151,6 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		panic("assertion should be the same assertion in ProposalResults")
 	}
 	partialHashBytes, err := hashing.UnanimousAssertPartialHash(
-		tr.vmID,
 		assertion.ProposalResults.SequenceNum,
 		assertion.ProposalResults.BeforeHash,
 		assertion.ProposalResults.TimeBounds,
