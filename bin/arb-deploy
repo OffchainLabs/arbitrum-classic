@@ -419,7 +419,7 @@ class GitStatusAction(argparse.Action):
                             path, check_output=True, quiet=True).strip(),
                         run('cd %s && git rev-parse --short HEAD' % path,
                             check_output=True, quiet=True).strip(),
-                        run('cd %s && git diff --stat'
+                        run('cd %s && git diff --stat && git diff --stat --cached'
                                  % path, exit_on_error=False, quiet=True, check_output=True) != '')
             def find(repo):
                 if os.path.isdir(deploy_dir + '/' + repo):
