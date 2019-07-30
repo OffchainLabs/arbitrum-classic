@@ -132,8 +132,8 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 		return nil, nil, err
 	}
 
-	confAssChan := make(chan *verifierRPC.VMTrackerConfirmedAssertion)
-	confAssSub, err := con.Tracker.WatchConfirmedAssertion(watch, confAssChan, [][32]byte{vmID})
+	confAssChan := make(chan *verifierRPC.VMTrackerConfirmedDisputableAssertion)
+	confAssSub, err := con.Tracker.WatchConfirmedDisputableAssertion(watch, confAssChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -320,7 +320,10 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  ConfirmedAssertEvent{val.Raw.TxHash, val.LogsAccHash},
+					Event: ConfirmedDisputableAssertEvent{
+						val.Raw.TxHash,
+						val.LogsAccHash,
+					},
 					TxHash: val.Raw.TxHash,
 				}
 			case val := <-challengeInitiatedChan:
@@ -720,7 +723,7 @@ func (con *Bridge) DisputableAssert(
 	)
 }
 
-func (con *Bridge) ConfirmAsserted(
+func (con *Bridge) ConfirmDisputableAsserted(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
 	precondition *protocol.Precondition,
@@ -739,7 +742,7 @@ func (con *Bridge) ConfirmAsserted(
 		}
 	}
 
-	tx, err := con.Tracker.ConfirmAsserted(
+	tx, err := con.Tracker.ConfirmDisputableAsserted(
 		auth,
 		vmID,
 		precondition.Hash(),
@@ -753,7 +756,7 @@ func (con *Bridge) ConfirmAsserted(
 		assertion.LogsHash(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't confirm assertion: %v", err)
+		return nil, fmt.Errorf("couldn't confirm disputable assertion: %v", err)
 	}
 	return tx, nil
 }

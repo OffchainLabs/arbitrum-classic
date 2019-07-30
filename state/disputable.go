@@ -509,7 +509,7 @@ func (bot finalizingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (St
 
 func (bot finalizingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ConfirmedAssertEvent:
+	case ethbridge.ConfirmedDisputableAssertEvent:
 		if bot.ResultChan != nil {
 			bot.ResultChan <- true
 		}

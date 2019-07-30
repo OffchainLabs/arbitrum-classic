@@ -81,12 +81,12 @@ func (DisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 
-type ConfirmedAssertEvent struct {
+type ConfirmedDisputableAssertEvent struct {
 	TxHash   [32]byte
 	LogsHash [32]byte
 }
 
-func (ConfirmedAssertEvent) GetIncomingMessageType() IncomingMessageType {
+func (ConfirmedDisputableAssertEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 

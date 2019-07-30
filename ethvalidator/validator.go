@@ -312,7 +312,7 @@ func (val *EthValidator) ConfirmDisputableAssertion(
 	assertion *protocol.Assertion,
 ) {
 	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.ConfirmAsserted(
+		_, err := val.con.ConfirmDisputableAsserted(
 			val.auth,
 			val.VmId,
 			precondition,
