@@ -178,9 +178,9 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 
 		if len(tr.assertionInfo) > 0 {
 			prev := tr.assertionInfo[len(tr.assertionInfo)-1]
-			if sequenceNum == prev.SequenceNum &&
-				beforeHash == prev.BeforeHash &&
-				originalInboxHash == prev.OriginalInboxHash {
+			if prop.SequenceNum == prev.SequenceNum &&
+				prop.BeforeHash == prev.BeforeHash &&
+				prop.OriginalInboxHash == prev.OriginalInboxHash {
 				logsPreHash = prev.LogsAccHashes[len(prev.LogsAccHashes)-1]
 			}
 		}
