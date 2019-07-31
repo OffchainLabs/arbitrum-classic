@@ -150,18 +150,32 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	if assertion.Assertion != assertion.ProposalResults.Assertion {
 		panic("assertion should be the same assertion in ProposalResults")
 	}
-	partialHashBytes, err := hashing.UnanimousAssertPartialHash(
-		assertion.ProposalResults.SequenceNum,
-		assertion.ProposalResults.BeforeHash,
-		assertion.ProposalResults.TimeBounds,
-		assertion.ProposalResults.NewInboxHash,
-		assertion.ProposalResults.OriginalInboxHash,
-		assertion.ProposalResults.Assertion,
-	)
-	if err != nil {
-		panic("Could not create partial hash")
+
+	var partialHash string
+	var sigs []string
+	var disputableTxHash string
+	if assertion.ProposalResults != nil {
+		partialHashBytes, err := hashing.UnanimousAssertPartialHash(
+			assertion.ProposalResults.SequenceNum,
+			assertion.ProposalResults.BeforeHash,
+			assertion.ProposalResults.TimeBounds,
+			assertion.ProposalResults.NewInboxHash,
+			assertion.ProposalResults.OriginalInboxHash,
+			assertion.ProposalResults.Assertion,
+		)
+		if err != nil {
+			panic("Could not create partial hash")
+		}
+		partialHash = hexutil.Encode(partialHashBytes[:])
+
+		// Encode assertion.Signatures as []string
+		sigs = make([]string, 0, len(assertion.Signatures))
+		for _, sig := range assertion.Signatures {
+			sigs = append(sigs, hexutil.Encode(sig))
+		}
+	} else {
+		disputableTxHash = hexutil.Encode(assertion.OnChainTxHash)
 	}
-	partialHash := hexutil.Encode(partialHashBytes[:])
 
 	// TODO: cache calculations (only need to calculate for NewLogs()
 	info.LogsValHashes = make([]string, 0, len(assertion.Assertion.Logs))
@@ -182,42 +196,29 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	logsPostHash := info.LogsAccHashes[len(info.LogsAccHashes)-1]
 	logsPreHash := hexutil.Encode(solsha3.Bytes32(0))
 	for i, res := range assertion.NewLogs() {
-		evmVal, err := evm.ProcessLog(res)
-		if err != nil {
-			log.Printf("VM produced invalid evm result: %v\n", err)
-		}
-
-		msg := evmVal.GetEthMsg()
-		msgHash := msg.MsgHash(tr.vmID)
-
-		log.Println("Coordinator got response for", hexutil.Encode(msgHash[:]))
-
 		// pre hash index phi can only be < 0 on the first loop
 		phi := len(info.LogsAccHashes) - assertion.NewLogCount - (i + 1)
 		if phi >= 0 {
 			logsPreHash = info.LogsAccHashes[phi]
 		} // else logsPreHash is zero (32 bytes)
-		logsValHashes := info.LogsValHashes[len(info.LogsValHashes)-
-			assertion.NewLogCount-(i-1):]
-
-		// Encode assertion.Signatures as []string
-		sigs := make([]string, 0, len(assertion.Signatures))
-		for _, sig := range assertion.Signatures {
-			sigs = append(sigs, hexutil.Encode(sig))
-		}
+		logsValHashes := info.LogsValHashes[phi:]
 
 		txInfo := txInfo{
 			Found:          true,
-			assertionIndex: 0,
+			assertionIndex: len(tr.assertionInfo),
 			RawVal:         res,
 			LogsPreHash:    logsPreHash,
 			LogsPostHash:   logsPostHash,
 			LogsValHashes:  logsValHashes,
 			ValidatorSigs:  sigs,
 			PartialHash:    partialHash,
-			OnChainTxHash:  hexutil.Encode(assertion.OnChainTxHash),
+			OnChainTxHash:  disputableTxHash,
 		}
-		txInfo.assertionIndex = len(tr.assertionInfo)
+
+		evmVal, err := evm.ProcessLog(res)
+		if err != nil {
+			log.Printf("VM produced invalid evm result: %v\n", err)
+		}
 		switch evmVal := evmVal.(type) {
 		case evm.Stop:
 			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
@@ -225,7 +226,10 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
 		case evm.Revert:
 		}
-		tr.transactions[msgHash] = txInfo
+
+		msg := evmVal.GetEthMsg()
+		log.Println("Coordinator got response for", hexutil.Encode(msg.Data.TxHash[:]))
+		tr.transactions[msg.Data.TxHash] = txInfo
 	}
 	tr.assertionInfo = append(tr.assertionInfo, info)
 }
