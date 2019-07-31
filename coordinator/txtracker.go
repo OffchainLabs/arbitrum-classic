@@ -76,9 +76,12 @@ type txInfo struct {
 }
 
 type assertionInfo struct {
-	TxLogs        []logsInfo
-	LogsAccHashes []string
-	LogsValHashes []string
+	TxLogs            []logsInfo
+	LogsAccHashes     []string
+	LogsValHashes     []string
+	SequenceNum       uint64
+	BeforeHash        [32]byte
+	OriginalInboxHash [32]byte
 }
 
 type logResponse struct {
@@ -114,10 +117,7 @@ func (a *assertionInfo) FindLogs(address *big.Int, topics [][32]byte) []logRespo
 }
 
 func newAssertionInfo() *assertionInfo {
-	logs := make([]logsInfo, 0)
-	logsAccHashes := make([]string, 0)
-	logsValHashes := make([]string, 0)
-	return &assertionInfo{logs, logsAccHashes, logsValHashes}
+	return &assertionInfo{}
 }
 
 type txTracker struct {
@@ -154,13 +154,18 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	var partialHash string
 	var sigs []string
 	var disputableTxHash string
+	zero := [32]byte{}
+	logsPreHash := hexutil.Encode(zero[:])
 	if assertion.ProposalResults != nil {
+		sequenceNum := assertion.ProposalResults.SequenceNum
+		beforeHash := assertion.ProposalResults.BeforeHash
+		originalInboxHash := assertion.ProposalResults.OriginalInboxHash
 		partialHashBytes, err := hashing.UnanimousAssertPartialHash(
-			assertion.ProposalResults.SequenceNum,
-			assertion.ProposalResults.BeforeHash,
+			sequenceNum,
+			beforeHash,
 			assertion.ProposalResults.TimeBounds,
 			assertion.ProposalResults.NewInboxHash,
-			assertion.ProposalResults.OriginalInboxHash,
+			originalInboxHash,
 			assertion.ProposalResults.Assertion,
 		)
 		if err != nil {
@@ -173,42 +178,48 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		for _, sig := range assertion.Signatures {
 			sigs = append(sigs, hexutil.Encode(sig))
 		}
+
+		if len(tr.assertionInfo) > 0 {
+			prev := tr.assertionInfo[len(tr.assertionInfo)-1]
+			if sequenceNum == prev.SequenceNum &&
+				beforeHash == prev.BeforeHash &&
+				originalInboxHash == prev.OriginalInboxHash {
+				logsPreHash = prev.LogsAccHashes[len(prev.LogsAccHashes)-1]
+			}
+		}
+		info.SequenceNum = assertion.ProposalResults.SequenceNum
+		info.BeforeHash = assertion.ProposalResults.BeforeHash
+		info.OriginalInboxHash = assertion.ProposalResults.OriginalInboxHash
 	} else {
 		disputableTxHash = hexutil.Encode(assertion.OnChainTxHash)
 	}
 
-	// TODO: cache calculations (only need to calculate for NewLogs()
-	info.LogsValHashes = make([]string, 0, len(assertion.Assertion.Logs))
-	info.LogsAccHashes = make([]string, 0, len(assertion.Assertion.Logs))
-	var acc []byte
-	for _, logsVal := range assertion.Assertion.Logs {
+	info.LogsValHashes = make([]string, 0, assertion.NewLogCount)
+	info.LogsAccHashes = make([]string, 0, assertion.NewLogCount)
+	acc, _ := hexutil.Decode(logsPreHash)
+	for _, logsVal := range assertion.NewLogs() {
 		logsValHash := logsVal.Hash()
 		info.LogsValHashes = append(info.LogsValHashes,
 			hexutil.Encode(logsValHash[:]))
 		acc = solsha3.SoliditySHA3(
 			solsha3.Bytes32(acc),
-			solsha3.Bytes32(logsVal.Hash()),
+			solsha3.Bytes32(logsValHash),
 		)
 		info.LogsAccHashes = append(info.LogsAccHashes,
 			hexutil.Encode(acc))
 	}
 
 	logsPostHash := info.LogsAccHashes[len(info.LogsAccHashes)-1]
-	logsPreHash := hexutil.Encode(solsha3.Bytes32(0))
-	for i, res := range assertion.NewLogs() {
-		// logIndex can only be equal to 0 on the first loop
-		logIndex := len(info.LogsAccHashes) - assertion.NewLogCount - i
-		if logIndex > 0 {
-			logsPreHash = info.LogsAccHashes[logIndex-1]
-		} // else logsPreHash is zero (32 bytes)
-
-		// From logIndex+1 because logIndex is location of RawVal
-		logsValHashes := info.LogsValHashes[logIndex+1:]
+	for i, logVal := range assertion.NewLogs() {
+		if i > 0 {
+			logsPreHash = info.LogsAccHashes[i-1] // Previous acc hash
+		}
+		logsValHashes := info.LogsValHashes[i+1:] // log acc hashes after logVal
 
 		txInfo := txInfo{
 			Found:          true,
 			assertionIndex: len(tr.assertionInfo),
-			RawVal:         res,
+			RawVal:         logVal,
 			LogsPreHash:    logsPreHash,
 			LogsPostHash:   logsPostHash,
 			LogsValHashes:  logsValHashes,
@@ -217,7 +228,7 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 			OnChainTxHash:  disputableTxHash,
 		}
 
-		evmVal, err := evm.ProcessLog(res)
+		evmVal, err := evm.ProcessLog(logVal)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
 		}
