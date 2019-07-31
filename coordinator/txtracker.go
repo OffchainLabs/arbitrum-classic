@@ -147,26 +147,23 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	log.Println("Coordinator produced finalized assertion")
 	info := newAssertionInfo()
 
-	if assertion.Assertion != assertion.ProposalResults.Assertion {
-		panic("assertion should be the same assertion in ProposalResults")
-	}
-
 	var partialHash string
 	var sigs []string
 	var disputableTxHash string
 	zero := [32]byte{}
 	logsPreHash := hexutil.Encode(zero[:])
-	if assertion.ProposalResults != nil {
-		sequenceNum := assertion.ProposalResults.SequenceNum
-		beforeHash := assertion.ProposalResults.BeforeHash
-		originalInboxHash := assertion.ProposalResults.OriginalInboxHash
+	prop := assertion.ProposalResults
+	if prop != nil {
+		if assertion.Assertion != prop.Assertion {
+			panic("assertion should be the same assertion in ProposalResults")
+		}
 		partialHashBytes, err := hashing.UnanimousAssertPartialHash(
-			sequenceNum,
-			beforeHash,
-			assertion.ProposalResults.TimeBounds,
-			assertion.ProposalResults.NewInboxHash,
-			originalInboxHash,
-			assertion.ProposalResults.Assertion,
+			prop.SequenceNum,
+			prop.BeforeHash,
+			prop.TimeBounds,
+			prop.NewInboxHash,
+			prop.OriginalInboxHash,
+			prop.Assertion,
 		)
 		if err != nil {
 			panic("Could not create partial hash")
@@ -187,9 +184,9 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 				logsPreHash = prev.LogsAccHashes[len(prev.LogsAccHashes)-1]
 			}
 		}
-		info.SequenceNum = assertion.ProposalResults.SequenceNum
-		info.BeforeHash = assertion.ProposalResults.BeforeHash
-		info.OriginalInboxHash = assertion.ProposalResults.OriginalInboxHash
+		info.SequenceNum = prop.SequenceNum
+		info.BeforeHash = prop.BeforeHash
+		info.OriginalInboxHash = prop.OriginalInboxHash
 	} else {
 		disputableTxHash = hexutil.Encode(assertion.OnChainTxHash)
 	}
