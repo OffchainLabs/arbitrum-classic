@@ -510,9 +510,9 @@ def main():
         help='Run docker-compose with sudo. May be helpful for some platforms')
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-b', '--build-only', action='store_true', dest='build_only',
+    group.add_argument('--build', action='store_true', dest='build_only',
         help='Run docker-compose build only')
-    group.add_argument('-u', '--up-only', action='store_true', dest='up_only',
+    group.add_argument('--up', action='store_true', dest='up_only',
         help='Run docker-compose up only')
 
     parser.add_argument('-k', '--keep-alive', action='store_true', dest='keep_alive',
