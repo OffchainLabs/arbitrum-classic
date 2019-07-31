@@ -196,12 +196,14 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	logsPostHash := info.LogsAccHashes[len(info.LogsAccHashes)-1]
 	logsPreHash := hexutil.Encode(solsha3.Bytes32(0))
 	for i, res := range assertion.NewLogs() {
-		// pre hash index phi can only be < 0 on the first loop
-		phi := len(info.LogsAccHashes) - assertion.NewLogCount - (i + 1)
-		if phi >= 0 {
-			logsPreHash = info.LogsAccHashes[phi]
+		// logIndex can only be equal to 0 on the first loop
+		logIndex := len(info.LogsAccHashes) - assertion.NewLogCount - i
+		if logIndex > 0 {
+			logsPreHash = info.LogsAccHashes[logIndex-1]
 		} // else logsPreHash is zero (32 bytes)
-		logsValHashes := info.LogsValHashes[phi:]
+
+		// From logIndex+1 because logIndex is location of RawVal
+		logsValHashes := info.LogsValHashes[logIndex+1:]
 
 		txInfo := txInfo{
 			Found:          true,
