@@ -122,12 +122,13 @@ services:
                 MNEMONIC: '%s'
                 NUM_WALLETS: %d
                 NUM_VALIDATORS: %d
-                GAS_PER_WALLET: %d
-                GAS_LIMIT: %d
-                BLOCK_TIME: %d
-                VERBOSE: '%s'
-                PORT: 7545
-                CANARY_PORT: 17545
+        environment:
+            - GAS_PER_WALLET=%d
+            - GAS_LIMIT=%d
+            - BLOCK_TIME=%d
+            - VERBOSE='%s'
+            - PORT=7545
+            - CANARY_PORT=17545
         ports:
             - '7545:7545'
             - '17545:17545'
@@ -142,11 +143,11 @@ services:
         build:
             context: %s
             dockerfile: %s
-            args:
-                WAIT_FOR: 'arb-ethbridge:17545'
-                ETH_URL: 'ws://arb-ethbridge:7545'
-                ID: 0
-                AVM: %s
+        environment:
+            - ID=0
+            - WAIT_FOR=arb-ethbridge:17545
+            - ETH_URL=ws://arb-ethbridge:7545
+            - AVM=%s
         ports:
             - '1235:1235'
             - '1236:1236'
@@ -171,11 +172,11 @@ COMPOSE_VALIDATOR=(
             - %s:/home/user/contract.ao
         image: arb-validator
         environment:
-            WAIT_FOR: 'arb-validator-coordinator:1236'
-            ETH_URL: 'ws://arb-ethbridge:7545'
-            COORDINATOR_URL: 'wss://arb-validator-coordinator:1236/ws'
-            ID: %d
-            AVM: %s
+            - ID=%d
+            - WAIT_FOR=arb-validator-coordinator:1236
+            - ETH_URL=ws://arb-ethbridge:7545
+            - COORDINATOR_URL=wss://arb-validator-coordinator:1236/ws
+            - AVM=%s
 """)
 
 # Returns one arb-validator declaration for a docker compose file
@@ -280,7 +281,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
             exit_on_error=False, sudo=sudo_flag)
 
     # number of wallets
-    n_wallets = n_validators + 100
+    n_wallets = n_validators + 10
 
     # dockerfile_dev_mode
     if dev_mode:
