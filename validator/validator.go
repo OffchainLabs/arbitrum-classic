@@ -108,6 +108,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) <-chan boo
 func (validator *Validator) InitiateUnanimousRequest(
 	length uint64,
 	messages []protocol.Message,
+	messageHashes [][]byte,
 	final bool,
 	maxSteps int32,
 ) (
@@ -119,13 +120,14 @@ func (validator *Validator) InitiateUnanimousRequest(
 	updateResultChan := make(chan valmessage.UnanimousUpdateResults, 1)
 	errChan := make(chan error, 1)
 	validator.requests <- initiateUnanimousRequest{
-		TimeLength:  length,
-		NewMessages: messages,
-		Final:       final,
-		MaxSteps:    maxSteps,
-		RequestChan: unanRequestChan,
-		ResultChan:  updateResultChan,
-		ErrChan:     errChan,
+		TimeLength:    length,
+		NewMessages:   messages,
+		MessageHashes: messageHashes,
+		Final:         final,
+		MaxSteps:      maxSteps,
+		RequestChan:   unanRequestChan,
+		ResultChan:    updateResultChan,
+		ErrChan:       errChan,
 	}
 	return unanRequestChan, updateResultChan, errChan
 }
@@ -215,14 +217,8 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					if bot, ok := validator.bot.(state.Waiting); ok {
 						newMessages := make([]protocol.Message, 0, len(request.NewMessages))
 						messageRecords := make([]protocol.Message, 0, len(request.NewMessages))
-						for _, msg := range request.NewMessages {
-							messageHash := solsha3.SoliditySHA3(
-								solsha3.Bytes32(msg.Destination),
-								solsha3.Bytes32(msg.Data.Hash()),
-								solsha3.Uint256(msg.Currency),
-								msg.TokenType[:],
-							)
-							msgHashInt := new(big.Int).SetBytes(messageHash[:])
+						for i, msg := range request.NewMessages {
+							msgHashInt := new(big.Int).SetBytes(request.MessageHashes[i])
 							val, _ := value.NewTupleFromSlice([]value.Value{
 								msg.Data,
 								value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),

@@ -272,6 +272,7 @@ func (m *Server) SendMessage(r *http.Request, args *SendMessageArgs, reply *Send
 				Currency:    amount,
 				Destination: senderArr,
 			},
+			Hash:      messageHash,
 			Signature: sigBytes,
 		})
 	}()

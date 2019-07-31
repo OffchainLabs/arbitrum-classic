@@ -262,6 +262,7 @@ func (m *ClientManager) WaitForFollowers(timeout time.Duration) bool {
 
 type OffchainMessage struct {
 	Message   protocol.Message
+	Hash      []byte
 	Signature []byte
 }
 
@@ -566,11 +567,14 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, m
 func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool, maxSteps int32) (bool, error) {
 	log.Println("Coordinator making unanimous assertion with", len(queuedMessages), "messages")
 	newMessages := make([]protocol.Message, 0, len(queuedMessages))
+	messageHashes := make([][]byte, 0, len(newMessages))
 	for _, msg := range queuedMessages {
 		newMessages = append(newMessages, msg.Message)
+		messageHashes = append(messageHashes, msg.Hash)
 	}
+
 	start := time.Now()
-	requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, forceFinal, maxSteps)
+	requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, messageHashes, forceFinal, maxSteps)
 	responsesChan := make(chan []LabeledFollowerResponse, 1)
 
 	var unanRequest valmessage.UnanimousRequest
