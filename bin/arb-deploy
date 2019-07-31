@@ -231,7 +231,7 @@ COPY --from=0 /build /build
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
-           gas_limit, dev_flag, sudo_flag, build_flag, up_flag, avm):
+           gas_limit, dev_flag, sudo_flag, build_flag, up_flag, avm, keep_alive):
 
     # Install dev_mode if flag set and doesn't exist already
     if dev_flag and not os.path.isdir(DEPLOY_DIR):
@@ -321,14 +321,19 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
             use_build_cache = '-f %s/arb-avm-cpp/%s ' % (DEPLOY_DIR, 'dev-mode.Dockerfile')
         run('docker build -t arb-avm-cpp %s%s' % (use_build_cache, get_context('arb-avm-cpp')))
 
+    # Set keep_alive from True/False flag to command line flag
+    if keep_alive:
+        keep_alive = ''
+    else:
+        keep_alive = ' --abort-on-container-exit'
+
     # Build
     if not up_flag or build_flag:
         run('docker-compose -f %s build' % compose, sudo=sudo_flag)
 
     # Run
     if not build_flag or up_flag:
-        run('docker-compose -f %s up --abort-on-container-exit' % compose,
-            sudo=sudo_flag)
+        run('docker-compose -f %s up%s' % (compose, keep_alive), sudo=sudo_flag)
 
 # Installs DEPS and links them correctly
 def install_dev_mode(sudo_flag):
@@ -498,36 +503,47 @@ def main():
     parser.add_argument('n_validators', type=int,
         help='The number of validators to deploy.')
     # Optional
-    parser.add_argument('-d', '--dev-mode', action='store_true', dest='dev',
-        help=(('Downloads dependencies into `%s` and links them if `%s` does ' +
-        'not already exist. Note: if `%s` does exist in the current working ' +
-        'directory then dev-mode will always be used, even without this flag')
-        % (DEPLOY_DIR, DEPLOY_DIR, DEPLOY_DIR)))
-    parser.add_argument('-a', '--avm', default='cpp', dest='avm',
-                        choices=['cpp', 'go', 'test'],
-                        help='Specify the avm backend')
+    parser.add_argument('-s', '--sudo', action='store_true', dest='sudo',
+        help='Run docker-compose with sudo. May be helpful for some platforms')
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-b', '--build-only', action='store_true', dest='build_only',
         help='Run docker-compose build only')
     group.add_argument('-u', '--up-only', action='store_true', dest='up_only',
         help='Run docker-compose up only')
-    parser.add_argument('-s', '--sudo', action='store_true', dest='sudo',
-        help='Run docker-compose with sudo. May be helpful for some platforms')
-    # Ganache Options
-    parser.add_argument('-l', '--gasLimit', type=int,
-        dest='gas_limit', default=6721975,
-        help='The block gas limit in wei [ganache-cli parameter]')
-    parser.add_argument('-e', '--defaultBalanceEther', type=int,
-        dest='gas_per_wallet', default=100,
-        help='Amount of ether to assign each test account [ganache-cli parameter]')
+
+    parser.add_argument('-k', '--keep-alive', action='store_true', dest='keep_alive',
+        help='Keep docker-compose running even if containers exit')
+
+    parser.add_argument('-a', '--avm', default='cpp', dest='avm',
+                        choices=['cpp', 'go', 'test'],
+                        help='Control the avm backend (default cpp)')
+
     parser.add_argument('-m', '--mnemonic', type=str, dest='mnemonic',
         default='jar deny prosper gasp flush glass core corn alarm treat leg smart',
-        help='Specify the Mnemonic to use (make sure to use "quotes")')
-    parser.add_argument('-v', '--verbose', dest='verbose', action='count')
-    parser.add_argument('--status', action=GitStatusAction)
+        help='Specify the test Mnemonic for key generation')
+    parser.add_argument('-l', '--gasLimit', type=int,
+        dest='gas_limit', default=6721975,
+        help='The block gas limit in wei on ganache')
+    parser.add_argument('-e', '--defaultBalanceEther', type=int,
+        dest='gas_per_wallet', default=100,
+        help='Amount of ether to assign each test account on ganache')
+
+    parser.add_argument('-v', '--verbose', dest='verbose', action='count',
+        help='Increase verbosity on ganache')
+
+    parser.add_argument('--status', action=GitStatusAction,
+        help='show tooling versions for diagnostics and exit')
+    parser.add_argument('-d', '--dev-mode', action='store_true', dest='dev',
+        help=(('Downloads dependencies into `%s` and links them if `%s` does ' +
+        'not already exist. Note: if `%s` exists in the current working ' +
+        'directory then dev-mode will be used automatically')
+        % (DEPLOY_DIR, DEPLOY_DIR, DEPLOY_DIR)))
+
     # Version
     parser.add_argument('--version', action='version',
         version='%(prog)s ' + __version__)
+
     args = parser.parse_args()
 
     # Set verbose to Ganache parameter
@@ -543,7 +559,7 @@ def main():
     # Deploy
     deploy(args.contract, args.n_validators, args.mnemonic, verboseFlag,
            args.gas_per_wallet, args.gas_limit, args.dev, args.sudo,
-           args.build_only, args.up_only, args.avm)
+           args.build_only, args.up_only, args.avm, args.keep_alive)
 
 if __name__ == '__main__':
     try:
