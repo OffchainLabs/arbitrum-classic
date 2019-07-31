@@ -34,6 +34,7 @@ import (
 	"github.com/offchainlabs/arb-util/value"
 
 	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -237,7 +238,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 }
 
 func (m *ValidatorFollower) HandleCreateVM(request *valmessage.CreateVMValidatorRequest) {
-	createHash := CreateVMHash(request)
+	createHash := hashing.CreateVMHash(request)
 	sig, err := m.Sign(createHash)
 	var response *valmessage.FollowerResponse
 	if err != nil {

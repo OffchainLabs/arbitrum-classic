@@ -21,10 +21,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
-
 	"github.com/offchainlabs/arb-validator/bridge"
 	"github.com/offchainlabs/arb-validator/challenge"
 	"github.com/offchainlabs/arb-validator/challenge/challenger"
@@ -33,6 +29,10 @@ import (
 	"github.com/offchainlabs/arb-validator/core"
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/valmessage"
+
+	"github.com/offchainlabs/arb-util/machine"
+	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arb-util/value"
 )
 
 type Error struct {
@@ -91,7 +91,7 @@ func NewWaiting(config *core.Config, c *core.Core) Waiting {
 }
 
 func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
-	bridge.UnanimousAssert(
+	bridge.PendingUnanimousAssert(
 		bot.GetCore().GetMachine().InboxHash().Hash(),
 		bot.timeBounds,
 		bot.assertion,
@@ -102,7 +102,7 @@ func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
 
 func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) {
 	inboxHash := bot.GetCore().GetMachine().InboxHash()
-	bridge.FinalUnanimousAssert(
+	bridge.FinalizedUnanimousAssert(
 		inboxHash.Hash(),
 		bot.timeBounds,
 		bot.assertion,
@@ -137,7 +137,7 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (St
 }
 
 func (bot Waiting) AttemptAssertion(request DisputableAssertionRequest, bridge bridge.Bridge) State {
-	bridge.DisputableAssert(
+	bridge.PendingDisputableAssert(
 		request.Precondition,
 		request.Assertion,
 	)
@@ -302,16 +302,16 @@ func (bot Waiting) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) 
 
 func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.FinalUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.sequenceNum != math.MaxUint64 {
 			return nil, nil, errors.New("waiting observer saw signed final unanimous proposal that it doesn't remember")
 		}
 		c := bot.GetCore()
 		c.DeliverMessagesToVM()
 		return NewWaiting(bot.Config, c), nil, nil
-	case ethbridge.ProposedUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
-			return nil, nil, errors.New("waiting observer saw signed unanimous proposal that it doesn't remember")
+			return nil, nil, errors.New("waiting observer saw pending unanimous assertion that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
 			newBot, err := bot.CloseUnanimous(bridge, nil)
 			return newBot, nil, err
@@ -324,7 +324,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 				nil,
 			}, nil, nil
 		}
-	case ethbridge.DisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		if bot.accepted != nil {
 			newBot, err := bot.CloseUnanimous(bridge, nil)
 			return newBot, nil, err
@@ -376,14 +376,14 @@ func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (Stat
 		return bot, nil
 	}
 
-	bridge.FinalizedAssertion(bot.assertion, len(bot.assertion.Logs))
-
 	balance := bot.GetBalance()
 	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.assertion.OutMsgs))
+
 	return finalizingAssertion{
 		Core:       core.NewCore(bot.pendingState, balance),
 		Config:     bot.Config,
 		ResultChan: nil,
+		assertion:  bot.assertion,
 	}, nil
 }
 
@@ -427,7 +427,7 @@ func (bot attemptingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (St
 
 func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.DisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
 			fmt.Println("attemptingAssertion: Other Assertion got in before ours")
 			return NewWaiting(bot.Config, bot.Core).UpdateState(ev, time, bridge)
@@ -457,21 +457,21 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 		return bot, nil
 	}
 
-	bridge.ConfirmDisputableAssertion(
+	bridge.ConfirmDisputableAsserted(
 		bot.request.Precondition,
 		bot.request.Assertion,
 	)
 	assertion := bot.request.Assertion
 	balance := bot.GetBalance()
 	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
-	bridge.FinalizedAssertion(assertion, len(assertion.Logs))
 	return finalizingAssertion{
-		core.NewCore(
+		Core: core.NewCore(
 			bot.request.AfterState,
 			balance,
 		),
-		bot.Config,
-		bot.request.ResultChan,
+		Config:     bot.Config,
+		ResultChan: bot.request.ResultChan,
+		assertion:  assertion,
 	}, nil
 }
 
@@ -500,6 +500,7 @@ type finalizingAssertion struct {
 	*core.Core
 	*core.Config
 	ResultChan chan<- bool
+	assertion  *protocol.Assertion
 }
 
 func (bot finalizingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
@@ -507,11 +508,18 @@ func (bot finalizingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (St
 }
 
 func (bot finalizingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
-	switch ev.(type) {
-	case ethbridge.ConfirmedAssertEvent:
+	switch ev := ev.(type) {
+	case ethbridge.ConfirmedDisputableAssertEvent:
 		if bot.ResultChan != nil {
 			bot.ResultChan <- true
 		}
+		bridge.FinalizedAssertion(
+			bot.assertion,
+			len(bot.assertion.Logs),
+			[][]byte{},
+			nil,
+			ev.TxHash[:],
+		)
 		bot.GetCore().DeliverMessagesToVM()
 		return NewWaiting(bot.Config, bot.Core), nil, nil
 	default:

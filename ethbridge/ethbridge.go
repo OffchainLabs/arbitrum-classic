@@ -34,6 +34,7 @@ import (
 
 	"github.com/offchainlabs/arb-validator/ethbridge/challengeRPC"
 	"github.com/offchainlabs/arb-validator/ethbridge/verifierRPC"
+	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -96,7 +97,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 	}
 
 	vmCreatedChan := make(chan *verifierRPC.VMTrackerVMCreated)
-	vmCreatedSub, err := con.Tracker.WatchVMCreated(watch, vmCreatedChan)
+	vmCreatedSub, err := con.Tracker.WatchVMCreated(watch, vmCreatedChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -107,14 +108,14 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 		return nil, nil, err
 	}
 
-	unanAssChan := make(chan *verifierRPC.VMTrackerFinalUnanimousAssertion)
-	unanAssSub, err := con.Tracker.WatchFinalUnanimousAssertion(watch, unanAssChan, [][32]byte{vmID})
+	unanAssChan := make(chan *verifierRPC.VMTrackerFinalizedUnanimousAssertion)
+	unanAssSub, err := con.Tracker.WatchFinalizedUnanimousAssertion(watch, unanAssChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	unanPropChan := make(chan *verifierRPC.VMTrackerProposedUnanimousAssertion)
-	unanPropSub, err := con.Tracker.WatchProposedUnanimousAssertion(watch, unanPropChan, [][32]byte{vmID})
+	unanPropChan := make(chan *verifierRPC.VMTrackerPendingUnanimousAssertion)
+	unanPropSub, err := con.Tracker.WatchPendingUnanimousAssertion(watch, unanPropChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -125,14 +126,14 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 		return nil, nil, err
 	}
 
-	dispAssChan := make(chan *verifierRPC.VMTrackerDisputableAssertion)
-	dispAssSub, err := con.Tracker.WatchDisputableAssertion(watch, dispAssChan, [][32]byte{vmID})
+	dispAssChan := make(chan *verifierRPC.VMTrackerPendingDisputableAssertion)
+	dispAssSub, err := con.Tracker.WatchPendingDisputableAssertion(watch, dispAssChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	confAssChan := make(chan *verifierRPC.VMTrackerConfirmedAssertion)
-	confAssSub, err := con.Tracker.WatchConfirmedAssertion(watch, confAssChan, [][32]byte{vmID})
+	confAssChan := make(chan *verifierRPC.VMTrackerConfirmedDisputableAssertion)
+	confAssSub, err := con.Tracker.WatchConfirmedDisputableAssertion(watch, confAssChan, [][32]byte{vmID})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -225,6 +226,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Event: MessageDeliveredEvent{
 						Msg: msg,
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-vmCreatedChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -236,16 +238,17 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Header: header,
 					VmID:   val.VmId,
 					Event: VMCreatedEvent{
+						VmId:                val.VmId,
 						GracePeriod:         val.GracePeriod,
 						EscrowRequired:      val.EscrowRequired,
 						EscrowCurrency:      val.EscrowCurrency,
 						MaxExecutionSteps:   val.MaxExecutionSteps,
-						VmId:                val.VmId,
 						VmState:             val.VmState,
 						ChallengeManagerNum: val.ChallengeManagerNum,
 						Owner:               val.Owner,
 						Validators:          val.Validators,
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-unanAssChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -256,9 +259,10 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event: FinalUnanimousAssertEvent{
+					Event: FinalizedUnanimousAssertEvent{
 						UnanHash: val.UnanHash,
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-unanPropChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -269,10 +273,11 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event: ProposedUnanimousAssertEvent{
+					Event: PendingUnanimousAssertEvent{
 						UnanHash:    val.UnanHash,
 						SequenceNum: val.SequenceNum,
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-unanConfChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -286,6 +291,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Event: ConfirmedUnanimousAssertEvent{
 						SequenceNum: val.SequenceNum,
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-dispAssChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -298,11 +304,12 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event: DisputableAssertionEvent{
+					Event: PendingDisputableAssertionEvent{
 						Precondition: precondition,
 						Assertion:    assertion,
 						Asserter:     val.Asserter,
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-confAssChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -313,7 +320,11 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				outChan <- Notification{
 					Header: header,
 					VmID:   val.VmId,
-					Event:  ConfirmedAssertEvent{},
+					Event: ConfirmedDisputableAssertEvent{
+						val.Raw.TxHash,
+						val.LogsAccHash,
+					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-challengeInitiatedChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -327,6 +338,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Event: InitiateChallengeEvent{
 						Challenger: val.Challenger,
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-challengeBisectedChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -340,6 +352,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Event: BisectionEvent{
 						Assertions: translateBisectionEvent(val),
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-challengeTimedOutChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -352,12 +365,14 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 						Header: header,
 						VmID:   val.VmId,
 						Event:  AsserterTimeoutEvent{},
+						TxHash: val.Raw.TxHash,
 					}
 				} else {
 					outChan <- Notification{
 						Header: header,
 						VmID:   val.VmId,
 						Event:  ChallengerTimeoutEvent{},
+						TxHash: val.Raw.TxHash,
 					}
 				}
 			case val := <-challengeContinuedChan:
@@ -372,6 +387,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Event: ContinueChallengeEvent{
 						ChallengedAssertion: uint16(val.AssertionIndex.Uint64()),
 					},
+					TxHash: val.Raw.TxHash,
 				}
 			case val := <-oneStepProofChan:
 				header, err := con.client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -383,6 +399,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 					Header: header,
 					VmID:   val.VmId,
 					Event:  OneStepProofEvent{},
+					TxHash: val.Raw.TxHash,
 				}
 			case err := <-headersSub.Err():
 				errChan <- err
@@ -551,7 +568,7 @@ func (con *Bridge) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest [
 	)
 }
 
-func (con *Bridge) UnanimousAssert(
+func (con *Bridge) FinalizedUnanimousAssert(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
 	newInboxHash [32]byte,
@@ -559,26 +576,24 @@ func (con *Bridge) UnanimousAssert(
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (*types.Transaction, error) {
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
-	var messageData bytes.Buffer
 	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		balance,
+	)
+
+	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return con.Tracker.UnanimousAssert(
+	return con.Tracker.FinalizedUnanimousAssert(
 		auth,
 		vmID,
 		assertion.AfterHash,
-		assertion.LogsHash(),
 		newInboxHash,
 		timeBounds,
 		balance.TokenTypes,
@@ -586,11 +601,12 @@ func (con *Bridge) UnanimousAssert(
 		tokenNums,
 		amounts,
 		destinations,
+		assertion.LogsHash(),
 		sigsToBlock(signatures),
 	)
 }
 
-func (con *Bridge) ProposeUnanimousAssert(
+func (con *Bridge) PendingUnanimousAssert(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
 	newInboxHash [32]byte,
@@ -600,14 +616,13 @@ func (con *Bridge) ProposeUnanimousAssert(
 	signatures [][]byte,
 ) (*types.Transaction, error) {
 	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		balance,
+	)
+
 	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
@@ -615,22 +630,23 @@ func (con *Bridge) ProposeUnanimousAssert(
 	}
 
 	var unanRest [32]byte
-	copy(unanRest[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(newInboxHash),
-		solsha3.Bytes32(assertion.AfterHash),
-		messageData.Bytes(),
-		value.Bytes32ArrayEncoded(destinations),
+	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
+		newInboxHash,
+		assertion,
+		messageData,
+		destinations,
 	))
 
-	return con.Tracker.ProposeUnanimousAssert(
+	return con.Tracker.PendingUnanimousAssert(
 		auth,
 		vmID,
 		unanRest,
-		sequenceNum,
 		timeBounds,
 		balance.TokenTypes,
 		tokenNums,
 		amounts,
+		sequenceNum,
+		assertion.LogsHash(),
 		sigsToBlock(signatures),
 	)
 }
@@ -641,15 +657,14 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
-	var messageData bytes.Buffer
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
 	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		balance,
+	)
+
+	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
@@ -660,7 +675,6 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 		auth,
 		vmID,
 		assertion.AfterHash,
-		assertion.LogsHash(),
 		newInboxHash,
 		balance.TokenTypes,
 		messageData.Bytes(),
@@ -674,23 +688,23 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 	return tx, nil
 }
 
-func (con *Bridge) DisputableAssert(
+func (con *Bridge) PendingDisputableAssert(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		precondition.BeforeBalance,
+	)
+
 	dataHashes := make([][32]byte, 0, len(assertion.OutMsgs))
 	for _, msg := range assertion.OutMsgs {
 		dataHashes = append(dataHashes, msg.Data.Hash())
-		tokenNums = append(tokenNums, uint16(precondition.BeforeBalance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 	}
-	return con.Tracker.DisputableAssert(
+
+	return con.Tracker.PendingDisputableAssert(
 		auth,
 		[5][32]byte{
 			vmID,
@@ -709,41 +723,40 @@ func (con *Bridge) DisputableAssert(
 	)
 }
 
-func (con *Bridge) ConfirmAsserted(
+func (con *Bridge) ConfirmDisputableAsserted(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
+	tokenNums, amounts, destinations := hashing.SplitMessages(
+		assertion.OutMsgs,
+		precondition.BeforeBalance,
+	)
+
 	var messageData bytes.Buffer
-	tokenNums := make([]uint16, 0, len(assertion.OutMsgs))
-	amounts := make([]*big.Int, 0, len(assertion.OutMsgs))
-	destinations := make([][32]byte, 0, len(assertion.OutMsgs))
 	for _, msg := range assertion.OutMsgs {
-		tokenNums = append(tokenNums, uint16(precondition.BeforeBalance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
 		err := value.MarshalValue(msg.Data, &messageData)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	tx, err := con.Tracker.ConfirmAsserted(
+	tx, err := con.Tracker.ConfirmDisputableAsserted(
 		auth,
 		vmID,
 		precondition.Hash(),
 		assertion.AfterHash,
-		assertion.LogsHash(),
 		assertion.NumSteps,
 		precondition.BeforeBalance.TokenTypes,
 		messageData.Bytes(),
 		tokenNums,
 		amounts,
 		destinations,
+		assertion.LogsHash(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't confirm assertion: %v", err)
+		return nil, fmt.Errorf("couldn't confirm disputable assertion: %v", err)
 	}
 	return tx, nil
 }
@@ -766,31 +779,27 @@ func (con *Bridge) InitiateChallenge(
 	)
 }
 
-func (con *Bridge) BisectChallenge(
+func (con *Bridge) BisectAssertion(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
 	deadline uint64,
 	precondition *protocol.Precondition,
-	assertions []*protocol.Assertion,
+	assertions []*protocol.AssertionStub,
 ) (*types.Transaction, error) {
 	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
 	totalMessageAmounts := make([]*big.Int, 0)
 	totalSteps := uint32(0)
-	stubs := make([]*protocol.AssertionStub, 0, len(assertions))
 	for _, assertion := range assertions {
-		stubs = append(stubs, assertion.Stub())
-	}
-	for _, assertion := range stubs {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHash)
 		totalMessageAmounts = append(totalMessageAmounts, assertion.TotalVals...)
 		totalSteps += assertion.NumSteps
 	}
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, stubs[0].FirstMessageHash)
-	for _, assertion := range stubs {
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHash)
+	for _, assertion := range assertions {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHash)
 	}
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, stubs[0].FirstLogHash)
-	for _, assertion := range stubs {
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHash)
+	for _, assertion := range assertions {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHash)
 	}
 	return con.Challenge.BisectAssertion(
@@ -896,7 +905,7 @@ func translateBisectionEvent(event *challengeRPC.ChallengeManagerBisectedAsserti
 	return assertions
 }
 
-func translateDisputableAssertionEvent(event *verifierRPC.VMTrackerDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
+func translateDisputableAssertionEvent(event *verifierRPC.VMTrackerPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	balanceTracker := protocol.NewBalanceTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],

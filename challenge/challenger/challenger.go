@@ -56,7 +56,7 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 	if time <= bot.deadline {
 		return bot, nil
 	}
-	bridge.TimeoutAsserter(
+	bridge.AsserterTimedOut(
 		bot.challengedPrecondition,
 		bot.challengedAssertion,
 		bot.deadline,

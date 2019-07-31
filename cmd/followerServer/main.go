@@ -82,7 +82,7 @@ func NewFollowerServer(
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
 
-	_, err = man.DepositEth(escrowRequired)
+	_, err = man.DepositFunds(escrowRequired)
 	if err != nil {
 		log.Fatal(err)
 	}

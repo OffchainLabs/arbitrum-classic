@@ -43,13 +43,14 @@ type disputableDefenderRequest struct {
 }
 
 type initiateUnanimousRequest struct {
-	TimeLength  uint64
-	NewMessages []protocol.Message
-	Final       bool
-	MaxSteps    int32
-	RequestChan chan<- valmessage.UnanimousRequest
-	ResultChan  chan<- valmessage.UnanimousUpdateResults
-	ErrChan     chan<- error
+	TimeLength    uint64
+	NewMessages   []protocol.Message
+	MessageHashes [][]byte
+	Final         bool
+	MaxSteps      int32
+	RequestChan   chan<- valmessage.UnanimousRequest
+	ResultChan    chan<- valmessage.UnanimousUpdateResults
+	ErrChan       chan<- error
 }
 
 type followUnanimousRequest struct {

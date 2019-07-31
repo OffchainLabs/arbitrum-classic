@@ -43,22 +43,23 @@ type Notification struct {
 	Header *types.Header
 	VmID   [32]byte
 	Event  Event
+	TxHash [32]byte
 }
 
-type FinalUnanimousAssertEvent struct {
+type FinalizedUnanimousAssertEvent struct {
 	UnanHash [32]byte
 }
 
-func (FinalUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
+func (FinalizedUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 
-type ProposedUnanimousAssertEvent struct {
+type PendingUnanimousAssertEvent struct {
 	UnanHash    [32]byte
 	SequenceNum uint64
 }
 
-func (ProposedUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
+func (PendingUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 
@@ -70,19 +71,22 @@ func (ConfirmedUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageTyp
 	return CommonMessage
 }
 
-type DisputableAssertionEvent struct {
+type PendingDisputableAssertionEvent struct {
 	Precondition *protocol.Precondition
 	Assertion    *protocol.AssertionStub
 	Asserter     common.Address
 }
 
-func (DisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {
+func (PendingDisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 
-type ConfirmedAssertEvent struct{}
+type ConfirmedDisputableAssertEvent struct {
+	TxHash   [32]byte
+	LogsHash [32]byte
+}
 
-func (ConfirmedAssertEvent) GetIncomingMessageType() IncomingMessageType {
+func (ConfirmedDisputableAssertEvent) GetIncomingMessageType() IncomingMessageType {
 	return CommonMessage
 }
 

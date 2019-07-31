@@ -27,6 +27,9 @@ import (
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/value"
 
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arb-validator/hashing"
 	"github.com/offchainlabs/arb-validator/valmessage"
 )
 
@@ -35,6 +38,10 @@ type validatorRequest interface {
 
 type assertionCountRequest struct {
 	resultChan chan<- int
+}
+
+type vmCreatedTxHashRequest struct {
+	resultChan chan<- [32]byte
 }
 
 type txRequest struct {
@@ -60,10 +67,21 @@ type txInfo struct {
 	Found          bool
 	assertionIndex int
 	RawVal         value.Value
+	LogsPreHash    string
+	LogsPostHash   string
+	LogsValHashes  []string
+	ValidatorSigs  []string
+	PartialHash    string
+	OnChainTxHash  string
 }
 
 type assertionInfo struct {
-	TxLogs []logsInfo
+	TxLogs            []logsInfo
+	LogsAccHashes     []string
+	LogsValHashes     []string
+	SequenceNum       uint64
+	BeforeHash        [32]byte
+	OriginalInboxHash [32]byte
 }
 
 type logResponse struct {
@@ -99,46 +117,118 @@ func (a *assertionInfo) FindLogs(address *big.Int, topics [][32]byte) []logRespo
 }
 
 func newAssertionInfo() *assertionInfo {
-	logs := make([]logsInfo, 0)
-	return &assertionInfo{logs}
+	return &assertionInfo{}
 }
 
 type txTracker struct {
-	txRequestIndex int
-	transactions   map[[32]byte]txInfo
-	assertionInfo  []*assertionInfo
-	accountNonces  map[common.Address]uint64
-	vmID           [32]byte
+	txRequestIndex  int
+	transactions    map[[32]byte]txInfo
+	assertionInfo   []*assertionInfo
+	accountNonces   map[common.Address]uint64
+	vmID            [32]byte
+	vmCreatedTxHash [32]byte
 }
 
-func newTxTracker(vmID [32]byte) *txTracker {
+func newTxTracker(
+	vmID [32]byte,
+	vmCreatedTxHash [32]byte,
+) *txTracker {
 	return &txTracker{
-		txRequestIndex: 0,
-		transactions:   make(map[[32]byte]txInfo),
-		assertionInfo:  make([]*assertionInfo, 0),
-		accountNonces:  make(map[common.Address]uint64),
-		vmID:           vmID,
+		txRequestIndex:  0,
+		transactions:    make(map[[32]byte]txInfo),
+		assertionInfo:   make([]*assertionInfo, 0),
+		accountNonces:   make(map[common.Address]uint64),
+		vmID:            vmID,
+		vmCreatedTxHash: vmCreatedTxHash,
 	}
 }
 
 func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAssertion) {
 	log.Println("Coordinator produced finalized assertion")
 	info := newAssertionInfo()
-	for _, res := range assertion.NewLogs() {
-		evmVal, err := evm.ProcessLog(res)
+
+	var partialHash string
+	var sigs []string
+	var disputableTxHash string
+	zero := [32]byte{}
+	logsPreHash := hexutil.Encode(zero[:])
+	prop := assertion.ProposalResults
+	if prop != nil {
+		if assertion.Assertion != prop.Assertion {
+			panic("assertion should be the same assertion in ProposalResults")
+		}
+		partialHashBytes, err := hashing.UnanimousAssertPartialHash(
+			prop.SequenceNum,
+			prop.BeforeHash,
+			prop.TimeBounds,
+			prop.NewInboxHash,
+			prop.OriginalInboxHash,
+			prop.Assertion,
+		)
 		if err != nil {
-			log.Printf("VM produced invalid evm result: %v\n", err)
+			panic("Could not create partial hash")
+		}
+		partialHash = hexutil.Encode(partialHashBytes[:])
+
+		// Encode assertion.Signatures as []string
+		sigs = make([]string, 0, len(assertion.Signatures))
+		for _, sig := range assertion.Signatures {
+			sigs = append(sigs, hexutil.Encode(sig))
 		}
 
-		msg := evmVal.GetEthMsg()
-		msgHash := msg.MsgHash(tr.vmID)
+		if len(tr.assertionInfo) > 0 {
+			prev := tr.assertionInfo[len(tr.assertionInfo)-1]
+			if sequenceNum == prev.SequenceNum &&
+				beforeHash == prev.BeforeHash &&
+				originalInboxHash == prev.OriginalInboxHash {
+				logsPreHash = prev.LogsAccHashes[len(prev.LogsAccHashes)-1]
+			}
+		}
+		info.SequenceNum = prop.SequenceNum
+		info.BeforeHash = prop.BeforeHash
+		info.OriginalInboxHash = prop.OriginalInboxHash
+	} else {
+		disputableTxHash = hexutil.Encode(assertion.OnChainTxHash)
+	}
+
+	info.LogsValHashes = make([]string, 0, assertion.NewLogCount)
+	info.LogsAccHashes = make([]string, 0, assertion.NewLogCount)
+	acc, _ := hexutil.Decode(logsPreHash)
+	for _, logsVal := range assertion.NewLogs() {
+		logsValHash := logsVal.Hash()
+		info.LogsValHashes = append(info.LogsValHashes,
+			hexutil.Encode(logsValHash[:]))
+		acc = solsha3.SoliditySHA3(
+			solsha3.Bytes32(acc),
+			solsha3.Bytes32(logsValHash),
+		)
+		info.LogsAccHashes = append(info.LogsAccHashes,
+			hexutil.Encode(acc))
+	}
+
+	logsPostHash := info.LogsAccHashes[len(info.LogsAccHashes)-1]
+	for i, logVal := range assertion.NewLogs() {
+		if i > 0 {
+			logsPreHash = info.LogsAccHashes[i-1] // Previous acc hash
+		}
+		logsValHashes := info.LogsValHashes[i+1:] // log acc hashes after logVal
 
 		txInfo := txInfo{
 			Found:          true,
-			assertionIndex: 0,
-			RawVal:         res,
+			assertionIndex: len(tr.assertionInfo),
+			RawVal:         logVal,
+			LogsPreHash:    logsPreHash,
+			LogsPostHash:   logsPostHash,
+			LogsValHashes:  logsValHashes,
+			ValidatorSigs:  sigs,
+			PartialHash:    partialHash,
+			OnChainTxHash:  disputableTxHash,
 		}
-		txInfo.assertionIndex = len(tr.assertionInfo)
+
+		evmVal, err := evm.ProcessLog(logVal)
+		if err != nil {
+			log.Printf("VM produced invalid evm result: %v\n", err)
+		}
 		switch evmVal := evmVal.(type) {
 		case evm.Stop:
 			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
@@ -146,13 +236,18 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
 		case evm.Revert:
 		}
-		tr.transactions[msgHash] = txInfo
+
+		msg := evmVal.GetEthMsg()
+		log.Println("Coordinator got response for", hexutil.Encode(msg.Data.TxHash[:]))
+		tr.transactions[msg.Data.TxHash] = txInfo
 	}
 	tr.assertionInfo = append(tr.assertionInfo, info)
 }
 
 func (tr *txTracker) processRequest(request validatorRequest) {
 	switch request := request.(type) {
+	case vmCreatedTxHashRequest:
+		request.resultChan <- tr.vmCreatedTxHash
 	case assertionCountRequest:
 		request.resultChan <- len(tr.assertionInfo) - 1
 	case txRequest:
@@ -206,14 +301,16 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 	}
 }
 
-func (tr *txTracker) handleTxResults(completedCalls chan valmessage.FinalizedAssertion, requests chan validatorRequest) {
+func (tr *txTracker) handleTxResults(
+	completedCalls chan valmessage.FinalizedAssertion,
+	requests chan validatorRequest,
+) {
 	for {
 		select {
 		case finalizedAssertion := <-completedCalls:
 			tr.processFinalizedAssertion(finalizedAssertion)
 		case request := <-requests:
 			tr.processRequest(request)
-
 		}
 	}
 }

@@ -40,15 +40,15 @@ func (bot attemptingUnanimousClosing) UpdateTime(time uint64, bridge bridge.Brid
 
 func (bot attemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev.(type) {
-	case ethbridge.ProposedUnanimousAssertEvent:
-		// Someone proposed an non-final update
+	case ethbridge.PendingUnanimousAssertEvent:
+		// Someone proposed a pending update
 		// Final update has already been sent
 		return bot, nil, nil
-	case ethbridge.DisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		// Someone proposed a disputable Assertion
 		// Final update has already been sent
 		return bot, nil, nil
-	case ethbridge.FinalUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- true
 		}
@@ -73,7 +73,7 @@ func (bot attemptingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridg
 
 func (bot attemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ProposedUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
 			// Someone proposed an old update
 			// Newer update has already been sent
@@ -92,11 +92,11 @@ func (bot attemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64
 				bot.retChan,
 			}, nil, nil
 		}
-	case ethbridge.DisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		// Someone proposed a disputable Assertion
 		// Unanimous proposal has already been sent
 		return bot, nil, nil
-	case ethbridge.FinalUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
@@ -121,7 +121,7 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 	if time <= bot.deadline {
 		return bot, nil
 	}
-	bridge.ConfirmUnanimousAssertion(
+	bridge.ConfirmUnanimousAsserted(
 		bot.Core.GetMachine().InboxHash().Hash(),
 		bot.assertion,
 	)
@@ -134,12 +134,12 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 
 func (bot waitingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev.(type) {
-	case ethbridge.ProposedUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
 		return nil, nil, errors.New("unanimous Assertion unexpectedly superseded by sequence number")
-	case ethbridge.FinalUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}

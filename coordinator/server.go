@@ -31,14 +31,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arb-util/evm"
 	"github.com/offchainlabs/arb-util/machine"
 	"github.com/offchainlabs/arb-util/protocol"
 	"github.com/offchainlabs/arb-util/value"
-
 	"github.com/offchainlabs/arb-validator/ethbridge"
 	"github.com/offchainlabs/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arb-validator/valmessage"
@@ -85,7 +82,7 @@ func NewServer(
 		log.Fatal(err)
 	}
 
-	tx, err := man.Val.DepositEth(escrowRequired)
+	tx, err := man.Val.DepositFunds(escrowRequired)
 	if err != nil {
 		log.Fatal(err, tx)
 	}
@@ -108,7 +105,7 @@ func NewServer(
 	requests := make(chan validatorRequest, 100)
 
 	go func() {
-		tracker := newTxTracker(man.Val.VmId)
+		tracker := newTxTracker(man.Val.VmId, <-man.Val.VMCreatedTxHashChan)
 		tracker.handleTxResults(man.Val.CompletedCallChan, requests)
 	}()
 
@@ -118,6 +115,12 @@ func NewServer(
 func (m *Server) requestAssertionCount() <-chan int {
 	req := make(chan int, 1)
 	m.requests <- assertionCountRequest{req}
+	return req
+}
+
+func (m *Server) requestVMCreatedTxHashChan() <-chan [32]byte {
+	req := make(chan [32]byte, 1)
+	m.requests <- vmCreatedTxHashRequest{req}
 	return req
 }
 
@@ -269,6 +272,7 @@ func (m *Server) SendMessage(r *http.Request, args *SendMessageArgs, reply *Send
 				Currency:    amount,
 				Destination: senderArr,
 			},
+			Hash:      messageHash,
 			Signature: sigBytes,
 		})
 	}()
@@ -283,8 +287,14 @@ type GetMessageResultArgs struct {
 
 // GetMessageResultReply contains output data for GetMessageResult
 type GetMessageResultReply struct {
-	Found  bool   `json:"found"`
-	RawVal string `json:"rawVal"`
+	Found         bool     `json:"found"`
+	RawVal        string   `json:"rawVal"`
+	LogPreHash    string   `json:"logPreHash"`    // Acc hash before RawVal
+	LogPostHash   string   `json:"logPostHash"`   // Acc hash to prove
+	LogValHashes  []string `json:"logValHashes"`  // Intermediate value hashes
+	ValidatorSigs []string `json:"validatorSigs"` // Unanimous signatures
+	PartialHash   string   `json:"partialHash"`   // Unanimous partial hash
+	OnChainTxHash string   `json:"onChainTxHash"` // Disputable Tx hash
 }
 
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
@@ -303,6 +313,16 @@ func (m *Server) GetMessageResult(r *http.Request, args *GetMessageResultArgs, r
 		var buf bytes.Buffer
 		_ = value.MarshalValue(txInfo.RawVal, &buf) // error can only occur from writes and bytes.Buffer is safe
 		reply.RawVal = hexutil.Encode(buf.Bytes())
+
+		// Log Proof pieces
+		reply.LogPreHash = txInfo.LogsPreHash
+		reply.LogPostHash = txInfo.LogsPostHash
+		reply.LogValHashes = txInfo.LogsValHashes
+
+		// Unanimous or Disputable assertion proof info
+		reply.ValidatorSigs = txInfo.ValidatorSigs
+		reply.PartialHash = txInfo.PartialHash
+		reply.OnChainTxHash = txInfo.OnChainTxHash
 	}
 	return nil
 }
@@ -316,6 +336,22 @@ type GetAssertionCountReply struct {
 func (m *Server) GetAssertionCount(r *http.Request, _ *struct{}, reply *GetAssertionCountReply) error {
 	req := m.requestAssertionCount()
 	reply.AssertionCount = <-req
+	return nil
+}
+
+// GetVMCreatedTxHashReply contains output data for GetVMCreatedTxHash
+type GetVMCreatedTxHashReply struct {
+	VMCreatedTxHash string `json:"vmCreatedTxHash"`
+}
+
+// GetVMCreatedTxHash returns the txHash containing the CreateVM Event
+func (m *Server) GetVMCreatedTxHash(
+	r *http.Request,
+	_ *struct{},
+	reply *GetVMCreatedTxHashReply,
+) error {
+	res := <-m.requestVMCreatedTxHashChan()
+	reply.VMCreatedTxHash = hexutil.Encode(res[:])
 	return nil
 }
 
