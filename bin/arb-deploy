@@ -124,6 +124,7 @@ services:
                 NUM_VALIDATORS: %d
                 GAS_PER_WALLET: %d
                 GAS_LIMIT: %d
+                BLOCK_TIME: %d
                 VERBOSE: '%s'
                 PORT: 7545
                 CANARY_PORT: 17545
@@ -152,10 +153,10 @@ services:
 """)
 
 def compose_header(cethbridge, mnemonic, num_wallets, num_validators,
-    gas_per_wallet, gas_limit, verbose, state_abspath, contract_abspath,
+    gas_per_wallet, gas_limit, block_time, verbose, state_abspath, contract_abspath,
     cvalidator, dockerfile, avm):
     return (COMPOSE_HEADER % (cethbridge, mnemonic, num_wallets, num_validators,
-                              gas_per_wallet, gas_limit, verbose, state_abspath,
+                              gas_per_wallet, gas_limit, block_time, verbose, state_abspath,
                               contract_abspath, cvalidator, dockerfile, avm))
 
 # Parameters: validator id, absolute path to state folder,
@@ -231,7 +232,8 @@ COPY --from=0 /build /build
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
-           gas_limit, dev_flag, sudo_flag, build_flag, up_flag, avm, keep_alive):
+           gas_limit, dev_flag, sudo_flag, build_flag, up_flag, avm, keep_alive,
+           block_time):
 
     # Install dev_mode if flag set and doesn't exist already
     if dev_flag and not os.path.isdir(DEPLOY_DIR):
@@ -303,6 +305,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
             n_validators,
             gas_per_wallet,
             gas_limit,
+            block_time,
             verbose,
             states_path + str(0),
             contract,
@@ -528,6 +531,9 @@ def main():
     parser.add_argument('-e', '--defaultBalanceEther', type=int,
         dest='gas_per_wallet', default=100,
         help='Amount of ether to assign each test account on ganache')
+    parser.add_argument('-b', '--blockTime', type=int,
+        dest='block_time', default=1,
+        help='Block time in seconds for automatic mining on ganache')
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='count',
         help='Increase verbosity on ganache')
@@ -559,7 +565,8 @@ def main():
     # Deploy
     deploy(args.contract, args.n_validators, args.mnemonic, verboseFlag,
            args.gas_per_wallet, args.gas_limit, args.dev, args.sudo,
-           args.build_only, args.up_only, args.avm, args.keep_alive)
+           args.build_only, args.up_only, args.avm, args.keep_alive,
+           args.block_time)
 
 if __name__ == '__main__':
     try:
