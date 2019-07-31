@@ -533,7 +533,7 @@ def main():
         dest='gas_per_wallet', default=100,
         help='Amount of ether to assign each test account on ganache')
     parser.add_argument('-b', '--blockTime', type=int,
-        dest='block_time', default=1,
+        dest='block_time', default=0,
         help='Block time in seconds for automatic mining on ganache')
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='count',
