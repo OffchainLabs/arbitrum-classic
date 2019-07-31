@@ -91,7 +91,7 @@ func NewWaiting(config *core.Config, c *core.Core) Waiting {
 }
 
 func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
-	bridge.UnanimousAssert(
+	bridge.PendingUnanimousAssert(
 		bot.GetCore().GetMachine().InboxHash().Hash(),
 		bot.timeBounds,
 		bot.assertion,
@@ -102,7 +102,7 @@ func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
 
 func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) {
 	inboxHash := bot.GetCore().GetMachine().InboxHash()
-	bridge.FinalUnanimousAssert(
+	bridge.FinalizedUnanimousAssert(
 		inboxHash.Hash(),
 		bot.timeBounds,
 		bot.assertion,
@@ -137,7 +137,7 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (St
 }
 
 func (bot Waiting) AttemptAssertion(request DisputableAssertionRequest, bridge bridge.Bridge) State {
-	bridge.DisputableAssert(
+	bridge.PendingDisputableAssert(
 		request.Precondition,
 		request.Assertion,
 	)
@@ -457,7 +457,7 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 		return bot, nil
 	}
 
-	bridge.ConfirmDisputableAssertion(
+	bridge.ConfirmDisputableAsserted(
 		bot.request.Precondition,
 		bot.request.Assertion,
 	)

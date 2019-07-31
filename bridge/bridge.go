@@ -29,28 +29,28 @@ type Bridge interface {
 		proposalResults *valmessage.UnanimousUpdateResults,
 		onChainTxHash []byte,
 	)
-	FinalUnanimousAssert(
+	FinalizedUnanimousAssert(
 		newInboxHash [32]byte,
 		timeBounds protocol.TimeBounds,
 		assertion *protocol.Assertion,
 		signatures [][]byte,
 	)
-	UnanimousAssert(
+	PendingUnanimousAssert(
 		newInboxHash [32]byte,
 		timeBounds protocol.TimeBounds,
 		assertion *protocol.Assertion,
 		sequenceNum uint64,
 		signatures [][]byte,
 	)
-	ConfirmUnanimousAssertion(
+	ConfirmUnanimousAsserted(
 		newInboxHash [32]byte,
 		assertion *protocol.Assertion,
 	)
-	DisputableAssert(
+	PendingDisputableAssert(
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
 	)
-	ConfirmDisputableAssertion(
+	ConfirmDisputableAsserted(
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
 	)
@@ -60,7 +60,7 @@ type Bridge interface {
 	)
 	BisectAssertion(
 		precondition *protocol.Precondition,
-		assertions []*protocol.Assertion,
+		assertions []*protocol.AssertionStub,
 		deadline uint64,
 	)
 	ContinueChallenge(
@@ -71,16 +71,16 @@ type Bridge interface {
 	)
 	OneStepProof(
 		precondition *protocol.Precondition,
-		assertion *protocol.Assertion,
+		assertion *protocol.AssertionStub,
 		proof []byte,
 		deadline uint64,
 	)
-	TimeoutAsserter(
+	AsserterTimedOut(
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
 		deadline uint64,
 	)
-	TimeoutChallenger(
+	ChallengerTimedOut(
 		preconditions []*protocol.Precondition,
 		assertions []*protocol.AssertionStub,
 		deadline uint64,

@@ -82,7 +82,7 @@ func NewServer(
 		log.Fatal(err)
 	}
 
-	tx, err := man.Val.DepositEth(escrowRequired)
+	tx, err := man.Val.DepositFunds(escrowRequired)
 	if err != nil {
 		log.Fatal(err, tx)
 	}

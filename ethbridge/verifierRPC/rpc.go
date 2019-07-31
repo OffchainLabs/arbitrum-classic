@@ -707,21 +707,21 @@ func (_ArbBalanceTracker *ArbBalanceTrackerTransactorSession) DepositERC721(_tok
 	return _ArbBalanceTracker.Contract.DepositERC721(&_ArbBalanceTracker.TransactOpts, _tokenContract, _tokenId)
 }
 
-// DepositEth is a paid mutator transaction binding the contract method 0xda63d7b6.
+// DepositFunds is a paid mutator transaction binding the contract method 0xda63d7b6.
 //
 // Solidity: function depositEth(bytes32 _destination) returns()
 func (_ArbBalanceTracker *ArbBalanceTrackerTransactor) DepositEth(opts *bind.TransactOpts, _destination [32]byte) (*types.Transaction, error) {
 	return _ArbBalanceTracker.contract.Transact(opts, "depositEth", _destination)
 }
 
-// DepositEth is a paid mutator transaction binding the contract method 0xda63d7b6.
+// DepositFunds is a paid mutator transaction binding the contract method 0xda63d7b6.
 //
 // Solidity: function depositEth(bytes32 _destination) returns()
 func (_ArbBalanceTracker *ArbBalanceTrackerSession) DepositEth(_destination [32]byte) (*types.Transaction, error) {
 	return _ArbBalanceTracker.Contract.DepositEth(&_ArbBalanceTracker.TransactOpts, _destination)
 }
 
-// DepositEth is a paid mutator transaction binding the contract method 0xda63d7b6.
+// DepositFunds is a paid mutator transaction binding the contract method 0xda63d7b6.
 //
 // Solidity: function depositEth(bytes32 _destination) returns()
 func (_ArbBalanceTracker *ArbBalanceTrackerTransactorSession) DepositEth(_destination [32]byte) (*types.Transaction, error) {

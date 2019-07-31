@@ -121,7 +121,7 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 	if time <= bot.deadline {
 		return bot, nil
 	}
-	bridge.ConfirmUnanimousAssertion(
+	bridge.ConfirmUnanimousAsserted(
 		bot.Core.GetMachine().InboxHash().Hash(),
 		bot.assertion,
 	)

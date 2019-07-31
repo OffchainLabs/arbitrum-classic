@@ -779,31 +779,27 @@ func (con *Bridge) InitiateChallenge(
 	)
 }
 
-func (con *Bridge) BisectChallenge(
+func (con *Bridge) BisectAssertion(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
 	deadline uint64,
 	precondition *protocol.Precondition,
-	assertions []*protocol.Assertion,
+	assertions []*protocol.AssertionStub,
 ) (*types.Transaction, error) {
 	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
 	totalMessageAmounts := make([]*big.Int, 0)
 	totalSteps := uint32(0)
-	stubs := make([]*protocol.AssertionStub, 0, len(assertions))
 	for _, assertion := range assertions {
-		stubs = append(stubs, assertion.Stub())
-	}
-	for _, assertion := range stubs {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHash)
 		totalMessageAmounts = append(totalMessageAmounts, assertion.TotalVals...)
 		totalSteps += assertion.NumSteps
 	}
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, stubs[0].FirstMessageHash)
-	for _, assertion := range stubs {
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHash)
+	for _, assertion := range assertions {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHash)
 	}
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, stubs[0].FirstLogHash)
-	for _, assertion := range stubs {
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHash)
+	for _, assertion := range assertions {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHash)
 	}
 	return con.Challenge.BisectAssertion(

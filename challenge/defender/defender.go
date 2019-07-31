@@ -39,7 +39,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		}
 		bridge.OneStepProof(
 			assDef.GetPrecondition(),
-			assDef.GetAssertion(),
+			assDef.GetAssertion().Stub(),
 			proofData,
 			deadline,
 		)
@@ -52,9 +52,9 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 	}
 
 	defenders := assDef.NBisect(6)
-	assertions := make([]*protocol.Assertion, 0, len(defenders))
+	assertions := make([]*protocol.AssertionStub, 0, len(defenders))
 	for _, defender := range defenders {
-		assertions = append(assertions, defender.GetAssertion())
+		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
 	bridge.BisectAssertion(
 		assDef.GetPrecondition(),
@@ -121,7 +121,7 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challe
 		preconditions = append(preconditions, defender.GetPrecondition())
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
-	bridge.TimeoutChallenger(
+	bridge.ChallengerTimedOut(
 		preconditions,
 		assertions,
 		bot.deadline,

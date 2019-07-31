@@ -215,17 +215,6 @@ func buildBisectionTree(preconditions []*protocol.Precondition, assertions []*pr
 	return NewMerkleTree(bisectionHashes)
 }
 
-func LogProof(a *protocol.Assertion, index int) ([][32]byte, error) {
-	if index < len(a.Logs) {
-		return nil, errors.New("log index out of range")
-	}
-	proof := make([][32]byte, 0, len(a.Logs)-1-index)
-	for i := len(a.Logs) - 1; i > index; i-- {
-		proof = append(proof, a.Logs[i].Hash())
-	}
-	return proof, nil
-}
-
 func (val *EthValidator) FinalizedAssertion(
 	assertion *protocol.Assertion,
 	newLogCount int,
@@ -242,8 +231,7 @@ func (val *EthValidator) FinalizedAssertion(
 	}
 }
 
-// TODO: FinalUnanimousAssert should be FinalizedUnanimousAssert
-func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
+func (val *EthValidator) FinalizedUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
 	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.FinalizedUnanimousAssert(
 			val.auth,
@@ -260,8 +248,7 @@ func (val *EthValidator) FinalUnanimousAssert(newInboxHash [32]byte, timeBounds 
 	}
 }
 
-// TODO: UnanimousAssert should be PendingUnanimousAssert
-func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
+func (val *EthValidator) PendingUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
 	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.PendingUnanimousAssert(
 			val.auth,
@@ -279,7 +266,7 @@ func (val *EthValidator) UnanimousAssert(newInboxHash [32]byte, timeBounds proto
 	}
 }
 
-func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assertion *protocol.Assertion) {
+func (val *EthValidator) ConfirmUnanimousAsserted(newInboxHash [32]byte, assertion *protocol.Assertion) {
 	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.ConfirmUnanimousAsserted(
 			val.auth,
@@ -294,7 +281,7 @@ func (val *EthValidator) ConfirmUnanimousAssertion(newInboxHash [32]byte, assert
 	}
 }
 
-func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
+func (val *EthValidator) PendingDisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
 	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.PendingDisputableAssert(
 			val.auth,
@@ -309,7 +296,7 @@ func (val *EthValidator) DisputableAssert(precondition *protocol.Precondition, a
 	}
 }
 
-func (val *EthValidator) ConfirmDisputableAssertion(
+func (val *EthValidator) ConfirmDisputableAsserted(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) {
@@ -342,9 +329,9 @@ func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, 
 	}
 }
 
-func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.Assertion, deadline uint64) {
+func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
 	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.BisectChallenge(
+		_, err := val.con.BisectAssertion(
 			val.auth,
 			val.VmId,
 			deadline,
@@ -378,13 +365,13 @@ func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, precondi
 	}
 }
 
-func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.Assertion, proof []byte, deadline uint64) {
+func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.AssertionStub, proof []byte, deadline uint64) {
 	val.actionChan <- func(val *EthValidator) error {
 		_, err := val.con.OneStepProof(
 			val.auth,
 			val.VmId,
 			precondition,
-			assertion.Stub(),
+			assertion,
 			proof,
 			deadline,
 		)
@@ -395,7 +382,7 @@ func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, asser
 	}
 }
 
-func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
+func (val *EthValidator) AsserterTimedOut(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
 	val.actionChan <- func(val *EthValidator) error {
 		preAssBytes := solsha3.SoliditySHA3(
 			solsha3.Bytes32(precondition.Hash()),
@@ -416,7 +403,7 @@ func (val *EthValidator) TimeoutAsserter(precondition *protocol.Precondition, as
 	}
 }
 
-func (val *EthValidator) TimeoutChallenger(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
+func (val *EthValidator) ChallengerTimedOut(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
 	val.actionChan <- func(val *EthValidator) error {
 		tree := buildBisectionTree(preconditions, assertions)
 		_, err := val.con.Challenge.ChallengerTimedOut(
@@ -436,7 +423,7 @@ func (val *EthValidator) AdvanceBlockchain(blockCount int) error {
 	return val.con.AdvanceBlockchain(val.auth, blockCount)
 }
 
-func (val *EthValidator) DepositEth(amount *big.Int) (*types.Transaction, error) {
+func (val *EthValidator) DepositFunds(amount *big.Int) (*types.Transaction, error) {
 	senderArr := [32]byte{}
 	copy(senderArr[:], val.Address().Bytes())
 	tx, err := val.con.DepositFunds(val.auth, amount, senderArr)

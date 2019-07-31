@@ -111,7 +111,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = coordinator.Val.DepositEth(escrowRequired)
+	_, err = coordinator.Val.DepositFunds(escrowRequired)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func main() {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
 
-	_, err = challenger.DepositEth(escrowRequired)
+	_, err = challenger.DepositFunds(escrowRequired)
 	if err != nil {
 		log.Fatal(err)
 	}
