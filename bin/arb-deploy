@@ -128,10 +128,8 @@ services:
             - BLOCK_TIME=%d
             - VERBOSE='%s'
             - PORT=7545
-            - CANARY_PORT=17545
         ports:
             - '7545:7545'
-            - '17545:17545'
 
     arb-validator-coordinator:
         depends_on:
@@ -145,7 +143,7 @@ services:
             dockerfile: %s
         environment:
             - ID=0
-            - WAIT_FOR=arb-ethbridge:17545
+            - WAIT_FOR=arb-ethbridge:7545
             - ETH_URL=ws://arb-ethbridge:7545
             - AVM=%s
         ports:
