@@ -126,7 +126,7 @@ services:
             - GAS_PER_WALLET=%d
             - GAS_LIMIT=%d
             - BLOCK_TIME=%d
-            - VERBOSE='%s'
+            - VERBOSE=%s
             - PORT=7545
         ports:
             - '7545:7545'
