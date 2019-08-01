@@ -93,7 +93,6 @@ ENV GAS_LIMIT=6721975 \
     GAS_PER_WALLET=100 \
     BLOCK_TIME=0 \
     PORT=7545 \
-    CANARY_PORT=17545 \
     MNEMONIC=$MNEMONIC \
     NUM_WALLETS=$NUM_WALLETS \
     NUM_VALIDATORS=$NUM_VALIDATORS \
@@ -102,9 +101,6 @@ ENV GAS_LIMIT=6721975 \
 
 # Wait for ganache-cli to launch and then deploy the EthBridge contract
 CMD sed -i "s/port: [0-9]*,/port: ${PORT},/p" truffle-config.js && \
-    (while ! nc -z localhost ${PORT}; do sleep 2; done &&          \
-    echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    nc -lvp ${CANARY_PORT} -w 362) & \
     ganache-cli --db db -p $PORT -l $GAS_LIMIT -e $GAS_PER_WALLET \
     -b $BLOCK_TIME -a $NUM_WALLETS -m "${MNEMONIC}" $VERBOSE
 EXPOSE ${PORT}
