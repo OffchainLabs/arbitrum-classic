@@ -42,7 +42,7 @@ RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
         -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset && [ -f ethbridge_addresses.json ] && \
+    truffle migrate --reset -q && [ -f ethbridge_addresses.json ] && \
     node -e "                                               \
     const data = require('./keys.json')['addresses'];       \
     const addresses = new Array(0);                         \
