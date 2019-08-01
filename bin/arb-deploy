@@ -122,14 +122,14 @@ services:
                 MNEMONIC: '%s'
                 NUM_WALLETS: %d
                 NUM_VALIDATORS: %d
-                GAS_PER_WALLET: %d
-                GAS_LIMIT: %d
-                VERBOSE: '%s'
-                PORT: 7545
-                CANARY_PORT: 17545
+        environment:
+            - GAS_PER_WALLET=%d
+            - GAS_LIMIT=%d
+            - BLOCK_TIME=%d
+            - VERBOSE=%s
+            - PORT=7545
         ports:
             - '7545:7545'
-            - '17545:17545'
 
     arb-validator-coordinator:
         depends_on:
@@ -141,21 +141,21 @@ services:
         build:
             context: %s
             dockerfile: %s
-            args:
-                WAIT_FOR: 'arb-ethbridge:17545'
-                ETH_URL: 'ws://arb-ethbridge:7545'
-                ID: 0
-                AVM: %s
+        environment:
+            - ID=0
+            - WAIT_FOR=arb-ethbridge:7545
+            - ETH_URL=ws://arb-ethbridge:7545
+            - AVM=%s
         ports:
             - '1235:1235'
             - '1236:1236'
 """)
 
 def compose_header(cethbridge, mnemonic, num_wallets, num_validators,
-    gas_per_wallet, gas_limit, verbose, state_abspath, contract_abspath,
+    gas_per_wallet, gas_limit, block_time, verbose, state_abspath, contract_abspath,
     cvalidator, dockerfile, avm):
     return (COMPOSE_HEADER % (cethbridge, mnemonic, num_wallets, num_validators,
-                              gas_per_wallet, gas_limit, verbose, state_abspath,
+                              gas_per_wallet, gas_limit, block_time, verbose, state_abspath,
                               contract_abspath, cvalidator, dockerfile, avm))
 
 # Parameters: validator id, absolute path to state folder,
@@ -170,11 +170,11 @@ COMPOSE_VALIDATOR=(
             - %s:/home/user/contract.ao
         image: arb-validator
         environment:
-            WAIT_FOR: 'arb-validator-coordinator:1236'
-            ETH_URL: 'ws://arb-ethbridge:7545'
-            COORDINATOR_URL: 'wss://arb-validator-coordinator:1236/ws'
-            ID: %d
-            AVM: %s
+            - ID=%d
+            - WAIT_FOR=arb-validator-coordinator:1236
+            - ETH_URL=ws://arb-ethbridge:7545
+            - COORDINATOR_URL=wss://arb-validator-coordinator:1236/ws
+            - AVM=%s
 """)
 
 # Returns one arb-validator declaration for a docker compose file
@@ -231,7 +231,8 @@ COPY --from=0 /build /build
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
-           gas_limit, dev_flag, sudo_flag, build_flag, up_flag, avm, keep_alive):
+           gas_limit, dev_flag, sudo_flag, build_flag, up_flag, avm, keep_alive,
+           block_time):
 
     # Install dev_mode if flag set and doesn't exist already
     if dev_flag and not os.path.isdir(DEPLOY_DIR):
@@ -278,7 +279,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
             exit_on_error=False, sudo=sudo_flag)
 
     # number of wallets
-    n_wallets = n_validators + 100
+    n_wallets = n_validators + 10
 
     # dockerfile_dev_mode
     if dev_mode:
@@ -303,6 +304,7 @@ def deploy(contract_name, n_validators, mnemonic, verbose, gas_per_wallet,
             n_validators,
             gas_per_wallet,
             gas_limit,
+            block_time,
             verbose,
             states_path + str(0),
             contract,
@@ -507,9 +509,9 @@ def main():
         help='Run docker-compose with sudo. May be helpful for some platforms')
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-b', '--build-only', action='store_true', dest='build_only',
+    group.add_argument('--build', action='store_true', dest='build_only',
         help='Run docker-compose build only')
-    group.add_argument('-u', '--up-only', action='store_true', dest='up_only',
+    group.add_argument('--up', action='store_true', dest='up_only',
         help='Run docker-compose up only')
 
     parser.add_argument('-k', '--keep-alive', action='store_true', dest='keep_alive',
@@ -528,6 +530,9 @@ def main():
     parser.add_argument('-e', '--defaultBalanceEther', type=int,
         dest='gas_per_wallet', default=100,
         help='Amount of ether to assign each test account on ganache')
+    parser.add_argument('-b', '--blockTime', type=int,
+        dest='block_time', default=0,
+        help='Block time in seconds for automatic mining on ganache')
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='count',
         help='Increase verbosity on ganache')
@@ -559,7 +564,8 @@ def main():
     # Deploy
     deploy(args.contract, args.n_validators, args.mnemonic, verboseFlag,
            args.gas_per_wallet, args.gas_limit, args.dev, args.sudo,
-           args.build_only, args.up_only, args.avm, args.keep_alive)
+           args.build_only, args.up_only, args.avm, args.keep_alive,
+           args.block_time)
 
 if __name__ == '__main__':
     try:
