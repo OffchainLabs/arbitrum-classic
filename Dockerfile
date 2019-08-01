@@ -23,8 +23,7 @@ RUN mkdir -p /home/user/.npm-global && \
     npm config set prefix "/home/user/.npm-global" && \
     npm install -g ganache-cli truffle yarn
 COPY package.json yarn.lock ./
-RUN yarn --production --frozen-lockfile && yarn cache clean && \
-    npm uninstall -g yarn && npm cache clean --force
+RUN yarn --production
 
 # Source code
 COPY . ./
@@ -99,8 +98,7 @@ ENV GAS_LIMIT=6721975 \
     DOCKER=true
 # DOCKER=true makes ganache run on host 0.0.0.0
 
-# Wait for ganache-cli to launch and then deploy the EthBridge contract
-CMD sed -i "s/port: [0-9]*,/port: ${PORT},/p" truffle-config.js && \
-    ganache-cli --db db -p $PORT -l $GAS_LIMIT -e $GAS_PER_WALLET \
+# Start ganache-cli using --db to use the EthBridge contract
+CMD ganache-cli --db db -p $PORT -l $GAS_LIMIT -e $GAS_PER_WALLET \
     -b $BLOCK_TIME -a $NUM_WALLETS -m "${MNEMONIC}" $VERBOSE
 EXPOSE ${PORT}
