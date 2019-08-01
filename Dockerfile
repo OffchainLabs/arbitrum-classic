@@ -71,7 +71,7 @@ COPY --chown=user --from=arb-ethbridge      \
 COPY --chown=user server.crt server.key ./
 
 ENV ID=0 \
-    WAIT_FOR="arb-ethbridge:17545" \
+    WAIT_FOR="arb-ethbridge:7545" \
     ETH_URL="ws://arb-ethbridge:7545" \
     COORDINATOR_URL="" \
     AVM="cpp" \
