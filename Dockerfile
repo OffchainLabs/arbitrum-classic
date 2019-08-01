@@ -70,14 +70,11 @@ COPY --chown=user --from=arb-ethbridge      \
     /home/user/validator_addresses.txt ./
 COPY --chown=user server.crt server.key ./
 
-# Arguments
-ARG WAIT_FOR
-ARG ID
-ARG ETH_URL
-ARG COORDINATOR_URL
-ARG AVM
-ENV WAIT_FOR=$WAIT_FOR ID=$ID ETH_URL=$ETH_URL \
-    COORDINATOR_URL=$COORDINATOR_URL AVM=$AVM \
+ENV ID=0 \
+    WAIT_FOR="arb-ethbridge:7545" \
+    ETH_URL="ws://arb-ethbridge:7545" \
+    COORDINATOR_URL="" \
+    AVM="cpp" \
     PATH="/home/user/go/bin:${PATH}"
 
 # Build cache
