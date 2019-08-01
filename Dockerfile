@@ -23,8 +23,7 @@ RUN mkdir -p /home/user/.npm-global && \
     npm config set prefix "/home/user/.npm-global" && \
     npm install -g ganache-cli truffle yarn
 COPY package.json yarn.lock ./
-RUN yarn --production --frozen-lockfile && yarn cache clean && \
-    npm uninstall -g yarn && npm cache clean --force
+RUN yarn --production
 
 # Source code
 COPY . ./
@@ -43,7 +42,7 @@ RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
         -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset && [ -f ethbridge_addresses.json ] && \
+    truffle migrate --reset -q && [ -f ethbridge_addresses.json ] && \
     node -e "                                               \
     const data = require('./keys.json')['addresses'];       \
     const addresses = new Array(0);                         \
@@ -85,23 +84,21 @@ COPY --chown=user . ./
 
 # Global arguments
 ARG MNEMONIC
-ARG NUM_VALIDATORS
 ARG NUM_WALLETS
-# Final arguments
-ARG GAS_LIMIT=6721975
-ARG VERBOSE="-q"
-ARG GAS_PER_WALLET=100
-ARG PORT=7545
-ARG CANARY_PORT=17545
-# DOCKER=true makes ganache run on host 0.0.0.0
-ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS \
-    NUM_WALLETS=$NUM_WALLETS GL=$GAS_LIMIT V=$VERBOSE \
-    GPW=$GAS_PER_WALLET P=$PORT CP=$CANARY_PORT
+ARG NUM_VALIDATORS
 
-# Wait for ganache-cli to launch and then deploy the EthBridge contract
-CMD sed -i "s/port: [0-9]*,/port: ${P},/p" truffle-config.js && \
-    (while ! nc -z localhost ${P}; do sleep 2; done &&          \
-    echo "Finished waiting for ganache on localhost:${P}..." && \
-    nc -lvp ${CP} -w 362) & \
-    ganache-cli --db db -p $P -l $GL -e $GPW -a $NUM_WALLETS -m "${MNEMONIC}" $V
-EXPOSE ${P}
+ENV GAS_LIMIT=6721975 \
+    VERBOSE="-q" \
+    GAS_PER_WALLET=100 \
+    BLOCK_TIME=0 \
+    PORT=7545 \
+    MNEMONIC=$MNEMONIC \
+    NUM_WALLETS=$NUM_WALLETS \
+    NUM_VALIDATORS=$NUM_VALIDATORS \
+    DOCKER=true
+# DOCKER=true makes ganache run on host 0.0.0.0
+
+# Start ganache-cli using --db to use the EthBridge contract
+CMD ganache-cli --db db -p $PORT -l $GAS_LIMIT -e $GAS_PER_WALLET \
+    -b $BLOCK_TIME -a $NUM_WALLETS -m "${MNEMONIC}" $VERBOSE
+EXPOSE ${PORT}
