@@ -1,7 +1,7 @@
 ---
 id: Developer_Quickstart
 title: Arbitrum Developer Quickstart
-custom_edit_url: https://github.com/OffchainLabs/developer-website/edit/staging/docs/Developer_Quickstart.md
+custom_edit_url: https://github.com/offchainlabs/developer-website/edit/staging/docs/Developer_Quickstart.md
 ---
 
 Get started with Arbitrum by installing the Arbitrum compiler,
@@ -10,18 +10,12 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 [port your own dapp](#porting-to-arbitrum).
 
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
-read the [white paper](https://OffchainLabs.com/arbitrum.pdf)!**
+read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
 
 ## Install Dependencies
 
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
-
-> Requires `node -v` version less than 12 for the web3.js frontend in the
-> demo app. You can use [nvm](https://github.com/nvm-sh/nvm) to switch
-> between multiple node versions.
-
-> Requires python3 to be at least version 3.6
 
 ### MacOS
 
@@ -37,7 +31,7 @@ list of dependencies.
 
     Once the Docker app appears in the menu bar, wait until the yellow light turns
     green (no need to log into Docker). Also check that node version 8 is installed
-    correctly by running `node --version`.
+    correctly by running `node -v`.
 
 2. Change npm's default directory:
 
@@ -69,8 +63,7 @@ sudo npm install -g truffle ganache-cli yarn
 ```
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
-> to give permissions "equivalent to the `root` user", but without the `root`
-> user group. See: [Docker Daemon Attack Surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
+> to give permissions "equivalent to the `root` user". See [the security warning](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
 
 ### Full List
 
@@ -81,16 +74,21 @@ Here are the important dependencies in case you are not running on a supported O
 - [node and npm](https://nodejs.org/en/)
 - [python3 and pip3](https://www.python.org/downloads/)
 - [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
+- [ganache](https://www.npmjs.com/package/ganache-cli)
 - [yarn](https://yarnpkg.com/en/)
 
-## Install the Arbitrum Compiler
+> Requires `node -v` version 8 or 10
+
+> Requires`python3 --version` 3.6 or greater
+
+## Install the Arbitrum SDK
 
 Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
 
 ### Build from source
 
 ``` bash
-git clone -b v0.1.0 --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/arbc-solidity.git
+git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbc-solidity.git
 cd arbc-solidity
 pip3 install -r requirements.txt
 python3 setup.py install
@@ -99,29 +97,51 @@ cd ..
 
 Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu.
 
+Install `arb-deploy` by building it from source:
+
+``` bash
+git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arb-sdk.git
+cd arb-sdk
+pip3 install -r requirements.txt
+python3 setup.py install
+cd ..
+```
+
 ### Check installation
 
 Verify the installation was successful:
 
 ``` bash
-which arbc-truffle-compile
+arb-deploy --status
 ```
 
-The expected output is:
+The `arb-deploy` and `arbc-truffle-compile` versions should match:
 
-> `/usr/local/bin/arbc-truffle-compile`
+``` text
+--------------- arb-deploy ---------------
+arb-deploy 0.2.0
+arbc-truffle-compile 0.2.0
+Timestamp: ...
+ Platform: ...
+------------ truffle version -------------
+Truffle v5.0.30 (core: 5.0.30)
+Solidity v0.5.0 (solc-js)
+Node v10.16.0
+Web3.js v^1.2.0
+------------------------------------------
+```
 
 ## Hello, Arbitrum
 
-Now you'll compile and run a demo dapp on Arbitrum. The dapp is based on
-a simple Pet Shop dapp that is used in a Truffle tutorial.
+Now you'll compile and run a demo dApp on Arbitrum. The dApp is based on
+a simple Pet Shop dApp that is used in a Truffle tutorial.
 
 ### Install
 
 You only need to run these commands once:
 
 ``` bash
-git clone -b v0.1.1 --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/demo-dapp-pet-shop.git
+git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/demo-dapp-pet-shop.git
 cd demo-dapp-pet-shop
 yarn
 ```
@@ -129,7 +149,7 @@ yarn
 ### Build and Run
 
 You'll need to do these steps every time you make a change to the Solidity. For
-this dapp, you do not need to change any Solidity files.
+this dApp, you do not need to change any Solidity files.
 
 1. Compile Solidity to Arbitrum:
 
@@ -137,43 +157,36 @@ this dapp, you do not need to change any Solidity files.
     `compiled.json` file needed for the frontend:
 
     ``` bash
-    truffle migrate --reset --network arbitrum
+    truffle migrate --reset --compile-all --network arbitrum
     ```
 
 2. Deploy `contract.ao` to 3 Validators
 
-    > Note: this step may take about 10 minutes the very first time. Subsequent
-    > builds are much, much faster because they are cached as Docker images.
-
     ``` bash
-    ./arb-deploy contract.ao 3
+    arb-deploy contract.ao 3
     ```
 
-3. Examine the Validator logs
+    > Note: this step may take about 10 minutes the very first time. Subsequent
+    > builds are much, much faster because Docker caches image layers.
 
-    Go back to the Validators, started with `./arb-deploy contract.ao 3`, and
-    examine the output of the logs. You should see the output similar to this:
+3. Examine the `arb-deploy contract.ao 3` output
+
+    When pet-shop is finished being deployed, you should see output similar to this:
 
     ``` txt
-    arb-ethbridge_1              | Summary
-    arb-ethbridge_1              | =======
-    arb-ethbridge_1              | > Total deployments:   10
-    arb-ethbridge_1              | > Final cost:          0.229981374766015443 ETH
-    arb-ethbridge_1              |
-    arb-ethbridge_1              | listening on [::]:17545 ...
-    arb-ethbridge_1              | connect to [::ffff:192.168.112.2]:17545 from demo-dapp-pet-shop_arb-validator-coordinator_1.demo-dapp-pet-shop_default:34891 ([::ffff:192.168.112.3]:34891)
-    arb-validator-coordinator_1  | Finished waiting for arb-ethbridge:17545...
-    arb-validator-coordinator_1  | 2019/06/04 07:10:18 Coordinator is trying to create the VM
-    arb-validator-coordinator_1  | 2019/06/04 07:10:19 http: TLS handshake error from 192.168.112.4:41587: EOF
-    arb-validator-coordinator_1  | 2019/06/04 07:10:19 http: TLS handshake error from 192.168.112.5:45429: EOF
+    arb-ethbridge_1              | Listening on 0.0.0.0:7545
+    arb-validator-coordinator_1  | Finished waiting for arb-ethbridge:7545...
+    arb-validator-coordinator_1  | 2019/08/02 16:49:12 Coordinator is trying to create the VM
+    arb-validator-coordinator_1  | 2019/08/02 16:49:13 http: TLS handshake error from 172.21.0.5:38281: EOF
+    arb-validator-coordinator_1  | 2019/08/02 16:49:13 http: TLS handshake error from 172.21.0.4:36287: EOF
     arb-validator2_1             | Finished waiting for arb-validator-coordinator:1236...
     arb-validator1_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator-coordinator_1  | 2019/06/04 07:10:21 Coordinator connected with follower 0x38299d74a169e68df4da85fb12c6fd22246add9f
-    arb-validator2_1             | 2019/06/04 07:10:21 Validator formed connected with coordinator
-    arb-validator-coordinator_1  | 2019/06/04 07:10:21 Coordinator connected with follower 0xc7711f36b2c13e00821ffd9ec54b04a60aefbd1b
-    arb-validator-coordinator_1  | 2019/06/04 07:10:21 Coordinator gathering signatures
-    arb-validator1_1             | 2019/06/04 07:10:21 Validator formed connected with coordinator
-    arb-validator-coordinator_1  | 2019/06/04 07:10:22 Coordinator created VM
+    arb-validator-coordinator_1  | 2019/08/02 16:49:15 Coordinator connected with follower 0xfbb0fc9161f9c824cb5ff5222166b7ea247e85ca
+    arb-validator-coordinator_1  | 2019/08/02 16:49:15 Coordinator connected with follower 0x85794eceb590b9b53554bc6d28c964be00aaa893
+    arb-validator-coordinator_1  | 2019/08/02 16:49:15 Coordinator gathering signatures
+    arb-validator1_1             | 2019/08/02 16:49:15 Validator formed connection with coordinator
+    arb-validator2_1             | 2019/08/02 16:49:15 Validator formed connection with coordinator
+    arb-validator-coordinator_1  | 2019/08/02 16:49:16 Coordinator created VM
     ```
 
 ### Use the DApp
@@ -181,7 +194,26 @@ this dapp, you do not need to change any Solidity files.
 1. Install [Metamask](https://metamask.io/)
 
     If you don't have Metamask already, download the extension and add it to
-    your browser and create a new account.
+    your browser and create a new account by importing the following seed phrase:
+
+    ``` text
+    jar deny prosper gasp flush glass core corn alarm treat leg smart
+    ```
+
+    > If you already have Metamask installed, then open it and select
+    > `Import Account` and enter one of the following private keys
+    > derived from the mnemonic listed above:
+    > ```
+    > 0x41a9550a0ae23fd52f3b99acab194db2e4474262db64dfd46807bca9e061e211
+    > 0x77500b500284eab4d5201d230ca015b82c32752e42c79dc3d6ff3668ada9d340
+    > 0x54f4370ee20fd563acaac3ea63eef5cc62d3e0cb11f7f03e70180e538c882bc8
+    > 0xa36dd563650acd8305d222a68abcaa4b3db69f28cc40d0abba391ec58ac12fba
+    > 0x2090bf383976cdcb04fc776585f5e65f71929be0e36d53ffc8eb066ef8ec2d18
+    > 0x1b153b674c13af2974acbb66027fa4386b85b31cb27d159276d05e9542359f3f
+    > ```
+
+    This mnemonic is the default used by `arb-deploy` and these accounts will
+    be pre-funded.
 
 2. Select Ganache local network in Metamask
 
@@ -191,18 +223,6 @@ this dapp, you do not need to change any Solidity files.
     - Enter `Ganache` as the network name
     - Enter `http://127.0.0.1:7545` as the RPC url
     - Press the save button
-
-3. Add pre-funded accounts to metamask
-    - Go back to Metamask or click the extension icon
-    - Select the circle icon on the top right hand side
-    - Select `Import Account`
-    - Enter any of the following private keys
-        - `0x41a9550a0ae23fd52f3b99acab194db2e4474262db64dfd46807bca9e061e211`
-        - `0x77500b500284eab4d5201d230ca015b82c32752e42c79dc3d6ff3668ada9d340`
-        - `0x54f4370ee20fd563acaac3ea63eef5cc62d3e0cb11f7f03e70180e538c882bc8`
-        - `0xa36dd563650acd8305d222a68abcaa4b3db69f28cc40d0abba391ec58ac12fba`
-        - `0x2090bf383976cdcb04fc776585f5e65f71929be0e36d53ffc8eb066ef8ec2d18`
-        - `0x1b153b674c13af2974acbb66027fa4386b85b31cb27d159276d05e9542359f3f`
     - Metamask should now have an Ganache testnet account holding ETH
 
 4. Launch the frontend
@@ -210,11 +230,10 @@ this dapp, you do not need to change any Solidity files.
     In another session navigate to `demo-dapp-pet-shop` and run:
 
     ``` bash
-    yarn
-    yarn dev
+    yarn start
     ```
 
-    The browser will open to [localhost:3000](http://localhost:3000)
+    The browser will open to [localhost:8080](http://localhost:8080)
 
     In the popup window that appears, select `Connect`
 
@@ -223,28 +242,62 @@ this dapp, you do not need to change any Solidity files.
     The pet shop dapp should now be running in your browser. Choose a pet or two
     and click the adopt button to adopt your new animal friend(s).
 
+### Summary
+
+If you want to try another dapp run these steps once:
+
+``` bash
+git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/demo-dapp-election.git
+cd demo-dapp-election
+yarn
+```
+
+and run these steps every time a change is made to the Solidity contract:
+
+``` bash
+truffle migrate --reset --compile--all --network arbitrum
+arb-deploy contract.ao 3
+```
+
+Open a new command line session, navigate to `demo-dapp-election`, and run:
+
+``` bash
+yarn start
+```
+
 The next step is to learn how to port an Ethereum dapp to Arbitrum.
 
 ## Porting to Arbitrum
 
-To get a project up and running on Arbitrum, configure the Truffle project to
-use the Arbitrum provider, compile the Solidity contracts to Arbitrum bytecode
-in `contract.ao`, launch validators, and use the arbitrum web3 provider or
-arbitrum ethers provider to hook into the frontend depending on which provider
-approach is used in the existing dapp.
+### Prerequisites
 
-> Note: remember to successfully run your Ethereum dapp locally before
-> attempting to port it to Arbitrum.
+The dApp must:
+
+- Be a Truffle-based project
+- Use web3 or ethers
+- Use webpack or a similar build system
+
+### Overview
+
+Here are the steps needed to port your dApp to Arbitrum:
+
+   1. Make sure your dApp compiles and runs correctly on Ethereum or ganache
+   2. Configure the Truffle project to use the Arbitrum Truffle provider (arb-truffle-provider)
+   3. Add the Arbitrum frontend provider (arb-web3-provider or arb-ethers-provider)
+   4. Compile your Truffle project to Arbitrum bytecode (output as contract.ao)
+   5. Launch a set of Arbitrum Validators with the bytecode
+   6. Launch the frontend of your dApp
 
 ### Configure Truffle
 
-If you are not already using a Truffle project, go ahead and run `truffle init`
-and place your `*.sol` files in the `contracts` folder that is generated.
+First, identify if your project uses web3 or truffle. The following examples
+will use truffle. If you are using web3 just replace arb-truffle-provider with
+arb-web3-provider for these steps:
 
-1. Add the `arb-truffle-provider`:
+1. Add the `arb-truffle-provider` to your project:
 
     ``` bash
-    yarn add https://github.com/OffchainLabs/arb-truffle-provider#v0.1.0
+    yarn add https://github.com/offchainlabs/arb-truffle-provider#v0.2.0
     ```
 
 2. Edit the `truffle-config.js`:
@@ -256,7 +309,7 @@ and place your `*.sol` files in the `contracts` folder that is generated.
         const mnemonic = "jar deny prosper gasp flush glass core corn alarm treat leg smart";
         ```
 
-    - Add the `arbitrum` network to `module.exports`:
+    - Add the `arbitrum` network to `module.exports` and `solc` version `0.5.3`:
 
         ``` js
         module.exports = {
@@ -276,93 +329,105 @@ and place your `*.sol` files in the `contracts` folder that is generated.
               },
               network_id: "*",
             },
+          },
         },
+        compilers: {
+          solc: {
+            version: "0.5.3",
+            docker: true,
+            settings: {
+              optimizer: {
+                enabled: true,
+                runs: 200
+              }
+            }
+          }
+        }
         ```
 
-### Compile Solidity to Arbitrum bytecode
+3. Modify your dapp to use the Arbitrum provider
 
-Now that the Arbitrum provider is setup correctly, the next step is to compile
-the Solidity files in the `contracts` folder:
+    Find the place in your code where you initialize the ethers (or web3) provider.
+    For example, this might be in `src/index.js` or `src/app.js` or somewhere else.
 
-1. Generate Arbitrum bytecode
-
-    Run the following command to generate `compiled.json` and `contract.ao`:
-
-    ``` bash
-    truffle migrate --reset --network arbitrum
-    ```
-
-    Copy the `compiled.json` file into your frontend (i.e. a `src` folder).
-    The frontend will need it to use with the arbitrum providers.
-
-2. Run the Validators
-
-    Make sure to copy in the [arb-deploy script](https://github.com/OffchainLabs/demo-dapp-pet-shop/blob/master/arb-deploy) from the demo app.
-
-    ``` bash
-    MNEMONIC="jar deny prosper gasp flush glass core corn alarm treat leg smart"
-    ./arb-deploy contract.ao 3 -m "$MNEMONIC"
-    ```
-
-### Connect the Web3 frontend
-
-1. Add the Arbitrum `web3.js` Provider
-
-    ``` bash
-    yarn add https://github.com/OffchainLabs/arb-web3-provider#v0.1.0
-    ```
-
-    Note: there is alternatively an `ethers.js` provider:
-
-    ``` bash
-    yarn add https://github.com/OffchainLabs/arb-ethers-provider#v0.1.0
-    ```
-
-2. Import the provider in the javascript app
-
-    First, find the existing provider in the project. It could look something
-    like this:
+    At the top of the file, find where `ethers` is imported (or `web3`):
 
     ``` js
-    const provider = new Web3.providers.HttpProvider('http://localhost:7545');
+    const ethers = require('ethers'); // or   const Web3 = require('web3');
     ```
 
-    Replace the existing provider with the Arbitrum Web3 provider:
+    Right below the ethers import, require the Arbitrum provider:
 
     ``` js
-    const contracts = await new Promise(function(resolve, reject) {
-        $.getJSON('compiled.json', function(data) {
-            resolve(data)
-        }).fail(function (jqhr, textStatus, error) {
-            reject("Failed to load compiled.json. " + textStatus + ": " + error)
-        });
-    });
+    const ArbProvider = require('arb-ethers-provider')
+    ```
 
-    const provider = new ArbProvider(
-        'http://localhost:1235',
-        contracts,
-        new Web3.providers.HttpProvider('http://localhost:7545')
-        // // ether provider would be used as:
-        //new ethers.providers.JsonRpcProvider('http://localhost:7545')
+    Next, find where the ethers (or web3) provider is initialized in your code,
+    and set the provider to use Arbitrum instead. For example for ethers:
+
+    ``` js
+    var standardProvider = null;
+    if (window.ethereum) {
+      standardProvider = ethereum;
+      try {
+        // Request account access if needed
+        await ethereum.enable();
+      } catch (error) {
+        console.log("User denied account access")
+      }
+    } else if (window.web3) {
+      // Legacy dapp browsers...
+      standardProvider = web3.currentProvider;
+    } else {
+      // Non-dapp browsers...
+      console.log('Non-Ethereum browser detected. You should consider trying MetaMask!');
+    }
+    let standardProvider = null;
+    let contracts = require('../compiled.json');
+    let App.provider = new ArbProvider(
+      'http://localhost:1235',
+      contracts,
+      new ethers.providers.Web3Provider(standardProvider)
     );
     ```
 
-    Note: this code must either be in an asynchronous function or the const
-    `contents` must be set synchronously. One way to do this is to paste the
-    contents of `compiled.json` into the javascript file and set `contents` to
-    have the json value.
+    If you are using web3 instead, then the code would look like this:
 
-    Finally, import `arb-web3-provider.js` in the `index.html` as a script. For
-    example:
-
-    ``` html
-    <script src="js/arb-web3-provider.js"></script>
+    ``` js
+    const contracts = require('../compiled.json');
+    App.provider = await ArbProvider(
+      'http://localhost:1235',
+      contracts,
+      new Web3.providers.HttpProvider('http://localhost:7545')
+    );
     ```
 
-3. Run the frontend
+    > Note: make the path to `compiled.json` correspond to the root directory of the project
 
-    For example the command might be:
+### Compile to Arbitrum bytecode
 
-    ``` bash
-    yarn start
-    ```
+Now that the Arbitrum provider is setup correctly, the next step is to compile
+the Truffle project into Arbitrum bytecode:
+
+Run the following command to generate `compiled.json` and `contract.ao`:
+
+``` bash
+truffle migrate --reset --compile-all --network arbitrum
+```
+
+We do not need to copy the `compiled.json` file into the frontend folder because
+it has already been setup to correctly to retrieve the json in the previous part.
+
+### Run the Validators
+
+``` bash
+arb-deploy contract.ao 3
+```
+
+### Run the frontend
+
+For example the command might be:
+
+``` bash
+yarn start
+```
