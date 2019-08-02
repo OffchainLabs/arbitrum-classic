@@ -45,8 +45,8 @@ func TestMachineAdd(t *testing.T) {
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	steps, _ := m.ExecuteAssertion(80000, protocol.NewTimeBounds(0, 100000))
-	fmt.Println(steps)
+	assertion := m.ExecuteAssertion(80000, protocol.NewTimeBounds(0, 100000))
+	fmt.Println(assertion.NumSteps)
 }
 
 // base operation tests for one, two, or three operands
@@ -387,8 +387,43 @@ func TestSignextend(t *testing.T) {
 		t.Error(err)
 	}
 	// test
-	res, err = binaryIntOpTest(big.NewInt(1), big.NewInt(0), math.U256(big.NewInt(-1)), code.SIGNEXTEND)
-	if res {
+	res, err = binaryIntOpTest(big.NewInt(1), big.NewInt(0), math.U256(big.NewInt(1)), code.SIGNEXTEND)
+	if !res {
+		t.Error(err)
+	}
+	// test
+	res, err = binaryIntOpTest(big.NewInt(127), big.NewInt(0), math.U256(big.NewInt(127)), code.SIGNEXTEND)
+	if !res {
+		t.Error(err)
+	}
+	// test
+	res, err = binaryIntOpTest(big.NewInt(128), big.NewInt(0), math.U256(big.NewInt(-128)), code.SIGNEXTEND)
+	if !res {
+		t.Error(err)
+	}
+	// test
+	res, err = binaryIntOpTest(big.NewInt(254), big.NewInt(0), math.U256(big.NewInt(-2)), code.SIGNEXTEND)
+	if !res {
+		t.Error(err)
+	}
+	// test
+	res, err = binaryIntOpTest(big.NewInt(257), big.NewInt(0), math.U256(big.NewInt(1)), code.SIGNEXTEND)
+	if !res {
+		t.Error(err)
+	}
+	// test
+	res, err = binaryIntOpTest(big.NewInt(65534), big.NewInt(1), math.U256(big.NewInt(-2)), code.SIGNEXTEND)
+	if !res {
+		t.Error(err)
+	}
+	// test
+	res, err = binaryIntOpTest(big.NewInt(65537), big.NewInt(1), math.U256(big.NewInt(1)), code.SIGNEXTEND)
+	if !res {
+		t.Error(err)
+	}
+	// test
+	res, err = binaryIntOpTest(big.NewInt(65537), big.NewInt(2), math.U256(big.NewInt(65537)), code.SIGNEXTEND)
+	if !res {
 		t.Error(err)
 	}
 }
@@ -1563,13 +1598,13 @@ func TestLog(t *testing.T) {
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	m.Stack().Push(value.NewInt64Value(5))
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
-	logs := ad.GetAssertion().Logs
+	logs := ad.Logs
 	if len(logs) != 1 {
 		t.Error("No log value generated")
 	}
@@ -1596,9 +1631,9 @@ func TestSendFungible(t *testing.T) {
 	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
-		value.NewInt64Value(7),
 		value.NewInt64Value(4),
+		value.NewInt64Value(7),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
 	})
 	m.Stack().Push(tup)
 
@@ -1606,12 +1641,12 @@ func TestSendFungible(t *testing.T) {
 	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
 
 	// send token 15 value=7 to dest 4
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	msgs := ad.GetAssertion().OutMsgs
+	msgs := ad.OutMsgs
 	// verify out message
 	if len(msgs) != 1 {
 		t.Error("No out message generated")
@@ -1643,21 +1678,21 @@ func TestSendNonFungible(t *testing.T) {
 	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
-		value.NewInt64Value(7),
 		value.NewInt64Value(4),
+		value.NewInt64Value(7),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
 	})
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
 	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(7), [32]byte{}))
 
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	msgs := ad.GetAssertion().OutMsgs
+	msgs := ad.OutMsgs
 	// verify out message
 	if len(msgs) != 1 {
 		t.Error("No out message generated")
@@ -1689,22 +1724,22 @@ func TestSendLowBalance(t *testing.T) {
 	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
-		value.NewInt64Value(17),
 		value.NewInt64Value(4),
+		value.NewInt64Value(17),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
 	})
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
 	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
 
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(tup)
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	msgs := ad.GetAssertion().OutMsgs
+	msgs := ad.OutMsgs
 	// verify out message
 	if len(msgs) != 0 {
 		t.Error("No out message generated")
@@ -1728,9 +1763,9 @@ func TestNbsend1(t *testing.T) {
 	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
-		value.NewInt64Value(10),
 		value.NewInt64Value(4),
+		value.NewInt64Value(10),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
 	})
 
 	m.Stack().Push(tup)
@@ -1738,7 +1773,7 @@ func TestNbsend1(t *testing.T) {
 	// add tokens to balanceTracker
 	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
 
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
@@ -1746,7 +1781,7 @@ func TestNbsend1(t *testing.T) {
 		t.Error(err)
 	}
 
-	msgs := ad.GetAssertion().OutMsgs
+	msgs := ad.OutMsgs
 	// verify out message
 	if len(msgs) != 1 {
 		t.Error("No out message generated")
@@ -1771,9 +1806,9 @@ func TestNBSendFungible(t *testing.T) {
 	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
-		value.NewInt64Value(7),
 		value.NewInt64Value(4),
+		value.NewInt64Value(7),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
 	})
 	m.Stack().Push(tup)
 
@@ -1781,13 +1816,13 @@ func TestNBSendFungible(t *testing.T) {
 	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
 
 	// send token 15 value=7 to dest 4
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	msgs := ad.GetAssertion().OutMsgs
+	msgs := ad.OutMsgs
 	// verify out message
 	if len(msgs) != 1 {
 		t.Error("No out message generated")
@@ -1819,22 +1854,22 @@ func TestNBSendNonFungible(t *testing.T) {
 	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
-		value.NewInt64Value(7),
 		value.NewInt64Value(4),
+		value.NewInt64Value(7),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
 	})
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
 	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(7), [32]byte{}))
 
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	msgs := ad.GetAssertion().OutMsgs
+	msgs := ad.OutMsgs
 	// verify out message
 	if len(msgs) != 1 {
 		t.Error("No out message generated")
@@ -1866,22 +1901,22 @@ func TestNBSendLowBalance(t *testing.T) {
 	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
-		value.NewInt64Value(17),
 		value.NewInt64Value(4),
+		value.NewInt64Value(17),
+		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
 	})
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
 	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
 
-	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(0))
 	if ok, err := vm.Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	msgs := ad.GetAssertion().OutMsgs
+	msgs := ad.OutMsgs
 	// verify out message
 	if len(msgs) != 0 {
 		t.Error("No out message generated")
@@ -1898,7 +1933,7 @@ func TestGettime(t *testing.T) {
 	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	_, _ = m.ExecuteAssertion(10, [2]uint64{5, 10})
+	m.ExecuteAssertion(10, [2]uint64{5, 10})
 
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
