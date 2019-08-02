@@ -81,6 +81,8 @@ Here are the important dependencies in case you are not running on a supported O
 
 > Requires`python3 --version` 3.6 or greater
 
+> Requires `solc` 0.5.10 or less in `truffle version`
+
 ## Install the Arbitrum SDK
 
 Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
@@ -344,6 +346,8 @@ arb-web3-provider for these steps:
           }
         }
         ```
+
+        > Requires solc version `0.5.10` or below
 
 3. Modify your dapp to use the Arbitrum provider
 
