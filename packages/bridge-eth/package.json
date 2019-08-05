@@ -1,0 +1,49 @@
+{
+  "name": "arbeth",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "module": {
+    "loaders": [
+      {
+        "test": ".sol",
+        "loader": "truffle-solidity"
+      }
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-stage-2": "^6.24.1",
+    "babel-preset-stage-3": "^6.17.0",
+    "babel-register": "^6.23.0",
+    "bignumber.js": "^8.0.2",
+    "drizzle": "^1.3.3",
+    "drizzle-react": "^1.2.0",
+    "ethereumjs-abi": "^0.6.6",
+    "ganache-core": "^2.4.0",
+    "jayson": "^2.1.1",
+    "json-rpc-client": "^0.2.2",
+    "merkle-tree-solidity": "^1.0.8",
+    "openzeppelin-solidity": "^2.1.2",
+    "scrypt": "^6.0.3",
+    "solidity-bytesutil": "^1.0.1",
+    "web3": "^1.0.0-beta.43",
+    "web3-utils": "^1.0.0-beta.43",
+    "zeppelin-solidity": "1.12.0"
+  },
+  "devDependencies": {
+    "truffle-solidity-loader": "0.1.3",
+    "webpack": "^4.29.3",
+    "webpack-dev-server": "^3.1.14"
+  }
+}
