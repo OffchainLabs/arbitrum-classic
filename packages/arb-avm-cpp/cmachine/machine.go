@@ -30,9 +30,9 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type Machine struct {
@@ -65,7 +65,7 @@ func (m *Machine) Clone() machine.Machine {
 	return ret
 }
 
-func (m *Machine) InboxHash() (value.HashOnlyValue) {
+func (m *Machine) InboxHash() value.HashOnlyValue {
 	var hash [32]byte
 	C.machineInboxHash(m.c, unsafe.Pointer(&hash[0]))
 	return value.NewHashOnlyValue(hash, 0)
@@ -89,7 +89,7 @@ func (m *Machine) DeliverOnchainMessage() {
 	C.machineDeliverOnchainMessages(m.c)
 }
 
-func (m *Machine) SendOffchainMessages(msgs[]protocol.Message) {
+func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	var buf bytes.Buffer
 	for _, msg := range msgs {
 		err := value.MarshalValue(msg.AsValue(), &buf)
@@ -125,7 +125,6 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 	}
 
 	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
-
 
 	return protocol.NewAssertion(
 		m.Hash(),
