@@ -1,0 +1,39 @@
+syntax = "proto3";
+package protocol;
+import "value/value.proto";
+option go_package = "github.com/offchainlabs/arb-util/protocol";
+
+message TokenTypeBuf {
+    bytes value = 1;
+}
+
+message MessageBuf {
+    value.ValueBuf value = 1;
+    TokenTypeBuf tokenType = 2;
+    value.BigIntegerBuf amount = 3;
+    value.HashBuf sender = 4;
+}
+
+message TimeBoundsBuf {
+    uint64 startTime = 1;
+    uint64 endTime = 2;
+}
+
+message BalanceTrackerBuf {
+    repeated TokenTypeBuf types = 1;
+    repeated value.BigIntegerBuf amounts = 2;
+}
+
+message PreconditionBuf {
+    value.HashBuf beforeHash = 1;
+    TimeBoundsBuf timeBounds = 2;
+    BalanceTrackerBuf balanceTracker = 3;
+    value.HashBuf beforeInbox = 4;
+}
+
+message AssertionBuf {
+    value.HashBuf afterHash = 1;
+    uint32 numSteps = 2;
+    repeated MessageBuf messages = 3;
+    repeated value.ValueBuf logs = 4;
+}
