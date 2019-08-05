@@ -3,20 +3,22 @@ package goarbitrum
 import (
 	"context"
 	"errors"
+	"log"
+	"math"
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-util/evm"
-	"github.com/offchainlabs/arb-util/value"
-	"github.com/offchainlabs/arb-validator/coordinator"
-	"log"
-	"math"
-	"math/big"
-	"sync"
-	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
 )
 
 type ArbConnection struct {
@@ -37,11 +39,11 @@ func Dial(url string, myAddress common.Address, privateKey []byte, hexPubkey str
 	if err != nil {
 		return nil, err
 	}
-	return &ArbConnection{ proxy, myAddress, vmId, append([]byte{}, privateKey...), hexPubkey }, nil
+	return &ArbConnection{proxy, myAddress, vmId, append([]byte{}, privateKey...), hexPubkey}, nil
 }
 
 func _nyiError(funcname string) error {
-	return errors.New("goarbitrum error: "+funcname+" not yet implemented")
+	return errors.New("goarbitrum error: " + funcname + " not yet implemented")
 }
 
 func _extendTo32Bytes(arr []byte) []byte {
@@ -60,8 +62,8 @@ func _extendTo32Bytes(arr []byte) []byte {
 // CodeAt returns the code of the given account. This is needed to differentiate
 // between contract internal errors and the local chain being out of sync.
 func (conn *ArbConnection) CodeAt(
-	ctx         context.Context,
-	contract    common.Address,
+	ctx context.Context,
+	contract common.Address,
 	blockNumber *big.Int,
 ) ([]byte, error) {
 	return nil, _nyiError("CodeAt")
@@ -70,8 +72,8 @@ func (conn *ArbConnection) CodeAt(
 // CallContract executes an Ethereum contract call with the specified data as the
 // input.
 func (conn *ArbConnection) CallContract(
-	ctx         context.Context,
-	call        ethereum.CallMsg,
+	ctx context.Context,
+	call ethereum.CallMsg,
 	blockNumber *big.Int,
 ) ([]byte, error) {
 	dataValue, err := evm.BytesToSizedByteArray(call.Data)
@@ -80,7 +82,7 @@ func (conn *ArbConnection) CallContract(
 	}
 	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(call.To[:]))
 	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
-	arbCallValue, err := value.NewTupleFromSlice([]value.Value{ dataValue, destAddrValue, seqNumValue })
+	arbCallValue, err := value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
 	if err != nil {
 		panic("Unexpected error building arbCallValue")
 	}
@@ -100,7 +102,7 @@ func (conn *ArbConnection) CallContract(
 
 // PendingCodeAt returns the code of the given account in the pending state.
 func (conn *ArbConnection) PendingCodeAt(
-	ctx     context.Context,
+	ctx context.Context,
 	account common.Address,
 ) ([]byte, error) {
 	return nil, _nyiError("PendingCodeAt")
@@ -108,7 +110,7 @@ func (conn *ArbConnection) PendingCodeAt(
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
 func (conn *ArbConnection) PendingNonceAt(
-	ctx     context.Context,
+	ctx context.Context,
 	account common.Address,
 ) (uint64, error) {
 	return 0, nil
@@ -148,7 +150,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(tx.To()[:]))
 	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
 
-	arbCallValue, err := value.NewTupleFromSlice([]value.Value{ dataValue, destAddrValue, seqNumValue })
+	arbCallValue, err := value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
 	if err != nil {
 		panic("Unexpected error building arbCallValue")
 	}
@@ -157,7 +159,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 	messageHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(conn.vmId),
 		solsha3.Bytes32(arbCallValue.Hash()),
-		solsha3.Uint256(big.NewInt(0)),  // amount
+		solsha3.Uint256(big.NewInt(0)), // amount
 		tokenType[:],
 	)
 	signedMsg := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
@@ -180,7 +182,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 				return err
 			}
 			if !ok {
-				time.Sleep(2*time.Second)
+				time.Sleep(2 * time.Second)
 			} else {
 				result, err := evm.ProcessLog(resultVal)
 				if err != nil {
@@ -213,14 +215,14 @@ func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.Filter
 // SubscribeFilterLogs creates a background log filtering operation, returning
 // a subscription immediately, which can be used to stream the found events.
 func (conn *ArbConnection) SubscribeFilterLogs(
-	ctx   context.Context,
+	ctx context.Context,
 	query ethereum.FilterQuery,
-	ch    chan<- types.Log,
+	ch chan<- types.Log,
 ) (ethereum.Subscription, error) {
 	return newSubscription(conn, query, ch), nil
 }
 
-const subscriptionPollingInterval = 5*time.Second
+const subscriptionPollingInterval = 5 * time.Second
 
 type subscription struct {
 	proxy            ValidatorProxy
@@ -240,7 +242,7 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	addr = query.Addresses[0]
 
 	topics = make([][32]byte, len(query.Topics))
-	for i,sl := range query.Topics {
+	for i, sl := range query.Topics {
 		if len(sl) > 1 {
 			panic("GoArbitrum: subscription can't handle ORs of topics")
 		}
@@ -258,7 +260,7 @@ func _decodeLogInfo(ins *coordinator.LogInfo) (*types.Log, error) {
 	}
 	copy(outs.Address[:], addr)
 	outs.Topics = make([]common.Hash, len(ins.Topics))
-	for i,top := range ins.Topics {
+	for i, top := range ins.Topics {
 		decodedTopic, err := hexutil.Decode(top)
 		if err != nil {
 			log.Println("_decodeLogInfo error 2:", err)
@@ -321,7 +323,9 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 		defer sub.Unsubscribe()
 		for {
 			time.Sleep(subscriptionPollingInterval)
-			if !sub.active { return }
+			if !sub.active {
+				return
+			}
 			logInfos, err := sub.proxy.FindLogs(int64(sub.firstBlockUnseen), math.MaxInt32, sub.address[:], sub.topics)
 			if err != nil {
 				sub.errChan <- err
@@ -334,7 +338,7 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 					return
 				}
 				ok := true
-				for i,targetTopic := range topics {
+				for i, targetTopic := range topics {
 					if targetTopic != outs.Topics[i] {
 						ok = false
 					}
@@ -345,7 +349,7 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 				if ok {
 					sub.logChan <- *outs
 					if sub.firstBlockUnseen <= outs.BlockNumber {
-						sub.firstBlockUnseen = outs.BlockNumber+1
+						sub.firstBlockUnseen = outs.BlockNumber + 1
 					}
 				}
 			}
@@ -357,7 +361,7 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 // Unsubscribe cancels the sending of events to the data channel
 // and closes the error channel.
 func (sub *subscription) Unsubscribe() {
-	sub.unsubOnce.Do(func () {
+	sub.unsubOnce.Do(func() {
 		sub.active = false
 		close(sub.errChan)
 	})

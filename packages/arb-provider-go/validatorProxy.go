@@ -2,14 +2,16 @@ package goarbitrum
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/rpc/json"
-	"github.com/offchainlabs/arb-util/value"
-	"github.com/offchainlabs/arb-validator/coordinator"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gorilla/rpc/json"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
 )
 
 type ValidatorProxy interface {
@@ -22,14 +24,14 @@ type ValidatorProxy interface {
 }
 
 type ValidatorProxyImpl struct {
-	url      string
+	url string
 }
 
 func NewValidatorProxyImpl(url string) ValidatorProxy {
 	if url == "" {
 		url = "http://localhost:1235"
 	}
-	return &ValidatorProxyImpl{ url }
+	return &ValidatorProxyImpl{url}
 }
 
 func _encodeInt(i int64) string {
@@ -38,7 +40,7 @@ func _encodeInt(i int64) string {
 
 func _encodeByteArraySlice(slice [][32]byte) []string {
 	ret := make([]string, len(slice))
-	for i,arr := range slice {
+	for i, arr := range slice {
 		ret[i] = hexutil.Encode(arr[:])
 	}
 	return ret
@@ -71,7 +73,7 @@ func (vp *ValidatorProxyImpl) doCall(methodName string, request interface{}, res
 
 func (vp *ValidatorProxyImpl) SendMessage(val value.Value, hexPubkey string, signature []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err!=nil {
+	if err := value.MarshalValue(val, &buf); err != nil {
 		log.Println("ValProxy.SendMessage: marshaling error:", err)
 		return nil, err
 	}
@@ -81,7 +83,7 @@ func (vp *ValidatorProxyImpl) SendMessage(val value.Value, hexPubkey string, sig
 		Signature: hexutil.Encode(signature),
 	}
 	var response coordinator.SendMessageReply
-	if err := vp.doCall("SendMessage", request, &response); err!=nil {
+	if err := vp.doCall("SendMessage", request, &response); err != nil {
 		log.Println("ValProxy.SendMessage: error returned from doCall:", err)
 		return nil, err
 	}
@@ -97,7 +99,7 @@ func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (value.Value, bool
 		TxHash: hexutil.Encode(txHash),
 	}
 	var response coordinator.GetMessageResultReply
-	if err := vp.doCall("GetMessageResult", request, &response); err!=nil {
+	if err := vp.doCall("GetMessageResult", request, &response); err != nil {
 		log.Println("ValProxy.GetMessageResult: doCall returned error:", err)
 		return nil, false, err
 	}
@@ -120,7 +122,7 @@ func (vp *ValidatorProxyImpl) GetMessageResult(txHash []byte) (value.Value, bool
 func (vp *ValidatorProxyImpl) GetAssertionCount() (int, error) {
 	request := &struct{}{}
 	var response coordinator.GetAssertionCountReply
-	if err := vp.doCall("GetAssertionCount", request, &response); err!=nil {
+	if err := vp.doCall("GetAssertionCount", request, &response); err != nil {
 		return 0, err
 	}
 	return response.AssertionCount, nil
@@ -129,7 +131,7 @@ func (vp *ValidatorProxyImpl) GetAssertionCount() (int, error) {
 func (vp *ValidatorProxyImpl) GetVMInfo() (string, error) {
 	request := &struct{}{}
 	var response coordinator.GetVMInfoReply
-	if err := vp.doCall("GetVMInfo", request, &response); err!=nil {
+	if err := vp.doCall("GetVMInfo", request, &response); err != nil {
 		return "", err
 	}
 	return response.VMId, nil
@@ -143,7 +145,7 @@ func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byt
 		Topics:     _encodeByteArraySlice(topics),
 	}
 	var response coordinator.FindLogsReply
-	if err := vp.doCall("FindLogs", request, &response); err!=nil {
+	if err := vp.doCall("FindLogs", request, &response); err != nil {
 		return nil, err
 	}
 	return response.Logs, nil
@@ -151,7 +153,7 @@ func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byt
 
 func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address) (value.Value, bool, error) {
 	var buf bytes.Buffer
-	if err := value.MarshalValue(val, &buf); err!=nil {
+	if err := value.MarshalValue(val, &buf); err != nil {
 		return nil, false, err
 	}
 	request := &coordinator.CallMessageArgs{
@@ -159,7 +161,7 @@ func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address
 		hexutil.Encode(sender[:]),
 	}
 	var response coordinator.CallMessageReply
-	if err := vp.doCall("CallMessage", request, &response); err!=nil {
+	if err := vp.doCall("CallMessage", request, &response); err != nil {
 		return nil, false, err
 	}
 	if response.Success {
@@ -173,4 +175,3 @@ func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address
 		return nil, false, nil
 	}
 }
-
