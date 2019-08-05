@@ -1,6 +1,8 @@
 [![Build Status](https://travis-ci.com/OffchainLabs/arb-avm-cpp.svg?branch=master)](https://travis-ci.com/OffchainLabs/arb-avm-cpp) [![codecov](https://codecov.io/gh/OffchainLabs/arb-avm-cpp/branch/master/graph/badge.svg)](https://codecov.io/gh/OffchainLabs/arb-avm-cpp)
 # arb-avm-cpp
 
+Arbitrum technologies are patent pending. This repository is offered under the Apache 2.0 license. See LICENSE for details.
+
 ## Bulding, testing, and running
 
 ```bash
