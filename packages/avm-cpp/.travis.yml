@@ -1,0 +1,28 @@
+language: cpp
+dist: bionic
+os:
+  - linux
+addons:
+  apt:
+    update: true
+compiler:
+  - gcc
+before_install:
+  - sudo apt-get install -y libboost-dev lcov python3
+  - pip install --user conan
+  - conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
+  - mkdir release
+  - cd release
+install:
+  - conan install ..
+script:
+  - cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
+  - cmake  --build .
+  - ctest .
+after_success:
+  # Create lcov report
+  - lcov --capture --directory . --output-file coverage.info
+  - lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*' # filter system-files
+  - lcov --list coverage.info # debug info
+  # Uploading report to CodeCov
+  - bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"

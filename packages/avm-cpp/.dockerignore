@@ -1,0 +1,10 @@
+**/.DS_Store
+**/.dockerignore
+**/.git
+**/.gitignore
+**/.idea
+**/Dockerfile
+**/dev-mode.Dockerfile
+build/
+release/
+xcode/
