@@ -34,9 +34,9 @@ import (
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	"github.com/offchainlabs/arb-validator/coordinator"
-	"github.com/offchainlabs/arb-validator/ethbridge"
-	"github.com/offchainlabs/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
 func attachProfiler(router *mux.Router) {

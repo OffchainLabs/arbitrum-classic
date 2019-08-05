@@ -1,4 +1,4 @@
-module github.com/offchainlabs/arb-validator
+module github.com/offchainlabs/arbitrum/packages/arb-validator
 
 go 1.12
 
@@ -33,9 +33,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
-	github.com/offchainlabs/arb-avm v0.1.1-0.20190723213946-c68fbd67a3fc
-	github.com/offchainlabs/arb-avm-cpp v0.0.0-20190725161721-6bc074d98eea
-	github.com/offchainlabs/arb-util v0.0.0-20190723230105-07fd0862acf5
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.0.0-20190805212115-4129e388f6a1
+	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.0.0-20190805212115-4129e388f6a1
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.0.0-20190805212115-4129e388f6a1
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
@@ -61,3 +61,9 @@ require (
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
+
+replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../arb-avm-go
+
+replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
+
+replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util

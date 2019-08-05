@@ -18,7 +18,7 @@ syntax = "proto3";
 package valmessage;
 import "protocol/protocol.proto";
 import "value/value.proto";
-option go_package = "github.com/offchainlabs/arb-validator/valmessage";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage";
 
 message Address {
     bytes value = 1;

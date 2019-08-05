@@ -19,7 +19,7 @@ package valmessage
 import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type UnanimousRequestData struct {

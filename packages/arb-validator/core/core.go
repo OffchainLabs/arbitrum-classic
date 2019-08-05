@@ -19,10 +19,9 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type Config struct {

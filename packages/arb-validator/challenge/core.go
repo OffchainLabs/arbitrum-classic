@@ -19,9 +19,9 @@ package challenge
 import (
 	"fmt"
 
-	"github.com/offchainlabs/arb-validator/bridge"
-	"github.com/offchainlabs/arb-validator/core"
-	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type State interface {

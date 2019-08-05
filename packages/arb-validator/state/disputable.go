@@ -21,18 +21,17 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/offchainlabs/arb-validator/bridge"
-	"github.com/offchainlabs/arb-validator/challenge"
-	"github.com/offchainlabs/arb-validator/challenge/challenger"
-	"github.com/offchainlabs/arb-validator/challenge/defender"
-	"github.com/offchainlabs/arb-validator/challenge/observer"
-	"github.com/offchainlabs/arb-validator/core"
-	"github.com/offchainlabs/arb-validator/ethbridge"
-	"github.com/offchainlabs/arb-validator/valmessage"
-
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/challenger"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/defender"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/observer"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type Error struct {

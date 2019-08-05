@@ -29,13 +29,12 @@ import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
-
-	"github.com/offchainlabs/arb-validator/ethbridge"
-	"github.com/offchainlabs/arb-validator/hashing"
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type UnanimousAssertionRequest struct {

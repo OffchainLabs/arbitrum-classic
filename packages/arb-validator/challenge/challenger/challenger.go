@@ -19,13 +19,12 @@ package challenger
 import (
 	"math/rand"
 
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-
-	"github.com/offchainlabs/arb-validator/bridge"
-	"github.com/offchainlabs/arb-validator/challenge"
-	"github.com/offchainlabs/arb-validator/core"
-	"github.com/offchainlabs/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func New(

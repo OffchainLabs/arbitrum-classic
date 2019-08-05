@@ -24,13 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/offchainlabs/arb-util/evm"
-	"github.com/offchainlabs/arb-util/value"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arb-validator/hashing"
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type validatorRequest interface {

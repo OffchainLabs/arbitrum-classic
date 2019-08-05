@@ -8,8 +8,8 @@ import (
 	math "math"
 
 	proto "github.com/golang/protobuf/proto"
-	protocol "github.com/offchainlabs/arb-util/protocol"
-	value "github.com/offchainlabs/arb-util/value"
+	protocol "github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	value "github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

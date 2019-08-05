@@ -18,18 +18,18 @@ WORKDIR "/home/user/"
 
 # Dependencies
 COPY --chown=user go.mod go.sum /home/user/
-##DEV_COPY --chown=user arb-avm/go.mod arb-avm/go.sum /home/user/arb-avm/
+##DEV_COPY --chown=user arb-avm-go/go.mod arb-avm-go/go.sum /home/user/arb-avm-go/
 ##DEV_COPY --chown=user arb-util/go.mod arb-util/go.sum /home/user/arb-util/
 ##DEV_COPY --chown=user arb-avm-cpp/go.mod arb-avm-cpp/go.sum /home/user/arb-avm-cpp/
-RUN if [[ -d arb-avm ]]; then                                                           \
-    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod &&            \
+RUN if [[ -d arb-avm-go ]]; then                                                        \
+    echo "replace github.com/offchainlabs/arb-avm-go => ./arb-avm-go" >> go.mod &&      \
     echo "replace github.com/offchainlabs/arb-util => ./arb-util" >> go.mod &&          \
     echo "replace github.com/offchainlabs/arb-avm-cpp => ./arb-avm-cpp" >> go.mod &&    \
-    echo "replace github.com/offchainlabs/arb-util => ../arb-util" >> arb-avm/go.mod;fi;\
+    echo "replace github.com/offchainlabs/arb-util => ../arb-util" >> arb-avm-go/go.mod;fi;\
     go mod download
 
 ##DEV_COPY --chown=user arb-util /home/user/arb-util
-##DEV_COPY --chown=user arb-avm /home/user/arb-avm
+##DEV_COPY --chown=user arb-avm-go /home/user/arb-avm-go
 COPY --from=arb-avm-cpp --chown=user /arb-avm-cpp /home/user/arb-avm-cpp/
 COPY --chown=user ./ /home/user/
 
@@ -37,11 +37,11 @@ COPY --chown=user ./ /home/user/
 ##DEV_COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 
 # Build arb-validator
-RUN if [[ -d arb-avm ]]; then \
-    echo "replace github.com/offchainlabs/arb-avm => ./arb-avm" >> go.mod &&            \
+RUN if [[ -d arb-avm-go ]]; then \
+    echo "replace github.com/offchainlabs/arb-avm-go => ./arb-avm-go" >> go.mod &&      \
     echo "replace github.com/offchainlabs/arb-util => ./arb-util" >> go.mod &&          \
     echo "replace github.com/offchainlabs/arb-avm-cpp => ./arb-avm-cpp" >> go.mod &&    \
-    echo "replace github.com/offchainlabs/arb-util => ../arb-util" >> arb-avm/go.mod;fi;\
+    echo "replace github.com/offchainlabs/arb-util => ../arb-util" >> arb-avm-go/go.mod;fi;\
     go build -v ./cmd/followerServer ./cmd/coordinatorServer && \
     go install ./cmd/followerServer ./cmd/coordinatorServer
 

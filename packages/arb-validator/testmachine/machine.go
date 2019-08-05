@@ -19,16 +19,14 @@ package testmachine
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arb-avm/goloader"
 	"log"
 
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
-
-	gomachine "github.com/offchainlabs/arb-avm/vm"
-
-	"github.com/offchainlabs/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
+	gomachine "github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type Machine struct {

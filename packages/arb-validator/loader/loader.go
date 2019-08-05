@@ -18,14 +18,12 @@ package loader
 
 import (
 	"fmt"
-	"github.com/offchainlabs/arb-validator/testmachine"
 	"strings"
 
-	"github.com/offchainlabs/arb-util/machine"
-
-	"github.com/offchainlabs/arb-avm/goloader"
-
-	"github.com/offchainlabs/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/testmachine"
 )
 
 func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine.Machine, error) {

@@ -36,12 +36,11 @@ import (
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	"github.com/offchainlabs/arb-util/machine"
-
-	"github.com/offchainlabs/arb-validator/ethbridge"
-	"github.com/offchainlabs/arb-validator/ethvalidator"
-	"github.com/offchainlabs/arb-validator/loader"
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type FollowerServer struct {

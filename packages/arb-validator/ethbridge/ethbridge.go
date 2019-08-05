@@ -29,13 +29,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
-
-	"github.com/offchainlabs/arb-validator/ethbridge/challengeRPC"
-	"github.com/offchainlabs/arb-validator/ethbridge/verifierRPC"
-	"github.com/offchainlabs/arb-validator/hashing"
-	"github.com/offchainlabs/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengeRPC"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/verifierRPC"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type Bridge struct {
