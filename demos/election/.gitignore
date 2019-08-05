@@ -2,7 +2,7 @@
 .DS_Store
 build
 compiled.json
-compose
-docker-compose.arb-deploy.yml
+docker-compose.yml
 node_modules
 validator-states
+yarn-error.log
