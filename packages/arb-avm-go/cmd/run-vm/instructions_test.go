@@ -23,10 +23,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/vm"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 // This is to test that a machine can be built and run

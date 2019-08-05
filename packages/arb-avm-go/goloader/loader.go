@@ -22,8 +22,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/offchainlabs/arb-avm/vm"
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type RawExtension struct {

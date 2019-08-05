@@ -16,7 +16,7 @@
 
 package code
 
-import "github.com/offchainlabs/arb-util/value"
+import "github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 // 0x0 range - arithmetic ops.
 const (

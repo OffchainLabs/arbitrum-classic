@@ -20,8 +20,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 const CodeSaveFrequency = 2

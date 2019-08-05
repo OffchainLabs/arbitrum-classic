@@ -21,14 +21,14 @@ import (
 	"fmt"
 	"io"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arb-avm/code"
-	"github.com/offchainlabs/arb-avm/vm/stack"
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/stack"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type MachineStatus int

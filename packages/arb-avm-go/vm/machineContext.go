@@ -17,9 +17,9 @@
 package vm
 
 import (
-	"github.com/offchainlabs/arb-util/machine"
-	"github.com/offchainlabs/arb-util/protocol"
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type MachineAssertionContext struct {
