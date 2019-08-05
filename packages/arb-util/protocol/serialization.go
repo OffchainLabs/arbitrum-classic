@@ -19,7 +19,7 @@ package protocol
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 //go:generate protoc -I.. -I. --go_out=paths=source_relative:. protocol.proto

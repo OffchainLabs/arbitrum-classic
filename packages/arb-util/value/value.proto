@@ -1,6 +1,6 @@
 syntax = "proto3";
 package value;
-option go_package = "github.com/offchainlabs/arb-util/value";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/value";
 
 message BigIntegerBuf {
     bytes value = 1;

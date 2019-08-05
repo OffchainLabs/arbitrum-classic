@@ -23,7 +23,7 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type nftKey struct {

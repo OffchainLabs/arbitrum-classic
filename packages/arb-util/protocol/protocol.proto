@@ -1,7 +1,7 @@
 syntax = "proto3";
 package protocol;
 import "value/value.proto";
-option go_package = "github.com/offchainlabs/arb-util/protocol";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
 message TokenTypeBuf {
     bytes value = 1;

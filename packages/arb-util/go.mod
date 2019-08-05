@@ -1,4 +1,4 @@
-module github.com/offchainlabs/arb-util
+module github.com/offchainlabs/arbitrum/packages/arb-util
 
 go 1.12
 

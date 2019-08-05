@@ -19,11 +19,11 @@ package protocol
 import (
 	"fmt"
 
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type MessageQueue struct {
-	msg     value.TupleValue
+	msg value.TupleValue
 }
 
 func NewMessageQueue() *MessageQueue {

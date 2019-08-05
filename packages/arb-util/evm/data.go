@@ -23,7 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/math"
 
-	"github.com/offchainlabs/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func getBigTuple(val value.Value, index uint64) (value.Value, error) {

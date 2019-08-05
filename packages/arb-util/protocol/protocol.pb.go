@@ -8,7 +8,7 @@ import (
 	math "math"
 
 	proto "github.com/golang/protobuf/proto"
-	value "github.com/offchainlabs/arb-util/value"
+	value "github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

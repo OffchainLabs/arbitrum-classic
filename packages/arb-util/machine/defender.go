@@ -18,7 +18,8 @@ package machine
 
 import (
 	"errors"
-	"github.com/offchainlabs/arb-util/protocol"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type AssertionDefender struct {
