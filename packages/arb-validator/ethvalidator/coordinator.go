@@ -527,6 +527,20 @@ func (m *ValidatorCoordinator) createVMImpl(ctx context.Context) (*types.Receipt
 		}
 		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
 	}
+
+	// Check all validators have deposited the required escrow amount
+	var tokenContract common.Address
+	copy(tokenContract[:], stateData.Config.EscrowCurrency.Value)
+	escrowRequired := value.NewBigIntFromBuf(stateData.Config.EscrowRequired)
+	var user [32]byte
+	for address := range m.Val.Validators {
+		copy(user[:], address[:])
+		if err := m.Val.WaitForTokenBalance(ctx, user, tokenContract, escrowRequired); err != nil {
+			return nil, fmt.Errorf("validator %v has insufficient balance",
+				hexutil.Encode(user[:]))
+		}
+	}
+
 	receiptChan, errChan := m.Val.CreateVM(ctx, createData, signatures)
 	select {
 	case receipt := <-receiptChan:

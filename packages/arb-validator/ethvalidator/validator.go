@@ -261,7 +261,7 @@ func (val *EthValidator) FinalizedUnanimousAssert(
 			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
 			return
@@ -295,7 +295,7 @@ func (val *EthValidator) PendingUnanimousAssert(
 			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
 			return
@@ -323,7 +323,7 @@ func (val *EthValidator) ConfirmUnanimousAsserted(
 			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
 			return
@@ -351,7 +351,7 @@ func (val *EthValidator) PendingDisputableAssert(
 			errChan <- errors2.Wrap(err, "failed initiating disputable assertion")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed initiating disputable assertion")
 			return
@@ -379,7 +379,7 @@ func (val *EthValidator) ConfirmDisputableAsserted(
 			errChan <- errors2.Wrap(err, "failed confirming disputable assertion")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed confirming disputable assertion")
 			return
@@ -407,7 +407,7 @@ func (val *EthValidator) InitiateChallenge(
 			errChan <- errors2.Wrap(err, "failed initiating challenge")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed initiating challenge")
 			return
@@ -437,7 +437,7 @@ func (val *EthValidator) BisectAssertion(
 			errChan <- errors2.Wrap(err, "failed initiating bisection")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed initiating bisection")
 			return
@@ -472,7 +472,7 @@ func (val *EthValidator) ContinueChallenge(
 			errChan <- errors2.Wrap(err, "failed continuing challenge")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed continuing challenge")
 			return
@@ -504,7 +504,7 @@ func (val *EthValidator) OneStepProof(
 			errChan <- errors2.Wrap(err, "failed one step proof")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed one step proof")
 			return
@@ -539,7 +539,7 @@ func (val *EthValidator) AsserterTimedOut(
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 			return
@@ -569,7 +569,7 @@ func (val *EthValidator) ChallengerTimedOut(
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 			return
@@ -600,7 +600,7 @@ func (val *EthValidator) DepositFunds(
 			errChan <- err
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err
 			return
@@ -623,6 +623,34 @@ func (val *EthValidator) GetTokenBalance(
 	return amt, err
 }
 
+func (val *EthValidator) WaitForTokenBalance(
+	ctx context.Context,
+	user [32]byte,
+	tokenContract common.Address,
+	amount *big.Int,
+) error {
+	auth := &bind.CallOpts{
+		Pending: false,
+		From:    val.auth.From,
+		Context: ctx,
+	}
+
+	for {
+		select {
+		case _ = <-time.After(time.Second):
+			amt, err := val.con.GetTokenBalance(auth, user, tokenContract)
+			if err != nil {
+				return err
+			}
+			if amount.Cmp(amt) >= 0 {
+				return nil
+			}
+		case _ = <-ctx.Done():
+			return errors.New("Balance not reached")
+		}
+	}
+}
+
 func (val *EthValidator) CreateVM(
 	ctx context.Context,
 	createData *valmessage.CreateVMValidatorRequest,
@@ -641,7 +669,7 @@ func (val *EthValidator) CreateVM(
 			errChan <- err
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err
 			return
@@ -665,7 +693,7 @@ func (val *EthValidator) SendMessage(
 			errChan <- err
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err
 			return
@@ -693,7 +721,7 @@ func (val *EthValidator) SendEthMessage(
 			errChan <- err
 			return
 		}
-		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err
 			return

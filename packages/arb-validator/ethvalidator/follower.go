@@ -17,11 +17,15 @@
 package ethvalidator
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"errors"
 	"log"
 	"math"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
@@ -236,36 +240,41 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 	return nil
 }
 
-func (m *ValidatorFollower) HandleCreateVM(request *valmessage.CreateVMValidatorRequest) {
+func (m *ValidatorFollower) HandleCreateVM(ctx context.Context, request *valmessage.CreateVMValidatorRequest) *valmessage.FollowerResponse {
 	createHash := hashing.CreateVMHash(request)
+	failedReply := &valmessage.FollowerResponse{
+		Response: &valmessage.FollowerResponse_Create{
+			Create: &valmessage.CreateVMFollowerResponse{
+				Accepted: false,
+			},
+		},
+		RequestId: value.NewHashBuf(createHash),
+	}
+	var escrowCurrency common.Address
+	copy(escrowCurrency[:], request.Config.EscrowCurrency.Value)
+	escrowRequired := value.NewBigIntFromBuf(request.Config.EscrowRequired)
+	address := m.Address()
+	var user [32]byte
+	copy(user[:], address[:])
+	if err := m.WaitForTokenBalance(ctx, user, escrowCurrency, escrowRequired); err != nil {
+		log.Printf("Follower meet balance requirement: %v", err)
+		return failedReply
+	}
 	sig, err := m.Sign(createHash)
-	var response *valmessage.FollowerResponse
 	if err != nil {
 		log.Printf("Follower failed to sign1: %v", err)
-		response = &valmessage.FollowerResponse{
-			Response: &valmessage.FollowerResponse_Create{
-				Create: &valmessage.CreateVMFollowerResponse{
-					Accepted: false,
-				},
-			},
-			RequestId: value.NewHashBuf(createHash),
-		}
-	} else {
-		response = &valmessage.FollowerResponse{
-			Response: &valmessage.FollowerResponse_Create{
-				Create: &valmessage.CreateVMFollowerResponse{
-					Accepted:  true,
-					Signature: sig,
-				},
-			},
-			RequestId: value.NewHashBuf(createHash),
-		}
+		return failedReply
 	}
-	raw, err := proto.Marshal(response)
-	if err != nil {
-		log.Fatalln("Follower failed to marshal response")
+
+	return &valmessage.FollowerResponse{
+		Response: &valmessage.FollowerResponse_Create{
+			Create: &valmessage.CreateVMFollowerResponse{
+				Accepted:  true,
+				Signature: sig,
+			},
+		},
+		RequestId: value.NewHashBuf(createHash),
 	}
-	m.client.ToClient <- raw
 }
 
 func (m *ValidatorFollower) Run() error {
@@ -302,7 +311,14 @@ func (m *ValidatorFollower) Run() error {
 					)
 				}
 			case *valmessage.ValidatorRequest_Create:
-				m.HandleCreateVM(request.Create)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+				defer cancel()
+				response := m.HandleCreateVM(ctx, request.Create)
+				raw, err := proto.Marshal(response)
+				if err != nil {
+					log.Fatalln("Follower failed to marshal response")
+				}
+				m.client.ToClient <- raw
 			case *valmessage.ValidatorRequest_CreateNotification:
 			}
 		}

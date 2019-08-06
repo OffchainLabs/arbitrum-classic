@@ -447,7 +447,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 	return outChan, errChan, nil
 }
 
-func (con *Bridge) WaitForReciept(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
+func (con *Bridge) WaitForReceipt(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):
