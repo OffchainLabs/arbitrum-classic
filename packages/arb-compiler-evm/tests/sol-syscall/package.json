@@ -1,5 +1,19 @@
 {
+  "name": "sol-syscall",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/offchainlabs/arbitrum.git",
+    "directory": "packages/arb-compiler-evm/tests/sol-syscall"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum/issues"
+  },
+  "homepage": "https://offchainlabs.com/",
   "dependencies": {
-    "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider"
+    "arb-provider-truffle": "^0.1.0"
   }
 }

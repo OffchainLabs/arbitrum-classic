@@ -1,6 +1,7 @@
 # Custom and then Node, Go, Cpp, Python
 .DS_Store
 .idea
+.vscode
 *.ao
 compiled.json
 build

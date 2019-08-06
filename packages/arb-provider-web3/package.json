@@ -1,20 +1,21 @@
 {
-  "name": "arb-web3-provider",
+  "name": "arb-provider-web3",
   "version": "0.1.0",
   "description": "Arbitrum provider for web3",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OffchainLabs/arb-web3-provider.git"
+    "url": "git+https://github.com/OffchainLabs/arbitrum.git",
+    "directory": "packages/arb-provider-web3"
   },
-  "author": "Offchain Labs, Inc.",
-  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/OffchainLabs/arb-web3-provider/issues"
+    "url": "https://github.com/OffchainLabs/arbitrum/issues"
   },
-  "homepage": "https://github.com/OffchainLabs/arb-web3-provider#readme",
+  "homepage": "https://offchainlabs.com",
   "dependencies": {
-    "arb-ethers-provider": "https://github.com/OffchainLabs/arb-ethers-provider.git",
+    "arb-provider-ethers": "^0.1.0",
     "ethers": "^4.0.27",
     "ethers-providers": "^2.1.19",
     "ethers-utils": "^2.1.11",

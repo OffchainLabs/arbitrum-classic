@@ -1,16 +1,15 @@
 {
   "name": "election",
   "version": "0.1.0",
-  "description": "",
+  "description": "Election demo dApp",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack",
     "start": "webpack-dev-server --open",
     "dev": "webpack-dev-server --open",
     "watch": "webpack --watch"
   },
-  "author": "Offchain Labs, Inc.",
-  "license": "Apache-2.0",
   "devDependencies": {
     "lite-server": "^2.5.2",
     "truffle": "^5.0.20",
@@ -19,8 +18,8 @@
     "webpack-dev-server": "^3.7.2"
   },
   "dependencies": {
-    "arb-truffle-provider": "https://github.com/OffchainLabs/arb-truffle-provider.git",
-    "arb-web3-provider": "https://github.com/offchainlabs/arb-web3-provider",
+    "arb-provider-truffle": "^0.1.0",
+    "arb-provider-web3": "^0.1.0",
     "truffle-contract": "1.1.11",
     "web3": "0.20"
   }
