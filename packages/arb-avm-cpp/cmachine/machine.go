@@ -19,7 +19,7 @@ package cmachine
 /*
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -lcavm -lavm -lstdc++
-#include <cmachine.h>
+#include "../cavm/cmachine.h"
 #include <stdio.h>
 #include <stdlib.h>
 */

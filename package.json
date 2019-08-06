@@ -13,6 +13,9 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
+    "install:compiler": "./scripts/install-arb-compiler-evm",
+    "install:validator": "./scripts/install-arb-validator",
+    "install:all": "yarn install:compiler && yarn install:validator",
     "test": "",
     "docs": ""
   },
