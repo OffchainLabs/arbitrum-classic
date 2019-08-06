@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -90,8 +92,12 @@ func NewWaiting(config *core.Config, c *core.Core) Waiting {
 	}
 }
 
-func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
-	bridge.PendingUnanimousAssert(
+func (bot Waiting) HasOpenAssertion() bool {
+	return bot.assertion != nil
+}
+
+func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, chan error) {
+	return bridge.PendingUnanimousAssert(
 		context.Background(),
 		bot.GetCore().GetMachine().InboxHash().Hash(),
 		bot.timeBounds,
@@ -101,9 +107,9 @@ func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
 	)
 }
 
-func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) {
+func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, chan error) {
 	inboxHash := bot.GetCore().GetMachine().InboxHash()
-	bridge.FinalizedUnanimousAssert(
+	return bridge.FinalizedUnanimousAssert(
 		context.Background(),
 		inboxHash.Hash(),
 		bot.timeBounds,
@@ -112,9 +118,15 @@ func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) {
 	)
 }
 
-func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (State, error) {
+func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool, errChan chan<- error) (State, error) {
+	// If there is no active unanimous assertion, there is nothing to close
+	// TODO: Validator should refuse to unanimous assert again from the same start point
 	if bot.assertion == nil {
-		return bot, errors.New("couldn't close since no Assertion is open")
+		err := errors.New("couldn't close since no Assertion is open")
+		if errChan != nil {
+			errChan <- err
+		}
+		return bot, err
 	}
 
 	if bot.sequenceNum == math.MaxUint64 {
@@ -124,6 +136,7 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (St
 				bot.GetCore(),
 				bot.assertion,
 				retChan,
+				errChan,
 			},
 			nil
 	}
@@ -134,6 +147,7 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (St
 			bot.sequenceNum,
 			bot.assertion,
 			retChan,
+			errChan,
 		},
 		nil
 }
@@ -316,7 +330,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, errors.New("waiting observer saw pending unanimous assertion that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
-			newBot, err := bot.CloseUnanimous(bridge, nil)
+			newBot, err := bot.CloseUnanimous(bridge, nil, nil)
 			return newBot, nil, err
 		} else {
 			return waitingOffchainClosing{
@@ -325,11 +339,12 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 				bot.assertion,
 				time + bot.VMConfig.GracePeriod,
 				nil,
+				nil,
 			}, nil, nil
 		}
 	case ethbridge.PendingDisputableAssertionEvent:
 		if bot.accepted != nil {
-			newBot, err := bot.CloseUnanimous(bridge, nil)
+			newBot, err := bot.CloseUnanimous(bridge, nil, nil)
 			return newBot, nil, err
 		}
 

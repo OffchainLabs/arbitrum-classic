@@ -32,6 +32,10 @@ type pendingMessageCheck struct {
 	ResultChan chan<- bool
 }
 
+type openAssertionCheck struct {
+	ResultChan chan<- bool
+}
+
 type vmStateRequest struct {
 	ResultChan chan<- valmessage.VMStateData
 }

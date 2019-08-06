@@ -423,15 +423,18 @@ func (m *ValidatorCoordinator) Run() error {
 				if shouldUnan {
 					err := m.initiateUnanimousAssertionImpl(forceFinal, m.maxStepsUnanSteps)
 					if err != nil {
-						log.Println("Coordinator hit problem and is closing channel")
-						closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
-
-						closed := <-closedChan
-						if closed {
-							log.Println("Coordinator successfully closed channel")
-						} else {
-							log.Println("Coordinator failed to close channel")
+						log.Println("Coordinator hit problem unanimously asserting")
+						if <-m.Val.Bot.HasOpenAssertion() {
+							log.Println("Coordinator is closing channel")
+							closedChan, errChan := m.Val.Bot.CloseUnanimousAssertionRequest()
+							select {
+							case _ = <-closedChan:
+								log.Println("Coordinator successfully closed channel")
+							case err := <-errChan:
+								log.Println("Coordinator failed to close channel", err)
+							}
 						}
+
 					} else {
 						pendingForProcessing = newPending
 					}
@@ -574,13 +577,13 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, m
 
 	if wasFinal {
 		log.Println("Coordinator is closing unanimous assertion")
-		closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
+		closedChan, errChan := m.Val.Bot.CloseUnanimousAssertionRequest()
 
-		closed := <-closedChan
-		if closed {
+		select {
+		case _ = <-closedChan:
 			log.Println("Coordinator successfully closed channel")
-		} else {
-			log.Println("Coordinator failed to close channel")
+		case err := <-errChan:
+			log.Println("Coordinator failed to close channel", err)
 		}
 	} else {
 		log.Println("Coordinator is keeping unanimous assertion chain open")

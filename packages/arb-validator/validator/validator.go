@@ -89,6 +89,12 @@ func (validator *Validator) HasPendingMessages() chan bool {
 	return retChan
 }
 
+func (validator *Validator) HasOpenAssertion() chan bool {
+	retChan := make(chan bool, 1)
+	validator.requests <- openAssertionCheck{ResultChan: retChan}
+	return retChan
+}
+
 func (validator *Validator) RequestVMState() <-chan valmessage.VMStateData {
 	resultChan := make(chan valmessage.VMStateData)
 	validator.requests <- vmStateRequest{ResultChan: resultChan}
@@ -163,12 +169,14 @@ func (validator *Validator) ConfirmOffchainUnanimousAssertion(
 	return resultChan, errChan
 }
 
-func (validator *Validator) CloseUnanimousAssertionRequest() <-chan bool {
+func (validator *Validator) CloseUnanimousAssertionRequest() (<-chan bool, <-chan error) {
 	resultChan := make(chan bool, 1)
+	errChan := make(chan error, 1)
 	validator.requests <- closeUnanimousAssertionRequest{
 		ResultChan: resultChan,
+		ErrChan:    errChan,
 	}
-	return resultChan
+	return resultChan, errChan
 }
 
 func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge bridge.Bridge) {
@@ -340,13 +348,11 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					}
 				case closeUnanimousAssertionRequest:
 					if bot, ok := validator.bot.(state.Waiting); ok {
-						_ = bot.GetCore()
-						newBot, err := bot.CloseUnanimous(bridge, request.ResultChan)
+						newBot, err := bot.CloseUnanimous(bridge, request.ResultChan, request.ErrChan)
 						if err != nil {
 							request.ErrChan <- err
 							break
 						}
-
 						validator.bot = newBot
 					} else {
 						request.ErrChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
@@ -387,6 +393,13 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 				case pendingMessageCheck:
 					c := validator.bot.GetCore()
 					request.ResultChan <- c.GetMachine().HasPendingMessages()
+				case openAssertionCheck:
+					bot, ok := validator.bot.(state.Waiting)
+					if !ok {
+						request.ResultChan <- false
+					} else {
+						request.ResultChan <- bot.HasOpenAssertion()
+					}
 				case callRequest:
 					c := validator.bot.GetCore()
 					updatedState := c.GetMachine().Clone()
