@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	jsonenc "encoding/json"
 	"flag"
@@ -76,13 +77,17 @@ func NewFollowerServer(
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
 
-	_, err = man.DepositFunds(escrowRequired)
-	if err != nil {
+	if err = man.Run(); err != nil {
 		log.Fatal(err)
 	}
 
-	err = man.Run()
-	if err != nil {
+	receiptChan, errChan := man.DepositFunds(context.Background(), escrowRequired)
+	select {
+	case receipt := <-receiptChan:
+		if receipt.Status == 0 {
+			log.Fatalln("Follower could not deposit funds")
+		}
+	case err := <-errChan:
 		log.Fatal(err)
 	}
 

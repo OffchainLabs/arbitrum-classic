@@ -17,6 +17,7 @@
 package ethvalidator
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/tls"
@@ -26,6 +27,8 @@ import (
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -248,13 +251,13 @@ func (m *ClientManager) gatherSignatures(
 	return responseList
 }
 
-func (m *ClientManager) WaitForFollowers(timeout time.Duration) bool {
+func (m *ClientManager) WaitForFollowers(ctx context.Context) bool {
 	waitChan := make(chan bool, 1)
 	m.waitRequestChan <- waitChan
 	select {
 	case <-waitChan:
 		return true
-	case <-time.After(timeout):
+	case <-ctx.Done():
 		return false
 	}
 }
@@ -382,7 +385,10 @@ func (m *ValidatorCoordinator) Run() error {
 			case request := <-m.requestChan:
 				switch request := request.(type) {
 				case CoordinatorCreateRequest:
-					ret, err := m.createVMImpl(request.timeout)
+					ctx, cancel := context.WithTimeout(context.Background(), request.timeout)
+					defer cancel()
+					ret, err := m.createVMImpl(ctx)
+
 					if err != nil {
 						request.errChan <- err
 					} else {
@@ -438,7 +444,7 @@ func (m *ValidatorCoordinator) Run() error {
 
 type CoordinatorCreateRequest struct {
 	timeout time.Duration
-	retChan chan bool
+	retChan chan *types.Receipt
 	errChan chan error
 }
 
@@ -452,8 +458,8 @@ type CoordinatorUnanimousRequest struct {
 	errChan chan error
 }
 
-func (m *ValidatorCoordinator) CreateVM(timeout time.Duration) (chan bool, chan error) {
-	retChan := make(chan bool, 1)
+func (m *ValidatorCoordinator) CreateVM(timeout time.Duration) (chan *types.Receipt, chan error) {
+	retChan := make(chan *types.Receipt, 1)
 	errChan := make(chan error, 1)
 	m.requestChan <- CoordinatorCreateRequest{timeout, retChan, errChan}
 	return retChan, errChan
@@ -472,10 +478,10 @@ func (m *ValidatorCoordinator) InitiateUnanimousAssertion(final bool) (chan bool
 	return retChan, errChan
 }
 
-func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error) {
-	gotAll := m.cm.WaitForFollowers(timeout)
+func (m *ValidatorCoordinator) createVMImpl(ctx context.Context) (*types.Receipt, error) {
+	gotAll := m.cm.WaitForFollowers(ctx)
 	if !gotAll {
-		return false, errors.New("coordinator can only create VM when connected to all other validators")
+		return nil, errors.New("coordinator can only create VM when connected to all other validators")
 	}
 
 	notifyFollowers := func(allSigned bool) {
@@ -505,24 +511,29 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 	)
 	if len(responses) != m.Val.ValidatorCount()-1 {
 		notifyFollowers(false)
-		return false, errors.New("some Validators didn't respond")
+		return nil, errors.New("some Validators didn't respond")
 	}
 
 	signatures := make([][]byte, m.Val.ValidatorCount())
 	var err error
 	signatures[m.Val.Validators[m.Val.Address()].indexNum], err = m.Val.Sign(createHash)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	for _, response := range responses {
 		r := response.response.Response.(*valmessage.FollowerResponse_Create).Create
 		if !r.Accepted {
-			return false, errors.New("some Validators refused to sign")
+			return nil, errors.New("some Validators refused to sign")
 		}
 		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
 	}
-	_, err = m.Val.CreateVM(createData, signatures)
-	return true, err
+	receiptChan, errChan := m.Val.CreateVM(ctx, createData, signatures)
+	select {
+	case receipt := <-receiptChan:
+		return receipt, nil
+	case err := <-errChan:
+		return nil, err
+	}
 }
 
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {

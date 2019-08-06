@@ -17,6 +17,7 @@
 package state
 
 import (
+	"context"
 	"errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -121,6 +122,7 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 		return bot, nil
 	}
 	bridge.ConfirmUnanimousAsserted(
+		context.Background(),
 		bot.Core.GetMachine().InboxHash().Hash(),
 		bot.assertion,
 	)

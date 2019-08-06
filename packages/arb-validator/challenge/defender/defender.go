@@ -17,6 +17,7 @@
 package defender
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -37,6 +38,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
 		}
 		bridge.OneStepProof(
+			context.Background(),
 			assDef.GetPrecondition(),
 			assDef.GetAssertion().Stub(),
 			proofData,
@@ -56,6 +58,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
 	bridge.BisectAssertion(
+		context.Background(),
 		assDef.GetPrecondition(),
 		assertions,
 		deadline,
@@ -121,6 +124,7 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challe
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
 	bridge.ChallengerTimedOut(
+		context.Background(),
 		preconditions,
 		assertions,
 		bot.deadline,

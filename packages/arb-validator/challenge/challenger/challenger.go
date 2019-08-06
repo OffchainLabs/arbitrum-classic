@@ -17,6 +17,7 @@
 package challenger
 
 import (
+	"context"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -56,6 +57,7 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 		return bot, nil
 	}
 	bridge.AsserterTimedOut(
+		context.Background(),
 		bot.challengedPrecondition,
 		bot.challengedAssertion,
 		bot.deadline,
@@ -84,6 +86,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 		}
 		deadline := time + bot.VMConfig.GracePeriod
 		bridge.ContinueChallenge(
+			context.Background(),
 			assertionNum,
 			preconditions,
 			ev.Assertions,

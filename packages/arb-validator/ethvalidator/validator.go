@@ -18,9 +18,9 @@ package ethvalidator
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"errors"
-	"log"
 	"math/big"
 	"time"
 
@@ -48,7 +48,7 @@ type EthValidator struct {
 	VMID                [32]byte
 	Validators          map[common.Address]validatorInfo
 	Bot                 *validator.Validator
-	actionChan          chan func(*EthValidator) error
+	actionChan          chan func(*EthValidator)
 	CompletedCallChan   chan valmessage.FinalizedAssertion
 	VMCreatedTxHashChan chan [32]byte
 
@@ -67,6 +67,18 @@ func (val *EthValidator) Address() common.Address {
 
 func (val *EthValidator) ValidatorCount() int {
 	return len(val.Validators)
+}
+
+func (val *EthValidator) makeAuth(ctx context.Context) *bind.TransactOpts {
+	return &bind.TransactOpts{
+		From:     val.auth.From,
+		Nonce:    val.auth.Nonce,
+		Signer:   val.auth.Signer,
+		Value:    val.auth.Value,
+		GasPrice: val.auth.GasPrice,
+		GasLimit: val.auth.GasLimit,
+		Context:  ctx,
+	}
 }
 
 type validatorInfo struct {
@@ -124,7 +136,7 @@ func NewEthValidator(
 
 	bot := validator.NewValidator(name, auth.From, protocol.NewBalanceTracker(), config, machine, challengeEverything, maxCallSteps)
 
-	actionChan := make(chan func(*EthValidator) error, 1024)
+	actionChan := make(chan func(*EthValidator), 1024)
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 	unanVMCreatedEventTxHashChan := make(chan [32]byte, 1)
 
@@ -170,10 +182,7 @@ func (val *EthValidator) StartListening() error {
 					parsedChan <- parse
 				}
 			case event := <-val.actionChan:
-				err := event(val)
-				if err != nil {
-					log.Fatalf("Error handling send: %v", err)
-				}
+				event(val)
 				val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 			case <-errChan:
 				// Ignore error and try to reset connection
@@ -230,10 +239,18 @@ func (val *EthValidator) FinalizedAssertion(
 	}
 }
 
-func (val *EthValidator) FinalizedUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, signatures [][]byte) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.FinalizedUnanimousAssert(
-			val.auth,
+func (val *EthValidator) FinalizedUnanimousAssert(
+	ctx context.Context,
+	newInboxHash [32]byte,
+	timeBounds protocol.TimeBounds,
+	assertion *protocol.Assertion,
+	signatures [][]byte,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.FinalizedUnanimousAssert(
+			val.makeAuth(ctx),
 			val.VMID,
 			newInboxHash,
 			timeBounds,
@@ -241,16 +258,32 @@ func (val *EthValidator) FinalizedUnanimousAssert(newInboxHash [32]byte, timeBou
 			signatures,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed sending finalized unanimous assertion")
+			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) PendingUnanimousAssert(newInboxHash [32]byte, timeBounds protocol.TimeBounds, assertion *protocol.Assertion, sequenceNum uint64, signatures [][]byte) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.PendingUnanimousAssert(
-			val.auth,
+func (val *EthValidator) PendingUnanimousAssert(
+	ctx context.Context,
+	newInboxHash [32]byte,
+	timeBounds protocol.TimeBounds,
+	assertion *protocol.Assertion,
+	sequenceNum uint64,
+	signatures [][]byte,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.PendingUnanimousAssert(
+			val.makeAuth(ctx),
 			val.VMID,
 			newInboxHash,
 			timeBounds,
@@ -259,97 +292,175 @@ func (val *EthValidator) PendingUnanimousAssert(newInboxHash [32]byte, timeBound
 			signatures,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed proposing unanimous assertion")
+			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) ConfirmUnanimousAsserted(newInboxHash [32]byte, assertion *protocol.Assertion) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.ConfirmUnanimousAsserted(
-			val.auth,
+func (val *EthValidator) ConfirmUnanimousAsserted(
+	ctx context.Context,
+	newInboxHash [32]byte,
+	assertion *protocol.Assertion,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.ConfirmUnanimousAsserted(
+			val.makeAuth(ctx),
 			val.VMID,
 			newInboxHash,
 			assertion,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed confirming unanimous assertion")
+			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) PendingDisputableAssert(precondition *protocol.Precondition, assertion *protocol.Assertion) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.PendingDisputableAssert(
-			val.auth,
+func (val *EthValidator) PendingDisputableAssert(
+	ctx context.Context,
+	precondition *protocol.Precondition,
+	assertion *protocol.Assertion,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.PendingDisputableAssert(
+			val.makeAuth(ctx),
 			val.VMID,
 			precondition,
 			assertion,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed initiating disputable assertion")
+			errChan <- errors2.Wrap(err, "failed initiating disputable assertion")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed initiating disputable assertion")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
 func (val *EthValidator) ConfirmDisputableAsserted(
+	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
-) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.ConfirmDisputableAsserted(
-			val.auth,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.ConfirmDisputableAsserted(
+			val.makeAuth(ctx),
 			val.VMID,
 			precondition,
 			assertion,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed confirming assertion")
+			errChan <- errors2.Wrap(err, "failed confirming disputable assertion")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed confirming disputable assertion")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) InitiateChallenge(precondition *protocol.Precondition, assertion *protocol.AssertionStub) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.InitiateChallenge(
-			val.auth,
+func (val *EthValidator) InitiateChallenge(
+	ctx context.Context,
+	precondition *protocol.Precondition,
+	assertion *protocol.AssertionStub,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.InitiateChallenge(
+			val.makeAuth(ctx),
 			val.VMID,
 			precondition,
 			assertion,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed initiating challenge")
+			errChan <- errors2.Wrap(err, "failed initiating challenge")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed initiating challenge")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) BisectAssertion(precondition *protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.BisectAssertion(
-			val.auth,
+func (val *EthValidator) BisectAssertion(
+	ctx context.Context,
+	precondition *protocol.Precondition,
+	assertions []*protocol.AssertionStub,
+	deadline uint64,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.BisectAssertion(
+			val.makeAuth(ctx),
 			val.VMID,
 			deadline,
 			precondition,
 			assertions,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed initiating bisection")
+			errChan <- errors2.Wrap(err, "failed initiating bisection")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed initiating bisection")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
-	val.actionChan <- func(val *EthValidator) error {
+func (val *EthValidator) ContinueChallenge(
+	ctx context.Context,
+	assertionToChallenge uint16,
+	preconditions []*protocol.Precondition,
+	assertions []*protocol.AssertionStub,
+	deadline uint64,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
 		tree := buildBisectionTree(preconditions, assertions)
 		root := tree.GetRoot()
-		_, err := val.con.ContinueChallenge(
-			val.auth,
+		tx, err := val.con.ContinueChallenge(
+			val.makeAuth(ctx),
 			val.VMID,
 			big.NewInt(int64(assertionToChallenge)),
 			tree.GetProofFlat(int(assertionToChallenge)),
@@ -358,16 +469,31 @@ func (val *EthValidator) ContinueChallenge(assertionToChallenge uint16, precondi
 			deadline,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed continuing challenge")
+			errChan <- errors2.Wrap(err, "failed continuing challenge")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed continuing challenge")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, assertion *protocol.AssertionStub, proof []byte, deadline uint64) {
-	val.actionChan <- func(val *EthValidator) error {
-		_, err := val.con.OneStepProof(
-			val.auth,
+func (val *EthValidator) OneStepProof(
+	ctx context.Context,
+	precondition *protocol.Precondition,
+	assertion *protocol.AssertionStub,
+	proof []byte,
+	deadline uint64,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.OneStepProof(
+			val.makeAuth(ctx),
 			val.VMID,
 			precondition,
 			assertion,
@@ -375,59 +501,113 @@ func (val *EthValidator) OneStepProof(precondition *protocol.Precondition, asser
 			deadline,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed one step proof")
+			errChan <- errors2.Wrap(err, "failed one step proof")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed one step proof")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) AsserterTimedOut(precondition *protocol.Precondition, assertion *protocol.AssertionStub, deadline uint64) {
-	val.actionChan <- func(val *EthValidator) error {
+func (val *EthValidator) AsserterTimedOut(
+	ctx context.Context,
+	precondition *protocol.Precondition,
+	assertion *protocol.AssertionStub,
+	deadline uint64,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
 		preAssBytes := solsha3.SoliditySHA3(
 			solsha3.Bytes32(precondition.Hash()),
 			solsha3.Bytes32(assertion.Hash()),
 		)
 		bisectionHash := [32]byte{}
 		copy(bisectionHash[:], preAssBytes)
-		_, err := val.con.Challenge.AsserterTimedOut(
-			val.auth,
+		tx, err := val.con.Challenge.AsserterTimedOut(
+			val.makeAuth(ctx),
 			val.VMID,
 			bisectionHash,
 			deadline,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed timing out challenge")
+			errChan <- errors2.Wrap(err, "failed timing out challenge")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed timing out challenge")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) ChallengerTimedOut(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub, deadline uint64) {
-	val.actionChan <- func(val *EthValidator) error {
+func (val *EthValidator) ChallengerTimedOut(
+	ctx context.Context,
+	preconditions []*protocol.Precondition,
+	assertions []*protocol.AssertionStub,
+	deadline uint64,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
 		tree := buildBisectionTree(preconditions, assertions)
-		_, err := val.con.Challenge.ChallengerTimedOut(
-			val.auth,
+		tx, err := val.con.Challenge.ChallengerTimedOut(
+			val.makeAuth(ctx),
 			val.VMID,
 			tree.GetRoot(),
 			deadline,
 		)
 		if err != nil {
-			return errors2.Wrap(err, "failed timing out challenge")
+			errChan <- errors2.Wrap(err, "failed timing out challenge")
+			return
 		}
-		return nil
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- errors2.Wrap(err, "failed timing out challenge")
+			return
+		}
+		receiptChan <- receipt
 	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) AdvanceBlockchain(blockCount int) error {
-	return val.con.AdvanceBlockchain(val.auth, blockCount)
+func (val *EthValidator) AdvanceBlockchain(
+	ctx context.Context,
+	blockCount int,
+) error {
+	return val.con.AdvanceBlockchain(val.makeAuth(ctx), blockCount)
 }
 
-func (val *EthValidator) DepositFunds(amount *big.Int) (*types.Transaction, error) {
-	senderArr := [32]byte{}
-	copy(senderArr[:], val.Address().Bytes())
-	tx, err := val.con.DepositFunds(val.auth, amount, senderArr)
-	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	return tx, err
+func (val *EthValidator) DepositFunds(
+	ctx context.Context,
+	amount *big.Int,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		senderArr := [32]byte{}
+		copy(senderArr[:], val.Address().Bytes())
+		tx, err := val.con.DepositFunds(val.makeAuth(ctx), amount, senderArr)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receiptChan <- receipt
+	}
+	return receiptChan, errChan
 }
 
 func (val *EthValidator) GetTokenBalance(
@@ -443,34 +623,84 @@ func (val *EthValidator) GetTokenBalance(
 	return amt, err
 }
 
-func (val *EthValidator) CreateVM(createData *valmessage.CreateVMValidatorRequest, signatures [][]byte) (*types.Transaction, error) {
-	tx, err := val.con.CreateVM(
-		val.auth,
-		createData,
-		hashing.CreateVMHash(createData),
-		signatures,
-	)
-	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	return tx, err
+func (val *EthValidator) CreateVM(
+	ctx context.Context,
+	createData *valmessage.CreateVMValidatorRequest,
+	signatures [][]byte,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.CreateVM(
+			val.makeAuth(ctx),
+			createData,
+			hashing.CreateVMHash(createData),
+			signatures,
+		)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receiptChan <- receipt
+	}
+	return receiptChan, errChan
 }
 
-func (val *EthValidator) SendMessage(data value.Value, tokenType [21]byte, currency *big.Int) (*types.Transaction, error) {
-	tx, err := val.con.SendMessage(val.auth, protocol.NewMessage(data, tokenType, currency, val.VMID))
-	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	return tx, err
+func (val *EthValidator) SendMessage(
+	ctx context.Context,
+	data value.Value,
+	tokenType [21]byte,
+	currency *big.Int,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.SendMessage(val.makeAuth(ctx), protocol.NewMessage(data, tokenType, currency, val.VMID))
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receiptChan <- receipt
+	}
+	return receiptChan, errChan
 }
 
 func (val *EthValidator) SendEthMessage(
+	ctx context.Context,
 	data value.Value,
 	amount *big.Int,
-) (*types.Transaction, error) {
-	var dataBuf bytes.Buffer
-	if err := value.MarshalValue(data, &dataBuf); err != nil {
-		return nil, err
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		var dataBuf bytes.Buffer
+		if err := value.MarshalValue(data, &dataBuf); err != nil {
+			errChan <- err
+			return
+		}
+		tx, err := val.con.SendEthMessage(val.makeAuth(ctx), data, val.VMID, amount)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receipt, err := val.con.WaitForReciept(ctx, tx.Hash())
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receiptChan <- receipt
 	}
-	tx, err := val.con.SendEthMessage(val.auth, data, val.VMID, amount)
-	val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
-	return tx, err
+	return receiptChan, errChan
 }
 
 func (val *EthValidator) UnanimousAssertHash(

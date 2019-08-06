@@ -17,6 +17,7 @@
 package state
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -91,6 +92,7 @@ func NewWaiting(config *core.Config, c *core.Core) Waiting {
 
 func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
 	bridge.PendingUnanimousAssert(
+		context.Background(),
 		bot.GetCore().GetMachine().InboxHash().Hash(),
 		bot.timeBounds,
 		bot.assertion,
@@ -102,6 +104,7 @@ func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
 func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) {
 	inboxHash := bot.GetCore().GetMachine().InboxHash()
 	bridge.FinalizedUnanimousAssert(
+		context.Background(),
 		inboxHash.Hash(),
 		bot.timeBounds,
 		bot.assertion,
@@ -137,6 +140,7 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (St
 
 func (bot Waiting) AttemptAssertion(request DisputableAssertionRequest, bridge bridge.Bridge) State {
 	bridge.PendingDisputableAssert(
+		context.Background(),
 		request.Precondition,
 		request.Assertion,
 	)
@@ -342,6 +346,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 		)
 		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
 			bridge.InitiateChallenge(
+				context.Background(),
 				ev.Precondition,
 				ev.Assertion,
 			)
@@ -457,6 +462,7 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 	}
 
 	bridge.ConfirmDisputableAsserted(
+		context.Background(),
 		bot.request.Precondition,
 		bot.request.Assertion,
 	)

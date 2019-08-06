@@ -21,6 +21,9 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
+
+	"github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
@@ -442,6 +445,20 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 		}
 	}()
 	return outChan, errChan, nil
+}
+
+func (con *Bridge) WaitForReciept(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
+	for {
+		select {
+		case _ = <-time.After(time.Second):
+			receipt, err := con.client.TransactionReceipt(context.Background(), hash)
+			if err == nil {
+				return receipt, nil
+			}
+		case _ = <-ctx.Done():
+			return nil, errors.New("Receipt not found")
+		}
+	}
 }
 
 func (con *Bridge) PendingNonceAt(account common.Address) (uint64, error) {
