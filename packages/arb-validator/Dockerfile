@@ -64,15 +64,15 @@ WORKDIR "/home/user/"
 COPY --chown=user --from=0 /home/user/go/bin /home/user/go/bin
 
 # Get EthBridge addresses and Validator private keys and addresses
-COPY --chown=user --from=arb-ethbridge      \
-    /home/user/ethbridge_addresses.json     \
+COPY --chown=user --from=arb-bridge-eth     \
+    /home/user/bridge_eth_addresses.json    \
     /home/user/validator_private_keys.txt   \
     /home/user/validator_addresses.txt ./
 COPY --chown=user server.crt server.key ./
 
 ENV ID=0 \
-    WAIT_FOR="arb-ethbridge:7545" \
-    ETH_URL="ws://arb-ethbridge:7545" \
+    WAIT_FOR="arb-bridge-eth:7545" \
+    ETH_URL="ws://arb-bridge-eth:7545" \
     COORDINATOR_URL="" \
     AVM="cpp" \
     PATH="/home/user/go/bin:${PATH}"
@@ -86,10 +86,10 @@ COPY --chown=user --from=0 /home/user/.cache/go-build /build
 CMD if [[ ! -z ${WAIT_FOR} ]]; then \
 sleep 2 && while ! nc -z ${WAIT_FOR//:/ }; do sleep 2; done && sleep 2; \
 echo "Finished waiting for ${WAIT_FOR}..."; else echo "Starting..."; fi \
-&& cp ethbridge_addresses.json validator_addresses.txt \
+&& cp bridge_eth_addresses.json validator_addresses.txt \
     server.* contract.ao ./state/ && touch ./state/contract.ao && \
 sed -n $((${ID}+1))p validator_private_keys.txt > ./state/private_key.txt && \
 T=follower; if [[ -z ${COORDINATOR_URL} ]]; then T=coordinator; fi; cd state &&\
 ${T}Server --avm=${AVM} contract.ao private_key.txt validator_addresses.txt \
-    ethbridge_addresses.json ${ETH_URL} ${COORDINATOR_URL}
+    bridge_eth_addresses.json ${ETH_URL} ${COORDINATOR_URL}
 EXPOSE 1235 1236

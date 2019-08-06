@@ -7,7 +7,7 @@ import pkg_resources
 from arbitrum.evm.contract import ArbContract, create_evm_vm
 from arbitrum.marshall import marshall_vm
 
-NAME = 'arbc-solidity'
+NAME = 'arb-compiler-evm'
 __version__ = pkg_resources.require(NAME)[0].version
 
 if __name__ == '__main__':

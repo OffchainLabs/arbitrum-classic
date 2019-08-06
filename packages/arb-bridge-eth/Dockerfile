@@ -1,6 +1,6 @@
 ### --------------------------------------------------------------------
 ### Dockerfile
-### arb-ethbridge
+### arb-bridge-eth
 ### --------------------------------------------------------------------
 
 # Global build args (for multistage build)
@@ -36,13 +36,13 @@ ARG NUM_WALLETS
 ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS \
     NUM_WALLETS=$NUM_WALLETS
 
-# Generate ethbrigde_addresses.json for export
+# Generate bridge_eth_addresses.json for export
 RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
     mkdir db && ganache-cli --db db --acctKeys keys.json \
         -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset -q && [ -f ethbridge_addresses.json ] && \
+    truffle migrate --reset -q && [ -f bridge_eth_addresses.json ] && \
     node -e "                                               \
     const data = require('./keys.json')['addresses'];       \
     const addresses = new Array(0);                         \
@@ -71,7 +71,7 @@ USER user
 WORKDIR "/home/user"
 
 # Addresses and keys
-COPY --from=0 --chown=user /home/user/ethbridge_addresses.json \
+COPY --from=0 --chown=user /home/user/bridge_eth_addresses.json \
     /home/user/validator_*.txt ./
 
 # ganache-cli and truffle (placed in /bin and /lib) and build folder

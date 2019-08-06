@@ -16,7 +16,7 @@
         ]
     },
     "default": {
-        "arbc-solidity": {
+        "arb-compiler-evm": {
             "editable": true,
             "path": "."
         },

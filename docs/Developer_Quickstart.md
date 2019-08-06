@@ -90,24 +90,14 @@ Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
 ### Build from source
 
 ``` bash
-git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbc-solidity.git
-cd arbc-solidity
+git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
+cd arbitrum
 pip3 install -r requirements.txt
 python3 setup.py install
 cd ..
 ```
 
 Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu.
-
-Install `arb-deploy` by building it from source:
-
-``` bash
-git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arb-sdk.git
-cd arb-sdk
-pip3 install -r requirements.txt
-python3 setup.py install
-cd ..
-```
 
 ### Check installation
 
@@ -176,8 +166,8 @@ this dApp, you do not need to change any Solidity files.
     When pet-shop is finished being deployed, you should see output similar to this:
 
     ``` txt
-    arb-ethbridge_1              | Listening on 0.0.0.0:7545
-    arb-validator-coordinator_1  | Finished waiting for arb-ethbridge:7545...
+    arb-bridge-eth_1             | Listening on 0.0.0.0:7545
+    arb-validator-coordinator_1  | Finished waiting for arb-bridge-eth:7545...
     arb-validator-coordinator_1  | 2019/08/02 16:49:12 Coordinator is trying to create the VM
     arb-validator-coordinator_1  | 2019/08/02 16:49:13 http: TLS handshake error from 172.21.0.5:38281: EOF
     arb-validator-coordinator_1  | 2019/08/02 16:49:13 http: TLS handshake error from 172.21.0.4:36287: EOF
@@ -284,8 +274,8 @@ The dApp must:
 Here are the steps needed to port your dApp to Arbitrum:
 
    1. Make sure your dApp compiles and runs correctly on Ethereum or ganache
-   2. Configure the Truffle project to use the Arbitrum Truffle provider (arb-truffle-provider)
-   3. Add the Arbitrum frontend provider (arb-web3-provider or arb-ethers-provider)
+   2. Configure the Truffle project to use the Arbitrum Truffle provider (arb-provider-truffle)
+   3. Add the Arbitrum frontend provider (arb-provider-web3 or arb-provider-ethers)
    4. Compile your Truffle project to Arbitrum bytecode (output as contract.ao)
    5. Launch a set of Arbitrum Validators with the bytecode
    6. Launch the frontend of your dApp
@@ -293,21 +283,21 @@ Here are the steps needed to port your dApp to Arbitrum:
 ### Configure Truffle
 
 First, identify if your project uses web3 or truffle. The following examples
-will use truffle. If you are using web3 just replace arb-truffle-provider with
-arb-web3-provider for these steps:
+will use truffle. If you are using web3 just replace arb-provider-truffle with
+arb-provider-web3 for these steps:
 
-1. Add the `arb-truffle-provider` to your project:
+1. Add the `arb-provider-truffle` to your project:
 
     ``` bash
-    yarn add https://github.com/offchainlabs/arb-truffle-provider#v0.2.0
+    yarn add https://github.com/offchainlabs/arb-provider-truffle#v0.2.0
     ```
 
 2. Edit the `truffle-config.js`:
 
-    - Import `arb-truffle-provider` and set the mnemonic at the top of the file:
+    - Import `arb-provider-truffle` and set the mnemonic at the top of the file:
 
         ``` js
-        const ArbProvider = require("arb-truffle-provider");
+        const ArbProvider = require("arb-provider-truffle");
         const mnemonic = "jar deny prosper gasp flush glass core corn alarm treat leg smart";
         ```
 
@@ -363,7 +353,7 @@ arb-web3-provider for these steps:
     Right below the ethers import, require the Arbitrum provider:
 
     ``` js
-    const ArbProvider = require('arb-ethers-provider')
+    const ArbProvider = require('arb-provider-ethers')
     ```
 
     Next, find where the ethers (or web3) provider is initialized in your code,

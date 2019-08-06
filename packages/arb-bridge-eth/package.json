@@ -1,13 +1,21 @@
 {
-  "name": "arbeth",
-  "version": "1.0.0",
+  "name": "arb-bridge-eth",
+  "private": true,
+  "version": "0.1.0",
   "description": "",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
   "main": "truffle-config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OffchainLabs/arbitrum.git"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum/issues"
+  },
+  "homepage": "https://offchainlabs.com/",
   "directories": {
     "test": "test"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "module": {
     "loaders": [
@@ -17,9 +25,6 @@
       }
     ]
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.18.0",

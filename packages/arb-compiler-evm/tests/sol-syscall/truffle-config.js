@@ -24,7 +24,7 @@
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
-const ArbProvider = require("arb-truffle-provider");
+const ArbProvider = require("arb-provider-truffle");
 const path = require("path");
 const mnemonic = "jar deny prosper gasp flush glass core corn alarm treat leg smart";
 

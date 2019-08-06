@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 var ArbProtocol = artifacts.require("./ArbProtocol.sol");
@@ -36,7 +36,7 @@ module.exports = function(deployer, network, accounts) {
 
   deployer.deploy(ArbProtocol);
   deployer.link(ArbProtocol, [VMTracker, ChallengeManager, OneStepProof]);
-  
+
   deployer.deploy(ArbMachine);
   deployer.link(ArbMachine, [OneStepProof, VMTracker]);
 
@@ -61,7 +61,7 @@ module.exports = function(deployer, network, accounts) {
       "vmTracker": vmTracker.address,
       "balanceTracker": ArbBalanceTracker.address
     };
-    fs.writeFileSync("ethbridge_addresses.json", JSON.stringify(addresses));
+    fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
     vmTracker.addChallengeManager(ChallengeManager.address);
   });
 };

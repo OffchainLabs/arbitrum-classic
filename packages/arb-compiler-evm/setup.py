@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,16 +14,16 @@
 
 from setuptools import setup
 
-setup(name='arbc-solidity',
+setup(name='arb-compiler-evm',
       version='0.1.0',
       description='Compiler from solidity to AVM bytecode',
-      url='http://github.com/OffchainLabs/arbc-solidity',
-      author='Harry Kalodner',
+      url='https://offchainlabs.com',
+      author='Offchain Labs, Inc.',
       author_email='harry@offchainlabs.com',
       license='Apache-2.0',
       packages=['arbitrum', 'arbitrum.std', 'arbitrum.evm'],
       zip_safe=False,
-      scripts=['bin/arbc-truffle-compile', 'bin/arbc-compile'],
+      scripts=['bin/arbc-truffle'],
       test_suite='nose.collector',
       tests_require=['nose'],
       python_requires='>=3.6',

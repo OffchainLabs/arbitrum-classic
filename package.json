@@ -21,11 +21,14 @@
     "yarn": "^1.0.0"
   },
   "private": true,
-  "workspaces": [
-    "packages/arb-provider-ethers",
-    "packages/arb-provider-truffle",
-    "packages/arb-provider-web3",
-    "packages/arb-compiler-evm/tests/sol-syscall",
-    "demos/*"
-  ]
+  "workspaces": {
+    "packages": [
+      "packages/arb-bridge-eth",
+      "packages/arb-provider-ethers",
+      "packages/arb-provider-truffle",
+      "packages/arb-provider-web3",
+      "packages/arb-compiler-evm/tests/sol-syscall",
+      "demos/*"
+    ]
+  }
 }

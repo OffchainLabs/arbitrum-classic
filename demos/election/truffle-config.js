@@ -1,4 +1,4 @@
-const ArbProvider = require("arb-truffle-provider");
+const ArbProvider = require("arb-provider-truffle");
 const mnemonic = "jar deny prosper gasp flush glass core corn alarm treat leg smart";
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>

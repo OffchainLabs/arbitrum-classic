@@ -1,6 +1,6 @@
 const Web3 = require('web3');
 const contract = require('truffle-contract');
-const ArbProvider = require('arb-web3-provider');
+const ArbProvider = require('arb-provider-web3');
 
 App = {
   web3Provider: null,
