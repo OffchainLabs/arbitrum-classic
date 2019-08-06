@@ -1,0 +1,20 @@
+#!/bin/sh
+### --------------------------------------------------------------------
+### pre-commit
+### --------------------------------------------------------------------
+
+## Prevent commit if go.mod contains a replace rule
+#ERR_MOD="Error: do not commit go.mod without removing all replace rules"
+#git grep --cached -q "replace .* => .*" go.mod && echo "${ERR_MOD}" && exit 1 \
+#    || true
+
+# Prevent commit if `gofmt -l .` produces any output
+ERR_FMT_GO="Error: please run \`go fmt ./...\` before committing changes"
+gofmt -l $(git diff-index --cached --name-only HEAD | grep ".go") | \
+    grep -q '^' && echo "${ERR_FMT}" && exit 1 || true
+
+# Prevent commit if clang-format produces any output
+ERR_FMT="Error: please run \`clang-format\` before committing changes"
+git diff-index --cached --name-only HEAD | grep ".h\|\.hpp\|\.c\|\.cpp" | \
+    xargs clang-format -style=file -i -fallback-style=none -output-replacements-xml | \
+    grep -q "<replacement " && echo "${ERR_FMT}" && exit 1 || true

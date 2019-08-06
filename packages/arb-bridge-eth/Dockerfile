@@ -22,7 +22,7 @@ WORKDIR "/home/user/"
 RUN mkdir -p /home/user/.npm-global && \
     npm config set prefix "/home/user/.npm-global" && \
     npm install -g ganache-cli truffle yarn
-COPY package.json yarn.lock ./
+COPY package.json ./
 RUN yarn --production
 
 # Source code

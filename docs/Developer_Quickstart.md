@@ -1,7 +1,7 @@
 ---
 id: Developer_Quickstart
 title: Arbitrum Developer Quickstart
-custom_edit_url: https://github.com/offchainlabs/developer-website/edit/staging/docs/Developer_Quickstart.md
+custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Developer_Quickstart.md
 ---
 
 Get started with Arbitrum by installing the Arbitrum compiler,
@@ -12,7 +12,7 @@ Get started with Arbitrum by installing the Arbitrum compiler,
 **Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p) and
 read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
 
-## Install Dependencies
+## Install System Dependencies
 
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
@@ -83,44 +83,39 @@ Here are the important dependencies in case you are not running on a supported O
 
 > Requires `solc` 0.5.10 or less in `truffle version`
 
-## Install the Arbitrum SDK
+## Install Arbitrum
 
-Install the Arbitrum compiler `arbc-truffle-compile` by building it from source:
-
-### Build from source
+Download the Arbitrum Monorepo from source:
 
 ``` bash
 git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
-pip3 install -r requirements.txt
-python3 setup.py install
-cd ..
+yarn
 ```
 
-Note: you may need to run `sudo python3 setup.py install` if running on Ubuntu.
+Install the `arbc-truffle` compiler:
 
-### Check installation
-
-Verify the installation was successful:
-
-``` bash
-arb-deploy --status
+```
+yarn install:compiler
 ```
 
-The `arb-deploy` and `arbc-truffle-compile` versions should match:
+Check `arbc-truffle was installed:
 
-``` text
---------------- arb-deploy ---------------
-arb-deploy 0.2.0
-arbc-truffle-compile 0.2.0
-Timestamp: ...
- Platform: ...
------------- truffle version -------------
-Truffle v5.0.30 (core: 5.0.30)
-Solidity v0.5.0 (solc-js)
-Node v10.16.0
-Web3.js v^1.2.0
-------------------------------------------
+```
+which arbc-truffle
+```
+
+Expected output:
+
+> /usr/local/bin/arbc-truffle
+
+### Ubuntu 18.04
+
+If installing `arbc-truffle` compile did not work, you may need to try with `sudo`:
+
+```
+cd packages/arb-compiler-evm
+sudo python3 setup.py install
 ```
 
 ## Hello, Arbitrum
@@ -128,14 +123,10 @@ Web3.js v^1.2.0
 Now you'll compile and run a demo dApp on Arbitrum. The dApp is based on
 a simple Pet Shop dApp that is used in a Truffle tutorial.
 
-### Install
+Inside the Arbitrum monorepo, open the `pet-shop` demo dApp:
 
-You only need to run these commands once:
-
-``` bash
-git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/demo-dapp-pet-shop.git
-cd demo-dapp-pet-shop
-yarn
+```
+cd demos/pet-shop
 ```
 
 ### Build and Run
@@ -152,16 +143,18 @@ this dApp, you do not need to change any Solidity files.
     truffle migrate --reset --compile-all --network arbitrum
     ```
 
+    > Note: if `--compile-all` if not recognized then try `--all`
+
 2. Deploy `contract.ao` to 3 Validators
 
     ``` bash
-    arb-deploy contract.ao 3
+    yarn deploy contract.ao 3
     ```
 
     > Note: this step may take about 10 minutes the very first time. Subsequent
     > builds are much, much faster because Docker caches image layers.
 
-3. Examine the `arb-deploy contract.ao 3` output
+3. Examine the `yarn deploy contract.ao 3` output
 
     When pet-shop is finished being deployed, you should see output similar to this:
 
@@ -204,7 +197,7 @@ this dApp, you do not need to change any Solidity files.
     > 0x1b153b674c13af2974acbb66027fa4386b85b31cb27d159276d05e9542359f3f
     > ```
 
-    This mnemonic is the default used by `arb-deploy` and these accounts will
+    This mnemonic is the default used by `yarn deploy` and these accounts will
     be pre-funded.
 
 2. Select Ganache local network in Metamask
@@ -248,7 +241,7 @@ and run these steps every time a change is made to the Solidity contract:
 
 ``` bash
 truffle migrate --reset --compile--all --network arbitrum
-arb-deploy contract.ao 3
+yarn deploy contract.ao 3
 ```
 
 Open a new command line session, navigate to `demo-dapp-election`, and run:
@@ -415,7 +408,7 @@ it has already been setup to correctly to retrieve the json in the previous part
 ### Run the Validators
 
 ``` bash
-arb-deploy contract.ao 3
+yarn deploy contract.ao 3
 ```
 
 ### Run the frontend
@@ -423,5 +416,6 @@ arb-deploy contract.ao 3
 For example the command might be:
 
 ``` bash
-yarn start
+yarn
+start
 ```

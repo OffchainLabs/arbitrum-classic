@@ -16,6 +16,7 @@
     "install:compiler": "./scripts/install-arb-compiler-evm",
     "install:validator": "./scripts/install-arb-validator",
     "install:all": "yarn install:compiler && yarn install:validator",
+    "deploy": "python3 scripts/arb-deploy",
     "test": "",
     "docs": ""
   },
