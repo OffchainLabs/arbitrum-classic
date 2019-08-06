@@ -566,6 +566,22 @@ func (con *Bridge) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest [
 	)
 }
 
+func (con *Bridge) GetTokenBalance(
+	auth *bind.CallOpts,
+	user [32]byte,
+	tokenContract common.Address,
+) (*big.Int, error) {
+	return con.BalanceTracker.GetTokenBalance(
+		&bind.CallOpts{
+			Pending: false,
+			From:    auth.From,
+			Context: context.Background(),
+		},
+		tokenContract,
+		user,
+	)
+}
+
 func (con *Bridge) FinalizedUnanimousAssert(
 	auth *bind.TransactOpts,
 	vmID [32]byte,

@@ -430,6 +430,19 @@ func (val *EthValidator) DepositFunds(amount *big.Int) (*types.Transaction, erro
 	return tx, err
 }
 
+func (val *EthValidator) GetTokenBalance(
+	user [32]byte,
+	tokenContract common.Address,
+) (*big.Int, error) {
+	auth := &bind.CallOpts{
+		Pending: false,
+		From:    val.auth.From,
+		Context: val.auth.Context,
+	}
+	amt, err := val.con.GetTokenBalance(auth, user, tokenContract)
+	return amt, err
+}
+
 func (val *EthValidator) CreateVM(createData *valmessage.CreateVMValidatorRequest, signatures [][]byte) (*types.Transaction, error) {
 	tx, err := val.con.CreateVM(
 		val.auth,
