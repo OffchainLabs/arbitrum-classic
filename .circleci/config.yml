@@ -1,184 +1,176 @@
 version: 2
-
 jobs:
-
   build:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum
     steps:
-      - restore_cache:
-          key: sys-deps-cache
-      - run:
-          name: System dependencies
-          command: |
-            sudo apt-get install -y libboost-dev lcov python3-pip
-            pip3 install codecov coverage conan
-            conan remote add nonstd-lite 'https://api.bintray.com/conan/martinmoene/nonstd-lite'
-      - save_cache:
-          key: sys-deps-cache
-      - checkout
-      - restore_cache:
-          key: build-cache-{{ .Branch }}
-      - run:
-          command: |
-            yarn
-            yarn 'install:dev'
-      - save_cache:
-          key: build-cache-{{ .Branch }}
-          paths:
-            - ~/arbitrum
-      - save_cache:
-          key: build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-          paths:
-            - ~/arbitrum
-
+    - run:
+        name: System dependencies
+        command: |
+          sudo apt-get install -y libboost-dev lcov python3-pip
+          pip3 install codecov coverage conan
+          conan remote add nonstd-lite 'https://api.bintray.com/conan/martinmoene/nonstd-lite'
+    - checkout
+    - restore_cache:
+        key: build-cache-{{ .Branch }}
+    - run:
+        command: |
+          yarn
+          yarn 'install:dev'
+    - save_cache:
+        key: build-cache-{{ .Branch }}
+        paths:
+        - ~/arbitrum
+    - save_cache:
+        key: build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+        paths:
+        - ~/arbitrum
   arb-avm-cpp:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-avm-cpp/build
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: ctest .
-      - run:
-          name: Collecte coverage reports
-          command: |
-            lcov --capture --directory . --output-file coverage.info
-            lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
-            lcov --list coverage.info
-      - run: codecov -f coverage.info -cF arb-avm-cpp
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: ctest .
+    - run:
+        name: Collecte coverage reports
+        command: |
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
+          lcov --list coverage.info
+    - run: codecov -f coverage.info -cF arb-avm-cpp
   arb-avm-go:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-avm-go
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-      - run: coverage -cF arb-avm-go
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+    - run: coverage -cF arb-avm-go
   arb-bridge-eth:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-bridge-eth
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: truffle test
-      - run: coverage -cF arb-bridge-eth
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: truffle test
+    - run: coverage -cF arb-bridge-eth
   arb-compiler-evm:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-compiler-evm
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: coverage run --source=arbitrum/ setup.py test
-      - run:
-          name: truffle tests
-          command: |
-            truffle migrate --reset --compile-all --network arbitrum
-            coverage run --source=../../arbitrum/ truffle_runner.py compiled.json
-          working_directory: ~/arbitrum/packages/arb-compiler-evm/tests/sol-syscall
-      - run: coverage combine .coverage tests/sol-syscall/.coverage
-      - run: coverage -cF arb-compiler-evm
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: coverage run --source=arbitrum/ setup.py test
+    - run:
+        name: truffle tests
+        command: |
+          truffle migrate --reset --compile-all --network arbitrum
+          coverage run --source=../../arbitrum/ truffle_runner.py compiled.json
+        working_directory: ~/arbitrum/packages/arb-compiler-evm/tests/sol-syscall
+    - run: coverage combine .coverage tests/sol-syscall/.coverage
+    - run: coverage -cF arb-compiler-evm
   arb-provider-ethers:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-provider-ethers
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: yarn jest --coverage
-      - run: coverage -cF arb-provider-ethers
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: yarn jest --coverage
+    - run: coverage -cF arb-provider-ethers
   arb-provider-go:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-provider-go
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-      - run: coverage -cF arb-provider-go
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+    - run: coverage -cF arb-provider-go
   arb-provider-truffle:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-provider-truffle
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: yarn jest --coverage --pass-with-no-tests
-      - run: coverage -cF arb-provider-truffle
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: yarn jest --coverage --pass-with-no-tests
+    - run: coverage -cF arb-provider-truffle
   arb-provider-web3:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-provider-web3
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: yarn jest --coverage --pass-with-no-tests
-      - run: coverage -cF arb-provider-web3
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: yarn jest --coverage --pass-with-no-tests
+    - run: coverage -cF arb-provider-web3
   arb-util:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-util
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-      - run: coverage -cF arb-util
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+    - run: coverage -cF arb-util
   arb-validator:
     docker:
-      - image: circleci/node:10.16-stretch
+    - image: circleci/node:10.16-stretch
     working_directory: ~/arbitrum/packages/arb-validator
     steps:
-      - restore_cache:
-          keys:
-            - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
-      - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-      - run: coverage -cF arb-validator
-
+    - restore_cache:
+        keys:
+        - build-fanout-{{ .Environment.CIRCLE_SHA1 }}
+    - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+    - run: coverage -cF arb-validator
 workflows:
   version: 2
   test:
     jobs:
-      - build
-      - arb-avm-cpp:
-          requires:
-            - build
-      - arb-avm-go:
-          requires:
-            - build
-      - arb-bridge-eth:
-          requires:
-            - build
-      - arb-compiler-evm:
-          requires:
-            - build
-      - arb-provider-ethers:
-          requires:
-            - build
-      - arb-provider-go:
-          requires:
-            - build
-      - arb-provider-truffle:
-          requires:
-            - build
-      - arb-provider-web3:
-          requires:
-            - build
-      - arb-util:
-          requires:
-            - build
-      - arb-validator:
-          requires:
-            - build
+    - build
+    - arb-avm-cpp:
+        requires:
+        - build
+    - arb-avm-go:
+        requires:
+        - build
+    - arb-bridge-eth:
+        requires:
+        - build
+    - arb-compiler-evm:
+        requires:
+        - build
+    - arb-provider-ethers:
+        requires:
+        - build
+    - arb-provider-go:
+        requires:
+        - build
+    - arb-provider-truffle:
+        requires:
+        - build
+    - arb-provider-web3:
+        requires:
+        - build
+    - arb-util:
+        requires:
+        - build
+    - arb-validator:
+        requires:
+        - build
