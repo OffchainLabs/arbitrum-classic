@@ -57,8 +57,9 @@ type EthValidator struct {
 	arbAddresses  ethbridge.ArbAddresses
 
 	// private thread only
-	con  *ethbridge.Bridge
-	auth *bind.TransactOpts
+	con                     *ethbridge.Bridge
+	auth                    *bind.TransactOpts
+	unprocessedMessageCount uint64
 }
 
 func (val *EthValidator) Address() common.Address {
@@ -152,6 +153,7 @@ func NewEthValidator(
 		connectionInfo,
 		con,
 		auth,
+		0,
 	}
 	return val, nil
 }
@@ -178,12 +180,15 @@ func (val *EthValidator) StartListening() error {
 				switch parse.Event.(type) {
 				case ethbridge.VMCreatedEvent:
 					val.VMCreatedTxHashChan <- parse.TxHash
+				case ethbridge.MessageDeliveredEvent:
+					// New onchain message for processing
+					val.unprocessedMessageCount++
+					parsedChan <- parse
 				default:
 					parsedChan <- parse
 				}
 			case event := <-val.actionChan:
 				event(val)
-				val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 			case <-errChan:
 				// Ignore error and try to reset connection
 				// log.Printf("Validator recieved error: %v", err)
@@ -223,19 +228,28 @@ func buildBisectionTree(preconditions []*protocol.Precondition, assertions []*pr
 	return NewMerkleTree(bisectionHashes)
 }
 
+func (val *EthValidator) AddedNewMessages(count uint64) {
+	val.actionChan <- func(val *EthValidator) {
+		val.unprocessedMessageCount += count
+	}
+}
+
 func (val *EthValidator) FinalizedAssertion(
 	assertion *protocol.Assertion,
-	newLogCount int,
+	onChainTxHash []byte,
 	signatures [][]byte,
 	proposalResults *valmessage.UnanimousUpdateResults,
-	onChainTxHash []byte,
 ) {
-	val.CompletedCallChan <- valmessage.FinalizedAssertion{
-		Assertion:       assertion,
-		NewLogCount:     newLogCount,
-		Signatures:      signatures,
-		ProposalResults: proposalResults,
-		OnChainTxHash:   onChainTxHash,
+	val.actionChan <- func(val *EthValidator) {
+		finalizedAssertion := valmessage.FinalizedAssertion{
+			Assertion:       assertion,
+			OnChainTxHash:   onChainTxHash,
+			Signatures:      signatures,
+			ProposalResults: proposalResults,
+		}
+
+		val.unprocessedMessageCount -= uint64(len(finalizedAssertion.NewLogs()))
+		val.CompletedCallChan <- finalizedAssertion
 	}
 }
 
@@ -261,6 +275,7 @@ func (val *EthValidator) FinalizedUnanimousAssert(
 			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
@@ -295,6 +310,7 @@ func (val *EthValidator) PendingUnanimousAssert(
 			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
@@ -323,6 +339,7 @@ func (val *EthValidator) ConfirmUnanimousAsserted(
 			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
@@ -351,6 +368,7 @@ func (val *EthValidator) PendingDisputableAssert(
 			errChan <- errors2.Wrap(err, "failed initiating disputable assertion")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed initiating disputable assertion")
@@ -379,6 +397,7 @@ func (val *EthValidator) ConfirmDisputableAsserted(
 			errChan <- errors2.Wrap(err, "failed confirming disputable assertion")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed confirming disputable assertion")
@@ -407,6 +426,7 @@ func (val *EthValidator) InitiateChallenge(
 			errChan <- errors2.Wrap(err, "failed initiating challenge")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed initiating challenge")
@@ -437,6 +457,7 @@ func (val *EthValidator) BisectAssertion(
 			errChan <- errors2.Wrap(err, "failed initiating bisection")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed initiating bisection")
@@ -472,6 +493,7 @@ func (val *EthValidator) ContinueChallenge(
 			errChan <- errors2.Wrap(err, "failed continuing challenge")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed continuing challenge")
@@ -504,6 +526,7 @@ func (val *EthValidator) OneStepProof(
 			errChan <- errors2.Wrap(err, "failed one step proof")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed one step proof")
@@ -539,6 +562,7 @@ func (val *EthValidator) AsserterTimedOut(
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
@@ -569,6 +593,7 @@ func (val *EthValidator) ChallengerTimedOut(
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
@@ -600,6 +625,7 @@ func (val *EthValidator) DepositFunds(
 			errChan <- err
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err
@@ -669,6 +695,7 @@ func (val *EthValidator) CreateVM(
 			errChan <- err
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err
@@ -693,6 +720,7 @@ func (val *EthValidator) SendMessage(
 			errChan <- err
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err
@@ -721,6 +749,7 @@ func (val *EthValidator) SendEthMessage(
 			errChan <- err
 			return
 		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
 		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			errChan <- err

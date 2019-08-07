@@ -299,8 +299,8 @@ func (m *Machine) InboxHash() value.HashOnlyValue {
 	return value.NewHashOnlyValueFromValue(m.inbox.Receive())
 }
 
-func (m *Machine) HasPendingMessages() bool {
-	return !m.inbox.PendingQueue.IsEmpty()
+func (m *Machine) PendingMessageCount() uint64 {
+	return m.inbox.PendingQueue.MessageCount()
 }
 
 func (m *Machine) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {

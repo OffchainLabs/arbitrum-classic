@@ -19,6 +19,7 @@ package state
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
@@ -50,10 +51,10 @@ func (bot attemptingUnanimousClosing) UpdateState(ev ethbridge.Event, time uint6
 		// Final update has already been sent
 		return bot, nil, nil
 	case ethbridge.FinalizedUnanimousAssertEvent:
+		bot.Core.DeliverMessagesToVM(bridge)
 		if bot.retChan != nil {
 			bot.retChan <- true
 		}
-		bot.Core.DeliverMessagesToVM()
 		return NewWaiting(bot.Config, bot.Core), nil, nil
 	default:
 		err := &Error{nil, "ERROR: waitingAssertion: VM state got unsynchronized"}
@@ -83,6 +84,7 @@ func (bot attemptingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64
 		if ev.SequenceNum < bot.sequenceNum {
 			// Someone proposed an old update
 			// Newer update has already been sent
+			fmt.Println("Someone proposed an old update")
 			return bot, nil, nil
 		} else if ev.SequenceNum > bot.sequenceNum {
 			err := errors.New("unanimous Assertion unexpectedly superseded")
@@ -178,7 +180,7 @@ func (bot finalizingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridg
 func (bot finalizingOffchainClosing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev.(type) {
 	case ethbridge.ConfirmedUnanimousAssertEvent:
-		bot.GetCore().DeliverMessagesToVM()
+		bot.GetCore().DeliverMessagesToVM(bridge)
 		if bot.retChan != nil {
 			bot.retChan <- true
 		}

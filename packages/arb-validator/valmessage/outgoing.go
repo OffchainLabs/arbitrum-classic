@@ -22,13 +22,18 @@ import (
 )
 
 type FinalizedAssertion struct {
-	Assertion       *protocol.Assertion
-	NewLogCount     int
-	Signatures      [][]byte // Unanimous Validator signatures
-	ProposalResults *UnanimousUpdateResults
-	OnChainTxHash   []byte // Disputable assertion on-chain Tx hash
+	Assertion       *protocol.Assertion     // Disputable assertion
+	OnChainTxHash   []byte                  // Disputable assertion on-chain Tx hash
+	Signatures      [][]byte                // Unanimous Validator signatures
+	ProposalResults *UnanimousUpdateResults // Unanimous proposal results
+
 }
 
 func (f FinalizedAssertion) NewLogs() []value.Value {
-	return f.Assertion.Logs[len(f.Assertion.Logs)-f.NewLogCount:]
+	if f.ProposalResults != nil {
+		assertion := f.ProposalResults.Assertion
+		return assertion.Logs[len(assertion.Logs)-f.ProposalResults.NewLogCount:]
+	} else {
+		return f.Assertion.Logs
+	}
 }

@@ -153,15 +153,12 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	logsPreHash := hexutil.Encode(zero[:])
 	prop := assertion.ProposalResults
 	if prop != nil {
-		if assertion.Assertion != prop.Assertion {
-			panic("assertion should be the same assertion in ProposalResults")
-		}
 		partialHashBytes, err := hashing.UnanimousAssertPartialHash(
 			prop.SequenceNum,
 			prop.BeforeHash,
 			prop.TimeBounds,
 			prop.NewInboxHash,
-			prop.OriginalInboxHash,
+			prop.BeforeInbox,
 			prop.Assertion,
 		)
 		if err != nil {
@@ -179,21 +176,22 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 			prev := tr.assertionInfo[len(tr.assertionInfo)-1]
 			if prop.SequenceNum == prev.SequenceNum &&
 				prop.BeforeHash == prev.BeforeHash &&
-				prop.OriginalInboxHash == prev.OriginalInboxHash {
+				prop.BeforeInbox == prev.OriginalInboxHash {
 				logsPreHash = prev.LogsAccHashes[len(prev.LogsAccHashes)-1]
 			}
 		}
 		info.SequenceNum = prop.SequenceNum
 		info.BeforeHash = prop.BeforeHash
-		info.OriginalInboxHash = prop.OriginalInboxHash
+		info.OriginalInboxHash = prop.BeforeInbox
 	} else {
 		disputableTxHash = hexutil.Encode(assertion.OnChainTxHash)
 	}
 
-	info.LogsValHashes = make([]string, 0, assertion.NewLogCount)
-	info.LogsAccHashes = make([]string, 0, assertion.NewLogCount)
+	logs := assertion.NewLogs()
+	info.LogsValHashes = make([]string, 0, len(logs))
+	info.LogsAccHashes = make([]string, 0, len(logs))
 	acc, _ := hexutil.Decode(logsPreHash)
-	for _, logsVal := range assertion.NewLogs() {
+	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
 		info.LogsValHashes = append(info.LogsValHashes,
 			hexutil.Encode(logsValHash[:]))
@@ -206,13 +204,13 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 	}
 
 	var logsPostHash string
-	if assertion.NewLogCount > 0 {
+	if len(logs) > 0 {
 		logsPostHash = info.LogsAccHashes[len(info.LogsAccHashes)-1]
 	} else {
 		logsPostHash = hexutil.Encode(zero[:])
 	}
 
-	for i, logVal := range assertion.NewLogs() {
+	for i, logVal := range logs {
 		if i > 0 {
 			logsPreHash = info.LogsAccHashes[i-1] // Previous acc hash
 		}

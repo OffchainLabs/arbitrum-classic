@@ -23,19 +23,24 @@ import (
 )
 
 type MessageQueue struct {
-	msg value.TupleValue
+	msg      value.TupleValue
+	msgCount uint64
 }
 
 func NewMessageQueue() *MessageQueue {
-	return &MessageQueue{value.NewEmptyTuple()}
+	return &MessageQueue{value.NewEmptyTuple(), 0}
 }
 
 func (in *MessageQueue) Clone() *MessageQueue {
-	return &MessageQueue{in.msg}
+	return &MessageQueue{in.msg, in.msgCount}
 }
 
 func (in *MessageQueue) String() string {
 	return fmt.Sprintf("MessageQueue(%v)", in.msg)
+}
+
+func (in *MessageQueue) MessageCount() uint64 {
+	return in.msgCount
 }
 
 func (in *MessageQueue) IsEmpty() bool {
@@ -52,6 +57,7 @@ func (in *MessageQueue) AddRawMessage(msgVal value.Value) {
 		in.msg,
 		msgVal,
 	})
+	in.msgCount++
 }
 
 type MessageQueues struct {

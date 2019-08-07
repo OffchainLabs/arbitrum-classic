@@ -80,9 +80,9 @@ void machineInboxHash(CMachine* m, void* ret) {
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 }
 
-int machineHasPendingMessages(CMachine* m) {
+uint64_t machinePendingMessageCount(CMachine* m) {
     Machine* mach = static_cast<Machine*>(m);
-    return mach->hasPendingMessages();
+    return mach->pendingMessageCount();
 }
 
 void machineSendOnchainMessage(CMachine* m, void* data) {

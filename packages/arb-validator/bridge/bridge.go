@@ -26,12 +26,13 @@ import (
 )
 
 type Bridge interface {
+	AddedNewMessages(count uint64)
+
 	FinalizedAssertion(
 		assertion *protocol.Assertion,
-		newLogCount int,
+		onChainTxHash []byte,
 		signatures [][]byte,
 		proposalResults *valmessage.UnanimousUpdateResults,
-		onChainTxHash []byte,
 	)
 
 	FinalizedUnanimousAssert(

@@ -22,7 +22,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"log"
-	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -41,17 +40,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type UnanimousAssertionRequest struct {
-	requestData valmessage.UnanimousRequestData
-	newMessages []protocol.Message
-}
-
 type ValidatorFollower struct {
 	*EthValidator
 
 	client *Client
 
-	unanimousRequests map[[32]byte]UnanimousAssertionRequest
+	unanimousRequests map[[32]byte]valmessage.UnanimousRequestData
 	maxStepsUnanSteps int32
 }
 
@@ -121,7 +115,7 @@ func NewValidatorFollower(
 	}
 
 	log.Println("Validator formed connection with coordinator")
-	unanimousRequests := make(map[[32]byte]UnanimousAssertionRequest)
+	unanimousRequests := make(map[[32]byte]valmessage.UnanimousRequestData)
 	client := NewClient(coordinatorConn, address)
 	return &ValidatorFollower{
 		EthValidator:      c,
@@ -135,13 +129,6 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 	request *valmessage.UnanimousAssertionValidatorRequest,
 	requestID [32]byte,
 ) error {
-	unanRequest := valmessage.UnanimousRequestData{
-		BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
-		BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
-		SequenceNum: request.SequenceNum,
-		TimeBounds:  protocol.NewTimeBoundsFromBuf(request.TimeBounds),
-	}
-
 	sig, unanHash, err := func() ([]byte, [32]byte, error) {
 		messages := make([]protocol.Message, 0, len(request.SignedMessages))
 		for _, signedMsg := range request.SignedMessages {
@@ -176,7 +163,22 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			messages = append(messages, msg)
 		}
 
-		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(unanRequest, messages, m.maxStepsUnanSteps)
+		// Force onchain assertion if there are outgoing messages
+		shouldFinalize := func(a *protocol.Assertion) bool {
+			return len(a.OutMsgs) > 0
+		}
+
+		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(
+			valmessage.UnanimousRequestData{
+				BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
+				BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
+				SequenceNum: request.SequenceNum,
+				TimeBounds:  protocol.NewTimeBoundsFromBuf(request.TimeBounds),
+			},
+			messages,
+			m.maxStepsUnanSteps,
+			shouldFinalize,
+		)
 		var unanUpdate valmessage.UnanimousUpdateResults
 		select {
 		case unanUpdate = <-resultsChan:
@@ -185,17 +187,12 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to follow assertion")
 		}
 
-		// Force onchain assertion if there are outgoing messages
-		if len(unanUpdate.Assertion.OutMsgs) > 0 {
-			unanUpdate.SequenceNum = math.MaxUint64
-		}
-
 		unanHash, err := m.UnanimousAssertHash(
 			unanUpdate.SequenceNum,
 			unanUpdate.BeforeHash,
 			unanUpdate.TimeBounds,
 			unanUpdate.NewInboxHash,
-			unanUpdate.OriginalInboxHash,
+			unanUpdate.BeforeInbox,
 			unanUpdate.Assertion,
 		)
 		if err != nil {
@@ -206,12 +203,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			return nil, [32]byte{}, errors2.Wrap(err, "Follower failed to sign")
 		}
 
-		unanRequest.SequenceNum = unanUpdate.SequenceNum
-
-		m.unanimousRequests[requestID] = UnanimousAssertionRequest{
-			unanRequest,
-			messages,
-		}
+		m.unanimousRequests[requestID] = unanUpdate.UnanimousRequestData
 		return sig, unanHash, nil
 	}()
 
@@ -305,10 +297,16 @@ func (m *ValidatorFollower) Run() error {
 			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
 				if request.UnanimousNotification.Accepted {
-					_, _ = m.Bot.ConfirmOffchainUnanimousAssertion(
-						requestInfo.requestData,
+					resultChan, errChan := m.Bot.ConfirmOffchainUnanimousAssertion(
+						requestInfo,
 						request.UnanimousNotification.Signatures,
+						false,
 					)
+					select {
+					case _ = <-resultChan:
+					case err := <-errChan:
+						log.Fatalln("Follower failed to confirm unanimous assertion", err)
+					}
 				}
 			case *valmessage.ValidatorRequest_Create:
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
