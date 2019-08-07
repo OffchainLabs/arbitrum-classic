@@ -175,38 +175,39 @@ func (validator *Validator) RequestVMState() <-chan VMStateData {
 
 func (validator *Validator) RequestDisputableAssertion(length uint64) <-chan bool {
 	resultChan := make(chan bool)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+	validator.actions <- func(validator *Validator, b bridge.Bridge) {
 		c := validator.bot.GetCore()
 		mClone := c.GetMachine().Clone()
 		maxSteps := validator.bot.GetConfig().VMConfig.MaxExecutionStepCount
 		startTime := validator.latestHeader.Number.Uint64()
-		balance := c.GetBalance().Clone()
 		go func() {
 			endTime := startTime + length
 			tb := [2]uint64{startTime, endTime}
+			beforeHash := mClone.Hash()
+			assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
+			spentBalance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
+			balance := c.GetBalance()
+			_ = balance.SpendAll(spentBalance)
+
 			pre := &protocol.Precondition{
-				BeforeHash:    mClone.Hash(),
+				BeforeHash:    beforeHash,
 				TimeBounds:    tb,
-				BeforeBalance: balance,
+				BeforeBalance: spentBalance,
 				BeforeInbox:   mClone.InboxHash(),
 			}
-			assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
-			validator.applyDisputableAssertion(state.DisputableAssertionRequest{
-				AfterState:   mClone,
+			request := &state.DisputableAssertionRequest{
+				AfterCore:    core.NewCore(mClone, balance),
 				Precondition: pre,
 				Assertion:    assertion,
 				ResultChan:   resultChan,
-			})
+			}
+			validator.actions <- func(validator *Validator, b bridge.Bridge) {
+				validator.pendingDisputableRequest = request
+				validator.maybeAssert <- true
+			}
 		}()
 	}
 	return resultChan
-}
-
-func (validator *Validator) applyDisputableAssertion(request state.DisputableAssertionRequest) {
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		validator.pendingDisputableRequest = &request
-		validator.maybeAssert <- true
-	}
 }
 
 type unanimousUpdateRequest struct {
@@ -403,7 +404,7 @@ func (validator *Validator) ConfirmOffchainUnanimousAssertion(
 
 		if request.SequenceNum == math.MaxUint64 {
 			if canClose {
-				bot.CloseUnanimous(bridge)
+				newBot.CloseUnanimous(bridge)
 			}
 			// Can only error if there is no pending assertion which is guaranteed here
 			newBot2, _ := newBot.ClosingUnanimous(resultChan, errChan)
@@ -425,14 +426,7 @@ func (validator *Validator) CloseUnanimousAssertionRequest() (<-chan bool, <-cha
 			errChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 			return
 		}
-		fmt.Println("CloseUnanimousAssertionRequest")
-		resultChan2, errChan2 := bot.CloseUnanimous(bridge)
-		select {
-		case res := <-resultChan2:
-			fmt.Println("res", res)
-		case err := <-errChan2:
-			fmt.Println("err", err)
-		}
+		bot.CloseUnanimous(bridge)
 		newBot, err := bot.ClosingUnanimous(resultChan, errChan)
 		if err != nil {
 			errChan <- err

@@ -17,12 +17,12 @@
 package state
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 )
 
 type DisputableAssertionRequest struct {
-	AfterState   machine.Machine
+	AfterCore    *core.Core
 	Precondition *protocol.Precondition
 	Assertion    *protocol.Assertion
 	ResultChan   chan<- bool

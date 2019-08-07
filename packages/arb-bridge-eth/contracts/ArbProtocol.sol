@@ -279,4 +279,20 @@ library ArbProtocol {
         }
         return addresses;
     }
+
+    /// @notice Recovers an array of addresses using a message hash and a signatures bytes array.
+    /// @param _messageHash The signed message hash
+    /// @param _signature The signature bytes array
+    function recoverAddress(
+        bytes32 _messageHash,
+        bytes memory _signature
+    ) pure public returns (address) {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
+        (v, r, s) = parseSignature(_signature, 0);
+        return ecrecover(prefixedHash, v, r, s);
+    }
 }

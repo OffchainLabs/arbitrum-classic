@@ -249,7 +249,7 @@ func (m *ValidatorFollower) HandleCreateVM(ctx context.Context, request *valmess
 	var user [32]byte
 	copy(user[:], address[:])
 	if err := m.WaitForTokenBalance(ctx, user, escrowCurrency, escrowRequired); err != nil {
-		log.Printf("Follower meet balance requirement: %v", err)
+		log.Printf("Follower failed to meet balance requirement: %v", err)
 		return failedReply
 	}
 	sig, err := m.Sign(createHash)

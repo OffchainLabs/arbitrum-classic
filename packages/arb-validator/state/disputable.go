@@ -168,11 +168,14 @@ func (bot Waiting) AttemptAssertion(ctx context.Context, request DisputableAsser
 		request.Assertion,
 	)
 
-	return attemptingAssertion{
+	return attemptingAssertion{&disputableAssertCore{
 		bot.GetCore(),
 		bot.GetConfig(),
-		request,
-	}
+		request.AfterCore,
+		request.Precondition,
+		request.Assertion,
+		request.ResultChan,
+	}}
 }
 
 func (bot Waiting) GetCore() *core.Core {
@@ -396,11 +399,13 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 				ev.Assertion,
 			)
 		}
+		balance := c.GetBalance()
+		_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 		return watchingAssertion{
 			c,
 			bot.Config,
 			inboxVal,
-			updatedState,
+			core.NewCore(updatedState, balance),
 			deadline,
 			ev.Precondition,
 			assertion,
@@ -414,10 +419,15 @@ type watchingAssertion struct {
 	*core.Core
 	*core.Config
 	inboxVal     value.Value
-	pendingState machine.Machine
+	pending      *core.Core
 	deadline     uint64
 	precondition *protocol.Precondition
 	assertion    *protocol.Assertion
+}
+
+func (bot watchingAssertion) SendMessageToVM(msg protocol.Message) {
+	bot.Core.SendMessageToVM(msg)
+	bot.pending.SendMessageToVM(msg)
 }
 
 func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
@@ -425,11 +435,8 @@ func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (Stat
 		return bot, nil
 	}
 
-	balance := bot.GetBalance()
-	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.assertion.OutMsgs))
-
 	return finalizingAssertion{
-		Core:       core.NewCore(bot.pendingState, balance),
+		Core:       bot.pending,
 		Config:     bot.Config,
 		ResultChan: nil,
 		assertion:  bot.assertion,
@@ -464,10 +471,22 @@ func (bot watchingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge
 	}
 }
 
-type attemptingAssertion struct {
+type disputableAssertCore struct {
 	*core.Core
 	*core.Config
-	request DisputableAssertionRequest
+	afterCore    *core.Core
+	precondition *protocol.Precondition
+	assertion    *protocol.Assertion
+	resultChan   chan<- bool
+}
+
+func (d *disputableAssertCore) SendMessageToVM(msg protocol.Message) {
+	d.Core.SendMessageToVM(msg)
+	d.afterCore.SendMessageToVM(msg)
+}
+
+type attemptingAssertion struct {
+	*disputableAssertCore
 }
 
 func (bot attemptingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
@@ -484,9 +503,7 @@ func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, brid
 
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingAssertion{
-			bot.Core,
-			bot.Config,
-			bot.request,
+			bot.disputableAssertCore,
 			deadline,
 		}, nil, nil
 	default:
@@ -495,9 +512,7 @@ func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, brid
 }
 
 type waitingAssertion struct {
-	*core.Core
-	*core.Config
-	request  DisputableAssertionRequest
+	*disputableAssertCore
 	deadline uint64
 }
 
@@ -508,32 +523,26 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 
 	bridge.ConfirmDisputableAsserted(
 		context.Background(),
-		bot.request.Precondition,
-		bot.request.Assertion,
+		bot.precondition,
+		bot.assertion,
 	)
-	assertion := bot.request.Assertion
-	balance := bot.GetBalance()
-	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 	return finalizingAssertion{
-		Core: core.NewCore(
-			bot.request.AfterState,
-			balance,
-		),
+		Core:       bot.afterCore,
 		Config:     bot.Config,
-		ResultChan: bot.request.ResultChan,
-		assertion:  assertion,
+		ResultChan: bot.resultChan,
+		assertion:  bot.assertion,
 	}, nil
 }
 
 func (bot waitingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
-		bot.request.ResultChan <- false
+		bot.resultChan <- false
 		ct, err := defender.New(
 			bot.Config,
 			machine.NewAssertionDefender(
-				bot.request.Assertion,
-				bot.request.Precondition,
+				bot.assertion,
+				bot.precondition,
 				bot.GetMachine().Clone(),
 			),
 			time,

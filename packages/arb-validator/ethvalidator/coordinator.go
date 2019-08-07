@@ -405,6 +405,20 @@ func (m *ValidatorCoordinator) Run() error {
 							case err := <-errChan:
 								log.Println("Coordinator failed to close channel", err)
 							}
+						} else {
+							log.Println("Coordinator is creating a disputable assertion")
+							// Get the message on-chain (in the inbox)
+							// Do the disputable assertion
+							messages := <-m.mpq.Fetch()
+							for _, msg := range messages {
+								receiptChan, errChan := m.Val.ForwardMessage(context.Background(), msg.Message.Data, msg.Message.TokenType, msg.Message.Currency, msg.Signature)
+								select {
+								case _ = <-receiptChan:
+								case err := <-errChan:
+									log.Fatalln("ForwardMessage err", err)
+								}
+							}
+							m.initiateDisputableAssertionImpl()
 						}
 
 					}

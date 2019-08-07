@@ -180,10 +180,6 @@ func (val *EthValidator) StartListening() error {
 				switch parse.Event.(type) {
 				case ethbridge.VMCreatedEvent:
 					val.VMCreatedTxHashChan <- parse.TxHash
-				case ethbridge.MessageDeliveredEvent:
-					// New onchain message for processing
-					val.unprocessedMessageCount++
-					parsedChan <- parse
 				default:
 					parsedChan <- parse
 				}
@@ -247,7 +243,6 @@ func (val *EthValidator) FinalizedAssertion(
 			Signatures:      signatures,
 			ProposalResults: proposalResults,
 		}
-
 		val.unprocessedMessageCount -= uint64(len(finalizedAssertion.NewLogs()))
 		val.CompletedCallChan <- finalizedAssertion
 	}
@@ -716,6 +711,32 @@ func (val *EthValidator) SendMessage(
 	errChan := make(chan error, 1)
 	val.actionChan <- func(val *EthValidator) {
 		tx, err := val.con.SendMessage(val.makeAuth(ctx), protocol.NewMessage(data, tokenType, currency, val.VMID))
+		if err != nil {
+			errChan <- err
+			return
+		}
+		val.auth.Nonce.Add(val.auth.Nonce, big.NewInt(1))
+		receipt, err := val.con.WaitForReceipt(ctx, tx.Hash())
+		if err != nil {
+			errChan <- err
+			return
+		}
+		receiptChan <- receipt
+	}
+	return receiptChan, errChan
+}
+
+func (val *EthValidator) ForwardMessage(
+	ctx context.Context,
+	data value.Value,
+	tokenType [21]byte,
+	currency *big.Int,
+	sig []byte,
+) (chan *types.Receipt, chan error) {
+	receiptChan := make(chan *types.Receipt, 1)
+	errChan := make(chan error, 1)
+	val.actionChan <- func(val *EthValidator) {
+		tx, err := val.con.ForwardMessage(val.makeAuth(ctx), protocol.NewMessage(data, tokenType, currency, val.VMID), sig)
 		if err != nil {
 			errChan <- err
 			return

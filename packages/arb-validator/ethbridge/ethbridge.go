@@ -509,6 +509,25 @@ func (con *Bridge) SendMessage(
 	)
 }
 
+func (con *Bridge) ForwardMessage(
+	auth *bind.TransactOpts,
+	msg protocol.Message,
+	sig []byte,
+) (*types.Transaction, error) {
+	var dataBuf bytes.Buffer
+	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
+		return nil, err
+	}
+	return con.Tracker.ForwardMessage(
+		auth,
+		msg.Destination,
+		msg.TokenType,
+		msg.Currency,
+		dataBuf.Bytes(),
+		sig,
+	)
+}
+
 func (con *Bridge) SendEthMessage(
 	auth *bind.TransactOpts,
 	data value.Value,
