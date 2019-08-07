@@ -10,6 +10,7 @@ xcode
 validator-states
 docker-compose.yml
 packages/arb-avm-cpp/tests/config.hpp
+packages/arb-compiler-evm/tests/sol-syscall/code.txt
 
 # Logs
 logs

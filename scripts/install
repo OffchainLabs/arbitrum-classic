@@ -1,0 +1,50 @@
+#!/bin/sh
+### --------------------------------------------------------------------
+### install
+### NOTE: invoke from the monorepo root directory
+### --------------------------------------------------------------------
+
+# Install arb-deploy
+cd scripts/arb-deploy
+python3 setup.py -q develop
+cd ../..
+
+# Install arb-compiler-evm
+cd packages/arb-compiler-evm
+pip3 install -r requirements.txt -q
+python3 setup.py -q develop
+cd ../..
+
+# Install conan and nonstd-lite if not found
+if ! conan &>/dev/null; then
+    pip3 install conan
+    conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
+elif ! conan remote list | grep -q "nonstd-lite"; then
+    conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
+fi;
+
+# Install arb-avm-cpp
+mkdir -p packages/arb-avm-cpp/build
+cd packages/arb-avm-cpp/build
+conan install ..
+if [[ -z "${CMAKE_BUILD_TYPE}" ]]; then
+    CMAKE_BUILD_TYPE="Release"
+fi
+if [[ -z "${CODE_COVERAGE}" ]]; then
+    CODE_COVERAGE="False"
+fi
+cmake -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" -DCODE_COVERAGE="${CODE_COVERAGE}" ..
+if nproc 2>/dev/null; then
+    NPROC=$(nproc)
+elif sysctl -n hw.ncpu 2>/dev/null; then
+    NPROC=$(sysctl -n hw.ncpu)
+else
+    NPROC=4
+fi
+cmake --build . -j ${NPROC}
+cp lib/lib* ../cmachine/
+cd ../../..
+
+# install arb-validator
+cd packages/arb-validator
+go install -v ./...
