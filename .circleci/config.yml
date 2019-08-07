@@ -1,5 +1,7 @@
 version: 2
+
 jobs:
+
   build:
     docker:
       - image: circleci/node:10.16-stretch
@@ -20,9 +22,8 @@ jobs:
           key: build-cache-{{ .Branch }}
       - run: Install
           command: |
-            pip3 install -r ~/arbitrum/packages/arb-compiler-evm/requirements.txt
             yarn
-            yarn 'install:debug'
+            yarn 'install:dev'
       - save_cache:
           key: build-cache-{{ .Branch }}
           paths:
@@ -146,17 +147,38 @@ jobs:
       - run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
       - run: coverage -cF arb-validator
 
-
-
-  final:
-    requires:
+workflows:
+  version: 2
+  test:
+    jobs:
+      - build
       - arb-avm-cpp
+          requires:
+            - build
       - arb-avm-go
+          requires:
+            - build
       - arb-bridge-eth
+          requires:
+            - build
       - arb-compiler-evm
+          requires:
+            - build
       - arb-provider-ethers
+          requires:
+            - build
       - arb-provider-go
+          requires:
+            - build
       - arb-provider-truffle
+          requires:
+            - build
       - arb-provider-web3
+          requires:
+            - build
       - arb-util
+          requires:
+            - build
       - arb-validator
+          requires:
+            - build
