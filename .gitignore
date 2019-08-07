@@ -7,6 +7,9 @@ compiled.json
 build
 release
 xcode
+validator-states
+docker-compose.yml
+packages/arb-avm-cpp/tests/config.hpp
 
 # Logs
 logs
