@@ -548,7 +548,7 @@ class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     // Step 2: prove that logPostHash is in assertion and assertion is valid
-    if (validatorSigs.length > 0) {
+    if (validatorSigs && validatorSigs.length > 0) {
       if (
         !this.processUnanimousAssertion(partialHash, logPostHash, validatorSigs)
       ) {
@@ -556,9 +556,11 @@ class ArbProvider extends ethers.providers.BaseProvider {
       }
     } else {
       // TODO: enable disputable assertion checks
-      // if (!this.processConfirmedDisputableAssertion(logPostHash, onChainTxHash)) {
-      //   return null;
-      // }
+      if (
+        !this.processConfirmedDisputableAssertion(logPostHash, onChainTxHash)
+      ) {
+        return null;
+      }
     }
 
     return {
