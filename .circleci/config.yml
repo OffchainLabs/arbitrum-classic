@@ -14,13 +14,13 @@ jobs:
           command: |
             sudo apt-get install -y libboost-dev lcov python3-pip
             pip3 install codecov coverage conan
-            conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
+            conan remote add nonstd-lite 'https://api.bintray.com/conan/martinmoene/nonstd-lite'
       - save_cache:
           key: sys-deps-cache
       - checkout
       - restore_cache:
           key: build-cache-{{ .Branch }}
-      - run: Install
+      - run:
           command: |
             yarn
             yarn 'install:dev'
@@ -152,33 +152,33 @@ workflows:
   test:
     jobs:
       - build
-      - arb-avm-cpp
+      - arb-avm-cpp:
           requires:
             - build
-      - arb-avm-go
+      - arb-avm-go:
           requires:
             - build
-      - arb-bridge-eth
+      - arb-bridge-eth:
           requires:
             - build
-      - arb-compiler-evm
+      - arb-compiler-evm:
           requires:
             - build
-      - arb-provider-ethers
+      - arb-provider-ethers:
           requires:
             - build
-      - arb-provider-go
+      - arb-provider-go:
           requires:
             - build
-      - arb-provider-truffle
+      - arb-provider-truffle:
           requires:
             - build
-      - arb-provider-web3
+      - arb-provider-web3:
           requires:
             - build
-      - arb-util
+      - arb-util:
           requires:
             - build
-      - arb-validator
+      - arb-validator:
           requires:
             - build
