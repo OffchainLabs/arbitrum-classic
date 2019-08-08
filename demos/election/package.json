@@ -11,11 +11,11 @@
     "watch": "webpack --watch"
   },
   "devDependencies": {
-    "lite-server": "^2.5.2",
-    "truffle": "^5.0.20",
-    "webpack": "^4.35.2",
-    "webpack-cli": "^3.3.5",
-    "webpack-dev-server": "^3.7.2"
+    "lite-server": "~2.5.2",
+    "truffle": "~5.0.20",
+    "webpack": "~4.35.2",
+    "webpack-cli": "~3.3.5",
+    "webpack-dev-server": "~3.7.2"
   },
   "dependencies": {
     "arb-provider-truffle": "^0.1.0",

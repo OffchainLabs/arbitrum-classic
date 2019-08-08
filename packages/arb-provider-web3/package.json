@@ -16,11 +16,11 @@
   "homepage": "https://offchainlabs.com",
   "dependencies": {
     "arb-provider-ethers": "^0.1.0",
-    "ethers": "^4.0.27",
-    "ethers-providers": "^2.1.19",
-    "ethers-utils": "^2.1.11",
-    "jayson": "^2.1.2",
-    "node-fetch": "^2.3.0",
-    "promise-poller": "^1.7.0"
+    "ethers": "~4.0.27",
+    "ethers-providers": "~2.1.19",
+    "ethers-utils": "~2.1.11",
+    "jayson": "~2.1.2",
+    "node-fetch": "~2.3.0",
+    "promise-poller": "~1.7.0"
   }
 }

@@ -11,14 +11,14 @@
     "watch": "webpack --watch"
   },
   "devDependencies": {
-    "webpack": "^4.35.2",
-    "webpack-cli": "^3.3.5",
-    "webpack-dev-server": "^3.7.2"
+    "webpack": "~4.35.2",
+    "webpack-cli": "~3.3.5",
+    "webpack-dev-server": "~3.7.2"
   },
   "dependencies": {
     "arb-provider-truffle": "^0.1.0",
     "arb-provider-web3": "^0.1.0",
-    "truffle-contract": "^4.0.23",
-    "web3": "^1.0.0-beta.55"
+    "truffle-contract": "~4.0.23",
+    "web3": "~1.0.0-beta.55"
   }
 }

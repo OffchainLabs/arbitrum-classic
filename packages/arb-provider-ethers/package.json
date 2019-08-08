@@ -18,12 +18,12 @@
     "test": "jest"
   },
   "dependencies": {
-    "ethers": "^4.0.28",
-    "jayson": "^2.1.2",
-    "node-fetch": "^2.3.0",
-    "promise-poller": "^1.7.0"
+    "ethers": "~4.0.28",
+    "jayson": "~2.1.2",
+    "node-fetch": "~2.3.0",
+    "promise-poller": "~1.7.0"
   },
   "devDependencies": {
-    "jest": "^24.8.0"
+    "jest": "~24.8.0"
   }
 }

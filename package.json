@@ -16,9 +16,11 @@
     "install:all": "./scripts/install"
   },
   "engines": {
-    "node": ">= 7.0.0 < 12.0.0",
+    "node": ">= 8.0.0 < 12.0.0",
+    "npm": "^6.0.0",
     "yarn": "^1.0.0"
   },
+  "engine-strict": true,
   "private": true,
   "workspaces": {
     "packages": [
@@ -31,6 +33,7 @@
     ]
   },
   "devDependencies": {
-    "jest": "^24.8.0"
+    "jest": "^24.8.0",
+    "ganache-cli": "6.5.0"
   }
 }
