@@ -19,6 +19,6 @@
     "arb-provider-truffle": "^0.1.0",
     "arb-provider-web3": "^0.1.0",
     "truffle-contract": "~4.0.23",
-    "web3": "~1.0.0-beta.55"
+    "web3": "~1.2.1"
   }
 }

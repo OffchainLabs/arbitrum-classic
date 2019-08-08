@@ -10593,7 +10593,7 @@ web3@^0.18.0:
     xhr2 "*"
     xmlhttprequest "*"
 
-web3@^1.2.0:
+web3@^1.2.0, web3@~1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/web3/-/web3-1.2.1.tgz#5d8158bcca47838ab8c2b784a2dee4c3ceb4179b"
   integrity sha512-nNMzeCK0agb5i/oTWNdQ1aGtwYfXzHottFP2Dz0oGIzavPMGSKyVlr8ibVb1yK5sJBjrWVnTdGaOC2zKDFuFRw==
@@ -10605,11 +10605,6 @@ web3@^1.2.0:
     web3-net "1.2.1"
     web3-shh "1.2.1"
     web3-utils "1.2.1"
-
-web3@~1.0.0-beta.55:
-  version "1.0.0-beta2"
-  resolved "https://registry.yarnpkg.com/web3/-/web3-1.0.0-beta2.tgz#bde93e2b88c431673f25d81298221a1ec2b1a9ef"
-  integrity sha1-vek+K4jEMWc/JdgSmCIaHsKxqe8=
 
 webidl-conversions@^4.0.2:
   version "4.0.2"
