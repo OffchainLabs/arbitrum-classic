@@ -67,7 +67,7 @@ func main() {
 
 	// Check number of args
 	if len(flag.Args()) != 5 {
-		log.Fatalln("Expected five arguments")
+		log.Fatalln("usage: coordinatorServer <contract.ao> <private_key.txt> <validator_addresses.txt> <bridge_eth_addresses.json> <ethURL>")
 	}
 
 	// 1) Compiled Arbitrum bytecode
