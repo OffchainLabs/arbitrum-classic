@@ -4,7 +4,7 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM alpine:3.9 as arb-avm-cpp-builder
+FROM alpine:3.9 as arb-avm-cpp
 # Alpine dependencies
 RUN apk add --no-cache boost-dev=1.67.0-r2 cmake=3.13.0-r0 g++=8.3.0-r0 \
     make=4.2.1-r2 musl-dev=1.1.20-r5 python3-dev=3.6.8-r2 && \
@@ -23,18 +23,12 @@ RUN mkdir -p build && cd build && \
 # Copy source code
 COPY --chown=user arb-avm-cpp/ ./
 # Copy build cache
-COPY --from=arb-avm-cpp --chown=user /build build/
+COPY --from=arb-validator --chown=user /cpp-build build/
 # Build arb-avm-cpp
 RUN cd build && conan install .. && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . -j $(nproc) && \
     cp lib/* ../cmachine
-FROM scratch as arb-avm-cpp
-# Export library binary and header
-COPY --from=arb-avm-cpp-builder /home/user/go.mod /home/user/go.sum arb-avm-cpp/
-COPY --from=arb-avm-cpp-builder /home/user/cavm/cmachine.h arb-avm-cpp/cavm/cmachine.h
-COPY --from=arb-avm-cpp-builder /home/user/cmachine arb-avm-cpp/cmachine/
-COPY --from=arb-avm-cpp-builder /home/user/build build/
 
 
 FROM alpine:3.9 as arb-validator-builder
@@ -58,7 +52,9 @@ RUN go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp=.
     cd ../arb-validator && \
     go mod download
 # Copy source code
-COPY --from=arb-avm-cpp --chown=user /arb-avm-cpp/ /home/user/arb-avm-cpp/
+COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-cpp/
+COPY --from=arb-avm-cpp /home/user/cavm/cmachine.h /home/user/arb-avm-cpp/cavm/cmachine.h
+COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
 COPY --chown=user arb-avm-go/ /home/user/arb-avm-go/
 COPY --chown=user arb-util/ /home/user/arb-util/
 COPY --chown=user arb-validator/ /home/user/arb-validator/
@@ -84,10 +80,6 @@ USER user
 RUN mkdir -p /home/user/state
 WORKDIR "/home/user/"
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
-COPY --chown=user --from=arb-bridge-eth     \
-    /home/user/bridge_eth_addresses.json    \
-    /home/user/validator_private_keys.txt   \
-    /home/user/validator_addresses.txt ./
 COPY --chown=user arb-validator/server.crt arb-validator/server.key ./
 
 ENV ID=0 \
@@ -99,16 +91,14 @@ ENV ID=0 \
 
 # Build cache
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
+COPY --from=arb-avm-cpp /home/user/build /cpp-build
 
 # 1) Waits for host:port if $WAIT_FOR is set
 # 2) Copies address files from ../ to ./ (state volume)
 # 3) Launches follower if $COORDINATOR_URL else launches coordinator
 CMD if [[ ! -z ${WAIT_FOR} ]]; then \
 sleep 2 && while ! nc -z ${WAIT_FOR//:/ }; do sleep 2; done && sleep 2; \
-echo "Finished waiting for ${WAIT_FOR}..."; else echo "Starting..."; fi \
-&& cp bridge_eth_addresses.json validator_addresses.txt \
-    server.* contract.ao ./state/ && touch ./state/contract.ao && \
-sed -n $((${ID}+1))p validator_private_keys.txt > ./state/private_key.txt && \
+echo "Finished waiting for ${WAIT_FOR}..."; else echo "Starting..."; fi && \
 T=follower; if [[ -z ${COORDINATOR_URL} ]]; then T=coordinator; fi; cd state &&\
 ${T}Server --avm=${AVM} contract.ao private_key.txt validator_addresses.txt \
     bridge_eth_addresses.json ${ETH_URL} ${COORDINATOR_URL}

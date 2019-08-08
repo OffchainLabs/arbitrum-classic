@@ -13,7 +13,9 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "install:all": "./scripts/install"
+    "install:all": "./scripts/install",
+    "generate:states": "./scripts/setup_states.py",
+    "deploy": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0 < 12.0.0",

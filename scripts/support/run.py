@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2019, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,16 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup
+import os
+import subprocess
+import sys
 
-setup(
-    name='arb-deploy',
-    version='0.2.0',
-    author='Offchain Labs, Inc.',
-    author_email='info@offchainlabs.com',
-    description='Manage Arbitrum dockerized deployments',
-    url='https://github.com/offchainlabs/arbitrum',
-    license='Apache-2.0',
-    scripts=['bin/arb-deploy'],
-    zip_safe=False,
-)
+# Run commands in shell
+def run(command, sudo=False, capture_stdout=False, quiet=False):
+    command = ('sudo ' if sudo else '') + command
+    if not quiet:
+        print('\n\033[1m$ %s' % command + '\033[0m')
+    if not capture_stdout:
+        return os.system(command)
+    try:
+        return subprocess.check_output(command, shell=True).decode('utf-8')
+    except subprocess.CalledProcessError as e:
+        return ''

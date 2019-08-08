@@ -18,13 +18,13 @@ deactivate
 
 # Install arb-deploy
 cd scripts/arb-deploy
-#python3 setup.py -q develop
+python3 setup.py -q develop
 cd ../..
 
 # Install arb-compiler-evm
 cd packages/arb-compiler-evm
-#pip3 install -r requirements.txt -q
-#python3 setup.py -q develop
+pip3 install -r requirements.txt -q
+python3 setup.py -q develop
 cd ../..
 
 # Install arb-avm-cpp

@@ -24,10 +24,13 @@ import pkg_resources
 import subprocess
 import sys
 
+import setup_states
+from support.run import run
+
 # package configuration
 NAME = 'arb-deploy'
 DESCRIPTION = 'Manage Arbitrum dockerized deployments'
-__version__ = '0.2.0'
+ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # filename constants
 DOCKER_COMPOSE_FILENAME='docker-compose.yml'
@@ -111,7 +114,12 @@ def compose_validator(validator_id, state_abspath, contract_abspath, avm):
     return (COMPOSE_VALIDATOR % (validator_id, state_abspath, contract_abspath,
                                  validator_id, avm))
 
-DOCKERFILE_CACHE="FROM alpine:3.9\nRUN mkdir /build\nFROM scratch\nCOPY --from=0 /build /build"
+DOCKERFILE_CACHE=(
+"""FROM alpine:3.9
+RUN mkdir /build /cpp-build
+FROM scratch
+COPY --from=0 /cpp-build /cpp-build
+COPY --from=0 /build /build""")
 
 ### ----------------------------------------------------------------------------
 ### Deploy
@@ -119,36 +127,30 @@ DOCKERFILE_CACHE="FROM alpine:3.9\nRUN mkdir /build\nFROM scratch\nCOPY --from=0
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def deploy(contract_name, n_validators, sudo_flag, build_flag, up_flag,
-           avm, mnemonic, gas_limit, gas_per_wallet, block_time, verbose):
-
+           avm, n_extra_wallets, mnemonic, gas_limit, gas_per_wallet, block_time, verbose):
     # Bootstrap the build cache if it does not exist
     def bootstrap_build_cache(name):
         if run('docker images -q %s' % name, capture_stdout=True, quiet=True, sudo=sudo_flag) == '':
             run('mkdir -p .tmp')
             run('echo "%s" > .tmp/Dockerfile' % DOCKERFILE_CACHE)
             run('docker build -t %s .tmp' % name, sudo=sudo_flag)
-            run('rm -rf .tmp')
+            #run('rm -rf .tmp')
     bootstrap_build_cache('arb-avm-cpp')
     bootstrap_build_cache('arb-validator')
-
-    # Create VALIDATOR_STATE_DIRNAME s if they don't exist
-    states_path = os.path.abspath(VALIDATOR_STATE_DIRNAME)
-    for i in range(n_validators):
-        if not os.path.isdir(VALIDATOR_STATE_DIRNAME + str(i)):
-            os.makedirs(states_path + str(i))
 
     # Stop running Arbitrum containers
     halt_docker(sudo_flag)
 
     # number of wallets
-    n_wallets = n_validators + 10
+    n_wallets = n_validators + n_extra_wallets
 
     # Overwrite DOCKER_COMPOSE_FILENAME
+    states_path = os.path.abspath(os.path.join(setup_states.VALIDATOR_STATES, setup_states.VALIDATOR_STATE))
     compose = os.path.abspath('./' + DOCKER_COMPOSE_FILENAME)
     contract = os.path.abspath(contract_name)
     contents = (
         compose_header(
-            os.path.abspath('./packages/arb-bridge-eth'),
+            os.path.abspath(os.path.join(ROOT_DIR, 'packages', 'arb-bridge-eth')),
             mnemonic,
             n_wallets,
             n_validators,
@@ -156,25 +158,32 @@ def deploy(contract_name, n_validators, sudo_flag, build_flag, up_flag,
             gas_limit,
             block_time,
             verbose,
-            states_path + str(0),
+            states_path % 0,
             contract,
-            os.path.abspath('./packages'),
+            os.path.abspath(os.path.join(ROOT_DIR, 'packages')),
             'arb-validator.Dockerfile',
             avm,
-        ) + ''.join([compose_validator(i, states_path + str(i), contract, avm)
+        ) + ''.join([compose_validator(i, states_path % i, contract, avm)
                         for i in range(1, n_validators)]))
     with open(compose, 'w') as f:
         f.write(contents)
 
     # Build
-    bec = 0 # build exit code
     if not up_flag or build_flag:
-        bec = run('docker-compose -f %s build' % compose, sudo=sudo_flag)
+        if run('docker-compose -f %s build' % compose, sudo=sudo_flag) != 0:
+            exit(1)
+
+    # Setup validator states
+    if not os.path.isdir(setup_states.VALIDATOR_STATES):
+        setup_states.setup_validator_states_ethbridge(
+            os.path.abspath(contract_name),
+            n_validators,
+            sudo_flag
+        )
 
     # Run
     if not build_flag or up_flag:
-        if bec is 0:
-            run('docker-compose -f %s up' % compose, sudo=sudo_flag)
+        run('docker-compose -f %s up' % compose, sudo=sudo_flag)
 
 def halt_docker(sudo_flag):
     # Check for DOCKER_COMPOSE_FILENAME and halt if running
@@ -188,22 +197,7 @@ def halt_docker(sudo_flag):
         run('docker kill $(' + ('sudo ' if sudo_flag else '') + 'docker ps | ' + ps + ')',
             capture_stdout=True, sudo=sudo_flag)
         run('docker rm $(' + ('sudo ' if sudo_flag else '') + 'docker ps -a | ' + ps + ')',
-            captrue_stdout=True, sudo=sudo_flag)
-
-# Run commands in shell
-def run(command, sudo=False, capture_stdout=False, quiet=False):
-    command = ('sudo ' if sudo else '') + command
-    if not quiet:
-        print('\033[1m$ %s\n' % command + '\033[0m')
-    if not capture_stdout:
-        return os.system(command)
-    try:
-        return subprocess.check_output(command, shell=True).decode('utf-8')
-    except subprocess.CalledProcessError as e:
-        if exit_on_error:
-            sys.exit(1)
-        else:
-            return ''
+            capture_stdout=True, sudo=sudo_flag)
 
 ### ----------------------------------------------------------------------------
 ### Command line interface
@@ -231,6 +225,8 @@ def main():
                         choices=['cpp', 'go', 'test'],
                         help='Control the avm backend (default cpp)')
 
+    parser.add_argument('-w', '--numExtraWallets', type=int, default=10,
+        help='The number of extra wallets to create')
     parser.add_argument('-m', '--mnemonic', type=str, dest='mnemonic',
         default='jar deny prosper gasp flush glass core corn alarm treat leg smart',
         help='Specify the test Mnemonic for key generation')
@@ -247,10 +243,6 @@ def main():
     parser.add_argument('-v', '--verbose', dest='verbose', action='count',
         help='Increase verbosity on ganache')
 
-    # Version
-    parser.add_argument('--version', action='version',
-        version='%(prog)s ' + __version__)
-
     args = parser.parse_args()
 
     # Set verbose to Ganache parameter
@@ -265,7 +257,7 @@ def main():
 
     # Deploy
     deploy(args.contract, args.n_validators, args.sudo, args.build, args.up,
-           args.avm, args.mnemonic, args.gas_limit, args.gas_per_wallet,
+           args.avm, args.numExtraWallets, args.mnemonic, args.gas_limit, args.gas_per_wallet,
            args.block_time, verboseFlag)
 
 if __name__ == '__main__':

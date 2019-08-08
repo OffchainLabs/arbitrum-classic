@@ -1,6 +1,8 @@
 ### --------------------------------------------------------------------
 ### Dockerfile
 ### arb-bridge-eth
+### Runs Ganache with the EthBridge deployed
+### Exports bridge_eth_addresses.json and keys.json
 ### --------------------------------------------------------------------
 
 # Global build args (for multistage build)
@@ -43,21 +45,7 @@ RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
         -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset --compile-all -q && [ -f bridge_eth_addresses.json ] && \
-    node -e "                                               \
-    const data = require('./keys.json')['addresses'];       \
-    const addresses = new Array(0);                         \
-    const privates = new Array(0);                          \
-    let start = ${NUM_WALLETS} - ${NUM_VALIDATORS};         \
-    for (const address of Object.keys(data).slice(start)) { \
-        addresses.push(address.slice(2));                   \
-        let pk = data[address]['secretKey']['data'].reduce( \
-        (a, B) => a+(B).toString(16).padStart(2, '0'), ''); \
-        privates.push(pk);                                  \
-    }                                                       \
-    console.log(addresses.join('\n'));                      \
-    console.error(privates.join('\n'));                     \
-    " > validator_addresses.txt 2> validator_private_keys.txt
+    truffle migrate --reset --compile-all -q && [ -f bridge_eth_addresses.json ]
 
 
 # Minimize image
@@ -73,7 +61,7 @@ WORKDIR "/home/user"
 
 # Addresses and keys
 COPY --from=0 --chown=user /home/user/bridge_eth_addresses.json \
-    /home/user/validator_*.txt ./
+    /home/user/keys.json ./
 
 # ganache-cli and truffle (placed in /bin and /lib) and build folder
 COPY --from=0 --chown=user /home/user/.npm-global /
