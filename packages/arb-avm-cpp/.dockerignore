@@ -1,8 +1,0 @@
-**/.DS_Store
-**/.dockerignore
-**/.idea
-**/Dockerfile
-**/dev-mode.Dockerfile
-build/
-release/
-xcode/

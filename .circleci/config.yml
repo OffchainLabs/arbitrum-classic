@@ -8,16 +8,15 @@ jobs:
     - run:
         name: System dependencies
         command: |
-          sudo apt-get install -y libboost-dev lcov python3-pip
-          pip3 install codecov coverage conan
-          conan remote add nonstd-lite 'https://api.bintray.com/conan/martinmoene/nonstd-lite'
+          sudo apt-get install -y cmake gcc golang libboost-dev lcov python3-pip
+          sudo pip3 install codecov coverage conan
     - checkout
     - restore_cache:
         key: build-cache-{{ .Branch }}
     - run:
         command: |
           yarn
-          yarn 'install:dev'
+          yarn 'install:all' dev
     - save_cache:
         key: build-cache-{{ .Branch }}
         paths:

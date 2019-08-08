@@ -1,3 +1,5 @@
+**/.DS_Store
+**/.dockerignore
 arb-avm-cpp/build/
 arb-bridge-eth
 arb-compiler-evm

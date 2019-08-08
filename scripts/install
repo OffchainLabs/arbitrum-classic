@@ -4,44 +4,44 @@
 ### NOTE: invoke from the monorepo root directory
 ### --------------------------------------------------------------------
 
-# Install conan and nonstd-lite if not found
-if ! conan &>/dev/null; then
+# Install conan
+if ! conan >/dev/null 2>&1; then
     pip3 install conan
-    conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
-elif ! conan remote list | grep -q "nonstd-lite"; then
+fi
+
+# conan nonstd-lite
+if ! conan remote list | grep -q "nonstd-lite"; then
     conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
 fi;
 
 # Install arb-deploy
 cd scripts/arb-deploy
-python3 setup.py -q develop
+#python3 setup.py -q develop
 cd ../..
 
 # Install arb-compiler-evm
 cd packages/arb-compiler-evm
-pip3 install -r requirements.txt -q
-python3 setup.py -q develop
+#pip3 install -r requirements.txt -q
+#python3 setup.py -q develop
 cd ../..
 
 # Install arb-avm-cpp
 mkdir -p packages/arb-avm-cpp/build
 cd packages/arb-avm-cpp/build
 conan install ..
-if [[ -z "${CMAKE_BUILD_TYPE}" ]]; then
-    CMAKE_BUILD_TYPE="Release"
+if [ $# -ge 1 ]; then
+    cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ ..
+else
+    cmake -DCMAKE_BUILD_TYPE=Release -DCODE_COVERAGE=False ..
 fi
-if [[ -z "${CODE_COVERAGE}" ]]; then
-    CODE_COVERAGE="False"
-fi
-cmake -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" -DCODE_COVERAGE="${CODE_COVERAGE}" ..
-if nproc 2>/dev/null; then
+if nproc >/dev/null 2>&1; then
     NPROC=$(nproc)
-elif sysctl -n hw.ncpu 2>/dev/null; then
+elif sysctl -n hw.ncpu >/dev/null 2>&1; then
     NPROC=$(sysctl -n hw.ncpu)
 else
     NPROC=4
 fi
-cmake --build . -j ${NPROC}
+cmake --build . "-j${NPROC}"
 cp lib/lib* ../cmachine/
 cd ../../..
 
