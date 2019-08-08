@@ -6,8 +6,9 @@
 
 FROM alpine:3.9 as arb-avm-cpp-builder
 # Alpine dependencies
-RUN apk add --no-cache boost-dev cmake g++ gcc make musl-dev python3 python3-dev && \
-    pip3 install conan && \
+RUN apk add --no-cache boost-dev=1.67.0-r2 cmake=3.13.0-r0 g++=8.3.0-r0 \
+    make=4.2.1-r2 musl-dev=1.1.20-r5 python3-dev=3.6.8-r2 && \
+    pip3 install conan==1.18.1 && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -38,7 +39,8 @@ COPY --from=arb-avm-cpp-builder /home/user/build build/
 
 FROM alpine:3.9 as arb-validator-builder
 # Alpine dependencies
-RUN apk add --no-cache build-base git go libc-dev linux-headers && \
+RUN apk add --no-cache build-base=0.5-r1 git=2.20.1-r0 go=1.11.5-r0 \
+    libc-dev=0.7.1-r0 linux-headers=4.18.13-r1 && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -74,7 +76,7 @@ RUN go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp=.
 
 FROM alpine:3.9 as arb-validator
 # Export binary
-RUN apk add --no-cache libstdc++ libgcc && \
+RUN apk add --no-cache libstdc++=8.3.0-r0 libgcc=8.3.0-r0 && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user

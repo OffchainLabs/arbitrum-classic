@@ -13,7 +13,8 @@ FROM alpine:3.9
 
 # Alpine dependencies and Non-root user
 # Check dependencies
-RUN apk add --no-cache g++ git make nodejs npm python && \
+RUN apk add --no-cache g++=8.3.0-r0 git=2.20.1-r0 make=4.2.1-r2 \
+    nodejs=10.14.2-r0 npm=10.14.2-r0 python2=2.7.16-r1 && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -21,9 +22,9 @@ ENV PATH="/home/user/.npm-global/bin:${PATH}"
 WORKDIR "/home/user/"
 RUN mkdir -p /home/user/.npm-global && \
     npm config set prefix "/home/user/.npm-global" && \
-    npm install -g ganache-cli truffle yarn
+    npm install -g ganache-cli@6.5.0 truffle@5.0.30 yarn@1.17.3
 COPY package.json ./
-RUN yarn --production
+RUN yarn --production --frozen-lockfile --non-interactive
 
 # Source code
 COPY . ./
@@ -42,7 +43,7 @@ RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
         -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset -q && [ -f bridge_eth_addresses.json ] && \
+    truffle migrate --reset --compile-all -q && [ -f bridge_eth_addresses.json ] && \
     node -e "                                               \
     const data = require('./keys.json')['addresses'];       \
     const addresses = new Array(0);                         \
@@ -62,7 +63,7 @@ RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
 # Minimize image
 FROM alpine:3.9
 
-RUN apk add --no-cache nodejs
+RUN apk add --no-cache nodejs=10.14.2-r0
 
 # Non-root user
 RUN addgroup -g 1000 -S user && \

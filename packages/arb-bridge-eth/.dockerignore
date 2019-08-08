@@ -139,7 +139,7 @@
 **/*.dll
 
 # Fortran module files
-**/*.mod
+## **/*.mod # conflicts with go.mod
 **/*.smod
 
 # Compiled Static libraries
