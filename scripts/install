@@ -5,14 +5,16 @@
 ### --------------------------------------------------------------------
 
 # Install conan
-if ! conan >/dev/null 2>&1; then
-    pip3 install conan
-fi
+virtualenv --no-site-packages vconan
+source vconan/bin/activate
+pip install --upgrade pip
+pip install --upgrade conan
 
 # conan nonstd-lite
 if ! conan remote list | grep -q "nonstd-lite"; then
     conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
 fi;
+deactivate
 
 # Install arb-deploy
 cd scripts/arb-deploy
@@ -26,9 +28,11 @@ cd packages/arb-compiler-evm
 cd ../..
 
 # Install arb-avm-cpp
+source vconan/bin/activate
 mkdir -p packages/arb-avm-cpp/build
 cd packages/arb-avm-cpp/build
 conan install ..
+deactivate
 if [ $# -ge 1 ]; then
     cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ ..
 else
