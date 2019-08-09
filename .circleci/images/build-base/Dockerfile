@@ -9,7 +9,7 @@ USER user
 WORKDIR /home/user/
 ENV PATH="/home/user/.local/bin:/home/user/.npm-global/bin:${PATH}"
 RUN pip3 install coverage virtualenv && \
-    virtualenv --no-site-packages vconan && \
+    virtualenv arbitrum/vconan && mv arbitrum/vconan . && rm -rf arbitrum && \
     . vconan/bin/activate && \
     pip install --upgrade conan && \
     conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite && \
