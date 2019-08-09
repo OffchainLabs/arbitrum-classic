@@ -3,6 +3,9 @@
 ### install-validator
 ### --------------------------------------------------------------------
 
+# Exit on error
+set -e
+
 # Install arb-avm-cpp
 if [[ "$*" == *--debug* ]]; then
     BUILD=debug
@@ -14,7 +17,7 @@ fi
 
 mkdir -p packages/arb-avm-cpp/${BUILD}
 cd packages/arb-avm-cpp/${BUILD}
-source ../../../vconan/bin/activate
+. ../../../vconan/bin/activate
 conan install ..
 deactivate
 cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ..
@@ -34,8 +37,6 @@ cd ../../..
 
 # install arb-validator
 cd packages/arb-validator
-echo "go mod download"
 go mod download
-echo "go install -v ./.."
 go install -v ./...
 cd ../..

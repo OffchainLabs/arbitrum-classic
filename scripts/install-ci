@@ -3,6 +3,9 @@
 ### install-ci
 ### --------------------------------------------------------------------
 
+# Exit on error
+set -e
+
 . vconan/bin/activate
 mkdir -p packages/arb-avm-cpp/ci
 cd packages/arb-avm-cpp/ci
@@ -12,9 +15,8 @@ cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
 cmake --build . -j $(nproc)
 cd ../../..
 
-# Install arb-compiler-evm and activate varbc
-. varbc/bin/activate
+# Install arb-compiler-evm
 cd packages/arb-compiler-evm
-pip install -r requirements.txt
-python setup.py install
+pip3 install -r requirements.txt
+python3 setup.py install --user
 cd ../..
