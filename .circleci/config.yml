@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-    - image: offchainlabs/build-base:0.1.0
+    - image: offchainlabs/build-base:0.1.2
     working_directory: /home/user/arbitrum
     steps:
     - run: mv /home/user/arbitrum/vconan/ /home/user/vconan/
@@ -19,7 +19,7 @@ jobs:
         command: |
           ctest .
           lcov --capture --directory . --output-file coverage.info
-          lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
+          lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
           lcov --list coverage.info
           bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -f coverage.info -cF arb_avm_cpp
         working_directory: /home/user/arbitrum/packages/arb-avm-cpp/ci
@@ -32,7 +32,9 @@ jobs:
     - run:
         name: test arb-bridge-eth
         command: |
-          truffle test || true
+          ganache-cli -p 7545 &
+          truffle migrate --reset --compile-all
+          kill $!
           bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_bridge_eth
         working_directory: /home/user/arbitrum/packages/arb-bridge-eth
     - run:
