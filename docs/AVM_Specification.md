@@ -131,7 +131,7 @@ Each VM has an Inbox, which is supplied by the Runtime Environment. At any time 
 * a 3-tuple [0, b, v], where b is an Inbox and v is a value, indicating that the inbox contains the sequence of messages in b followed by the message v; or
 * a 3-tuple [1, b, c], where b and c are Inboxes, indicating that the Inbox contains the sequence of messages in b followed by the sequence of messages in c.
 
-Each Message is a 4-tuple [value, currency, amount, sender], where value is a Value, currency is a non-negative Integer identifying a particular currency, amount denotes the amount of that currency transferred by the sender to the VM in the Message, and sender is the Arbitrum identity of the party who sent the Message, represented as an Integer. (The Arbitrum protocol ensures that the sender is verified and the currency really was transferred, so you can rely on the sender identity being accurate, and on the incoming transfer of currency having occurred.)
+Each Message is a 4-tuple [value, sender, amount, currency], where value is a Value, sender is the Arbitrum identity of the party who sent the Message, amount denotes the amount of that currency transferred by the sender to the VM in the Message represented as an Integer, and currency is a non-negative Integer identifying a particular currency. (The Arbitrum protocol ensures that the sender is verified and the currency really was transferred, so you can rely on the sender identity being accurate, and on the incoming transfer of currency having occurred.)
 
 A VM can receive from its Inbox by using the inbox instruction (described below), which pushes the current Inbox contents onto the Data Stack.
 
