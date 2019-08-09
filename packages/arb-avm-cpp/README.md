@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.com/OffchainLabs/arb-avm-cpp.svg?branch=master)](https://travis-ci.com/OffchainLabs/arb-avm-cpp) [![codecov](https://codecov.io/gh/OffchainLabs/arb-avm-cpp/branch/master/graph/badge.svg)](https://codecov.io/gh/OffchainLabs/arb-avm-cpp)
 # arb-avm-cpp
 
 Arbitrum technologies are patent pending. This repository is offered under the Apache 2.0 license. See LICENSE for details.
@@ -22,26 +21,4 @@ Format depends on clang-format which can be installed with `brew install clang-f
 
 ```bash
 make format
-```
-
-## Docker
-
-Build with:
-
-```
-docker build -t arb-avm-cpp .
-```
-
-To enable caching, remove the `##DEV_` prefixes. Note that there must be at least one
-successful `arb-avm-cpp` image build before using the cache will work. Enable caching with:
-
-```
-awk '{gsub(/##DEV_/, "")}1' Dockerfile > .tmp.Dockerfile && mv .tmp.Dockerfile Dockerfile
-```
-
-Exported file locations:
-
-```
-/build/cmachine.h
-/build/avm/libavm.a
 ```
