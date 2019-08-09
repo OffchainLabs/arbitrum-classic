@@ -205,7 +205,12 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 			hexutil.Encode(acc))
 	}
 
-	logsPostHash := info.LogsAccHashes[len(info.LogsAccHashes)-1]
+	var logsPostHash string
+	if len(info.LogsAccHashes) > 0 {
+		logsPostHash = info.LogsAccHashes[len(info.LogsAccHashes)-1]
+	} else {
+		logsPostHash = hexutil.Encode(zero[:])
+	}
 	for i, logVal := range assertion.NewLogs() {
 		if i > 0 {
 			logsPreHash = info.LogsAccHashes[i-1] // Previous acc hash
