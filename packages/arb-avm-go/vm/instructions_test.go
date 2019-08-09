@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package vm
 
 import (
 	"fmt"
@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -45,7 +44,7 @@ func TestMachineAdd(t *testing.T) {
 	i++
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	assertion := m.ExecuteAssertion(80000, protocol.NewTimeBounds(0, 100000))
 	fmt.Println(assertion.NumSteps)
 }
@@ -60,18 +59,18 @@ func unaryIntOpTest(x, expected *big.Int, oper value.Opcode) (bool, string) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewIntValue(x))
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -85,19 +84,19 @@ func binaryIntOpTest(x, y, expected *big.Int, oper value.Opcode) (bool, string) 
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewIntValue(y))
 	m.Stack().Push(value.NewIntValue(x))
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -111,19 +110,19 @@ func binaryValueOpTest(x, y value.Value, expected *big.Int, oper value.Opcode) (
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(y)
 	m.Stack().Push(x)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -137,20 +136,20 @@ func tertiaryIntOpTest(x, y, z, expected *big.Int, oper value.Opcode) (bool, str
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewIntValue(z))
 	m.Stack().Push(value.NewIntValue(y))
 	m.Stack().Push(value.NewIntValue(x))
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); err != nil {
 		tmp := "RunInstruction error:"
 		tmp += err.Error()
 		return false, tmp
 	}
 	knownMachine.Stack().Push(value.NewIntValue(expected))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		tmp := "machines not equal: "
 		tmp += err
 		return false, tmp
@@ -165,16 +164,16 @@ func TestAddMissingValue(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(1))
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ADD}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.ADD}); err == nil {
 		t.Error("tried to pop empty stack expected")
 	}
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if ok, _ := vm.Equal(knownMachine, m); ok {
+	if ok, _ := Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
@@ -691,7 +690,7 @@ func TestPop(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	a := m.Stack().Count()
@@ -701,7 +700,7 @@ func TestPop(t *testing.T) {
 		t.Error(tmp)
 	}
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.POP}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.POP}); err != nil {
 		tmp := "POP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -719,9 +718,9 @@ func TestSpush(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SPUSH}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.SPUSH}); err != nil {
 		tmp := "SPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -739,9 +738,9 @@ func TestRpush(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.RPUSH}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.RPUSH}); err != nil {
 		tmp := "RPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -765,12 +764,12 @@ func TestRset(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(5))
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.RSET}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.RSET}); err != nil {
 		tmp := "RSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -780,17 +779,17 @@ func TestRset(t *testing.T) {
 		tmp := "RSET stack size check failed"
 		t.Error(tmp)
 	}
-	if ok, _ := vm.Equal(knownMachine, m); ok {
+	if ok, _ := Equal(knownMachine, m); ok {
 		t.Error("machines equal expected different")
 	}
 
 	knownMachine.Stack().Push(value.NewInt64Value(5))
-	if _, err := vm.RunInstruction(knownMachine, value.BasicOperation{Op: code.RSET}); err != nil {
+	if _, err := RunInstruction(knownMachine, value.BasicOperation{Op: code.RSET}); err != nil {
 		tmp := "RSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -801,8 +800,8 @@ func TestInbox(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knowninbox := protocol.NewEmptyInbox()
 
 	var tok protocol.TokenType
@@ -818,7 +817,7 @@ func TestInbox(t *testing.T) {
 	knowninbox.SendMessage(protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(3), dest))
 	knowninbox.DeliverMessages()
 
-	vm.NewMachineAssertionContext(m, [2]uint64{0, 10000})
+	NewMachineAssertionContext(m, [2]uint64{0, 10000})
 
 	var tokint big.Int
 	var bigtok [32]byte
@@ -833,13 +832,13 @@ func TestInbox(t *testing.T) {
 	tup, _ := value.NewTupleOfSizeWithContents(vals, 4)
 
 	m.Stack().Push(tup)
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.INBOX}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.INBOX}); err != nil {
 		tmp := "INBOX failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	knownMachine.Stack().Push(knowninbox.Receive())
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -858,22 +857,22 @@ func TestJump(t *testing.T) {
 	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// run NOP to push value 1
-	vm.RunInstruction(m, m.GetOperation())
+	RunInstruction(m, m.GetOperation())
 	// push 2 to set jump point
 	var nextHash [32]byte
 	codept := value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
 	m.Stack().Push(codept)
 	// JUMP
-	vm.RunInstruction(m, value.BasicOperation{Op: code.JUMP})
+	RunInstruction(m, value.BasicOperation{Op: code.JUMP})
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	vm.RunInstruction(m, m.GetOperation())
+	RunInstruction(m, m.GetOperation())
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -892,13 +891,13 @@ func TestCJump(t *testing.T) {
 	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	saveMachine := m.Clone().(*vm.Machine)
-	saveKnownMachine := knownMachine.Clone().(*vm.Machine)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	saveMachine := m.Clone().(*Machine)
+	saveKnownMachine := knownMachine.Clone().(*Machine)
 
 	// run NOP to push value 1
-	vm.RunInstruction(m, m.GetOperation())
+	RunInstruction(m, m.GetOperation())
 	// push 0 for conditional
 	m.Stack().Push(value.NewInt64Value(0))
 	// push 2 to set jump point
@@ -906,12 +905,12 @@ func TestCJump(t *testing.T) {
 	codept := value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
 	m.Stack().Push(codept)
 	// CJUMP
-	vm.RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
+	RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	vm.RunInstruction(m, m.GetOperation())
+	RunInstruction(m, m.GetOperation())
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 
@@ -919,19 +918,19 @@ func TestCJump(t *testing.T) {
 	m = saveMachine
 	knownMachine = saveKnownMachine
 	// run NOP to push value 1
-	vm.RunInstruction(m, m.GetOperation())
+	RunInstruction(m, m.GetOperation())
 	// push 1 for conditional
 	m.Stack().Push(value.NewInt64Value(1))
 	// push 2 to set jump point
 	codept = value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
 	m.Stack().Push(codept)
 	// CJUMP
-	vm.RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
+	RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	vm.RunInstruction(m, m.GetOperation())
+	RunInstruction(m, m.GetOperation())
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -942,10 +941,10 @@ func TestStackempty(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
 		tmp := "STACKEMPTY failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -959,10 +958,10 @@ func TestStackempty(t *testing.T) {
 	}
 	// verify known and unknown match one item value = 1
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.STACKEMPTY}); err != nil {
 		tmp := "STACKEMPTY failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -975,7 +974,7 @@ func TestStackempty(t *testing.T) {
 	}
 	// push 0 to knownMachine as result of second STACKEMPTY call
 	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -986,10 +985,10 @@ func TestPcpush(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.PCPUSH}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.PCPUSH}); err != nil {
 		tmp := "PCPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -1005,7 +1004,7 @@ func TestPcpush(t *testing.T) {
 	var nextHash [32]byte
 	codept := value.CodePointValue{0, value.BasicOperation{Op: code.HALT}, nextHash}
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1016,11 +1015,11 @@ func TestAuxpush(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(4))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXPUSH}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.AUXPUSH}); err != nil {
 		tmp := "AUXPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -1041,7 +1040,7 @@ func TestAuxpush(t *testing.T) {
 	}
 	// verify known and unknown match one item value = 4
 	knownMachine.AuxStack().Push(value.NewInt64Value(4))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1052,11 +1051,11 @@ func TestAuxpop(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.AuxStack().Push(value.NewInt64Value(5))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXPOP}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.AUXPOP}); err != nil {
 		tmp := "AUXPOP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -1077,7 +1076,7 @@ func TestAuxpop(t *testing.T) {
 	}
 	// verify known and unknown match one item value = 5
 	knownMachine.Stack().Push(value.NewInt64Value(5))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1088,8 +1087,8 @@ func TestAuxstckempty(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// auxstack should be empty
 	a := m.AuxStack().Count()
@@ -1099,14 +1098,14 @@ func TestAuxstckempty(t *testing.T) {
 		t.Error(tmp)
 	}
 	// check aux stack empty and push results on data stack
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
 		tmp := "AUXSTACKEMPTY failed"
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match one item value = 1
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 
@@ -1118,7 +1117,7 @@ func TestAuxstckempty(t *testing.T) {
 		tmp += strconv.FormatInt(a, 10)
 		t.Error(tmp)
 	}
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.AUXSTACKEMPTY}); err != nil {
 		tmp := "AUXSTACKEMPTY failed"
 		tmp += err.Error()
 		t.Error(err)
@@ -1126,7 +1125,7 @@ func TestAuxstckempty(t *testing.T) {
 	// verify known and unknown match
 	knownMachine.AuxStack().Push(value.NewInt64Value(5))
 	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1137,34 +1136,34 @@ func TestNop(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// check NOP does nothing
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.NOP}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.NOP}); err != nil {
 		tmp := "NOP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 
 	// check NOP does nothing
 	// immediate operation pushes value then does nothing
-	if _, err := vm.RunInstruction(m, value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}); err != nil {
+	if _, err := RunInstruction(m, value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}); err != nil {
 		tmp := "NOP failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1183,52 +1182,52 @@ func TestErrpush(t *testing.T) {
 	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// push codepoint onto stack
 	var nextHash [32]byte
 	codept := value.CodePointValue{4, value.BasicOperation{Op: code.HALT}, nextHash}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// run errset to set the error handler
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERRSET}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.ERRSET}); err != nil {
 		tmp := "ERRSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown different
-	if ok, _ := vm.Equal(knownMachine, m); ok {
+	if ok, _ := Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
 	// set known to match
-	if _, err := vm.RunInstruction(knownMachine, value.BasicOperation{Op: code.ERRSET}); err != nil {
+	if _, err := RunInstruction(knownMachine, value.BasicOperation{Op: code.ERRSET}); err != nil {
 		tmp := "ERRSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// run errpush to push error handler to data stack
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERRPUSH}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.ERRPUSH}); err != nil {
 		tmp := "ERRPUSH failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown different
-	if ok, _ := vm.Equal(knownMachine, m); ok {
+	if ok, _ := Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
 	// push error handler code point to known data stack
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1247,36 +1246,36 @@ func TestErrset(t *testing.T) {
 	i++ // insn 4
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// push codepoint onto stack
 	var nextHash [32]byte
 	codept := value.CodePointValue{4, value.BasicOperation{Op: code.HALT}, nextHash}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// run errset to set the error handler
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERRSET}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.ERRSET}); err != nil {
 		tmp := "ERRSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown different
-	if ok, _ := vm.Equal(knownMachine, m); ok {
+	if ok, _ := Equal(knownMachine, m); ok {
 		tmp := "machines equal expected different"
 		t.Error(tmp)
 	}
 	// set known to match
-	if _, err := vm.RunInstruction(knownMachine, value.BasicOperation{Op: code.ERRSET}); err != nil {
+	if _, err := RunInstruction(knownMachine, value.BasicOperation{Op: code.ERRSET}); err != nil {
 		tmp := "ERRSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1287,20 +1286,20 @@ func TestError(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// check NOP does nothing
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.ERROR}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.ERROR}); err == nil {
 		tmp := "ERROR failed - should have generated error"
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1311,19 +1310,19 @@ func TestDup0(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.DUP0}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.DUP0}); err != nil {
 		tmp := "DUP0 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1334,21 +1333,21 @@ func TestDup1(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	m.Stack().Push(value.NewInt64Value(2))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.DUP1}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.DUP1}); err != nil {
 		tmp := "DUP1 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1359,8 +1358,8 @@ func TestDup2(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	m.Stack().Push(value.NewInt64Value(2))
@@ -1368,14 +1367,14 @@ func TestDup2(t *testing.T) {
 	knownMachine.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(2))
 	knownMachine.Stack().Push(value.NewInt64Value(3))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.DUP2}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.DUP2}); err != nil {
 		tmp := "DUP2 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1386,13 +1385,13 @@ func TestSwap2(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	m.Stack().Push(value.NewInt64Value(2))
 	m.Stack().Push(value.NewInt64Value(3))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.SWAP2}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.SWAP2}); err != nil {
 		tmp := "SWAP2 failed - "
 		tmp += err.Error()
 		t.Error(tmp)
@@ -1401,7 +1400,7 @@ func TestSwap2(t *testing.T) {
 	knownMachine.Stack().Push(value.NewInt64Value(3))
 	knownMachine.Stack().Push(value.NewInt64Value(2))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1412,31 +1411,31 @@ func TestTget(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	tup := value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2))
 
 	m.Stack().Push(tup)
 	m.Stack().Push(value.NewInt64Value(1))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TGET}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TGET}); err != nil {
 		tmp := "TGET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match one item value = 1
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test with only int on stack
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
 		tmp := "TGET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
 	knownMachine.Stack().Pop()
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test A out of range
@@ -1445,12 +1444,12 @@ func TestTget(t *testing.T) {
 	var nextHash [32]byte
 	codept := value.CodePointValue{0, value.BasicOperation{Op: code.HALT}, nextHash}
 	m.SetPC(codept)
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
 		tmp := "TGET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1461,42 +1460,42 @@ func TestTset(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewInt64Value(3))
 	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 	m.Stack().Push(value.NewInt64Value(1))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TSET}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TSET}); err != nil {
 		tmp := "TSET failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(3)))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test with only tuple on stack
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TSET}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TSET}); err == nil {
 		tmp := "TSET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
 	knownMachine.Stack().Pop()
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test incorrect A
 	m.Stack().Push(value.NewInt64Value(3))
 	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 	m.Stack().Push(value.NewInt64Value(4))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TSET}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TSET}); err == nil {
 		tmp := "TSET expected fail"
 		t.Error(tmp)
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1507,27 +1506,27 @@ func TestTlen(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TLEN}); err != nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TLEN}); err != nil {
 		tmp := "TLEN failed - "
 		tmp += err.Error()
 		t.Error(tmp)
 	}
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(2))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// test A not a tuple
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TLEN}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TLEN}); err == nil {
 		t.Error("TLEN expected fail")
 	}
 	// verify known and unknown match expect empty stack
 	knownMachine.Stack().Pop()
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1553,11 +1552,11 @@ func TestType(t *testing.T) {
 	}
 
 	for i := range testValues {
-		m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 		m.Stack().Push(testValues[i])
-		if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.TYPE}); err != nil {
+		if _, err := RunInstruction(m, value.BasicOperation{Op: code.TYPE}); err != nil {
 			tmp := "TYPE failed - "
 			tmp += err.Error()
 			t.Error(tmp)
@@ -1565,7 +1564,7 @@ func TestType(t *testing.T) {
 
 		knownMachine.Stack().Push(resultValues[i])
 
-		if ok, err := vm.Equal(knownMachine, m); !ok {
+		if ok, err := Equal(knownMachine, m); !ok {
 			t.Error(err)
 		}
 	}
@@ -1577,14 +1576,14 @@ func TestBreakpoint(t *testing.T) {
 	i := 0
 	insns[i] = value.BasicOperation{Op: code.HALT}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
-	if _, err := vm.RunInstruction(m, value.BasicOperation{Op: code.BREAKPOINT}); err == nil {
+	if _, err := RunInstruction(m, value.BasicOperation{Op: code.BREAKPOINT}); err == nil {
 		t.Error("Breakpoint didn't block")
 	}
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
@@ -1596,12 +1595,12 @@ func TestLog(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	m.Stack().Push(value.NewInt64Value(5))
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	// verify out message
@@ -1621,8 +1620,8 @@ func TestSendFungible(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// fungible value=10
 	var tok protocol.TokenType
@@ -1644,7 +1643,7 @@ func TestSendFungible(t *testing.T) {
 	// send token 15 value=7 to dest 4
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	msgs := ad.OutMsgs
@@ -1668,8 +1667,8 @@ func TestSendNonFungible(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send of non fungible
 	var tok protocol.TokenType
@@ -1690,7 +1689,7 @@ func TestSendNonFungible(t *testing.T) {
 
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	msgs := ad.OutMsgs
@@ -1714,8 +1713,8 @@ func TestSendLowBalance(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send with insufficient funds
 	var tok protocol.TokenType
@@ -1737,7 +1736,7 @@ func TestSendLowBalance(t *testing.T) {
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(tup)
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	msgs := ad.OutMsgs
@@ -1754,8 +1753,8 @@ func TestNbsend1(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	var tok protocol.TokenType
 	tok[0] = 15
@@ -1778,7 +1777,7 @@ func TestNbsend1(t *testing.T) {
 
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 
@@ -1796,8 +1795,8 @@ func TestNBSendFungible(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// fungible value=10
 	var tok protocol.TokenType
@@ -1820,7 +1819,7 @@ func TestNBSendFungible(t *testing.T) {
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	msgs := ad.OutMsgs
@@ -1844,8 +1843,8 @@ func TestNBSendNonFungible(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send of non fungible
 	var tok protocol.TokenType
@@ -1867,7 +1866,7 @@ func TestNBSendNonFungible(t *testing.T) {
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	msgs := ad.OutMsgs
@@ -1891,8 +1890,8 @@ func TestNBSendLowBalance(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// test send with insufficient funds
 	var tok protocol.TokenType
@@ -1914,7 +1913,7 @@ func TestNBSendLowBalance(t *testing.T) {
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 	msgs := ad.OutMsgs
@@ -1931,14 +1930,14 @@ func TestGettime(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := vm.NewMachine(insns, value.NewInt64Value(1), false, 100)
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	m.ExecuteAssertion(10, [2]uint64{5, 10})
 
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
-	if ok, err := vm.Equal(knownMachine, m); !ok {
+	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
 }
