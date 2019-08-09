@@ -9,10 +9,11 @@ USER user
 WORKDIR /home/user/
 ENV PATH="/home/user/.local/bin:/home/user/.npm-global/bin:${PATH}"
 RUN pip3 install coverage virtualenv && \
-    virtualenv arbitrum/vconan && mv arbitrum/vconan . && rm -rf arbitrum && \
-    . vconan/bin/activate && \
+    virtualenv arbitrum/vconan && \
+    . arbitrum/vconan/bin/activate && \
     pip install --upgrade conan && \
     conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite && \
     deactivate && \
     mkdir /home/user/.npm-global && npm config set prefix '~/.npm-global' && \
     npm install -g ganache-cli@6.5.0 truffle@5.0.30 yarn@1.17.3
+WORKDIR /home/user/arbitrum
