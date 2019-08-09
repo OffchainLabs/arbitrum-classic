@@ -171,7 +171,7 @@
 **/downloads/
 **/eggs/
 **/.eggs/
-**/lib/
+## **/lib/ # conflicts with arb-avm-cpp
 **/lib64/
 **/parts/
 **/sdist/
