@@ -21,19 +21,19 @@ jobs:
           lcov --capture --directory . --output-file coverage.info
           lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
           lcov --list coverage.info
-          codecov --file coverage.info --root /home/user/arbitrum --flags arb-avm-cpp
+          codecov --file coverage.info --flags arb-avm-cpp
         working_directory: /home/user/arbitrum/packages/arb-avm-cpp/ci
     - run:
         name: test arb-avm-go
         command: |
           go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          codecov --root /home/user/arbitrum --flags arb-avm-go
+          codecov --flags arb-avm-go
         working_directory: /home/user/arbitrum/packages/arb-avm-go
     - run:
         name: test arb-bridge-eth
         command: |
           truffle test || true
-          codecov --root /home/user/arbitrum --flags arb-bridge-eth
+          codecov --flags arb-bridge-eth
         working_directory: /home/user/arbitrum/packages/arb-bridge-eth
     - run:
         name: test arb-compiler-evm
@@ -44,41 +44,41 @@ jobs:
           coverage run --source=../../arbitrum/ truffle_runner.py compiled.json
           cd ../..
           coverage combine .coverage tests/sol-syscall/.coverage
-          codecov --root /home/user/arbitrum --flags arb-compiler-evm
+          codecov --flags arb-compiler-evm
         working_directory: /home/user/arbitrum/packages/arb-compiler-evm
     - run:
         name: test arb-provider-ethers
         command: |
           yarn jest --coverage
-          codecov --root /home/user/arbitrum --flags arb-provider-ethers
+          codecov --flags arb-provider-ethers
         working_directory: /home/user/arbitrum/packages/arb-provider-ethers
     - run:
         name: test arb-provider-go
         command: |
           go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          codecov --root /home/user/arbitrum --flags arb-provider-go
+          codecov --flags arb-provider-go
         working_directory: /home/user/arbitrum/packages/arb-provider-go
     - run:
         name: test arb-provider-truffle
         command: |
           yarn jest --coverage --pass-with-no-tests
-          codecov --root /home/user/arbitrum --flags arb-provider-truffle
+          codecov --flags arb-provider-truffle
         working_directory: /home/user/arbitrum/packages/arb-provider-truffle
     - run:
         name: test arb-provider-web3
         command: |
           yarn jest --coverage --pass-with-no-tests
-          codecov --root /home/user/arbitrum --flags arb-provider-web3
+          codecov --flags arb-provider-web3
         working_directory: /home/user/arbitrum/packages/arb-provider-web3
     - run:
         name: test arb-util
         command: |
           go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          codecov --root /home/user/arbitrum --flags arb-util
+          codecov --flags arb-util
         working_directory: /home/user/arbitrum/packages/arb-util
     - run:
         name: test arb-validator
         command: |
           go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          codecov --root /home/user/arbitrum --flags arb-validator
+          codecov --flags arb-validator
         working_directory: /home/user/arbitrum/packages/arb-validator

@@ -1,0 +1,56 @@
+coverage:
+  status:
+    project:
+      default: off
+      arb-avm-cpp:
+        flags: arb-avm-cpp
+      arb-avm-go:
+        flags: arb-avm-go
+      arb-bridge-eth:
+        flags: arb-bridge-eth
+      arb-compiler-evm:
+        flags: arb-compiler-evm
+      arb-provider-ethers:
+        flags: arb-provider-ethers
+      arb-provider-go:
+        flags: arb-provider-go
+      arb-provider-truffle:
+        flags: arb-provider-truffle
+      arb-provider-web3:
+        flags: arb-provider-web3
+      arb-util:
+        flags: arb-util
+      arb-validator:
+        flags: arb-validator
+
+flags:
+  arb-avm-cpp:
+    paths:
+      - packages/arb-avm-cpp
+  arb-avm-go:
+    paths:
+      - packages/arb-avm-go
+  arb-bridge-eth:
+    paths:
+      - packages/arb-bridge-eth
+  arb-compiler-evm:
+    paths:
+      - packages/arb-compiler-evm
+  arb-provider-ethers:
+    paths:
+      - packages/arb-provider-ethers
+  arb-provider-go:
+    paths:
+      - packages/arb-provider-go
+  arb-provider-truffle:
+    paths:
+      - packages/arb-provider-truffle
+  arb-provider-web3:
+    paths:
+      - packages/arb-provider-web3
+  arb-util:
+    paths:
+      - packages/arb-util
+  arb-validator:
+    paths:
+      - packages/arb-validator
