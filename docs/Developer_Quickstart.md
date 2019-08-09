@@ -5,7 +5,7 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Devel
 ---
 
 Get started with Arbitrum by installing the Arbitrum compiler,
-`arbc-truffle-compile`, and its dependencies. Next,
+`arbc-truffle`, and its dependencies. Next,
 [build and run the demo app](#hello-arbitrum) or
 [port your own dapp](#porting-to-arbitrum).
 
@@ -91,15 +91,10 @@ Download the Arbitrum Monorepo from source:
 git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
+yarn install:deps
 ```
 
-Install the `arbc-truffle` compiler:
-
-```
-yarn install:compiler
-```
-
-Check `arbc-truffle was installed:
+Check `arbc-truffle` was installed:
 
 ```
 which arbc-truffle
@@ -108,15 +103,6 @@ which arbc-truffle
 Expected output:
 
 > /usr/local/bin/arbc-truffle
-
-### Ubuntu 18.04
-
-If installing `arbc-truffle` compile did not work, you may need to try with `sudo`:
-
-```
-cd packages/arb-compiler-evm
-sudo python3 setup.py install
-```
 
 ## Hello, Arbitrum
 
@@ -145,33 +131,39 @@ this dApp, you do not need to change any Solidity files.
 
     > Note: if `--compile-all` if not recognized then try `--all`
 
+    Return to the root of the Monorepo:
+
+    ```
+    cd ../..
+    ```
+
 2. Deploy `contract.ao` to 3 Validators
 
     ``` bash
-    yarn deploy contract.ao 3
+    ./scripts/arb_deploy.py demos/pet-shop/contract.ao 3
     ```
 
     > Note: this step may take about 10 minutes the very first time. Subsequent
-    > builds are much, much faster because Docker caches image layers.
+    > builds are much faster. You can also use the `--up` flag to skip builds
+    > if one has completed successfully before.
 
 3. Examine the `yarn deploy contract.ao 3` output
 
     When pet-shop is finished being deployed, you should see output similar to this:
 
     ``` txt
-    arb-bridge-eth_1             | Listening on 0.0.0.0:7545
     arb-validator-coordinator_1  | Finished waiting for arb-bridge-eth:7545...
-    arb-validator-coordinator_1  | 2019/08/02 16:49:12 Coordinator is trying to create the VM
-    arb-validator-coordinator_1  | 2019/08/02 16:49:13 http: TLS handshake error from 172.21.0.5:38281: EOF
-    arb-validator-coordinator_1  | 2019/08/02 16:49:13 http: TLS handshake error from 172.21.0.4:36287: EOF
+    arb-validator-coordinator_1  | 2019/08/09 23:49:12 Coordinator is trying to create the VM
+    arb-validator-coordinator_1  | 2019/08/09 23:49:13 http: TLS handshake error from 192.168.208.4:32963: EOF
+    arb-validator-coordinator_1  | 2019/08/09 23:49:13 http: TLS handshake error from 192.168.208.5:37875: EOF
     arb-validator2_1             | Finished waiting for arb-validator-coordinator:1236...
     arb-validator1_1             | Finished waiting for arb-validator-coordinator:1236...
-    arb-validator-coordinator_1  | 2019/08/02 16:49:15 Coordinator connected with follower 0xfbb0fc9161f9c824cb5ff5222166b7ea247e85ca
-    arb-validator-coordinator_1  | 2019/08/02 16:49:15 Coordinator connected with follower 0x85794eceb590b9b53554bc6d28c964be00aaa893
-    arb-validator-coordinator_1  | 2019/08/02 16:49:15 Coordinator gathering signatures
-    arb-validator1_1             | 2019/08/02 16:49:15 Validator formed connection with coordinator
-    arb-validator2_1             | 2019/08/02 16:49:15 Validator formed connection with coordinator
-    arb-validator-coordinator_1  | 2019/08/02 16:49:16 Coordinator created VM
+    arb-validator-coordinator_1  | 2019/08/09 23:49:15 Coordinator connected with follower 0x85794eceb590b9b53554bc6d28c964be00aaa893
+    arb-validator2_1             | 2019/08/09 23:49:15 Validator formed connection with coordinator
+    arb-validator-coordinator_1  | 2019/08/09 23:49:15 Coordinator connected with follower 0xfbb0fc9161f9c824cb5ff5222166b7ea247e85ca
+    arb-validator-coordinator_1  | 2019/08/09 23:49:15 Coordinator gathering signatures
+    arb-validator1_1             | 2019/08/09 23:49:15 Validator formed connection with coordinator
+    arb-validator-coordinator_1  | 2019/08/09 23:49:16 Coordinator created VM
     ```
 
 ### Use the DApp
