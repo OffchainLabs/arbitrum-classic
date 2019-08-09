@@ -4,6 +4,8 @@
 .vscode
 *.ao
 compiled.json
+ci
+debug
 build
 release
 xcode

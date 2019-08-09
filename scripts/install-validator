@@ -1,0 +1,37 @@
+#!/bin/sh
+### --------------------------------------------------------------------
+### install-validator
+### --------------------------------------------------------------------
+
+# Install arb-avm-cpp
+if [[ "$*" == *--debug* ]]; then
+    BUILD=debug
+    CMAKE_BUILD_TYPE=Debug
+else
+    BUILD=build
+    CMAKE_BUILD_TYPE=Release
+fi
+
+mkdir -p packages/arb-avm-cpp/${BUILD}
+cd packages/arb-avm-cpp/${BUILD}
+source ../../../vconan/bin/activate
+conan install ..
+deactivate
+cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+
+
+if nproc >/dev/null 2>&1; then
+    NPROC=$(nproc)
+elif sysctl -n hw.ncpu >/dev/null 2>&1; then
+    NPROC=$(sysctl -n hw.ncpu)
+else
+    NPROC=4
+fi
+
+cmake --build . -j "${NPROC}"
+cp lib/lib* ../cmachine/
+cd ../../..
+
+# install arb-validator
+cd packages/arb-validator
+go install -v ./...

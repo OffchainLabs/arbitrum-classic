@@ -1,0 +1,25 @@
+#!/bin/sh
+### --------------------------------------------------------------------
+### install-deps
+### --------------------------------------------------------------------
+
+# When running `pip3 install --user ...` the bin location is in:
+# python3 -c "import site; print(site.USER_BASE + '/bin')"
+
+# Install conan
+pip3 install virtualenv
+virtualenv --no-site-packages vconan
+source vconan/bin/activate
+pip3 install --upgrade pip
+pip3 install --upgrade conan
+# conan nonstd-lite
+if ! conan remote list | grep -q "nonstd-lite"; then
+    conan remote add nonstd-lite https://api.bintray.com/conan/martinmoene/nonstd-lite
+fi;
+deactivate
+
+# Install arb-compiler-evm
+cd packages/arb-compiler-evm
+pip3 install -r requirements.txt
+python3 setup.py develop
+cd ../..

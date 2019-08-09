@@ -16,6 +16,8 @@ arb-validator.Dockerfile
 **/.vscode
 **/*.ao
 **/compiled.json
+**/ci
+**/debug
 **/build
 **/release
 **/xcode

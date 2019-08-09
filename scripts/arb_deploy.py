@@ -134,7 +134,7 @@ def deploy(contract_name, n_validators, sudo_flag, build_flag, up_flag,
             run('mkdir -p .tmp')
             run('echo "%s" > .tmp/Dockerfile' % DOCKERFILE_CACHE)
             run('docker build -t %s .tmp' % name, sudo=sudo_flag)
-            #run('rm -rf .tmp')
+            run('rm -rf .tmp')
     bootstrap_build_cache('arb-avm-cpp')
     bootstrap_build_cache('arb-validator')
 
