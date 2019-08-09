@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ### --------------------------------------------------------------------
 ### install-deps
 ### --------------------------------------------------------------------
@@ -9,7 +9,7 @@
 # Install conan
 pip3 install virtualenv
 virtualenv --no-site-packages vconan
-source vconan/bin/activate
+. vconan/bin/activate
 pip3 install --upgrade pip
 pip3 install --upgrade conan
 # conan nonstd-lite
