@@ -8,7 +8,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
 USER user
 WORKDIR /home/user/
 ENV PATH="/home/user/.local/bin:/home/user/.npm-global/bin:${PATH}"
-RUN pip3 install codecov virtualenv && \
+RUN pip3 install coverage virtualenv && \
     mkdir arbitrum && cd arbitrum && \
     virtualenv --no-site-packages vconan && \
     . vconan/bin/activate && \
