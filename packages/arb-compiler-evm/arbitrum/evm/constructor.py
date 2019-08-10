@@ -14,10 +14,6 @@
 
 import web3
 from ethereum import vm as EthVM
-from ethereum.pow.chain import Chain
-from ethereum.messages import Transaction, VMExt
-from ethereum import messages
-from ethereum import utils
 
 
 class VmExtBase:

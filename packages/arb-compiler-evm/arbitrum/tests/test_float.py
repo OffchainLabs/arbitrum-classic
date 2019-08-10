@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest import TestCase
-import struct
+# from unittest import TestCase
+# import struct
 
-from arbitrum.std import floatlib
-from arbitrum import VM
+# from arbitrum.std import floatlib
+# from arbitrum import VM
 
 
 # def python_add(i, j):

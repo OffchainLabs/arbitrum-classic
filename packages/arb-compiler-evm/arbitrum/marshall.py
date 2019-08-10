@@ -15,7 +15,6 @@
 import eth_abi
 from .ast import AVMLabeledCodePoint, BasicOp, ImmediateOp
 from . import value
-from . import instructions
 
 INT_TYPE_CODE = 0
 CODE_POINT_TYPE_CODE = 1

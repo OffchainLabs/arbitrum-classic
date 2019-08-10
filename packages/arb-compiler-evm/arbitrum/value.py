@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import eth_utils
-import eth_abi
 
 from eth_abi.packed import encode_single_packed
 

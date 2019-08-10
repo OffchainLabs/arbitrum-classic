@@ -237,6 +237,183 @@ def generate_evm_code(raw_code, storage):
     return compile_block(initialization), BlockStatement(main_code)
 
 
+def evm_div(vm):
+    vm.dup1()
+    vm.iszero()
+    vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.div())
+
+
+def evm_sdiv(vm):
+    vm.dup1()
+    vm.iszero()
+    vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.sdiv())
+
+
+def evm_mod(vm):
+    vm.dup1()
+    vm.iszero()
+    vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.mod())
+
+
+def evm_smod(vm):
+    vm.dup1()
+    vm.iszero()
+    vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.smod())
+
+
+def evm_addmod(vm):
+    vm.dup2()
+    vm.iszero()
+    vm.ifelse(lambda vm: [vm.pop(), vm.pop()], lambda vm: vm.addmod())
+
+
+def evm_mulmod(vm):
+    vm.dup2()
+    vm.iszero()
+    vm.ifelse(lambda vm: [vm.pop(), vm.pop()], lambda vm: vm.mulmod())
+
+
+def not_supported_op(name):
+    raise EVMNotSupported(name)
+
+
+EVM_STATIC_OPS = {
+    "SELF_BALANCE": lambda vm: [vm.push(0), os.balance_get(vm)],
+    # 0s: Stop and Arithmetic Operations
+    "STOP": execution.stop,
+    "ADD": lambda vm: vm.add(),
+    "MUL": lambda vm: vm.mul(),
+    "SUB": lambda vm: vm.sub(),
+    "DIV": evm_div,
+    "SDIV": evm_sdiv,
+    "MOD": evm_mod,
+    "SMOD": evm_smod,
+    "ADDMOD": evm_addmod,
+    "MULMOD": evm_mulmod,
+    "EXP": lambda vm: vm.exp(),
+    "SIGNEXTEND": lambda vm: vm.signextend(),
+    # 10s: Comparison & Bitwise Logic Operations
+    "LT": lambda vm: vm.lt(),
+    "GT": lambda vm: vm.gt(),
+    "SLT": lambda vm: vm.slt(),
+    "SGT": lambda vm: vm.sgt(),
+    "EQ": lambda vm: vm.eq(),
+    "ISZERO": lambda vm: vm.iszero(),
+    "AND": lambda vm: vm.bitwise_and(),
+    "OR": lambda vm: vm.bitwise_or(),
+    "XOR": lambda vm: vm.bitwise_xor(),
+    "NOT": lambda vm: vm.bitwise_not(),
+    "BYTE": lambda vm: vm.byte(),
+    "SHL": lambda vm: [vm.swap1(), bitwise.shift_left(vm)],
+    "SHR": lambda vm: [vm.swap1(), bitwise.shift_right(vm)],
+    "SAR": lambda vm: [vm.swap1(), bitwise.arithmetic_shift_right(vm)],
+    # 20s: SHA3
+    "SHA3": os.evm_sha3,
+    # 30s: Environmental Information
+    "ADDRESS": lambda vm: [
+        os.get_call_frame(vm),
+        call_frame.call_frame.get("contractID")(vm),
+    ],
+    "ORIGIN": os.message_origin,
+    "CALLER": os.message_caller,
+    "CALLVALUE": os.message_value,
+    "CALLDATALOAD": os.message_data_load,
+    "CALLDATASIZE": os.message_data_size,
+    "CALLDATACOPY": os.message_data_copy,
+    # TODO: Arbitrary value
+    "GASPRICE": lambda vm: vm.push(1),
+    "RETURNDATASIZE": os.return_data_size,
+    "RETURNDATACOPY": os.return_data_copy,
+    # 40s: Block Information
+    "BLOCKHASH": lambda vm: not_supported_op("BLOCKHASH"),
+    "COINBASE": lambda vm: not_supported_op("COINBASE"),
+    "TIMESTAMP": os.get_timestamp,
+    "NUMBER": os.get_block_number,
+    "DIFFICULTY": lambda vm: not_supported_op("DIFFICULTY"),
+    "GASLIMIT": lambda vm: not_supported_op("GASLIMIT"),
+    # 50s: Stack, Memory, Storage and Flow Operations
+    "POP": lambda vm: vm.pop(),
+    "MLOAD": os.memory_load,
+    "MSTORE": os.memory_store,
+    "MSTORE8": os.memory_store8,
+    "SLOAD": os.storage_load,
+    "SSTORE": os.storage_store,
+    "GETPC": lambda vm: not_supported_op("GETPC"),
+    "MSIZE": os.memory_length,
+    # TODO: Fill in here
+    "GAS": lambda vm: vm.push(9999999999),
+    "DUP1": stack_manip.dup_n(0),
+    "DUP2": stack_manip.dup_n(1),
+    "DUP3": stack_manip.dup_n(2),
+    "DUP4": stack_manip.dup_n(3),
+    "DUP5": stack_manip.dup_n(4),
+    "DUP6": stack_manip.dup_n(5),
+    "DUP7": stack_manip.dup_n(6),
+    "DUP8": stack_manip.dup_n(7),
+    "DUP9": stack_manip.dup_n(8),
+    "DUP10": stack_manip.dup_n(9),
+    "DUP11": stack_manip.dup_n(10),
+    "DUP12": stack_manip.dup_n(11),
+    "DUP13": stack_manip.dup_n(12),
+    "DUP14": stack_manip.dup_n(13),
+    "DUP15": stack_manip.dup_n(14),
+    "DUP16": stack_manip.dup_n(15),
+    "SWAP1": stack_manip.swap_n(1),
+    "SWAP2": stack_manip.swap_n(2),
+    "SWAP3": stack_manip.swap_n(3),
+    "SWAP4": stack_manip.swap_n(4),
+    "SWAP5": stack_manip.swap_n(5),
+    "SWAP6": stack_manip.swap_n(6),
+    "SWAP7": stack_manip.swap_n(7),
+    "SWAP8": stack_manip.swap_n(8),
+    "SWAP9": stack_manip.swap_n(9),
+    "SWAP10": stack_manip.swap_n(10),
+    "SWAP11": stack_manip.swap_n(11),
+    "SWAP12": stack_manip.swap_n(12),
+    "SWAP13": stack_manip.swap_n(13),
+    "SWAP14": stack_manip.swap_n(14),
+    "SWAP15": stack_manip.swap_n(15),
+    "SWAP16": stack_manip.swap_n(16),
+    # a0s: Logging Operations
+    "LOG1": os.evm_log1,
+    "LOG2": os.evm_log2,
+    "LOG3": os.evm_log3,
+    "LOG4": os.evm_log4,
+    # f0s: System operations
+    "CREATE": lambda vm: not_supported_op("CREATE"),
+    "CREATE2": lambda vm: not_supported_op("CREATE2"),
+    "RETURN": execution.ret,
+    "REVERT": execution.revert,
+    "SELFDESTRUCT": execution.selfdestruct,
+    "BALANCE": lambda vm: [
+        print("Warning: BALANCE was used which may lead to an error"),
+        vm.push(0),
+        vm.swap1(),
+        os.ext_balance(vm),
+    ],
+}
+
+UNHANDLED_OPCODE = {
+    0x3F: "EXTCODEHASH",
+    0xF5: "CREATE2",
+    0x1B: "SHL",
+    0x1C: "SHR",
+    0x1D: "SAR",
+}
+
+
+def get_opcode_name(instr):
+    if instr.opcode in UNHANDLED_OPCODE:
+        return UNHANDLED_OPCODE[instr.opcode]
+    if instr.name[:4] == "PUSH":
+        return "PUSH"
+    if instr.name[:3] == "DUP":
+        return "DUP"
+    if instr.name[:4] == "SWAP":
+        return "SWAP"
+    return instr.name
+
+
 def generate_contract_code(
     label,
     code,
@@ -266,260 +443,96 @@ def generate_contract_code(
     def get_contract_code(vm):
         vm.push(code_tuple)
 
+    def evm_extcodesize(vm):
+        print("Warning: EXTCODESIZE was used which may lead to an error")
+        code_size(vm)
+        vm.dup0()
+        vm.tnewn(0)
+        vm.eq()
+        vm.ifelse(lambda vm: [vm.error()])
+
+    def evm_extcodecopy(vm):
+        print("Warning: EXTCODECOPY was used which may lead to an error")
+        code_tuples(vm)
+        vm.dup0()
+        vm.tnewn(0)
+        vm.eq()
+        vm.ifelse(lambda vm: [vm.error()])
+        os.set_scratch(vm)
+        os.evm_copy_to_memory(vm, os.get_scratch)
+
+    def evm_extcodehash(vm):
+        print("Warning: EXTCODEHASH was used which may lead to an error")
+        code_hashes(vm)
+        vm.dup0()
+        vm.tnewn(0)
+        vm.eq()
+        vm.ifelse(lambda vm: [vm.error()])
+
+    EVM_CONTRACT_OPS = {
+        "JUMP": lambda vm: [
+            dispatch(vm),
+            vm.dup0(),
+            vm.tnewn(0),
+            vm.eq(),
+            vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.jump()]),
+        ],
+        "JUMPI": lambda vm: [
+            dispatch(vm),
+            vm.dup0(),
+            vm.tnewn(0),
+            vm.eq(),
+            vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.cjump()]),
+        ],
+        "CODESIZE": lambda vm: vm.push(len(code)),
+        "CODECOPY": lambda vm: os.evm_copy_to_memory(vm, get_contract_code),
+        "EXTCODESIZE": evm_extcodesize,
+        "EXTCODECOPY": evm_extcodecopy,
+        "EXTCODEHASH": evm_extcodehash,
+    }
+
     def run_op(instr):
-        def impl(vm):
-            if instr.name == "SELF_BALANCE":
-                vm.push(0)
-                os.balance_get(vm)
-
-            # 0s: Stop and Arithmetic Operations
-            elif instr.name == "STOP":
-                execution.stop(vm)
-            elif instr.name == "ADD":
-                vm.add()
-            elif instr.name == "MUL":
-                vm.mul()
-            elif instr.name == "SUB":
-                vm.sub()
-            elif instr.name == "DIV":
-                vm.dup1()
-                vm.iszero()
-                vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.div())
-            elif instr.name == "SDIV":
-                vm.dup1()
-                vm.iszero()
-                vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.sdiv())
-            elif instr.name == "MOD":
-                vm.dup1()
-                vm.iszero()
-                vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.mod())
-            elif instr.name == "SMOD":
-                vm.dup1()
-                vm.iszero()
-                vm.ifelse(lambda vm: vm.pop(), lambda vm: vm.smod())
-            elif instr.name == "ADDMOD":
-                vm.dup2()
-                vm.iszero()
-                vm.ifelse(lambda vm: [vm.pop(), vm.pop()], lambda vm: vm.addmod())
-            elif instr.name == "MULMOD":
-                vm.dup2()
-                vm.iszero()
-                vm.ifelse(lambda vm: [vm.pop(), vm.pop()], lambda vm: vm.mulmod())
-            elif instr.name == "EXP":
-                vm.exp()
-            elif instr.name == "SIGNEXTEND":
-                vm.signextend()
-
-            # 10s: Comparison & Bitwise Logic Operations
-            elif instr.name == "LT":
-                vm.lt()
-            elif instr.name == "GT":
-                vm.gt()
-            elif instr.name == "SLT":
-                vm.slt()
-            elif instr.name == "SGT":
-                vm.sgt()
-            elif instr.name == "EQ":
-                vm.eq()
-            elif instr.name == "ISZERO":
-                vm.iszero()
-            elif instr.name == "AND":
-                vm.bitwise_and()
-            elif instr.name == "OR":
-                vm.bitwise_or()
-            elif instr.name == "XOR":
-                vm.bitwise_xor()
-            elif instr.name == "NOT":
-                vm.bitwise_not()
-            elif instr.name == "BYTE":
-                vm.byte()
-            elif instr.opcode == 0x1B:
-                vm.swap1()
-                bitwise.shift_left(vm)
-            elif instr.opcode == 0x1C:
-                vm.swap1()
-                bitwise.shift_right(vm)
-            elif instr.opcode == 0x1D:
-                vm.swap1()
-                bitwise.arithmetic_shift_right(vm)
-
-            # 20s: SHA3
-            elif instr.name == "SHA3":
-                os.evm_sha3(vm)
-
-            # 30s: Environmental Information
-            elif instr.name == "ADDRESS":
-                os.get_call_frame(vm)
-                call_frame.call_frame.get("contractID")(vm)
-            elif instr.name == "ORIGIN":
-                os.message_origin(vm)
-            elif instr.name == "CALLER":
-                os.message_caller(vm)
-            elif instr.name == "CALLVALUE":
-                os.message_value(vm)
-            elif instr.name == "CALLDATALOAD":
-                os.message_data_load(vm)
-            elif instr.name == "CALLDATASIZE":
-                os.message_data_size(vm)
-            elif instr.name == "CALLDATACOPY":
-                os.message_data_copy(vm)
-            elif instr.name == "CODESIZE":
-                vm.push(len(code))
-            elif instr.name == "CODECOPY":
-                os.evm_copy_to_memory(vm, get_contract_code)
-            elif instr.name == "GASPRICE":
-                # TODO: Arbitrary value
-                vm.push(1)
-            elif instr.name == "RETURNDATASIZE":
-                os.return_data_size(vm)
-            elif instr.name == "RETURNDATACOPY":
-                os.return_data_copy(vm)
-
-            # 40s: Block Information
-            elif instr.name == "BLOCKHASH":
-                raise EVMNotSupported(instr.name)
-            elif instr.name == "COINBASE":
-                raise EVMNotSupported()
-            elif instr.name == "TIMESTAMP":
-                os.get_timestamp(vm)
-            elif instr.name == "NUMBER":
-                os.get_block_number(vm)
-            elif instr.name == "DIFFICULTY":
-                raise EVMNotSupported(instr.name)
-            elif instr.name == "GASLIMIT":
-                # TODO: Arbitrary value
-                raise EVMNotSupported(instr.name)
-
-            # 50s: Stack, Memory, Storage and Flow Operations
-            elif instr.name == "POP":
-                vm.pop()
-            elif instr.name == "MLOAD":
-                os.memory_load(vm)
-            elif instr.name == "MSTORE":
-                os.memory_store(vm)
-            elif instr.name == "MSTORE8":
-                os.memory_store8(vm)
-            elif instr.name == "SLOAD":
-                os.storage_load(vm)
-            elif instr.name == "SSTORE":
-                os.storage_store(vm)
-            elif instr.name == "JUMP":
-                dispatch(vm)
-                vm.dup0()
-                vm.tnewn(0)
-                vm.eq()
-                vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.jump()])
-            elif instr.name == "JUMPI":
-                dispatch(vm)
-                vm.dup0()
-                vm.tnewn(0)
-                vm.eq()
-                vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.cjump()])
-            elif instr.name == "GETPC":
-                raise EVMNotSupported(instr.name)
-            elif instr.name == "MSIZE":
-                os.memory_length(vm)
-            elif instr.name == "GAS":
-                vm.push(9999999999)
-                # TODO: Fill in here
-            elif instr.name == "JUMPDEST":
-                vm.set_label(AVMLabel("jumpdest_{}_{}".format(contract_id, instr.pc)))
-
-            # 60s & 70s: Push Operations
-            elif instr.name[:4] == "PUSH":
-                vm.push(instr.operand)
-
-            # 80s: Duplication Operations
-            elif instr.name[:3] == "DUP":
-                dup_num = int(instr.name[3:]) - 1
-                if dup_num == 0:
-                    vm.dup0()
-                elif dup_num == 1:
-                    vm.dup1()
-                elif dup_num == 2:
-                    vm.dup2()
-                else:
-                    stack_manip.dup_n(dup_num)(vm)
-
-            # 90s: Exchange Operations
-            elif instr.name[:4] == "SWAP":
-                swap_num = int(instr.name[4:])
-                if swap_num == 1:
-                    vm.swap1()
-                elif swap_num == 2:
-                    vm.swap2()
-                else:
-                    stack_manip.swap_n(swap_num)(vm)
-
-            # a0s: Logging Operations
-            elif instr.name == "LOG1":
-                os.evm_log1(vm)
-            elif instr.name == "LOG2":
-                os.evm_log2(vm)
-            elif instr.name == "LOG3":
-                os.evm_log3(vm)
-            elif instr.name == "LOG4":
-                os.evm_log4(vm)
-
-            # f0s: System operations
-            elif instr.name == "CREATE":
-                raise EVMNotSupported(instr.name)
-            elif instr.opcode == 0xF5:
-                raise EVMNotSupported("CREATE2")
-            elif instr.name == "CALL":
-                execution.call(vm, dispatch_contract, instr.pc, contract_id)
-            elif instr.name == "CALLCODE":
-                execution.callcode(vm, dispatch_contract, instr.pc, contract_id)
-            elif instr.name == "RETURN":
-                execution.ret(vm)
-            elif instr.name == "DELEGATECALL":
-                execution.delegatecall(vm, dispatch_contract, instr.pc, contract_id)
-            elif instr.name == "STATICCALL":
-                execution.staticcall(vm, dispatch_contract, instr.pc, contract_id)
-            elif instr.name == "REVERT":
-                execution.revert(vm)
-            elif instr.name == "SELFDESTRUCT":
-                execution.selfdestruct(vm)
-            elif instr.name == "BALANCE":
-                print("Warning: BALANCE was used which may lead to an error")
-                vm.push(0)
-                vm.swap1()
-                os.ext_balance(vm)
-            elif instr.name == "EXTCODESIZE":
-                print("Warning: EXTCODESIZE was used which may lead to an error")
-                code_size(vm)
-                vm.dup0()
-                vm.tnewn(0)
-                vm.eq()
-                vm.ifelse(lambda vm: [vm.error()])
-            elif instr.name == "EXTCODECOPY":
-                print("Warning: EXTCODECOPY was used which may lead to an error")
-                code_tuples(vm)
-                vm.dup0()
-                vm.tnewn(0)
-                vm.eq()
-                vm.ifelse(lambda vm: [vm.error()])
-                os.set_scratch(vm)
-                os.evm_copy_to_memory(vm, os.get_scratch)
-            elif instr.opcode == 0x3F:  # EXTCODEHASH
-                print("Warning: EXTCODEHASH was used which may lead to an error")
-                code_hashes(vm)
-                vm.dup0()
-                vm.tnewn(0)
-                vm.eq()
-                vm.ifelse(lambda vm: [vm.error()])
-            elif instr.name == "INVALID":
-                if instr.opcode != 0xFE:
-                    print(
-                        "Warning: Source code contained nonstandard invalid opcode {}".format(
-                            hex(instr.opcode)
-                        )
+        def evm_invalid_op(vm):
+            if instr.opcode != 0xFE:
+                print(
+                    "Warning: Source code contained nonstandard invalid opcode {}".format(
+                        hex(instr.opcode)
                     )
-                execution.revert(vm)
-            else:
-                raise Exception("Unhandled instruction {}".format(instr))
+                )
+            execution.revert(vm)
 
-        return impl
+        evm_instr_ops = {
+            "PUSH": lambda vm: vm.push(instr.operand),
+            "JUMPDEST": lambda vm: vm.set_label(
+                AVMLabel("jumpdest_{}_{}".format(contract_id, instr.pc))
+            ),
+            "CALL": lambda vm: execution.call(
+                vm, dispatch_contract, instr.pc, contract_id
+            ),
+            "CALLCODE": lambda vm: execution.call(
+                vm, dispatch_contract, instr.pc, contract_id
+            ),
+            "DELEGATECALL": lambda vm: execution.delegatecall(
+                vm, dispatch_contract, instr.pc, contract_id
+            ),
+            "STATICCALL": lambda vm: execution.staticcall(
+                vm, dispatch_contract, instr.pc, contract_id
+            ),
+            "INVALID": evm_invalid_op,
+        }
+
+        instr_name = get_opcode_name(instr)
+
+        if instr_name in EVM_STATIC_OPS:
+            return EVM_STATIC_OPS[instr_name]
+
+        if instr_name in EVM_CONTRACT_OPS:
+            return EVM_CONTRACT_OPS[instr_name]
+
+        if instr_name in evm_instr_ops:
+            return evm_instr_ops[instr_name]
+
+        raise Exception("Unhandled instruction {}".format(instr))
 
     contract_code = [label]
     for insn in code:

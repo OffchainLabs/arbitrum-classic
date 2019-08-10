@@ -43,7 +43,7 @@ class Locals:
 
     def discard(self, varToSave=None):
         self.vm.auxpop()
-        if varToSave == None:
+        if varToSave is None:
             self.vm.pop()
         else:
             self.struc.get(varToSave)(self.vm)

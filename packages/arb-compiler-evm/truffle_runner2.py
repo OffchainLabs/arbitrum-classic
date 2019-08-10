@@ -20,9 +20,6 @@ from arbitrum.instructions import OPS
 import sys
 from arbitrum.evm.contract import ArbContract, create_evm_vm
 
-from arbitrum.value import *
-from arbitrum.std import sized_byterange
-
 
 def run_until_halt(vm):
     log = []

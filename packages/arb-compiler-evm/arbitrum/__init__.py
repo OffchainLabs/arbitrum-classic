@@ -20,3 +20,16 @@ from .annotation import modifies_stack
 from .vm_runner import run_vm_once
 from . import marshall
 from . import evm
+
+__all__ = [
+    "BasicVM",
+    "AVMCodePoint",
+    "VM",
+    "AVMOp",
+    "compile_program",
+    "compile_block",
+    "modifies_stack",
+    "run_vm_once",
+    "marshall",
+    "evm",
+]

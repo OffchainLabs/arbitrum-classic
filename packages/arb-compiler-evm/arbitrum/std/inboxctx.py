@@ -15,7 +15,6 @@
 from ..annotation import modifies_stack
 from . import tup
 from . import queue_tup
-from .stack_manip import swap_n
 from .. import value
 from .types import inbox_ctx
 

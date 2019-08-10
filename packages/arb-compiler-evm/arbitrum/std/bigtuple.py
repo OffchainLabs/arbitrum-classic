@@ -15,7 +15,7 @@
 from . import tup
 from .struct import Struct
 from ..annotation import modifies_stack
-from ..value import TupleType, IntType, ValueType
+from ..value import TupleType, IntType
 from .. import value
 
 

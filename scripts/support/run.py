@@ -14,7 +14,7 @@
 
 import os
 import subprocess
-import sys
+
 
 # Run commands in shell
 def run(command, sudo=False, capture_stdout=False, quiet=False):
@@ -25,5 +25,5 @@ def run(command, sudo=False, capture_stdout=False, quiet=False):
         return os.system(command)
     try:
         return subprocess.check_output(command, shell=True).decode("utf-8")
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         return ""

@@ -20,8 +20,6 @@
 
 import argparse
 import os
-import pkg_resources
-import subprocess
 import sys
 
 import setup_states
@@ -133,6 +131,7 @@ COMPOSE_VALIDATOR = """
             - AVM=%s
 """
 
+
 # Returns one arb-validator declaration for a docker compose file
 def compose_validator(validator_id, state_abspath, contract_abspath, avm):
     return COMPOSE_VALIDATOR % (
@@ -153,6 +152,7 @@ COPY --from=0 /build /build"""
 ### ----------------------------------------------------------------------------
 ### Deploy
 ### ----------------------------------------------------------------------------
+
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
 def deploy(
@@ -249,7 +249,7 @@ def halt_docker(sudo_flag):
         )
 
     # Kill and rm all docker containers and images created by any `arb-deploy`
-    ps = "grep 'arb-validator\|arb-bridge-eth' | awk '{ print $1 }'"
+    ps = "grep -e 'arb-validator' -e 'arb-bridge-eth' | awk '{ print $1 }'"
     if run("docker ps | " + ps, capture_stdout=True, quiet=True, sudo=sudo_flag) != "":
         run(
             "docker kill $("

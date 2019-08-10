@@ -16,7 +16,6 @@ from unittest import TestCase
 
 from arbitrum.std import sized_bigtuple
 from arbitrum import VM
-from arbitrum import value
 
 
 class TestSizedBigTuple(TestCase):

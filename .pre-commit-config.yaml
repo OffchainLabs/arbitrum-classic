@@ -22,3 +22,7 @@ repos:
       rev: "" # Use the sha or tag you want to point at
       hooks:
           - id: prettier
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v1.2.3
+      hooks:
+          - id: flake8

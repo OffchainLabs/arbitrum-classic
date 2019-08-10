@@ -14,7 +14,8 @@
 
 import json
 import arbitrum as arb
-import eth_utils
+
+# import eth_utils
 from collections import Counter
 from arbitrum.instructions import OPS
 import sys

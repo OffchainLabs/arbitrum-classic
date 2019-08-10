@@ -628,38 +628,51 @@ def flatten_block(op):
     return ret
 
 
-def compile_program(initialization, body, should_optimize=True):
-    compiled_funcs = {}
+def optimize_program(compiled_funcs):
+    # use cycle checking to figure out which functions are safe to inline
+    non_recursive = get_non_recursive(compiled_funcs)
+    non_recursive = [x for x in non_recursive if compiled_funcs[x].is_callable]
+    # IMPORTANT: Inling requires code cloning which only currently works
+    #            if the ast in the code includes no labels.
+    # # count how many times each function is called
+    counter = CallCounter()
+    for func in compiled_funcs:
+        compiled_funcs[func].modify_ast(counter)
 
-    # Iteratively resolve all function calls
-    seen_funcs = set()
-    funcs_to_search = [ast.FuncDefinition("MAIN_FUNC", None, body, False)]
-    label_gen = LabelGenerator()
-    while funcs_to_search:
-        new_funcs = []
+    # inline non-recursive functions that are called a single time
+    single_call = [
+        x
+        for x in counter.call_counts
+        if counter.call_counts[x] == 1 and x in non_recursive
+    ]
+    for single_func in single_call:
+        func_to_inline = compiled_funcs[single_func]
+        for func in compiled_funcs:
+            compiled_funcs[func] = compiled_funcs[func].modify_ast(
+                InlineCallTransformer(func_to_inline)
+            )
+        non_recursive.remove(single_func)
+        del compiled_funcs[single_func]
 
-        def find_calls(op):
-            if isinstance(
-                op, (ast.CallStatement, ast.SetErrorHandlerFunctionStatement)
-            ):
-                if op.func_name not in seen_funcs:
-                    new_funcs.append(
-                        ast.FuncDefinition(
-                            op.func_name,
-                            op.func,
-                            compile_block(op.func),
-                            op.is_callable,
-                        )
-                    )
-                    seen_funcs.add(op.func_name)
+    # inline short non-recursive functions
+    while True:
+        if not non_recursive:
+            break
+        shortest_non_recursive = min(
+            non_recursive, key=lambda func: len(compiled_funcs[func])
+        )
+        if len(compiled_funcs[shortest_non_recursive]) >= 150:
+            break
+        func_to_inline = compiled_funcs[shortest_non_recursive]
+        del compiled_funcs[shortest_non_recursive]
+        for func in compiled_funcs:
+            compiled_funcs[func] = compiled_funcs[func].modify_ast(
+                InlineCallTransformer(func_to_inline)
+            )
+        non_recursive.remove(shortest_non_recursive)
 
-        for func in funcs_to_search:
-            func.traverse_ast(find_calls)
-            compiled_funcs[func.name] = func
 
-        funcs_to_search = new_funcs
-
-    # print(list(compiled_funcs))
+def verify_stackmods(compiled_funcs):
     # Verify manual stack count labeling
     for func in compiled_funcs:
         if func == "MAIN_FUNC":
@@ -710,6 +723,41 @@ def compile_program(initialization, body, should_optimize=True):
                     )
                 )
 
+
+def compile_program(initialization, body, should_optimize=True):
+    compiled_funcs = {}
+
+    # Iteratively resolve all function calls
+    seen_funcs = set()
+    funcs_to_search = [ast.FuncDefinition("MAIN_FUNC", None, body, False)]
+    label_gen = LabelGenerator()
+    while funcs_to_search:
+        new_funcs = []
+
+        def find_calls(op):
+            if isinstance(
+                op, (ast.CallStatement, ast.SetErrorHandlerFunctionStatement)
+            ):
+                if op.func_name not in seen_funcs:
+                    new_funcs.append(
+                        ast.FuncDefinition(
+                            op.func_name,
+                            op.func,
+                            compile_block(op.func),
+                            op.is_callable,
+                        )
+                    )
+                    seen_funcs.add(op.func_name)
+
+        for func in funcs_to_search:
+            func.traverse_ast(find_calls)
+            compiled_funcs[func.name] = func
+
+        funcs_to_search = new_funcs
+
+    # print(list(compiled_funcs))
+    verify_stackmods(compiled_funcs)
+
     for func in compiled_funcs:
         if func == "MAIN_FUNC":
             continue
@@ -720,47 +768,7 @@ def compile_program(initialization, body, should_optimize=True):
         compiled_funcs[func] = compiled_funcs[func].modify_ast(CastRemover())
 
     if should_optimize:
-        # use cycle checking to figure out which functions are safe to inline
-        non_recursive = get_non_recursive(compiled_funcs)
-        non_recursive = [x for x in non_recursive if compiled_funcs[x].is_callable]
-        # IMPORTANT: Inling requires code cloning which only currently works
-        #            if the ast in the code includes no labels.
-        # # count how many times each function is called
-        counter = CallCounter()
-        for func in compiled_funcs:
-            compiled_funcs[func].modify_ast(counter)
-
-        # inline non-recursive functions that are called a single time
-        single_call = [
-            x
-            for x in counter.call_counts
-            if counter.call_counts[x] == 1 and x in non_recursive
-        ]
-        for single_func in single_call:
-            func_to_inline = compiled_funcs[single_func]
-            for func in compiled_funcs:
-                compiled_funcs[func] = compiled_funcs[func].modify_ast(
-                    InlineCallTransformer(func_to_inline)
-                )
-            non_recursive.remove(single_func)
-            del compiled_funcs[single_func]
-
-        # inline short non-recursive functions
-        while True:
-            if not non_recursive:
-                break
-            shortest_non_recursive = min(
-                non_recursive, key=lambda func: len(compiled_funcs[func])
-            )
-            if len(compiled_funcs[shortest_non_recursive]) >= 150:
-                break
-            func_to_inline = compiled_funcs[shortest_non_recursive]
-            del compiled_funcs[shortest_non_recursive]
-            for func in compiled_funcs:
-                compiled_funcs[func] = compiled_funcs[func].modify_ast(
-                    InlineCallTransformer(func_to_inline)
-                )
-            non_recursive.remove(shortest_non_recursive)
+        optimize_program(compiled_funcs)
 
     for func in compiled_funcs:
         compiled_funcs[func] = compiled_funcs[func].modify_ast(

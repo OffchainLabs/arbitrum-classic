@@ -245,7 +245,7 @@ class BasicVM:
         if op2 != 0:
             try:
                 self.push(op1 // op2)
-            except:
+            except Exception:
                 print(op1)
                 print(op2)
                 raise

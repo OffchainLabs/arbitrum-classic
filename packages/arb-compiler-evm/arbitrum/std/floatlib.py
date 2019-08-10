@@ -363,7 +363,7 @@ def pack(vm):
                                             vm.push((1 << _mantbits) - 1),
                                             vm.bitwise_and(),
                                             vm.swap1(),
-                                            vm.push(-bias),
+                                            vm.push(-_bias),
                                             vm.add(),
                                             vm.push(1 << _mantbits),
                                             vm.mul(),

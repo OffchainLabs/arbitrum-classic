@@ -574,6 +574,27 @@ class AVMLabeledCodePoint(ASTNode):
         return self.pc == other.pc
 
 
+def typecheck_tget(stack):
+    index = stack.pop(value.IntType())
+    tup = stack.pop(value.TupleType())
+    if isinstance(index, int) and not tup.has_member_at_index(index):
+        raise Exception("Tried to get index {} from tuple {}".format(index, tup))
+    stack.push(tup.get_tup(index))
+
+
+OP_HANDLER = {
+    "auxpush": lambda stack: stack.push_aux(stack.pop()),
+    "auxpop": lambda stack: stack.push(stack.pop_aux()),
+    "dup0": instructions.dup0,
+    "dup1": instructions.dup1,
+    "dup2": instructions.dup2,
+    "swap1": instructions.swap1,
+    "swap2": instructions.swap2,
+    "tget": typecheck_tget,
+    "tset": instructions.tset,
+}
+
+
 class BasicOp(ASTNode):
     def __init__(self, op_code, path=None):
         super(BasicOp, self).__init__(path)
@@ -609,40 +630,8 @@ class BasicOp(ASTNode):
     def typecheck(self, stack):
         try:
             name = instructions.OP_NAMES[self.op_code]
-            if name == "auxpush":
-                stack.push_aux(stack.pop())
-            elif name == "auxpop":
-                stack.push(stack.pop_aux())
-            elif name == "dup0":
-                instructions.dup0(stack)
-            elif name == "dup1":
-                instructions.dup1(stack)
-            elif name == "dup2":
-                instructions.dup2(stack)
-            elif name == "swap1":
-                instructions.swap1(stack)
-            elif name == "swap2":
-                instructions.swap2(stack)
-            elif name == "tnew":
-                size = stack.pop(value.IntType())
-                if isinstance(size, int):
-                    stack.push(value.Tuple([value.Tuple([]) for i in range(size)]))
-                else:
-                    stack.push(value.TupleType())
-            elif name == "tget":
-                index = stack.pop(value.IntType())
-                tup = stack.pop(value.TupleType())
-                if isinstance(index, int) and not tup.has_member_at_index(index):
-                    raise Exception(
-                        "Tried to get index {} from tuple {}".format(index, tup)
-                    )
-                stack.push(tup.get_tup(index))
-            elif name[:4] == "tget":
-                instructions.tgetn(stack, int(name[4:]))
-            elif name == "tset":
-                instructions.tset(stack)
-            elif name[:4] == "tset":
-                instructions.tsetn(stack, int(name[4:]))
+            if name in OP_HANDLER:
+                OP_HANDLER[name](stack)
             else:
                 info = instructions.OF_INFO[self.op_code]
                 for pop in info["pop"]:

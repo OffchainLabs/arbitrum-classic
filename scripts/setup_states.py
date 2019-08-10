@@ -18,7 +18,6 @@ import argparse
 import json
 import os
 import shutil
-import subprocess
 
 from support.run import run
 
@@ -27,6 +26,7 @@ DESCRIPTION = ""
 VALIDATOR_STATES = "validator-states"
 VALIDATOR_STATE = "validator%s"
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 # Retrieve bridge_eth_addresses.json and keys.json
 # arb-bridge-eth must be have been built first
@@ -89,6 +89,29 @@ def setup_validator_states(contract, n_validators, acct_keys, ethaddrs):
             f.write(privates[i])
 
 
+def check_file(name):
+    if not os.path.isfile(name):
+        raise argparse.ArgumentTypeError("%s is not a valid file" % name)
+    return name
+
+
+def check_range_2_100(n):
+    if not isinstance(n, int) or n < 2 or n > 100:
+        raise argparse.ArgumentTypeError("%s must be >= 2 and <= 100" % n)
+    return n
+
+
+def check_json(name):
+    if not os.path.isfile(name):
+        raise argparse.ArgumentTypeError("%s is not a valid file" % name)
+    try:
+        with open(name, "r") as f:
+            json.loads(f.read())
+    except ValueError:
+        raise argparse.ArgumentTypeError("%s is not valid json" % name)
+    return name
+
+
 def main():
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
     parser.add_argument(
@@ -121,30 +144,10 @@ def main():
         help="Port number to search for Ganache on",
     )
 
-    def check_file(name):
-        if not os.path.isfile(name):
-            raise argparse.ArgumentTypeError("%s is not a valid file" % name)
-        return name
-
-    def check_range_2_100(n):
-        if not isinstance(n, int) or n < 2 or n > end:
-            raise argparse.ArgumentTypeError("%s must be >= 2 and <= 100" % n)
-        return n
-
-    def check_json(name):
-        if not os.path.isfile(name):
-            raise argparse.ArgumentTypeError("%s is not a valid file" % name)
-        try:
-            with open(name, "r") as f:
-                json.loads(f.read())
-        except ValueError:
-            raise argparse.ArgumentTypeError("%s is not valid json" % name)
-        return name
-
     args = parser.parse_args()
 
     setup_validator_states(
-        args.contract, args.n_validators, arb.acctKeys, args.bridge_eth_addresses
+        args.contract, args.n_validators, args.acctKeys, args.bridge_eth_addresses
     )
 
 

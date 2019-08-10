@@ -9,11 +9,11 @@
 # Exit on error
 set -e
 
+pip3 install -r requirements.txt
+pip3 install -r requirements-dev.txt
 # Install conan
-pip3 install virtualenv
 virtualenv --no-site-packages vconan
 . vconan/bin/activate
-pip3 install --upgrade pip
 pip3 install --upgrade conan
 # conan nonstd-lite
 if ! conan remote list | grep -q "nonstd-lite"; then
