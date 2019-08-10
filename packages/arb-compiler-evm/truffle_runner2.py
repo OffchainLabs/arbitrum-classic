@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,6 +23,7 @@ from arbitrum.evm.contract import ArbContract, create_evm_vm
 from arbitrum.value import *
 from arbitrum.std import sized_byterange
 
+
 def run_until_halt(vm):
     log = []
     i = 0
@@ -38,7 +39,7 @@ def run_until_halt(vm):
             i += 1
         except Exception as err:
             print("Error at", vm.pc.pc - 1, vm.code[vm.pc.pc - 1])
-            print("Context", vm.code[vm.pc.pc - 6: vm.pc.pc + 4])
+            print("Context", vm.code[vm.pc.pc - 6 : vm.pc.pc + 4])
             raise err
         if vm.halted:
             break
@@ -61,17 +62,19 @@ def run_n_steps(vm, steps):
             i += 1
         except Exception as err:
             print("Error at", vm.pc.pc - 1, vm.code[vm.pc.pc - 1])
-            print("Context", vm.code[vm.pc.pc - 6: vm.pc.pc + 4])
+            print("Context", vm.code[vm.pc.pc - 6 : vm.pc.pc + 4])
             raise err
         if vm.halted:
             break
     print("Ran VM for {} steps".format(i))
     return log
 
+
 def make_msg_val(calldata):
     return arb.value.Tuple([calldata, 0, 0, 0])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # tup = Tuple([Tuple([
     #     Tuple(),
     #     Tuple([Tuple(), Tuple(), Tuple(), Tuple(), Tuple(), Tuple(), Tuple(), 0]),
@@ -85,7 +88,9 @@ if __name__ == '__main__':
     # print(tup)
     # print(sized_byterange.tohex(tup))
     # print(int("0xada5013122d395ba3c54772283fb069b10426056ef8ca54750cb9bb552a59e7d", 0))
-    data = bytearray.fromhex("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000")
+    data = bytearray.fromhex(
+        "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000"
+    )
     intHash = int.from_bytes(eth_utils.crypto.keccak(data), byteorder="big")
     print(intHash)
     print(hex(intHash))
@@ -116,4 +121,3 @@ if __name__ == '__main__':
     # vm.env.send_message([elections.candidates(2), 2345, 0, 0, 0])
     vm.env.deliver_pending()
     run_until_halt(vm)
-

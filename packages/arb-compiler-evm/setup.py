@@ -14,25 +14,26 @@
 
 from setuptools import setup
 
-setup(name='arb-compiler-evm',
-      version='0.1.0',
-      description='Compiler from solidity to AVM bytecode',
-      url='https://offchainlabs.com',
-      author='Offchain Labs, Inc.',
-      author_email='harry@offchainlabs.com',
-      license='Apache-2.0',
-      packages=['arbitrum', 'arbitrum.std', 'arbitrum.evm'],
-      zip_safe=False,
-      scripts=['bin/arbc-truffle'],
-      test_suite='nose.collector',
-      tests_require=['nose'],
-      python_requires='>=3.6',
-      install_requires=[
-          "eth-utils",
-          "eth-abi>=2.0.0b0",
-          "pyevmasm",
-          "web3>=5.0.0b1",
-          "py-solc-x",
-          "networkx"
-      ]
+setup(
+    name="arb-compiler-evm",
+    version="0.1.0",
+    description="Compiler from solidity to AVM bytecode",
+    url="https://offchainlabs.com",
+    author="Offchain Labs, Inc.",
+    author_email="harry@offchainlabs.com",
+    license="Apache-2.0",
+    packages=["arbitrum", "arbitrum.std", "arbitrum.evm"],
+    zip_safe=False,
+    scripts=["bin/arbc-truffle"],
+    test_suite="nose.collector",
+    tests_require=["nose"],
+    python_requires=">=3.6",
+    install_requires=[
+        "eth-utils",
+        "eth-abi>=2.0.0b0",
+        "pyevmasm",
+        "web3>=5.0.0b1",
+        "py-solc-x",
+        "networkx",
+    ],
 )

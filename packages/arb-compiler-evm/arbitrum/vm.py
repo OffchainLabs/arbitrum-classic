@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -38,7 +38,7 @@ class VM(BasicVM):
         if code:
             self.pc = code[0]
         else:
-            self.pc = AVMCodePoint(0, 0, b'')
+            self.pc = AVMCodePoint(0, 0, b"")
 
     def debug_print(self):
         print(
@@ -48,7 +48,7 @@ class VM(BasicVM):
             "\nmessage:",
             self.register[5],
             "\npc:",
-            self.pc.pc
+            self.pc.pc,
         )
 
     def ifelse(self, true_block, false_block=None):

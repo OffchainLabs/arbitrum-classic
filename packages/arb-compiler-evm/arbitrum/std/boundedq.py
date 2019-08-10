@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,20 +24,23 @@ from . import make_bigtuple_type
 #             (could probably fix this, but it's not worth the
 #              trouble at this point)
 
+
 def make_boundedq_type(typ):
     bigtuple = make_bigtuple_type(typ, typ.empty_val())
-    boundedq_type = Struct("boundedq[{}]".format(typ), [
-        ("bigtuple", bigtuple.typ),
-        ("nextGetIndex", value.IntType()),
-        ("nextPutIndex", value.IntType()),
-        ("capacity", value.IntType())
-    ])
+    boundedq_type = Struct(
+        "boundedq[{}]".format(typ),
+        [
+            ("bigtuple", bigtuple.typ),
+            ("nextGetIndex", value.IntType()),
+            ("nextPutIndex", value.IntType()),
+            ("capacity", value.IntType()),
+        ],
+    )
 
     class BoundedQueue:
         @staticmethod
         def make(capacity):
             return value.Tuple([value.Tuple([]), 0, 0, capacity])
-
 
         @staticmethod
         @modifies_stack([value.IntType()], [boundedq_type.typ])
@@ -46,7 +49,6 @@ def make_boundedq_type(typ):
             vm.push(BoundedQueue.make(0))
             vm.tsetn(3)
             vm.cast(boundedq_type.typ)
-
 
         @staticmethod
         @modifies_stack([boundedq_type.typ], [value.IntType()])
@@ -132,6 +134,7 @@ def make_boundedq_type(typ):
             # bq
             BoundedQueue._incrmod_field(vm, "nextPutIndex")
             # updatedbq
+
     BoundedQueue.typ = boundedq_type.typ
     BoundedQueue.struct = boundedq_type
     return BoundedQueue

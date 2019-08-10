@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,11 +21,10 @@ from .struct import Struct
 # a queue is just a boundedq; when the boundedq gets full
 # we generate a new, bigger one
 
+
 def make_queue_type(typ):
     boundedq = make_boundedq_type(typ)
-    queue_type = Struct("queue[{}]".format(typ), [
-        ("boundedq", boundedq.typ)
-    ])
+    queue_type = Struct("queue[{}]".format(typ), [("boundedq", boundedq.typ)])
     # stack_type.fields[]
 
     class Queue:
@@ -54,35 +53,40 @@ def make_queue_type(typ):
             vm.dup0()
             boundedq.isfull(vm)
             # bqisfull bq item
-            vm.ifelse(lambda vm: [
-                # bq item
-                vm.dup0(),
-                boundedq.struct.get("capacity")(vm),
-                vm.push(2),
-                vm.mul(),
-                boundedq.new(vm),
-                vm.swap1(),
-                # oldbq newbq item
-                vm.while_loop(lambda vm: [
+            vm.ifelse(
+                lambda vm: [
+                    # bq item
                     vm.dup0(),
-                    boundedq.isempty(vm),
-                    vm.push(0),
-                    vm.eq()
-                    # (oldbq is nonempty) oldbq newbq item
-                ], lambda vm: [
+                    boundedq.struct.get("capacity")(vm),
+                    vm.push(2),
+                    vm.mul(),
+                    boundedq.new(vm),
+                    vm.swap1(),
                     # oldbq newbq item
-                    boundedq.get(vm),
-                    # moveitem oldbq newbq item
-                    vm.swap1(),
-                    vm.swap2(),
-                    # newbq moveitem oldbq item
-                    boundedq.put(vm),
-                    # newbq oldbq item
-                    vm.swap1(),
-                ]),
-                # oldbq newbq item
-                vm.pop()
-            ])
+                    vm.while_loop(
+                        lambda vm: [
+                            vm.dup0(),
+                            boundedq.isempty(vm),
+                            vm.push(0),
+                            vm.eq()
+                            # (oldbq is nonempty) oldbq newbq item
+                        ],
+                        lambda vm: [
+                            # oldbq newbq item
+                            boundedq.get(vm),
+                            # moveitem oldbq newbq item
+                            vm.swap1(),
+                            vm.swap2(),
+                            # newbq moveitem oldbq item
+                            boundedq.put(vm),
+                            # newbq oldbq item
+                            vm.swap1(),
+                        ],
+                    ),
+                    # oldbq newbq item
+                    vm.pop(),
+                ]
+            )
             # bq item
             boundedq.put(vm)
             queue_type.set_val("boundedq")(vm)
@@ -97,8 +101,10 @@ def make_queue_type(typ):
             vm.swap1()
             queue_type.set_val("boundedq")(vm)
             vm.swap1()
+
     Queue.typ = queue_type.typ
     return Queue
+
 
 queue = make_queue_type(value.ValueType())
 queue_tup = make_queue_type(value.TupleType())

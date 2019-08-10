@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -47,7 +47,9 @@ def ctx_new(vm):
     tup.make(3)(vm)
 
 
-@modifies_stack([value.ValueType(), value.IntType()], 1)  # sha3ctx byte -> updatedsha3ctx
+@modifies_stack(
+    [value.ValueType(), value.IntType()], 1
+)  # sha3ctx byte -> updatedsha3ctx
 def ctx_pushbyte(vm):
     vm.cast(value.TupleType(3))
     vm.swap1()
@@ -75,32 +77,38 @@ def ctx_pushbyte(vm):
     vm.push(136)
     vm.eq()
     # updatedNumBytes==136 updatedNumBytes ctx
-    vm.ifelse(lambda vm: [
-        # 136 ctx
-        vm.pop(),
-        # ctx
-        tup.tbreak(3)(vm),
-        # shaAccum blockBuffer 136
-        absorb_block(vm),
-        # updatedShaAccum 136
-        vm.swap1(),
-        vm.pop(),
-        # updatedShaAccum
-        vm.push(0),
-        vm.swap1(),
-        make_buf_1600(vm),
-        vm.swap1(),
-        # updatedShaAccum emptyBlockBuf 0
-        tup.make(3)(vm),
-        # updatedCtx
-    ], lambda vm: [
-        # updNumByte ctx
-        vm.swap1(),
-        vm.tsetn(2),
-        # updatedCtx
-    ])
+    vm.ifelse(
+        lambda vm: [
+            # 136 ctx
+            vm.pop(),
+            # ctx
+            tup.tbreak(3)(vm),
+            # shaAccum blockBuffer 136
+            absorb_block(vm),
+            # updatedShaAccum 136
+            vm.swap1(),
+            vm.pop(),
+            # updatedShaAccum
+            vm.push(0),
+            vm.swap1(),
+            make_buf_1600(vm),
+            vm.swap1(),
+            # updatedShaAccum emptyBlockBuf 0
+            tup.make(3)(vm),
+            # updatedCtx
+        ],
+        lambda vm: [
+            # updNumByte ctx
+            vm.swap1(),
+            vm.tsetn(2),
+            # updatedCtx
+        ],
+    )
 
-@modifies_stack([value.TupleType(3), value.TupleType(5)], [value.TupleType(3)])  # sha3ctx block -> sha3ctx
+
+@modifies_stack(
+    [value.TupleType(3), value.TupleType(5)], [value.TupleType(3)]
+)  # sha3ctx block -> sha3ctx
 def ctx_pushblock(vm):
     vm.tgetn(0)
     absorb_block(vm)
@@ -112,34 +120,37 @@ def ctx_pushblock(vm):
     vm.tsetn(1)
     vm.tsetn(0)
 
+
 def set135(vm, val):
     # block
     vm.dup0()
-    vm.tgetn(135//32)
+    vm.tgetn(135 // 32)
     vm.cast(value.IntType())
-    vm.push(val << (8*(135%32)))
+    vm.push(val << (8 * (135 % 32)))
     vm.bitwise_or()
     vm.swap1()
-    vm.tsetn(135//32)
+    vm.tsetn(135 // 32)
 
 
-@modifies_stack_unchecked([value.TupleType(3), value.TupleType(5), value.IntType()], [value.IntType()])  # sha3ctx block numBytes -> keccak256hash
+@modifies_stack_unchecked(
+    [value.TupleType(3), value.TupleType(5), value.IntType()], [value.IntType()]
+)  # sha3ctx block numBytes -> keccak256hash
 def ctx_pushlastblock(vm):
     vm.swap2()
     vm.dup0()
     vm.push(135)
     vm.eq()
-    vm.ifelse(lambda vm: [
-        vm.pop(),
-        set135(vm, 0x81)
-    ], lambda vm: [
-        # numBytes block sha3ctx
-        vm.push(0x01),
-        vm.swap2(),
-        set_byte_in_buf(vm),
-        # block sha3ctx
-        set135(vm, 0x80),
-    ])
+    vm.ifelse(
+        lambda vm: [vm.pop(), set135(vm, 0x81)],
+        lambda vm: [
+            # numBytes block sha3ctx
+            vm.push(0x01),
+            vm.swap2(),
+            set_byte_in_buf(vm),
+            # block sha3ctx
+            set135(vm, 0x80),
+        ],
+    )
     # block sha3ctx
     vm.swap1()
     vm.cast(value.TupleType(3))
@@ -157,33 +168,35 @@ def ctx_finish(vm):
     vm.push(135)
     vm.eq()
     # numBytesInBuf==135 ctx
-    vm.ifelse(lambda vm: [
-        # ctx
-        vm.push(0x86),
-        vm.swap1(),
-        ctx_pushbyte(vm),
-        # ctx
-    ], lambda vm: [
-        vm.push(6),
-        vm.swap1(),
-        ctx_pushbyte(vm),
-        vm.while_loop(lambda vm: [
+    vm.ifelse(
+        lambda vm: [
             # ctx
-            vm.dup0(),
-            vm.tgetn(2),
-            vm.push(135),
-            vm.eq(),
-            vm.iszero(),
-            # ctx.numBytes!=135 ctx
-        ], lambda vm: [
-            vm.push(0),
+            vm.push(0x86),
             vm.swap1(),
             ctx_pushbyte(vm),
-        ]),
-        vm.push(0x80),
-        vm.swap1(),
-        ctx_pushbyte(vm),
-    ])
+            # ctx
+        ],
+        lambda vm: [
+            vm.push(6),
+            vm.swap1(),
+            ctx_pushbyte(vm),
+            vm.while_loop(
+                lambda vm: [
+                    # ctx
+                    vm.dup0(),
+                    vm.tgetn(2),
+                    vm.push(135),
+                    vm.eq(),
+                    vm.iszero(),
+                    # ctx.numBytes!=135 ctx
+                ],
+                lambda vm: [vm.push(0), vm.swap1(), ctx_pushbyte(vm)],
+            ),
+            vm.push(0x80),
+            vm.swap1(),
+            ctx_pushbyte(vm),
+        ],
+    )
     vm.tgetn(0)
     vm.tgetn(0)
     bitwise.flip_endianness(vm)
@@ -197,34 +210,36 @@ def keccak_ctx_finish(vm):
     vm.push(135)
     vm.eq()
     # numBytesInBuf==135 ctx
-    vm.ifelse(lambda vm: [
-        # ctx
-        vm.push(0x81),
-        vm.swap1(),
-        ctx_pushbyte(vm),
-        # ctx
-    ], lambda vm: [
-        vm.push(1),
-        vm.swap1(),
-        ctx_pushbyte(vm),
-        vm.while_loop(lambda vm: [
+    vm.ifelse(
+        lambda vm: [
             # ctx
-            vm.dup0(),
-            vm.cast(value.TupleType(3)),
-            vm.tgetn(2),
-            vm.push(135),
-            vm.eq(),
-            vm.iszero(),
-            # ctx.numBytes!=135 ctx
-        ], lambda vm: [
-            vm.push(0),
+            vm.push(0x81),
             vm.swap1(),
             ctx_pushbyte(vm),
-        ]),
-        vm.push(0x80),
-        vm.swap1(),
-        ctx_pushbyte(vm),
-    ])
+            # ctx
+        ],
+        lambda vm: [
+            vm.push(1),
+            vm.swap1(),
+            ctx_pushbyte(vm),
+            vm.while_loop(
+                lambda vm: [
+                    # ctx
+                    vm.dup0(),
+                    vm.cast(value.TupleType(3)),
+                    vm.tgetn(2),
+                    vm.push(135),
+                    vm.eq(),
+                    vm.iszero(),
+                    # ctx.numBytes!=135 ctx
+                ],
+                lambda vm: [vm.push(0), vm.swap1(), ctx_pushbyte(vm)],
+            ),
+            vm.push(0x80),
+            vm.swap1(),
+            ctx_pushbyte(vm),
+        ],
+    )
     vm.cast(value.TupleType(3))
     vm.tgetn(0)
     vm.cast(value.TupleType(3))
@@ -234,28 +249,84 @@ def keccak_ctx_finish(vm):
 
 
 _ROUND_CONST = [
-    0x0000000000000001, 0x0000000000008082,
-    0x800000000000808a, 0x8000000080008000,
-    0x000000000000808b, 0x0000000080000001,
-    0x8000000080008081, 0x8000000000008009,
-    0x000000000000008a, 0x0000000000000088,
-    0x0000000080008009, 0x000000008000000a,
-    0x000000008000808b, 0x800000000000008b,
-    0x8000000000008089, 0x8000000000008003,
-    0x8000000000008002, 0x8000000000000080,
-    0x000000000000800a, 0x800000008000000a,
-    0x8000000080008081, 0x8000000000008080,
-    0x0000000080000001, 0x8000000080008008
+    0x0000000000000001,
+    0x0000000000008082,
+    0x800000000000808A,
+    0x8000000080008000,
+    0x000000000000808B,
+    0x0000000080000001,
+    0x8000000080008081,
+    0x8000000000008009,
+    0x000000000000008A,
+    0x0000000000000088,
+    0x0000000080008009,
+    0x000000008000000A,
+    0x000000008000808B,
+    0x800000000000008B,
+    0x8000000000008089,
+    0x8000000000008003,
+    0x8000000000008002,
+    0x8000000000000080,
+    0x000000000000800A,
+    0x800000008000000A,
+    0x8000000080008081,
+    0x8000000000008080,
+    0x0000000080000001,
+    0x8000000080008008,
 ]
 
 _PILN = [
-    10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4,
-    15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1
+    10,
+    7,
+    11,
+    17,
+    18,
+    3,
+    5,
+    16,
+    8,
+    21,
+    24,
+    4,
+    15,
+    23,
+    19,
+    13,
+    12,
+    2,
+    20,
+    14,
+    22,
+    9,
+    6,
+    1,
 ]
 
 _ROTC = [
-    1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2,
-    14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44
+    1,
+    3,
+    6,
+    10,
+    15,
+    21,
+    28,
+    36,
+    45,
+    55,
+    2,
+    14,
+    27,
+    41,
+    56,
+    8,
+    25,
+    43,
+    62,
+    18,
+    39,
+    61,
+    20,
+    44,
 ]
 
 _BLOCK_FOR_EMPTY_MESSAGE = [6, 0, 0, 0, 1 << 63, 0, 0]
@@ -313,21 +384,24 @@ def set_byte_in_buf(vm):
 def set_byte_in_word(vm):  # assume the slot is zero-filled
     vm.swap2()
     # byte slotNum word
-    vm.while_loop(lambda vm: [
-        vm.dup1(),
-        vm.iszero(),
-        vm.iszero(),
-        # slotNum!=0 vyte slotNum word
-    ], lambda vm: [
-        # byte slotNum word
-        vm.push(256),
-        vm.mul(),
-        # updByte slotNum word
-        vm.swap1(),
-        vm.push(-1 & TT256M1),
-        vm.add(),
-        vm.swap1(),
-    ])
+    vm.while_loop(
+        lambda vm: [
+            vm.dup1(),
+            vm.iszero(),
+            vm.iszero(),
+            # slotNum!=0 vyte slotNum word
+        ],
+        lambda vm: [
+            # byte slotNum word
+            vm.push(256),
+            vm.mul(),
+            # updByte slotNum word
+            vm.swap1(),
+            vm.push(-1 & TT256M1),
+            vm.add(),
+            vm.swap1(),
+        ],
+    )
     # shiftedByte 0 word
     vm.swap1()
     vm.pop()
@@ -336,7 +410,7 @@ def set_byte_in_word(vm):  # assume the slot is zero-filled
     # updatedWord
 
 
-@modifies_stack(2, 1)   # state newblock -> state'
+@modifies_stack(2, 1)  # state newblock -> state'
 def absorb_block(vm):
     vm.cast(value.TupleType(7))
     vm.swap1()
@@ -392,7 +466,7 @@ def theta(vm):
             # acc s bc
             vm.cast(value.IntType())
             vm.dup1()
-            getword(vm, i+j)
+            getword(vm, i + j)
             # s[i+j] acc s bc
             vm.bitwise_xor()
             # acc s bc
@@ -407,11 +481,11 @@ def theta(vm):
     # bc s
     for i in range(5):
         vm.dup0()
-        getword(vm, (i+4) % 5)
+        getword(vm, (i + 4) % 5)
         # bc[.] bc s
         vm.cast(value.IntType())
         vm.dup1()
-        getword(vm, (i+1) % 5)
+        getword(vm, (i + 1) % 5)
         vm.cast(value.IntType())
         rotl64(vm, 1)
         vm.bitwise_xor()
@@ -420,7 +494,7 @@ def theta(vm):
         vm.swap2()
         # s t bc
         for j in range(0, 25, 5):
-            jpi = j+i
+            jpi = j + i
             vm.dup1()
             vm.cast(value.IntType())
             vm.dup1()
@@ -481,19 +555,19 @@ def chi(vm):
         for i in range(5):
             # bc s
             vm.dup1()
-            getword(vm, j+i)
+            getword(vm, j + i)
             # s[j+i] bc s
             vm.swap1()
             setword(vm, i)
         # bc s
         for i in range(5):
             vm.dup0()
-            getword(vm, (i+1) % 5)
+            getword(vm, (i + 1) % 5)
             vm.push(_MASK_64)
             vm.bitwise_xor()
             # ~bc[(i+1)%5] bc s
             vm.dup1()
-            getword(vm, (i+2) % 5)
+            getword(vm, (i + 2) % 5)
             vm.bitwise_and()
             # _ bc s
             vm.swap1()
@@ -502,11 +576,11 @@ def chi(vm):
             vm.swap1()
             vm.dup1()
             # s _ s bc
-            getword(vm, j+i)
+            getword(vm, j + i)
             vm.bitwise_xor()
             # xorResult s bc
             vm.swap1()
-            setword(vm, j+i)
+            setword(vm, j + i)
             # s bc
             vm.swap1()
         # bc s
@@ -538,13 +612,13 @@ def make_buf_1600(vm):
     vm.push(value.Tuple([0, 0, 0, 0, 0, 0, 0]))
 
 
-_TWO_TO_64 = 65536*65536*65536*65536
-_TWO_TO_128 = _TWO_TO_64*_TWO_TO_64
-_TWO_TO_192 = _TWO_TO_128*_TWO_TO_64
-_MASK_64 = _TWO_TO_64-1
-_MASK_128 = _MASK_64*_TWO_TO_64
-_MASK_192 = _MASK_64*_TWO_TO_128
-_MASK_256 = _MASK_64*_TWO_TO_192
+_TWO_TO_64 = 65536 * 65536 * 65536 * 65536
+_TWO_TO_128 = _TWO_TO_64 * _TWO_TO_64
+_TWO_TO_192 = _TWO_TO_128 * _TWO_TO_64
+_MASK_64 = _TWO_TO_64 - 1
+_MASK_128 = _MASK_64 * _TWO_TO_64
+_MASK_192 = _MASK_64 * _TWO_TO_128
+_MASK_256 = _MASK_64 * _TWO_TO_192
 
 
 def rotl64(vm, amount):
@@ -573,7 +647,7 @@ def getword(vm, word_num):
     assert word_num >= 0
     assert word_num < 25
     vm.cast(value.TupleType(7))
-    vm.tgetn(word_num//4)
+    vm.tgetn(word_num // 4)
     section = word_num % 4
     if section == 1:
         vm.push(_TWO_TO_64)
@@ -630,6 +704,7 @@ def setword(vm, word_num):
     vm.swap1()
     vm.tsetn(word_num // 4)
 
+
 @modifies_stack([byterange.typ, value.IntType()], [value.TupleType(5)])
 def byterange_get136(vm):
     # [br, offset]
@@ -659,6 +734,7 @@ def byterange_get136(vm):
     vm.pop()
     vm.pop()
 
+
 @modifies_stack([byterange.typ, value.IntType()], [value.IntType()])
 def hash_byterange(vm):
     # bytearray length
@@ -666,35 +742,37 @@ def hash_byterange(vm):
     ctx_new(vm)
     tup.make(4)(vm)
     # [ctx, i, bytearray, length]
-    vm.while_loop(lambda vm: [
-        vm.dup0(),
-        vm.tgetn(3),
-        vm.dup1(),
-        vm.tgetn(1),
-        vm.push(135),
-        vm.add(),
-        vm.lt()
-    ], lambda vm: [
-        vm.dup0(),
-        vm.tgetn(1),
-        vm.dup1(),
-        vm.tgetn(2),
-        byterange_get136(vm),
-        # val [ctx, i, bytearray, length]
-        vm.dup1(),
-        vm.tgetn(0),
-        vm.cast(value.TupleType(3)),
-        ctx_pushblock(vm),
-        vm.swap1(),
-        vm.tsetn(0),
-
-        vm.dup0(),
-        vm.tgetn(1),
-        vm.push(136),
-        vm.add(),
-        vm.swap1(),
-        vm.tsetn(1)
-    ])
+    vm.while_loop(
+        lambda vm: [
+            vm.dup0(),
+            vm.tgetn(3),
+            vm.dup1(),
+            vm.tgetn(1),
+            vm.push(135),
+            vm.add(),
+            vm.lt(),
+        ],
+        lambda vm: [
+            vm.dup0(),
+            vm.tgetn(1),
+            vm.dup1(),
+            vm.tgetn(2),
+            byterange_get136(vm),
+            # val [ctx, i, bytearray, length]
+            vm.dup1(),
+            vm.tgetn(0),
+            vm.cast(value.TupleType(3)),
+            ctx_pushblock(vm),
+            vm.swap1(),
+            vm.tsetn(0),
+            vm.dup0(),
+            vm.tgetn(1),
+            vm.push(136),
+            vm.add(),
+            vm.swap1(),
+            vm.tsetn(1),
+        ],
+    )
     vm.dup0()
     vm.tgetn(1)
     vm.dup1()
@@ -713,6 +791,7 @@ def hash_byterange(vm):
     vm.cast(value.TupleType(3))
     # [ctx, val, bytes]
     ctx_pushlastblock(vm)
+
 
 def print_nist_style(vm):
     # buf
@@ -733,6 +812,6 @@ def print_nist_style(vm):
 def _print64(word):
     ret = ""
     for i in range(0, 64, 8):
-        val = (word >> i) & 0xff
-        ret = ret + format(val, '02x') + " "
+        val = (word >> i) & 0xFF
+        ret = ret + format(val, "02x") + " "
     return ret

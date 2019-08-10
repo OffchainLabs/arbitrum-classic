@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,12 +20,12 @@ from ..vm import VM
 from .. import value
 from .struct import Struct
 
-sized_byterange = Struct("sized_byterange", [
-    ("data", byterange.typ),
-    ("size", value.IntType())
-])
+sized_byterange = Struct(
+    "sized_byterange", [("data", byterange.typ), ("size", value.IntType())]
+)
 
 typ = sized_byterange.typ
+
 
 def make():
     return sized_common.make(byterange.make)
@@ -65,13 +65,7 @@ def get_static(val, index):
 
 
 def set_static(byterange_val, index, val):
-    return sized_common.set_static(
-        byterange_val,
-        index,
-        val,
-        byterange.set_static,
-        32
-    )
+    return sized_common.set_static(byterange_val, index, val, byterange.set_static, 32)
 
 
 def frombytes(data):
@@ -79,14 +73,12 @@ def frombytes(data):
 
 
 def tohex(byterange_val):
-    tot = ''
+    tot = ""
     for i in range(0, byterange_val[1], 32):
-        segment = eth_utils.to_hex(
-            byterange.get_static(byterange_val[0], i)
-        )[2:]
-        segment = (64 - len(segment)) * '0' + segment
+        segment = eth_utils.to_hex(byterange.get_static(byterange_val[0], i))[2:]
+        segment = (64 - len(segment)) * "0" + segment
         tot += segment
-    return '0x' + tot[:byterange_val[1]*2]
+    return "0x" + tot[: byterange_val[1] * 2]
 
 
 def create_sized_bytearray(data):

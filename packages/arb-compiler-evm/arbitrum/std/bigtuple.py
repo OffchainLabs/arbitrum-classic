@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,32 +20,34 @@ from .. import value
 
 
 def make_bigtuple_type(typ, default_val=None):
-    base_typ = value.TupleType([
-        value.TupleType(),
-        value.TupleType(),
-        value.TupleType(),
-        value.TupleType(),
-        value.TupleType(),
-        value.TupleType(),
-        value.TupleType(),
-        typ
-    ])
-    bigtuple_type = Struct("bigtuple[{}]".format(typ), [
-        ("tup", base_typ)
-    ])
+    base_typ = value.TupleType(
+        [
+            value.TupleType(),
+            value.TupleType(),
+            value.TupleType(),
+            value.TupleType(),
+            value.TupleType(),
+            value.TupleType(),
+            value.TupleType(),
+            typ,
+        ]
+    )
+    bigtuple_type = Struct("bigtuple[{}]".format(typ), [("tup", base_typ)])
 
     if default_val is None:
         default_val = value.Tuple([])
-    base_val = value.Tuple([
-        value.Tuple([]),
-        value.Tuple([]),
-        value.Tuple([]),
-        value.Tuple([]),
-        value.Tuple([]),
-        value.Tuple([]),
-        value.Tuple([]),
-        default_val
-    ])
+    base_val = value.Tuple(
+        [
+            value.Tuple([]),
+            value.Tuple([]),
+            value.Tuple([]),
+            value.Tuple([]),
+            value.Tuple([]),
+            value.Tuple([]),
+            value.Tuple([]),
+            default_val,
+        ]
+    )
 
     class BigTuple:
         @staticmethod
@@ -59,7 +61,9 @@ def make_bigtuple_type(typ, default_val=None):
             vm.cast(bigtuple_type)
 
         @staticmethod
-        @modifies_stack([bigtuple_type.typ, IntType(), typ], [bigtuple_type.typ], default_val)
+        @modifies_stack(
+            [bigtuple_type.typ, IntType(), typ], [bigtuple_type.typ], default_val
+        )
         def set_val(vm):
             bigtuple_type.get("tup")(vm)
             BigTuple._set_val_impl(vm)
@@ -67,11 +71,7 @@ def make_bigtuple_type(typ, default_val=None):
 
         # [tuple, index, value] -> [tuple]
         @staticmethod
-        @modifies_stack(
-            [TupleType(), IntType(), typ],
-            [base_typ],
-            default_val
-        )
+        @modifies_stack([TupleType(), IntType(), typ], [base_typ], default_val)
         def _set_val_impl(vm):
             # check if tuple is empty
             vm.dup0()
@@ -90,25 +90,19 @@ def make_bigtuple_type(typ, default_val=None):
             # check if index is 0
             vm.ifelse(
                 # [index, tuple, value]
+                lambda vm: [vm.pop(), vm.tsetn(7), vm.cast(base_typ)],
                 lambda vm: [
-                    vm.pop(),
-                    vm.tsetn(7),
-                    vm.cast(base_typ),
-                ], lambda vm: [
                     vm.swap2(),
                     vm.auxpush(),
                     vm.swap1(),
-
                     vm.push(7),
                     vm.dup1(),
                     vm.mod(),
-
                     vm.swap1(),
                     vm.push(7),
                     vm.swap1(),
                     vm.div(),
                     # [index / 7, index % 7, tuple]
-
                     vm.dup2(),
                     vm.dup2(),
                     vm.tget(),
@@ -122,8 +116,8 @@ def make_bigtuple_type(typ, default_val=None):
                     vm.swap2(),
                     vm.swap1(),
                     vm.tset(),
-                    vm.cast(base_typ)
-                ]
+                    vm.cast(base_typ),
+                ],
             )
 
         # [tuple, index] -> [tuple]
@@ -133,7 +127,7 @@ def make_bigtuple_type(typ, default_val=None):
             @modifies_stack(
                 [TupleType(), IntType(), closure.typ],
                 [base_typ],
-                "{}_{}".format(default_val, closure.typ.name)
+                "{}_{}".format(default_val, closure.typ.name),
             )
             def read_modify_write_impl(vm):
                 # check if tuple is empty
@@ -163,22 +157,20 @@ def make_bigtuple_type(typ, default_val=None):
                         closure.call(vm),
                         vm.swap1(),
                         vm.tsetn(7),
-                        vm.cast(base_typ)
-                    ], lambda vm: [
+                        vm.cast(base_typ),
+                    ],
+                    lambda vm: [
                         vm.swap2(),
                         vm.auxpush(),
                         vm.swap1(),
-
                         vm.push(7),
                         vm.dup1(),
                         vm.mod(),
-
                         vm.swap1(),
                         vm.push(7),
                         vm.swap1(),
                         vm.div(),
                         # [index / 7, index % 7, tuple]
-
                         vm.dup2(),
                         vm.dup2(),
                         vm.tget(),
@@ -192,14 +184,14 @@ def make_bigtuple_type(typ, default_val=None):
                         vm.swap2(),
                         vm.swap1(),
                         vm.tset(),
-                        vm.cast(base_typ)
-                    ]
+                        vm.cast(base_typ),
+                    ],
                 )
 
             @modifies_stack(
                 [bigtuple_type.typ, IntType(), closure.typ],
                 [bigtuple_type.typ],
-                "{}_{}".format(default_val, closure.typ.name)
+                "{}_{}".format(default_val, closure.typ.name),
             )
             def read_modify_write(vm):
                 bigtuple_type.get("tup")(vm)
@@ -213,30 +205,32 @@ def make_bigtuple_type(typ, default_val=None):
         @modifies_stack([bigtuple_type.typ, IntType()], [typ], default_val)
         def get(vm):
             # tuple, index
-            vm.while_loop(lambda vm: [
-                vm.dup0(),
-                vm.tnewn(0),
-                vm.eq(),
-                vm.dup2(),
-                vm.push(0),
-                vm.eq(),
-                vm.bitwise_or(),
-                vm.iszero()
-            ], lambda vm: [
-                vm.cast(base_typ),
-                # tuple index
-                vm.push(7),
-                vm.dup2(),
-                vm.div(),
-                # index/7 tuple index
-
-                vm.swap2(),
-                vm.push(7),
-                vm.swap1(),
-                vm.mod(),
-                # index/7 tuple index%7
-                vm.tget()
-            ])
+            vm.while_loop(
+                lambda vm: [
+                    vm.dup0(),
+                    vm.tnewn(0),
+                    vm.eq(),
+                    vm.dup2(),
+                    vm.push(0),
+                    vm.eq(),
+                    vm.bitwise_or(),
+                    vm.iszero(),
+                ],
+                lambda vm: [
+                    vm.cast(base_typ),
+                    # tuple index
+                    vm.push(7),
+                    vm.dup2(),
+                    vm.div(),
+                    # index/7 tuple index
+                    vm.swap2(),
+                    vm.push(7),
+                    vm.swap1(),
+                    vm.mod(),
+                    # index/7 tuple index%7
+                    vm.tget(),
+                ],
+            )
             vm.swap1()
             vm.push(0)
             vm.eq()
@@ -246,13 +240,10 @@ def make_bigtuple_type(typ, default_val=None):
             vm.eq()
             vm.iszero()
             vm.bitwise_and()
-            vm.ifelse(lambda vm: [
-                vm.cast(base_typ),
-                vm.tgetn(7),
-            ], lambda vm: [
-                vm.pop(),
-                vm.push(default_val),
-            ])
+            vm.ifelse(
+                lambda vm: [vm.cast(base_typ), vm.tgetn(7)],
+                lambda vm: [vm.pop(), vm.push(default_val)],
+            )
 
         # [source_tuple, start offset, end offset, dest tuple, dest offset]
         @staticmethod
@@ -278,7 +269,6 @@ def make_bigtuple_type(typ, default_val=None):
                     vm.dup1(),
                     vm.tgetn(0),
                     BigTuple.get(vm),
-
                     # get destination[out offset]
                     vm.dup1(),
                     vm.tgetn(4),
@@ -287,7 +277,6 @@ def make_bigtuple_type(typ, default_val=None):
                     BigTuple.set_val(vm),
                     vm.swap1(),
                     vm.tsetn(3),
-
                     # increment destination offset
                     vm.dup0(),
                     vm.tgetn(4),
@@ -295,7 +284,6 @@ def make_bigtuple_type(typ, default_val=None):
                     vm.add(),
                     vm.swap1(),
                     vm.tsetn(4),
-
                     # increment source offset
                     vm.dup0(),
                     vm.tgetn(1),
@@ -303,8 +291,7 @@ def make_bigtuple_type(typ, default_val=None):
                     vm.add(),
                     vm.swap1(),
                     vm.tsetn(1),
-
-                    BigTuple._copy_impl(vm)
+                    BigTuple._copy_impl(vm),
                 ]
             )
 
@@ -339,8 +326,7 @@ def make_bigtuple_type(typ, default_val=None):
                 return tup_val.set_tup_val(7, val)
 
             return tup_val.set_tup_val(
-                index % 7,
-                BigTuple.set_static(tup_val[index % 7], index // 7, val)
+                index % 7, BigTuple.set_static(tup_val[index % 7], index // 7, val)
             )
 
         @staticmethod
@@ -356,4 +342,3 @@ def make_bigtuple_type(typ, default_val=None):
 
 bigtuple = make_bigtuple_type(value.ValueType())
 bigtuple_int = make_bigtuple_type(value.IntType(), 0)
-

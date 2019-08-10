@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,8 +19,7 @@ class Locals:
     def __init__(self, vm, fields):
         self.vm = vm
         self.struc = Struct(
-            "Locals[{}]".format(', '.join((str(x) for x in fields))),
-            fields
+            "Locals[{}]".format(", ".join((str(x) for x in fields))), fields
         )
 
     def new(self):

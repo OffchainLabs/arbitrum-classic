@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -31,6 +31,7 @@ def generate_func(func_name, interface, address):
 
     return impl
 
+
 def generate_func2(func_name, interface):
     def impl(self, *args):
         func = getattr(interface.functions, func_name)
@@ -43,8 +44,7 @@ class ArbContract:
     def __init__(self, contractInfo):
         self.w3 = web3.Web3()
         self.interface = self.w3.eth.contract(
-            address=contractInfo["address"],
-            abi=contractInfo["abi"]
+            address=contractInfo["address"], abi=contractInfo["abi"]
         )
         self.address_string = contractInfo["address"]
         self.address = eth_utils.to_int(hexstr=self.address_string)
@@ -62,37 +62,21 @@ class ArbContract:
         self.address = eth_utils.to_int(hexstr=contractInfo["address"])
         for func_interface in self.interface.abi:
             if func_interface["type"] == "function":
-                id_bytes = eth_utils.function_abi_to_4byte_selector(
-                    func_interface
-                )
+                id_bytes = eth_utils.function_abi_to_4byte_selector(func_interface)
                 func_id = eth_utils.big_endian_to_int(id_bytes)
                 self.funcs[func_id] = func_interface
             elif func_interface["type"] == "event":
                 id_bytes = eth_utils.event_abi_to_log_topic(func_interface)
                 func_id = eth_utils.big_endian_to_int(id_bytes)
                 self.funcs[func_id] = func_interface
-        funcs = [
-            x for x in dir(self.interface.functions)
-            if x[0] != '_' and x != "abi"
-        ]
+        funcs = [x for x in dir(self.interface.functions) if x[0] != "_" and x != "abi"]
         for func in funcs:
             setattr(
                 ArbContract,
                 func,
-                generate_func(
-                    func,
-                    self.interface,
-                    contractInfo["address"]
-                )
+                generate_func(func, self.interface, contractInfo["address"]),
             )
-            setattr(
-                ArbContract,
-                "_" + func,
-                generate_func2(
-                    func,
-                    self.interface
-                )
-            )
+            setattr(ArbContract, "_" + func, generate_func2(func, self.interface))
             self.functions.append(func)
 
     def __repr__(self):
@@ -100,15 +84,15 @@ class ArbContract:
 
 
 def get_return_abi(func_info):
-    output_types = [param['type'] for param in func_info["outputs"]]
-    return '(' + ','.join(output_types) + ')'
+    output_types = [param["type"] for param in func_info["outputs"]]
+    return "(" + ",".join(output_types) + ")"
 
 
 def convert_log_raw(logVal):
     topics = []
     for topic in logVal[3:]:
         raw_bytes = eth_utils.int_to_big_endian(topic)
-        raw_bytes = (32 - len(raw_bytes)) * b'\x00' + raw_bytes
+        raw_bytes = (32 - len(raw_bytes)) * b"\x00" + raw_bytes
         topics.append(raw_bytes)
 
     output_byte_str = sized_byterange.tohex(logVal[1])
@@ -118,7 +102,7 @@ def convert_log_raw(logVal):
         "contract": logVal[0],
         "id": logVal[2],
         "data": output_bytes,
-        "topics": topics
+        "topics": topics,
     }
 
 
@@ -129,20 +113,14 @@ def decode_log(logVal, abis):
     for (topic, topic_data) in zip(topics, logVal["topics"]):
         ret[topic["name"]] = eth_abi.decode_single(topic["type"], topic_data)
 
-    other_inputs = [
-        inp for inp in event_interface["inputs"]
-        if not inp["indexed"]
-    ]
-    arg_type = '(' + ','.join([inp["type"] for inp in other_inputs]) + ')'
+    other_inputs = [inp for inp in event_interface["inputs"] if not inp["indexed"]]
+    arg_type = "(" + ",".join([inp["type"] for inp in other_inputs]) + ")"
     decoded = eth_abi.decode_single(arg_type, logVal["data"])
 
     for (inp, val) in zip(other_inputs, decoded):
         ret[inp["name"]] = val
 
-    return {
-        "name": event_interface['name'],
-        "args": ret
-    }
+    return {"name": event_interface["name"], "args": ret}
 
 
 REVERT_CODE = 0
@@ -158,8 +136,7 @@ class EVMCall:
         output_bytes = eth_utils.to_bytes(hexstr=output_byte_str)
         self.interface = func_interface
         self.output_values = eth_abi.decode_single(
-            get_return_abi(func_interface),
-            output_bytes
+            get_return_abi(func_interface), output_bytes
         )
         self.logs = [
             decode_log(convert_log_raw(logVal), abis)
@@ -170,9 +147,7 @@ class EVMCall:
         ret = "{} returned {}".format(self.interface["name"], self.output_values)
         for log in self.logs:
             ret += "\n{} logged event {}{}".format(
-                self.interface['name'],
-                log['name'],
-                log['args']
+                self.interface["name"], log["name"], log["args"]
             )
         return ret
 
@@ -184,8 +159,7 @@ class EVMRevert:
 
     def __str__(self):
         return "{} failed with revert returning {}".format(
-            self.interface['name'],
-            self.output_byte_str
+            self.interface["name"], self.output_byte_str
         )
 
 
@@ -194,7 +168,7 @@ class EVMInvalid:
         self.interface = func_interface
 
     def __str__(self):
-        return "{} failed with invalid op".format(self.interface['name'])
+        return "{} failed with invalid op".format(self.interface["name"])
 
 
 class EVMInvalidSequence:
@@ -202,7 +176,7 @@ class EVMInvalidSequence:
         self.interface = func_interface
 
     def __str__(self):
-        return "{} failed with invalid sequence".format(self.interface['name'])
+        return "{} failed with invalid sequence".format(self.interface["name"])
 
 
 class EVMUnknownResponseError:
@@ -211,7 +185,7 @@ class EVMUnknownResponseError:
         self.val = val
 
     def __str__(self):
-        return "{} had unknown error: {}".format(self.func_interface['name'], self.val)
+        return "{} had unknown error: {}".format(self.func_interface["name"], self.val)
 
 
 class EVMStop:
@@ -223,12 +197,10 @@ class EVMStop:
         ]
 
     def __str__(self):
-        ret = "{} completed successfully".format(self.interface['name'])
+        ret = "{} completed successfully".format(self.interface["name"])
         for log in self.logs:
             ret += "\n{} logged event {}{}".format(
-                self.interface['name'],
-                log['name'],
-                log['args']
+                self.interface["name"], log["name"], log["args"]
             )
         return ret
 
@@ -258,6 +230,7 @@ def parse_output(val, abis):
         return EVMStop(abis, func_interface, val)
     else:
         return EVMUnknownResponseError(func_interface, val)
+
 
 # [logs, contract_num, func_code, return_val, return_code]
 def create_output_handler(contracts):

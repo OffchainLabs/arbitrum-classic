@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 from .. import value
 from ..annotation import modifies_stack
 
+
 def build_array(arr):
     arr_length = len(arr)
     if len(arr) > 8:
@@ -25,7 +26,7 @@ def build_array(arr):
             size = base_chunk_size
             if (8 - chunk) <= arr_length % 8:
                 size += 1
-            ret.append(build_array(arr[offset:offset + size]))
+            ret.append(build_array(arr[offset : offset + size]))
             offset += size
         return value.Tuple(ret)
 
@@ -33,6 +34,7 @@ def build_array(arr):
         return arr[0]
 
     return value.Tuple(arr)
+
 
 def build_array_type(arr):
     arr_length = len(arr)
@@ -44,7 +46,7 @@ def build_array_type(arr):
             size = base_chunk_size
             if (8 - chunk) <= arr_length % 8:
                 size += 1
-            ret.append(build_array_type(arr[offset:offset + size]))
+            ret.append(build_array_type(arr[offset : offset + size]))
             offset += size
         return value.TupleType(ret)
 
@@ -74,10 +76,9 @@ def array_path(arr_size, index):
 
 
 class Array:
-
     def __init__(self, types):
         if isinstance(types, int):
-            types = [value.ValueType()]*types
+            types = [value.ValueType()] * types
         self.typ = build_array_type(types)
         self.types = types
         self.length = len(types)
@@ -103,44 +104,40 @@ class Array:
 
     def get(self, i):
         if self.length == 1:
-            @modifies_stack(
-                [],
-                [],
-                "{}_0".format(self.length)
-            )
+
+            @modifies_stack([], [], "{}_0".format(self.length))
             def get(vm):
                 pass
+
             return get
 
         def binder(index):
             @modifies_stack(
-                [self.typ],
-                [self.types[index]],
-                "{}_{}".format(self.length, index)
+                [self.typ], [self.types[index]], "{}_{}".format(self.length, index)
             )
             def get(vm):
                 path = array_path(self.length, index)
                 for i in path:
                     vm.tgetn(i)
+
             return get
+
         return binder(i)
 
     def set_val(self, i):
         if self.length == 1:
-            @modifies_stack(
-                [],
-                [],
-                "{}_0".format(self.length)
-            )
+
+            @modifies_stack([], [], "{}_0".format(self.length))
             def set_val(vm):
                 pass
+
             return set_val
 
         def binder(index):
             @modifies_stack(
                 [self.typ, self.types[index]],
                 [self.typ],
-                "{}_{}".format(self.length, index)
+                "{}_{}".format(self.length, index),
             )
             def set_val(vm):
                 # [array, val]
@@ -166,5 +163,7 @@ class Array:
                     for i in path[::-1]:
                         vm.swap1()
                         vm.tsetn(i)
+
             return set_val
+
         return binder(i)

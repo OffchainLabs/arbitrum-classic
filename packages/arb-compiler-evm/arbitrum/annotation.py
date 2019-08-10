@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -36,9 +36,11 @@ def modifies_stack(pop_count, push_count, func_suffix=None):
             if not args:
                 real_func = func
             else:
+
                 def real_func(vm):
                     func(vm, *args)
-                real_func.__name__ = "{}_{}".format(func.__name__, '_'.join(args))
+
+                real_func.__name__ = "{}_{}".format(func.__name__, "_".join(args))
 
             real_func.pops = pops
             real_func.pushes = pushes
@@ -50,7 +52,9 @@ def modifies_stack(pop_count, push_count, func_suffix=None):
         wrapper_modifies_stack.pushes = pushes
 
         return wrapper_modifies_stack
+
     return decorator_modifies_stack
+
 
 def modifies_stack_unchecked(pop_count, push_count, func_suffix=None):
     def decorator_modifies_stack(func):
@@ -72,9 +76,11 @@ def modifies_stack_unchecked(pop_count, push_count, func_suffix=None):
             if not args:
                 real_func = func
             else:
+
                 def real_func(vm):
                     func(vm, *args)
-                real_func.__name__ = "{}_{}".format(func.__name__, '_'.join(args))
+
+                real_func.__name__ = "{}_{}".format(func.__name__, "_".join(args))
 
             real_func.pops = pops
             real_func.pushes = pushes
@@ -83,6 +89,7 @@ def modifies_stack_unchecked(pop_count, push_count, func_suffix=None):
             return vm.call(real_func)
 
         return wrapper_modifies_stack
+
     return decorator_modifies_stack
 
 
@@ -90,6 +97,7 @@ def uncountable_stack(func):
     @functools.wraps(func)
     def wrapper_modifies_stack(vm):
         return vm.call(func)
+
     func.uncountable = True
     func.can_call = True
     return wrapper_modifies_stack

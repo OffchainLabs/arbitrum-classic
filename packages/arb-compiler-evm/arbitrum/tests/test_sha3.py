@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -34,10 +34,10 @@ class TestSha3(TestCase):
         sha3.ctx_new(vm)
         hasher = hashlib.sha3_256()
         for i in range(200):
-            vm.push(0xa3)
+            vm.push(0xA3)
             vm.swap1()
             sha3.ctx_pushbyte(vm)
-            hasher.update(bytes([0xa3]))
+            hasher.update(bytes([0xA3]))
         real_hash = int.from_bytes(hasher.digest(), byteorder="big")
         sha3.ctx_finish(vm)
         self.assertEqual(vm.stack[0], real_hash)
@@ -74,13 +74,21 @@ class TestSha3(TestCase):
         vm.push(0)
         vm.push(byterange.frombytes(data))
         sha3.byterange_get136(vm)
-        self.assertEqual(vm.stack[0], value.Tuple([
-            int.from_bytes(data[0:32], byteorder="little"),
-            int.from_bytes(data[32:64], byteorder="little"),
-            int.from_bytes(data[64:96], byteorder="little"),
-            int.from_bytes(data[96:128], byteorder="little"),
-            int.from_bytes(data[128:136] + bytearray([0 for x in range(24)]), byteorder="little")
-        ]))
+        self.assertEqual(
+            vm.stack[0],
+            value.Tuple(
+                [
+                    int.from_bytes(data[0:32], byteorder="little"),
+                    int.from_bytes(data[32:64], byteorder="little"),
+                    int.from_bytes(data[64:96], byteorder="little"),
+                    int.from_bytes(data[96:128], byteorder="little"),
+                    int.from_bytes(
+                        data[128:136] + bytearray([0 for x in range(24)]),
+                        byteorder="little",
+                    ),
+                ]
+            ),
+        )
 
     def test_pushblock(self):
         data = bytearray(random.getrandbits(8) for _ in range(200))
@@ -99,7 +107,6 @@ class TestSha3(TestCase):
         sha3.ctx_pushblock(vm2)
         self.assertEqual(vm1.stack[0], vm2.stack[0])
 
-
     def test_byterange_keccak256(self):
         for length in [64, 128, 200, 136, 135]:
             data = bytearray(random.getrandbits(8) for _ in range(length))
@@ -109,4 +116,3 @@ class TestSha3(TestCase):
             sha3.hash_byterange(vm)
             real_hash = int.from_bytes(eth_utils.crypto.keccak(data), byteorder="big")
             self.assertEqual(real_hash, vm.stack[0])
-

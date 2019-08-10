@@ -18,12 +18,12 @@ import sys
 
 # Run commands in shell
 def run(command, sudo=False, capture_stdout=False, quiet=False):
-    command = ('sudo ' if sudo else '') + command
+    command = ("sudo " if sudo else "") + command
     if not quiet:
-        print('\n\033[1m$ %s' % command + '\033[0m')
+        print("\n\033[1m$ %s" % command + "\033[0m")
     if not capture_stdout:
         return os.system(command)
     try:
-        return subprocess.check_output(command, shell=True).decode('utf-8')
+        return subprocess.check_output(command, shell=True).decode("utf-8")
     except subprocess.CalledProcessError as e:
-        return ''
+        return ""

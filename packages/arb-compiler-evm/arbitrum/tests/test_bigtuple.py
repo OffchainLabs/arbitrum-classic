@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -72,7 +72,9 @@ class TestBigTuple(TestCase):
     def test_copy(self):
         indexes = [(0, 32, 0), (0, 16, 0), (0, 32, 32), (0, 6, 0), (37, 108, 42)]
         for (source_start, source_end, dest_start) in indexes:
-            with self.subTest(source_start=source_start, source_end=source_end, dest_start=dest_start):
+            with self.subTest(
+                source_start=source_start, source_end=source_end, dest_start=dest_start
+            ):
                 source = list(range(200))
                 dest = [x + 1000 for x in range(200)]
                 size = source_end - source_start
@@ -84,5 +86,9 @@ class TestBigTuple(TestCase):
                 vm.push(bigtuple.fromints(source))
                 bigtuple.copy(vm)
 
-                result = dest[:dest_start] + source[source_start:source_end] + dest[dest_start + size:]
+                result = (
+                    dest[:dest_start]
+                    + source[source_start:source_end]
+                    + dest[dest_start + size :]
+                )
                 self.assertEqual(bigtuple.fromints(result), vm.stack[0])

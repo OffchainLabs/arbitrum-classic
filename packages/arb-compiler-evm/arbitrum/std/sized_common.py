@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,6 +24,7 @@ def new(vm, new_func):
     vm.push(value.Tuple([0, 0]))
     vm.tsetn(0)
 
+
 def get(vm, struct, get_func):
     struct.get("data")(vm)
     get_func(vm)
@@ -33,9 +34,9 @@ def get(vm, struct, get_func):
 def set_val(vm, struct, set_func, unit_size):
     vm.dup0()
     struct.get("size")(vm)
-#   [old_size, sized_bigtuple, index, value]
+    #   [old_size, sized_bigtuple, index, value]
     vm.dup2()
-#   [index, old_size, sized_bigtuple, index, value]
+    #   [index, old_size, sized_bigtuple, index, value]
     vm.push(unit_size)
     vm.add()
     vm.gt()
@@ -46,7 +47,7 @@ def set_val(vm, struct, set_func, unit_size):
             vm.push(unit_size),
             vm.add(),
             vm.swap1(),
-            struct.set_val("size")(vm)
+            struct.set_val("size")(vm),
         ]
     )
     vm.swap2()

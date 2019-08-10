@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -36,7 +36,7 @@ def run_until_halt(vm):
             i += 1
         except Exception as err:
             print("Error at", vm.pc.pc - 1, vm.code[vm.pc.pc - 1])
-            print("Context", vm.code[vm.pc.pc - 6: vm.pc.pc + 4])
+            print("Context", vm.code[vm.pc.pc - 6 : vm.pc.pc + 4])
             raise err
         if vm.halted:
             break
@@ -59,17 +59,19 @@ def run_n_steps(vm, steps):
             i += 1
         except Exception as err:
             print("Error at", vm.pc.pc - 1, vm.code[vm.pc.pc - 1])
-            print("Context", vm.code[vm.pc.pc - 6: vm.pc.pc + 4])
+            print("Context", vm.code[vm.pc.pc - 6 : vm.pc.pc + 4])
             raise err
         if vm.halted:
             break
     print("Ran VM for {} steps".format(i))
     return log
 
+
 def make_msg_val(calldata):
     return arb.value.Tuple([calldata, 0, 0, 0])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     if len(sys.argv) != 2:
         raise Exception("Call as truffle_runner.py [compiled.json]")
 
@@ -95,7 +97,7 @@ if __name__ == '__main__':
     print(fib._generateFib(40))
     print(make_msg_val(fib.generateFib(2, 40)[0]))
     # print(arb.value.value_hash(fib.generateFib(2, 40)[0]).hex())
-    vm.env.send_message([make_msg_val(fib.generateFib(2, 10 )), 1234, 100000000, 0])
+    vm.env.send_message([make_msg_val(fib.generateFib(2, 10)), 1234, 100000000, 0])
     # vm.env.send_message([make_msg_val(fib.getFib(3, 19)), 2345, 0, 0])
     vm.env.deliver_pending()
     run_until_halt(vm)

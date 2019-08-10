@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,11 +32,13 @@ def to_signed(i):
 
 class VMBlocked(Exception):
     """VM tried to run opcode that blocks"""
+
     pass
 
 
 class VMBlockedAdvance(Exception):
     """VM tried to run opcode that blocks"""
+
     pass
 
 
@@ -47,18 +49,12 @@ class VMEnv:
         self.time_bounds = value.Tuple([0, 100000000])
 
     def send_message(self, message):
-        self.pending_messages = value.Tuple([
-            0,
-            self.pending_messages,
-            value.Tuple(message)
-        ])
+        self.pending_messages = value.Tuple(
+            [0, self.pending_messages, value.Tuple(message)]
+        )
 
     def deliver_pending(self):
-        self.messages = value.Tuple([
-            1,
-            self.messages,
-            self.pending_messages
-        ])
+        self.messages = value.Tuple([1, self.messages, self.pending_messages])
         self.pending_messages = value.Tuple([])
 
 
@@ -90,7 +86,7 @@ class Stack:
 
 class BasicVM:
     def __init__(self):
-        self.pc = value.AVMCodePoint(0, 0, b'')
+        self.pc = value.AVMCodePoint(0, 0, b"")
         self.stack = Stack()
         self.aux_stack = Stack()
         self.register = value.Tuple([])
@@ -218,7 +214,6 @@ class BasicVM:
             self.stack.push(3)
         else:
             self.stack.push(1)
-        
 
     def spush(self):
         self.stack.push(self.static)

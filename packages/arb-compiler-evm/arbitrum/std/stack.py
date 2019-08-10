@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,11 +16,9 @@ from ..annotation import modifies_stack
 from .. import value
 from .struct import Struct
 
+
 def make_stack_type(typ):
-    stack_type = Struct("stack[{}]".format(typ), [
-        "prev",
-        ("val", typ)
-    ])
+    stack_type = Struct("stack[{}]".format(typ), ["prev", ("val", typ)])
 
     class Stack:
         # [] -> [stack]
@@ -64,6 +62,7 @@ def make_stack_type(typ):
 
     Stack.typ = stack_type.typ
     return Stack
+
 
 stack = make_stack_type(value.ValueType())
 stack_tup = make_stack_type(value.TupleType())

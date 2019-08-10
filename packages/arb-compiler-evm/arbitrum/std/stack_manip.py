@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,10 +18,8 @@ from ..annotation import modifies_stack, uncountable_stack, noreturn
 
 @uncountable_stack
 def kill(vm):
-    vm.while_loop(
-        lambda vm: [vm.stackempty(), vm.iszero()],
-        lambda vm: vm.pop()
-    )
+    vm.while_loop(lambda vm: [vm.stackempty(), vm.iszero()], lambda vm: vm.pop())
+
 
 @noreturn
 def kill_aux(vm):
@@ -31,14 +29,9 @@ def kill_aux(vm):
             vm.auxstackempty(),
             vm.iszero(),
             vm.swap1(),
-            vm.auxpush()
-        ],
-        lambda vm: [
-            vm.auxpop(),
-            vm.auxpop(),
-            vm.pop(),
             vm.auxpush(),
-        ]
+        ],
+        lambda vm: [vm.auxpop(), vm.auxpop(), vm.pop(), vm.auxpush()],
     )
 
 
@@ -51,11 +44,12 @@ def compress(vm):
             vm.stackempty(),
             vm.iszero(),
             vm.auxpop(),
-            vm.swap1()
-        ], lambda vm: [
+            vm.swap1(),
+        ],
+        lambda vm: [
             # stack item
             stack.push(vm)
-        ]
+        ],
     )
 
 
@@ -63,14 +57,8 @@ def compress(vm):
 def uncompress(vm):
     # compressed_stack
     vm.while_loop(
-        lambda vm: [
-            vm.dup0(),
-            stack.isempty(vm),
-            vm.iszero()
-        ], lambda vm: [
-            stack.pop(vm),
-            vm.swap1()
-        ]
+        lambda vm: [vm.dup0(), stack.isempty(vm), vm.iszero()],
+        lambda vm: [stack.pop(vm), vm.swap1()],
     )
     vm.pop()
 
@@ -86,7 +74,8 @@ def compress_aux(vm):
             vm.iszero(),
             vm.swap1(),
             vm.auxpush(),
-        ], lambda vm: [
+        ],
+        lambda vm: [
             vm.auxpop(),
             vm.swap1(),
             vm.auxpop(),
@@ -94,18 +83,16 @@ def compress_aux(vm):
             stack.push(vm),
             vm.swap1(),
             vm.auxpush(),
-        ]
+        ],
     )
+
 
 @noreturn
 def uncompress_aux(vm):
     # compressed_stack
     vm.while_loop(
+        lambda vm: [vm.dup0(), stack.isempty(vm), vm.iszero()],
         lambda vm: [
-            vm.dup0(),
-            stack.isempty(vm),
-            vm.iszero()
-        ], lambda vm: [
             vm.auxpop(),
             vm.swap1(),
             # auxc ret
@@ -115,8 +102,8 @@ def uncompress_aux(vm):
             vm.auxpush(),
             vm.swap1(),
             # ret auxc
-            vm.auxpush()
-        ]
+            vm.auxpush(),
+        ],
     )
     vm.pop()
 
@@ -135,6 +122,7 @@ def dup_n(index):
             for _ in range(index - 2):
                 vm.auxpop()
                 vm.swap1()
+
     return dup
 
 
@@ -151,6 +139,7 @@ def swap_n(index):
             for _ in range(index - 2):
                 vm.auxpop()
                 vm.swap1()
+
     return swap
 
 
@@ -184,4 +173,5 @@ def push_to_n(index):
             vm.swap1()
             for _ in range(index - 2):
                 vm.auxpop()
+
     return push_to

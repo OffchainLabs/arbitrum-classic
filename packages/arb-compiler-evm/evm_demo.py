@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -48,7 +48,7 @@ def run_until_halt(vm):
             i += 1
         except Exception as err:
             print("Error at", vm.pc.pc - 1, vm.code[vm.pc.pc - 1])
-            print("Context", vm.code[vm.pc.pc - 6: vm.pc.pc + 4])
+            print("Context", vm.code[vm.pc.pc - 6 : vm.pc.pc + 4])
             raise err
         if vm.halted:
             break
@@ -68,7 +68,7 @@ def run_n_steps(vm, steps):
             i += 1
         except Exception as err:
             print("Error at", vm.pc.pc - 1, vm.code[vm.pc.pc - 1])
-            print("Context", vm.code[vm.pc.pc - 6: vm.pc.pc + 4])
+            print("Context", vm.code[vm.pc.pc - 6 : vm.pc.pc + 4])
             raise err
         if vm.halted:
             break
@@ -80,23 +80,23 @@ def prepare_contracts(solidity_files):
     compiled = solcx.compile_files(
         solidity_files,
         optimize=True,
-        allow_paths="/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum-python/contracts"
+        allow_paths="/Users/hkalodner/Documents/OffchainLabs/Github/arbitrum-python/contracts",
     )
     contracts = {}
     for contractName in compiled:
         name = contractName.split(":")[-1]
         contract = compiled[contractName]
 
-        address_bytes = hashlib.sha224(bytes.fromhex(
-            contract['bin-runtime'][2:]
-        )).hexdigest()[:40]
+        address_bytes = hashlib.sha224(
+            bytes.fromhex(contract["bin-runtime"][2:])
+        ).hexdigest()[:40]
         address_string = web3.Web3.toChecksumAddress(address_bytes)
 
         contracts[name] = {
-            'address': address_string,
-            'abi': contract['abi'],
-            'name': name,
-            'code': contract['bin'],
+            "address": address_string,
+            "abi": contract["abi"],
+            "name": name,
+            "code": contract["bin"],
         }
     return contracts
 
@@ -122,10 +122,7 @@ def test_fibonacci(total_count, query_num):
 def test_fibonacci_and_payments(total_count, query_num):
     contracts_code = prepare_contracts(["payment_channel.sol"])
     fib = constructor.construct_contract(contracts_code["Fibonacci"])
-    channel = constructor.construct_contract(
-        contracts_code["Channel"],
-        fib["address"]
-    )
+    channel = constructor.construct_contract(contracts_code["Channel"], fib["address"])
     raw_contracts = constructor.generate_code([fib, channel])
     contracts = [ArbContract(raw) for raw in raw_contracts]
     fib = contracts[0]
@@ -141,8 +138,8 @@ def test_fibonacci_and_payments(total_count, query_num):
 
     print("Contract sent messages:", vm.sent_messages)
 
-    person_a = '0x1000000000000000000000000000000000000000'
-    person_b = '0x2222222222222222222222222222222222222222'
+    person_a = "0x1000000000000000000000000000000000000000"
+    person_b = "0x2222222222222222222222222222222222222222"
     person_a_int = eth_utils.to_int(hexstr=person_a)
     person_b_int = eth_utils.to_int(hexstr=person_b)
 
@@ -151,9 +148,7 @@ def test_fibonacci_and_payments(total_count, query_num):
     vm.env.send_message([channel.getBalance(person_b), 0, 0, 0, 0])
     vm.env.deliver_pending()
     run_until_halt(vm)
-    vm.env.send_message(
-        [channel.transfer(person_b, 4000), person_a_int, 0, 0, 0]
-    )
+    vm.env.send_message([channel.transfer(person_b, 4000), person_a_int, 0, 0, 0])
     vm.env.send_message([channel.getBalance(person_a), 0, 0, 0, 0])
     vm.env.send_message([channel.getBalance(person_b), 0, 0, 0, 0])
     vm.env.deliver_pending()
@@ -171,8 +166,7 @@ def test_payment_channel():
     # print(contracts_code)
     fib = constructor.construct_contract(contracts_code["Fibonacci"])
     channel = constructor.construct_contract(
-        contracts_code["PaymentChannel"],
-        fib["address"]
+        contracts_code["PaymentChannel"], fib["address"]
     )
     raw_contracts = constructor.generate_code([fib, channel])
     contracts = [ArbContract(raw) for raw in raw_contracts]
@@ -180,8 +174,8 @@ def test_payment_channel():
     channel = contracts[1]
     vm = create_evm_vm(contracts)
 
-    person_a = '0x1000000000000000000000000000000000000000'
-    person_b = '0x2222222222222222222222222222222222222222'
+    person_a = "0x1000000000000000000000000000000000000000"
+    person_b = "0x2222222222222222222222222222222222222222"
     person_a_int = eth_utils.to_int(hexstr=person_a)
     person_b_int = eth_utils.to_int(hexstr=person_b)
 
@@ -190,9 +184,7 @@ def test_payment_channel():
     vm.env.send_message([channel.getBalance(person_b), 0, 0, 0, 0])
     vm.env.deliver_pending()
     run_until_halt(vm)
-    vm.env.send_message(
-        [channel.transferFib(person_b, 14), person_a_int, 0, 0, 0]
-    )
+    vm.env.send_message([channel.transferFib(person_b, 14), person_a_int, 0, 0, 0])
     vm.env.send_message([channel.getBalance(person_a), 0, 0, 0, 0])
     vm.env.send_message([channel.getBalance(person_b), 0, 0, 0, 0])
     vm.env.deliver_pending()
@@ -205,7 +197,7 @@ def test_payment_channel():
     print("Contract sent messages:", vm.sent_messages)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) != 3:
         raise Exception("Call as evm_demo.py [generate_count] [read_index]")
 

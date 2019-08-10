@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -28,7 +28,8 @@ def build_bst(items):
     tree = [
         items[mid][0],
         items[mid][1],
-        build_bst(items[:mid]), build_bst(items[mid + 1:])
+        build_bst(items[:mid]),
+        build_bst(items[mid + 1 :]),
     ]
     if not tree[2]:
         tree[2] = value.Tuple([0])
@@ -39,22 +40,21 @@ def build_bst(items):
 
 def generate_code_pointers(insns):
     code_points = []
-    prev_hash = b''
+    prev_hash = b""
     total = len(insns)
     for i in range(len(insns) - 1, -1, -1):
         if isinstance(insns[i], ast.BasicOp):
-            code_point = value.AVMCodePoint(
-                i,
-                insns[i],
-                prev_hash,
-                insns[i].path
-            )
+            code_point = value.AVMCodePoint(i, insns[i], prev_hash, insns[i].path)
         elif isinstance(insns[i], ast.ImmediateOp):
             val = insns[i].val
             if isinstance(val, ast.AVMLabeledPos):
                 immediate = code_points[total - val.pc - 1]
                 if immediate.pc != val.pc:
-                    raise Exception("Error calculating code points: Non matching pc {} and {}".format(immediate.pc, val.pc))
+                    raise Exception(
+                        "Error calculating code points: Non matching pc {} and {}".format(
+                            immediate.pc, val.pc
+                        )
+                    )
                 assert immediate.pc == val.pc
             else:
                 immediate = val
@@ -62,10 +62,14 @@ def generate_code_pointers(insns):
                 i,
                 ast.ImmediateOp(insns[i].op, immediate, insns[i].path),
                 prev_hash,
-                insns[i].path
+                insns[i].path,
             )
         else:
-            raise Exception("Can't generate code pointer at {} from unexpected value {}".format(i, insns[i]))
+            raise Exception(
+                "Can't generate code pointer at {} from unexpected value {}".format(
+                    i, insns[i]
+                )
+            )
         prev_hash = value.value_hash(code_point)
         code_points.append(code_point)
     assert len(code_points) == len(insns)
@@ -74,10 +78,7 @@ def generate_code_pointers(insns):
 
 def check_compiled(insns):
     for i, insn in enumerate(insns):
-        if not isinstance(
-            insn,
-            (ast.BasicOp, ast.AVMLabel, ast.AVMUniqueLabel)
-        ):
+        if not isinstance(insn, (ast.BasicOp, ast.AVMLabel, ast.AVMUniqueLabel)):
             raise Exception("Found not basic op {} at position {}".format(insn, i))
 
 
@@ -162,10 +163,7 @@ class StaticTracker:
         return val
 
     def __contains__(self, field_name):
-        return (
-            field_name in self.big_struct or
-            field_name in self.immediate_pushes
-        )
+        return field_name in self.big_struct or field_name in self.immediate_pushes
 
     def get_arb_value(self):
         return self.big_struct.initial_val
@@ -173,19 +171,26 @@ class StaticTracker:
     def load_static_func(self, val):
         def impl(vm):
             self.big_struct.get(val, vm)
+
         return impl
 
     def resolve_label(self, old_val, new_val):
         if old_val in self.big_struct:
             cur_val = self.big_struct[old_val]
             if cur_val != old_val:
-                raise Exception("Tried to resolve label {} with set value {} and new value {}".format(old_val, cur_val, new_val))
+                raise Exception(
+                    "Tried to resolve label {} with set value {} and new value {}".format(
+                        old_val, cur_val, new_val
+                    )
+                )
             self.big_struct.set_static(old_val, new_val)
         elif old_val in self.immediate_pushes:
             cur_val = self.immediate_pushes[old_val]
             self.immediate_pushes[old_val] = new_val
         else:
-            raise Exception("Unhandled label update with old {} and new {}".format(old_val, new_val))
+            raise Exception(
+                "Unhandled label update with old {} and new {}".format(old_val, new_val)
+            )
 
 
 class ASTTransformer:
@@ -270,15 +275,12 @@ class FlowControlTransformer(ASTTransformer):
             end_label = self.label_gen.generate_unique_label("ifelse_end")
             vm.push(mid_label)
             vm.cjump()
-            vm.block.append(
-                ast.add_label_to_ast(op.false_code, "IfElseStatementFalse")
-            )
+            vm.block.append(ast.add_label_to_ast(op.false_code, "IfElseStatementFalse"))
             vm.jump_direct(end_label)
             vm.set_label(mid_label)
-            vm.block.append(
-                ast.add_label_to_ast(op.true_code, "IfElseStatementTrue")
-            )
+            vm.block.append(ast.add_label_to_ast(op.true_code, "IfElseStatementTrue"))
             vm.set_label(end_label)
+
         return ast.add_label_to_ast(compile_block(impl), "IfElseStatement")
 
     def transform_if(self, op):
@@ -287,10 +289,9 @@ class FlowControlTransformer(ASTTransformer):
             vm.iszero()
             vm.push(end_label)
             vm.cjump()
-            vm.block.append(
-                ast.add_label_to_ast(op.true_code, "IfStatementTrue")
-            )
+            vm.block.append(ast.add_label_to_ast(op.true_code, "IfStatementTrue"))
             vm.set_label(end_label)
+
         return ast.add_label_to_ast(compile_block(impl), "IfStatement")
 
     def transform_while(self, op):
@@ -298,20 +299,17 @@ class FlowControlTransformer(ASTTransformer):
             bottom_label = self.label_gen.generate_unique_label("while_bottom")
             vm.pcpush()
             vm.auxpush()
-            vm.block.append(
-                ast.add_label_to_ast(op.cond_code, "WhileStatementCond")
-            )
+            vm.block.append(ast.add_label_to_ast(op.cond_code, "WhileStatementCond"))
             vm.iszero()
             vm.push(bottom_label)
             vm.cjump()
-            vm.block.append(
-                ast.add_label_to_ast(op.body_code, "WhileStatementBody")
-            )
+            vm.block.append(ast.add_label_to_ast(op.body_code, "WhileStatementBody"))
             vm.auxpop()
             vm.jump()
             vm.set_label(bottom_label)
             vm.auxpop()
             vm.pop()
+
         return ast.add_label_to_ast(compile_block(impl), "WhileStatement")
 
 
@@ -377,11 +375,9 @@ class ForwardImmediateTransformer(ASTTransformer):
             if isinstance(val, value.Tuple):
                 return any(contains_matching_label(val) for val in val.val)
             return val in self.seen_labels
+
         if isinstance(op.val, str) or contains_matching_label(op.val):
-            return ast.BlockStatement([
-                ast.IndirectPushStatement(op.val),
-                op.op
-            ])
+            return ast.BlockStatement([ast.IndirectPushStatement(op.val), op.op])
         return op
 
 
@@ -395,11 +391,11 @@ class PushTransformer(ASTTransformer):
             def impl(vm):
                 vm.spush()
                 self.static_tracker.load_static_func(val)(vm)
+
             return impl
 
         return ast.add_label_to_ast(
-            compile_block(replace_push(op.val)),
-            "Push({})".format(op.val)
+            compile_block(replace_push(op.val)), "Push({})".format(op.val)
         )
 
 
@@ -418,10 +414,7 @@ class CallTransformer(ASTTransformer):
             vm.jump_direct(ast.AVMLabel(op.func_name))
             vm.set_label(return_label)
 
-        return ast.add_label_to_ast(
-            compile_block(impl),
-            op
-        )
+        return ast.add_label_to_ast(compile_block(impl), op)
 
     def transform_set_error_handler(self, op):
         def impl(vm):
@@ -429,8 +422,7 @@ class CallTransformer(ASTTransformer):
             vm.errset()
 
         return ast.add_label_to_ast(
-            compile_block(impl),
-            "SetErrorHandlerFunction({})".format(op.func_name)
+            compile_block(impl), "SetErrorHandlerFunction({})".format(op.func_name)
         )
 
 
@@ -440,19 +432,21 @@ class FuncTransformer(ASTTransformer):
 
     def transform_func_definition(self, op):
         if op.is_callable:
+
             def impl(vm):
                 vm.set_label(ast.AVMLabel(op.name))
                 vm.block.append(op.code)
                 vm.auxpop()
                 vm.jump()
+
         else:
+
             def impl(vm):
                 vm.set_label(ast.AVMLabel(op.name))
                 vm.block.append(op.code)
 
         return ast.add_label_to_ast(
-            compile_block(impl),
-            "FuncDefinition({})".format(op.name)
+            compile_block(impl), "FuncDefinition({})".format(op.name)
         )
 
 
@@ -478,20 +472,21 @@ def compile_block(func):
 def transform_code_block(code, code_pass, op_count=1):
     i = 0
     while i + op_count - 1 < len(code):
-        ops = code[i:i + op_count]
+        ops = code[i : i + op_count]
         if op_count > 1:
             new_code = code_pass(ops, i)
         else:
             new_code = code_pass(ops[0], i)
-        code[i:i + op_count] = new_code
+        code[i : i + op_count] = new_code
         if new_code == ops:
             i += 1
 
 
 def remove_nop_swaps(ops, i):
     if ops[0] == ops[1] and (
-            ops[0].op_code == instructions.OPS["swap1"] or
-            ops[0].op_code == instructions.OPS["swap2"]):
+        ops[0].op_code == instructions.OPS["swap1"]
+        or ops[0].op_code == instructions.OPS["swap2"]
+    ):
         return []
 
     return ops
@@ -499,10 +494,10 @@ def remove_nop_swaps(ops, i):
 
 def compress_pushes(ops, i):
     if (
-            isinstance(ops[0], ast.ImmediateOp) and
-            ops[0].get_op() == instructions.OPS["nop"] and
-            isinstance(ops[1], ast.BasicOp) and
-            ops[1].get_op() != instructions.OPS["pcpush"]
+        isinstance(ops[0], ast.ImmediateOp)
+        and ops[0].get_op() == instructions.OPS["nop"]
+        and isinstance(ops[1], ast.BasicOp)
+        and ops[1].get_op() != instructions.OPS["pcpush"]
     ):
         return [ast.ImmediateOp(ops[1], ops[0].val, ops[1].path)]
     else:
@@ -545,15 +540,16 @@ def resolve_immediate_ops(static_tracker):
                 return [op]
         else:
             return [op]
+
     return impl
 
 
 class VMCompiler:
     def __init__(self):
-
         def create_op(op_name, op_code):
             def impl(self):
                 self.block.append(ast.BasicOp(op_code))
+
             return impl
 
         self.block = []
@@ -575,25 +571,23 @@ class VMCompiler:
         self.block.append(ast.SetErrorHandlerFunctionStatement(func))
 
     def clear_exception_handler(self):
-        self.push(value.AVMCodePoint(0, ast.BasicOp(0), b''))
+        self.push(value.AVMCodePoint(0, ast.BasicOp(0), b""))
         self.errset()
 
     def while_loop(self, cond_block, body_block):
-        self.block.append(ast.WhileStatement(
-            compile_block(cond_block),
-            compile_block(body_block)
-        ))
+        self.block.append(
+            ast.WhileStatement(compile_block(cond_block), compile_block(body_block))
+        )
 
     def ifelse(self, true_block, false_block=None):
         if false_block:
-            self.block.append(ast.IfElseStatement(
-                compile_block(true_block),
-                compile_block(false_block)
-            ))
+            self.block.append(
+                ast.IfElseStatement(
+                    compile_block(true_block), compile_block(false_block)
+                )
+            )
         else:
-            self.block.append(ast.IfStatement(
-                compile_block(true_block)
-            ))
+            self.block.append(ast.IfStatement(compile_block(true_block)))
 
     def cast(self, typ):
         self.block.append(ast.CastStatement(typ))
@@ -611,7 +605,9 @@ class VMCompiler:
         self.block.append(ast.ImmediateOp(ast.BasicOp(instructions.OPS["tget"]), val))
 
     def jump_direct(self, location):
-        self.block.append(ast.ImmediateOp(ast.BasicOp(instructions.OPS["jump"]), location))
+        self.block.append(
+            ast.ImmediateOp(ast.BasicOp(instructions.OPS["jump"]), location)
+        )
 
 
 def expectation_dependencies(expectations):
@@ -644,16 +640,17 @@ def compile_program(initialization, body, should_optimize=True):
 
         def find_calls(op):
             if isinstance(
-                    op,
-                    (ast.CallStatement, ast.SetErrorHandlerFunctionStatement)
+                op, (ast.CallStatement, ast.SetErrorHandlerFunctionStatement)
             ):
                 if op.func_name not in seen_funcs:
-                    new_funcs.append(ast.FuncDefinition(
-                        op.func_name,
-                        op.func,
-                        compile_block(op.func),
-                        op.is_callable
-                    ))
+                    new_funcs.append(
+                        ast.FuncDefinition(
+                            op.func_name,
+                            op.func,
+                            compile_block(op.func),
+                            op.is_callable,
+                        )
+                    )
                     seen_funcs.add(op.func_name)
 
         for func in funcs_to_search:
@@ -675,33 +672,43 @@ def compile_program(initialization, body, should_optimize=True):
         uncountable = False
         incorrect = False
         for x in expects:
-            if x[0] == 'eq':
+            if x[0] == "eq":
                 if x[1] != x[2]:
                     incorrect = True
                     break
-            elif x[0] == 'invalid':
+            elif x[0] == "invalid":
                 uncountable = True
                 break
             else:
                 raise Exception("Unhandled expectation type")
 
         if uncountable:
-            raise Exception("{} calculated as uncountable, but isn't labeled that way".format(func))
+            raise Exception(
+                "{} calculated as uncountable, but isn't labeled that way".format(func)
+            )
         elif incorrect:
-            raise Exception("Function '{}'' violates constraints {}".format(func, expects))
+            raise Exception(
+                "Function '{}'' violates constraints {}".format(func, expects)
+            )
         else:
             if not hasattr(compiled_funcs[func].func, "pops"):
-                raise Exception("{} calculated {} but wasn't labeled with count".format(func, mods['pop']))
+                raise Exception(
+                    "{} calculated {} but wasn't labeled with count".format(
+                        func, mods["pop"]
+                    )
+                )
             if mods["pop"] != len(compiled_funcs[func].func.pops):
                 raise Exception(
                     "{} calculated {} pops but was labeled with {}".format(
-                        func,
-                        mods['pop'],
-                        len(compiled_funcs[func].func.pops)
+                        func, mods["pop"], len(compiled_funcs[func].func.pops)
                     )
                 )
             if mods["push"] != len(compiled_funcs[func].func.pushes):
-                raise Exception("{} calculated {} pushes but was labeled with {}".format(func, mods['push'], len(compiled_funcs[func].func.pushes)))
+                raise Exception(
+                    "{} calculated {} pushes but was labeled with {}".format(
+                        func, mods["push"], len(compiled_funcs[func].func.pushes)
+                    )
+                )
 
     for func in compiled_funcs:
         if func == "MAIN_FUNC":
@@ -710,9 +717,7 @@ def compile_program(initialization, body, should_optimize=True):
             compiled_funcs[func].typecheck()
 
     for func in compiled_funcs:
-        compiled_funcs[func] = compiled_funcs[func].modify_ast(
-            CastRemover()
-        )
+        compiled_funcs[func] = compiled_funcs[func].modify_ast(CastRemover())
 
     if should_optimize:
         # use cycle checking to figure out which functions are safe to inline
@@ -727,7 +732,8 @@ def compile_program(initialization, body, should_optimize=True):
 
         # inline non-recursive functions that are called a single time
         single_call = [
-            x for x in counter.call_counts
+            x
+            for x in counter.call_counts
             if counter.call_counts[x] == 1 and x in non_recursive
         ]
         for single_func in single_call:
@@ -744,8 +750,7 @@ def compile_program(initialization, body, should_optimize=True):
             if not non_recursive:
                 break
             shortest_non_recursive = min(
-                non_recursive,
-                key=lambda func: len(compiled_funcs[func])
+                non_recursive, key=lambda func: len(compiled_funcs[func])
             )
             if len(compiled_funcs[shortest_non_recursive]) >= 150:
                 break
@@ -778,9 +783,7 @@ def compile_program(initialization, body, should_optimize=True):
 
     full_code = initialization.code
     for func in compiled_funcs:
-        compiled_funcs[func] = compiled_funcs[func].modify_ast(
-            FuncTransformer()
-        )
+        compiled_funcs[func] = compiled_funcs[func].modify_ast(FuncTransformer())
 
     for func in [x for x in function_order if x != "MAIN_FUNC"]:
         full_code.append(compiled_funcs[func])

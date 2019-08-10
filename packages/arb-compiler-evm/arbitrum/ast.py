@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -46,10 +46,7 @@ class BlockStatement(ASTNode):
         self.stack_mod_saved = None
 
     def clone(self):
-        return BlockStatement(
-            [op.clone() for op in self.code],
-            list(self.path)
-        )
+        return BlockStatement([op.clone() for op in self.code], list(self.path))
 
     def __repr__(self):
         res = "["
@@ -77,10 +74,8 @@ class BlockStatement(ASTNode):
             pop_count = -min(net_stacks)
             push_count = max(net + pop_count, 0)
             self.stack_mod_saved = (
-                {
-                    "pop": pop_count,
-                    "push": push_count
-                }, expectations
+                {"pop": pop_count, "push": push_count},
+                expectations,
             )
         return self.stack_mod_saved
 
@@ -106,30 +101,33 @@ class IfElseStatement(ASTNode):
 
     def clone(self):
         return IfElseStatement(
-            self.true_code.clone(),
-            self.false_code.clone(),
-            list(self.path)
+            self.true_code.clone(), self.false_code.clone(), list(self.path)
         )
 
     def __repr__(self):
         return "IfElse({}, {})".format(self.true_code, self.false_code)
 
     def __len__(self):
-        return len(self.true_code) + len(self.false_code) + 2 + 2*PUSH_WEIGHT
+        return len(self.true_code) + len(self.false_code) + 2 + 2 * PUSH_WEIGHT
 
     def stack_mod(self):
         true_mods, true_expectations = self.true_code.stack_mod()
         false_mods, false_expectations = self.false_code.stack_mod()
         expectations = true_expectations + false_expectations
-        expectations.append((
-            'eq',
-            true_mods["push"] - true_mods["pop"],
-            false_mods["push"] - false_mods["pop"]
-        ))
-        return {
-            "pop": max(true_mods["pop"], false_mods["pop"]) + 1,
-            "push": max(true_mods["push"], false_mods["push"])
-        }, expectations
+        expectations.append(
+            (
+                "eq",
+                true_mods["push"] - true_mods["pop"],
+                false_mods["push"] - false_mods["pop"],
+            )
+        )
+        return (
+            {
+                "pop": max(true_mods["pop"], false_mods["pop"]) + 1,
+                "push": max(true_mods["push"], false_mods["push"]),
+            },
+            expectations,
+        )
 
     def typecheck(self, stack):
         stack.pop(value.IntType())
@@ -164,10 +162,7 @@ class CastStatement(ASTNode):
         return 0
 
     def stack_mod(self):
-        return {
-            "pop": 1,
-            "push": 1
-        }, []
+        return {"pop": 1, "push": 1}, []
 
     def typecheck(self, stack):
         stack.pop()
@@ -197,11 +192,8 @@ class IfStatement(ASTNode):
     def stack_mod(self):
         true_mods, true_expectations = self.true_code.stack_mod()
         expectations = list(true_expectations)
-        expectations.append(('eq', true_mods["push"] - true_mods["pop"], 0))
-        return {
-            "pop": true_mods["pop"] + 1,
-            "push": true_mods["push"]
-        }, expectations
+        expectations.append(("eq", true_mods["push"] - true_mods["pop"], 0))
+        return {"pop": true_mods["pop"] + 1, "push": true_mods["push"]}, expectations
 
     def typecheck(self, stack):
         stack.pop(value.IntType())
@@ -226,35 +218,31 @@ class WhileStatement(ASTNode):
 
     def clone(self):
         return WhileStatement(
-            self.cond_code.clone(),
-            self.body_code.clone(),
-            list(self.path)
+            self.cond_code.clone(), self.body_code.clone(), list(self.path)
         )
 
     def __repr__(self):
         return "WhileStatement({}, {})".format(self.cond_code, self.body_code)
 
     def __len__(self):
-        return len(self.cond_code) + len(self.body_code) + 3 + 2*PUSH_WEIGHT
+        return len(self.cond_code) + len(self.body_code) + 3 + 2 * PUSH_WEIGHT
 
     def stack_mod(self):
         cmod, cond_expectations = self.cond_code.stack_mod()
         bmod, body_expectation = self.body_code.stack_mod()
         expectations = cond_expectations + body_expectation
-        expectations.append((
-            'eq',
-            cmod["push"] - cmod["pop"] - 1 + bmod["push"] - bmod["pop"],
-            0,
-            "while_loop({}, {}, {}, {})".format(cmod['pop'], cmod['push'], bmod['pop'], bmod['push'])
-        ))
-        pop_count = max(
-            cmod["pop"],
-            bmod["pop"] + 1 - cmod["push"] + cmod["pop"]
+        expectations.append(
+            (
+                "eq",
+                cmod["push"] - cmod["pop"] - 1 + bmod["push"] - bmod["pop"],
+                0,
+                "while_loop({}, {}, {}, {})".format(
+                    cmod["pop"], cmod["push"], bmod["pop"], bmod["push"]
+                ),
+            )
         )
-        mods = {
-            "push": pop_count + cmod["push"] - cmod["pop"] - 1,
-            "pop": pop_count
-        }
+        pop_count = max(cmod["pop"], bmod["pop"] + 1 - cmod["push"] + cmod["pop"])
+        mods = {"push": pop_count + cmod["push"] - cmod["pop"] - 1, "pop": pop_count}
         return mods, expectations
 
     def typecheck(self, stack):
@@ -296,7 +284,11 @@ class FuncDefinition(ASTNode):
         return len(self.code)
 
     def can_typecheck(self):
-        return hasattr(self.func, "pops") and hasattr(self.func, "pushes") and self.func.typecheck
+        return (
+            hasattr(self.func, "pops")
+            and hasattr(self.func, "pushes")
+            and self.func.typecheck
+        )
 
     def typecheck(self):
         stack = value.TypeStack()
@@ -306,12 +298,14 @@ class FuncDefinition(ASTNode):
             self.code.typecheck(stack)
         except Exception as err:
             raise Exception("Error typechecking {} body: {}".format(self.name, err))
-        
+
         try:
             for typ in self.func.pushes:
                 stack.pop(typ)
         except Exception as err:
-            raise Exception("Error typechecking {} return vals: {}".format(self.name, err))
+            raise Exception(
+                "Error typechecking {} return vals: {}".format(self.name, err)
+            )
 
     def traverse_ast(self, func):
         func(self)
@@ -329,18 +323,12 @@ class CallStatement(ASTNode):
         self.func_name = "{}.{}".format(func.__module__, func.__name__)
         self.is_callable = True
         if hasattr(self.func, "uncountable"):
-            self.mods = {"pop": 0, "push": 0}, [('invalid',)]
+            self.mods = {"pop": 0, "push": 0}, [("invalid",)]
 
-        elif (
-                not hasattr(self.func, "pushes") or
-                not hasattr(self.func, "pops")
-        ):
+        elif not hasattr(self.func, "pushes") or not hasattr(self.func, "pops"):
             raise Exception("Call {} has unknown stack mods".format(self.func_name))
         else:
-            self.mods = {
-                "pop": len(self.func.pops),
-                "push": len(self.func.pushes)
-            }, []
+            self.mods = {"pop": len(self.func.pops), "push": len(self.func.pushes)}, []
             self.pops = self.func.pops
             self.pushes = self.func.pushes
 
@@ -364,7 +352,9 @@ class CallStatement(ASTNode):
             for typ in self.func.pushes[::-1]:
                 stack.push(typ)
         except Exception as err:
-            raise Exception("Type error calling func {}: {}".format(self.func_name, err))
+            raise Exception(
+                "Type error calling func {}: {}".format(self.func_name, err)
+            )
 
     def traverse_ast(self, func):
         func(self)
@@ -391,10 +381,7 @@ class SetErrorHandlerFunctionStatement(ASTNode):
         return 1
 
     def stack_mod(self):
-        return {
-            "pop": 0,
-            "push": 0
-        }
+        return {"pop": 0, "push": 0}
 
     def typecheck(self, stack):
         pass
@@ -404,7 +391,6 @@ class SetErrorHandlerFunctionStatement(ASTNode):
 
     def modify_ast(self, func):
         return func(self)
-
 
 
 class IndirectPushStatement(ASTNode):
@@ -610,17 +596,14 @@ class BasicOp(ASTNode):
 
     def stack_mod(self):
         info = instructions.OF_INFO[self.op_code]
-        mod = {
-            "pop": len(info["pop"]),
-            "push": len(info["push"])
-        }
+        mod = {"pop": len(info["pop"]), "push": len(info["push"])}
         if (
-                instructions.OP_NAMES[self.op_code] == "jump" or
-                instructions.OP_NAMES[self.op_code] == "cjump"
+            instructions.OP_NAMES[self.op_code] == "jump"
+            or instructions.OP_NAMES[self.op_code] == "cjump"
         ):
-            return mod, [('invalid',)]
+            return mod, [("invalid",)]
         if instructions.OP_NAMES[self.op_code] == "halt":
-            return mod, [('invalid',)]
+            return mod, [("invalid",)]
         return mod, []
 
     def typecheck(self, stack):
@@ -650,7 +633,9 @@ class BasicOp(ASTNode):
                 index = stack.pop(value.IntType())
                 tup = stack.pop(value.TupleType())
                 if isinstance(index, int) and not tup.has_member_at_index(index):
-                    raise Exception("Tried to get index {} from tuple {}".format(index, tup))
+                    raise Exception(
+                        "Tried to get index {} from tuple {}".format(index, tup)
+                    )
                 stack.push(tup.get_tup(index))
             elif name[:4] == "tget":
                 instructions.tgetn(stack, int(name[4:]))
@@ -666,7 +651,9 @@ class BasicOp(ASTNode):
                     stack.push(push)
         except Exception as err:
             raise Exception(
-                "Exception typechecking {}: {}".format(instructions.OP_NAMES[self.op_code], err)
+                "Exception typechecking {}: {}".format(
+                    instructions.OP_NAMES[self.op_code], err
+                )
             )
 
     def __eq__(self, other):

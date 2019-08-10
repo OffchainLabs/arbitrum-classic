@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -89,15 +89,17 @@ class TestByteRange(TestCase):
 
                 solution = bytearray(data)
                 solution[i] = update_bytes
-                self.assertEqual(solution.hex(), sized_byterange.tohex([vm.stack[0], 100])[2:])
+                self.assertEqual(
+                    solution.hex(), sized_byterange.tohex([vm.stack[0], 100])[2:]
+                )
 
     def test_frombytes(self):
         data = bytearray(random.getrandbits(8) for _ in range(500))
         data2 = bytearray(data)
         if len(data2) % 32 != 0:
-            data2 = data2 + b'\0'*(32 - (len(data2) % 32))
+            data2 = data2 + b"\0" * (32 - (len(data2) % 32))
         chunks = [
-            eth_utils.big_endian_to_int(data2[i: i + 32])
+            eth_utils.big_endian_to_int(data2[i : i + 32])
             for i in range(0, len(data2), 32)
         ]
         vm = VM()
@@ -123,7 +125,9 @@ class TestByteRange(TestCase):
     def test_copy(self):
         indexes = [(0, 32, 0), (0, 16, 0), (0, 32, 32), (0, 6, 0), (37, 108, 42)]
         for (source_start, source_end, dest_start) in indexes:
-            with self.subTest(source_start=source_start, source_end=source_end, dest_start=dest_start):
+            with self.subTest(
+                source_start=source_start, source_end=source_end, dest_start=dest_start
+            ):
                 source = bytearray(random.getrandbits(8) for _ in range(500))
                 dest = bytearray(random.getrandbits(8) for _ in range(500))
                 size = source_end - source_start
@@ -134,5 +138,9 @@ class TestByteRange(TestCase):
                 vm.push(source_start)
                 vm.push(byterange.frombytes(source))
                 byterange.copy(vm)
-                result = dest[:dest_start] + source[source_start:source_end] + dest[dest_start + size:]
+                result = (
+                    dest[:dest_start]
+                    + source[source_start:source_end]
+                    + dest[dest_start + size :]
+                )
                 self.assertEqual(byterange.frombytes(result), vm.stack[0])

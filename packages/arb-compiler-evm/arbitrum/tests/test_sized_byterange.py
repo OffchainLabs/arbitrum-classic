@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -50,7 +50,9 @@ class TestSizedByteRange(TestCase):
             vm.push(val * 58)
             vm.dup1()
             sized_byterange.get(vm)
-            self.assertEqual(sized_byterange.get_static(tup, val * 58), vm.stack.items[0])
+            self.assertEqual(
+                sized_byterange.get_static(tup, val * 58), vm.stack.items[0]
+            )
             vm.pop()
 
     def test_static_set(self):

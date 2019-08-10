@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,7 +20,7 @@ from ethereum import messages
 from ethereum import utils
 
 
-class VmExtBase():
+class VmExtBase:
     def __init__(self):
         self.storage = {}
         self.block_prevhash = 0
@@ -30,7 +30,7 @@ class VmExtBase():
         self.block_difficulty = 0
         self.block_gas_limit = 0
 
-        self.tx_origin = b'0' * 40
+        self.tx_origin = b"0" * 40
         self.tx_gasprice = 0
 
         self.log_storage = lambda addr: 0
@@ -53,7 +53,7 @@ class VmExtBase():
 
     def get_code(self, addr):
         print("Get code")
-        return b''
+        return b""
 
     def log(self, addr, topics, data):
         print("log")
@@ -91,15 +91,13 @@ class ConstructorMSG:
 def construct_contract(contract, *args):
     w3 = web3.Web3()
     interface = w3.eth.contract(
-        address=contract["address"],
-        abi=contract["abi"],
-        bytecode=contract["code"]
+        address=contract["address"], abi=contract["abi"], bytecode=contract["code"]
     )
     return {
         "name": contract["name"],
         "address": contract["address"],
         "abi": contract["abi"],
-        "code": interface.constructor(*args).data_in_transaction
+        "code": interface.constructor(*args).data_in_transaction,
     }
 
 
@@ -109,16 +107,14 @@ def generate_code(contracts):
     for contract in contracts:
         raw_code = bytes.fromhex(contract["code"][2:])
         contructor_output = EthVM.vm_execute(
-            ext,
-            ConstructorMSG(contract["address"]),
-            raw_code
+            ext, ConstructorMSG(contract["address"]), raw_code
         )
         new_contracts[contract["address"]] = {
             "name": contract["name"],
             "address": contract["address"],
             "abi": contract["abi"],
-            "code": '0x' + contructor_output[2].hex(),
-            "storage": {}
+            "code": "0x" + contructor_output[2].hex(),
+            "storage": {},
         }
     for contract in ext.storage:
         storage = {}

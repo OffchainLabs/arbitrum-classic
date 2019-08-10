@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,10 +18,10 @@ from ..annotation import modifies_stack
 from .. import value
 from .struct import Struct
 
-sized_bigtuple = Struct("sized_bigtuple", [
-    ("data", bigtuple.typ),
-    ("size", value.IntType())
-])
+sized_bigtuple = Struct(
+    "sized_bigtuple", [("data", bigtuple.typ), ("size", value.IntType())]
+)
+
 
 def make():
     return sized_common.make(bigtuple.make)

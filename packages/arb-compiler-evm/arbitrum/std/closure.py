@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,9 +22,7 @@ def make_closure(func, capture_count):
     param_types = func.pops[capture_count:]
     struct = Struct(
         "closure[{}_{}_{}]".format(func.__module__, func.__name__, capture_count),
-        [
-            ("capture", queue.typ),
-        ]
+        [("capture", queue.typ)],
     )
     typ = struct.typ
 
@@ -47,5 +45,6 @@ def make_closure(func, capture_count):
                 vm.swap1()
             vm.pop()
             func(vm)
+
     Closure.typ = typ
     return Closure

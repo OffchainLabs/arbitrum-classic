@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -30,6 +30,7 @@ def _get_call_location(vm, dispatch_func):
     vm.eq()
     vm.ifelse(lambda vm: vm.error())
     # call_location
+
 
 @noreturn
 def _perform_call(vm, call_num):
@@ -135,40 +136,45 @@ def call(vm, dispatch_func, call_num, contract_id):
     std.tup.make(7)(vm)
     vm.dup0()
     os.is_simple_send(vm)
-    vm.ifelse(lambda vm: [
-        # call sends no gas, has no arguments, and gets no return
-        os.evm_call_to_send(vm),
-        os.add_send_to_queue(vm)
-    ], lambda vm: [
-        vm.dup0(),
-        vm.tgetn(1),
-        vm.push(1),
-        vm.eq(),
-        vm.ifelse(lambda vm: [
+    vm.ifelse(
+        lambda vm: [
+            # call sends no gas, has no arguments, and gets no return
             os.evm_call_to_send(vm),
+            os.add_send_to_queue(vm),
+        ],
+        lambda vm: [
             vm.dup0(),
-            local_exec_state.get("data")(vm),
-            vm.push(0),
-            vm.swap1(),
-            std.sized_byterange.get(vm),
-            vm.push(224),
-            vm.swap1(),
-            std.bitwise.shift_right(vm),
-            vm.dup0(),
-            vm.push(0xda795ea3),
+            vm.tgetn(1),
+            vm.push(1),
             vm.eq(),
-            vm.ifelse(lambda vm: [
-                vm.pop(),
-                send_erc20_interupt(vm)
-            ], lambda vm: [
-                vm.push(0x8e725ee1),
-                vm.eq(),
-                vm.ifelse(send_erc721_interupt, lambda vm: vm.error())
-            ])
-        ], lambda vm: [
-            _inner_call(vm, dispatch_func, call_num, contract_id)
-        ])
-    ])
+            vm.ifelse(
+                lambda vm: [
+                    os.evm_call_to_send(vm),
+                    vm.dup0(),
+                    local_exec_state.get("data")(vm),
+                    vm.push(0),
+                    vm.swap1(),
+                    std.sized_byterange.get(vm),
+                    vm.push(224),
+                    vm.swap1(),
+                    std.bitwise.shift_right(vm),
+                    vm.dup0(),
+                    vm.push(0xDA795EA3),
+                    vm.eq(),
+                    vm.ifelse(
+                        lambda vm: [vm.pop(), send_erc20_interupt(vm)],
+                        lambda vm: [
+                            vm.push(0x8E725EE1),
+                            vm.eq(),
+                            vm.ifelse(send_erc721_interupt, lambda vm: vm.error()),
+                        ],
+                    ),
+                ],
+                lambda vm: [_inner_call(vm, dispatch_func, call_num, contract_id)],
+            ),
+        ],
+    )
+
 
 def _send_interupt(vm):
     def get_dest(vm):
@@ -185,6 +191,7 @@ def _send_interupt(vm):
         vm.push(68)
         vm.swap1()
         std.sized_byterange.get(vm)
+
     vm.tgetn(0)
     # data
     vm.dup0()
@@ -201,6 +208,7 @@ def _send_interupt(vm):
     local_exec_state.set_val("sender")(vm)
     local_exec_state.set_val("amount")(vm)
     local_exec_state.set_val("type")(vm)
+
 
 def send_erc20_interupt(vm):
     _send_interupt(vm)
@@ -226,29 +234,34 @@ def send_erc721_interupt(vm):
     os.add_send_to_queue(vm)
 
 
-@modifies_stack([value.IntType(), value.TupleType([value.IntType()]*7)], [value.IntType()])
+@modifies_stack(
+    [value.IntType(), value.TupleType([value.IntType()] * 7)], [value.IntType()]
+)
 def _mutable_call_ret(vm):
     # ret_type calltup
     translate_ret_type(vm)
     # return_val calltup
-    vm.ifelse(lambda vm: [
-        os.get_call_frame(vm),
-        vm.dup0(),
-        call_frame.call_frame.get("parent_frame")(vm),
-        call_frame.merge(vm),
-        # parent_frame
-        os.get_chain_state(vm),
-        os.chain_state.set_val("call_frame")(vm),
-        os.set_chain_state(vm),
-        vm.push(1),
-    ], lambda vm: [
-        os.get_call_frame(vm),
-        call_frame.call_frame.get("parent_frame")(vm),
-        os.get_chain_state(vm),
-        os.chain_state.set_val("call_frame")(vm),
-        os.set_chain_state(vm),
-        vm.push(0)
-    ])
+    vm.ifelse(
+        lambda vm: [
+            os.get_call_frame(vm),
+            vm.dup0(),
+            call_frame.call_frame.get("parent_frame")(vm),
+            call_frame.merge(vm),
+            # parent_frame
+            os.get_chain_state(vm),
+            os.chain_state.set_val("call_frame")(vm),
+            os.set_chain_state(vm),
+            vm.push(1),
+        ],
+        lambda vm: [
+            os.get_call_frame(vm),
+            call_frame.call_frame.get("parent_frame")(vm),
+            os.get_chain_state(vm),
+            os.chain_state.set_val("call_frame")(vm),
+            os.set_chain_state(vm),
+            vm.push(0),
+        ],
+    )
     vm.swap1()
     os.copy_return_data(vm)
 

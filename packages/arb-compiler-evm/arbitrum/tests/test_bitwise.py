@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,9 +26,12 @@ TT255 = 2 ** 255
 def to_signed(i):
     return i if i < TT255 else i - TT256
 
+
 class TestArray(TestCase):
     def test_flip_endianness(self):
-        hexstr = bytearray.fromhex("ada5013122d395ba3c54772283fb069b10426056ef8ca54750cb9bb552a59e7d")
+        hexstr = bytearray.fromhex(
+            "ada5013122d395ba3c54772283fb069b10426056ef8ca54750cb9bb552a59e7d"
+        )
         littleInt = int.from_bytes(hexstr, byteorder="little")
         bigInt = int.from_bytes(hexstr, byteorder="big")
 
@@ -38,7 +41,9 @@ class TestArray(TestCase):
         self.assertEqual(vm.stack[0], bigInt)
 
     def test_set_byte(self):
-        origstring = bytearray.fromhex("ada5013122d395ba3c54772283fb069b10426056ef8ca54750cb9bb552a59e7d")
+        origstring = bytearray.fromhex(
+            "ada5013122d395ba3c54772283fb069b10426056ef8ca54750cb9bb552a59e7d"
+        )
         bigInt = int.from_bytes(origstring, byteorder="big")
         for i in range(32):
             new_val = random.getrandbits(8)
@@ -50,7 +55,7 @@ class TestArray(TestCase):
             finalstring = bytearray(origstring)
             finalstring[i] = new_val
             self.assertEqual(vm.stack[0], int.from_bytes(finalstring, byteorder="big"))
-        
+
     def test_arithmetic_shift_right(self):
         cases = [(TT256 - 100, 2), (100, 2)]
         for case in cases:
@@ -83,6 +88,5 @@ class TestArray(TestCase):
             vm2.push(case[0])
             bitwise.shift_left(vm2)
             self.assertEqual(
-                to_signed((case[0] << case[1]) & TT256M1),
-                to_signed(vm2.stack[0])
+                to_signed((case[0] << case[1]) & TT256M1), to_signed(vm2.stack[0])
             )

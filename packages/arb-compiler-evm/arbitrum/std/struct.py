@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -65,16 +65,13 @@ class Struct:
     def get(self, names):
         if not isinstance(names, list):
             names = [names]
-        types = [
-            self.array.types[self.field_index[name]]
-            for name in names
-        ]
+        types = [self.array.types[self.field_index[name]] for name in names]
 
         def binder(struct_type, field_names):
             @modifies_stack(
                 [struct_type],
                 types,
-                "{}_{}".format(self.typ.name, '_'.join(field_names))
+                "{}_{}".format(self.typ.name, "_".join(field_names)),
             )
             def get(vm):
                 vm.cast(self.array.typ)
@@ -83,39 +80,42 @@ class Struct:
                     self.array.get(self.field_index[name])(vm)
                     vm.swap1()
                 self.array.get(self.field_index[field_names[0]])(vm)
+
             return get
+
         return binder(self.typ, names)
 
     def set_val(self, names):
         if not isinstance(names, list):
             names = [names]
-        types = [
-            self.array.types[self.field_index[name]]
-            for name in names
-        ]
+        types = [self.array.types[self.field_index[name]] for name in names]
 
         if len(self) == 1:
+
             @modifies_stack(
                 [self.array.types[self.field_index[names[0]]]],
                 [self.typ],
-                "{}_{}".format(self.typ.name, names[0])
+                "{}_{}".format(self.typ.name, names[0]),
             )
             def set_val(vm):
                 vm.cast(self.array.typ)
                 self.array.set_val(self.field_index[names[0]])(vm)
                 vm.cast(self.typ)
+
             return set_val
 
         def binder(struct_type, field_names):
             @modifies_stack(
                 [struct_type] + types,
                 [struct_type],
-                "{}_{}".format(self.typ.name, '_'.join(field_names))
+                "{}_{}".format(self.typ.name, "_".join(field_names)),
             )
             def set_val(vm):
                 vm.cast(self.array.typ)
                 for name in field_names:
                     self.array.set_val(self.field_index[name])(vm)
                 vm.cast(struct_type)
+
             return set_val
+
         return binder(self.typ, names)

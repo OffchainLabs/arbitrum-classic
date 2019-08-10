@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,9 +24,7 @@ from .closure import make_closure
 
 TT256M1 = 2 ** 256 - 1
 
-byterange = Struct("byterange", [
-    ("bigtuple", bigtuple_int.typ)
-])
+byterange = Struct("byterange", [("bigtuple", bigtuple_int.typ)])
 
 typ = byterange.typ
 
@@ -100,18 +98,19 @@ def set_val(vm):
     vm.mod()
     vm.push(0)
     vm.eq()
-    vm.ifelse(lambda vm: [
-        vm.swap1(),
-        vm.push(32),
-        vm.swap1(),
-        vm.div(),
-        vm.swap1(),
-        byterange.get("bigtuple")(vm),
-        bigtuple_int.set_val(vm),
-        byterange.set_val("bigtuple")(vm)
-    ], lambda vm: [
-        _set_impl(vm)
-    ])
+    vm.ifelse(
+        lambda vm: [
+            vm.swap1(),
+            vm.push(32),
+            vm.swap1(),
+            vm.div(),
+            vm.swap1(),
+            byterange.get("bigtuple")(vm),
+            bigtuple_int.set_val(vm),
+            byterange.set_val("bigtuple")(vm),
+        ],
+        lambda vm: [_set_impl(vm)],
+    )
 
 
 # [index] -> [index / 32, (index % 32) * 8]
@@ -186,17 +185,18 @@ def get(vm):
     vm.mod()
     vm.push(0)
     vm.eq()
-    vm.ifelse(lambda vm: [
-        vm.swap1(),
-        vm.push(32),
-        vm.swap1(),
-        vm.div(),
-        vm.swap1(),
-        byterange.get("bigtuple")(vm),
-        bigtuple_int.get(vm),
-    ], lambda vm: [
-        _get_impl(vm)
-    ])
+    vm.ifelse(
+        lambda vm: [
+            vm.swap1(),
+            vm.push(32),
+            vm.swap1(),
+            vm.div(),
+            vm.swap1(),
+            byterange.get("bigtuple")(vm),
+            bigtuple_int.get(vm),
+        ],
+        lambda vm: [_get_impl(vm)],
+    )
 
 
 # [tuple, index]
@@ -230,13 +230,7 @@ def _get_impl(vm):
     vm.bitwise_or()
 
 
-copy_types = [
-    typ,
-    value.IntType(),
-    value.IntType(),
-    typ,
-    value.IntType()
-]
+copy_types = [typ, value.IntType(), value.IntType(), typ, value.IntType()]
 
 
 # [source bytearray, start offset, end offset, dest bytearray, dest offset]
@@ -249,7 +243,6 @@ def copy(vm):
 
 @modifies_stack([value.TupleType(copy_types)], [value.TupleType(copy_types)])
 def _copy_impl(vm):
-
     def get_source(vm):
         vm.dup0()
         vm.tgetn(1)
@@ -280,34 +273,35 @@ def _copy_impl(vm):
     #    dest bytearray,
     #    dest offset
     # ]]
-    vm.while_loop(lambda vm: [
-        vm.dup0(),
-        vm.tgetn(2),
-        vm.dup1(),
-        vm.tgetn(1),
-        vm.push(32),
-        vm.add(),
-        vm.lt()
-    ], lambda vm: [
-        get_source(vm),
-        set_dest(vm),
-
-        # increment destination offset
-        vm.dup0(),
-        vm.tgetn(4),
-        vm.push(32),
-        vm.add(),
-        vm.swap1(),
-        vm.tsetn(4),
-
-        # increment source offset
-        vm.dup0(),
-        vm.tgetn(1),
-        vm.push(32),
-        vm.add(),
-        vm.swap1(),
-        vm.tsetn(1)
-    ])
+    vm.while_loop(
+        lambda vm: [
+            vm.dup0(),
+            vm.tgetn(2),
+            vm.dup1(),
+            vm.tgetn(1),
+            vm.push(32),
+            vm.add(),
+            vm.lt(),
+        ],
+        lambda vm: [
+            get_source(vm),
+            set_dest(vm),
+            # increment destination offset
+            vm.dup0(),
+            vm.tgetn(4),
+            vm.push(32),
+            vm.add(),
+            vm.swap1(),
+            vm.tsetn(4),
+            # increment source offset
+            vm.dup0(),
+            vm.tgetn(1),
+            vm.push(32),
+            vm.add(),
+            vm.swap1(),
+            vm.tsetn(1),
+        ],
+    )
 
     vm.dup0()
     vm.tgetn(1)
@@ -318,50 +312,50 @@ def _copy_impl(vm):
     vm.dup0()
     vm.push(0)
     vm.eq()
-    vm.ifelse(lambda vm: [
-        vm.pop()
-    ], lambda vm: [
-        vm.push(32),
-        vm.eq(),
-        vm.ifelse(lambda vm: [
-            get_source(vm),
-            set_dest(vm),
-        ], lambda vm: [
-            # [
-            #   source bytearray,
-            #   start offset,
-            #   end offset,
-            #   dest bytearray,
-            #   dest offset
-            # ]
-
-            # save remaining byte size into end offset slot
-            vm.dup0(),
-            vm.tgetn(1),
-            # start offset [...]
-            vm.dup1(),
-            vm.tgetn(2),
-            # end_offset start_offset [...]
-            vm.sub(),
-            # (end_offset- start_offset) [...]
-            vm.push(8),
-            vm.mul(),
-            vm.swap1(),
-            get_source(vm),
-            # value [...] index
-            vm.swap1(),
-            vm.swap2(),
-            vm.swap1(),
-            # value index [...]
-            vm.dup2(),
-            get_dest(vm),
-            vm.swap1(),
-            vm.pop(),
-            # old_num, value, index, [...]
-            _merge_numbers(vm),
-            set_dest(vm)
-        ])
-    ])
+    vm.ifelse(
+        lambda vm: [vm.pop()],
+        lambda vm: [
+            vm.push(32),
+            vm.eq(),
+            vm.ifelse(
+                lambda vm: [get_source(vm), set_dest(vm)],
+                lambda vm: [
+                    # [
+                    #   source bytearray,
+                    #   start offset,
+                    #   end offset,
+                    #   dest bytearray,
+                    #   dest offset
+                    # ]
+                    # save remaining byte size into end offset slot
+                    vm.dup0(),
+                    vm.tgetn(1),
+                    # start offset [...]
+                    vm.dup1(),
+                    vm.tgetn(2),
+                    # end_offset start_offset [...]
+                    vm.sub(),
+                    # (end_offset- start_offset) [...]
+                    vm.push(8),
+                    vm.mul(),
+                    vm.swap1(),
+                    get_source(vm),
+                    # value [...] index
+                    vm.swap1(),
+                    vm.swap2(),
+                    vm.swap1(),
+                    # value index [...]
+                    vm.dup2(),
+                    get_dest(vm),
+                    vm.swap1(),
+                    vm.pop(),
+                    # old_num, value, index, [...]
+                    _merge_numbers(vm),
+                    set_dest(vm),
+                ],
+            ),
+        ],
+    )
 
 
 # (new & n_highest_mask(48)) | (old & n_lowest_mask(208))
@@ -400,6 +394,7 @@ def get8(vm):
     vm.push(8)
     bitwise.n_lowest_mask(vm)
     vm.bitwise_and()
+
 
 # [index, byte, old number] -> [new number]
 @modifies_stack([IntType(), IntType(), IntType()], [IntType()])
@@ -447,10 +442,9 @@ def get_subset(vm):
 
 def frombytes(data):
     if len(data) % 32 != 0:
-        data = data + b'\0'*(32 - (len(data) % 32))
+        data = data + b"\0" * (32 - (len(data) % 32))
     chunks = [
-        eth_utils.big_endian_to_int(data[i: i + 32])
-        for i in range(0, len(data), 32)
+        eth_utils.big_endian_to_int(data[i : i + 32]) for i in range(0, len(data), 32)
     ]
     return bigtuple_int.fromints(chunks)
 
@@ -460,14 +454,10 @@ def get_static(tup_val, index):
     if index % 32 == 0:
         return bigtuple_int.get_static(tup_val, index // 32)
 
-    first_half = bigtuple_int.get_static(
-        tup_val,
-        index // 32
-    ) << ((index % 32) * 8)
-    second_half = bigtuple_int.get_static(
-        tup_val,
-        index // 32 + 1
-    ) >> (256 - ((index % 32) * 8))
+    first_half = bigtuple_int.get_static(tup_val, index // 32) << ((index % 32) * 8)
+    second_half = bigtuple_int.get_static(tup_val, index // 32 + 1) >> (
+        256 - ((index % 32) * 8)
+    )
     return (first_half | second_half) & TT256M1
 
 

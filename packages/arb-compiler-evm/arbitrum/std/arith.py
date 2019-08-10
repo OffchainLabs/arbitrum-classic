@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,10 +21,7 @@ def max(vm):
     vm.dup1()
     vm.dup1()
     vm.lt()
-    vm.ifelse(
-        lambda vm: [vm.pop()],
-        lambda vm: [vm.swap1(), vm.pop()]
-    )
+    vm.ifelse(lambda vm: [vm.pop()], lambda vm: [vm.swap1(), vm.pop()])
 
 
 @modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
@@ -32,7 +29,4 @@ def min(vm):
     vm.dup1()
     vm.dup1()
     vm.lt()
-    vm.ifelse(
-        lambda vm: [vm.swap1(), vm.pop()],
-        lambda vm: [vm.pop()]
-    )
+    vm.ifelse(lambda vm: [vm.swap1(), vm.pop()], lambda vm: [vm.pop()])

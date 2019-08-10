@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -45,7 +45,7 @@ def _generate_recipes(structure):
         if isinstance(item, value.Tuple):
             sub_recipes = _generate_recipes(item)
             for (name, rec) in sub_recipes.items():
-                ret[name] = [i]+rec
+                ret[name] = [i] + rec
     return ret
 
 
@@ -76,11 +76,8 @@ def _set_static_impl(node, i, recipe, val):
 
 
 class BigStruct:
-    def __init__(self, items):   # each item is (weight, name, initialValue)
-        trees = [
-            (item[0], i, item[1], item[2])
-            for i, item in enumerate(items)
-        ]
+    def __init__(self, items):  # each item is (weight, name, initialValue)
+        trees = [(item[0], i, item[1], item[2]) for i, item in enumerate(items)]
         heapq.heapify(trees)
         self.next_nonce = len(trees)
         while len(trees) > 1:
@@ -95,7 +92,7 @@ class BigStruct:
             self.recipes = []
 
     def _reduce(self, trees):
-        size = ((len(trees)-1) % 7) + 1
+        size = ((len(trees) - 1) % 7) + 1
         if size == 1:
             size = 8
         sum_wt = 0
@@ -106,13 +103,8 @@ class BigStruct:
             sum_wt += item[0]
             lis += [item[2]]
             initial_val += [item[3]]
-        new_item = (
-            sum_wt,
-            self.next_nonce,
-            value.Tuple(lis),
-            value.Tuple(initial_val)
-        )
-        self.next_nonce = self.next_nonce+1
+        new_item = (sum_wt, self.next_nonce, value.Tuple(lis), value.Tuple(initial_val))
+        self.next_nonce = self.next_nonce + 1
         heapq.heappush(trees, new_item)
 
     def initialize(self, vm):

@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -45,61 +45,56 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
             # kvs keyhash
             vm.cast(value.TupleType())
 
-            vm.while_loop(lambda vm: [
-                vm.dup0(),
-                vm.tlen(),
-                vm.push(8),
-                vm.eq()
-            ], lambda vm: [
-                vm.cast(value.TupleType(8)),
-                # kvs keyhash
-                vm.push(8),
-                vm.dup2(),
-                vm.mod(),
-                # keyhash%8 kvs keyhash
-                vm.tget(),
-                # subkvs keyhash
-                vm.swap1(),
-                vm.push(8),
-                vm.swap1(),
-                vm.div(),
-                vm.swap1(),
-            ])
+            vm.while_loop(
+                lambda vm: [vm.dup0(), vm.tlen(), vm.push(8), vm.eq()],
+                lambda vm: [
+                    vm.cast(value.TupleType(8)),
+                    # kvs keyhash
+                    vm.push(8),
+                    vm.dup2(),
+                    vm.mod(),
+                    # keyhash%8 kvs keyhash
+                    vm.tget(),
+                    # subkvs keyhash
+                    vm.swap1(),
+                    vm.push(8),
+                    vm.swap1(),
+                    vm.div(),
+                    vm.swap1(),
+                ],
+            )
 
             vm.dup0()
             vm.tnewn(0)
             vm.eq()
-            vm.ifelse(lambda vm: [
-                vm.pop(),
-                vm.pop(),
-                vm.push(default_val)
-            ], lambda vm: [
-                # kvs keyhash
-                vm.cast(value.TupleType(3)),
-                vm.swap1(),
-                vm.dup1(),
-                vm.tgetn(0),
-                # tupkeyhash keyhash kvs
-                vm.eq(),
-                vm.ifelse(
-                    lambda vm: [
-                        # kvs
-                        vm.tgetn(2),
-                    ],
-                    lambda vm: [
-                        # kvs
-                        vm.pop(),
-                        vm.push(default_val)
-                    ]
-                )
-            ])
+            vm.ifelse(
+                lambda vm: [vm.pop(), vm.pop(), vm.push(default_val)],
+                lambda vm: [
+                    # kvs keyhash
+                    vm.cast(value.TupleType(3)),
+                    vm.swap1(),
+                    vm.dup1(),
+                    vm.tgetn(0),
+                    # tupkeyhash keyhash kvs
+                    vm.eq(),
+                    vm.ifelse(
+                        lambda vm: [
+                            # kvs
+                            vm.tgetn(2)
+                        ],
+                        lambda vm: [
+                            # kvs
+                            vm.pop(),
+                            vm.push(default_val),
+                        ],
+                    ),
+                ],
+            )
             vm.cast(value_type)
 
         @staticmethod
         @modifies_stack(
-            [keyvalue_type.typ, key_type, value_type],
-            [keyvalue_type.typ],
-            default_val
+            [keyvalue_type.typ, key_type, value_type], [keyvalue_type.typ], default_val
         )
         def set_val(vm):
             # kvs key value
@@ -124,17 +119,14 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
         @staticmethod
         def get_static(kvs, key):
             return KeyValue._get_static_impl(
-                kvs,
-                eth_utils.big_endian_to_int(value.value_hash(key))
+                kvs, eth_utils.big_endian_to_int(value.value_hash(key))
             )
 
         @staticmethod
         def set_static(kvs, key, val):
-            update = value.Tuple([
-                eth_utils.big_endian_to_int(value.value_hash(key)),
-                key,
-                val
-            ])
+            update = value.Tuple(
+                [eth_utils.big_endian_to_int(value.value_hash(key)), key, val]
+            )
             return KeyValue._set_impl_static(kvs, update)
 
         @staticmethod
@@ -155,14 +147,12 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
         @modifies_stack(
             [
                 value.TupleType(),
-                value.TupleType([
-                    value.IntType(),
-                    value.ValueType(),
-                    value.ValueType()
-                ])
+                value.TupleType(
+                    [value.IntType(), value.ValueType(), value.ValueType()]
+                ),
             ],
             [value.TupleType()],
-            default_val
+            default_val,
         )
         def _set_impl(vm):
             # kvs [hash(key) key value]
@@ -178,11 +168,15 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
                     # len(kvs)==3 kvs [...]
                     vm.ifelse(
                         lambda vm: [
-                            vm.cast(value.TupleType([
-                                value.IntType(),
-                                value.ValueType(),
-                                value.ValueType()
-                            ])),
+                            vm.cast(
+                                value.TupleType(
+                                    [
+                                        value.IntType(),
+                                        value.ValueType(),
+                                        value.ValueType(),
+                                    ]
+                                )
+                            ),
                             # [oldhash oldkey oldval] [newhash newkey newval]
                             vm.dup1(),
                             vm.tgetn(1),
@@ -201,7 +195,7 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
                                     # empty8tuple [old...] [new...]
                                     KeyValue._set_impl(vm),
                                     KeyValue._set_impl(vm),
-                                ]
+                                ],
                             ),
                         ],
                         lambda vm: [
@@ -229,26 +223,30 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
                             vm.dup2(),
                             # newhash%8 kvstuple subtriple newhash%8 kvstuple
                             vm.tget(),
-                            vm.cast(value.TupleType([
-                                value.IntType(),
-                                value.ValueType(),
-                                value.ValueType()
-                            ])),
+                            vm.cast(
+                                value.TupleType(
+                                    [
+                                        value.IntType(),
+                                        value.ValueType(),
+                                        value.ValueType(),
+                                    ]
+                                )
+                            ),
                             # subkvs subtriple newhash%8 kvstuple
                             KeyValue._set_impl(vm),
                             # newsubkvs newhash%8 kvstuple
                             vm.swap2(),
                             vm.swap1(),
                             # newhash%8 kvstuple newsubkvs
-                            vm.tset()
-                        ]
+                            vm.tset(),
+                        ],
                     ),
                 ],
                 lambda vm: [
                     # len(kvs) None [hash(key) key value]
                     vm.pop(),
                     vm.pop(),
-                ]
+                ],
             )
 
         @staticmethod
@@ -260,16 +258,15 @@ def make_keyvalue_type(key_type, value_type, default_val=None):
                 if kvs[1] == update[1]:
                     return update
 
-                new_kvs = value.Tuple([value.Tuple([])]*8)
+                new_kvs = value.Tuple([value.Tuple([])] * 8)
                 new_kvs = KeyValue._set_impl_static(new_kvs, kvs)
                 return KeyValue._set_impl_static(new_kvs, update)
 
             return kvs.set_tup_val(
                 update[0] % 8,
                 KeyValue._set_impl_static(
-                    kvs[update[0] % 8],
-                    update.set_tup_val(0, update[0] // 8)
-                )
+                    kvs[update[0] % 8], update.set_tup_val(0, update[0] // 8)
+                ),
             )
 
     KeyValue.typ = keyvalue_type.typ

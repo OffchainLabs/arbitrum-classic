@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,24 +20,28 @@ from ..annotation import modifies_stack
 
 sent_queue = std.make_queue_type(types.local_exec_state.typ)
 
-call_frame = std.struct.Struct("call_frame", [
-    ("contractID", value.IntType()),       # transient
-    ("memory", std.sized_byterange.sized_byterange.typ),           # transient
-    ('contract_state', types.contract_state.typ),   # record
-    ("contracts", types.contract_store.typ),        # record
-    ("local_exec_state", types.local_exec_state.typ),  # transient
-    ("return_data", std.sized_byterange.sized_byterange.typ),  # transient
-    ("sent_queue", sent_queue.typ),       # record
-    ("logs", std.stack_tup.typ),             # record
-    "parent_frame",
-    ("return_location", value.CodePointType()),
-    ("saved_stack", std.stack.typ),
-    ("saved_aux_stack", std.stack.typ),
-])
+call_frame = std.struct.Struct(
+    "call_frame",
+    [
+        ("contractID", value.IntType()),  # transient
+        ("memory", std.sized_byterange.sized_byterange.typ),  # transient
+        ("contract_state", types.contract_state.typ),  # record
+        ("contracts", types.contract_store.typ),  # record
+        ("local_exec_state", types.local_exec_state.typ),  # transient
+        ("return_data", std.sized_byterange.sized_byterange.typ),  # transient
+        ("sent_queue", sent_queue.typ),  # record
+        ("logs", std.stack_tup.typ),  # record
+        "parent_frame",
+        ("return_location", value.CodePointType()),
+        ("saved_stack", std.stack.typ),
+        ("saved_aux_stack", std.stack.typ),
+    ],
+)
 
 typ = call_frame.typ
 
 call_frame.update_type("parent_frame", call_frame.typ)
+
 
 def make_empty():
     vm = VM()
@@ -52,6 +56,7 @@ def make_empty():
     call_frame.set_val("sent_queue")(vm)
     return vm.stack.items[0]
 
+
 @modifies_stack([call_frame.typ], [types.contract_state.typ])
 def lookup_current_state(vm):
     vm.dup0()
@@ -59,6 +64,7 @@ def lookup_current_state(vm):
     vm.swap1()
     call_frame.get("contracts")(vm)
     types.contract_store.get(vm)
+
 
 @modifies_stack([call_frame.typ], [call_frame.typ])
 def save_state(vm):
@@ -73,6 +79,7 @@ def save_state(vm):
     vm.swap1()
     call_frame.set_val("contracts")(vm)
 
+
 @modifies_stack([call_frame.typ], [call_frame.typ])
 def setup_state(vm):
     # frame
@@ -80,6 +87,7 @@ def setup_state(vm):
     lookup_current_state(vm)
     vm.swap1()
     call_frame.set_val("contract_state")(vm)
+
 
 @modifies_stack([call_frame.typ, call_frame.typ], [call_frame.typ])
 def merge(vm):
@@ -107,6 +115,7 @@ def merge(vm):
     vm.pop()
     # parent_frame
 
+
 # update:
 #   contractID
 #   message
@@ -124,8 +133,9 @@ def merge(vm):
         call_frame.typ,
         value.IntType(),
         types.local_exec_state.typ,
-        value.CodePointType()
-    ], [call_frame.typ]
+        value.CodePointType(),
+    ],
+    [call_frame.typ],
 )
 def spawn(vm):
     # frame contractID message return_location

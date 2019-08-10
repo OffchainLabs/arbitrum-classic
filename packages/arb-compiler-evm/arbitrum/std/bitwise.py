@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -39,20 +39,21 @@ def shift_right(vm):
 @modifies_stack([value.IntType(), value.IntType()], [value.IntType()])
 def arithmetic_shift_right(vm):
     vm.dup0()
-    vm.push(2**255)
+    vm.push(2 ** 255)
     vm.bitwise_and()
     vm.push(0)
     vm.eq()
-    vm.ifelse(lambda vm: [
-        shift_right(vm)
-    ], lambda vm: [
-        vm.dup1(),
-        vm.swap1(),
-        shift_right(vm),
-        vm.swap1(),
-        n_highest_mask(vm),
-        vm.bitwise_or()
-    ])
+    vm.ifelse(
+        lambda vm: [shift_right(vm)],
+        lambda vm: [
+            vm.dup1(),
+            vm.swap1(),
+            shift_right(vm),
+            vm.swap1(),
+            n_highest_mask(vm),
+            vm.bitwise_or(),
+        ],
+    )
 
 
 # [bits]
@@ -80,7 +81,7 @@ def n_highest_mask(vm):
 
 
 def n_lowest_mask_static(bits):
-    return 2**bits - 1
+    return 2 ** bits - 1
 
 
 def n_highest_mask_static(bits):
@@ -91,10 +92,11 @@ def n_highest_mask_static(bits):
 def flip_endianness(vm):
     flip_endianness_impl(vm, 32)
 
+
 def flip_endianness_impl(vm, numBytes):
-    if numBytes>1:
-        nb2 = numBytes//2
-        mod = 1<<(8*nb2)
+    if numBytes > 1:
+        nb2 = numBytes // 2
+        mod = 1 << (8 * nb2)
         vm.push(mod)
         vm.dup1()
         # x mod x
@@ -113,6 +115,7 @@ def flip_endianness_impl(vm, numBytes):
         vm.mul()
         vm.bitwise_or()
 
+
 # [int, index, byte]
 @modifies_stack([value.IntType(), value.IntType(), value.IntType()], [value.IntType()])
 def set_byte(vm):
@@ -123,7 +126,7 @@ def set_byte(vm):
     # # [orig, int, index, byte]
     vm.auxpush()
     vm.swap2()
-    vm.push(0xff)
+    vm.push(0xFF)
     vm.bitwise_and()
     vm.auxpop()
     # # [orig, byte, index, int]

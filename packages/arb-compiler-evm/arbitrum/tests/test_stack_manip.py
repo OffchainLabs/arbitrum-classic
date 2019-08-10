@@ -1,5 +1,5 @@
 # Copyright 2019, Offchain Labs, Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,7 +19,6 @@ from arbitrum import VM
 
 
 class TestStackManip(TestCase):
-
     def test_compress(self):
         vm = VM()
         vm.stack.items = list(range(93))
@@ -76,7 +75,6 @@ class TestStackManip(TestCase):
                 self.assertEqual(vm.stack[0], i)
                 self.assertEqual(vm.stack[1:], list(range(100)))
 
-
     def test_swap_n(self):
         for i in range(1, 100):
             with self.subTest():
@@ -94,7 +92,7 @@ class TestStackManip(TestCase):
                 orig_list = list(range(100))
                 vm.stack.items = list(orig_list)
                 stack_manip.take_n(i)(vm)
-                new_list = [orig_list[i]] + orig_list[:i] + orig_list[i + 1:]
+                new_list = [orig_list[i]] + orig_list[:i] + orig_list[i + 1 :]
                 self.assertEqual(vm.stack[:], new_list)
 
     def test_push_to_n(self):
@@ -104,5 +102,5 @@ class TestStackManip(TestCase):
                 orig_list = list(range(100))
                 vm.stack.items = list(orig_list)
                 stack_manip.push_to_n(i)(vm)
-                new_list = orig_list[1:i + 1] + [orig_list[0]] + orig_list[i + 1:]
+                new_list = orig_list[1 : i + 1] + [orig_list[0]] + orig_list[i + 1 :]
                 self.assertEqual(vm.stack[:], new_list)
