@@ -407,10 +407,6 @@ def get_opcode_name(instr):
         return UNHANDLED_OPCODE[instr.opcode]
     if instr.name[:4] == "PUSH":
         return "PUSH"
-    if instr.name[:3] == "DUP":
-        return "DUP"
-    if instr.name[:4] == "SWAP":
-        return "SWAP"
     return instr.name
 
 
