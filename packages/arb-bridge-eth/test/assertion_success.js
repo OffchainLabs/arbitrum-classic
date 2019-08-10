@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import advanceToBlock from 'zeppelin-solidity/test/helpers/advanceToBlock';
-import assertRevert from 'zeppelin-solidity/test/helpers/assertRevert';
-const eutil = require('ethereumjs-util')
+import advanceToBlock from "zeppelin-solidity/test/helpers/advanceToBlock";
+import assertRevert from "zeppelin-solidity/test/helpers/assertRevert";
+const eutil = require("ethereumjs-util");
 
-import {ArbVM} from './vmTrackerWrapper'
-import {ArbManager} from './vmManager'
+import { ArbVM } from "./vmTrackerWrapper";
+import { ArbManager } from "./vmManager";
 
 var VMTracker = artifacts.require("VMTracker");
 var ArbProtocol = artifacts.require("ArbProtocol");
@@ -28,45 +28,49 @@ var ArbValue = artifacts.require("ArbValue");
 let vmId = "0x123450";
 
 let msg1 = {
-  "data": '0x00',
-  "amount": 0,
-  "destination": "0x00"
+  data: "0x00",
+  amount: 0,
+  destination: "0x00"
 };
 
 let msg2 = {
-  "data": '0x00',
-  "amount": 0,
-  "destination": "0x00"
+  data: "0x00",
+  amount: 0,
+  destination: "0x00"
 };
 
 let msg3 = {
-  "data": "0x20",
-  "amount": 1000000,
-  "destination": "0x00"
+  data: "0x20",
+  amount: 1000000,
+  destination: "0x00"
 };
 
-let testAssertion1 =  {
-  "afterHash": "0x3000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 100,
-  "messages": [msg1, msg2]
+let testAssertion1 = {
+  afterHash:
+    "0x3000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 100,
+  messages: [msg1, msg2]
 };
 
-let testAssertion2 =  {
-  "afterHash": "0x2000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 100,
-  "messages": [msg1, msg2]
+let testAssertion2 = {
+  afterHash:
+    "0x2000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 100,
+  messages: [msg1, msg2]
 };
 
-let testAssertion3 =  {
-  "afterHash": "0x2000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 1000000000000,
-  "messages": [msg1, msg2]
+let testAssertion3 = {
+  afterHash:
+    "0x2000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 1000000000000,
+  messages: [msg1, msg2]
 };
 
-let testAssertion4 =  {
-  "afterHash": "0x2000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 100,
-  "messages": [msg1, msg3]
+let testAssertion4 = {
+  afterHash:
+    "0x2000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 100,
+  messages: [msg1, msg3]
 };
 
 var manager;
@@ -74,7 +78,7 @@ var manager2;
 var vm;
 var vm2;
 
-contract('VMTracker', function(accounts) {
+contract("VMTracker", function(accounts) {
   before(async function() {
     let vmTracker = await VMTracker.deployed();
     let arbMachine = await ArbProtocol.deployed();
@@ -83,14 +87,19 @@ contract('VMTracker', function(accounts) {
     manager2 = new ArbManager(vmTracker, arbMachine, arbValue, accounts[2]);
   });
   it("it should be able to send a message from one manager to another", async function() {
-    return manager.sendMessage(accounts[2], 0, '0x00');
+    return manager.sendMessage(accounts[2], 0, "0x00");
   });
   it("it should fail to send a message from one manager to another with too much funds", async function() {
-    return assertRevert(manager.sendMessage(accounts[2], 1000, '0x00'));
+    return assertRevert(manager.sendMessage(accounts[2], 1000, "0x00"));
   });
   it("it should be able to create a VM", async function() {
-    let vmStartState = "0x0000000000000000000000000000000000000000000000000000000000000000";
-    vm = await manager.createDefaultVm(vmId, [accounts[0], accounts[1]], vmStartState);
+    let vmStartState =
+      "0x0000000000000000000000000000000000000000000000000000000000000000";
+    vm = await manager.createDefaultVm(
+      vmId,
+      [accounts[0], accounts[1]],
+      vmStartState
+    );
     vm2 = await manager2.getVm(vmId);
     var vmState = await vm.getVmInfo();
     assert.equal(vmState["stateHash"], vmStartState);
@@ -99,21 +108,28 @@ contract('VMTracker', function(accounts) {
     let precondition = await vm.generatePrecondition();
     let unanHash = await vm.unanimousAssertHash(precondition, testAssertion1);
     let signature0 = eutil.fromRpcSig(web3.eth.sign(accounts[0], unanHash));
-    await assertRevert(vm.unanimousAssert(precondition, testAssertion1, [signature0]));
+    await assertRevert(
+      vm.unanimousAssert(precondition, testAssertion1, [signature0])
+    );
   });
   it("it should fail a unanimous assertion with wrong signatures", async function() {
     let precondition = await vm.generatePrecondition();
     let unanHash = await vm.unanimousAssertHash(precondition, testAssertion1);
     let signature0 = eutil.fromRpcSig(web3.eth.sign(accounts[0], unanHash));
     let signature1 = eutil.fromRpcSig(web3.eth.sign(accounts[2], unanHash));
-    await assertRevert(vm.unanimousAssert(precondition, testAssertion1, [signature0, signature1]));
+    await assertRevert(
+      vm.unanimousAssert(precondition, testAssertion1, [signature0, signature1])
+    );
   });
   it("it should be able to make a unanimous assertion", async function() {
     let precondition = await vm.generatePrecondition();
     let unanHash = await vm.unanimousAssertHash(precondition, testAssertion1);
     let signature0 = eutil.fromRpcSig(web3.eth.sign(accounts[0], unanHash));
     let signature1 = eutil.fromRpcSig(web3.eth.sign(accounts[1], unanHash));
-    return vm.unanimousAssert(precondition, testAssertion1, [signature0, signature1]);
+    return vm.unanimousAssert(precondition, testAssertion1, [
+      signature0,
+      signature1
+    ]);
   });
   it("it should fail to make a disputable assertion with invalid asserterNum", async function() {
     let precondition = await vm.generatePrecondition();

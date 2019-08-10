@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-const utils = require('ethereumjs-util')
-const abi = require('ethereumjs-abi')
+const utils = require("ethereumjs-util");
+const abi = require("ethereumjs-abi");
 
 export class ArbInt {
   constructor(value) {
@@ -23,16 +23,16 @@ export class ArbInt {
   }
 
   hash() {
-    return '0x' + utils.sha3(this.serialize()).toString('hex');
+    return "0x" + utils.sha3(this.serialize()).toString("hex");
   }
 
   serialize() {
-    return abi.solidityPack(['uint8', 'int256'], [1, this.value]);
+    return abi.solidityPack(["uint8", "int256"], [1, this.value]);
   }
 }
 
 export class ArbNone {
   hash() {
-    return '0x' + abi.soliditySHA3(['uint8'], [0]).toString('hex');
+    return "0x" + abi.soliditySHA3(["uint8"], [0]).toString("hex");
   }
 }

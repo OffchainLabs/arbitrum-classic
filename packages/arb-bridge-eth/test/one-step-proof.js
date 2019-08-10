@@ -14,49 +14,53 @@
  * limitations under the License.
  */
 
-const utils = require('ethereumjs-util');
-const abi = require('ethereumjs-abi');
-var jayson = require('jayson/promise');
+const utils = require("ethereumjs-util");
+const abi = require("ethereumjs-abi");
+var jayson = require("jayson/promise");
 
 var OneStepProof = artifacts.require("OneStepProof");
 
 function checkOneStepProof(oneStepProofLib, precondition, assertion, proof) {
-	return oneStepProofLib.validateProof(
-		[
-			precondition.BeforeHash,
-			precondition.BeforeInbox,
-			assertion.afterHash,
-			'0x0000000000000000000000000000000000000000000000000000000000000000',
-			'0x0000000000000000000000000000000000000000000000000000000000000000'
-		],
-		precondition.TimeBounds,
-		precondition.TokenTypes,
-		precondition.Balances,
-		[],
-		proof
-	)
+  return oneStepProofLib.validateProof(
+    [
+      precondition.BeforeHash,
+      precondition.BeforeInbox,
+      assertion.afterHash,
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    precondition.TimeBounds,
+    precondition.TokenTypes,
+    precondition.Balances,
+    [],
+    proof
+  );
 }
 
-contract('One step proof', function(accounts) {
+contract("One step proof", function(accounts) {
   it("proof test", async function() {
-	let oneStepProof = await OneStepProof.deployed();
+    let oneStepProof = await OneStepProof.deployed();
 
-	var client = jayson.client.http('http://localhost:1235/rpc');
+    var client = jayson.client.http("http://localhost:1235/rpc");
 
-	for (var i = 0; i < 508; i++) {
-		let response = await client.request('RPCInterface.GetProofData', [i]);
-		if (response.error != null) {
-			throw data.error;
-		}
-		let proofResult = await checkOneStepProof(
-		  	oneStepProof,
-		  	response.result.precondition,
-		  	response.result.assertion,
-		  	response.result.proof
-		);
-		if (proofResult.toNumber() != 0) {
-			console.log(`result ${i}, ${response.result.Instruction}: ${proofResult.toNumber()}`,);
-		}
-	}
+    for (var i = 0; i < 508; i++) {
+      let response = await client.request("RPCInterface.GetProofData", [i]);
+      if (response.error != null) {
+        throw data.error;
+      }
+      let proofResult = await checkOneStepProof(
+        oneStepProof,
+        response.result.precondition,
+        response.result.assertion,
+        response.result.proof
+      );
+      if (proofResult.toNumber() != 0) {
+        console.log(
+          `result ${i}, ${
+            response.result.Instruction
+          }: ${proofResult.toNumber()}`
+        );
+      }
+    }
   });
 });

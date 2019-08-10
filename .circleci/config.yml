@@ -2,86 +2,86 @@ version: 2
 jobs:
   build:
     docker:
-    - image: offchainlabs/build-base:0.1.2
+      - image: offchainlabs/build-base:0.1.2
     working_directory: /home/user/arbitrum
     steps:
-    - run: mv /home/user/arbitrum/vconan/ /home/user/vconan/
-    - checkout
-    - run:
-        name: build all
-        command: |
-          mv /home/user/vconan/ /home/user/arbitrum/vconan/
-          yarn
-          yarn 'install:validator'
-          yarn 'install:ci'
-    - run:
-        name: test arb-avm-cpp
-        command: |
-          ctest .
-          lcov --capture --directory . --output-file coverage.info
-          lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
-          lcov --list coverage.info
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -f coverage.info -cF arb_avm_cpp
-          cd .. && rm -rf ci
-        working_directory: /home/user/arbitrum/packages/arb-avm-cpp/ci
-    - run:
-        name: test arb-avm-go
-        command: |
-          go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_avm_go
-        working_directory: /home/user/arbitrum/packages/arb-avm-go
-    - run:
-        name: test arb-bridge-eth
-        command: |
-          ganache-cli -p 7545 &
-          truffle migrate --reset --compile-all
-          kill $!
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_bridge_eth
-        working_directory: /home/user/arbitrum/packages/arb-bridge-eth
-    - run:
-        name: test arb-compiler-evm
-        command: |
-          coverage run --source=arbitrum/ setup.py test
-          cd tests/sol-syscall
-          truffle migrate --reset --compile-all --network arbitrum
-          coverage run --source=../../arbitrum/ truffle_runner.py compiled.json
-          cd ../..
-          coverage combine .coverage tests/sol-syscall/.coverage
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_compiler_evm
-        working_directory: /home/user/arbitrum/packages/arb-compiler-evm
-    - run:
-        name: test arb-provider-ethers
-        command: |
-          yarn jest --coverage
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_ethers
-        working_directory: /home/user/arbitrum/packages/arb-provider-ethers
-    - run:
-        name: test arb-provider-go
-        command: |
-          go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_go
-        working_directory: /home/user/arbitrum/packages/arb-provider-go
-    - run:
-        name: test arb-provider-truffle
-        command: |
-          yarn jest --coverage --pass-with-no-tests
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_truffle
-        working_directory: /home/user/arbitrum/packages/arb-provider-truffle
-    - run:
-        name: test arb-provider-web3
-        command: |
-          yarn jest --coverage --pass-with-no-tests
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_web3
-        working_directory: /home/user/arbitrum/packages/arb-provider-web3
-    - run:
-        name: test arb-util
-        command: |
-          go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_util
-        working_directory: /home/user/arbitrum/packages/arb-util
-    - run:
-        name: test arb-validator
-        command: |
-          go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-          bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_validator
-        working_directory: /home/user/arbitrum/packages/arb-validator
+      - run: mv /home/user/arbitrum/vconan/ /home/user/vconan/
+      - checkout
+      - run:
+          name: build all
+          command: |
+            mv /home/user/vconan/ /home/user/arbitrum/vconan/
+            yarn
+            yarn 'install:validator'
+            yarn 'install:ci'
+      - run:
+          name: test arb-avm-cpp
+          command: |
+            ctest .
+            lcov --capture --directory . --output-file coverage.info
+            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
+            lcov --list coverage.info
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -f coverage.info -cF arb_avm_cpp
+            cd .. && rm -rf ci
+          working_directory: /home/user/arbitrum/packages/arb-avm-cpp/ci
+      - run:
+          name: test arb-avm-go
+          command: |
+            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_avm_go
+          working_directory: /home/user/arbitrum/packages/arb-avm-go
+      - run:
+          name: test arb-bridge-eth
+          command: |
+            ganache-cli -p 7545 &
+            truffle migrate --reset --compile-all
+            kill $!
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_bridge_eth
+          working_directory: /home/user/arbitrum/packages/arb-bridge-eth
+      - run:
+          name: test arb-compiler-evm
+          command: |
+            coverage run --source=arbitrum/ setup.py test
+            cd tests/sol-syscall
+            truffle migrate --reset --compile-all --network arbitrum
+            coverage run --source=../../arbitrum/ truffle_runner.py compiled.json
+            cd ../..
+            coverage combine .coverage tests/sol-syscall/.coverage
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_compiler_evm
+          working_directory: /home/user/arbitrum/packages/arb-compiler-evm
+      - run:
+          name: test arb-provider-ethers
+          command: |
+            yarn jest --coverage
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_ethers
+          working_directory: /home/user/arbitrum/packages/arb-provider-ethers
+      - run:
+          name: test arb-provider-go
+          command: |
+            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_go
+          working_directory: /home/user/arbitrum/packages/arb-provider-go
+      - run:
+          name: test arb-provider-truffle
+          command: |
+            yarn jest --coverage --pass-with-no-tests
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_truffle
+          working_directory: /home/user/arbitrum/packages/arb-provider-truffle
+      - run:
+          name: test arb-provider-web3
+          command: |
+            yarn jest --coverage --pass-with-no-tests
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_provider_web3
+          working_directory: /home/user/arbitrum/packages/arb-provider-web3
+      - run:
+          name: test arb-util
+          command: |
+            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_util
+          working_directory: /home/user/arbitrum/packages/arb-util
+      - run:
+          name: test arb-validator
+          command: |
+            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            bash <(curl -s https://codecov.io/bash) -R /home/user/arbitrum -cF arb_validator
+          working_directory: /home/user/arbitrum/packages/arb-validator

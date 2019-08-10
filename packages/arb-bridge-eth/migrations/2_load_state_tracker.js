@@ -43,25 +43,31 @@ module.exports = function(deployer, network, accounts) {
   deployer.deploy(OneStepProof);
   deployer.link(OneStepProof, ChallengeManager);
 
-  deployer.deploy(ArbBalanceTracker).then(function() {
-    return deployer.deploy(VMTracker, ArbBalanceTracker.address);
-  }).then(function() {
-    return deployer.deploy(ChallengeManager, VMTracker.address);
-  }).then(function() {
-    return ArbBalanceTracker.deployed();
-  }).then(function(balanceTracker) {
-    balanceTracker.transferOwnership(VMTracker.address);
-    return VMTracker.deployed();
-  }).then(async function(vmTracker) {
-    const fs = require("fs");
-    let addresses = {
-      "ArbProtocol": ArbProtocol.address,
-      "ChallengeManager": ChallengeManager.address,
-      "OneStepProof": OneStepProof.address,
-      "vmTracker": vmTracker.address,
-      "balanceTracker": ArbBalanceTracker.address
-    };
-    fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
-    vmTracker.addChallengeManager(ChallengeManager.address);
-  });
+  deployer
+    .deploy(ArbBalanceTracker)
+    .then(function() {
+      return deployer.deploy(VMTracker, ArbBalanceTracker.address);
+    })
+    .then(function() {
+      return deployer.deploy(ChallengeManager, VMTracker.address);
+    })
+    .then(function() {
+      return ArbBalanceTracker.deployed();
+    })
+    .then(function(balanceTracker) {
+      balanceTracker.transferOwnership(VMTracker.address);
+      return VMTracker.deployed();
+    })
+    .then(async function(vmTracker) {
+      const fs = require("fs");
+      let addresses = {
+        ArbProtocol: ArbProtocol.address,
+        ChallengeManager: ChallengeManager.address,
+        OneStepProof: OneStepProof.address,
+        vmTracker: vmTracker.address,
+        balanceTracker: ArbBalanceTracker.address
+      };
+      fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
+      vmTracker.addChallengeManager(ChallengeManager.address);
+    });
 };

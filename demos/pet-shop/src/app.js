@@ -1,6 +1,6 @@
-const Web3 = require('web3');
-const contract = require('truffle-contract');
-const ArbProvider = require('arb-provider-web3');
+const Web3 = require("web3");
+const contract = require("truffle-contract");
+const ArbProvider = require("arb-provider-web3");
 
 App = {
   web3Provider: null,
@@ -8,17 +8,17 @@ App = {
 
   init: async function() {
     // Load pets.
-    $.getJSON('pets.json', function(data) {
-      var petsRow = $('#petsRow');
-      var petTemplate = $('#petTemplate');
+    $.getJSON("pets.json", function(data) {
+      var petsRow = $("#petsRow");
+      var petTemplate = $("#petTemplate");
 
-      for (i = 0; i < data.length; i ++) {
-        petTemplate.find('.panel-title').text(data[i].name);
-        petTemplate.find('img').attr('src', data[i].picture);
-        petTemplate.find('.pet-breed').text(data[i].breed);
-        petTemplate.find('.pet-age').text(data[i].age);
-        petTemplate.find('.pet-location').text(data[i].location);
-        petTemplate.find('.btn-adopt').attr('data-id', data[i].id);
+      for (i = 0; i < data.length; i++) {
+        petTemplate.find(".panel-title").text(data[i].name);
+        petTemplate.find("img").attr("src", data[i].picture);
+        petTemplate.find(".pet-breed").text(data[i].breed);
+        petTemplate.find(".pet-age").text(data[i].age);
+        petTemplate.find(".pet-location").text(data[i].location);
+        petTemplate.find(".btn-adopt").attr("data-id", data[i].id);
 
         petsRow.append(petTemplate.html());
       }
@@ -36,7 +36,7 @@ App = {
         await window.ethereum.enable();
       } catch (error) {
         // User denied account access...
-        console.error("User denied account access")
+        console.error("User denied account access");
       }
     }
     // Legacy dapp browsers...
@@ -45,12 +45,14 @@ App = {
     }
     // If no injected web3 instance is detected, fall back to Ganache
     else {
-      App.web3Provider = new Web3.providers.HttpProvider('http://localhost:7545');
+      App.web3Provider = new Web3.providers.HttpProvider(
+        "http://localhost:7545"
+      );
     }
 
-    const contracts = require('../compiled.json');
+    const contracts = require("../compiled.json");
     App.web3Provider = await ArbProvider(
-      'http://localhost:1235',
+      "http://localhost:1235",
       contracts,
       App.web3Provider
     );
@@ -60,7 +62,7 @@ App = {
   },
 
   initContract: function() {
-    let adoption = require('../build/contracts/Adoption.json');
+    let adoption = require("../build/contracts/Adoption.json");
     App.contracts.Adoption = contract(adoption);
     // Set the provider for our contract
     App.contracts.Adoption.setProvider(App.web3Provider);
@@ -72,31 +74,38 @@ App = {
   },
 
   bindEvents: function() {
-    $(document).on('click', '.btn-adopt', App.handleAdopt);
+    $(document).on("click", ".btn-adopt", App.handleAdopt);
   },
 
   markAdopted: function(adopters, account) {
     var adoptionInstance;
 
-    App.contracts.Adoption.deployed().then(function(instance) {
-      adoptionInstance = instance;
+    App.contracts.Adoption.deployed()
+      .then(function(instance) {
+        adoptionInstance = instance;
 
-      return adoptionInstance.getAdopters.call();
-    }).then(function(adopters) {
-      for (i = 0; i < adopters.length; i++) {
-        if (adopters[i] !== '0x0000000000000000000000000000000000000000') {
-          $('.panel-pet').eq(i).find('button').text('Success').attr('disabled', true);
+        return adoptionInstance.getAdopters.call();
+      })
+      .then(function(adopters) {
+        for (i = 0; i < adopters.length; i++) {
+          if (adopters[i] !== "0x0000000000000000000000000000000000000000") {
+            $(".panel-pet")
+              .eq(i)
+              .find("button")
+              .text("Success")
+              .attr("disabled", true);
+          }
         }
-      }
-    }).catch(function(err) {
-      console.log(err.message);
-    });
+      })
+      .catch(function(err) {
+        console.log(err.message);
+      });
   },
 
   handleAdopt: function(event) {
     event.preventDefault();
 
-    var petId = parseInt($(event.target).data('id'));
+    var petId = parseInt($(event.target).data("id"));
 
     var adoptionInstance;
 
@@ -107,16 +116,19 @@ App = {
 
       var account = accounts[0];
 
-      App.contracts.Adoption.deployed().then(function(instance) {
-        adoptionInstance = instance;
+      App.contracts.Adoption.deployed()
+        .then(function(instance) {
+          adoptionInstance = instance;
 
-        // Execute adopt as a transaction by sending account
-        return adoptionInstance.adopt(petId, {from: account});
-      }).then(function(result) {
-        return App.markAdopted();
-      }).catch(function(err) {
-        console.log("Error calling adopt", err.message);
-      });
+          // Execute adopt as a transaction by sending account
+          return adoptionInstance.adopt(petId, { from: account });
+        })
+        .then(function(result) {
+          return App.markAdopted();
+        })
+        .catch(function(err) {
+          console.log("Error calling adopt", err.message);
+        });
     });
   }
 };

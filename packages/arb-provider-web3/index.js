@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-const ethers = require('ethers');
-const ArbProvider = require('arb-provider-ethers');
-var ProviderBridge = require('./ethers-web3-bridge');
+const ethers = require("ethers");
+const ArbProvider = require("arb-provider-ethers");
+var ProviderBridge = require("./ethers-web3-bridge");
 
 module.exports = async function(managerUrl, contracts, provider) {
-	let wrappedProv = new ethers.providers.Web3Provider(provider)
-	let arbProvider = new ArbProvider(managerUrl, contracts, wrappedProv)
-	let wallet = await arbProvider.getSigner(0);
-	return new ProviderBridge(arbProvider, wallet);
-}
+  let wrappedProv = new ethers.providers.Web3Provider(provider);
+  let arbProvider = new ArbProvider(managerUrl, contracts, wrappedProv);
+  let wallet = await arbProvider.getSigner(0);
+  return new ProviderBridge(arbProvider, wallet);
+};

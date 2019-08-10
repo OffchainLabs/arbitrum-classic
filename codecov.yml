@@ -3,7 +3,19 @@ coverage:
     project:
       default: off
       build:
-        flags: [arb_avm_cpp, arb_avm_go, arb_bridge_eth, arb_compiler_evm, arb_provider_ethers, arb_provider_go, arb_provider_truffle, arb_provider_web3, arb_util, arb-validator]
+        flags:
+          [
+            arb_avm_cpp,
+            arb_avm_go,
+            arb_bridge_eth,
+            arb_compiler_evm,
+            arb_provider_ethers,
+            arb_provider_go,
+            arb_provider_truffle,
+            arb_provider_web3,
+            arb_util,
+            arb-validator,
+          ]
 
 flags:
   arb_avm_cpp:

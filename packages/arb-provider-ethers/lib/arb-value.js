@@ -23,50 +23,57 @@ const OP_CODE_ERROR = 0x74;
 const OP_CODE_HALT = 0x75;
 
 // Valid opcode ranges (inclusive)
-const OP_CODE_RANGES =
-  [
-    [0x01, 0x0a],
-    [0x10, 0x1b],
-    [0x20, 0x21],
-    [0x30, 0x3d],
-    [0x40, 0x44],
-    [0x50, 0x52],
-    [0x60, 0x61],
-    [0x70, 0x75],
-  ]
+const OP_CODE_RANGES = [
+  [0x01, 0x0a],
+  [0x10, 0x1b],
+  [0x20, 0x21],
+  [0x30, 0x3d],
+  [0x40, 0x44],
+  [0x50, 0x52],
+  [0x60, 0x61],
+  [0x70, 0x75]
+];
 const VALID_OP_CODES = OP_CODE_RANGES.reduce(
-  ((acc, range) => acc.concat(
-    Array(range[1] - range[0] + 1).fill().map((_, i) => range[0] + i)
-  )), []
+  (acc, range) =>
+    acc.concat(
+      Array(range[1] - range[0] + 1)
+        .fill()
+        .map((_, i) => range[0] + i)
+    ),
+  []
 );
 
 // Max tuple size
 const MAX_TUPLE_SIZE = 8;
 
 // Arbitrum value type identifiers
-const TYPE_INT        = 0;
+const TYPE_INT = 0;
 const TYPE_CODE_POINT = 1;
-const TYPE_HASH       = 2;
-const TYPE_TUPLE_0    = 3;
-const TYPE_TUPLE_MAX  = 3 + MAX_TUPLE_SIZE;
+const TYPE_HASH = 2;
+const TYPE_TUPLE_0 = 3;
+const TYPE_TUPLE_MAX = 3 + MAX_TUPLE_SIZE;
 
 // Extracts first n bytes from s returning two separate strings as list
 const extractBytes = (s, n) => {
-  if (n < 0 || n*2 > s.length) {
+  if (n < 0 || n * 2 > s.length) {
     throw "Error extracting bytes: string is too short";
   }
-  return [s.substring(0, n*2), s.substring(n*2, s.length)];
-}
+  return [s.substring(0, n * 2), s.substring(n * 2, s.length)];
+};
 
 // Convert unsigned int i to hexstring of n bytes. Does not include "0x".
-const intToBytes = (i, n) => i.toString(16).padStart(n*2, "0");
+const intToBytes = (i, n) => i.toString(16).padStart(n * 2, "0");
 
 // Convert unsigned BigNumber to hexstring of 32 bytes. Does not include "0x".
-const uBigNumToBytes = (bn) => bn.toHexString().slice(2).padStart(32*2, "0");
+const uBigNumToBytes = bn =>
+  bn
+    .toHexString()
+    .slice(2)
+    .padStart(32 * 2, "0");
 
 // Operation identifiers
 const BASIC_OP_IMM_COUNT = 0;
-const IMM_OP_IMM_COUNT   = 1;
+const IMM_OP_IMM_COUNT = 1;
 
 class Operation {
   // opcode: 1 byte number
@@ -91,8 +98,12 @@ class ImmOp extends Operation {
 }
 
 class Value {
-  hash() { throw "unimplemented"; }
-  typeCode() { throw "unimplemented"; }
+  hash() {
+    throw "unimplemented";
+  }
+  typeCode() {
+    throw "unimplemented";
+  }
 }
 
 class IntValue extends Value {
@@ -108,7 +119,7 @@ class IntValue extends Value {
   }
 
   toString() {
-    return this.bignum.toString()
+    return this.bignum.toString();
   }
 }
 
@@ -127,16 +138,24 @@ class CodePointValue extends Value {
   hash() {
     if (this.op instanceof BasicOp) {
       // 34 bytes total (2 + 32)
-      let packed = ("0x" + this.typeCode().toString().padStart(2, "0") +
-                    this.op.opcode.toString().padStart(2, "0") +
-                    this.nextHash.slice(2));
+      let packed =
+        "0x" +
+        this.typeCode()
+          .toString()
+          .padStart(2, "0") +
+        this.op.opcode.toString().padStart(2, "0") +
+        this.nextHash.slice(2);
       return utils.keccak256(packed);
     } else if (this.op instanceof ImmOp) {
       // 66 bytes total (2 + 32 + 32)
-      let packed = ("0x" + this.typeCode().toString().padStart(2, "0") +
-                    this.op.opcode.toString().padStart(2, "0") +
-                    this.op.val.hash().slice(2) +
-                    this.nextHash.slice(2));
+      let packed =
+        "0x" +
+        this.typeCode()
+          .toString()
+          .padStart(2, "0") +
+        this.op.opcode.toString().padStart(2, "0") +
+        this.op.val.hash().slice(2) +
+        this.nextHash.slice(2);
       return utils.keccak256(packed);
     } else {
       throw "Error: CodePointValue must be instanceof BasicOp or ImmOp";
@@ -145,10 +164,15 @@ class CodePointValue extends Value {
 
   toString() {
     if (this.op instanceof BasicOp) {
-      return ("Basic(OpCode(0x" + this.op.opcode.toString() + "))");
+      return "Basic(OpCode(0x" + this.op.opcode.toString() + "))";
     } else if (this.op instanceof ImmOp) {
-      return ("Immediate(OpCode(0x" + this.op.opcode.toString() + "), " +
-              this.op.val.toString() + ")");
+      return (
+        "Immediate(OpCode(0x" +
+        this.op.opcode.toString() +
+        "), " +
+        this.op.val.toString() +
+        ")"
+      );
     } else {
       throw "Error: CodePointValue must be instanceof BasicOp or ImmOp";
     }
@@ -166,7 +190,7 @@ class HashOnlyValue extends Value {
   }
 
   toString() {
-    return ("HashOnlyValue(" + this.hash() + ")");
+    return "HashOnlyValue(" + this.hash() + ")";
   }
 }
 
@@ -175,7 +199,7 @@ class TupleValue extends Value {
   // size: num of Value(s) in contents
   constructor(contents) {
     if (contents.length > MAX_TUPLE_SIZE) {
-      throw ("Error TupleValue: illegal size " + contents.length);
+      throw "Error TupleValue: illegal size " + contents.length;
     }
     super();
     this.contents = contents;
@@ -185,7 +209,7 @@ class TupleValue extends Value {
       let hashes = this.contents.map((value, _) => value.hash());
       let types = ["uint8"].concat(Array(contents.length).fill("bytes32"));
       return utils.solidityKeccak256(types, [this.typeCode()].concat(hashes));
-    }
+    };
     let hash = this.calcHash();
     this.hash = () => hash;
   }
@@ -193,7 +217,7 @@ class TupleValue extends Value {
   // index: uint8
   get(index) {
     if (index < 0 || index >= this.contents.length) {
-      throw ("Error TupleValue get: index out of bounds " + index);
+      throw "Error TupleValue get: index out of bounds " + index;
     }
     return this.contents[index];
   }
@@ -203,7 +227,7 @@ class TupleValue extends Value {
   // value: *Value
   set(index, value) {
     if (index < 0 || index >= this.contents.length) {
-      throw ("Error TupleValue set: index out of bounds " + index);
+      throw "Error TupleValue set: index out of bounds " + index;
     }
     let contents = [...this.contents];
     contents[index] = value;
@@ -211,15 +235,15 @@ class TupleValue extends Value {
   }
 
   toString() {
-    let ret = "Tuple(["
-    ret += this.contents.map(val => val.toString()).join(", ")
-    ret += "])"
-    return ret
+    let ret = "Tuple([";
+    ret += this.contents.map(val => val.toString()).join(", ");
+    ret += "])";
+    return ret;
   }
 }
 
 // Useful for BigTuple operations
-const LAST_INDEX = MAX_TUPLE_SIZE-1;
+const LAST_INDEX = MAX_TUPLE_SIZE - 1;
 const LAST_INDEX_BIG_NUM = utils.bigNumberify(LAST_INDEX);
 
 // tuple: TupleValue
@@ -265,7 +289,7 @@ function sizedByteRangeToHex(twoTupleValue) {
     let value = getBigTuple(byterange, i);
     accumulator += value.bignum.toHexString().slice(2);
   }
-  return "0x" + accumulator.slice(0, 2*size);
+  return "0x" + accumulator.slice(0, 2 * size);
 }
 
 // hexString: must be a byte string (hexString.length % 2 === 0)
@@ -285,11 +309,11 @@ function hexToSizedByteRange(hexString) {
   let numBytes = h.length / 2;
   let size = utils.bigNumberify(Math.ceil(numBytes / 32));
   for (let i = utils.bigNumberify(0); i.lt(size); i = i.add(1)) {
-    let hexnum = h.slice(i*32*2, i*32*2 + 32*2).padEnd(2*32, "0");
+    let hexnum = h.slice(i * 32 * 2, i * 32 * 2 + 32 * 2).padEnd(2 * 32, "0");
     let bignum = utils.bigNumberify("0x" + hexnum);
     t = setBigTuple(t, i, new IntValue(bignum));
   }
-  return new TupleValue([t, new IntValue(h.length / 2)])
+  return new TupleValue([t, new IntValue(h.length / 2)]);
 }
 
 function marshal(someValue) {
@@ -307,14 +331,18 @@ function _marshalValue(acc, v) {
     return accTy + uBigNumToBytes(v.bignum);
   } else if (ty === TYPE_CODE_POINT) {
     // 1B type; 8B insnNum; 1B immCount; 1B opcode; Val?; 32B hash
-    let packed = (accTy + intToBytes(v.insnNum, 8) +
-                  intToBytes(v.op.immCount, 1) + intToBytes(v.op.opcode, 1));
+    let packed =
+      accTy +
+      intToBytes(v.insnNum, 8) +
+      intToBytes(v.op.immCount, 1) +
+      intToBytes(v.op.opcode, 1);
     if (v.op.immCount === BASIC_OP_IMM_COUNT) {
       return packed + v.nextHash.slice(2);
     } else if (v.op.immCount === IMM_OP_IMM_COUNT) {
       return _marshalValue(packed, v.op.val) + v.nextHash.slice(2);
     } else {
-      throw ("Error marshaling CodePointValue illegal immCount: " + v.op.immCount);
+      throw "Error marshaling CodePointValue illegal immCount: " +
+        v.op.immCount;
     }
   } else if (ty === TYPE_HASH) {
     // 1B type; 8B size; 32B hash
@@ -326,7 +354,7 @@ function _marshalValue(acc, v) {
     }
     return accTy;
   } else {
-    throw ("Error marshaling value no such TYPE: " + ty);
+    throw "Error marshaling value no such TYPE: " + ty;
   }
 }
 
@@ -367,7 +395,7 @@ function _unmarshalValue(hexString) {
     [contents, tail] = unmarshalTuple(tail, size);
     return [new TupleValue(contents), tail];
   } else {
-    throw ("Error unmarshaling value no such TYPE: " + ty.toString(16));
+    throw "Error unmarshaling value no such TYPE: " + ty.toString(16);
   }
 }
 
@@ -377,13 +405,13 @@ function unmarshalOp(hexString) {
   let immCount = parseInt(head, 16);
   if (immCount === BASIC_OP_IMM_COUNT) {
     [opcode, tail] = unmarshalOpCode(tail);
-    return [new BasicOp(opcode), tail]
+    return [new BasicOp(opcode), tail];
   } else if (immCount === IMM_OP_IMM_COUNT) {
     [opcode, tail] = unmarshalOpCode(tail);
     [value, tail] = _unmarshalValue(tail);
-    return [new ImmOp(opcode, value), tail]
+    return [new ImmOp(opcode, value), tail];
   } else {
-    throw ("Error unmarshalOp no such immCount: 0x" + immCount.toString(16));
+    throw "Error unmarshalOp no such immCount: 0x" + immCount.toString(16);
   }
 }
 
@@ -391,7 +419,7 @@ function unmarshalOpCode(hexString) {
   let [head, tail] = extractBytes(hexString, 1);
   let opcode = parseInt(head, 16);
   if (!VALID_OP_CODES.includes(opcode)) {
-    throw ("Error unmarshalOpCode no such opcode: 0x" + opcode.toString(16));
+    throw "Error unmarshalOpCode no such opcode: 0x" + opcode.toString(16);
   }
   return [opcode, tail];
 }
@@ -420,7 +448,7 @@ module.exports = {
   unmarshal,
 
   hexToSizedByteRange,
-  sizedByteRangeToHex,
+  sizedByteRangeToHex
 };
 
 /* istanbul ignore else */

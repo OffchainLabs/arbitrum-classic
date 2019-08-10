@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-const utils = require('ethereumjs-util');
-const abi = require('ethereumjs-abi');
+const utils = require("ethereumjs-util");
+const abi = require("ethereumjs-abi");
 
-import advanceToBlock from 'zeppelin-solidity/test/helpers/advanceToBlock';
-import assertRevert from 'zeppelin-solidity/test/helpers/assertRevert';
+import advanceToBlock from "zeppelin-solidity/test/helpers/advanceToBlock";
+import assertRevert from "zeppelin-solidity/test/helpers/assertRevert";
 
-import {ArbVM} from './vmTrackerWrapper'
-import {ArbManager} from './vmManager'
-import {RPCManager} from './vmManagerRPC'
+import { ArbVM } from "./vmTrackerWrapper";
+import { ArbManager } from "./vmManager";
+import { RPCManager } from "./vmManagerRPC";
 
 var ArbBalanceTracker = artifacts.require("ArbBalanceTracker");
 var VMTracker = artifacts.require("VMTracker");
@@ -32,49 +32,53 @@ var VMTrackerLib = artifacts.require("VMTrackerLib");
 var ChallengeManager = artifacts.require("ChallengeManager");
 
 let msg1 = {
-  "data": "0x00",
-  "tokenType":"0x000000000000000000000000000000000000000000",
-  "amount": web3.toBigNumber(0),
-  "destination": "0x01"
+  data: "0x00",
+  tokenType: "0x000000000000000000000000000000000000000000",
+  amount: web3.toBigNumber(0),
+  destination: "0x01"
 };
 
 let msg2 = {
-  "data": "0x00",
-  "tokenType":"0x000000000000000000000000000000000000000000",
-  "amount": web3.toBigNumber(0),
-  "destination": "0x02"
+  data: "0x00",
+  tokenType: "0x000000000000000000000000000000000000000000",
+  amount: web3.toBigNumber(0),
+  destination: "0x02"
 };
 
 let msg3 = {
-  "data": "0x00",
-  "tokenType":"0x000000000000000000000000000000000000000000",
-  "amount": web3.toBigNumber(0),
-  "destination": "0x03"
+  data: "0x00",
+  tokenType: "0x000000000000000000000000000000000000000000",
+  amount: web3.toBigNumber(0),
+  destination: "0x03"
 };
 
 let vmId = "0x223450";
-let testAssertion =  {
-  "afterHash": "0x2000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 4,
-  "messages": [msg1, msg2, msg3]
+let testAssertion = {
+  afterHash:
+    "0x2000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 4,
+  messages: [msg1, msg2, msg3]
 };
 
-let testAssertion2 =  {
-  "afterHash": "0x3000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 2,
-  "messages": [msg1, msg2]
+let testAssertion2 = {
+  afterHash:
+    "0x3000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 2,
+  messages: [msg1, msg2]
 };
 
-let testAssertion4 =  {
-  "afterHash": "0x4000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 2,
-  "messages": [msg3]
+let testAssertion4 = {
+  afterHash:
+    "0x4000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 2,
+  messages: [msg3]
 };
 
-let testAssertion3 =  {
-  "afterHash": "0x4000000000000000000000000000000000000000000000000000000000000000",
-  "numSteps": 1,
-  "messages": [msg1]
+let testAssertion3 = {
+  afterHash:
+    "0x4000000000000000000000000000000000000000000000000000000000000000",
+  numSteps: 1,
+  messages: [msg1]
 };
 
 var challengeManager;
@@ -90,11 +94,12 @@ var prec1;
 var newPrec;
 
 var vmConfig;
-let vmStartState = "0x0000000000000000000000000000000000000000000000000000000000000000";
+let vmStartState =
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 var rpcManager;
 
-contract('VMTracker', function(accounts) {
+contract("VMTracker", function(accounts) {
   before(async function() {
     challengeManager = await ChallengeManager.deployed();
     let vmTracker = await VMTracker.deployed();
@@ -105,14 +110,21 @@ contract('VMTracker', function(accounts) {
     await vmTracker.mintArbsToUser(accounts[1], 100000);
 
     vmConfig = {
-      "gracePeriod": 10,
-      "escrowRequired": 50000,
-      "assertKeys": [accounts[0], accounts[1]],
-      "maxExecutionSteps":100000,
-      "challengeVerifier":0
+      gracePeriod: 10,
+      escrowRequired: 50000,
+      assertKeys: [accounts[0], accounts[1]],
+      maxExecutionSteps: 100000,
+      challengeVerifier: 0
     };
 
-    let rpcManager = new RPCManager(vmTracker, challengeManager, arbMachine, vmId, vmConfig, 1);
+    let rpcManager = new RPCManager(
+      vmTracker,
+      challengeManager,
+      arbMachine,
+      vmId,
+      vmConfig,
+      1
+    );
 
     manager1 = new ArbManager(vmTracker, arbMachine, arbValue, accounts[0]);
     manager2 = new ArbManager(vmTracker, arbMachine, arbValue, accounts[1]);
@@ -133,15 +145,24 @@ contract('VMTracker', function(accounts) {
     let signature0 = utils.fromRpcSig(web3.eth.sign(accounts[0], createHash));
     let signature1 = utils.fromRpcSig(web3.eth.sign(accounts[1], createHash));
 
-    vm = await manager1.createVm(vmId, vmConfig, vmStartState, [signature0, signature1], cMan);
+    vm = await manager1.createVm(
+      vmId,
+      vmConfig,
+      vmStartState,
+      [signature0, signature1],
+      cMan
+    );
   });
   it("it should be able to get an existing vm ", async function() {
     let cMan = await ChallengeManager.deployed();
-    vm2 = await manager2.getVm(vmId, challengeManager, [accounts[0], accounts[1]]);
+    vm2 = await manager2.getVm(vmId, challengeManager, [
+      accounts[0],
+      accounts[1]
+    ]);
   });
   it("it should be able to get vm info", async function() {
     info = await vm.getVmInfo();
-  })
+  });
 
   // it("it should fail to initiate a challenge not during an assertion", async function() {
   //   await assertRevert(vm2.initiateChallenge());
@@ -159,7 +180,6 @@ contract('VMTracker', function(accounts) {
     await new Promise(resolve => setTimeout(resolve, 2000));
   });
 
-
   // it("it should fail to make a disputable assertion during another disputable assertion", async function() {
   //   let precondition = await vm2.getVmInfo();
   //   await assertRevert(vm2.disputableAssert(precondition, testAssertion));
@@ -171,11 +191,9 @@ contract('VMTracker', function(accounts) {
   // // //   await assertRevert(vm2.continueChallenge(0));
   // // // });
 
-
   // it("it should be able to initiate a challenge", async function() {
   //   await vm2.initiateChallenge();
   // });
-
 
   // it("it should fail to make a disputable assertion after a challenge is initiated", async function() {
   //   let precondition = await vm2.getVmInfo();
@@ -187,7 +205,6 @@ contract('VMTracker', function(accounts) {
   // // // it("it should fail to continue a challenge before a bisection has occured", async function() {
   // // //   await assertRevert(vm2.continueChallenge(0));
   // // // });
-
 
   // it("it should be able to bisect a challenge", async function() {
   //   await vm.bisectAssertion(testAssertion2);
@@ -206,12 +223,10 @@ contract('VMTracker', function(accounts) {
   // //   await new Promise(resolve => setTimeout(resolve, 500));
   // // });
 
-
   // it("it should be able to continue a challenge", async function() {
   //   await vm2.continueChallenge(0);
   //   await new Promise(resolve => setTimeout(resolve, 500));
   // });
-
 
   // it("it should fail to make a disputable assertion after bisecting", async function() {
   //   let precondition = await vm2.getVmInfo();
@@ -223,7 +238,6 @@ contract('VMTracker', function(accounts) {
   // // // it("it should fail to continue a challenge before bisecting", async function() {
   // // //   await assertRevert(vm2.continueChallenge(0));
   // // // });
-
 
   // it("it should be able to bisect again", async function() {
   //   await vm.bisectAssertion(testAssertion3);

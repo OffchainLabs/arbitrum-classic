@@ -4,7 +4,7 @@
 
 [![CircleCI](https://circleci.com/gh/OffchainLabs/arbitrum.svg?style=svg)](https://circleci.com/gh/OffchainLabs/arbitrum) [![codecov](https://codecov.io/gh/OffchainLabs/arbitrum/branch/master/graph/badge.svg)](https://codecov.io/gh/OffchainLabs/arbitrum)
 
-Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalable, fast, and private. Arbitrum interoperates closely with Ethereum, so Ethereum developers can easily  cross-compile  their  contracts  to  run  on  Arbitrum.  Arbitrum  achieves  these  goals  through a unique combination of incentives, network protocol design, and virtual machine architecture.
+Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalable, fast, and private. Arbitrum interoperates closely with Ethereum, so Ethereum developers can easily cross-compile their contracts to run on Arbitrum. Arbitrum achieves these goals through a unique combination of incentives, network protocol design, and virtual machine architecture.
 
 Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p), follow the [developer guide](https://developer.offchainlabs.com), and read the [white paper](https://offchainlabs.com/arbitrum.pdf)!
 
@@ -18,7 +18,7 @@ Arbitrum technologies are patent pending. This repository is offered under the A
 
 Clone the monorepo to get started:
 
-``` bash
+```bash
 git clone -b master --depth=1 -c advice.detachedHead=false https://github.com/OffchainLabs/arbitrum.git
 cd arbitrum
 yarn

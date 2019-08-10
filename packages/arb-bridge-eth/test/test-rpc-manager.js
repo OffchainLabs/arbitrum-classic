@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import {RPCManager} from './vmManagerRPC'
-import advanceToBlock from 'zeppelin-solidity/test/helpers/advanceToBlock';
+import { RPCManager } from "./vmManagerRPC";
+import advanceToBlock from "zeppelin-solidity/test/helpers/advanceToBlock";
 
-const utils = require('ethereumjs-util');
-const abi = require('ethereumjs-abi');
+const utils = require("ethereumjs-util");
+const abi = require("ethereumjs-abi");
 
 var ArbBalanceTracker = artifacts.require("ArbBalanceTracker");
 var VMTracker = artifacts.require("VMTracker");
@@ -31,48 +31,47 @@ var rpcManager1;
 var rpcManager2;
 
 function createVm(vmTracker, cMan, vmId, config, vmState) {
-  vmTracker.createVMHash(
-    config.gracePeriod,
-    config.escrowRequired,
-    config.maxExecutionSteps,
-    vmState,
-    config.challengeVerifier,
-    config.assertKeys
-  ).then(function(createHash) {
-    let sigs = config.assertKeys.map(key => utils.fromRpcSig(web3.eth.sign(key, createHash)));
-    var sigVs = [];
-    var sigRs = [];
-    var sigSs = [];
-    sigs.forEach(function(sig) {
-      sigVs.push(sig.v);
-      sigRs.push('0x' + sig.r.toString('hex'));
-      sigSs.push('0x' + sig.s.toString('hex'));
+  vmTracker
+    .createVMHash(
+      config.gracePeriod,
+      config.escrowRequired,
+      config.maxExecutionSteps,
+      vmState,
+      config.challengeVerifier,
+      config.assertKeys
+    )
+    .then(function(createHash) {
+      let sigs = config.assertKeys.map(key =>
+        utils.fromRpcSig(web3.eth.sign(key, createHash))
+      );
+      var sigVs = [];
+      var sigRs = [];
+      var sigSs = [];
+      sigs.forEach(function(sig) {
+        sigVs.push(sig.v);
+        sigRs.push("0x" + sig.r.toString("hex"));
+        sigSs.push("0x" + sig.s.toString("hex"));
+      });
+      console.log("Creating VM");
+      return vmTracker.createVm(
+        [vmId, vmState, createHash],
+        [
+          config["gracePeriod"],
+          config["maxExecutionSteps"],
+          config["challengeVerifier"]
+        ],
+        config["escrowRequired"],
+        sigVs,
+        sigRs,
+        sigSs,
+        { from: config.assertKeys[0] }
+      );
     });
-    console.log("Creating VM");
-    return vmTracker.createVm(
-      [
-        vmId,
-        vmState,
-        createHash
-      ],
-      [
-        config["gracePeriod"],
-        config["maxExecutionSteps"],
-        config["challengeVerifier"]
-      ]
-      ,
-      config["escrowRequired"],
-      sigVs,
-      sigRs,
-      sigSs,
-      {from: config.assertKeys[0]}
-    );
-  });
 }
 
 let vmId = "0x223450";
 
-contract('VMTracker', function(accounts) {
+contract("VMTracker", function(accounts) {
   it("test", async function() {
     let challengeManager = await ChallengeManager.deployed();
     let vmTracker = await VMTracker.deployed();
@@ -81,16 +80,30 @@ contract('VMTracker', function(accounts) {
     await vmTracker.mintArbsToUser(accounts[2], 100000);
 
     let vmConfig = {
-      "gracePeriod": 10,
-      "escrowRequired": 50000,
-      "assertKeys": [accounts[1], accounts[2]],
-      "maxExecutionSteps":10000000,
-      "challengeVerifier":0
+      gracePeriod: 10,
+      escrowRequired: 50000,
+      assertKeys: [accounts[1], accounts[2]],
+      maxExecutionSteps: 10000000,
+      challengeVerifier: 0
     };
 
-    rpcManager1 = new RPCManager(vmTracker, challengeManager, vmId, vmConfig, 0, false);
+    rpcManager1 = new RPCManager(
+      vmTracker,
+      challengeManager,
+      vmId,
+      vmConfig,
+      0,
+      false
+    );
     await new Promise(resolve => setTimeout(resolve, 100));
-    rpcManager2 = new RPCManager(vmTracker, challengeManager, vmId, vmConfig, 1, true);
+    rpcManager2 = new RPCManager(
+      vmTracker,
+      challengeManager,
+      vmId,
+      vmConfig,
+      1,
+      true
+    );
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -120,6 +133,4 @@ contract('VMTracker', function(accounts) {
 
     await new Promise(resolve => setTimeout(resolve, 20000));
   });
-
-
 });

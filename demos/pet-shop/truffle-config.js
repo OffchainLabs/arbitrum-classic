@@ -1,6 +1,7 @@
 const ArbProvider = require("arb-provider-truffle");
 const path = require("path");
-const mnemonic = "jar deny prosper gasp flush glass core corn alarm treat leg smart";
+const mnemonic =
+  "jar deny prosper gasp flush glass core corn alarm treat leg smart";
 
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
@@ -13,29 +14,30 @@ module.exports = {
     },
     arbitrum: {
       provider: function() {
-        if(typeof this.provider.prov == 'undefined') {
-            this.provider.prov = ArbProvider.provider(
-              __dirname,
-              'build/contracts',
-              {
-                'mnemonic': mnemonic,
-              }
-            );
+        if (typeof this.provider.prov == "undefined") {
+          this.provider.prov = ArbProvider.provider(
+            __dirname,
+            "build/contracts",
+            {
+              mnemonic: mnemonic
+            }
+          );
         }
-        return this.provider.prov
+        return this.provider.prov;
       },
-      network_id: "*",
+      network_id: "*"
     }
   },
   compilers: {
     solc: {
-      version: "0.5.3",    // Fetch exact version from solc-bin (default: truffle's version)
-      docker: true,        // Use "0.5.3" you've installed locally with docker (default: false)
-      settings: {          // See the solidity docs for advice about optimization and evmVersion
-       optimizer: {
-         enabled: true,
-         runs: 200
-       }
+      version: "0.5.3", // Fetch exact version from solc-bin (default: truffle's version)
+      docker: true, // Use "0.5.3" you've installed locally with docker (default: false)
+      settings: {
+        // See the solidity docs for advice about optimization and evmVersion
+        optimizer: {
+          enabled: true,
+          runs: 200
+        }
       }
     }
   }

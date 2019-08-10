@@ -627,7 +627,8 @@ TEST_CASE("SWAP2 opcode is correct") {
 TEST_CASE("TGET opcode is correct") {
     SECTION("tget") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
+                           uint256_t{6}, m.pool.get()});
         m.stack.push(uint256_t{1});
         m.runOp(OpCode::TGET);
         value res = m.stack.pop();
@@ -651,11 +652,15 @@ TEST_CASE("TSET opcode is correct") {
     SECTION("8 tup") {
         MachineState m;
         m.stack.push(uint256_t{3});
-        m.stack.push(Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9},
+                           uint256_t{9}, uint256_t{9}, uint256_t{9},
+                           uint256_t{9}, uint256_t{9}, m.pool.get()});
         m.stack.push(uint256_t{7});
         m.runOp(OpCode::TSET);
         value res = m.stack.pop();
-        REQUIRE(res == value{Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{9}, uint256_t{3}, m.pool.get()}});
+        REQUIRE(res == value{Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9},
+                                   uint256_t{9}, uint256_t{9}, uint256_t{9},
+                                   uint256_t{9}, uint256_t{3}, m.pool.get()}});
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -663,7 +668,8 @@ TEST_CASE("TSET opcode is correct") {
 TEST_CASE("TLEN opcode is correct") {
     SECTION("tlen") {
         MachineState m;
-        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}, m.pool.get()});
+        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
+                           uint256_t{6}, m.pool.get()});
         m.runOp(OpCode::TLEN);
         value res = m.stack.pop();
         REQUIRE(res == value{uint256_t(4)});

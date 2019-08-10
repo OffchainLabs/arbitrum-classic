@@ -28,7 +28,7 @@ module.exports = {
       port: 7545,
       network_id: "*",
       gasPrice: 12166983189,
-      websockets: true,
+      websockets: true
       // provider: ganache.provider()
     }
   },
@@ -38,8 +38,8 @@ module.exports = {
       // docker: true,
       settings: {
         optimizer: {
-          "enabled": true,
-          "runs": 200,
+          enabled: true,
+          runs: 200
         }
       }
     }

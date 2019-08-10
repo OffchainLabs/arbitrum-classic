@@ -37,8 +37,11 @@ function provider(outputFolder, buildLocation, options) {
 
   const contractCode = {};
   arbProvider.engine.on("block", function(block) {
-    for (let [ address_string, value ] of Object.entries(storage)) {
-      arbProvider.engine.manager.eth_getCode(address_string, "latest", function(err, code) {
+    for (let [address_string, value] of Object.entries(storage)) {
+      arbProvider.engine.manager.eth_getCode(address_string, "latest", function(
+        err,
+        code
+      ) {
         contractCode[address_string] = code;
       });
     }
@@ -54,18 +57,20 @@ function provider(outputFolder, buildLocation, options) {
       }
       if (info.opcode.name == "SSTORE") {
         let args = info.stack
-            .slice(-info.opcode.in)
-            .map((arg) => "0x" + arg.toString("hex"));
+          .slice(-info.opcode.in)
+          .map(arg => "0x" + arg.toString("hex"));
 
         storage[address_string][args[1]] = args[0];
       }
     });
   });
-  process.on("exit", (code) => {
+  process.on("exit", code => {
     const contracts = [];
     const files = fs.readdirSync(buildLocation, {});
     for (let filePath of files) {
-      const contract = JSON.parse(fs.readFileSync(path.resolve(buildLocation, filePath)));
+      const contract = JSON.parse(
+        fs.readFileSync(path.resolve(buildLocation, filePath))
+      );
       const networkInfo = contract.networks[netID];
       if (networkInfo) {
         const address = networkInfo.address;
@@ -74,31 +79,40 @@ function provider(outputFolder, buildLocation, options) {
           address: address,
           code: contractCode[address.toLowerCase()],
           storage: storage[address.toLowerCase()],
-          abi: contract.abi,
+          abi: contract.abi
         });
       }
     }
     try {
       fs.writeFileSync(outputLocationEVM, JSON.stringify(contracts, null, 2));
     } catch (e) {
-      console.log("Error writing output to file: " + outputLocationEVM +
-                  "\n" + e.name + " " + e.message);
+      console.log(
+        "Error writing output to file: " +
+          outputLocationEVM +
+          "\n" +
+          e.name +
+          " " +
+          e.message
+      );
       throw e;
     }
     console.log("arbc-truffle " + filenameEVM + " " + filenameAO);
     try {
-      var compile = spawnSync("arbc-truffle",
-                              [outputLocationEVM, outputLocationAO], {encoding: "utf-8"});
+      var compile = spawnSync(
+        "arbc-truffle",
+        [outputLocationEVM, outputLocationAO],
+        { encoding: "utf-8" }
+      );
       console.log(compile.stdout);
       console.log(compile.stderr);
     } catch (e) {
       console.log("Error arbc-truffle: " + e.name + " " + e.message);
       throw e;
     }
-  })
+  });
   return arbProvider;
 }
 
 module.exports = {
-  provider,
-}
+  provider
+};

@@ -7,18 +7,30 @@ import pkg_resources
 from arbitrum.evm.contract import ArbContract, create_evm_vm
 from arbitrum.marshall import marshall_vm
 
-NAME = 'arb-compiler-evm'
+NAME = "arb-compiler-evm"
 __version__ = pkg_resources.require(NAME)[0].version
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_file", help="Json file generated with evm code produced by truffle")
+    parser.add_argument(
+        "input_file", help="Json file generated with evm code produced by truffle"
+    )
     parser.add_argument("output_file", help="File location to save produced AVM binary")
-    parser.add_argument("-d", "--debug-output", type=str,
-                        help="File location to save produced debug output")
-    parser.add_argument("--optimize-off",
-                        help="Don't perform any optimization in the compiler", action="store_true", default=False)
-    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+    parser.add_argument(
+        "-d",
+        "--debug-output",
+        type=str,
+        help="File location to save produced debug output",
+    )
+    parser.add_argument(
+        "--optimize-off",
+        help="Don't perform any optimization in the compiler",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     args = parser.parse_args()
 
     with open(args.input_file) as json_file:

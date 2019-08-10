@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {ArbVM} from './vmTrackerWrapper'
+import { ArbVM } from "./vmTrackerWrapper";
 
 export class ArbManager {
   constructor(vmTracker, arbMachineLib, arbValueLib, address) {
@@ -33,8 +33,8 @@ export class ArbManager {
 
     signatures.forEach(function(signature) {
       sigVs.push(signature.v);
-      sigRs.push('0x' + signature.r.toString('hex'));
-      sigSs.push('0x' + signature.s.toString('hex'));
+      sigRs.push("0x" + signature.r.toString("hex"));
+      sigSs.push("0x" + signature.s.toString("hex"));
     });
 
     let createHash = await self.vmTracker.createVMHash(
@@ -45,7 +45,8 @@ export class ArbManager {
       config.challengeVerifier,
       config.assertKeys
     );
-    return self.vmTracker.createVm(
+    return self.vmTracker
+      .createVm(
         config["gracePeriod"],
         config["escrowRequired"],
         config["maxExecutionSteps"],
@@ -56,29 +57,50 @@ export class ArbManager {
         sigVs,
         sigRs,
         sigSs,
-        {from: self.address}
-    ).then(function(result) {
-      config.challengeVerifier = cMan;
-      return new ArbVM(self.vmTracker, self.arbMachineLib, self.arbValueLib, vmId, config, self.address);
-    });
+        { from: self.address }
+      )
+      .then(function(result) {
+        config.challengeVerifier = cMan;
+        return new ArbVM(
+          self.vmTracker,
+          self.arbMachineLib,
+          self.arbValueLib,
+          vmId,
+          config,
+          self.address
+        );
+      });
   }
 
   createDefaultVm(vmId, managers, challengeVerifier, vmState) {
-    return this.createVm(vmId, {
-        "gracePeriod": 10,
-        "escrowRequired": 50000,
-        "assertKeys": managers,
-        "maxExecutionSteps":100000,
-        "challengeVerifier":challengeVerifier
-      }, vmState
+    return this.createVm(
+      vmId,
+      {
+        gracePeriod: 10,
+        escrowRequired: 50000,
+        assertKeys: managers,
+        maxExecutionSteps: 100000,
+        challengeVerifier: challengeVerifier
+      },
+      vmState
     );
   }
 
   getVm(vmId, challengeManager, assertKeys) {
-    return ArbVM.vmWithId(challengeManager, this.vmTracker, this.arbMachineLib, this.arbValueLib, vmId, this.address, assertKeys);
+    return ArbVM.vmWithId(
+      challengeManager,
+      this.vmTracker,
+      this.arbMachineLib,
+      this.arbValueLib,
+      vmId,
+      this.address,
+      assertKeys
+    );
   }
 
   async sendMessage(destination, value, data) {
-    let result = await this.vmTracker.sendMessage(destination, value, data, {from: this.address});
+    let result = await this.vmTracker.sendMessage(destination, value, data, {
+      from: this.address
+    });
   }
 }

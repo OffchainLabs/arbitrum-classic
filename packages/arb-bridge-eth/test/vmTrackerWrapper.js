@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-import MerkleTree, { checkProof, merkleRoot, checkProofSolidityFactory } from 'merkle-tree-solidity'
+import MerkleTree, {
+  checkProof,
+  merkleRoot,
+  checkProofSolidityFactory
+} from "merkle-tree-solidity";
 
-const utils = require('ethereumjs-util');
-const abi = require('ethereumjs-abi');
-import {BigNumber} from 'bignumber.js';
+const utils = require("ethereumjs-util");
+const abi = require("ethereumjs-abi");
+import { BigNumber } from "bignumber.js";
 
 class TokenNumTracker {
   constructor(messages) {
@@ -68,11 +72,19 @@ function breakUpMessages(messages) {
   messages.forEach(function(message) {
     let buf = Buffer.from(message.tokenType.slice(2), "hex");
     messageData += message.data.slice(2);
-    messageTokenNum.push(tokenNumTracker.getTokenNum(message.tokenType, message.amount))
+    messageTokenNum.push(
+      tokenNumTracker.getTokenNum(message.tokenType, message.amount)
+    );
     messageAmount.push(message.amount);
     messageDestination.push(message.destination);
   });
-  return [tokenNumTracker, messageData, messageTokenNum, messageAmount, messageDestination];
+  return [
+    tokenNumTracker,
+    messageData,
+    messageTokenNum,
+    messageAmount,
+    messageDestination
+  ];
 }
 
 class ArbMessage {
@@ -90,25 +102,31 @@ class ArbMessage {
 
   hash(arbMachineLib, arbValueLib) {
     let self = this;
-    return arbValueLib.deserialize_value_hash(this.data).then(function(valueHash) {
-      return arbMachineLib.generateMessageStubHash(
-        valueHash,
-        self.tokenType,
-        self.amount,
-        self.destination
-      );
-    })
+    return arbValueLib
+      .deserialize_value_hash(this.data)
+      .then(function(valueHash) {
+        return arbMachineLib.generateMessageStubHash(
+          valueHash,
+          self.tokenType,
+          self.amount,
+          self.destination
+        );
+      });
   }
 
   print() {
-    console.log(`message(${this.data}, ${this.tokenType}, ${this.amount}, ${this.destination})`);
+    console.log(
+      `message(${this.data}, ${this.tokenType}, ${this.amount}, ${this.destination})`
+    );
   }
 
   isEqualTo(other) {
-    return this.data == other.data &&
-    this.tokenType == other.tokenType &&
-    this.amount.eq(other.amount) &&
-    this.destination == other.destination
+    return (
+      this.data == other.data &&
+      this.tokenType == other.tokenType &&
+      this.amount.eq(other.amount) &&
+      this.destination == other.destination
+    );
   }
 }
 
@@ -126,16 +144,24 @@ function getTotalVals(tracker, messages) {
 }
 
 class FullPreconditionAssertion {
-
-  static freshAssertion(beforeHash, timeBounds, beforeInbox, afterHash, numSteps, messages) {
+  static freshAssertion(
+    beforeHash,
+    timeBounds,
+    beforeInbox,
+    afterHash,
+    numSteps,
+    messages
+  ) {
     var newMessages = [];
     for (var i = 0; i < messages.length; i++) {
-      newMessages.push(new ArbMessage(
-        messages[i].data,
-        messages[i].tokenType,
-        messages[i].amount,
-        messages[i].destination
-      ));
+      newMessages.push(
+        new ArbMessage(
+          messages[i].data,
+          messages[i].tokenType,
+          messages[i].amount,
+          messages[i].destination
+        )
+      );
     }
     let tracker = new TokenNumTracker(newMessages);
     let beforeValues = getTotalVals(tracker, newMessages);
@@ -148,7 +174,7 @@ class FullPreconditionAssertion {
       messages,
       tracker,
       beforeValues,
-      '0x00'
+      "0x00"
     );
   }
 
@@ -175,12 +201,14 @@ class FullPreconditionAssertion {
 
     this.messages = [];
     for (var i = 0; i < messages.length; i++) {
-      this.messages.push(new ArbMessage(
-        messages[i].data,
-        messages[i].tokenType,
-        messages[i].amount,
-        messages[i].destination
-      ));
+      this.messages.push(
+        new ArbMessage(
+          messages[i].data,
+          messages[i].tokenType,
+          messages[i].amount,
+          messages[i].destination
+        )
+      );
     }
   }
 
@@ -188,13 +216,17 @@ class FullPreconditionAssertion {
     let endHash = this.firstMessageHash;
     for (var i = 0; i < this.messages.length; i++) {
       let messageHash = await this.messages[i].hash(arbMachineLib, arbValueLib);
-      endHash = '0x' + abi.soliditySHA3(['bytes32', 'bytes32'], [endHash, messageHash]).toString('hex');
+      endHash =
+        "0x" +
+        abi
+          .soliditySHA3(["bytes32", "bytes32"], [endHash, messageHash])
+          .toString("hex");
     }
     return endHash;
   }
 
   preconditionHash(arbMachineLib) {
-    let tokenTracker = new TokenNumTracker(this.messages);;
+    let tokenTracker = new TokenNumTracker(this.messages);
     return arbMachineLib.generatePreconditionHash(
       this.beforeHash,
       this.startTime,
@@ -217,11 +249,19 @@ class FullPreconditionAssertion {
     this.messages.forEach(function(message) {
       let buf = Buffer.from(message.tokenType.slice(2), "hex");
       messageData += message.data.slice(2);
-      messageTokenNum.push(tokenNumTracker.getTokenNum(message.tokenType, message.amount))
+      messageTokenNum.push(
+        tokenNumTracker.getTokenNum(message.tokenType, message.amount)
+      );
       messageAmount.push(message.amount);
       messageDestination.push(message.destination);
     });
-    return [tokenNumTracker, messageData, messageTokenNum, messageAmount, messageDestination];
+    return [
+      tokenNumTracker,
+      messageData,
+      messageTokenNum,
+      messageAmount,
+      messageDestination
+    ];
   }
 
   async breakUpMessageHashes(arbValue) {
@@ -248,7 +288,12 @@ class FullPreconditionAssertion {
     var totalVals = this.getTotalVals();
     var totalCoinNums = [];
     for (var i = 0; i < tracker.fullTokenTypes.length; i++) {
-      totalCoinNums.push(tokenNumTracker.getTokenNum(tracker.fullTokenTypes[i][0], tracker.fullTokenTypes[i][1]));
+      totalCoinNums.push(
+        tokenNumTracker.getTokenNum(
+          tracker.fullTokenTypes[i][0],
+          tracker.fullTokenTypes[i][1]
+        )
+      );
     }
     return [totalVals, totalCoinNums];
   }
@@ -260,39 +305,45 @@ class FullPreconditionAssertion {
       firstHalfAssertion.startTime != this.startTime ||
       firstHalfAssertion.endTime != this.endTime
     ) {
-      throw("bisect: preconditions don't match");
+      throw "bisect: preconditions don't match";
     }
 
     if (Math.floor(this.numSteps / 2) != firstHalfAssertion.numSteps) {
-      throw("bisectAssertion: firstHalfAssertion has wrong number of steps");
+      throw "bisectAssertion: firstHalfAssertion has wrong number of steps";
     }
 
     if (firstHalfAssertion.messages.length > this.messages.length) {
-      throw("bisect: firstHalfAssertion has more messages than original");
+      throw "bisect: firstHalfAssertion has more messages than original";
     }
 
     for (var i = 0; i < firstHalfAssertion.messages.length; i++) {
       if (!firstHalfAssertion.messages[i].isEqualTo(this.messages[i])) {
         firstHalfAssertion.messages[i].print();
         this.messages[i].print();
-        throw("bisect: firstHalfAssertion has different message than original");
+        throw "bisect: firstHalfAssertion has different message than original";
       }
     }
 
     if (firstHalfAssertion.firstMessageHash != this.firstMessageHash) {
-      throw("bisectAssertion: firstHalfAssertion message start doesn't match full assertion");
+      throw "bisectAssertion: firstHalfAssertion message start doesn't match full assertion";
     }
 
-    let secondHalfStart = await firstHalfAssertion.lastMessageHash(arbMachineLib, arbValueLib);
+    let secondHalfStart = await firstHalfAssertion.lastMessageHash(
+      arbMachineLib,
+      arbValueLib
+    );
 
     let newBeforeValues = [];
     for (var i = 0; i < this.beforeValues.length; i++) {
       newBeforeValues.push(this.beforeValues[i]);
     }
 
-    let firstHalfTotals = getTotalVals(this.tracker, firstHalfAssertion.messages);
+    let firstHalfTotals = getTotalVals(
+      this.tracker,
+      firstHalfAssertion.messages
+    );
     for (var i = 0; i < firstHalfTotals.length; i++) {
-      newBeforeValues[i] -= firstHalfTotals[i]
+      newBeforeValues[i] -= firstHalfTotals[i];
     }
 
     let secondHalfAssertion = new FullPreconditionAssertion(
@@ -357,9 +408,12 @@ class StubPreconditionAssertion {
   }
 
   preconditionAssertionHash(arbMachineLib) {
-    return Promise.all([this.preconditionHash(arbMachineLib), this.assertionHash(arbMachineLib)]).then(function(values) {
+    return Promise.all([
+      this.preconditionHash(arbMachineLib),
+      this.assertionHash(arbMachineLib)
+    ]).then(function(values) {
       return abi.soliditySHA3(["bytes32", "bytes32"], values);
-    })
+    });
   }
 
   generateChildren(
@@ -388,27 +442,30 @@ class StubPreconditionAssertion {
         values[coinNum] = values[coinNum].add(totalMessageAmounts[count]);
       }
 
-      children.push(new StubPreconditionAssertion(
-        beforeHash,
-        [this.startTime, this.endTime],
-        this.beforeInbox,
-        this.tokenTypes,
-        newBeforeValues,
-        afterHashes[i],
-        numSteps[i],
-        messageBisections[i],
-        messageBisections[i + 1],
-        values
-      ));
+      children.push(
+        new StubPreconditionAssertion(
+          beforeHash,
+          [this.startTime, this.endTime],
+          this.beforeInbox,
+          this.tokenTypes,
+          newBeforeValues,
+          afterHashes[i],
+          numSteps[i],
+          messageBisections[i],
+          messageBisections[i + 1],
+          values
+        )
+      );
 
       for (var j = 0; j < totalMessageCoinCount[i]; j++) {
         let coinNum = totalMessageCoinNums[count + i];
-        newBeforeValues[coinNum] = newBeforeValues[coinNum].sub(totalMessageAmounts[count]);
+        newBeforeValues[coinNum] = newBeforeValues[coinNum].sub(
+          totalMessageAmounts[count]
+        );
       }
 
       beforeHash = afterHashes[i];
       count += totalMessageCoinCount[i];
-
     }
     return children;
   }
@@ -433,11 +490,16 @@ export class ArbVM {
       }
     }
     var self = this;
-    const disputableAssertionWatcher = vmTracker.DisputableAssertion({vmId: vmId});
+    const disputableAssertionWatcher = vmTracker.DisputableAssertion({
+      vmId: vmId
+    });
     disputableAssertionWatcher.watch(function(err, result) {
       self.pendingPreconditionAssertion = new StubPreconditionAssertion(
         result.args.beforeHash,
-        [result.args.timeBounds[0].toNumber(), result.args.timeBounds[1].toNumber()],
+        [
+          result.args.timeBounds[0].toNumber(),
+          result.args.timeBounds[1].toNumber()
+        ],
         result.args.beforeInbox,
         result.args.tokenTypes,
         result.args.totalMessageValues,
@@ -452,7 +514,9 @@ export class ArbVM {
       self.pendingAssertionDeadline = result.args.deadline.toNumber();
     });
 
-    const bisectionAssertionWatcher = self.challengeVerifier.BisectedAssertion({vmId: vmId});
+    const bisectionAssertionWatcher = self.challengeVerifier.BisectedAssertion({
+      vmId: vmId
+    });
     bisectionAssertionWatcher.watch(function(err, result) {
       self.bisectionPreconditionAssertions = self.pendingPreconditionAssertion.generateChildren(
         result.args.afterHash,
@@ -464,37 +528,60 @@ export class ArbVM {
       );
       let bisectionHashPromises = [];
       for (var i = 0; i < self.bisectionPreconditionAssertions.length; i++) {
-        bisectionHashPromises.push(self.bisectionPreconditionAssertions[i].preconditionAssertionHash(self.arbMachineLib));
+        bisectionHashPromises.push(
+          self.bisectionPreconditionAssertions[i].preconditionAssertionHash(
+            self.arbMachineLib
+          )
+        );
       }
       Promise.all(bisectionHashPromises).then(function(bisectionHashes) {
         self.bisectionHashes = bisectionHashes;
-      })
+      });
     });
 
-    const challengeWatcher = self.challengeVerifier.ContinuedChallenge({vmId: self.vmId});
+    const challengeWatcher = self.challengeVerifier.ContinuedChallenge({
+      vmId: self.vmId
+    });
     challengeWatcher.watch(function(err, result) {
       if (self.myBisections != null) {
         self.myAssertion = self.myBisections[result.args.assertionIndex];
       }
     });
 
-    const timeoutWatcher = self.challengeVerifier.TimedOutChallenge({vmId: self.vmId});
+    const timeoutWatcher = self.challengeVerifier.TimedOutChallenge({
+      vmId: self.vmId
+    });
     timeoutWatcher.watch(function(err, result) {
       self.pendingAssertion = null;
       self.pendingPrecondition = null;
-    })
+    });
   }
 
-  static async vmWithId(challengeManager, vmTracker, arbMachineLib, arbValueLib, vmId, address, assertKeys) {
+  static async vmWithId(
+    challengeManager,
+    vmTracker,
+    arbMachineLib,
+    arbValueLib,
+    vmId,
+    address,
+    assertKeys
+  ) {
     let result = await vmTracker.getConfig(vmId);
 
-    return new ArbVM(vmTracker, arbMachineLib, arbValueLib, vmId, {
-      "escrowRequired": result[0].toNumber(),
-      "gracePeriod": result[1].toNumber(),
-      "maxExecutionSteps":result[2].toNumber(),
-      "assertKeys": assertKeys,
-      "challengeVerifier": challengeManager
-    }, address);
+    return new ArbVM(
+      vmTracker,
+      arbMachineLib,
+      arbValueLib,
+      vmId,
+      {
+        escrowRequired: result[0].toNumber(),
+        gracePeriod: result[1].toNumber(),
+        maxExecutionSteps: result[2].toNumber(),
+        assertKeys: assertKeys,
+        challengeVerifier: challengeManager
+      },
+      address
+    );
   }
 
   getVmInfo() {
@@ -511,12 +598,12 @@ export class ArbVM {
         nfts[result[6][i]][result[7][i]] = true;
       }
       return {
-        "state": result[0].toNumber(),
-        "stateHash": result[1],
-        "inboxHash": result[2],
-        "pendingMessages": result[3],
-        "tokens": tokens,
-        "nfts": nfts
+        state: result[0].toNumber(),
+        stateHash: result[1],
+        inboxHash: result[2],
+        pendingMessages: result[3],
+        tokens: tokens,
+        nfts: nfts
       };
     });
   }
@@ -524,14 +611,14 @@ export class ArbVM {
   getChallengeInfo() {
     return this.vmTracker.getChallenge.call(this.vmId).then(function(result) {
       return {
-        "state": result[0].toNumber(),
-        "asserter": result[1],
-        "challenger": result[2],
-        "asserterEscrow": result[3].toNumber(),
-        "challengerEscrow": result[4].toNumber(),
-        "challengePeriod": result[5].toNumber(),
-        "deadline": result[6].toNumber(),
-        "assertionPreconditionRoot": result[7]
+        state: result[0].toNumber(),
+        asserter: result[1],
+        challenger: result[2],
+        asserterEscrow: result[3].toNumber(),
+        challengerEscrow: result[4].toNumber(),
+        challengePeriod: result[5].toNumber(),
+        deadline: result[6].toNumber(),
+        assertionPreconditionRoot: result[7]
       };
     });
   }
@@ -540,22 +627,25 @@ export class ArbVM {
     return this.getVmInfo().then(function(vmState) {
       var blockNum = web3.eth.blockNumber;
       return {
-        "inbox":vmState.inboxHash,
-        "stateHash":vmState.stateHash,
-        "beforeTime":blockNum + 2,
-        "afterTime":blockNum
-      }
+        inbox: vmState.inboxHash,
+        stateHash: vmState.stateHash,
+        beforeTime: blockNum + 2,
+        afterTime: blockNum
+      };
     });
   }
 
   async unanimousAssertHash(precondition, assertion) {
-    var messageHashes = []
+    var messageHashes = [];
     for (var i = 0; i < assertion.messages.length; i++) {
-      messageHashes.push(await hashMessage(assertion.messages[i], this.arbMachineLib));
+      messageHashes.push(
+        await hashMessage(assertion.messages[i], this.arbMachineLib)
+      );
     }
 
-
-    var [messageData, messageAmount, messageDestination] = breakUpMessages(assertion.messages);
+    var [messageData, messageAmount, messageDestination] = breakUpMessages(
+      assertion.messages
+    );
     return this.vmTracker.unanimousAssertHash(
       this.vmId,
       [precondition.stateHash, precondition.inbox],
@@ -569,19 +659,26 @@ export class ArbVM {
 
   unanimousAssert(precondition, assertion, signatures) {
     var self = this;
-    var [messageData, messageAmount, messageDestination] = breakUpMessages(assertion.messages);
+    var [messageData, messageAmount, messageDestination] = breakUpMessages(
+      assertion.messages
+    );
     var sigVs = [];
     var sigRs = [];
     var sigSs = [];
 
     signatures.forEach(function(signature) {
       sigVs.push(signature.v);
-      sigRs.push('0x' + signature.r.toString('hex'));
-      sigSs.push('0x' + signature.s.toString('hex'));
+      sigRs.push("0x" + signature.r.toString("hex"));
+      sigSs.push("0x" + signature.s.toString("hex"));
     });
 
     return this.vmTracker.unanimousAssert(
-      [this.vmId, precondition.stateHash, precondition.inbox, assertion.afterHash],
+      [
+        this.vmId,
+        precondition.stateHash,
+        precondition.inbox,
+        assertion.afterHash
+      ],
       [precondition.afterTime, precondition.beforeTime],
       [precondition.balance, assertion.numSteps],
       messageData,
@@ -590,16 +687,19 @@ export class ArbVM {
       sigVs,
       sigRs,
       sigSs,
-      {from: this.address}
+      { from: this.address }
     );
   }
 
   disputableAssert(precondition, assertion) {
-    return this._disputableAssert(precondition, assertion, this.config.assertEscrowRequired);
+    return this._disputableAssert(
+      precondition,
+      assertion,
+      this.config.assertEscrowRequired
+    );
   }
 
   async _disputableAssert(vmInfo, assertion, escrow) {
-
     this.myAssertion = FullPreconditionAssertion.freshAssertion(
       vmInfo.stateHash,
       [web3.eth.blockNumber, web3.eth.blockNumber + 2],
@@ -618,27 +718,43 @@ export class ArbVM {
     ] = this.myAssertion.breakUpMessages();
 
     let tree = this.managerMerkleTree();
-    let proof = tree.getProofOrdered(tree.elements[this.managerNum], this.managerNum + 1, true);
+    let proof = tree.getProofOrdered(
+      tree.elements[this.managerNum],
+      this.managerNum + 1,
+      true
+    );
 
     let result = await this.vmTracker.disputableAssert(
-      [this.vmId, this.myAssertion.beforeHash, this.myAssertion.beforeInbox, this.myAssertion.afterHash],
-      [this.managerNum, this.myAssertion.numSteps, this.myAssertion.startTime, this.myAssertion.endTime],
+      [
+        this.vmId,
+        this.myAssertion.beforeHash,
+        this.myAssertion.beforeInbox,
+        this.myAssertion.afterHash
+      ],
+      [
+        this.managerNum,
+        this.myAssertion.numSteps,
+        this.myAssertion.startTime,
+        this.myAssertion.endTime
+      ],
       proof,
       tokenTracker.tokenTypes,
       messageData,
       messageTokenNum,
       messageAmount,
       messageDestinations,
-      {from:this.address}
+      { from: this.address }
       // {value: escrow, from:this.address}
     );
-    this.myAssertionDeadline = result.logs[result.logs.length - 1].args.deadline.toNumber();
+    this.myAssertionDeadline = result.logs[
+      result.logs.length - 1
+    ].args.deadline.toNumber();
   }
 
   async confirmAsserted() {
     var self = this;
     if (this.myAssertion == null) {
-      throw("Must have assertion pending");
+      throw "Must have assertion pending";
     }
     var [
       tokenTracker,
@@ -647,35 +763,53 @@ export class ArbVM {
       messageAmount,
       messageDestinations
     ] = this.myAssertion.breakUpMessages();
-    var [messageData, messageTokens, messageAmount, messageDestination] = await this.myAssertion.breakUpMessageHashes(this.arbValueLib);
-    let preconditionHash = await this.myAssertion.preconditionHash(this.arbMachineLib);
-    let lastMessageHash = await this.myAssertion.lastMessageHash(this.arbMachineLib, this.arbValueLib);
-    return this.vmTracker.confirmAsserted(
-      this.config.assertKeys[this.pendingAsserter],
-      this.myAssertionDeadline,
-      [
-        this.vmId,
-        preconditionHash,
-        this.myAssertion.afterHash,
-        this.myAssertion.firstMessageHash,
-        lastMessageHash
-      ],
-      this.myAssertion.numSteps,
-      this.myAssertion.getTotalVals(),
+    var [
       messageData,
       messageTokens,
       messageAmount,
-      messageDestination,
-      {from:this.address}
-    ).then(function(result) {
-      self.myAssertion = null;
-    });
+      messageDestination
+    ] = await this.myAssertion.breakUpMessageHashes(this.arbValueLib);
+    let preconditionHash = await this.myAssertion.preconditionHash(
+      this.arbMachineLib
+    );
+    let lastMessageHash = await this.myAssertion.lastMessageHash(
+      this.arbMachineLib,
+      this.arbValueLib
+    );
+    return this.vmTracker
+      .confirmAsserted(
+        this.config.assertKeys[this.pendingAsserter],
+        this.myAssertionDeadline,
+        [
+          this.vmId,
+          preconditionHash,
+          this.myAssertion.afterHash,
+          this.myAssertion.firstMessageHash,
+          lastMessageHash
+        ],
+        this.myAssertion.numSteps,
+        this.myAssertion.getTotalVals(),
+        messageData,
+        messageTokens,
+        messageAmount,
+        messageDestination,
+        { from: this.address }
+      )
+      .then(function(result) {
+        self.myAssertion = null;
+      });
   }
 
   async initiateChallenge() {
     let tree = this.managerMerkleTree();
-    let proof = tree.getProofOrdered(tree.elements[this.managerNum], this.managerNum + 1, true);
-    let assertionHash = await this.pendingPreconditionAssertion.assertionHash(this.arbMachineLib);
+    let proof = tree.getProofOrdered(
+      tree.elements[this.managerNum],
+      this.managerNum + 1,
+      true
+    );
+    let assertionHash = await this.pendingPreconditionAssertion.assertionHash(
+      this.arbMachineLib
+    );
     return this.vmTracker.initiateChallenge(
       this.vmId,
       this.config.assertKeys[this.pendingAsserter],
@@ -683,18 +817,21 @@ export class ArbVM {
       proof,
       this.pendingAssertionDeadline,
       this.pendingPreconditionAssertion.beforeHash,
-      [this.pendingPreconditionAssertion.startTime, this.pendingPreconditionAssertion.endTime],
+      [
+        this.pendingPreconditionAssertion.startTime,
+        this.pendingPreconditionAssertion.endTime
+      ],
       this.pendingPreconditionAssertion.beforeInbox,
       this.pendingPreconditionAssertion.tokenTypes,
       this.pendingPreconditionAssertion.totalMessageValues,
       assertionHash,
-      {from:this.address}
+      { from: this.address }
     );
   }
 
   async bisectAssertion(firstHalfAssertion) {
     if (this.myAssertion == null) {
-      throw ("There must be a pending assertion to bisect");
+      throw "There must be a pending assertion to bisect";
     }
     let fullFirstHalfAssertion = new FullPreconditionAssertion(
       this.myAssertion.beforeHash,
@@ -707,7 +844,11 @@ export class ArbVM {
       this.myAssertion.beforeValues,
       this.myAssertion.firstMessageHash
     );
-    let assertions = await this.myAssertion.bisect(fullFirstHalfAssertion, this.arbMachineLib, this.arbValueLib);
+    let assertions = await this.myAssertion.bisect(
+      fullFirstHalfAssertion,
+      this.arbMachineLib,
+      this.arbValueLib
+    );
     return this._bisectAssertion(this.myAssertion, assertions);
   }
 
@@ -721,18 +862,25 @@ export class ArbVM {
     let messageTotals = [];
     let messageCoinNums = [];
 
-    let prevHash = '0x00';
+    let prevHash = "0x00";
     messageBisections = [prevHash];
     for (var i = 0; i < assertions.length; i++) {
-      messageBisections.push(await assertions[i].lastMessageHash(this.arbMachineLib, this.arbValueLib));
+      messageBisections.push(
+        await assertions[i].lastMessageHash(
+          this.arbMachineLib,
+          this.arbValueLib
+        )
+      );
       prevHash = assertions[i].lastMessage;
       afterHashes.push(assertions[i].afterHash);
       numSteps.push(assertions[i].numSteps);
-      var [totalVals, totalCoinNums] = assertions[i].generateBisectionStub(fullAssertion.tracker);
+      var [totalVals, totalCoinNums] = assertions[i].generateBisectionStub(
+        fullAssertion.tracker
+      );
       messageCoinCount.push(totalVals.length);
       for (var j = 0; j < totalVals.length; j++) {
         messageTotals.push(totalVals[j]);
-        messageCoinNums.push(totalCoinNums[j])
+        messageCoinNums.push(totalCoinNums[j]);
       }
     }
 
@@ -747,7 +895,7 @@ export class ArbVM {
       [fullAssertion.startTime, fullAssertion.endTime],
       fullAssertion.tracker.tokenTypes,
       fullAssertion.beforeValues,
-      {from:this.address}
+      { from: this.address }
     );
   }
 
@@ -769,17 +917,23 @@ export class ArbVM {
 
   async continueChallenge(assertionIndex) {
     if (this.bisectionPreconditionAssertions == null) {
-      throw("Cannot continue challenge if bisection has not been seen");
+      throw "Cannot continue challenge if bisection has not been seen";
     }
     let tree = await this.bisectionMerkleTree();
-    let proof = tree.getProofOrdered(tree.elements[assertionIndex], assertionIndex + 1, true);
-    this.pendingPreconditionAssertion = this.bisectionPreconditionAssertions[assertionIndex];
+    let proof = tree.getProofOrdered(
+      tree.elements[assertionIndex],
+      assertionIndex + 1,
+      true
+    );
+    this.pendingPreconditionAssertion = this.bisectionPreconditionAssertions[
+      assertionIndex
+    ];
     return this.challengeVerifier.continueChallenge(
       this.vmId,
       assertionIndex,
       proof,
       utils.bufferToHex(tree.elements[assertionIndex]),
-      {from:this.address}
+      { from: this.address }
     );
   }
 
@@ -788,29 +942,31 @@ export class ArbVM {
   }
 
   async _oneStepProof(assertion, proof) {
+    var tokenTypes = [];
+    var amounts = [];
+    if (assertion.messages.length == 1) {
+      tokenTypes.push(assertion.messages[0].tokenType);
+      amounts.push(assertion.messages[0].amount);
+    }
 
-      var tokenTypes = [];
-      var amounts = [];
-      if (assertion.messages.length == 1) {
-        tokenTypes.push(assertion.messages[0].tokenType);
-        amounts.push(assertion.messages[0].amount);
-      }
+    let lastMessageHash = await assertion.lastMessageHash(
+      this.arbMachineLib,
+      this.arbValueLib
+    );
 
-      let lastMessageHash = await assertion.lastMessageHash(this.arbMachineLib, this.arbValueLib);
-
-      let proofPromise = this.challengeVerifier.oneStepProof(
-        this.vmId,
-        [assertion.beforeHash, assertion.beforeInbox],
-        [assertion.startTime, assertion.endTime],
-        tokenTypes,
-        assertion.beforeValues,
-        [assertion.afterHash, assertion.firstMessageHash, lastMessageHash],
-        amounts,
-        proof,
-        {from: this.address}
-      );
-      this.pendingAssertion = null;
-      this.pendingPrecondition = null;
-      return proofPromise;
+    let proofPromise = this.challengeVerifier.oneStepProof(
+      this.vmId,
+      [assertion.beforeHash, assertion.beforeInbox],
+      [assertion.startTime, assertion.endTime],
+      tokenTypes,
+      assertion.beforeValues,
+      [assertion.afterHash, assertion.firstMessageHash, lastMessageHash],
+      amounts,
+      proof,
+      { from: this.address }
+    );
+    this.pendingAssertion = null;
+    this.pendingPrecondition = null;
+    return proofPromise;
   }
 }
