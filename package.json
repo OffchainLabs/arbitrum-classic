@@ -31,7 +31,8 @@
       "packages/arb-provider-truffle",
       "packages/arb-provider-web3",
       "packages/arb-compiler-evm/tests/sol-syscall",
-      "demos/*"
+      "demos/*",
+      "workspace/*"
     ]
   },
   "devDependencies": {

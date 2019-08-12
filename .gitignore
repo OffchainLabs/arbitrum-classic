@@ -16,6 +16,7 @@ packages/arb-compiler-evm/tests/sol-syscall/code.txt
 bridge_eth_addresses.json
 keys.json
 vconan
+/workspace
 
 # Logs
 logs

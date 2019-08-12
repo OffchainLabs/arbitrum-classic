@@ -1,4 +1,5 @@
 demos/
+workspace/
 arb-compiler-evm
 arb-provider-ethers
 arb-provider-go
