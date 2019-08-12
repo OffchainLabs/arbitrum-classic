@@ -11,6 +11,3 @@ eth-utils = "<2.0.0,>=1.2.0"
 networkx = "*"
 pycryptodome = "*"
 pyevmasm = "*"
-
-[requires]
-python_version = "3.6"

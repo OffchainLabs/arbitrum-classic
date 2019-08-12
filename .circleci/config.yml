@@ -15,7 +15,9 @@ jobs:
 
       - restore_cache:
           keys:
-            - go-mod-v2-{{ checksum "packages/arb-validator/go.sum" }}
+            - go-mod-v2-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+            - go-mod-v2-{{ .Branch }}-
+            - go-mod-v2-
       - restore_cache:
           keys:
             # when lock file changes, use increasingly general patterns to restore cache
@@ -24,7 +26,14 @@ jobs:
             - yarn-packages-v1-
       - restore_cache:
           keys:
-            - conan-packages-v1-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+            - conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+            - conan-packages-v1-{{ .Branch }}-
+            - conan-packages-v1-
+      - restore_cache:
+          key:
+            - python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+            - python-packages-v1-{{ .Branch }}-
+            - python-packages-v1-
       - run:
           name: build all
           command: |
@@ -45,6 +54,10 @@ jobs:
           paths:
             - ~/.conan/data
           key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+      - save_cache:
+          paths:
+            - ~/.local/lib/python3.7/site-packages
+          key: python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
       - run:
           name: test arb-avm-cpp
           command: |

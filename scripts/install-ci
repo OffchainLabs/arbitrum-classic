@@ -17,6 +17,6 @@ cd ../../..
 
 # Install arb-compiler-evm
 cd packages/arb-compiler-evm
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt --user
 python3 setup.py install --user
 cd ../..
