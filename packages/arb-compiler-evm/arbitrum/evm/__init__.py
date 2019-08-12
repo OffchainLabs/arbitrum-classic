@@ -14,6 +14,7 @@
 
 from . import compile
 from . import contract
+from . import contract_abi
 from . import execution
 
-__all__ = ["compile", "contract", "execution"]
+__all__ = ["compile", "contract", "contract_abi", "execution"]

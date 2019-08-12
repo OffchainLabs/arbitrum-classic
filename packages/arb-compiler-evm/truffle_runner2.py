@@ -13,22 +13,17 @@
 # limitations under the License.
 
 import json
-import arbitrum as arb
-import eth_utils
-from collections import Counter
-from arbitrum.instructions import OPS
 import sys
-from arbitrum.evm.contract import ArbContract, create_evm_vm
+
+import arbitrum as arb
+from arbitrum.evm.contract import create_evm_vm
+from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 
 
 def run_until_halt(vm):
-    log = []
     i = 0
-    push_counts = Counter()
     while True:
         try:
-            if vm.pc.op.get_op() == OPS["spush"]:
-                push_counts[vm.pc.path[-1][5:-1]] += 1
             run = arb.run_vm_once(vm)
             if not run:
                 print("Hit blocked insn")
@@ -40,12 +35,10 @@ def run_until_halt(vm):
             raise err
         if vm.halted:
             break
-    for log in vm.logs:
-        vm.output_handler(log)
+    logs = vm.logs
     vm.logs = []
     print("Ran VM for {} steps".format(i))
-    # print(push_counts)
-    return log
+    return logs
 
 
 def run_n_steps(vm, steps):
@@ -72,49 +65,27 @@ def make_msg_val(calldata):
 
 
 if __name__ == "__main__":
-    # tup = Tuple([Tuple([
-    #     Tuple(),
-    #     Tuple([Tuple(), Tuple(), Tuple(), Tuple(), Tuple(), Tuple(), Tuple(), 0]),
-    #     Tuple(),
-    #     Tuple(),
-    #     Tuple(),
-    #     Tuple(),
-    #     Tuple(),
-    #     1
-    # ]), 64])
-    # print(tup)
-    # print(sized_byterange.tohex(tup))
-    # print(int("0xada5013122d395ba3c54772283fb069b10426056ef8ca54750cb9bb552a59e7d", 0))
-    data = bytearray.fromhex(
-        "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000"
-    )
-    intHash = int.from_bytes(eth_utils.crypto.keccak(data), byteorder="big")
-    print(intHash)
-    print(hex(intHash))
-    # sys.exit(0)
     if len(sys.argv) != 2:
         raise Exception("Call as truffle_runner.py [compiled.json]")
 
     with open(sys.argv[1]) as json_file:
         raw_contracts = json.load(json_file)
 
-    contracts = [ArbContract(contract) for contract in raw_contracts]
+    contracts = [ContractABI(contract) for contract in raw_contracts]
     vm = create_evm_vm(contracts)
+    output_handler = create_output_handler(contracts)
     with open("code.txt", "w") as f:
         for instr in vm.code:
             f.write("{} {}".format(instr, instr.path))
             f.write("\n")
 
     elections = contracts[0]
-
-    print(elections._candidatesCount())
-    print(elections._candidates(1))
-    print(elections._candidates(2))
-
     # vm.env.send_message([elections.candidatesCount(), 2345, 0, 0, 0])
-    vm.env.send_message([make_msg_val(elections.candidates(14, 1)), 2345, 0, 0, 0])
-    vm.env.send_message([make_msg_val(elections.vote(14, 1)), 2345, 0, 0, 0])
-    vm.env.send_message([make_msg_val(elections.candidates(14, 1)), 2345, 0, 0, 0])
+    vm.env.send_message([make_msg_val(elections.candidates(14, 1)), 2345, 0, 0])
+    vm.env.send_message([make_msg_val(elections.vote(16, 1)), 2345, 0, 0])
+    vm.env.send_message([make_msg_val(elections.candidates(18, 1)), 2345, 0, 0])
     # vm.env.send_message([elections.candidates(2), 2345, 0, 0, 0])
     vm.env.deliver_pending()
-    run_until_halt(vm)
+    logs = run_until_halt(vm)
+    for log in logs:
+        print(output_handler(log))

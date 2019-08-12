@@ -4,13 +4,14 @@ import argparse
 import json
 import pkg_resources
 
-from arbitrum.evm.contract import ArbContract, create_evm_vm
+from arbitrum.evm.contract import Contract, create_evm_vm
 from arbitrum.marshall import marshall_vm
 
 NAME = "arb-compiler-evm"
 __version__ = pkg_resources.require(NAME)[0].version
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "input_file", help="Json file generated with evm code produced by truffle"
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     with open(args.input_file) as json_file:
         raw_contracts = json.load(json_file)
 
-    contracts = [ArbContract(contract) for contract in raw_contracts]
+    contracts = [Contract(contract) for contract in raw_contracts]
     for contract in contracts:
         print(contract.name, contract.address)
     vm = create_evm_vm(contracts, not args.optimize_off)
@@ -50,3 +51,7 @@ if __name__ == "__main__":
             for instr in vm.code:
                 f.write("{} {}".format(instr, instr.path))
                 f.write("\n")
+
+
+if __name__ == "__main__":
+    main()

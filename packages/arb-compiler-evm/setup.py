@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="arb-compiler-evm",
@@ -22,18 +22,17 @@ setup(
     author="Offchain Labs, Inc.",
     author_email="harry@offchainlabs.com",
     license="Apache-2.0",
-    packages=["arbitrum", "arbitrum.std", "arbitrum.evm"],
+    packages=find_packages(),
     zip_safe=False,
     scripts=["bin/arbc-truffle"],
     test_suite="nose.collector",
     tests_require=["nose"],
     python_requires=">=3.6",
     install_requires=[
-        "eth-utils",
-        "eth-abi>=2.0.0b0",
+        "eth-utils<2.0.0,>=1.2.0",
+        "eth-abi>=2.0.0",
         "pyevmasm",
-        "web3>=5.0.0b1",
-        "py-solc-x",
         "networkx",
+        "pycryptodome",
     ],
 )

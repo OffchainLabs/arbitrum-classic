@@ -12,24 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-import arbitrum as arb
 import eth_utils
-from collections import Counter
-from arbitrum.instructions import OPS
+import json
 import sys
-from arbitrum.evm.contract import ArbContract, create_evm_vm
+
+import arbitrum as arb
+from arbitrum.evm.contract import create_evm_vm
+from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 
 
 def run_until_halt(vm):
-    log = []
     i = 0
-    push_counts = Counter()
     while True:
-        # print(vm.pc, repr(vm.stack[:1])[:50])
         try:
-            if vm.pc.op.get_op() == OPS["spush"]:
-                push_counts[vm.pc.path[-1][5:-1]] += 1
             run = arb.run_vm_once(vm)
             if not run:
                 print("Hit blocked insn")
@@ -41,28 +36,26 @@ def run_until_halt(vm):
             raise err
         if vm.halted:
             break
-    for log in vm.logs:
-        vm.output_handler(log)
+    logs = vm.logs
     vm.logs = []
     print("Ran VM for {} steps".format(i))
-    print("VM sent messages {}".format(vm.sent_messages))
-    # print(push_counts)
-    return log
+    return logs
 
 
 def make_msg_val(calldata):
     return arb.value.Tuple([calldata, 0, 0, 0])
 
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) != 2:
         raise Exception("Call as truffle_runner.py [compiled.json]")
 
     with open(sys.argv[1]) as json_file:
         raw_contracts = json.load(json_file)
 
-    contracts = [ArbContract(contract) for contract in raw_contracts]
-    vm = create_evm_vm(contracts, False)
+    contracts = [ContractABI(contract) for contract in raw_contracts]
+    vm = create_evm_vm(contracts)
+    output_handler = create_output_handler(contracts)
     with open("code.txt", "w") as f:
         for instr in vm.code:
             f.write("{} {}".format(instr, instr.path))
@@ -110,4 +103,10 @@ if __name__ == "__main__":
     )
 
     vm.env.deliver_pending()
-    run_until_halt(vm)
+    logs = run_until_halt(vm)
+    for log in logs:
+        print(output_handler(log))
+
+
+if __name__ == "__main__":
+    main()

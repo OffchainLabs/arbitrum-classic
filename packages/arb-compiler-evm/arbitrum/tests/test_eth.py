@@ -1,11 +1,26 @@
+# Copyright 2019, Offchain Labs, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import eth_utils
+from pyevmasm import instruction_tables, assemble_hex, assemble_one, disassemble_one
+import random
 from unittest import TestCase
 
 from arbitrum import run_vm_once, value
-from arbitrum.evm.contract import ArbContract, create_evm_vm, EVMCall, EVMInvalid
-
-from pyevmasm import instruction_tables, assemble_hex, assemble_one, disassemble_one
-import eth_utils
-import random
+from arbitrum.evm.contract import create_evm_vm
+from arbitrum.evm.contract_abi import ContractABI, create_output_handler
+from arbitrum.evm.log import EVMCall, EVMInvalid
 
 
 def make_msg_val(calldata):
@@ -65,7 +80,7 @@ def make_evm_codecopy_code(offset, length, address):
 
 
 def make_contract(evm_code, return_type):
-    return ArbContract(
+    return ContractABI(
         {
             "address": "0x895521964D724c8362A36608AAf09A3D7d0A0445",
             "abi": [
@@ -86,11 +101,11 @@ def make_contract(evm_code, return_type):
     )
 
 
-def create_many_contract_vm(contract_a):
+def create_many_contracts(contract_a):
     contracts = [contract_a]
-    for i in range(10):
+    for _ in range(10):
         contracts.append(
-            ArbContract(
+            ContractABI(
                 {
                     "address": eth_utils.to_checksum_address(
                         random.getrandbits(8 * 20).to_bytes(20, byteorder="big").hex()
@@ -102,7 +117,7 @@ def create_many_contract_vm(contract_a):
                 }
             )
         )
-    return create_evm_vm(contracts)
+    return contracts
 
 
 class TestEVM(TestCase):
@@ -114,13 +129,15 @@ class TestEVM(TestCase):
         )
         code_size = len(evm_code) + sum(op.operand_size for op in evm_code)
         contract_a = make_contract(evm_code, "uint256")
-        vm = create_many_contract_vm(contract_a)
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMCall)
         self.assertEqual(parsed_out.output_values[0], code_size)
 
@@ -128,13 +145,15 @@ class TestEVM(TestCase):
         instruction_table = instruction_tables["byzantium"]
         evm_code = make_evm_ext_code(instruction_table["EXTCODESIZE"], "0x9999")
         contract_a = make_contract(evm_code, "uint256")
-        vm = create_many_contract_vm(contract_a)
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMInvalid)
 
     def test_codehash_succeed(self):
@@ -147,26 +166,30 @@ class TestEVM(TestCase):
             eth_utils.crypto.keccak(hexstr=hex_code), byteorder="big"
         )
         contract_a = make_contract(evm_code, "uint256")
-        vm = create_many_contract_vm(contract_a)
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMCall)
         self.assertEqual(parsed_out.output_values[0], code_hash)
 
     def test_codehash_fail(self):
         evm_code = make_evm_ext_code(disassemble_one(bytes.fromhex("3f")), "0x9999")
         contract_a = make_contract(evm_code, "uint256")
-        vm = create_many_contract_vm(contract_a)
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMInvalid)
 
     def test_codecopy_succeed(self):
@@ -177,13 +200,15 @@ class TestEVM(TestCase):
         )
         hex_code = assemble_hex(evm_code)
         contract_a = make_contract(evm_code, "bytes")
-        vm = create_many_contract_vm(contract_a)
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMCall)
         self.assertEqual(
             parsed_out.output_values[0].hex(),
@@ -195,13 +220,15 @@ class TestEVM(TestCase):
         length = 80
         evm_code = make_evm_codecopy_code(offset, length, "0x9999")
         contract_a = make_contract(evm_code, "bytes")
-        vm = create_evm_vm([contract_a])
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMInvalid)
 
     def test_balance_succeed(self):
@@ -210,13 +237,15 @@ class TestEVM(TestCase):
             instruction_table["BALANCE"], "0x895521964D724c8362A36608AAf09A3D7d0A0445"
         )
         contract_a = make_contract(evm_code, "uint256")
-        vm = create_many_contract_vm(contract_a)
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMCall)
         self.assertEqual(parsed_out.output_values[0], 62244)
 
@@ -224,11 +253,13 @@ class TestEVM(TestCase):
         instruction_table = instruction_tables["byzantium"]
         evm_code = make_evm_ext_code(instruction_table["BALANCE"], "0x9999")
         contract_a = make_contract(evm_code, "uint256")
-        vm = create_many_contract_vm(contract_a)
+        contracts = create_many_contracts(contract_a)
+        vm = create_evm_vm(contracts)
+        output_handler = create_output_handler(contracts)
         vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
-        parsed_out = vm.output_handler(val)
+        parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMInvalid)

@@ -27,10 +27,9 @@ class AVMOp:
 
 
 class VM(BasicVM):
-    def __init__(self, code=None, output_handler=None):
+    def __init__(self, code=None):
         super(VM, self).__init__()
         self.code = code
-        self.output_handler = output_handler
 
         self.ops = {}
         for (op_name, op_code, pop_count, push_count) in OP_CODES:
