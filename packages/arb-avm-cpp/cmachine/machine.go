@@ -71,8 +71,8 @@ func (m *Machine) InboxHash() value.HashOnlyValue {
 	return value.NewHashOnlyValue(hash, 0)
 }
 
-func (m *Machine) HasPendingMessages() bool {
-	return C.machineHasPendingMessages(m.c) != 0
+func (m *Machine) PendingMessageCount() uint64 {
+	return uint64(C.machinePendingMessageCount(m.c))
 }
 
 func (m *Machine) SendOnchainMessage(msg protocol.Message) {

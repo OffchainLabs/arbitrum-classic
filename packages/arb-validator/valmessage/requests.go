@@ -47,15 +47,8 @@ type UnanimousRequest struct {
 }
 
 type UnanimousUpdateResults struct {
-	SequenceNum       uint64
-	BeforeHash        [32]byte
-	TimeBounds        protocol.TimeBounds
-	NewInboxHash      [32]byte
-	OriginalInboxHash [32]byte
-	Assertion         *protocol.Assertion
-}
-
-type VMStateData struct {
-	MachineState [32]byte
-	Config       VMConfiguration
+	UnanimousRequestData
+	NewInboxHash [32]byte
+	Assertion    *protocol.Assertion
+	NewLogCount  int
 }

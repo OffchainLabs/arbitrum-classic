@@ -18,6 +18,7 @@ package coordinator
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
@@ -82,20 +83,29 @@ func NewServer(
 		log.Fatal(err)
 	}
 
-	tx, err := man.Val.DepositFunds(escrowRequired)
-	if err != nil {
-		log.Fatal(err, tx)
-	}
-
 	if err := man.Run(); err != nil {
 		log.Fatalln(err)
 	}
+
+	receiptChan, errChan := man.Val.DepositFunds(context.Background(), escrowRequired)
+	select {
+	case receipt := <-receiptChan:
+		if receipt.Status == 0 {
+			log.Fatalln("Coordinator could not deposit funds")
+		}
+	case err := <-errChan:
+		log.Fatal(err)
+	}
+
 	log.Println("Coordinator is trying to create the VM")
 
-	retChan, errChan := man.CreateVM(time.Second * 60)
+	receiptChan, errChan = man.CreateVM(time.Second * 60)
 
 	select {
-	case <-retChan:
+	case receipt := <-receiptChan:
+		if receipt.Status == 0 {
+			log.Fatalln("Coordinator failed to create VM")
+		}
 		log.Println("Coordinator created VM")
 	case err := <-errChan:
 		log.Fatalf("Failed to create vm: %v", err)

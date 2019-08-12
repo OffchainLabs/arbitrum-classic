@@ -17,42 +17,13 @@
 package state
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 )
 
-type UnanimousUpdateRequest struct {
-	valmessage.UnanimousRequestData
-
-	NewMessages []protocol.Message
-
-	Machine   machine.Machine
-	Assertion *protocol.Assertion
-
-	ResultChan chan<- valmessage.UnanimousUpdateResults
-	ErrChan    chan<- error
-}
-
 type DisputableAssertionRequest struct {
-	AfterState   machine.Machine
+	AfterCore    *core.Core
 	Precondition *protocol.Precondition
 	Assertion    *protocol.Assertion
 	ResultChan   chan<- bool
-}
-
-func (r DisputableAssertionRequest) GetPrecondition() *protocol.Precondition {
-	return r.Precondition
-}
-
-func (r DisputableAssertionRequest) NotifyInvalid() {
-	go func() {
-		r.ResultChan <- false
-	}()
-}
-
-func (r DisputableAssertionRequest) NotifyAccepted() {
-	go func() {
-		r.ResultChan <- true
-	}()
 }

@@ -42,6 +42,35 @@ struct Assertion {
     std::vector<value> logs;
 };
 
+struct MessageStack {
+    Tuple messages;
+    uint64_t messageCount;
+    TuplePool& pool;
+
+    MessageStack(TuplePool& pool_) : pool(pool_) {}
+
+    bool isEmpty() const { return messageCount == 0; }
+
+    void addMessage(const Message& msg) {
+        messages =
+            Tuple{uint256_t{0}, std::move(messages), msg.toValue(pool), &pool};
+        messageCount++;
+    }
+
+    void addMessageStack(MessageStack&& stack) {
+        if (!stack.isEmpty()) {
+            messages = Tuple(uint256_t(1), std::move(messages),
+                             std::move(stack.messages), &pool);
+            messageCount += stack.messageCount;
+        }
+    }
+
+    void clear() {
+        messages = Tuple{};
+        messageCount = 0;
+    }
+};
+
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
     std::vector<CodePoint> code;
@@ -52,9 +81,9 @@ struct MachineState {
     Status state = Status::Extensive;
     uint64_t pc = 0;
     CodePoint errpc;
-    Tuple pendingInbox;
+    MessageStack pendingInbox;
     AssertionContext context;
-    Tuple inbox;
+    MessageStack inbox;
     BalanceTracker balance;
 
     MachineState();
@@ -63,15 +92,12 @@ struct MachineState {
 
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
-    bool hasPendingMessages() const;
+    uint64_t pendingMessageCount() const;
     void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();
     void sendOffchainMessages(const std::vector<Message>& messages);
     void runOp(OpCode opcode);
     uint256_t hash() const;
-
-   private:
-    void deliverMessageStack(Tuple&& messages);
 };
 
 class Machine {
@@ -88,9 +114,9 @@ class Machine {
     int runOne();
     uint256_t hash() const { return m.hash(); }
     std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
-    bool hasPendingMessages() const { return m.hasPendingMessages(); }
+    uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }
 
-    uint256_t inboxHash() const { return ::hash(m.inbox); }
+    uint256_t inboxHash() const { return ::hash(m.inbox.messages); }
 
     void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();

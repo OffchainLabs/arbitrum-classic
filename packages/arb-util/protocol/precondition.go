@@ -152,7 +152,7 @@ func (pre *Precondition) Hash() [32]byte {
 		solsha3.Uint64(pre.TimeBounds[0]),
 		solsha3.Uint64(pre.TimeBounds[1]),
 		solsha3.Bytes32(pre.BeforeInbox.Hash()),
-		tokenTypeArrayEncoded(tokenTypes),
+		TokenTypeArrayEncoded(tokenTypes),
 		solsha3.Uint256Array(pre.BeforeBalance.TokenAmounts),
 	)
 	copy(ret[:], hashVal)

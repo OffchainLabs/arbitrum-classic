@@ -17,6 +17,7 @@
 package ethvalidator
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/tls"
@@ -26,6 +27,8 @@ import (
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -219,6 +222,7 @@ func (m *ClientManager) Run() {
 }
 
 func (m *ClientManager) gatherSignatures(
+	ctx context.Context,
 	request *valmessage.ValidatorRequest,
 	requestID [32]byte,
 ) []LabeledFollowerResponse {
@@ -230,31 +234,29 @@ func (m *ClientManager) gatherSignatures(
 		requestID,
 	}
 	responseList := make([]LabeledFollowerResponse, 0, len(m.validators)-1)
-	timer := time.NewTimer(20 * time.Second)
-	timedOut := false
-	defer timer.Stop()
+Loop:
 	for {
 		select {
 		case response := <-responseChan:
 			responseList = append(responseList, response)
-		case <-timer.C:
-			log.Println("Coordinator timed out gathering signatures")
-			timedOut = true
+		case <-ctx.Done():
+			log.Println("Coordinator cancelled gathering signatures")
+			break Loop
 		}
-		if len(responseList) == len(m.validators)-1 || timedOut {
+		if len(responseList) == len(m.validators)-1 {
 			break
 		}
 	}
 	return responseList
 }
 
-func (m *ClientManager) WaitForFollowers(timeout time.Duration) bool {
+func (m *ClientManager) WaitForFollowers(ctx context.Context) bool {
 	waitChan := make(chan bool, 1)
 	m.waitRequestChan <- waitChan
 	select {
 	case <-waitChan:
 		return true
-	case <-time.After(timeout):
+	case <-ctx.Done():
 		return false
 	}
 }
@@ -265,55 +267,51 @@ type OffchainMessage struct {
 	Signature []byte
 }
 
-func (m *MessageProcessingQueue) Fetch() chan []OffchainMessage {
-	retChan := make(chan []OffchainMessage, 1)
-	m.requests <- retChan
-	return retChan
-}
-
-func (m *MessageProcessingQueue) HasMessages() chan bool {
-	retChan := make(chan bool, 1)
-	m.requests <- retChan
-	return retChan
-}
-
-func (m *MessageProcessingQueue) Return(messages []OffchainMessage) {
-	m.requests <- messages
-}
-
-func (m *MessageProcessingQueue) Send(message OffchainMessage) {
-	m.requests <- message
-}
-
 type MessageProcessingQueue struct {
 	queuedMessages []OffchainMessage
-	requests       chan interface{}
+	actions        chan func(*MessageProcessingQueue)
 }
 
 func NewMessageProcessingQueue() *MessageProcessingQueue {
 	return &MessageProcessingQueue{
 		queuedMessages: make([]OffchainMessage, 0),
-		requests:       make(chan interface{}, 10),
+		actions:        make(chan func(*MessageProcessingQueue), 10),
+	}
+}
+
+func (m *MessageProcessingQueue) Fetch() chan []OffchainMessage {
+	retChan := make(chan []OffchainMessage, 1)
+	m.actions <- func(m *MessageProcessingQueue) {
+		retChan <- m.queuedMessages
+		m.queuedMessages = nil
+	}
+	return retChan
+}
+
+func (m *MessageProcessingQueue) HasMessages() chan bool {
+	retChan := make(chan bool, 1)
+	m.actions <- func(m *MessageProcessingQueue) {
+		retChan <- len(m.queuedMessages) > 0
+	}
+	return retChan
+}
+
+func (m *MessageProcessingQueue) Return(messages []OffchainMessage) {
+	m.actions <- func(m *MessageProcessingQueue) {
+		m.queuedMessages = append(messages, m.queuedMessages...)
+	}
+}
+
+func (m *MessageProcessingQueue) Send(message OffchainMessage) {
+	m.actions <- func(m *MessageProcessingQueue) {
+		m.queuedMessages = append(m.queuedMessages, message)
 	}
 }
 
 func (m *MessageProcessingQueue) run() {
 	go func() {
-		for {
-			request := <-m.requests
-			switch request := request.(type) {
-			case chan []OffchainMessage:
-				request <- m.queuedMessages
-				m.queuedMessages = nil
-			case []OffchainMessage:
-				m.queuedMessages = append(request, m.queuedMessages...)
-			case OffchainMessage:
-				m.queuedMessages = append(m.queuedMessages, request)
-			case chan bool:
-				request <- len(m.queuedMessages) > 0
-			default:
-				log.Fatalf("Unhandled request type %T\n", request)
-			}
+		for action := range m.actions {
+			action(m)
 		}
 	}()
 }
@@ -322,7 +320,7 @@ type ValidatorCoordinator struct {
 	Val *EthValidator
 	cm  *ClientManager
 
-	requestChan chan ValidatorLeaderRequest
+	actions chan func(*ValidatorCoordinator)
 
 	mpq               *MessageProcessingQueue
 	maxStepsUnanSteps int32
@@ -352,7 +350,7 @@ func NewCoordinator(
 	return &ValidatorCoordinator{
 		Val:               c,
 		cm:                NewClientManager(key, vmID, c.Validators),
-		requestChan:       make(chan ValidatorLeaderRequest, 10),
+		actions:           make(chan func(*ValidatorCoordinator), 10),
 		mpq:               NewMessageProcessingQueue(),
 		maxStepsUnanSteps: maxStepsUnanSteps,
 	}, nil
@@ -376,58 +374,53 @@ func (m *ValidatorCoordinator) Run() error {
 		return err
 	}
 	go func() {
-		pendingForProcessing := false
 		for {
 			select {
-			case request := <-m.requestChan:
-				switch request := request.(type) {
-				case CoordinatorCreateRequest:
-					ret, err := m.createVMImpl(request.timeout)
-					if err != nil {
-						request.errChan <- err
-					} else {
-						request.retChan <- ret
-					}
-				case CoordinatorDisputableRequest:
-					request.retChan <- m.initiateDisputableAssertionImpl()
-				case CoordinatorUnanimousRequest:
-					err := m.initiateUnanimousAssertionImpl(request.final, m.maxStepsUnanSteps)
-					if err != nil {
-						request.errChan <- err
-					} else {
-						pendingForProcessing = false
-						request.retChan <- request.final
-					}
-				}
+			case action := <-m.actions:
+				action(m)
 			case <-time.After(time.Second):
 				shouldUnan := false
 				forceFinal := false
-				newPending := false
-				if <-m.Val.Bot.HasPendingMessages() {
+				pendingCount := <-m.Val.Bot.PendingMessageCount()
+				if pendingCount > 0 {
 					// Force onchain assertion if there are pending on chain messages, then force an offchain assertion
 					shouldUnan = true
 					forceFinal = true
-					newPending = true
-				} else if <-m.mpq.HasMessages() || pendingForProcessing {
+				} else if <-m.mpq.HasMessages() || m.Val.unprocessedMessageCount > 0 {
 					shouldUnan = true
-					forceFinal = false
-					newPending = false
 				}
 
 				if shouldUnan {
-					err := m.initiateUnanimousAssertionImpl(forceFinal, m.maxStepsUnanSteps)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+					err := m.initiateUnanimousAssertionImpl(ctx, forceFinal, m.maxStepsUnanSteps)
+					cancel()
 					if err != nil {
-						log.Println("Coordinator hit problem and is closing channel")
-						closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
-
-						closed := <-closedChan
-						if closed {
-							log.Println("Coordinator successfully closed channel")
+						log.Println("Coordinator hit problem unanimously asserting")
+						if <-m.Val.Bot.HasOpenAssertion() {
+							log.Println("Coordinator is closing channel")
+							closedChan, errChan := m.Val.Bot.CloseUnanimousAssertionRequest()
+							select {
+							case _ = <-closedChan:
+								log.Println("Coordinator successfully closed channel")
+							case err := <-errChan:
+								log.Println("Coordinator failed to close channel", err)
+							}
 						} else {
-							log.Println("Coordinator failed to close channel")
+							log.Println("Coordinator is creating a disputable assertion")
+							// Get the message on-chain (in the inbox)
+							// Do the disputable assertion
+							messages := <-m.mpq.Fetch()
+							for _, msg := range messages {
+								receiptChan, errChan := m.Val.ForwardMessage(context.Background(), msg.Message.Data, msg.Message.TokenType, msg.Message.Currency, msg.Signature)
+								select {
+								case _ = <-receiptChan:
+								case err := <-errChan:
+									log.Fatalln("ForwardMessage err", err)
+								}
+							}
+							m.initiateDisputableAssertionImpl()
 						}
-					} else {
-						pendingForProcessing = newPending
+
 					}
 				}
 			}
@@ -436,46 +429,58 @@ func (m *ValidatorCoordinator) Run() error {
 	return nil
 }
 
-type CoordinatorCreateRequest struct {
-	timeout time.Duration
-	retChan chan bool
-	errChan chan error
-}
-
-type CoordinatorDisputableRequest struct {
-	retChan chan bool
-}
-
 type CoordinatorUnanimousRequest struct {
 	final   bool
 	retChan chan bool
 	errChan chan error
 }
 
-func (m *ValidatorCoordinator) CreateVM(timeout time.Duration) (chan bool, chan error) {
-	retChan := make(chan bool, 1)
+func (m *ValidatorCoordinator) CreateVM(timeout time.Duration) (chan *types.Receipt, chan error) {
+	retChan := make(chan *types.Receipt, 1)
 	errChan := make(chan error, 1)
-	m.requestChan <- CoordinatorCreateRequest{timeout, retChan, errChan}
+	m.actions <- func(m *ValidatorCoordinator) {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ret, err := m.createVMImpl(ctx)
+		cancel()
+
+		if err != nil {
+			errChan <- err
+		} else {
+			retChan <- ret
+		}
+	}
 	return retChan, errChan
 }
 
 func (m *ValidatorCoordinator) InitiateDisputableAssertion() chan bool {
-	resChan := make(chan bool, 1)
-	m.requestChan <- CoordinatorDisputableRequest{resChan}
-	return resChan
+	retChan := make(chan bool, 1)
+	m.actions <- func(m *ValidatorCoordinator) {
+		retChan <- m.initiateDisputableAssertionImpl()
+	}
+
+	return retChan
 }
 
 func (m *ValidatorCoordinator) InitiateUnanimousAssertion(final bool) (chan bool, chan error) {
 	retChan := make(chan bool, 1)
 	errChan := make(chan error, 1)
-	m.requestChan <- CoordinatorUnanimousRequest{final, retChan, errChan}
+	m.actions <- func(m *ValidatorCoordinator) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+		err := m.initiateUnanimousAssertionImpl(ctx, final, m.maxStepsUnanSteps)
+		cancel()
+		if err != nil {
+			errChan <- err
+		} else {
+			retChan <- true
+		}
+	}
 	return retChan, errChan
 }
 
-func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error) {
-	gotAll := m.cm.WaitForFollowers(timeout)
+func (m *ValidatorCoordinator) createVMImpl(ctx context.Context) (*types.Receipt, error) {
+	gotAll := m.cm.WaitForFollowers(ctx)
 	if !gotAll {
-		return false, errors.New("coordinator can only create VM when connected to all other validators")
+		return nil, errors.New("coordinator can only create VM when connected to all other validators")
 	}
 
 	notifyFollowers := func(allSigned bool) {
@@ -498,6 +503,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 	createHash := hashing.CreateVMHash(createData)
 
 	responses := m.cm.gatherSignatures(
+		ctx,
 		&valmessage.ValidatorRequest{
 			Request: &valmessage.ValidatorRequest_Create{Create: createData},
 		},
@@ -505,24 +511,43 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 	)
 	if len(responses) != m.Val.ValidatorCount()-1 {
 		notifyFollowers(false)
-		return false, errors.New("some Validators didn't respond")
+		return nil, errors.New("some Validators didn't respond")
 	}
 
 	signatures := make([][]byte, m.Val.ValidatorCount())
 	var err error
 	signatures[m.Val.Validators[m.Val.Address()].indexNum], err = m.Val.Sign(createHash)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	for _, response := range responses {
 		r := response.response.Response.(*valmessage.FollowerResponse_Create).Create
 		if !r.Accepted {
-			return false, errors.New("some Validators refused to sign")
+			return nil, errors.New("some Validators refused to sign")
 		}
 		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
 	}
-	_, err = m.Val.CreateVM(createData, signatures)
-	return true, err
+
+	// Check all validators have deposited the required escrow amount
+	var tokenContract common.Address
+	copy(tokenContract[:], stateData.Config.EscrowCurrency.Value)
+	escrowRequired := value.NewBigIntFromBuf(stateData.Config.EscrowRequired)
+	var user [32]byte
+	for address := range m.Val.Validators {
+		copy(user[:], address[:])
+		if err := m.Val.WaitForTokenBalance(ctx, user, tokenContract, escrowRequired); err != nil {
+			return nil, fmt.Errorf("validator %v has insufficient balance",
+				hexutil.Encode(user[:]))
+		}
+	}
+
+	receiptChan, errChan := m.Val.CreateVM(ctx, createData, signatures)
+	select {
+	case receipt := <-receiptChan:
+		return receipt, nil
+	case err := <-errChan:
+		return nil, err
+	}
 }
 
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
@@ -538,173 +563,170 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	return res
 }
 
-func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(forceFinal bool, maxSteps int32) error {
+func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Context, forceFinal bool, maxSteps int32) error {
 	queuedMessages := <-m.mpq.Fetch()
 
-	wasFinal, err := m._initiateUnanimousAssertionImpl(queuedMessages, forceFinal, maxSteps)
+	err := func() error {
+		log.Println("Coordinator making unanimous assertion with", len(queuedMessages), "messages")
+		newMessages := make([]protocol.Message, 0, len(queuedMessages))
+		messageHashes := make([][]byte, 0, len(newMessages))
+		for _, msg := range queuedMessages {
+			newMessages = append(newMessages, msg.Message)
+			messageHashes = append(messageHashes, msg.Hash)
+		}
+
+		// Force onchain assertion if there are outgoing messages
+		shouldFinalize := func(a *protocol.Assertion) bool {
+			return len(a.OutMsgs) > 0
+		}
+
+		start := time.Now()
+		requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, messageHashes, forceFinal, maxSteps, shouldFinalize)
+		responsesChan := make(chan []LabeledFollowerResponse, 1)
+
+		var unanRequest valmessage.UnanimousRequest
+		select {
+		case unanRequest = <-requestChan:
+			break
+		case err := <-unanErrChan:
+			return err
+		}
+
+		requestMessages := make([]*valmessage.SignedMessage, 0, len(unanRequest.NewMessages))
+		for i, msg := range unanRequest.NewMessages {
+			requestMessages = append(requestMessages, &valmessage.SignedMessage{
+				Message:   protocol.NewMessageBuf(msg),
+				Signature: queuedMessages[i].Signature,
+			})
+		}
+		hashID := unanRequest.Hash()
+
+		notifyFollowers := func(msg *valmessage.UnanimousAssertionValidatorNotification) {
+			m.cm.broadcast <- &valmessage.ValidatorRequest{
+				RequestId: value.NewHashBuf(hashID),
+				Request:   &valmessage.ValidatorRequest_UnanimousNotification{UnanimousNotification: msg},
+			}
+		}
+
+		go func() {
+			request := &valmessage.UnanimousAssertionValidatorRequest{
+				BeforeHash:     value.NewHashBuf(unanRequest.BeforeHash),
+				BeforeInbox:    value.NewHashBuf(unanRequest.BeforeInbox),
+				SequenceNum:    unanRequest.SequenceNum,
+				TimeBounds:     protocol.NewTimeBoundsBuf(unanRequest.TimeBounds),
+				SignedMessages: requestMessages,
+			}
+			responsesChan <- m.cm.gatherSignatures(
+				ctx,
+				&valmessage.ValidatorRequest{
+					RequestId: value.NewHashBuf(hashID),
+					Request: &valmessage.ValidatorRequest_Unanimous{
+						Unanimous: request,
+					},
+				},
+				hashID,
+			)
+		}()
+
+		var unanUpdate valmessage.UnanimousUpdateResults
+		select {
+		case unanUpdate = <-resultsChan:
+			break
+		case err := <-unanErrChan:
+			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
+				Accepted: false,
+			})
+			return err
+		}
+
+		unanHash, err := m.Val.UnanimousAssertHash(
+			unanUpdate.SequenceNum,
+			unanUpdate.BeforeHash,
+			unanUpdate.TimeBounds,
+			unanUpdate.NewInboxHash,
+			unanUpdate.BeforeInbox,
+			unanUpdate.Assertion,
+		)
+		if err != nil {
+			log.Println("Coordinator failed to hash unanimous assertion")
+			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
+				Accepted: false,
+			})
+			return err
+		}
+		sig, err := m.Val.Sign(unanHash)
+		if err != nil {
+			log.Println("Coordinator failed to sign unanimous assertion")
+			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
+				Accepted: false,
+			})
+			return err
+		}
+
+		responses := <-responsesChan
+		if len(responses) != m.Val.ValidatorCount()-1 {
+			log.Println("Coordinator failed to collect unanimous assertion sigs")
+			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
+				Accepted: false,
+			})
+			return errors.New("some Validators didn't respond")
+		}
+
+		signatures := make([][]byte, m.Val.ValidatorCount())
+		signatures[m.Val.Validators[m.Val.Address()].indexNum] = sig
+		for _, response := range responses {
+			r := response.response.Response.(*valmessage.FollowerResponse_Unanimous).Unanimous
+			if !r.Accepted {
+				notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
+					Accepted: false,
+				})
+				return errors.New("some Validators refused to sign")
+			}
+			if value.NewHashFromBuf(r.AssertionHash) != unanHash {
+				notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
+					Accepted: false,
+				})
+				return errors.New("some Validators signed the wrong assertion")
+			}
+			signatures[m.Val.Validators[response.address].indexNum] = r.Signature
+		}
+
+		elapsed := time.Since(start)
+		log.Printf("Coordinator succeeded signing unanimous assertion in %s\n", elapsed)
+		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
+			Accepted:   true,
+			Signatures: signatures,
+		})
+
+		confRetChan, confErrChan := m.Val.Bot.ConfirmOffchainUnanimousAssertion(
+			unanUpdate.UnanimousRequestData,
+			signatures,
+			true,
+		)
+
+		wasFinal := unanUpdate.SequenceNum == math.MaxUint64
+
+		if wasFinal {
+			log.Println("Coordinator is closing unanimous assertion")
+		} else {
+			log.Println("Coordinator is keeping unanimous assertion chain open")
+		}
+
+		select {
+		case <-confRetChan:
+			if wasFinal {
+				log.Println("Coordinator successfully closed channel")
+			}
+		case err := <-confErrChan:
+			log.Println("Coordinator failed to complete assertion", err)
+			return err
+		}
+		return nil
+	}()
+
 	if err != nil {
 		m.mpq.Return(queuedMessages)
 		return err
 	}
-
-	if wasFinal {
-		log.Println("Coordinator is closing unanimous assertion")
-		closedChan := m.Val.Bot.CloseUnanimousAssertionRequest()
-
-		closed := <-closedChan
-		if closed {
-			log.Println("Coordinator successfully closed channel")
-		} else {
-			log.Println("Coordinator failed to close channel")
-		}
-	} else {
-		log.Println("Coordinator is keeping unanimous assertion chain open")
-	}
 	return nil
-}
-
-func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []OffchainMessage, forceFinal bool, maxSteps int32) (bool, error) {
-	log.Println("Coordinator making unanimous assertion with", len(queuedMessages), "messages")
-	newMessages := make([]protocol.Message, 0, len(queuedMessages))
-	messageHashes := make([][]byte, 0, len(newMessages))
-	for _, msg := range queuedMessages {
-		newMessages = append(newMessages, msg.Message)
-		messageHashes = append(messageHashes, msg.Hash)
-	}
-
-	start := time.Now()
-	requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, messageHashes, forceFinal, maxSteps)
-	responsesChan := make(chan []LabeledFollowerResponse, 1)
-
-	var unanRequest valmessage.UnanimousRequest
-	select {
-	case unanRequest = <-requestChan:
-		break
-	case err := <-unanErrChan:
-		return false, err
-	}
-
-	requestMessages := make([]*valmessage.SignedMessage, 0, len(unanRequest.NewMessages))
-	for i, msg := range unanRequest.NewMessages {
-		requestMessages = append(requestMessages, &valmessage.SignedMessage{
-			Message:   protocol.NewMessageBuf(msg),
-			Signature: queuedMessages[i].Signature,
-		})
-	}
-	hashID := unanRequest.Hash()
-
-	notifyFollowers := func(msg *valmessage.UnanimousAssertionValidatorNotification) {
-		m.cm.broadcast <- &valmessage.ValidatorRequest{
-			RequestId: value.NewHashBuf(hashID),
-			Request:   &valmessage.ValidatorRequest_UnanimousNotification{UnanimousNotification: msg},
-		}
-	}
-
-	go func() {
-		request := &valmessage.UnanimousAssertionValidatorRequest{
-			BeforeHash:     value.NewHashBuf(unanRequest.BeforeHash),
-			BeforeInbox:    value.NewHashBuf(unanRequest.BeforeInbox),
-			SequenceNum:    unanRequest.SequenceNum,
-			TimeBounds:     protocol.NewTimeBoundsBuf(unanRequest.TimeBounds),
-			SignedMessages: requestMessages,
-		}
-		responsesChan <- m.cm.gatherSignatures(
-			&valmessage.ValidatorRequest{
-				RequestId: value.NewHashBuf(hashID),
-				Request: &valmessage.ValidatorRequest_Unanimous{
-					Unanimous: request,
-				},
-			},
-			hashID,
-		)
-	}()
-
-	var unanUpdate valmessage.UnanimousUpdateResults
-	select {
-	case unanUpdate = <-resultsChan:
-		break
-	case err := <-unanErrChan:
-		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
-			Accepted: false,
-		})
-		return false, err
-	}
-
-	// Force onchain assertion if there are outgoing messages
-	if len(unanUpdate.Assertion.OutMsgs) > 0 {
-		unanUpdate.SequenceNum = math.MaxUint64
-	}
-	unanHash, err := m.Val.UnanimousAssertHash(
-		unanUpdate.SequenceNum,
-		unanUpdate.BeforeHash,
-		unanUpdate.TimeBounds,
-		unanUpdate.NewInboxHash,
-		unanUpdate.OriginalInboxHash,
-		unanUpdate.Assertion,
-	)
-	if err != nil {
-		log.Println("Coordinator failed to hash unanimous assertion")
-		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
-			Accepted: false,
-		})
-		return false, err
-	}
-	sig, err := m.Val.Sign(unanHash)
-	if err != nil {
-		log.Println("Coordinator failed to sign unanimous assertion")
-		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
-			Accepted: false,
-		})
-		return false, err
-	}
-
-	responses := <-responsesChan
-	if len(responses) != m.Val.ValidatorCount()-1 {
-		log.Println("Coordinator failed to collect unanimous assertion sigs")
-		notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
-			Accepted: false,
-		})
-		return false, errors.New("some Validators didn't respond")
-	}
-
-	signatures := make([][]byte, m.Val.ValidatorCount())
-	signatures[m.Val.Validators[m.Val.Address()].indexNum] = sig
-	for _, response := range responses {
-		r := response.response.Response.(*valmessage.FollowerResponse_Unanimous).Unanimous
-		if !r.Accepted {
-			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
-				Accepted: false,
-			})
-			return false, errors.New("some Validators refused to sign")
-		}
-		if value.NewHashFromBuf(r.AssertionHash) != unanHash {
-			notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
-				Accepted: false,
-			})
-			return false, errors.New("some Validators signed the wrong assertion")
-		}
-		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
-	}
-
-	elapsed := time.Since(start)
-	log.Printf("Coordinator succeeded signing unanimous assertion in %s\n", elapsed)
-	notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
-		Accepted:   true,
-		Signatures: signatures,
-	})
-
-	unanRequest.SequenceNum = unanUpdate.SequenceNum
-
-	confRetChan, confErrChan := m.Val.Bot.ConfirmOffchainUnanimousAssertion(
-		unanRequest.UnanimousRequestData,
-		signatures,
-	)
-
-	select {
-	case <-confRetChan:
-		break
-	case err := <-confErrChan:
-		return false, err
-	}
-	return unanUpdate.SequenceNum == math.MaxUint64, nil
 }

@@ -46,7 +46,7 @@ type Machine interface {
 	Clone() Machine
 
 	InboxHash() value.HashOnlyValue
-	HasPendingMessages() bool
+	PendingMessageCount() uint64
 	SendOnchainMessage(protocol.Message)
 	DeliverOnchainMessage()
 	SendOffchainMessages([]protocol.Message)

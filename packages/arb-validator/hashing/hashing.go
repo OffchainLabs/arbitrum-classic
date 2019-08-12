@@ -29,18 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-func tokenTypeEncoded(input [21]byte) []byte {
-	return common.RightPadBytes(input[:], 21)
-}
-
-func tokenTypeArrayEncoded(input [][21]byte) []byte {
-	var values []byte
-	for _, val := range input {
-		values = append(values, common.RightPadBytes(val[:], 32)...)
-	}
-	return values
-}
-
 func bytes32ArrayEncoded(input [][32]byte) []byte {
 	var values []byte
 	for _, val := range input {
@@ -140,7 +128,7 @@ func UnanimousAssertPartialHash(
 			solsha3.Int64Array(timeBounds),
 			solsha3.Bytes32(beforeHash),
 			solsha3.Bytes32(originalInboxHash),
-			tokenTypeArrayEncoded(balance.TokenTypes),
+			protocol.TokenTypeArrayEncoded(balance.TokenTypes),
 			solsha3.Uint16Array(tokenNums),
 			solsha3.Uint256Array(amounts),
 		))
@@ -155,7 +143,7 @@ func UnanimousAssertPartialHash(
 			solsha3.Int64Array(timeBounds),
 			solsha3.Bytes32(beforeHash),
 			solsha3.Bytes32(originalInboxHash),
-			tokenTypeArrayEncoded(balance.TokenTypes),
+			protocol.TokenTypeArrayEncoded(balance.TokenTypes),
 			solsha3.Uint16Array(tokenNums),
 			solsha3.Uint256Array(amounts),
 			solsha3.Uint64(sequenceNum),

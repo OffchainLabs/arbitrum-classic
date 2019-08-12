@@ -21,6 +21,9 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
+
+	"github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
@@ -444,6 +447,20 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 	return outChan, errChan, nil
 }
 
+func (con *Bridge) WaitForReceipt(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
+	for {
+		select {
+		case _ = <-time.After(time.Second):
+			receipt, err := con.client.TransactionReceipt(context.Background(), hash)
+			if err == nil {
+				return receipt, nil
+			}
+		case _ = <-ctx.Done():
+			return nil, errors.New("Receipt not found")
+		}
+	}
+}
+
 func (con *Bridge) PendingNonceAt(account common.Address) (uint64, error) {
 	return con.client.PendingNonceAt(context.Background(), account)
 }
@@ -489,6 +506,25 @@ func (con *Bridge) SendMessage(
 		msg.TokenType,
 		msg.Currency,
 		dataBuf.Bytes(),
+	)
+}
+
+func (con *Bridge) ForwardMessage(
+	auth *bind.TransactOpts,
+	msg protocol.Message,
+	sig []byte,
+) (*types.Transaction, error) {
+	var dataBuf bytes.Buffer
+	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
+		return nil, err
+	}
+	return con.Tracker.ForwardMessage(
+		auth,
+		msg.Destination,
+		msg.TokenType,
+		msg.Currency,
+		dataBuf.Bytes(),
+		sig,
 	)
 }
 
@@ -563,6 +599,22 @@ func (con *Bridge) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest [
 			Value:    amount,
 		},
 		dest,
+	)
+}
+
+func (con *Bridge) GetTokenBalance(
+	auth *bind.CallOpts,
+	user [32]byte,
+	tokenContract common.Address,
+) (*big.Int, error) {
+	return con.BalanceTracker.GetTokenBalance(
+		&bind.CallOpts{
+			Pending: false,
+			From:    auth.From,
+			Context: context.Background(),
+		},
+		tokenContract,
+		user,
 	)
 }
 

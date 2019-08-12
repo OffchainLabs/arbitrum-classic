@@ -52,7 +52,10 @@ class int_out_of_bounds : public std::exception {
 };
 
 MachineState::MachineState()
-    : pool(std::make_unique<TuplePool>()), context({0, 0}) {}
+    : pool(std::make_unique<TuplePool>()),
+      pendingInbox(*pool.get()),
+      context({0, 0}),
+      inbox(*pool.get()) {}
 
 uint256_t MachineState::hash() const {
     if (state == Status::Halted)
@@ -200,36 +203,26 @@ void MachineState::deserialize(char* bufptr) {
     pc = 0;
 }
 
-bool MachineState::hasPendingMessages() const {
-    return !(pendingInbox == Tuple());
+uint64_t MachineState::pendingMessageCount() const {
+    return pendingInbox.messageCount;
 }
 
 void MachineState::sendOnchainMessage(const Message& msg) {
-    pendingInbox = Tuple{uint256_t{0}, std::move(pendingInbox),
-                         msg.toValue(*pool), pool.get()};
+    pendingInbox.addMessage(msg);
     balance.add(msg.token, msg.currency);
 }
 
-void MachineState::deliverMessageStack(Tuple&& messages) {
-    if (!(messages == Tuple())) {
-        inbox = Tuple(uint256_t(1), std::move(inbox), std::move(messages),
-                      pool.get());
-    }
-}
-
 void MachineState::sendOffchainMessages(const std::vector<Message>& messages) {
-    Tuple messageStack;
+    MessageStack messageStack(*pool.get());
     for (const auto& message : messages) {
-        auto messageVal = message.toValue(*pool);
-        messageStack = Tuple{uint256_t{0}, std::move(messageStack),
-                             std::move(messageVal), pool.get()};
+        messageStack.addMessage(message);
     }
-    deliverMessageStack(std::move(messageStack));
+    inbox.addMessageStack(std::move(messageStack));
 }
 
 void MachineState::deliverOnchainMessages() {
-    deliverMessageStack(std::move(pendingInbox));
-    pendingInbox = Tuple();
+    inbox.addMessageStack(std::move(pendingInbox));
+    pendingInbox.clear();
 }
 
 void uint256_t_to_buf(uint256_t val, std::vector<unsigned char>& buf) {
@@ -931,10 +924,10 @@ static void getTime(MachineState& m) {
 static void inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
     auto stackTop = nonstd::get_if<Tuple>(&m.stack[0]);
-    if (stackTop && m.inbox == *stackTop) {
+    if (stackTop && m.inbox.messages == *stackTop) {
         m.state = Status::Blocked;
     } else {
-        value inboxCopy = m.inbox;
+        value inboxCopy = m.inbox.messages;
         m.stack[0] = std::move(inboxCopy);
         ++m.pc;
     }

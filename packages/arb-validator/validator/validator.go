@@ -18,16 +18,18 @@ package validator
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -41,7 +43,7 @@ import (
 
 type Validator struct {
 	Name        string
-	requests    chan interface{}
+	actions     chan func(*Validator, bridge.Bridge)
 	maybeAssert chan bool
 
 	// Run loop only
@@ -52,7 +54,7 @@ type Validator struct {
 }
 
 func NewValidator(name string, address common.Address, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool, maxCallSteps int32) *Validator {
-	requests := make(chan interface{}, 10)
+	actions := make(chan func(*Validator, bridge.Bridge), 100)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
 		machine,
@@ -63,7 +65,7 @@ func NewValidator(name string, address common.Address, balance *protocol.Balance
 	valConfig := core.NewValidatorConfig(address, config, challengeEverything, maxCallSteps)
 	return &Validator{
 		name,
-		requests,
+		actions,
 		maybeAssert,
 		state.NewWaiting(valConfig, c),
 		nil,
@@ -74,34 +76,152 @@ func NewValidator(name string, address common.Address, balance *protocol.Balance
 
 func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Value, <-chan error) {
 	resultChan := make(chan value.Value, 1)
-	errorChan := make(chan error, 1)
-	validator.requests <- callRequest{
-		Message:    msg,
-		ResultChan: resultChan,
-		ErrorChan:  errorChan,
+	errChan := make(chan error, 1)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		c := validator.bot.GetCore()
+		updatedState := c.GetMachine().Clone()
+		startTime := validator.latestHeader.Number.Uint64()
+		messageHash := solsha3.SoliditySHA3(
+			solsha3.Bytes32(msg.Destination),
+			solsha3.Bytes32(msg.Data.Hash()),
+			solsha3.Uint256(msg.Currency),
+			msg.TokenType[:],
+		)
+		msgHashInt := new(big.Int).SetBytes(messageHash[:])
+		val, _ := value.NewTupleFromSlice([]value.Value{
+			msg.Data,
+			value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
+			value.NewIntValue(validator.latestHeader.Number),
+			value.NewIntValue(msgHashInt),
+		})
+		callingMessage := protocol.Message{
+			Data:        val.Clone(),
+			TokenType:   msg.TokenType,
+			Currency:    msg.Currency,
+			Destination: msg.Destination,
+		}
+		maxCallSteps := validator.bot.GetConfig().MaxCallSteps
+		go func() {
+			updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
+			assertion := updatedState.ExecuteAssertion(
+				maxCallSteps,
+				[2]uint64{startTime, startTime + 1},
+			)
+			results := assertion.Logs
+			if len(results) == 0 {
+				errChan <- errors.New("Call produced no output")
+				return
+			}
+			lastLogVal := results[len(results)-1]
+			lastLog, err := evm.ProcessLog(lastLogVal)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			logHash := lastLog.GetEthMsg().Data.TxHash
+			if !bytes.Equal(logHash[:], messageHash) {
+				// Last produced log is not the call we sent
+				errChan <- errors.New("Call took too long to execute")
+				return
+			}
+
+			resultChan <- results[len(results)-1]
+		}()
 	}
-	return resultChan, errorChan
+
+	return resultChan, errChan
 }
 
-func (validator *Validator) HasPendingMessages() chan bool {
-	retChan := make(chan bool, 1)
-	validator.requests <- pendingMessageCheck{ResultChan: retChan}
-	return retChan
+func (validator *Validator) PendingMessageCount() chan uint64 {
+	resultChan := make(chan uint64, 1)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		c := validator.bot.GetCore()
+		resultChan <- c.GetMachine().PendingMessageCount()
+	}
+	return resultChan
 }
 
-func (validator *Validator) RequestVMState() <-chan valmessage.VMStateData {
-	resultChan := make(chan valmessage.VMStateData)
-	validator.requests <- vmStateRequest{ResultChan: resultChan}
+func (validator *Validator) HasOpenAssertion() chan bool {
+	resultChan := make(chan bool, 1)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		bot, ok := validator.bot.(state.Waiting)
+		if !ok {
+			resultChan <- false
+		} else {
+			resultChan <- bot.HasOpenAssertion()
+		}
+	}
+
+	return resultChan
+}
+
+type VMStateData struct {
+	MachineState [32]byte
+	Config       valmessage.VMConfiguration
+}
+
+func (validator *Validator) RequestVMState() <-chan VMStateData {
+	resultChan := make(chan VMStateData)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		c := validator.bot.GetCore()
+		machineHash := c.GetMachine().Hash()
+		resultChan <- VMStateData{
+			MachineState: machineHash,
+			Config:       *validator.bot.GetConfig().VMConfig,
+		}
+	}
 	return resultChan
 }
 
 func (validator *Validator) RequestDisputableAssertion(length uint64) <-chan bool {
 	resultChan := make(chan bool)
-	validator.requests <- disputableDefenderRequest{
-		Length:     length,
-		ResultChan: resultChan,
+	validator.actions <- func(validator *Validator, b bridge.Bridge) {
+		c := validator.bot.GetCore()
+		mClone := c.GetMachine().Clone()
+		maxSteps := validator.bot.GetConfig().VMConfig.MaxExecutionStepCount
+		startTime := validator.latestHeader.Number.Uint64()
+		go func() {
+			endTime := startTime + length
+			tb := [2]uint64{startTime, endTime}
+			beforeHash := mClone.Hash()
+			assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
+			spentBalance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
+			balance := c.GetBalance()
+			_ = balance.SpendAll(spentBalance)
+
+			pre := &protocol.Precondition{
+				BeforeHash:    beforeHash,
+				TimeBounds:    tb,
+				BeforeBalance: spentBalance,
+				BeforeInbox:   mClone.InboxHash(),
+			}
+			request := &state.DisputableAssertionRequest{
+				AfterCore:    core.NewCore(mClone, balance),
+				Precondition: pre,
+				Assertion:    assertion,
+				ResultChan:   resultChan,
+			}
+			validator.actions <- func(validator *Validator, b bridge.Bridge) {
+				validator.pendingDisputableRequest = request
+				validator.maybeAssert <- true
+			}
+		}()
 	}
 	return resultChan
+}
+
+type unanimousUpdateRequest struct {
+	valmessage.UnanimousRequestData
+
+	NewMessages []protocol.Message
+
+	Machine   machine.Machine
+	Assertion *protocol.Assertion
+
+	ShouldFinalize func(*protocol.Assertion) bool
+
+	ResultChan chan<- valmessage.UnanimousUpdateResults
+	ErrChan    chan<- error
 }
 
 func (validator *Validator) InitiateUnanimousRequest(
@@ -110,6 +230,7 @@ func (validator *Validator) InitiateUnanimousRequest(
 	messageHashes [][]byte,
 	final bool,
 	maxSteps int32,
+	shouldFinalize func(*protocol.Assertion) bool,
 ) (
 	<-chan valmessage.UnanimousRequest,
 	<-chan valmessage.UnanimousUpdateResults,
@@ -118,15 +239,63 @@ func (validator *Validator) InitiateUnanimousRequest(
 	unanRequestChan := make(chan valmessage.UnanimousRequest, 1)
 	updateResultChan := make(chan valmessage.UnanimousUpdateResults, 1)
 	errChan := make(chan error, 1)
-	validator.requests <- initiateUnanimousRequest{
-		TimeLength:    length,
-		NewMessages:   messages,
-		MessageHashes: messageHashes,
-		Final:         final,
-		MaxSteps:      maxSteps,
-		RequestChan:   unanRequestChan,
-		ResultChan:    updateResultChan,
-		ErrChan:       errChan,
+
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		bot, ok := validator.bot.(state.Waiting)
+		if !ok {
+			errChan <- fmt.Errorf("recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.bot)
+			return
+		}
+		newMessages := make([]protocol.Message, 0, len(messages))
+		messageRecords := make([]protocol.Message, 0, len(messages))
+		for i, msg := range messages {
+			msgHashInt := new(big.Int).SetBytes(messageHashes[i])
+			val, _ := value.NewTupleFromSlice([]value.Value{
+				msg.Data,
+				value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
+				value.NewIntValue(validator.latestHeader.Number),
+				value.NewIntValue(msgHashInt),
+			})
+			newMessages = append(newMessages, protocol.Message{
+				Data:        val,
+				TokenType:   msg.TokenType,
+				Currency:    msg.Currency,
+				Destination: msg.Destination,
+			})
+			messageRecords = append(messageRecords, protocol.Message{
+				Data:        val.Clone(),
+				TokenType:   msg.TokenType,
+				Currency:    msg.Currency,
+				Destination: msg.Destination,
+			})
+		}
+		timeBounds := [2]uint64{validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64() + length}
+		seqNum := bot.OffchainContext(timeBounds, final)
+		clonedMachine := bot.GetCore().GetMachine().Clone()
+		requestData := valmessage.UnanimousRequestData{
+			BeforeHash:  bot.OrigHash(),
+			BeforeInbox: bot.OrigInboxHash(),
+			SequenceNum: seqNum,
+			TimeBounds:  timeBounds,
+		}
+
+		unanRequestChan <- valmessage.UnanimousRequest{UnanimousRequestData: requestData, NewMessages: messageRecords}
+		go func() {
+			clonedMachine.SendOffchainMessages(newMessages)
+			assertion := clonedMachine.ExecuteAssertion(
+				maxSteps,
+				timeBounds,
+			)
+			validator.requestUnanimousUpdate(unanimousUpdateRequest{
+				UnanimousRequestData: requestData,
+				NewMessages:          newMessages,
+				Machine:              clonedMachine,
+				Assertion:            assertion,
+				ShouldFinalize:       shouldFinalize,
+				ResultChan:           updateResultChan,
+				ErrChan:              errChan,
+			})
+		}()
 	}
 	return unanRequestChan, updateResultChan, errChan
 }
@@ -135,40 +304,156 @@ func (validator *Validator) RequestFollowUnanimous(
 	request valmessage.UnanimousRequestData,
 	messages []protocol.Message,
 	maxSteps int32,
+	shouldFinalize func(*protocol.Assertion) bool,
 ) (<-chan valmessage.UnanimousUpdateResults, <-chan error) {
 	resultChan := make(chan valmessage.UnanimousUpdateResults, 1)
 	errChan := make(chan error, 1)
-	validator.requests <- followUnanimousRequest{
-		UnanimousRequestData: request,
-		NewMessages:          messages,
-		MaxSteps:             maxSteps,
-		ResultChan:           resultChan,
-		ErrChan:              errChan,
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		bot, ok := validator.bot.(state.Waiting)
+		if !ok {
+			errChan <- fmt.Errorf("recieved follow unanimous request, but was in the wrong state to handle it: %T", validator.bot)
+			return
+		}
+
+		if err := bot.ValidateUnanimousRequest(request); err != nil {
+			errChan <- err
+			return
+		}
+
+		_ = bot.OffchainContext(request.TimeBounds, request.SequenceNum == math.MaxUint64)
+		clonedMachine := bot.GetCore().GetMachine().Clone()
+		go func() {
+			clonedMachine.SendOffchainMessages(messages)
+			assertion := clonedMachine.ExecuteAssertion(
+				maxSteps,
+				request.TimeBounds,
+			)
+			validator.requestUnanimousUpdate(unanimousUpdateRequest{
+				UnanimousRequestData: request,
+				NewMessages:          messages,
+				Machine:              clonedMachine,
+				Assertion:            assertion,
+				ShouldFinalize:       shouldFinalize,
+				ResultChan:           resultChan,
+				ErrChan:              errChan,
+			})
+		}()
 	}
 	return resultChan, errChan
+}
+
+func (validator *Validator) requestUnanimousUpdate(request unanimousUpdateRequest) {
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		bot, ok := validator.bot.(state.Waiting)
+		if !ok {
+			request.ErrChan <- fmt.Errorf("recieved unanimous update request, but was in the wrong state to handle it: %T", validator.bot)
+			return
+		}
+
+		newBot, err := bot.PreparePendingUnanimous(
+			request.Assertion,
+			request.NewMessages,
+			request.Machine,
+			request.SequenceNum,
+			request.TimeBounds,
+			request.ShouldFinalize,
+		)
+
+		if err != nil {
+			request.ErrChan <- err
+			return
+		}
+		request.ResultChan <- newBot.ProposalResults()
+		validator.bot = newBot
+	}
 }
 
 func (validator *Validator) ConfirmOffchainUnanimousAssertion(
-	unanRequest valmessage.UnanimousRequestData,
+	request valmessage.UnanimousRequestData,
 	signatures [][]byte,
+	canClose bool,
 ) (<-chan bool, <-chan error) {
 	resultChan := make(chan bool, 1)
 	errChan := make(chan error, 1)
-	validator.requests <- unanimousConfirmRequest{
-		UnanimousRequestData: unanRequest,
-		Signatures:           signatures,
-		ResultChan:           resultChan,
-		ErrChan:              errChan,
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		bot, ok := validator.bot.(state.Waiting)
+		if !ok {
+			errChan <- fmt.Errorf("recieved unanimous confirm request, but was in the wrong state to handle it: %T", validator.bot)
+			return
+		}
+		if err := bot.ValidateUnanimousAssertion(request); err != nil {
+			errChan <- err
+			return
+		}
+
+		bridge.AddedNewMessages(bot.ProposedMessageCount())
+
+		proposalResults := bot.ProposalResults()
+		newBot, err := bot.FinalizePendingUnanimous(signatures)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		bridge.FinalizedAssertion(
+			nil,
+			[]byte{},
+			signatures,
+			&proposalResults,
+		)
+
+		if request.SequenceNum == math.MaxUint64 {
+			if canClose {
+				newBot.CloseUnanimous(bridge)
+			}
+			// Can only error if there is no pending assertion which is guaranteed here
+			newBot2, _ := newBot.ClosingUnanimous(resultChan, errChan)
+			validator.bot = newBot2
+		} else {
+			validator.bot = newBot
+			resultChan <- true
+		}
 	}
 	return resultChan, errChan
 }
 
-func (validator *Validator) CloseUnanimousAssertionRequest() <-chan bool {
+func (validator *Validator) CloseUnanimousAssertionRequest() (<-chan bool, <-chan error) {
 	resultChan := make(chan bool, 1)
-	validator.requests <- closeUnanimousAssertionRequest{
-		ResultChan: resultChan,
+	errChan := make(chan error, 1)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		bot, ok := validator.bot.(state.Waiting)
+		if !ok {
+			errChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
+			return
+		}
+		bot.CloseUnanimous(bridge)
+		newBot, err := bot.ClosingUnanimous(resultChan, errChan)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		validator.bot = newBot
 	}
-	return resultChan
+	return resultChan, errChan
+}
+
+func (validator *Validator) ClosingUnanimousAssertionRequest() (<-chan bool, <-chan error) {
+	resultChan := make(chan bool, 1)
+	errChan := make(chan error, 1)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		bot, ok := validator.bot.(state.Waiting)
+		if !ok {
+			errChan <- fmt.Errorf("can't close unanimous request. Validator was in the wrong state to handle it: %T", validator.bot)
+			return
+		}
+		newBot, err := bot.ClosingUnanimous(resultChan, errChan)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		validator.bot = newBot
+	}
+	return resultChan, errChan
 }
 
 func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge bridge.Bridge) {
@@ -189,9 +474,9 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					validator.timeUpdate(bridge)
 
 					if validator.pendingDisputableRequest != nil {
-						pre := validator.pendingDisputableRequest.GetPrecondition()
+						pre := validator.pendingDisputableRequest.Precondition
 						if !validator.bot.GetCore().ValidateAssertion(pre, newHeader.Number.Uint64()) {
-							validator.pendingDisputableRequest.NotifyInvalid()
+							validator.pendingDisputableRequest.ResultChan <- false
 							validator.pendingDisputableRequest = nil
 						}
 					}
@@ -207,253 +492,17 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 				default:
 					panic("Should never recieve other kinds of events")
 				}
-				validator.tryToAssert(bridge)
-			case request := <-validator.requests:
-				switch request := request.(type) {
-				case initiateUnanimousRequest:
-					if bot, ok := validator.bot.(state.Waiting); ok {
-						newMessages := make([]protocol.Message, 0, len(request.NewMessages))
-						messageRecords := make([]protocol.Message, 0, len(request.NewMessages))
-						for i, msg := range request.NewMessages {
-							msgHashInt := new(big.Int).SetBytes(request.MessageHashes[i])
-							val, _ := value.NewTupleFromSlice([]value.Value{
-								msg.Data,
-								value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
-								value.NewIntValue(validator.latestHeader.Number),
-								value.NewIntValue(msgHashInt),
-							})
-							newMessages = append(newMessages, protocol.Message{
-								Data:        val,
-								TokenType:   msg.TokenType,
-								Currency:    msg.Currency,
-								Destination: msg.Destination,
-							})
-							messageRecords = append(messageRecords, protocol.Message{
-								Data:        val.Clone(),
-								TokenType:   msg.TokenType,
-								Currency:    msg.Currency,
-								Destination: msg.Destination,
-							})
-						}
-						timeBounds := [2]uint64{validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64() + request.TimeLength}
-						tb, seqNum := bot.OffchainContext(timeBounds, request.Final)
-						clonedMachine := bot.GetCore().GetMachine().Clone()
-						requestData := valmessage.UnanimousRequestData{
-							BeforeHash:  clonedMachine.Hash(),
-							BeforeInbox: clonedMachine.InboxHash().Hash(),
-							SequenceNum: seqNum,
-							TimeBounds:  tb,
-						}
-
-						request.RequestChan <- valmessage.UnanimousRequest{UnanimousRequestData: requestData, NewMessages: messageRecords}
-						go func() {
-							clonedMachine.SendOffchainMessages(newMessages)
-							assertion := clonedMachine.ExecuteAssertion(
-								request.MaxSteps,
-								timeBounds,
-							)
-							validator.requests <- state.UnanimousUpdateRequest{
-								UnanimousRequestData: requestData,
-								NewMessages:          newMessages,
-								Machine:              clonedMachine,
-								Assertion:            assertion,
-								ResultChan:           request.ResultChan,
-								ErrChan:              request.ErrChan,
-							}
-						}()
-					} else {
-						request.ErrChan <- fmt.Errorf("recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.bot)
-						break
-					}
-				case followUnanimousRequest:
-					if bot, ok := validator.bot.(state.Waiting); ok {
-						if err := bot.ValidateUnanimousRequest(request.UnanimousRequestData); err != nil {
-							request.ErrChan <- err
-							break
-						}
-
-						_, _ = bot.OffchainContext(request.TimeBounds, request.SequenceNum == math.MaxUint64)
-						clonedMachine := bot.GetCore().GetMachine().Clone()
-						go func() {
-							clonedMachine.SendOffchainMessages(request.NewMessages)
-							assertion := clonedMachine.ExecuteAssertion(
-								request.MaxSteps,
-								request.TimeBounds,
-							)
-							validator.requests <- state.UnanimousUpdateRequest{
-								UnanimousRequestData: request.UnanimousRequestData,
-								NewMessages:          request.NewMessages,
-								Machine:              clonedMachine,
-								Assertion:            assertion,
-								ResultChan:           request.ResultChan,
-								ErrChan:              request.ErrChan,
-							}
-						}()
-					} else {
-						request.ErrChan <- fmt.Errorf("recieved follow unanimous request, but was in the wrong state to handle it: %T", validator.bot)
-						break
-					}
-				case state.UnanimousUpdateRequest:
-					if bot, ok := validator.bot.(state.Waiting); ok {
-						if err := bot.ValidateUnanimousRequest(request.UnanimousRequestData); err != nil {
-							request.ErrChan <- err
-							break
-						}
-
-						newBot, err := bot.PreparePendingUnanimous(request)
-						if err != nil {
-							request.ErrChan <- err
-							break
-						}
-						request.ResultChan <- newBot.ProposalResults()
-						validator.bot = newBot
-
-					} else {
-						request.ErrChan <- fmt.Errorf("recieved unanimous update request, but was in the wrong state to handle it: %T", validator.bot)
-						break
-					}
-				case unanimousConfirmRequest:
-					if bot, ok := validator.bot.(state.Waiting); ok {
-						if err := bot.ValidateUnanimousRequest(request.UnanimousRequestData); err != nil {
-							request.ErrChan <- err
-							break
-						}
-
-						newBot, proposal, err := bot.FinalizePendingUnanimous(request.SequenceNum, request.Signatures)
-						if err != nil {
-							request.ErrChan <- err
-							break
-						}
-						validator.bot = newBot
-						proposalResults := bot.ProposalResults()
-						bridge.FinalizedAssertion(
-							proposal.Assertion,
-							proposal.NewLogCount,
-							request.Signatures,
-							&proposalResults,
-							[]byte{},
-						)
-						request.ResultChan <- true
-					} else {
-						request.ErrChan <- fmt.Errorf("recieved unanimous confirm request, but was in the wrong state to handle it: %T", validator.bot)
-						break
-					}
-				case closeUnanimousAssertionRequest:
-					if bot, ok := validator.bot.(state.Waiting); ok {
-						_ = bot.GetCore()
-						newBot, err := bot.CloseUnanimous(bridge, request.ResultChan)
-						if err != nil {
-							request.ErrChan <- err
-							break
-						}
-
-						validator.bot = newBot
-					} else {
-						request.ErrChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
-					}
-				case disputableDefenderRequest:
-					c := validator.bot.GetCore()
-					mClone := c.GetMachine().Clone()
-					maxSteps := validator.bot.GetConfig().VMConfig.MaxExecutionStepCount
-					startTime := validator.latestHeader.Number.Uint64()
-					balance := c.GetBalance().Clone()
-					go func() {
-						endTime := startTime + request.Length
-						tb := [2]uint64{startTime, endTime}
-						pre := &protocol.Precondition{
-							BeforeHash:    mClone.Hash(),
-							TimeBounds:    tb,
-							BeforeBalance: balance,
-							BeforeInbox:   mClone.InboxHash(),
-						}
-						assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
-						validator.requests <- state.DisputableAssertionRequest{
-							AfterState:   mClone,
-							Precondition: pre,
-							Assertion:    assertion,
-							ResultChan:   request.ResultChan,
-						}
-					}()
-				case state.DisputableAssertionRequest:
-					validator.pendingDisputableRequest = &request
-					validator.maybeAssert <- true
-				case vmStateRequest:
-					c := validator.bot.GetCore()
-					machineHash := c.GetMachine().Hash()
-					request.ResultChan <- valmessage.VMStateData{
-						MachineState: machineHash,
-						Config:       *validator.bot.GetConfig().VMConfig,
-					}
-				case pendingMessageCheck:
-					c := validator.bot.GetCore()
-					request.ResultChan <- c.GetMachine().HasPendingMessages()
-				case callRequest:
-					c := validator.bot.GetCore()
-					updatedState := c.GetMachine().Clone()
-					startTime := validator.latestHeader.Number.Uint64()
-					msg := request.Message
-					messageHash := solsha3.SoliditySHA3(
-						solsha3.Bytes32(msg.Destination),
-						solsha3.Bytes32(msg.Data.Hash()),
-						solsha3.Uint256(msg.Currency),
-						msg.TokenType[:],
-					)
-					msgHashInt := new(big.Int).SetBytes(messageHash[:])
-					val, _ := value.NewTupleFromSlice([]value.Value{
-						msg.Data,
-						value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
-						value.NewIntValue(validator.latestHeader.Number),
-						value.NewIntValue(msgHashInt),
-					})
-					callingMessage := protocol.Message{
-						Data:        val.Clone(),
-						TokenType:   msg.TokenType,
-						Currency:    msg.Currency,
-						Destination: msg.Destination,
-					}
-					maxCallSteps := validator.bot.GetConfig().MaxCallSteps
-					go func() {
-						updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
-						assertion := updatedState.ExecuteAssertion(
-							maxCallSteps,
-							[2]uint64{startTime, startTime + 1},
-						)
-						results := assertion.Logs
-						if len(results) == 0 {
-							request.ErrorChan <- errors.New("Call produced no output")
-							return
-						}
-						lastLogVal := results[len(results)-1]
-						lastLog, err := evm.ProcessLog(lastLogVal)
-						if err != nil {
-							request.ErrorChan <- err
-							return
-						}
-						logHash := lastLog.GetEthMsg().Data.TxHash
-						if !bytes.Equal(logHash[:], messageHash) {
-							// Last produced log is not the call we sent
-							request.ErrorChan <- errors.New("Call took too long to execute")
-							return
-						}
-
-						request.ResultChan <- results[len(results)-1]
-					}()
-				default:
-					fmt.Printf("Unahandled validator request %T: %v\n", request, request)
-				}
-				validator.tryToAssert(bridge)
+			case action := <-validator.actions:
+				action(validator, bridge)
 			case <-validator.maybeAssert:
-				validator.tryToAssert(bridge)
+			}
+
+			if bot, ok := validator.bot.(state.Waiting); ok && validator.pendingDisputableRequest != nil {
+				validator.bot = bot.AttemptAssertion(context.Background(), *validator.pendingDisputableRequest, bridge)
+				validator.pendingDisputableRequest = nil
 			}
 		}
 	}()
-}
-
-func (validator *Validator) tryToAssert(bridge bridge.Bridge) {
-	if bot, ok := validator.bot.(state.Waiting); ok && validator.pendingDisputableRequest != nil {
-		validator.bot = bot.AttemptAssertion(*validator.pendingDisputableRequest, bridge)
-		validator.pendingDisputableRequest = nil
-	}
 }
 
 func (validator *Validator) timeUpdate(bridge bridge.Bridge) {

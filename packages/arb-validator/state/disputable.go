@@ -17,9 +17,12 @@
 package state
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
+
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -47,19 +50,22 @@ func (e *Error) Error() string {
 }
 
 type proposedUpdate struct {
-	machine     machine.Machine
-	messages    *protocol.MessageQueue
-	Assertion   *protocol.Assertion
-	sequenceNum uint64
-	NewLogCount int
+	machine         machine.Machine
+	newMessageCount uint64
+	Assertion       *protocol.Assertion
+	timeBounds      protocol.TimeBounds
+	sequenceNum     uint64
+	NewLogCount     int
 }
 
 func (p *proposedUpdate) clone() *proposedUpdate {
 	return &proposedUpdate{
-		machine:     p.machine.Clone(),
-		messages:    p.messages.Clone(),
-		Assertion:   p.Assertion,
-		sequenceNum: p.sequenceNum,
+		machine:         p.machine.Clone(),
+		newMessageCount: p.newMessageCount,
+		Assertion:       p.Assertion,
+		timeBounds:      p.timeBounds,
+		sequenceNum:     p.sequenceNum,
+		NewLogCount:     0,
 	}
 }
 
@@ -89,63 +95,87 @@ func NewWaiting(config *core.Config, c *core.Core) Waiting {
 	}
 }
 
-func (bot Waiting) SlowCloseUnanimous(bridge bridge.Bridge) {
-	bridge.PendingUnanimousAssert(
-		bot.GetCore().GetMachine().InboxHash().Hash(),
-		bot.timeBounds,
-		bot.assertion,
-		bot.sequenceNum,
-		bot.signatures,
-	)
+func (bot Waiting) OrigHash() [32]byte {
+	return bot.orig.GetMachine().Hash()
 }
 
-func (bot Waiting) FastCloseUnanimous(bridge bridge.Bridge) {
-	inboxHash := bot.GetCore().GetMachine().InboxHash()
-	bridge.FinalizedUnanimousAssert(
-		inboxHash.Hash(),
-		bot.timeBounds,
-		bot.assertion,
-		bot.signatures,
-	)
+func (bot Waiting) OrigInboxHash() [32]byte {
+	return bot.orig.GetMachine().InboxHash().Hash()
 }
 
-func (bot Waiting) CloseUnanimous(bridge bridge.Bridge, retChan chan<- bool) (State, error) {
+func (bot Waiting) HasOpenAssertion() bool {
+	return bot.assertion != nil
+}
+
+func (bot Waiting) CloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, chan error) {
+	if bot.sequenceNum == math.MaxUint64 {
+		return bridge.FinalizedUnanimousAssert(
+			context.Background(),
+			bot.GetCore().GetMachine().InboxHash().Hash(),
+			bot.timeBounds,
+			bot.assertion,
+			bot.signatures,
+		)
+	} else {
+		return bridge.PendingUnanimousAssert(
+			context.Background(),
+			bot.GetCore().GetMachine().InboxHash().Hash(),
+			bot.timeBounds,
+			bot.assertion,
+			bot.sequenceNum,
+			bot.signatures,
+		)
+	}
+}
+
+func (bot Waiting) ClosingUnanimous(retChan chan<- bool, errChan chan<- error) (State, error) {
+	// If there is no active unanimous assertion, there is nothing to close
+	// TODO: Validator should refuse to unanimous assert again from the same start point
 	if bot.assertion == nil {
-		return bot, errors.New("couldn't close since no Assertion is open")
+		err := errors.New("couldn't close since no Assertion is open")
+		if errChan != nil {
+			errChan <- err
+		}
+		return bot, err
 	}
 
 	if bot.sequenceNum == math.MaxUint64 {
-		bot.FastCloseUnanimous(bridge)
 		return attemptingUnanimousClosing{
 				bot.Config,
 				bot.GetCore(),
 				bot.assertion,
 				retChan,
+				errChan,
+			},
+			nil
+	} else {
+		return attemptingOffchainClosing{
+				bot.Config,
+				bot.GetCore(),
+				bot.sequenceNum,
+				bot.assertion,
+				retChan,
+				errChan,
 			},
 			nil
 	}
-	bot.SlowCloseUnanimous(bridge)
-	return attemptingOffchainClosing{
-			bot.Config,
-			bot.GetCore(),
-			bot.sequenceNum,
-			bot.assertion,
-			retChan,
-		},
-		nil
 }
 
-func (bot Waiting) AttemptAssertion(request DisputableAssertionRequest, bridge bridge.Bridge) State {
+func (bot Waiting) AttemptAssertion(ctx context.Context, request DisputableAssertionRequest, bridge bridge.Bridge) State {
 	bridge.PendingDisputableAssert(
+		ctx,
 		request.Precondition,
 		request.Assertion,
 	)
 
-	return attemptingAssertion{
+	return attemptingAssertion{&disputableAssertCore{
 		bot.GetCore(),
 		bot.GetConfig(),
-		request,
-	}
+		request.AfterCore,
+		request.Precondition,
+		request.Assertion,
+		request.ResultChan,
+	}}
 }
 
 func (bot Waiting) GetCore() *core.Core {
@@ -167,13 +197,20 @@ func (bot Waiting) SendMessageToVM(msg protocol.Message) {
 
 func (bot Waiting) ProposalResults() valmessage.UnanimousUpdateResults {
 	return valmessage.UnanimousUpdateResults{
-		SequenceNum:       bot.proposed.sequenceNum,
-		BeforeHash:        bot.orig.GetMachine().Hash(),
-		TimeBounds:        bot.timeBounds,
-		NewInboxHash:      bot.proposed.machine.InboxHash().Hash(),
-		OriginalInboxHash: bot.orig.GetMachine().InboxHash().Hash(),
-		Assertion:         bot.proposed.Assertion,
+		UnanimousRequestData: valmessage.UnanimousRequestData{
+			BeforeHash:  bot.orig.GetMachine().Hash(),
+			BeforeInbox: bot.orig.GetMachine().InboxHash().Hash(),
+			SequenceNum: bot.proposed.sequenceNum,
+			TimeBounds:  bot.proposed.timeBounds,
+		},
+		NewInboxHash: bot.proposed.machine.InboxHash().Hash(),
+		Assertion:    bot.proposed.Assertion,
+		NewLogCount:  bot.proposed.NewLogCount,
 	}
+}
+
+func (bot Waiting) ProposedMessageCount() uint64 {
+	return bot.proposed.newMessageCount
 }
 
 func (bot Waiting) Clone() Waiting {
@@ -192,14 +229,11 @@ func (bot Waiting) Clone() Waiting {
 func (bot Waiting) OffchainContext(
 	timeBounds protocol.TimeBounds,
 	final bool,
-) (protocol.TimeBounds, uint64) {
-	var tb protocol.TimeBounds
+) uint64 {
 	var seqNum uint64
 	if bot.accepted != nil {
-		tb = bot.timeBounds
 		seqNum = bot.sequenceNum + 1
 	} else {
-		tb = timeBounds
 		seqNum = 0
 	}
 
@@ -207,74 +241,96 @@ func (bot Waiting) OffchainContext(
 		seqNum = math.MaxUint64
 	}
 
-	return tb, seqNum
+	return seqNum
 }
 
 func (bot Waiting) ValidateUnanimousRequest(request valmessage.UnanimousRequestData) error {
-	c := bot.GetCore()
-
-	if request.BeforeHash != c.GetMachine().Hash() {
+	if bot.proposed != nil {
+		return errors.New("can't process unanimous request while request is pending")
+	}
+	if request.BeforeHash != bot.orig.GetMachine().Hash() {
 		return errors.New("recieved unanimous request with invalid before hash")
 	}
-	if request.BeforeInbox != c.GetMachine().InboxHash().Hash() {
+	if request.BeforeInbox != bot.orig.GetMachine().InboxHash().Hash() {
 		return errors.New("recieved unanimous request with invalid before inbox")
 	}
 
-	var tb protocol.TimeBounds
-	var seqNum uint64
 	if bot.accepted != nil {
-		tb = bot.timeBounds
-		seqNum = bot.sequenceNum + 1
-	} else {
-		tb = request.TimeBounds
-		seqNum = 0
-	}
-
-	if request.TimeBounds != tb {
-		return errors.New("recieved unanimous request with invalid timebounds")
-	}
-
-	if request.SequenceNum < seqNum {
-		return errors.New("recieved unanimous request with invalid sequence number")
+		if request.TimeBounds[0] < bot.timeBounds[0] {
+			return errors.New("unanimous assertion request starting time bound may only increase")
+		}
+		if request.SequenceNum <= bot.sequenceNum {
+			return errors.New("recieved unanimous request with invalid sequence number")
+		}
 	}
 	return nil
 }
 
-func (bot Waiting) PreparePendingUnanimous(request UnanimousUpdateRequest) (Waiting, error) {
-	assertion := request.Assertion
-	newLogCount := len(assertion.Logs)
-	if bot.assertion != nil {
-		assertion.NumSteps += bot.assertion.NumSteps
-		assertion.OutMsgs = append(bot.assertion.OutMsgs, assertion.OutMsgs...)
-		assertion.Logs = append(bot.assertion.Logs, assertion.Logs...)
+func (bot Waiting) ValidateUnanimousAssertion(request valmessage.UnanimousRequestData) error {
+	if bot.proposed == nil {
+		return errors.New("validator unanimous assertion without pending request")
 	}
 
-	mq := protocol.NewMessageQueue()
-	for _, msg := range request.NewMessages {
-		mq.AddMessage(msg)
+	if request.BeforeHash != bot.orig.GetMachine().Hash() {
+		return errors.New("recieved unanimous update with invalid before hash")
+	}
+	if request.BeforeInbox != bot.orig.GetMachine().InboxHash().Hash() {
+		return errors.New("recieved unanimous update with invalid before inbox")
+	}
+
+	if bot.accepted != nil {
+		if request.TimeBounds[0] < bot.timeBounds[0] {
+			return errors.New("unanimous assertion starting time bound may only increase")
+		}
+	}
+
+	if request.SequenceNum < bot.proposed.sequenceNum {
+		return errors.New("recieved unanimous update with invalid sequence number")
+	}
+	return nil
+}
+
+func (bot Waiting) PreparePendingUnanimous(
+	newAssertion *protocol.Assertion,
+	messages []protocol.Message,
+	machine machine.Machine,
+	sequenceNum uint64,
+	timeBounds protocol.TimeBounds,
+	shouldFinalize func(*protocol.Assertion) bool,
+) (Waiting, error) {
+	newLogCount := len(newAssertion.Logs)
+	if bot.assertion != nil {
+		newAssertion.NumSteps += bot.assertion.NumSteps
+		newAssertion.OutMsgs = append(bot.assertion.OutMsgs, newAssertion.OutMsgs...)
+		newAssertion.Logs = append(bot.assertion.Logs, newAssertion.Logs...)
+	}
+
+	if shouldFinalize(newAssertion) {
+		sequenceNum = math.MaxUint64
 	}
 
 	return Waiting{
 		Config: bot.Config,
 		proposed: &proposedUpdate{
-			machine:     request.Machine,
-			messages:    mq,
-			Assertion:   assertion,
-			sequenceNum: request.SequenceNum,
-			NewLogCount: newLogCount,
+			machine:         machine,
+			newMessageCount: uint64(len(messages)),
+			Assertion:       newAssertion,
+			timeBounds:      timeBounds,
+			sequenceNum:     sequenceNum,
+			NewLogCount:     newLogCount,
 		},
 		accepted:    bot.accepted,
 		assertion:   bot.assertion,
 		sequenceNum: bot.sequenceNum,
 		signatures:  bot.signatures,
-		timeBounds:  request.TimeBounds,
+		timeBounds:  bot.timeBounds,
 		orig:        bot.orig,
 	}, nil
 }
 
-func (bot Waiting) FinalizePendingUnanimous(sequenceNum uint64, signatures [][]byte) (State, *proposedUpdate, error) {
+func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (Waiting, error) {
 	if bot.proposed == nil {
-		return nil, nil, errors.New("no pending Assertion")
+		return Waiting{}, errors.New("no pending Assertion")
 	}
 
 	balance := bot.GetCore().GetBalance()
@@ -288,11 +344,11 @@ func (bot Waiting) FinalizePendingUnanimous(sequenceNum uint64, signatures [][]b
 			balance,
 		),
 		assertion:   bot.proposed.Assertion,
-		sequenceNum: sequenceNum,
+		sequenceNum: bot.proposed.sequenceNum,
 		signatures:  signatures,
-		timeBounds:  bot.timeBounds,
+		timeBounds:  bot.proposed.timeBounds,
 		orig:        bot.orig,
-	}, bot.proposed, nil
+	}, nil
 }
 
 func (bot Waiting) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
@@ -301,18 +357,12 @@ func (bot Waiting) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) 
 
 func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.FinalizedUnanimousAssertEvent:
-		if bot.sequenceNum != math.MaxUint64 {
-			return nil, nil, errors.New("waiting observer saw signed final unanimous proposal that it doesn't remember")
-		}
-		c := bot.GetCore()
-		c.DeliverMessagesToVM()
-		return NewWaiting(bot.Config, c), nil, nil
 	case ethbridge.PendingUnanimousAssertEvent:
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, errors.New("waiting observer saw pending unanimous assertion that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
-			newBot, err := bot.CloseUnanimous(bridge, nil)
+			bot.CloseUnanimous(bridge)
+			newBot, err := bot.ClosingUnanimous(nil, nil)
 			return newBot, nil, err
 		} else {
 			return waitingOffchainClosing{
@@ -321,11 +371,13 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 				bot.assertion,
 				time + bot.VMConfig.GracePeriod,
 				nil,
+				nil,
 			}, nil, nil
 		}
 	case ethbridge.PendingDisputableAssertionEvent:
 		if bot.accepted != nil {
-			newBot, err := bot.CloseUnanimous(bridge, nil)
+			bot.CloseUnanimous(bridge)
+			newBot, err := bot.ClosingUnanimous(nil, nil)
 			return newBot, nil, err
 		}
 
@@ -342,15 +394,18 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 		)
 		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
 			bridge.InitiateChallenge(
+				context.Background(),
 				ev.Precondition,
 				ev.Assertion,
 			)
 		}
+		balance := c.GetBalance()
+		_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 		return watchingAssertion{
 			c,
 			bot.Config,
 			inboxVal,
-			updatedState,
+			core.NewCore(updatedState, balance),
 			deadline,
 			ev.Precondition,
 			assertion,
@@ -364,10 +419,15 @@ type watchingAssertion struct {
 	*core.Core
 	*core.Config
 	inboxVal     value.Value
-	pendingState machine.Machine
+	pending      *core.Core
 	deadline     uint64
 	precondition *protocol.Precondition
 	assertion    *protocol.Assertion
+}
+
+func (bot watchingAssertion) SendMessageToVM(msg protocol.Message) {
+	bot.Core.SendMessageToVM(msg)
+	bot.pending.SendMessageToVM(msg)
 }
 
 func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
@@ -375,11 +435,8 @@ func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (Stat
 		return bot, nil
 	}
 
-	balance := bot.GetBalance()
-	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.assertion.OutMsgs))
-
 	return finalizingAssertion{
-		Core:       core.NewCore(bot.pendingState, balance),
+		Core:       bot.pending,
 		Config:     bot.Config,
 		ResultChan: nil,
 		assertion:  bot.assertion,
@@ -414,10 +471,22 @@ func (bot watchingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge
 	}
 }
 
-type attemptingAssertion struct {
+type disputableAssertCore struct {
 	*core.Core
 	*core.Config
-	request DisputableAssertionRequest
+	afterCore    *core.Core
+	precondition *protocol.Precondition
+	assertion    *protocol.Assertion
+	resultChan   chan<- bool
+}
+
+func (d *disputableAssertCore) SendMessageToVM(msg protocol.Message) {
+	d.Core.SendMessageToVM(msg)
+	d.afterCore.SendMessageToVM(msg)
+}
+
+type attemptingAssertion struct {
+	*disputableAssertCore
 }
 
 func (bot attemptingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
@@ -434,9 +503,7 @@ func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, brid
 
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingAssertion{
-			bot.Core,
-			bot.Config,
-			bot.request,
+			bot.disputableAssertCore,
 			deadline,
 		}, nil, nil
 	default:
@@ -445,9 +512,7 @@ func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, brid
 }
 
 type waitingAssertion struct {
-	*core.Core
-	*core.Config
-	request  DisputableAssertionRequest
+	*disputableAssertCore
 	deadline uint64
 }
 
@@ -457,32 +522,27 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 	}
 
 	bridge.ConfirmDisputableAsserted(
-		bot.request.Precondition,
-		bot.request.Assertion,
+		context.Background(),
+		bot.precondition,
+		bot.assertion,
 	)
-	assertion := bot.request.Assertion
-	balance := bot.GetBalance()
-	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 	return finalizingAssertion{
-		Core: core.NewCore(
-			bot.request.AfterState,
-			balance,
-		),
+		Core:       bot.afterCore,
 		Config:     bot.Config,
-		ResultChan: bot.request.ResultChan,
-		assertion:  assertion,
+		ResultChan: bot.resultChan,
+		assertion:  bot.assertion,
 	}, nil
 }
 
 func (bot waitingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
-		bot.request.NotifyInvalid()
+		bot.resultChan <- false
 		ct, err := defender.New(
 			bot.Config,
 			machine.NewAssertionDefender(
-				bot.request.Assertion,
-				bot.request.Precondition,
+				bot.assertion,
+				bot.precondition,
 				bot.GetMachine().Clone(),
 			),
 			time,
@@ -514,12 +574,11 @@ func (bot finalizingAssertion) UpdateState(ev ethbridge.Event, time uint64, brid
 		}
 		bridge.FinalizedAssertion(
 			bot.assertion,
-			len(bot.assertion.Logs),
+			ev.TxHash[:],
 			[][]byte{},
 			nil,
-			ev.TxHash[:],
 		)
-		bot.GetCore().DeliverMessagesToVM()
+		bot.GetCore().DeliverMessagesToVM(bridge)
 		return NewWaiting(bot.Config, bot.Core), nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: FinalizingAssertDefender: VM state got unsynchronized"}

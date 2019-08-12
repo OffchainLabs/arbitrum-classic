@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	jsonenc "encoding/json"
 	"fmt"
@@ -110,8 +111,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = coordinator.Val.DepositFunds(escrowRequired)
-	if err != nil {
+	receiptChan, errChan := coordinator.Val.DepositFunds(context.Background(), escrowRequired)
+	select {
+	case receipt := <-receiptChan:
+		if receipt.Status == 0 {
+			log.Fatalln("Follower could not deposit funds")
+		}
+	case err := <-errChan:
 		log.Fatal(err)
 	}
 
@@ -135,8 +141,13 @@ func main() {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
 
-	_, err = challenger.DepositFunds(escrowRequired)
-	if err != nil {
+	receiptChan, errChan = challenger.DepositFunds(context.Background(), escrowRequired)
+	select {
+	case receipt := <-receiptChan:
+		if receipt.Status == 0 {
+			log.Fatalln("Follower could not deposit funds")
+		}
+	case err := <-errChan:
 		log.Fatal(err)
 	}
 
@@ -167,11 +178,17 @@ func main() {
 		seq,
 	})
 
-	_, err = coordinator.Val.SendEthMessage(
+	receiptChan, errChan = coordinator.Val.SendEthMessage(
+		context.Background(),
 		tup,
 		big.NewInt(0),
 	)
-	if err != nil {
+	select {
+	case receipt := <-receiptChan:
+		if receipt.Status == 0 {
+			log.Fatalln("Follower could not deposit funds")
+		}
+	case err := <-errChan:
 		log.Fatal(err)
 	}
 	// fmt.Println("Send error", err)

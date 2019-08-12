@@ -18,6 +18,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -72,7 +73,8 @@ func (c *Core) SendMessageToVM(msg protocol.Message) {
 	c.balance.Add(msg.TokenType, msg.Currency)
 }
 
-func (c *Core) DeliverMessagesToVM() {
+func (c *Core) DeliverMessagesToVM(bridge bridge.Bridge) {
+	bridge.AddedNewMessages(c.machine.PendingMessageCount())
 	c.machine.DeliverOnchainMessage()
 }
 

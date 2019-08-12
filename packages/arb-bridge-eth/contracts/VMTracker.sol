@@ -278,6 +278,23 @@ contract VMTracker is Ownable {
         );
     }
 
+    function forwardMessage(bytes32 _destination, bytes21 _tokenType, uint256 _amount, bytes memory _data, bytes memory _signature) public {
+        address sender = ArbProtocol.recoverAddress(keccak256(abi.encodePacked(
+            _destination,
+            ArbValue.deserialize_value_hash(_data),
+            _amount,
+            _tokenType
+        )), _signature);
+
+        _sendUnpaidMessage(
+            _destination,
+            _tokenType,
+            _amount,
+            bytes32(uint256(uint160(sender))),
+            _data
+        );
+    }
+
     function sendEthMessage(bytes32 _destination, bytes memory _data) public payable {
         arbBalanceTracker.depositEth.value(msg.value)(_destination);
         _deliverMessage(

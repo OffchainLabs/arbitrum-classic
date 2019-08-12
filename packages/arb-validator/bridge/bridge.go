@@ -17,72 +17,99 @@
 package bridge
 
 import (
+	"context"
+
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type Bridge interface {
+	AddedNewMessages(count uint64)
+
 	FinalizedAssertion(
 		assertion *protocol.Assertion,
-		newLogCount int,
+		onChainTxHash []byte,
 		signatures [][]byte,
 		proposalResults *valmessage.UnanimousUpdateResults,
-		onChainTxHash []byte,
 	)
+
 	FinalizedUnanimousAssert(
+		ctx context.Context,
 		newInboxHash [32]byte,
 		timeBounds protocol.TimeBounds,
 		assertion *protocol.Assertion,
 		signatures [][]byte,
-	)
+	) (chan *types.Receipt, chan error)
+
 	PendingUnanimousAssert(
+		ctx context.Context,
 		newInboxHash [32]byte,
 		timeBounds protocol.TimeBounds,
 		assertion *protocol.Assertion,
 		sequenceNum uint64,
 		signatures [][]byte,
-	)
+	) (chan *types.Receipt, chan error)
+
 	ConfirmUnanimousAsserted(
+		ctx context.Context,
 		newInboxHash [32]byte,
 		assertion *protocol.Assertion,
-	)
+	) (chan *types.Receipt, chan error)
+
 	PendingDisputableAssert(
+		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
-	)
+	) (chan *types.Receipt, chan error)
+
 	ConfirmDisputableAsserted(
+		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
-	)
+	) (chan *types.Receipt, chan error)
+
 	InitiateChallenge(
+		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
-	)
+	) (chan *types.Receipt, chan error)
+
 	BisectAssertion(
+		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
 		deadline uint64,
-	)
+	) (chan *types.Receipt, chan error)
+
 	ContinueChallenge(
+		ctx context.Context,
 		assertionToChallenge uint16,
 		preconditions []*protocol.Precondition,
 		assertions []*protocol.AssertionStub,
 		deadline uint64,
-	)
+	) (chan *types.Receipt, chan error)
+
 	OneStepProof(
+		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
 		proof []byte,
 		deadline uint64,
-	)
+	) (chan *types.Receipt, chan error)
+
 	AsserterTimedOut(
+		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
 		deadline uint64,
-	)
+	) (chan *types.Receipt, chan error)
+
 	ChallengerTimedOut(
+		ctx context.Context,
 		preconditions []*protocol.Precondition,
 		assertions []*protocol.AssertionStub,
 		deadline uint64,
-	)
+	) (chan *types.Receipt, chan error)
 }
