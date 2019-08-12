@@ -51,9 +51,8 @@ func NewInt64Value(x int64) IntValue {
 func NewBooleanValue(val bool) IntValue {
 	if val {
 		return NewInt64Value(1)
-	} else {
-		return NewInt64Value(0)
 	}
+	return NewInt64Value(0)
 }
 
 func NewIntValueFromString(str string) Value {

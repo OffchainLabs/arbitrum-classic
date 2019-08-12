@@ -129,7 +129,7 @@ func NewValidatorFollower(
 
 func (m *ValidatorFollower) HandleUnanimousRequest(
 	request *valmessage.UnanimousAssertionValidatorRequest,
-	requestId [32]byte,
+	requestID [32]byte,
 ) error {
 	unanRequest := valmessage.UnanimousRequestData{
 		BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
@@ -152,7 +152,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			// Access is safe since we already did a length check
 			signedVal, _ := tup.GetByInt64(0)
 			messageHash := solsha3.SoliditySHA3(
-				solsha3.Bytes32(m.VmId),
+				solsha3.Bytes32(m.VMID),
 				solsha3.Bytes32(signedVal.Hash()),
 				solsha3.Uint256(msg.Currency),
 				msg.TokenType[:],
@@ -204,7 +204,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 
 		unanRequest.SequenceNum = unanUpdate.SequenceNum
 
-		m.unanimousRequests[requestId] = UnanimousAssertionRequest{
+		m.unanimousRequests[requestID] = UnanimousAssertionRequest{
 			unanRequest,
 			messages,
 		}
@@ -225,7 +225,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		}
 	}
 	message := &valmessage.FollowerResponse{
-		RequestId: value.NewHashBuf(requestId),
+		RequestId: value.NewHashBuf(requestID),
 		Response:  &valmessage.FollowerResponse_Unanimous{Unanimous: msg},
 	}
 	raw, err := proto.Marshal(message)

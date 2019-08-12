@@ -24,13 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-// type VMConfiguration struct {
-//	GracePeriod           uint64
-//	EscrowRequired        *big.Int
-//	AssertKeys            []common.Address
-//	MaxExecutionStepCount uint32
-//}
-//
 func NewVMConfiguration(gracePeriod uint64, escrowRequired *big.Int, escrowCurrency common.Address, assertKeys []common.Address, maxSteps uint32, owner common.Address) *VMConfiguration {
 	keys := make([]*Address, 0, len(assertKeys))
 	for _, key := range assertKeys {

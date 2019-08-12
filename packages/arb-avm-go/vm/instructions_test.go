@@ -864,7 +864,7 @@ func TestJump(t *testing.T) {
 	RunInstruction(m, m.GetOperation())
 	// push 2 to set jump point
 	var nextHash [32]byte
-	codept := value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
+	codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// JUMP
 	RunInstruction(m, value.BasicOperation{Op: code.JUMP})
@@ -902,7 +902,7 @@ func TestCJump(t *testing.T) {
 	m.Stack().Push(value.NewInt64Value(0))
 	// push 2 to set jump point
 	var nextHash [32]byte
-	codept := value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
+	codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// CJUMP
 	RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
@@ -922,7 +922,7 @@ func TestCJump(t *testing.T) {
 	// push 1 for conditional
 	m.Stack().Push(value.NewInt64Value(1))
 	// push 2 to set jump point
-	codept = value.CodePointValue{2, value.BasicOperation{Op: code.SUB}, nextHash}
+	codept = value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// CJUMP
 	RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
@@ -1002,7 +1002,7 @@ func TestPcpush(t *testing.T) {
 	}
 	// verify known and unknown match one item value = 1
 	var nextHash [32]byte
-	codept := value.CodePointValue{0, value.BasicOperation{Op: code.HALT}, nextHash}
+	codept := value.CodePointValue{Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	knownMachine.Stack().Push(codept)
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
@@ -1187,7 +1187,7 @@ func TestErrpush(t *testing.T) {
 
 	// push codepoint onto stack
 	var nextHash [32]byte
-	codept := value.CodePointValue{4, value.BasicOperation{Op: code.HALT}, nextHash}
+	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1251,7 +1251,7 @@ func TestErrset(t *testing.T) {
 
 	// push codepoint onto stack
 	var nextHash [32]byte
-	codept := value.CodePointValue{4, value.BasicOperation{Op: code.HALT}, nextHash}
+	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1442,7 +1442,7 @@ func TestTget(t *testing.T) {
 	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 	m.Stack().Push(value.NewInt64Value(3))
 	var nextHash [32]byte
-	codept := value.CodePointValue{0, value.BasicOperation{Op: code.HALT}, nextHash}
+	codept := value.CodePointValue{Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	m.SetPC(codept)
 	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
 		tmp := "TGET expected fail"

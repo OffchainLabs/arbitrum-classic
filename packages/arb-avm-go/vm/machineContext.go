@@ -70,10 +70,10 @@ func (ac *MachineAssertionContext) NotifyStep() {
 }
 
 func (ac *MachineAssertionContext) Finalize(m *Machine) *protocol.Assertion {
-	ac.machine.SetContext(&machine.MachineNoContext{})
+	ac.machine.SetContext(&machine.NoContext{})
 	return protocol.NewAssertion(ac.machine.Hash(), ac.numSteps, ac.outMsgs, ac.logs)
 }
 
 func (ac *MachineAssertionContext) EndContext() {
-	ac.machine.SetContext(&machine.MachineNoContext{})
+	ac.machine.SetContext(&machine.NoContext{})
 }

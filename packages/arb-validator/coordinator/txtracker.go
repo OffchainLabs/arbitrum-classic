@@ -92,7 +92,7 @@ func (a *assertionInfo) FindLogs(address *big.Int, topics [][32]byte) []logRespo
 	logs := make([]logResponse, 0)
 	for _, txLogs := range a.TxLogs {
 		for _, evmLog := range txLogs.Logs {
-			if address != nil && !value.NewIntValue(address).Equal(evmLog.ContractId) {
+			if address != nil && !value.NewIntValue(address).Equal(evmLog.ContractID) {
 				continue
 			}
 
@@ -283,7 +283,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 		for i, assertion := range assertions {
 			assertionLogs := assertion.FindLogs(request.address, request.topics)
 			for j, evmLog := range assertionLogs {
-				addressBytes := evmLog.Log.ContractId.ToBytes()
+				addressBytes := evmLog.Log.ContractID.ToBytes()
 				topicStrings := make([]string, 0, len(evmLog.Log.Topics))
 				for _, topic := range evmLog.Log.Topics {
 					topicStrings = append(topicStrings, hexutil.Encode(topic[:]))

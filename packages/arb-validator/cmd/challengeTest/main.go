@@ -74,8 +74,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var vmId [32]byte
-	_, err = rand.Read(vmId[:])
+	var vmID [32]byte
+	_, err = rand.Read(vmID[:])
 	if err != nil {
 		log.Fatal(err)
 	}

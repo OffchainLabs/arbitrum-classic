@@ -90,9 +90,8 @@ func (op ImmediateOperation) MarshalProof(wr io.Writer, includeVal bool) error {
 	}
 	if includeVal {
 		return MarshalValue(op.Val.CloneShallow(), wr)
-	} else {
-		return MarshalValue(NewHashOnlyValueFromValue(op.Val), wr)
 	}
+	return MarshalValue(NewHashOnlyValueFromValue(op.Val), wr)
 }
 
 func (op BasicOperation) TypeCode() uint8 {

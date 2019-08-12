@@ -53,21 +53,21 @@ func NewMachinePC(insns []value.Operation, handler WarningHandler) *MachinePC {
 	return &MachinePC{handler, flat, savedValues, 0}
 }
 
-func (s *MachinePC) Equal(y *MachinePC) (bool, string) {
-	for i := range s.flat {
-		if s.flat[i].GetOp() != y.flat[i].GetOp() {
+func (m *MachinePC) Equal(y *MachinePC) (bool, string) {
+	for i := range m.flat {
+		if m.flat[i].GetOp() != y.flat[i].GetOp() {
 			return false, "MachinePC flat Op different"
 		}
-		if s.flat[i].TypeCode() != y.flat[i].TypeCode() {
+		if m.flat[i].TypeCode() != y.flat[i].TypeCode() {
 			return false, "MachinePC flat TypeCode different"
 		}
 	}
-	for i := range s.savedValues {
-		if !(value.Eq(s.savedValues[i], y.savedValues[i])) {
+	for i := range m.savedValues {
+		if !(value.Eq(m.savedValues[i], y.savedValues[i])) {
 			return false, "Flat stack savedValues different"
 		}
 	}
-	if s.pc != y.pc {
+	if m.pc != y.pc {
 		return false, "Flat stack PC different"
 	}
 
@@ -79,11 +79,10 @@ func (m MachinePC) GetCurrentInsn() value.Operation {
 }
 
 func (m MachinePC) GetCurrentInsnName() string {
-	if m.pc >= 0 {
-		return code.InstructionNames[m.flat[m.pc].GetOp()]
-	} else {
+	if m.pc < 0 {
 		panic("Bad pc")
 	}
+	return code.InstructionNames[m.flat[m.pc].GetOp()]
 }
 
 func (m MachinePC) GetPC() value.CodePointValue {
@@ -100,20 +99,18 @@ func (m MachinePC) GetPC() value.CodePointValue {
 
 	if curPC == m.pc {
 		return codePoint
-	} else {
-		for i := curPC - 1; i >= m.pc; i-- {
-			codePoint = value.CodePointValue{InsnNum: i, Op: m.flat[i], NextHash: codePoint.Hash()}
-		}
-		return codePoint
 	}
+	for i := curPC - 1; i >= m.pc; i-- {
+		codePoint = value.CodePointValue{InsnNum: i, Op: m.flat[i], NextHash: codePoint.Hash()}
+	}
+	return codePoint
 }
 
 func (m MachinePC) GetCurrentCodePointHash() [32]byte {
 	if m.pc == -1 {
 		return HashOfLastInstruction
-	} else {
-		return m.GetPC().Hash()
 	}
+	return m.GetPC().Hash()
 }
 
 func (m *MachinePC) IncrPC() error {

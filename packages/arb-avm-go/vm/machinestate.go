@@ -34,9 +34,9 @@ import (
 type MachineStatus int
 
 const (
-	MACHINE_EXTENSIVE MachineStatus = iota
-	MACHINE_ERRORSTOP
-	MACHINE_HALT
+	Extensive MachineStatus = iota
+	ErrorStop
+	Halt
 )
 
 type Machine struct {
@@ -47,7 +47,7 @@ type Machine struct {
 	static     *MachineValue
 	pc         *MachinePC
 	errHandler value.CodePointValue
-	context    machine.MachineContext
+	context    machine.Context
 	status     MachineStatus
 	inbox      *protocol.Inbox
 	balance    *protocol.BalanceTracker
@@ -110,8 +110,8 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		static,
 		pc,
 		errHandler,
-		&machine.MachineNoContext{},
-		MACHINE_EXTENSIVE,
+		&machine.NoContext{},
+		Extensive,
 		inbox,
 		balance,
 		sizeLimit,
@@ -131,7 +131,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 //	pc := NewMachinePC(opCodes, wh)
 //	wh.SwitchMachinePC(pc)
 //	pc.SetPCForced(pcVal)
-//	return &Machine{datastack, auxStack, register, static, pc, errHandlerVal, &machine.MachineNoContext{}, MACHINE_EXTENSIVE, sizeLimit, false, wh}
+//	return &Machine{datastack, auxStack, register, static, pc, errHandlerVal, &machine.NoContext{}, Extensive, sizeLimit, false, wh}
 //}
 
 func (m *Machine) Stack() stack.Stack {
@@ -150,7 +150,7 @@ func (m *Machine) Static() *MachineValue {
 	return m.static
 }
 
-func (m *Machine) SetContext(mc machine.MachineContext) {
+func (m *Machine) SetContext(mc machine.Context) {
 	m.context = mc
 }
 
@@ -174,7 +174,7 @@ func (m *Machine) IncrPC() {
 	if !m.HaveSizeException() {
 		err := m.pc.IncrPC()
 		if err != nil {
-			m.status = MACHINE_ERRORSTOP
+			m.status = ErrorStop
 		}
 	}
 }
@@ -205,19 +205,19 @@ func (m *Machine) SetPC(iv value.Value) error {
 }
 
 func (m *Machine) Halt() {
-	m.status = MACHINE_HALT
+	m.status = Halt
 }
 
 func (m *Machine) ErrorStop() {
-	m.status = MACHINE_ERRORSTOP
+	m.status = ErrorStop
 }
 
 func (m *Machine) IsHalted() bool {
-	return m.status == MACHINE_HALT
+	return m.status == Halt
 }
 
 func (m *Machine) IsErrored() bool {
-	return m.status == MACHINE_ERRORSTOP
+	return m.status == ErrorStop
 }
 
 func (m *Machine) HaveSizeException() bool {
@@ -243,7 +243,7 @@ func (m *Machine) run() (bool, bool, string) {
 	}
 	insnName := m.pc.GetCurrentInsnName()
 	_, err := RunInstruction(m, m.pc.GetCurrentInsn())
-	if _, blocked := err.(VMBlockedError); blocked {
+	if _, blocked := err.(BlockedError); blocked {
 		return false, false, "Blocked"
 	}
 	m.context.NotifyStep()
@@ -264,7 +264,7 @@ func (m *Machine) run() (bool, bool, string) {
 	return true, true, "Success"
 }
 
-// run up to maxSteps steps, stop earlier if halted, errored or blocked
+// ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	assCtx := NewMachineAssertionContext(
 		m,
@@ -324,7 +324,7 @@ func (m *Machine) Log(val value.Value) {
 
 func (m *Machine) Hash() [32]byte {
 	switch m.status {
-	case MACHINE_EXTENSIVE:
+	case Extensive:
 		ret := [32]byte{}
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
@@ -335,9 +335,9 @@ func (m *Machine) Hash() [32]byte {
 			solsha3.Bytes32(m.errHandler.Hash()),
 		))
 		return ret
-	case MACHINE_ERRORSTOP:
+	case ErrorStop:
 		return value.NewInt64Value(1).ToBytes()
-	case MACHINE_HALT:
+	case Halt:
 		return value.NewInt64Value(0).ToBytes()
 	}
 	panic("Machine::Hash: invalid machine status")
@@ -432,7 +432,7 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.static.Clone(),
 		newPcPointer,
 		m.errHandler,
-		&machine.MachineNoContext{},
+		&machine.NoContext{},
 		m.status,
 		m.inbox.Clone(),
 		m.balance.Clone(),

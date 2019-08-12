@@ -84,7 +84,6 @@ func (nv HashOnlyValue) Equal(val Value) bool {
 
 func (nv HashOnlyValue) String() string {
 	return fmt.Sprintf("HashOnlyValue(%v)", hexutil.Encode(nv.hash[:]))
-	return "[HashOnlyValue]"
 }
 
 func (nv HashOnlyValue) Hash() [32]byte {

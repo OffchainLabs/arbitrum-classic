@@ -221,7 +221,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				msg := protocol.NewMessage(msgVal, val.TokenType, val.Value, val.Destination)
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: MessageDeliveredEvent{
 						Msg: msg,
 					},
@@ -235,14 +235,13 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: VMCreatedEvent{
-						VmId:                val.VmId,
 						GracePeriod:         val.GracePeriod,
 						EscrowRequired:      val.EscrowRequired,
 						EscrowCurrency:      val.EscrowCurrency,
 						MaxExecutionSteps:   val.MaxExecutionSteps,
-						VmState:             val.VmState,
+						VMState:             val.VmState,
 						ChallengeManagerNum: val.ChallengeManagerNum,
 						Owner:               val.Owner,
 						Validators:          val.Validators,
@@ -257,7 +256,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: FinalizedUnanimousAssertEvent{
 						UnanHash: val.UnanHash,
 					},
@@ -271,7 +270,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: PendingUnanimousAssertEvent{
 						UnanHash:    val.UnanHash,
 						SequenceNum: val.SequenceNum,
@@ -286,7 +285,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: ConfirmedUnanimousAssertEvent{
 						SequenceNum: val.SequenceNum,
 					},
@@ -302,7 +301,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				precondition, assertion := translateDisputableAssertionEvent(val)
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: PendingDisputableAssertionEvent{
 						Precondition: precondition,
 						Assertion:    assertion,
@@ -318,7 +317,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: ConfirmedDisputableAssertEvent{
 						val.Raw.TxHash,
 						val.LogsAccHash,
@@ -333,7 +332,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: InitiateChallengeEvent{
 						Challenger: val.Challenger,
 					},
@@ -347,7 +346,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: BisectionEvent{
 						Assertions: translateBisectionEvent(val),
 					},
@@ -362,14 +361,14 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				if val.ChallengerWrong {
 					outChan <- Notification{
 						Header: header,
-						VmID:   val.VmId,
+						VMID:   val.VmId,
 						Event:  AsserterTimeoutEvent{},
 						TxHash: val.Raw.TxHash,
 					}
 				} else {
 					outChan <- Notification{
 						Header: header,
-						VmID:   val.VmId,
+						VMID:   val.VmId,
 						Event:  ChallengerTimeoutEvent{},
 						TxHash: val.Raw.TxHash,
 					}
@@ -382,7 +381,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event: ContinueChallengeEvent{
 						ChallengedAssertion: uint16(val.AssertionIndex.Uint64()),
 					},
@@ -396,7 +395,7 @@ func (con *Bridge) CreateListeners(vmID [32]byte) (chan Notification, chan error
 				}
 				outChan <- Notification{
 					Header: header,
-					VmID:   val.VmId,
+					VMID:   val.VmId,
 					Event:  OneStepProofEvent{},
 					TxHash: val.Raw.TxHash,
 				}

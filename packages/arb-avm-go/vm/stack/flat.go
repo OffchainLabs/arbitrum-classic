@@ -34,10 +34,10 @@ type Flat struct {
 	size       int64
 }
 
-func (m *Flat) String() string {
+func (f *Flat) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("[")
-	s := m.Clone()
+	s := f.Clone()
 	for !s.IsEmpty() {
 		val, _ := s.Pop()
 		buf.WriteString(fmt.Sprintf("%v", val))
@@ -66,202 +66,201 @@ func FlatFromTupleChain(val value.Value) *Flat {
 	return fs
 }
 
-func (s *Flat) CloneImpl() *Flat {
-	s.verifyHeight()
-	ints := make([]value.IntValue, len(s.ints))
-	copy(ints, s.ints)
-	tuples := make([]value.TupleValue, len(s.tuples))
-	copy(tuples, s.tuples)
-	codePoints := make([]value.CodePointValue, len(s.codePoints))
-	copy(codePoints, s.codePoints)
-	hashOnly := make([]value.HashOnlyValue, len(s.hashOnly))
-	copy(hashOnly, s.hashOnly)
-	itemTypes := make([]byte, len(s.itemTypes))
-	copy(itemTypes, s.itemTypes)
-	hashes := make([][32]byte, len(s.hashes))
-	copy(hashes, s.hashes)
-	newS := &Flat{ints, tuples, codePoints, hashOnly, itemTypes, hashes, s.size}
+func (f *Flat) CloneImpl() *Flat {
+	f.verifyHeight()
+	ints := make([]value.IntValue, len(f.ints))
+	copy(ints, f.ints)
+	tuples := make([]value.TupleValue, len(f.tuples))
+	copy(tuples, f.tuples)
+	codePoints := make([]value.CodePointValue, len(f.codePoints))
+	copy(codePoints, f.codePoints)
+	hashOnly := make([]value.HashOnlyValue, len(f.hashOnly))
+	copy(hashOnly, f.hashOnly)
+	itemTypes := make([]byte, len(f.itemTypes))
+	copy(itemTypes, f.itemTypes)
+	hashes := make([][32]byte, len(f.hashes))
+	copy(hashes, f.hashes)
+	newS := &Flat{ints, tuples, codePoints, hashOnly, itemTypes, hashes, f.size}
 	newS.verifyHeight()
 	return newS
 }
 
-func (s *Flat) Clone() Stack {
-	return s.CloneImpl()
+func (f *Flat) Clone() Stack {
+	return f.CloneImpl()
 }
 
-func (s *Flat) Equal(yin Stack) (bool, string) {
+func (f *Flat) Equal(yin Stack) (bool, string) {
 	y := yin.(*Flat)
-	if len(s.itemTypes) != len(y.itemTypes) {
-		return false, fmt.Sprintf("Flat stack lengths are different (%v and %v)", len(s.itemTypes), len(y.itemTypes))
+	if len(f.itemTypes) != len(y.itemTypes) {
+		return false, fmt.Sprintf("Flat stack lengths are different (%v and %v)", len(f.itemTypes), len(y.itemTypes))
 	}
-	if !bytes.Equal(s.itemTypes, y.itemTypes) {
+	if !bytes.Equal(f.itemTypes, y.itemTypes) {
 		return false, "Flat stacks contain values of different types"
 	}
 
-	for i := range s.ints {
-		if !(value.Eq(s.ints[i], y.ints[i])) {
-			return false, fmt.Sprintf("Flat stacks contain ints of different value (expected %v found %v)", s.ints[i], y.ints[i])
+	for i := range f.ints {
+		if !(value.Eq(f.ints[i], y.ints[i])) {
+			return false, fmt.Sprintf("Flat stacks contain ints of different value (expected %v found %v)", f.ints[i], y.ints[i])
 		}
 	}
-	for i := range s.tuples {
-		if !(value.Eq(s.tuples[i], y.tuples[i])) {
+	for i := range f.tuples {
+		if !(value.Eq(f.tuples[i], y.tuples[i])) {
 			return false, "Flat stack tuples different"
 		}
 	}
-	for i := range s.codePoints {
-		if !(value.Eq(s.codePoints[i], y.codePoints[i])) {
+	for i := range f.codePoints {
+		if !(value.Eq(f.codePoints[i], y.codePoints[i])) {
 			return false, "Flat stack codePoints different"
 		}
 	}
-	for i := range s.hashOnly {
-		if !(value.Eq(s.hashOnly[i], y.hashOnly[i])) {
+	for i := range f.hashOnly {
+		if !(value.Eq(f.hashOnly[i], y.hashOnly[i])) {
 			return false, "Flat stack hashOnly different"
 		}
 	}
-	for i := range s.hashes {
-		if s.hashes[i] != y.hashes[i] {
+	for i := range f.hashes {
+		if f.hashes[i] != y.hashes[i] {
 			return false, "Flat stack hashes different"
 		}
 	}
 
-	if s.size != y.size {
-		return false, fmt.Sprintf("Flat stack sizes are different (%v and %v)", s.size, y.size)
+	if f.size != y.size {
+		return false, fmt.Sprintf("Flat stack sizes are different (%v and %v)", f.size, y.size)
 	}
 
 	return true, ""
 }
 
-func (s *Flat) PushInt(v value.IntValue) {
-	s.verifyHeight()
-	s.ints = append(s.ints, v)
-	s.addedValue(v.TypeCode(), v.Size())
-	s.verifyHeight()
+func (f *Flat) PushInt(v value.IntValue) {
+	f.verifyHeight()
+	f.ints = append(f.ints, v)
+	f.addedValue(v.TypeCode(), v.Size())
+	f.verifyHeight()
 }
 
-func (s *Flat) PushTuple(v value.TupleValue) {
-	s.verifyHeight()
-	s.tuples = append(s.tuples, v)
-	s.addedValue(v.TypeCode(), v.Size())
-	s.verifyHeight()
+func (f *Flat) PushTuple(v value.TupleValue) {
+	f.verifyHeight()
+	f.tuples = append(f.tuples, v)
+	f.addedValue(v.TypeCode(), v.Size())
+	f.verifyHeight()
 }
 
-func (s *Flat) PushCodePoint(v value.CodePointValue) {
-	s.verifyHeight()
-	s.codePoints = append(s.codePoints, v)
-	s.addedValue(v.TypeCode(), v.Size())
-	s.verifyHeight()
+func (f *Flat) PushCodePoint(v value.CodePointValue) {
+	f.verifyHeight()
+	f.codePoints = append(f.codePoints, v)
+	f.addedValue(v.TypeCode(), v.Size())
+	f.verifyHeight()
 }
 
-func (s *Flat) PushHashOnly(b value.HashOnlyValue) {
-	s.verifyHeight()
-	s.hashOnly = append(s.hashOnly, b)
-	s.addedValue(b.TypeCode(), b.Size())
-	s.verifyHeight()
+func (f *Flat) PushHashOnly(b value.HashOnlyValue) {
+	f.verifyHeight()
+	f.hashOnly = append(f.hashOnly, b)
+	f.addedValue(b.TypeCode(), b.Size())
+	f.verifyHeight()
 }
 
-func (s *Flat) Push(val value.Value) {
-	s.verifyHeight()
+func (f *Flat) Push(val value.Value) {
+	f.verifyHeight()
 	switch v := val.(type) {
 	case value.IntValue:
-		s.PushInt(v)
+		f.PushInt(v)
 	case value.TupleValue:
-		s.PushTuple(v)
+		f.PushTuple(v)
 	case value.CodePointValue:
-		s.PushCodePoint(v)
+		f.PushCodePoint(v)
 	case value.HashOnlyValue:
-		s.PushHashOnly(v)
+		f.PushHashOnly(v)
 	default:
 		panic("PushValue: unhandled case")
 	}
-	s.verifyHeight()
+	f.verifyHeight()
 }
 
-func (s *Flat) PopInt() (val value.IntValue, err error) {
-	s.verifyHeight()
-	if err := s.tryPop(value.TypeCodeInt); err != nil {
+func (f *Flat) PopInt() (val value.IntValue, err error) {
+	f.verifyHeight()
+	if err := f.tryPop(value.TypeCodeInt); err != nil {
 		return value.IntValue{}, err
 	}
-	val = s.popIntUnchecked()
-	s.verifyHeight()
+	val = f.popIntUnchecked()
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) PopTuple() (value.TupleValue, error) {
-	s.verifyHeight()
-	if err := s.tryPop(value.TypeCodeTuple); err != nil {
+func (f *Flat) PopTuple() (value.TupleValue, error) {
+	f.verifyHeight()
+	if err := f.tryPop(value.TypeCodeTuple); err != nil {
 		return value.TupleValue{}, err
 	}
-	val := s.popTupleUnchecked()
-	s.verifyHeight()
+	val := f.popTupleUnchecked()
+	f.verifyHeight()
 	return val, nil
 }
 
-func (s *Flat) PopCodePoint() (val value.CodePointValue, err error) {
-	s.verifyHeight()
-	if err := s.tryPop(value.TypeCodeCodePoint); err != nil {
+func (f *Flat) PopCodePoint() (val value.CodePointValue, err error) {
+	f.verifyHeight()
+	if err := f.tryPop(value.TypeCodeCodePoint); err != nil {
 		return value.CodePointValue{}, err
 	}
-	val = s.popCodePointUnchecked()
-	s.verifyHeight()
+	val = f.popCodePointUnchecked()
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) PopHashOnly() (val value.HashOnlyValue, err error) {
-	s.verifyHeight()
-	if err := s.tryPop(value.TypeCodeHashOnly); err != nil {
+func (f *Flat) PopHashOnly() (val value.HashOnlyValue, err error) {
+	f.verifyHeight()
+	if err := f.tryPop(value.TypeCodeHashOnly); err != nil {
 		return value.HashOnlyValue{}, err
 	}
-	val = s.popHashOnlyUnchecked()
-	s.verifyHeight()
+	val = f.popHashOnlyUnchecked()
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) Pop() (lastItem value.Value, err error) {
-	s.verifyHeight()
-	if len(s.itemTypes) == 0 {
+func (f *Flat) Pop() (lastItem value.Value, err error) {
+	f.verifyHeight()
+	if len(f.itemTypes) == 0 {
 		return nil, EmptyError{}
 	}
-	valType := s.itemTypes[len(s.itemTypes)-1]
+	valType := f.itemTypes[len(f.itemTypes)-1]
 	switch valType {
 	case value.TypeCodeInt:
-		lastItem = s.popIntUnchecked()
+		lastItem = f.popIntUnchecked()
 	case value.TypeCodeTuple:
-		lastItem = s.popTupleUnchecked()
+		lastItem = f.popTupleUnchecked()
 	case value.TypeCodeCodePoint:
-		lastItem = s.popCodePointUnchecked()
+		lastItem = f.popCodePointUnchecked()
 	case value.TypeCodeHashOnly:
-		lastItem = s.popHashOnlyUnchecked()
+		lastItem = f.popHashOnlyUnchecked()
 	default:
 		panic("PopValue: Unhandled type")
 	}
-	s.verifyHeight()
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) IsEmpty() bool {
-	return len(s.itemTypes) == 0
+func (f *Flat) IsEmpty() bool {
+	return len(f.itemTypes) == 0
 }
 
-func (s *Flat) Size() int64 {
-	return s.size
+func (f *Flat) Size() int64 {
+	return f.size
 }
 
-func (s *Flat) Count() int64 {
-	return int64(len(s.itemTypes))
+func (f *Flat) Count() int64 {
+	return int64(len(f.itemTypes))
 }
 
-func (s *Flat) StateValue() value.Value {
-	s.updateHashes()
-	if len(s.itemTypes) > 0 {
-		return value.NewHashOnlyValue(s.hashes[len(s.hashes)-1], s.size)
-	} else {
+func (f *Flat) StateValue() value.Value {
+	f.updateHashes()
+	if len(f.itemTypes) == 0 {
 		return value.NewHashOnlyValue(value.NewEmptyTuple().Hash(), 1)
 	}
+	return value.NewHashOnlyValue(f.hashes[len(f.hashes)-1], f.size)
 }
 
-func (s *Flat) ProofValue(stackInfo []byte) value.Value {
-	s.updateHashes()
-	c := s.CloneImpl()
+func (f *Flat) ProofValue(stackInfo []byte) value.Value {
+	f.updateHashes()
+	c := f.CloneImpl()
 	vals := make([]value.Value, 0, len(stackInfo))
 	for range stackInfo {
 		val, _ := c.Pop()
@@ -278,9 +277,9 @@ func (s *Flat) ProofValue(stackInfo []byte) value.Value {
 	return stack.stack
 }
 
-func (s *Flat) SolidityProofValue(stackInfo []byte) (value.HashOnlyValue, []value.Value) {
-	s.updateHashes()
-	c := s.CloneImpl()
+func (f *Flat) SolidityProofValue(stackInfo []byte) (value.HashOnlyValue, []value.Value) {
+	f.updateHashes()
+	c := f.CloneImpl()
 	vals := make([]value.Value, 0, len(stackInfo))
 	for i := range stackInfo {
 		val, _ := c.Pop()
@@ -293,24 +292,23 @@ func (s *Flat) SolidityProofValue(stackInfo []byte) (value.HashOnlyValue, []valu
 	return value.NewHashOnlyValueFromValue(c.StateValue()), vals
 }
 
-func (s *Flat) FullyExpandedValue() value.Value {
-	s2 := s.Clone()
+func (f *Flat) FullyExpandedValue() value.Value {
+	s2 := f.Clone()
 	return s2.(*Flat).FullyExpandedValueImpl()
 }
 
-func (s *Flat) FullyExpandedValueImpl() value.Value {
-	if s.IsEmpty() {
+func (f *Flat) FullyExpandedValueImpl() value.Value {
+	if f.IsEmpty() {
 		return value.NewEmptyTuple()
-	} else {
-		top, _ := s.Pop() // ignore error because we just checked for empty stack
-		return value.NewTuple2(top, s.FullyExpandedValueImpl())
 	}
+	top, _ := f.Pop() // ignore error because we just checked for empty stack
+	return value.NewTuple2(top, f.FullyExpandedValueImpl())
 }
 
-func (s *Flat) addedValueAddHash(itemHash1 [32]byte) {
+func (f *Flat) addedValueAddHash(itemHash1 [32]byte) {
 	var prevItem [32]byte
-	if len(s.hashes) > 0 {
-		prevItem = s.hashes[len(s.hashes)-1]
+	if len(f.hashes) > 0 {
+		prevItem = f.hashes[len(f.hashes)-1]
 	} else {
 		prevItem = value.NewEmptyTuple().Hash()
 	}
@@ -320,155 +318,155 @@ func (s *Flat) addedValueAddHash(itemHash1 [32]byte) {
 	)
 	var ret [32]byte
 	copy(ret[:], val)
-	s.hashes = append(s.hashes, ret)
+	f.hashes = append(f.hashes, ret)
 }
 
-func (s *Flat) countOfType(tipe byte) int {
+func (f *Flat) countOfType(tipe byte) int {
 	switch tipe {
 	case value.TypeCodeInt:
-		return len(s.ints)
+		return len(f.ints)
 	case value.TypeCodeTuple:
-		return len(s.tuples)
+		return len(f.tuples)
 	case value.TypeCodeCodePoint:
-		return len(s.codePoints)
+		return len(f.codePoints)
 	case value.TypeCodeHashOnly:
-		return len(s.hashOnly)
+		return len(f.hashOnly)
 	default:
 		panic("PopValue: Unhandled type")
 	}
 }
 
-func (s *Flat) hashOfItem(tipe byte, offset int) [32]byte {
+func (f *Flat) hashOfItem(tipe byte, offset int) [32]byte {
 	switch tipe {
 	case value.TypeCodeInt:
-		return s.ints[offset].Hash()
+		return f.ints[offset].Hash()
 	case value.TypeCodeTuple:
-		return s.tuples[offset].Hash()
+		return f.tuples[offset].Hash()
 	case value.TypeCodeCodePoint:
-		return s.codePoints[offset].Hash()
+		return f.codePoints[offset].Hash()
 	case value.TypeCodeHashOnly:
-		return s.hashOnly[offset].Hash()
+		return f.hashOnly[offset].Hash()
 	default:
 		panic("PopValue: Unhandled type")
 	}
 }
 
-func (s *Flat) addedValue(tipe byte, size int64) {
-	s.itemTypes = append(s.itemTypes, tipe)
-	s.size += size + 1
-	if len(s.itemTypes)-len(s.hashes) > 10 {
-		s.updateHashes()
+func (f *Flat) addedValue(tipe byte, size int64) {
+	f.itemTypes = append(f.itemTypes, tipe)
+	f.size += size + 1
+	if len(f.itemTypes)-len(f.hashes) > 10 {
+		f.updateHashes()
 	}
 }
 
-func (s *Flat) removedValue(size int64) {
-	s.size -= size + 1
-	s.itemTypes = s.itemTypes[:len(s.itemTypes)-1]
-	if len(s.hashes) > len(s.itemTypes) {
-		s.hashes = s.hashes[:len(s.itemTypes)]
+func (f *Flat) removedValue(size int64) {
+	f.size -= size + 1
+	f.itemTypes = f.itemTypes[:len(f.itemTypes)-1]
+	if len(f.hashes) > len(f.itemTypes) {
+		f.hashes = f.hashes[:len(f.itemTypes)]
 	}
 }
 
-func (s *Flat) updateHashes() {
-	s.verifyHeight()
+func (f *Flat) updateHashes() {
+	f.verifyHeight()
 	var counts [200]int
-	for i := len(s.hashes); i < len(s.itemTypes); i++ {
-		counts[s.itemTypes[i]]++
+	for i := len(f.hashes); i < len(f.itemTypes); i++ {
+		counts[f.itemTypes[i]]++
 	}
 
-	for i := len(s.hashes); i < len(s.itemTypes); i++ {
-		tipe := s.itemTypes[i]
-		totalCount := s.countOfType(tipe)
+	for i := len(f.hashes); i < len(f.itemTypes); i++ {
+		tipe := f.itemTypes[i]
+		totalCount := f.countOfType(tipe)
 		waitingCount := counts[tipe]
-		hash := s.hashOfItem(tipe, totalCount-waitingCount)
-		s.addedValueAddHash(hash)
+		hash := f.hashOfItem(tipe, totalCount-waitingCount)
+		f.addedValueAddHash(hash)
 		counts[tipe]--
 	}
-	s.verifyHeight()
+	f.verifyHeight()
 }
 
-func (s *Flat) tryPop(tipe byte) error {
-	s.verifyHeight()
-	if len(s.itemTypes) == 0 {
+func (f *Flat) tryPop(tipe byte) error {
+	f.verifyHeight()
+	if len(f.itemTypes) == 0 {
 		return EmptyError{}
 	}
-	valType := s.itemTypes[len(s.itemTypes)-1]
+	valType := f.itemTypes[len(f.itemTypes)-1]
 	if valType != tipe {
 		switch valType {
 		case value.TypeCodeInt:
-			s.popIntUnchecked()
+			f.popIntUnchecked()
 		case value.TypeCodeTuple:
-			s.popTupleUnchecked()
+			f.popTupleUnchecked()
 		case value.TypeCodeCodePoint:
-			s.popCodePointUnchecked()
+			f.popCodePointUnchecked()
 		case value.TypeCodeHashOnly:
-			s.popHashOnlyUnchecked()
+			f.popHashOnlyUnchecked()
 		default:
 			panic("PopValue: Unhandled type")
 		}
-		s.verifyHeight()
+		f.verifyHeight()
 		return TypeError{}
 	}
-	s.verifyHeight()
+	f.verifyHeight()
 	return nil
 }
 
-func (s *Flat) popIntUnchecked() (lastItem value.IntValue) {
-	s.verifyHeight()
-	lastItem = s.ints[len(s.ints)-1]
-	s.ints = s.ints[:len(s.ints)-1]
-	s.removedValue(lastItem.Size())
-	s.verifyHeight()
+func (f *Flat) popIntUnchecked() (lastItem value.IntValue) {
+	f.verifyHeight()
+	lastItem = f.ints[len(f.ints)-1]
+	f.ints = f.ints[:len(f.ints)-1]
+	f.removedValue(lastItem.Size())
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) popTupleUnchecked() (lastItem value.TupleValue) {
-	s.verifyHeight()
-	lastItem = s.tuples[len(s.tuples)-1]
-	s.tuples = s.tuples[:len(s.tuples)-1]
-	s.removedValue(lastItem.Size())
-	s.verifyHeight()
+func (f *Flat) popTupleUnchecked() (lastItem value.TupleValue) {
+	f.verifyHeight()
+	lastItem = f.tuples[len(f.tuples)-1]
+	f.tuples = f.tuples[:len(f.tuples)-1]
+	f.removedValue(lastItem.Size())
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) popCodePointUnchecked() (lastItem value.CodePointValue) {
-	s.verifyHeight()
-	lastItem = s.codePoints[len(s.codePoints)-1]
-	s.codePoints = s.codePoints[:len(s.codePoints)-1]
-	s.removedValue(lastItem.Size())
-	s.verifyHeight()
+func (f *Flat) popCodePointUnchecked() (lastItem value.CodePointValue) {
+	f.verifyHeight()
+	lastItem = f.codePoints[len(f.codePoints)-1]
+	f.codePoints = f.codePoints[:len(f.codePoints)-1]
+	f.removedValue(lastItem.Size())
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) popHashOnlyUnchecked() (lastItem value.HashOnlyValue) {
-	s.verifyHeight()
-	lastItem = s.hashOnly[len(s.hashOnly)-1]
-	s.hashOnly = s.hashOnly[:len(s.hashOnly)-1]
-	s.removedValue(lastItem.Size())
-	s.verifyHeight()
+func (f *Flat) popHashOnlyUnchecked() (lastItem value.HashOnlyValue) {
+	f.verifyHeight()
+	lastItem = f.hashOnly[len(f.hashOnly)-1]
+	f.hashOnly = f.hashOnly[:len(f.hashOnly)-1]
+	f.removedValue(lastItem.Size())
+	f.verifyHeight()
 	return
 }
 
-func (s *Flat) verifyHeight() {
-	if len(s.ints)+len(s.tuples)+len(s.hashOnly)+len(s.codePoints) != len(s.itemTypes) {
+func (f *Flat) verifyHeight() {
+	if len(f.ints)+len(f.tuples)+len(f.hashOnly)+len(f.codePoints) != len(f.itemTypes) {
 		panic("Bad stack height")
 	}
 }
 
-func (s *Flat) duplicate() {
-	s.verifyHeight()
-	tipe := s.itemTypes[len(s.itemTypes)-1]
+func (f *Flat) duplicate() {
+	f.verifyHeight()
+	tipe := f.itemTypes[len(f.itemTypes)-1]
 	switch tipe {
 	case value.TypeCodeInt:
-		s.PushInt(s.ints[len(s.ints)-1])
+		f.PushInt(f.ints[len(f.ints)-1])
 	case value.TypeCodeTuple:
-		s.PushTuple(s.tuples[len(s.tuples)-1])
+		f.PushTuple(f.tuples[len(f.tuples)-1])
 	case value.TypeCodeCodePoint:
-		s.PushCodePoint(s.codePoints[len(s.codePoints)-1])
+		f.PushCodePoint(f.codePoints[len(f.codePoints)-1])
 	case value.TypeCodeHashOnly:
-		s.PushHashOnly(s.hashOnly[len(s.hashOnly)-1])
+		f.PushHashOnly(f.hashOnly[len(f.hashOnly)-1])
 	default:
 		panic("PopValue: Unhandled type")
 	}
-	s.verifyHeight()
+	f.verifyHeight()
 }

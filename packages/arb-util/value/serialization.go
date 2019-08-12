@@ -62,15 +62,15 @@ func NewOperationBuf(op Operation) *OperationBuf {
 }
 
 func NewOperationFromBuf(buf *OperationBuf) (Operation, error) {
-	if buf.Immediate != nil {
-		val, err := NewValueFromBuf(buf.Immediate)
-		return ImmediateOperation{
-			Opcode(buf.OpCode),
-			val,
-		}, err
-	} else {
+	if buf.Immediate == nil {
 		return BasicOperation{Opcode(buf.OpCode)}, nil
 	}
+
+	val, err := NewValueFromBuf(buf.Immediate)
+	return ImmediateOperation{
+		Opcode(buf.OpCode),
+		val,
+	}, err
 }
 
 func NewCodePointBuf(val CodePointValue) *CodePointBuf {

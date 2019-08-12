@@ -127,9 +127,8 @@ func NewVersionedCheckpointer(cp *Checkpointer) (*VersionedCheckpointer, error) 
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
 				return nil
-			} else {
-				return err
 			}
+			return err
 		}
 		if err := item.Value(func(val []byte) error {
 			rd := bytes.NewReader(val)
@@ -251,7 +250,7 @@ func (vcp *VersionedCheckpointer) IsKnownVersion(num int64) bool {
 }
 
 func (vcp *VersionedCheckpointer) discardVersion(num int64) error {
-	var refs [][32]byte = nil
+	var refs [][32]byte
 	if err := vcp.cp.db.Update(func(txn *badger.Txn) error {
 		if err := txn.Delete(vcpStateDataKey(num)); err != nil {
 			return err
@@ -618,9 +617,8 @@ func (cp *Checkpointer) EntryExists(key []byte) (bool, error) {
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
 			return false, nil
-		} else {
-			return false, err
 		}
+		return false, err
 	}
 	return true, nil
 }
@@ -711,7 +709,7 @@ func (cp *Checkpointer) restoreMachineInTxn(txn *badger.Txn, keySuffix []byte) (
 }
 
 func writeOp(wr io.Writer, op value.Operation) (value.Value, error) {
-	var val value.Value = nil
+	var val value.Value
 	if op.TypeCode() == 1 {
 		iop := op.(value.ImmediateOperation)
 		val = iop.Val
@@ -744,9 +742,8 @@ func (cp *Checkpointer) restoreOp(txn *badger.Txn, rd io.Reader) (value.Operatio
 			return nil, err
 		}
 		return value.ImmediateOperation{Op: value.Opcode(buf[1]), Val: immedVal}, nil
-	} else {
-		return value.BasicOperation{Op: value.Opcode(buf[1])}, nil
 	}
+	return value.BasicOperation{Op: value.Opcode(buf[1])}, nil
 }
 
 func (cp *Checkpointer) SaveCode(machine *vm.Machine) error {

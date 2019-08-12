@@ -157,21 +157,19 @@ func (b *BalanceTracker) TokenIndex(tokenType [21]byte, amount *big.Int) int {
 	copy(tokType[:], tokenType[:])
 	if tokType.IsToken() {
 		return b.TokenLookup[tokType]
-	} else {
-		return b.NFTLookup[newNFTKey(tokType, amount)]
 	}
+	return b.NFTLookup[newNFTKey(tokType, amount)]
 }
 
 func (b *BalanceTracker) CanSpend(tokenType TokenType, amount *big.Int) bool {
 	if tokenType.IsToken() {
 		return amount.Cmp(b.TokenAmounts[b.TokenLookup[tokenType]]) <= 0
-	} else {
-		index, ok := b.NFTLookup[newNFTKey(tokenType, amount)]
-		if !ok {
-			return false
-		}
-		return b.TokenAmounts[index].Cmp(amount) == 0
 	}
+	index, ok := b.NFTLookup[newNFTKey(tokenType, amount)]
+	if !ok {
+		return false
+	}
+	return b.TokenAmounts[index].Cmp(amount) == 0
 }
 
 func (b *BalanceTracker) Spend(tokenType TokenType, amount *big.Int) error {

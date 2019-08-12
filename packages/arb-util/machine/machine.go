@@ -7,7 +7,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type MachineContext interface {
+type Context interface {
 	Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error
 	GetTimeBounds() value.Value
 	NotifyStep()
@@ -16,29 +16,29 @@ type MachineContext interface {
 	OutMessageCount() int
 }
 
-type MachineNoContext struct{}
+type NoContext struct{}
 
-func (m *MachineNoContext) LoggedValue(data value.Value) error {
+func (m *NoContext) LoggedValue(data value.Value) error {
 	return errors.New("can't log values outside of assertion mode")
 }
 
-func (m *MachineNoContext) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
+func (m *NoContext) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
 	return false
 }
 
-func (m *MachineNoContext) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
+func (m *NoContext) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
 	return errors.New("can't send message outside of assertion mode")
 }
 
-func (m *MachineNoContext) OutMessageCount() int {
+func (m *NoContext) OutMessageCount() int {
 	return 0
 }
 
-func (m *MachineNoContext) GetTimeBounds() value.Value {
+func (m *NoContext) GetTimeBounds() value.Value {
 	return value.NewEmptyTuple()
 }
 
-func (m *MachineNoContext) NotifyStep() {
+func (m *NoContext) NotifyStep() {
 }
 
 type Machine interface {

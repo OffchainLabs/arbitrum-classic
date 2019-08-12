@@ -491,7 +491,7 @@ func (m *ValidatorCoordinator) createVMImpl(timeout time.Duration) (bool, error)
 	stateData := <-stateDataChan
 	createData := &valmessage.CreateVMValidatorRequest{
 		Config:              &stateData.Config,
-		VmId:                value.NewHashBuf(m.Val.VmId),
+		VmId:                value.NewHashBuf(m.Val.VMID),
 		VmState:             value.NewHashBuf(stateData.MachineState),
 		ChallengeManagerNum: 0,
 	}
@@ -591,11 +591,11 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 			Signature: queuedMessages[i].Signature,
 		})
 	}
-	hashId := unanRequest.Hash()
+	hashID := unanRequest.Hash()
 
 	notifyFollowers := func(msg *valmessage.UnanimousAssertionValidatorNotification) {
 		m.cm.broadcast <- &valmessage.ValidatorRequest{
-			RequestId: value.NewHashBuf(hashId),
+			RequestId: value.NewHashBuf(hashID),
 			Request:   &valmessage.ValidatorRequest_UnanimousNotification{UnanimousNotification: msg},
 		}
 	}
@@ -610,12 +610,12 @@ func (m *ValidatorCoordinator) _initiateUnanimousAssertionImpl(queuedMessages []
 		}
 		responsesChan <- m.cm.gatherSignatures(
 			&valmessage.ValidatorRequest{
-				RequestId: value.NewHashBuf(hashId),
+				RequestId: value.NewHashBuf(hashID),
 				Request: &valmessage.ValidatorRequest_Unanimous{
 					Unanimous: request,
 				},
 			},
-			hashId,
+			hashID,
 		)
 	}()
 

@@ -41,7 +41,7 @@ type VMEvent interface {
 
 type Notification struct {
 	Header *types.Header
-	VmID   [32]byte
+	VMID   [32]byte
 	Event  Event
 	TxHash [32]byte
 }
@@ -137,8 +137,7 @@ type VMCreatedEvent struct {
 	EscrowRequired      *big.Int
 	EscrowCurrency      common.Address
 	MaxExecutionSteps   uint32
-	VmId                [32]byte
-	VmState             [32]byte
+	VMState             [32]byte
 	ChallengeManagerNum uint16
 	Owner               common.Address
 	Validators          []common.Address

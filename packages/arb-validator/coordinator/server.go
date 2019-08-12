@@ -105,7 +105,7 @@ func NewServer(
 	requests := make(chan validatorRequest, 100)
 
 	go func() {
-		tracker := newTxTracker(man.Val.VmId, <-man.Val.VMCreatedTxHashChan)
+		tracker := newTxTracker(man.Val.VMID, <-man.Val.VMCreatedTxHashChan)
 		tracker.handleTxResults(man.Val.CompletedCallChan, requests)
 	}()
 
@@ -240,7 +240,7 @@ func (m *Server) SendMessage(r *http.Request, args *SendMessageArgs, reply *Send
 	tokenType := [21]byte{}
 
 	messageHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(m.coordinator.Val.VmId),
+		solsha3.Bytes32(m.coordinator.Val.VMID),
 		solsha3.Bytes32(dataVal.Hash()),
 		solsha3.Uint256(amount),
 		tokenType[:],
@@ -362,7 +362,7 @@ type GetVMInfoReply struct {
 
 // GetVMInfo returns current metadata about this VM
 func (m *Server) GetVMInfo(r *http.Request, _ *struct{}, reply *GetVMInfoReply) error {
-	reply.VMId = hexutil.Encode(m.coordinator.Val.VmId[:])
+	reply.VMId = hexutil.Encode(m.coordinator.Val.VMID[:])
 	return nil
 }
 

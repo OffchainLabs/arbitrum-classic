@@ -143,11 +143,10 @@ func (tv TupleValue) Get(idx IntValue) (Value, error) {
 }
 
 func (tv TupleValue) GetByInt64(idx int64) (Value, error) {
-	if idx >= 0 && idx < tv.Len() {
-		return tv.contentsArr[idx], nil
-	} else {
+	if idx < 0 || idx >= tv.Len() {
 		return nil, errors.New("tuple index out of bounds")
 	}
+	return tv.contentsArr[idx], nil
 }
 
 func (tv TupleValue) Set(idx IntValue, val Value) (TupleValue, error) {
@@ -155,16 +154,15 @@ func (tv TupleValue) Set(idx IntValue, val Value) (TupleValue, error) {
 }
 
 func (tv TupleValue) SetByInt64(idx int64, val Value) (TupleValue, error) {
-	if idx >= 0 && idx < tv.Len() {
-		var contents [MaxTupleSize]Value
-		for i, v := range tv.Contents() {
-			contents[i] = v
-		}
-		contents[idx] = val
-		return NewTupleOfSizeWithContents(contents, tv.itemCount)
-	} else {
+	if idx < 0 || idx >= tv.Len() {
 		return TupleValue{}, errors.New("tuple index out of bounds")
 	}
+	var contents [MaxTupleSize]Value
+	for i, v := range tv.Contents() {
+		contents[i] = v
+	}
+	contents[idx] = val
+	return NewTupleOfSizeWithContents(contents, tv.itemCount)
 }
 
 func (tv TupleValue) TypeCode() uint8 {

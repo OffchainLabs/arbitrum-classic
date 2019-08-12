@@ -55,9 +55,8 @@ func (cp *Checkpointer) writeValue(wr io.Writer, val value.Value) ([]value.Value
 		}
 		if val == nil {
 			return nil, nil
-		} else {
-			return []value.Value{val}, nil
 		}
+		return []value.Value{val}, nil
 	case value.TypeCodeTuple:
 		tup := val.(value.TupleValue)
 		size := tup.Len()
@@ -144,7 +143,7 @@ func (cp *Checkpointer) RemoveRefToValue(hash [32]byte) {
 }
 
 func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
-	var more [][32]byte = nil
+	var more [][32]byte
 	err := cp.db.Update(func(txn *badger.Txn) error {
 		key := append([]byte{PrefixValue}, hash[:]...)
 		item, err := txn.Get(key)
@@ -180,13 +179,12 @@ func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
 				}
 			}
 			return nil
-		} else {
-			var buf bytes.Buffer
-			if err := binary.Write(&buf, binary.LittleEndian, &refCount); err != nil {
-				return err
-			}
-			return txn.Set(key, append(buf.Bytes(), valCopy[8:]...))
 		}
+		var buf bytes.Buffer
+		if err := binary.Write(&buf, binary.LittleEndian, &refCount); err != nil {
+			return err
+		}
+		return txn.Set(key, append(buf.Bytes(), valCopy[8:]...))
 	})
 	if err != nil {
 		return err

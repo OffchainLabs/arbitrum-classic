@@ -55,17 +55,17 @@ func setBigTuple(tupleVal value.Value, index uint64, val value.Value) (value.Val
 	if index == 0 {
 		tup, _ = tup.SetByInt64(7, val)
 		return tup, nil
-	} else {
-		subTup, err := tup.GetByInt64(int64(index) % 7)
-		if err != nil {
-			return nil, err
-		}
-		newSubTup, err := setBigTuple(subTup, index/7, val)
-		if err != nil {
-			return nil, err
-		}
-		return tup.SetByInt64(int64(index)%7, newSubTup)
 	}
+
+	subTup, err := tup.GetByInt64(int64(index) % 7)
+	if err != nil {
+		return nil, err
+	}
+	newSubTup, err := setBigTuple(subTup, index/7, val)
+	if err != nil {
+		return nil, err
+	}
+	return tup.SetByInt64(int64(index)%7, newSubTup)
 }
 
 func getByteArray(val value.Value, index uint64) (*big.Int, error) {
@@ -81,31 +81,31 @@ func getByteArray(val value.Value, index uint64) (*big.Int, error) {
 			return nil, errors.New("bytearray expected int value")
 		}
 		return intVal.BigInt(), nil
-	} else {
-		first, err := getBigTuple(val, item)
-		if err != nil {
-			return nil, err
-		}
-		firstInt, ok := first.(value.IntValue)
-		if !ok {
-			return nil, errors.New("bytearray expected int value")
-		}
-		firstBig := firstInt.BigInt()
-
-		second, err := getBigTuple(val, item+1)
-		if err != nil {
-			return nil, err
-		}
-		secondInt, ok := second.(value.IntValue)
-		if !ok {
-			return nil, errors.New("bytearray expected int value")
-		}
-		secondBig := secondInt.BigInt()
-
-		firstBig = math.U256(firstBig.Lsh(firstBig, uint(extraBytes)))
-		secondBig = math.U256(secondBig.Rsh(secondBig, uint(256-extraBytes)))
-		return firstBig.Or(firstBig, secondBig), nil
 	}
+
+	first, err := getBigTuple(val, item)
+	if err != nil {
+		return nil, err
+	}
+	firstInt, ok := first.(value.IntValue)
+	if !ok {
+		return nil, errors.New("bytearray expected int value")
+	}
+	firstBig := firstInt.BigInt()
+
+	second, err := getBigTuple(val, item+1)
+	if err != nil {
+		return nil, err
+	}
+	secondInt, ok := second.(value.IntValue)
+	if !ok {
+		return nil, errors.New("bytearray expected int value")
+	}
+	secondBig := secondInt.BigInt()
+
+	firstBig = math.U256(firstBig.Lsh(firstBig, uint(extraBytes)))
+	secondBig = math.U256(secondBig.Rsh(secondBig, uint(256-extraBytes)))
+	return firstBig.Or(firstBig, secondBig), nil
 }
 
 func SizedByteArrayToHex(val value.Value) ([]byte, error) {

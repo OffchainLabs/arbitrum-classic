@@ -71,16 +71,15 @@ func (in *MessageQueues) String() string {
 }
 
 func (in *MessageQueues) WithAddedQueue(queue *MessageQueue) *MessageQueues {
-	if !queue.IsEmpty() {
-		tup, _ := value.NewTupleFromSlice([]value.Value{
-			value.NewInt64Value(1),
-			in.queues,
-			queue.msg,
-		})
-		return &MessageQueues{tup}
-	} else {
+	if queue.IsEmpty() {
 		return in
 	}
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		in.queues,
+		queue.msg,
+	})
+	return &MessageQueues{tup}
 }
 
 type Inbox struct {

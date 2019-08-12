@@ -49,7 +49,7 @@ func LoadMachineFromFile(fileName string, warnMode bool) (*vm.Machine, error) {
 	return LoadMachine(f, warnMode)
 }
 
-const CURRENT_AO_VERSION uint32 = 1
+const CurrentAOVersion uint32 = 1
 
 func LoadMachine(rd io.Reader, warnMode bool) (*vm.Machine, error) {
 	var aoVersion uint32
@@ -58,18 +58,18 @@ func LoadMachine(rd io.Reader, warnMode bool) (*vm.Machine, error) {
 		return nil, err
 	}
 
-	if aoVersion != CURRENT_AO_VERSION {
+	if aoVersion != CurrentAOVersion {
 		return nil, fmt.Errorf("AO file has unsupported version %v", aoVersion)
 	}
 
 	extensions := make([]RawExtension, 0)
-	var extensionId uint32 = 1
-	for extensionId != 0 {
-		err := binary.Read(rd, binary.BigEndian, &extensionId)
+	var extensionID uint32 = 1
+	for extensionID != 0 {
+		err := binary.Read(rd, binary.BigEndian, &extensionID)
 		if err != nil {
 			return nil, err
 		}
-		if extensionId > 0 {
+		if extensionID > 0 {
 			var extensionLength uint32
 			err := binary.Read(rd, binary.BigEndian, &extensionLength)
 			if err != nil {
@@ -81,7 +81,7 @@ func LoadMachine(rd io.Reader, warnMode bool) (*vm.Machine, error) {
 				return nil, err
 			}
 			extensions = append(extensions, RawExtension{
-				id:   extensionId,
+				id:   extensionID,
 				data: extensionData,
 			})
 		}

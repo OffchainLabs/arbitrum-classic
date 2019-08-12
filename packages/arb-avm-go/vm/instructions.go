@@ -113,9 +113,9 @@ func init() {
 	}
 }
 
-type VMBlockedError struct{}
+type BlockedError struct{}
 
-func (w VMBlockedError) Error() string {
+func (w BlockedError) Error() string {
 	return "VMBlockederror"
 }
 
@@ -138,27 +138,27 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, error) {
 		return mods, nil
 	}
 
-	if _, blocked := err.(VMBlockedError); blocked {
-		return mods, err
-	} else {
-		// in case of any errors from operation
-		// pop remaining stack values and set
-		// PC to errHandler
-		m.Warn(err.Error())
-		for mods.popsRemaining > 0 {
-			var poperr error
-			_, mods, poperr = PopStackBox(m, mods)
-			if poperr != nil {
-				break
-			}
-		}
-		if m.errHandler.Equal(value.ErrorCodePoint) {
-			m.ErrorStop()
-		} else {
-			m.pc.SetPCForced(m.errHandler)
-		}
+	if _, blocked := err.(BlockedError); blocked {
 		return mods, err
 	}
+
+	// in case of any errors from operation
+	// pop remaining stack values and set
+	// PC to errHandler
+	m.Warn(err.Error())
+	for mods.popsRemaining > 0 {
+		var poperr error
+		_, mods, poperr = PopStackBox(m, mods)
+		if poperr != nil {
+			break
+		}
+	}
+	if m.errHandler.Equal(value.ErrorCodePoint) {
+		m.ErrorStop()
+	} else {
+		m.pc.SetPCForced(m.errHandler)
+	}
+	return mods, err
 }
 
 func (insn Instruction) GetName() string {
@@ -667,11 +667,10 @@ func insnInbox(state *Machine) (StackMods, error) {
 	inboxVal := state.ReadInbox()
 	mods = PushStackBox(state, mods, inboxVal)
 	if value.Eq(x, inboxVal) {
-		return mods, VMBlockedError{}
-	} else {
-		state.IncrPC()
-		return mods, nil
+		return mods, BlockedError{}
 	}
+	state.IncrPC()
+	return mods, nil
 }
 
 func insnErrPush(state *Machine) (StackMods, error) {
@@ -732,10 +731,9 @@ func insnCjump(state *Machine) (StackMods, error) {
 	if cond.BigInt().Cmp(big.NewInt(0)) != 0 {
 		err := state.SetPC(rawTarget)
 		return mods, err
-	} else {
-		state.IncrPC()
-		return mods, nil
 	}
+	state.IncrPC()
+	return mods, nil
 }
 
 func insnPcpush(state *Machine) (StackMods, error) {
@@ -904,9 +902,9 @@ func insnTget(state *Machine) (StackMods, error) {
 		fmt.Println(state.stack)
 		fmt.Println("pc = ", state.pc.GetPC())
 		return mods, fmt.Errorf("insn_tget: index %v out of range %v", index.BigInt(), tuple.Len())
-	} else {
-		mods = PushStackBox(state, mods, val)
 	}
+
+	mods = PushStackBox(state, mods, val)
 	state.IncrPC()
 	return mods, nil
 }
@@ -932,9 +930,9 @@ func insnTset(state *Machine) (StackMods, error) {
 	newTup, err := tuple.Set(index, newVal)
 	if err != nil {
 		return mods, fmt.Errorf("insn_tset: index %v out of range of tuple %v", index, tuple)
-	} else {
-		mods = PushStackTuple(state, mods, newTup)
 	}
+
+	mods = PushStackTuple(state, mods, newTup)
 	state.IncrPC()
 	return mods, nil
 }
@@ -964,7 +962,7 @@ func insnType(state *Machine) (StackMods, error) {
 func insnBreakpoint(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 0)
 	state.IncrPC()
-	return mods, VMBlockedError{}
+	return mods, BlockedError{}
 }
 
 func insnLog(state *Machine) (StackMods, error) {
@@ -1017,7 +1015,7 @@ func insnSend(state *Machine) (StackMods, error) {
 	err = state.Send(data, tokenType, amount, destination)
 	if err != nil {
 		state.stack.PushTuple(sendData)
-		return mods, VMBlockedError{}
+		return mods, BlockedError{}
 	}
 
 	state.IncrPC()

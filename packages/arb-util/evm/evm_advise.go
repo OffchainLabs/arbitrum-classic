@@ -119,15 +119,15 @@ type FuncCall struct {
 }
 
 const (
-	EVM_REVERT_CODE       = 0
-	EVM_INVALID_CODE      = 1
-	EVM_RETURN_CODE       = 2
-	EVM_STOP_CODE         = 3
-	EVM_BAD_SEQUENCE_CODE = 4
+	RevertCode      = 0
+	InvalidCode     = 1
+	ReturnCode      = 2
+	StopCode        = 3
+	BadSequenceCode = 4
 )
 
 type Log struct {
-	ContractId value.IntValue
+	ContractID value.IntValue
 	Data       []byte
 	Topics     [][32]byte
 }
@@ -135,7 +135,7 @@ type Log struct {
 func (l Log) String() string {
 	var sb strings.Builder
 	sb.WriteString("Log(contract: ")
-	sb.WriteString(l.ContractId.String())
+	sb.WriteString(l.ContractID.String())
 	sb.WriteString(", topics: [")
 	for i, topic := range l.Topics {
 		sb.WriteString(hexutil.Encode(topic[:]))
@@ -157,8 +157,8 @@ func LogValToLog(val value.Value) (Log, error) {
 	if tupVal.Len() < 3 {
 		return Log{}, fmt.Errorf("Log tuple must be at least size 3, but is %v", tupVal)
 	}
-	contractIdVal, _ := tupVal.GetByInt64(0)
-	contractIdInt, ok := contractIdVal.(value.IntValue)
+	contractIDVal, _ := tupVal.GetByInt64(0)
+	contractIDInt, ok := contractIDVal.(value.IntValue)
 	if !ok {
 		return Log{}, errors.New("Log contract id must be an int")
 	}
@@ -176,7 +176,7 @@ func LogValToLog(val value.Value) (Log, error) {
 		topics = append(topics, topicValInt.ToBytes())
 	}
 
-	return Log{contractIdInt, logData, topics}, nil
+	return Log{contractIDInt, logData, topics}, nil
 }
 
 func LogStackToLogs(val value.Value) ([]Log, error) {
@@ -197,7 +197,7 @@ func LogStackToLogs(val value.Value) ([]Log, error) {
 
 type EthCallData struct {
 	Data        []byte
-	ContractId  *big.Int
+	ContractID  *big.Int
 	SequenceNum *big.Int
 }
 
@@ -237,7 +237,7 @@ func NewEthCallDataFromValue(val value.Value) (EthCallData, error) {
 
 func (data EthCallData) Equals(data2 EthCallData) bool {
 	return bytes.Equal(data.Data, data2.Data) &&
-		data.ContractId.Cmp(data2.ContractId) == 0 &&
+		data.ContractID.Cmp(data2.ContractID) == 0 &&
 		data.SequenceNum.Cmp(data2.SequenceNum) == 0
 }
 
@@ -307,10 +307,10 @@ type EthMsg struct {
 	Caller    [32]byte
 }
 
-func (msg EthMsg) MsgHash(vmId [32]byte) [32]byte {
+func (msg EthMsg) MsgHash(vmID [32]byte) [32]byte {
 	ret := [32]byte{}
 	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(vmId),
+		solsha3.Bytes32(vmID),
 		solsha3.Bytes32(msg.Data.dataHash),
 		solsha3.Uint256(msg.Currency),
 		msg.TokenType[:],
@@ -342,7 +342,6 @@ func (msg EthMsg) Equals(msg2 EthMsg) bool {
 		msg.Caller == msg2.Caller
 }
 
-// [logs, contract_num, func_code, return_val, return_code]
 func ProcessLog(val value.Value) (Result, error) {
 	tup, ok := val.(value.TupleValue)
 	if !ok {
@@ -365,7 +364,7 @@ func ProcessLog(val value.Value) (Result, error) {
 	}
 
 	switch returnCode.BigInt().Uint64() {
-	case EVM_RETURN_CODE:
+	case ReturnCode:
 		// EVM Return
 		logVal, _ := tup.GetByInt64(1)
 		logs, err := LogStackToLogs(logVal)
@@ -378,7 +377,7 @@ func ProcessLog(val value.Value) (Result, error) {
 			return nil, err
 		}
 		return Return{ethMsg, returnBytes, logs}, nil
-	case EVM_REVERT_CODE:
+	case RevertCode:
 		// EVM Revert
 		returnVal, _ := tup.GetByInt64(2)
 		returnBytes, err := SizedByteArrayToHex(returnVal)
@@ -386,7 +385,7 @@ func ProcessLog(val value.Value) (Result, error) {
 			return nil, err
 		}
 		return Revert{ethMsg, returnBytes}, nil
-	case EVM_STOP_CODE:
+	case StopCode:
 		// EVM Stop
 		logVal, _ := tup.GetByInt64(1)
 		logs, err := LogStackToLogs(logVal)
@@ -394,9 +393,9 @@ func ProcessLog(val value.Value) (Result, error) {
 			return nil, err
 		}
 		return Stop{ethMsg, logs}, nil
-	case EVM_BAD_SEQUENCE_CODE:
+	case BadSequenceCode:
 		return nil, errors.New("bad sequence number")
-	case EVM_INVALID_CODE:
+	case InvalidCode:
 		return nil, errors.New("invalid tx")
 	default:
 		// Unknown type
