@@ -7,13 +7,30 @@ jobs:
     steps:
       - run: mv /home/user/arbitrum/vconan/ /home/user/vconan/
       - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "packages/arb-validator/go.sum" }}
+      - restore_cache:
+          keys:
+            # when lock file changes, use increasingly general patterns to restore cache
+            - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+            - yarn-packages-v1-{{ .Branch }}-
+            - yarn-packages-v1-
       - run:
           name: build all
           command: |
             mv /home/user/vconan/ /home/user/arbitrum/vconan/
-            yarn
+            yarn install --cache-folder ~/.cache/yarn
             yarn 'install:validator'
             yarn 'install:ci'
+      - save_cache:
+          key: go-mod-v1-{{ checksum "packages/arb-validator/go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+      - save_cache:
+          paths:
+            - ~/.cache/yarn
+          key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
       - run:
           name: test arb-avm-cpp
           command: |
