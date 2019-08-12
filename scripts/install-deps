@@ -11,6 +11,10 @@ set -e
 
 pip3 install -r requirements.txt
 pip3 install -r requirements-dev.txt
+
+# Setup pre-commit
+pre-commit install
+
 # Install conan
 virtualenv --no-site-packages vconan
 . vconan/bin/activate
