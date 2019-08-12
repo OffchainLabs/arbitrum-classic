@@ -30,7 +30,7 @@ jobs:
             - conan-packages-v1-{{ .Branch }}-
             - conan-packages-v1-
       - restore_cache:
-          key:
+          keys:
             - python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
             - python-packages-v1-{{ .Branch }}-
             - python-packages-v1-
