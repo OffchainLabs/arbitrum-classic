@@ -31,11 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
@@ -176,7 +171,7 @@ func main() {
 	coordinatorURL := flag.Arg(5)
 
 	// Validator creation
-	rpcInterface := NewFollowerServer(
+	NewFollowerServer(
 		machine,
 		key,
 		validators,
@@ -185,23 +180,6 @@ func main() {
 		coordinatorURL,
 	)
 
-	s := rpc.NewServer()
-	s.RegisterCodec(json.NewCodec(), "application/json")
-	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
-
-	if err := s.RegisterService(rpcInterface, "Validator"); err != nil {
-		log.Fatal(err)
-	}
-	r := mux.NewRouter()
-	r.Handle("/", s).Methods("GET", "POST", "OPTIONS")
-
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
-
-	// port := fmt.Sprintf(":%d", 1237 + index)
-	err = http.ListenAndServe(":1237", handlers.CORS(headersOk, originsOk, methodsOk)(r))
-	if err != nil {
-		panic(err)
-	}
+	blockChan := make(chan struct{})
+	<-blockChan
 }
