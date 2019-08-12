@@ -38,13 +38,12 @@ def main():
         raw_contracts = json.load(json_file)
 
     contracts = [Contract(contract) for contract in raw_contracts]
-    for contract in contracts:
-        print(contract.name, contract.address)
     vm = create_evm_vm(contracts, not args.optimize_off)
-    print(len(vm.code))
 
     with open(args.output_file, "wb") as f:
         marshall_vm(vm, f)
+
+    print("Successfully created VM")
 
     if args.debug_output:
         with open(args.debug_output, "w") as f:
