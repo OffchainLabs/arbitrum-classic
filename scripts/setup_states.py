@@ -30,7 +30,7 @@ ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 # Retrieve bridge_eth_addresses.json and keys.json
 # arb-bridge-eth must be have been built first
-def setup_validator_states_ethbridge(contract, n_validators, sudo):
+def setup_validator_states_ethbridge(contract, n_validators, sudo=False):
     keys = "keys.json"
     ethaddrs = "bridge_eth_addresses.json"
 
@@ -95,12 +95,6 @@ def check_file(name):
     return name
 
 
-def check_range_2_100(n):
-    if not isinstance(n, int) or n < 2 or n > 100:
-        raise argparse.ArgumentTypeError("%s must be >= 2 and <= 100" % n)
-    return n
-
-
 def check_json(name):
     if not os.path.isfile(name):
         raise argparse.ArgumentTypeError("%s is not a valid file" % name)
@@ -119,21 +113,35 @@ def main():
     )
     parser.add_argument(
         "n_validators",
-        type=check_range_2_100,
+        choices=range(2, 101),
+        metavar="[2-100]",
+        type=int,
         help="The number of validators to deploy",
+    )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--docker",
+        action="store_true",
+        dest="is_ethbridge",
+        help="Generate states based on arb-bridge-eth docker images",
+    )
+    group.add_argument(
+        "--local",
+        action="store_false",
+        dest="is_ethbridge",
+        help="Generate states based on local inputs",
     )
     parser.add_argument(
         "-a",
         "--acctKeys",
         type=check_json,
-        default="./keys.json",
+        required=False,
         help='Generate with: ganache-cli --acctKeys keys.json -m "$MNEMONIC" -a "$NUM_WALLETS"',
     )
     parser.add_argument(
         "-b",
         "--bridge_eth_addresses",
         type=check_json,
-        default="./bridge_eth_addresses.json",
         help="EthBridge contract addresses",
     )
     parser.add_argument(
@@ -146,9 +154,14 @@ def main():
 
     args = parser.parse_args()
 
-    setup_validator_states(
-        args.contract, args.n_validators, args.acctKeys, args.bridge_eth_addresses
-    )
+    print("is_ethbridge", args.is_ethbridge)
+
+    if args.is_ethbridge:
+        setup_validator_states_ethbridge(args.contract, args.n_validators)
+    else:
+        setup_validator_states(
+            args.contract, args.n_validators, args.acctKeys, args.bridge_eth_addresses
+        )
 
 
 if __name__ == "__main__":
