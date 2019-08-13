@@ -1,0 +1,348 @@
+{
+  "contractName": "VMTracker",
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "owner",
+      "outputs": [{ "name": "", "type": "address" }],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "isOwner",
+      "outputs": [{ "name": "", "type": "bool" }],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [{ "name": "newOwner", "type": "address" }],
+      "name": "transferOwnership",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "name": "_balanceTrackerAddress", "type": "address" }],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "destination", "type": "bytes32" },
+        { "indexed": false, "name": "tokenType", "type": "bytes21" },
+        { "indexed": false, "name": "value", "type": "uint256" },
+        { "indexed": false, "name": "data", "type": "bytes" }
+      ],
+      "name": "MessageDelivered",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "_gracePeriod", "type": "uint32" },
+        { "indexed": false, "name": "_escrowRequired", "type": "uint128" },
+        { "indexed": false, "name": "_escrowCurrency", "type": "address" },
+        { "indexed": false, "name": "_maxExecutionSteps", "type": "uint32" },
+        { "indexed": false, "name": "_vmState", "type": "bytes32" },
+        { "indexed": false, "name": "_challengeManagerNum", "type": "uint16" },
+        { "indexed": false, "name": "_owner", "type": "address" },
+        { "indexed": false, "name": "validators", "type": "address[]" }
+      ],
+      "name": "VMCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "unanHash", "type": "bytes32" },
+        { "indexed": false, "name": "sequenceNum", "type": "uint64" }
+      ],
+      "name": "PendingUnanimousAssertion",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "sequenceNum", "type": "uint64" }
+      ],
+      "name": "ConfirmedUnanimousAssertion",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "unanHash", "type": "bytes32" }
+      ],
+      "name": "FinalizedUnanimousAssertion",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "fields", "type": "bytes32[3]" },
+        { "indexed": false, "name": "asserter", "type": "address" },
+        { "indexed": false, "name": "timeBounds", "type": "uint64[2]" },
+        { "indexed": false, "name": "tokenTypes", "type": "bytes21[]" },
+        { "indexed": false, "name": "numSteps", "type": "uint32" },
+        { "indexed": false, "name": "lastMessageHash", "type": "bytes32" },
+        { "indexed": false, "name": "logsAccHash", "type": "bytes32" },
+        { "indexed": false, "name": "amounts", "type": "uint256[]" }
+      ],
+      "name": "PendingDisputableAssertion",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "newState", "type": "bytes32" },
+        { "indexed": false, "name": "logsAccHash", "type": "bytes32" }
+      ],
+      "name": "ConfirmedDisputableAssertion",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "vmId", "type": "bytes32" },
+        { "indexed": false, "name": "challenger", "type": "address" }
+      ],
+      "name": "InitiatedChallenge",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "name": "previousOwner", "type": "address" },
+        { "indexed": true, "name": "newOwner", "type": "address" }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "constant": false,
+      "inputs": [{ "name": "_challengeManager", "type": "address" }],
+      "name": "addChallengeManager",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [{ "name": "_timeBounds", "type": "uint64[2]" }],
+      "name": "withinTimeBounds",
+      "outputs": [{ "name": "", "type": "bool" }],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_fields", "type": "bytes32[3]" },
+        { "name": "_gracePeriod", "type": "uint32" },
+        { "name": "_maxExecutionSteps", "type": "uint32" },
+        { "name": "_challengeManagerNum", "type": "uint16" },
+        { "name": "_escrowRequired", "type": "uint128" },
+        { "name": "_escrowCurrency", "type": "address" },
+        { "name": "_owner", "type": "address" },
+        { "name": "_signatures", "type": "bytes" }
+      ],
+      "name": "createVm",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [{ "name": "_vmId", "type": "bytes32" }],
+      "name": "ownerShutdown",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_destination", "type": "bytes32" },
+        { "name": "_tokenType", "type": "bytes21" },
+        { "name": "_amount", "type": "uint256" },
+        { "name": "_data", "type": "bytes" }
+      ],
+      "name": "sendMessage",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_destination", "type": "bytes32" },
+        { "name": "_tokenType", "type": "bytes21" },
+        { "name": "_amount", "type": "uint256" },
+        { "name": "_data", "type": "bytes" },
+        { "name": "_signature", "type": "bytes" }
+      ],
+      "name": "forwardMessage",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [{ "name": "_destination", "type": "bytes32" }, { "name": "_data", "type": "bytes" }],
+      "name": "sendEthMessage",
+      "outputs": [],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_vmId", "type": "bytes32" },
+        { "name": "_afterHash", "type": "bytes32" },
+        { "name": "_newInbox", "type": "bytes32" },
+        { "name": "_timeBounds", "type": "uint64[2]" },
+        { "name": "_tokenTypes", "type": "bytes21[]" },
+        { "name": "_messageData", "type": "bytes" },
+        { "name": "_messageTokenNum", "type": "uint16[]" },
+        { "name": "_messageAmount", "type": "uint256[]" },
+        { "name": "_messageDestination", "type": "bytes32[]" },
+        { "name": "_logsAccHash", "type": "bytes32" },
+        { "name": "_signatures", "type": "bytes" }
+      ],
+      "name": "finalizedUnanimousAssert",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_vmId", "type": "bytes32" },
+        { "name": "_unanRest", "type": "bytes32" },
+        { "name": "_timeBounds", "type": "uint64[2]" },
+        { "name": "_tokenTypes", "type": "bytes21[]" },
+        { "name": "_messageTokenNum", "type": "uint16[]" },
+        { "name": "_messageAmount", "type": "uint256[]" },
+        { "name": "_sequenceNum", "type": "uint64" },
+        { "name": "_logsAccHash", "type": "bytes32" },
+        { "name": "_signatures", "type": "bytes" }
+      ],
+      "name": "pendingUnanimousAssert",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_vmId", "type": "bytes32" },
+        { "name": "_afterHash", "type": "bytes32" },
+        { "name": "_newInbox", "type": "bytes32" },
+        { "name": "_tokenTypes", "type": "bytes21[]" },
+        { "name": "_messageData", "type": "bytes" },
+        { "name": "_messageTokenNum", "type": "uint16[]" },
+        { "name": "_messageAmount", "type": "uint256[]" },
+        { "name": "_messageDestination", "type": "bytes32[]" }
+      ],
+      "name": "ConfirmUnanimousAsserted",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_fields", "type": "bytes32[5]" },
+        { "name": "_numSteps", "type": "uint32" },
+        { "name": "timeBounds", "type": "uint64[2]" },
+        { "name": "_tokenTypes", "type": "bytes21[]" },
+        { "name": "_messageDataHash", "type": "bytes32[]" },
+        { "name": "_messageTokenNum", "type": "uint16[]" },
+        { "name": "_msgAmount", "type": "uint256[]" },
+        { "name": "_msgDestination", "type": "bytes32[]" }
+      ],
+      "name": "pendingDisputableAssert",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_vmId", "type": "bytes32" },
+        { "name": "_preconditionHash", "type": "bytes32" },
+        { "name": "_afterHash", "type": "bytes32" },
+        { "name": "_numSteps", "type": "uint32" },
+        { "name": "_tokenTypes", "type": "bytes21[]" },
+        { "name": "_messageData", "type": "bytes" },
+        { "name": "_messageTokenNums", "type": "uint16[]" },
+        { "name": "_messageAmounts", "type": "uint256[]" },
+        { "name": "_messageDestination", "type": "bytes32[]" },
+        { "name": "_logsAccHash", "type": "bytes32" }
+      ],
+      "name": "confirmDisputableAsserted",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [{ "name": "_vmId", "type": "bytes32" }, { "name": "_assertPreHash", "type": "bytes32" }],
+      "name": "initiateChallenge",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        { "name": "_vmId", "type": "bytes32" },
+        { "name": "_players", "type": "address[2]" },
+        { "name": "_rewards", "type": "uint128[2]" }
+      ],
+      "name": "completeChallenge",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}
