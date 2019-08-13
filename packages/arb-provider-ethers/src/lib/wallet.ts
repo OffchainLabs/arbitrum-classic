@@ -55,7 +55,8 @@ export class ArbWallet extends ethers.Signer {
             throw Error("Can't send transaction without destination");
         }
         const dest = await transaction.to;
-        if (this.contracts[dest.toLowerCase()]) {
+        let contract = this.contracts.get(dest.toLowerCase());
+        if (contract) {
             this.seq = this.seq.add(2);
             const vmId = await this.provider.getVmID();
             let encodedData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);

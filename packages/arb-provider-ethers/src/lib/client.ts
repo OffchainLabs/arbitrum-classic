@@ -48,14 +48,14 @@ class OrigMessage {
         const calldata = wrappedData.get(0) as ArbValue.TupleValue;
         this.calldataHash = calldata.hash();
         this.data = ArbValue.sizedByteRangeToBytes(calldata.get(0) as ArbValue.TupleValue);
-        this.contractID = ethers.utils.hexDataSlice((calldata.get(1) as ArbValue.IntValue).bignum.toHexString(), 12);
+        this.contractID = ethers.utils.getAddress((calldata.get(1) as ArbValue.IntValue).bignum.toHexString());
         this.sequenceNum = (calldata.get(2) as ArbValue.IntValue).bignum.toHexString();
         this.timestamp = (wrappedData.get(1) as ArbValue.IntValue).bignum.toHexString();
         this.blockHeight = (wrappedData.get(2) as ArbValue.IntValue).bignum.toHexString();
         this.txHash = (wrappedData.get(3) as ArbValue.IntValue).bignum.toHexString();
         this.tokenType = (value.get(3) as ArbValue.IntValue).bignum.toHexString();
         this.value = (value.get(2) as ArbValue.IntValue).bignum.toHexString();
-        this.caller = ethers.utils.hexDataSlice((value.get(1) as ArbValue.IntValue).bignum.toHexString(), 12);
+        this.caller = ethers.utils.getAddress((value.get(1) as ArbValue.IntValue).bignum.toHexString());
     }
 }
 
@@ -277,7 +277,7 @@ export class ArbClient {
                 'Validator.SendMessage',
                 [
                     {
-                        data: ArbValue.marshal(value),
+                        data: ethers.utils.hexlify(ArbValue.marshal(value)),
                         pubkey,
                         signature: sig,
                     },
@@ -301,7 +301,7 @@ export class ArbClient {
                 'Validator.CallMessage',
                 [
                     {
-                        data: ArbValue.marshal(value),
+                        data: ethers.utils.hexlify(ArbValue.marshal(value)),
                         sender,
                     },
                 ],

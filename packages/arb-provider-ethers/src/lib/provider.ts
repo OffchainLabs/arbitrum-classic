@@ -24,7 +24,7 @@ import * as ethers from 'ethers';
 
 const promisePoller = require('promise-poller').default;
 
-const vmTrackerJson = require('./VMTracker.json');
+import vmTrackerJson from './VMTracker.json';
 
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated';
@@ -115,7 +115,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         const vmId = await this.getVmID();
         const txHashCheck = ethers.utils.solidityKeccak256(
             ['bytes32', 'bytes32', 'uint256', 'bytes21'],
-            [vmId, evmVal.orig.calldataHash, evmVal.orig.value, ethers.utils.hexDataSlice(evmVal.orig.tokenType, 11)],
+            [
+                vmId,
+                evmVal.orig.calldataHash,
+                evmVal.orig.value,
+                ethers.utils.hexZeroPad(ethers.utils.hexDataSlice(evmVal.orig.tokenType, 21), 21),
+            ],
         );
 
         // Check txHashCheck matches txHash
