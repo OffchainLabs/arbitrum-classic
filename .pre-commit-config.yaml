@@ -9,9 +9,12 @@ repos:
       hooks:
           - id: black
             language_version: python3.6
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v1.2.3
+      hooks:
+          - id: flake8
     - repo: git://github.com/doublify/pre-commit-clang-format
       rev: master
-
       hooks:
           - id: clang-format
     - repo: git://github.com/dnephin/pre-commit-golang
@@ -22,10 +25,10 @@ repos:
       rev: "" # Use the sha or tag you want to point at
       hooks:
           - id: prettier
-    - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v1.2.3
+    - repo: https://github.com/pre-commit/mirrors-eslint
+      rev: "" # Use the sha / tag you want to point at
       hooks:
-          - id: flake8
+          - id: eslint
     - repo: https://github.com/syntaqx/git-hooks
       rev: v0.0.16
       hooks:

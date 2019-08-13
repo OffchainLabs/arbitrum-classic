@@ -36,6 +36,7 @@
     ]
   },
   "devDependencies": {
+    "eslint": "^6.1.0",
     "ganache-cli": "6.5.0",
     "jest": "^24.8.0"
   }

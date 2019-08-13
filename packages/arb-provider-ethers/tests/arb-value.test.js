@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* eslint-env node, jest */
 "use strict";
 
 const ethers = require("ethers");
@@ -467,9 +468,9 @@ describe("Integration", function() {
 
 describe("test_cases.json", function() {
   for (let i = 0; i < test_cases.length; i++) {
-    it(test_cases[i]["name"], function() {
-      let expectedHash = test_cases[i]["hash"];
-      let value = arb.unmarshal(test_cases[i]["value"]);
+    it(test_cases[i].name, function() {
+      let expectedHash = test_cases[i].hash;
+      let value = arb.unmarshal(test_cases[i].value);
       let hash = value.hash().slice(2);
       if (hash !== expectedHash) {
         console.log(value.toString());

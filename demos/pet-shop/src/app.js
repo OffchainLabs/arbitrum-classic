@@ -1,3 +1,4 @@
+/* eslint-env browser */
 "use strict";
 
 var $ = require("jquery");
@@ -5,9 +6,10 @@ const Web3 = require("web3");
 const contract = require("truffle-contract");
 const ArbProvider = require("arb-provider-web3");
 
-import "bootstrap/dist/css/bootstrap.min.css";
+require("bootstrap/dist/css/bootstrap.min.css");
 
 let App = {
+  web3: null,
   web3Provider: null,
   contracts: {},
 
@@ -56,12 +58,14 @@ let App = {
     }
 
     const contracts = require("../compiled.json");
-    App.web3Provider = await ArbProvider(
+
+    let provider = await ArbProvider(
       "http://localhost:1235",
       contracts,
       App.web3Provider
     );
-    web3 = new Web3(App.web3Provider);
+    App.web3Provider = provider; // eslint-disable-line require-atomic-updates
+    App.web3 = new Web3(App.web3Provider); // eslint-disable-line require-atomic-updates
 
     return App.initContract();
   },
@@ -114,7 +118,7 @@ let App = {
 
     var adoptionInstance;
 
-    web3.eth.getAccounts(function(error, accounts) {
+    App.web3.eth.getAccounts(function(error, accounts) {
       if (error) {
         console.log(error);
       }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* eslint-env node */
 "use strict";
 
 const ethers = require("ethers");
@@ -54,12 +55,12 @@ const TYPE_TUPLE_0 = 3;
 const TYPE_TUPLE_MAX = 3 + MAX_TUPLE_SIZE;
 
 // Extracts first n bytes from s returning two separate strings as list
-const extractBytes = (s, n) => {
+function extractBytes(s, n) {
   if (n < 0 || n * 2 > s.length) {
     throw "Error extracting bytes: string is too short";
   }
   return [s.substring(0, n * 2), s.substring(n * 2, s.length)];
-};
+}
 
 // Convert unsigned int i to hexstring of n bytes. Does not include "0x".
 const intToBytes = (i, n) => i.toString(16).padStart(n * 2, "0");
@@ -426,7 +427,7 @@ function unmarshalOpCode(hexString) {
 
 function unmarshalTuple(hexString, size) {
   let contents = new Array(size);
-  let value = undefined;
+  var value;
   let tail = hexString;
   for (let i = 0; i < size; i++) {
     [value, tail] = _unmarshalValue(tail);

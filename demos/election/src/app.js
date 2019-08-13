@@ -1,3 +1,4 @@
+/* eslint-env browser */
 "use strict";
 
 var $ = require("jquery");
@@ -5,7 +6,7 @@ const Web3 = require("web3");
 const contract = require("truffle-contract");
 const ArbProvider = require("arb-provider-web3");
 
-import "bootstrap/dist/css/bootstrap.min.css";
+require("bootstrap/dist/css/bootstrap.min.css");
 
 let App = {
   web3Provider: null,
@@ -41,12 +42,13 @@ let App = {
     }
 
     const contracts = require("../compiled.json");
-    App.web3Provider = await ArbProvider(
+    let provider = await ArbProvider(
       "http://localhost:1235",
       contracts,
       App.web3Provider
     );
-    web3 = new Web3(App.web3Provider);
+    App.web3Provider = provider; // eslint-disable-line require-atomic-updates
+    App.web3 = new Web3(App.web3Provider); // eslint-disable-line require-atomic-updates
 
     return App.initContract();
   },
@@ -94,7 +96,7 @@ let App = {
     });
 
     var accountInterval = setInterval(function() {
-      web3.eth.getAccounts(function(err, accounts) {
+      App.web3.eth.getAccounts(function(err, accounts) {
         if (err === null && accounts[0] != App.account) {
           console.log("Updated account", accounts[0]);
           App.account = accounts[0];
@@ -112,7 +114,7 @@ let App = {
     loader.show();
     content.hide();
 
-    web3.eth.getAccounts(function(err, accounts) {
+    App.web3.eth.getAccounts(function(err, accounts) {
       console.log(err, accounts);
     });
 
@@ -129,7 +131,7 @@ let App = {
 
         var candidateFutures = [];
         for (
-          var i = web3.toBigNumber(1);
+          var i = App.web3.toBigNumber(1);
           i.lte(candidatesCount);
           i = i.add(1)
         ) {

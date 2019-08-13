@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* eslint-env node */
+"use strict";
 
 const ganache = require("ganache-core");
 const path = require("path");
@@ -31,19 +33,25 @@ function provider(outputFolder, buildLocation, options) {
   if (!buildLocation) {
     buildLocation = path.resolve(rootPath, "build/contracts");
   }
-  options["network_id"] = 123456789;
-  options["allowUnlimitedContractSize"] = true;
+  options.network_id = 123456789;
+  options.allowUnlimitedContractSize = true;
   const arbProvider = ganache.provider(options);
 
   const contractCode = {};
+
+  let storageTrackFuncGen = function(address_string) {
+    return function(err, code) {
+      contractCode[address_string] = code;
+    };
+  };
+
   arbProvider.engine.on("block", function(block) {
     for (let [address_string, value] of Object.entries(storage)) {
-      arbProvider.engine.manager.eth_getCode(address_string, "latest", function(
-        err,
-        code
-      ) {
-        contractCode[address_string] = code;
-      });
+      arbProvider.engine.manager.eth_getCode(
+        address_string,
+        "latest",
+        storageTrackFuncGen(address_string)
+      );
     }
   });
 

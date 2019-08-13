@@ -157,7 +157,6 @@ function formatReceipt(receipt) {
   );
 
   (receipt.logs || []).forEach(function(log) {
-    var log = {};
     result.logs.push(log);
 
     if (receipt.removed != null) {
@@ -463,7 +462,7 @@ utils.defineProperty(ProviderBridge.prototype, "_sendAsync", function(
 
     case "eth_sign":
       params = [params[1], params[0]];
-    // Fall-through
+    // Fall through
 
     case "personal_sign":
       signer.getAddress().then(
@@ -682,7 +681,6 @@ utils.defineProperty(ProviderBridge.prototype, "_sendAsync", function(
     // Unsupported methods
     case "eth_getUncleByBlockHashAndIndex":
     case "eth_getUncleByBlockNumberAndIndex":
-
     case "eth_getUncleCountByBlockHash":
     case "eth_getUncleCountByBlockNumber":
       respondError("unsupported method", { method: payload.method });

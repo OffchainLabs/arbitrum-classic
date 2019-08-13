@@ -1,0 +1,4 @@
+**/migrations/*.js
+packages/arb-bridge-eth/test/**/*.js
+**/dist/main.js
+**/node_modules/**

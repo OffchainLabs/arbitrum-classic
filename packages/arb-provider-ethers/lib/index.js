@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* eslint-env node */
 "use strict";
 
 const ethers = require("ethers");
@@ -114,33 +115,28 @@ function processLog(value) {
         logs: stackValueToList(logs).map(logValToLog),
         returnType: EVM_RETURN_CODE
       };
-      break;
     case EVM_REVERT_CODE:
       return {
         orig: origMessage,
         data: ArbValue.sizedByteRangeToHex(returnVal),
         returnType: EVM_REVERT_CODE
       };
-      break;
     case EVM_STOP_CODE:
       return {
         orig: origMessage,
         logs: stackValueToList(logs).map(logValToLog),
         returnType: EVM_STOP_CODE
       };
-      break;
     case EVM_BAD_SEQUENCE_CODE:
       return {
         orig: origMessage,
         returnType: EVM_BAD_SEQUENCE_CODE
       };
-      break;
     case EVM_INVALID_CODE:
       return {
         orig: origMessage,
         returnType: EVM_INVALID_CODE
       };
-      break;
     default:
       throw "processLogs Invalid EVM return code";
   }
@@ -172,20 +168,20 @@ class ArbClient {
         }
       );
     });
-    if (result["found"]) {
+    if (result.found) {
       let vmId = await self.getVmID();
-      let val = ArbValue.unmarshal(result["rawVal"]);
+      let val = ArbValue.unmarshal(result.rawVal);
       let evmVal = processLog(val);
 
       let data = {
         vmId: vmId,
         val: val,
-        logPreHash: result["logPreHash"],
-        logPostHash: result["logPostHash"],
-        logValHashes: result["logValHashes"],
-        validatorSigs: result["validatorSigs"],
-        partialHash: result["partialHash"],
-        onChainTxHash: result["onChainTxHash"]
+        logPreHash: result.logPreHash,
+        logPostHash: result.logPostHash,
+        logValHashes: result.logValHashes,
+        validatorSigs: result.validatorSigs,
+        partialHash: result.partialHash,
+        onChainTxHash: result.onChainTxHash
       };
 
       return {
@@ -215,7 +211,7 @@ class ArbClient {
           } else if (error) {
             reject(error);
           } else {
-            resolve(result["hash"]);
+            resolve(result.hash);
           }
         }
       );
@@ -239,8 +235,8 @@ class ArbClient {
           } else if (error) {
             reject(error);
           } else {
-            if (result["Success"]) {
-              resolve(result["ReturnVal"]);
+            if (result.Success) {
+              resolve(result.ReturnVal);
             } else {
               reject(new Error("Call was reverted"));
             }
@@ -269,7 +265,7 @@ class ArbClient {
           } else if (error) {
             reject(error);
           } else {
-            resolve(result["logs"]);
+            resolve(result.logs);
           }
         }
       );
@@ -289,7 +285,7 @@ class ArbClient {
         } else if (error) {
           reject(error);
         } else {
-          resolve(result["vmID"]);
+          resolve(result.vmID);
         }
       });
     });
@@ -308,7 +304,7 @@ class ArbClient {
         } else if (error) {
           reject(error);
         } else {
-          resolve(result["assertionCount"]);
+          resolve(result.assertionCount);
         }
       });
     });
@@ -327,7 +323,7 @@ class ArbClient {
         } else if (error) {
           reject(error);
         } else {
-          resolve(result["vmCreatedTxHash"]);
+          resolve(result.vmCreatedTxHash);
         }
       });
     });
@@ -343,7 +339,7 @@ class ArbProvider extends ethers.providers.BaseProvider {
     let contractAddress = "0x5EBF59dBff8dCDa41610738634b396DfCB24A7c7";
     this.vmTracker = new ethers.Contract(
       contractAddress,
-      vmTrackerJson["abi"],
+      vmTrackerJson.abi,
       provider
     );
     this.contracts = {};
@@ -427,7 +423,7 @@ class ArbProvider extends ethers.providers.BaseProvider {
     let receipt = await this.provider.waitForTransaction(onChainTxHash);
     let events = receipt.logs.map(l => this.vmTracker.interface.parseLog(l));
     // DisputableAssertion Event
-    let cda = events.find(event => event["name"] === EB_EVENT_CDA);
+    let cda = events.find(event => event.name === EB_EVENT_CDA);
     if (cda) {
       const vmId = await this.getVmID();
       // Check correct VM
@@ -466,7 +462,7 @@ class ArbProvider extends ethers.providers.BaseProvider {
       let eventTxHash = await this.client.getVMCreatedTxHash();
       let receipt = await this.provider.waitForTransaction(eventTxHash);
       let events = receipt.logs.map(l => this.vmTracker.interface.parseLog(l));
-      let vmCreatedEvent = events.find(event => event["name"] === EB_EVENT_VMC);
+      let vmCreatedEvent = events.find(event => event.name === EB_EVENT_VMC);
       if (!vmCreatedEvent) {
         throw new Error("VMCreated Event not found");
       }
@@ -682,7 +678,7 @@ class ArbProvider extends ethers.providers.BaseProvider {
       let sender = await this.provider.getSigner(0).getAddress();
       return this.client.call(arbMsg, sender);
     } else {
-      return self.provider.call(transaction);
+      return this.provider.call(transaction);
     }
   }
 }
@@ -732,7 +728,7 @@ class ArbWallet extends ethers.Signer {
         new ArbValue.IntValue(self.seq)
       ]);
       if (!transaction.value) {
-        transaction.value = ethers.utils.bigNumberify(0);
+        transaction.value = ethers.utils.bigNumberify(0); // eslint-disable-line require-atomic-updates
       }
       let args = [
         vmId,
@@ -744,9 +740,10 @@ class ArbWallet extends ethers.Signer {
         ["bytes32", "bytes32", "uint256", "bytes21"],
         args
       );
+      let fromAddress = await self.getAddress();
       let tx = {
         hash: messageHash,
-        from: await self.getAddress(),
+        from: fromAddress,
         gasPrice: 1,
         gasLimit: 1,
         to: dest,

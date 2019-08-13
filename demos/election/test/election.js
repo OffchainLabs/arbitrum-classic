@@ -1,4 +1,7 @@
-/* eslint-env chai, mocha */
+/* eslint-env mocha, chai */
+/* global artifacts, assert, contract */
+"use strict";
+
 var Election = artifacts.require("./Election.sol");
 
 contract("Election", function(accounts) {
@@ -34,6 +37,7 @@ contract("Election", function(accounts) {
   });
 
   it("allows a voter to cast a vote", function() {
+    var candidateId;
     return Election.deployed()
       .then(function(instance) {
         electionInstance = instance;
@@ -90,6 +94,7 @@ contract("Election", function(accounts) {
   });
 
   it("throws an exception for double voting", function() {
+    var candidateId;
     return Election.deployed()
       .then(function(instance) {
         electionInstance = instance;
