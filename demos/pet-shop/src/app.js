@@ -1,8 +1,11 @@
+var $ = require("jquery");
 const Web3 = require("web3");
 const contract = require("truffle-contract");
 const ArbProvider = require("arb-provider-web3");
 
-App = {
+import "bootstrap/dist/css/bootstrap.min.css";
+
+let App = {
   web3Provider: null,
   contracts: {},
 
@@ -12,7 +15,7 @@ App = {
       var petsRow = $("#petsRow");
       var petTemplate = $("#petTemplate");
 
-      for (i = 0; i < data.length; i++) {
+      for (let i = 0; i < data.length; i++) {
         petTemplate.find(".panel-title").text(data[i].name);
         petTemplate.find("img").attr("src", data[i].picture);
         petTemplate.find(".pet-breed").text(data[i].breed);
@@ -77,7 +80,7 @@ App = {
     $(document).on("click", ".btn-adopt", App.handleAdopt);
   },
 
-  markAdopted: function(adopters, account) {
+  markAdopted: function() {
     var adoptionInstance;
 
     App.contracts.Adoption.deployed()
@@ -87,7 +90,7 @@ App = {
         return adoptionInstance.getAdopters.call();
       })
       .then(function(adopters) {
-        for (i = 0; i < adopters.length; i++) {
+        for (let i = 0; i < adopters.length; i++) {
           if (adopters[i] !== "0x0000000000000000000000000000000000000000") {
             $(".panel-pet")
               .eq(i)
@@ -134,7 +137,7 @@ App = {
 };
 
 $(function() {
-  $(window).load(function() {
+  $(window).on("load", function() {
     App.init();
   });
 });

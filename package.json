@@ -36,7 +36,7 @@
     ]
   },
   "devDependencies": {
-    "jest": "^24.8.0",
-    "ganache-cli": "6.5.0"
+    "ganache-cli": "6.5.0",
+    "jest": "^24.8.0"
   }
 }
