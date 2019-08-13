@@ -4,7 +4,8 @@
   "description": "Arbitrum provider for ethers",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/offchainlabs/arbitrum.git",
@@ -15,7 +16,10 @@
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
-    "test": "jest"
+    "build": "tsc",
+    "test": "jest",
+    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
+    "lint": "tslint -p tsconfig.json"
   },
   "dependencies": {
     "ethers": "~4.0.28",
@@ -24,6 +28,12 @@
     "promise-poller": "~1.7.0"
   },
   "devDependencies": {
-    "jest": "~24.8.0"
+    "@types/jest": "^24.0.17",
+    "jest": "~24.8.0",
+    "prettier": "^1.18.2",
+    "ts-jest": "^24.0.2",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.5.3"
   }
 }
