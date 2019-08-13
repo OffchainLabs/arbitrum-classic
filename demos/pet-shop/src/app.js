@@ -1,3 +1,5 @@
+"use strict";
+
 var $ = require("jquery");
 const Web3 = require("web3");
 const contract = require("truffle-contract");

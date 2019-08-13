@@ -11,8 +11,11 @@
     "watch": "webpack --watch"
   },
   "devDependencies": {
-    "lite-server": "~2.5.2",
-    "truffle": "~5.0.20",
+    "css-loader": "^3.2.0",
+    "file-loader": "^4.2.0",
+    "style-loader": "^1.0.0",
+    "svg-inline-loader": "^0.8.0",
+    "truffle": "^5.0.31",
     "webpack": "~4.35.2",
     "webpack-cli": "~3.3.5",
     "webpack-dev-server": "~3.7.2"
@@ -20,6 +23,8 @@
   "dependencies": {
     "arb-provider-truffle": "^0.1.0",
     "arb-provider-web3": "^0.1.0",
+    "bootstrap": "3.4.1",
+    "jquery": "^3.4.1",
     "truffle-contract": "1.1.11",
     "web3": "0.20"
   }

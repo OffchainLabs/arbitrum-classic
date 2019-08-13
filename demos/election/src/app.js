@@ -1,8 +1,13 @@
+"use strict";
+
+var $ = require("jquery");
 const Web3 = require("web3");
 const contract = require("truffle-contract");
 const ArbProvider = require("arb-provider-web3");
 
-App = {
+import "bootstrap/dist/css/bootstrap.min.css";
+
+let App = {
   web3Provider: null,
   contracts: {},
   account: "0x0",
@@ -55,7 +60,16 @@ App = {
 
     App.listenForEvents();
 
+    App.setupHooks();
+
     return App.render();
+  },
+
+  setupHooks: function() {
+    $("#voteForm").submit(function(event) {
+      App.castVote();
+      event.preventDefault();
+    });
   },
 
   // Listen for events emitted from the contract
@@ -185,7 +199,7 @@ App = {
 };
 
 $(function() {
-  $(window).load(function() {
+  $(window).on("load", function() {
     App.init();
   });
 });
