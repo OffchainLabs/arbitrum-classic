@@ -18,7 +18,7 @@
 
 const ethers = require('ethers');
 const utils = ethers.utils;
-import * as arb from '../src/lib/arb-value';
+import * as arb from '../src/lib/value';
 const test_cases = require('./test_cases.json');
 
 // Helper shortcuts
@@ -182,7 +182,9 @@ describe('Marshaling', function() {
     });
 
     test('marshal and unmarshal CodePointValue', function() {
-        let [pc, op, nextHash] = [0, new arb.BasicOp(arb.OpCode.Halt), '0x' + ZEROS_32B];
+        let pc = 0;
+        let op = new arb.BasicOp(arb.OpCode.Halt);
+        let nextHash = '0x' + ZEROS_32B;
         let basic_tcv = new arb.CodePointValue(pc, op, nextHash);
         let marshaledBytes = arb.marshal(basic_tcv);
         expect(marshaledBytes.length).toBe(M_CODE_POINT_SIZE);

@@ -16,8 +16,11 @@
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
+    "prepare": "yarn build",
+    "prepublishOnly": "yarn test && yarn lint",
+    "preversion": "npm run lint",
     "build": "tsc",
-    "test": "jest",
+    "test": "jest --config jestconfig.json",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "tslint -p tsconfig.json"
   },
@@ -35,5 +38,8 @@
     "tslint": "^5.18.0",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.5.3"
-  }
+  },
+  "files": [
+    "lib/**/*"
+  ]
 }

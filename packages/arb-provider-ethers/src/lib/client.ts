@@ -1,5 +1,7 @@
 import * as ArbValue from './value';
+
 import * as ethers from 'ethers';
+
 const jaysonBrowserClient = require('jayson/lib/client/browser');
 const fetch = require('node-fetch');
 
@@ -12,17 +14,17 @@ export enum EVMCode {
 }
 
 function logValToLog(val: ArbValue.Value) {
-    let value = val as ArbValue.TupleValue;
+    const value = val as ArbValue.TupleValue;
     return {
         contractId: (value.get(0) as ArbValue.IntValue).bignum,
         data: ArbValue.sizedByteRangeToBytes(value.get(1) as ArbValue.TupleValue),
-        topics: value.contents.slice(2).map(val => (val as ArbValue.IntValue).bignum),
+        topics: value.contents.slice(2).map(rawTopic => (rawTopic as ArbValue.IntValue).bignum),
     };
 }
 
 function stackValueToList(value: ArbValue.TupleValue) {
-    let values = [];
-    while (value.contents.length != 0) {
+    const values = [];
+    while (value.contents.length !== 0) {
         values.push(value.get(1));
         value = value.get(0) as ArbValue.TupleValue;
     }
@@ -30,20 +32,20 @@ function stackValueToList(value: ArbValue.TupleValue) {
 }
 
 class OrigMessage {
-    data: Uint8Array;
-    calldataHash: string;
-    contractID: string;
-    sequenceNum: string;
-    timestamp: string;
-    blockHeight: string;
-    txHash: string;
-    tokenType: string;
-    value: string;
-    caller: string;
+    public data: Uint8Array;
+    public calldataHash: string;
+    public contractID: string;
+    public sequenceNum: string;
+    public timestamp: string;
+    public blockHeight: string;
+    public txHash: string;
+    public tokenType: string;
+    public value: string;
+    public caller: string;
 
     constructor(value: ArbValue.TupleValue) {
-        let wrappedData = value.get(0) as ArbValue.TupleValue;
-        let calldata = wrappedData.get(0) as ArbValue.TupleValue;
+        const wrappedData = value.get(0) as ArbValue.TupleValue;
+        const calldata = wrappedData.get(0) as ArbValue.TupleValue;
         this.calldataHash = calldata.hash();
         this.data = ArbValue.sizedByteRangeToBytes(calldata.get(0) as ArbValue.TupleValue);
         this.contractID = ethers.utils.hexDataSlice((calldata.get(1) as ArbValue.IntValue).bignum.toHexString(), 12);
@@ -57,16 +59,16 @@ class OrigMessage {
     }
 }
 
-export interface EVMResult {
+export interface IEVMResult {
     orig: OrigMessage;
 
     returnType(): EVMCode;
 }
 
 class EVMReturn {
-    orig: OrigMessage;
-    data: Uint8Array;
-    logs: any;
+    public orig: OrigMessage;
+    public data: Uint8Array;
+    public logs: any;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
@@ -74,65 +76,65 @@ class EVMReturn {
         this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(logValToLog);
     }
 
-    returnType(): EVMCode {
+    public returnType(): EVMCode {
         return EVMCode.Return;
     }
 }
 
 class EVMRevert {
-    orig: OrigMessage;
-    data: Uint8Array;
+    public orig: OrigMessage;
+    public data: Uint8Array;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
         this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
     }
 
-    returnType(): EVMCode {
+    public returnType(): EVMCode {
         return EVMCode.Revert;
     }
 }
 
 class EVMStop {
-    orig: OrigMessage;
-    logs: any;
+    public orig: OrigMessage;
+    public logs: any;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
         this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(logValToLog);
     }
 
-    returnType(): EVMCode {
+    public returnType(): EVMCode {
         return EVMCode.Stop;
     }
 }
 
 class EVMBadSequenceCode {
-    orig: OrigMessage;
+    public orig: OrigMessage;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
     }
 
-    returnType(): EVMCode {
+    public returnType(): EVMCode {
         return EVMCode.BadSequenceCode;
     }
 }
 
 class EVMInvalid {
-    orig: OrigMessage;
+    public orig: OrigMessage;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
     }
 
-    returnType(): EVMCode {
+    public returnType(): EVMCode {
         return EVMCode.Invalid;
     }
 }
 
-function processLog(value: ArbValue.TupleValue): EVMResult {
-    let returnCode = value.get(3) as ArbValue.IntValue;
+function processLog(value: ArbValue.TupleValue): IEVMResult {
+    const returnCode = value.get(3) as ArbValue.IntValue;
     switch (returnCode.bignum.toNumber()) {
         case EVMCode.Return:
             return new EVMReturn(value);
@@ -145,71 +147,71 @@ function processLog(value: ArbValue.TupleValue): EVMResult {
         case EVMCode.Invalid:
             return new EVMInvalid(value);
         default:
-            throw 'processLogs Invalid EVM return code';
+            throw Error('processLogs Invalid EVM return code');
     }
 }
 
-interface GetVMInfoReply {
+interface IGetVMInfoReply {
     vmID: string;
 }
 
-interface GetAssertionCountReply {
+interface IGetAssertionCountReply {
     assertionCount: number;
 }
 
-interface GetMessageResultReply {
+interface IGetMessageResultReply {
     found: boolean;
     rawVal: string;
     logPreHash: string;
     logPostHash: string;
-    logValHashes: Array<string>;
-    validatorSigs: Array<string>;
+    logValHashes: string[];
+    validatorSigs: string[];
     partialHash: string;
     onChainTxHash: string;
 }
 
-interface SendMessageReply {
+interface ISendMessageReply {
     hash: string;
 }
 
-interface CallMessageReply {
+interface ICallMessageReply {
     ReturnVal: string;
     Success: boolean;
 }
 
-interface LogInfo {
+interface ILogInfo {
     address: string;
     blockHash: string;
     blockNumber: string;
     data: string;
     logIndex: string;
-    topics: Array<string>;
+    topics: string[];
     transactionIndex: string;
     transactionHash: string;
 }
 
-interface FindLogsReply {
-    logs: Array<LogInfo>;
+interface IFindLogsReply {
+    logs: ILogInfo[];
 }
 
 function _arbClient(managerAddress: string) {
-    var callServer = function(request: any, callback: any) {
-        var options = {
-            method: 'POST',
+    const callServer = (request: any, callback: any) => {
+        const options = {
             body: request, // request is a string
             headers: {
                 'Content-Type': 'application/json',
             },
+            method: 'POST',
         };
 
         fetch(managerAddress, options)
-            .then(function(res: any) {
+            .then((res: any) => {
                 return res.text();
             })
-            .then(function(text: any) {
+            .then((text: any) => {
                 callback(null, text);
             })
-            .catch(function(err: any) {
+            .catch((err: any) => {
                 callback(err);
             });
     };
@@ -218,23 +220,22 @@ function _arbClient(managerAddress: string) {
 }
 
 export class ArbClient {
-    client: any;
+    public client: any;
 
     constructor(managerUrl: string) {
         this.client = _arbClient(managerUrl);
     }
 
-    async getMessageResult(txHash: string) {
-        let self = this;
-        let result = await new Promise<GetMessageResultReply>((resolve, reject) => {
-            self.client.request(
+    public async getMessageResult(txHash: string) {
+        const messageResult = await new Promise<IGetMessageResultReply>((resolve, reject) => {
+            this.client.request(
                 'Validator.GetMessageResult',
                 [
                     {
-                        txHash: txHash,
+                        txHash,
                     },
                 ],
-                function(err: Error, error: Error, result: GetMessageResultReply) {
+                (err: Error, error: Error, result: IGetMessageResultReply) => {
                     if (err) {
                         reject(err);
                     } else if (error) {
@@ -245,44 +246,43 @@ export class ArbClient {
                 },
             );
         });
-        if (result.found) {
-            let vmId = await self.getVmID();
-            let val = ArbValue.unmarshal(result.rawVal);
-            let evmVal = processLog(val as ArbValue.TupleValue);
+        if (messageResult.found) {
+            const vmId = await this.getVmID();
+            const val = ArbValue.unmarshal(messageResult.rawVal);
+            const evmVal = processLog(val as ArbValue.TupleValue);
 
-            let data = {
-                vmId: vmId,
-                val: val,
-                logPreHash: result.logPreHash,
-                logPostHash: result.logPostHash,
-                logValHashes: result.logValHashes,
-                validatorSigs: result.validatorSigs,
-                partialHash: result.partialHash,
-                onChainTxHash: result.onChainTxHash,
+            const data = {
+                logPostHash: messageResult.logPostHash,
+                logPreHash: messageResult.logPreHash,
+                logValHashes: messageResult.logValHashes,
+                onChainTxHash: messageResult.onChainTxHash,
+                partialHash: messageResult.partialHash,
+                val,
+                validatorSigs: messageResult.validatorSigs,
+                vmId,
             };
 
             return {
-                data: data,
-                evmVal: evmVal,
+                data,
+                evmVal,
             };
         } else {
             return null;
         }
     }
 
-    sendMessage(value: ArbValue.Value, sig: string, pubkey: string): Promise<string> {
-        let self = this;
-        return new Promise(function(resolve, reject) {
-            self.client.request(
+    public sendMessage(value: ArbValue.Value, sig: string, pubkey: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            this.client.request(
                 'Validator.SendMessage',
                 [
                     {
                         data: ArbValue.marshal(value),
+                        pubkey,
                         signature: sig,
-                        pubkey: pubkey,
                     },
                 ],
-                function(err: Error, error: Error, result: SendMessageReply) {
+                (err: Error, error: Error, result: ISendMessageReply) => {
                     if (err) {
                         reject(err);
                     } else if (error) {
@@ -295,18 +295,17 @@ export class ArbClient {
         });
     }
 
-    call(value: ArbValue.Value, sender: string): Promise<string> {
-        let self = this;
-        return new Promise(function(resolve, reject) {
-            self.client.request(
+    public call(value: ArbValue.Value, sender: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            this.client.request(
                 'Validator.CallMessage',
                 [
                     {
                         data: ArbValue.marshal(value),
-                        sender: sender,
+                        sender,
                     },
                 ],
-                function(err: Error, error: Error, result: CallMessageReply) {
+                (err: Error, error: Error, result: ICallMessageReply) => {
                     if (err) {
                         reject(err);
                     } else if (error) {
@@ -323,20 +322,19 @@ export class ArbClient {
         });
     }
 
-    findLogs(fromBlock: number, toBlock: number, address: string, topics: Array<string>): Promise<Array<LogInfo>> {
-        let self = this;
-        return new Promise(function(resolve, reject) {
-            return self.client.request(
+    public findLogs(fromBlock: number, toBlock: number, address: string, topics: string[]): Promise<ILogInfo[]> {
+        return new Promise((resolve, reject) => {
+            return this.client.request(
                 'Validator.FindLogs',
                 [
                     {
+                        address,
                         fromHeight: fromBlock,
                         toHeight: toBlock,
-                        address: address,
-                        topics: topics,
+                        topics,
                     },
                 ],
-                function(err: Error, error: Error, result: FindLogsReply) {
+                (err: Error, error: Error, result: IFindLogsReply) => {
                     if (err) {
                         reject(err);
                     } else if (error) {
@@ -349,10 +347,9 @@ export class ArbClient {
         });
     }
 
-    getVmID(): Promise<string> {
-        let self = this;
-        return new Promise(function(resolve, reject) {
-            self.client.request('Validator.GetVMInfo', [], function(err: Error, error: Error, result: GetVMInfoReply) {
+    public getVmID(): Promise<string> {
+        return new Promise((resolve, reject) => {
+            this.client.request('Validator.GetVMInfo', [], (err: Error, error: Error, result: IGetVMInfoReply) => {
                 if (err) {
                     reject(err);
                 } else if (error) {
@@ -364,29 +361,27 @@ export class ArbClient {
         });
     }
 
-    getAssertionCount(): Promise<number> {
-        let self = this;
-        return new Promise(function(resolve, reject) {
-            self.client.request('Validator.GetAssertionCount', [], function(
-                err: Error,
-                error: Error,
-                result: GetAssertionCountReply,
-            ) {
-                if (err) {
-                    reject(err);
-                } else if (error) {
-                    reject(error);
-                } else {
-                    resolve(result.assertionCount);
-                }
-            });
+    public getAssertionCount(): Promise<number> {
+        return new Promise((resolve, reject) => {
+            this.client.request(
+                'Validator.GetAssertionCount',
+                [],
+                (err: Error, error: Error, result: IGetAssertionCountReply) => {
+                    if (err) {
+                        reject(err);
+                    } else if (error) {
+                        reject(error);
+                    } else {
+                        resolve(result.assertionCount);
+                    }
+                },
+            );
         });
     }
 
-    getVMCreatedTxHash(): Promise<string> {
-        let self = this;
-        return new Promise(function(resolve, reject) {
-            self.client.request('Validator.GetVMCreatedTxHash', [], function(err: Error, error: Error, result: any) {
+    public getVMCreatedTxHash(): Promise<string> {
+        return new Promise((resolve, reject) => {
+            this.client.request('Validator.GetVMCreatedTxHash', [], (err: Error, error: Error, result: any) => {
                 if (err) {
                     reject(err);
                 } else if (error) {
