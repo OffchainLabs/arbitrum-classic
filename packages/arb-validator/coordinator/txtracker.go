@@ -231,6 +231,7 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		evmVal, err := evm.ProcessLog(logVal)
 		if err != nil {
 			log.Printf("VM produced invalid evm result: %v\n", err)
+			continue
 		}
 		switch evmVal := evmVal.(type) {
 		case evm.Stop:

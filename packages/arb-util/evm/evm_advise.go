@@ -113,6 +113,42 @@ func (e Stop) String() string {
 	return sb.String()
 }
 
+type BadSequenceNum struct {
+	Msg EthMsg
+}
+
+func (e BadSequenceNum) GetEthMsg() EthMsg {
+	return e.Msg
+}
+
+func (e BadSequenceNum) IsResult() {}
+
+func (e BadSequenceNum) String() string {
+	var sb strings.Builder
+	sb.WriteString("BadSequenceNum(func: ")
+	sb.WriteString(hexutil.Encode(e.Msg.Data.CallData.Data[:4]))
+	sb.WriteString("])")
+	return sb.String()
+}
+
+type Invalid struct {
+	Msg EthMsg
+}
+
+func (e Invalid) GetEthMsg() EthMsg {
+	return e.Msg
+}
+
+func (e Invalid) IsResult() {}
+
+func (e Invalid) String() string {
+	var sb strings.Builder
+	sb.WriteString("Invalid(func: ")
+	sb.WriteString(hexutil.Encode(e.Msg.Data.CallData.Data[:4]))
+	sb.WriteString("])")
+	return sb.String()
+}
+
 type FuncCall struct {
 	funcID [4]byte
 	logs   value.Value
@@ -394,9 +430,9 @@ func ProcessLog(val value.Value) (Result, error) {
 		}
 		return Stop{ethMsg, logs}, nil
 	case BadSequenceCode:
-		return nil, errors.New("bad sequence number")
+		return BadSequenceNum{ethMsg}, nil
 	case InvalidCode:
-		return nil, errors.New("invalid tx")
+		return Invalid{ethMsg}, nil
 	default:
 		// Unknown type
 		return nil, errors.New("unknown return code")
