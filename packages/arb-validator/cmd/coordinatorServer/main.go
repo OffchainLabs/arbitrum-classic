@@ -144,7 +144,7 @@ func main() {
 	}
 	r := mux.NewRouter()
 	r.Handle("/", s).Methods("GET", "POST", "OPTIONS")
-	attachProfiler(r)
+	//attachProfiler(r)
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
