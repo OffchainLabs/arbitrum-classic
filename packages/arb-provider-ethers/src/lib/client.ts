@@ -59,77 +59,63 @@ class OrigMessage {
     }
 }
 
-export interface IEVMResult {
-    orig: OrigMessage;
-
-    returnType(): EVMCode;
-}
+type EVMResult = EVMReturn | EVMRevert | EVMStop | EVMBadSequenceCode | EVMInvalid;
 
 class EVMReturn {
     public orig: OrigMessage;
     public data: Uint8Array;
     public logs: any;
+    public returnType: EVMCode.Return;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
         this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
         this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(logValToLog);
-    }
-
-    public returnType(): EVMCode {
-        return EVMCode.Return;
+        this.returnType = EVMCode.Return;
     }
 }
 
 class EVMRevert {
     public orig: OrigMessage;
     public data: Uint8Array;
+    public returnType: EVMCode.Revert;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
         this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
-    }
-
-    public returnType(): EVMCode {
-        return EVMCode.Revert;
+        this.returnType = EVMCode.Revert;
     }
 }
 
 class EVMStop {
     public orig: OrigMessage;
     public logs: any;
+    public returnType: EVMCode.Stop;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
         this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(logValToLog);
-    }
-
-    public returnType(): EVMCode {
-        return EVMCode.Stop;
+        this.returnType = EVMCode.Stop;
     }
 }
 
 class EVMBadSequenceCode {
     public orig: OrigMessage;
+    public returnType: EVMCode.BadSequenceCode;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
-    }
-
-    public returnType(): EVMCode {
-        return EVMCode.BadSequenceCode;
+        this.returnType = EVMCode.BadSequenceCode;
     }
 }
 
 class EVMInvalid {
     public orig: OrigMessage;
+    public returnType: EVMCode.Invalid;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
-    }
-
-    public returnType(): EVMCode {
-        return EVMCode.Invalid;
+        this.returnType = EVMCode.Invalid;
     }
 }
 
@@ -175,8 +161,7 @@ interface ISendMessageReply {
 }
 
 interface ICallMessageReply {
-    returnVal: string;
-    success: boolean;
+    rawVal: string;
 }
 
 interface ILogInfo {
@@ -299,7 +284,7 @@ export class ArbClient {
         });
     }
 
-    public call(value: ArbValue.Value, sender: string): Promise<string> {
+    public call(value: ArbValue.Value, sender: string): Promise<Uint8Array> {
         return new Promise((resolve, reject) => {
             this.client.request(
                 'Validator.CallMessage',
@@ -315,10 +300,18 @@ export class ArbClient {
                     } else if (error) {
                         reject(error);
                     } else {
-                        if (result.success) {
-                            resolve(result.returnVal);
-                        } else {
-                            reject(new Error('Call was reverted'));
+                        const val = ArbValue.unmarshal(result.rawVal);
+                        const evmVal = processLog(val as ArbValue.TupleValue);
+                        switch (evmVal.returnType) {
+                            case EVMCode.Return:
+                                resolve(evmVal.data);
+                                break;
+                            case EVMCode.Stop:
+                                resolve(new Uint8Array());
+                                break;
+                            default:
+                                reject(new Error('Call was reverted'));
+                                break;
                         }
                     }
                 },

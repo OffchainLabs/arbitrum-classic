@@ -126,12 +126,14 @@ type txTracker struct {
 	accountNonces   map[common.Address]uint64
 	vmID            [32]byte
 	vmCreatedTxHash [32]byte
+	requests        chan validatorRequest
 }
 
 func newTxTracker(
 	vmID [32]byte,
 	vmCreatedTxHash [32]byte,
 ) *txTracker {
+	requests := make(chan validatorRequest, 100)
 	return &txTracker{
 		txRequestIndex:  0,
 		transactions:    make(map[[32]byte]txInfo),
@@ -139,7 +141,37 @@ func newTxTracker(
 		accountNonces:   make(map[common.Address]uint64),
 		vmID:            vmID,
 		vmCreatedTxHash: vmCreatedTxHash,
+		requests:        requests,
 	}
+}
+
+func (tr *txTracker) AssertionCount() <-chan int {
+	req := make(chan int, 1)
+	tr.requests <- assertionCountRequest{req}
+	return req
+}
+
+func (tr *txTracker) VMCreatedTxHash() <-chan [32]byte {
+	req := make(chan [32]byte, 1)
+	tr.requests <- vmCreatedTxHashRequest{req}
+	return req
+}
+
+func (tr *txTracker) TxInfo(txHash [32]byte) <-chan txInfo {
+	req := make(chan txInfo, 1)
+	tr.requests <- txRequest{txHash, req}
+	return req
+}
+
+func (tr *txTracker) FindLogs(
+	fromHeight *int64,
+	toHeight *int64,
+	address *big.Int,
+	topics [][32]byte,
+) <-chan []*LogInfo {
+	req := make(chan []*LogInfo, 1)
+	tr.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
+	return req
 }
 
 func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAssertion) {
@@ -305,15 +337,12 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 	}
 }
 
-func (tr *txTracker) handleTxResults(
-	completedCalls chan valmessage.FinalizedAssertion,
-	requests chan validatorRequest,
-) {
+func (tr *txTracker) handleTxResults(completedCalls chan valmessage.FinalizedAssertion) {
 	for {
 		select {
 		case finalizedAssertion := <-completedCalls:
 			tr.processFinalizedAssertion(finalizedAssertion)
-		case request := <-requests:
+		case request := <-tr.requests:
 			tr.processRequest(request)
 		}
 	}

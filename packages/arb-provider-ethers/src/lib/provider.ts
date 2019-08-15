@@ -165,10 +165,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                 return this.getMessageResult(params.transactionHash).then(result => {
                     if (result) {
                         let status = 0;
-                        if (
-                            result.evmVal.returnType() === EVMCode.Return ||
-                            result.evmVal.returnType() === EVMCode.Stop
-                        ) {
+                        if (result.evmVal.returnType === EVMCode.Return || result.evmVal.returnType === EVMCode.Stop) {
                             status = 1;
                         }
                         return {
@@ -204,8 +201,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                                 hash: result.txHash,
                                 nonce: 0,
                                 status:
-                                    result.evmVal.returnType() === EVMCode.Return ||
-                                    result.evmVal.returnType() === EVMCode.Stop,
+                                    result.evmVal.returnType === EVMCode.Return ||
+                                    result.evmVal.returnType === EVMCode.Stop,
                                 to: result.evmVal.orig.contractID,
                                 transactionIndex: 0,
                                 value: result.evmVal.orig.value,
@@ -243,7 +240,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public async call(
         transaction: ethers.providers.TransactionRequest,
         blockTag?: ethers.providers.BlockTag | Promise<ethers.providers.BlockTag>,
-    ) {
+    ): Promise<string> {
         if (!transaction.to) {
             throw Error('Cannot create call without a destination');
         }
@@ -265,7 +262,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                 new ArbValue.IntValue(maxSeq),
             ]);
             const sender = await this.provider.getSigner(0).getAddress();
-            return this.client.call(arbMsg, sender);
+            const resultData = await this.client.call(arbMsg, sender);
+            return ethers.utils.hexlify(resultData);
         } else {
             return this.provider.call(transaction);
         }

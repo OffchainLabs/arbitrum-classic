@@ -132,7 +132,7 @@ func main() {
 	ethURL := flag.Arg(4)
 
 	// Validator creation
-	server := coordinator.NewServer(machine, key, validators, connectionInfo, ethURL)
+	server := coordinator.NewRPCServer(machine, key, validators, connectionInfo, ethURL)
 
 	// Run server
 	s := rpc.NewServer()

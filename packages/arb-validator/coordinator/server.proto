@@ -37,9 +37,6 @@ message FindLogsArgs {
 }
 
 message FindLogsReply {
-    string fromHeight = 1;
-    string toHeight = 2;
-    string address = 3;
     repeated LogInfo logs = 4;
 }
 
@@ -68,12 +65,24 @@ message GetMessageResultReply {
     string onChainTxHash = 8;
 }
 
+message GetAssertionCountArgs {
+
+}
+
 message GetAssertionCountReply {
     int32 assertionCount = 1;
 }
 
+message GetVMCreatedTxHashArgs {
+
+}
+
 message GetVMCreatedTxHashReply {
     string vmCreatedTxHash = 1;
+}
+
+message GetVMInfoArgs {
+
 }
 
 message GetVMInfoReply {
@@ -86,6 +95,15 @@ message CallMessageArgs {
 }
 
 message CallMessageReply {
-    string returnVal = 1;
-    bool success = 2;
+    string rawVal = 1;
+}
+
+service Coordinator {
+    rpc SendMessage (SendMessageArgs) returns (SendMessageReply);
+    rpc GetMessageResult (GetMessageResultArgs) returns (GetMessageResultReply);
+    rpc CallMessage (CallMessageArgs) returns (CallMessageReply);
+    rpc FindLogs (FindLogsArgs) returns (FindLogsReply);
+    rpc GetAssertionCount (GetAssertionCountArgs) returns (GetAssertionCountReply);
+    rpc GetVMCreatedTxHash (GetVMCreatedTxHashArgs) returns (GetVMCreatedTxHashReply);
+    rpc GetVMInfo (GetVMInfoArgs) returns (GetVMInfoReply);
 }
