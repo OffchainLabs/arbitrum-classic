@@ -156,7 +156,10 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, error) {
 	if m.errHandler.Equal(value.ErrorCodePoint) {
 		m.ErrorStop()
 	} else {
-		m.pc.SetPCForced(m.errHandler)
+		err := m.pc.SetPCForced(m.errHandler)
+		if err != nil {
+			m.ErrorStop()
+		}
 	}
 	return mods, err
 }
@@ -699,7 +702,7 @@ func (w ErrorInstructionError) Error() string {
 	return "Executed error instruction"
 }
 
-func insnError(state *Machine) (StackMods, error) {
+func insnError(*Machine) (StackMods, error) {
 	mods := NewStackMods(0, 0)
 	return mods, ErrorInstructionError{}
 }

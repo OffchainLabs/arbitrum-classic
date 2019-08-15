@@ -11,15 +11,15 @@ type Context interface {
 	Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error
 	GetTimeBounds() value.Value
 	NotifyStep()
-	LoggedValue(value.Value) error
+	LoggedValue(value.Value)
 
 	OutMessageCount() int
 }
 
 type NoContext struct{}
 
-func (m *NoContext) LoggedValue(data value.Value) error {
-	return errors.New("can't log values outside of assertion mode")
+func (m *NoContext) LoggedValue(data value.Value) {
+
 }
 
 func (m *NoContext) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {

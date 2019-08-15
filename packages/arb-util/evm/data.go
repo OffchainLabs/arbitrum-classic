@@ -181,7 +181,7 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 	for !val.Equal(value.NewEmptyTuple()) {
 		tupVal, ok := val.(value.TupleValue)
 		if !ok {
-			return nil, errors.New("Value was not in stack format")
+			return nil, errors.New("value was not in stack format")
 		}
 		member, err := tupVal.GetByInt64(1)
 		if err != nil {

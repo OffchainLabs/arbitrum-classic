@@ -43,9 +43,8 @@ func NewMachineAssertionContext(m *Machine, timeBounds protocol.TimeBounds) *Mac
 	return ret
 }
 
-func (ac *MachineAssertionContext) LoggedValue(data value.Value) error {
+func (ac *MachineAssertionContext) LoggedValue(data value.Value) {
 	ac.logs = append(ac.logs, data)
-	return nil
 }
 
 func (ac *MachineAssertionContext) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {

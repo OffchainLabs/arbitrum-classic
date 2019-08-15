@@ -109,7 +109,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 			)
 			results := assertion.Logs
 			if len(results) == 0 {
-				errChan <- errors.New("Call produced no output")
+				errChan <- errors.New("call produced no output")
 				return
 			}
 			lastLogVal := results[len(results)-1]
@@ -121,7 +121,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 			logHash := lastLog.GetEthMsg().Data.TxHash
 			if !bytes.Equal(logHash[:], messageHash) {
 				// Last produced log is not the call we sent
-				errChan <- errors.New("Call took too long to execute")
+				errChan <- errors.New("call took too long to execute")
 				return
 			}
 

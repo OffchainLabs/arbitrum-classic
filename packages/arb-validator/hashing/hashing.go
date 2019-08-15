@@ -29,14 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-func bytes32ArrayEncoded(input [][32]byte) []byte {
-	var values []byte
-	for _, val := range input {
-		values = append(values, common.RightPadBytes(val[:], 32)...)
-	}
-	return values
-}
-
 func CreateVMHash(data *valmessage.CreateVMValidatorRequest) [32]byte {
 	var ret [32]byte
 	keys := make([]common.Address, 0, len(data.Config.AssertKeys))

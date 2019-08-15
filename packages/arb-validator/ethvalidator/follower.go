@@ -310,8 +310,8 @@ func (m *ValidatorFollower) Run() error {
 				}
 			case *valmessage.ValidatorRequest_Create:
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
-				defer cancel()
 				response := m.HandleCreateVM(ctx, request.Create)
+				cancel()
 				raw, err := proto.Marshal(response)
 				if err != nil {
 					log.Fatalln("Follower failed to marshal response")

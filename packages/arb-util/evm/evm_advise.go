@@ -188,15 +188,15 @@ func (l Log) String() string {
 func LogValToLog(val value.Value) (Log, error) {
 	tupVal, ok := val.(value.TupleValue)
 	if !ok {
-		return Log{}, errors.New("Log must be a tuple")
+		return Log{}, errors.New("log must be a tuple")
 	}
 	if tupVal.Len() < 3 {
-		return Log{}, fmt.Errorf("Log tuple must be at least size 3, but is %v", tupVal)
+		return Log{}, fmt.Errorf("log tuple must be at least size 3, but is %v", tupVal)
 	}
 	contractIDVal, _ := tupVal.GetByInt64(0)
 	contractIDInt, ok := contractIDVal.(value.IntValue)
 	if !ok {
-		return Log{}, errors.New("Log contract id must be an int")
+		return Log{}, errors.New("log contract id must be an int")
 	}
 	logDataByteVal, _ := tupVal.GetByInt64(1)
 	logData, err := SizedByteArrayToHex(logDataByteVal)
@@ -207,7 +207,7 @@ func LogValToLog(val value.Value) (Log, error) {
 	for _, topicVal := range tupVal.Contents()[2:] {
 		topicValInt, ok := topicVal.(value.IntValue)
 		if !ok {
-			return Log{}, errors.New("Log topic must be an int")
+			return Log{}, errors.New("log topic must be an int")
 		}
 		topics = append(topics, topicValInt.ToBytes())
 	}

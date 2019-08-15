@@ -861,15 +861,24 @@ func TestJump(t *testing.T) {
 	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
 
 	// run NOP to push value 1
-	RunInstruction(m, m.GetOperation())
+	_, err := RunInstruction(m, m.GetOperation())
+	if err != nil {
+		t.Error(err)
+	}
 	// push 2 to set jump point
 	var nextHash [32]byte
 	codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// JUMP
-	RunInstruction(m, value.BasicOperation{Op: code.JUMP})
+	_, err = RunInstruction(m, value.BasicOperation{Op: code.JUMP})
+	if err != nil {
+		t.Error(err)
+	}
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	RunInstruction(m, m.GetOperation())
+	_, err = RunInstruction(m, m.GetOperation())
+	if err != nil {
+		t.Error(err)
+	}
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -897,7 +906,10 @@ func TestCJump(t *testing.T) {
 	saveKnownMachine := knownMachine.Clone().(*Machine)
 
 	// run NOP to push value 1
-	RunInstruction(m, m.GetOperation())
+	_, err := RunInstruction(m, m.GetOperation())
+	if err != nil {
+		t.Error(err)
+	}
 	// push 0 for conditional
 	m.Stack().Push(value.NewInt64Value(0))
 	// push 2 to set jump point
@@ -905,9 +917,15 @@ func TestCJump(t *testing.T) {
 	codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// CJUMP
-	RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
+	_, err = RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
+	if err != nil {
+		t.Error(err)
+	}
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	RunInstruction(m, m.GetOperation())
+	_, err = RunInstruction(m, m.GetOperation())
+	if err != nil {
+		t.Error(err)
+	}
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -918,16 +936,25 @@ func TestCJump(t *testing.T) {
 	m = saveMachine
 	knownMachine = saveKnownMachine
 	// run NOP to push value 1
-	RunInstruction(m, m.GetOperation())
+	_, err = RunInstruction(m, m.GetOperation())
+	if err != nil {
+		t.Error(err)
+	}
 	// push 1 for conditional
 	m.Stack().Push(value.NewInt64Value(1))
 	// push 2 to set jump point
 	codept = value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// CJUMP
-	RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
+	_, err = RunInstruction(m, value.BasicOperation{Op: code.CJUMP})
+	if err != nil {
+		t.Error(err)
+	}
 	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	RunInstruction(m, m.GetOperation())
+	_, err = RunInstruction(m, m.GetOperation())
+	if err != nil {
+		t.Error(err)
+	}
 	// verify sub was executed
 	knownMachine.Stack().Push(value.NewInt64Value(4))
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1434,7 +1461,10 @@ func TestTget(t *testing.T) {
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
-	knownMachine.Stack().Pop()
+	_, err := knownMachine.Stack().Pop()
+	if err != nil {
+		t.Error(err)
+	}
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
@@ -1443,7 +1473,10 @@ func TestTget(t *testing.T) {
 	m.Stack().Push(value.NewInt64Value(3))
 	var nextHash [32]byte
 	codept := value.CodePointValue{Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
-	m.SetPC(codept)
+	err = m.SetPC(codept)
+	if err != nil {
+		t.Error(err)
+	}
 	if _, err := RunInstruction(m, value.BasicOperation{Op: code.TGET}); err == nil {
 		tmp := "TGET expected fail"
 		t.Error(tmp)
@@ -1482,7 +1515,10 @@ func TestTset(t *testing.T) {
 		t.Error(tmp)
 	}
 	// verify known and unknown match expect empty stack
-	knownMachine.Stack().Pop()
+	_, err := knownMachine.Stack().Pop()
+	if err != nil {
+		t.Error(err)
+	}
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
@@ -1525,7 +1561,10 @@ func TestTlen(t *testing.T) {
 		t.Error("TLEN expected fail")
 	}
 	// verify known and unknown match expect empty stack
-	knownMachine.Stack().Pop()
+	_, err := knownMachine.Stack().Pop()
+	if err != nil {
+		t.Error(err)
+	}
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}

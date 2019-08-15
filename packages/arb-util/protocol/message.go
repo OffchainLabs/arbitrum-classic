@@ -73,18 +73,18 @@ func NewMessageFromReader(rd io.Reader) (Message, error) {
 	tokenType := [21]byte{}
 	_, err = rd.Read(tokenType[:])
 	if err != nil {
-		return Message{}, fmt.Errorf("Error unmarshalling OutgoingMessage: %v", err)
+		return Message{}, fmt.Errorf("error unmarshalling OutgoingMessage: %v", err)
 	}
 
 	currency, err := value.NewIntValueFromReader(rd)
 	if err != nil {
-		return Message{}, fmt.Errorf("Error unmarshalling OutgoingMessage: %v", err)
+		return Message{}, fmt.Errorf("error unmarshalling OutgoingMessage: %v", err)
 	}
 
 	dest := [32]byte{}
 	_, err = rd.Read(tokenType[:])
 	if err != nil {
-		return Message{}, fmt.Errorf("Error unmarshalling OutgoingMessage: %v", err)
+		return Message{}, fmt.Errorf("error unmarshalling OutgoingMessage: %v", err)
 	}
 
 	return NewMessage(data, tokenType, currency.BigInt(), dest), nil

@@ -82,10 +82,10 @@ func NewAssertionStubFromReader(rd io.Reader) (AssertionStub, error) {
 	totalVals := make([]*big.Int, valCount)
 	for i := range totalVals {
 		intVal, err := value.NewIntValueFromReader(rd)
-		totalVals[i] = intVal.BigInt()
 		if err != nil {
 			return AssertionStub{}, err
 		}
+		totalVals[i] = intVal.BigInt()
 	}
 	return AssertionStub{afterHash, numSteps, firstMessageHash, lastMessageHash, firstLogHash, lastLogHash, totalVals}, nil
 }

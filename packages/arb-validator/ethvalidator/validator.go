@@ -667,7 +667,7 @@ func (val *EthValidator) WaitForTokenBalance(
 				return nil
 			}
 		case _ = <-ctx.Done():
-			return errors.New("Balance not reached")
+			return errors.New("balance not reached")
 		}
 	}
 }

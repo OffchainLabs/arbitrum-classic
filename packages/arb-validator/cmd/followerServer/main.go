@@ -115,7 +115,7 @@ func main() {
 	}
 
 	// 1) Compiled Arbitrum bytecode
-	machine, err := loader.LoadMachineFromFile(flag.Arg(0), true, *vmType)
+	m, err := loader.LoadMachineFromFile(flag.Arg(0), true, *vmType)
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
@@ -177,7 +177,7 @@ func main() {
 
 	// Validator creation
 	NewFollowerServer(
-		machine,
+		m,
 		key,
 		validators,
 		connectionInfo,

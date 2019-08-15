@@ -141,7 +141,7 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 
 func bytesArrayToVals(data []byte, valCount int) []value.Value {
 	rd := bytes.NewReader(data)
-	vals := []value.Value{}
+	vals := make([]value.Value, 0, valCount)
 	for i := 0; i < valCount; i++ {
 		val, err := value.UnmarshalValue(rd)
 		if err != nil {

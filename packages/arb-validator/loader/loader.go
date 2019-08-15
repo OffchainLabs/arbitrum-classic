@@ -35,6 +35,6 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 	} else if strings.EqualFold(vmtype, "test") {
 		return testmachine.New(fileName, warnMode)
 	} else {
-		return nil, fmt.Errorf("Invalid machine type specified %v", vmtype)
+		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
 	}
 }
