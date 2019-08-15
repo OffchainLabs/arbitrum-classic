@@ -23,13 +23,12 @@ import (
 
 type ArbConnection struct {
 	proxy      ValidatorProxy
-	myAddress  common.Address
 	vmId       []byte
 	privateKey []byte
 	hexPubkey  string
 }
 
-func Dial(url string, myAddress common.Address, privateKey []byte, hexPubkey string) (*ArbConnection, error) {
+func Dial(url string, privateKey []byte, hexPubkey string) (*ArbConnection, error) {
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo()
 	if err != nil {
@@ -39,21 +38,11 @@ func Dial(url string, myAddress common.Address, privateKey []byte, hexPubkey str
 	if err != nil {
 		return nil, err
 	}
-	return &ArbConnection{proxy, myAddress, vmId, append([]byte{}, privateKey...), hexPubkey}, nil
+	return &ArbConnection{proxy, vmId, append([]byte{}, privateKey...), hexPubkey}, nil
 }
 
 func _nyiError(funcname string) error {
 	return errors.New("goarbitrum error: " + funcname + " not yet implemented")
-}
-
-func _extendTo32Bytes(arr []byte) []byte {
-	if len(arr) > 32 {
-		panic("invalid call to _extendTo32Bytes")
-	}
-	ret := make([]byte, 32)
-	//copy(ret[32-len(arr):], arr)
-	copy(ret[:], arr)
-	return ret
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -332,7 +321,7 @@ func newSubscription(conn *ArbConnection, query ethereum.FilterQuery, ch chan<- 
 				return
 			}
 			for _, logInfo := range logInfos {
-				outs, err := _decodeLogInfo(&logInfo)
+				outs, err := _decodeLogInfo(logInfo)
 				if err != nil {
 					sub.errChan <- err
 					return

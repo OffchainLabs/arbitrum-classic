@@ -19,7 +19,7 @@ type ValidatorProxy interface {
 	GetMessageResult(txHash []byte) (value.Value, bool, error)
 	GetAssertionCount() (int, error)
 	GetVMInfo() (string, error)
-	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]coordinator.LogInfo, error)
+	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*coordinator.LogInfo, error)
 	CallMessage(val value.Value, sender common.Address) (value.Value, bool, error)
 }
 
@@ -125,7 +125,7 @@ func (vp *ValidatorProxyImpl) GetAssertionCount() (int, error) {
 	if err := vp.doCall("GetAssertionCount", request, &response); err != nil {
 		return 0, err
 	}
-	return response.AssertionCount, nil
+	return int(response.AssertionCount), nil
 }
 
 func (vp *ValidatorProxyImpl) GetVMInfo() (string, error) {
@@ -134,10 +134,10 @@ func (vp *ValidatorProxyImpl) GetVMInfo() (string, error) {
 	if err := vp.doCall("GetVMInfo", request, &response); err != nil {
 		return "", err
 	}
-	return response.VMId, nil
+	return response.VmId, nil
 }
 
-func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]coordinator.LogInfo, error) {
+func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*coordinator.LogInfo, error) {
 	request := &coordinator.FindLogsArgs{
 		FromHeight: _encodeInt(fromHeight),
 		ToHeight:   _encodeInt(toHeight),
@@ -157,8 +157,8 @@ func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address
 		return nil, false, err
 	}
 	request := &coordinator.CallMessageArgs{
-		hexutil.Encode(buf.Bytes()),
-		hexutil.Encode(sender[:]),
+		Data:   hexutil.Encode(buf.Bytes()),
+		Sender: hexutil.Encode(sender[:]),
 	}
 	var response coordinator.CallMessageReply
 	if err := vp.doCall("CallMessage", request, &response); err != nil {

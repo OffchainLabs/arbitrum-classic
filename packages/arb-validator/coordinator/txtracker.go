@@ -54,7 +54,7 @@ type findLogsRequest struct {
 	address    *big.Int
 	topics     [][32]byte
 
-	resultChan chan<- []LogInfo
+	resultChan chan<- []*LogInfo
 }
 
 type logsInfo struct {
@@ -242,7 +242,7 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		}
 
 		msg := evmVal.GetEthMsg()
-		log.Println("Coordinator got response for", hexutil.Encode(msg.Data.TxHash[:]))
+		//log.Println("Coordinator got response for", hexutil.Encode(msg.Data.TxHash[:]))
 		tr.transactions[msg.Data.TxHash] = txInfo
 	}
 	tr.assertionInfo = append(tr.assertionInfo, info)
@@ -273,7 +273,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 				endHeight = altEndHeight
 			}
 		}
-		logs := make([]LogInfo, 0)
+		logs := make([]*LogInfo, 0)
 		if startHeight >= int64(len(tr.assertionInfo)) {
 			request.resultChan <- logs
 			break
@@ -289,7 +289,7 @@ func (tr *txTracker) processRequest(request validatorRequest) {
 					topicStrings = append(topicStrings, hexutil.Encode(topic[:]))
 				}
 				txHash := evmLog.Msg.MsgHash(tr.vmID)
-				logs = append(logs, LogInfo{
+				logs = append(logs, &LogInfo{
 					Address:          hexutil.Encode(addressBytes[12:]),
 					BlockHash:        hexutil.Encode(txHash[:]),
 					BlockNumber:      "0x" + strconv.FormatInt(startHeight+int64(i), 16),

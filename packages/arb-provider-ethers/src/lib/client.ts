@@ -175,8 +175,8 @@ interface ISendMessageReply {
 }
 
 interface ICallMessageReply {
-    ReturnVal: string;
-    Success: boolean;
+    returnVal: string;
+    success: boolean;
 }
 
 interface ILogInfo {
@@ -250,11 +250,15 @@ export class ArbClient {
             const vmId = await this.getVmID();
             const val = ArbValue.unmarshal(messageResult.rawVal);
             const evmVal = processLog(val as ArbValue.TupleValue);
+            let logValHashes = messageResult.logValHashes;
+            if (!logValHashes) {
+                logValHashes = [];
+            }
 
             const data = {
                 logPostHash: messageResult.logPostHash,
                 logPreHash: messageResult.logPreHash,
-                logValHashes: messageResult.logValHashes,
+                logValHashes,
                 onChainTxHash: messageResult.onChainTxHash,
                 partialHash: messageResult.partialHash,
                 val,
@@ -311,8 +315,8 @@ export class ArbClient {
                     } else if (error) {
                         reject(error);
                     } else {
-                        if (result.Success) {
-                            resolve(result.ReturnVal);
+                        if (result.success) {
+                            resolve(result.returnVal);
                         } else {
                             reject(new Error('Call was reverted'));
                         }

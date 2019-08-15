@@ -42,6 +42,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
+//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
+
 // Server provides an interface for interacting with a a running coordinator
 type Server struct {
 	coordinator *ethvalidator.ValidatorCoordinator
@@ -145,23 +147,10 @@ func (m *Server) requestFindLogs(
 	toHeight *int64,
 	address *big.Int,
 	topics [][32]byte,
-) <-chan []LogInfo {
-	req := make(chan []LogInfo, 1)
+) <-chan []*LogInfo {
+	req := make(chan []*LogInfo, 1)
 	m.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
 	return req
-}
-
-// FindLogsArgs contains input data for FindLogs
-type FindLogsArgs struct {
-	FromHeight string   `json:"fromHeight"`
-	ToHeight   string   `json:"toHeight"`
-	Address    string   `json:"address"`
-	Topics     []string `json:"topics"`
-}
-
-// FindLogsReply contains output data for FindLogs
-type FindLogsReply struct {
-	Logs []LogInfo `json:"logs"`
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -190,7 +179,7 @@ func (m *Server) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsRe
 		return err
 	}
 
-	var logsChan <-chan []LogInfo
+	var logsChan <-chan []*LogInfo
 	if args.ToHeight == "latest" {
 		logsChan = m.requestFindLogs(&fromHeight, nil, addressInt, topics)
 	} else {
@@ -205,18 +194,6 @@ func (m *Server) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsRe
 	ret := <-logsChan
 	reply.Logs = ret
 	return nil
-}
-
-// SendMessageArgs contains input data for SendMessage
-type SendMessageArgs struct {
-	Data      string `json:"data"`
-	Pubkey    string `json:"pubkey"`
-	Signature string `json:"signature"`
-}
-
-// SendMessageReply contains output data for SendMessage
-type SendMessageReply struct {
-	TxHash string `json:"hash"`
 }
 
 // SendMessage takes a request from a client and sends it to the VM
@@ -290,23 +267,6 @@ func (m *Server) SendMessage(r *http.Request, args *SendMessageArgs, reply *Send
 	return nil
 }
 
-// GetMessageResultArgs contains input data for GetMessageResult
-type GetMessageResultArgs struct {
-	TxHash string `json:"txHash"`
-}
-
-// GetMessageResultReply contains output data for GetMessageResult
-type GetMessageResultReply struct {
-	Found         bool     `json:"found"`
-	RawVal        string   `json:"rawVal"`
-	LogPreHash    string   `json:"logPreHash"`    // Acc hash before RawVal
-	LogPostHash   string   `json:"logPostHash"`   // Acc hash to prove
-	LogValHashes  []string `json:"logValHashes"`  // Intermediate value hashes
-	ValidatorSigs []string `json:"validatorSigs"` // Unanimous signatures
-	PartialHash   string   `json:"partialHash"`   // Unanimous partial hash
-	OnChainTxHash string   `json:"onChainTxHash"` // Disputable Tx hash
-}
-
 // GetMessageResult returns the value output by the VM in response to the message with the given hash
 func (m *Server) GetMessageResult(r *http.Request, args *GetMessageResultArgs, reply *GetMessageResultReply) error {
 	txHashBytes, err := hexutil.Decode(args.TxHash)
@@ -337,21 +297,11 @@ func (m *Server) GetMessageResult(r *http.Request, args *GetMessageResultArgs, r
 	return nil
 }
 
-// GetAssertionCountReply contains output data for GetAssertionCount
-type GetAssertionCountReply struct {
-	AssertionCount int `json:"assertionCount"`
-}
-
 // GetAssertionCount returns the total number of finalized assertions
 func (m *Server) GetAssertionCount(r *http.Request, _ *struct{}, reply *GetAssertionCountReply) error {
 	req := m.requestAssertionCount()
-	reply.AssertionCount = <-req
+	reply.AssertionCount = int32(<-req)
 	return nil
-}
-
-// GetVMCreatedTxHashReply contains output data for GetVMCreatedTxHash
-type GetVMCreatedTxHashReply struct {
-	VMCreatedTxHash string `json:"vmCreatedTxHash"`
 }
 
 // GetVMCreatedTxHash returns the txHash containing the CreateVM Event
@@ -361,31 +311,14 @@ func (m *Server) GetVMCreatedTxHash(
 	reply *GetVMCreatedTxHashReply,
 ) error {
 	res := <-m.requestVMCreatedTxHashChan()
-	reply.VMCreatedTxHash = hexutil.Encode(res[:])
+	reply.VmCreatedTxHash = hexutil.Encode(res[:])
 	return nil
-}
-
-// GetVMInfoReply contains output data for GetVMInfo
-type GetVMInfoReply struct {
-	VMId string `json:"vmID"`
 }
 
 // GetVMInfo returns current metadata about this VM
 func (m *Server) GetVMInfo(r *http.Request, _ *struct{}, reply *GetVMInfoReply) error {
-	reply.VMId = hexutil.Encode(m.coordinator.Val.VMID[:])
+	reply.VmID = hexutil.Encode(m.coordinator.Val.VMID[:])
 	return nil
-}
-
-// CallMessageArgs contains input data for CallMessage
-type CallMessageArgs struct {
-	Data   string `json:"data"`
-	Sender string `json:"sender"`
-}
-
-// CallMessageReply contains output data for CallMessage
-type CallMessageReply struct {
-	ReturnVal string
-	Success   bool
 }
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
