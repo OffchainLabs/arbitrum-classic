@@ -75,13 +75,21 @@ func (conn *ArbConnection) CallContract(
 	if err != nil {
 		panic("Unexpected error building arbCallValue")
 	}
-	retValue, succeeded, err := conn.proxy.CallMessage(arbCallValue, call.From)
+	retValue, err := conn.proxy.CallMessage(arbCallValue, call.From)
 	if err != nil {
 		return nil, err
 	}
-	if succeeded {
-		return evm.SizedByteArrayToHex(retValue)
-	} else {
+
+	logVal, err := evm.ProcessLog(retValue)
+	if err != nil {
+		return nil, err
+	}
+	switch logVal := logVal.(type) {
+	case evm.Return:
+		return logVal.ReturnVal, nil
+	case evm.Stop:
+		return []byte{}, nil
+	default:
 		return nil, errors.New("call reverted")
 	}
 }

@@ -20,7 +20,7 @@ type ValidatorProxy interface {
 	GetAssertionCount() (int, error)
 	GetVMInfo() (string, error)
 	FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*coordinator.LogInfo, error)
-	CallMessage(val value.Value, sender common.Address) (value.Value, bool, error)
+	CallMessage(val value.Value, sender common.Address) (value.Value, error)
 }
 
 type ValidatorProxyImpl struct {
@@ -134,7 +134,7 @@ func (vp *ValidatorProxyImpl) GetVMInfo() (string, error) {
 	if err := vp.doCall("GetVMInfo", request, &response); err != nil {
 		return "", err
 	}
-	return response.VmId, nil
+	return response.VmID, nil
 }
 
 func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byte, topics [][32]byte) ([]*coordinator.LogInfo, error) {
@@ -151,10 +151,10 @@ func (vp *ValidatorProxyImpl) FindLogs(fromHeight, toHeight int64, address []byt
 	return response.Logs, nil
 }
 
-func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address) (value.Value, bool, error) {
+func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address) (value.Value, error) {
 	var buf bytes.Buffer
 	if err := value.MarshalValue(val, &buf); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	request := &coordinator.CallMessageArgs{
 		Data:   hexutil.Encode(buf.Bytes()),
@@ -162,16 +162,16 @@ func (vp *ValidatorProxyImpl) CallMessage(val value.Value, sender common.Address
 	}
 	var response coordinator.CallMessageReply
 	if err := vp.doCall("CallMessage", request, &response); err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	if response.Success {
-		buf, err := hexutil.Decode(response.ReturnVal)
-		if err != nil {
-			return nil, false, err
-		}
-		val, err := value.UnmarshalValue(bytes.NewReader(buf))
-		return val, true, err
-	} else {
-		return nil, false, nil
+	retBuf, err := hexutil.Decode(response.RawVal)
+	if err != nil {
+		log.Println("GetMessageResult error:", err)
+		return nil, err
 	}
+	retVal, err := value.UnmarshalValue(bytes.NewReader(retBuf))
+	if err != nil {
+		log.Println("ValProxy.GetMessageResult: UnmarshalValue returned error:", err)
+	}
+	return retVal, err
 }
