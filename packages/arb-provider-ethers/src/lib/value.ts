@@ -314,7 +314,7 @@ export function sizedByteRangeToBytes(twoTupleValue: TupleValue): Uint8Array {
     const result = new Uint8Array(chunkCount * 32);
     for (let i = 0; i < chunkCount; i++) {
         const value = getBigTuple(byterange, i) as IntValue;
-        result.set(ethers.utils.arrayify(value.bignum), i * 32);
+        result.set(ethers.utils.padZeros(ethers.utils.arrayify(value.bignum), 32), i * 32);
     }
     return result.slice(0, sizeBytes);
 }

@@ -61,7 +61,7 @@ class OrigMessage {
 
 type EVMResult = EVMReturn | EVMRevert | EVMStop | EVMBadSequenceCode | EVMInvalid;
 
-class EVMReturn {
+export class EVMReturn {
     public orig: OrigMessage;
     public data: Uint8Array;
     public logs: any;
@@ -75,7 +75,7 @@ class EVMReturn {
     }
 }
 
-class EVMRevert {
+export class EVMRevert {
     public orig: OrigMessage;
     public data: Uint8Array;
     public returnType: EVMCode.Revert;
@@ -87,7 +87,7 @@ class EVMRevert {
     }
 }
 
-class EVMStop {
+export class EVMStop {
     public orig: OrigMessage;
     public logs: any;
     public returnType: EVMCode.Stop;
@@ -99,7 +99,7 @@ class EVMStop {
     }
 }
 
-class EVMBadSequenceCode {
+export class EVMBadSequenceCode {
     public orig: OrigMessage;
     public returnType: EVMCode.BadSequenceCode;
 
@@ -109,7 +109,7 @@ class EVMBadSequenceCode {
     }
 }
 
-class EVMInvalid {
+export class EVMInvalid {
     public orig: OrigMessage;
     public returnType: EVMCode.Invalid;
 
@@ -119,7 +119,7 @@ class EVMInvalid {
     }
 }
 
-function processLog(value: ArbValue.TupleValue): IEVMResult {
+function processLog(value: ArbValue.TupleValue): EVMResult {
     const returnCode = value.get(3) as ArbValue.IntValue;
     switch (returnCode.bignum.toNumber()) {
         case EVMCode.Return:
@@ -157,7 +157,7 @@ interface IGetMessageResultReply {
 }
 
 interface ISendMessageReply {
-    hash: string;
+    txHash: string;
 }
 
 interface ICallMessageReply {
@@ -277,7 +277,7 @@ export class ArbClient {
                     } else if (error) {
                         reject(error);
                     } else {
-                        resolve(result.hash);
+                        resolve(result.txHash);
                     }
                 },
             );
