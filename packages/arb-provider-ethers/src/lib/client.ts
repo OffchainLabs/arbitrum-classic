@@ -261,12 +261,16 @@ export class ArbClient {
     }
 
     public sendMessage(value: ArbValue.Value, sig: string, pubkey: string): Promise<string> {
+        return this.sendRawMessage(ethers.utils.hexlify(ArbValue.marshal(value)), sig, pubkey);
+    }
+
+    public sendRawMessage(value: string, sig: string, pubkey: string): Promise<string> {
         return new Promise((resolve, reject) => {
             this.client.request(
                 'Validator.SendMessage',
                 [
                     {
-                        data: ethers.utils.hexlify(ArbValue.marshal(value)),
+                        data: value,
                         pubkey,
                         signature: sig,
                     },

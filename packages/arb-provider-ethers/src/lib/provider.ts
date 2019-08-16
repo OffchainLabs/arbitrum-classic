@@ -26,6 +26,12 @@ const promisePoller = require('promise-poller').default;
 
 import vmTrackerJson from './VMTracker.json';
 
+function sleep(ms: number) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
+
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated';
 const EB_EVENT_CUA = 'ConfirmedUnanimousAssertion';
@@ -91,6 +97,15 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                 .sort();
         }
         return this.validatorAddressesCache;
+    }
+
+    public async sendMessages(messages: any): Promise<string> {
+        let txHash: Promise<string> = new Promise<string>(() => '');
+        for (const message of messages) {
+            txHash = this.client.sendRawMessage(message.value, message.sig, message.pubkey);
+            await sleep(1);
+        }
+        return txHash;
     }
 
     public async getVmID() {
