@@ -4,6 +4,7 @@
   "description": "Pet shop demo dApp",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
+  "private": true,
   "scripts": {
     "build": "webpack",
     "start": "webpack-dev-server --open",
@@ -27,5 +28,11 @@
     "jquery": "^3.4.1",
     "truffle-contract": "~4.0.23",
     "web3": "~1.2.1"
+  },
+  "workspaces": {
+    "nohoist": [
+      "web3",
+      "truffle-contract"
+    ]
   }
 }
