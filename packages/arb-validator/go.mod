@@ -12,7 +12,7 @@ require (
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.4 // indirect
-	github.com/ethereum/go-ethereum v1.9.1
+	github.com/ethereum/go-ethereum v1.9.2
 	github.com/fjl/memsize v0.0.0-20180929194037-2a09253e352a // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
 	github.com/golang/protobuf v1.3.2

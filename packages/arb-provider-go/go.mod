@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/ethereum/go-ethereum v1.9.1
+	github.com/ethereum/go-ethereum v1.9.2
 	github.com/gorilla/rpc v1.2.0
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.0.0-20190805220102-5dc53dcd29e4

@@ -52,6 +52,7 @@ github.com/ethereum/go-ethereum v1.8.20/go.mod h1:PwpWDrCLZrV+tfrhqqF6kPknbISMHa
 github.com/ethereum/go-ethereum v1.8.23/go.mod h1:PwpWDrCLZrV+tfrhqqF6kPknbISMHaJv9Ln3kPCZLwY=
 github.com/ethereum/go-ethereum v1.9.1 h1:MrdTRvKIa3apdx6NW1azzSgl8BQB1eTBVSUmFhuztaU=
 github.com/ethereum/go-ethereum v1.9.1/go.mod h1:PwpWDrCLZrV+tfrhqqF6kPknbISMHaJv9Ln3kPCZLwY=
+github.com/ethereum/go-ethereum v1.9.2/go.mod h1:PwpWDrCLZrV+tfrhqqF6kPknbISMHaJv9Ln3kPCZLwY=
 github.com/fjl/memsize v0.0.0-20180929194037-2a09253e352a h1:1znxn4+q2MrEdTk1eCk6KIV3muTYVclBIB6CTVR/zBc=
 github.com/fjl/memsize v0.0.0-20180929194037-2a09253e352a/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
