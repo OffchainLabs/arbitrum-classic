@@ -17,4 +17,4 @@
 
 import { ArbProvider } from './lib/provider';
 
-export { ArbProvider };
+export = ArbProvider;

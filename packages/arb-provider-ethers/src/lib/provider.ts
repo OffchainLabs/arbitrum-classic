@@ -32,6 +32,11 @@ function sleep(ms: number) {
     });
 }
 
+interface IContract {
+    code: any;
+    address: string;
+}
+
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated';
 const EB_EVENT_CUA = 'ConfirmedUnanimousAssertion';
@@ -43,12 +48,12 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public provider: ethers.providers.JsonRpcProvider;
     public client: ArbClient;
     public vmTracker: ethers.Contract;
-    public contracts: Map<string, any>;
+    public contracts: Map<string, IContract>;
 
     private validatorAddressesCache: any;
     private vmIdCache: any;
 
-    constructor(managerUrl: string, contracts: any, provider: ethers.providers.JsonRpcProvider) {
+    constructor(managerUrl: string, contracts: IContract[], provider: ethers.providers.JsonRpcProvider) {
         super(123456789);
         this.chainId = 123456789;
         this.provider = provider;

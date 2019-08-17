@@ -15,7 +15,7 @@
  */
 
 const ethers = require("ethers");
-const ArbProvider = require("arb-provider-ethers").ArbProvider;
+const ArbProvider = require("arb-provider-ethers");
 var ProviderBridge = require("./ethers-web3-bridge");
 
 module.exports = async function(managerUrl, contracts, provider) {
