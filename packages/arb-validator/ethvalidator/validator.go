@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"log"
 	"math/big"
 	"time"
 
@@ -163,6 +164,20 @@ func (val *EthValidator) Sign(msgHash [32]byte) ([]byte, error) {
 	return crypto.Sign(data, val.key)
 }
 
+func (val *EthValidator) RestartConnection() (chan ethbridge.Notification, chan error, error) {
+	con, err := ethbridge.New(val.serverAddress, val.arbAddresses)
+	if err != nil {
+		return nil, nil, err
+	}
+	nonce, err := con.PendingNonceAt(val.auth.From)
+	if err != nil {
+		return nil, nil, err
+	}
+	val.auth.Nonce = big.NewInt(int64(nonce))
+	val.con = con
+	return val.con.CreateListeners(val.VMID)
+}
+
 func (val *EthValidator) StartListening() error {
 	outChan, errChan, err := val.con.CreateListeners(val.VMID)
 	if err != nil {
@@ -176,7 +191,14 @@ func (val *EthValidator) StartListening() error {
 		for {
 			time.Sleep(200 * time.Millisecond)
 			select {
-			case parse := <-outChan:
+			case parse, ok := <-outChan:
+				if !ok {
+					outChan, errChan, err = val.RestartConnection()
+					if err != nil {
+						panic(err)
+					}
+					break
+				}
 				switch parse.Event.(type) {
 				case ethbridge.VMCreatedEvent:
 					val.VMCreatedTxHashChan <- parse.TxHash
@@ -189,20 +211,15 @@ func (val *EthValidator) StartListening() error {
 				// Ignore error and try to reset connection
 				// log.Printf("Validator recieved error: %v", err)
 				// fmt.Println("Resetting channels")
-				con, err := ethbridge.New(val.serverAddress, val.arbAddresses)
-				if err != nil {
-					panic(err)
+				for {
+					outChan, errChan, err = val.RestartConnection()
+					if err == nil {
+						break
+					}
+					log.Println("Error: Validator can't connect to blockchain")
+					time.Sleep(5 * time.Second)
 				}
-				nonce, err := con.PendingNonceAt(val.auth.From)
-				if err != nil {
-					panic(err)
-				}
-				val.auth.Nonce = big.NewInt(int64(nonce))
-				val.con = con
-				outChan, errChan, err = val.con.CreateListeners(val.VMID)
-				if err != nil {
-					panic(err)
-				}
+
 			}
 		}
 	}()
