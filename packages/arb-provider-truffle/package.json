@@ -16,6 +16,6 @@
   "homepage": "https://offchainlabs.com",
   "dependencies": {
     "callsite": "~1.0.0",
-    "ganache-core": "2.6.0"
+    "ganache-core": "2.7.0"
   }
 }

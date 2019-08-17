@@ -64,10 +64,7 @@ function provider(outputFolder, buildLocation, options) {
         storage[address_string] = {};
       }
       if (info.opcode.name == "SSTORE") {
-        let args = info.stack
-          .slice(-info.opcode.in)
-          .map(arg => "0x" + arg.toString("hex"));
-
+        let args = info.stack.slice(-2).map(arg => "0x" + arg.toString("hex"));
         storage[address_string][args[1]] = args[0];
       }
     });
