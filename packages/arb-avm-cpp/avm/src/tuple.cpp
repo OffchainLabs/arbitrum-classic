@@ -65,7 +65,7 @@ uint256_t zeroHash() {
 std::ostream& operator<<(std::ostream& os, const Tuple& val) {
     os << "Tuple(";
     for (int i = 0; i < val.tuple_size(); i++) {
-        std::cout << val.get_element(i);
+        os << val.get_element(i);
         if (i < val.tuple_size() - 1) {
             os << ", ";
         }

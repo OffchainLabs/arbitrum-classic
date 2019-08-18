@@ -173,10 +173,9 @@ bool MachineState::deserialize(char* bufptr) {
     bufptr += sizeof(version);
 
     if (version != CURRENT_AO_VERSION) {
-        std::cout << "incorrect version of .ao file" << std::endl;
-        std::cout << "expected version " << CURRENT_AO_VERSION
+        std::cerr << "incorrect version of .ao file" << std::endl;
+        std::cerr << "expected version " << CURRENT_AO_VERSION
                   << " found version " << version << std::endl;
-        return;
         return false;
     }
 
@@ -186,7 +185,7 @@ bool MachineState::deserialize(char* bufptr) {
         extentionId = __builtin_bswap32(extentionId);
         bufptr += sizeof(extentionId);
         if (extentionId > 0) {
-            std::cout << "found extention" << std::endl;
+            //            std::cout << "found extention" << std::endl;
         }
     }
     uint64_t codeCount;
@@ -264,7 +263,6 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     for (auto const& auxstackval : auxStackVals) {
         marshal_value(auxstackval, buf);
     }
-    std::cout << "marshal size " << buf.size() << std::endl;
     return buf;
 }
 
@@ -1106,13 +1104,11 @@ BlockReason MachineState::runOp(OpCode opcode) {
             state = Status::Error;
             break;
         case OpCode::HALT:
-            std::cout << "Hit halt opcode at instruction " << pc << "\n";
             state = Status::Halted;
             break;
         default:
-            std::stringstream ss;
-            ss << "Unhandled opcode <" << InstructionNames.at(opcode) << ">"
-               << std::hex << static_cast<int>(opcode);
+            std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)
+                      << ">" << std::hex << static_cast<int>(opcode);
             state = Status::Error;
     }
     return NotBlocked{};
