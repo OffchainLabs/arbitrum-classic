@@ -166,7 +166,7 @@ Tuple& assumeTuple(value& val) {
     return *tup;
 }
 
-void MachineState::deserialize(char* bufptr) {
+bool MachineState::deserialize(char* bufptr) {
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
     version = __builtin_bswap32(version);
@@ -177,6 +177,7 @@ void MachineState::deserialize(char* bufptr) {
         std::cout << "expected version " << CURRENT_AO_VERSION
                   << " found version " << version << std::endl;
         return;
+        return false;
     }
 
     uint32_t extentionId = 1;
@@ -202,6 +203,7 @@ void MachineState::deserialize(char* bufptr) {
 
     staticVal = deserialize_value(bufptr, *pool);
     pc = 0;
+    return true;
 }
 
 uint64_t MachineState::pendingMessageCount() const {

@@ -115,7 +115,7 @@ struct MachineState {
 
     MachineState();
 
-    void deserialize(char* data);
+    bool deserialize(char* data);
 
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
@@ -134,7 +134,7 @@ class Machine {
     void runOne();
 
    public:
-    void deserialize(char* data) { m.deserialize(data); }
+    bool deserialize(char* data) { return m.deserialize(data); }
 
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,

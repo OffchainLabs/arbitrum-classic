@@ -35,12 +35,15 @@ Machine* read_files(std::string filename) {
     char* buf = (char*)malloc(filestatus.st_size);
 
     myfile.open(filename, std::ios::in);
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
+    if (!myfile.is_open()) {
+        return nullptr;
     }
+    myfile.read((char*)buf, filestatus.st_size);
     auto machine = new Machine();
-    machine->deserialize(buf);
+    bool success = machine->deserialize(buf);
+    if (!success) {
+        return nullptr;
+    }
     return machine;
 }
 
