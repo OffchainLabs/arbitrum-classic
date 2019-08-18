@@ -111,7 +111,7 @@ struct ReasonConverter {
 
     CBlockReason operator()(const InboxBlocked& val) const {
         std::vector<unsigned char> inboxDataVec;
-        marshal_value(hash(val.inbox), inboxDataVec);
+        marshal_value(val.inbox, inboxDataVec);
         unsigned char* cInboxData = (unsigned char*)malloc(inboxDataVec.size());
         std::copy(inboxDataVec.begin(), inboxDataVec.end(), cInboxData);
         return CBlockReason{

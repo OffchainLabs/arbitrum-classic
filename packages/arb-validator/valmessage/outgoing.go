@@ -37,3 +37,11 @@ func (f FinalizedAssertion) NewLogs() []value.Value {
 		return f.Assertion.Logs
 	}
 }
+
+func (f FinalizedAssertion) GetAssertion() *protocol.Assertion {
+	if f.ProposalResults != nil {
+		return f.ProposalResults.Assertion
+	} else {
+		return f.Assertion
+	}
+}

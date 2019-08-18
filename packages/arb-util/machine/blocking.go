@@ -24,14 +24,14 @@ import (
 )
 
 type BlockReason interface {
-	IsBlocked(m Machine) bool
+	IsBlocked(m Machine, currentTime uint64) bool
 	Equals(b BlockReason) bool
 }
 
 type HaltBlocked struct {
 }
 
-func (b HaltBlocked) IsBlocked(m Machine) bool {
+func (b HaltBlocked) IsBlocked(m Machine, currentTime uint64) bool {
 	return true
 }
 
@@ -43,7 +43,7 @@ func (b HaltBlocked) Equals(a BlockReason) bool {
 type ErrorBlocked struct {
 }
 
-func (b ErrorBlocked) IsBlocked(m Machine) bool {
+func (b ErrorBlocked) IsBlocked(m Machine, currentTime uint64) bool {
 	return true
 }
 
@@ -55,7 +55,7 @@ func (b ErrorBlocked) Equals(a BlockReason) bool {
 type BreakpointBlocked struct {
 }
 
-func (b BreakpointBlocked) IsBlocked(m Machine) bool {
+func (b BreakpointBlocked) IsBlocked(m Machine, currentTime uint64) bool {
 	return false
 }
 
@@ -68,7 +68,7 @@ type InboxBlocked struct {
 	Inbox value.HashOnlyValue
 }
 
-func (b InboxBlocked) IsBlocked(m Machine) bool {
+func (b InboxBlocked) IsBlocked(m Machine, currentTime uint64) bool {
 	return value.Eq(m.InboxHash(), b.Inbox)
 }
 
@@ -85,7 +85,7 @@ type SendBlocked struct {
 	TokenType protocol.TokenType
 }
 
-func (b SendBlocked) IsBlocked(m Machine) bool {
+func (b SendBlocked) IsBlocked(m Machine, currentTime uint64) bool {
 	return m.CanSpend(b.TokenType, b.Currency)
 }
 
