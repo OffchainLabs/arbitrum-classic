@@ -38,6 +38,12 @@ func TokenTypeFromIntValue(val value.IntValue) TokenType {
 	return tokType
 }
 
+func (t TokenType) ToIntValue() value.IntValue {
+	var bigtok [32]byte
+	copy(bigtok[:], t[:])
+	return value.NewIntValue(new(big.Int).SetBytes(bigtok[:]))
+}
+
 func (t TokenType) IsToken() bool {
 	return t[20] == 0
 }

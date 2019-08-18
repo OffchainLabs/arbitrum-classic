@@ -88,6 +88,17 @@ enum class OpCode : uint8_t {
     DEBUG
 };
 
+inline bool isValidOpcode(OpCode op) {
+    return (op >= OpCode::ADD && op <= OpCode::EXP) ||
+           (op >= OpCode::LT && op <= OpCode::SIGNEXTEND) ||
+           (op >= OpCode::HASH && op <= OpCode::TYPE) ||
+           (op >= OpCode::POP && op <= OpCode::ERRSET) ||
+           (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
+           (op >= OpCode::TGET && op <= OpCode::TLEN) ||
+           (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
+           (op >= OpCode::SEND && op <= OpCode::ERROR);
+}
+
 const std::map<OpCode, std::string> InstructionNames = {
     {static_cast<OpCode>(0), "unhandled opcode"},
     {OpCode::ADD, "add"},

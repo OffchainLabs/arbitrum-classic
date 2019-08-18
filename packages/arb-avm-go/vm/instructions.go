@@ -125,7 +125,6 @@ func (w BlockedError) Error() string {
 }
 
 func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockReason) {
-	insnName := m.pc.GetCurrentInsnName()
 	if m.IsHalted() {
 		return NewStackMods(0, 0), machine.HaltBlocked{}
 	}
@@ -156,7 +155,7 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 		return mods, blocked.reason
 	}
 
-	fmt.Printf("error running instruction %v: %v\n", insnName, err)
+	//fmt.Printf("error running instruction %v: %v\n", code.InstructionNames[op.GetOp()], err)
 
 	// in case of any errors from operation
 	// pop remaining stack values and set

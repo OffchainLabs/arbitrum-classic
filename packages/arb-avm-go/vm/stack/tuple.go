@@ -63,14 +63,14 @@ func (m *Tuple) Pop() (value.Value, error) {
 	topTuple, ok := m.stack.(value.TupleValue)
 	if !ok {
 		// Can only occur if there is an internal implementation bug
-		panic(fmt.Sprintf("Stack.Pop: Value in Stack was %s instead of a tuple", value.TypeCodeName(m.stack.TypeCode())))
+		panic(fmt.Sprintf("Stack.Pop: Value in Stack was %v instead of a tuple", value.TypeCodeName(m.stack.TypeCode())))
 	}
 	if topTuple.Len() == 0 {
 		return nil, EmptyError{}
 	}
 
 	if topTuple.Len() != 2 {
-		panic(fmt.Sprintf("Stack.Pop: Value in Stack was tuple of incorrect length %s", topTuple.Len()))
+		panic(fmt.Sprintf("Stack.Pop: Value in Stack was tuple of incorrect length %v", topTuple.Len()))
 	}
 	m.stack, _ = topTuple.GetByInt64(1)
 	m.count--

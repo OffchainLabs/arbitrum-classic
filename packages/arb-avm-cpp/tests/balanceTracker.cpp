@@ -89,10 +89,11 @@ TEST_CASE("SEND") {
 
         currency = 25;
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
-        m.runOp(OpCode::SEND);
+        auto blockReason = m.runOp(OpCode::SEND);
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 20);
-        REQUIRE(m.state == Status::Blocked);
+        REQUIRE(m.state == Status::Extensive);
+        REQUIRE(nonstd::get_if<SendBlocked>(&blockReason));
     }
 
     SECTION("Successful NF send") {
@@ -125,10 +126,11 @@ TEST_CASE("SEND") {
         m.state = Status::Extensive;
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
-        m.runOp(OpCode::SEND);
+        auto blockReason = m.runOp(OpCode::SEND);
         uint256_t resNum = m.balance.tokenValue(token);
         REQUIRE(resNum == 0);
-        REQUIRE(m.state == Status::Blocked);
+        REQUIRE(m.state == Status::Extensive);
+        REQUIRE(nonstd::get_if<SendBlocked>(&blockReason));
     }
 }
 

@@ -35,6 +35,9 @@ struct Operation {
     void marshal(std::vector<unsigned char>& buf) const;
 };
 
+bool operator==(const Operation& val1, const Operation& val2);
+bool operator!=(const Operation& val1, const Operation& val2);
+
 struct CodePoint {
     uint64_t pc;
     Operation op;
@@ -52,6 +55,7 @@ struct CodePoint {
 
 uint256_t hash(const CodePoint& cp);
 
+bool operator==(const CodePoint& val1, const CodePoint& val2);
 std::ostream& operator<<(std::ostream& os, const Operation& val);
 
 #endif /* codepoint_h */

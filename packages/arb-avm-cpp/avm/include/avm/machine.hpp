@@ -26,7 +26,7 @@
 
 typedef std::array<uint256_t, 2> TimeBounds;
 
-enum class Status { Extensive, Blocked, Halted, Error };
+enum class Status { Extensive, Halted, Error };
 
 struct NotBlocked {};
 
@@ -53,11 +53,13 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     SendBlocked>;
 
 struct AssertionContext {
+    uint32_t numSteps;
     TimeBounds timeBounds;
     std::vector<Message> outMessage;
     std::vector<value> logs;
 
-    explicit AssertionContext(const TimeBounds& tb) : timeBounds(tb) {}
+    explicit AssertionContext(const TimeBounds& tb)
+        : numSteps{0}, timeBounds(tb) {}
 };
 
 struct Assertion {
@@ -121,7 +123,7 @@ struct MachineState {
     void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();
     void sendOffchainMessages(const std::vector<Message>& messages);
-    void runOp(OpCode opcode);
+    BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
 };
 
@@ -129,6 +131,7 @@ class Machine {
     MachineState m;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
+    BlockReason runOne();
 
    public:
     void deserialize(char* data) { m.deserialize(data); }
@@ -136,7 +139,6 @@ class Machine {
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,
                   uint64_t timeBoundEnd);
-    int runOne();
     uint256_t hash() const { return m.hash(); }
     std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
     uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }
