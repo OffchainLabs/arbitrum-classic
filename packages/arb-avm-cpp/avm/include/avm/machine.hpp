@@ -131,7 +131,7 @@ class Machine {
     MachineState m;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
-    BlockReason runOne();
+    void runOne();
 
    public:
     void deserialize(char* data) { m.deserialize(data); }
@@ -139,6 +139,7 @@ class Machine {
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,
                   uint64_t timeBoundEnd);
+    BlockReason lastBlockReason() { return m.blockReason; }
     uint256_t hash() const { return m.hash(); }
     std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
     uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }

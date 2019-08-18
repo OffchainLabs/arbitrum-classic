@@ -284,9 +284,8 @@ Assertion Machine::run(uint64_t stepCount,
     m.context = AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
     m.blockReason = NotBlocked{};
     while (m.context.numSteps < stepCount) {
-        auto blockReason = runOne();
-        if (!nonstd::get_if<NotBlocked>(&blockReason)) {
-            m.blockReason = blockReason;
+        runOne();
+        if (!nonstd::get_if<NotBlocked>(&m.blockReason)) {
             break;
         }
     }
@@ -298,13 +297,15 @@ bool isErrorCodePoint(const CodePoint& cp) {
     return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
 }
 
-BlockReason Machine::runOne() {
+void Machine::runOne() {
     if (m.state == Status::Error) {
-        return ErrorBlocked();
+        m.blockReason = ErrorBlocked();
+        return;
     }
 
     if (m.state == Status::Halted) {
-        return HaltBlocked();
+        m.blockReason = HaltBlocked();
+        return;
     }
 
     m.context.numSteps++;
@@ -322,7 +323,7 @@ BlockReason Machine::runOne() {
         }
 
         try {
-            m.runOp(instruction.op.opcode);
+            m.blockReason = m.runOp(instruction.op.opcode);
         } catch (const bad_pop_type& e) {
             m.state = Status::Error;
         } catch (const bad_tuple_index& e) {
@@ -331,7 +332,7 @@ BlockReason Machine::runOne() {
     }
 
     if (m.state != Status::Error) {
-        return NotBlocked();
+        return;
     }
 
     // Clear stack to base for instruction
@@ -346,7 +347,7 @@ BlockReason Machine::runOne() {
         m.state = Status::Extensive;
     }
 
-    return NotBlocked();
+    return;
 }
 
 template <typename T>

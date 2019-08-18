@@ -67,6 +67,50 @@ func (m *Machine) Clone() machine.Machine {
 }
 
 func (m *Machine) LastBlockReason() machine.BlockReason {
+	cBlockReason := C.machineLastBlockReason(m.c)
+	switch cBlockReason.blockType {
+	case C.BLOCK_TYPE_NOT_BLOCKED:
+		return nil
+	case C.BLOCK_TYPE_HALT:
+		return machine.HaltBlocked{}
+	case C.BLOCK_TYPE_ERROR:
+		return machine.ErrorBlocked{}
+	case C.BLOCK_TYPE_BREAKPOINT:
+		return machine.BreakpointBlocked{}
+	case C.BLOCK_TYPE_INBOX:
+		rawInboxHash := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
+		inboxHash, err := value.UnmarshalValue(bytes.NewReader(rawInboxHash[:]))
+		if err != nil {
+			panic(err)
+		}
+		inboxHashInt, ok := inboxHash.(value.IntValue)
+		if !ok {
+			panic("Inbox hash must be an int")
+		}
+		C.free(cBlockReason.val1.data)
+		return machine.InboxBlocked{Inbox: value.NewHashOnlyValue(inboxHashInt.ToBytes(), 0)}
+	case C.BLOCK_TYPE_SEND:
+		rawCurrency := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
+		currency, err := value.UnmarshalValue(bytes.NewReader(rawCurrency[:]))
+		if err != nil {
+			panic(err)
+		}
+		currencyInt, ok := currency.(value.IntValue)
+		if !ok {
+			panic("Inbox hash must be an int")
+		}
+		C.free(cBlockReason.val1.data)
+
+		rawTokenType := C.GoBytes(unsafe.Pointer(cBlockReason.val2.data), cBlockReason.val2.length)
+		var tokType protocol.TokenType
+		copy(tokType[:], rawTokenType)
+		C.free(cBlockReason.val2.data)
+		return machine.SendBlocked{
+			Currency:  currencyInt.BigInt(),
+			TokenType: tokType,
+		}
+	default:
+	}
 	return nil
 }
 
