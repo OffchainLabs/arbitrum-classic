@@ -56,3 +56,11 @@ type Machine interface {
 	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion
 	MarshalForProof() ([]byte, error)
 }
+
+func IsMachineBlocked(machine Machine, currentTime uint64) bool {
+	lastReason := machine.LastBlockReason()
+	if lastReason == nil {
+		return false
+	}
+	return lastReason.IsBlocked(machine, currentTime)
+}

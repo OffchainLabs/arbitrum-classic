@@ -155,6 +155,20 @@ func (validator *Validator) HasOpenAssertion() chan bool {
 	return resultChan
 }
 
+func (validator *Validator) CanContinueRunning() chan bool {
+	resultChan := make(chan bool, 1)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		if validator.latestHeader == nil {
+			resultChan <- false
+		} else {
+			currentTime := validator.latestHeader.Number.Uint64()
+			resultChan <- !machine.IsMachineBlocked(validator.bot.GetCore().GetMachine(), currentTime)
+		}
+
+	}
+	return resultChan
+}
+
 type VMStateData struct {
 	MachineState [32]byte
 	Config       valmessage.VMConfiguration
