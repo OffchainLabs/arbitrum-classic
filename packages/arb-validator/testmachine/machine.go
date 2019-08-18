@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
@@ -53,6 +54,24 @@ func (m *Machine) Hash() [32]byte {
 
 func (m *Machine) Clone() machine.Machine {
 	return &Machine{m.cppmachine.Clone().(*cmachine.Machine), m.gomachine.Clone().(*gomachine.Machine)}
+}
+
+func (m *Machine) LastBlockReason() machine.BlockReason {
+	b1 := m.cppmachine.LastBlockReason()
+	b2 := m.gomachine.LastBlockReason()
+	if !b1.Equals(b2) {
+		log.Fatalln("LastBlockReason error at pc", m.gomachine.GetPC())
+	}
+	return b1
+}
+
+func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
+	b1 := m.cppmachine.CanSpend(tokenType, currency)
+	b2 := m.gomachine.CanSpend(tokenType, currency)
+	if b1 != b2 {
+		log.Fatalln("CanSpend error at pc", m.gomachine.GetPC())
+	}
+	return b1
 }
 
 func (m *Machine) InboxHash() value.HashOnlyValue {

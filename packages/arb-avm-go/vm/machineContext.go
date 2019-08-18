@@ -47,13 +47,12 @@ func (ac *MachineAssertionContext) LoggedValue(data value.Value) {
 	ac.logs = append(ac.logs, data)
 }
 
-func (ac *MachineAssertionContext) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
-	tokType := [21]byte{}
-	tokBytes := tokenType.ToBytes()
-	copy(tokType[:], tokBytes[:])
-	newMsg := protocol.NewMessage(data, tokType, currency.BigInt(), dest.ToBytes())
-	ac.outMsgs = append(ac.outMsgs, newMsg)
-	return nil
+func (ac *MachineAssertionContext) Send(message protocol.Message) {
+	ac.outMsgs = append(ac.outMsgs, message)
+}
+
+func (ac *MachineAssertionContext) StepCount() uint32 {
+	return ac.numSteps
 }
 
 func (ac *MachineAssertionContext) OutMessageCount() int {

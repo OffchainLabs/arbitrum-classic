@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
@@ -113,34 +116,46 @@ func init() {
 	}
 }
 
-type BlockedError struct{}
+type BlockedError struct {
+	reason machine.BlockReason
+}
 
 func (w BlockedError) Error() string {
 	return "VMBlockederror"
 }
 
-func runInstructionImpl(m *Machine, op value.Operation) (StackMods, error) {
-	if _, ok := code.InstructionNames[op.GetOp()]; !ok {
-		return StackMods{}, errors.New("invalid opcode")
+func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockReason) {
+	if m.IsHalted() {
+		return NewStackMods(0, 0), machine.HaltBlocked{}
 	}
-
-	if immediate, ok := op.(value.ImmediateOperation); ok {
-		m.stack.Push(immediate.Val)
+	if m.IsErrored() {
+		return NewStackMods(0, 0), machine.ErrorBlocked{}
 	}
+	if m.HaveSizeException() {
+		return NewStackMods(0, 0), machine.ErrorBlocked{}
+	}
+	m.context.NotifyStep()
+	mods, err := func() (StackMods, error) {
+		if _, ok := code.InstructionNames[op.GetOp()]; !ok {
+			return StackMods{}, errors.New("invalid opcode")
+		}
 
-	return Instructions[op.GetOp()].impl(m)
-}
+		if immediate, ok := op.(value.ImmediateOperation); ok {
+			m.stack.Push(immediate.Val)
+		}
 
-func RunInstruction(m *Machine, op value.Operation) (StackMods, error) {
-	mods, err := runInstructionImpl(m, op)
+		return Instructions[op.GetOp()].impl(m)
+	}()
 
 	if err == nil {
 		return mods, nil
 	}
 
-	if _, blocked := err.(BlockedError); blocked {
-		return mods, err
+	if blocked, isBlocked := err.(BlockedError); isBlocked {
+		return mods, blocked.reason
 	}
+
+	//fmt.Printf("error running instruction %v: %v\n", code.InstructionNames[op.GetOp()], err)
 
 	// in case of any errors from operation
 	// pop remaining stack values and set
@@ -153,15 +168,15 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, error) {
 			break
 		}
 	}
-	if m.errHandler.Equal(value.ErrorCodePoint) {
-		m.ErrorStop()
-	} else {
-		err := m.pc.SetPCForced(m.errHandler)
-		if err != nil {
-			m.ErrorStop()
-		}
+
+	// Clear the error by jumping to the error handler
+	if !m.errHandler.Equal(value.ErrorCodePoint) {
+		err = m.pc.SetPCForced(m.errHandler)
 	}
-	return mods, err
+	if err != nil {
+		m.ErrorStop()
+	}
+	return mods, nil
 }
 
 func (insn Instruction) GetName() string {
@@ -281,8 +296,8 @@ func PopStackBox(m *Machine, mods StackMods) (value.Value, StackMods, error) {
 	mods.popsRemaining--
 	mods.stackPopTypes[mods.stackPopsPerformed] = 0
 	mods.stackPopsPerformed++
-	b, err := m.Stack().Pop()
-	return b, mods, err
+	b, _ := m.Stack().Pop()
+	return b, mods, nil
 }
 
 func PopStackValue(m *Machine, mods StackMods) (value.Value, StackMods, error) {
@@ -670,7 +685,9 @@ func insnInbox(state *Machine) (StackMods, error) {
 	inboxVal := state.ReadInbox()
 	mods = PushStackBox(state, mods, inboxVal)
 	if value.Eq(x, inboxVal) {
-		return mods, BlockedError{}
+		return mods, BlockedError{machine.InboxBlocked{
+			Inbox: value.NewHashOnlyValueFromValue(inboxVal),
+		}}
 	}
 	state.IncrPC()
 	return mods, nil
@@ -965,7 +982,7 @@ func insnType(state *Machine) (StackMods, error) {
 func insnBreakpoint(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 0)
 	state.IncrPC()
-	return mods, BlockedError{}
+	return mods, BlockedError{machine.BreakpointBlocked{}}
 }
 
 func insnLog(state *Machine) (StackMods, error) {
@@ -979,17 +996,15 @@ func insnLog(state *Machine) (StackMods, error) {
 	return mods, nil
 }
 
-func sendImpl(state *Machine) (value.TupleValue, value.Value, value.IntValue, value.IntValue, value.IntValue, StackMods, error) {
+func sendImpl(state *Machine) (value.TupleValue, protocol.Message, StackMods, error) {
 	mods := NewStackMods(1, 0)
 	sendData, mods, err := PopStackTuple(state, mods)
 	if err != nil {
-		// mods, err := handlePopError(state, mods, err)
-		return value.NewEmptyTuple(), nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
+		return sendData, protocol.Message{}, mods, err
 	}
 
 	if sendData.Len() != 4 {
-		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
-		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
+		return sendData, protocol.Message{}, mods, err
 	}
 
 	data, _ := sendData.GetByInt64(0)
@@ -1003,22 +1018,24 @@ func sendImpl(state *Machine) (value.TupleValue, value.Value, value.IntValue, va
 
 	if !ok2 || !ok3 || !ok4 {
 		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
-		return sendData, nil, value.NewInt64Value(0), value.NewInt64Value(0), value.NewInt64Value(0), mods, err
+		return sendData, protocol.Message{}, mods, err
 	}
-
-	return sendData, data, tokenType, amount, destination, mods, nil
+	return sendData, protocol.NewMessage(data, protocol.TokenTypeFromIntValue(tokenType), amount.BigInt(), destination.ToBytes()), mods, nil
 }
 
 func insnSend(state *Machine) (StackMods, error) {
-	sendData, data, tokenType, amount, destination, mods, err := sendImpl(state)
+	sendData, msg, mods, err := sendImpl(state)
 	if err != nil {
 		return mods, err
 	}
 
-	err = state.Send(data, tokenType, amount, destination)
+	err = state.Send(msg)
 	if err != nil {
 		state.stack.PushTuple(sendData)
-		return mods, BlockedError{}
+		return mods, BlockedError{machine.SendBlocked{
+			Currency:  msg.Currency,
+			TokenType: msg.TokenType,
+		}}
 	}
 
 	state.IncrPC()
@@ -1026,22 +1043,18 @@ func insnSend(state *Machine) (StackMods, error) {
 }
 
 func insnNBSend(state *Machine) (StackMods, error) {
-	_, data, tokenType, amount, destination, mods, err := sendImpl(state)
+	_, msg, mods, err := sendImpl(state)
 	if err != nil {
 		return mods, err
 	}
 
-	if !state.CanSpend(tokenType, amount) {
+	if err := state.Send(msg); err != nil {
+		state.Warn(err.Error())
 		mods = PushStackInt(state, mods, value.NewInt64Value(0))
 	} else {
-		err := state.Send(data, tokenType, amount, destination)
-		if err != nil {
-			state.Warn(err.Error())
-			mods = PushStackInt(state, mods, value.NewInt64Value(0))
-		} else {
-			mods = PushStackInt(state, mods, value.NewInt64Value(1))
-		}
+		mods = PushStackInt(state, mods, value.NewInt64Value(1))
 	}
+
 	state.IncrPC()
 	return mods, nil
 }

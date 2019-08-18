@@ -31,6 +31,19 @@ import (
 type Identity [32]byte
 type TokenType [21]byte
 
+func TokenTypeFromIntValue(val value.IntValue) TokenType {
+	var tokType TokenType
+	tokBytes := val.ToBytes()
+	copy(tokType[:], tokBytes[:])
+	return tokType
+}
+
+func (t TokenType) ToIntValue() value.IntValue {
+	var bigtok [32]byte
+	copy(bigtok[:], t[:])
+	return value.NewIntValue(new(big.Int).SetBytes(bigtok[:]))
+}
+
 func (t TokenType) IsToken() bool {
 	return t[20] == 0
 }

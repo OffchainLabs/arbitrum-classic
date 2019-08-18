@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -41,16 +42,18 @@ const (
 
 type Machine struct {
 	// implements Machinestate
-	stack      stack.Stack
-	auxstack   stack.Stack
-	register   *MachineValue
-	static     *MachineValue
-	pc         *MachinePC
-	errHandler value.CodePointValue
-	context    machine.Context
-	status     MachineStatus
-	inbox      *protocol.Inbox
-	balance    *protocol.BalanceTracker
+	stack       stack.Stack
+	auxstack    stack.Stack
+	register    *MachineValue
+	static      *MachineValue
+	pc          *MachinePC
+	errHandler  value.CodePointValue
+	context     machine.Context
+	status      MachineStatus
+	blockReason machine.BlockReason
+
+	inbox   *protocol.Inbox
+	balance *protocol.BalanceTracker
 
 	sizeLimit     int64
 	sizeException bool
@@ -112,6 +115,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		errHandler,
 		&machine.NoContext{},
 		Extensive,
+		nil,
 		inbox,
 		balance,
 		sizeLimit,
@@ -158,12 +162,8 @@ func (m *Machine) ReadInbox() value.Value {
 	return m.inbox.Receive()
 }
 
-func (m *Machine) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
-	tokenTypeBytes := tokenType.ToBytes()
-	var tok protocol.TokenType
-	// Cut off at 21 bytes
-	copy(tok[:], tokenTypeBytes[:])
-	return m.balance.CanSpend(tok, currency.BigInt())
+func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
+	return m.balance.CanSpend(tokenType, currency)
 }
 
 func (m *Machine) GetTimeBounds() value.Value {
@@ -236,32 +236,8 @@ func (m *Machine) GetSizeLimit() int64 {
 	return m.sizeLimit
 }
 
-func (m *Machine) run() (bool, bool, string) {
-	// fmt.Println("BEFORE", m.pc.GetPC().Op, m.stack.(*stack.Flat))
-	if m.IsHalted() || m.IsErrored() || m.HaveSizeException() {
-		return false, false, "Can't run"
-	}
-	insnName := m.pc.GetCurrentInsnName()
-	_, err := RunInstruction(m, m.pc.GetCurrentInsn())
-	if _, blocked := err.(BlockedError); blocked {
-		return false, false, "Blocked"
-	}
-	m.context.NotifyStep()
-	if err != nil {
-		fmt.Printf("error running instruction %v: %v\n", insnName, err)
-		return false, false, "Error"
-	}
-	if m.IsHalted() {
-		return true, false, "Halted"
-	}
-	if m.IsErrored() {
-		return true, false, "ErrorStopped"
-	}
-	if m.HaveSizeException() {
-		return true, false, "SizeException"
-	}
-	// fmt.Println("AFTER", m.pc.GetPC().Op, m.stack.(*stack.Flat))
-	return true, true, "Success"
+func (m *Machine) LastBlockReason() machine.BlockReason {
+	return m.blockReason
 }
 
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
@@ -270,13 +246,12 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		m,
 		timeBounds,
 	)
-	i := int32(0)
-	continueRun := true
-	var ran bool
-	for continueRun && i < maxSteps {
-		ran, continueRun, _ = m.run()
-		if ran {
-			i++
+	m.blockReason = nil
+	for assCtx.StepCount() < uint32(maxSteps) {
+		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
+		if blocked != nil {
+			m.blockReason = blocked
+			break
 		}
 	}
 	return assCtx.Finalize(m)
@@ -303,15 +278,13 @@ func (m *Machine) PendingMessageCount() uint64 {
 	return m.inbox.PendingQueue.MessageCount()
 }
 
-func (m *Machine) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
-	tokType := [21]byte{}
-	tokBytes := tokenType.ToBytes()
-	copy(tokType[:], tokBytes[:])
-	err := m.balance.Spend(tokType, currency.BigInt())
+func (m *Machine) Send(message protocol.Message) error {
+	err := m.balance.Spend(message.TokenType, message.Currency)
 	if err != nil {
 		return err
 	}
-	return m.context.Send(data, tokenType, currency, dest)
+	m.context.Send(message)
+	return nil
 }
 
 func (m *Machine) Warn(str string) {
@@ -434,6 +407,7 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.errHandler,
 		&machine.NoContext{},
 		m.status,
+		m.blockReason,
 		m.inbox.Clone(),
 		m.balance.Clone(),
 		m.sizeLimit,

@@ -40,6 +40,34 @@ Operation& Operation::operator=(const Operation& cp) {
 
 Operation& Operation::operator=(Operation&&) = default;
 Operation::~Operation() = default;
+
+bool operator==(const Operation& val1, const Operation& val2) {
+    if (val1.opcode != val2.opcode) {
+        return false;
+    }
+    if (!val1.immediate && !val2.immediate) {
+        return true;
+    }
+    if (val1.immediate && val2.immediate) {
+        return *val1.immediate == *val2.immediate;
+    }
+    return false;
+}
+
+bool operator!=(const Operation& val1, const Operation& val2) {
+    if (val1.opcode != val2.opcode) {
+        return true;
+    }
+    if ((val1.immediate && !val2.immediate) ||
+        (!val1.immediate && val2.immediate)) {
+        return true;
+    }
+    if (val1.immediate && val2.immediate) {
+        return *val1.immediate != *val2.immediate;
+    }
+    return false;
+}
+
 void Operation::marshal(std::vector<unsigned char>& buf) const {
     if (immediate) {
         buf.push_back(1);
@@ -49,6 +77,13 @@ void Operation::marshal(std::vector<unsigned char>& buf) const {
         buf.push_back(0);
         buf.push_back((uint8_t)opcode);
     }
+}
+
+bool operator==(const CodePoint& val1, const CodePoint& val2) {
+    if (val1.pc != val2.pc)
+        return false;
+    else
+        return true;
 }
 
 void CodePoint::marshal(std::vector<unsigned char>& buf) const {

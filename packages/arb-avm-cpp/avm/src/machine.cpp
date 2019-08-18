@@ -22,6 +22,7 @@
 #include <iostream>
 
 namespace {
+
 std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
     std::vector<CodePoint> cps;
     cps.reserve(ops.size());
@@ -165,17 +166,17 @@ Tuple& assumeTuple(value& val) {
     return *tup;
 }
 
-void MachineState::deserialize(char* bufptr) {
+bool MachineState::deserialize(char* bufptr) {
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
     version = __builtin_bswap32(version);
     bufptr += sizeof(version);
 
     if (version != CURRENT_AO_VERSION) {
-        std::cout << "incorrect version of .ao file" << std::endl;
-        std::cout << "expected version " << CURRENT_AO_VERSION
+        std::cerr << "incorrect version of .ao file" << std::endl;
+        std::cerr << "expected version " << CURRENT_AO_VERSION
                   << " found version " << version << std::endl;
-        return;
+        return false;
     }
 
     uint32_t extentionId = 1;
@@ -184,7 +185,7 @@ void MachineState::deserialize(char* bufptr) {
         extentionId = __builtin_bswap32(extentionId);
         bufptr += sizeof(extentionId);
         if (extentionId > 0) {
-            std::cout << "found extention" << std::endl;
+            //            std::cout << "found extention" << std::endl;
         }
     }
     uint64_t codeCount;
@@ -201,6 +202,7 @@ void MachineState::deserialize(char* bufptr) {
 
     staticVal = deserialize_value(bufptr, *pool);
     pc = 0;
+    return true;
 }
 
 uint64_t MachineState::pendingMessageCount() const {
@@ -248,16 +250,6 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     uint256_t registerHash = ::hash(registerVal);
     uint256_t staticHash = ::hash(staticVal);
     uint256_t errHandlerHash = ::hash(errpc);
-    std::cout << "Proof of " << code[pc] << " has " << stackVals.size()
-              << " stack vals and " << auxStackVals.size() << " aux stack vals"
-              << std::endl;
-    std::cout << "pc next hash " << to_hex_str(code[pc].nextHash) << std::endl;
-    std::cout << "baseStackHash " << to_hex_str(baseStackHash) << std::endl;
-    std::cout << "baseAuxStackHash " << to_hex_str(baseAuxStackHash)
-              << std::endl;
-    std::cout << "registerHash " << to_hex_str(registerHash) << std::endl;
-    std::cout << "staticHash " << to_hex_str(staticHash) << std::endl;
-    std::cout << "errHandlerHash " << to_hex_str(errHandlerHash) << std::endl;
     uint256_t_to_buf(code[pc].nextHash, buf);
     uint256_t_to_buf(baseStackHash, buf);
     uint256_t_to_buf(baseAuxStackHash, buf);
@@ -271,7 +263,6 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     for (auto const& auxstackval : auxStackVals) {
         marshal_value(auxstackval, buf);
     }
-    std::cout << "marshal size " << buf.size() << std::endl;
     return buf;
 }
 
@@ -291,84 +282,72 @@ Assertion Machine::run(uint64_t stepCount,
                        uint64_t timeBoundStart,
                        uint64_t timeBoundEnd) {
     m.context = AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
-    uint64_t i;
-    if (m.state == Status::Blocked) {
-        m.state = Status::Extensive;
-    }
-    for (i = 0; i < stepCount; i++) {
-        if (m.state == Status::Error || m.state == Status::Halted ||
-            m.state == Status::Blocked) {
-            break;
-        }
-        auto ret = runOne();
-        if (ret < 0) {
+    m.blockReason = NotBlocked{};
+    while (m.context.numSteps < stepCount) {
+        runOne();
+        if (!nonstd::get_if<NotBlocked>(&m.blockReason)) {
             break;
         }
     }
-
-    if (m.state == Status::Blocked) {
-        i--;
-    }
-
-    if (m.state == Status::Error) {
-        std::cout << "error state" << std::endl;
-        if (m.errpc.isSet()) {
-            m.pc = m.errpc.pc;
-        }
-    }
-    if (m.state == Status::Halted) {
-        // set error return
-        //        std::cout << "halted state" << std::endl;
-    }
-    return {i, std::move(m.context.outMessage), std::move(m.context.logs)};
+    return {m.context.numSteps, std::move(m.context.outMessage),
+            std::move(m.context.logs)};
 }
 
-int Machine::runOne() {
-    //    std::cout << to_hex_str(hash()) << " " << m.code[m.pc].op <<
-    //    std::endl; std::cout << *this << std::endl; std::cout<<"in
-    //    runOne"<<std::endl;
+bool isErrorCodePoint(const CodePoint& cp) {
+    return cp.nextHash == 0 && cp.op == Operation{static_cast<OpCode>(0)};
+}
+
+void Machine::runOne() {
     if (m.state == Status::Error) {
-        // set error return
-        std::cout << "error state" << std::endl;
-        return -1;
+        m.blockReason = ErrorBlocked();
+        return;
     }
 
     if (m.state == Status::Halted) {
-        // set error return
-        std::cout << "halted state" << std::endl;
-        std::cout << "full stack - size=" << m.stack.stacksize() << std::endl;
-        while (m.stack.stacksize() > 0) {
-            std::cout << m.stack[0] << std::endl;
-            m.stack.popClear();
-        }
-        return -2;
+        m.blockReason = HaltBlocked();
+        return;
     }
+
+    m.context.numSteps++;
 
     auto& instruction = m.code[m.pc];
-    //    std::cout<<m.pc<<"
-    //    "<<InstructionNames.at(instruction.op.opcode)<<std::endl; std::cout <<
-    //    to_hex_str(m.hash()) << "\n" << m << std::endl; std::cout << m <<
-    //    std::endl;
-    if (instruction.op.immediate) {
-        //        std::cout<<"immediateVal = "<<*immediateVal<<std::endl;
-        auto imm = *instruction.op.immediate;
-        m.stack.push(std::move(imm));
+
+    auto startStackSize = m.stack.stacksize();
+
+    if (!isValidOpcode(instruction.op.opcode)) {
+        m.state = Status::Error;
+    } else {
+        if (instruction.op.immediate) {
+            auto imm = *instruction.op.immediate;
+            m.stack.push(std::move(imm));
+        }
+
+        try {
+            m.blockReason = m.runOp(instruction.op.opcode);
+        } catch (const bad_pop_type& e) {
+            m.state = Status::Error;
+        } catch (const bad_tuple_index& e) {
+            m.state = Status::Error;
+        }
     }
 
-    try {
-        //        std::cout<<"calling runInstruction"<<std::endl;
-        m.runOp(instruction.op.opcode);
-        //        std::cout<<"after runInstruction stack size=
-        //        "<<stack.stacksize()<< std::endl; if (stack.stacksize()>0){
-        //            std::cout<<"top="<<stack.peek()<< std::endl;
-        //        }
-    } catch (const bad_pop_type& e) {
-        m.state = Status::Error;
-    } catch (const bad_tuple_index& e) {
-        m.state = Status::Error;
+    if (m.state != Status::Error) {
+        return;
     }
 
-    return 0;
+    // Clear stack to base for instruction
+    auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
+    while (m.stack.stacksize() > 0 &&
+           startStackSize - m.stack.stacksize() < stackItems) {
+        m.stack.popClear();
+    }
+
+    if (!isErrorCodePoint(m.errpc)) {
+        m.pc = m.errpc.pc;
+        m.state = Status::Extensive;
+    }
+
+    return;
 }
 
 template <typename T>
@@ -848,8 +827,8 @@ static void tlen(MachineState& m) {
     ++m.pc;
 }
 
-static void breakpoint(MachineState& m) {
-    m.state = Status::Blocked;
+static BlockReason breakpoint(MachineState&) {
+    return BreakpointBlocked{};
 }
 
 static void log(MachineState& m) {
@@ -876,20 +855,21 @@ static void debug(MachineState& m) {
     ++m.pc;
 }
 
-static void send(MachineState& m) {
+static BlockReason send(MachineState& m) {
     m.stack.prepForMod(1);
     Message outMsg;
     auto success = outMsg.deserialize(m.stack[0]);
     if (!success) {
         m.state = Status::Error;
-        return;
+        return NotBlocked();
     }
     if (!m.balance.Spend(outMsg.token, outMsg.currency)) {
-        m.state = Status::Blocked;
+        return SendBlocked{outMsg.currency, outMsg.token};
     } else {
         m.stack.popClear();
         m.context.outMessage.push_back(outMsg);
         ++m.pc;
+        return NotBlocked();
     }
 }
 
@@ -921,20 +901,21 @@ static void getTime(MachineState& m) {
     ++m.pc;
 }
 
-static void inboxOp(MachineState& m) {
+static BlockReason inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
     auto stackTop = nonstd::get_if<Tuple>(&m.stack[0]);
     if (stackTop && m.inbox.messages == *stackTop) {
-        m.state = Status::Blocked;
+        return InboxBlocked{hash(m.inbox.messages)};
     } else {
         value inboxCopy = m.inbox.messages;
         m.stack[0] = std::move(inboxCopy);
         ++m.pc;
+        return NotBlocked{};
     }
 }
 }  // namespace
 
-void MachineState::runOp(OpCode opcode) {
+BlockReason MachineState::runOp(OpCode opcode) {
     switch (opcode) {
         /**************************/
         /*  Arithmetic Operations */
@@ -1099,8 +1080,7 @@ void MachineState::runOp(OpCode opcode) {
             /*  Logging Operations */
             /***********************/
         case OpCode::BREAKPOINT:
-            breakpoint(*this);
-            break;
+            return breakpoint(*this);
         case OpCode::LOG:
             log(*this);
             break;
@@ -1111,8 +1091,7 @@ void MachineState::runOp(OpCode opcode) {
             /*  System Operations */
             /**********************/
         case OpCode::SEND:
-            send(*this);
-            break;
+            return send(*this);
         case OpCode::NBSEND:
             nbsend(*this);
             break;
@@ -1120,22 +1099,17 @@ void MachineState::runOp(OpCode opcode) {
             getTime(*this);
             break;
         case OpCode::INBOX:
-            inboxOp(*this);
-            break;
+            return inboxOp(*this);
         case OpCode::ERROR:
             state = Status::Error;
-            if (errpc.isSet()) {
-                pc = errpc.pc;
-            }
             break;
         case OpCode::HALT:
-            std::cout << "Hit halt opcode at instruction " << pc << "\n";
             state = Status::Halted;
             break;
         default:
-            std::stringstream ss;
-            ss << "Unhandled opcode <" << InstructionNames.at(opcode) << ">"
-               << std::hex << static_cast<int>(opcode);
-            throw std::runtime_error(ss.str());
+            std::cerr << "Unhandled opcode <" << InstructionNames.at(opcode)
+                      << ">" << std::hex << static_cast<int>(opcode);
+            state = Status::Error;
     }
+    return NotBlocked{};
 }

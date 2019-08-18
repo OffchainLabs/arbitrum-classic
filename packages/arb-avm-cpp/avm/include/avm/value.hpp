@@ -40,7 +40,6 @@ struct CodePoint;
 using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
-bool operator==(const CodePoint& val1, const CodePoint& val2);
 
 uint256_t hash(const value& value);
 

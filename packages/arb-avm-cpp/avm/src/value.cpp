@@ -112,13 +112,6 @@ value deserialize_value(char*& bufptr, TuplePool& pool) {
     }
 }
 
-bool operator==(const CodePoint& val1, const CodePoint& val2) {
-    if (val1.pc != val2.pc)
-        return false;
-    else
-        return true;
-}
-
 uint256_t hash(const value& value) {
     return nonstd::visit([](const auto& val) { return hash(val); }, value);
 }

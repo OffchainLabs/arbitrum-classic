@@ -23,10 +23,25 @@
 extern "C" {
 #endif
 
+enum CBlockType {
+    BLOCK_TYPE_NOT_BLOCKED = 0,
+    BLOCK_TYPE_HALT = 1,
+    BLOCK_TYPE_ERROR = 2,
+    BLOCK_TYPE_BREAKPOINT = 3,
+    BLOCK_TYPE_INBOX = 4,
+    BLOCK_TYPE_SEND = 5,
+};
+
 typedef struct {
     void* data;
     int length;
 } ByteSlice;
+
+typedef struct {
+    enum CBlockType blockType;
+    ByteSlice val1;
+    ByteSlice val2;
+} CBlockReason;
 
 typedef struct {
     unsigned char* outMessageData;
@@ -49,7 +64,8 @@ CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 void machineInboxHash(CMachine* m, void* ret);
-
+int machineCanSpend(CMachine* m, char* tokType, char* amount);
+CBlockReason machineLastBlockReason(CMachine* m);
 uint64_t machinePendingMessageCount(CMachine* m);
 void machineSendOnchainMessage(CMachine* m, void* data);
 void machineDeliverOnchainMessages(CMachine* m);

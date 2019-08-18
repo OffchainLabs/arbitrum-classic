@@ -39,7 +39,7 @@ TEST_CASE("Value hashing") {
     nlohmann::json j;
     i >> j;
     for (auto valtest : j) {
-        DYNAMIC_SECTION("Test " << valtest["name"]) {
+        DYNAMIC_SECTION("Test " << valtest["name"].get<std::string>()) {
             auto valBytes =
                 hexStringToBytes(valtest["value"].get<std::string>());
             auto valRaw = valBytes.data();
@@ -62,7 +62,7 @@ TEST_CASE("Value marshaling") {
     nlohmann::json j;
     i >> j;
     for (auto valtest : j) {
-        DYNAMIC_SECTION("Test " << valtest["name"]) {
+        DYNAMIC_SECTION("Test " << valtest["name"].get<std::string>()) {
             auto valBytes =
                 hexStringToBytes(valtest["value"].get<std::string>());
             auto valRaw = valBytes.data();

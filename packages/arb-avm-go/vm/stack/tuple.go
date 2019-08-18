@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/warning"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -63,10 +62,15 @@ func (m *Tuple) PushCodePoint(v value.CodePointValue) {
 func (m *Tuple) Pop() (value.Value, error) {
 	topTuple, ok := m.stack.(value.TupleValue)
 	if !ok {
-		return nil, warning.New(fmt.Sprintf("Stack.Pop: Value in Stack was %s instead of a tuple", value.TypeCodeName(m.stack.TypeCode())))
+		// Can only occur if there is an internal implementation bug
+		panic(fmt.Sprintf("Stack.Pop: Value in Stack was %v instead of a tuple", value.TypeCodeName(m.stack.TypeCode())))
 	}
+	if topTuple.Len() == 0 {
+		return nil, EmptyError{}
+	}
+
 	if topTuple.Len() != 2 {
-		return nil, warning.New("Stack.Pop: Tuple in Stack was not size 2")
+		panic(fmt.Sprintf("Stack.Pop: Value in Stack was tuple of incorrect length %v", topTuple.Len()))
 	}
 	m.stack, _ = topTuple.GetByInt64(1)
 	m.count--

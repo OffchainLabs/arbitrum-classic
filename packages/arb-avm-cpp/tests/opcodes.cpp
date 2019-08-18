@@ -680,8 +680,9 @@ TEST_CASE("TLEN opcode is correct") {
 TEST_CASE("BREAKPOINT opcode is correct") {
     SECTION("break") {
         MachineState m;
-        m.runOp(OpCode::BREAKPOINT);
-        REQUIRE(m.state == Status::Blocked);
+        auto blockReason = m.runOp(OpCode::BREAKPOINT);
+        REQUIRE(m.state == Status::Extensive);
+        REQUIRE(nonstd::get_if<BreakpointBlocked>(&blockReason));
         REQUIRE(m.stack.stacksize() == 0);
     }
 }

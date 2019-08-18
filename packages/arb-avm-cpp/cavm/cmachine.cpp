@@ -35,12 +35,15 @@ Machine* read_files(std::string filename) {
     char* buf = (char*)malloc(filestatus.st_size);
 
     myfile.open(filename, std::ios::in);
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
+    if (!myfile.is_open()) {
+        return nullptr;
     }
+    myfile.read((char*)buf, filestatus.st_size);
     auto machine = new Machine();
-    machine->deserialize(buf);
+    bool success = machine->deserialize(buf);
+    if (!success) {
+        return nullptr;
+    }
     return machine;
 }
 
@@ -78,6 +81,70 @@ void machineInboxHash(CMachine* m, void* ret) {
     std::array<unsigned char, 32> val;
     to_big_endian(retHash, val.begin());
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+}
+
+int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
+    Machine* mach = static_cast<Machine*>(m);
+    TokenType tokType;
+    std::copy(cTokType, cTokType + 21, tokType.begin());
+    uint256_t amount = deserialize_int(cAmount);
+    return mach->canSpend(tokType, amount);
+}
+
+struct ReasonConverter {
+    CBlockReason operator()(const NotBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_NOT_BLOCKED, ByteSlice{nullptr, 0},
+                            ByteSlice{nullptr, 0}};
+    }
+
+    CBlockReason operator()(const HaltBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_HALT, ByteSlice{nullptr, 0},
+                            ByteSlice{nullptr, 0}};
+    }
+
+    CBlockReason operator()(const ErrorBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_ERROR, ByteSlice{nullptr, 0},
+                            ByteSlice{nullptr, 0}};
+    }
+
+    CBlockReason operator()(const BreakpointBlocked&) const {
+        return CBlockReason{BLOCK_TYPE_BREAKPOINT, ByteSlice{nullptr, 0},
+                            ByteSlice{nullptr, 0}};
+    }
+
+    CBlockReason operator()(const InboxBlocked& val) const {
+        std::vector<unsigned char> inboxDataVec;
+        marshal_value(val.inbox, inboxDataVec);
+        unsigned char* cInboxData = (unsigned char*)malloc(inboxDataVec.size());
+        std::copy(inboxDataVec.begin(), inboxDataVec.end(), cInboxData);
+        return CBlockReason{
+            BLOCK_TYPE_INBOX,
+            ByteSlice{cInboxData, static_cast<int>(inboxDataVec.size())},
+            ByteSlice{nullptr, 0}};
+    }
+
+    CBlockReason operator()(const SendBlocked& val) const {
+        std::vector<unsigned char> currencyDataVec;
+        marshal_value(val.currency, currencyDataVec);
+        unsigned char* cCurrencyData =
+            (unsigned char*)malloc(currencyDataVec.size());
+        std::copy(currencyDataVec.begin(), currencyDataVec.end(),
+                  cCurrencyData);
+
+        unsigned char* cTokenData =
+            (unsigned char*)malloc(val.tokenType.size());
+        std::copy(val.tokenType.begin(), val.tokenType.end(), cTokenData);
+        return CBlockReason{
+            BLOCK_TYPE_SEND,
+            ByteSlice{cCurrencyData, static_cast<int>(currencyDataVec.size())},
+            ByteSlice{cTokenData, static_cast<int>(val.tokenType.size())},
+        };
+    }
+};
+
+CBlockReason machineLastBlockReason(CMachine* m) {
+    Machine* mach = static_cast<Machine*>(m);
+    return nonstd::visit(ReasonConverter{}, mach->lastBlockReason());
 }
 
 uint64_t machinePendingMessageCount(CMachine* m) {

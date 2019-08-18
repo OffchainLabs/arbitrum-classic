@@ -386,7 +386,7 @@ func (m *ValidatorCoordinator) Run() error {
 					// Force onchain assertion if there are pending on chain messages, then force an offchain assertion
 					shouldUnan = true
 					forceFinal = true
-				} else if <-m.mpq.HasMessages() || m.Val.unprocessedMessageCount > 0 {
+				} else if <-m.mpq.HasMessages() || <-m.Val.Bot.CanContinueRunning() {
 					shouldUnan = true
 				}
 

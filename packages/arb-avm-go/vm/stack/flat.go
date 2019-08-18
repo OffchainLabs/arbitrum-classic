@@ -216,7 +216,7 @@ func (f *Flat) PopHashOnly() (val value.HashOnlyValue, err error) {
 	return
 }
 
-func (f *Flat) Pop() (lastItem value.Value, err error) {
+func (f *Flat) Pop() (value.Value, error) {
 	f.verifyHeight()
 	if len(f.itemTypes) == 0 {
 		return nil, EmptyError{}
@@ -224,18 +224,16 @@ func (f *Flat) Pop() (lastItem value.Value, err error) {
 	valType := f.itemTypes[len(f.itemTypes)-1]
 	switch valType {
 	case value.TypeCodeInt:
-		lastItem = f.popIntUnchecked()
+		return f.popIntUnchecked(), nil
 	case value.TypeCodeTuple:
-		lastItem = f.popTupleUnchecked()
+		return f.popTupleUnchecked(), nil
 	case value.TypeCodeCodePoint:
-		lastItem = f.popCodePointUnchecked()
+		return f.popCodePointUnchecked(), nil
 	case value.TypeCodeHashOnly:
-		lastItem = f.popHashOnlyUnchecked()
+		return f.popHashOnlyUnchecked(), nil
 	default:
 		panic("PopValue: Unhandled type")
 	}
-	f.verifyHeight()
-	return
 }
 
 func (f *Flat) IsEmpty() bool {

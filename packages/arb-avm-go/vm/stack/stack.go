@@ -45,7 +45,7 @@ type Stack interface {
 	PushTuple(value.TupleValue)
 	PushCodePoint(value.CodePointValue)
 
-	Pop() (value.Value, error)
+	Pop() (value.Value, error) // Only error than can return is EmptyError
 	PopInt() (value.IntValue, error)
 	PopTuple() (value.TupleValue, error)
 	PopCodePoint() (value.CodePointValue, error)

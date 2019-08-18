@@ -26,14 +26,40 @@
 
 typedef std::array<uint256_t, 2> TimeBounds;
 
-enum class Status { Extensive, Blocked, Halted, Error };
+enum class Status { Extensive, Halted, Error };
+
+struct NotBlocked {};
+
+struct HaltBlocked {};
+
+struct ErrorBlocked {};
+
+struct BreakpointBlocked {};
+
+struct InboxBlocked {
+    uint256_t inbox;
+};
+
+struct SendBlocked {
+    uint256_t currency;
+    TokenType tokenType;
+};
+
+using BlockReason = nonstd::variant<NotBlocked,
+                                    HaltBlocked,
+                                    ErrorBlocked,
+                                    BreakpointBlocked,
+                                    InboxBlocked,
+                                    SendBlocked>;
 
 struct AssertionContext {
+    uint32_t numSteps;
     TimeBounds timeBounds;
     std::vector<Message> outMessage;
     std::vector<value> logs;
 
-    explicit AssertionContext(const TimeBounds& tb) : timeBounds(tb) {}
+    explicit AssertionContext(const TimeBounds& tb)
+        : numSteps{0}, timeBounds(tb) {}
 };
 
 struct Assertion {
@@ -85,10 +111,11 @@ struct MachineState {
     AssertionContext context;
     MessageStack inbox;
     BalanceTracker balance;
+    BlockReason blockReason;
 
     MachineState();
 
-    void deserialize(char* data);
+    bool deserialize(char* data);
 
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
@@ -96,7 +123,7 @@ struct MachineState {
     void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();
     void sendOffchainMessages(const std::vector<Message>& messages);
-    void runOp(OpCode opcode);
+    BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
 };
 
@@ -104,18 +131,22 @@ class Machine {
     MachineState m;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
+    void runOne();
 
    public:
-    void deserialize(char* data) { m.deserialize(data); }
+    bool deserialize(char* data) { return m.deserialize(data); }
 
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,
                   uint64_t timeBoundEnd);
-    int runOne();
+    BlockReason lastBlockReason() { return m.blockReason; }
     uint256_t hash() const { return m.hash(); }
     std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
     uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }
 
+    bool canSpend(const TokenType& tokType, const uint256_t& amount) const {
+        return m.balance.CanSpend(tokType, amount);
+    }
     uint256_t inboxHash() const { return ::hash(m.inbox.messages); }
 
     void sendOnchainMessage(const Message& msg);
