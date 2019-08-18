@@ -82,7 +82,7 @@ func runInstWithError(m *Machine, oper value.Opcode) (bool, string) {
 func naryValueOpTest(vals []value.Value, expected value.Value, oper value.Opcode) (bool, string) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	for _, val := range vals {
 		m.Stack().Push(val)
@@ -127,7 +127,7 @@ func TestAddMissingValue(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewInt64Value(1))
 
@@ -712,7 +712,7 @@ func TestRset(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewInt64Value(5))
 
@@ -741,7 +741,7 @@ func TestInbox(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 	knowninbox := protocol.NewEmptyInbox()
 
 	var tok protocol.TokenType
@@ -789,7 +789,7 @@ func TestJump(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// run NOP to push value 1
 	if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
@@ -824,59 +824,60 @@ func TestCJump(t *testing.T) {
 		value.BasicOperation{Op: code.HALT},
 	}
 
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	saveMachine := m.Clone().(*Machine)
-	saveKnownMachine := knownMachine.Clone().(*Machine)
+	{
+		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
-	// run NOP to push value 1
-	if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
-		t.Error(reason)
-	}
-	// push 0 for conditional
-	m.Stack().Push(value.NewInt64Value(0))
-	// push 2 to set jump point
-	var nextHash [32]byte
-	codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
-	m.Stack().Push(codept)
-	// CJUMP
-	if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
-		t.Error(reason)
-	}
-	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
-		t.Error(reason)
-	}
-	// verify sub was executed
-	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
+		// run NOP to push value 1
+		if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
+			t.Error(reason)
+		}
+		// push 0 for conditional
+		m.Stack().Push(value.NewInt64Value(0))
+		// push 2 to set jump point
+		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: [32]byte{}}
+		m.Stack().Push(codept)
+		// CJUMP
+		if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
+			t.Error(reason)
+		}
+		// PC should now be 2 - immediate operation that pushes 5 and subtracts
+		if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
+			t.Error(reason)
+		}
+		// verify sub was executed
+		knownMachine.Stack().Push(value.NewInt64Value(4))
+		if ok, err := Equal(knownMachine, m); !ok {
+			t.Error(err)
+		}
 	}
 
-	// repeat test with conditional set to 1
-	m = saveMachine
-	knownMachine = saveKnownMachine
-	// run NOP to push value 1
-	if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
-		t.Error(reason)
-	}
-	// push 1 for conditional
-	m.Stack().Push(value.NewInt64Value(1))
-	// push 2 to set jump point
-	codept = value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
-	m.Stack().Push(codept)
-	// CJUMP
-	if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
-		t.Error(reason)
-	}
-	// PC should now be 2 - immediate operation that pushes 5 and subtracts
-	if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
-		t.Error(reason)
-	}
-	// verify sub was executed
-	knownMachine.Stack().Push(value.NewInt64Value(4))
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
+	{
+		// repeat test with conditional set to 1
+		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
+		// run NOP to push value 1
+		if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
+			t.Error(reason)
+		}
+		// push 1 for conditional
+		m.Stack().Push(value.NewInt64Value(1))
+		// push 2 to set jump point
+		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: [32]byte{}}
+		m.Stack().Push(codept)
+		// CJUMP
+		if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
+			t.Error(reason)
+		}
+		// PC should now be 2 - immediate operation that pushes 5 and subtracts
+		if succeeded, reason := runInstOpNoFault(m, m.GetOperation()); !succeeded {
+			t.Error(reason)
+		}
+		// verify sub was executed
+		knownMachine.Stack().Push(value.NewInt64Value(4))
+		if ok, err := Equal(knownMachine, m); !ok {
+			t.Error(err)
+		}
 	}
 }
 
@@ -919,7 +920,7 @@ func TestPcpush(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	if succeeded, reason := runInstNoFault(m, code.PCPUSH); !succeeded {
 		t.Error(reason)
@@ -945,7 +946,7 @@ func TestAuxpush(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewInt64Value(4))
 	if succeeded, reason := runInstNoFault(m, code.AUXPUSH); !succeeded {
@@ -977,7 +978,7 @@ func TestAuxpop(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.AuxStack().Push(value.NewInt64Value(5))
 	if succeeded, reason := runInstNoFault(m, code.AUXPOP); !succeeded {
@@ -1010,7 +1011,7 @@ func TestAuxstackempty(t *testing.T) {
 
 	{
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
 		// auxstack should be empty
 		a := m.AuxStack().Count()
@@ -1030,7 +1031,7 @@ func TestAuxstackempty(t *testing.T) {
 
 	{
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 		m.AuxStack().Push(value.NewInt64Value(5))
 		// auxstack should not be empty
 		a := m.AuxStack().Count()
@@ -1054,7 +1055,7 @@ func TestNop(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 	{
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
 		// verify known and unknown match
 		if ok, err := Equal(knownMachine, m); !ok {
@@ -1074,7 +1075,7 @@ func TestNop(t *testing.T) {
 		// check NOP does nothing
 		// immediate operation pushes value then does nothing
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 		if succeeded, reason := runInstOpNoFault(m, value.ImmediateOperation{Op: code.NOP, Val: value.NewInt64Value(1)}); !succeeded {
 			t.Error(reason)
 		}
@@ -1098,7 +1099,7 @@ func TestErrpush(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// push codepoint onto stack
 	var nextHash [32]byte
@@ -1152,7 +1153,7 @@ func TestErrset(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// push codepoint onto stack
 	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: [32]byte{}}
@@ -1185,7 +1186,7 @@ func TestError(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// verify known and unknown match
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1207,7 +1208,7 @@ func TestDup0(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	knownMachine.Stack().Push(value.NewInt64Value(1))
@@ -1226,7 +1227,7 @@ func TestDup1(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	m.Stack().Push(value.NewInt64Value(2))
@@ -1247,7 +1248,7 @@ func TestDup2(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	m.Stack().Push(value.NewInt64Value(2))
@@ -1270,7 +1271,7 @@ func TestSwap2(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewInt64Value(1))
 	m.Stack().Push(value.NewInt64Value(2))
@@ -1293,7 +1294,7 @@ func TestTget(t *testing.T) {
 
 	{
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
 		tup := value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2))
 
@@ -1312,7 +1313,7 @@ func TestTget(t *testing.T) {
 	{
 		// test with only int on stack
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 		m.Stack().Push(value.NewInt64Value(1))
 		if failed, reason := runInstWithError(m, code.TGET); !failed {
 			t.Error(reason)
@@ -1326,7 +1327,7 @@ func TestTget(t *testing.T) {
 	{
 		// test A out of range
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 		m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 		m.Stack().Push(value.NewInt64Value(3))
 		if failed, reason := runInstWithError(m, code.TGET); !failed {
@@ -1345,7 +1346,7 @@ func TestTset(t *testing.T) {
 
 	{
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
 		m.Stack().Push(value.NewInt64Value(3))
 		m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
@@ -1362,7 +1363,7 @@ func TestTset(t *testing.T) {
 
 	{
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
 		m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 		// test with only tuple on stack
@@ -1378,7 +1379,7 @@ func TestTset(t *testing.T) {
 	{
 		// test incorrect A
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
 		m.Stack().Push(value.NewInt64Value(3))
 		m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
@@ -1398,7 +1399,7 @@ func TestTlen(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.Stack().Push(value.NewTuple2(value.NewInt64Value(1), value.NewInt64Value(2)))
 	if succeeded, reason := runInstNoFault(m, code.TLEN); !succeeded {
@@ -1443,7 +1444,7 @@ func TestType(t *testing.T) {
 
 	for i := range testValues {
 		m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-		knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+		knownMachine := m.Clone().(*Machine)
 
 		m.Stack().Push(testValues[i])
 		if succeeded, reason := runInstNoFault(m, code.TYPE); !succeeded {
@@ -1463,7 +1464,7 @@ func TestBreakpoint(t *testing.T) {
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	_, blocked := RunInstruction(m, value.BasicOperation{Op: code.BREAKPOINT})
 	if _, ok := blocked.(machine.BreakpointBlocked); !ok {
@@ -1483,7 +1484,7 @@ func TestLog(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 	m.Stack().Push(value.NewInt64Value(5))
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
@@ -1508,19 +1509,17 @@ func TestSendFungible(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// fungible value=10
 	var tok protocol.TokenType
 	tok[0] = 15
 	tok[20] = 0
-	var bigtok [32]byte
-	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewInt64Value(4),
 		value.NewInt64Value(7),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		tok.ToIntValue(),
 	})
 	m.Stack().Push(tup)
 
@@ -1533,16 +1532,15 @@ func TestSendFungible(t *testing.T) {
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
-	msgs := ad.OutMsgs
 	// verify out message
-	if len(msgs) != 1 {
+	if len(ad.OutMsgs) != 1 {
 		t.Error("No out message generated")
 	}
 
 	dest := [32]byte{}
 	dest[31] = 4
 	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	if !msgs[0].Equals(knownmessage) {
+	if !ad.OutMsgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
 }
@@ -1555,19 +1553,17 @@ func TestSendNonFungible(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// test send of non fungible
 	var tok protocol.TokenType
 	tok[0] = 16
 	tok[20] = 1
-	var bigtok [32]byte
-	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewInt64Value(4),
 		value.NewInt64Value(7),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		tok.ToIntValue(),
 	})
 	m.Stack().Push(tup)
 
@@ -1601,19 +1597,17 @@ func TestSendLowBalance(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// test send with insufficient funds
 	var tok protocol.TokenType
 	tok[0] = 17
 	tok[20] = 0
-	var bigtok [32]byte
-	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewInt64Value(4),
 		value.NewInt64Value(17),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		tok.ToIntValue(),
 	})
 	m.Stack().Push(tup)
 
@@ -1641,18 +1635,16 @@ func TestNbsend1(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	var tok protocol.TokenType
 	tok[0] = 15
 	tok[20] = 1
-	var bigtok [32]byte
-	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewInt64Value(4),
 		value.NewInt64Value(10),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		tok.ToIntValue(),
 	})
 
 	m.Stack().Push(tup)
@@ -1683,19 +1675,17 @@ func TestNBSendFungible(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// fungible value=10
 	var tok protocol.TokenType
 	tok[0] = 15
 	tok[20] = 0
-	var bigtok [32]byte
-	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewInt64Value(4),
 		value.NewInt64Value(7),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		tok.ToIntValue(),
 	})
 	m.Stack().Push(tup)
 
@@ -1731,19 +1721,17 @@ func TestNBSendNonFungible(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// test send of non fungible
 	var tok protocol.TokenType
 	tok[0] = 16
 	tok[20] = 1
-	var bigtok [32]byte
-	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewInt64Value(4),
 		value.NewInt64Value(7),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		tok.ToIntValue(),
 	})
 	m.Stack().Push(tup)
 
@@ -1778,19 +1766,17 @@ func TestNBSendLowBalance(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	// test send with insufficient funds
 	var tok protocol.TokenType
 	tok[0] = 17
 	tok[20] = 0
-	var bigtok [32]byte
-	copy(bigtok[:], tok[:])
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
 		value.NewInt64Value(4),
 		value.NewInt64Value(17),
-		value.NewIntValue(new(big.Int).SetBytes(bigtok[:])),
+		tok.ToIntValue(),
 	})
 	m.Stack().Push(tup)
 
@@ -1818,7 +1804,7 @@ func TestGettime(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
 
 	m.ExecuteAssertion(10, [2]uint64{5, 10})
 
