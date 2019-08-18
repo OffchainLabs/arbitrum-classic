@@ -1,19 +1,19 @@
 {
-  "compilerOptions": {
-    "target": "es5",
-    "module": "commonjs",
-    "declaration": true,
-    "outDir": "./dist",
-    "strict": true,
+    "compilerOptions": {
+        "target": "es5",
+        "module": "commonjs",
+        "declaration": true,
+        "outDir": "./dist",
+        "strict": true,
 
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "strictNullChecks": true,
-    "noImplicitThis": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "strictNullChecks": true,
+        "noImplicitThis": true,
 
-    "resolveJsonModule": true,
-    "esModuleInterop": true
-  },
-  "include": ["src/**/*.ts"]
+        "resolveJsonModule": true,
+        "esModuleInterop": true
+    },
+    "include": ["src/**/*.ts"]
 }

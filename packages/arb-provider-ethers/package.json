@@ -1,46 +1,50 @@
 {
-  "name": "arb-provider-ethers",
-  "version": "0.1.0",
-  "description": "Arbitrum provider for ethers",
-  "author": "Offchain Labs, Inc.",
-  "license": "Apache-2.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/offchainlabs/arbitrum.git",
-    "directory": "packages/arb-provider-ethers"
-  },
-  "bugs": {
-    "url": "https://github.com/offchainlabs/arbitrum/issues"
-  },
-  "homepage": "https://offchainlabs.com",
-  "scripts": {
-    "prepare": "yarn build",
-    "prepublishOnly": "yarn shrinkABI && yarn test && yarn lint",
-    "preversion": "npm run lint",
-    "shrinkABI": "node shrinkABI.js",
-    "build": "tsc",
-    "test": "jest --config jest.config.js",
-    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
-    "lint": "tslint -p tsconfig.json"
-  },
-  "dependencies": {
-    "ethers": "~4.0.28",
-    "jayson": "~2.1.2",
-    "node-fetch": "~2.3.0",
-    "promise-poller": "~1.7.0"
-  },
-  "devDependencies": {
-    "@types/jest": "^24.0.17",
-    "jest": "^24.8.0",
-    "prettier": "^1.18.2",
-    "ts-jest": "^24.0.2",
-    "tslint": "^5.18.0",
-    "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.5.3"
-  },
-  "files": [
-    "lib/**/*"
-  ]
+    "name": "arb-provider-ethers",
+    "version": "0.1.0",
+    "description": "Arbitrum provider for ethers",
+    "author": "Offchain Labs, Inc.",
+    "license": "Apache-2.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/offchainlabs/arbitrum.git",
+        "directory": "packages/arb-provider-ethers"
+    },
+    "bugs": {
+        "url": "https://github.com/offchainlabs/arbitrum/issues"
+    },
+    "homepage": "https://offchainlabs.com",
+    "scripts": {
+        "prepare": "yarn build",
+        "prepublishOnly": "yarn shrinkABI && yarn test && yarn lint",
+        "preversion": "npm run lint",
+        "shrinkABI": "node shrinkABI.js",
+        "build": "tsc",
+        "test": "jest --config jest.config.js",
+        "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "ethers": "~4.0.28",
+        "jayson": "~2.1.2",
+        "node-fetch": "~2.3.0",
+        "promise-poller": "~1.7.0"
+    },
+    "devDependencies": {
+        "@types/jest": "^24.0.17",
+        "@typescript-eslint/eslint-plugin": "^2.0.0",
+        "@typescript-eslint/parser": "^2.0.0",
+        "eslint": "^6.1.0",
+        "eslint-config-prettier": "^6.0.0",
+        "eslint-plugin-prettier": "^3.1.0",
+        "jest": "^24.8.0",
+        "jest-junit": "^7.0.0",
+        "prettier": "^1.18.2",
+        "ts-jest": "^24.0.2",
+        "typescript": "^3.5.3"
+    },
+    "files": [
+        "lib/**/*"
+    ]
 }
