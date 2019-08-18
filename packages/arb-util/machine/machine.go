@@ -1,14 +1,14 @@
 package machine
 
 import (
-	"errors"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type Context interface {
-	Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error
+	Send(message protocol.Message)
 	GetTimeBounds() value.Value
 	NotifyStep()
 	LoggedValue(value.Value)
@@ -26,8 +26,8 @@ func (m *NoContext) CanSpend(tokenType value.IntValue, currency value.IntValue) 
 	return false
 }
 
-func (m *NoContext) Send(data value.Value, tokenType value.IntValue, currency value.IntValue, dest value.IntValue) error {
-	return errors.New("can't send message outside of assertion mode")
+func (m *NoContext) Send(message protocol.Message) {
+
 }
 
 func (m *NoContext) OutMessageCount() int {
@@ -45,6 +45,8 @@ type Machine interface {
 	Hash() [32]byte
 	Clone() Machine
 
+	LastBlockReason() BlockReason
+	CanSpend(tokenType protocol.TokenType, currency *big.Int) bool
 	InboxHash() value.HashOnlyValue
 	PendingMessageCount() uint64
 	SendOnchainMessage(protocol.Message)

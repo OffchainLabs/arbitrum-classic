@@ -248,16 +248,6 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     uint256_t registerHash = ::hash(registerVal);
     uint256_t staticHash = ::hash(staticVal);
     uint256_t errHandlerHash = ::hash(errpc);
-    std::cout << "Proof of " << code[pc] << " has " << stackVals.size()
-              << " stack vals and " << auxStackVals.size() << " aux stack vals"
-              << std::endl;
-    std::cout << "pc next hash " << to_hex_str(code[pc].nextHash) << std::endl;
-    std::cout << "baseStackHash " << to_hex_str(baseStackHash) << std::endl;
-    std::cout << "baseAuxStackHash " << to_hex_str(baseAuxStackHash)
-              << std::endl;
-    std::cout << "registerHash " << to_hex_str(registerHash) << std::endl;
-    std::cout << "staticHash " << to_hex_str(staticHash) << std::endl;
-    std::cout << "errHandlerHash " << to_hex_str(errHandlerHash) << std::endl;
     uint256_t_to_buf(code[pc].nextHash, buf);
     uint256_t_to_buf(baseStackHash, buf);
     uint256_t_to_buf(baseAuxStackHash, buf);

@@ -27,6 +27,7 @@ import "C"
 
 import (
 	"bytes"
+	"math/big"
 	"runtime"
 	"unsafe"
 
@@ -63,6 +64,18 @@ func (m *Machine) Clone() machine.Machine {
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
 	return ret
+}
+
+func (m *Machine) LastBlockReason() machine.BlockReason {
+	return nil
+}
+
+func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
+	var currencyBuf bytes.Buffer
+	_ = value.NewIntValue(currency).Marshal(&currencyBuf)
+	currencyData := currencyBuf.Bytes()
+	canSpend := C.machineCanSpend(m.c, (*C.char)(unsafe.Pointer(&tokenType[0])), (*C.char)(unsafe.Pointer(&currencyData[0])))
+	return int(canSpend) != 0
 }
 
 func (m *Machine) InboxHash() value.HashOnlyValue {

@@ -28,6 +28,30 @@ typedef std::array<uint256_t, 2> TimeBounds;
 
 enum class Status { Extensive, Blocked, Halted, Error };
 
+struct NotBlocked {};
+
+struct HaltBlocked {};
+
+struct ErrorBlocked {};
+
+struct BreakpointBlocked {};
+
+struct InboxBlocked {
+    uint256_t inbox;
+};
+
+struct SendBlocked {
+    uint256_t currency;
+    TokenType tokenType;
+};
+
+using BlockReason = nonstd::variant<NotBlocked,
+                                    HaltBlocked,
+                                    ErrorBlocked,
+                                    BreakpointBlocked,
+                                    InboxBlocked,
+                                    SendBlocked>;
+
 struct AssertionContext {
     TimeBounds timeBounds;
     std::vector<Message> outMessage;
@@ -85,6 +109,7 @@ struct MachineState {
     AssertionContext context;
     MessageStack inbox;
     BalanceTracker balance;
+    BlockReason blockReason;
 
     MachineState();
 
@@ -116,6 +141,9 @@ class Machine {
     std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
     uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }
 
+    bool canSpend(const TokenType& tokType, const uint256_t& amount) const {
+        return m.balance.CanSpend(tokType, amount);
+    }
     uint256_t inboxHash() const { return ::hash(m.inbox.messages); }
 
     void sendOnchainMessage(const Message& msg);

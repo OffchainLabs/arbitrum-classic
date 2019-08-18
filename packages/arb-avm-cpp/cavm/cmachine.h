@@ -49,7 +49,7 @@ CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 void machineInboxHash(CMachine* m, void* ret);
-
+int machineCanSpend(CMachine* m, char* tokType, char* amount);
 uint64_t machinePendingMessageCount(CMachine* m);
 void machineSendOnchainMessage(CMachine* m, void* data);
 void machineDeliverOnchainMessages(CMachine* m);

@@ -80,6 +80,14 @@ void machineInboxHash(CMachine* m, void* ret) {
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 }
 
+int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
+    Machine* mach = static_cast<Machine*>(m);
+    TokenType tokType;
+    std::copy(cTokType, cTokType + 21, tokType.begin());
+    uint256_t amount = deserialize_int(cAmount);
+    return mach->canSpend(tokType, amount);
+}
+
 uint64_t machinePendingMessageCount(CMachine* m) {
     Machine* mach = static_cast<Machine*>(m);
     return mach->pendingMessageCount();
