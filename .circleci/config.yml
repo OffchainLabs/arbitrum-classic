@@ -4,6 +4,8 @@ jobs:
     docker:
       - image: offchainlabs/build-base:0.1.2
     working_directory: /home/user/arbitrum
+    environment: # environment variables for the build itself
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
       - run:
           name: Setup enviroment
@@ -11,7 +13,9 @@ jobs:
             mv /home/user/arbitrum/vconan/ /home/user/vconan/
             curl -s https://codecov.io/bash > ../codecovbash
             chmod +x ../codecovbash
+            go get gotest.tools/gotestsum
       - checkout
+      - run: mkdir -p $TEST_RESULTS # create the test results directory
 
       - restore_cache:
           keys:
@@ -40,8 +44,8 @@ jobs:
             mv /home/user/vconan/ /home/user/arbitrum/vconan/
             mv ../codecovbash codecovbash
             yarn install --cache-folder ~/.cache/yarn
-            yarn 'install:validator'
-            yarn 'install:ci'
+            yarn install:validator
+            yarn install:ci
       - save_cache:
           key: go-mod-v2-{{ checksum "packages/arb-validator/go.sum" }}
           paths:
@@ -61,7 +65,7 @@ jobs:
       - run:
           name: test arb-avm-cpp
           command: |
-            ctest .
+            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
@@ -71,7 +75,7 @@ jobs:
       - run:
           name: test arb-avm-go
           command: |
-            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             ../../codecovbash -R /home/user/arbitrum -cF arb_avm_go
           working_directory: /home/user/arbitrum/packages/arb-avm-go
       - run:
@@ -96,36 +100,47 @@ jobs:
       - run:
           name: test arb-provider-ethers
           command: |
-            yarn jest --coverage
+            yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn lint --format junit -o /tmp/test-results/arb-provider-ethers-lint.xml
             ../../codecovbash -R /home/user/arbitrum -cF arb_provider_ethers
+          environment:
+            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-ethers.xml"
           working_directory: /home/user/arbitrum/packages/arb-provider-ethers
       - run:
           name: test arb-provider-go
           command: |
-            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             ../../codecovbash -R /home/user/arbitrum -cF arb_provider_go
           working_directory: /home/user/arbitrum/packages/arb-provider-go
       - run:
           name: test arb-provider-truffle
           command: |
-            yarn jest --coverage --pass-with-no-tests
+            yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn lint --format junit -o /tmp/test-results/arb-provider-truffle-lint.xml
             ../../codecovbash -R /home/user/arbitrum -cF arb_provider_truffle
+          environment:
+            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-truffle.xml"
           working_directory: /home/user/arbitrum/packages/arb-provider-truffle
       - run:
           name: test arb-provider-web3
           command: |
-            yarn jest --coverage --pass-with-no-tests
+            yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn lint --format junit -o /tmp/test-results/arb-provider-web3-lint.xml
             ../../codecovbash -R /home/user/arbitrum -cF arb_provider_web3
+          environment:
+            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-web3.xml"
           working_directory: /home/user/arbitrum/packages/arb-provider-web3
       - run:
           name: test arb-util
           command: |
-            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             ../../codecovbash -R /home/user/arbitrum -cF arb_util
           working_directory: /home/user/arbitrum/packages/arb-util
       - run:
           name: test arb-validator
           command: |
-            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             ../../codecovbash -R /home/user/arbitrum -cF arb_validator
           working_directory: /home/user/arbitrum/packages/arb-validator
+      - store_test_results: # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: /tmp/test-results
