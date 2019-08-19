@@ -23,9 +23,10 @@
         "build": "tsc",
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-        "lint": "eslint ."
+        "lint": "eslint . src/**/*.ts tests/**/*.ts"
     },
     "dependencies": {
+        "@types/node-fetch": "^2.5.0",
         "ethers": "~4.0.28",
         "jayson": "~2.1.2",
         "node-fetch": "~2.3.0",

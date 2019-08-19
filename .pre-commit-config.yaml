@@ -30,6 +30,8 @@ repos:
       hooks:
           - id: eslint
             args: [--fix]
+            types: [text]
+            files: '\.(js|ts)$'
             additional_dependencies:
                 - "eslint@6.1.0"
                 - "@typescript-eslint/parser@2.0.0"
