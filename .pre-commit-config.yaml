@@ -29,6 +29,15 @@ repos:
       rev: "" # Use the sha / tag you want to point at
       hooks:
           - id: eslint
+            args: [--fix]
+            types: [text]
+            files: '\.(js|ts)$'
+            additional_dependencies:
+                - "eslint@6.2.0"
+                - "@typescript-eslint/parser@2.0.0"
+                - "@typescript-eslint/eslint-plugin@2.0.0"
+                - eslint-config-prettier@6.0.0
+                - eslint-plugin-prettier@3.1.0
     - repo: https://github.com/syntaqx/git-hooks
       rev: v0.0.16
       hooks:

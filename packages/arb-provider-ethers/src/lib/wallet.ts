@@ -1,18 +1,38 @@
+/*
+ * Copyright 2019, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict';
+
 import { ArbClient } from './client';
+import { Contract } from './contract';
+import { ArbProvider } from './provider';
 import * as ArbValue from './value';
 
 import * as ethers from 'ethers';
 
 export class ArbWallet extends ethers.Signer {
     public client: ArbClient;
-    public contracts: any;
-    public signer: any;
-    public provider: any;
-    public vmTracker: any;
+    public contracts: Map<string, Contract>;
+    public signer: ethers.Signer;
+    public provider: ArbProvider;
+    public vmTracker: ethers.Contract;
     public seq: ethers.utils.BigNumber;
-    public pubkey: any;
+    public pubkey?: string;
 
-    constructor(client: ArbClient, contracts: any, signer: ethers.Signer, provider: any) {
+    constructor(client: ArbClient, contracts: Map<string, Contract>, signer: ethers.Signer, provider: ArbProvider) {
         super();
         this.contracts = contracts;
         this.signer = signer;
@@ -20,10 +40,10 @@ export class ArbWallet extends ethers.Signer {
         this.client = client;
         this.vmTracker = provider.vmTracker.connect(signer);
         this.seq = ethers.utils.bigNumberify(0);
-        this.pubkey = null;
+        this.pubkey = undefined;
     }
 
-    public async initialize() {
+    public async initialize(): Promise<void> {
         if (this.seq.eq(ethers.utils.bigNumberify(0))) {
             return;
         }
@@ -40,12 +60,12 @@ export class ArbWallet extends ethers.Signer {
         });
     }
 
-    public getAddress() {
+    public getAddress(): any {
         return this.signer.getAddress();
     }
 
     public async signMessage(message: ethers.utils.Arrayish | string): Promise<string> {
-        return this.signer.signMessage;
+        return this.signer.signMessage(message);
     }
 
     public async sendTransaction(
@@ -68,23 +88,14 @@ export class ArbWallet extends ethers.Signer {
                 new ArbValue.IntValue(dest),
                 new ArbValue.IntValue(this.seq),
             ]);
-            if (!transaction.value) {
-                transaction.value = ethers.utils.bigNumberify(0); // eslint-disable-line require-atomic-updates
+            let value = ethers.utils.bigNumberify(0);
+            if (transaction.value) {
+                value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
             }
             const args = [vmId, arbMsg.hash(), transaction.value, ethers.utils.hexZeroPad('0x00', 21)];
             const messageHash = ethers.utils.solidityKeccak256(['bytes32', 'bytes32', 'uint256', 'bytes21'], args);
             const fromAddress = await this.getAddress();
-            const tx = {
-                data: transaction.data,
-                from: fromAddress,
-                gasLimit: 1,
-                gasPrice: 1,
-                hash: messageHash,
-                nonce: this.seq,
-                to: dest,
-                value: transaction.value,
-            };
-            if (ethers.utils.bigNumberify(await transaction.value).eq(0)) {
+            if (value.eq(0)) {
                 const messageHashBytes = ethers.utils.arrayify(messageHash);
                 const sig = await this.signer.signMessage(messageHashBytes);
                 if (!this.pubkey) {
@@ -96,11 +107,27 @@ export class ArbWallet extends ethers.Signer {
                 await this.client.sendMessage(arbMsg, sig, this.pubkey);
             } else {
                 const blockchainTx = await this.vmTracker.sendEthMessage(vmId, ArbValue.marshal(arbMsg), {
-                    value: transaction.value,
+                    value,
                 });
 
                 await blockchainTx.wait();
             }
+            let txData = '';
+            if (transaction.data) {
+                txData = ethers.utils.hexlify(await transaction.data);
+            }
+
+            const tx = {
+                data: txData,
+                from: fromAddress,
+                gasLimit: ethers.utils.bigNumberify(1),
+                gasPrice: ethers.utils.bigNumberify(1),
+                hash: messageHash,
+                nonce: 0,
+                to: dest,
+                value: value,
+                chainId: 123456789,
+            };
             return this.provider._wrapTransaction(tx, messageHash);
         } else {
             return this.signer.sendTransaction(transaction);

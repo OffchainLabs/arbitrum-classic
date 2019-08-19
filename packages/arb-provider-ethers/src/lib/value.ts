@@ -15,7 +15,12 @@
  */
 /* eslint-env node */
 'use strict';
+
 import * as ethers from 'ethers';
+
+function assertNever(x: never): never {
+    throw new Error('Unexpected object: ' + x);
+}
 
 // Error and Halt opcodes
 export enum OpCode {
@@ -74,10 +79,6 @@ function uBigNumToBytes(bn: ethers.utils.BigNumber): Uint8Array {
     return ethers.utils.padZeros(ethers.utils.arrayify(bn), 32);
 }
 
-// Operation identifiers
-const BASIC_OP_IMM_COUNT = 0;
-const IMM_OP_IMM_COUNT = 1;
-
 export enum OperationType {
     Basic = 0,
     Immediate = 1,
@@ -116,7 +117,7 @@ export class IntValue {
         this.bignum = ethers.utils.bigNumberify(bignum);
     }
 
-    public typeCode() {
+    public typeCode(): ValueType {
         return ValueType.Int;
     }
 
@@ -124,7 +125,7 @@ export class IntValue {
         return ethers.utils.solidityKeccak256(['uint256'], [this.bignum]);
     }
 
-    public toString() {
+    public toString(): string {
         return this.bignum.toString();
     }
 }
@@ -142,7 +143,7 @@ export class CodePointValue {
         this.nextHash = nextHash;
     }
 
-    public typeCode() {
+    public typeCode(): ValueType {
         return ValueType.CodePoint;
     }
 
@@ -201,7 +202,7 @@ export class HashOnlyValue {
         this.size = size;
     }
 
-    public typeCode(): number {
+    public typeCode(): ValueType {
         return ValueType.HashOnly;
     }
 
@@ -209,7 +210,7 @@ export class HashOnlyValue {
         return this.hashVal;
     }
 
-    public toString() {
+    public toString(): string {
         return 'HashOnlyValue(' + this.hash() + ')';
     }
 }
@@ -224,13 +225,13 @@ export class TupleValue {
             throw Error('Error TupleValue: illegal size ' + contents.length);
         }
         this.contents = contents;
-        const hashes = this.contents.map((value, _) => value.hash());
+        const hashes = this.contents.map((value): string => value.hash());
         const types = ['uint8'].concat(Array(contents.length).fill('bytes32'));
         const values: any[] = [this.typeCode()];
         this.cachedHash = ethers.utils.solidityKeccak256(types, values.concat(hashes));
     }
 
-    public typeCode(): number {
+    public typeCode(): ValueType {
         return ValueType.Tuple + this.contents.length;
     }
 
@@ -239,7 +240,7 @@ export class TupleValue {
     }
 
     // index: uint8
-    public get(index: number) {
+    public get(index: number): Value {
         if (index < 0 || index >= this.contents.length) {
             throw Error('Error TupleValue get: index out of bounds ' + index);
         }
@@ -249,7 +250,7 @@ export class TupleValue {
     // Non-mutating
     // index: uint8
     // value: *Value
-    public set(index: number, value: Value) {
+    public set(index: number, value: Value): TupleValue {
         if (index < 0 || index >= this.contents.length) {
             throw Error('Error TupleValue set: index out of bounds ' + index);
         }
@@ -258,7 +259,7 @@ export class TupleValue {
         return new TupleValue(contents);
     }
 
-    public toString() {
+    public toString(): string {
         let ret = 'Tuple([';
         ret += this.contents.map(val => val.toString()).join(', ');
         ret += '])';
@@ -339,14 +340,6 @@ export function hexToSizedByteRange(hex: ethers.utils.Arrayish): TupleValue {
     return new TupleValue([t, new IntValue(sizeBytes)]);
 }
 
-export function marshal(someValue: Value): Uint8Array {
-    return _marshalValue(new Uint8Array(), someValue);
-}
-
-function assertNever(x: never): never {
-    throw new Error('Unexpected object: ' + x);
-}
-
 function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {
     const ty = v.typeCode();
     let accTy = ethers.utils.concat([acc, intToBytes(ty, 1)]);
@@ -367,14 +360,17 @@ function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {
             intToBytes(val.op.opcode, 1),
         ]);
         switch (val.op.kind) {
-            case OperationType.Basic:
+            case OperationType.Basic: {
                 return ethers.utils.concat([packed, val.nextHash]);
-            case OperationType.Immediate:
+            }
+            case OperationType.Immediate: {
                 const op = val.op as ImmOp;
                 return ethers.utils.concat([_marshalValue(packed, op.value), val.nextHash]);
-            default:
+            }
+            default: {
                 assertNever(val.op);
                 return new Uint8Array();
+            }
         }
     } else if (ty === ValueType.HashOnly) {
         const val = v as HashOnlyValue;
@@ -392,8 +388,47 @@ function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {
     }
 }
 
-export function unmarshal(array: ethers.utils.Arrayish) {
-    return _unmarshalValue(ethers.utils.arrayify(array))[0];
+export function marshal(someValue: Value): Uint8Array {
+    return _marshalValue(new Uint8Array(), someValue);
+}
+
+function unmarshalOpCode(array: Uint8Array): [number, Uint8Array] {
+    const [head, tail] = extractBytes(array, 1);
+    const opcode = ethers.utils.bigNumberify(head).toNumber();
+    if (!VALID_OP_CODES.includes(opcode)) {
+        throw Error('Error unmarshalOpCode no such opcode: 0x' + opcode.toString(16));
+    }
+    return [opcode, tail];
+}
+
+function unmarshalOp(array: Uint8Array): [Operation, Uint8Array] {
+    let head = new Uint8Array();
+    let tail;
+    [head, tail] = extractBytes(array, 1);
+    const kind: OperationType = ethers.utils.bigNumberify(head).toNumber();
+    if (kind === OperationType.Basic) {
+        const [opcode, rest] = unmarshalOpCode(tail);
+        return [new BasicOp(opcode), rest];
+    } else if (kind === OperationType.Immediate) {
+        let opcode;
+        let value;
+        [opcode, tail] = unmarshalOpCode(tail);
+        [value, tail] = _unmarshalValue(tail);
+        return [new ImmOp(opcode, value), tail];
+    } else {
+        throw Error('Error unmarshalOp no such immCount: ' + kind);
+    }
+}
+
+function unmarshalTuple(array: Uint8Array, size: number): [Value[], Uint8Array] {
+    const contents = new Array(size);
+    let tail = array;
+    for (let i = 0; i < size; i++) {
+        let value;
+        [value, tail] = _unmarshalValue(tail);
+        contents[i] = value;
+    }
+    return [contents, tail];
 }
 
 function _unmarshalValue(array: Uint8Array): [Value, Uint8Array] {
@@ -429,41 +464,6 @@ function _unmarshalValue(array: Uint8Array): [Value, Uint8Array] {
     }
 }
 
-function unmarshalOp(array: Uint8Array): [Operation, Uint8Array] {
-    let head;
-    let tail;
-    [head, tail] = extractBytes(array, 1);
-    const kind: OperationType = ethers.utils.bigNumberify(head).toNumber();
-    if (kind === OperationType.Basic) {
-        const [opcode, rest] = unmarshalOpCode(tail);
-        return [new BasicOp(opcode), rest];
-    } else if (kind === OperationType.Immediate) {
-        let opcode;
-        let value;
-        [opcode, tail] = unmarshalOpCode(tail);
-        [value, tail] = _unmarshalValue(tail);
-        return [new ImmOp(opcode, value), tail];
-    } else {
-        throw Error('Error unmarshalOp no such immCount: ' + kind);
-    }
-}
-
-function unmarshalOpCode(array: Uint8Array): [number, Uint8Array] {
-    const [head, tail] = extractBytes(array, 1);
-    const opcode = ethers.utils.bigNumberify(head).toNumber();
-    if (!VALID_OP_CODES.includes(opcode)) {
-        throw Error('Error unmarshalOpCode no such opcode: 0x' + opcode.toString(16));
-    }
-    return [opcode, tail];
-}
-
-function unmarshalTuple(array: Uint8Array, size: number): [Value[], Uint8Array] {
-    const contents = new Array(size);
-    let tail = array;
-    for (let i = 0; i < size; i++) {
-        let value;
-        [value, tail] = _unmarshalValue(tail);
-        contents[i] = value;
-    }
-    return [contents, tail];
+export function unmarshal(array: ethers.utils.Arrayish): Value {
+    return _unmarshalValue(ethers.utils.arrayify(array))[0];
 }

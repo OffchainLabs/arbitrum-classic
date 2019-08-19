@@ -16,10 +16,11 @@
 /* eslint-env node, jest */
 'use strict';
 
-const ethers = require('ethers');
+import * as ethers from 'ethers';
+
 const utils = ethers.utils;
 import * as arb from '../src/lib/value';
-const test_cases = require('./test_cases.json');
+import testCases from './test_cases.json';
 
 // Helper shortcuts
 const bn = utils.bigNumberify;
@@ -33,42 +34,42 @@ describe('Constructors', function() {
     const nullHash = '0x' + ZEROS_32B;
 
     test('BasicOp', function() {
-        let bop = new arb.BasicOp(arb.OpCode.Halt);
+        const bop = new arb.BasicOp(arb.OpCode.Halt);
         expect(bop.opcode).toBe(arb.OpCode.Halt);
     });
 
     test('ImmOp', function() {
-        let iop = new arb.ImmOp(0x19, new arb.IntValue(utils.bigNumberify(9)));
+        const iop = new arb.ImmOp(0x19, new arb.IntValue(utils.bigNumberify(9)));
         expect(iop.opcode).toBe(0x19);
         expect((iop.value as arb.IntValue).bignum.toNumber()).toBe(9);
     });
 
     test('IntValue', function() {
-        let iv = new arb.IntValue(utils.bigNumberify(0));
+        const iv = new arb.IntValue(utils.bigNumberify(0));
         expect(iv.bignum.toNumber()).toBe(0);
         expect(iv.typeCode()).toBe(0);
     });
 
     test('CodePointValue', function() {
-        let cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash);
+        const cpv = new arb.CodePointValue(0, new arb.BasicOp(0x60), nullHash);
         expect(cpv.insnNum).toBe(0);
         expect(cpv.op.opcode).toBe(0x60);
         expect(cpv.nextHash).toBe(nullHash);
 
         // Test BasicOp hash value
-        let bopv = new arb.CodePointValue(99, new arb.BasicOp(0x60), EMPTY_TUPLE_HASH);
-        let preCalc = '0xb9cffde57db229ede25012536613c9a9f9a7cde0e5f23381350737b6818852da';
+        const bopv = new arb.CodePointValue(99, new arb.BasicOp(0x60), EMPTY_TUPLE_HASH);
+        const preCalc = '0xb9cffde57db229ede25012536613c9a9f9a7cde0e5f23381350737b6818852da';
         expect(bopv.hash()).toBe(preCalc);
 
         // Test ImmOp hash value
-        let immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)));
-        let immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH);
-        let preCalc2 = '0x9b6304f1c0d7299152b70c5097dcb370ed46668b1f09146586a333f507594619';
+        const immop = new arb.ImmOp(0x60, new arb.IntValue(bn(0)));
+        const immv = new arb.CodePointValue(100, immop, EMPTY_TUPLE_HASH);
+        const preCalc2 = '0x9b6304f1c0d7299152b70c5097dcb370ed46668b1f09146586a333f507594619';
         expect(immv.hash()).toBe(preCalc2);
     });
 
     test('HashOnlyValue', function() {
-        let hov = new arb.HashOnlyValue(nullHash, 0);
+        const hov = new arb.HashOnlyValue(nullHash, 0);
         expect(hov.hash()).toBe(nullHash);
         expect(hov.size).toBe(0);
         expect(hov.typeCode()).toBe(2);
@@ -77,14 +78,14 @@ describe('Constructors', function() {
 
 describe('TupleValue', function() {
     test('Empty', function() {
-        let emptyTuple = new arb.TupleValue([]);
+        const emptyTuple = new arb.TupleValue([]);
         expect(emptyTuple.contents).toEqual([]);
         expect(emptyTuple.typeCode()).toBe(3);
         expect(emptyTuple.hash()).toBe(EMPTY_TUPLE_HASH);
     });
 
     test('Two Tuple', function() {
-        let twoTuple = new arb.TupleValue([
+        const twoTuple = new arb.TupleValue([
             new arb.IntValue(utils.bigNumberify(0)),
             new arb.IntValue(utils.bigNumberify(100)),
         ]);
@@ -94,15 +95,14 @@ describe('TupleValue', function() {
     });
 
     test('Largest Tuple', function() {
-        let mtsv = new arb.TupleValue(Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([])));
+        const mtsv = new arb.TupleValue(Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([])));
         expect(mtsv.contents.length).toBe(arb.MAX_TUPLE_SIZE);
         for (let i = 0; i < arb.MAX_TUPLE_SIZE; i++) {
-            let valI = mtsv.get(i);
             expect((mtsv.get(i) as arb.TupleValue).contents.length).toBe(0);
         }
         expect(mtsv.typeCode()).toBe(3 + arb.MAX_TUPLE_SIZE);
         // Pre calculated hash
-        let p = '0xbfa3a3ab6c2f6c71c78354b8186a0e206a99b73b9bb6d8e6d45b733466decbf8';
+        const p = '0xbfa3a3ab6c2f6c71c78354b8186a0e206a99b73b9bb6d8e6d45b733466decbf8';
         expect(mtsv.hash()).toBe(p);
     });
 
@@ -113,7 +113,7 @@ describe('TupleValue', function() {
     });
 
     test('get and set', function() {
-        let emptyTuple = new arb.TupleValue(Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([])));
+        const emptyTuple = new arb.TupleValue(Array(arb.MAX_TUPLE_SIZE).fill(new arb.TupleValue([])));
         let t = emptyTuple;
         // set
         for (let i = 0; i < arb.MAX_TUPLE_SIZE; i++) {
@@ -140,14 +140,14 @@ describe('TupleValue', function() {
 
 describe('BigTuple', function() {
     test('getBigTuple and setBigTuple', function() {
-        let emptyBigTup = new arb.TupleValue([]);
-        expect((arb.getBigTuple(emptyBigTup, utils.bigNumberify(93)) as arb.IntValue).bignum.toNumber()).toBe(0);
-        expect((arb.getBigTuple(emptyBigTup, utils.bigNumberify(1234567890)) as arb.IntValue).bignum.eq(0)).toBe(true);
+        const emptyBigTup = new arb.TupleValue([]);
+        expect((arb.getBigTuple(emptyBigTup, 93) as arb.IntValue).bignum.toNumber()).toBe(0);
+        expect((arb.getBigTuple(emptyBigTup, 1234567890) as arb.IntValue).bignum.eq(0)).toBe(true);
 
         let t = emptyBigTup;
-        for (let i = bn(0); i.lt(100); i = i.add(1)) {
+        for (let i = 0; i < 100; i++) {
             t = arb.setBigTuple(t, i, new arb.IntValue(i));
-            expect((arb.getBigTuple(t, i) as arb.IntValue).bignum.toNumber()).toBe(i.toNumber());
+            expect((arb.getBigTuple(t, i) as arb.IntValue).bignum.toNumber()).toBe(i);
         }
     });
 });
@@ -160,11 +160,11 @@ const M_TUPLE_SIZE = 1 + 0; // Without other vals
 
 describe('Marshaling', function() {
     test('marshal and unmarshal IntValue', function() {
-        for (let i of [0, 1, 100, '0x9271342394932492394']) {
-            let iv = new arb.IntValue(bn(i));
-            let marshaledBytes = arb.marshal(iv);
+        for (const i of [0, 1, 100, '0x9271342394932492394']) {
+            const iv = new arb.IntValue(bn(i));
+            const marshaledBytes = arb.marshal(iv);
             expect(marshaledBytes.length).toBe(M_INT_VALUE_SIZE);
-            let unmarshaledValue = arb.unmarshal(marshaledBytes);
+            const unmarshaledValue = arb.unmarshal(marshaledBytes);
             expect((unmarshaledValue as arb.IntValue).bignum.eq(bn(i))).toBe(true);
         }
 
@@ -174,43 +174,43 @@ describe('Marshaling', function() {
         );
 
         // Test without "0x"
-        let iv = new arb.IntValue(bn(99));
-        let marshaledBytes = arb.marshal(iv);
+        const iv = new arb.IntValue(bn(99));
+        const marshaledBytes = arb.marshal(iv);
         expect(marshaledBytes.length).toBe(M_INT_VALUE_SIZE);
-        let unmarshaledValue = arb.unmarshal(marshaledBytes);
+        const unmarshaledValue = arb.unmarshal(marshaledBytes);
         expect((unmarshaledValue as arb.IntValue).bignum.eq(bn(99))).toBe(true);
     });
 
     test('marshal and unmarshal CodePointValue', function() {
-        let pc = 0;
-        let op = new arb.BasicOp(arb.OpCode.Halt);
-        let nextHash = '0x' + ZEROS_32B;
-        let basic_tcv = new arb.CodePointValue(pc, op, nextHash);
-        let marshaledBytes = arb.marshal(basic_tcv);
+        const pc = 0;
+        const op = new arb.BasicOp(arb.OpCode.Halt);
+        const nextHash = '0x' + ZEROS_32B;
+        const basicTCV = new arb.CodePointValue(pc, op, nextHash);
+        const marshaledBytes = arb.marshal(basicTCV);
         expect(marshaledBytes.length).toBe(M_CODE_POINT_SIZE);
-        let revValue = arb.unmarshal(marshaledBytes) as arb.CodePointValue;
+        const revValue = arb.unmarshal(marshaledBytes) as arb.CodePointValue;
         expect(revValue.insnNum).toEqual(pc);
         expect(revValue.op.opcode).toBe(op.opcode);
         expect(revValue.nextHash).toEqual(nextHash);
-        expect(revValue.toString()).toEqual(basic_tcv.toString());
+        expect(revValue.toString()).toEqual(basicTCV.toString());
 
-        let iv = new arb.IntValue(bn(60));
+        const iv = new arb.IntValue(bn(60));
         expect(arb.marshal(iv).length).toBe(M_INT_VALUE_SIZE);
-        let imm_tcv = new arb.CodePointValue(pc, new arb.ImmOp(0x19, iv), nextHash);
-        let mb = arb.marshal(imm_tcv);
+        const immTCV = new arb.CodePointValue(pc, new arb.ImmOp(0x19, iv), nextHash);
+        const mb = arb.marshal(immTCV);
         expect(mb.length).toBe(M_CODE_POINT_SIZE + M_INT_VALUE_SIZE);
-        let revImmValue = arb.unmarshal(mb) as arb.CodePointValue;
+        const revImmValue = arb.unmarshal(mb) as arb.CodePointValue;
         expect(revImmValue.insnNum).toEqual(pc);
         expect(revImmValue.op.opcode).toBe(0x19);
         expect(((revImmValue.op as arb.ImmOp).value as arb.IntValue).bignum.toNumber()).toBe(60);
         expect(revImmValue.nextHash).toEqual(nextHash);
-        expect(revImmValue.toString()).toEqual(imm_tcv.toString());
+        expect(revImmValue.toString()).toEqual(immTCV.toString());
     });
 
     test('marshal and unmarshal HashOnlyValue', function() {
         // HashOnlyValue should not be used
-        let hv = new arb.HashOnlyValue('0x' + ZEROS_32B, 0);
-        let marshaledBytes = arb.marshal(hv);
+        const hv = new arb.HashOnlyValue('0x' + ZEROS_32B, 0);
+        const marshaledBytes = arb.marshal(hv);
         expect(marshaledBytes.length).toBe(M_HASH_ONLY_SIZE);
         expect(() => arb.unmarshal(marshaledBytes)).toThrow('Error unmarshaling: HashOnlyValue was not expected');
         expect(hv.toString()).toEqual('HashOnlyValue(' + hv.hash() + ')');
@@ -218,56 +218,55 @@ describe('Marshaling', function() {
 
     test('marshal and unmarshal TupleValue', function() {
         // Empty Tuple
-        let etv = new arb.TupleValue([]);
-        let etvm = arb.marshal(etv);
+        const etv = new arb.TupleValue([]);
+        const etvm = arb.marshal(etv);
         expect(etvm.length).toBe(M_TUPLE_SIZE);
-        let etv_rev = arb.unmarshal(etvm);
-        expect(etv_rev.toString()).toEqual(etv.toString());
+        const etvRev = arb.unmarshal(etvm);
+        expect(etvRev.toString()).toEqual(etv.toString());
 
         // Full Tuple of Empty Tuple"s
-        let ftv = new arb.TupleValue(Array(8).fill(new arb.TupleValue([])));
-        let ftvm = arb.marshal(ftv);
+        const ftv = new arb.TupleValue(Array(8).fill(new arb.TupleValue([])));
+        const ftvm = arb.marshal(ftv);
         expect(ftvm.length).toBe(M_TUPLE_SIZE + M_TUPLE_SIZE * 8);
-        let ftv_rev = arb.unmarshal(ftvm);
-        expect(ftv_rev.toString()).toEqual(ftv.toString());
+        const ftvRev = arb.unmarshal(ftvm);
+        expect(ftvRev.toString()).toEqual(ftv.toString());
 
         // Full Tuple of IntValue"s
-        let fitv = new arb.TupleValue(Array(8).fill(new arb.IntValue(bn(0))));
-        let fitvm = arb.marshal(fitv);
+        const fitv = new arb.TupleValue(Array(8).fill(new arb.IntValue(bn(0))));
+        const fitvm = arb.marshal(fitv);
         expect(fitvm.length).toBe(M_TUPLE_SIZE + M_INT_VALUE_SIZE * 8);
-        let fitv_rev = arb.unmarshal(fitvm) as arb.TupleValue;
-        expect(fitv_rev.toString()).toEqual(fitv.toString());
-        expect((fitv_rev.get(0) as arb.IntValue).bignum.toNumber()).toBe(0);
-        expect((fitv_rev.get(7) as arb.IntValue).bignum.toNumber()).toBe(0);
-        expect(() => fitv_rev.get(8)).toThrow('Error TupleValue get: index out of bounds 8');
+        const fitvRev = arb.unmarshal(fitvm) as arb.TupleValue;
+        expect(fitvRev.toString()).toEqual(fitv.toString());
+        expect((fitvRev.get(0) as arb.IntValue).bignum.toNumber()).toBe(0);
+        expect((fitvRev.get(7) as arb.IntValue).bignum.toNumber()).toBe(0);
+        expect(() => fitvRev.get(8)).toThrow('Error TupleValue get: index out of bounds 8');
     });
 
     test('illegal inputs', function() {
         // Illegal Value
         expect(() => arb.unmarshal('0x99')).toThrow('Error unmarshaling value no such TYPE: 99');
 
-        let [ty_code_point, pc, erroneous_op_ty] = [
+        const [tyCodePoint, pc, erroneousOpTy] = [
             '0x01',
             Array(8)
                 .fill('00')
                 .join(''),
             'FF',
         ];
-        expect(() => arb.unmarshal(ty_code_point + pc + erroneous_op_ty)).toThrow(
+        expect(() => arb.unmarshal(tyCodePoint + pc + erroneousOpTy)).toThrow(
             'Error unmarshalOp no such immCount: 255',
         );
 
         // Illegal OpCode
-        let ILLEGAL_OP_CODE = 'FF',
-            immop: string;
-        [ty_code_point, pc, immop] = [
+        const ILLEGAL_OP_CODE = 'FF';
+        const [tyCodePoint2, pc2, immop2] = [
             '0x01',
             Array(8)
                 .fill('00')
                 .join(''),
             '00',
         ];
-        expect(() => arb.unmarshal(ty_code_point + pc + immop + ILLEGAL_OP_CODE)).toThrow(
+        expect(() => arb.unmarshal(tyCodePoint2 + pc2 + immop2 + ILLEGAL_OP_CODE)).toThrow(
             'Error unmarshalOpCode no such opcode: 0xff',
         );
 
@@ -338,11 +337,11 @@ describe('Integration', function() {
 });
 
 describe('test_cases.json', function() {
-    for (let i = 0; i < test_cases.length; i++) {
-        it(test_cases[i].name, function() {
-            let expectedHash = test_cases[i].hash;
-            let value = arb.unmarshal('0x' + test_cases[i].value);
-            let hash = value.hash().slice(2);
+    for (let i = 0; i < testCases.length; i++) {
+        it(testCases[i].name, function() {
+            const expectedHash = testCases[i].hash;
+            const value = arb.unmarshal('0x' + testCases[i].value);
+            const hash = value.hash().slice(2);
             if (hash !== expectedHash) {
                 console.log(value.toString());
             }

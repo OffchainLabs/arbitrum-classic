@@ -72,7 +72,9 @@ TEST_CASE("Value marshaling") {
             marshal_value(val, buf);
             char* valptr = (char*)&buf[0];
             auto newval = deserialize_value(valptr, pool);
-            REQUIRE(val == newval);
+            auto valsEqual = val == newval;
+            REQUIRE(valsEqual);
+            // REQUIRE(val == newval); junit output broken with map::at error
         }
     }
 }
