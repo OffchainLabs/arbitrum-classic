@@ -66,6 +66,20 @@ func (m *Machine) Clone() machine.Machine {
 	return ret
 }
 
+func (m *Machine) CurrentStatus() machine.Status {
+	cStatus := C.machineCurrentStatus(m.c)
+	switch cStatus {
+	case C.STATUS_EXTENSIVE:
+		return machine.Extensive
+	case C.STATUS_ERROR_STOP:
+		return machine.ErrorStop
+	case C.STATUS_HALT:
+		return machine.Halt
+	default:
+		panic("Unknown status")
+	}
+}
+
 func (m *Machine) LastBlockReason() machine.BlockReason {
 	cBlockReason := C.machineLastBlockReason(m.c)
 	switch cBlockReason.blockType {

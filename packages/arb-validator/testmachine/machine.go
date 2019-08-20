@@ -56,6 +56,15 @@ func (m *Machine) Clone() machine.Machine {
 	return &Machine{m.cppmachine.Clone().(*cmachine.Machine), m.gomachine.Clone().(*gomachine.Machine)}
 }
 
+func (m *Machine) CurrentStatus() machine.Status {
+	b1 := m.cppmachine.CurrentStatus()
+	b2 := m.gomachine.CurrentStatus()
+	if b1 != b2 {
+		log.Fatalln("CurrentStatus error at pc", m.gomachine.GetPC())
+	}
+	return b1
+}
+
 func (m *Machine) LastBlockReason() machine.BlockReason {
 	b1 := m.cppmachine.LastBlockReason()
 	b2 := m.gomachine.LastBlockReason()

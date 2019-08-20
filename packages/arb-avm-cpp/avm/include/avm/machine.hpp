@@ -139,6 +139,7 @@ class Machine {
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,
                   uint64_t timeBoundEnd);
+    Status currentStatus() { return m.state; }
     BlockReason lastBlockReason() { return m.blockReason; }
     uint256_t hash() const { return m.hash(); }
     std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }

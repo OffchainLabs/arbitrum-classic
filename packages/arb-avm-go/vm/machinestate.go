@@ -32,14 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type MachineStatus int
-
-const (
-	Extensive MachineStatus = iota
-	ErrorStop
-	Halt
-)
-
 type Machine struct {
 	// implements Machinestate
 	stack       stack.Stack
@@ -49,7 +41,7 @@ type Machine struct {
 	pc          *MachinePC
 	errHandler  value.CodePointValue
 	context     machine.Context
-	status      MachineStatus
+	status      machine.Status
 	blockReason machine.BlockReason
 
 	inbox   *protocol.Inbox
@@ -114,7 +106,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		pc,
 		errHandler,
 		&machine.NoContext{},
-		Extensive,
+		machine.Extensive,
 		nil,
 		inbox,
 		balance,
@@ -174,7 +166,7 @@ func (m *Machine) IncrPC() {
 	if !m.HaveSizeException() {
 		err := m.pc.IncrPC()
 		if err != nil {
-			m.status = ErrorStop
+			m.status = machine.ErrorStop
 		}
 	}
 }
@@ -205,19 +197,19 @@ func (m *Machine) SetPC(iv value.Value) error {
 }
 
 func (m *Machine) Halt() {
-	m.status = Halt
+	m.status = machine.Halt
 }
 
 func (m *Machine) ErrorStop() {
-	m.status = ErrorStop
+	m.status = machine.ErrorStop
 }
 
 func (m *Machine) IsHalted() bool {
-	return m.status == Halt
+	return m.status == machine.Halt
 }
 
 func (m *Machine) IsErrored() bool {
-	return m.status == ErrorStop
+	return m.status == machine.ErrorStop
 }
 
 func (m *Machine) HaveSizeException() bool {
@@ -234,6 +226,10 @@ func (m *Machine) checkSize() {
 
 func (m *Machine) GetSizeLimit() int64 {
 	return m.sizeLimit
+}
+
+func (m *Machine) CurrentStatus() machine.Status {
+	return m.status
 }
 
 func (m *Machine) LastBlockReason() machine.BlockReason {
@@ -297,7 +293,7 @@ func (m *Machine) Log(val value.Value) {
 
 func (m *Machine) Hash() [32]byte {
 	switch m.status {
-	case Extensive:
+	case machine.Extensive:
 		ret := [32]byte{}
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
@@ -308,9 +304,9 @@ func (m *Machine) Hash() [32]byte {
 			solsha3.Bytes32(m.errHandler.Hash()),
 		))
 		return ret
-	case ErrorStop:
+	case machine.ErrorStop:
 		return value.NewInt64Value(1).ToBytes()
-	case Halt:
+	case machine.Halt:
 		return value.NewInt64Value(0).ToBytes()
 	}
 	panic("Machine::Hash: invalid machine status")

@@ -41,10 +41,19 @@ func (m *NoContext) GetTimeBounds() value.Value {
 func (m *NoContext) NotifyStep() {
 }
 
+type Status int
+
+const (
+	Extensive Status = iota
+	ErrorStop
+	Halt
+)
+
 type Machine interface {
 	Hash() [32]byte
 	Clone() Machine
 
+	CurrentStatus() Status
 	LastBlockReason() BlockReason
 	CanSpend(tokenType protocol.TokenType, currency *big.Int) bool
 	InboxHash() value.HashOnlyValue

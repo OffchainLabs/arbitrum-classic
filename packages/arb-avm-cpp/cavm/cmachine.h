@@ -32,6 +32,12 @@ enum CBlockType {
     BLOCK_TYPE_SEND = 5,
 };
 
+typedef enum {
+    STATUS_EXTENSIVE = 0,
+    STATUS_ERROR_STOP = 1,
+    STATUS_HALT = 2,
+} CStatus;
+
 typedef struct {
     void* data;
     int length;
@@ -65,6 +71,7 @@ CMachine* machineClone(CMachine* m);
 // Ret must have 32 bytes of storage allocated for returned hash
 void machineInboxHash(CMachine* m, void* ret);
 int machineCanSpend(CMachine* m, char* tokType, char* amount);
+CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineLastBlockReason(CMachine* m);
 uint64_t machinePendingMessageCount(CMachine* m);
 void machineSendOnchainMessage(CMachine* m, void* data);

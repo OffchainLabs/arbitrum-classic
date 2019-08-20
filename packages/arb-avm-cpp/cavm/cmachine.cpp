@@ -91,6 +91,20 @@ int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
     return mach->canSpend(tokType, amount);
 }
 
+CStatus machineCurrentStatus(CMachine* m) {
+    Machine* mach = static_cast<Machine*>(m);
+    switch (mach->currentStatus()) {
+        case Status::Extensive:
+            return STATUS_EXTENSIVE;
+        case Status::Error:
+            return STATUS_ERROR_STOP;
+        case Status::Halted:
+            return STATUS_HALT;
+        default:
+            throw std::runtime_error("Bad machine status type");
+    }
+}
+
 struct ReasonConverter {
     CBlockReason operator()(const NotBlocked&) const {
         return CBlockReason{BLOCK_TYPE_NOT_BLOCKED, ByteSlice{nullptr, 0},
