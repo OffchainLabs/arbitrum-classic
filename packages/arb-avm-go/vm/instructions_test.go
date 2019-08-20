@@ -51,7 +51,7 @@ func runInstOpNoFault(m *Machine, oper value.Operation) (bool, string) {
 		return false, fmt.Sprintf("RunInstruction blocked: %#v", blockReason)
 	}
 
-	if m.status != Extensive {
+	if m.status != machine.Extensive {
 		return false, fmt.Sprintf("RunInstruction should have succeeded, but had bad status: %v", m.status)
 	}
 
@@ -67,7 +67,7 @@ func runInstWithError(m *Machine, oper value.Opcode) (bool, string) {
 		return false, fmt.Sprintf("RunInstruction blocked: %#v", blockReason)
 	}
 
-	if m.status != ErrorStop {
+	if m.status != machine.ErrorStop {
 		return false, fmt.Sprintf("RunInstruction should have errored, but had status: %v", m.status)
 	}
 
