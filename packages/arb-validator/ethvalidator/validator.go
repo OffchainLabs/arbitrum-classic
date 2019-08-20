@@ -199,12 +199,10 @@ func (val *EthValidator) StartListening() error {
 					}
 					break
 				}
-				switch parse.Event.(type) {
-				case ethbridge.VMCreatedEvent:
+				if _, ok := parse.Event.(ethbridge.VMCreatedEvent); ok {
 					val.VMCreatedTxHashChan <- parse.TxHash
-				default:
-					parsedChan <- parse
 				}
+				parsedChan <- parse
 			case event := <-val.actionChan:
 				event(val)
 			case <-errChan:

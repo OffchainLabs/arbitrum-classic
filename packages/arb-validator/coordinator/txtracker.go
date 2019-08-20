@@ -175,7 +175,6 @@ func (tr *txTracker) FindLogs(
 }
 
 func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAssertion) {
-	log.Println("Coordinator produced finalized assertion")
 	info := newAssertionInfo()
 
 	var partialHash string
@@ -206,9 +205,10 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 
 		if len(tr.assertionInfo) > 0 {
 			prev := tr.assertionInfo[len(tr.assertionInfo)-1]
-			if prop.SequenceNum == prev.SequenceNum &&
+			if prop.SequenceNum > prev.SequenceNum &&
 				prop.BeforeHash == prev.BeforeHash &&
-				prop.BeforeInbox == prev.OriginalInboxHash {
+				prop.BeforeInbox == prev.OriginalInboxHash &&
+				len(prev.LogsAccHashes) > 0 {
 				logsPreHash = prev.LogsAccHashes[len(prev.LogsAccHashes)-1]
 			}
 		}
@@ -274,7 +274,7 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		}
 
 		msg := evmVal.GetEthMsg()
-		//log.Println("Coordinator got response for", hexutil.Encode(msg.Data.TxHash[:]))
+		log.Println("Coordinator got response for", hexutil.Encode(msg.Data.TxHash[:]))
 		tr.transactions[msg.Data.TxHash] = txInfo
 	}
 	tr.assertionInfo = append(tr.assertionInfo, info)

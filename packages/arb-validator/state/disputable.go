@@ -175,6 +175,7 @@ func (bot Waiting) AttemptAssertion(ctx context.Context, request DisputableAsser
 		request.Precondition,
 		request.Assertion,
 		request.ResultChan,
+		request.ErrorChan,
 	}}
 }
 
@@ -478,6 +479,7 @@ type disputableAssertCore struct {
 	precondition *protocol.Precondition
 	assertion    *protocol.Assertion
 	resultChan   chan<- bool
+	errorChan    chan<- error
 }
 
 func (d *disputableAssertCore) SendMessageToVM(msg protocol.Message) {
@@ -497,7 +499,9 @@ func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, brid
 	switch ev := ev.(type) {
 	case ethbridge.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
-			fmt.Println("attemptingAssertion: Other Assertion got in before ours")
+			bot.errorChan <- errors.New("attemptingAssertion: Other Assertion got in before ours")
+			close(bot.errorChan)
+			close(bot.resultChan)
 			return NewWaiting(bot.Config, bot.Core).UpdateState(ev, time, bridge)
 		}
 

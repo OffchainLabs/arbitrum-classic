@@ -26,4 +26,5 @@ type DisputableAssertionRequest struct {
 	Precondition *protocol.Precondition
 	Assertion    *protocol.Assertion
 	ResultChan   chan<- bool
+	ErrorChan    chan<- error
 }

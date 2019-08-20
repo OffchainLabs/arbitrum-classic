@@ -167,6 +167,9 @@ func (m *Server) FindLogs(ctx context.Context, args *FindLogsArgs) (*FindLogsRep
 
 // SendMessage takes a request from a client and sends it to the VM
 func (m *Server) SendMessage(ctx context.Context, args *SendMessageArgs) (*SendMessageReply, error) {
+	if !<-m.coordinator.Val.Bot.CanRun() {
+		return nil, errors.New("Cannot send message when machine can't run")
+	}
 	sigBytes, err := hexutil.Decode(args.Signature)
 	if err != nil {
 		log.Printf("SendMessage: Failed to decode signature, %v\n", err)
@@ -293,6 +296,9 @@ func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfo
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
+	if !<-m.coordinator.Val.Bot.CanRun() {
+		return nil, errors.New("Cannot call when machine can't run")
+	}
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err

@@ -51,6 +51,7 @@ type Validator struct {
 	challengeBot             challenge.State
 	latestHeader             *types.Header
 	pendingDisputableRequest *state.DisputableAssertionRequest
+	isCreated                bool
 }
 
 func NewValidator(name string, address common.Address, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool, maxCallSteps int32) *Validator {
@@ -71,6 +72,7 @@ func NewValidator(name string, address common.Address, balance *protocol.Balance
 		nil,
 		nil,
 		nil,
+		false,
 	}
 }
 
@@ -78,6 +80,10 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 	resultChan := make(chan value.Value, 1)
 	errChan := make(chan error, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		if !validator.canRun() {
+			errChan <- errors.New("Cannot call when VM is not running")
+			return
+		}
 		c := validator.bot.GetCore()
 		updatedState := c.GetMachine().Clone()
 		startTime := validator.latestHeader.Number.Uint64()
@@ -155,10 +161,25 @@ func (validator *Validator) HasOpenAssertion() chan bool {
 	return resultChan
 }
 
+func (validator *Validator) canRun() bool {
+	c := validator.bot.GetCore()
+	return validator.isCreated && c.GetMachine().CurrentStatus() == machine.Extensive
+}
+
+func (validator *Validator) CanRun() chan bool {
+	resultChan := make(chan bool, 1)
+	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		resultChan <- validator.canRun()
+	}
+	return resultChan
+}
+
 func (validator *Validator) CanContinueRunning() chan bool {
 	resultChan := make(chan bool, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		if validator.latestHeader == nil {
+		if !validator.canRun() {
+			resultChan <- false
+		} else if validator.latestHeader == nil {
 			resultChan <- false
 		} else {
 			currentTime := validator.latestHeader.Number.Uint64()
@@ -187,9 +208,14 @@ func (validator *Validator) RequestVMState() <-chan VMStateData {
 	return resultChan
 }
 
-func (validator *Validator) RequestDisputableAssertion(length uint64) <-chan bool {
+func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bool, <-chan error) {
 	resultChan := make(chan bool)
+	errChan := make(chan error)
 	validator.actions <- func(validator *Validator, b bridge.Bridge) {
+		if !validator.canRun() {
+			errChan <- errors.New("Can't disputable assert when not running")
+			return
+		}
 		c := validator.bot.GetCore()
 		mClone := c.GetMachine().Clone()
 		maxSteps := validator.bot.GetConfig().VMConfig.MaxExecutionStepCount
@@ -214,6 +240,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) <-chan boo
 				Precondition: pre,
 				Assertion:    assertion,
 				ResultChan:   resultChan,
+				ErrorChan:    errChan,
 			}
 			validator.actions <- func(validator *Validator, b bridge.Bridge) {
 				validator.pendingDisputableRequest = request
@@ -221,7 +248,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) <-chan boo
 			}
 		}()
 	}
-	return resultChan
+	return resultChan, errChan
 }
 
 type unanimousUpdateRequest struct {
@@ -255,6 +282,10 @@ func (validator *Validator) InitiateUnanimousRequest(
 	errChan := make(chan error, 1)
 
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		if !validator.canRun() {
+			errChan <- errors.New("Can't unanimous assert when not running")
+			return
+		}
 		bot, ok := validator.bot.(state.Waiting)
 		if !ok {
 			errChan <- fmt.Errorf("recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.bot)
@@ -323,6 +354,10 @@ func (validator *Validator) RequestFollowUnanimous(
 	resultChan := make(chan valmessage.UnanimousUpdateResults, 1)
 	errChan := make(chan error, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+		if !validator.canRun() {
+			errChan <- errors.New("Can't unanimous assert when not running")
+			return
+		}
 		bot, ok := validator.bot.(state.Waiting)
 		if !ok {
 			errChan <- fmt.Errorf("recieved follow unanimous request, but was in the wrong state to handle it: %T", validator.bot)
@@ -490,7 +525,9 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 					if validator.pendingDisputableRequest != nil {
 						pre := validator.pendingDisputableRequest.Precondition
 						if !validator.bot.GetCore().ValidateAssertion(pre, newHeader.Number.Uint64()) {
-							validator.pendingDisputableRequest.ResultChan <- false
+							validator.pendingDisputableRequest.ErrorChan <- errors.New("Precondition was invalidated")
+							close(validator.pendingDisputableRequest.ErrorChan)
+							close(validator.pendingDisputableRequest.ResultChan)
 							validator.pendingDisputableRequest = nil
 						}
 					}
@@ -499,6 +536,8 @@ func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge b
 				switch ev := notification.Event.(type) {
 				case ethbridge.NewTimeEvent:
 					break
+				case ethbridge.VMCreatedEvent:
+					validator.isCreated = true
 				case ethbridge.VMEvent:
 					validator.eventUpdate(ev, notification.Header, bridge)
 				case ethbridge.MessageDeliveredEvent:

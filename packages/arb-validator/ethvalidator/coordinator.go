@@ -379,6 +379,9 @@ func (m *ValidatorCoordinator) Run() error {
 			case action := <-m.actions:
 				action(m)
 			case <-time.After(time.Second):
+				if !<-m.Val.Bot.CanRun() {
+					break
+				}
 				shouldUnan := false
 				forceFinal := false
 				pendingCount := <-m.Val.Bot.PendingMessageCount()
@@ -389,39 +392,41 @@ func (m *ValidatorCoordinator) Run() error {
 				} else if <-m.mpq.HasMessages() || <-m.Val.Bot.CanContinueRunning() {
 					shouldUnan = true
 				}
+				if !shouldUnan {
+					break
+				}
 
-				if shouldUnan {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
-					err := m.initiateUnanimousAssertionImpl(ctx, forceFinal, m.maxStepsUnanSteps)
-					cancel()
-					if err != nil {
-						log.Println("Coordinator hit problem unanimously asserting")
-						if <-m.Val.Bot.HasOpenAssertion() {
-							log.Println("Coordinator is closing channel")
-							closedChan, errChan := m.Val.Bot.CloseUnanimousAssertionRequest()
-							select {
-							case _ = <-closedChan:
-								log.Println("Coordinator successfully closed channel")
-							case err := <-errChan:
-								log.Println("Coordinator failed to close channel", err)
-							}
-						} else {
-							log.Println("Coordinator is creating a disputable assertion")
-							// Get the message on-chain (in the inbox)
-							// Do the disputable assertion
-							messages := <-m.mpq.Fetch()
-							for _, msg := range messages {
-								receiptChan, errChan := m.Val.ForwardMessage(context.Background(), msg.Message.Data, msg.Message.TokenType, msg.Message.Currency, msg.Signature)
-								select {
-								case _ = <-receiptChan:
-								case err := <-errChan:
-									log.Fatalln("ForwardMessage err", err)
-								}
-							}
-							m.initiateDisputableAssertionImpl()
-						}
-
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+				err := m.initiateUnanimousAssertionImpl(ctx, forceFinal, m.maxStepsUnanSteps)
+				cancel()
+				if err == nil {
+					// Assertion was successful so we are done
+					break
+				}
+				log.Println("Coordinator hit problem unanimously asserting")
+				if <-m.Val.Bot.HasOpenAssertion() {
+					log.Println("Coordinator is closing channel")
+					closedChan, errChan := m.Val.Bot.CloseUnanimousAssertionRequest()
+					select {
+					case _ = <-closedChan:
+						log.Println("Coordinator successfully closed channel")
+					case err := <-errChan:
+						log.Println("Coordinator failed to close channel", err)
 					}
+				} else {
+					log.Println("Coordinator is creating a disputable assertion")
+					// Get the message on-chain (in the inbox)
+					// Do the disputable assertion
+					messages := <-m.mpq.Fetch()
+					for _, msg := range messages {
+						receiptChan, errChan := m.Val.ForwardMessage(context.Background(), msg.Message.Data, msg.Message.TokenType, msg.Message.Currency, msg.Signature)
+						select {
+						case _ = <-receiptChan:
+						case err := <-errChan:
+							log.Fatalln("ForwardMessage err", err)
+						}
+					}
+					m.initiateDisputableAssertionImpl()
 				}
 			}
 		}
@@ -552,15 +557,16 @@ func (m *ValidatorCoordinator) createVMImpl(ctx context.Context) (*types.Receipt
 
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	start := time.Now()
-	resultChan := m.Val.Bot.RequestDisputableAssertion(10000)
-	res := <-resultChan
+	resultChan, errChan := m.Val.Bot.RequestDisputableAssertion(10000)
 
-	if res {
+	select {
+	case <-resultChan:
 		log.Printf("Coordinator made disputable assertion in %s seconds", time.Since(start))
-	} else {
-		log.Printf("Disputable assertion failed")
+		return true
+	case err := <-errChan:
+		log.Printf("Disputable assertion failed", err)
+		return false
 	}
-	return res
 }
 
 func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Context, forceFinal bool, maxSteps int32) error {
