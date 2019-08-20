@@ -123,31 +123,23 @@ this dApp, you do not need to change any Solidity files.
 1. Compile Solidity to Arbitrum:
 
     Truffle will output the compiled contract as `contract.ao` as well as a
-    `compiled.json` file needed for the frontend:
+    `compiled.json` file needed for the front-end:
 
     ```bash
-    truffle migrate --reset --compile-all --network arbitrum
-    ```
-
-    > Note: if `--compile-all` if not recognized then try `--all`
-
-    Return to the root of the Monorepo:
-
-    ```
-    cd ../..
+    truffle migrate --network arbitrum
     ```
 
 2. Deploy `contract.ao` to 3 Validators
 
     ```bash
-    ./scripts/arb_deploy.py demos/pet-shop/contract.ao 3
+    ../../scripts/arb_deploy.py contract.ao 3
     ```
 
     > Note: this step may take about 10 minutes the very first time. Subsequent
     > builds are much faster. You can also use the `--up` flag to skip builds
     > if one has completed successfully before.
 
-3. Examine the `yarn deploy contract.ao 3` output
+3. Examine the output from the previous step
 
     When pet-shop is finished being deployed, you should see output similar to this:
 
@@ -170,14 +162,7 @@ this dApp, you do not need to change any Solidity files.
 
 1. Install [Metamask](https://metamask.io/)
 
-    If you don't have Metamask already, download the extension and add it to
-    your browser and create a new account by importing the following seed phrase:
-
-    ```text
-    jar deny prosper gasp flush glass core corn alarm treat leg smart
-    ```
-
-    > If you already have Metamask installed, then open it and select
+    > Once Metamask is installed, open it and select
     > `Import Account` and enter one of the following private keys
     > derived from the mnemonic listed above:
     >
@@ -190,7 +175,7 @@ this dApp, you do not need to change any Solidity files.
     > 0x1b153b674c13af2974acbb66027fa4386b85b31cb27d159276d05e9542359f3f
     > ```
 
-    This mnemonic is the default used by `yarn deploy` and these accounts will
+    This mnemonic is the default used by `arb_deploy.py` and these accounts will
     be pre-funded.
 
 2. Select Ganache local network in Metamask
@@ -203,9 +188,9 @@ this dApp, you do not need to change any Solidity files.
     - Press the save button
     - Metamask should now have an Ganache testnet account holding ETH
 
-3. Launch the frontend
+3. Launch the front-end
 
-    In another session navigate to `demo-dapp-pet-shop` and run:
+    In another session navigate to `demos/pet-shop` and run:
 
     ```bash
     yarn start
@@ -222,22 +207,16 @@ this dApp, you do not need to change any Solidity files.
 
 ### Summary
 
-If you want to try another dapp run these steps once:
+If you want to try another dapp run, first run the following to compile the
+Solidity contract:
 
 ```bash
-git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/demo-dapp-election.git
-cd demo-dapp-election
-yarn
+cd demos/election
+truffle migrate --network arbitrum
+../../scripts/arb_deploy.py contract.ao 3
 ```
 
-and run these steps every time a change is made to the Solidity contract:
-
-```bash
-truffle migrate --reset --compile--all --network arbitrum
-yarn deploy contract.ao 3
-```
-
-Open a new command line session, navigate to `demo-dapp-election`, and run:
+Then open a new command line session, navigate to `demos/election`, and run:
 
 ```bash
 yarn start
@@ -251,9 +230,9 @@ The next step is to learn how to port an Ethereum dapp to Arbitrum.
 
 The dApp must:
 
--   Be a Truffle-based project
--   Use web3 or ethers
--   Use webpack or a similar build system
+    - Be a Truffle-based project
+    - Use web3.js or ethers.js
+    - Use webpack or a similar build system
 
 ### Overview
 
@@ -261,26 +240,26 @@ Here are the steps needed to port your dApp to Arbitrum:
 
 1. Make sure your dApp compiles and runs correctly on Ethereum or ganache
 2. Configure the Truffle project to use the Arbitrum Truffle provider (arb-provider-truffle)
-3. Add the Arbitrum frontend provider (arb-provider-web3 or arb-provider-ethers)
+3. Add the Arbitrum front-end provider (arb-provider-web3 or arb-provider-ethers)
 4. Compile your Truffle project to Arbitrum bytecode (output as contract.ao)
 5. Launch a set of Arbitrum Validators with the bytecode
-6. Launch the frontend of your dApp
+6. Launch the front-end of your dApp
+
+### Setup your workspace
+
+Move your project folder into `arbitrum/workspace/projectname` in order to pick up local versions of arbitrum packages.
 
 ### Configure Truffle
-
-First, identify if your project uses web3 or truffle. The following examples
-will use truffle. If you are using web3 just replace arb-provider-truffle with
-arb-provider-web3 for these steps:
 
 1. Add the `arb-provider-truffle` to your project:
 
     ```bash
-    yarn add https://github.com/offchainlabs/arb-provider-truffle#v0.2.0
+    yarn add arb-provider-truffle
     ```
 
 2. Edit the `truffle-config.js`:
 
-    - Import `arb-provider-truffle` and set the mnemonic at the top of the file:
+    - Import `arb-provider-truffle` and set the mnemonic at the top of the file. This mnemonic is used to set the of your contract's constructor when migrating.:
 
         ```js
         const ArbProvider = require("arb-provider-truffle");
@@ -295,7 +274,7 @@ arb-provider-web3 for these steps:
           networks: {
             arbitrum: {
               provider: function() {
-                if(typeof this.provider.prov == 'undefined') {
+                if(!this.provider.prov) {
                     this.provider.prov = ArbProvider.provider(
                       __dirname,
                       'build/contracts',
@@ -343,43 +322,46 @@ arb-provider-web3 for these steps:
     const ArbProvider = require("arb-provider-ethers");
     ```
 
-    Next, find where the ethers (or web3) provider is initialized in your code,
-    and set the provider to use Arbitrum instead. For example for ethers:
+    or
 
     ```js
-    var standardProvider = null;
-    if (window.ethereum) {
-      standardProvider = ethereum;
-      try {
-        // Request account access if needed
-        await ethereum.enable();
-      } catch (error) {
-        console.log("User denied account access")
-      }
-    } else if (window.web3) {
-      // Legacy dapp browsers...
-      standardProvider = web3.currentProvider;
-    } else {
-      // Non-dapp browsers...
-      console.log('Non-Ethereum browser detected. You should consider trying MetaMask!');
-    }
+    const ArbProvider = require("arb-provider-web3");
+    ```
+
+    Next, find where web3 (or ethers) is initialized in your code. For example:
+
+    ```js
     let standardProvider = null;
-    let contracts = require('../compiled.json');
-    let App.provider = new ArbProvider(
-      'http://localhost:1235',
-      contracts,
-      new ethers.providers.Web3Provider(standardProvider)
+    if (window.ethereum) {
+        standardProvider = ethereum;
+        try {
+            await ethereum.enable();
+        } catch (error) {
+            console.log("User denied account access");
+        }
+    } else if (window.web3) {
+        standardProvider = web3.currentProvider;
+    }
+    this.web3 = new Web3(standardProvider);
+    ```
+
+    Then set the provider to use Arbitrum instead. For example for web3.js replace the last line with:
+
+    ```js
+    let contracts = require("../compiled.json");
+    this.web3 = new Web3(
+        new ArbProvider("http://localhost:1235", contracts, standardProvider)
     );
     ```
 
-    If you are using web3 instead, then the code would look like this:
+    Or for for ethers.js use
 
     ```js
     const contracts = require("../compiled.json");
-    App.provider = await ArbProvider(
+    let provider = new ArbProvider(
         "http://localhost:1235",
         contracts,
-        new Web3.providers.HttpProvider("http://localhost:7545")
+        new ethers.providers.Web3Provider(standardProvider)
     );
     ```
 
@@ -396,20 +378,19 @@ Run the following command to generate `compiled.json` and `contract.ao`:
 truffle migrate --reset --compile-all --network arbitrum
 ```
 
-We do not need to copy the `compiled.json` file into the frontend folder because
+We do not need to copy the `compiled.json` file into the front-end folder because
 it has already been setup to correctly to retrieve the json in the previous part.
 
 ### Run the Validators
 
 ```bash
-yarn deploy contract.ao 3
+../../scripts/arb_deploy.py contract.ao 3
 ```
 
-### Run the frontend
+### Run the front-end
 
 For example the command might be:
 
 ```bash
-yarn
-start
+yarn start
 ```
