@@ -564,7 +564,7 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 		log.Printf("Coordinator made disputable assertion in %s seconds", time.Since(start))
 		return true
 	case err := <-errChan:
-		log.Printf("Disputable assertion failed", err)
+		log.Println("Disputable assertion failed", err)
 		return false
 	}
 }
