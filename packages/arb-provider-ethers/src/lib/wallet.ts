@@ -92,7 +92,7 @@ export class ArbWallet extends ethers.Signer {
             if (transaction.value) {
                 value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
             }
-            const args = [vmId, arbMsg.hash(), transaction.value, ethers.utils.hexZeroPad('0x00', 21)];
+            const args = [vmId, arbMsg.hash(), value, ethers.utils.hexZeroPad('0x00', 21)];
             const messageHash = ethers.utils.solidityKeccak256(['bytes32', 'bytes32', 'uint256', 'bytes21'], args);
             const fromAddress = await this.getAddress();
             if (value.eq(0)) {

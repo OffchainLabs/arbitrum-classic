@@ -19,8 +19,8 @@
 import * as ArbValue from './value';
 
 import * as ethers from 'ethers';
-import fetch from 'node-fetch';
 
+const fetch = require('node-fetch'); // eslint-disable-line @typescript-eslint/no-var-requires
 const jaysonBrowserClient = require('jayson/lib/client/browser'); // eslint-disable-line @typescript-eslint/no-var-requires
 
 export enum EVMCode {

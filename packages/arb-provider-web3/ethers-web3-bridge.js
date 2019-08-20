@@ -499,6 +499,7 @@ utils.defineProperty(ProviderBridge.prototype, "_sendAsync", function(
               respond(tx.hash);
             },
             function(error) {
+              console.error("eth_sendTransaction error", error);
               respondError("eth_sendTransaction error", Errors.InternalError);
             }
           );
@@ -567,6 +568,7 @@ utils.defineProperty(ProviderBridge.prototype, "_sendAsync", function(
           respond(data);
         },
         function(error) {
+          console.error("eth_call error", error);
           respondError("eth_call error", Errors.InternalError);
         }
       );
