@@ -233,7 +233,7 @@ func (cv CodePointValue) Hash() [32]byte {
 		hash := [32]byte{}
 		copy(hash[:], solsha3.SoliditySHA3(
 			solsha3.Uint8(TypeCodeCodePoint),
-			solsha3.Uint8(op.Op),
+			solsha3.Uint8(byte(op.Op)),
 			solsha3.Bytes32(op.Val.Hash()),
 			solsha3.Bytes32(cv.NextHash),
 		))
@@ -242,7 +242,7 @@ func (cv CodePointValue) Hash() [32]byte {
 		hash := [32]byte{}
 		copy(hash[:], solsha3.SoliditySHA3(
 			solsha3.Uint8(TypeCodeCodePoint),
-			solsha3.Uint8(op.Op),
+			solsha3.Uint8(byte(op.Op)),
 			solsha3.Bytes32(cv.NextHash),
 		))
 		return hash

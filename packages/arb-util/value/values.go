@@ -20,9 +20,9 @@ import "io"
 
 const (
 	TypeCodeInt       uint8 = 0
-	TypeCodeCodePoint       = 1
-	TypeCodeHashOnly        = 2
-	TypeCodeTuple           = 3
+	TypeCodeCodePoint uint8 = 1
+	TypeCodeHashOnly  uint8 = 2
+	TypeCodeTuple     uint8 = 3
 )
 
 func TypeCodeName(code uint8) string {

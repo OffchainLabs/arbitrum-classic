@@ -121,12 +121,12 @@ func NewValueBuf(val Value) *ValueBuf {
 		}
 	case CodePointValue:
 		return &ValueBuf{
-			Type:  TypeCodeCodePoint,
+			Type:  uint32(TypeCodeCodePoint),
 			Value: &ValueBuf_CodePointVal{NewCodePointBuf(val)},
 		}
 	case TupleValue:
 		return &ValueBuf{
-			Type:  TypeCodeCodePoint,
+			Type:  uint32(TypeCodeCodePoint),
 			Value: &ValueBuf_TupleVal{NewTupleBuf(val)},
 		}
 	default:
