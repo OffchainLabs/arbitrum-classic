@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/sha3"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
 type Opcode uint8
@@ -230,27 +230,22 @@ func init() {
 func (cv CodePointValue) Hash() [32]byte {
 	switch op := cv.Op.(type) {
 	case ImmediateOperation:
-		var codePointData [66]byte
-		codePointData[0] = TypeCodeCodePoint
-		codePointData[1] = byte(op.Op)
-		valHash := op.Val.Hash()
-		copy(codePointData[2:], valHash[:])
-		copy(codePointData[34:], cv.NextHash[:])
-		d := sha3.NewLegacyKeccak256()
-		d.Write(codePointData[:])
-		ret := [32]byte{}
-		d.Sum(ret[:0])
-		return ret
+		hash := [32]byte{}
+		copy(hash[:], solsha3.SoliditySHA3(
+			solsha3.Uint8(TypeCodeCodePoint),
+			solsha3.Uint8(op.Op),
+			solsha3.Bytes32(op.Val.Hash()),
+			solsha3.Bytes32(cv.NextHash),
+		))
+		return hash
 	case BasicOperation:
-		var codePointData [34]byte
-		codePointData[0] = TypeCodeCodePoint
-		codePointData[1] = byte(op.Op)
-		copy(codePointData[2:], cv.NextHash[:])
-		d := sha3.NewLegacyKeccak256()
-		d.Write(codePointData[:])
-		ret := [32]byte{}
-		d.Sum(ret[:0])
-		return ret
+		hash := [32]byte{}
+		copy(hash[:], solsha3.SoliditySHA3(
+			solsha3.Uint8(TypeCodeCodePoint),
+			solsha3.Uint8(op.Op),
+			solsha3.Bytes32(cv.NextHash),
+		))
+		return hash
 	default:
 		panic(fmt.Sprintf("Bad operation type: %T in with pc %d", op, cv.InsnNum))
 	}

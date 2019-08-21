@@ -3,14 +3,12 @@
 
 var $ = require("jquery");
 const Web3 = require("web3");
-const contract = require("truffle-contract");
 const ArbProvider = require("arb-provider-web3");
 
 require("bootstrap/dist/css/bootstrap.min.css");
 
 let App = {
   web3: null,
-  web3Provider: null,
   contracts: {},
 
   init: async function() {
@@ -36,8 +34,9 @@ let App = {
 
   initWeb3: async function() {
     // Modern dapp browsers...
+    let web3Provider = null;
     if (window.ethereum) {
-      App.web3Provider = window.ethereum;
+      web3Provider = window.ethereum;
       try {
         // Request account access
         await window.ethereum.enable();
@@ -48,13 +47,11 @@ let App = {
     }
     // Legacy dapp browsers...
     else if (window.web3) {
-      App.web3Provider = window.web3.currentProvider;
+      web3Provider = window.web3.currentProvider;
     }
     // If no injected web3 instance is detected, fall back to Ganache
     else {
-      App.web3Provider = new Web3.providers.HttpProvider(
-        "http://localhost:7545"
-      );
+      web3Provider = new Web3.providers.HttpProvider("http://localhost:7545");
     }
 
     const contracts = require("../compiled.json");
@@ -62,19 +59,19 @@ let App = {
     let provider = await ArbProvider(
       "http://localhost:1235",
       contracts,
-      App.web3Provider
+      web3Provider
     );
-    App.web3Provider = provider; // eslint-disable-line require-atomic-updates
-    App.web3 = new Web3(App.web3Provider); // eslint-disable-line require-atomic-updates
+    App.web3 = new Web3(provider); // eslint-disable-line require-atomic-updates
 
     return App.initContract();
   },
 
   initContract: function() {
     let adoption = require("../build/contracts/Adoption.json");
-    App.contracts.Adoption = contract(adoption);
-    // Set the provider for our contract
-    App.contracts.Adoption.setProvider(App.web3Provider);
+    App.contracts.Adoption = new App.web3.eth.Contract(
+      adoption.abi,
+      adoption.networks["123456789"].address
+    );
 
     // Use our contract to retrieve and mark the adopted pets
     App.markAdopted();
@@ -86,59 +83,36 @@ let App = {
     $(document).on("click", ".btn-adopt", App.handleAdopt);
   },
 
-  markAdopted: function() {
-    var adoptionInstance;
-
-    App.contracts.Adoption.deployed()
-      .then(function(instance) {
-        adoptionInstance = instance;
-
-        return adoptionInstance.getAdopters.call();
-      })
-      .then(function(adopters) {
-        for (let i = 0; i < adopters.length; i++) {
-          if (adopters[i] !== "0x0000000000000000000000000000000000000000") {
-            $(".panel-pet")
-              .eq(i)
-              .find("button")
-              .text("Success")
-              .attr("disabled", true);
-          }
+  markAdopted: async function() {
+    try {
+      let adopters = await App.contracts.Adoption.methods.getAdopters().call();
+      for (let i = 0; i < adopters.length; i++) {
+        if (adopters[i] !== "0x0000000000000000000000000000000000000000") {
+          $(".panel-pet")
+            .eq(i)
+            .find("button")
+            .text("Success")
+            .attr("disabled", true);
         }
-      })
-      .catch(function(err) {
-        console.log(err.message);
-      });
+      }
+    } catch (err) {
+      console.log(err.message);
+    }
   },
 
-  handleAdopt: function(event) {
+  handleAdopt: async function(event) {
     event.preventDefault();
-
     var petId = parseInt($(event.target).data("id"));
 
-    var adoptionInstance;
-
-    App.web3.eth.getAccounts(function(error, accounts) {
-      if (error) {
-        console.log(error);
-      }
-
-      var account = accounts[0];
-
-      App.contracts.Adoption.deployed()
-        .then(function(instance) {
-          adoptionInstance = instance;
-
-          // Execute adopt as a transaction by sending account
-          return adoptionInstance.adopt(petId, { from: account });
-        })
-        .then(function(result) {
-          return App.markAdopted();
-        })
-        .catch(function(err) {
-          console.log("Error calling adopt", err.message);
-        });
-    });
+    try {
+      let accounts = await App.web3.eth.getAccounts();
+      await App.contracts.Adoption.methods
+        .adopt(petId)
+        .send({ from: accounts[0] });
+      await App.markAdopted();
+    } catch (err) {
+      console.log("Error calling adopt", err.message);
+    }
   }
 };
 

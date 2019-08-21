@@ -44,7 +44,7 @@ export class ArbWallet extends ethers.Signer {
     }
 
     public async initialize(): Promise<void> {
-        if (this.seq.eq(ethers.utils.bigNumberify(0))) {
+        if (!this.seq.eq(ethers.utils.bigNumberify(0))) {
             return;
         }
 
@@ -60,7 +60,7 @@ export class ArbWallet extends ethers.Signer {
         });
     }
 
-    public getAddress(): any {
+    public getAddress(): Promise<string> {
         return this.signer.getAddress();
     }
 

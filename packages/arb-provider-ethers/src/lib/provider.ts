@@ -186,6 +186,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     // method is the method name (e.g. getBalance) and params is an
     // object with normalized values passed in, depending on the method
     public async perform(method: string, params: any): Promise<any> {
+        console.log('perform', method, params);
         switch (method) {
             case 'getCode': {
                 const contract = this.contracts.get(params.address.toLowerCase());
@@ -260,6 +261,13 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                 });
             }
             case 'getLogs': {
+                console.log(
+                    'getLogs',
+                    params.filter.fromBlock,
+                    params.filter.toBlock,
+                    params.filter.address,
+                    params.filter.topics,
+                );
                 return this.client.findLogs(
                     params.filter.fromBlock,
                     params.filter.toBlock,
@@ -269,7 +277,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
             }
         }
         const forwardResponse = this.provider.perform(method, params);
-        // console.log('Forwarding query to provider', method, forwardResponse);
+        console.log('Forwarding query to provider', method, forwardResponse);
         return forwardResponse;
     }
 

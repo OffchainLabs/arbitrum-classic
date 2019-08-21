@@ -22,17 +22,13 @@
     "webpack-dev-server": "~3.7.2"
   },
   "dependencies": {
-    "arb-provider-truffle": "^0.1.0",
-    "arb-provider-web3": "^0.1.0",
+    "arb-provider-truffle": "^0.2.0",
+    "arb-provider-web3": "^0.2.0",
     "bootstrap": "^3.4.1",
     "jquery": "^3.4.1",
-    "truffle-contract": "~4.0.23",
     "web3": "~1.2.1"
   },
   "workspaces": {
-    "nohoist": [
-      "web3",
-      "truffle-contract"
-    ]
+    "nohoist": []
   }
 }

@@ -388,6 +388,10 @@ utils.defineProperty(ProviderBridge.prototype, "_sendAsync", function(
     return;
   }
 
+  if (payload.method != "eth_accounts") {
+    console.log("_sendAsync", payload, callback);
+  }
+
   var self = this;
 
   if (Array.isArray(payload)) {
