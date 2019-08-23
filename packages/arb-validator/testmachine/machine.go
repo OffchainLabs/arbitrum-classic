@@ -36,11 +36,13 @@ type Machine struct {
 }
 
 func New(codeFile string, warnMode bool) (*Machine, error) {
-	gm, err := goloader.LoadMachineFromFile(codeFile, warnMode)
+	gm, gmerr := goloader.LoadMachineFromFile(codeFile, warnMode)
+	cm, cmerr := cmachine.New(codeFile)
+
 	return &Machine{
-		cmachine.New(codeFile),
+		cm,
 		gm,
-	}, err
+	}, fmt.Errorf("Go machine error: %v \ncpp machine error: %v", gmerr, cmerr)
 }
 
 func (m *Machine) Hash() [32]byte {

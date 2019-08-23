@@ -30,8 +30,7 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 	if strings.EqualFold(vmtype, "go") {
 		return goloader.LoadMachineFromFile(fileName, warnMode)
 	} else if strings.EqualFold(vmtype, "cpp") {
-		ret := cmachine.New(fileName)
-		return ret, nil
+		return cmachine.New(fileName)
 	} else if strings.EqualFold(vmtype, "test") {
 		return testmachine.New(fileName, warnMode)
 	} else {

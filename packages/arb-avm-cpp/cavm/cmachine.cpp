@@ -60,6 +60,7 @@ void machineDestroy(CMachine* m) {
 }
 
 void machineHash(CMachine* m, void* ret) {
+    assert(m);
     uint256_t retHash = static_cast<Machine*>(m)->hash();
     std::array<unsigned char, 32> val;
     to_big_endian(retHash, val.begin());
@@ -67,16 +68,19 @@ void machineHash(CMachine* m, void* ret) {
 }
 
 void* machineClone(CMachine* m) {
+    assert(m);
     Machine* mach = new Machine(*(static_cast<Machine*>(m)));
     return static_cast<void*>(mach);
 }
 
 void machinePrint(CMachine* m) {
+    assert(m);
     Machine* mach = new Machine(*(static_cast<Machine*>(m)));
     std::cout << "Machine info\n" << *mach << std::endl;
 }
 
 void machineInboxHash(CMachine* m, void* ret) {
+    assert(m);
     uint256_t retHash = static_cast<Machine*>(m)->inboxHash();
     std::array<unsigned char, 32> val;
     to_big_endian(retHash, val.begin());
@@ -84,6 +88,7 @@ void machineInboxHash(CMachine* m, void* ret) {
 }
 
 int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     TokenType tokType;
     std::copy(cTokType, cTokType + 21, tokType.begin());
@@ -157,16 +162,19 @@ struct ReasonConverter {
 };
 
 CBlockReason machineLastBlockReason(CMachine* m) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     return nonstd::visit(ReasonConverter{}, mach->lastBlockReason());
 }
 
 uint64_t machinePendingMessageCount(CMachine* m) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     return mach->pendingMessageCount();
 }
 
 void machineSendOnchainMessage(CMachine* m, void* data) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     auto dataPtr = reinterpret_cast<char*>(data);
     auto val = deserialize_value(dataPtr, mach->getPool());
@@ -179,11 +187,13 @@ void machineSendOnchainMessage(CMachine* m, void* data) {
 }
 
 void machineDeliverOnchainMessages(CMachine* m) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     mach->deliverOnchainMessages();
 }
 
 ByteSlice machineMarshallForProof(CMachine* m) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
     auto proof = mach->marshalForProof();
@@ -194,6 +204,7 @@ ByteSlice machineMarshallForProof(CMachine* m) {
 }
 
 void machineSendOffchainMessages(CMachine* m, void* rawData, int messageCount) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     std::vector<Message> messages;
     auto data = reinterpret_cast<char*>(rawData);
@@ -212,6 +223,7 @@ RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      uint64_t timeboundStart,
                                      uint64_t timeboundEnd) {
+    assert(m);
     Machine* mach = static_cast<Machine*>(m);
     Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd);
     std::vector<unsigned char> outMsgData;
