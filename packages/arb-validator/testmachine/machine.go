@@ -38,11 +38,20 @@ type Machine struct {
 func New(codeFile string, warnMode bool) (*Machine, error) {
 	gm, gmerr := goloader.LoadMachineFromFile(codeFile, warnMode)
 	cm, cmerr := cmachine.New(codeFile)
-
+	var err error
+	if gmerr != nil {
+		if cmerr != nil {
+			err = fmt.Errorf("Go machine error: %v, cpp machine error: %v ", gmerr, cmerr)
+		} else {
+			err = fmt.Errorf("Go machine error: %v", gmerr)
+		}
+	} else if cmerr != nil {
+		err = fmt.Errorf("cpp machine error: %v ", cmerr)
+	}
 	return &Machine{
 		cm,
 		gm,
-	}, fmt.Errorf("Go machine error: %v \ncpp machine error: %v", gmerr, cmerr)
+	}, err
 }
 
 func (m *Machine) Hash() [32]byte {
