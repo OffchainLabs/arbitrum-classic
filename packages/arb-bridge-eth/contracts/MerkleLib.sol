@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
+
 library MerkleLib {
     function generateAddressRoot(address[] memory _addresses) public pure returns (bytes32) {
         bytes32[] memory _hashes = new bytes32[](_addresses.length);
@@ -46,7 +47,11 @@ library MerkleLib {
         bytes32 root,
         bytes32 hash,
         uint256 index
-    ) public pure returns (bool) {
+    )
+        public
+        pure
+        returns (bool)
+    {
         // use the index to determine the node ordering
         // index ranges 1 to n
 

@@ -24,6 +24,7 @@ import "./MerkleLib.sol";
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
+
 contract VMTracker is Ownable {
     using SafeMath for uint256;
     using BytesLib for bytes;
@@ -130,6 +131,25 @@ contract VMTracker is Ownable {
         acceptedCurrencies[address(0)] = true;
     }
 
+    function ownerShutdown(bytes32 _vmId) external {
+        VM storage vm = vms[_vmId];
+        require(msg.sender == vm.owner, "Only owner can shutdown the VM");
+        _shutdownVM(_vmId);
+    }
+
+    function completeChallenge(bytes32 _vmId, address[2] calldata _players, uint128[2] calldata _rewards) external {
+        VM storage vm = vms[_vmId];
+        require(
+            msg.sender == address(challengeManagers[vm.challengeManagersNum]),
+            "Only challenge manager can complete challenge"
+        );
+        require(vm.inChallenge, "VM must be in challenge to complete it");
+
+        vm.inChallenge = false;
+        vm.validatorBalances[_players[0]] = vm.validatorBalances[_players[0]].add(_rewards[0]);
+        vm.validatorBalances[_players[1]] = vm.validatorBalances[_players[1]].add(_rewards[1]);
+    }
+
     function addChallengeManager(IChallengeManager _challengeManager) public onlyOwner {
         challengeManagers.push(_challengeManager);
     }
@@ -137,48 +157,6 @@ contract VMTracker is Ownable {
     function withinTimeBounds(uint64[2] memory _timeBounds) public view returns (bool) {
         return block.number >= _timeBounds[0] && block.number <= _timeBounds[1];
     }
-
-    function _resetDeadline(VM storage _vm) internal {
-        _vm.deadline = uint64(block.number) + _vm.gracePeriod;
-    }
-
-    function _acceptAssertion(
-        bytes32 _vmId,
-        bytes32 _afterHash,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _tokenTypeNum,
-        uint256[] memory _amounts,
-        bytes32[] memory _destinations
-    ) internal {
-        uint offset = 0;
-        bytes memory msgData;
-        VM storage vm = vms[_vmId];
-        for (uint i = 0; i < _amounts.length; i++) {
-            (offset, msgData) = ArbValue.get_next_valid_value(_messageData, offset);
-            _sendUnpaidMessage(
-                _destinations[i],
-                _tokenTypes[_tokenTypeNum[i]],
-                _amounts[i],
-                _vmId,
-                msgData
-            );
-        }
-
-        vm.machineHash = _afterHash;
-        vm.state = VMState.Waiting;
-
-        if (vm.pendingMessages != ArbValue.hashEmptyTuple()) {
-            vm.inboxHash = ArbProtocol.appendInboxMessages(vm.inboxHash, vm.pendingMessages);
-            vm.pendingMessages = ArbValue.hashEmptyTuple();
-        }
-
-        if (_afterHash == MACHINE_HALT_HASH) {
-            _shutdownVM(_vmId);
-        }
-    }
-
-
 
     // fields
     // _vmId
@@ -194,7 +172,9 @@ contract VMTracker is Ownable {
         address _escrowCurrency,
         address _owner,
         bytes memory _signatures
-    ) public {
+    )
+        public
+    {
         require(_signatures.length / 65 < 2 ** 16, "Too many validators");
         require(bytes32(bytes20(_fields[0])) != _fields[0], "Invalid vmId");
         require(_challengeManagerNum < challengeManagers.length, "Invalid challenge manager num");
@@ -262,18 +242,14 @@ contract VMTracker is Ownable {
         );
     }
 
-    function _shutdownVM(bytes32 _vmId) private {
-        // TODO: transfer all owned funds to halt address
-        delete vms[_vmId];
-    }
-
-    function ownerShutdown(bytes32 _vmId) external {
-        VM storage vm = vms[_vmId];
-        require(msg.sender == vm.owner, "Only owner can shutdown the VM");
-        _shutdownVM(_vmId);
-    }
-
-    function sendMessage(bytes32 _destination, bytes21 _tokenType, uint256 _amount, bytes memory _data) public {
+    function sendMessage(
+        bytes32 _destination,
+        bytes21 _tokenType,
+        uint256 _amount,
+        bytes memory _data
+    )
+        public
+    {
         _sendUnpaidMessage(
             _destination,
             _tokenType,
@@ -289,12 +265,14 @@ contract VMTracker is Ownable {
         uint256 _amount,
         bytes memory _data,
         bytes memory _signature
-    ) public {
+    )
+        public
+    {
         address sender = ArbProtocol.recoverAddress(
             keccak256(
                 abi.encodePacked(
                     _destination,
-                    ArbValue.deserialize_value_hash(_data),
+                    ArbValue.deserializeValueHash(_data),
                     _amount,
                     _tokenType
                 )
@@ -322,64 +300,7 @@ contract VMTracker is Ownable {
         );
     }
 
-    function _sendUnpaidMessage(
-        bytes32 _destination,
-        bytes21 _tokenType,
-        uint256 _value,
-        bytes32 _sender,
-        bytes memory _data
-    ) internal {
-        if(_tokenType[20] == 0x01) {
-            arbBalanceTracker.transferNFT(_sender, _destination, address(bytes20(_tokenType)), _value);
-        } else {
-            arbBalanceTracker.transferToken(_sender, _destination, address(bytes20(_tokenType)), _value);
-        }
-        _deliverMessage(_destination, _tokenType, _value, _sender, _data);
-    }
-
-    function _deliverMessage(
-        bytes32 _destination,
-        bytes21 _tokenType,
-        uint256 _value,
-        bytes32 _sender,
-        bytes memory _data
-    ) internal {
-        if (bytes32(bytes20(_destination)) != _destination) {
-            VM storage vm = vms[_destination];
-            bytes32 messageHash = ArbProtocol.generateSentMessageHash(
-                _destination,
-                ArbValue.deserialize_value_hash(_data),
-                _tokenType,
-                _value,
-                _sender
-            );
-            vm.pendingMessages = ArbProtocol.appendInboxPendingMessage(
-                vm.pendingMessages,
-                messageHash
-            );
-        }
-
-        emit MessageDelivered(
-            _destination,
-            _sender,
-            _tokenType,
-            _value,
-            _data
-        );
-    }
-
-    function _cancelCurrentState(VM storage vm) internal {
-        if (vm.state != VMState.Waiting) {
-            require(block.number <= vm.deadline, "Can't cancel finalized state");
-        }
-
-        if (vm.state == VMState.PendingAssertion) {
-            // If there is a pending disputable assertion, cancel it
-            vm.validatorBalances[vm.asserter] = vm.validatorBalances[vm.asserter].add(vm.escrowRequired);
-        }
-    }
-
-    struct finalizedUnanimousAssertData {
+    struct FinalizedUnanimousAssertData {
         bytes32 vmId;
         bytes32 afterHash;
         bytes32 newInbox;
@@ -405,9 +326,11 @@ contract VMTracker is Ownable {
         bytes32[] memory _messageDestination,
         bytes32 _logsAccHash,
         bytes memory _signatures
-    ) public {
+    )
+        public
+    {
         _finalizedUnanimousAssert(
-            finalizedUnanimousAssertData(
+            FinalizedUnanimousAssertData(
                 _vmId,
                 _afterHash,
                 _newInbox,
@@ -423,60 +346,6 @@ contract VMTracker is Ownable {
         );
     }
 
-    function _finalizedUnanimousAssert(finalizedUnanimousAssertData memory data) internal {
-        VM storage vm = vms[data.vmId];
-        require(vm.machineHash != MACHINE_HALT_HASH, "Can't assert halted machine");
-        require(withinTimeBounds(data.timeBounds), "Precondition: not within time bounds");
-        bytes32 unanHash = keccak256(
-            abi.encodePacked(
-                data.vmId,
-                keccak256(
-                    abi.encodePacked(
-                        keccak256(
-                            abi.encodePacked(
-                                data.newInbox,
-                                data.afterHash,
-                                data.messageData,
-                                data.messageDestination
-                            )
-                        ),
-                        data.timeBounds,
-                        vm.machineHash,
-                        vm.inboxHash,
-                        data.tokenTypes,
-                        data.messageTokenNum,
-                        data.messageAmount
-                    )
-                ),
-                data.logsAccHash
-            )
-        );
-        require(
-            MerkleLib.generateAddressRoot(
-                ArbProtocol.recoverAddresses(unanHash, data.signatures)
-            ) == vm.validatorRoot,
-            "Validator signatures don't match"
-        );
-
-        _cancelCurrentState(vm);
-        vm.state = VMState.Waiting;
-        vm.inboxHash = data.newInbox;
-        _acceptAssertion(
-            data.vmId,
-            data.afterHash,
-            data.tokenTypes,
-            data.messageData,
-            data.messageTokenNum,
-            data.messageAmount,
-            data.messageDestination
-        );
-
-        emit FinalizedUnanimousAssertion(
-            data.vmId,
-            unanHash
-        );
-    }
-
     function pendingUnanimousAssert(
         bytes32 _vmId,
         bytes32 _unanRest,
@@ -487,7 +356,9 @@ contract VMTracker is Ownable {
         uint64 _sequenceNum,
         bytes32 _logsAccHash,
         bytes memory _signatures
-    ) public {
+    )
+        public
+    {
         VM storage vm = vms[_vmId];
         require(withinTimeBounds(_timeBounds), "Precondition: not within time bounds");
         require(vm.machineHash != MACHINE_HALT_HASH, "Can't assert halted machine");
@@ -554,7 +425,7 @@ contract VMTracker is Ownable {
         );
     }
 
-    function ConfirmUnanimousAsserted(
+    function confirmUnanimousAsserted(
         bytes32 _vmId,
         bytes32 _afterHash,
         bytes32 _newInbox,
@@ -563,7 +434,9 @@ contract VMTracker is Ownable {
         uint16[] memory _messageTokenNum,
         uint256[] memory _messageAmount,
         bytes32[] memory _messageDestination
-    ) public {
+    )
+        public
+    {
         VM storage vm = vms[_vmId];
         require(vm.state == VMState.PendingUnanimous, "Can only confirm if there is a pending assertion");
         require(block.number > vm.deadline, "Can only confirm assertion whose challenge deadline has passed");
@@ -634,7 +507,9 @@ contract VMTracker is Ownable {
         uint16[] memory _messageTokenNum,
         uint256[] memory _msgAmount,
         bytes32[] memory _msgDestination
-    ) public {
+    )
+        public
+    {
         return _pendingDisputableAssert(
             PendingDisputableAssertData(
                 _fields[0],
@@ -650,6 +525,148 @@ contract VMTracker is Ownable {
                 _msgAmount,
                 _msgDestination
             )
+        );
+    }
+
+    // fields:
+    // _vmId
+    // _preconditionHash
+    // _afterHash
+    // _logsAccHash
+
+    struct ConfirmDisputableAssertedData {
+        bytes32 vmId;
+        bytes32 preconditionHash;
+        bytes32 afterHash;
+        uint32  numSteps;
+        bytes21[] tokenTypes;
+        bytes messageData;
+        uint16[] messageTokenNums;
+        uint256[] messageAmounts;
+        bytes32[] messageDestination;
+        bytes32 logsAccHash;
+    }
+
+    function confirmDisputableAsserted(
+        bytes32 _vmId,
+        bytes32 _preconditionHash,
+        bytes32 _afterHash,
+        uint32 _numSteps,
+        bytes21[] memory _tokenTypes,
+        bytes memory _messageData,
+        uint16[] memory _messageTokenNums,
+        uint256[] memory _messageAmounts,
+        bytes32[] memory _messageDestination,
+        bytes32 _logsAccHash
+    )
+        public
+    {
+        return _confirmDisputableAsserted(
+            ConfirmDisputableAssertedData(
+                _vmId,
+                _preconditionHash,
+                _afterHash,
+                _numSteps,
+                _tokenTypes,
+                _messageData,
+                _messageTokenNums,
+                _messageAmounts,
+                _messageDestination,
+                _logsAccHash
+            )
+        );
+    }
+
+    event InitiatedChallenge(
+        bytes32 indexed vmId,
+        address challenger
+    );
+
+    // fields
+    // _vmId
+    // _assertionHash
+
+    function initiateChallenge(bytes32 _vmId, bytes32 _assertPreHash) public {
+        VM storage vm = vms[_vmId];
+        require(msg.sender != vm.asserter, "Challenge was created by asserter");
+        require(block.number <= vm.deadline, "Challenge did not come before deadline");
+        require(vm.state == VMState.PendingAssertion, "Assertion must be pending to initiate challenge");
+        require(vm.escrowRequired <= vm.validatorBalances[msg.sender], "Challenger did not have enough escrowed");
+
+        require(
+            _assertPreHash == vm.pendingHash,
+            "Precondition and assertion do not match pending assertion"
+        );
+
+        vm.validatorBalances[msg.sender] = vm.validatorBalances[msg.sender].sub(vm.escrowRequired);
+        vm.pendingHash = 0;
+        vm.state = VMState.Waiting;
+        vm.inChallenge = true;
+
+        challengeManagers[vm.challengeManagersNum].initiateChallenge(
+            _vmId,
+            [vm.asserter, msg.sender],
+            [vm.escrowRequired, vm.escrowRequired],
+            vm.gracePeriod,
+            _assertPreHash
+        );
+        emit InitiatedChallenge(
+            _vmId,
+            msg.sender
+        );
+    }
+
+    function _finalizedUnanimousAssert(FinalizedUnanimousAssertData memory data) internal {
+        VM storage vm = vms[data.vmId];
+        require(vm.machineHash != MACHINE_HALT_HASH, "Can't assert halted machine");
+        require(withinTimeBounds(data.timeBounds), "Precondition: not within time bounds");
+        bytes32 unanHash = keccak256(
+            abi.encodePacked(
+                data.vmId,
+                keccak256(
+                    abi.encodePacked(
+                        keccak256(
+                            abi.encodePacked(
+                                data.newInbox,
+                                data.afterHash,
+                                data.messageData,
+                                data.messageDestination
+                            )
+                        ),
+                        data.timeBounds,
+                        vm.machineHash,
+                        vm.inboxHash,
+                        data.tokenTypes,
+                        data.messageTokenNum,
+                        data.messageAmount
+                    )
+                ),
+                data.logsAccHash
+            )
+        );
+        require(
+            MerkleLib.generateAddressRoot(
+                ArbProtocol.recoverAddresses(unanHash, data.signatures)
+            ) == vm.validatorRoot,
+            "Validator signatures don't match"
+        );
+
+        _cancelCurrentState(vm);
+        vm.state = VMState.Waiting;
+        vm.inboxHash = data.newInbox;
+        _acceptAssertion(
+            data.vmId,
+            data.afterHash,
+            data.tokenTypes,
+            data.messageData,
+            data.messageTokenNum,
+            data.messageAmount,
+            data.messageDestination
+        );
+
+        emit FinalizedUnanimousAssertion(
+            data.vmId,
+            unanHash
         );
     }
 
@@ -729,54 +746,7 @@ contract VMTracker is Ownable {
         );
     }
 
-    // fields:
-    // _vmId
-    // _preconditionHash
-    // _afterHash
-    // _logsAccHash
-
-    struct confirmDisputableAssertedData{
-        bytes32 vmId;
-        bytes32 preconditionHash;
-        bytes32 afterHash;
-        uint32  numSteps;
-        bytes21[] tokenTypes;
-        bytes messageData;
-        uint16[] messageTokenNums;
-        uint256[] messageAmounts;
-        bytes32[] messageDestination;
-        bytes32 logsAccHash;
-    }
-
-    function confirmDisputableAsserted(
-        bytes32 _vmId,
-        bytes32 _preconditionHash,
-        bytes32 _afterHash,
-        uint32 _numSteps,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        bytes32[] memory _messageDestination,
-        bytes32 _logsAccHash
-    ) public {
-        return _confirmDisputableAsserted(
-            confirmDisputableAssertedData(
-                _vmId,
-                _preconditionHash,
-                _afterHash,
-                _numSteps,
-                _tokenTypes,
-                _messageData,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestination,
-                _logsAccHash
-            )
-        );
-    }
-
-    function _confirmDisputableAsserted(confirmDisputableAssertedData memory _data) internal {
+    function _confirmDisputableAsserted(ConfirmDisputableAssertedData memory _data) internal {
         VM storage vm = vms[_data.vmId];
         require(vm.state == VMState.PendingAssertion, "VM does not have assertion pending");
         require(block.number > vm.deadline, "Assertion is still pending challenge");
@@ -825,59 +795,127 @@ contract VMTracker is Ownable {
         );
     }
 
-    event InitiatedChallenge(
-        bytes32 indexed vmId,
-        address challenger
-    );
+    function _resetDeadline(VM storage _vm) internal {
+        _vm.deadline = uint64(block.number) + _vm.gracePeriod;
+    }
 
-    // fields
-    // _vmId
-    // _assertionHash
-
-    function initiateChallenge(
+    function _acceptAssertion(
         bytes32 _vmId,
-        bytes32 _assertPreHash
-    ) public {
+        bytes32 _afterHash,
+        bytes21[] memory _tokenTypes,
+        bytes memory _messageData,
+        uint16[] memory _tokenTypeNum,
+        uint256[] memory _amounts,
+        bytes32[] memory _destinations
+    )
+        internal
+    {
+        uint offset = 0;
+        bytes memory msgData;
         VM storage vm = vms[_vmId];
-        require(msg.sender != vm.asserter, "Challenge was created by asserter");
-        require(block.number <= vm.deadline, "Challenge did not come before deadline");
-        require(vm.state == VMState.PendingAssertion, "Assertion must be pending to initiate challenge");
-        require(vm.escrowRequired <= vm.validatorBalances[msg.sender], "Challenger did not have enough escrowed");
+        for (uint i = 0; i < _amounts.length; i++) {
+            (offset, msgData) = ArbValue.getNextValidValue(_messageData, offset);
+            _sendUnpaidMessage(
+                _destinations[i],
+                _tokenTypes[_tokenTypeNum[i]],
+                _amounts[i],
+                _vmId,
+                msgData
+            );
+        }
 
-        require(
-            _assertPreHash == vm.pendingHash,
-            "Precondition and assertion do not match pending assertion"
-        );
-
-        vm.validatorBalances[msg.sender] = vm.validatorBalances[msg.sender].sub(vm.escrowRequired);
-        vm.pendingHash = 0;
+        vm.machineHash = _afterHash;
         vm.state = VMState.Waiting;
-        vm.inChallenge = true;
 
-        challengeManagers[vm.challengeManagersNum].initiateChallenge(
-            _vmId,
-            [vm.asserter, msg.sender],
-            [vm.escrowRequired, vm.escrowRequired],
-            vm.gracePeriod,
-            _assertPreHash
-        );
-        emit InitiatedChallenge(
-            _vmId,
-            msg.sender
+        if (vm.pendingMessages != ArbValue.hashEmptyTuple()) {
+            vm.inboxHash = ArbProtocol.appendInboxMessages(vm.inboxHash, vm.pendingMessages);
+            vm.pendingMessages = ArbValue.hashEmptyTuple();
+        }
+
+        if (_afterHash == MACHINE_HALT_HASH) {
+            _shutdownVM(_vmId);
+        }
+    }
+
+    function _sendUnpaidMessage(
+        bytes32 _destination,
+        bytes21 _tokenType,
+        uint256 _value,
+        bytes32 _sender,
+        bytes memory _data
+    )
+        internal
+    {
+        if (_tokenType[20] == 0x01) {
+            arbBalanceTracker.transferNFT(
+                _sender,
+                _destination,
+                address(bytes20(_tokenType)),
+                _value
+            );
+        } else {
+            arbBalanceTracker.transferToken(
+                _sender,
+                _destination,
+                address(bytes20(_tokenType)),
+                _value
+            );
+        }
+        _deliverMessage(
+            _destination,
+            _tokenType,
+            _value,
+            _sender,
+            _data
         );
     }
 
+    function _deliverMessage(
+        bytes32 _destination,
+        bytes21 _tokenType,
+        uint256 _value,
+        bytes32 _sender,
+        bytes memory _data
+    )
+        internal
+    {
+        if (bytes32(bytes20(_destination)) != _destination) {
+            VM storage vm = vms[_destination];
+            bytes32 messageHash = ArbProtocol.generateSentMessageHash(
+                _destination,
+                ArbValue.deserializeValueHash(_data),
+                _tokenType,
+                _value,
+                _sender
+            );
+            vm.pendingMessages = ArbProtocol.appendInboxPendingMessage(
+                vm.pendingMessages,
+                messageHash
+            );
+        }
 
-    function completeChallenge(bytes32 _vmId, address[2] calldata _players, uint128[2] calldata _rewards) external {
-        VM storage vm = vms[_vmId];
-        require(
-            msg.sender == address(challengeManagers[vm.challengeManagersNum]),
-            "Only challenge manager can complete challenge"
+        emit MessageDelivered(
+            _destination,
+            _sender,
+            _tokenType,
+            _value,
+            _data
         );
-        require(vm.inChallenge, "VM must be in challenge to complete it");
+    }
 
-        vm.inChallenge = false;
-        vm.validatorBalances[_players[0]] = vm.validatorBalances[_players[0]].add(_rewards[0]);
-        vm.validatorBalances[_players[1]] = vm.validatorBalances[_players[1]].add(_rewards[1]);
+    function _cancelCurrentState(VM storage vm) internal {
+        if (vm.state != VMState.Waiting) {
+            require(block.number <= vm.deadline, "Can't cancel finalized state");
+        }
+
+        if (vm.state == VMState.PendingAssertion) {
+            // If there is a pending disputable assertion, cancel it
+            vm.validatorBalances[vm.asserter] = vm.validatorBalances[vm.asserter].add(vm.escrowRequired);
+        }
+    }
+
+    function _shutdownVM(bytes32 _vmId) private {
+        // TODO: transfer all owned funds to halt address
+        delete vms[_vmId];
     }
 }

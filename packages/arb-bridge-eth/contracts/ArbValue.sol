@@ -18,23 +18,24 @@ pragma solidity ^0.5.3;
 
 import "bytes/BytesLib.sol";
 
+
 library ArbValue {
     using BytesLib for bytes;
     using ArbValue for Value;
 
-    uint8 constant IntTypeCode = 0;
-    uint8 constant CodePointCode = 1;
-    uint8 constant HashOnlyTypeCode = 2;
-    uint8 constant TupleTypeCode = 3;
-    uint8 constant ValueTypeCount = TupleTypeCode + 9;
+    uint8 constant INT_TYPECODE = 0;
+    uint8 constant CODE_POINT_TYPECODE = 1;
+    uint8 constant HASH_ONLY_TYPECODE = 2;
+    uint8 constant TUPLE_TYPECODE = 3;
+    uint8 constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
 
     function isTupleType(uint8 typeCode) private pure returns (bool) {
-        return typeCode < ValueTypeCount && typeCode >= TupleTypeCode;
+        return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
     }
 
     function typeLength(uint8 typeCode) private pure returns (uint8) {
         if (isTupleType(typeCode)) {
-            return typeCode - TupleTypeCode;
+            return typeCode - TUPLE_TYPECODE;
         } else {
             return 1;
         }
@@ -47,7 +48,7 @@ library ArbValue {
     function hashCodePointBasicValue(uint8 opcode, bytes32 nextCodePoint) public pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
-                CodePointCode,
+                CODE_POINT_TYPECODE,
                 opcode,
                 nextCodePoint
             )
@@ -58,10 +59,14 @@ library ArbValue {
         uint8 opcode,
         bytes32 immediateVal,
         bytes32 nextCodePoint
-    ) public pure returns (bytes32) {
+    )
+        public
+        pure
+        returns (bytes32)
+    {
         return keccak256(
             abi.encodePacked(
-                CodePointCode,
+                CODE_POINT_TYPECODE,
                 opcode,
                 immediateVal,
                 nextCodePoint
@@ -73,7 +78,7 @@ library ArbValue {
         bytes32[] memory hashes = new bytes32[](0);
         return keccak256(
             abi.encodePacked(
-                uint8(TupleTypeCode),
+                uint8(TUPLE_TYPECODE),
                 hashes
             )
         );
@@ -103,7 +108,6 @@ library ArbValue {
         return hashTupleValue(vals);
     }
 
-
     function hashTupleValue(Value[] memory val) private pure returns (bytes32) {
         require(val.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](val.length);
@@ -113,7 +117,7 @@ library ArbValue {
         }
         return keccak256(
             abi.encodePacked(
-                uint8(TupleTypeCode + val.length),
+                uint8(TUPLE_TYPECODE + val.length),
                 hashes
             )
         );
@@ -123,10 +127,14 @@ library ArbValue {
         bytes32 hash;
     }
 
-    function deserialize_hash_only_value(
+    function deserializeHashOnlyValue(
         bytes memory data,
         uint startOffset
-    ) internal pure returns(uint retCode, uint, HashOnlyValue memory) {
+    )
+        internal
+        pure
+        returns(uint retCode, uint, HashOnlyValue memory)
+    {
         uint offset = startOffset;
         bytes32 valHash = data.toBytes32(offset);
         offset += 32;
@@ -155,7 +163,7 @@ library ArbValue {
     }
 
     function isInt(Value memory val) internal pure returns (bool) {
-        return val.typeCode == IntTypeCode;
+        return val.typeCode == INT_TYPECODE;
     }
 
     function isTuple(Value memory val) internal pure returns (bool) {
@@ -163,12 +171,12 @@ library ArbValue {
     }
 
     function hash(Value memory val) internal pure returns (HashOnlyValue memory) {
-        require(val.typeCode < ValueTypeCount, "Invalid type code");
-        if (val.typeCode == IntTypeCode) {
+        require(val.typeCode < VALUE_TYPE_COUNT, "Invalid type code");
+        if (val.typeCode == INT_TYPECODE) {
             return HashOnlyValue(hashIntValue(val.intVal));
-        } else if (val.typeCode == HashOnlyTypeCode) {
+        } else if (val.typeCode == HASH_ONLY_TYPECODE) {
             return HashOnlyValue(bytes32(val.intVal));
-        } else if (val.typeCode >= TupleTypeCode && val.typeCode < ValueTypeCount) {
+        } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
             return HashOnlyValue(hashTupleValue(val.tupleVal));
         } else {
             assert(false);
@@ -176,7 +184,7 @@ library ArbValue {
     }
 
     function newNoneValue() internal pure returns (Value memory) {
-        return Value(0, new Value[](0), TupleTypeCode);
+        return Value(0, new Value[](0), TUPLE_TYPECODE);
     }
 
     function newBooleanValue(bool val) internal pure returns (Value memory) {
@@ -188,7 +196,7 @@ library ArbValue {
     }
 
     function newIntValue(uint256 _val) internal pure returns (Value memory) {
-        return Value(_val, new Value[](0), IntTypeCode);
+        return Value(_val, new Value[](0), INT_TYPECODE);
     }
 
     function isValidTupleSize(uint size) public pure returns (bool) {
@@ -197,7 +205,7 @@ library ArbValue {
 
     function newTupleValue(Value[] memory _val) internal pure returns (Value memory) {
         require(isValidTupleSize(_val.length), "Tuple must have valid size");
-        return Value(0, _val, uint8(TupleTypeCode + _val.length));
+        return Value(0, _val, uint8(TUPLE_TYPECODE + _val.length));
     }
 
     function newTupleHashValues(HashOnlyValue[] memory _val) internal pure returns (Value memory) {
@@ -217,26 +225,30 @@ library ArbValue {
     }
 
     function newHashOnlyValue(bytes32 _val) internal pure returns (Value memory) {
-        return Value(uint256(_val), new Value[](0), HashOnlyTypeCode);
+        return Value(uint256(_val), new Value[](0), HASH_ONLY_TYPECODE);
     }
 
-    function deserialize_int(bytes memory data, uint startOffset) internal pure returns (uint, uint256) {
+    function deserializeInt(bytes memory data, uint startOffset) internal pure returns (uint, uint256) {
         uint offset = startOffset;
         uint256 intVal = data.toUint(offset);
         offset += 32;
         return (offset, intVal);
     }
 
-    function deserialize_tuple(
+    function deserializeTuple(
         uint8 memberCount,
         bytes memory data,
         uint startOffset
-    ) internal pure returns (uint, uint, Value[] memory) {
+    )
+        internal
+        pure
+        returns (uint, uint, Value[] memory)
+    {
         uint offset = startOffset;
         uint retVal;
         Value[] memory members = new Value[](memberCount);
         for (uint8 i = 0; i < memberCount; i++) {
-            (retVal, offset, members[i]) = deserialize_value(data, offset);
+            (retVal, offset, members[i]) = deserializeValue(data, offset);
             if (retVal != 0) {
                 return (retVal, offset, members);
             }
@@ -244,53 +256,57 @@ library ArbValue {
         return (0, offset, members);
     }
 
-    function deserialize_value(
+    function deserializeValue(
         bytes memory data,
         uint startOffset
-    ) internal pure returns(uint retCode, uint, Value memory) {
+    )
+        internal
+        pure
+        returns(uint retCode, uint, Value memory)
+    {
         uint offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
-        if (valType == IntTypeCode) {
-            (offset, intVal) = deserialize_int(data, offset);
+        if (valType == INT_TYPECODE) {
+            (offset, intVal) = deserializeInt(data, offset);
             return (0, offset, newIntValue(intVal));
-        } else if (valType == HashOnlyTypeCode) {
-            (offset, intVal) = deserialize_int(data, offset);
+        } else if (valType == HASH_ONLY_TYPECODE) {
+            (offset, intVal) = deserializeInt(data, offset);
             return (0, offset, newHashOnlyValue(bytes32(intVal)));
-        } else if (valType >= TupleTypeCode && valType < ValueTypeCount) {
-            uint8 tupLength = uint8(valType - TupleTypeCode);
+        } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
+            uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
             Value[] memory tupleVal;
             uint valid;
-            (valid, offset, tupleVal) = deserialize_tuple(tupLength, data, offset);
+            (valid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
             return (valid, offset, newTupleValue(tupleVal));
         }
         return (10000 + uint(valType), 0, newIntValue(0));
     }
 
-    function deserialize_valid_value_hash(bytes memory data, uint offset) public pure returns(uint, bytes32) {
+    function deserializeValidValueHash(bytes memory data, uint offset) public pure returns(uint, bytes32) {
         uint valid;
         uint newOffset;
         Value memory value;
-        (valid, newOffset, value) = deserialize_value(data, offset);
+        (valid, newOffset, value) = deserializeValue(data, offset);
         require(valid == 0, "Marshalled value must be valid");
         return (newOffset, value.hash().hash);
     }
 
-    function get_next_valid_value(bytes memory data, uint offset) public pure returns(uint, bytes memory) {
+    function getNextValidValue(bytes memory data, uint offset) public pure returns(uint, bytes memory) {
         uint valid;
         uint nextOffset;
         Value memory value;
-        (valid, nextOffset, value) = deserialize_value(data, offset);
+        (valid, nextOffset, value) = deserializeValue(data, offset);
         require(valid == 0, "Marshalled value must be valid");
         return (nextOffset, data.slice(offset, nextOffset - offset));
     }
 
-    function deserialize_value_hash(bytes memory data) public pure returns (bytes32) {
+    function deserializeValueHash(bytes memory data) public pure returns (bytes32) {
         uint valid;
         uint offset = 0;
         Value memory value;
-        (valid, offset, value) = deserialize_value(data, 0);
+        (valid, offset, value) = deserializeValue(data, 0);
         require(valid == 0, "Marshalled value must be valid");
         return value.hash().hash;
     }

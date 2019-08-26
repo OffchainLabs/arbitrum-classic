@@ -22,6 +22,7 @@ import "./MerkleLib.sol";
 import "./ArbProtocol.sol";
 import "./OneStepProof.sol";
 
+
 contract ChallengeManager is IChallengeManager {
     enum ChallengeState {
         NoChallenge,
@@ -56,7 +57,9 @@ contract ChallengeManager is IChallengeManager {
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,
         bytes32 _challengeRoot
-    ) external {
+    )
+        external
+    {
         require(msg.sender == address(vmTracker), "Challenge must be forwarded from main contract");
         require(challenges[_vmId].challengeState == 0x00, "There must be no existing challenge");
 
@@ -95,7 +98,9 @@ contract ChallengeManager is IChallengeManager {
         bytes21[] memory _tokenTypes,
         uint256[] memory _beforeBalances,
         uint64 _deadline
-    ) public {
+    )
+        public
+    {
         require(
             _tokenTypes.length == 0 ||
             (_totalMessageAmounts.length % _tokenTypes.length == 0),
@@ -156,7 +161,6 @@ contract ChallengeManager is IChallengeManager {
         );
     }
 
-
     // bisectionFields:
     // afterHash
     // Message Bisections
@@ -183,9 +187,180 @@ contract ChallengeManager is IChallengeManager {
         uint32 stepCount;
     }
 
+    event ContinuedChallenge (
+        bytes32 indexed vmId,
+        address challenger,
+        uint assertionIndex
+    );
+
+    function continueChallenge(
+        bytes32 _vmId,
+        uint _assertionToChallenge,
+        bytes memory _proof,
+        uint64 _deadline,
+        bytes32 _bisectionRoot,
+        bytes32 _bisectionHash
+    )
+        public
+    {
+        Challenge storage challenge = challenges[_vmId];
+        require(
+            keccak256(
+                abi.encodePacked(
+                    _bisectionRoot,
+                    ChallengeState.Bisected,
+                    _deadline
+                )
+            ) == challenge.challengeState, "continueChallenge: Incorrect previous state"
+        );
+        require(block.number <= _deadline, "Challenge deadline expired");
+        require(msg.sender == challenge.players[1], "Only original challenger can continue challenge");
+        require(
+            MerkleLib.verifyProof(
+                _proof,
+                _bisectionRoot,
+                _bisectionHash,
+                _assertionToChallenge + 1
+            ),
+            "Invalid assertion selected"
+        );
+
+        challenge.challengeState = keccak256(
+            abi.encodePacked(
+                _bisectionHash,
+                ChallengeState.Challenged,
+                uint64(block.number) + uint64(challenge.challengePeriod)
+            )
+        );
+        emit ContinuedChallenge(_vmId, challenge.players[1], _assertionToChallenge);
+    }
+
+    event OneStepProofCompleted(
+        bytes32 indexed vmId,
+        address asserter,
+        bytes proof
+    );
+
+    event OneStepProofDebug(bytes32 indexed vmId, bytes32[10] proofData);
+
+    function oneStepProof(
+        bytes32 _vmId,
+        bytes32[2] memory _beforeHashAndInbox,
+        uint64[2] memory _timeBounds,
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _beforeBalances,
+        bytes32[5] memory _afterHashAndMessages,
+        uint256[] memory _amounts,
+        bytes memory _proof,
+        uint64 _deadline
+    )
+        public
+    {
+        Challenge storage challenge = challenges[_vmId];
+        require(block.number <= _deadline, "One step proof missed deadline");
+
+        require(
+            keccak256(
+                abi.encodePacked(
+                    keccak256(
+                        abi.encodePacked(
+                            ArbProtocol.generatePreconditionHash(
+                                _beforeHashAndInbox[0],
+                                _timeBounds,
+                                _beforeHashAndInbox[1],
+                                _tokenTypes,
+                                _beforeBalances
+                            ),
+                            ArbProtocol.generateAssertionHash(
+                                _afterHashAndMessages[0],
+                                1,
+                                _afterHashAndMessages[1],
+                                _afterHashAndMessages[2],
+                                _afterHashAndMessages[3],
+                                _afterHashAndMessages[4],
+                                _amounts
+                            )
+                        )
+                    ),
+                ChallengeState.Challenged,
+                _deadline
+                )
+            ) == challenge.challengeState,
+            "One step proof with invalid prev state"
+        );
+
+        uint correctProof = OneStepProof.validateProof(
+            [
+                _beforeHashAndInbox[0],
+                _beforeHashAndInbox[1],
+                _afterHashAndMessages[0],
+                _afterHashAndMessages[1],
+                _afterHashAndMessages[2],
+                _afterHashAndMessages[3],
+                _afterHashAndMessages[4]
+            ],
+            _timeBounds,
+            _tokenTypes,
+            _beforeBalances,
+            _amounts,
+            _proof
+        );
+
+        require(correctProof == 0, "Proof was incorrect");
+        _asserterWin(_vmId, challenge);
+        emit OneStepProofCompleted(_vmId, msg.sender, _proof);
+    }
+
+    event TimedOutChallenge (
+        bytes32 indexed vmId,
+        bool challengerWrong
+    );
+
+    function asserterTimedOut(bytes32 _vmId, bytes32 _rootHash, uint64 _deadline) public {
+        Challenge storage challenge = challenges[_vmId];
+        require(
+            keccak256(
+                abi.encodePacked(
+                    _rootHash,
+                    ChallengeState.Challenged,
+                    _deadline
+                )
+            ) == challenge.challengeState,
+            "Incorrect previous state"
+        );
+        require(block.number > _deadline, "Deadline hasn't expired");
+
+        _challengerWin(_vmId, challenge);
+
+        emit TimedOutChallenge(_vmId, true);
+    }
+
+    function challengerTimedOut(bytes32 _vmId, bytes32 _rootHash, uint64 _deadline) public {
+        Challenge storage challenge = challenges[_vmId];
+        require(
+            keccak256(
+                abi.encodePacked(
+                    _rootHash,
+                    ChallengeState.Bisected,
+                    _deadline
+                )
+            ) == challenge.challengeState,
+            "Incorrect previous state"
+        );
+        require(block.number > _deadline, "Deadline hasn't expired");
+
+        _asserterWin(_vmId, challenge);
+
+        emit TimedOutChallenge(_vmId, false);
+    }
+
     function generateBisectionDataImpl(
         BisectAssertionData memory _data
-    ) private pure returns (bytes32, bytes32[] memory) {
+    )
+        private
+        pure
+        returns (bytes32, bytes32[] memory)
+    {
         GenerateBisectionHashesImplFrame memory frame;
         frame.hashes = new bytes32[](_data.bisectionCount);
         frame.stepCount = _data.totalSteps / _data.bisectionCount + 1;
@@ -248,177 +423,6 @@ contract ChallengeManager is IChallengeManager {
             }
         }
         return (frame.fullHash, frame.hashes);
-    }
-
-    event ContinuedChallenge (
-        bytes32 indexed vmId,
-        address challenger,
-        uint assertionIndex
-    );
-
-    function continueChallenge(
-        bytes32 _vmId,
-        uint _assertionToChallenge,
-        bytes memory _proof,
-        uint64 _deadline,
-        bytes32 _bisectionRoot,
-        bytes32 _bisectionHash
-    ) public {
-        Challenge storage challenge = challenges[_vmId];
-        require(
-            keccak256(
-                abi.encodePacked(
-                    _bisectionRoot,
-                    ChallengeState.Bisected,
-                    _deadline
-                )
-            ) == challenge.challengeState, "continueChallenge: Incorrect previous state"
-        );
-        require(block.number <= _deadline, "Challenge deadline expired");
-        require(msg.sender == challenge.players[1], "Only original challenger can continue challenge");
-        require(
-            MerkleLib.verifyProof(
-                _proof,
-                _bisectionRoot,
-                _bisectionHash,
-                _assertionToChallenge + 1
-            ),
-            "Invalid assertion selected"
-        );
-
-        challenge.challengeState = keccak256(
-            abi.encodePacked(
-                _bisectionHash,
-                ChallengeState.Challenged,
-                uint64(block.number) + uint64(challenge.challengePeriod)
-            )
-        );
-        emit ContinuedChallenge(_vmId, challenge.players[1], _assertionToChallenge);
-    }
-
-    event OneStepProofCompleted(
-        bytes32 indexed vmId,
-        address asserter,
-        bytes proof
-    );
-
-    event OneStepProofDebug(bytes32 indexed vmId, bytes32[10] proofData);
-
-    function oneStepProof(
-        bytes32 _vmId,
-        bytes32[2] memory _beforeHashAndInbox,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances,
-        bytes32[5] memory _afterHashAndMessages,
-        uint256[] memory _amounts,
-        bytes memory _proof,
-        uint64 _deadline
-    ) public {
-        Challenge storage challenge = challenges[_vmId];
-        require(block.number <= _deadline, "One step proof missed deadline");
-
-        require(
-            keccak256(
-                abi.encodePacked(
-                    keccak256(
-                        abi.encodePacked(
-                            ArbProtocol.generatePreconditionHash(
-                                _beforeHashAndInbox[0],
-                                _timeBounds,
-                                _beforeHashAndInbox[1],
-                                _tokenTypes,
-                                _beforeBalances
-                            ),
-                            ArbProtocol.generateAssertionHash(
-                                _afterHashAndMessages[0],
-                                1,
-                                _afterHashAndMessages[1],
-                                _afterHashAndMessages[2],
-                                _afterHashAndMessages[3],
-                                _afterHashAndMessages[4],
-                                _amounts
-                            )
-                        )
-                    ),
-                ChallengeState.Challenged,
-                _deadline
-                )
-            ) == challenge.challengeState,
-            "One step proof with invalid prev state"
-        );
-
-        uint correctProof = OneStepProof.validateProof(
-            [
-                _beforeHashAndInbox[0],
-                _beforeHashAndInbox[1],
-                _afterHashAndMessages[0],
-                _afterHashAndMessages[1],
-                _afterHashAndMessages[2],
-                _afterHashAndMessages[3],
-                _afterHashAndMessages[4]
-            ],
-            _timeBounds,
-            _tokenTypes,
-            _beforeBalances,
-            _amounts,
-            _proof
-        );
-
-        require(correctProof == 0, "Proof was incorrect");
-        _asserterWin(_vmId, challenge);
-        emit OneStepProofCompleted(_vmId, msg.sender, _proof);
-    }
-
-    event TimedOutChallenge (
-        bytes32 indexed vmId,
-        bool challengerWrong
-    );
-
-    function asserterTimedOut(
-        bytes32 _vmId,
-        bytes32 _rootHash,
-        uint64 _deadline
-    ) public {
-        Challenge storage challenge = challenges[_vmId];
-        require(
-            keccak256(
-                abi.encodePacked(
-                    _rootHash,
-                    ChallengeState.Challenged,
-                    _deadline
-                )
-            ) == challenge.challengeState,
-            "Incorrect previous state"
-        );
-        require(block.number > _deadline, "Deadline hasn't expired");
-
-        _challengerWin(_vmId, challenge);
-
-        emit TimedOutChallenge(_vmId, true);
-    }
-
-    function challengerTimedOut(
-        bytes32 _vmId,
-        bytes32 _rootHash,
-        uint64 _deadline
-    ) public {
-        Challenge storage challenge = challenges[_vmId];
-        require(
-            keccak256(
-                abi.encodePacked(
-                    _rootHash,
-                    ChallengeState.Bisected,
-                    _deadline
-                )
-            ) == challenge.challengeState,
-            "Incorrect previous state"
-        );
-        require(block.number > _deadline, "Deadline hasn't expired");
-
-        _asserterWin(_vmId, challenge);
-
-        emit TimedOutChallenge(_vmId, false);
     }
 
     function _asserterWin(bytes32 _vmId, Challenge storage challenge) private {

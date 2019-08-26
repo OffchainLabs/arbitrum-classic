@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "bytes/BytesLib.sol";
 import "./ArbValue.sol";
 
+
 library ArbMachine {
 
     using BytesLib for bytes;
@@ -31,7 +32,11 @@ library ArbMachine {
     function addStackVal(
         ArbValue.HashOnlyValue memory stackVal,
         ArbValue.HashOnlyValue memory valHash
-    ) internal pure returns (ArbValue.HashOnlyValue memory) {
+    )
+        internal
+        pure
+        returns (ArbValue.HashOnlyValue memory)
+    {
         ArbValue.HashOnlyValue[] memory values = new ArbValue.HashOnlyValue[](2);
         values[0] = valHash;
         values[1] = stackVal;
@@ -58,7 +63,6 @@ library ArbMachine {
             return byte(uint8(b) + 0x57);
         }
     }
-
 
     function bytes32string(bytes32 b32) internal pure returns (string memory out) {
         bytes memory s = new bytes(64);
@@ -136,7 +140,11 @@ library ArbMachine {
         bytes32 registerHash,
         bytes32 staticHash,
         bytes32 errHandlerHash
-    ) public pure returns (bytes32) {
+    )
+        public
+        pure
+        returns (bytes32)
+    {
         return hash(
             Machine(
                 ArbValue.HashOnlyValue(instructionStackHash),
@@ -182,31 +190,31 @@ library ArbMachine {
         );
     }
 
-    function deserialize_machine(bytes memory data, uint offset) internal pure returns (uint, uint, Machine memory) {
+    function deserializeMachine(bytes memory data, uint offset) internal pure returns (uint, uint, Machine memory) {
         Machine memory m;
         m.status = MACHINE_EXTENSIVE;
         uint retVal;
-        (retVal, offset, m.instructionStackHash) = ArbValue.deserialize_hash_only_value(data, offset);
+        (retVal, offset, m.instructionStackHash) = ArbValue.deserializeHashOnlyValue(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.dataStackHash) = ArbValue.deserialize_hash_only_value(data, offset);
+        (retVal, offset, m.dataStackHash) = ArbValue.deserializeHashOnlyValue(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.auxStackHash) = ArbValue.deserialize_hash_only_value(data, offset);
+        (retVal, offset, m.auxStackHash) = ArbValue.deserializeHashOnlyValue(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.registerHash) = ArbValue.deserialize_hash_only_value(data, offset);
+        (retVal, offset, m.registerHash) = ArbValue.deserializeHashOnlyValue(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.staticHash) = ArbValue.deserialize_hash_only_value(data, offset);
+        (retVal, offset, m.staticHash) = ArbValue.deserializeHashOnlyValue(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.errHandler) = ArbValue.deserialize_hash_only_value(data, offset);
+        (retVal, offset, m.errHandler) = ArbValue.deserializeHashOnlyValue(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }

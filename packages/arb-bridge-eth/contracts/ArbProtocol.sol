@@ -18,13 +18,11 @@ pragma solidity ^0.5.3;
 
 import "./ArbValue.sol";
 
+
 library ArbProtocol {
     using ArbValue for ArbValue.Value;
 
-    function appendInboxMessages(
-        bytes32 _inboxHash,
-        bytes32 _pendingMessages
-    ) public pure returns (bytes32) {
+    function appendInboxMessages(bytes32 _inboxHash, bytes32 _pendingMessages) public pure returns (bytes32) {
         return ArbValue.hashTupleValue([
             ArbValue.newIntValue(1),
             ArbValue.newHashOnlyValue(_inboxHash),
@@ -32,10 +30,7 @@ library ArbProtocol {
         ]);
     }
 
-    function appendInboxPendingMessage(
-        bytes32 _pendingMessages,
-        bytes32 _newMessage
-    ) public pure returns (bytes32) {
+    function appendInboxPendingMessage(bytes32 _pendingMessages, bytes32 _newMessage) public pure returns (bytes32) {
         return ArbValue.hashTupleValue([
             ArbValue.newIntValue(0),
             ArbValue.newHashOnlyValue(_pendingMessages),
@@ -48,7 +43,11 @@ library ArbProtocol {
         bytes21 _tokenType,
         uint256 _value,
         bytes32 _destination
-    ) public pure returns (bytes32) {
+    )
+        public
+        pure
+        returns (bytes32)
+    {
         ArbValue.Value[] memory values = new ArbValue.Value[](4);
         values[0] = ArbValue.newHashOnlyValue(_data);
         values[1] = ArbValue.newIntValue(uint256(_destination));
@@ -63,7 +62,11 @@ library ArbProtocol {
         bytes21 _tokenType,
         uint256 _value,
         bytes32 _sender
-    ) public view returns (bytes32) {
+    )
+        public
+        view
+        returns (bytes32)
+    {
         bytes32 txHash = keccak256(
             abi.encodePacked(
                 _dest,
@@ -92,7 +95,11 @@ library ArbProtocol {
         bytes32 _beforeInbox,
         bytes21[] memory _tokenTypes,
         uint256[] memory _beforeBalances
-    ) public pure returns (bytes32) {
+    )
+        public
+        pure
+        returns (bytes32)
+    {
         return keccak256(
             abi.encodePacked(
                 _beforeHash,
@@ -113,7 +120,11 @@ library ArbProtocol {
         bytes32 _firstLogHash,
         bytes32 _lastLogHash,
         uint256[] memory _totalMessageValueAmounts
-    ) public pure returns (bytes32) {
+    )
+        public
+        pure
+        returns (bytes32)
+    {
         return keccak256(
             abi.encodePacked(
                 _afterHash,
@@ -142,7 +153,11 @@ library ArbProtocol {
         uint16[] memory _messageTokenNum,
         uint256[] memory _messageAmount,
         bytes32[] memory _messageDestination
-    ) public pure returns(bytes32) {
+    )
+        public
+        pure
+        returns(bytes32)
+    {
         return keccak256(
             abi.encodePacked(
                 _fields,
@@ -160,7 +175,11 @@ library ArbProtocol {
         bytes21[] memory _tokenTypes,
         uint16[] memory _messageTokenNums,
         uint256[] memory _messageAmounts
-    ) public pure returns(uint256[] memory) {
+    )
+        public
+        pure
+        returns(uint256[] memory)
+    {
         uint256[] memory beforeBalances = new uint256[](_tokenTypes.length);
         for (uint i = 0; i < _messageTokenNums.length; i++) {
             if (_tokenTypes[_messageTokenNums[i]][20] == 0) {
@@ -180,14 +199,18 @@ library ArbProtocol {
         uint16[] memory _messageTokenNum,
         uint256[] memory _messageAmount,
         bytes32[] memory _messageDestination
-    ) public pure returns (bytes32) {
+    )
+        public
+        pure
+        returns (bytes32)
+    {
         require(_messageAmount.length == _messageDestination.length, "Input size mismatch");
         require(_messageAmount.length == _messageTokenNum.length, "Input size mismatch");
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;
         for (uint i = 0; i < _messageAmount.length; i++) {
-            (offset, msgHash) = ArbValue.deserialize_valid_value_hash(_messageData, offset);
+            (offset, msgHash) = ArbValue.deserializeValidValueHash(_messageData, offset);
             msgHash = generateMessageStubHash(
                 msgHash,
                 _tokenTypes[_messageTokenNum[i]],
@@ -204,7 +227,11 @@ library ArbProtocol {
         uint16[] memory _messageTokenNum,
         uint256[] memory _messageValueAmounts,
         bytes32[] memory _messageDestination
-    ) public pure returns (bytes32) {
+    )
+        public
+        pure
+        returns (bytes32)
+    {
         require(_messageDataHashes.length == _messageTokenNum.length, "Input size mismatch");
         require(_messageDataHashes.length == _messageValueAmounts.length, "Input size mismatch");
         require(_messageDataHashes.length == _messageDestination.length, "Input size mismatch");
@@ -225,7 +252,11 @@ library ArbProtocol {
     function parseSignature(
         bytes memory _signatures,
         uint _pos
-    ) public pure returns (uint8 v, bytes32 r, bytes32 s) {
+    )
+        public
+        pure
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
         uint offset = _pos * 65;
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
@@ -241,7 +272,9 @@ library ArbProtocol {
             v := and(mload(add(_signatures, add(65, offset))), 0xff)
         }
 
-        if (v < 27) v += 27;
+        if (v < 27) {
+            v += 27;
+        }
 
         require(v == 27 || v == 28, "Incorrect v value");
     }
@@ -259,7 +292,11 @@ library ArbProtocol {
     function recoverAddresses(
         bytes32 _messageHash,
         bytes memory _signatures
-    ) public pure returns (address[] memory) {
+    )
+        public
+        pure
+        returns (address[] memory)
+    {
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -269,7 +306,12 @@ library ArbProtocol {
         bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
         for (uint i = 0; i < count; i++) {
             (v, r, s) = parseSignature(_signatures, i);
-            addresses[i] = ecrecover(prefixedHash, v, r, s);
+            addresses[i] = ecrecover(
+                prefixedHash,
+                v,
+                r,
+                s
+            );
         }
         return addresses;
     }
@@ -280,13 +322,22 @@ library ArbProtocol {
     function recoverAddress(
         bytes32 _messageHash,
         bytes memory _signature
-    ) public pure returns (address) {
+    )
+        public
+        pure
+        returns (address)
+    {
         uint8 v;
         bytes32 r;
         bytes32 s;
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
         (v, r, s) = parseSignature(_signature, 0);
-        return ecrecover(prefixedHash, v, r, s);
+        return ecrecover(
+            prefixedHash,
+            v,
+            r,
+            s
+        );
     }
 }
