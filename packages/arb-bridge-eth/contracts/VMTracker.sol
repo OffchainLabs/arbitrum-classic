@@ -22,7 +22,7 @@ import "./IChallengeManager.sol";
 import "./ArbBalanceTracker.sol";
 import "./MerkleLib.sol";
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
 contract VMTracker is Ownable {

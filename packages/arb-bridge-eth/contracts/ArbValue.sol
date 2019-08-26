@@ -264,6 +264,7 @@ library ArbValue {
         pure
         returns(uint retCode, uint, Value memory)
     {
+        require(startOffset < data.length, "Data offset out of bounds");
         uint offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;

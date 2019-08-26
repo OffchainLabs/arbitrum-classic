@@ -32,6 +32,7 @@ module.exports = {
       // provider: ganache.provider()
     }
   },
+  plugins: ["truffle-security"],
   compilers: {
     solc: {
       version: "0.5.3",
