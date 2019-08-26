@@ -36,9 +36,20 @@ type Machine struct {
 }
 
 func New(codeFile string, warnMode bool) (*Machine, error) {
-	gm, err := goloader.LoadMachineFromFile(codeFile, warnMode)
+	gm, gmerr := goloader.LoadMachineFromFile(codeFile, warnMode)
+	cm, cmerr := cmachine.New(codeFile)
+	var err error
+	if gmerr != nil {
+		if cmerr != nil {
+			err = fmt.Errorf("Go machine error: %v, cpp machine error: %v ", gmerr, cmerr)
+		} else {
+			err = fmt.Errorf("Go machine error: %v", gmerr)
+		}
+	} else if cmerr != nil {
+		err = fmt.Errorf("cpp machine error: %v ", cmerr)
+	}
 	return &Machine{
-		cmachine.New(codeFile),
+		cm,
 		gm,
 	}, err
 }

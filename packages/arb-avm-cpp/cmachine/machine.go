@@ -27,6 +27,7 @@ import "C"
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -40,14 +41,17 @@ type Machine struct {
 	c unsafe.Pointer
 }
 
-func New(codeFile string) *Machine {
+func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
 
 	cMachine := C.machineCreate(cFilename)
+	if cMachine == nil {
+		return nil, fmt.Errorf("error loading machine %v", codeFile)
+	}
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
 	C.free(unsafe.Pointer(cFilename))
-	return ret
+	return ret, nil
 }
 
 func cdestroyVM(cMachine *Machine) {
