@@ -21,14 +21,17 @@ import "./ArbValue.sol";
 
 library ArbMachine {
 
-	using BytesLib for bytes;
-	using ArbValue for ArbValue.Value;
+    using BytesLib for bytes;
+    using ArbValue for ArbValue.Value;
 
     uint constant MACHINE_EXTENSIVE = uint(0);
     uint constant MACHINE_ERRORSTOP = uint(1);
     uint constant MACHINE_HALT = uint(2);
 
-	function addStackVal(ArbValue.HashOnlyValue memory stackVal, ArbValue.HashOnlyValue memory valHash) internal pure returns (ArbValue.HashOnlyValue memory) {
+    function addStackVal(
+        ArbValue.HashOnlyValue memory stackVal,
+        ArbValue.HashOnlyValue memory valHash
+    ) internal pure returns (ArbValue.HashOnlyValue memory) {
         ArbValue.HashOnlyValue[] memory values = new ArbValue.HashOnlyValue[](2);
         values[0] = valHash;
         values[1] = stackVal;
@@ -49,8 +52,11 @@ library ArbMachine {
     }
 
     function char(byte b) internal pure returns (byte c) {
-        if (uint8(b) < 10) return byte(uint8(b) + 0x30);
-        else return byte(uint8(b) + 0x57);
+        if (uint8(b) < 10) {
+            return byte(uint8(b) + 0x30);
+        } else {
+            return byte(uint8(b) + 0x57);
+        }
     }
 
 
@@ -69,21 +75,23 @@ library ArbMachine {
     }
 
     function toString(Machine memory machine) internal pure returns (string memory) {
-        return string(abi.encodePacked(
-            "Machine(",
-            bytes32string(machine.instructionStackHash.hash),
-            ", ",
-            bytes32string(machine.dataStackHash.hash),
-            ", ",
-            bytes32string(machine.auxStackHash.hash),
-            ", ",
-            bytes32string(machine.registerHash.hash),
-            ", ",
-            bytes32string(machine.staticHash.hash),
-            ", ",
-            bytes32string(machine.errHandler.hash),
-            ")"
-        ));
+        return string(
+            abi.encodePacked(
+                "Machine(",
+                bytes32string(machine.instructionStackHash.hash),
+                ", ",
+                bytes32string(machine.dataStackHash.hash),
+                ", ",
+                bytes32string(machine.auxStackHash.hash),
+                ", ",
+                bytes32string(machine.registerHash.hash),
+                ", ",
+                bytes32string(machine.staticHash.hash),
+                ", ",
+                bytes32string(machine.errHandler.hash),
+                ")"
+            )
+        );
     }
 
     function setExtensive(Machine memory machine) internal pure {
@@ -129,15 +137,17 @@ library ArbMachine {
         bytes32 staticHash,
         bytes32 errHandlerHash
     ) public pure returns (bytes32) {
-        return hash(Machine(
-            ArbValue.HashOnlyValue(instructionStackHash),
-            ArbValue.HashOnlyValue(dataStackHash),
-            ArbValue.HashOnlyValue(auxStackHash),
-            ArbValue.HashOnlyValue(registerHash),
-            ArbValue.HashOnlyValue(staticHash),
-            ArbValue.HashOnlyValue(errHandlerHash),
-            MACHINE_EXTENSIVE
-        ));
+        return hash(
+            Machine(
+                ArbValue.HashOnlyValue(instructionStackHash),
+                ArbValue.HashOnlyValue(dataStackHash),
+                ArbValue.HashOnlyValue(auxStackHash),
+                ArbValue.HashOnlyValue(registerHash),
+                ArbValue.HashOnlyValue(staticHash),
+                ArbValue.HashOnlyValue(errHandlerHash),
+                MACHINE_EXTENSIVE
+            )
+        );
     }
 
     function hash(Machine memory machine) internal pure returns (bytes32) {
@@ -146,14 +156,16 @@ library ArbMachine {
         } else if (machine.status == MACHINE_ERRORSTOP) {
             return bytes32(uint(1));
         } else {
-            return keccak256(abi.encodePacked(
-                machine.instructionStackHash.hash,
-                machine.dataStackHash.hash,
-                machine.auxStackHash.hash,
-                machine.registerHash.hash,
-                machine.staticHash.hash,
-                machine.errHandler.hash
-            ));
+            return keccak256(
+                abi.encodePacked(
+                    machine.instructionStackHash.hash,
+                    machine.dataStackHash.hash,
+                    machine.auxStackHash.hash,
+                    machine.registerHash.hash,
+                    machine.staticHash.hash,
+                    machine.errHandler.hash
+                )
+            );
         }
 
     }

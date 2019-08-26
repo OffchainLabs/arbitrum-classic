@@ -31,7 +31,11 @@ library OneStepProof {
 
     // Arithmetic
 
-    function execute_add_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_add_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -45,7 +49,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_mul_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_mul_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -59,7 +67,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_sub_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_sub_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -73,7 +85,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_div_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_div_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -87,7 +103,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_sdiv_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_sdiv_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -101,7 +121,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_mod_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_mod_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -115,7 +139,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_smod_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_smod_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -129,7 +157,12 @@ library OneStepProof {
         return true;
     }
 
-    function execute_addmod_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2, ArbValue.Value memory val3) internal pure returns (bool) {
+    function execute_addmod_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2,
+        ArbValue.Value memory val3
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -144,7 +177,12 @@ library OneStepProof {
         return true;
     }
 
-    function execute_mulmod_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2, ArbValue.Value memory val3) internal pure returns (bool) {
+    function execute_mulmod_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2,
+        ArbValue.Value memory val3
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -159,7 +197,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_exp_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_exp_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -175,7 +217,11 @@ library OneStepProof {
 
     // Comparison
 
-    function execute_lt_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_lt_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -189,7 +235,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_gt_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_gt_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -203,7 +253,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_slt_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_slt_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -217,7 +271,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_sgt_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_sgt_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -231,12 +289,19 @@ library OneStepProof {
         return true;
     }
 
-    function execute_eq_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_eq_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         machine.addDataStackValue(ArbValue.newBooleanValue(val1.hash().hash == val2.hash().hash));
         return true;
     }
 
-    function execute_iszero_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_iszero_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         if (!val1.isInt()) {
             machine.addDataStackInt(0);
         } else {
@@ -250,7 +315,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_and_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_and_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -264,7 +333,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_or_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_or_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -278,7 +351,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_xor_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_xor_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -292,7 +369,10 @@ library OneStepProof {
         return true;
     }
 
-    function execute_not_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_not_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         if (!val1.isInt()) {
             return false;
         }
@@ -305,7 +385,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_byte_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_byte_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -319,7 +403,11 @@ library OneStepProof {
         return true;
     }
 
-    function execute_signextend_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_signextend_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
@@ -335,43 +423,66 @@ library OneStepProof {
 
     // Hash
 
-    function execute_sha3_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_sha3_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         machine.addDataStackInt(uint256(val1.hash().hash));
         return true;
     }
 
-    function execute_type_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_type_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         machine.addDataStackValue(val1.typeCodeVal());
         return true;
     }
 
     // Stack ops
 
-    function execute_pop_insn(ArbMachine.Machine memory, ArbValue.Value memory) internal pure returns (bool) {
+    function execute_pop_insn(
+        ArbMachine.Machine memory,
+        ArbValue.Value memory
+    ) internal pure returns (bool) {
         return true;
     }
 
-    function execute_spush_insn(ArbMachine.Machine memory machine) internal pure returns (bool) {
+    function execute_spush_insn(
+        ArbMachine.Machine memory machine
+    ) internal pure returns (bool) {
         machine.addDataStackHashValue(machine.staticHash);
         return true;
     }
 
-    function execute_rpush_insn(ArbMachine.Machine memory machine) internal pure returns (bool) {
+    function execute_rpush_insn(
+        ArbMachine.Machine memory machine
+    ) internal pure returns (bool) {
         machine.addDataStackHashValue(machine.registerHash);
         return true;
     }
 
-    function execute_rset_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_rset_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         machine.registerHash = val1.hash();
         return true;
     }
 
-    function execute_jump_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_jump_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         machine.instructionStackHash = val1.hash();
         return true;
     }
 
-    function execute_cjump_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_cjump_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val2.isInt()) {
             return false;
         }
@@ -381,32 +492,51 @@ library OneStepProof {
         return true;
     }
 
-    function execute_stackempty_insn(ArbMachine.Machine memory machine) internal pure returns (bool) {
-        machine.addDataStackValue(ArbValue.newBooleanValue(machine.dataStackHash.hash == ArbValue.newNoneValue().hash().hash));
+    function execute_stackempty_insn(
+        ArbMachine.Machine memory machine
+    ) internal pure returns (bool) {
+        machine.addDataStackValue(
+            ArbValue.newBooleanValue(machine.dataStackHash.hash == ArbValue.newNoneValue().hash().hash)
+        );
         return true;
     }
 
-    function execute_pcpush_insn(ArbMachine.Machine memory machine, ArbValue.HashOnlyValue memory pc) internal pure returns (bool) {
+    function execute_pcpush_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.HashOnlyValue memory pc
+    ) internal pure returns (bool) {
         machine.addDataStackHashValue(pc);
         return true;
     }
 
-    function execute_auxpush_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val) internal pure returns (bool) {
+    function execute_auxpush_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val
+    ) internal pure returns (bool) {
         machine.addAuxStackValue(val);
         return true;
     }
 
-    function execute_auxstackempty_insn(ArbMachine.Machine memory machine) internal pure returns (bool) {
-        machine.addDataStackValue(ArbValue.newBooleanValue(machine.auxStackHash.hash == ArbValue.newNoneValue().hash().hash));
+    function execute_auxstackempty_insn(
+        ArbMachine.Machine memory machine
+    ) internal pure returns (bool) {
+        machine.addDataStackValue(
+            ArbValue.newBooleanValue(machine.auxStackHash.hash == ArbValue.newNoneValue().hash().hash)
+        );
         return true;
     }
 
-    function execute_errpush_insn(ArbMachine.Machine memory machine) internal pure returns (bool) {
+    function execute_errpush_insn(
+        ArbMachine.Machine memory machine
+    ) internal pure returns (bool) {
         machine.addDataStackHashValue(machine.errHandler);
         return true;
     }
 
-    function execute_errset_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val) internal pure returns (bool) {
+    function execute_errset_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val
+    ) internal pure returns (bool) {
         machine.errHandler = val.hash();
         return true;
     }
@@ -414,20 +544,31 @@ library OneStepProof {
 
     // Dup ops
 
-    function execute_dup0_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_dup0_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         machine.addDataStackValue(val1);
         machine.addDataStackValue(val1);
         return true;
     }
 
-    function execute_dup1_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_dup1_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         machine.addDataStackValue(val2);
         machine.addDataStackValue(val1);
         machine.addDataStackValue(val2);
         return true;
     }
 
-    function execute_dup2_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2, ArbValue.Value memory val3) internal pure returns (bool) {
+    function execute_dup2_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2,
+        ArbValue.Value memory val3) internal pure returns (bool) {
         machine.addDataStackValue(val3);
         machine.addDataStackValue(val2);
         machine.addDataStackValue(val1);
@@ -437,13 +578,22 @@ library OneStepProof {
 
     // Swap ops
 
-    function execute_swap1_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_swap1_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         machine.addDataStackValue(val1);
         machine.addDataStackValue(val2);
         return true;
     }
 
-    function execute_swap2_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2, ArbValue.Value memory val3) internal pure returns (bool) {
+    function execute_swap2_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2,
+        ArbValue.Value memory val3
+    ) internal pure returns (bool) {
         machine.addDataStackValue(val1);
         machine.addDataStackValue(val2);
         machine.addDataStackValue(val3);
@@ -452,7 +602,11 @@ library OneStepProof {
 
     // Tuple ops
 
-    function execute_tget_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2) internal pure returns (bool) {
+    function execute_tget_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2
+    ) internal pure returns (bool) {
         if (!val1.isInt() || !val2.isTuple()) {
             return false;
         }
@@ -465,7 +619,12 @@ library OneStepProof {
         return true;
     }
 
-    function execute_tset_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.Value memory val2, ArbValue.Value memory val3) internal pure returns (bool) {
+    function execute_tset_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.Value memory val2,
+        ArbValue.Value memory val3
+    ) internal pure returns (bool) {
         if (!val2.isTuple() || !val1.isInt()) {
             return false;
         }
@@ -478,7 +637,10 @@ library OneStepProof {
         return true;
     }
 
-    function execute_tlen_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1) internal pure returns (bool) {
+    function execute_tlen_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool) {
         if (!val1.isTuple()) {
             return false;
         }
@@ -488,11 +650,17 @@ library OneStepProof {
 
     // Logging
 
-    function execute_breakpoint_insn(ArbMachine.Machine memory, ArbValue.Value memory) internal pure returns (bool) {
+    function execute_breakpoint_insn(
+        ArbMachine.Machine memory,
+        ArbValue.Value memory
+    ) internal pure returns (bool) {
         return true;
     }
 
-    function execute_log_insn(ArbMachine.Machine memory, ArbValue.Value memory val1) internal pure returns (bool, bytes32) {
+    function execute_log_insn(
+        ArbMachine.Machine memory,
+        ArbValue.Value memory val1
+    ) internal pure returns (bool, bytes32) {
         ArbValue.HashOnlyValue memory hashVal = val1.hash();
         return (true, hashVal.hash);
     }
@@ -531,7 +699,11 @@ library OneStepProof {
         return (true, messageHash, tokenType, amount);
     }
 
-    function execute_inbox_insn(ArbMachine.Machine memory machine, ArbValue.Value memory val1, ArbValue.HashOnlyValue memory beforeInbox) internal pure returns (bool) {
+    function execute_inbox_insn(
+        ArbMachine.Machine memory machine,
+        ArbValue.Value memory val1,
+        ArbValue.HashOnlyValue memory beforeInbox
+    ) internal pure returns (bool) {
         require(val1.hash().hash != beforeInbox.hash, "Inbox instruction was blocked");
         machine.addDataStackHashValue(beforeInbox);
         return true;
@@ -761,7 +933,7 @@ library OneStepProof {
         uint256[] memory beforeValues,
         uint256[] memory messageValue,
         bytes memory proof
-    ) pure public returns(uint) {
+    ) public pure returns(uint) {
         // require(messageValue.length == 1 || messageValue.length == 0);
         bytes21 tokenType;
         uint amount;
@@ -791,24 +963,27 @@ library OneStepProof {
                 require(messageValue[i] == 0, "Must have no message values");
             }
         }
-        return checkProof(ValidateProofData(
-            fields[0],
-            timeBounds,
-            fields[1],
-            fields[2],
-            fields[3],
-            fields[4],
-            fields[5],
-            fields[6],
-            tokenType,
-            amount,
-            foundAmount,
-            proof
-        ));
+        return checkProof(
+            ValidateProofData(
+                fields[0],
+                timeBounds,
+                fields[1],
+                fields[2],
+                fields[3],
+                fields[4],
+                fields[5],
+                fields[6],
+                tokenType,
+                amount,
+                foundAmount,
+                proof
+            )
+        );
     }
 
     // Taken from https://github.com/oraclize/ethereum-api/blob/master/oraclizeAPI_0.5.sol
-    function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
+    function uint2str(uint _iParam) internal pure returns (string memory _uintAsString) {
+        uint _i = _iParam;
         if (_i == 0) {
             return "0";
         }
@@ -893,11 +1068,13 @@ library OneStepProof {
     }
 
     uint8 constant CodePointCode = 1;
-    bytes32 constant CODE_POINT_ERROR = keccak256(abi.encodePacked(
-        CodePointCode,
-        uint8(0),
-        bytes32(0)
-    ));
+    bytes32 constant CODE_POINT_ERROR = keccak256(
+        abi.encodePacked(
+            CodePointCode,
+            uint8(0),
+            bytes32(0)
+        )
+    );
 
     function checkProof(ValidateProofData memory _data) internal pure returns(uint) {
         uint8 opCode;
@@ -1003,28 +1180,43 @@ library OneStepProof {
             correct = execute_breakpoint_insn(endMachine, stackVals[0]);
         } else if (opCode == OP_LOG) {
             (correct, messageHash) = execute_log_insn(endMachine, stackVals[0]);
-            require(keccak256(abi.encodePacked(
-                _data.firstLog,
-                messageHash
-            )) == _data.lastLog, "Loged value doesn't match output log");
+            require(
+                keccak256(
+                    abi.encodePacked(
+                        _data.firstLog,
+                        messageHash
+                    )
+                ) == _data.lastLog,
+                "Logged value doesn't match output log"
+            );
             require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
         } else if (opCode == OP_SEND) {
             bytes21 tokenType;
             uint amount;
             (correct, messageHash, tokenType, amount) = send_insn_impl(endMachine, stackVals[0]);
-            require(keccak256(abi.encodePacked(
-                _data.firstMessage,
-                messageHash
-            )) == _data.lastMessage, "sent message doesn't match output mesage");
+            require(
+                keccak256(
+                    abi.encodePacked(
+                        _data.firstMessage,
+                        messageHash
+                    )
+                ) == _data.lastMessage,
+                "sent message doesn't match output mesage"
+            );
             require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
         } else if (opCode == OP_NBSEND) {
             bytes21 tokenType;
             uint amount;
             (correct, messageHash, tokenType, amount) = send_insn_impl(endMachine, stackVals[0]);
-            require(keccak256(abi.encodePacked(
-                _data.firstMessage,
-                messageHash
-            )) == _data.lastMessage, "sent message doesn't match output mesage");
+            require(
+                keccak256(
+                    abi.encodePacked(
+                        _data.firstMessage,
+                        messageHash
+                    )
+                ) == _data.lastMessage,
+                "sent message doesn't match output mesage"
+            );
             require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
         } else if (opCode == OP_GETTIME) {
             ArbValue.Value[] memory contents = new ArbValue.Value[](2);
@@ -1052,9 +1244,15 @@ library OneStepProof {
             }
         }
 
-        // require(_data.beforeHash == startMachine.hash(), string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString())));
+        // require(
+        //     _data.beforeHash == startMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
+        // );
         require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-        // require(_data.afterHash == endMachine.hash(), string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString())));
+        // require(
+        //     _data.afterHash == endMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
+        // );
         require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;

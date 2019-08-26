@@ -21,6 +21,7 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
+
 contract ArbBalanceTracker is Ownable, ERC20 {
 
     using SafeMath for uint256;
@@ -55,7 +56,7 @@ contract ArbBalanceTracker is Ownable, ERC20 {
             wallet.nftWalletIndex[_tokenContract] = index;
         }
         NFTWallet storage nftWallet = wallet.nftWalletList[index - 1];
-        require(nftWallet.tokenIndex[_tokenId] == 0);
+        require(nftWallet.tokenIndex[_tokenId] == 0, "can't add already owned token");
         nftWallet.tokenList.push(_tokenId);
         nftWallet.tokenIndex[_tokenId] = nftWallet.tokenList.length;
     }
@@ -139,25 +140,21 @@ contract ArbBalanceTracker is Ownable, ERC20 {
     }
 
     function depositERC20(address _tokenContract, uint256 _value) external {
-        require(_tokenContract != address(this));
         ERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
         addToken(bytes32(bytes20(msg.sender)), _tokenContract, _value);
     }
 
     function withdrawERC20(address _tokenContract, uint256 _value) external {
-        require(_tokenContract != address(this));
         removeToken(bytes32(bytes20(msg.sender)), _tokenContract, _value);
         ERC20(_tokenContract).transfer(msg.sender, _value);
     }
 
     function depositERC721(address _tokenContract, uint256 _tokenId) external {
-        require(_tokenContract != address(this));
         ERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
         addNFTToken(bytes32(bytes20(msg.sender)), _tokenContract, _tokenId);
     }
 
     function withdrawERC721(address _tokenContract, uint256 _tokenId) external {
-        require(_tokenContract != address(this));
         removeNFTToken(bytes32(bytes20(msg.sender)), _tokenContract, _tokenId);
         ERC721(_tokenContract).safeTransferFrom(address(this), msg.sender, _tokenId);
     }

@@ -41,32 +41,42 @@ library ArbValue {
     }
 
     function hashIntValue(uint256 val) public pure returns (bytes32) {
-         return keccak256(abi.encodePacked(val));
+        return keccak256(abi.encodePacked(val));
     }
 
     function hashCodePointBasicValue(uint8 opcode, bytes32 nextCodePoint) public pure returns (bytes32) {
-         return keccak256(abi.encodePacked(
-            CodePointCode,
-            opcode,
-            nextCodePoint
-        ));
+        return keccak256(
+            abi.encodePacked(
+                CodePointCode,
+                opcode,
+                nextCodePoint
+            )
+        );
     }
 
-    function hashCodePointImmediateValue(uint8 opcode, bytes32 immediateVal, bytes32 nextCodePoint) public pure returns (bytes32) {
-         return keccak256(abi.encodePacked(
-            CodePointCode,
-            opcode,
-            immediateVal,
-            nextCodePoint
-        ));
+    function hashCodePointImmediateValue(
+        uint8 opcode,
+        bytes32 immediateVal,
+        bytes32 nextCodePoint
+    ) public pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                CodePointCode,
+                opcode,
+                immediateVal,
+                nextCodePoint
+            )
+        );
     }
 
     function hashEmptyTuple() public pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](0);
-        return keccak256(abi.encodePacked(
-            uint8(TupleTypeCode),
-            hashes
-        ));
+        return keccak256(
+            abi.encodePacked(
+                uint8(TupleTypeCode),
+                hashes
+            )
+        );
     }
 
     function hashTupleValue(Value[1] memory val) internal pure returns (bytes32) {
@@ -95,23 +105,29 @@ library ArbValue {
 
 
     function hashTupleValue(Value[] memory val) private pure returns (bytes32) {
-        require(val.length <= 8);
+        require(val.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](val.length);
         for (uint i = 0; i < hashes.length; i++) {
             HashOnlyValue memory hashVal = val[i].hash();
             hashes[i] = hashVal.hash;
         }
-        return keccak256(abi.encodePacked(
-            uint8(TupleTypeCode + val.length),
-            hashes
-        ));
+        return keccak256(
+            abi.encodePacked(
+                uint8(TupleTypeCode + val.length),
+                hashes
+            )
+        );
     }
 
     struct HashOnlyValue {
         bytes32 hash;
     }
 
-    function deserialize_hash_only_value(bytes memory data, uint offset) internal pure returns(uint retCode, uint, HashOnlyValue memory) {
+    function deserialize_hash_only_value(
+        bytes memory data,
+        uint startOffset
+    ) internal pure returns(uint retCode, uint, HashOnlyValue memory) {
+        uint offset = startOffset;
         bytes32 valHash = data.toBytes32(offset);
         offset += 32;
         return (0, offset, HashOnlyValue(valHash));
@@ -124,7 +140,7 @@ library ArbValue {
     }
 
     function typeCodeVal(Value memory val) internal pure returns (Value memory) {
-        require(val.typeCode != 2);
+        require(val.typeCode != 2, "Value must have a valid type code");
         if (val.typeCode == 0) {
             return newIntValue(0);
         } else if (val.typeCode == 1) {
@@ -147,7 +163,7 @@ library ArbValue {
     }
 
     function hash(Value memory val) internal pure returns (HashOnlyValue memory) {
-        require(val.typeCode < ValueTypeCount);
+        require(val.typeCode < ValueTypeCount, "Invalid type code");
         if (val.typeCode == IntTypeCode) {
             return HashOnlyValue(hashIntValue(val.intVal));
         } else if (val.typeCode == HashOnlyTypeCode) {
@@ -180,7 +196,7 @@ library ArbValue {
     }
 
     function newTupleValue(Value[] memory _val) internal pure returns (Value memory) {
-        require(isValidTupleSize(_val.length));
+        require(isValidTupleSize(_val.length), "Tuple must have valid size");
         return Value(0, _val, uint8(TupleTypeCode + _val.length));
     }
 
@@ -204,17 +220,23 @@ library ArbValue {
         return Value(uint256(_val), new Value[](0), HashOnlyTypeCode);
     }
 
-    function deserialize_int(bytes memory data, uint offset) internal pure returns (uint, uint256) {
+    function deserialize_int(bytes memory data, uint startOffset) internal pure returns (uint, uint256) {
+        uint offset = startOffset;
         uint256 intVal = data.toUint(offset);
         offset += 32;
         return (offset, intVal);
     }
 
-    function deserialize_tuple(uint8 memberCount, bytes memory data, uint offset) internal pure returns (uint, uint, Value[] memory) {
+    function deserialize_tuple(
+        uint8 memberCount,
+        bytes memory data,
+        uint startOffset
+    ) internal pure returns (uint, uint, Value[] memory) {
+        uint offset = startOffset;
         uint retVal;
         Value[] memory members = new Value[](memberCount);
         for (uint8 i = 0; i < memberCount; i++) {
-            (retVal, offset, members[i]) =  deserialize_value(data, offset);
+            (retVal, offset, members[i]) = deserialize_value(data, offset);
             if (retVal != 0) {
                 return (retVal, offset, members);
             }
@@ -222,7 +244,11 @@ library ArbValue {
         return (0, offset, members);
     }
 
-    function deserialize_value(bytes memory data, uint offset) internal pure returns(uint retCode, uint, Value memory) {
+    function deserialize_value(
+        bytes memory data,
+        uint startOffset
+    ) internal pure returns(uint retCode, uint, Value memory) {
+        uint offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
@@ -247,7 +273,7 @@ library ArbValue {
         uint newOffset;
         Value memory value;
         (valid, newOffset, value) = deserialize_value(data, offset);
-        require(valid == 0);
+        require(valid == 0, "Marshalled value must be valid");
         return (newOffset, value.hash().hash);
     }
 
@@ -256,16 +282,16 @@ library ArbValue {
         uint nextOffset;
         Value memory value;
         (valid, nextOffset, value) = deserialize_value(data, offset);
-        require(valid == 0);
+        require(valid == 0, "Marshalled value must be valid");
         return (nextOffset, data.slice(offset, nextOffset - offset));
     }
 
     function deserialize_value_hash(bytes memory data) public pure returns (bytes32) {
-       uint valid;
-       uint offset = 0;
-       Value memory value;
-       (valid, offset, value) = deserialize_value(data, 0);
-       require(valid == 0);
-       return value.hash().hash;
+        uint valid;
+        uint offset = 0;
+        Value memory value;
+        (valid, offset, value) = deserialize_value(data, 0);
+        require(valid == 0, "Marshalled value must be valid");
+        return value.hash().hash;
     }
 }

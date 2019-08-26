@@ -64,12 +64,14 @@ library ArbProtocol {
         uint256 _value,
         bytes32 _sender
     ) public view returns (bytes32) {
-        bytes32 txHash = keccak256(abi.encodePacked(
-            _dest,
-            _data,
-            _value,
-            _tokenType
-        ));
+        bytes32 txHash = keccak256(
+            abi.encodePacked(
+                _dest,
+                _data,
+                _value,
+                _tokenType
+            )
+        );
         ArbValue.Value[] memory dataValues = new ArbValue.Value[](4);
         dataValues[0] = ArbValue.newHashOnlyValue(_data);
         dataValues[1] = ArbValue.newIntValue(block.timestamp);
@@ -91,14 +93,16 @@ library ArbProtocol {
         bytes21[] memory _tokenTypes,
         uint256[] memory _beforeBalances
     ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(
-            _beforeHash,
-            _timeBounds[0],
-            _timeBounds[1],
-            _beforeInbox,
-            _tokenTypes,
-            _beforeBalances
-        ));
+        return keccak256(
+            abi.encodePacked(
+                _beforeHash,
+                _timeBounds[0],
+                _timeBounds[1],
+                _beforeInbox,
+                _tokenTypes,
+                _beforeBalances
+            )
+        );
     }
 
     function generateAssertionHash(
@@ -110,15 +114,17 @@ library ArbProtocol {
         bytes32 _lastLogHash,
         uint256[] memory _totalMessageValueAmounts
     ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(
-            _afterHash,
-            _numSteps,
-            _firstMessageHash,
-            _lastMessageHash,
-            _firstLogHash,
-            _lastLogHash,
-            _totalMessageValueAmounts
-        ));
+        return keccak256(
+            abi.encodePacked(
+                _afterHash,
+                _numSteps,
+                _firstMessageHash,
+                _lastMessageHash,
+                _firstLogHash,
+                _lastLogHash,
+                _totalMessageValueAmounts
+            )
+        );
     }
 
     // fields:
@@ -137,15 +143,17 @@ library ArbProtocol {
         uint256[] memory _messageAmount,
         bytes32[] memory _messageDestination
     ) public pure returns(bytes32) {
-        return keccak256(abi.encodePacked(
-            _fields,
-            _timeBounds,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNum,
-            _messageAmount,
-            _messageDestination
-        ));
+        return keccak256(
+            abi.encodePacked(
+                _fields,
+                _timeBounds,
+                _tokenTypes,
+                _messageData,
+                _messageTokenNum,
+                _messageAmount,
+                _messageDestination
+            )
+        );
     }
 
     function calculateBeforeValues(
@@ -158,8 +166,8 @@ library ArbProtocol {
             if (_tokenTypes[_messageTokenNums[i]][20] == 0) {
                 beforeBalances[_messageTokenNums[i]] += _messageAmounts[i];
             } else {
-                require(beforeBalances[_messageTokenNums[i]] == 0);
-                require(_messageAmounts[i] != 0);
+                require(beforeBalances[_messageTokenNums[i]] == 0, "Can't include NFT token twice");
+                require(_messageAmounts[i] != 0, "NFT token must have non-zero id");
                 beforeBalances[_messageTokenNums[i]] = _messageAmounts[i];
             }
         }
@@ -173,8 +181,8 @@ library ArbProtocol {
         uint256[] memory _messageAmount,
         bytes32[] memory _messageDestination
     ) public pure returns (bytes32) {
-        require(_messageAmount.length == _messageDestination.length);
-        require(_messageAmount.length == _messageTokenNum.length);
+        require(_messageAmount.length == _messageDestination.length, "Input size mismatch");
+        require(_messageAmount.length == _messageTokenNum.length, "Input size mismatch");
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;
@@ -197,9 +205,9 @@ library ArbProtocol {
         uint256[] memory _messageValueAmounts,
         bytes32[] memory _messageDestination
     ) public pure returns (bytes32) {
-        require(_messageDataHashes.length == _messageTokenNum.length);
-        require(_messageDataHashes.length == _messageValueAmounts.length);
-        require(_messageDataHashes.length == _messageDestination.length);
+        require(_messageDataHashes.length == _messageTokenNum.length, "Input size mismatch");
+        require(_messageDataHashes.length == _messageValueAmounts.length, "Input size mismatch");
+        require(_messageDataHashes.length == _messageDestination.length, "Input size mismatch");
         bytes32 hashVal = 0x00;
         bytes32 msgHash;
         for (uint i = 0; i < _messageDataHashes.length; i++) {
@@ -217,11 +225,7 @@ library ArbProtocol {
     function parseSignature(
         bytes memory _signatures,
         uint _pos
-    )
-        pure
-        public
-        returns (uint8 v, bytes32 r, bytes32 s)
-    {
+    ) public pure returns (uint8 v, bytes32 r, bytes32 s) {
         uint offset = _pos * 65;
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
@@ -239,19 +243,13 @@ library ArbProtocol {
 
         if (v < 27) v += 27;
 
-        require(v == 27 || v == 28);
+        require(v == 27 || v == 28, "Incorrect v value");
     }
 
     /// @notice Counts the number of signatures in a signatures bytes array. Returns 0 if the length is invalid.
     /// @param _signatures The signatures bytes array
     /// @dev Signatures are 65 bytes long and are densely packed.
-    function countSignatures(
-        bytes memory _signatures
-    )
-        pure
-        public
-        returns (uint)
-    {
+    function countSignatures(bytes memory _signatures) public pure returns (uint) {
         return _signatures.length % 65 == 0 ? _signatures.length / 65 : 0;
     }
 
@@ -261,11 +259,7 @@ library ArbProtocol {
     function recoverAddresses(
         bytes32 _messageHash,
         bytes memory _signatures
-    )
-        pure
-        public
-        returns (address[] memory)
-    {
+    ) public pure returns (address[] memory) {
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -286,7 +280,7 @@ library ArbProtocol {
     function recoverAddress(
         bytes32 _messageHash,
         bytes memory _signature
-    ) pure public returns (address) {
+    ) public pure returns (address) {
         uint8 v;
         bytes32 r;
         bytes32 s;

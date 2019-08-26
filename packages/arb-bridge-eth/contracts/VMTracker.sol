@@ -25,7 +25,7 @@ import "./MerkleLib.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract VMTracker is Ownable {
-	using SafeMath for uint256;
+    using SafeMath for uint256;
     using BytesLib for bytes;
 
     event MessageDelivered(
@@ -102,7 +102,7 @@ contract VMTracker is Ownable {
         bytes32 exitAddress;
         bytes32 terminateAddress;
         address owner;
-        address disputableAsserter;
+        address asserter;
         address currencyType;
         uint128 escrowRequired;
         uint64 deadline;
@@ -130,7 +130,7 @@ contract VMTracker is Ownable {
         acceptedCurrencies[address(0)] = true;
     }
 
-    function addChallengeManager(IChallengeManager _challengeManager) onlyOwner public {
+    function addChallengeManager(IChallengeManager _challengeManager) public onlyOwner {
         challengeManagers.push(_challengeManager);
     }
 
@@ -198,20 +198,25 @@ contract VMTracker is Ownable {
         require(_signatures.length / 65 < 2 ** 16, "Too many validators");
         require(bytes32(bytes20(_fields[0])) != _fields[0], "Invalid vmId");
         require(_challengeManagerNum < challengeManagers.length, "Invalid challenge manager num");
-        require(_escrowRequired > 0);
+        require(_escrowRequired > 0, "VM must require non-zero deposit");
         require(acceptedCurrencies[_escrowCurrency], "Selected currency is not an accepted type");
 
         address[] memory assertKeys = ArbProtocol.recoverAddresses(_fields[2], _signatures);
-        require(_fields[2] == keccak256(abi.encodePacked(
-            _gracePeriod,
-            _escrowRequired,
-            _escrowCurrency,
-            _maxExecutionSteps,
-            _fields[1],
-            _challengeManagerNum,
-            _owner,
-            assertKeys
-        )), "Create data incorrect");
+        require(
+            keccak256(
+                abi.encodePacked(
+                    _gracePeriod,
+                    _escrowRequired,
+                    _escrowCurrency,
+                    _maxExecutionSteps,
+                    _fields[1],
+                    _challengeManagerNum,
+                    _owner,
+                    assertKeys
+                )
+            ) == _fields[2],
+            "Create data incorrect"
+        );
 
         for (uint i = 0; i < assertKeys.length; i++) {
             arbBalanceTracker.ownerRemoveToken(
@@ -278,13 +283,24 @@ contract VMTracker is Ownable {
         );
     }
 
-    function forwardMessage(bytes32 _destination, bytes21 _tokenType, uint256 _amount, bytes memory _data, bytes memory _signature) public {
-        address sender = ArbProtocol.recoverAddress(keccak256(abi.encodePacked(
-            _destination,
-            ArbValue.deserialize_value_hash(_data),
-            _amount,
-            _tokenType
-        )), _signature);
+    function forwardMessage(
+        bytes32 _destination,
+        bytes21 _tokenType,
+        uint256 _amount,
+        bytes memory _data,
+        bytes memory _signature
+    ) public {
+        address sender = ArbProtocol.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    _destination,
+                    ArbValue.deserialize_value_hash(_data),
+                    _amount,
+                    _tokenType
+                )
+            ),
+            _signature
+        );
 
         _sendUnpaidMessage(
             _destination,
@@ -306,7 +322,13 @@ contract VMTracker is Ownable {
         );
     }
 
-    function _sendUnpaidMessage(bytes32 _destination, bytes21 _tokenType, uint256 _value, bytes32 _sender, bytes memory _data) internal {
+    function _sendUnpaidMessage(
+        bytes32 _destination,
+        bytes21 _tokenType,
+        uint256 _value,
+        bytes32 _sender,
+        bytes memory _data
+    ) internal {
         if(_tokenType[20] == 0x01) {
             arbBalanceTracker.transferNFT(_sender, _destination, address(bytes20(_tokenType)), _value);
         } else {
@@ -315,7 +337,13 @@ contract VMTracker is Ownable {
         _deliverMessage(_destination, _tokenType, _value, _sender, _data);
     }
 
-    function _deliverMessage(bytes32 _destination, bytes21 _tokenType, uint256 _value, bytes32 _sender, bytes memory _data) internal {
+    function _deliverMessage(
+        bytes32 _destination,
+        bytes21 _tokenType,
+        uint256 _value,
+        bytes32 _sender,
+        bytes memory _data
+    ) internal {
         if (bytes32(bytes20(_destination)) != _destination) {
             VM storage vm = vms[_destination];
             bytes32 messageHash = ArbProtocol.generateSentMessageHash(
@@ -342,12 +370,12 @@ contract VMTracker is Ownable {
 
     function _cancelCurrentState(VM storage vm) internal {
         if (vm.state != VMState.Waiting) {
-            require(block.number <= vm.deadline);
+            require(block.number <= vm.deadline, "Can't cancel finalized state");
         }
 
         if (vm.state == VMState.PendingAssertion) {
             // If there is a pending disputable assertion, cancel it
-            vm.validatorBalances[vm.disputableAsserter] = vm.validatorBalances[vm.disputableAsserter].add(vm.escrowRequired);
+            vm.validatorBalances[vm.asserter] = vm.validatorBalances[vm.asserter].add(vm.escrowRequired);
         }
     }
 
@@ -378,46 +406,57 @@ contract VMTracker is Ownable {
         bytes32 _logsAccHash,
         bytes memory _signatures
     ) public {
-        _finalizedUnanimousAssert(finalizedUnanimousAssertData(
-            _vmId,
-            _afterHash,
-            _newInbox,
-            _timeBounds,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNum,
-            _messageAmount,
-            _messageDestination,
-            _logsAccHash,
-            _signatures
-        ));
+        _finalizedUnanimousAssert(
+            finalizedUnanimousAssertData(
+                _vmId,
+                _afterHash,
+                _newInbox,
+                _timeBounds,
+                _tokenTypes,
+                _messageData,
+                _messageTokenNum,
+                _messageAmount,
+                _messageDestination,
+                _logsAccHash,
+                _signatures
+            )
+        );
     }
 
     function _finalizedUnanimousAssert(finalizedUnanimousAssertData memory data) internal {
         VM storage vm = vms[data.vmId];
-        require(vm.machineHash != MACHINE_HALT_HASH);
+        require(vm.machineHash != MACHINE_HALT_HASH, "Can't assert halted machine");
         require(withinTimeBounds(data.timeBounds), "Precondition: not within time bounds");
-        bytes32 unanHash = keccak256(abi.encodePacked(
-            data.vmId,
-            keccak256(abi.encodePacked(
-                keccak256(abi.encodePacked(
-                    data.newInbox,
-                    data.afterHash,
-                    data.messageData,
-                    data.messageDestination
-                )),
-                data.timeBounds,
-                vm.machineHash,
-                vm.inboxHash,
-                data.tokenTypes,
-                data.messageTokenNum,
-                data.messageAmount
-            )),
-            data.logsAccHash
-        ));
-        require(MerkleLib.generateAddressRoot(
-            ArbProtocol.recoverAddresses(unanHash, data.signatures)
-        ) == vm.validatorRoot, "Validator signatures don't match");
+        bytes32 unanHash = keccak256(
+            abi.encodePacked(
+                data.vmId,
+                keccak256(
+                    abi.encodePacked(
+                        keccak256(
+                            abi.encodePacked(
+                                data.newInbox,
+                                data.afterHash,
+                                data.messageData,
+                                data.messageDestination
+                            )
+                        ),
+                        data.timeBounds,
+                        vm.machineHash,
+                        vm.inboxHash,
+                        data.tokenTypes,
+                        data.messageTokenNum,
+                        data.messageAmount
+                    )
+                ),
+                data.logsAccHash
+            )
+        );
+        require(
+            MerkleLib.generateAddressRoot(
+                ArbProtocol.recoverAddresses(unanHash, data.signatures)
+            ) == vm.validatorRoot,
+            "Validator signatures don't match"
+        );
 
         _cancelCurrentState(vm);
         vm.state = VMState.Waiting;
@@ -451,27 +490,37 @@ contract VMTracker is Ownable {
     ) public {
         VM storage vm = vms[_vmId];
         require(withinTimeBounds(_timeBounds), "Precondition: not within time bounds");
-        require(vm.machineHash != MACHINE_HALT_HASH);
-        bytes32 unanHash = keccak256(abi.encodePacked(
-            _vmId,
-            keccak256(abi.encodePacked(
-                _unanRest,
-                _timeBounds,
-                vm.machineHash,
-                vm.inboxHash,
-                _tokenTypes,
-                _messageTokenNum,
-                _messageAmount,
-                _sequenceNum
-            )),
-            _logsAccHash
-        ));
-        require(MerkleLib.generateAddressRoot(
-            ArbProtocol.recoverAddresses(unanHash, _signatures)
-        ) == vm.validatorRoot, "Validator signatures don't match");
+        require(vm.machineHash != MACHINE_HALT_HASH, "Can't assert halted machine");
+        bytes32 unanHash = keccak256(
+            abi.encodePacked(
+                _vmId,
+                keccak256(
+                    abi.encodePacked(
+                        _unanRest,
+                        _timeBounds,
+                        vm.machineHash,
+                        vm.inboxHash,
+                        _tokenTypes,
+                        _messageTokenNum,
+                        _messageAmount,
+                        _sequenceNum
+                    )
+                ),
+                _logsAccHash
+            )
+        );
+        require(
+            MerkleLib.generateAddressRoot(
+                ArbProtocol.recoverAddresses(unanHash, _signatures)
+            ) == vm.validatorRoot,
+            "Validator signatures don't match"
+        );
 
         if (vm.state == VMState.PendingUnanimous) {
-            require(_sequenceNum > vm.sequenceNum);
+            require(
+                _sequenceNum > vm.sequenceNum,
+                "Can only supersede previous assertion with greater sequence number"
+            );
         }
 
         arbBalanceTracker.hasFunds(
@@ -489,12 +538,14 @@ contract VMTracker is Ownable {
 
         vm.state = VMState.PendingUnanimous;
         vm.sequenceNum = _sequenceNum;
-        vm.pendingHash = keccak256(abi.encodePacked(
-            _tokenTypes,
-            _messageTokenNum,
-            _messageAmount,
-            _unanRest
-        ));
+        vm.pendingHash = keccak256(
+            abi.encodePacked(
+                _tokenTypes,
+                _messageTokenNum,
+                _messageAmount,
+                _unanRest
+            )
+        );
 
         emit PendingUnanimousAssertion(
             _vmId,
@@ -514,19 +565,26 @@ contract VMTracker is Ownable {
         bytes32[] memory _messageDestination
     ) public {
         VM storage vm = vms[_vmId];
-        require(vm.state == VMState.PendingUnanimous);
-        require(block.number > vm.deadline);
-        require(vm.pendingHash == keccak256(abi.encodePacked(
-            _tokenTypes,
-            _messageTokenNum,
-            _messageAmount,
-            keccak256(abi.encodePacked(
-                _newInbox,
-                _afterHash,
-                _messageData,
-                _messageDestination
-            ))
-        )));
+        require(vm.state == VMState.PendingUnanimous, "Can only confirm if there is a pending assertion");
+        require(block.number > vm.deadline, "Can only confirm assertion whose challenge deadline has passed");
+        require(
+            keccak256(
+                abi.encodePacked(
+                    _tokenTypes,
+                    _messageTokenNum,
+                    _messageAmount,
+                    keccak256(
+                        abi.encodePacked(
+                            _newInbox,
+                            _afterHash,
+                            _messageData,
+                            _messageDestination
+                        )
+                    )
+                )
+            ) == vm.pendingHash,
+            "Can only confirm assertion that is currently pending"
+        );
 
         vm.inboxHash = _newInbox;
         _acceptAssertion(
@@ -577,35 +635,41 @@ contract VMTracker is Ownable {
         uint256[] memory _msgAmount,
         bytes32[] memory _msgDestination
     ) public {
-        return _pendingDisputableAssert(PendingDisputableAssertData(
-            _fields[0],
-            _fields[1],
-            _fields[2],
-            _fields[3],
-            _fields[4],
-            _numSteps,
-            timeBounds,
-            _tokenTypes,
-            _messageDataHash,
-            _messageTokenNum,
-            _msgAmount,
-            _msgDestination
-        ));
+        return _pendingDisputableAssert(
+            PendingDisputableAssertData(
+                _fields[0],
+                _fields[1],
+                _fields[2],
+                _fields[3],
+                _fields[4],
+                _numSteps,
+                timeBounds,
+                _tokenTypes,
+                _messageDataHash,
+                _messageTokenNum,
+                _msgAmount,
+                _msgDestination
+            )
+        );
     }
 
     function _pendingDisputableAssert(PendingDisputableAssertData memory _data) internal {
         VM storage vm = vms[_data.vmId];
         require(vm.state == VMState.Waiting, "Can only disputable assert from waiting state");
-        require(vm.machineHash != MACHINE_HALT_HASH && vm.machineHash != MACHINE_ERROR_HASH);
-        require(!vm.inChallenge);
+        require(
+            vm.machineHash != MACHINE_HALT_HASH && vm.machineHash != MACHINE_ERROR_HASH,
+            "Can only disputable assert if machine is not errored or halted"
+        );
+        require(!vm.inChallenge, "Can only disputable assert if not in challenge");
         require(vm.escrowRequired <= vm.validatorBalances[msg.sender], "Validator does not have required escrow");
         require(_data.numSteps <= vm.maxExecutionSteps, "Tried to execute too many steps");
         require(withinTimeBounds(_data.timeBounds), "Precondition: not within time bounds");
         require(_data.beforeHash == vm.machineHash, "Precondition: state hash does not match");
         require(
             _data.beforeInbox == vm.inboxHash ||
-            _data.beforeInbox == ArbProtocol.appendInboxMessages(vm.inboxHash, vm.pendingMessages)
-        , "Precondition: inbox does not match");
+            _data.beforeInbox == ArbProtocol.appendInboxMessages(vm.inboxHash, vm.pendingMessages),
+            "Precondition: inbox does not match"
+        );
 
         uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
             _data.tokenTypes,
@@ -628,26 +692,28 @@ contract VMTracker is Ownable {
             _data.msgDestination
         );
 
-        vm.pendingHash = keccak256(abi.encodePacked(
-            ArbProtocol.generatePreconditionHash(
-                _data.beforeHash,
-                _data.timeBounds,
-                _data.beforeInbox,
-                _data.tokenTypes,
-                beforeBalances
-            ),
-            ArbProtocol.generateAssertionHash(
-                _data.afterHash,
-                _data.numSteps,
-                0x00,
-                lastMessageHash,
-                0x00,
-                _data.logsAccHash,
-                beforeBalances
+        vm.pendingHash = keccak256(
+            abi.encodePacked(
+                ArbProtocol.generatePreconditionHash(
+                    _data.beforeHash,
+                    _data.timeBounds,
+                    _data.beforeInbox,
+                    _data.tokenTypes,
+                    beforeBalances
+                ),
+                ArbProtocol.generateAssertionHash(
+                    _data.afterHash,
+                    _data.numSteps,
+                    0x00,
+                    lastMessageHash,
+                    0x00,
+                    _data.logsAccHash,
+                    beforeBalances
+                )
             )
-        ));
+        );
         vm.validatorBalances[msg.sender] = vm.validatorBalances[msg.sender].sub(vm.escrowRequired);
-        vm.disputableAsserter = msg.sender;
+        vm.asserter = msg.sender;
         vm.state = VMState.PendingAssertion;
 
         emit PendingDisputableAssertion(
@@ -694,18 +760,20 @@ contract VMTracker is Ownable {
         bytes32[] memory _messageDestination,
         bytes32 _logsAccHash
     ) public {
-        return _confirmDisputableAsserted(confirmDisputableAssertedData(
-            _vmId,
-            _preconditionHash,
-            _afterHash,
-            _numSteps,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestination,
-            _logsAccHash
-        ));
+        return _confirmDisputableAsserted(
+            confirmDisputableAssertedData(
+                _vmId,
+                _preconditionHash,
+                _afterHash,
+                _numSteps,
+                _tokenTypes,
+                _messageData,
+                _messageTokenNums,
+                _messageAmounts,
+                _messageDestination,
+                _logsAccHash
+            )
+        );
     }
 
     function _confirmDisputableAsserted(confirmDisputableAssertedData memory _data) internal {
@@ -713,31 +781,33 @@ contract VMTracker is Ownable {
         require(vm.state == VMState.PendingAssertion, "VM does not have assertion pending");
         require(block.number > vm.deadline, "Assertion is still pending challenge");
         require(
-            keccak256(abi.encodePacked(
-                _data.preconditionHash,
-                ArbProtocol.generateAssertionHash(
-                    _data.afterHash,
-                    _data.numSteps,
-                    0x00,
-                    ArbProtocol.generateLastMessageHash(
-                        _data.tokenTypes,
-                        _data.messageData,
-                        _data.messageTokenNums,
-                        _data.messageAmounts,
-                        _data.messageDestination
-                    ),
-                    0x00,
-                    _data.logsAccHash,
-                    ArbProtocol.calculateBeforeValues(
-                        _data.tokenTypes,
-                        _data.messageTokenNums,
-                        _data.messageAmounts
+            keccak256(
+                abi.encodePacked(
+                    _data.preconditionHash,
+                    ArbProtocol.generateAssertionHash(
+                        _data.afterHash,
+                        _data.numSteps,
+                        0x00,
+                        ArbProtocol.generateLastMessageHash(
+                            _data.tokenTypes,
+                            _data.messageData,
+                            _data.messageTokenNums,
+                            _data.messageAmounts,
+                            _data.messageDestination
+                        ),
+                        0x00,
+                        _data.logsAccHash,
+                        ArbProtocol.calculateBeforeValues(
+                            _data.tokenTypes,
+                            _data.messageTokenNums,
+                            _data.messageAmounts
+                        )
                     )
                 )
-            )) == vm.pendingHash,
+            ) == vm.pendingHash,
             "Precondition and assertion do not match pending assertion"
         );
-        vm.validatorBalances[vm.disputableAsserter] = vm.validatorBalances[vm.disputableAsserter].add(vm.escrowRequired);
+        vm.validatorBalances[vm.asserter] = vm.validatorBalances[vm.asserter].add(vm.escrowRequired);
         _acceptAssertion(
             _data.vmId,
             _data.afterHash,
@@ -769,14 +839,13 @@ contract VMTracker is Ownable {
         bytes32 _assertPreHash
     ) public {
         VM storage vm = vms[_vmId];
-        require(msg.sender != vm.disputableAsserter, "Challenge was created by asserter");
+        require(msg.sender != vm.asserter, "Challenge was created by asserter");
         require(block.number <= vm.deadline, "Challenge did not come before deadline");
         require(vm.state == VMState.PendingAssertion, "Assertion must be pending to initiate challenge");
         require(vm.escrowRequired <= vm.validatorBalances[msg.sender], "Challenger did not have enough escrowed");
 
         require(
-            _assertPreHash
-            == vm.pendingHash,
+            _assertPreHash == vm.pendingHash,
             "Precondition and assertion do not match pending assertion"
         );
 
@@ -787,7 +856,7 @@ contract VMTracker is Ownable {
 
         challengeManagers[vm.challengeManagersNum].initiateChallenge(
             _vmId,
-            [vm.disputableAsserter, msg.sender],
+            [vm.asserter, msg.sender],
             [vm.escrowRequired, vm.escrowRequired],
             vm.gracePeriod,
             _assertPreHash
@@ -801,8 +870,11 @@ contract VMTracker is Ownable {
 
     function completeChallenge(bytes32 _vmId, address[2] calldata _players, uint128[2] calldata _rewards) external {
         VM storage vm = vms[_vmId];
-        require(msg.sender == address(challengeManagers[vm.challengeManagersNum]));
-        require(vm.inChallenge);
+        require(
+            msg.sender == address(challengeManagers[vm.challengeManagersNum]),
+            "Only challenge manager can complete challenge"
+        );
+        require(vm.inChallenge, "VM must be in challenge to complete it");
 
         vm.inChallenge = false;
         vm.validatorBalances[_players[0]] = vm.validatorBalances[_players[0]].add(_rewards[0]);
