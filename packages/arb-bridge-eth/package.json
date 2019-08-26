@@ -26,6 +26,7 @@
     ]
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^2.3.0"
+    "@openzeppelin/contracts": "^2.3.0",
+    "solidity-bytes-utils": "^0.0.8"
   }
 }

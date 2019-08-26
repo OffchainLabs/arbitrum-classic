@@ -16,7 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-import "bytes/BytesLib.sol";
+import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./ArbProtocol.sol";
 import "./ArbValue.sol";
 import "./ArbMachine.sol";
