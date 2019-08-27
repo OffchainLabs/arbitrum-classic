@@ -17,6 +17,9 @@
   "directories": {
     "test": "test"
   },
+  "scripts": {
+    "build": "truffle compile"
+  },
   "module": {
     "loaders": [
       {
@@ -28,5 +31,8 @@
   "dependencies": {
     "@openzeppelin/contracts": "^2.3.0",
     "solidity-bytes-utils": "^0.0.8"
+  },
+  "devDependencies": {
+    "truffle": "^5.0.33"
   }
 }
