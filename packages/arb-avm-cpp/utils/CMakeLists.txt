@@ -18,8 +18,6 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (avm_utils LANGUAGES CXX)
 
-find_package(Boost 1.65 COMPONENTS system REQUIRED)
-
 add_library(avm_utils STATIC bigint_utils.hpp bigint_utils.cpp )
 
 set_target_properties(
