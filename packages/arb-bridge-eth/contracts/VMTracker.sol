@@ -117,8 +117,9 @@ contract VMTracker is Ownable {
         mapping(address => uint256) validatorBalances;
     }
 
-    bytes32 constant MACHINE_HALT_HASH = bytes32(0);
-    bytes32 constant MACHINE_ERROR_HASH = bytes32(uint(1));
+    bytes32 internal constant MACHINE_HALT_HASH = bytes32(0);
+    bytes32 internal constant MACHINE_ERROR_HASH = bytes32(uint(1));
+    address internal constant ETH_ADDRESS = address(0);
 
     IChallengeManager[] challengeManagers;
     ArbBalanceTracker arbBalanceTracker;
@@ -128,7 +129,7 @@ contract VMTracker is Ownable {
     constructor(address _balanceTrackerAddress) public {
         arbBalanceTracker = ArbBalanceTracker(_balanceTrackerAddress);
 
-        acceptedCurrencies[address(0)] = true;
+        acceptedCurrencies[ETH_ADDRESS] = true;
     }
 
     function ownerShutdown(bytes32 _vmId) external {
@@ -388,14 +389,17 @@ contract VMTracker is Ownable {
             );
         }
 
-        arbBalanceTracker.hasFunds(
-            _vmId,
-            _tokenTypes,
-            ArbProtocol.calculateBeforeValues(
+        require(
+            arbBalanceTracker.hasFunds(
+                _vmId,
                 _tokenTypes,
-                _messageTokenNum,
-                _messageAmount
-            )
+                ArbProtocol.calculateBeforeValues(
+                    _tokenTypes,
+                    _messageTokenNum,
+                    _messageAmount
+                )
+            ),
+            "VM has insufficient balance"
         );
 
         _cancelCurrentState(vm);
@@ -686,10 +690,13 @@ contract VMTracker is Ownable {
             _data.msgAmount
         );
 
-        arbBalanceTracker.hasFunds(
-            _data.vmId,
-            _data.tokenTypes,
-            beforeBalances
+        require(
+            arbBalanceTracker.hasFunds(
+                _data.vmId,
+                _data.tokenTypes,
+                beforeBalances
+            ),
+            "VM has insufficient balance"
         );
         _resetDeadline(vm);
 
@@ -805,7 +812,8 @@ contract VMTracker is Ownable {
         uint offset = 0;
         bytes memory msgData;
         VM storage vm = vms[_vmId];
-        for (uint i = 0; i < _amounts.length; i++) {
+        uint amountCount = _amounts.length;
+        for (uint i = 0; i < amountCount; i++) {
             (offset, msgData) = ArbValue.getNextValidValue(_messageData, offset);
             _sendUnpaidMessage(
                 _destinations[i],

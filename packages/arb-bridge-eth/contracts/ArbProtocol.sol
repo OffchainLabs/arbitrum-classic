@@ -181,7 +181,8 @@ library ArbProtocol {
         returns(uint256[] memory)
     {
         uint256[] memory beforeBalances = new uint256[](_tokenTypes.length);
-        for (uint i = 0; i < _messageTokenNums.length; i++) {
+        uint tokenNumCount = _messageTokenNums.length;
+        for (uint i = 0; i < tokenNumCount; i++) {
             if (_tokenTypes[_messageTokenNums[i]][20] == 0) {
                 beforeBalances[_messageTokenNums[i]] += _messageAmounts[i];
             } else {
@@ -195,27 +196,28 @@ library ArbProtocol {
 
     function generateLastMessageHash(
         bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNum,
-        uint256[] memory _messageAmount,
-        bytes32[] memory _messageDestination
+        bytes memory _data,
+        uint16[] memory _tokenNums,
+        uint256[] memory _amounts,
+        bytes32[] memory _destinations
     )
         public
         pure
         returns (bytes32)
     {
-        require(_messageAmount.length == _messageDestination.length, "Input size mismatch");
-        require(_messageAmount.length == _messageTokenNum.length, "Input size mismatch");
+        require(_amounts.length == _destinations.length, "Input size mismatch");
+        require(_amounts.length == _tokenNums.length, "Input size mismatch");
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;
-        for (uint i = 0; i < _messageAmount.length; i++) {
-            (offset, msgHash) = ArbValue.deserializeValidValueHash(_messageData, offset);
+        uint amountCount = _amounts.length;
+        for (uint i = 0; i < amountCount; i++) {
+            (offset, msgHash) = ArbValue.deserializeValidValueHash(_data, offset);
             msgHash = generateMessageStubHash(
                 msgHash,
-                _tokenTypes[_messageTokenNum[i]],
-                _messageAmount[i],
-                _messageDestination[i]
+                _tokenTypes[_tokenNums[i]],
+                _amounts[i],
+                _destinations[i]
             );
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
@@ -223,26 +225,27 @@ library ArbProtocol {
 
     function generateLastMessageHashStub(
         bytes21[] memory _tokenTypes,
-        bytes32[] memory _messageDataHashes,
-        uint16[] memory _messageTokenNum,
-        uint256[] memory _messageValueAmounts,
-        bytes32[] memory _messageDestination
+        bytes32[] memory _dataHashes,
+        uint16[] memory _tokenNums,
+        uint256[] memory _amounts,
+        bytes32[] memory _destinations
     )
         public
         pure
         returns (bytes32)
     {
-        require(_messageDataHashes.length == _messageTokenNum.length, "Input size mismatch");
-        require(_messageDataHashes.length == _messageValueAmounts.length, "Input size mismatch");
-        require(_messageDataHashes.length == _messageDestination.length, "Input size mismatch");
+        require(_dataHashes.length == _tokenNums.length, "Input size mismatch");
+        require(_dataHashes.length == _amounts.length, "Input size mismatch");
+        require(_dataHashes.length == _destinations.length, "Input size mismatch");
         bytes32 hashVal = 0x00;
         bytes32 msgHash;
-        for (uint i = 0; i < _messageDataHashes.length; i++) {
+        uint dataHashCount = _dataHashes.length;
+        for (uint i = 0; i < dataHashCount; i++) {
             msgHash = generateMessageStubHash(
-                _messageDataHashes[i],
-                _tokenTypes[_messageTokenNum[i]],
-                _messageValueAmounts[i],
-                _messageDestination[i]
+                _dataHashes[i],
+                _tokenTypes[_tokenNums[i]],
+                _amounts[i],
+                _destinations[i]
             );
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }

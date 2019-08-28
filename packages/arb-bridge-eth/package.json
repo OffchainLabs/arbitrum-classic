@@ -34,5 +34,11 @@
   },
   "devDependencies": {
     "truffle": "^5.0.33"
+  },
+  "workspaces": {
+    "nohoist": [
+      "@openzeppelin/contracts",
+      "solidity-bytes-utils"
+    ]
   }
 }

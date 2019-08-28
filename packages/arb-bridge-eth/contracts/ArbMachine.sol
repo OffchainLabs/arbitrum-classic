@@ -25,9 +25,9 @@ library ArbMachine {
     using BytesLib for bytes;
     using ArbValue for ArbValue.Value;
 
-    uint constant MACHINE_EXTENSIVE = uint(0);
-    uint constant MACHINE_ERRORSTOP = uint(1);
-    uint constant MACHINE_HALT = uint(2);
+    uint internal constant MACHINE_EXTENSIVE = uint(0);
+    uint internal constant MACHINE_ERRORSTOP = uint(1);
+    uint internal constant MACHINE_HALT = uint(2);
 
     function addStackVal(
         ArbValue.HashOnlyValue memory stackVal,

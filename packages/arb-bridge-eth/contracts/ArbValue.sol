@@ -23,11 +23,11 @@ library ArbValue {
     using BytesLib for bytes;
     using ArbValue for Value;
 
-    uint8 constant INT_TYPECODE = 0;
-    uint8 constant CODE_POINT_TYPECODE = 1;
-    uint8 constant HASH_ONLY_TYPECODE = 2;
-    uint8 constant TUPLE_TYPECODE = 3;
-    uint8 constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
+    uint8 internal constant INT_TYPECODE = 0;
+    uint8 internal constant CODE_POINT_TYPECODE = 1;
+    uint8 internal constant HASH_ONLY_TYPECODE = 2;
+    uint8 internal constant TUPLE_TYPECODE = 3;
+    uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
 
     function isTupleType(uint8 typeCode) private pure returns (bool) {
         return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
@@ -86,7 +86,8 @@ library ArbValue {
 
     function hashTupleValue(Value[1] memory val) internal pure returns (bytes32) {
         Value[] memory vals = new Value[](val.length);
-        for (uint i = 0; i < vals.length; i++) {
+        uint valCount = vals.length;
+        for (uint i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
         return hashTupleValue(vals);
@@ -94,7 +95,8 @@ library ArbValue {
 
     function hashTupleValue(Value[2] memory val) internal pure returns (bytes32) {
         Value[] memory vals = new Value[](val.length);
-        for (uint i = 0; i < vals.length; i++) {
+        uint valCount = vals.length;
+        for (uint i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
         return hashTupleValue(vals);
@@ -102,7 +104,8 @@ library ArbValue {
 
     function hashTupleValue(Value[3] memory val) internal pure returns (bytes32) {
         Value[] memory vals = new Value[](val.length);
-        for (uint i = 0; i < vals.length; i++) {
+        uint valCount = vals.length;
+        for (uint i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
         return hashTupleValue(vals);
@@ -111,7 +114,8 @@ library ArbValue {
     function hashTupleValue(Value[] memory val) private pure returns (bytes32) {
         require(val.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](val.length);
-        for (uint i = 0; i < hashes.length; i++) {
+        uint hashCount = hashes.length;
+        for (uint i = 0; i < hashCount; i++) {
             HashOnlyValue memory hashVal = val[i].hash();
             hashes[i] = hashVal.hash;
         }
@@ -210,7 +214,8 @@ library ArbValue {
 
     function newTupleHashValues(HashOnlyValue[] memory _val) internal pure returns (Value memory) {
         Value[] memory values = new Value[](_val.length);
-        for (uint i = 0; i < _val.length; i++) {
+        uint valCount = _val.length;
+        for (uint i = 0; i < valCount; i++) {
             values[i] = newHashOnlyValue(_val[i].hash);
         }
         return newTupleValue(values);
