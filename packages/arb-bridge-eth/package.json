@@ -18,7 +18,8 @@
     "test": "test"
   },
   "scripts": {
-    "build": "truffle compile"
+    "build": "truffle compile",
+    "flatten": "truffle-flattener contracts/* > arbitrum_flat.sol"
   },
   "module": {
     "loaders": [
@@ -33,7 +34,8 @@
     "solidity-bytes-utils": "^0.0.8"
   },
   "devDependencies": {
-    "truffle": "^5.0.33"
+    "truffle": "^5.0.33",
+    "truffle-flattener": "^1.4.0"
   },
   "workspaces": {
     "nohoist": [

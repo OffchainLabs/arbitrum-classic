@@ -17,6 +17,7 @@ bridge_eth_addresses.json
 keys.json
 vconan
 /workspace
+arbitrum_flat.sol
 
 # Logs
 logs
