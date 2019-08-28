@@ -1,0 +1,18 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### update-go-abi
+### --------------------------------------------------------------------
+
+yarn workspace arb-bridge-eth build
+cd packages/arb-bridge-eth/contracts
+cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
+cp -r ../node_modules/solidity-bytes-utils/ ./solidity-bytes-utils
+abigen --sol=VMTracker.sol --pkg=verifierRPC --out=verifier_rpc.go
+abigen --sol=ChallengeManager.sol --pkg=challengeRPC --out=challenger_rpc.go
+\cp verifier_rpc.go ../../arb-validator/ethbridge/verifierRPC/rpc.go
+\cp challenger_rpc.go ../../arb-validator/ethbridge/challengeRPC/rpc.go
+rm -rf @openzeppelin solidity-bytes-utils
+\cp ../build/contracts/VMTracker.json ../../arb-provider-ethers/src/lib/VMTracker.json
+rm -f verifier_rpc.go challenger_rpc.go
+cd ../../..
+yarn workspace arb-provider-ethers shrinkABI

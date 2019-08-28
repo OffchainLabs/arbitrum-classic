@@ -19,7 +19,7 @@
         "prepare": "yarn build",
         "prepublishOnly": "yarn shrinkABI && yarn test && yarn lint",
         "preversion": "npm run lint",
-        "shrinkABI": "node shrinkABI.js",
+        "shrinkABI": "node shrinkABI.js && yarn run prettier src/lib/VMTracker.json --write",
         "build": "tsc",
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
