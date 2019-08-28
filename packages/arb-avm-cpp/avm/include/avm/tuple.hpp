@@ -17,9 +17,9 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
-#include "codepoint.hpp"
-#include "pool.hpp"
-#include "value.hpp"
+#include <avm/codepoint.hpp>
+#include <avm/pool.hpp>
+#include <avm/value.hpp>
 
 #include <memory>
 
@@ -48,50 +48,20 @@ class Tuple {
         }
     }
 
-    Tuple(value val, TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(1)) {
-        tpl->data.push_back(std::move(val));
-        tpl->cachedHash = calculateHash();
-    }
+    Tuple(value val, TuplePool* pool);
 
-    Tuple(value val1, value val2, TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(2)) {
-        tpl->data.push_back(std::move(val1));
-        tpl->data.push_back(std::move(val2));
-        tpl->cachedHash = calculateHash();
-    }
+    Tuple(value val1, value val2, TuplePool* pool);
 
-    Tuple(value val1, value val2, value val3, TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(3)) {
-        tpl->data.push_back(std::move(val1));
-        tpl->data.push_back(std::move(val2));
-        tpl->data.push_back(std::move(val3));
-        tpl->cachedHash = calculateHash();
-    }
+    Tuple(value val1, value val2, value val3, TuplePool* pool);
 
-    Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(4)) {
-        tpl->data.push_back(std::move(val1));
-        tpl->data.push_back(std::move(val2));
-        tpl->data.push_back(std::move(val3));
-        tpl->data.push_back(std::move(val4));
-        tpl->cachedHash = calculateHash();
-    }
+    Tuple(value val1, value val2, value val3, value val4, TuplePool* pool);
 
     Tuple(value val1,
           value val2,
           value val3,
           value val4,
           value val5,
-          TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(5)) {
-        tpl->data.push_back(std::move(val1));
-        tpl->data.push_back(std::move(val2));
-        tpl->data.push_back(std::move(val3));
-        tpl->data.push_back(std::move(val4));
-        tpl->data.push_back(std::move(val5));
-        tpl->cachedHash = calculateHash();
-    }
+          TuplePool* pool);
 
     Tuple(value val1,
           value val2,
@@ -99,16 +69,7 @@ class Tuple {
           value val4,
           value val5,
           value val6,
-          TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(6)) {
-        tpl->data.push_back(std::move(val1));
-        tpl->data.push_back(std::move(val2));
-        tpl->data.push_back(std::move(val3));
-        tpl->data.push_back(std::move(val4));
-        tpl->data.push_back(std::move(val5));
-        tpl->data.push_back(std::move(val6));
-        tpl->cachedHash = calculateHash();
-    }
+          TuplePool* pool);
 
     Tuple(value val1,
           value val2,
@@ -117,17 +78,7 @@ class Tuple {
           value val5,
           value val6,
           value val7,
-          TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(7)) {
-        tpl->data.push_back(std::move(val1));
-        tpl->data.push_back(std::move(val2));
-        tpl->data.push_back(std::move(val3));
-        tpl->data.push_back(std::move(val4));
-        tpl->data.push_back(std::move(val5));
-        tpl->data.push_back(std::move(val6));
-        tpl->data.push_back(std::move(val7));
-        tpl->cachedHash = calculateHash();
-    }
+          TuplePool* pool);
 
     Tuple(value val1,
           value val2,
@@ -137,18 +88,7 @@ class Tuple {
           value val6,
           value val7,
           value val8,
-          TuplePool* pool)
-        : tuplePool(pool), tpl(pool->getResource(8)) {
-        tpl->data.push_back(std::move(val1));
-        tpl->data.push_back(std::move(val2));
-        tpl->data.push_back(std::move(val3));
-        tpl->data.push_back(std::move(val4));
-        tpl->data.push_back(std::move(val5));
-        tpl->data.push_back(std::move(val6));
-        tpl->data.push_back(std::move(val7));
-        tpl->data.push_back(std::move(val8));
-        tpl->cachedHash = calculateHash();
-    }
+          TuplePool* pool);
 
     //    ~Tuple() {
     //        if (tpl.use_count() == 1) {

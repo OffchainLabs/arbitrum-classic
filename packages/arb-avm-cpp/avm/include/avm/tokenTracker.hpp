@@ -17,8 +17,8 @@
 #ifndef tokenTracker_hpp
 #define tokenTracker_hpp
 
-#include "datastack.hpp"
-#include "value.hpp"
+#include <avm/datastack.hpp>
+#include <avm/value.hpp>
 
 #include <stdio.h>
 

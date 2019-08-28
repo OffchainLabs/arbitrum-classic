@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <avm/codepoint.hpp>
+#include "avm/codepoint.hpp"
 
-#include <avm/tuple.hpp>
-#include <avm/util.hpp>
+#include "avm/tuple.hpp"
+
+#include "util.hpp"
 
 Operation::Operation(OpCode opcode_, value immediate_)
     : opcode(opcode_), immediate(std::make_unique<value>(immediate_)) {}

@@ -17,8 +17,8 @@
 #ifndef value_h
 #define value_h
 
-#include "bigint.hpp"
-#include "opcodes.hpp"
+#include <avm/bigint.hpp>
+#include <avm/opcodes.hpp>
 
 #include <nonstd/variant.hpp>
 

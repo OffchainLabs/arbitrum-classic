@@ -14,9 +14,111 @@
  * limitations under the License.
  */
 
-#include <avm/tuple.hpp>
+#include "avm/tuple.hpp"
 
-#include <avm/util.hpp>
+#include "util.hpp"
+
+Tuple::Tuple(value val, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(1)) {
+    tpl->data.push_back(std::move(val));
+    tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(value val1, value val2, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(2)) {
+    tpl->data.push_back(std::move(val1));
+    tpl->data.push_back(std::move(val2));
+    tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(3)) {
+    tpl->data.push_back(std::move(val1));
+    tpl->data.push_back(std::move(val2));
+    tpl->data.push_back(std::move(val3));
+    tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(4)) {
+    tpl->data.push_back(std::move(val1));
+    tpl->data.push_back(std::move(val2));
+    tpl->data.push_back(std::move(val3));
+    tpl->data.push_back(std::move(val4));
+    tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(value val1,
+             value val2,
+             value val3,
+             value val4,
+             value val5,
+             TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(5)) {
+    tpl->data.push_back(std::move(val1));
+    tpl->data.push_back(std::move(val2));
+    tpl->data.push_back(std::move(val3));
+    tpl->data.push_back(std::move(val4));
+    tpl->data.push_back(std::move(val5));
+    tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(value val1,
+             value val2,
+             value val3,
+             value val4,
+             value val5,
+             value val6,
+             TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(6)) {
+    tpl->data.push_back(std::move(val1));
+    tpl->data.push_back(std::move(val2));
+    tpl->data.push_back(std::move(val3));
+    tpl->data.push_back(std::move(val4));
+    tpl->data.push_back(std::move(val5));
+    tpl->data.push_back(std::move(val6));
+    tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(value val1,
+             value val2,
+             value val3,
+             value val4,
+             value val5,
+             value val6,
+             value val7,
+             TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(7)) {
+    tpl->data.push_back(std::move(val1));
+    tpl->data.push_back(std::move(val2));
+    tpl->data.push_back(std::move(val3));
+    tpl->data.push_back(std::move(val4));
+    tpl->data.push_back(std::move(val5));
+    tpl->data.push_back(std::move(val6));
+    tpl->data.push_back(std::move(val7));
+    tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(value val1,
+             value val2,
+             value val3,
+             value val4,
+             value val5,
+             value val6,
+             value val7,
+             value val8,
+             TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(8)) {
+    tpl->data.push_back(std::move(val1));
+    tpl->data.push_back(std::move(val2));
+    tpl->data.push_back(std::move(val3));
+    tpl->data.push_back(std::move(val4));
+    tpl->data.push_back(std::move(val5));
+    tpl->data.push_back(std::move(val6));
+    tpl->data.push_back(std::move(val7));
+    tpl->data.push_back(std::move(val8));
+    tpl->cachedHash = calculateHash();
+}
 
 void Tuple::marshal(std::vector<unsigned char>& buf) const {
     buf.push_back(TUPLE + tuple_size());

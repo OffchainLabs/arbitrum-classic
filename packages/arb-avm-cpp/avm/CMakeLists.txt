@@ -26,10 +26,9 @@ set(LIB_HEADERS
   include/avm/machine.hpp
   include/avm/opcodes.hpp
   include/avm/pool.hpp
-  include/avm/tuple.hpp
-  include/avm/util.hpp
-  include/avm/value.hpp
   include/avm/tokenTracker.hpp
+  include/avm/tuple.hpp
+  include/avm/value.hpp
 )
 
 set(LIB_SOURCES
@@ -41,6 +40,8 @@ set(LIB_SOURCES
   src/tuple.cpp
   src/value.cpp
   src/tokenTracker.cpp
+
+  src/util.hpp
 
   ${KECCAK_SOURCES}
 )

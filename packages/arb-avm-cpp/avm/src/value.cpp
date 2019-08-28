@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include <avm/value.hpp>
+#include "avm/value.hpp"
 
-#include <avm/codepoint.hpp>
-#include <avm/tuple.hpp>
+#include "avm/codepoint.hpp"
+#include "avm/pool.hpp"
+#include "avm/tuple.hpp"
 
-#include <avm/pool.hpp>
-#include <avm/util.hpp>
+#include "util.hpp"
 
 #include <iostream>
 

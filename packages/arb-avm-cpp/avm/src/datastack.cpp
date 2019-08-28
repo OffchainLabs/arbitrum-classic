@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-#include <avm/datastack.hpp>
-#include <avm/util.hpp>
+#include "avm/datastack.hpp"
+
+#include "util.hpp"
 
 void datastack::addHash() const {
     uint256_t prev;

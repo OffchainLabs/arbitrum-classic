@@ -17,9 +17,9 @@
 #ifndef machine_hpp
 #define machine_hpp
 
-#include "datastack.hpp"
-#include "tokenTracker.hpp"
-#include "value.hpp"
+#include <avm/datastack.hpp>
+#include <avm/tokenTracker.hpp>
+#include <avm/value.hpp>
 
 #include <memory>
 #include <vector>

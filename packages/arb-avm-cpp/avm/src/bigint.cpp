@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <avm/bigint.hpp>
+#include "avm/bigint.hpp"
 
-#include <avm/util.hpp>
+#include "util.hpp"
 
 uint256_t hash(const uint256_t& val) {
     std::array<unsigned char, 32> intData;

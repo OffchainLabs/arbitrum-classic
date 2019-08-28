@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <avm/machine.hpp>
+#include "avm/machine.hpp"
 
-#include <avm/opcodes.hpp>
-#include <avm/util.hpp>
+#include "avm/opcodes.hpp"
+
+#include "util.hpp"
 
 #include <iostream>
 
