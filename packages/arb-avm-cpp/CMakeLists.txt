@@ -16,7 +16,13 @@ cmake_minimum_required (VERSION 3.5)
 
 set (CMAKE_CXX_STANDARD 14)
 
-project (AVMtest)
+project (arb-avm-cpp)
+
+set(AVM_VERSION_MAJOR 0)
+set(AVM_VERSION_MINOR 2)
+set(AVM_VERSION_PATCH 0)
+
+set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_PATCH})
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)

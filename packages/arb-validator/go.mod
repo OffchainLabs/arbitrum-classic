@@ -33,9 +33,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/miguelmota/go-solidity-sha3 v0.1.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
-	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.3.0
-	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.3.0
-	github.com/offchainlabs/arbitrum/packages/arb-util v0.3.0
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.2.0
+	github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.2.0
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.2.0
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect

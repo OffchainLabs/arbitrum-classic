@@ -20,6 +20,13 @@ project (cavm LANGUAGES CXX)
 
 add_library(cavm STATIC cmachine.h cmachine.cpp )
 
+set_target_properties(
+    cavm
+    PROPERTIES
+    VERSION ${AVM_VERSION_STRING}
+    SOVERSION ${AVM_VERSION_MAJOR}
+)
+
 target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic)
 
 target_link_libraries(cavm avm)

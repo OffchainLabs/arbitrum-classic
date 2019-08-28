@@ -41,11 +41,18 @@ set(LIB_SOURCES
   src/tuple.cpp
   src/value.cpp
   src/tokenTracker.cpp
-  
+
   ${KECCAK_SOURCES}
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} )
+
+set_target_properties(
+    avm
+    PROPERTIES
+    VERSION ${AVM_VERSION_STRING}
+    SOVERSION ${AVM_VERSION_MAJOR}
+)
 
 target_compile_options(avm PRIVATE -Wall -Wextra -Wpedantic)
 
