@@ -16,6 +16,7 @@
 
 #include "avm/datastack.hpp"
 
+#include "bigint_utils.hpp"
 #include "util.hpp"
 
 void datastack::addHash() const {

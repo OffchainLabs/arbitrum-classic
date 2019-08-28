@@ -8,8 +8,6 @@ extern "C" {
 }
 
 #include <limits>
-#include <sstream>
-#include <vector>
 
 namespace evm {
 inline void Keccak_256(const unsigned char* input,
@@ -26,11 +24,5 @@ inline void Keccak_256(const unsigned char* input,
         &hi, input, inputByteLen * std::numeric_limits<unsigned char>::digits);
     Keccak_HashFinal(&hi, output);
 }
-
-std::string strip(const std::string& s);
-std::vector<uint8_t> to_bytes(const std::string& s);
-std::string to_hex_string(const std::vector<uint8_t>& bytes);
-
-//  Address generate_address(const Address& sender, uint64_t nonce);
 
 }  // namespace evm

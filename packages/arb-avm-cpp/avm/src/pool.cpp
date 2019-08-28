@@ -19,7 +19,7 @@
 #include "avm/tuple.hpp"
 #include "avm/value.hpp"
 
-#include <iostream>
+#include <ostream>
 
 /**
  * Returns instance of Resource.

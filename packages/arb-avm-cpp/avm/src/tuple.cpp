@@ -16,6 +16,7 @@
 
 #include "avm/tuple.hpp"
 
+#include "bigint_utils.hpp"
 #include "util.hpp"
 
 Tuple::Tuple(value val, TuplePool* pool)

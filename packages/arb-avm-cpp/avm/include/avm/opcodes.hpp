@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef opcodes_h
-#define opcodes_h
+#ifndef opcodes_hpp
+#define opcodes_hpp
 
 #define CURRENT_AO_VERSION 1
 
@@ -294,4 +294,4 @@ const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}}};
 
-#endif /* opcodes_h */
+#endif /* opcodes_hpp */

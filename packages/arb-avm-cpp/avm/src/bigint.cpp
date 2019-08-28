@@ -16,7 +16,10 @@
 
 #include "avm/bigint.hpp"
 
+#include "bigint_utils.hpp"
 #include "util.hpp"
+
+#include <sstream>
 
 uint256_t hash(const uint256_t& val) {
     std::array<unsigned char, 32> intData;

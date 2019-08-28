@@ -27,7 +27,7 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
-find_package(Boost 1.65 REQUIRED)
+find_package(Boost 1.65 COMPONENTS system REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -40,6 +40,7 @@ file(GLOB_RECURSE ALL_CODE_FILES
     ${PROJECT_SOURCE_DIR}/avm/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/app/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/tests/*.[h]pp
+    ${PROJECT_SOURCE_DIR}/utils/*.[ch]pp
 )
 
 clang_format(TARGET_NAME ${ALL_CODE_FILES})
@@ -51,6 +52,7 @@ file(GLOB KECCAK_SOURCES
   external/keccak/*.c
 )
 
+add_subdirectory(utils)
 add_subdirectory(avm)
 add_subdirectory(cavm)
 add_subdirectory(app)

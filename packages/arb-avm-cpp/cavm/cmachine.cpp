@@ -15,6 +15,7 @@
  */
 
 #include "cmachine.h"
+#include "bigint_utils.hpp"
 
 #include <avm/machine.hpp>
 

@@ -18,6 +18,7 @@
 
 #include "avm/opcodes.hpp"
 
+#include "bigint_utils.hpp"
 #include "util.hpp"
 
 #include <iostream>

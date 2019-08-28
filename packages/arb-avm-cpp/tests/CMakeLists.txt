@@ -32,6 +32,7 @@ target_link_libraries(
 	avm_tests
 PRIVATE
 	avm
+    avm_utils
 	CONAN_PKG::Catch2
 	CONAN_PKG::jsonformoderncpp
 )

@@ -20,9 +20,10 @@
 #include "avm/pool.hpp"
 #include "avm/tuple.hpp"
 
+#include "bigint_utils.hpp"
 #include "util.hpp"
 
-#include <iostream>
+#include <ostream>
 
 #define UINT256_SIZE 32
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef value_h
-#define value_h
+#ifndef value_hpp
+#define value_hpp
 
 #include <avm/bigint.hpp>
 #include <avm/opcodes.hpp>
@@ -53,4 +53,4 @@ void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
 void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
 
-#endif /* value_h */
+#endif /* value_hpp */

@@ -18,6 +18,7 @@
 
 #include "avm/tuple.hpp"
 
+#include "bigint_utils.hpp"
 #include "util.hpp"
 
 Operation::Operation(OpCode opcode_, value immediate_)

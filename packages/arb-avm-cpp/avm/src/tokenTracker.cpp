@@ -16,13 +16,14 @@
 
 #include "avm/tokenTracker.hpp"
 
+#include "bigint_utils.hpp"
+
 bool isToken(const TokenType& tok) {
     return tok[20] == 0;
 }
 
 uint256_t fromTokenType(const TokenType& tok) {
-    std::vector<unsigned char> val;
-    val.resize(32);
+    std::array<unsigned char, 32> val;
     std::copy(tok.begin(), tok.end(), val.begin());
     return from_big_endian(val.begin(), val.end());
 }

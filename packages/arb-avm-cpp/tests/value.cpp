@@ -16,6 +16,8 @@
 
 #include "config.hpp"
 
+#include "bigint_utils.hpp"
+
 #include <avm/tuple.hpp>
 #include <avm/value.hpp>
 

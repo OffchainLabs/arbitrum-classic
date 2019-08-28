@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef codepoint_h
-#define codepoint_h
+#ifndef codepoint_hpp
+#define codepoint_hpp
 
 #include <avm/value.hpp>
 
@@ -58,4 +58,4 @@ uint256_t hash(const CodePoint& cp);
 bool operator==(const CodePoint& val1, const CodePoint& val2);
 std::ostream& operator<<(std::ostream& os, const Operation& val);
 
-#endif /* codepoint_h */
+#endif /* codepoint_hpp */
