@@ -62,6 +62,4 @@ require (
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
 
-replace github.com/offchainlabs/arbitrum/packages/arb-avm-go => ../arb-avm-go
-
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
