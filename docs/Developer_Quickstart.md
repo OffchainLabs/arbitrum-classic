@@ -17,53 +17,44 @@ read the [white paper](https://offchainlabs.com/arbitrum.pdf)!**
 Follow the instructions for supported operating systems or use the comprehensive
 list of dependencies.
 
-### MacOS
+### 1. Install python3 and docker:
 
-1. Install python3, nodejs, & docker using [Homebrew](https://brew.sh/):
+#### MacOS
 
-    ```bash
-    brew install python3 node@8 docker docker-compose
-    brew unlink node
-    brew link --force --overwrite node@8
-    brew cask install docker
-    open -a Docker
-    ```
-
-    Once the Docker app appears in the menu bar, wait until the yellow light turns
-    green (no need to log into Docker). Also check that node version 8 is installed
-    correctly by running `node -v`.
-
-2. Change npm's default directory:
-
-    If you have not installed any npm global packages before,
-    [change npm's default directory](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally)
-    with the following commands:
-
-    ```bash
-    mkdir ~/.npm-global
-    npm config set prefix '~/.npm-global'
-    echo $'# npm\nexport PATH="~/.npm-global/bin:$PATH"' >> ~/.bash_profile
-    source ~/.bash_profile
-    ```
-
-3. Install truffle and yarn
-
-    ```bash
-    npm install -g truffle ganache-cli yarn
-    ```
-
-### Ubuntu 18.04
-
-Install python3, nodejs, docker, truffle, and yarn:
+Using [Homebrew](https://brew.sh/):
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y python3 python3-pip nodejs npm docker docker-compose
-sudo npm install -g truffle ganache-cli yarn
+brew install python3 docker docker-compose
+brew cask install docker
+open -a Docker
+```
+
+    Once the Docker app appears in the menu bar, wait until the yellow light turns
+    green (no need to log into Docker). Also check that node version 10 is installed
+    correctly by running `node -v`.
+
+#### Ubuntu 18.04
+
+Using apt:
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip docker docker-compose
 ```
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
 > to give permissions "equivalent to the `root` user". See [the security warning](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface).
+
+### 2. Install yarn and truffle
+
+```bash
+touch ~/.bashrc
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+curl -o- -L https://yarnpkg.com/install.sh | bash
+nvm install 10.16.3
+. ~/.bashrc
+yarn global add ganache-cli truffle
+```
 
 ### Full List
 
@@ -71,7 +62,7 @@ Here are the important dependencies in case you are not running on a supported O
 
 -   [docker](https://github.com/docker/docker-ce/releases) and
     [docker-compose](https://github.com/docker/compose/releases)
--   [node and npm](https://nodejs.org/en/)
+-   [node](https://nodejs.org/en/)
 -   [python3 and pip3](https://www.python.org/downloads/)
 -   [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
 -   [ganache](https://www.npmjs.com/package/ganache-cli)

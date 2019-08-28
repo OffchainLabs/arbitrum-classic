@@ -11,5 +11,4 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-validator v0.2.0
 )
 
-
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp

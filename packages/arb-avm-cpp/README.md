@@ -2,7 +2,7 @@
 
 Arbitrum technologies are patent pending. This repository is offered under the Apache 2.0 license. See LICENSE for details.
 
-## Bulding, testing, and running
+## Bulding and testing
 
 ```bash
 mkdir release
@@ -12,7 +12,6 @@ conan install ..
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build .
 ctest .
-./app/avm_runner contract.ao inbox.dat
 ```
 
 ## Formatting code
