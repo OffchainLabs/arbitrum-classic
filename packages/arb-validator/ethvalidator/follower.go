@@ -190,7 +190,6 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		unanHash, err := m.UnanimousAssertHash(
 			unanUpdate.SequenceNum,
 			unanUpdate.BeforeHash,
-			unanUpdate.TimeBounds,
 			unanUpdate.NewInboxHash,
 			unanUpdate.BeforeInbox,
 			unanUpdate.Assertion,

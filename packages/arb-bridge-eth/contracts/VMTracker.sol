@@ -304,7 +304,6 @@ contract VMTracker is Ownable {
         bytes32 vmId;
         bytes32 afterHash;
         bytes32 newInbox;
-        uint64[2] timeBounds;
         bytes21[] tokenTypes;
         bytes messageData;
         uint16[] messageTokenNum;
@@ -318,7 +317,6 @@ contract VMTracker is Ownable {
         bytes32 _vmId,
         bytes32 _afterHash,
         bytes32 _newInbox,
-        uint64[2] memory _timeBounds,
         bytes21[] memory _tokenTypes,
         bytes memory _messageData,
         uint16[] memory _messageTokenNum,
@@ -334,7 +332,6 @@ contract VMTracker is Ownable {
                 _vmId,
                 _afterHash,
                 _newInbox,
-                _timeBounds,
                 _tokenTypes,
                 _messageData,
                 _messageTokenNum,
@@ -349,7 +346,6 @@ contract VMTracker is Ownable {
     function pendingUnanimousAssert(
         bytes32 _vmId,
         bytes32 _unanRest,
-        uint64[2] memory _timeBounds,
         bytes21[] memory _tokenTypes,
         uint16[] memory _messageTokenNum,
         uint256[] memory _messageAmount,
@@ -360,7 +356,6 @@ contract VMTracker is Ownable {
         public
     {
         VM storage vm = vms[_vmId];
-        require(withinTimeBounds(_timeBounds), "Precondition: not within time bounds");
         require(vm.machineHash != MACHINE_HALT_HASH, "Can't assert halted machine");
         bytes32 unanHash = keccak256(
             abi.encodePacked(
@@ -368,7 +363,6 @@ contract VMTracker is Ownable {
                 keccak256(
                     abi.encodePacked(
                         _unanRest,
-                        _timeBounds,
                         vm.machineHash,
                         vm.inboxHash,
                         _tokenTypes,
@@ -619,7 +613,6 @@ contract VMTracker is Ownable {
     function _finalizedUnanimousAssert(FinalizedUnanimousAssertData memory data) internal {
         VM storage vm = vms[data.vmId];
         require(vm.machineHash != MACHINE_HALT_HASH, "Can't assert halted machine");
-        require(withinTimeBounds(data.timeBounds), "Precondition: not within time bounds");
         bytes32 unanHash = keccak256(
             abi.encodePacked(
                 data.vmId,
@@ -633,7 +626,6 @@ contract VMTracker is Ownable {
                                 data.messageDestination
                             )
                         ),
-                        data.timeBounds,
                         vm.machineHash,
                         vm.inboxHash,
                         data.tokenTypes,

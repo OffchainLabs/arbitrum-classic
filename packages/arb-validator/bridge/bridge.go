@@ -38,7 +38,6 @@ type Bridge interface {
 	FinalizedUnanimousAssert(
 		ctx context.Context,
 		newInboxHash [32]byte,
-		timeBounds protocol.TimeBounds,
 		assertion *protocol.Assertion,
 		signatures [][]byte,
 	) (chan *types.Receipt, chan error)
@@ -46,7 +45,6 @@ type Bridge interface {
 	PendingUnanimousAssert(
 		ctx context.Context,
 		newInboxHash [32]byte,
-		timeBounds protocol.TimeBounds,
 		assertion *protocol.Assertion,
 		sequenceNum uint64,
 		signatures [][]byte,

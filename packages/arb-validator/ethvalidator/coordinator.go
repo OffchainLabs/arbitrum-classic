@@ -648,7 +648,6 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 		unanHash, err := m.Val.UnanimousAssertHash(
 			unanUpdate.SequenceNum,
 			unanUpdate.BeforeHash,
-			unanUpdate.TimeBounds,
 			unanUpdate.NewInboxHash,
 			unanUpdate.BeforeInbox,
 			unanUpdate.Assertion,

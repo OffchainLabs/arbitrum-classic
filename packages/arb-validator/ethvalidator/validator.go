@@ -266,7 +266,6 @@ func (val *EthValidator) FinalizedAssertion(
 func (val *EthValidator) FinalizedUnanimousAssert(
 	ctx context.Context,
 	newInboxHash [32]byte,
-	timeBounds protocol.TimeBounds,
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (chan *types.Receipt, chan error) {
@@ -277,7 +276,6 @@ func (val *EthValidator) FinalizedUnanimousAssert(
 			val.makeAuth(ctx),
 			val.VMID,
 			newInboxHash,
-			timeBounds,
 			assertion,
 			signatures,
 		)
@@ -299,7 +297,6 @@ func (val *EthValidator) FinalizedUnanimousAssert(
 func (val *EthValidator) PendingUnanimousAssert(
 	ctx context.Context,
 	newInboxHash [32]byte,
-	timeBounds protocol.TimeBounds,
 	assertion *protocol.Assertion,
 	sequenceNum uint64,
 	signatures [][]byte,
@@ -311,7 +308,6 @@ func (val *EthValidator) PendingUnanimousAssert(
 			val.makeAuth(ctx),
 			val.VMID,
 			newInboxHash,
-			timeBounds,
 			assertion,
 			sequenceNum,
 			signatures,
@@ -799,7 +795,6 @@ func (val *EthValidator) SendEthMessage(
 func (val *EthValidator) UnanimousAssertHash(
 	sequenceNum uint64,
 	beforeHash [32]byte,
-	timeBounds protocol.TimeBounds,
 	newInboxHash [32]byte,
 	originalInboxHash [32]byte,
 	assertion *protocol.Assertion,
@@ -808,7 +803,6 @@ func (val *EthValidator) UnanimousAssertHash(
 		val.VMID,
 		sequenceNum,
 		beforeHash,
-		timeBounds,
 		newInboxHash,
 		originalInboxHash,
 		assertion,

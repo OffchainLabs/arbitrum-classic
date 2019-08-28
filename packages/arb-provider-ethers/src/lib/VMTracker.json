@@ -245,7 +245,6 @@
                 { "name": "_vmId", "type": "bytes32" },
                 { "name": "_afterHash", "type": "bytes32" },
                 { "name": "_newInbox", "type": "bytes32" },
-                { "name": "_timeBounds", "type": "uint64[2]" },
                 { "name": "_tokenTypes", "type": "bytes21[]" },
                 { "name": "_messageData", "type": "bytes" },
                 { "name": "_messageTokenNum", "type": "uint16[]" },
@@ -265,7 +264,6 @@
             "inputs": [
                 { "name": "_vmId", "type": "bytes32" },
                 { "name": "_unanRest", "type": "bytes32" },
-                { "name": "_timeBounds", "type": "uint64[2]" },
                 { "name": "_tokenTypes", "type": "bytes21[]" },
                 { "name": "_messageTokenNum", "type": "uint16[]" },
                 { "name": "_messageAmount", "type": "uint256[]" },

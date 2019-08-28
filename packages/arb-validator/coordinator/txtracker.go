@@ -187,7 +187,6 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		partialHashBytes, err := hashing.UnanimousAssertPartialHash(
 			prop.SequenceNum,
 			prop.BeforeHash,
-			prop.TimeBounds,
 			prop.NewInboxHash,
 			prop.BeforeInbox,
 			prop.Assertion,

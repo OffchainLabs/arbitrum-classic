@@ -112,7 +112,6 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, ch
 		return bridge.FinalizedUnanimousAssert(
 			context.Background(),
 			bot.GetCore().GetMachine().InboxHash().Hash(),
-			bot.timeBounds,
 			bot.assertion,
 			bot.signatures,
 		)
@@ -120,7 +119,6 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, ch
 		return bridge.PendingUnanimousAssert(
 			context.Background(),
 			bot.GetCore().GetMachine().InboxHash().Hash(),
-			bot.timeBounds,
 			bot.assertion,
 			bot.sequenceNum,
 			bot.signatures,
