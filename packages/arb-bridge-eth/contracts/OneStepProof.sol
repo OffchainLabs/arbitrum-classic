@@ -16,7 +16,6 @@
 
 pragma solidity ^0.5.3;
 
-import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./ArbProtocol.sol";
 import "./ArbValue.sol";
 import "./ArbMachine.sol";
@@ -25,8 +24,6 @@ import "./ArbMachine.sol";
 
 
 library OneStepProof {
-
-    using BytesLib for bytes;
     using ArbMachine for ArbMachine.Machine;
     using ArbValue for ArbValue.Value;
 

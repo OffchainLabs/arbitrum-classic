@@ -24,13 +24,13 @@ import "./MerkleLib.sol";
 import "./VM.sol";
 import "./Disputable.sol";
 import "./Unanimous.sol";
+import "./SigUtils.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
 contract VMTracker is Ownable {
     using SafeMath for uint256;
-    using BytesLib for bytes;
 
     event MessageDelivered(
         bytes32 indexed vmId,
@@ -155,7 +155,7 @@ contract VMTracker is Ownable {
         require(_escrowRequired > 0, "VM must require non-zero deposit");
         require(acceptedCurrencies[_escrowCurrency], "Selected currency is not an accepted type");
 
-        address[] memory assertKeys = ArbProtocol.recoverAddresses(_fields[2], _signatures);
+        address[] memory assertKeys = SigUtils.recoverAddresses(_fields[2], _signatures);
         require(
             keccak256(
                 abi.encodePacked(
@@ -244,7 +244,7 @@ contract VMTracker is Ownable {
     )
         public
     {
-        address sender = ArbProtocol.recoverAddress(
+        address sender = SigUtils.recoverAddress(
             keccak256(
                 abi.encodePacked(
                     _destination,

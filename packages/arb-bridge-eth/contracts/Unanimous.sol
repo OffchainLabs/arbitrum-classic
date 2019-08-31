@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 import "./MerkleLib.sol";
-import "./ArbProtocol.sol";
+import "./SigUtils.sol";
 
 
 library Unanimous {
@@ -195,7 +195,7 @@ library Unanimous {
         );
         require(
             MerkleLib.generateAddressRoot(
-                ArbProtocol.recoverAddresses(unanHash, data.signatures)
+                SigUtils.recoverAddresses(unanHash, data.signatures)
             ) == vm.validatorRoot,
             "Validator signatures don't match"
         );
@@ -240,7 +240,7 @@ library Unanimous {
         );
         require(
             MerkleLib.generateAddressRoot(
-                ArbProtocol.recoverAddresses(unanHash, data.signatures)
+                SigUtils.recoverAddresses(unanHash, data.signatures)
             ) == vm.validatorRoot,
             "Validator signatures don't match"
         );
