@@ -175,15 +175,6 @@
             "type": "function"
         },
         {
-            "constant": true,
-            "inputs": [{ "name": "_timeBounds", "type": "uint64[2]" }],
-            "name": "withinTimeBounds",
-            "outputs": [{ "name": "", "type": "bool" }],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
             "constant": false,
             "inputs": [
                 { "name": "_fields", "type": "bytes32[3]" },
@@ -243,69 +234,14 @@
             "constant": false,
             "inputs": [
                 { "name": "_vmId", "type": "bytes32" },
-                { "name": "_afterHash", "type": "bytes32" },
-                { "name": "_newInbox", "type": "bytes32" },
-                { "name": "_tokenTypes", "type": "bytes21[]" },
-                { "name": "_messageData", "type": "bytes" },
-                { "name": "_messageTokenNum", "type": "uint16[]" },
-                { "name": "_messageAmount", "type": "uint256[]" },
-                { "name": "_messageDestination", "type": "bytes32[]" },
-                { "name": "_logsAccHash", "type": "bytes32" },
-                { "name": "_signatures", "type": "bytes" }
-            ],
-            "name": "finalizedUnanimousAssert",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                { "name": "_vmId", "type": "bytes32" },
-                { "name": "_unanRest", "type": "bytes32" },
-                { "name": "_tokenTypes", "type": "bytes21[]" },
-                { "name": "_messageTokenNum", "type": "uint16[]" },
-                { "name": "_messageAmount", "type": "uint256[]" },
-                { "name": "_sequenceNum", "type": "uint64" },
-                { "name": "_logsAccHash", "type": "bytes32" },
-                { "name": "_signatures", "type": "bytes" }
-            ],
-            "name": "pendingUnanimousAssert",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                { "name": "_vmId", "type": "bytes32" },
-                { "name": "_afterHash", "type": "bytes32" },
-                { "name": "_newInbox", "type": "bytes32" },
-                { "name": "_tokenTypes", "type": "bytes21[]" },
-                { "name": "_messageData", "type": "bytes" },
-                { "name": "_messageTokenNum", "type": "uint16[]" },
-                { "name": "_messageAmount", "type": "uint256[]" },
-                { "name": "_messageDestination", "type": "bytes32[]" }
-            ],
-            "name": "confirmUnanimousAsserted",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                { "name": "_fields", "type": "bytes32[5]" },
+                { "name": "_fields", "type": "bytes32[4]" },
                 { "name": "_numSteps", "type": "uint32" },
-                { "name": "timeBounds", "type": "uint64[2]" },
+                { "name": "_timeBounds", "type": "uint64[2]" },
                 { "name": "_tokenTypes", "type": "bytes21[]" },
                 { "name": "_messageDataHash", "type": "bytes32[]" },
-                { "name": "_messageTokenNum", "type": "uint16[]" },
-                { "name": "_msgAmount", "type": "uint256[]" },
-                { "name": "_msgDestination", "type": "bytes32[]" }
+                { "name": "_messageTokenNums", "type": "uint16[]" },
+                { "name": "_messageAmounts", "type": "uint256[]" },
+                { "name": "_messageDestinations", "type": "bytes32[]" }
             ],
             "name": "pendingDisputableAssert",
             "outputs": [],
@@ -324,7 +260,7 @@
                 { "name": "_messageData", "type": "bytes" },
                 { "name": "_messageTokenNums", "type": "uint16[]" },
                 { "name": "_messageAmounts", "type": "uint256[]" },
-                { "name": "_messageDestination", "type": "bytes32[]" },
+                { "name": "_messageDestinations", "type": "bytes32[]" },
                 { "name": "_logsAccHash", "type": "bytes32" }
             ],
             "name": "confirmDisputableAsserted",
@@ -337,6 +273,62 @@
             "constant": false,
             "inputs": [{ "name": "_vmId", "type": "bytes32" }, { "name": "_assertPreHash", "type": "bytes32" }],
             "name": "initiateChallenge",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                { "name": "_vmId", "type": "bytes32" },
+                { "name": "_afterHash", "type": "bytes32" },
+                { "name": "_newInbox", "type": "bytes32" },
+                { "name": "_tokenTypes", "type": "bytes21[]" },
+                { "name": "_messageData", "type": "bytes" },
+                { "name": "_messageTokenNums", "type": "uint16[]" },
+                { "name": "_messageAmounts", "type": "uint256[]" },
+                { "name": "_messageDestinations", "type": "bytes32[]" },
+                { "name": "_logsAccHash", "type": "bytes32" },
+                { "name": "_signatures", "type": "bytes" }
+            ],
+            "name": "finalizedUnanimousAssert",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                { "name": "_vmId", "type": "bytes32" },
+                { "name": "_unanRest", "type": "bytes32" },
+                { "name": "_tokenTypes", "type": "bytes21[]" },
+                { "name": "_messageTokenNums", "type": "uint16[]" },
+                { "name": "_messageAmounts", "type": "uint256[]" },
+                { "name": "_sequenceNum", "type": "uint64" },
+                { "name": "_logsAccHash", "type": "bytes32" },
+                { "name": "_signatures", "type": "bytes" }
+            ],
+            "name": "pendingUnanimousAssert",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                { "name": "_vmId", "type": "bytes32" },
+                { "name": "_afterHash", "type": "bytes32" },
+                { "name": "_newInbox", "type": "bytes32" },
+                { "name": "_tokenTypes", "type": "bytes21[]" },
+                { "name": "_messageData", "type": "bytes" },
+                { "name": "_messageTokenNums", "type": "uint16[]" },
+                { "name": "_messageAmounts", "type": "uint256[]" },
+                { "name": "_messageDestinations", "type": "bytes32[]" }
+            ],
+            "name": "confirmUnanimousAsserted",
             "outputs": [],
             "payable": false,
             "stateMutability": "nonpayable",

@@ -752,8 +752,8 @@ func (con *Bridge) PendingDisputableAssert(
 
 	return con.Tracker.PendingDisputableAssert(
 		auth,
-		[5][32]byte{
-			vmID,
+		vmID,
+		[4][32]byte{
 			precondition.BeforeHash,
 			precondition.BeforeInbox.Hash(),
 			assertion.AfterHash,

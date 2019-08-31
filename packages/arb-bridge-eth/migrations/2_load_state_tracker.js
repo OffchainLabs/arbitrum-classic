@@ -15,7 +15,10 @@
  */
 
 var ArbProtocol = artifacts.require("./ArbProtocol.sol");
+var VM = artifacts.require("./VM.sol");
 var ArbValue = artifacts.require("./ArbValue.sol");
+var Disputable = artifacts.require("./Disputable.sol");
+var Unanimous = artifacts.require("./Unanimous.sol");
 var VMTracker = artifacts.require("./VMTracker.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
@@ -26,22 +29,44 @@ var ArbBalanceTracker = artifacts.require("./ArbBalanceTracker.sol");
 
 module.exports = function(deployer, network, accounts) {
   deployer.deploy(MerkleLib);
-  deployer.link(MerkleLib, [ChallengeManager, VMTracker]);
+  deployer.link(MerkleLib, [ChallengeManager, VMTracker, Unanimous]);
 
   deployer.deploy(BytesLib);
   deployer.link(BytesLib, [ArbValue, ArbMachine]);
 
   deployer.deploy(ArbValue);
-  deployer.link(ArbValue, [VMTracker, OneStepProof, ArbMachine, ArbProtocol]);
+  deployer.link(ArbValue, [
+    VMTracker,
+    OneStepProof,
+    ArbMachine,
+    ArbProtocol,
+    VM
+  ]);
 
   deployer.deploy(ArbProtocol);
-  deployer.link(ArbProtocol, [VMTracker, ChallengeManager, OneStepProof]);
+  deployer.link(ArbProtocol, [
+    VMTracker,
+    ChallengeManager,
+    OneStepProof,
+    VM,
+    Disputable,
+    Unanimous
+  ]);
 
   deployer.deploy(ArbMachine);
   deployer.link(ArbMachine, [OneStepProof, VMTracker]);
 
   deployer.deploy(OneStepProof);
   deployer.link(OneStepProof, ChallengeManager);
+
+  deployer.deploy(VM);
+  deployer.link(VM, [Disputable, Unanimous, VMTracker]);
+
+  deployer.deploy(Disputable);
+  deployer.link(Disputable, VMTracker);
+
+  deployer.deploy(Unanimous);
+  deployer.link(Unanimous, VMTracker);
 
   deployer
     .deploy(ArbBalanceTracker)
