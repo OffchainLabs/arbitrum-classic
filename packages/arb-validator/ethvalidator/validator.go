@@ -447,7 +447,6 @@ func (val *EthValidator) BisectAssertion(
 	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
-	deadline uint64,
 ) (chan *types.Receipt, chan error) {
 	receiptChan := make(chan *types.Receipt, 1)
 	errChan := make(chan error, 1)
@@ -455,7 +454,6 @@ func (val *EthValidator) BisectAssertion(
 		tx, err := val.con.BisectAssertion(
 			val.makeAuth(ctx),
 			val.VMID,
-			deadline,
 			precondition,
 			assertions,
 		)
@@ -479,7 +477,6 @@ func (val *EthValidator) ContinueChallenge(
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,
 	assertions []*protocol.AssertionStub,
-	deadline uint64,
 ) (chan *types.Receipt, chan error) {
 	receiptChan := make(chan *types.Receipt, 1)
 	errChan := make(chan error, 1)
@@ -493,7 +490,6 @@ func (val *EthValidator) ContinueChallenge(
 			tree.GetProofFlat(int(assertionToChallenge)),
 			root,
 			tree.GetNode(int(assertionToChallenge)),
-			deadline,
 		)
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed continuing challenge")
@@ -515,7 +511,6 @@ func (val *EthValidator) OneStepProof(
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	proof []byte,
-	deadline uint64,
 ) (chan *types.Receipt, chan error) {
 	receiptChan := make(chan *types.Receipt, 1)
 	errChan := make(chan error, 1)
@@ -526,7 +521,6 @@ func (val *EthValidator) OneStepProof(
 			precondition,
 			assertion,
 			proof,
-			deadline,
 		)
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed one step proof")
@@ -545,24 +539,13 @@ func (val *EthValidator) OneStepProof(
 
 func (val *EthValidator) AsserterTimedOut(
 	ctx context.Context,
-	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
-	deadline uint64,
 ) (chan *types.Receipt, chan error) {
 	receiptChan := make(chan *types.Receipt, 1)
 	errChan := make(chan error, 1)
 	val.actionChan <- func(val *EthValidator) {
-		preAssBytes := solsha3.SoliditySHA3(
-			solsha3.Bytes32(precondition.Hash()),
-			solsha3.Bytes32(assertion.Hash()),
-		)
-		bisectionHash := [32]byte{}
-		copy(bisectionHash[:], preAssBytes)
 		tx, err := val.con.Challenge.AsserterTimedOut(
 			val.makeAuth(ctx),
 			val.VMID,
-			bisectionHash,
-			deadline,
 		)
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
@@ -581,19 +564,13 @@ func (val *EthValidator) AsserterTimedOut(
 
 func (val *EthValidator) ChallengerTimedOut(
 	ctx context.Context,
-	preconditions []*protocol.Precondition,
-	assertions []*protocol.AssertionStub,
-	deadline uint64,
 ) (chan *types.Receipt, chan error) {
 	receiptChan := make(chan *types.Receipt, 1)
 	errChan := make(chan error, 1)
 	val.actionChan <- func(val *EthValidator) {
-		tree := buildBisectionTree(preconditions, assertions)
 		tx, err := val.con.Challenge.ChallengerTimedOut(
 			val.makeAuth(ctx),
 			val.VMID,
-			tree.GetRoot(),
-			deadline,
 		)
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")

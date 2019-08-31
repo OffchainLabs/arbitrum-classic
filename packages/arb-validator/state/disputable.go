@@ -451,7 +451,6 @@ func (bot watchingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge
 			challengeState = challenger.New(
 				bot.Config,
 				bot.precondition,
-				bot.assertion.Stub(),
 				bot.GetMachine().Clone(),
 				deadline,
 			)

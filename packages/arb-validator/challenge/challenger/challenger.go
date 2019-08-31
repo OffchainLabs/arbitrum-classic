@@ -31,14 +31,12 @@ import (
 func New(
 	config *core.Config,
 	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
 	machine machine.Machine,
 	deadline uint64,
 ) challenge.State {
 	return waitingContinuing{
 		config,
 		precondition,
-		assertion,
 		machine,
 		deadline,
 	}
@@ -47,7 +45,6 @@ func New(
 type waitingContinuing struct {
 	*core.Config
 	challengedPrecondition *protocol.Precondition
-	challengedAssertion    *protocol.AssertionStub
 	startState             machine.Machine
 	deadline               uint64
 }
@@ -58,9 +55,6 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 	}
 	bridge.AsserterTimedOut(
 		context.Background(),
-		bot.challengedPrecondition,
-		bot.challengedAssertion,
-		bot.deadline,
 	)
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
@@ -84,18 +78,16 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 		if err != nil {
 			return nil, &challenge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
 		}
-		deadline := time + bot.VMConfig.GracePeriod
 		bridge.ContinueChallenge(
 			context.Background(),
 			assertionNum,
 			preconditions,
 			ev.Assertions,
-			deadline,
 		)
 		return continuing{
 			Config:          bot.Config,
 			challengedState: m,
-			deadline:        deadline,
+			deadline:        time + bot.VMConfig.GracePeriod,
 			preconditions:   preconditions,
 			assertions:      ev.Assertions,
 		}, nil
@@ -135,7 +127,6 @@ func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge
 		return waitingContinuing{
 			bot.Config,
 			bot.preconditions[ev.ChallengedAssertion],
-			bot.assertions[ev.ChallengedAssertion],
 			bot.challengedState,
 			deadline,
 		}, nil

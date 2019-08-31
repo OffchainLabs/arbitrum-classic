@@ -828,7 +828,6 @@ func (con *Bridge) InitiateChallenge(
 func (con *Bridge) BisectAssertion(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
-	deadline uint64,
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
 ) (*types.Transaction, error) {
@@ -850,8 +849,8 @@ func (con *Bridge) BisectAssertion(
 	}
 	return con.Challenge.BisectAssertion(
 		auth,
-		[3][32]byte{
-			vmID,
+		vmID,
+		[2][32]byte{
 			precondition.BeforeHash,
 			precondition.BeforeInbox.Hash(),
 		},
@@ -861,7 +860,6 @@ func (con *Bridge) BisectAssertion(
 		precondition.TimeBounds,
 		precondition.BeforeBalance.TokenTypes,
 		precondition.BeforeBalance.TokenAmounts,
-		deadline,
 	)
 }
 
@@ -872,14 +870,12 @@ func (con *Bridge) ContinueChallenge(
 	bisectionProof []byte,
 	bisectionRoot [32]byte,
 	bisectionHash [32]byte,
-	deadline uint64,
 ) (*types.Transaction, error) {
 	return con.Challenge.ContinueChallenge(
 		auth,
 		vmID,
 		assertionToChallenge,
 		bisectionProof,
-		deadline,
 		bisectionRoot,
 		bisectionHash,
 	)
@@ -891,7 +887,6 @@ func (con *Bridge) OneStepProof(
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	proof []byte,
-	deadline uint64,
 ) (*types.Transaction, error) {
 	return con.Challenge.OneStepProof(
 		auth,
@@ -909,21 +904,16 @@ func (con *Bridge) OneStepProof(
 		},
 		assertion.TotalVals,
 		proof,
-		deadline,
 	)
 }
 
 func (con *Bridge) AsserterTimedOutChallenge(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
-	bisectionHash [32]byte,
-	deadline uint64,
 ) (*types.Transaction, error) {
 	return con.Challenge.AsserterTimedOut(
 		auth,
 		vmID,
-		bisectionHash,
-		deadline,
 	)
 }
 

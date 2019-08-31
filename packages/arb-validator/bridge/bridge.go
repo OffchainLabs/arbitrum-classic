@@ -78,7 +78,6 @@ type Bridge interface {
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
-		deadline uint64,
 	) (chan *types.Receipt, chan error)
 
 	ContinueChallenge(
@@ -86,7 +85,6 @@ type Bridge interface {
 		assertionToChallenge uint16,
 		preconditions []*protocol.Precondition,
 		assertions []*protocol.AssertionStub,
-		deadline uint64,
 	) (chan *types.Receipt, chan error)
 
 	OneStepProof(
@@ -94,20 +92,13 @@ type Bridge interface {
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
 		proof []byte,
-		deadline uint64,
 	) (chan *types.Receipt, chan error)
 
 	AsserterTimedOut(
 		ctx context.Context,
-		precondition *protocol.Precondition,
-		assertion *protocol.AssertionStub,
-		deadline uint64,
 	) (chan *types.Receipt, chan error)
 
 	ChallengerTimedOut(
 		ctx context.Context,
-		preconditions []*protocol.Precondition,
-		assertions []*protocol.AssertionStub,
-		deadline uint64,
 	) (chan *types.Receipt, chan error)
 }
