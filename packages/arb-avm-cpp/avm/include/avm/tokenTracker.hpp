@@ -20,7 +20,8 @@
 #include <avm/datastack.hpp>
 #include <avm/value.hpp>
 
-#include <stdio.h>
+#include <unordered_map>
+#include <unordered_set>
 
 using TokenType = std::array<unsigned char, 21>;
 
@@ -42,21 +43,38 @@ struct nftKey {
     TokenType tokenType;
     uint256_t intVal;
     bool operator<(const nftKey& n) const {
-        return (this->tokenType < n.tokenType);
+        return std::tie(tokenType, intVal) < std::tie(n.tokenType, n.intVal);
+    }
+
+    bool operator==(const nftKey& n) const {
+        return std::tie(tokenType, intVal) == std::tie(n.tokenType, n.intVal);
     }
 };
 
+namespace std {
+template <>
+struct hash<TokenType> {
+    std::size_t operator()(const TokenType& k) const;
+};
+}  // namespace std
+
+namespace std {
+template <>
+struct hash<nftKey> {
+    std::size_t operator()(const nftKey& k) const;
+};
+}  // namespace std
+
 class BalanceTracker {
-    std::vector<TokenType> tokenTypes;
-    std::vector<uint256_t> tokenAmounts;
-    std::map<TokenType, int> tokenLookup;
-    std::map<nftKey, int> NFTLookup;
+    std::unordered_map<TokenType, uint256_t> tokenLookup;
+    std::unordered_set<nftKey> nftLookup;
 
    public:
-    bool CanSpend(const TokenType& tokType, const uint256_t& amount) const;
-    bool Spend(const TokenType& tokType, const uint256_t& amount);
+    bool canSpend(const TokenType& tokType, const uint256_t& amount) const;
+    bool spend(const TokenType& tokType, const uint256_t& amount);
     void add(const TokenType& tokType, const uint256_t& amount);
     uint256_t tokenValue(const TokenType& tokType) const;
+    bool hasNFT(const TokenType& tokType, const uint256_t& id) const;
 };
 
 #endif /* tokenTracker_hpp */

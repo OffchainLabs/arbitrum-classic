@@ -865,7 +865,7 @@ static BlockReason send(MachineState& m) {
         m.state = Status::Error;
         return NotBlocked();
     }
-    if (!m.balance.Spend(outMsg.token, outMsg.currency)) {
+    if (!m.balance.spend(outMsg.token, outMsg.currency)) {
         return SendBlocked{outMsg.currency, outMsg.token};
     } else {
         m.stack.popClear();
@@ -885,7 +885,7 @@ static void nbsend(MachineState& m) {
         return;
     }
 
-    bool spent = m.balance.Spend(outMsg.token, outMsg.currency);
+    bool spent = m.balance.spend(outMsg.token, outMsg.currency);
     if (!spent) {
         m.stack[0] = 0;
     } else {
