@@ -21,17 +21,12 @@
 #include <stdio.h>
 
 void pushMessage(MachineState& m,
-                 value data,
-                 uint256_t dest,
-                 uint256_t currency,
-                 TokenType tokType,
+                 const value& data,
+                 const uint256_t& dest,
+                 const uint256_t& currency,
+                 const TokenType& tokType,
                  TuplePool& pool) {
-    Tuple msgTup(&pool, 4);
-    msgTup.set_element(0, data);
-    msgTup.set_element(1, dest);
-    msgTup.set_element(2, currency);
-    msgTup.set_element(3, fromTokenType(tokType));
-    m.stack.push(std::move(msgTup));
+    m.stack.push(Tuple{data, dest, currency, fromTokenType(tokType), &pool});
 }
 
 void sendInboxMessage(MachineState& m,
@@ -39,12 +34,7 @@ void sendInboxMessage(MachineState& m,
                       uint256_t dest,
                       uint256_t currency,
                       TokenType tokType) {
-    Message msg;
-    msg.data = data;
-    msg.token = tokType;
-    msg.currency = currency;
-    msg.destination = dest;
-    m.sendOnchainMessage(msg);
+    m.sendOnchainMessage({data, dest, currency, tokType});
 }
 
 MachineState setupMachine(value data,
@@ -109,8 +99,10 @@ TEST_CASE("SEND") {
         sendInboxMessage(m, data, destination, currency, token);
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
-        m.runOp(OpCode::SEND);
+
         REQUIRE(m.balance.hasNFT(token, currency));
+        m.runOp(OpCode::SEND);
+        REQUIRE(!m.balance.hasNFT(token, currency));
         REQUIRE(m.state == Status::Extensive);
     }
 
@@ -126,7 +118,7 @@ TEST_CASE("SEND") {
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         auto blockReason = m.runOp(OpCode::SEND);
-        REQUIRE(m.balance.hasNFT(token, currency));
+        REQUIRE(!m.balance.hasNFT(token, currency));
         REQUIRE(m.state == Status::Extensive);
         REQUIRE(nonstd::get_if<SendBlocked>(&blockReason));
     }
@@ -189,8 +181,9 @@ TEST_CASE("NBSEND") {
         sendInboxMessage(m, data, destination, currency, token);
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
-        m.runOp(OpCode::NBSEND);
         REQUIRE(m.balance.hasNFT(token, currency));
+        m.runOp(OpCode::NBSEND);
+        REQUIRE(!m.balance.hasNFT(token, currency));
         value retval = m.stack.pop();
         auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 1);
@@ -208,8 +201,9 @@ TEST_CASE("NBSEND") {
         m.state = Status::Extensive;
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
+        REQUIRE(!m.balance.hasNFT(token, currency));
         m.runOp(OpCode::NBSEND);
-        REQUIRE(m.balance.hasNFT(token, currency));
+        REQUIRE(!m.balance.hasNFT(token, currency));
         value retval = m.stack.pop();
         auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 0);
