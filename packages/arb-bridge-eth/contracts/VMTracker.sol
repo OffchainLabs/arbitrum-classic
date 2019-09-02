@@ -295,13 +295,12 @@ contract VMTracker is Ownable {
     )
         public
     {
-        VM.Data storage vm = vms[_vmId];
         uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
             _tokenTypes,
             _messageTokenNums,
             _messageAmounts
         );
-
+        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
         require(
             arbBalanceTracker.hasFunds(
                 _vmId,
@@ -311,7 +310,7 @@ contract VMTracker is Ownable {
             "VM has insufficient balance"
         );
         Disputable.pendingDisputableAssert(
-            vm,
+            vms[_vmId],
             _fields,
             _numSteps,
             _timeBounds,
@@ -429,15 +428,17 @@ contract VMTracker is Ownable {
     )
         public
     {
+        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
+            _tokenTypes,
+            _messageTokenNums,
+            _messageAmounts
+        );
+        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
         require(
             arbBalanceTracker.hasFunds(
                 _vmId,
                 _tokenTypes,
-                ArbProtocol.calculateBeforeValues(
-                    _tokenTypes,
-                    _messageTokenNums,
-                    _messageAmounts
-                )
+                beforeBalances
             ),
             "VM has insufficient balance"
         );

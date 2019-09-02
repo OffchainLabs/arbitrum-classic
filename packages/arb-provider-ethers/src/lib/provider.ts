@@ -63,7 +63,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         this.chainId = 123456789;
         this.provider = provider;
         this.client = new ArbClient(managerUrl);
-        const contractAddress = '0x5EBF59dBff8dCDa41610738634b396DfCB24A7c7';
+        const contractAddress = '0x7073c616a8A3F277Ea4511fCe9EBB2656a1b87B8';
         this.vmTracker = new ethers.Contract(contractAddress, vmTrackerJson.abi, provider);
         this.contracts = new Map<string, Contract>();
         for (const contract of contracts) {

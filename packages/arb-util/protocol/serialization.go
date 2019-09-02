@@ -48,16 +48,14 @@ func NewTokenTypeFromBuf(buf *TokenTypeBuf) [21]byte {
 }
 
 func NewBalanceTrackerBuf(bt *BalanceTracker) *BalanceTrackerBuf {
-	types := make([]*TokenTypeBuf, 0, len(bt.TokenTypes))
-	amounts := make([]*value.BigIntegerBuf, 0, len(bt.TokenAmounts))
-	for _, tokenType := range bt.TokenTypes {
+	types := make([]*TokenTypeBuf, 0, len(bt.entries))
+	amounts := make([]*value.BigIntegerBuf, 0, len(bt.entries))
+	for _, entry := range bt.entries {
 		types = append(types, &TokenTypeBuf{
-			Value: tokenType[:],
+			Value: entry.tokenType[:],
 		})
-	}
-	for _, tokenAmount := range bt.TokenAmounts {
 		amounts = append(amounts, &value.BigIntegerBuf{
-			Value: tokenAmount.Bytes(),
+			Value: entry.amount.Bytes(),
 		})
 	}
 	return &BalanceTrackerBuf{

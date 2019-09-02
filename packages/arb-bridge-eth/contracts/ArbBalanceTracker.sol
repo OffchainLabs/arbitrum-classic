@@ -109,6 +109,11 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         ERC20(_tokenContract).transfer(msg.sender, _value);
     }
 
+    function onERC721Received(address, address _from, uint256 _tokenId, bytes calldata) external returns(bytes4) {
+        addNFTToken(bytes32(bytes20(_from)), msg.sender, _tokenId);
+        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
+    }
+
     function depositERC721(address _tokenContract, uint256 _tokenId) external {
         ERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
         addNFTToken(bytes32(bytes20(msg.sender)), _tokenContract, _tokenId);
@@ -176,41 +181,29 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         return wallet.nftWalletList[index - 1].tokenIndex[_tokenId] != 0;
     }
 
-    function hasFunds(bytes32 _vmId, bytes21[] memory _tokenTypes, uint256[] memory _amounts) public returns(bool) {
+    // This function assumes that tokenTypes and amounts are valid and in canonical
+    // order. The pair (tokenType, amount) are sorted in ascending order with
+    // tokenTypes as the primary key and amount as the secondary key
+    // Token type only allows repeats for NFTs and amounts disallow repeats for NFTs
+    function hasFunds(
+        bytes32 _vmId,
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _amounts
+    )
+        public
+        view
+        returns(bool)
+    {
         uint tokenTypeCount = _tokenTypes.length;
         for (uint i = 0; i < tokenTypeCount; i++) {
             if (_tokenTypes[i][20] == 0x01) {
-                if (!removeNFTToken(
-                    _vmId,
-                    address(bytes20(_tokenTypes[i])),
-                    _amounts[i]
-                )) {
+                if (!hasNFT(address(bytes20(_tokenTypes[i])), _vmId, _amounts[i])) {
                     return false;
                 }
             } else {
-                if (!removeToken(
-                    _vmId,
-                    address(bytes20(_tokenTypes[i])),
-                    _amounts[i]
-                )) {
+                if (_amounts[i] > getTokenBalance(address(bytes20(_tokenTypes[i])), _vmId)) {
                     return false;
                 }
-            }
-        }
-
-        for (uint i = 0; i < tokenTypeCount; i++) {
-            if (_tokenTypes[i][20] == 0x01) {
-                addNFTToken(
-                    _vmId,
-                    address(bytes20(_tokenTypes[i])),
-                    _amounts[i]
-                );
-            } else {
-                addToken(
-                    _vmId,
-                    address(bytes20(_tokenTypes[i])),
-                    _amounts[i]
-                );
             }
         }
         return true;

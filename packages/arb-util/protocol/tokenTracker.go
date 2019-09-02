@@ -22,6 +22,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	"sort"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -46,17 +47,33 @@ func (k nftKey) Value() *big.Int {
 	return v.BigInt()
 }
 
+type tokenEntry struct {
+	tokenType TokenType
+	amount    *big.Int
+}
+
 type BalanceTracker struct {
-	TokenTypes   [][21]byte
-	TokenAmounts []*big.Int
-	TokenLookup  map[TokenType]int
-	NFTLookup    map[nftKey]int
+	entries     []tokenEntry
+	tokenLookup map[TokenType]int
+	nftLookup   map[nftKey]int
+}
+
+func tokenTypeComparator(a, b interface{}) int {
+	object1 := a.(tokenEntry)
+	object2 := b.(tokenEntry)
+	tokDiff := object1.tokenType.ToIntValue().BigInt().Cmp(object2.tokenType.ToIntValue().BigInt())
+	if tokDiff < 0 {
+		return -1
+	} else if tokDiff > 0 {
+		return 1
+	} else {
+		return object1.amount.Cmp(object2.amount)
+	}
 }
 
 func NewBalanceTracker() *BalanceTracker {
 	return &BalanceTracker{
-		make([][21]byte, 0),
-		make([]*big.Int, 0),
+		make([]tokenEntry, 0),
 		make(map[TokenType]int),
 		make(map[nftKey]int),
 	}
@@ -78,13 +95,40 @@ func NewBalanceTrackerFromLists(types [][21]byte, amounts []*big.Int) *BalanceTr
 	return tracker
 }
 
+func (b *BalanceTracker) GetTypesAndAmounts() ([][21]byte, []*big.Int) {
+	entries := b.Clone().entries
+	sort.Slice(entries, func(i, j int) bool {
+		tokDiff := entries[i].tokenType.ToIntValue().BigInt().Cmp(entries[j].tokenType.ToIntValue().BigInt())
+		if tokDiff < 0 {
+			return true
+		} else if tokDiff > 0 {
+			return false
+		} else {
+			return entries[i].amount.Cmp(entries[j].amount) < 0
+		}
+	})
+	tokTypes := make([][21]byte, 0, len(b.entries))
+	amounts := make([]*big.Int, 0, len(b.entries))
+	for _, entry := range entries {
+		tokTypes = append(tokTypes, entry.tokenType)
+		amounts = append(amounts, entry.amount)
+	}
+	return tokTypes, amounts
+}
+
+func (b *BalanceTracker) RemoveAssertionValues(totalVals []*big.Int) {
+	for i, val := range totalVals {
+		b.entries[i].amount.Sub(b.entries[i].amount, val)
+	}
+}
+
 func (b *BalanceTracker) Equals(o *BalanceTracker) bool {
-	if len(b.TokenTypes) != len(o.TokenTypes) {
+	if len(b.entries) != len(o.entries) {
 		return false
 	}
 
-	for i := 0; i < len(b.TokenTypes); i++ {
-		if b.TokenTypes[i] != o.TokenTypes[i] || b.TokenAmounts[i].Cmp(o.TokenAmounts[i]) != 0 {
+	for i := 0; i < len(b.entries); i++ {
+		if b.entries[i].tokenType != o.entries[i].tokenType || b.entries[i].amount.Cmp(o.entries[i].amount) != 0 {
 			return false
 		}
 	}
@@ -120,19 +164,19 @@ func NewBalanceTrackerFromReader(rd io.Reader) (*BalanceTracker, error) {
 }
 
 func (b *BalanceTracker) Marshal(wr io.Writer) error {
-	count := int64(len(b.TokenAmounts))
+	count := int64(len(b.entries))
 	err := binary.Write(wr, binary.LittleEndian, &count)
 	if err != nil {
 		return err
 	}
-	for _, tokenType := range b.TokenTypes {
-		_, err := wr.Write(tokenType[:])
+	for _, entry := range b.entries {
+		_, err := wr.Write(entry.tokenType[:])
 		if err != nil {
 			return err
 		}
 	}
-	for _, amount := range b.TokenAmounts {
-		err := value.NewIntValue(amount).Marshal(wr)
+	for _, entry := range b.entries {
+		err := value.NewIntValue(entry.amount).Marshal(wr)
 		if err != nil {
 			return err
 		}
@@ -141,12 +185,11 @@ func (b *BalanceTracker) Marshal(wr io.Writer) error {
 }
 
 func (b *BalanceTracker) Clone() *BalanceTracker {
-	tokenTypes := make([][21]byte, 0, len(b.TokenTypes))
-	tokenAmounts := make([]*big.Int, 0, len(b.TokenTypes))
-	for i := range b.TokenTypes {
-		tokenTypes = append(tokenTypes, b.TokenTypes[i])
-		newAmount := big.NewInt(0)
-		newAmount.Set(b.TokenAmounts[i])
+	tokenTypes := make([][21]byte, 0, len(b.entries))
+	tokenAmounts := make([]*big.Int, 0, len(b.entries))
+	for _, entry := range b.entries {
+		tokenTypes = append(tokenTypes, entry.tokenType)
+		newAmount := big.NewInt(0).Set(entry.amount)
 		tokenAmounts = append(tokenAmounts, newAmount)
 	}
 	return NewBalanceTrackerFromLists(tokenTypes, tokenAmounts)
@@ -156,20 +199,20 @@ func (b *BalanceTracker) TokenIndex(tokenType [21]byte, amount *big.Int) int {
 	tokType := TokenType{}
 	copy(tokType[:], tokenType[:])
 	if tokType.IsToken() {
-		return b.TokenLookup[tokType]
+		return b.tokenLookup[tokType]
 	}
-	return b.NFTLookup[newNFTKey(tokType, amount)]
+	return b.nftLookup[newNFTKey(tokType, amount)]
 }
 
 func (b *BalanceTracker) CanSpend(tokenType TokenType, amount *big.Int) bool {
 	if tokenType.IsToken() {
-		return amount.Cmp(b.TokenAmounts[b.TokenLookup[tokenType]]) <= 0
+		return amount.Cmp(b.entries[b.tokenLookup[tokenType]].amount) <= 0
 	}
-	index, ok := b.NFTLookup[newNFTKey(tokenType, amount)]
+	index, ok := b.nftLookup[newNFTKey(tokenType, amount)]
 	if !ok {
 		return false
 	}
-	return b.TokenAmounts[index].Cmp(amount) == 0
+	return b.entries[index].amount.Cmp(amount) == 0
 }
 
 func (b *BalanceTracker) Spend(tokenType TokenType, amount *big.Int) error {
@@ -178,36 +221,40 @@ func (b *BalanceTracker) Spend(tokenType TokenType, amount *big.Int) error {
 	}
 
 	if tokenType.IsToken() {
-		b.TokenAmounts[b.TokenLookup[tokenType]].Sub(b.TokenAmounts[b.TokenLookup[tokenType]], amount)
+		b.entries[b.tokenLookup[tokenType]].amount.Sub(b.entries[b.tokenLookup[tokenType]].amount, amount)
 	} else {
-		b.TokenAmounts[b.NFTLookup[newNFTKey(tokenType, amount)]] = big.NewInt(0)
+		b.entries[b.nftLookup[newNFTKey(tokenType, amount)]].amount.SetUint64(0)
 	}
 	return nil
 }
 
 func (b *BalanceTracker) Add(tokenType TokenType, amount *big.Int) {
 	if tokenType.IsToken() {
-		if index, ok := b.TokenLookup[tokenType]; ok {
-			b.TokenAmounts[index].Add(b.TokenAmounts[index], amount)
+		if index, ok := b.tokenLookup[tokenType]; ok {
+			b.entries[index].amount.Add(b.entries[index].amount, amount)
 		} else {
-			b.TokenTypes = append(b.TokenTypes, tokenType)
-			b.TokenAmounts = append(b.TokenAmounts, amount)
-			b.TokenLookup[tokenType] = len(b.TokenTypes) - 1
+			b.entries = append(b.entries, tokenEntry{
+				tokenType: tokenType,
+				amount:    amount,
+			})
+			b.tokenLookup[tokenType] = len(b.entries) - 1
 		}
 	} else {
-		if index, ok := b.NFTLookup[newNFTKey(tokenType, amount)]; ok {
-			b.TokenAmounts[index] = amount
+		if index, ok := b.nftLookup[newNFTKey(tokenType, amount)]; ok {
+			b.entries[index].amount.Set(amount)
 		} else {
-			b.TokenTypes = append(b.TokenTypes, tokenType)
-			b.TokenAmounts = append(b.TokenAmounts, amount)
-			b.NFTLookup[newNFTKey(tokenType, amount)] = len(b.TokenTypes) - 1
+			b.entries = append(b.entries, tokenEntry{
+				tokenType: tokenType,
+				amount:    amount,
+			})
+			b.nftLookup[newNFTKey(tokenType, amount)] = len(b.entries) - 1
 		}
 	}
 }
 
 func (b *BalanceTracker) SpendAll(o *BalanceTracker) error {
-	for i := range o.TokenTypes {
-		err := b.Spend(o.TokenTypes[i], o.TokenAmounts[i])
+	for _, entry := range o.entries {
+		err := b.Spend(entry.tokenType, entry.amount)
 		if err != nil {
 			return err
 		}
@@ -215,19 +262,7 @@ func (b *BalanceTracker) SpendAll(o *BalanceTracker) error {
 	return nil
 }
 
-func (b *BalanceTracker) AddAll(o *BalanceTracker) {
-	for i := range o.TokenTypes {
-		b.Add(o.TokenTypes[i], o.TokenAmounts[i])
-	}
-}
-
 func (b *BalanceTracker) CanSpendAll(o *BalanceTracker) bool {
 	c := b.Clone()
-	return c.SpendAll(o) == nil
-}
-
-func (b *BalanceTracker) ValidAssertionStub(a *AssertionStub) bool {
-	c := b.Clone()
-	o := NewBalanceTrackerFromLists(b.TokenTypes, a.TotalVals)
 	return c.SpendAll(o) == nil
 }
