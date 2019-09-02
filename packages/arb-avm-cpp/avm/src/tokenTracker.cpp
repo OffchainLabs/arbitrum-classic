@@ -18,6 +18,7 @@
 
 #include "bigint_utils.hpp"
 
+#include <boost/algorithm/hex.hpp>
 #include <boost/functional/hash.hpp>
 
 namespace std {
@@ -42,12 +43,21 @@ std::size_t hash<TokenType>::operator()(const TokenType& k) const {
 }
 }  // namespace std
 
+std::ostream& operator<<(std::ostream& os, const Message& val) {
+    std::string tokenType;
+    boost::algorithm::hex(val.token.begin(), val.token.end(),
+                          std::back_inserter(tokenType));
+    return os << "Message(" << val.data << ", " << val.destination << ", "
+              << val.currency << ", " << tokenType << ")";
+}
+
 bool isToken(const TokenType& tok) {
     return tok[20] == 0;
 }
 
 uint256_t fromTokenType(const TokenType& tok) {
     std::array<unsigned char, 32> val;
+    val.fill(0);
     std::copy(tok.begin(), tok.end(), val.begin());
     return from_big_endian(val.begin(), val.end());
 }

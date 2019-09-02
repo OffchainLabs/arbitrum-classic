@@ -39,6 +39,8 @@ struct Message {
     value toValue(TuplePool& pool) const;
 };
 
+std::ostream& operator<<(std::ostream& os, const Message& val);
+
 struct nftKey {
     TokenType tokenType;
     uint256_t intVal;
