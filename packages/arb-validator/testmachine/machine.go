@@ -107,7 +107,7 @@ func (m *Machine) PendingMessageCount() uint64 {
 	h1 := m.cppmachine.PendingMessageCount()
 	h2 := m.gomachine.PendingMessageCount()
 	if h1 != h2 {
-		log.Fatalln("PendingMessageCount error at pc", m.gomachine.GetPC())
+		log.Fatalln("PendingMessageCount error", h1, h2, "at pc", m.gomachine.GetPC())
 	}
 	return h1
 }
