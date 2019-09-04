@@ -16,7 +16,8 @@
     "install:deps": "./scripts/install-deps",
     "install:ci": "./scripts/install-ci",
     "install:validator": "./scripts/install-validator",
-    "update-abi": "./scripts/update-go-abi"
+    "update-abi": "./scripts/update-go-abi",
+    "build": "yarn workspace arb-provider-ethers build"
   },
   "engines": {
     "node": ">= 8.0.0 < 12.0.0",

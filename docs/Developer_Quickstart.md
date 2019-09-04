@@ -82,6 +82,7 @@ Download the Arbitrum Monorepo from source:
 git clone -b v0.2.0 --depth=1 -c advice.detachedHead=false https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 yarn
+yarn build
 yarn install:deps
 ```
 
