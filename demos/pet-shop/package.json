@@ -26,8 +26,7 @@
     "arb-provider-web3": "^0.2.0",
     "bootstrap": "^3.4.1",
     "jquery": "^3.4.1",
-    "web3": "~1.2.1",
-    "webpack-node-externals": "^1.7.2"
+    "web3": "~1.2.1"
   },
   "workspaces": {
     "nohoist": []
