@@ -171,7 +171,7 @@ func (m *Machine) IncrPC() {
 	}
 }
 
-func (m *Machine) GetPC() value.Value {
+func (m *Machine) GetPC() value.CodePointValue {
 	return m.pc.GetPC()
 }
 

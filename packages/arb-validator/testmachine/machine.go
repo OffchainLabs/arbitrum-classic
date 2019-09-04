@@ -79,6 +79,12 @@ func (m *Machine) CurrentStatus() machine.Status {
 func (m *Machine) LastBlockReason() machine.BlockReason {
 	b1 := m.cppmachine.LastBlockReason()
 	b2 := m.gomachine.LastBlockReason()
+	if b1 == nil || b2 == nil {
+		if b1 != nil || b2 != nil {
+			log.Fatalln("LastBlockReason error at pc", m.gomachine.GetPC())
+		}
+		return nil
+	}
 	if !b1.Equals(b2) {
 		log.Fatalln("LastBlockReason error at pc", m.gomachine.GetPC())
 	}
@@ -129,10 +135,11 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
-	for i := int32(0); i < maxSteps; i += 50 {
+	stepIncrease := int32(50)
+	for i := int32(0); i < maxSteps; i += stepIncrease {
 		steps := maxSteps - i
-		if steps > 50 {
-			steps = 50
+		if steps > stepIncrease {
+			steps = stepIncrease
 		}
 
 		pcStart := m.gomachine.GetPC()

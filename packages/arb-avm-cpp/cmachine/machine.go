@@ -150,6 +150,10 @@ func (m *Machine) PendingMessageCount() uint64 {
 	return uint64(C.machinePendingMessageCount(m.c))
 }
 
+func (m *Machine) PrintState() {
+	C.machinePrint(m.c)
+}
+
 func (m *Machine) SendOnchainMessage(msg protocol.Message) {
 	var buf bytes.Buffer
 	err := value.MarshalValue(msg.AsValue(), &buf)
