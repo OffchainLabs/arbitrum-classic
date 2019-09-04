@@ -64,8 +64,7 @@ uint256_t fromTokenType(const TokenType& tok) {
 
 TokenType toTokenType(const uint256_t& tokTypeVal) {
     TokenType tok;
-    std::vector<unsigned char> val;
-    val.resize(32);
+    std::array<unsigned char, 32> val;
     to_big_endian(tokTypeVal, val.begin());
     std::copy(val.begin(), val.begin() + 21, tok.begin());
     return tok;
