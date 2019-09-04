@@ -123,14 +123,14 @@ Tuple::Tuple(value val1,
 
 void Tuple::marshal(std::vector<unsigned char>& buf) const {
     buf.push_back(TUPLE + tuple_size());
-    for (int i = 0; i < tuple_size(); i++) {
+    for (uint64_t i = 0; i < tuple_size(); i++) {
         marshal_value(get_element(i), buf);
     }
 }
 
 value Tuple::clone_shallow() {
     Tuple tup(tuplePool, tuple_size());
-    for (int i = 0; i < tuple_size(); i++) {
+    for (uint64_t i = 0; i < tuple_size(); i++) {
         auto valHash = hash(get_element(i));
         tup.set_element(i, valHash);
     }
@@ -142,7 +142,7 @@ uint256_t Tuple::calculateHash() const {
     auto oit = tupData.begin();
     tupData[0] = TUPLE + tuple_size();
     ++oit;
-    for (int i = 0; i < tuple_size(); i++) {
+    for (uint64_t i = 0; i < tuple_size(); i++) {
         auto valHash = hash(get_element(i));
         std::array<uint64_t, 4> valHashInts;
         to_big_endian(valHash, valHashInts.begin());
@@ -167,7 +167,7 @@ uint256_t zeroHash() {
 
 std::ostream& operator<<(std::ostream& os, const Tuple& val) {
     os << "Tuple(";
-    for (int i = 0; i < val.tuple_size(); i++) {
+    for (uint64_t i = 0; i < val.tuple_size(); i++) {
         os << val.get_element(i);
         if (i < val.tuple_size() - 1) {
             os << ", ";

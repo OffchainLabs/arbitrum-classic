@@ -96,7 +96,7 @@ class Tuple {
     //        }
     //    }
 
-    int tuple_size() const {
+    uint64_t tuple_size() const {
         if (tpl) {
             return tpl->data.size();
         } else {
@@ -104,7 +104,7 @@ class Tuple {
         }
     }
 
-    void set_element(int pos, value newval) {
+    void set_element(uint64_t pos, value newval) {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
@@ -121,7 +121,7 @@ class Tuple {
         tpl->cachedHash = calculateHash();
     }
 
-    value get_element(int pos) const {
+    value get_element(uint64_t pos) const {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
