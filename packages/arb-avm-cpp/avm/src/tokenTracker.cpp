@@ -18,20 +18,53 @@
 
 #include "bigint_utils.hpp"
 
+#include <boost/algorithm/hex.hpp>
+#include <boost/functional/hash.hpp>
+
+namespace std {
+std::size_t hash<nftKey>::operator()(const nftKey& k) const {
+    using boost::hash_combine;
+
+    std::array<unsigned char, 32> intData;
+    to_big_endian(k.intVal, intData.begin());
+
+    std::size_t seed = 3754345;
+    hash_combine(seed, k.tokenType);
+    hash_combine(seed, intData);
+    return seed;
+}
+
+std::size_t hash<TokenType>::operator()(const TokenType& k) const {
+    using boost::hash_combine;
+
+    std::size_t seed = 9587356;
+    hash_combine(seed, k);
+    return seed;
+}
+}  // namespace std
+
+std::ostream& operator<<(std::ostream& os, const Message& val) {
+    std::string tokenType;
+    boost::algorithm::hex(val.token.begin(), val.token.end(),
+                          std::back_inserter(tokenType));
+    return os << "Message(" << val.data << ", " << val.destination << ", "
+              << val.currency << ", " << tokenType << ")";
+}
+
 bool isToken(const TokenType& tok) {
     return tok[20] == 0;
 }
 
 uint256_t fromTokenType(const TokenType& tok) {
     std::array<unsigned char, 32> val;
+    val.fill(0);
     std::copy(tok.begin(), tok.end(), val.begin());
     return from_big_endian(val.begin(), val.end());
 }
 
 TokenType toTokenType(const uint256_t& tokTypeVal) {
     TokenType tok;
-    std::vector<unsigned char> val;
-    val.resize(32);
+    std::array<unsigned char, 32> val;
     to_big_endian(tokTypeVal, val.begin());
     std::copy(val.begin(), val.begin() + 21, tok.begin());
     return tok;
@@ -75,84 +108,50 @@ value Message::toValue(TuplePool& pool) const {
     return Tuple{data, destination, currency, fromTokenType(token), &pool};
 }
 
-bool BalanceTracker::CanSpend(const TokenType& tokType,
+uint256_t BalanceTracker::tokenValue(const TokenType& tokType) const {
+    assert(isToken(tokType));
+    return tokenLookup.at(tokType);
+}
+
+bool BalanceTracker::hasNFT(const TokenType& tokType,
+                            const uint256_t& id) const {
+    assert(!isToken(tokType));
+    nftKey key = {tokType, id};
+    return nftLookup.find(key) != nftLookup.end();
+}
+
+bool BalanceTracker::canSpend(const TokenType& tokType,
                               const uint256_t& amount) const {
     // if token is fungible check that the spend amount <= the amount assigned
     // to that token
     if (isToken(tokType)) {
-        return (amount <= tokenAmounts[tokenLookup.at(tokType)]);
+        return amount <= tokenValue(tokType);
     } else {
-        // for non-fungible tokens, check that amount == amount assigned to that
-        // token
-        nftKey key = {tokType, amount};
-        if (NFTLookup.find(key) == NFTLookup.end()) {
-            return false;
-        }
-        return tokenAmounts[NFTLookup.at(key)] == amount;
+        return hasNFT(tokType, amount);
     }
 }
 
-bool BalanceTracker::Spend(const TokenType& tokType, const uint256_t& amount) {
-    if (!CanSpend(tokType, amount)) {
-        //        errors.New("not enough balance to spend")
+bool BalanceTracker::spend(const TokenType& tokType, const uint256_t& amount) {
+    if (!canSpend(tokType, amount)) {
         return false;
     }
 
     if (isToken(tokType)) {
-        tokenAmounts[tokenLookup[tokType]] -= amount;
-        return true;
+        tokenLookup[tokType] -= amount;
     } else {
-        // for non-fungible tokens, check that amount == amount assigned to that
-        // token
         nftKey key = {tokType, amount};
-        std::map<nftKey, int>::iterator it = NFTLookup.find(key);
-        if (it == NFTLookup.end()) {
-            return false;
-        }
-        tokenAmounts[it->second] = 0;
-        return true;
+        nftLookup.erase(key);
     }
+    return true;
 }
 
 void BalanceTracker::add(const TokenType& tokType, const uint256_t& amount) {
     if (isToken(tokType)) {
-        std::map<TokenType, int>::iterator it = tokenLookup.find(tokType);
-        if (it == tokenLookup.end()) {
-            // add token
-            tokenAmounts.push_back(amount);
-            tokenLookup.insert(
-                std::pair<TokenType, int>(tokType, tokenAmounts.size() - 1));
-        } else {
-            // add amount to token
-            tokenAmounts[it->second] += amount;
-        }
+        auto insertion =
+            tokenLookup.insert(std::make_pair(tokType, uint256_t{0}));
+        insertion.first->second += amount;
     } else {
         nftKey key = {tokType, amount};
-        std::map<nftKey, int>::iterator it = NFTLookup.find(key);
-        if (it == NFTLookup.end()) {
-            // add token
-            tokenAmounts.push_back(amount);
-            NFTLookup.insert(
-                std::pair<nftKey, int>(key, tokenAmounts.size() - 1));
-        } else {
-            // set amount
-            tokenAmounts[it->second] = amount;
-        }
-    }
-}
-
-uint256_t BalanceTracker::tokenValue(const TokenType& tokType) const {
-    // if token is fungible check that the spend amount <= the amount assigned
-    // to that token
-    if (isToken(tokType)) {
-        return tokenAmounts[tokenLookup.at(tokType)];
-    } else {
-        // for non-fungible tokens, check that amount == amount assigned to that
-        // token
-        nftKey key = {tokType, 1};
-        if (NFTLookup.find(key) == NFTLookup.end()) {
-            return 0;
-        }
-        return tokenAmounts[NFTLookup.at(key)];
+        nftLookup.insert(key);
     }
 }

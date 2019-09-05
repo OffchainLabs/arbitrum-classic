@@ -94,7 +94,7 @@ func NewServer(
 			log.Fatalln("Coordinator could not deposit funds")
 		}
 	case err := <-errChan:
-		log.Fatal(err)
+		log.Fatal("Coordinator failed depositing funds: ", err)
 	}
 
 	log.Println("Coordinator is trying to create the VM")

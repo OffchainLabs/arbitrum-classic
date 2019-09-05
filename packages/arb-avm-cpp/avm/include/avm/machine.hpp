@@ -146,7 +146,7 @@ class Machine {
     uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }
 
     bool canSpend(const TokenType& tokType, const uint256_t& amount) const {
-        return m.balance.CanSpend(tokType, amount);
+        return m.balance.canSpend(tokType, amount);
     }
     uint256_t inboxHash() const { return ::hash(m.inbox.messages); }
 

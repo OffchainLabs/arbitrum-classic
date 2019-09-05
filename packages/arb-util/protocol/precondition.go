@@ -142,19 +142,15 @@ func (pre *Precondition) Equals(b *Precondition) bool {
 }
 
 func (pre *Precondition) Hash() [32]byte {
-	tokenTypes := make([][21]byte, 0, len(pre.BeforeBalance.TokenTypes))
-	for _, tokType := range pre.BeforeBalance.TokenTypes {
-		tokenTypes = append(tokenTypes, tokType)
-	}
+	tokenTypes, amounts := pre.BeforeBalance.GetTypesAndAmounts()
 	var ret [32]byte
-	hashVal := solsha3.SoliditySHA3(
+	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(pre.BeforeHash),
 		solsha3.Uint64(pre.TimeBounds[0]),
 		solsha3.Uint64(pre.TimeBounds[1]),
 		solsha3.Bytes32(pre.BeforeInbox.Hash()),
 		TokenTypeArrayEncoded(tokenTypes),
-		solsha3.Uint256Array(pre.BeforeBalance.TokenAmounts),
-	)
-	copy(ret[:], hashVal)
+		solsha3.Uint256Array(amounts),
+	))
 	return ret
 }

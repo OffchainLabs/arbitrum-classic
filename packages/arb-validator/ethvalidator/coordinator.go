@@ -403,7 +403,7 @@ func (m *ValidatorCoordinator) Run() error {
 					// Assertion was successful so we are done
 					break
 				}
-				log.Println("Coordinator hit problem unanimously asserting")
+				log.Println("Coordinator hit problem unanimously asserting", err)
 				if <-m.Val.Bot.HasOpenAssertion() {
 					log.Println("Coordinator is closing channel")
 					closedChan, errChan := m.Val.Bot.CloseUnanimousAssertionRequest()

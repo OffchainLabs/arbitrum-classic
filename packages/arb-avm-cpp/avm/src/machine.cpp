@@ -789,34 +789,32 @@ static void dup2(MachineState& m) {
 
 static void swap1(MachineState& m) {
     m.stack.prepForMod(2);
-    value temp = m.stack[0];
-    m.stack[0] = m.stack[1];
-    m.stack[1] = temp;
+    std::swap(m.stack[0], m.stack[1]);
     ++m.pc;
 }
 
 static void swap2(MachineState& m) {
     m.stack.prepForMod(3);
-    value temp = m.stack[0];
-    m.stack[0] = m.stack[2];
-    m.stack[2] = temp;
+    std::swap(m.stack[0], m.stack[2]);
     ++m.pc;
 }
 
 static void tget(MachineState& m) {
     m.stack.prepForMod(2);
-    auto& index = assumeInt(m.stack[0]);
+    auto& bigIndex = assumeInt(m.stack[0]);
+    auto index = assumeInt64(bigIndex);
     auto& tup = assumeTuple(m.stack[1]);
-    m.stack[1] = tup.get_element(static_cast<uint32_t>(index));
+    m.stack[1] = tup.get_element(index);
     m.stack.popClear();
     ++m.pc;
 }
 
 static void tset(MachineState& m) {
     m.stack.prepForMod(3);
-    auto& index = assumeInt(m.stack[0]);
+    auto& bigIndex = assumeInt(m.stack[0]);
+    auto index = assumeInt64(bigIndex);
     auto& tup = assumeTuple(m.stack[1]);
-    tup.set_element(static_cast<uint32_t>(index), std::move(m.stack[2]));
+    tup.set_element(index, std::move(m.stack[2]));
     m.stack[2] = std::move(tup);
     m.stack.popClear();
     m.stack.popClear();
@@ -865,7 +863,7 @@ static BlockReason send(MachineState& m) {
         m.state = Status::Error;
         return NotBlocked();
     }
-    if (!m.balance.Spend(outMsg.token, outMsg.currency)) {
+    if (!m.balance.spend(outMsg.token, outMsg.currency)) {
         return SendBlocked{outMsg.currency, outMsg.token};
     } else {
         m.stack.popClear();
@@ -885,7 +883,7 @@ static void nbsend(MachineState& m) {
         return;
     }
 
-    bool spent = m.balance.Spend(outMsg.token, outMsg.currency);
+    bool spent = m.balance.spend(outMsg.token, outMsg.currency);
     if (!spent) {
         m.stack[0] = 0;
     } else {

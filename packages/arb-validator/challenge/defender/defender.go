@@ -42,7 +42,6 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 			assDef.GetPrecondition(),
 			assDef.GetAssertion().Stub(),
 			proofData,
-			deadline,
 		)
 		return oneStepChallenged{
 			Config:       core,
@@ -61,7 +60,6 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		context.Background(),
 		assDef.GetPrecondition(),
 		assertions,
-		deadline,
 	)
 	return bisectedAssert{
 		Config:            core,
@@ -117,17 +115,8 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challe
 		return bot, nil
 	}
 
-	preconditions := make([]*protocol.Precondition, 0, len(bot.defenders))
-	assertions := make([]*protocol.AssertionStub, 0, len(bot.defenders))
-	for _, defender := range bot.defenders {
-		preconditions = append(preconditions, defender.GetPrecondition())
-		assertions = append(assertions, defender.GetAssertion().Stub())
-	}
 	bridge.ChallengerTimedOut(
 		context.Background(),
-		preconditions,
-		assertions,
-		bot.deadline,
 	)
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }

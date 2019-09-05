@@ -15,50 +15,83 @@
  */
 
 var ArbProtocol = artifacts.require("./ArbProtocol.sol");
+var VM = artifacts.require("./VM.sol");
 var ArbValue = artifacts.require("./ArbValue.sol");
+var Disputable = artifacts.require("./Disputable.sol");
+var Unanimous = artifacts.require("./Unanimous.sol");
+var Bisection = artifacts.require("./Bisection.sol");
 var VMTracker = artifacts.require("./VMTracker.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
 var MerkleLib = artifacts.require("./MerkleLib.sol");
+var SigUtils = artifacts.require("./SigUtils.sol");
 var ChallengeManager = artifacts.require("./ChallengeManager.sol");
 var ArbBalanceTracker = artifacts.require("./ArbBalanceTracker.sol");
 
 module.exports = function(deployer, network, accounts) {
   deployer.deploy(MerkleLib);
-  deployer.link(MerkleLib, [ChallengeManager, VMTracker]);
+  deployer.link(MerkleLib, [Bisection, VMTracker, Unanimous]);
+
+  deployer.deploy(SigUtils);
+  deployer.link(SigUtils, [VMTracker, Unanimous]);
 
   deployer.deploy(BytesLib);
-  deployer.link(BytesLib, [ArbValue, ArbMachine]);
+  deployer.link(BytesLib, [ArbValue]);
 
   deployer.deploy(ArbValue);
-  deployer.link(ArbValue, [VMTracker, OneStepProof, ArbMachine, ArbProtocol]);
+  deployer.link(ArbValue, [
+    VMTracker,
+    OneStepProof,
+    ArbMachine,
+    ArbProtocol,
+    VM
+  ]);
 
   deployer.deploy(ArbProtocol);
-  deployer.link(ArbProtocol, [VMTracker, ChallengeManager, OneStepProof]);
+  deployer.link(ArbProtocol, [
+    VMTracker,
+    ChallengeManager,
+    OneStepProof,
+    VM,
+    Disputable,
+    Bisection
+  ]);
 
   deployer.deploy(ArbMachine);
-  deployer.link(ArbMachine, [OneStepProof, VMTracker]);
+  deployer.link(ArbMachine, [OneStepProof]);
 
   deployer.deploy(OneStepProof);
   deployer.link(OneStepProof, ChallengeManager);
 
+  deployer.deploy(Bisection);
+  deployer.link(Bisection, ChallengeManager);
+
+  deployer.deploy(VM);
+  deployer.link(VM, [Disputable, Unanimous, VMTracker]);
+
+  deployer.deploy(Disputable);
+  deployer.link(Disputable, VMTracker);
+
+  deployer.deploy(Unanimous);
+  deployer.link(Unanimous, VMTracker);
+
   deployer
     .deploy(ArbBalanceTracker)
-    .then(function() {
+    .then(() => {
       return deployer.deploy(VMTracker, ArbBalanceTracker.address);
     })
-    .then(function() {
+    .then(() => {
       return deployer.deploy(ChallengeManager, VMTracker.address);
     })
-    .then(function() {
+    .then(() => {
       return ArbBalanceTracker.deployed();
     })
-    .then(function(balanceTracker) {
+    .then(balanceTracker => {
       balanceTracker.transferOwnership(VMTracker.address);
       return VMTracker.deployed();
     })
-    .then(async function(vmTracker) {
+    .then(vmTracker => {
       const fs = require("fs");
       let addresses = {
         ArbProtocol: ArbProtocol.address,

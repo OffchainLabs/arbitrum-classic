@@ -16,13 +16,10 @@
 
 pragma solidity ^0.5.3;
 
-import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./ArbValue.sol";
 
 
 library ArbMachine {
-
-    using BytesLib for bytes;
     using ArbValue for ArbValue.Value;
 
     uint internal constant MACHINE_EXTENSIVE = uint(0);

@@ -21,17 +21,12 @@
 #include <stdio.h>
 
 void pushMessage(MachineState& m,
-                 value data,
-                 uint256_t dest,
-                 uint256_t currency,
-                 TokenType tokType,
+                 const value& data,
+                 const uint256_t& dest,
+                 const uint256_t& currency,
+                 const TokenType& tokType,
                  TuplePool& pool) {
-    Tuple msgTup(&pool, 4);
-    msgTup.set_element(0, data);
-    msgTup.set_element(1, dest);
-    msgTup.set_element(2, currency);
-    msgTup.set_element(3, fromTokenType(tokType));
-    m.stack.push(std::move(msgTup));
+    m.stack.push(Tuple{data, dest, currency, fromTokenType(tokType), &pool});
 }
 
 void sendInboxMessage(MachineState& m,
@@ -39,12 +34,7 @@ void sendInboxMessage(MachineState& m,
                       uint256_t dest,
                       uint256_t currency,
                       TokenType tokType) {
-    Message msg;
-    msg.data = data;
-    msg.token = tokType;
-    msg.currency = currency;
-    msg.destination = dest;
-    m.sendOnchainMessage(msg);
+    m.sendOnchainMessage({data, dest, currency, tokType});
 }
 
 MachineState setupMachine(value data,
@@ -109,9 +99,10 @@ TEST_CASE("SEND") {
         sendInboxMessage(m, data, destination, currency, token);
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
+
+        REQUIRE(m.balance.hasNFT(token, currency));
         m.runOp(OpCode::SEND);
-        uint256_t resNum = m.balance.tokenValue(token);
-        REQUIRE(resNum == 0);
+        REQUIRE(!m.balance.hasNFT(token, currency));
         REQUIRE(m.state == Status::Extensive);
     }
 
@@ -127,8 +118,7 @@ TEST_CASE("SEND") {
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
         auto blockReason = m.runOp(OpCode::SEND);
-        uint256_t resNum = m.balance.tokenValue(token);
-        REQUIRE(resNum == 0);
+        REQUIRE(!m.balance.hasNFT(token, currency));
         REQUIRE(m.state == Status::Extensive);
         REQUIRE(nonstd::get_if<SendBlocked>(&blockReason));
     }
@@ -191,9 +181,9 @@ TEST_CASE("NBSEND") {
         sendInboxMessage(m, data, destination, currency, token);
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
+        REQUIRE(m.balance.hasNFT(token, currency));
         m.runOp(OpCode::NBSEND);
-        uint256_t resNum = m.balance.tokenValue(token);
-        REQUIRE(resNum == 0);
+        REQUIRE(!m.balance.hasNFT(token, currency));
         value retval = m.stack.pop();
         auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 1);
@@ -211,90 +201,12 @@ TEST_CASE("NBSEND") {
         m.state = Status::Extensive;
 
         pushMessage(m, data, destination, currency, token, *(m.pool.get()));
+        REQUIRE(!m.balance.hasNFT(token, currency));
         m.runOp(OpCode::NBSEND);
-        uint256_t resNum = m.balance.tokenValue(token);
-        REQUIRE(resNum == 0);
+        REQUIRE(!m.balance.hasNFT(token, currency));
         value retval = m.stack.pop();
         auto ret = nonstd::get_if<uint256_t>(&retval);
         REQUIRE(*ret == 0);
         REQUIRE(m.state == Status::Extensive);
     }
 }
-
-/*{
-    value data;
-    Message msg;
-    msg.data = data;
-    msg.token[0]=15;
-    msg.token[20]=0;
-    msg.currency = 20;
-    msg.destination = 25;
-
-    uint256_t tokval =fromTokenType(msg.token);
-    TokenType tokenval;
-    toTokenType(tokval, tokenval);
-    std::cout<<tokval<<std::endl;
-    std::cout<<"token value="<<tokval<<"
-   tokenval[0]={"<<tokenval[0]<<"}"<<std::endl; m.addInboxMessage(msg);
-
-    Tuple msgTup(4, m.pool.get());
-    msgTup.set_element(0, msg.data);
-    msgTup.set_element(1, fromTokenType(msg.token));
-    msg.currency = 4;
-    msgTup.set_element(2, msg.currency);
-    msgTup.set_element(3, msg.destination);
-    m.stack.push(std::move(msgTup));
-    m.runOp(OpCode::SEND);
-    uint256_t resNum = m.context.afterBalance.tokenValue(msg.token);
-    if (resNum != 16){
-        std::cout<<"ERROR - send failed - expected 16 received
-   "<<resNum<<std::endl;
-    }
-
-    msg.currency = 18;
-    msgTup.set_element(2, msg.currency);
-    m.stack.push(std::move(msgTup));
-    m.runOp(OpCode::SEND);
-    if (m.state != HALTED){
-        std::cout<<"ERROR - send failed - expected state HALTED received
-   "<<m.state<<std::endl;
-    }
-    resNum = m.context.afterBalance.tokenValue(msg.token);
-    if (resNum != 16){
-        std::cout<<"ERROR - send failed - expected 16 received
-   "<<resNum<<std::endl;
-    }
-
-    msg.currency = 4;
-    msgTup.set_element(2, msg.currency);
-    m.stack.push(std::move(msgTup));
-    m.runOp(OpCode::NBSEND);
-    resNum = m.context.afterBalance.tokenValue(msg.token);
-    if (resNum != 12){
-        std::cout<<"ERROR - send failed - expected 12 received
-   "<<resNum<<std::endl;
-    }
-    value res = m.stack.pop();
-    resNum = assumeInt(res);
-    if (resNum != 1){
-        std::cout<<"ERROR - sub failed - expected 1 received
-   "<<resNum<<std::endl;
-    }
-
-    msg.currency = 14;
-    msgTup.set_element(2, msg.currency);
-    m.stack.push(std::move(msgTup));
-    m.runOp(OpCode::NBSEND);
-    resNum = m.context.afterBalance.tokenValue(msg.token);
-    if (resNum != 12){
-        std::cout<<"ERROR - send failed - expected 12 received
-   "<<resNum<<std::endl;
-    }
-    res = m.stack.pop();
-    resNum = assumeInt(res);
-    if (resNum != 0){
-        std::cout<<"ERROR - sub failed - expected 1 received
-   "<<resNum<<std::endl;
-    }
-    }
-*/

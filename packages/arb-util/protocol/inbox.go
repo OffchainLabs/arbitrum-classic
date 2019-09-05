@@ -102,7 +102,7 @@ func NewEmptyInbox() *Inbox {
 }
 
 func (in *Inbox) Clone() *Inbox {
-	return &Inbox{in.Accepted, in.PendingQueue}
+	return &Inbox{in.Accepted.Clone(), in.PendingQueue.Clone()}
 }
 
 func (in *Inbox) SendMessage(msg Message) {

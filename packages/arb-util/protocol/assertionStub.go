@@ -157,9 +157,7 @@ func (a *AssertionStub) Hash() [32]byte {
 
 func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
 	bt := pre.BeforeBalance.Clone()
-	for i, val := range a.TotalVals {
-		bt.TokenAmounts[i].Sub(bt.TokenAmounts[i], val)
-	}
+	bt.RemoveAssertionValues(a.TotalVals)
 	return NewPrecondition(a.AfterHash, pre.TimeBounds, bt, pre.BeforeInbox)
 }
 

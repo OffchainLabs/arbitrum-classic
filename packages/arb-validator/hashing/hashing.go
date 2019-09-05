@@ -58,8 +58,8 @@ func CreateVMHash(data *valmessage.CreateVMValidatorRequest) [32]byte {
 
 func SplitMessages(
 	outMsgs []protocol.Message,
-	balance *protocol.BalanceTracker,
-) ([]uint16, []*big.Int, [][32]byte) {
+) ([]uint16, []*big.Int, [][32]byte, [][21]byte) {
+	balance := protocol.NewBalanceTrackerFromMessages(outMsgs)
 	tokenNums := make([]uint16, 0, len(outMsgs))
 	amounts := make([]*big.Int, 0, len(outMsgs))
 	destinations := make([][32]byte, 0, len(outMsgs))
@@ -69,7 +69,8 @@ func SplitMessages(
 		amounts = append(amounts, msg.Currency)
 		destinations = append(destinations, msg.Destination)
 	}
-	return tokenNums, amounts, destinations
+	tokenTypes, _ := balance.GetTypesAndAmounts()
+	return tokenNums, amounts, destinations, tokenTypes
 }
 
 func UnanimousAssertPartialPartialHash(
@@ -93,11 +94,7 @@ func UnanimousAssertPartialHash(
 	originalInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) ([32]byte, error) {
-	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
-	tokenNums, amounts, destinations := SplitMessages(
-		assertion.OutMsgs,
-		balance,
-	)
+	tokenNums, amounts, destinations, tokenTypes := SplitMessages(assertion.OutMsgs)
 
 	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
@@ -118,7 +115,7 @@ func UnanimousAssertPartialHash(
 			),
 			solsha3.Bytes32(beforeHash),
 			solsha3.Bytes32(originalInboxHash),
-			protocol.TokenTypeArrayEncoded(balance.TokenTypes),
+			protocol.TokenTypeArrayEncoded(tokenTypes),
 			solsha3.Uint16Array(tokenNums),
 			solsha3.Uint256Array(amounts),
 		))
@@ -132,7 +129,7 @@ func UnanimousAssertPartialHash(
 			),
 			solsha3.Bytes32(beforeHash),
 			solsha3.Bytes32(originalInboxHash),
-			protocol.TokenTypeArrayEncoded(balance.TokenTypes),
+			protocol.TokenTypeArrayEncoded(tokenTypes),
 			solsha3.Uint16Array(tokenNums),
 			solsha3.Uint256Array(amounts),
 			solsha3.Uint64(sequenceNum),

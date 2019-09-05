@@ -68,7 +68,7 @@ type Message struct {
 }
 
 func NewMessage(data value.Value, tokenType [21]byte, currency *big.Int, destination [32]byte) Message {
-	return Message{data, tokenType, currency, destination}
+	return Message{data, tokenType, new(big.Int).Set(currency), destination}
 }
 
 func NewSimpleMessage(data value.Value, tokenType [21]byte, currency *big.Int, sender common.Address) Message {
@@ -177,10 +177,11 @@ func (msg Message) Hash() [32]byte {
 }
 
 func (msg Message) Clone() Message {
+	// Message shouldn't require cloning currency, but something is mutating that variable elsewhere in the code
 	return Message{
 		msg.Data.Clone(),
 		msg.TokenType,
-		msg.Currency,
+		new(big.Int).Set(msg.Currency),
 		msg.Destination,
 	}
 }

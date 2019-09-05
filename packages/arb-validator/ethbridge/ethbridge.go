@@ -625,11 +625,7 @@ func (con *Bridge) FinalizedUnanimousAssert(
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (*types.Transaction, error) {
-	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
-	tokenNums, amounts, destinations := hashing.SplitMessages(
-		assertion.OutMsgs,
-		balance,
-	)
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
@@ -644,7 +640,7 @@ func (con *Bridge) FinalizedUnanimousAssert(
 		vmID,
 		assertion.AfterHash,
 		newInboxHash,
-		balance.TokenTypes,
+		tokenTypes,
 		messageData.Bytes(),
 		tokenNums,
 		amounts,
@@ -662,11 +658,7 @@ func (con *Bridge) PendingUnanimousAssert(
 	sequenceNum uint64,
 	signatures [][]byte,
 ) (*types.Transaction, error) {
-	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
-	tokenNums, amounts, destinations := hashing.SplitMessages(
-		assertion.OutMsgs,
-		balance,
-	)
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
@@ -688,7 +680,7 @@ func (con *Bridge) PendingUnanimousAssert(
 		auth,
 		vmID,
 		unanRest,
-		balance.TokenTypes,
+		tokenTypes,
 		tokenNums,
 		amounts,
 		sequenceNum,
@@ -703,11 +695,7 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
-	balance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
-	tokenNums, amounts, destinations := hashing.SplitMessages(
-		assertion.OutMsgs,
-		balance,
-	)
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
@@ -722,7 +710,7 @@ func (con *Bridge) ConfirmUnanimousAsserted(
 		vmID,
 		assertion.AfterHash,
 		newInboxHash,
-		balance.TokenTypes,
+		tokenTypes,
 		messageData.Bytes(),
 		tokenNums,
 		amounts,
@@ -740,10 +728,7 @@ func (con *Bridge) PendingDisputableAssert(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
-	tokenNums, amounts, destinations := hashing.SplitMessages(
-		assertion.OutMsgs,
-		precondition.BeforeBalance,
-	)
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	dataHashes := make([][32]byte, 0, len(assertion.OutMsgs))
 	for _, msg := range assertion.OutMsgs {
@@ -752,8 +737,8 @@ func (con *Bridge) PendingDisputableAssert(
 
 	return con.Tracker.PendingDisputableAssert(
 		auth,
-		[5][32]byte{
-			vmID,
+		vmID,
+		[4][32]byte{
 			precondition.BeforeHash,
 			precondition.BeforeInbox.Hash(),
 			assertion.AfterHash,
@@ -761,7 +746,7 @@ func (con *Bridge) PendingDisputableAssert(
 		},
 		assertion.NumSteps,
 		precondition.TimeBounds,
-		precondition.BeforeBalance.TokenTypes,
+		tokenTypes,
 		dataHashes,
 		tokenNums,
 		amounts,
@@ -775,10 +760,7 @@ func (con *Bridge) ConfirmDisputableAsserted(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Transaction, error) {
-	tokenNums, amounts, destinations := hashing.SplitMessages(
-		assertion.OutMsgs,
-		precondition.BeforeBalance,
-	)
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	var messageData bytes.Buffer
 	for _, msg := range assertion.OutMsgs {
@@ -794,7 +776,7 @@ func (con *Bridge) ConfirmDisputableAsserted(
 		precondition.Hash(),
 		assertion.AfterHash,
 		assertion.NumSteps,
-		precondition.BeforeBalance.TokenTypes,
+		tokenTypes,
 		messageData.Bytes(),
 		tokenNums,
 		amounts,
@@ -828,7 +810,6 @@ func (con *Bridge) InitiateChallenge(
 func (con *Bridge) BisectAssertion(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
-	deadline uint64,
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
 ) (*types.Transaction, error) {
@@ -848,10 +829,11 @@ func (con *Bridge) BisectAssertion(
 	for _, assertion := range assertions {
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHash)
 	}
+	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	return con.Challenge.BisectAssertion(
 		auth,
-		[3][32]byte{
-			vmID,
+		vmID,
+		[2][32]byte{
 			precondition.BeforeHash,
 			precondition.BeforeInbox.Hash(),
 		},
@@ -859,9 +841,8 @@ func (con *Bridge) BisectAssertion(
 		totalMessageAmounts,
 		totalSteps,
 		precondition.TimeBounds,
-		precondition.BeforeBalance.TokenTypes,
-		precondition.BeforeBalance.TokenAmounts,
-		deadline,
+		tokenTypes,
+		amounts,
 	)
 }
 
@@ -872,14 +853,12 @@ func (con *Bridge) ContinueChallenge(
 	bisectionProof []byte,
 	bisectionRoot [32]byte,
 	bisectionHash [32]byte,
-	deadline uint64,
 ) (*types.Transaction, error) {
 	return con.Challenge.ContinueChallenge(
 		auth,
 		vmID,
 		assertionToChallenge,
 		bisectionProof,
-		deadline,
 		bisectionRoot,
 		bisectionHash,
 	)
@@ -891,15 +870,15 @@ func (con *Bridge) OneStepProof(
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	proof []byte,
-	deadline uint64,
 ) (*types.Transaction, error) {
+	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	return con.Challenge.OneStepProof(
 		auth,
 		vmID,
 		[2][32]byte{precondition.BeforeHash, precondition.BeforeInbox.Hash()},
 		precondition.TimeBounds,
-		precondition.BeforeBalance.TokenTypes,
-		precondition.BeforeBalance.TokenAmounts,
+		tokenTypes,
+		amounts,
 		[5][32]byte{
 			assertion.AfterHash,
 			assertion.FirstMessageHash,
@@ -909,21 +888,16 @@ func (con *Bridge) OneStepProof(
 		},
 		assertion.TotalVals,
 		proof,
-		deadline,
 	)
 }
 
 func (con *Bridge) AsserterTimedOutChallenge(
 	auth *bind.TransactOpts,
 	vmID [32]byte,
-	bisectionHash [32]byte,
-	deadline uint64,
 ) (*types.Transaction, error) {
 	return con.Challenge.AsserterTimedOut(
 		auth,
 		vmID,
-		bisectionHash,
-		deadline,
 	)
 }
 

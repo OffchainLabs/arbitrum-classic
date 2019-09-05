@@ -171,7 +171,7 @@ func (m *Machine) IncrPC() {
 	}
 }
 
-func (m *Machine) GetPC() value.Value {
+func (m *Machine) GetPC() value.CodePointValue {
 	return m.pc.GetPC()
 }
 
@@ -254,7 +254,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 }
 
 func (m *Machine) SendOnchainMessage(msg protocol.Message) {
-	m.inbox.SendMessage(msg)
+	m.inbox.SendMessage(msg.Clone())
 	m.balance.Add(msg.TokenType, msg.Currency)
 }
 

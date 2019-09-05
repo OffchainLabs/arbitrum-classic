@@ -19,7 +19,8 @@
   },
   "scripts": {
     "build": "truffle compile",
-    "flatten": "truffle-flattener contracts/* > arbitrum_flat.sol"
+    "flatten": "truffle-flattener contracts/* > arbitrum_flat.sol",
+    "truffle": "truffle"
   },
   "module": {
     "loaders": [

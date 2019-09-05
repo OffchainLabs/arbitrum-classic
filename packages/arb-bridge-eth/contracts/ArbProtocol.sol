@@ -171,6 +171,41 @@ library ArbProtocol {
         );
     }
 
+    function beforeBalancesValid(
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _beforeBalances
+    ) public pure returns(bool) {
+        uint itemCount = _tokenTypes.length;
+        if (itemCount == 0 || itemCount == 1) {
+            return true;
+        }
+        for (uint i = 0; i < itemCount - 1; i++) {
+            byte tokenType = _tokenTypes[i][20];
+            if (tokenType == 0x00) {
+                if (_tokenTypes[i + 1] <= _tokenTypes[i]) {
+                    return false;
+                }
+            } else if (tokenType == 0x01) {
+                if (
+                    _tokenTypes[i + 1] < _tokenTypes[i] || (
+                        _tokenTypes[i + 1] == _tokenTypes[i] &&
+                        _beforeBalances[i + 1] <= _beforeBalances[i]
+                    )
+                ) {
+                    return false;
+                }
+
+            } else {
+                return false;
+            }
+        }
+
+        if (_tokenTypes[itemCount - 1][20] > 0x01) {
+            return false;
+        }
+        return true;
+    }
+
     function calculateBeforeValues(
         bytes21[] memory _tokenTypes,
         uint16[] memory _messageTokenNums,
@@ -180,15 +215,17 @@ library ArbProtocol {
         pure
         returns(uint256[] memory)
     {
+        uint messageCount = _messageTokenNums.length;
         uint256[] memory beforeBalances = new uint256[](_tokenTypes.length);
-        uint tokenNumCount = _messageTokenNums.length;
-        for (uint i = 0; i < tokenNumCount; i++) {
-            if (_tokenTypes[_messageTokenNums[i]][20] == 0) {
-                beforeBalances[_messageTokenNums[i]] += _messageAmounts[i];
+
+        for (uint i = 0; i < messageCount; i++) {
+            uint16 tokenNum = _messageTokenNums[i];
+            if (_tokenTypes[tokenNum][20] == 0x00) {
+                beforeBalances[tokenNum] += _messageAmounts[i];
             } else {
-                require(beforeBalances[_messageTokenNums[i]] == 0, "Can't include NFT token twice");
+                require(beforeBalances[tokenNum] == 0, "Can't include NFT token twice");
                 require(_messageAmounts[i] != 0, "NFT token must have non-zero id");
-                beforeBalances[_messageTokenNums[i]] = _messageAmounts[i];
+                beforeBalances[tokenNum] = _messageAmounts[i];
             }
         }
         return beforeBalances;
@@ -250,97 +287,5 @@ library ArbProtocol {
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
         return hashVal;
-    }
-
-    function parseSignature(
-        bytes memory _signatures,
-        uint _pos
-    )
-        public
-        pure
-        returns (uint8 v, bytes32 r, bytes32 s)
-    {
-        uint offset = _pos * 65;
-        // The signature format is a compact form of:
-        //   {bytes32 r}{bytes32 s}{uint8 v}
-        // Compact means, uint8 is not padded to 32 bytes.
-        assembly { // solium-disable-line security/no-inline-assembly
-            r := mload(add(_signatures, add(32, offset)))
-            s := mload(add(_signatures, add(64, offset)))
-            // Here we are loading the last 32 bytes, including 31 bytes
-            // of 's'. There is no 'mload8' to do this.
-            //
-            // 'byte' is not working due to the Solidity parser, so lets
-            // use the second best option, 'and'
-            v := and(mload(add(_signatures, add(65, offset))), 0xff)
-        }
-
-        if (v < 27) {
-            v += 27;
-        }
-
-        require(v == 27 || v == 28, "Incorrect v value");
-    }
-
-    /// @notice Counts the number of signatures in a signatures bytes array. Returns 0 if the length is invalid.
-    /// @param _signatures The signatures bytes array
-    /// @dev Signatures are 65 bytes long and are densely packed.
-    function countSignatures(bytes memory _signatures) public pure returns (uint) {
-        return _signatures.length % 65 == 0 ? _signatures.length / 65 : 0;
-    }
-
-    /// @notice Recovers an array of addresses using a message hash and a signatures bytes array.
-    /// @param _messageHash The signed message hash
-    /// @param _signatures The signatures bytes array
-    function recoverAddresses(
-        bytes32 _messageHash,
-        bytes memory _signatures
-    )
-        public
-        pure
-        returns (address[] memory)
-    {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        uint count = countSignatures(_signatures);
-        address[] memory addresses = new address[](count);
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
-        for (uint i = 0; i < count; i++) {
-            (v, r, s) = parseSignature(_signatures, i);
-            addresses[i] = ecrecover(
-                prefixedHash,
-                v,
-                r,
-                s
-            );
-        }
-        return addresses;
-    }
-
-    /// @notice Recovers an array of addresses using a message hash and a signatures bytes array.
-    /// @param _messageHash The signed message hash
-    /// @param _signature The signature bytes array
-    function recoverAddress(
-        bytes32 _messageHash,
-        bytes memory _signature
-    )
-        public
-        pure
-        returns (address)
-    {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, _messageHash));
-        (v, r, s) = parseSignature(_signature, 0);
-        return ecrecover(
-            prefixedHash,
-            v,
-            r,
-            s
-        );
     }
 }
