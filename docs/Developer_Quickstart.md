@@ -29,9 +29,9 @@ brew cask install docker
 open -a Docker
 ```
 
-    Once the Docker app appears in the menu bar, wait until the yellow light turns
-    green (no need to log into Docker). Also check that node version 10 is installed
-    correctly by running `node -v`.
+Once the Docker app appears in the menu bar, wait until the yellow light turns
+green (no need to log into Docker). Also check that node version 10 is installed
+correctly by running `node -v`.
 
 #### Ubuntu 18.04
 
@@ -251,7 +251,7 @@ Move your project folder into `arbitrum/workspace/projectname` in order to pick 
 
 2. Edit the `truffle-config.js`:
 
-    - Import `arb-provider-truffle` and set the mnemonic at the top of the file. This mnemonic is used to set the of your contract's constructor when migrating.:
+    - Import `arb-provider-truffle` and set the mnemonic at the top of the file. This mnemonic is used to set the caller of your contract's constructor when migrating.:
 
         ```js
         const ArbProvider = require("arb-provider-truffle");
