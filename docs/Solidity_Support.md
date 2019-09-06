@@ -23,6 +23,6 @@ Although we support most solidity code, there are a number of restrictions that 
 -   Token Support
     -   Arbitrum VMs support sending and receiving Eth, ERC20, and ERC721 tokens through the on-chain. Tokens can be deposited into an Arbitrum wallet through the [`ArbBalanceTracker`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/ArbBalanceTracker.sol) contract by calling `depositEth`, `depositERC20`, or `depositERC721` respectively. Then tokens can be sent to a contract using the [`VMTracker`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/VMTracker.sol) `sendMessage` function.
     -   Tokens can be sent from an Arbitrum contract by use of the [`ArbSys`](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-compiler-evm/ArbSys.sol) interface. For example use
-        `js ArbSys(address(0x01)).sendERC20( bytes32(bytes20(address)), tokenAddress, amount );`
+        `ArbSys(address(0x01)).sendERC20( bytes32(bytes20(address)), tokenAddress, amount );`
         to send tokens from the Arbitrum contract to a particular address.
     -   When Eth and tokens are sent to a non-Arbitrum contract address, they are placed into the `ArbBalanceTracker`. A call to the `ArbBalanceTracker` is necessary to withdraw them back to your standard wallet.
