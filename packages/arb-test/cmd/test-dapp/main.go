@@ -76,7 +76,7 @@ func setupValidators() (bind.ContractBackend, *bind.TransactOpts, error) {
 	fmt.Println("seed", seed)
 	brand.Seed(seed)
 
-	jsonFile, err := os.Open("/Users/tobryan/work/arbitrum/demos/poker-dapp/validator-states/validator0/bridge_eth_addresses.json")
+	jsonFile, err := os.Open("bridge_eth_addresses.json")
 	//jsonFile, err := os.Open("/Users/tobryan/work/arbitrum/validator-states/validator0/bridge_eth_addresses.json")
 	if err != nil {
 		log.Fatalln(err)
