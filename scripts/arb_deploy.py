@@ -21,6 +21,7 @@
 import argparse
 import os
 import sys
+import shutil
 
 import setup_states
 from support.run import run
@@ -228,7 +229,15 @@ def deploy(
         if run("docker-compose -f %s build" % compose, sudo=sudo_flag) != 0:
             exit(1)
 
+    # Nuke old validator states if it exists
+    if os.path.isdir(setup_states.VALIDATOR_STATES):
+        shutil.rmtree(setup_states.VALIDATOR_STATES)
+
     # Setup validator states
+    setup_states.setup_validator_states_ethbridge(
+        os.path.abspath(contract_name), n_validators, sudo_flag
+    )
+
     if not os.path.isdir(setup_states.VALIDATOR_STATES):
         setup_states.setup_validator_states_ethbridge(
             os.path.abspath(contract_name), n_validators, sudo_flag
