@@ -1,6 +1,6 @@
 {
     "name": "arb-provider-ethers",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Arbitrum provider for ethers",
     "author": "Offchain Labs, Inc.",
     "license": "Apache-2.0",
