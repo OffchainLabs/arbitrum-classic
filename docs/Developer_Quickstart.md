@@ -342,7 +342,7 @@ Move your project folder into `arbitrum/workspace/projectname` in order to pick 
     ```js
     let contracts = require("../compiled.json");
     this.web3 = new Web3(
-        new ArbProvider("http://localhost:1235", contracts, standardProvider)
+        await ArbProvider("http://localhost:1235", contracts, standardProvider)
     );
     ```
 
