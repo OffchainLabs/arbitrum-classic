@@ -36,8 +36,22 @@ import (
 )
 
 func main() {
-	conn, auth, _ := setupValidators()
+	coordinatorKey := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
+	followerKey := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	err := setupValidators(coordinatorKey, followerKey)
+	if err != nil {
+		log.Println("Validator setup error", err)
+	}
 	//setupValidators()
+
+	privateKeyBytes, _ := hex.DecodeString("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	conn, dialerr := goarbitrum.Dial("", privateKeyBytes, _computePubKeyString(privateKeyBytes))
+	if dialerr != nil {
+		log.Println("Dial error", dialerr)
+	}
+	key1, _ := crypto.HexToECDSA(coordinatorKey)
+	auth := bind.NewKeyedTransactor(key1)
+	auth.GasLimit = 100000000
 
 	//conn, err = goarbitrum.Dial("", privateKeyBytes, _computePubKeyString(privateKeyBytes))
 	var fibAddr common.Address
@@ -62,7 +76,7 @@ func main() {
 	fibsize := 15
 	fibnum := 11
 	fmt.Println("generating fib")
-	fibonacciSession.GenerateFib(big.NewInt(int64(fibsize)))
+	_, _ = fibonacciSession.GenerateFib(big.NewInt(int64(fibsize)))
 	fmt.Println("getting fib")
 	fibval, _ := fibonacciSession.GetFib(big.NewInt(int64(fibnum)))
 	log.Printf("Fibonacci value number %v = %v", fibnum, fibval)
@@ -72,7 +86,7 @@ func main() {
 /********************************************/
 /*    Validators                            */
 /********************************************/
-func setupValidators() (bind.ContractBackend, *bind.TransactOpts, error) {
+func setupValidators(coordinatorKey string, followerKey string) error {
 
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
@@ -80,7 +94,6 @@ func setupValidators() (bind.ContractBackend, *bind.TransactOpts, error) {
 	brand.Seed(seed)
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
-	//jsonFile, err := os.Open("/Users/tobryan/work/arbitrum/validator-states/validator0/bridge_eth_addresses.json")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -99,11 +112,11 @@ func setupValidators() (bind.ContractBackend, *bind.TransactOpts, error) {
 		log.Fatal("Loader Error: ", err)
 	}
 
-	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	key1, err := crypto.HexToECDSA(coordinatorKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	key2, err := crypto.HexToECDSA("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
+	key2, err := crypto.HexToECDSA(followerKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,12 +143,9 @@ func setupValidators() (bind.ContractBackend, *bind.TransactOpts, error) {
 	ethURL := "ws://127.0.0.1:7545"
 
 	// Validator creation
-	var server *coordinator.RPCServer
-	go func() {
-		server = coordinator.NewRPCServer(machine, key1, validators, connectionInfo, ethURL)
-	}()
-	time.Sleep(500 * time.Millisecond)
+	coord := coordinator.NewCoordinator(machine, key1, validators, connectionInfo, ethURL)
 
+	// follower/challenger creation
 	challenger, err := ethvalidator.NewValidatorFollower(
 		"Bob",
 		machine,
@@ -166,12 +176,14 @@ func setupValidators() (bind.ContractBackend, *bind.TransactOpts, error) {
 		log.Fatal(err)
 	}
 
+	// start RPC server VM
+	server := coordinator.StartRPCServerVM(coord)
+
 	// Run server
 	s := rpc.NewServer()
 
 	s.RegisterCodec(json.NewCodec(), "application/json")
 	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
-	time.Sleep(5000 * time.Millisecond)
 
 	if err := s.RegisterService(server, "Validator"); err != nil {
 		log.Fatal(err)
@@ -191,12 +203,7 @@ func setupValidators() (bind.ContractBackend, *bind.TransactOpts, error) {
 		}
 	}()
 
-	privateKeyBytes, err := hex.DecodeString("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
-	contract, err := goarbitrum.Dial("", privateKeyBytes, _computePubKeyString(privateKeyBytes))
-	auth := bind.NewKeyedTransactor(key1)
-	auth.GasLimit = 100000000
-
-	return contract, auth, err
+	return err
 
 }
 
@@ -211,9 +218,7 @@ func _computePubKeyString(privKeyBytes []byte) string {
 }
 
 func eventLoop(session *chain.FibonacciSession, eventChan chan interface{}) {
-	fmt.Println("event loop")
 	for ev := range eventChan {
-
 		switch event := ev.(type) {
 		case *chain.FibonacciTestEvent:
 			fmt.Printf("Received fibonacci test event %v", event.Number)
@@ -224,5 +229,4 @@ func eventLoop(session *chain.FibonacciSession, eventChan chan interface{}) {
 			log.Println("eventLoop: unknown event type", ev)
 		}
 	}
-	fmt.Println("exiting eventLoop")
 }

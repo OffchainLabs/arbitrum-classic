@@ -57,6 +57,17 @@ func NewServer(
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) *Server {
+	return CreateVM(NewCoordinator(machine, key, validators, connectionInfo, ethURL))
+}
+
+// NewServer returns a new instance of the Server class
+func NewCoordinator(
+	machine machine.Machine,
+	key *ecdsa.PrivateKey,
+	validators []common.Address,
+	connectionInfo ethbridge.ArbAddresses,
+	ethURL string,
+) *ethvalidator.ValidatorCoordinator {
 	// Commit all pending transactions in the simulator and print the names again
 	escrowRequired := big.NewInt(10)
 	config := valmessage.NewVMConfiguration(
@@ -96,10 +107,13 @@ func NewServer(
 	case err := <-errChan:
 		log.Fatal("Coordinator failed depositing funds: ", err)
 	}
+	return man
+}
 
+func CreateVM(man *ethvalidator.ValidatorCoordinator) *Server {
 	log.Println("Coordinator is trying to create the VM")
 
-	receiptChan, errChan = man.CreateVM(time.Second * 60)
+	receiptChan, errChan := man.CreateVM(time.Second * 60)
 
 	select {
 	case receipt := <-receiptChan:
