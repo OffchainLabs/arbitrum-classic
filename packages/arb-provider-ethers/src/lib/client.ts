@@ -31,18 +31,19 @@ export enum EVMCode {
     BadSequenceCode = 4,
 }
 
-interface Log {
-    contractId: ethers.utils.BigNumber;
-    data: Uint8Array;
-    topics: ethers.utils.BigNumber[];
-}
-
-function logValToLog(val: ArbValue.Value): Log {
+function logValToLog(val: ArbValue.Value, index: number, orig: OrigMessage): ethers.providers.Log {
     const value = val as ArbValue.TupleValue;
     return {
-        contractId: (value.get(0) as ArbValue.IntValue).bignum,
-        data: ArbValue.sizedByteRangeToBytes(value.get(1) as ArbValue.TupleValue),
-        topics: value.contents.slice(2).map(rawTopic => (rawTopic as ArbValue.IntValue).bignum),
+        blockNumber: orig.blockHeight.toNumber(),
+        blockHash: orig.txHash,
+        transactionIndex: 0,
+        removed: false,
+        transactionLogIndex: index,
+        address: ethers.utils.hexlify((value.get(0) as ArbValue.IntValue).bignum),
+        data: ethers.utils.hexlify(ArbValue.sizedByteRangeToBytes(value.get(1) as ArbValue.TupleValue)),
+        topics: value.contents.slice(2).map(rawTopic => ethers.utils.hexlify((rawTopic as ArbValue.IntValue).bignum)),
+        transactionHash: orig.txHash,
+        logIndex: index,
     };
 }
 
@@ -88,13 +89,15 @@ export type EVMResult = EVMReturn | EVMRevert | EVMStop | EVMBadSequenceCode | E
 export class EVMReturn {
     public orig: OrigMessage;
     public data: Uint8Array;
-    public logs: Log[];
+    public logs: ethers.providers.Log[];
     public returnType: EVMCode.Return;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
         this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
-        this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(logValToLog);
+        this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map((val, index) => {
+            return logValToLog(val, index, this.orig);
+        });
         this.returnType = EVMCode.Return;
     }
 }
@@ -113,12 +116,14 @@ export class EVMRevert {
 
 export class EVMStop {
     public orig: OrigMessage;
-    public logs: Log[];
+    public logs: ethers.providers.Log[];
     public returnType: EVMCode.Stop;
 
     constructor(value: ArbValue.TupleValue) {
         this.orig = new OrigMessage(value.get(0) as ArbValue.TupleValue);
-        this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map(logValToLog);
+        this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map((val, index) => {
+            return logValToLog(val, index, this.orig);
+        });
         this.returnType = EVMCode.Stop;
     }
 }
