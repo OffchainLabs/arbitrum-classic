@@ -173,12 +173,7 @@ function formatReceipt(receipt) {
       true
     );
 
-    fillCopy(
-      receipt,
-      log,
-      ["address", "blockHash", "data", "transactionHash"],
-      true
-    );
+    fillCopy(receipt, log, ["blockHash", "transactionHash"], true);
   });
 
   return result;

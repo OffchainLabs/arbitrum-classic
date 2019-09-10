@@ -202,8 +202,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                 const result = await this.getMessageResult(params.transactionHash);
                 if (result) {
                     let status = 0;
+                    let logs: ethers.providers.Log[] = [];
                     if (result.evmVal.returnType === EVMCode.Return || result.evmVal.returnType === EVMCode.Stop) {
                         status = 1;
+                        logs = result.evmVal.logs;
                     }
                     return {
                         blockHash: result.txHash,
@@ -212,7 +214,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
                         cumulativeGasUsed: ethers.utils.bigNumberify(1),
                         from: result.evmVal.orig.caller,
                         gasUsed: ethers.utils.bigNumberify(1),
-                        logs: [],
+                        logs,
                         status,
                         to: result.evmVal.orig.contractID,
                         transactionHash: result.txHash,
