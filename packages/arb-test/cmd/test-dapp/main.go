@@ -41,7 +41,7 @@ func main() {
 
 	//conn, err = goarbitrum.Dial("", privateKeyBytes, _computePubKeyString(privateKeyBytes))
 	var fibAddr common.Address
-	fibAddr = common.HexToAddress("0x2EEBB8EE9c377caBC476654ca4aba016ECA1B9fc")
+	fibAddr = common.HexToAddress("0x895521964D724c8362A36608AAf09A3D7d0A0445")
 	fib, _ := chain.NewFibonacci(fibAddr, conn)
 	eventChan := chain.StartEventListeners(fib)
 
@@ -59,11 +59,14 @@ func main() {
 	}()
 
 	time.Sleep(5 * time.Second)
+	fibsize := 15
+	fibnum := 11
 	fmt.Println("generating fib")
-	fibonacciSession.GenerateFib(big.NewInt(int64(5)))
+	fibonacciSession.GenerateFib(big.NewInt(int64(fibsize)))
 	fmt.Println("getting fib")
-	fibonacciSession.GetFib(big.NewInt(int64(2)))
-	time.Sleep(30 * time.Second)
+	fibval, _ := fibonacciSession.GetFib(big.NewInt(int64(fibnum)))
+	log.Printf("Fibonacci value number %v = %v", fibnum, fibval)
+
 }
 
 /********************************************/
@@ -213,8 +216,7 @@ func eventLoop(session *chain.FibonacciSession, eventChan chan interface{}) {
 
 		switch event := ev.(type) {
 		case *chain.FibonacciTestEvent:
-			fmt.Println("test event")
-			fmt.Print(event.Number)
+			fmt.Printf("Received fibonacci test event %v", event.Number)
 			return
 		case chain.ListenerError:
 			log.Println("errorEvent", event.ListenerName, event.Err)

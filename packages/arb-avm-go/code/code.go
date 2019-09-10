@@ -167,8 +167,8 @@ var InstructionNames = map[value.Opcode]string{
 	NBSEND:  "nbsend",
 	GETTIME: "gettime",
 	INBOX:   "inbox",
-	ERROR:   "error",
 	HALT:    "halt",
+	ERROR:   "error",
 	DEBUG:   "debug",
 }
 
