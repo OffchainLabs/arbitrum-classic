@@ -219,71 +219,62 @@ func RunValidators(t *testing.T) (*FibonacciSession, error) {
 	return fibonacciSession, nil
 }
 
-var session *FibonacciSession
-
-func TestSetupFib(t *testing.T) {
-	sess, err := RunValidators(t)
+func TestFib(t *testing.T) {
+	session, err := RunValidators(t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
 	}
-	session = sess
-}
 
-func TestFib(t *testing.T) {
-	if session == nil {
-		t.Error("Validator setup error")
-		return
-	}
-	fibsize := 15
-	fibnum := 11
-	fmt.Println("generating fib")
-	_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
-	if err != nil {
-		t.Errorf("GenerateFib error %v", err)
-		return
-	}
-	fmt.Println("getting fib")
-	fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
-	if err != nil {
-		t.Errorf("GetFib error %v", err)
-		return
-	}
-	if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
-		t.Errorf("GetFib error - expected %v got %v", big.NewInt(int64(144)), fibval)
-	}
-	log.Printf("Fibonacci value number %v = %v", fibnum, fibval)
-}
-
-func TestFibEvent(t *testing.T) {
-	if session == nil {
-		t.Error("Validator setup error")
-		return
-	}
-	eventChan := StartEventListeners(session.Contract)
-
-	fibsize := 15
-	go func() {
-		time.Sleep(5 * time.Second)
+	t.Run("TestFibResult", func(t *testing.T) {
+		fibsize := 15
+		fibnum := 11
 		fmt.Println("generating fib")
 		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
 		if err != nil {
 			t.Errorf("GenerateFib error %v", err)
 			return
 		}
-	}()
-
-	fmt.Println("waiting for event")
-Loop:
-	for ev := range eventChan {
-		switch event := ev.(type) {
-		case *FibonacciTestEvent:
-			fmt.Printf("Received fibonacci test event %v", event.Number)
-			break Loop
-		case ListenerError:
-			t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
-		default:
-			t.Error("eventLoop: unknown event type", ev)
+		fmt.Println("getting fib")
+		fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
+		if err != nil {
+			t.Errorf("GetFib error %v", err)
+			return
 		}
-	}
-	fmt.Println("end event test")
+		if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
+			t.Errorf("GetFib error - expected %v got %v", big.NewInt(int64(144)), fibval)
+		}
+		log.Printf("Fibonacci value number %v = %v", fibnum, fibval)
+
+	})
+	t.Run("TestEvent", func(t *testing.T) {
+		eventChan := StartEventListeners(session.Contract)
+
+		fibsize := 15
+		go func() {
+			time.Sleep(5 * time.Second)
+			fmt.Println("generating fib")
+			_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
+			if err != nil {
+				t.Errorf("GenerateFib error %v", err)
+				return
+			}
+		}()
+
+		fmt.Println("waiting for event")
+	Loop:
+		for ev := range eventChan {
+			switch event := ev.(type) {
+			case *FibonacciTestEvent:
+				fmt.Printf("Received fibonacci test event %v", event.Number)
+				break Loop
+			case ListenerError:
+				t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
+			default:
+				t.Error("eventLoop: unknown event type", ev)
+			}
+		}
+		fmt.Println("end event test")
+
+	})
+
 }
