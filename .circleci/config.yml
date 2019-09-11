@@ -81,6 +81,7 @@ jobs:
       - run:
           name: test arb-bridge-eth
           command: |
+            mkdir db
             ganache-cli --db db -p 7545 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             truffle migrate --reset --compile-all
             kill $!
