@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	jsonenc "encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,7 +17,6 @@ import (
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 	"github.com/offchainlabs/arbitrum/packages/arb-provider-go"
-	"github.com/offchainlabs/arbitrum/packages/arb-provider-go/chain"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
@@ -36,7 +36,7 @@ import (
 /********************************************/
 /*    Validators                            */
 /********************************************/
-func setupValidators(coordinatorKey string, followerKey string) error {
+func setupValidators(coordinatorKey string, followerKey string, t *testing.T) error {
 
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
@@ -45,36 +45,37 @@ func setupValidators(coordinatorKey string, followerKey string) error {
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 	if err != nil {
-		log.Fatalln(err)
+		t.Errorf("bridge_eth_addresses error %v", err)
+		return err
 	}
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	if err := jsonFile.Close(); err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
-	machine, err := loader.LoadMachineFromFile("contract.ao", true, "cpp")
+	machine, err := loader.LoadMachineFromFile("contract.ao", true, "test")
 	if err != nil {
-		log.Fatal("Loader Error: ", err)
+		return err
 	}
 
 	key1, err := crypto.HexToECDSA(coordinatorKey)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	key2, err := crypto.HexToECDSA(followerKey)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var vmID [32]byte
 	_, err = rand.Read(vmID[:])
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	auth1 := bind.NewKeyedTransactor(key1)
@@ -109,21 +110,21 @@ func setupValidators(coordinatorKey string, followerKey string) error {
 		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
-		log.Fatalf("Failed to create follower %v\n", err)
+		return err
 	}
 	err = challenger.Run()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	receiptChan, errChan := challenger.DepositFunds(context.Background(), escrowRequired)
 	select {
 	case receipt := <-receiptChan:
 		if receipt.Status == 0 {
-			log.Fatalln("Challenger could not deposit funds")
+			return errors.New("Challenger could not deposit funds")
 		}
 	case err := <-errChan:
-		log.Fatal(err)
+		return err
 	}
 
 	// start RPC server VM
@@ -136,7 +137,7 @@ func setupValidators(coordinatorKey string, followerKey string) error {
 	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
 
 	if err := s.RegisterService(server, "Validator"); err != nil {
-		log.Fatal(err)
+		return err
 	}
 	r := mux.NewRouter()
 	r.Handle("/", s).Methods("GET", "POST", "OPTIONS")
@@ -149,64 +150,65 @@ func setupValidators(coordinatorKey string, followerKey string) error {
 	go func() {
 		err = http.ListenAndServe(":1235", handlers.CORS(headersOk, originsOk, methodsOk)(r))
 		if err != nil {
-			log.Fatal(err)
+			t.Errorf("ListenAndServe error %v", err)
 		}
 	}()
 
-	return err
+	return nil
 
 }
 
-func _computePubKeyString(privKeyBytes []byte) string {
+func _computePubKeyString(privKeyBytes []byte) (string, error) {
 	privKey, err := crypto.ToECDSA(privKeyBytes)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 	pubKey := privKey.Public().(*ecdsa.PublicKey)
 	buf := crypto.FromECDSAPub(pubKey)
-	return hexutil.Encode(buf)
+	return hexutil.Encode(buf), nil
 }
 
-func eventLoop(session *chain.FibonacciSession, eventChan chan interface{}) {
-	for ev := range eventChan {
-		switch event := ev.(type) {
-		case *chain.FibonacciTestEvent:
-			fmt.Printf("Received fibonacci test event %v", event.Number)
-			return
-		case chain.ListenerError:
-			log.Fatalln("errorEvent", event.ListenerName, event.Err)
-		default:
-			log.Fatalln("eventLoop: unknown event type", ev)
-		}
-	}
-}
-
-func RunValidators(t *testing.T) *chain.FibonacciSession {
+func RunValidators(t *testing.T) (*FibonacciSession, error) {
 	coordinatorKey := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
 	followerKey := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
-	err := setupValidators(coordinatorKey, followerKey)
+	err := setupValidators(coordinatorKey, followerKey, t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
+		t.FailNow()
+		return nil, err
 	}
 	//setupValidators()
 
 	privateKeyBytes, _ := hex.DecodeString("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
-	conn, dialerr := goarbitrum.Dial("", privateKeyBytes, _computePubKeyString(privateKeyBytes))
+	pubKey, err := _computePubKeyString(privateKeyBytes)
+	if err != nil {
+		t.Errorf("_computePubKeyString error %v", err)
+		return nil, err
+	}
+	conn, dialerr := goarbitrum.Dial("", privateKeyBytes, pubKey)
 	if dialerr != nil {
 		t.Errorf("Dial error %v", dialerr)
+		return nil, err
 	}
-	key1, _ := crypto.HexToECDSA(coordinatorKey)
+	key1, err := crypto.HexToECDSA(coordinatorKey)
+	if err != nil {
+		t.Errorf("HexToECDSA error %v", err)
+		return nil, err
+	}
 	auth := bind.NewKeyedTransactor(key1)
 	auth.GasLimit = 100000000
 
 	//conn, err = goarbitrum.Dial("", privateKeyBytes, _computePubKeyString(privateKeyBytes))
 	var fibAddr common.Address
 	fibAddr = common.HexToAddress("0x895521964D724c8362A36608AAf09A3D7d0A0445")
-	fib, _ := chain.NewFibonacci(fibAddr, conn)
-	eventChan := chain.StartEventListeners(fib)
+	fib, err := NewFibonacci(fibAddr, conn)
+	if err != nil {
+		t.Errorf("NewFibonacci error %v", err)
+		return nil, err
+	}
 
 	//Wrap the Token contract instance into a session
-	fibonacciSession := &chain.FibonacciSession{
+	fibonacciSession := &FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
 			From: auth.From,
@@ -214,21 +216,74 @@ func RunValidators(t *testing.T) *chain.FibonacciSession {
 		TransactOpts: *auth,
 	}
 
-	go func() {
-		eventLoop(fibonacciSession, eventChan)
-	}()
+	return fibonacciSession, nil
+}
 
-	time.Sleep(5 * time.Second)
-	return fibonacciSession
+var session *FibonacciSession
+
+func TestSetupFib(t *testing.T) {
+	sess, err := RunValidators(t)
+	if err != nil {
+		t.Errorf("Validator setup error %v", err)
+	}
+	session = sess
 }
 
 func TestFib(t *testing.T) {
-	session := RunValidators(t)
+	if session == nil {
+		t.Error("Validator setup error")
+		return
+	}
 	fibsize := 15
 	fibnum := 11
 	fmt.Println("generating fib")
-	_, _ = session.GenerateFib(big.NewInt(int64(fibsize)))
+	_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
+	if err != nil {
+		t.Errorf("GenerateFib error %v", err)
+		return
+	}
 	fmt.Println("getting fib")
-	fibval, _ := session.GetFib(big.NewInt(int64(fibnum)))
+	fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
+	if err != nil {
+		t.Errorf("GetFib error %v", err)
+		return
+	}
+	if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
+		t.Errorf("GetFib error - expected %v got %v", big.NewInt(int64(144)), fibval)
+	}
 	log.Printf("Fibonacci value number %v = %v", fibnum, fibval)
+}
+
+func TestFibEvent(t *testing.T) {
+	if session == nil {
+		t.Error("Validator setup error")
+		return
+	}
+	eventChan := StartEventListeners(session.Contract)
+
+	fibsize := 15
+	go func() {
+		time.Sleep(5 * time.Second)
+		fmt.Println("generating fib")
+		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
+		if err != nil {
+			t.Errorf("GenerateFib error %v", err)
+			return
+		}
+	}()
+
+	fmt.Println("waiting for event")
+Loop:
+	for ev := range eventChan {
+		switch event := ev.(type) {
+		case *FibonacciTestEvent:
+			fmt.Printf("Received fibonacci test event %v", event.Number)
+			break Loop
+		case ListenerError:
+			t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
+		default:
+			t.Error("eventLoop: unknown event type", ev)
+		}
+	}
+	fmt.Println("end event test")
 }
