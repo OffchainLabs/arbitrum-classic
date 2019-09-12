@@ -111,6 +111,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := coordinator.Run(); err != nil {
+		log.Fatal(err)
+	}
+
 	receiptChan, errChan := coordinator.Val.DepositFunds(context.Background(), escrowRequired)
 	select {
 	case receipt := <-receiptChan:
@@ -118,10 +122,6 @@ func main() {
 			log.Fatalln("Follower could not deposit funds")
 		}
 	case err := <-errChan:
-		log.Fatal(err)
-	}
-
-	if err := coordinator.Run(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -141,6 +141,11 @@ func main() {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
 
+	err = challenger.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	receiptChan, errChan = challenger.DepositFunds(context.Background(), escrowRequired)
 	select {
 	case receipt := <-receiptChan:
@@ -148,11 +153,6 @@ func main() {
 			log.Fatalln("Follower could not deposit funds")
 		}
 	case err := <-errChan:
-		log.Fatal(err)
-	}
-
-	err = challenger.Run()
-	if err != nil {
 		log.Fatal(err)
 	}
 

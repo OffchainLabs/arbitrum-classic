@@ -179,7 +179,7 @@ func RunValidators(t *testing.T) (*FibonacciSession, error) {
 	}
 	//setupValidators()
 
-	privateKeyBytes, _ := hex.DecodeString("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	privateKeyBytes, _ := hex.DecodeString(coordinatorKey)
 	pubKey, err := _computePubKeyString(privateKeyBytes)
 	if err != nil {
 		t.Errorf("_computePubKeyString error %v", err)
