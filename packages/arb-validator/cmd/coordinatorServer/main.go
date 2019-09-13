@@ -133,8 +133,7 @@ func main() {
 
 	// Validator creation
 	server := coordinator.NewRPCServer(machine, key, validators, connectionInfo, ethURL)
-	coordinator.StartRPCServerVM(server)
-
+	server.CreateVM()
 	// Run server
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")

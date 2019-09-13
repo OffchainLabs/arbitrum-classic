@@ -44,8 +44,8 @@ func NewRPCServer(
 }
 
 // NewServer returns a new instance of the Server class
-func StartRPCServerVM(server *RPCServer) {
-	createVM(server.Server)
+func (m *RPCServer) CreateVM() {
+	createVM(m.Server)
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
