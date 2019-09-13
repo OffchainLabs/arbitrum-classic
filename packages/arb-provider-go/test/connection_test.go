@@ -138,7 +138,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	t.Log("challenger created")
 	t.Log("starting RPCServerVM")
 	// start RPC server VM
-	coordinator.StartRPCServerVM(server)
+	server.CreateVM()
 
 	// Run server
 	s := rpc.NewServer()
