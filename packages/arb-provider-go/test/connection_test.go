@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,7 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 	"io/ioutil"
-	"log"
 	"math"
 	"math/big"
 	brand "math/rand"
@@ -40,41 +38,46 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
-	fmt.Println("seed", seed)
 	brand.Seed(seed)
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 	if err != nil {
-		t.Errorf("bridge_eth_addresses error %v", err)
+		t.Errorf("setupValidators Open error %v", err)
 		return err
 	}
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	if err := jsonFile.Close(); err != nil {
+		t.Errorf("setupValidators ReadAll error %v", err)
 		return err
 	}
-
+	t.Log("bridge_eth_addresses.json loaded")
 	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		t.Errorf("setupValidators Unmarshal error %v", err)
 		return err
 	}
 
 	machine, err := loader.LoadMachineFromFile("contract.ao", true, "test")
 	if err != nil {
+		t.Errorf("setupValidators LoadMachineFromFile error %v", err)
 		return err
 	}
 
 	key1, err := crypto.HexToECDSA(coordinatorKey)
 	if err != nil {
+		t.Errorf("setupValidators HexToECDSA error %v", err)
 		return err
 	}
 	key2, err := crypto.HexToECDSA(followerKey)
 	if err != nil {
+		t.Errorf("setupValidators HexToECDSA error %v", err)
 		return err
 	}
 
 	var vmID [32]byte
 	_, err = rand.Read(vmID[:])
 	if err != nil {
+		t.Errorf("setupValidators Read error %v", err)
 		return err
 	}
 
@@ -93,8 +96,9 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	)
 	ethURL := "ws://127.0.0.1:7545"
 
+	t.Log("creating coordinator")
 	// Validator creation
-	coord := coordinator.NewCoordinator(machine, key1, validators, connectionInfo, ethURL)
+	server := coordinator.NewRPCServer(machine, key1, validators, connectionInfo, ethURL)
 
 	// follower/challenger creation
 	challenger, err := ethvalidator.NewValidatorFollower(
@@ -110,10 +114,12 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
+		t.Errorf("setupValidators NewValidatorFollower error %v", err)
 		return err
 	}
 	err = challenger.Run()
 	if err != nil {
+		t.Errorf("setupValidators Run error %v", err)
 		return err
 	}
 
@@ -121,14 +127,18 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	select {
 	case receipt := <-receiptChan:
 		if receipt.Status == 0 {
-			return errors.New("Challenger could not deposit funds")
+			err := errors.New("Challenger could not deposit funds")
+			t.Errorf("setupValidators error %v", err)
+			return err
 		}
 	case err := <-errChan:
+		t.Errorf("setupValidators DepositFunds error %v", err)
 		return err
 	}
-
+	t.Log("challenger created")
+	t.Log("starting RPCServerVM")
 	// start RPC server VM
-	server := coordinator.StartRPCServerVM(coord)
+	coordinator.StartRPCServerVM(server)
 
 	// Run server
 	s := rpc.NewServer()
@@ -137,6 +147,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
 
 	if err := s.RegisterService(server, "Validator"); err != nil {
+		t.Errorf("setupValidators RegisterService error %v", err)
 		return err
 	}
 	r := mux.NewRouter()
@@ -174,7 +185,6 @@ func RunValidators(t *testing.T) (*FibonacciSession, error) {
 	err := setupValidators(coordinatorKey, followerKey, t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
-		t.FailNow()
 		return nil, err
 	}
 	//setupValidators()
@@ -219,22 +229,62 @@ func RunValidators(t *testing.T) (*FibonacciSession, error) {
 	return fibonacciSession, nil
 }
 
+type ListenerError struct {
+	ListenerName string
+	Err          error
+}
+
+func startFibTestEventListener(fibonacci *Fibonacci, ch chan interface{}, t *testing.T) {
+	go func() {
+		evCh := make(chan *FibonacciTestEvent, 2)
+		start := uint64(0)
+		watch := &bind.WatchOpts{
+			Context: context.Background(),
+			Start:   &start,
+		}
+		sub, err := fibonacci.WatchTestEvent(watch, evCh)
+		if err != nil {
+			t.Errorf("WatchTestEvent error %v", err)
+			return
+		}
+		defer sub.Unsubscribe()
+		errChan := sub.Err()
+		for {
+			select {
+			case ev, ok := <-evCh:
+				if ok {
+					ch <- ev
+				} else {
+					ch <- &ListenerError{"FibonacciTestEvent ", errors.New("channel closed")}
+					return
+				}
+			case err, ok := <-errChan:
+				if ok {
+					ch <- &ListenerError{"FibonacciTestEvent error:", err}
+				} else {
+					ch <- &ListenerError{"FibonacciTestEvent ", errors.New("error channel closed")}
+					return
+				}
+			}
+		}
+	}()
+}
+
 func TestFib(t *testing.T) {
 	session, err := RunValidators(t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
+		t.FailNow()
 	}
 
 	t.Run("TestFibResult", func(t *testing.T) {
 		fibsize := 15
 		fibnum := 11
-		fmt.Println("generating fib")
 		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
 		if err != nil {
 			t.Errorf("GenerateFib error %v", err)
 			return
 		}
-		fmt.Println("getting fib")
 		fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
 		if err != nil {
 			t.Errorf("GetFib error %v", err)
@@ -243,38 +293,38 @@ func TestFib(t *testing.T) {
 		if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
 			t.Errorf("GetFib error - expected %v got %v", big.NewInt(int64(144)), fibval)
 		}
-		log.Printf("Fibonacci value number %v = %v", fibnum, fibval)
-
 	})
+
 	t.Run("TestEvent", func(t *testing.T) {
-		eventChan := StartEventListeners(session.Contract)
+		eventChan := make(chan interface{}, 2)
+		startFibTestEventListener(session.Contract, eventChan, t)
+		testEventRcvd := false
 
 		fibsize := 15
-		go func() {
-			time.Sleep(5 * time.Second)
-			fmt.Println("generating fib")
-			_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
-			if err != nil {
-				t.Errorf("GenerateFib error %v", err)
-				return
-			}
-		}()
+		time.Sleep(5 * time.Second)
+		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
+		if err != nil {
+			t.Errorf("GenerateFib error %v", err)
+			return
+		}
 
-		fmt.Println("waiting for event")
 	Loop:
 		for ev := range eventChan {
 			switch event := ev.(type) {
 			case *FibonacciTestEvent:
-				fmt.Printf("Received fibonacci test event %v", event.Number)
+				testEventRcvd = true
 				break Loop
 			case ListenerError:
 				t.Errorf("errorEvent %v %v", event.ListenerName, event.Err)
+				break Loop
 			default:
 				t.Error("eventLoop: unknown event type", ev)
+				break Loop
 			}
 		}
-		fmt.Println("end event test")
-
+		if testEventRcvd != true {
+			t.Error("eventLoop: FibonacciTestEvent not received")
+		}
 	})
 
 }

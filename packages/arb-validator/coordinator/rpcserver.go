@@ -19,7 +19,6 @@ package coordinator
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -41,12 +40,12 @@ func NewRPCServer(
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) *RPCServer {
-	return StartRPCServerVM(NewCoordinator(machine, key, validators, connectionInfo, ethURL))
+	return &RPCServer{NewServer(machine, key, validators, connectionInfo, ethURL)}
 }
 
 // NewServer returns a new instance of the Server class
-func StartRPCServerVM(coordinator *ethvalidator.ValidatorCoordinator) *RPCServer {
-	return &RPCServer{CreateVM(coordinator)}
+func StartRPCServerVM(server *RPCServer) {
+	createVM(server.Server)
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query

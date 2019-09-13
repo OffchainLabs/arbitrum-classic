@@ -45,8 +45,7 @@ import (
 // Server provides an interface for interacting with a a running coordinator
 type Server struct {
 	coordinator *ethvalidator.ValidatorCoordinator
-
-	tracker *txTracker
+	tracker     *txTracker
 }
 
 // NewServer returns a new instance of the Server class
@@ -57,17 +56,6 @@ func NewServer(
 	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) *Server {
-	return CreateVM(NewCoordinator(machine, key, validators, connectionInfo, ethURL))
-}
-
-// NewServer returns a new instance of the Server class
-func NewCoordinator(
-	machine machine.Machine,
-	key *ecdsa.PrivateKey,
-	validators []common.Address,
-	connectionInfo ethbridge.ArbAddresses,
-	ethURL string,
-) *ethvalidator.ValidatorCoordinator {
 	// Commit all pending transactions in the simulator and print the names again
 	escrowRequired := big.NewInt(10)
 	config := valmessage.NewVMConfiguration(
@@ -107,13 +95,15 @@ func NewCoordinator(
 	case err := <-errChan:
 		log.Fatal("Coordinator failed depositing funds: ", err)
 	}
-	return man
+
+	return &Server{man, nil}
 }
 
-func CreateVM(man *ethvalidator.ValidatorCoordinator) *Server {
+// creates the VM and waits for followers to connect
+func createVM(server *Server) {
 	log.Println("Coordinator is trying to create the VM")
 
-	receiptChan, errChan := man.CreateVM(time.Second * 60)
+	receiptChan, errChan := server.coordinator.CreateVM(time.Second * 60)
 
 	select {
 	case receipt := <-receiptChan:
@@ -126,14 +116,12 @@ func CreateVM(man *ethvalidator.ValidatorCoordinator) *Server {
 	}
 
 	time.Sleep(500 * time.Millisecond)
-
-	tracker := newTxTracker(man.Val.VMID, <-man.Val.VMCreatedTxHashChan)
+	log.Print("creating txtracker")
+	server.tracker = newTxTracker(server.coordinator.Val.VMID, <-server.coordinator.Val.VMCreatedTxHashChan)
 	go func() {
-
-		tracker.handleTxResults(man.Val.CompletedCallChan)
+		server.tracker.handleTxResults(server.coordinator.Val.CompletedCallChan)
 	}()
 
-	return &Server{man, tracker}
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query

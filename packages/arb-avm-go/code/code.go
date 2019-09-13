@@ -100,8 +100,8 @@ const (
 	NBSEND
 	GETTIME
 	INBOX
-	HALT
 	ERROR
+	HALT
 	DEBUG
 )
 
@@ -167,8 +167,8 @@ var InstructionNames = map[value.Opcode]string{
 	NBSEND:  "nbsend",
 	GETTIME: "gettime",
 	INBOX:   "inbox",
-	HALT:    "halt",
 	ERROR:   "error",
+	HALT:    "halt",
 	DEBUG:   "debug",
 }
 
