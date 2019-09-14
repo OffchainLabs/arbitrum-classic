@@ -81,7 +81,8 @@ jobs:
       - run:
           name: test arb-bridge-eth
           command: |
-            ganache-cli -p 7545 &
+            mkdir db
+            ganache-cli --db db -p 7545 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             truffle migrate --reset --compile-all
             kill $!
             ../../codecovbash -R /home/user/arbitrum -cF arb_bridge_eth
@@ -109,6 +110,7 @@ jobs:
       - run:
           name: test arb-provider-go
           command: |
+            ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             ../../codecovbash -R /home/user/arbitrum -cF arb_provider_go
           working_directory: /home/user/arbitrum/packages/arb-provider-go

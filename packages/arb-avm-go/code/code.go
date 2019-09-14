@@ -100,8 +100,8 @@ const (
 	NBSEND
 	GETTIME
 	INBOX
-	HALT
 	ERROR
+	HALT
 	DEBUG
 )
 

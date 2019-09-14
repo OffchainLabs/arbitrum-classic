@@ -83,8 +83,8 @@ enum class OpCode : uint8_t {
     NBSEND,
     GETTIME,
     INBOX,
-    HALT,
     ERROR,
+    HALT,
     DEBUG
 };
 

@@ -43,6 +43,11 @@ func NewRPCServer(
 	return &RPCServer{NewServer(machine, key, validators, connectionInfo, ethURL)}
 }
 
+// NewServer returns a new instance of the Server class
+func (m *RPCServer) CreateVM() {
+	createVM(m.Server)
+}
+
 // FindLogs takes a set of parameters and return the list of all logs that match the query
 func (m *RPCServer) FindLogs(r *http.Request, args *FindLogsArgs, reply *FindLogsReply) error {
 	ret, err := m.Server.FindLogs(context.Background(), args)
