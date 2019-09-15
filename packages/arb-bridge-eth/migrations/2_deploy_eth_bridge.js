@@ -22,7 +22,7 @@ var ArbValue = artifacts.require("./ArbValue.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
 var Bisection = artifacts.require("./Bisection.sol");
-var VMCreator = artifacts.require("./VMCreator.sol");
+var ChannelCreator = artifacts.require("./ChannelCreator.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
@@ -33,13 +33,13 @@ var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
 
 module.exports = async function(deployer, network, accounts) {
   deployer.deploy(DebugPrint);
-  deployer.link(DebugPrint, [ArbMachine, Unanimous]);
+  deployer.link(DebugPrint, [ArbMachine]);
 
   deployer.deploy(MerkleLib);
   deployer.link(MerkleLib, [Bisection]);
 
   deployer.deploy(SigUtils);
-  deployer.link(SigUtils, [VMCreator, Unanimous, GlobalPendingInbox]);
+  deployer.link(SigUtils, [Unanimous, GlobalPendingInbox]);
 
   deployer.deploy(BytesLib);
   deployer.link(BytesLib, [ArbValue]);
@@ -51,13 +51,13 @@ module.exports = async function(deployer, network, accounts) {
     ArbMachine,
     ArbProtocol,
     VM,
-    VMCreator
+    ChannelCreator
   ]);
 
   deployer.deploy(ArbProtocol);
   deployer.link(ArbProtocol, [
     GlobalPendingInbox,
-    VMCreator,
+    ChannelCreator,
     ChallengeManager,
     OneStepProof,
     VM,
@@ -75,25 +75,25 @@ module.exports = async function(deployer, network, accounts) {
   deployer.link(Bisection, ChallengeManager);
 
   deployer.deploy(VM);
-  deployer.link(VM, [Disputable, Unanimous, VMCreator]);
+  deployer.link(VM, [Disputable, Unanimous, ChannelCreator]);
 
   deployer.deploy(Disputable);
-  deployer.link(Disputable, VMCreator);
+  deployer.link(Disputable, ChannelCreator);
 
   deployer.deploy(Unanimous);
-  deployer.link(Unanimous, VMCreator);
+  deployer.link(Unanimous, ChannelCreator);
 
   await deployer.deploy(GlobalPendingInbox);
   await deployer.deploy(ChallengeManager);
   await deployer.deploy(
-    VMCreator,
+    ChannelCreator,
     GlobalPendingInbox.address,
     ChallengeManager.address
   );
 
   const fs = require("fs");
   let addresses = {
-    vmCreator: VMCreator.address,
+    vmCreator: ChannelCreator.address,
     globalPendingInbox: GlobalPendingInbox.address
   };
   fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));

@@ -95,4 +95,17 @@ library VM {
             _vm.validators[_vm.asserter].balance = _vm.validators[_vm.asserter].balance.add(_vm.escrowRequired);
         }
     }
+
+    function isValidatorList(Data storage _vm, address[] calldata _validators) external view returns(bool) {
+        uint validatorCount = _validators.length;
+        if (validatorCount != _vm.validatorCount) {
+            return false;
+        }
+        for (uint i = 0; i < validatorCount; i++) {
+            if (!_vm.validators[_validators[i]].valid) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

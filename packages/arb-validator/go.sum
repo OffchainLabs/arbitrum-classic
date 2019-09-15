@@ -176,6 +176,7 @@ github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 h1:RWengNIwukTxcDr9
 github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826/go.mod h1:TaXosZuwdSHYgviHp1DAtfrULt5eUgsSMsZf+YrPgl8=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/offchainlabs/arb-validator v0.1.0 h1:td6QH8/pnXofpsxvHLqgWOyq+wp+n4qc8q80V6joCLk=
+github.com/offchainlabs/arbitrum v0.2.1 h1:dhX6H79iRRmPl9cltK2wes6RhTGKz1mpO6oLhGQWzgU=
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.2.0 h1:8QsKfdZ3vdPgmr0OalPyfnNb70ZICdaWLzK+w+RD99E=
 github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.2.0/go.mod h1:OoC1cFCRCzplslcpnmnX25VxGOvx/+8DxWxfwpsWqMU=
 github.com/offchainlabs/arbitrum/packages/arb-avm-go v0.2.0 h1:J90R1L7z4FvB2yEi5oGMxNuFA1I9muMObPVNlLo8Cyc=

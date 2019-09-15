@@ -279,14 +279,6 @@ func (vm *VMTracker) VerifyVM(
 		return errors.New("VM has different escrow required")
 	}
 
-	escrowCurrency, err := vm.contract.Tracker.EscrowCurrency(auth)
-	if err != nil {
-		return err
-	}
-	if protocol.NewAddressFromBuf(config.EscrowCurrency) != escrowCurrency {
-		return errors.New("VM has different escrow currency")
-	}
-
 	validators := make([]common.Address, 0, len(config.AssertKeys))
 	for _, assertKey := range config.AssertKeys {
 		validators = append(validators, protocol.NewAddressFromBuf(assertKey))

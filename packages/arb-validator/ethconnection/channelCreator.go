@@ -1,6 +1,7 @@
 package ethconnection
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/channelcreator"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -10,38 +11,37 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/vmtracker"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type VMCreator struct {
-	contract *vmtracker.VMCreator
+type ChannelCreator struct {
+	contract *channelcreator.ChannelCreator
 }
 
-func NewVMCreator(address common.Address, client *ethclient.Client) (*VMCreator, error) {
-	vmCreatorContract, err := vmtracker.NewVMCreator(address, client)
+func NewVMCreator(address common.Address, client *ethclient.Client) (*ChannelCreator, error) {
+	vmCreatorContract, err := channelcreator.NewChannelCreator(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to VMCreator")
+		return nil, errors2.Wrap(err, "Failed to connect to ChannelCreator")
 	}
-	return &VMCreator{vmCreatorContract}, nil
+	return &ChannelCreator{vmCreatorContract}, nil
 }
 
-func (con *VMCreator) ParseVMCreated(log *types.Log) (common.Address, [32]byte, *valmessage.VMConfiguration, error) {
-	event, err := con.contract.ParseVMCreated(*log)
+func (con *ChannelCreator) ParseVMCreated(log *types.Log) (common.Address, [32]byte, *valmessage.VMConfiguration, error) {
+	event, err := con.contract.ParseChannelCreated(*log)
 	if err != nil {
 		return common.Address{}, [32]byte{}, nil, err
 	}
 	return event.VmAddress, event.VmState, valmessage.NewVMConfiguration(
 		uint64(event.GracePeriod),
 		event.EscrowRequired,
-		event.EscrowCurrency,
+		common.Address{},
 		event.Validators,
 		event.MaxExecutionSteps,
 		event.Owner,
 	), nil
 }
 
-func (con *VMCreator) LaunchVM(
+func (con *ChannelCreator) LaunchVM(
 	auth *bind.TransactOpts,
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
@@ -60,7 +60,6 @@ func (con *VMCreator) LaunchVM(
 		uint32(config.GracePeriod),
 		config.MaxExecutionStepCount,
 		value.NewBigIntFromBuf(config.EscrowRequired),
-		escrowCurrency,
 		owner,
 		validatorKeys,
 	)

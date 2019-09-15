@@ -18,31 +18,16 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 import "./Disputable.sol";
-import "./Unanimous.sol";
 
 import "../IGlobalPendingInbox.sol";
 
 import "../challenge/IChallengeManager.sol";
 
 import "../libraries/ArbProtocol.sol";
-import "../libraries/SigUtils.sol";
 
 
-contract VMTracker {
+contract ArbitrumVM {
     using SafeMath for uint256;
-
-    event PendingUnanimousAssertion (
-        bytes32 unanHash,
-        uint64 sequenceNum
-    );
-
-    event ConfirmedUnanimousAssertion (
-        uint64 sequenceNum
-    );
-
-    event FinalizedUnanimousAssertion(
-        bytes32 unanHash
-    );
 
     // fields:
     // beforeHash
@@ -75,7 +60,6 @@ contract VMTracker {
     IGlobalPendingInbox public globalInbox;
 
     VM.Data public vm;
-    address public escrowCurrency;
 
     uint16 public activatedValidators;
     address payable public exitAddress;
@@ -92,31 +76,18 @@ contract VMTracker {
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
-        address _escrowCurrency,
         address payable _owner,
         address _challengeManagerAddress,
-        address _globalInboxAddress,
-        address[] memory _validatorKeys
+        address _globalInboxAddress
     )
         public
     {
-        require(
-            _escrowCurrency == ETH_ADDRESS,
-            "Validator deposits must be in ETH"
-        );
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
         challengeManager = IChallengeManager(_challengeManagerAddress);
 
         globalInbox.registerForInbox();
         owner = _owner;
         activatedValidators = 0;
-        escrowCurrency = _escrowCurrency;
-
-        uint16 validatorCount = uint16(_validatorKeys.length);
-        vm.validatorCount = validatorCount;
-        for (uint16 i = 0; i < validatorCount; i++) {
-            vm.validators[_validatorKeys[i]] = VM.Validator(0, true);
-        }
 
         // Machine state
         vm.machineHash = _vmState;
@@ -145,18 +116,6 @@ contract VMTracker {
         return vm.state;
     }
 
-    function increaseDeposit() external payable validatorOnly {
-        VM.Validator storage validator = vm.validators[msg.sender];
-        bool wasInactive = validator.balance < uint256(vm.escrowRequired);
-        vm.validators[msg.sender].balance += msg.value;
-        if (wasInactive && validator.balance >= uint256(vm.escrowRequired)) {
-            activatedValidators++;
-        }
-        if (activatedValidators == vm.validatorCount && vm.state == VM.State.Uninitialized) {
-            vm.state = VM.State.Waiting;
-        }
-    }
-
     function ownerShutdown() external {
         require(msg.sender == owner, "Only owner can shutdown the VM");
         _shutdown();
@@ -172,19 +131,6 @@ contract VMTracker {
         vm.inChallenge = false;
         vm.validators[_players[0]].balance = vm.validators[_players[0]].balance.add(_rewards[0]);
         vm.validators[_players[1]].balance = vm.validators[_players[1]].balance.add(_rewards[1]);
-    }
-
-    function isValidatorList(address[] memory _validators) public view returns(bool) {
-        uint validatorCount = _validators.length;
-        if (validatorCount != vm.validatorCount) {
-            return false;
-        }
-        for (uint i = 0; i < validatorCount; i++) {
-            if (!vm.validators[_validators[i]].valid) {
-                return false;
-            }
-        }
-        return true;
     }
 
     // fields:
@@ -259,9 +205,7 @@ contract VMTracker {
             _logsAccHash
         );
 
-        _pushPendingToInbox();
-
-        globalInbox.sendMessages(
+        _completeAssertion(
             _tokenTypes,
             _messageData,
             _messageTokenNums,
@@ -284,101 +228,19 @@ contract VMTracker {
         );
     }
 
-    function finalizedUnanimousAssert(
-        bytes32 _afterHash,
-        bytes32 _newInbox,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations,
-        bytes32 _logsAccHash,
-        bytes memory _signatures
-    )
-        public
-    {
-        Unanimous.finalizedUnanimousAssert(
-            vm,
-            [_afterHash, _newInbox, _logsAccHash],
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations,
-            _signatures
-        );
-
-        _pushPendingToInbox();
-
-        globalInbox.sendMessages(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
-    }
-
-    function pendingUnanimousAssert(
-        bytes32 _unanRest,
-        bytes21[] memory _tokenTypes,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        uint64 _sequenceNum,
-        bytes32 _logsAccHash,
-        bytes memory _signatures
-    )
-        public
-    {
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
-        require(
-            globalInbox.hasFunds(
-                address(this),
-                _tokenTypes,
-                beforeBalances
-            ),
-            "VM has insufficient balance"
-        );
-        Unanimous.pendingUnanimousAssert(
-            vm,
-            _unanRest,
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts,
-            _sequenceNum,
-            _logsAccHash,
-            _signatures
-        );
-    }
-
-    function confirmUnanimousAsserted(
-        bytes32 _afterHash,
-        bytes32 _newInbox,
+    function _completeAssertion(
         bytes21[] memory _tokenTypes,
         bytes memory _messageData,
         uint16[] memory _messageTokenNums,
         uint256[] memory _messageAmounts,
         address[] memory _messageDestinations
     )
-        public
+        internal
     {
-        Unanimous.confirmUnanimousAsserted(
-            vm,
-            _afterHash,
-            _newInbox,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
-
-        _pushPendingToInbox();
+        bytes32 pending = globalInbox.pullPendingMessages(address(this));
+        if (pending != ArbValue.hashEmptyTuple()) {
+            vm.inbox = ArbProtocol.appendInboxMessages(vm.inbox, pending);
+        }
 
         globalInbox.sendMessages(
             _tokenTypes,
@@ -392,12 +254,5 @@ contract VMTracker {
     function _shutdown() private {
         // TODO: transfer all owned funds to halt address
         selfdestruct(owner);
-    }
-
-    function _pushPendingToInbox() private {
-        bytes32 pending = globalInbox.pullPendingMessages(address(this));
-        if (pending != ArbValue.hashEmptyTuple()) {
-            vm.inbox = ArbProtocol.appendInboxMessages(vm.inbox, pending);
-        }
     }
 }

@@ -44,7 +44,7 @@ type Validator struct {
 	arbAddresses  ethbridge.ArbAddresses
 	client        *ethclient.Client
 
-	*ethbridge.VMCreator
+	*ethbridge.ChannelCreator
 	*ethbridge.PendingInbox
 	auth *bind.TransactOpts
 }
@@ -72,13 +72,13 @@ func NewValidator(
 	}
 
 	return &Validator{
-		key:           key,
-		serverAddress: ethURL,
-		arbAddresses:  connectionInfo,
-		client:        client,
-		VMCreator:     vmCreator,
-		PendingInbox:  pendingInbox,
-		auth:          auth,
+		key:            key,
+		serverAddress:  ethURL,
+		arbAddresses:   connectionInfo,
+		client:         client,
+		ChannelCreator: vmCreator,
+		PendingInbox:   pendingInbox,
+		auth:           auth,
 	}, nil
 }
 
@@ -172,7 +172,7 @@ func (val *Validator) LaunchVM(
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
 ) (*types.Receipt, error) {
-	return val.VMCreator.LaunchVM(
+	return val.ChannelCreator.LaunchVM(
 		val.makeAuth(ctx),
 		config,
 		vmState,

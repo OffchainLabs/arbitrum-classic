@@ -16,15 +16,14 @@
 
 pragma solidity ^0.5.3;
 
-import "./vm/VMTracker.sol";
+import "./vm/ArbChannel.sol";
 
 
-contract VMCreator {
-    event VMCreated(
+contract ChannelCreator {
+    event ChannelCreated(
         address vmAddress,
         uint32 gracePeriod,
         uint128 escrowRequired,
-        address escrowCurrency,
         uint32 maxExecutionSteps,
         bytes32 vmState,
         address owner,
@@ -44,28 +43,25 @@ contract VMCreator {
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
-        address _escrowCurrency,
         address payable _owner,
         address[] memory _validatorKeys
     )
         public
     {
-        VMTracker vm = new VMTracker(
+        ArbChannel vm = new ArbChannel(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
             _escrowRequired,
-            _escrowCurrency,
             _owner,
             challengeManagerAddress,
             globalInboxAddress,
             _validatorKeys
         );
-        emit VMCreated(
+        emit ChannelCreated(
             address(vm),
             _gracePeriod,
             _escrowRequired,
-            _escrowCurrency,
             _maxExecutionSteps,
             _vmState,
             _owner,

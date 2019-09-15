@@ -26,17 +26,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type VMCreator struct {
-	contract *ethconnection.VMCreator
+type ChannelCreator struct {
+	contract *ethconnection.ChannelCreator
 	client   *ethclient.Client
 }
 
-func NewVMCreator(address common.Address, client *ethclient.Client) (*VMCreator, error) {
+func NewVMCreator(address common.Address, client *ethclient.Client) (*ChannelCreator, error) {
 	vm, err := ethconnection.NewVMCreator(address, client)
-	return &VMCreator{vm, client}, err
+	return &ChannelCreator{vm, client}, err
 }
 
-func (con *VMCreator) LaunchVM(
+func (con *ChannelCreator) LaunchVM(
 	auth *bind.TransactOpts,
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
@@ -52,6 +52,6 @@ func (con *VMCreator) LaunchVM(
 	return waitForReceipt(auth.Context, con.client, tx.Hash())
 }
 
-func (con *VMCreator) ParseVMCreated(log *types.Log) (common.Address, [32]byte, *valmessage.VMConfiguration, error) {
+func (con *ChannelCreator) ParseVMCreated(log *types.Log) (common.Address, [32]byte, *valmessage.VMConfiguration, error) {
 	return con.contract.ParseVMCreated(log)
 }

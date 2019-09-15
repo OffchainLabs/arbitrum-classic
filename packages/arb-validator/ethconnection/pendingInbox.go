@@ -18,7 +18,6 @@ package ethconnection
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -41,7 +40,7 @@ type PendingInbox struct {
 func NewPendingInbox(address common.Address, client *ethclient.Client) (*PendingInbox, error) {
 	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to VMCreator")
+		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
 	return &PendingInbox{globalPendingInboxContract}, nil
 }
@@ -54,7 +53,6 @@ func (con *PendingInbox) SendMessage(
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
 		return nil, err
 	}
-	fmt.Println("Sending valmessage to VMTracker")
 	return con.GlobalPendingInbox.SendMessage(
 		auth,
 		msg.Destination,

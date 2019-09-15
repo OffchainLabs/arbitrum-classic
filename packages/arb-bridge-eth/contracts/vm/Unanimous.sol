@@ -160,27 +160,6 @@ library Unanimous {
         );
     }
 
-    function _requireUnanimousSigs(
-        VM.Data storage vm,
-        bytes32 msgHash,
-        bytes memory signatures
-    )
-        private view
-    {
-        address[] memory addresses = SigUtils.recoverAddresses(msgHash, signatures);
-        uint addressCount = addresses.length;
-        require(
-            vm.validatorCount == addressCount,
-            "Must have one signature from each validator"
-        );
-        for (uint i = 0; i < addressCount; i++) {
-            require(
-                vm.validators[addresses[i]].valid,
-                "Signature from non-validator key"
-            );
-        }
-    }
-
     function _requireAllSignedAssertion(
         VM.Data storage vm,
         bytes32 _unanRest,
@@ -208,7 +187,11 @@ library Unanimous {
                 _logsAccHash
             )
         );
-        _requireUnanimousSigs(vm, unanHash, _signatures);
+        address[] memory addresses = SigUtils.recoverAddresses(unanHash, _signatures);
+        require(
+            VM.isValidatorList(vm, addresses),
+            "Invalid signature list"
+        );
         return unanHash;
     }
 

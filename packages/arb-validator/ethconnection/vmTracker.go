@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/channelcreator"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	errors2 "github.com/pkg/errors"
 
@@ -33,21 +35,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/challengemanager"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/vmtracker"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 
 type VMTracker struct {
 	Client             *ethclient.Client
-	Tracker            *vmtracker.VMTracker
+	Tracker            *channelcreator.ArbChannel
 	Challenge          *challengemanager.ChallengeManager
-	GlobalPendingInbox *vmtracker.IGlobalPendingInbox
+	GlobalPendingInbox *channelcreator.IGlobalPendingInbox
 
 	address common.Address
 }
 
 func NewVMTracker(address common.Address, client *ethclient.Client) (*VMTracker, error) {
-	trackerContract, err := vmtracker.NewVMTracker(address, client)
+	trackerContract, err := channelcreator.NewArbChannel(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to VMTracker")
 	}
@@ -71,7 +72,7 @@ func NewVMTracker(address common.Address, client *ethclient.Client) (*VMTracker,
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
 	}
-	globalPendingContract, err := vmtracker.NewIGlobalPendingInbox(globalPendingInboxAddress, client)
+	globalPendingContract, err := channelcreator.NewIGlobalPendingInbox(globalPendingInboxAddress, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
@@ -95,43 +96,43 @@ func (vm *VMTracker) CreateListeners(ctx context.Context) (chan Notification, ch
 		return nil, nil, err
 	}
 
-	messageDeliveredChan := make(chan *vmtracker.IGlobalPendingInboxMessageDelivered)
+	messageDeliveredChan := make(chan *channelcreator.IGlobalPendingInboxMessageDelivered)
 	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	unanAssChan := make(chan *vmtracker.VMTrackerFinalizedUnanimousAssertion)
+	unanAssChan := make(chan *channelcreator.ArbChannelFinalizedUnanimousAssertion)
 	unanAssSub, err := vm.Tracker.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	unanPropChan := make(chan *vmtracker.VMTrackerPendingUnanimousAssertion)
+	unanPropChan := make(chan *channelcreator.ArbChannelPendingUnanimousAssertion)
 	unanPropSub, err := vm.Tracker.WatchPendingUnanimousAssertion(watch, unanPropChan)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	unanConfChan := make(chan *vmtracker.VMTrackerConfirmedUnanimousAssertion)
+	unanConfChan := make(chan *channelcreator.ArbChannelConfirmedUnanimousAssertion)
 	unanConfSub, err := vm.Tracker.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dispAssChan := make(chan *vmtracker.VMTrackerPendingDisputableAssertion)
+	dispAssChan := make(chan *channelcreator.ArbChannelPendingDisputableAssertion)
 	dispAssSub, err := vm.Tracker.WatchPendingDisputableAssertion(watch, dispAssChan)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	confAssChan := make(chan *vmtracker.VMTrackerConfirmedDisputableAssertion)
+	confAssChan := make(chan *channelcreator.ArbChannelConfirmedDisputableAssertion)
 	confAssSub, err := vm.Tracker.WatchConfirmedDisputableAssertion(watch, confAssChan)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	challengeInitiatedChan := make(chan *vmtracker.VMTrackerInitiatedChallenge)
+	challengeInitiatedChan := make(chan *channelcreator.ArbChannelInitiatedChallenge)
 	challengeInitiatedSub, err := vm.Tracker.WatchInitiatedChallenge(watch, challengeInitiatedChan)
 	if err != nil {
 		return nil, nil, err
@@ -744,7 +745,7 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 	return assertions
 }
 
-func translateDisputableAssertionEvent(event *vmtracker.VMTrackerPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
+func translateDisputableAssertionEvent(event *channelcreator.ArbChannelPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	balanceTracker := protocol.NewBalanceTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],
