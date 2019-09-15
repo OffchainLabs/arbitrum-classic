@@ -16,7 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-import "./VMTracker.sol";
+import "./vm/VMTracker.sol";
 
 
 contract VMCreator {

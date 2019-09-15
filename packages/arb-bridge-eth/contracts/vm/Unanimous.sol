@@ -17,8 +17,9 @@
 pragma solidity ^0.5.3;
 
 import "./VM.sol";
-import "./SigUtils.sol";
-import "./DebugPrint.sol";
+
+import "../libraries/SigUtils.sol";
+import "../libraries/DebugPrint.sol";
 
 
 library Unanimous {

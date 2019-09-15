@@ -16,9 +16,9 @@
 
 pragma solidity ^0.5.3;
 
-import "./ArbProtocol.sol";
-import "./ArbValue.sol";
-import "./ArbMachine.sol";
+import "../libraries/ArbProtocol.sol";
+import "../libraries/ArbValue.sol";
+import "../libraries/ArbMachine.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 

@@ -17,7 +17,8 @@
 pragma solidity ^0.5.3;
 
 import "./VM.sol";
-import "./ArbProtocol.sol";
+
+import "../libraries/ArbProtocol.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 

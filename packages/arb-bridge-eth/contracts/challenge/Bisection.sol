@@ -16,8 +16,8 @@
 
 pragma solidity ^0.5.3;
 
-import "./MerkleLib.sol";
-import "./ArbProtocol.sol";
+import "../libraries/MerkleLib.sol";
+import "../libraries/ArbProtocol.sol";
 
 
 library Bisection {

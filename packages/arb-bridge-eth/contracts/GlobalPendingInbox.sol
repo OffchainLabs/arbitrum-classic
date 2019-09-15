@@ -16,11 +16,12 @@
 
 pragma solidity ^0.5.3;
 
-import "./ArbProtocol.sol";
-import "./ArbValue.sol";
 import "./GlobalWallet.sol";
-import "./SigUtils.sol";
 import "./IGlobalPendingInbox.sol";
+
+import "./libraries/ArbProtocol.sol";
+import "./libraries/ArbValue.sol";
+import "./libraries/SigUtils.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 

@@ -16,13 +16,16 @@
 
 pragma solidity ^0.5.3;
 
-import "./ArbProtocol.sol";
-import "./IChallengeManager.sol";
-import "./IGlobalPendingInbox.sol";
 import "./VM.sol";
 import "./Disputable.sol";
 import "./Unanimous.sol";
-import "./SigUtils.sol";
+
+import "../IGlobalPendingInbox.sol";
+
+import "../challenge/IChallengeManager.sol";
+
+import "../libraries/ArbProtocol.sol";
+import "../libraries/SigUtils.sol";
 
 
 contract VMTracker {

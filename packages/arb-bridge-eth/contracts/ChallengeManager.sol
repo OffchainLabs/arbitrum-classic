@@ -16,11 +16,13 @@
 
 pragma solidity ^0.5.3;
 
-import "./IChallengeManager.sol";
-import "./IVMTracker.sol";
-import "./ArbProtocol.sol";
-import "./OneStepProof.sol";
-import "./Bisection.sol";
+import "./challenge/IChallengeManager.sol";
+import "./challenge/OneStepProof.sol";
+import "./challenge/Bisection.sol";
+
+import "./vm/IVMTracker.sol";
+
+import "./libraries/ArbProtocol.sol";
 
 
 contract ChallengeManager is IChallengeManager {
