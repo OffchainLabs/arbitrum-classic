@@ -154,7 +154,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 
 	tokenType := [21]byte{}
 	messageHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(conn.vmId),
+		solsha3.Address(conn.vmId),
 		solsha3.Bytes32(arbCallValue.Hash()),
 		solsha3.Uint256(big.NewInt(0)), // amount
 		tokenType[:],

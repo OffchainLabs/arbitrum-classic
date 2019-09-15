@@ -20,12 +20,13 @@ import (
 	"context"
 	"math/rand"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func New(
@@ -59,9 +60,9 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot waitingContinuing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.BisectionEvent:
+	case ethconnection.BisectionEvent:
 		preconditions := protocol.GeneratePreconditions(bot.challengedPrecondition, ev.Assertions)
 		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions)
 		if err != nil && bot.ChallengeEverything {
@@ -91,10 +92,10 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 			preconditions:   preconditions,
 			assertions:      ev.Assertions,
 		}, nil
-	case ethbridge.OneStepProofEvent:
+	case ethconnection.OneStepProofEvent:
 		return nil, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingContinuing: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingContinuing: VMTracker state got unsynchronized"}
 	}
 }
 
@@ -120,9 +121,9 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.S
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
-func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot continuing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ContinueChallengeEvent:
+	case ethconnection.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingContinuing{
 			bot.Config,
@@ -131,6 +132,6 @@ func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: continuing: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: continuing: VMTracker state got unsynchronized"}
 	}
 }

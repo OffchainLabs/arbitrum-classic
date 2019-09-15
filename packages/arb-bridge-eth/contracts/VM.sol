@@ -29,51 +29,44 @@ library VM {
     bytes32 private constant MACHINE_ERROR_HASH = bytes32(uint(1));
 
     enum State {
+        Uninitialized,
         Waiting,
-        PendingAssertion,
+        PendingDisputable,
         PendingUnanimous
     }
 
+    struct Validator {
+        uint balance;
+        bool valid;
+    }
+
     struct Data {
+        mapping(address => Validator) validators;
         bytes32 machineHash;
         bytes32 pendingHash; // Lock pending and confirm asserts together
-        bytes32 inboxHash;
-        bytes32 pendingMessages;
-        bytes32 validatorRoot;
-        bytes32 exitAddress;
-        bytes32 terminateAddress;
-        bytes32 id;
-        address owner;
+        bytes32 inbox;
         address asserter;
-        address currencyType;
         uint128 escrowRequired;
         uint64 deadline;
         uint64 sequenceNum;
         uint32 gracePeriod;
         uint32 maxExecutionSteps;
         uint16 validatorCount;
-        uint16 challengeManagersNum;
         State state;
         bool inChallenge;
-        mapping(address => uint256) validatorBalances;
     }
 
     struct FullAssertion {
         bytes messageData;
         uint16[] messageTokenNums;
         uint256[] messageAmounts;
-        bytes32[] messageDestinations;
+        address[] messageDestinations;
         bytes32 logsAccHash;
     }
 
     function acceptAssertion(Data storage _vm, bytes32 _afterHash) external {
         _vm.machineHash = _afterHash;
         _vm.state = VM.State.Waiting;
-
-        if (_vm.pendingMessages != ArbValue.hashEmptyTuple()) {
-            _vm.inboxHash = ArbProtocol.appendInboxMessages(_vm.inboxHash, _vm.pendingMessages);
-            _vm.pendingMessages = ArbValue.hashEmptyTuple();
-        }
     }
 
     function withinDeadline(Data storage _vm) external view returns(bool) {
@@ -92,37 +85,14 @@ library VM {
         return _vm.machineHash == MACHINE_HALT_HASH;
     }
 
-    function cancelCurrentState(Data storage vm) external {
-        if (vm.state != VM.State.Waiting) {
-            require(block.number <= vm.deadline, "Can't cancel finalized state");
+    function cancelCurrentState(Data storage _vm) external {
+        if (_vm.state != VM.State.Waiting) {
+            require(block.number <= _vm.deadline, "Can't cancel finalized state");
         }
 
-        if (vm.state == VM.State.PendingAssertion) {
+        if (_vm.state == VM.State.PendingDisputable) {
             // If there is a pending disputable assertion, cancel it
-            vm.validatorBalances[vm.asserter] = vm.validatorBalances[vm.asserter].add(vm.escrowRequired);
+            _vm.validators[_vm.asserter].balance = _vm.validators[_vm.asserter].balance.add(_vm.escrowRequired);
         }
     }
-
-    function deliverMessage(
-        Data storage _vm,
-        bytes21 _tokenType,
-        uint256 _value,
-        bytes32 _sender,
-        bytes calldata _data
-    )
-        external
-    {
-        bytes32 messageHash = ArbProtocol.generateSentMessageHash(
-            _vm.id,
-            ArbValue.deserializeValueHash(_data),
-            _tokenType,
-            _value,
-            _sender
-        );
-        _vm.pendingMessages = ArbProtocol.appendInboxPendingMessage(
-            _vm.pendingMessages,
-            messageHash
-        );
-    }
-
 }

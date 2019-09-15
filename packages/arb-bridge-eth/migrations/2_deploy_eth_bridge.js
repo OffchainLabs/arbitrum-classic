@@ -14,43 +14,50 @@
  * limitations under the License.
  */
 
+var DebugPrint = artifacts.require("./DebugPrint.sol");
+
 var ArbProtocol = artifacts.require("./ArbProtocol.sol");
 var VM = artifacts.require("./VM.sol");
 var ArbValue = artifacts.require("./ArbValue.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
 var Bisection = artifacts.require("./Bisection.sol");
-var VMTracker = artifacts.require("./VMTracker.sol");
+var VMCreator = artifacts.require("./VMCreator.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
 var MerkleLib = artifacts.require("./MerkleLib.sol");
 var SigUtils = artifacts.require("./SigUtils.sol");
 var ChallengeManager = artifacts.require("./ChallengeManager.sol");
-var ArbBalanceTracker = artifacts.require("./ArbBalanceTracker.sol");
+var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
 
-module.exports = function(deployer, network, accounts) {
+module.exports = async function(deployer, network, accounts) {
+  deployer.deploy(DebugPrint);
+  deployer.link(DebugPrint, [ArbMachine, Unanimous]);
+
   deployer.deploy(MerkleLib);
-  deployer.link(MerkleLib, [Bisection, VMTracker, Unanimous]);
+  deployer.link(MerkleLib, [Bisection]);
 
   deployer.deploy(SigUtils);
-  deployer.link(SigUtils, [VMTracker, Unanimous]);
+  deployer.link(SigUtils, [VMCreator, Unanimous, GlobalPendingInbox]);
 
   deployer.deploy(BytesLib);
   deployer.link(BytesLib, [ArbValue]);
 
   deployer.deploy(ArbValue);
   deployer.link(ArbValue, [
-    VMTracker,
+    GlobalPendingInbox,
     OneStepProof,
     ArbMachine,
     ArbProtocol,
-    VM
+    VM,
+    VMCreator
   ]);
 
   deployer.deploy(ArbProtocol);
   deployer.link(ArbProtocol, [
-    VMTracker,
+    GlobalPendingInbox,
+    VMCreator,
     ChallengeManager,
     OneStepProof,
     VM,
@@ -68,39 +75,26 @@ module.exports = function(deployer, network, accounts) {
   deployer.link(Bisection, ChallengeManager);
 
   deployer.deploy(VM);
-  deployer.link(VM, [Disputable, Unanimous, VMTracker]);
+  deployer.link(VM, [Disputable, Unanimous, VMCreator]);
 
   deployer.deploy(Disputable);
-  deployer.link(Disputable, VMTracker);
+  deployer.link(Disputable, VMCreator);
 
   deployer.deploy(Unanimous);
-  deployer.link(Unanimous, VMTracker);
+  deployer.link(Unanimous, VMCreator);
 
-  deployer
-    .deploy(ArbBalanceTracker)
-    .then(() => {
-      return deployer.deploy(VMTracker, ArbBalanceTracker.address);
-    })
-    .then(() => {
-      return deployer.deploy(ChallengeManager, VMTracker.address);
-    })
-    .then(() => {
-      return ArbBalanceTracker.deployed();
-    })
-    .then(balanceTracker => {
-      balanceTracker.transferOwnership(VMTracker.address);
-      return VMTracker.deployed();
-    })
-    .then(vmTracker => {
-      const fs = require("fs");
-      let addresses = {
-        ArbProtocol: ArbProtocol.address,
-        ChallengeManager: ChallengeManager.address,
-        OneStepProof: OneStepProof.address,
-        vmTracker: vmTracker.address,
-        balanceTracker: ArbBalanceTracker.address
-      };
-      fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
-      vmTracker.addChallengeManager(ChallengeManager.address);
-    });
+  await deployer.deploy(GlobalPendingInbox);
+  await deployer.deploy(ChallengeManager);
+  await deployer.deploy(
+    VMCreator,
+    GlobalPendingInbox.address,
+    ChallengeManager.address
+  );
+
+  const fs = require("fs");
+  let addresses = {
+    vmCreator: VMCreator.address,
+    globalPendingInbox: GlobalPendingInbox.address
+  };
+  fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
 };

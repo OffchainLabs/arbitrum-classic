@@ -18,7 +18,6 @@ package ethvalidator
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"crypto/tls"
 	"errors"
 	"log"
@@ -35,13 +34,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type ValidatorFollower struct {
-	*EthValidator
+	*VMValidator
 
 	client *Client
 
@@ -51,15 +48,13 @@ type ValidatorFollower struct {
 
 func NewValidatorFollower(
 	name string,
+	val *Validator,
 	machine machine.Machine,
-	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
 	maxCallSteps int32,
-	connectionInfo ethbridge.ArbAddresses,
-	ethURL string,
-	coordinatorURL string,
 	maxStepsUnanSteps int32,
+	coordinatorURL string,
 ) (*ValidatorFollower, error) {
 	dialer := websocket.DefaultDialer
 	dialer.TLSClientConfig = &tls.Config{
@@ -79,35 +74,36 @@ func NewValidatorFollower(
 	}
 	uniqueVal := tlsCon.ConnectionState().TLSUnique
 	hashVal := crypto.Keccak256(uniqueVal)
-	sigData, err := crypto.Sign(hashVal, key)
+	sigData, err := val.Sign(hashVal)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "follower failed to sign session id")
 	}
 	wr, err := coordinatorConn.NextWriter(websocket.BinaryMessage)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "follower failed to create writer")
 	}
 	if _, err := wr.Write(sigData); err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "follower failed to write to coordinator")
 	}
 	if err := wr.Close(); err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "follower failed to close writer")
 	}
 	_, vmData, err := coordinatorConn.ReadMessage()
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "follower failed to read message")
 	}
-	var vmID [32]byte
+	var vmID common.Address
 	copy(vmID[:], vmData)
-	pubkey, err := crypto.SigToPub(hashVal, vmData[32:])
+	pubkey, err := EthSigToPub(hashVal, vmData[20:])
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "follower failed to get pubkey from sig")
 	}
 	address := crypto.PubkeyToAddress(*pubkey)
 
-	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, maxCallSteps, connectionInfo, ethURL)
+	time.Sleep(time.Second * 2)
+	c, err := NewVMValidator(name, val, vmID, machine, config, challengeEverything, maxCallSteps)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "Error initializing VMValidator in follower")
 	}
 
 	if _, ok := c.Validators[address]; !ok {
@@ -118,7 +114,7 @@ func NewValidatorFollower(
 	unanimousRequests := make(map[[32]byte]valmessage.UnanimousRequestData)
 	client := NewClient(coordinatorConn, address)
 	return &ValidatorFollower{
-		EthValidator:      c,
+		VMValidator:       c,
 		client:            client,
 		unanimousRequests: unanimousRequests,
 		maxStepsUnanSteps: maxStepsUnanSteps,
@@ -143,7 +139,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			// Access is safe since we already did a length check
 			signedVal, _ := tup.GetByInt64(0)
 			messageHash := solsha3.SoliditySHA3(
-				solsha3.Bytes32(m.VMID),
+				solsha3.Address(m.VMID),
 				solsha3.Bytes32(signedVal.Hash()),
 				solsha3.Uint256(msg.Currency),
 				msg.TokenType[:],
@@ -154,10 +150,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			if err != nil {
 				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message with bad signature")
 			}
-			sender := crypto.PubkeyToAddress(*pubkey)
-			senderArr := [32]byte{}
-			copy(senderArr[12:], sender.Bytes())
-			if senderArr != msg.Destination {
+			if crypto.PubkeyToAddress(*pubkey) != msg.Destination {
 				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message with incorrect signature")
 			}
 			messages = append(messages, msg)
@@ -221,7 +214,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 	}
 	message := &valmessage.FollowerResponse{
 		RequestId: value.NewHashBuf(requestID),
-		Response:  &valmessage.FollowerResponse_Unanimous{Unanimous: msg},
+		Unanimous: msg,
 	}
 	raw, err := proto.Marshal(message)
 	if err != nil {
@@ -231,44 +224,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 	return nil
 }
 
-func (m *ValidatorFollower) HandleCreateVM(ctx context.Context, request *valmessage.CreateVMValidatorRequest) *valmessage.FollowerResponse {
-	createHash := hashing.CreateVMHash(request)
-	failedReply := &valmessage.FollowerResponse{
-		Response: &valmessage.FollowerResponse_Create{
-			Create: &valmessage.CreateVMFollowerResponse{
-				Accepted: false,
-			},
-		},
-		RequestId: value.NewHashBuf(createHash),
-	}
-	var escrowCurrency common.Address
-	copy(escrowCurrency[:], request.Config.EscrowCurrency.Value)
-	escrowRequired := value.NewBigIntFromBuf(request.Config.EscrowRequired)
-	address := m.Address()
-	var user [32]byte
-	copy(user[:], address[:])
-	if err := m.WaitForTokenBalance(ctx, user, escrowCurrency, escrowRequired); err != nil {
-		log.Printf("Follower failed to meet balance requirement: %v", err)
-		return failedReply
-	}
-	sig, err := m.Sign(createHash)
-	if err != nil {
-		log.Printf("Follower failed to sign1: %v", err)
-		return failedReply
-	}
-
-	return &valmessage.FollowerResponse{
-		Response: &valmessage.FollowerResponse_Create{
-			Create: &valmessage.CreateVMFollowerResponse{
-				Accepted:  true,
-				Signature: sig,
-			},
-		},
-		RequestId: value.NewHashBuf(createHash),
-	}
-}
-
-func (m *ValidatorFollower) Run() error {
+func (m *ValidatorFollower) Run(ctx context.Context) error {
 	go func() {
 		if err := m.client.run(); err != nil {
 			log.Printf("Follower connection to coordinator ended with error %v\n", err)
@@ -307,18 +263,8 @@ func (m *ValidatorFollower) Run() error {
 						log.Fatalln("Follower failed to confirm unanimous assertion", err)
 					}
 				}
-			case *valmessage.ValidatorRequest_Create:
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
-				response := m.HandleCreateVM(ctx, request.Create)
-				cancel()
-				raw, err := proto.Marshal(response)
-				if err != nil {
-					log.Fatalln("Follower failed to marshal response")
-				}
-				m.client.ToClient <- raw
-			case *valmessage.ValidatorRequest_CreateNotification:
 			}
 		}
 	}()
-	return m.StartListening()
+	return m.StartListening(ctx)
 }

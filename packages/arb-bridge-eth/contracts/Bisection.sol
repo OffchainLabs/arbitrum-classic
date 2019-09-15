@@ -28,7 +28,7 @@ library Bisection {
     }
 
     struct Challenge {
-        bytes32 vmId;
+        address vmAddress;
         // After bisection this is an array of all sub-assertions
         // After a challenge, the first assertion is the main assertion
         bytes32 challengeState;
@@ -47,13 +47,13 @@ library Bisection {
     }
 
     event ContinuedChallenge (
-        bytes32 indexed vmId,
+        address indexed vmAddress,
         address challenger,
         uint assertionIndex
     );
 
     event BisectedAssertion(
-        bytes32 indexed vmId,
+        address indexed vmAddress,
         address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
         uint32 totalSteps,
@@ -94,7 +94,7 @@ library Bisection {
         _challenge.state = Bisection.State.Challenged;
         _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
         _challenge.challengeState = _bisectionHash;
-        emit ContinuedChallenge(_challenge.vmId, _challenge.players[1], _assertionToChallenge);
+        emit ContinuedChallenge(_challenge.vmAddress, _challenge.players[1], _assertionToChallenge);
     }
 
     // fields
@@ -164,7 +164,7 @@ library Bisection {
         _challenge.challengeState = MerkleLib.generateRoot(bisectionHashes);
 
         emit BisectedAssertion(
-            _challenge.vmId,
+            _challenge.vmAddress,
             _challenge.players[0],
             _afterHashAndMessageAndLogsBisections,
             _totalSteps,

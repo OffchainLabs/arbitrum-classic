@@ -39,10 +39,6 @@ type assertionCountRequest struct {
 	resultChan chan<- int
 }
 
-type vmCreatedTxHashRequest struct {
-	resultChan chan<- [32]byte
-}
-
 type txRequest struct {
 	txHash     [32]byte
 	resultChan chan<- txInfo
@@ -120,40 +116,31 @@ func newAssertionInfo() *assertionInfo {
 }
 
 type txTracker struct {
-	txRequestIndex  int
-	transactions    map[[32]byte]txInfo
-	assertionInfo   []*assertionInfo
-	accountNonces   map[common.Address]uint64
-	vmID            [32]byte
-	vmCreatedTxHash [32]byte
-	requests        chan validatorRequest
+	txRequestIndex int
+	transactions   map[[32]byte]txInfo
+	assertionInfo  []*assertionInfo
+	accountNonces  map[common.Address]uint64
+	vmID           common.Address
+	requests       chan validatorRequest
 }
 
 func newTxTracker(
-	vmID [32]byte,
-	vmCreatedTxHash [32]byte,
+	vmID common.Address,
 ) *txTracker {
 	requests := make(chan validatorRequest, 100)
 	return &txTracker{
-		txRequestIndex:  0,
-		transactions:    make(map[[32]byte]txInfo),
-		assertionInfo:   make([]*assertionInfo, 0),
-		accountNonces:   make(map[common.Address]uint64),
-		vmID:            vmID,
-		vmCreatedTxHash: vmCreatedTxHash,
-		requests:        requests,
+		txRequestIndex: 0,
+		transactions:   make(map[[32]byte]txInfo),
+		assertionInfo:  make([]*assertionInfo, 0),
+		accountNonces:  make(map[common.Address]uint64),
+		vmID:           vmID,
+		requests:       requests,
 	}
 }
 
 func (tr *txTracker) AssertionCount() <-chan int {
 	req := make(chan int, 1)
 	tr.requests <- assertionCountRequest{req}
-	return req
-}
-
-func (tr *txTracker) VMCreatedTxHash() <-chan [32]byte {
-	req := make(chan [32]byte, 1)
-	tr.requests <- vmCreatedTxHashRequest{req}
 	return req
 }
 
@@ -281,8 +268,6 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 
 func (tr *txTracker) processRequest(request validatorRequest) {
 	switch request := request.(type) {
-	case vmCreatedTxHashRequest:
-		request.resultChan <- tr.vmCreatedTxHash
 	case assertionCountRequest:
 		request.resultChan <- len(tr.assertionInfo) - 1
 	case txRequest:

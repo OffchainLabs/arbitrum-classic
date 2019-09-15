@@ -17,5 +17,5 @@
 pragma solidity ^0.5.3;
 
 interface IVMTracker {
-    function completeChallenge(bytes32 _vmId, address[2] calldata _players, uint128[2] calldata _rewards) external;
+    function completeChallenge(address[2] calldata _players, uint128[2] calldata _rewards) external;
 }

@@ -19,6 +19,8 @@ package protocol
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -43,6 +45,18 @@ func NewTokenTypeBuf(tok [21]byte) *TokenTypeBuf {
 
 func NewTokenTypeFromBuf(buf *TokenTypeBuf) [21]byte {
 	var ret [21]byte
+	copy(ret[:], buf.Value)
+	return ret
+}
+
+func NewAddressBuf(tok common.Address) *AddressBuf {
+	return &AddressBuf{
+		Value: tok.Bytes(),
+	}
+}
+
+func NewAddressFromBuf(buf *AddressBuf) common.Address {
+	var ret common.Address
 	copy(ret[:], buf.Value)
 	return ret
 }
@@ -102,17 +116,17 @@ func NewMessageBuf(val Message) *MessageBuf {
 		Value:     value.NewValueBuf(val.Data),
 		TokenType: NewTokenTypeBuf(val.TokenType),
 		Amount:    value.NewBigIntBuf(val.Currency),
-		Sender:    value.NewHashBuf(val.Destination),
+		Sender:    NewAddressBuf(val.Destination),
 	}
 }
 
 func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 	val, err := value.NewValueFromBuf(buf.Value)
-	return NewMessage(
+	return NewSimpleMessage(
 		val,
 		NewTokenTypeFromBuf(buf.TokenType),
 		value.NewBigIntFromBuf(buf.Amount),
-		value.NewHashFromBuf(buf.Sender),
+		NewAddressFromBuf(buf.Sender),
 	), err
 }
 

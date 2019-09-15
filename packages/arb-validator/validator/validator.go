@@ -24,6 +24,8 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
@@ -36,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -51,10 +52,18 @@ type Validator struct {
 	challengeBot             challenge.State
 	latestHeader             *types.Header
 	pendingDisputableRequest *state.DisputableAssertionRequest
-	isCreated                bool
 }
 
-func NewValidator(name string, address common.Address, balance *protocol.BalanceTracker, config *valmessage.VMConfiguration, machine machine.Machine, challengeEverything bool, maxCallSteps int32) *Validator {
+func NewValidator(
+	name string,
+	address common.Address,
+	latestHeader *types.Header,
+	balance *protocol.BalanceTracker,
+	config *valmessage.VMConfiguration,
+	machine machine.Machine,
+	challengeEverything bool,
+	maxCallSteps int32,
+) *Validator {
 	actions := make(chan func(*Validator, bridge.Bridge), 100)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
@@ -62,7 +71,6 @@ func NewValidator(name string, address common.Address, balance *protocol.Balance
 		balance,
 	)
 
-	// TODO: latestHeader starts as nil which isn't valid. This needs to be properly initialized
 	valConfig := core.NewValidatorConfig(address, config, challengeEverything, maxCallSteps)
 	return &Validator{
 		name,
@@ -70,9 +78,8 @@ func NewValidator(name string, address common.Address, balance *protocol.Balance
 		maybeAssert,
 		state.NewWaiting(valConfig, c),
 		nil,
+		latestHeader,
 		nil,
-		nil,
-		false,
 	}
 }
 
@@ -81,7 +88,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 	errChan := make(chan error, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
 		if !validator.canRun() {
-			errChan <- errors.New("Cannot call when VM is not running")
+			errChan <- errors.New("Cannot call when VMTracker is not running")
 			return
 		}
 		c := validator.bot.GetCore()
@@ -162,8 +169,7 @@ func (validator *Validator) HasOpenAssertion() chan bool {
 }
 
 func (validator *Validator) canRun() bool {
-	c := validator.bot.GetCore()
-	return validator.isCreated && c.GetMachine().CurrentStatus() == machine.Extensive
+	return validator.bot.GetCore().GetMachine().CurrentStatus() == machine.Extensive
 }
 
 func (validator *Validator) CanRun() chan bool {
@@ -178,8 +184,6 @@ func (validator *Validator) CanContinueRunning() chan bool {
 	resultChan := make(chan bool, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
 		if !validator.canRun() {
-			resultChan <- false
-		} else if validator.latestHeader == nil {
 			resultChan <- false
 		} else {
 			currentTime := validator.latestHeader.Number.Uint64()
@@ -505,57 +509,55 @@ func (validator *Validator) ClosingUnanimousAssertionRequest() (<-chan bool, <-c
 	return resultChan, errChan
 }
 
-func (validator *Validator) Run(recvChan <-chan ethbridge.Notification, bridge bridge.Bridge) {
-	go func() {
-		defer fmt.Printf("%v: Exiting\n", validator.Name)
-		for {
-			select {
-			case notification, ok := <-recvChan:
-				// fmt.Printf("Got valmessage %T: %v\n", event, event)
-				if !ok {
-					fmt.Printf("%v: Error in recvChan\n", validator.Name)
-					return
-				}
+func (validator *Validator) Run(recvChan <-chan ethconnection.Notification, bridge bridge.Bridge, ctx context.Context) {
+	defer fmt.Printf("%v: Exiting\n", validator.Name)
+	for {
+		select {
+		case <-ctx.Done():
+			break
+		case notification, ok := <-recvChan:
+			// fmt.Printf("Got valmessage %T: %v\n", event, event)
+			if !ok {
+				fmt.Printf("%v: Error in recvChan\n", validator.Name)
+				return
+			}
 
-				newHeader := notification.Header
-				if validator.latestHeader == nil || newHeader.Number.Uint64() >= validator.latestHeader.Number.Uint64() && newHeader.Hash() != validator.latestHeader.Hash() {
-					validator.latestHeader = newHeader
-					validator.timeUpdate(bridge)
+			newHeader := notification.Header
+			if validator.latestHeader == nil || newHeader.Number.Uint64() >= validator.latestHeader.Number.Uint64() && newHeader.Hash() != validator.latestHeader.Hash() {
+				validator.latestHeader = newHeader
+				validator.timeUpdate(bridge)
 
-					if validator.pendingDisputableRequest != nil {
-						pre := validator.pendingDisputableRequest.Precondition
-						if !validator.bot.GetCore().ValidateAssertion(pre, newHeader.Number.Uint64()) {
-							validator.pendingDisputableRequest.ErrorChan <- errors.New("Precondition was invalidated")
-							close(validator.pendingDisputableRequest.ErrorChan)
-							close(validator.pendingDisputableRequest.ResultChan)
-							validator.pendingDisputableRequest = nil
-						}
+				if validator.pendingDisputableRequest != nil {
+					pre := validator.pendingDisputableRequest.Precondition
+					if !validator.bot.GetCore().ValidateAssertion(pre, newHeader.Number.Uint64()) {
+						validator.pendingDisputableRequest.ErrorChan <- errors.New("Precondition was invalidated")
+						close(validator.pendingDisputableRequest.ErrorChan)
+						close(validator.pendingDisputableRequest.ResultChan)
+						validator.pendingDisputableRequest = nil
 					}
 				}
-
-				switch ev := notification.Event.(type) {
-				case ethbridge.NewTimeEvent:
-					break
-				case ethbridge.VMCreatedEvent:
-					validator.isCreated = true
-				case ethbridge.VMEvent:
-					validator.eventUpdate(ev, notification.Header, bridge)
-				case ethbridge.MessageDeliveredEvent:
-					validator.bot.SendMessageToVM(ev.Msg)
-				default:
-					panic("Should never recieve other kinds of events")
-				}
-			case action := <-validator.actions:
-				action(validator, bridge)
-			case <-validator.maybeAssert:
 			}
 
-			if bot, ok := validator.bot.(state.Waiting); ok && validator.pendingDisputableRequest != nil {
-				validator.bot = bot.AttemptAssertion(context.Background(), *validator.pendingDisputableRequest, bridge)
-				validator.pendingDisputableRequest = nil
+			switch ev := notification.Event.(type) {
+			case ethconnection.NewTimeEvent:
+				break
+			case ethconnection.VMEvent:
+				validator.eventUpdate(ev, notification.Header, bridge)
+			case ethconnection.MessageDeliveredEvent:
+				validator.bot.SendMessageToVM(ev.Msg)
+			default:
+				panic("Should never recieve other kinds of events")
 			}
+		case action := <-validator.actions:
+			action(validator, bridge)
+		case <-validator.maybeAssert:
 		}
-	}()
+
+		if bot, ok := validator.bot.(state.Waiting); ok && validator.pendingDisputableRequest != nil {
+			validator.bot = bot.AttemptAssertion(context.Background(), *validator.pendingDisputableRequest, bridge)
+			validator.pendingDisputableRequest = nil
+		}
+	}
 }
 
 func (validator *Validator) timeUpdate(bridge bridge.Bridge) {
@@ -575,8 +577,8 @@ func (validator *Validator) timeUpdate(bridge bridge.Bridge) {
 	validator.bot = newBot
 }
 
-func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Header, bridge bridge.Bridge) {
-	if ev.GetIncomingMessageType() == ethbridge.ChallengeMessage {
+func (validator *Validator) eventUpdate(ev ethconnection.VMEvent, header *types.Header, bridge bridge.Bridge) {
+	if ev.GetIncomingMessageType() == ethconnection.ChallengeMessage {
 		if validator.challengeBot == nil {
 			panic("challengeBot can't be nil if challenge message is recieved")
 		}

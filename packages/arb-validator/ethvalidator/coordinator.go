@@ -18,17 +18,12 @@ package ethvalidator
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"log"
 	"math"
 	"net/http"
 	"time"
-
-	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -41,17 +36,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type ValidatorLeaderRequest interface {
 }
-
-// type ValidatorMessageRequest interface {
-//	msg vm.
-//}
 
 type LabeledFollowerResponse struct {
 	address  common.Address
@@ -68,12 +57,12 @@ type ClientManager struct {
 	waitingChans    map[chan bool]bool
 	responses       map[[32]byte]chan LabeledFollowerResponse
 
-	key        *ecdsa.PrivateKey
-	vmID       [32]byte
+	val        *Validator
+	vmID       common.Address
 	validators map[common.Address]validatorInfo
 }
 
-func NewClientManager(key *ecdsa.PrivateKey, vmID [32]byte, validators map[common.Address]validatorInfo) *ClientManager {
+func NewClientManager(val *Validator, vmID common.Address, validators map[common.Address]validatorInfo) *ClientManager {
 	return &ClientManager{
 		clients:         make(map[*Client]bool),
 		broadcast:       make(chan *valmessage.ValidatorRequest, 10),
@@ -83,7 +72,7 @@ func NewClientManager(key *ecdsa.PrivateKey, vmID [32]byte, validators map[commo
 		sigRequestChan:  make(chan GatherSignatureRequest, 10),
 		waitingChans:    make(map[chan bool]bool),
 		responses:       make(map[[32]byte]chan LabeledFollowerResponse),
-		key:             key,
+		val:             val,
 		vmID:            vmID,
 		validators:      validators,
 	}
@@ -94,69 +83,89 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func (m *ClientManager) RunServer() error {
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		c, err := func() (*Client, error) {
-			conn, err := upgrader.Upgrade(w, r, nil)
-			if err != nil {
-				return nil, err
-			}
-			tlsCon, ok := conn.UnderlyingConn().(*tls.Conn)
-			if !ok {
-				return nil, errors.New("made non tls connection")
-			}
-
-			_, signedUnique, err := conn.ReadMessage()
-			if err != nil {
-				return nil, errors2.Wrap(err, "failed to get message from follower")
-			}
-			uniqueVal := tlsCon.ConnectionState().TLSUnique
-			hashVal := crypto.Keccak256(uniqueVal)
-			pubkey, err := crypto.SigToPub(hashVal, signedUnique)
-			if err != nil {
-				return nil, err
-			}
-			address := crypto.PubkeyToAddress(*pubkey)
-			if _, ok := m.validators[address]; !ok {
-				return nil, errors.New("follower tried to connect with bad pubkey")
-			}
-			sigData, err := crypto.Sign(hashVal, m.key)
-			if err != nil {
-				return nil, err
-			}
-			wr, err := conn.NextWriter(websocket.BinaryMessage)
-			if err != nil {
-				return nil, err
-			}
-			if _, err := wr.Write(m.vmID[:]); err != nil {
-				return nil, err
-			}
-
-			if _, err := wr.Write(sigData); err != nil {
-				return nil, err
-			}
-
-			if err := wr.Close(); err != nil {
-				return nil, err
-			}
-			return NewClient(conn, address), nil
-		}()
+func (m *ClientManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	c, err := func() (*Client, error) {
+		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Printf("Coordinator failed to connet with follower: %v\n", err)
-			return
+			return nil, err
+		}
+		tlsCon, ok := conn.UnderlyingConn().(*tls.Conn)
+		if !ok {
+			return nil, errors.New("made non tls connection")
 		}
 
-		log.Println("Coordinator connected with follower", hexutil.Encode(c.Address[:]))
-		m.register <- c
+		_, signedUnique, err := conn.ReadMessage()
+		if err != nil {
+			return nil, errors2.Wrap(err, "failed to get message from follower")
+		}
+		uniqueVal := tlsCon.ConnectionState().TLSUnique
+		hashVal := crypto.Keccak256(uniqueVal)
+		pubkey, err := EthSigToPub(hashVal, signedUnique)
+		if err != nil {
+			return nil, err
+		}
+		address := crypto.PubkeyToAddress(*pubkey)
+		if _, ok := m.validators[address]; !ok {
+			return nil, errors.New("follower tried to connect with bad pubkey")
+		}
+		sigData, err := m.val.Sign(hashVal)
+		if err != nil {
+			return nil, err
+		}
+		wr, err := conn.NextWriter(websocket.BinaryMessage)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := wr.Write(m.vmID[:]); err != nil {
+			return nil, err
+		}
 
-		go func() {
-			if err := c.run(); err != nil {
-				log.Printf("Coordinator lost connection to client with error: %v\n", err)
-			}
-			m.unregister <- c
-		}()
-	})
-	return http.ListenAndServeTLS(":1236", "server.crt", "server.key", nil)
+		if _, err := wr.Write(sigData); err != nil {
+			return nil, err
+		}
+
+		if err := wr.Close(); err != nil {
+			return nil, err
+		}
+		return NewClient(conn, address), nil
+	}()
+	if err != nil {
+		log.Printf("Coordinator failed to connet with follower: %v\n", err)
+		return
+	}
+
+	log.Println("Coordinator connected with follower", hexutil.Encode(c.Address[:]))
+	m.register <- c
+
+	go func() {
+		if err := c.run(); err != nil {
+			log.Printf("Coordinator lost connection to client with error: %v\n", err)
+		}
+		m.unregister <- c
+	}()
+}
+
+func (m *ClientManager) RunServer(ctx context.Context) error {
+	srv := &http.Server{
+		Addr:    ":1236",
+		Handler: m,
+	}
+	errChan := make(chan error)
+	go func() {
+		errChan <- srv.ListenAndServeTLS("server.crt", "server.key")
+	}()
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		defer cancel()
+		err := srv.Shutdown(shutdownCtx)
+		if err != nil {
+			return err
+		}
+		return errors.New("Stop requested")
+	case err := <-errChan:
+		return err
+	}
 }
 
 type GatherSignatureRequest struct {
@@ -227,7 +236,6 @@ func (m *ClientManager) gatherSignatures(
 	requestID [32]byte,
 ) []LabeledFollowerResponse {
 	responseChan := make(chan LabeledFollowerResponse, len(m.validators)-1)
-	log.Println("Coordinator gathering signatures")
 	m.sigRequestChan <- GatherSignatureRequest{
 		request,
 		responseChan,
@@ -317,7 +325,7 @@ func (m *MessageProcessingQueue) run() {
 }
 
 type ValidatorCoordinator struct {
-	Val *EthValidator
+	Val *VMValidator
 	cm  *ClientManager
 
 	actions chan func(*ValidatorCoordinator)
@@ -328,28 +336,21 @@ type ValidatorCoordinator struct {
 
 func NewCoordinator(
 	name string,
+	val *Validator,
+	vmID common.Address,
 	machine machine.Machine,
-	key *ecdsa.PrivateKey,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
 	maxCallSteps int32,
-	connectionInfo ethbridge.ArbAddresses,
-	ethURL string,
 	maxStepsUnanSteps int32,
 ) (*ValidatorCoordinator, error) {
-	var vmID [32]byte
-	_, err := rand.Read(vmID[:])
+	c, err := NewVMValidator(name, val, vmID, machine, config, challengeEverything, maxCallSteps)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	c, err := NewEthValidator(name, vmID, machine, key, config, challengeEverything, maxCallSteps, connectionInfo, ethURL)
-	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "Error initializing VMValidator in coordinator")
 	}
 	return &ValidatorCoordinator{
 		Val:               c,
-		cm:                NewClientManager(key, vmID, c.Validators),
+		cm:                NewClientManager(val, vmID, c.Validators),
 		actions:           make(chan func(*ValidatorCoordinator), 10),
 		mpq:               NewMessageProcessingQueue(),
 		maxStepsUnanSteps: maxStepsUnanSteps,
@@ -360,17 +361,19 @@ func (m *ValidatorCoordinator) SendMessage(msg OffchainMessage) {
 	m.mpq.Send(msg)
 }
 
-func (m *ValidatorCoordinator) Run() error {
+func (m *ValidatorCoordinator) StartServer(ctx context.Context) {
 	go func() {
-		err := m.cm.RunServer()
-		fmt.Println("Running server", err)
+		err := m.cm.RunServer(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}()
 	go m.mpq.run()
 	go m.cm.Run()
-	if err := m.Val.StartListening(); err != nil {
+}
+
+func (m *ValidatorCoordinator) Run(ctx context.Context) error {
+	if err := m.Val.StartListening(ctx); err != nil {
 		return err
 	}
 	go func() {
@@ -387,9 +390,14 @@ func (m *ValidatorCoordinator) Run() error {
 				pendingCount := <-m.Val.Bot.PendingMessageCount()
 				if pendingCount > 0 {
 					// Force onchain assertion if there are pending on chain messages, then force an offchain assertion
+					log.Println("Unanimous asserting because of pending on chain messages")
 					shouldUnan = true
 					forceFinal = true
-				} else if <-m.mpq.HasMessages() || <-m.Val.Bot.CanContinueRunning() {
+				} else if <-m.mpq.HasMessages() {
+					log.Println("Unanimous asserting because of pending off chain messages")
+					shouldUnan = true
+				} else if <-m.Val.Bot.CanContinueRunning() {
+					log.Println("Unanimous asserting because machine is not blocked")
 					shouldUnan = true
 				}
 				if !shouldUnan {
@@ -440,23 +448,6 @@ type CoordinatorUnanimousRequest struct {
 	errChan chan error
 }
 
-func (m *ValidatorCoordinator) CreateVM(timeout time.Duration) (chan *types.Receipt, chan error) {
-	retChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	m.actions <- func(m *ValidatorCoordinator) {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		ret, err := m.createVMImpl(ctx)
-		cancel()
-
-		if err != nil {
-			errChan <- err
-		} else {
-			retChan <- ret
-		}
-	}
-	return retChan, errChan
-}
-
 func (m *ValidatorCoordinator) InitiateDisputableAssertion() chan bool {
 	retChan := make(chan bool, 1)
 	m.actions <- func(m *ValidatorCoordinator) {
@@ -482,79 +473,6 @@ func (m *ValidatorCoordinator) InitiateUnanimousAssertion(final bool) (chan bool
 	return retChan, errChan
 }
 
-func (m *ValidatorCoordinator) createVMImpl(ctx context.Context) (*types.Receipt, error) {
-	gotAll := m.cm.WaitForFollowers(ctx)
-	if !gotAll {
-		return nil, errors.New("coordinator can only create VM when connected to all other validators")
-	}
-
-	notifyFollowers := func(allSigned bool) {
-		m.cm.broadcast <- &valmessage.ValidatorRequest{
-			Request: &valmessage.ValidatorRequest_CreateNotification{
-				CreateNotification: &valmessage.CreateVMFinalizedValidatorNotification{
-					Approved: allSigned,
-				},
-			},
-		}
-	}
-	stateDataChan := m.Val.Bot.RequestVMState()
-	stateData := <-stateDataChan
-	createData := &valmessage.CreateVMValidatorRequest{
-		Config:              &stateData.Config,
-		VmId:                value.NewHashBuf(m.Val.VMID),
-		VmState:             value.NewHashBuf(stateData.MachineState),
-		ChallengeManagerNum: 0,
-	}
-	createHash := hashing.CreateVMHash(createData)
-
-	responses := m.cm.gatherSignatures(
-		ctx,
-		&valmessage.ValidatorRequest{
-			Request: &valmessage.ValidatorRequest_Create{Create: createData},
-		},
-		createHash,
-	)
-	if len(responses) != m.Val.ValidatorCount()-1 {
-		notifyFollowers(false)
-		return nil, errors.New("some Validators didn't respond")
-	}
-
-	signatures := make([][]byte, m.Val.ValidatorCount())
-	var err error
-	signatures[m.Val.Validators[m.Val.Address()].indexNum], err = m.Val.Sign(createHash)
-	if err != nil {
-		return nil, err
-	}
-	for _, response := range responses {
-		r := response.response.Response.(*valmessage.FollowerResponse_Create).Create
-		if !r.Accepted {
-			return nil, errors.New("some Validators refused to sign")
-		}
-		signatures[m.Val.Validators[response.address].indexNum] = r.Signature
-	}
-
-	// Check all validators have deposited the required escrow amount
-	var tokenContract common.Address
-	copy(tokenContract[:], stateData.Config.EscrowCurrency.Value)
-	escrowRequired := value.NewBigIntFromBuf(stateData.Config.EscrowRequired)
-	var user [32]byte
-	for address := range m.Val.Validators {
-		copy(user[:], address[:])
-		if err := m.Val.WaitForTokenBalance(ctx, user, tokenContract, escrowRequired); err != nil {
-			return nil, fmt.Errorf("validator %v has insufficient balance",
-				hexutil.Encode(user[:]))
-		}
-	}
-
-	receiptChan, errChan := m.Val.CreateVM(ctx, createData, signatures)
-	select {
-	case receipt := <-receiptChan:
-		return receipt, nil
-	case err := <-errChan:
-		return nil, err
-	}
-}
-
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	start := time.Now()
 	resultChan, errChan := m.Val.Bot.RequestDisputableAssertion(10000)
@@ -570,6 +488,10 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 }
 
 func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Context, forceFinal bool, maxSteps int32) error {
+	if !m.cm.WaitForFollowers(ctx) {
+		return errors.New("failed to connect to other validators when unanimous asserting")
+	}
+
 	queuedMessages := <-m.mpq.Fetch()
 
 	err := func() error {
@@ -680,7 +602,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 		signatures := make([][]byte, m.Val.ValidatorCount())
 		signatures[m.Val.Validators[m.Val.Address()].indexNum] = sig
 		for _, response := range responses {
-			r := response.response.Response.(*valmessage.FollowerResponse_Unanimous).Unanimous
+			r := response.response.Unanimous
 			if !r.Accepted {
 				notifyFollowers(&valmessage.UnanimousAssertionValidatorNotification{
 					Accepted: false,
@@ -713,14 +635,14 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 
 		if wasFinal {
 			log.Println("Coordinator is closing unanimous assertion")
-		} else {
-			log.Println("Coordinator is keeping unanimous assertion chain open")
 		}
 
 		select {
 		case <-confRetChan:
 			if wasFinal {
 				log.Println("Coordinator successfully closed channel")
+			} else {
+				log.Println("Coordinator is keeping unanimous assertion chain open")
 			}
 		case err := <-confErrChan:
 			log.Println("Coordinator failed to complete assertion", err)

@@ -19,14 +19,15 @@ package challenge
 import (
 	"fmt"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type State interface {
 	UpdateTime(uint64, bridge.Bridge) (State, error)
-	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (State, error)
+	UpdateState(ethconnection.Event, uint64, bridge.Bridge) (State, error)
 }
 
 type Error struct {
@@ -49,12 +50,12 @@ func (bot TimedOutChallenger) UpdateTime(time uint64, bridge bridge.Bridge) (Sta
 	return bot, nil
 }
 
-func (bot TimedOutChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
+func (bot TimedOutChallenger) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, error) {
 	switch ev.(type) {
-	case ethbridge.ChallengerTimeoutEvent:
+	case ethconnection.ChallengerTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutChallenger: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutChallenger: VMTracker state got unsynchronized"}
 	}
 }
 
@@ -66,11 +67,11 @@ func (bot TimedOutAsserter) UpdateTime(time uint64, bridge bridge.Bridge) (State
 	return bot, nil
 }
 
-func (bot TimedOutAsserter) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, error) {
+func (bot TimedOutAsserter) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, error) {
 	switch ev.(type) {
-	case ethbridge.AsserterTimeoutEvent:
+	case ethconnection.AsserterTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutAsserter: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutAsserter: VMTracker state got unsynchronized"}
 	}
 }

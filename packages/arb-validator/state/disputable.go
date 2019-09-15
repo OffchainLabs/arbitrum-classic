@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -33,7 +35,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/defender"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/observer"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
@@ -354,9 +355,9 @@ func (bot Waiting) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) 
 	return bot, nil
 }
 
-func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot Waiting) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.PendingUnanimousAssertEvent:
+	case ethconnection.PendingUnanimousAssertEvent:
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, errors.New("waiting observer saw pending unanimous assertion that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
@@ -373,7 +374,7 @@ func (bot Waiting) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Br
 				nil,
 			}, nil, nil
 		}
-	case ethbridge.PendingDisputableAssertionEvent:
+	case ethconnection.PendingDisputableAssertionEvent:
 		if bot.accepted != nil {
 			bot.CloseUnanimous(bridge)
 			newBot, err := bot.ClosingUnanimous(nil, nil)
@@ -442,9 +443,9 @@ func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (Stat
 	}, nil
 }
 
-func (bot watchingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot watchingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.InitiateChallengeEvent:
+	case ethconnection.InitiateChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		var challengeState challenge.State
 		if ev.Challenger == bot.Address {
@@ -492,9 +493,9 @@ func (bot attemptingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (St
 	return bot, nil
 }
 
-func (bot attemptingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot attemptingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.PendingDisputableAssertionEvent:
+	case ethconnection.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
 			bot.errorChan <- errors.New("attemptingAssertion: Other Assertion got in before ours")
 			close(bot.errorChan)
@@ -535,9 +536,9 @@ func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State
 	}, nil
 }
 
-func (bot waitingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot waitingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev.(type) {
-	case ethbridge.InitiateChallengeEvent:
+	case ethconnection.InitiateChallengeEvent:
 		bot.resultChan <- false
 		ct, err := defender.New(
 			bot.Config,
@@ -567,9 +568,9 @@ func (bot finalizingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (St
 	return bot, nil
 }
 
-func (bot finalizingAssertion) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot finalizingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ConfirmedDisputableAssertEvent:
+	case ethconnection.ConfirmedDisputableAssertEvent:
 		if bot.ResultChan != nil {
 			bot.ResultChan <- true
 		}

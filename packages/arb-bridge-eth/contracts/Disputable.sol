@@ -25,8 +25,12 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 library Disputable {
     using SafeMath for uint256;
 
+    // fields
+    //    beforeHash
+    //    beforeInbox
+    //    afterHash
+
     event PendingDisputableAssertion (
-        bytes32 indexed vmId,
         bytes32[3] fields,
         address asserter,
         uint64[2] timeBounds,
@@ -38,13 +42,11 @@ library Disputable {
     );
 
     event ConfirmedDisputableAssertion(
-        bytes32 indexed vmId,
         bytes32 newState,
         bytes32 logsAccHash
     );
 
     event InitiatedChallenge(
-        bytes32 indexed vmId,
         address challenger
     );
 
@@ -58,7 +60,7 @@ library Disputable {
         bytes32[] messageDataHash;
         uint16[] messageTokenNums;
         uint256[] messageAmounts;
-        bytes32[] messageDestinations;
+        address[] messageDestinations;
         bytes32 logsAccHash;
     }
 
@@ -85,7 +87,7 @@ library Disputable {
         bytes32[] memory _messageDataHash,
         uint16[] memory _messageTokenNums,
         uint256[] memory _messageAmounts,
-        bytes32[] memory _messageDestinations
+        address[] memory _messageDestinations
     )
         public
     {
@@ -116,7 +118,7 @@ library Disputable {
         bytes memory _messageData,
         uint16[] memory _messageTokenNums,
         uint256[] memory _messageAmounts,
-        bytes32[] memory _messageDestinations,
+        address[] memory _messageDestinations,
         bytes32 _logsAccHash
     )
         public
@@ -142,21 +144,20 @@ library Disputable {
     function initiateChallenge(VM.Data storage _vm, bytes32 _assertPreHash) public {
         require(msg.sender != _vm.asserter, "Challenge was created by asserter");
         require(VM.withinDeadline(_vm), "Challenge did not come before deadline");
-        require(_vm.state == VM.State.PendingAssertion, "Assertion must be pending to initiate challenge");
-        require(_vm.escrowRequired <= _vm.validatorBalances[msg.sender], "Challenger did not have enough escrowed");
+        require(_vm.state == VM.State.PendingDisputable, "Assertion must be pending to initiate challenge");
+        require(_vm.escrowRequired <= _vm.validators[msg.sender].balance, "Challenger did not have enough escrowed");
 
         require(
             _assertPreHash == _vm.pendingHash,
             "Precondition and assertion do not match pending assertion"
         );
 
-        _vm.validatorBalances[msg.sender] = _vm.validatorBalances[msg.sender].sub(_vm.escrowRequired);
+        _vm.validators[msg.sender].balance -= _vm.escrowRequired;
         _vm.pendingHash = 0;
         _vm.state = VM.State.Waiting;
         _vm.inChallenge = true;
 
         emit InitiatedChallenge(
-            _vm.id,
             msg.sender
         );
     }
@@ -177,15 +178,11 @@ library Disputable {
             "Can only disputable assert if machine is not errored or halted"
         );
         require(!_vm.inChallenge, "Can only disputable assert if not in challenge");
-        require(_vm.escrowRequired <= _vm.validatorBalances[msg.sender], "Validator does not have required escrow");
+        require(_vm.escrowRequired <= _vm.validators[msg.sender].balance, "Validator does not have required escrow");
         require(_data.numSteps <= _vm.maxExecutionSteps, "Tried to execute too many steps");
         require(withinTimeBounds(_data.timeBounds), "Precondition: not within time bounds");
         require(_data.beforeHash == _vm.machineHash, "Precondition: state hash does not match");
-        require(
-            _data.beforeInbox == _vm.inboxHash ||
-            _data.beforeInbox == ArbProtocol.appendInboxMessages(_vm.inboxHash, _vm.pendingMessages),
-            "Precondition: inbox does not match"
-        );
+        require(_vm.inbox == _data.beforeInbox, "Precondition: inbox does not match");
 
         uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
             _data.tokenTypes,
@@ -223,12 +220,11 @@ library Disputable {
                 )
             )
         );
-        _vm.validatorBalances[msg.sender] = _vm.validatorBalances[msg.sender].sub(_vm.escrowRequired);
+        _vm.validators[msg.sender].balance -= _vm.escrowRequired;
         _vm.asserter = msg.sender;
-        _vm.state = VM.State.PendingAssertion;
+        _vm.state = VM.State.PendingDisputable;
 
         emit PendingDisputableAssertion(
-            _vm.id,
             [_data.beforeHash, _data.beforeInbox, _data.afterHash],
             msg.sender,
             _data.timeBounds,
@@ -246,7 +242,7 @@ library Disputable {
     )
         internal
     {
-        require(_vm.state == VM.State.PendingAssertion, "VM does not have assertion pending");
+        require(_vm.state == VM.State.PendingDisputable, "VM does not have assertion pending");
         require(!VM.withinDeadline(_vm), "Assertion is still pending challenge");
         require(
             keccak256(
@@ -275,14 +271,13 @@ library Disputable {
             ) == _vm.pendingHash,
             "Precondition and assertion do not match pending assertion"
         );
-        _vm.validatorBalances[_vm.asserter] = _vm.validatorBalances[_vm.asserter].add(_vm.escrowRequired);
+        _vm.validators[_vm.asserter].balance = _vm.validators[_vm.asserter].balance.add(_vm.escrowRequired);
         VM.acceptAssertion(
             _vm,
             _data.afterHash
         );
 
         emit ConfirmedDisputableAssertion(
-            _vm.id,
             _data.afterHash,
             _data.assertion.logsAccHash
         );

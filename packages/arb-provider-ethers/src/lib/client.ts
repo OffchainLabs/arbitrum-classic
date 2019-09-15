@@ -170,12 +170,12 @@ interface GetVMInfoReply {
     vmID: string;
 }
 
-interface GetAssertionCountReply {
-    assertionCount: number;
+interface GetValidatorListReply {
+    validators: string[];
 }
 
-interface GetVMCreatedTxHashReply {
-    vmCreatedTxHash: string;
+interface GetAssertionCountReply {
+    assertionCount: number;
 }
 
 interface GetMessageResultReply {
@@ -421,18 +421,18 @@ export class ArbClient {
         });
     }
 
-    public getVMCreatedTxHash(): Promise<string> {
+    public getValidatorList(): Promise<string[]> {
         return new Promise((resolve, reject): void => {
             this.client.request(
-                'Validator.GetVMCreatedTxHash',
+                'Validator.GetValidatorList',
                 [],
-                (err: Error, error: Error, result: GetVMCreatedTxHashReply) => {
+                (err: Error, error: Error, result: GetValidatorListReply) => {
                     if (err) {
                         reject(err);
                     } else if (error) {
                         reject(error);
                     } else {
-                        resolve(result.vmCreatedTxHash);
+                        resolve(result.validators);
                     }
                 },
             );

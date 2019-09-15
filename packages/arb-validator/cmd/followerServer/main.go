@@ -61,33 +61,30 @@ func NewFollowerServer(
 		common.Address{}, // Address 0 means no owner
 	)
 
-	man, err := ethvalidator.NewValidatorFollower(
+	val, err := ethvalidator.NewValidator(
+		key,
+		connectionInfo,
+		ethURL,
+	)
+
+	if err != nil {
+		log.Fatalf("Failed to create validator %v\n", err)
+	}
+
+	man, err := val.NewFollower(
 		"Bob",
 		machine,
-		key,
 		config,
 		false,
 		math.MaxInt32, // maxCallSteps
-		connectionInfo,
-		ethURL,
-		coordinatorURL,
 		math.MaxInt32, // maxUnanSteps
+		coordinatorURL,
 	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
 
-	if err = man.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	receiptChan, errChan := man.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
+	if err = man.Run(context.Background()); err != nil {
 		log.Fatal(err)
 	}
 

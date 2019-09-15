@@ -17,25 +17,22 @@
 pragma solidity ^0.5.3;
 
 import "./VM.sol";
-import "./MerkleLib.sol";
 import "./SigUtils.sol";
+import "./DebugPrint.sol";
 
 
 library Unanimous {
 
     event PendingUnanimousAssertion (
-        bytes32 indexed vmId,
         bytes32 unanHash,
         uint64 sequenceNum
     );
 
     event ConfirmedUnanimousAssertion (
-        bytes32 indexed vmId,
         uint64 sequenceNum
     );
 
     event FinalizedUnanimousAssertion(
-        bytes32 indexed vmId,
         bytes32 unanHash
     );
 
@@ -69,7 +66,7 @@ library Unanimous {
         bytes memory _messageData,
         uint16[] memory _messageTokenNums,
         uint256[] memory _messageAmounts,
-        bytes32[] memory _messageDestinations,
+        address[] memory _messageDestinations,
         bytes memory _signatures
     )
         public
@@ -126,7 +123,7 @@ library Unanimous {
         bytes memory _messageData,
         uint16[] memory _messageTokenNums,
         uint256[] memory _messageAmounts,
-        bytes32[] memory _messageDestinations
+        address[] memory _messageDestinations
     )
         public
     {
@@ -151,16 +148,36 @@ library Unanimous {
             "Can only confirm assertion that is currently pending"
         );
 
-        _vm.inboxHash = _newInbox;
+        _vm.inbox = _newInbox;
         VM.acceptAssertion(
             _vm,
             _afterHash
         );
 
         emit ConfirmedUnanimousAssertion(
-            _vm.id,
             _vm.sequenceNum
         );
+    }
+
+    function _requireUnanimousSigs(
+        VM.Data storage vm,
+        bytes32 msgHash,
+        bytes memory signatures
+    )
+        private view
+    {
+        address[] memory addresses = SigUtils.recoverAddresses(msgHash, signatures);
+        uint addressCount = addresses.length;
+        require(
+            vm.validatorCount == addressCount,
+            "Must have one signature from each validator"
+        );
+        for (uint i = 0; i < addressCount; i++) {
+            require(
+                vm.validators[addresses[i]].valid,
+                "Signature from non-validator key"
+            );
+        }
     }
 
     function _finalizedUnanimousAssert(
@@ -170,9 +187,15 @@ library Unanimous {
         private
     {
         require(!VM.isHalted(vm), "Can't assert halted machine");
+        require(
+            vm.state == VM.State.Waiting ||
+            vm.state == VM.State.PendingDisputable ||
+            vm.state == VM.State.PendingUnanimous,
+            "Tried to finalize unanimous from invalid state"
+        );
         bytes32 unanHash = keccak256(
             abi.encodePacked(
-                vm.id,
+                address(this),
                 keccak256(
                     abi.encodePacked(
                         keccak256(
@@ -184,7 +207,7 @@ library Unanimous {
                             )
                         ),
                         vm.machineHash,
-                        vm.inboxHash,
+                        vm.inbox,
                         data.tokenTypes,
                         data.assertion.messageTokenNums,
                         data.assertion.messageAmounts
@@ -193,23 +216,16 @@ library Unanimous {
                 data.assertion.logsAccHash
             )
         );
-        require(
-            MerkleLib.generateAddressRoot(
-                SigUtils.recoverAddresses(unanHash, data.signatures)
-            ) == vm.validatorRoot,
-            "Validator signatures don't match"
-        );
+        _requireUnanimousSigs(vm, unanHash, data.signatures);
 
         VM.cancelCurrentState(vm);
-        vm.state = VM.State.Waiting;
-        vm.inboxHash = data.newInbox;
+        vm.inbox = data.newInbox;
         VM.acceptAssertion(
             vm,
             data.afterHash
         );
 
         emit FinalizedUnanimousAssertion(
-            vm.id,
             unanHash
         );
     }
@@ -221,14 +237,20 @@ library Unanimous {
         private
     {
         require(!VM.isHalted(vm), "Can't assert halted machine");
+        require(
+            vm.state == VM.State.Waiting ||
+            vm.state == VM.State.PendingDisputable ||
+            vm.state == VM.State.PendingUnanimous,
+            "Tried to pending unanimous from invalid state"
+        );
         bytes32 unanHash = keccak256(
             abi.encodePacked(
-                vm.id,
+                address(this),
                 keccak256(
                     abi.encodePacked(
                         data.unanRest,
                         vm.machineHash,
-                        vm.inboxHash,
+                        vm.inbox,
                         data.tokenTypes,
                         data.messageTokenNums,
                         data.messageAmounts,
@@ -238,12 +260,8 @@ library Unanimous {
                 data.logsAccHash
             )
         );
-        require(
-            MerkleLib.generateAddressRoot(
-                SigUtils.recoverAddresses(unanHash, data.signatures)
-            ) == vm.validatorRoot,
-            "Validator signatures don't match"
-        );
+
+        _requireUnanimousSigs(vm, unanHash, data.signatures);
 
         if (vm.state == VM.State.PendingUnanimous) {
             require(
@@ -267,7 +285,6 @@ library Unanimous {
         );
 
         emit PendingUnanimousAssertion(
-            vm.id,
             unanHash,
             data.sequenceNum
         );

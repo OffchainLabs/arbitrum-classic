@@ -21,12 +21,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridge bridge.Bridge) (challenge.State, error) {
@@ -90,9 +91,9 @@ func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.Bridge) (challen
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot bisectedAssert) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev.(type) {
-	case ethbridge.BisectionEvent:
+	case ethconnection.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingBisected{
 			bot.Config,
@@ -100,7 +101,7 @@ func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge br
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: bisectedAssert: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: bisectedAssert: VMTracker state got unsynchronized"}
 	}
 }
 
@@ -121,15 +122,15 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challe
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
-func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ContinueChallengeEvent:
+	case ethconnection.ContinueChallengeEvent:
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
 			return nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
 		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
 	default:
-		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: VM state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: VMTracker state got unsynchronized, %T", ev)}
 	}
 }
 
@@ -153,12 +154,12 @@ func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot oneStepChallenged) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev.(type) {
-	case ethbridge.OneStepProofEvent:
+	case ethconnection.OneStepProofEvent:
 		fmt.Println("oneStepChallenged: Proof was accepted")
 		return nil, nil
 	default:
-		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: VM state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: VMTracker state got unsynchronized, %T", ev)}
 	}
 }

@@ -1020,7 +1020,7 @@ func sendImpl(state *Machine) (value.TupleValue, protocol.Message, StackMods, er
 		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
 		return sendData, protocol.Message{}, mods, err
 	}
-	return sendData, protocol.NewMessage(data, protocol.TokenTypeFromIntValue(tokenType), amount.BigInt(), destination.ToBytes()), mods, nil
+	return sendData, protocol.NewMessage(data, protocol.TokenTypeFromIntValue(tokenType), amount.BigInt(), destination.BigInt()), mods, nil
 }
 
 func insnSend(state *Machine) (StackMods, error) {

@@ -42,7 +42,7 @@ library ArbProtocol {
         bytes32 _data,
         bytes21 _tokenType,
         uint256 _value,
-        bytes32 _destination
+        address _destination
     )
         public
         pure
@@ -57,11 +57,11 @@ library ArbProtocol {
     }
 
     function generateSentMessageHash(
-        bytes32 _dest,
+        address _dest,
         bytes32 _data,
         bytes21 _tokenType,
         uint256 _value,
-        bytes32 _sender
+        address _sender
     )
         public
         view
@@ -152,7 +152,7 @@ library ArbProtocol {
         bytes memory _messageData,
         uint16[] memory _messageTokenNum,
         uint256[] memory _messageAmount,
-        bytes32[] memory _messageDestination
+        address[] memory _messageDestination
     )
         public
         pure
@@ -174,7 +174,11 @@ library ArbProtocol {
     function beforeBalancesValid(
         bytes21[] memory _tokenTypes,
         uint256[] memory _beforeBalances
-    ) public pure returns(bool) {
+    )
+        public
+        pure
+        returns(bool)
+    {
         uint itemCount = _tokenTypes.length;
         if (itemCount == 0 || itemCount == 1) {
             return true;
@@ -236,7 +240,7 @@ library ArbProtocol {
         bytes memory _data,
         uint16[] memory _tokenNums,
         uint256[] memory _amounts,
-        bytes32[] memory _destinations
+        address[] memory _destinations
     )
         public
         pure
@@ -265,7 +269,7 @@ library ArbProtocol {
         bytes32[] memory _dataHashes,
         uint16[] memory _tokenNums,
         uint256[] memory _amounts,
-        bytes32[] memory _destinations
+        address[] memory _destinations
     )
         public
         pure

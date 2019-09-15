@@ -7,11 +7,15 @@ message TokenTypeBuf {
     bytes value = 1;
 }
 
+message AddressBuf {
+    bytes value = 1;
+}
+
 message MessageBuf {
     value.ValueBuf value = 1;
     TokenTypeBuf tokenType = 2;
     value.BigIntegerBuf amount = 3;
-    value.HashBuf sender = 4;
+    AddressBuf sender = 4;
 }
 
 message TimeBoundsBuf {

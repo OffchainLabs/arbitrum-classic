@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	jsonenc "encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -75,12 +74,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var vmID [32]byte
-	_, err = rand.Read(vmID[:])
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	auth1 := bind.NewKeyedTransactor(key1)
 	auth2 := bind.NewKeyedTransactor(key2)
 
@@ -97,75 +90,71 @@ func main() {
 
 	ethURL := os.Args[3]
 
-	coordinator, err := ethvalidator.NewCoordinator(
-		"Alice",
-		machine.Clone(),
-		key1, config,
-		false,
-		math.MaxInt32, // maxCallSteps
+	val1, err := ethvalidator.NewValidator(
+		key1,
 		connectionInfo,
 		ethURL,
-		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := coordinator.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	receiptChan, errChan := coordinator.Val.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
-		log.Fatal(err)
-	}
-
-	challenger, err := ethvalidator.NewValidatorFollower(
-		"Bob",
-		machine,
+	val2, err := ethvalidator.NewValidator(
 		key2,
-		config,
-		true,
-		math.MaxInt32, // maxCallSteps
 		connectionInfo,
 		ethURL,
-		"wss://127.0.0.1:1236/ws",
-		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
-		log.Fatalf("Failed to create follower %v\n", err)
+		log.Fatal(err)
 	}
 
-	err = challenger.Run()
+	receipt, err := val1.LaunchVM(context.Background(), config, machine.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	receiptChan, errChan = challenger.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
+	address, _, _, err := val1.ParseVMCreated(receipt.Logs[0])
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	retChan, errChan := coordinator.CreateVM(time.Second * 10)
+	coordinator, err := val1.NewCoordinator(
+		"Alice",
+		address,
+		machine.Clone(),
+		config,
+		false,
+		math.MaxInt32, // maxCallSteps,
+		math.MaxInt32, // maxUnanSteps
+	)
 
-	select {
-	case <-retChan:
-		log.Println("Coordinator created VM")
-	case err := <-errChan:
-		log.Fatalf("Failed to create vm: %v", err)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	time.Sleep(500 * time.Millisecond)
+	coordinator.StartServer(context.Background())
+
+	challenger, err := val2.NewFollower(
+		"Bob",
+		machine.Clone(),
+		config,
+		false,
+		math.MaxInt32, // maxCallSteps,
+		math.MaxInt32, // maxUnanSteps
+		"wss://127.0.0.1:1236/ws",
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := coordinator.Run(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := challenger.Run(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 
 	dataBytes, _ := hexutil.Decode("0x2ddec39b0000000000000000000000000000000000000000000000000000000000000028")
 	data, _ := evm.BytesToSizedByteArray(dataBytes)
@@ -178,7 +167,7 @@ func main() {
 		seq,
 	})
 
-	receiptChan, errChan = coordinator.Val.SendEthMessage(
+	receiptChan, errChan := coordinator.Val.SendEthMessage(
 		context.Background(),
 		tup,
 		big.NewInt(0),
@@ -191,17 +180,17 @@ func main() {
 	case err := <-errChan:
 		log.Fatal(err)
 	}
-	// fmt.Println("Send error", err)
-	// time.Sleep(2000 * time.Millisecond)
-	// successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
-	// select {
-	// case result := <-successChan:
-	//	fmt.Println("ChallengeTest: Unanimous assertion successful", result)
-	// case err := <-errChan:
-	//	panic(fmt.Sprintf("Error Running unanimous assertion: %v", err))
-	//}
+	fmt.Println("Send error", err)
+	time.Sleep(2000 * time.Millisecond)
+	successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
+	select {
+	case result := <-successChan:
+		fmt.Println("ChallengeTest: Unanimous assertion successful", result)
+	case err := <-errChan:
+		panic(fmt.Sprintf("Error Running unanimous assertion: %v", err))
+	}
 
-	successChan := coordinator.InitiateDisputableAssertion()
+	successChan = coordinator.InitiateDisputableAssertion()
 	result := <-successChan
 	fmt.Println("Result", result)
 

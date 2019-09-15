@@ -871,7 +871,7 @@ library OneStepProof {
             val1.hash().hash,
             tokenType,
             amount,
-            bytes32(val1.tupleVal[3].intVal)
+            address(bytes20(bytes32(val1.tupleVal[3].intVal)))
         );
         return (true, messageHash, tokenType, amount);
     }

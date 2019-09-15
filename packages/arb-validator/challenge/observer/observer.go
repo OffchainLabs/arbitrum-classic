@@ -21,7 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 )
 
 func New(
@@ -58,14 +58,14 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.Bridge) (chall
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot waitingChallenge) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.BisectionEvent:
+	case ethconnection.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
 		return waitingBisected{bot.Config, deadline, preconditions, ev.Assertions}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingChallenge: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingChallenge: VMTracker state got unsynchronized"}
 	}
 }
 
@@ -89,9 +89,9 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challe
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
-func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ContinueChallengeEvent:
+	case ethconnection.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingChallenge{
 			bot.Config,
@@ -100,6 +100,6 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge b
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingBisected: VM state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingBisected: VMTracker state got unsynchronized"}
 	}
 }

@@ -26,13 +26,13 @@ import "./Bisection.sol";
 contract ChallengeManager is IChallengeManager {
 
     event ContinuedChallenge (
-        bytes32 indexed vmId,
+        address indexed vmAddress,
         address challenger,
         uint assertionIndex
     );
 
     event BisectedAssertion(
-        bytes32 indexed vmId,
+        address indexed vmAddress,
         address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
         uint32 totalSteps,
@@ -40,25 +40,19 @@ contract ChallengeManager is IChallengeManager {
     );
 
     event OneStepProofCompleted(
-        bytes32 indexed vmId,
+        address indexed vmAddress,
         address asserter,
         bytes proof
     );
 
     event TimedOutChallenge (
-        bytes32 indexed vmId,
+        address indexed vmAddress,
         bool challengerWrong
     );
 
-    IVMTracker vmTracker;
-    mapping(bytes32 => Bisection.Challenge) challenges;
-
-    constructor(IVMTracker _vmTracker) public {
-        vmTracker = _vmTracker;
-    }
+    mapping(address => Bisection.Challenge) challenges;
 
     function initiateChallenge(
-        bytes32 _vmId,
         address[2] calldata _players,
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,
@@ -66,11 +60,10 @@ contract ChallengeManager is IChallengeManager {
     )
         external
     {
-        require(msg.sender == address(vmTracker), "Challenge must be forwarded from main contract");
-        require(challenges[_vmId].challengeState == 0x00, "There must be no existing challenge");
+        require(challenges[msg.sender].challengeState == 0x00, "There must be no existing challenge");
 
-        challenges[_vmId] = Bisection.Challenge(
-            _vmId,
+        challenges[msg.sender] = Bisection.Challenge(
+            msg.sender,
             _challengeRoot,
             _escrows,
             _players,
@@ -84,7 +77,7 @@ contract ChallengeManager is IChallengeManager {
     // _beforeHash
     // _beforeInbox
     function bisectAssertion(
-        bytes32 _challengeId,
+        address _challengeId,
         bytes32[2] memory _fields,
         bytes32[] memory _afterHashAndMessageAndLogsBisections,
         uint256[] memory _totalMessageAmounts,
@@ -109,7 +102,7 @@ contract ChallengeManager is IChallengeManager {
     }
 
     function continueChallenge(
-        bytes32 _vmId,
+        address _vmAddress,
         uint _assertionToChallenge,
         bytes memory _proof,
         bytes32 _bisectionRoot,
@@ -117,7 +110,7 @@ contract ChallengeManager is IChallengeManager {
     )
         public
     {
-        Bisection.Challenge storage challenge = challenges[_vmId];
+        Bisection.Challenge storage challenge = challenges[_vmAddress];
         Bisection.continueChallenge(
             challenge,
             _assertionToChallenge,
@@ -128,7 +121,7 @@ contract ChallengeManager is IChallengeManager {
     }
 
     function oneStepProof(
-        bytes32 _vmId,
+        address _vmAddress,
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
         bytes21[] memory _tokenTypes,
@@ -139,7 +132,7 @@ contract ChallengeManager is IChallengeManager {
     )
         public
     {
-        Bisection.Challenge storage challenge = challenges[_vmId];
+        Bisection.Challenge storage challenge = challenges[_vmAddress];
         require(
             challenge.state == Bisection.State.Challenged,
             "Can only one step proof following a single step challenge"
@@ -188,39 +181,38 @@ contract ChallengeManager is IChallengeManager {
         );
 
         require(correctProof == 0, "Proof was incorrect");
-        _asserterWin(_vmId, challenge);
-        emit OneStepProofCompleted(_vmId, msg.sender, _proof);
+        _asserterWin(challenge);
+        emit OneStepProofCompleted(_vmAddress, msg.sender, _proof);
     }
 
-    function asserterTimedOut(bytes32 _vmId) public {
-        Bisection.Challenge storage challenge = challenges[_vmId];
+    function asserterTimedOut(address _vmAddress) public {
+        Bisection.Challenge storage challenge = challenges[_vmAddress];
         require(
             challenge.state == Bisection.State.Challenged,
             "Can only time out asserter if it is their turn"
         );
         require(block.number > challenge.deadline, "Deadline hasn't expired");
 
-        _challengerWin(_vmId, challenge);
+        _challengerWin(challenge);
 
-        emit TimedOutChallenge(_vmId, true);
+        emit TimedOutChallenge(_vmAddress, true);
     }
 
-    function challengerTimedOut(bytes32 _vmId) public {
-        Bisection.Challenge storage challenge = challenges[_vmId];
+    function challengerTimedOut(address _vmAddress) public {
+        Bisection.Challenge storage challenge = challenges[_vmAddress];
         require(
             challenge.state == Bisection.State.Bisected,
             "Can only time out challenger if it is their turn"
         );
         require(block.number > challenge.deadline, "Deadline hasn't expired");
 
-        _asserterWin(_vmId, challenge);
+        _asserterWin(challenge);
 
-        emit TimedOutChallenge(_vmId, false);
+        emit TimedOutChallenge(_vmAddress, false);
     }
 
-    function _asserterWin(bytes32 _vmId, Bisection.Challenge storage challenge) private {
-        vmTracker.completeChallenge(
-            _vmId,
+    function _asserterWin(Bisection.Challenge storage challenge) private {
+        IVMTracker(challenge.vmAddress).completeChallenge(
             challenge.players,
             [
                 challenge.escrows[0] + challenge.escrows[1] / 2,
@@ -229,9 +221,8 @@ contract ChallengeManager is IChallengeManager {
         );
     }
 
-    function _challengerWin(bytes32 _vmId, Bisection.Challenge storage challenge) private {
-        vmTracker.completeChallenge(
-            _vmId,
+    function _challengerWin(Bisection.Challenge storage challenge) private {
+        IVMTracker(challenge.vmAddress).completeChallenge(
             challenge.players,
             [
                 0,

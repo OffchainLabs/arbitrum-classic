@@ -26,43 +26,15 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
-
-func CreateVMHash(data *valmessage.CreateVMValidatorRequest) [32]byte {
-	var ret [32]byte
-	keys := make([]common.Address, 0, len(data.Config.AssertKeys))
-	for _, key := range data.Config.AssertKeys {
-		var address common.Address
-		copy(address[:], key.Value)
-		keys = append(keys, address)
-	}
-	var owner common.Address
-	copy(owner[:], data.Config.Owner.Value)
-	var escrowCurrency common.Address
-	copy(escrowCurrency[:], data.Config.EscrowCurrency.Value)
-	createHash := solsha3.SoliditySHA3(
-		solsha3.Uint32(uint32(data.Config.GracePeriod)),
-		solsha3.Uint128(value.NewBigIntFromBuf(data.Config.EscrowRequired)),
-		solsha3.Address(escrowCurrency),
-		solsha3.Uint32(data.Config.MaxExecutionStepCount),
-		solsha3.Bytes32(value.NewHashFromBuf(data.VmState)),
-		solsha3.Uint16(data.ChallengeManagerNum),
-		solsha3.Address(owner),
-		solsha3.AddressArray(keys),
-	)
-	copy(ret[:], createHash)
-	createHash = nil
-	return ret
-}
 
 func SplitMessages(
 	outMsgs []protocol.Message,
-) ([]uint16, []*big.Int, [][32]byte, [][21]byte) {
+) ([]uint16, []*big.Int, []common.Address, [][21]byte) {
 	balance := protocol.NewBalanceTrackerFromMessages(outMsgs)
 	tokenNums := make([]uint16, 0, len(outMsgs))
 	amounts := make([]*big.Int, 0, len(outMsgs))
-	destinations := make([][32]byte, 0, len(outMsgs))
+	destinations := make([]common.Address, 0, len(outMsgs))
 	for _, msg := range outMsgs {
 		tokenNums = append(tokenNums,
 			uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
@@ -77,13 +49,13 @@ func UnanimousAssertPartialPartialHash(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 	messageData bytes.Buffer,
-	destinations [][32]byte,
+	destinations []common.Address,
 ) []byte {
 	return solsha3.SoliditySHA3(
 		solsha3.Bytes32(newInboxHash),
 		solsha3.Bytes32(assertion.AfterHash),
 		messageData.Bytes(),
-		value.Bytes32ArrayEncoded(destinations),
+		solsha3.AddressArray(destinations),
 	)
 }
 
@@ -139,7 +111,7 @@ func UnanimousAssertPartialHash(
 }
 
 func UnanimousAssertHash(
-	vmID [32]byte,
+	vmID common.Address,
 	sequenceNum uint64,
 	beforeHash [32]byte,
 	newInboxHash [32]byte,
@@ -159,7 +131,7 @@ func UnanimousAssertHash(
 
 	var hash [32]byte
 	copy(hash[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(vmID),
+		solsha3.Address(vmID),
 		solsha3.Bytes32(partialHash),
 		solsha3.Bytes32(assertion.LogsHash()),
 	))

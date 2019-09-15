@@ -19,10 +19,9 @@ pragma solidity ^0.5.3;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
-contract ArbBalanceTracker is Ownable, ERC20 {
+contract GlobalWallet {
 
     using SafeMath for uint256;
 
@@ -47,9 +46,9 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         NFTWallet[] nftWalletList;
     }
 
-    mapping(bytes32 => Wallet) wallets;
+    mapping(address => Wallet) wallets;
 
-    function getTokenBalances(bytes32 _owner) external view returns (address[] memory, uint256[] memory) {
+    function getTokenBalances(address _owner) external view returns (address[] memory, uint256[] memory) {
         Wallet storage wallet = wallets[_owner];
         address[] memory addresses = new address[](wallet.tokenList.length);
         uint256[] memory values = new uint256[](addresses.length);
@@ -61,7 +60,7 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         return (addresses, values);
     }
 
-    function getNFTTokens(bytes32 _owner) external view returns (address[] memory, uint256[] memory) {
+    function getNFTTokens(address _owner) external view returns (address[] memory, uint256[] memory) {
         Wallet storage wallet = wallets[_owner];
         uint totalLength = 0;
         uint i;
@@ -84,13 +83,37 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         return (addresses, tokens);
     }
 
-    function depositEth(bytes32 _destination) external payable {
-        addToken(_destination, ETH_ADDRESS, msg.value);
+    // This function assumes that tokenTypes and amounts are valid and in canonical
+    // order. The pair (tokenType, amount) are sorted in ascending order with
+    // tokenTypes as the primary key and amount as the secondary key
+    // Token type only allows repeats for NFTs and amounts disallow repeats for NFTs
+    function hasFunds(
+        address _owner,
+        bytes21[] calldata _tokenTypes,
+        uint256[] calldata _amounts
+    )
+        external
+        view
+        returns(bool)
+    {
+        uint tokenTypeCount = _tokenTypes.length;
+        for (uint i = 0; i < tokenTypeCount; i++) {
+            if (_tokenTypes[i][20] == 0x01) {
+                if (!hasNFT(address(bytes20(_tokenTypes[i])), _owner, _amounts[i])) {
+                    return false;
+                }
+            } else {
+                if (_amounts[i] > getTokenBalance(address(bytes20(_tokenTypes[i])), _owner)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     function withdrawEth(uint256 _value) external {
         require(
-            removeToken(bytes32(bytes20(msg.sender)), ETH_ADDRESS, _value),
+            removeToken(msg.sender, ETH_ADDRESS, _value),
             "Wallet doesn't own sufficient balance of token"
         );
         msg.sender.transfer(_value);
@@ -98,43 +121,72 @@ contract ArbBalanceTracker is Ownable, ERC20 {
 
     function depositERC20(address _tokenContract, uint256 _value) external {
         ERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
-        addToken(bytes32(bytes20(msg.sender)), _tokenContract, _value);
+        addToken(msg.sender, _tokenContract, _value);
     }
 
     function withdrawERC20(address _tokenContract, uint256 _value) external {
         require(
-            removeToken(bytes32(bytes20(msg.sender)), _tokenContract, _value),
+            removeToken(msg.sender, _tokenContract, _value),
             "Wallet doesn't own sufficient balance of token"
         );
         ERC20(_tokenContract).transfer(msg.sender, _value);
     }
 
-    function onERC721Received(address, address _from, uint256 _tokenId, bytes calldata) external returns(bytes4) {
-        addNFTToken(bytes32(bytes20(_from)), msg.sender, _tokenId);
+    function onERC721Received(
+        address,
+        address _from,
+        uint256 _tokenId,
+        bytes calldata
+    )
+        external
+        returns(bytes4)
+    {
+        addNFTToken(_from, msg.sender, _tokenId);
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 
     function depositERC721(address _tokenContract, uint256 _tokenId) external {
         ERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
-        addNFTToken(bytes32(bytes20(msg.sender)), _tokenContract, _tokenId);
+        addNFTToken(msg.sender, _tokenContract, _tokenId);
     }
 
     function withdrawERC721(address _tokenContract, uint256 _tokenId) external {
         require(
-            removeNFTToken(bytes32(bytes20(msg.sender)), _tokenContract, _tokenId),
+            removeNFTToken(msg.sender, _tokenContract, _tokenId),
             "Wallet doesn't own token"
         );
         ERC721(_tokenContract).safeTransferFrom(address(this), msg.sender, _tokenId);
     }
 
+    function depositEth(address _destination) public payable {
+        addToken(_destination, ETH_ADDRESS, msg.value);
+    }
+
+    function getTokenBalance(address _tokenContract, address _owner) public view returns (uint256) {
+        Wallet storage wallet = wallets[_owner];
+        uint index = wallet.tokenIndex[_tokenContract];
+        if (index == 0) {
+            return 0;
+        }
+        return wallet.tokenList[index - 1].balance;
+    }
+
+    function hasNFT(address _tokenContract, address _owner, uint256 _tokenId) public view returns (bool) {
+        Wallet storage wallet = wallets[_owner];
+        uint index = wallet.nftWalletIndex[_tokenContract];
+        if (index == 0) {
+            return false;
+        }
+        return wallet.nftWalletList[index - 1].tokenIndex[_tokenId] != 0;
+    }
+
     function transferToken(
-        bytes32 _from,
-        bytes32 _to,
+        address _from,
+        address _to,
         address _tokenContract,
         uint256 _value
     )
-        public
-        onlyOwner
+        internal
     {
         require(
             removeToken(_from, _tokenContract, _value),
@@ -144,72 +196,18 @@ contract ArbBalanceTracker is Ownable, ERC20 {
     }
 
     function transferNFT(
-        bytes32 _from,
-        bytes32 _to,
+        address _from,
+        address _to,
         address _tokenContract,
         uint256 _tokenId
     )
-        public
-        onlyOwner
+        internal
     {
         require(removeNFTToken(_from, _tokenContract, _tokenId), "Wallet doesn't own token");
         addNFTToken(_to, _tokenContract, _tokenId);
     }
 
-    function ownerRemoveToken(bytes32 _user, address _tokenContract, uint256 _value) public onlyOwner {
-        require(
-            removeToken(_user, _tokenContract, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-    }
-
-    function getTokenBalance(address _tokenContract, bytes32 _owner) public view returns (uint256) {
-        Wallet storage wallet = wallets[_owner];
-        uint index = wallet.tokenIndex[_tokenContract];
-        if (index == 0) {
-            return 0;
-        }
-        return wallet.tokenList[index - 1].balance;
-    }
-
-    function hasNFT(address _tokenContract, bytes32 _owner, uint256 _tokenId) public view returns (bool) {
-        Wallet storage wallet = wallets[_owner];
-        uint index = wallet.nftWalletIndex[_tokenContract];
-        if (index == 0) {
-            return false;
-        }
-        return wallet.nftWalletList[index - 1].tokenIndex[_tokenId] != 0;
-    }
-
-    // This function assumes that tokenTypes and amounts are valid and in canonical
-    // order. The pair (tokenType, amount) are sorted in ascending order with
-    // tokenTypes as the primary key and amount as the secondary key
-    // Token type only allows repeats for NFTs and amounts disallow repeats for NFTs
-    function hasFunds(
-        bytes32 _vmId,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _amounts
-    )
-        public
-        view
-        returns(bool)
-    {
-        uint tokenTypeCount = _tokenTypes.length;
-        for (uint i = 0; i < tokenTypeCount; i++) {
-            if (_tokenTypes[i][20] == 0x01) {
-                if (!hasNFT(address(bytes20(_tokenTypes[i])), _vmId, _amounts[i])) {
-                    return false;
-                }
-            } else {
-                if (_amounts[i] > getTokenBalance(address(bytes20(_tokenTypes[i])), _vmId)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    function addNFTToken(bytes32 _user, address _tokenContract, uint256 _tokenId) internal {
+    function addNFTToken(address _user, address _tokenContract, uint256 _tokenId) private {
         Wallet storage wallet = wallets[_user];
         uint index = wallet.nftWalletIndex[_tokenContract];
         if (index == 0) {
@@ -222,7 +220,7 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         nftWallet.tokenIndex[_tokenId] = nftWallet.tokenList.length;
     }
 
-    function addToken(bytes32 _user, address _tokenContract, uint256 _value) internal {
+    function addToken(address _user, address _tokenContract, uint256 _value) private {
         if (_value == 0) {
             return;
         }
@@ -236,7 +234,7 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         tokenWallet.balance = tokenWallet.balance.add(_value);
     }
 
-    function removeNFTToken(bytes32 _user, address _tokenContract, uint256 _tokenId) internal returns (bool) {
+    function removeNFTToken(address _user, address _tokenContract, uint256 _tokenId) private returns (bool) {
         Wallet storage wallet = wallets[_user];
         uint walletIndex = wallet.nftWalletIndex[_tokenContract];
         if (walletIndex == 0) {
@@ -262,7 +260,7 @@ contract ArbBalanceTracker is Ownable, ERC20 {
         return true;
     }
 
-    function removeToken(bytes32 _user, address _tokenContract, uint256 _value) internal returns (bool) {
+    function removeToken(address _user, address _tokenContract, uint256 _value) private returns (bool) {
         if (_value == 0) {
             return true;
         }

@@ -18,7 +18,6 @@ pragma solidity ^0.5.3;
 
 interface IChallengeManager {
     function initiateChallenge(
-        bytes32 vmId,
         address[2] calldata players,
         uint128[2] calldata escrows,
         uint32 challengePeriod,

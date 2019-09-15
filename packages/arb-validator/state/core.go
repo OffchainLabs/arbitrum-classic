@@ -21,12 +21,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 )
 
 type State interface {
 	UpdateTime(uint64, bridge.Bridge) (State, error)
-	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (State, challenge.State, error)
+	UpdateState(ethconnection.Event, uint64, bridge.Bridge) (State, challenge.State, error)
 
 	SendMessageToVM(msg protocol.Message)
 	GetCore() *core.Core

@@ -3,24 +3,9 @@ package test
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-provider-go"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -29,13 +14,30 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+
+	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
 )
 
 /********************************************/
 /*    Validators                            */
 /********************************************/
 func setupValidators(coordinatorKey string, followerKey string, t *testing.T) error {
-
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	brand.Seed(seed)
@@ -57,7 +59,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	machine, err := loader.LoadMachineFromFile("contract.ao", true, "test")
+	mach, err := loader.LoadMachineFromFile("contract.ao", true, "test")
 	if err != nil {
 		t.Errorf("setupValidators LoadMachineFromFile error %v", err)
 		return err
@@ -71,13 +73,6 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	key2, err := crypto.HexToECDSA(followerKey)
 	if err != nil {
 		t.Errorf("setupValidators HexToECDSA error %v", err)
-		return err
-	}
-
-	var vmID [32]byte
-	_, err = rand.Read(vmID[:])
-	if err != nil {
-		t.Errorf("setupValidators Read error %v", err)
 		return err
 	}
 
@@ -98,47 +93,63 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 
 	t.Log("creating coordinator")
 	// Validator creation
-	server := coordinator.NewRPCServer(machine, key1, validators, connectionInfo, ethURL)
+	val1, err := ethvalidator.NewValidator(key1, connectionInfo, ethURL)
+	if err != nil {
+		t.Error(err)
+		return err
+	}
+
+	val2, err := ethvalidator.NewValidator(key2, connectionInfo, ethURL)
+	if err != nil {
+		t.Error(err)
+		return err
+	}
+
+	receipt, err := val1.LaunchVM(context.Background(), config, mach.Hash())
+	if err != nil {
+		t.Error(err)
+		return err
+	}
+
+	address, _, _, err := val1.ParseVMCreated(receipt.Logs[0])
+	if err != nil {
+		t.Error(err)
+		return err
+	}
+
+	server, err := coordinator.NewRPCServer(val1, address, mach, config)
+	if err != nil {
+		t.Error(err)
+		return err
+	}
 
 	// follower/challenger creation
-	challenger, err := ethvalidator.NewValidatorFollower(
+	challenger, err := val2.NewFollower(
 		"Bob",
-		machine,
-		key2,
+		mach,
 		config,
-		true,
-		math.MaxInt32, // maxCallSteps
-		connectionInfo,
-		ethURL,
+		false,
+		math.MaxInt32, // maxCallSteps,
+		math.MaxInt32, // maxUnanSteps,
 		"wss://127.0.0.1:1236/ws",
-		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		t.Errorf("setupValidators NewValidatorFollower error %v", err)
 		return err
 	}
-	err = challenger.Run()
-	if err != nil {
-		t.Errorf("setupValidators Run error %v", err)
+
+	if err := server.Run(context.Background()); err != nil {
+		t.Errorf("setupValidators coordinator run error %v", err)
 		return err
 	}
 
-	receiptChan, errChan := challenger.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			err := errors.New("Challenger could not deposit funds")
-			t.Errorf("setupValidators error %v", err)
-			return err
-		}
-	case err := <-errChan:
-		t.Errorf("setupValidators DepositFunds error %v", err)
+	if err := challenger.Run(context.Background()); err != nil {
+		t.Errorf("setupValidators challenger run error %v", err)
 		return err
 	}
+
 	t.Log("challenger created")
 	t.Log("starting RPCServerVM")
-	// start RPC server VM
-	server.CreateVM()
 
 	// Run server
 	s := rpc.NewServer()
@@ -187,7 +198,6 @@ func RunValidators(t *testing.T) (*FibonacciSession, error) {
 		t.Errorf("Validator setup error %v", err)
 		return nil, err
 	}
-	//setupValidators()
 
 	privateKeyBytes, _ := hex.DecodeString(coordinatorKey)
 	pubKey, err := _computePubKeyString(privateKeyBytes)
