@@ -180,6 +180,37 @@ library Unanimous {
         }
     }
 
+    function _requireAllSignedAssertion(
+        VM.Data storage vm,
+        bytes32 _unanRest,
+        bytes21[] memory _tokenTypes,
+        uint16[] memory _messageTokenNums,
+        uint256[] memory _messageAmounts,
+        uint64 _sequenceNum,
+        bytes32 _logsAccHash,
+        bytes memory _signatures
+    ) private view returns(bytes32) {
+        bytes32 unanHash = keccak256(
+            abi.encodePacked(
+                address(this),
+                keccak256(
+                    abi.encodePacked(
+                        _unanRest,
+                        vm.machineHash,
+                        vm.inbox,
+                        _tokenTypes,
+                        _messageTokenNums,
+                        _messageAmounts,
+                        _sequenceNum
+                    )
+                ),
+                _logsAccHash
+            )
+        );
+        _requireUnanimousSigs(vm, unanHash, _signatures);
+        return unanHash;
+    }
+
     function _finalizedUnanimousAssert(
         VM.Data storage vm,
         FinalizedUnanimousAssertData memory data
@@ -193,30 +224,23 @@ library Unanimous {
             vm.state == VM.State.PendingUnanimous,
             "Tried to finalize unanimous from invalid state"
         );
-        bytes32 unanHash = keccak256(
-            abi.encodePacked(
-                address(this),
-                keccak256(
-                    abi.encodePacked(
-                        keccak256(
-                            abi.encodePacked(
-                                data.newInbox,
-                                data.afterHash,
-                                data.assertion.messageData,
-                                data.assertion.messageDestinations
-                            )
-                        ),
-                        vm.machineHash,
-                        vm.inbox,
-                        data.tokenTypes,
-                        data.assertion.messageTokenNums,
-                        data.assertion.messageAmounts
-                    )
-                ),
-                data.assertion.logsAccHash
-            )
+        bytes32 unanHash = _requireAllSignedAssertion(
+            vm,
+            keccak256(
+                abi.encodePacked(
+                    data.newInbox,
+                    data.afterHash,
+                    data.assertion.messageData,
+                    data.assertion.messageDestinations
+                )
+            ),
+            data.tokenTypes,
+            data.assertion.messageTokenNums,
+            data.assertion.messageAmounts,
+            ~uint64(0),
+            data.assertion.logsAccHash,
+            data.signatures
         );
-        _requireUnanimousSigs(vm, unanHash, data.signatures);
 
         VM.cancelCurrentState(vm);
         vm.inbox = data.newInbox;
@@ -243,25 +267,16 @@ library Unanimous {
             vm.state == VM.State.PendingUnanimous,
             "Tried to pending unanimous from invalid state"
         );
-        bytes32 unanHash = keccak256(
-            abi.encodePacked(
-                address(this),
-                keccak256(
-                    abi.encodePacked(
-                        data.unanRest,
-                        vm.machineHash,
-                        vm.inbox,
-                        data.tokenTypes,
-                        data.messageTokenNums,
-                        data.messageAmounts,
-                        data.sequenceNum
-                    )
-                ),
-                data.logsAccHash
-            )
+        bytes32 unanHash = _requireAllSignedAssertion(
+            vm,
+            data.unanRest,
+            data.tokenTypes,
+            data.messageTokenNums,
+            data.messageAmounts,
+            data.sequenceNum,
+            data.logsAccHash,
+            data.signatures
         );
-
-        _requireUnanimousSigs(vm, unanHash, data.signatures);
 
         if (vm.state == VM.State.PendingUnanimous) {
             require(

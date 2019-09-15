@@ -18,7 +18,6 @@ package hashing
 
 import (
 	"bytes"
-	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -77,36 +76,20 @@ func UnanimousAssertPartialHash(
 	}
 
 	var ret [32]byte
-	if sequenceNum == math.MaxUint64 {
-		copy(ret[:], solsha3.SoliditySHA3(
-			UnanimousAssertPartialPartialHash(
-				newInboxHash,
-				assertion,
-				messageData,
-				destinations,
-			),
-			solsha3.Bytes32(beforeHash),
-			solsha3.Bytes32(originalInboxHash),
-			protocol.TokenTypeArrayEncoded(tokenTypes),
-			solsha3.Uint16Array(tokenNums),
-			solsha3.Uint256Array(amounts),
-		))
-	} else {
-		copy(ret[:], solsha3.SoliditySHA3(
-			UnanimousAssertPartialPartialHash(
-				newInboxHash,
-				assertion,
-				messageData,
-				destinations,
-			),
-			solsha3.Bytes32(beforeHash),
-			solsha3.Bytes32(originalInboxHash),
-			protocol.TokenTypeArrayEncoded(tokenTypes),
-			solsha3.Uint16Array(tokenNums),
-			solsha3.Uint256Array(amounts),
-			solsha3.Uint64(sequenceNum),
-		))
-	}
+	copy(ret[:], solsha3.SoliditySHA3(
+		UnanimousAssertPartialPartialHash(
+			newInboxHash,
+			assertion,
+			messageData,
+			destinations,
+		),
+		solsha3.Bytes32(beforeHash),
+		solsha3.Bytes32(originalInboxHash),
+		protocol.TokenTypeArrayEncoded(tokenTypes),
+		solsha3.Uint16Array(tokenNums),
+		solsha3.Uint256Array(amounts),
+		solsha3.Uint64(sequenceNum),
+	))
 	return ret, nil
 }
 
