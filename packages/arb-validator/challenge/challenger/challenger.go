@@ -95,7 +95,7 @@ func (bot waitingContinuing) UpdateState(ev ethconnection.Event, time uint64, br
 	case ethconnection.OneStepProofEvent:
 		return nil, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingContinuing: VMTracker state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingContinuing: ArbChannel state got unsynchronized"}
 	}
 }
 
@@ -132,6 +132,6 @@ func (bot continuing) UpdateState(ev ethconnection.Event, time uint64, bridge br
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: continuing: VMTracker state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: continuing: ArbChannel state got unsynchronized"}
 	}
 }

@@ -88,7 +88,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 	errChan := make(chan error, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
 		if !validator.canRun() {
-			errChan <- errors.New("Cannot call when VMTracker is not running")
+			errChan <- errors.New("Cannot call when ArbChannel is not running")
 			return
 		}
 		c := validator.bot.GetCore()

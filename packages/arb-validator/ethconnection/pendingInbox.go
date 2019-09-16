@@ -35,6 +35,7 @@ import (
 
 type PendingInbox struct {
 	GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
+	client             *ethclient.Client
 }
 
 func NewPendingInbox(address common.Address, client *ethclient.Client) (*PendingInbox, error) {
@@ -42,36 +43,40 @@ func NewPendingInbox(address common.Address, client *ethclient.Client) (*Pending
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
-	return &PendingInbox{globalPendingInboxContract}, nil
+	return &PendingInbox{globalPendingInboxContract, client}, nil
 }
 
 func (con *PendingInbox) SendMessage(
 	auth *bind.TransactOpts,
 	msg protocol.Message,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
 		return nil, err
 	}
-	return con.GlobalPendingInbox.SendMessage(
+	tx, err := con.GlobalPendingInbox.SendMessage(
 		auth,
 		msg.Destination,
 		msg.TokenType,
 		msg.Currency,
 		dataBuf.Bytes(),
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, con.client, tx.Hash())
 }
 
 func (con *PendingInbox) ForwardMessage(
 	auth *bind.TransactOpts,
 	msg protocol.Message,
 	sig []byte,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
 		return nil, err
 	}
-	return con.GlobalPendingInbox.ForwardMessage(
+	tx, err := con.GlobalPendingInbox.ForwardMessage(
 		auth,
 		msg.Destination,
 		msg.TokenType,
@@ -79,6 +84,10 @@ func (con *PendingInbox) ForwardMessage(
 		dataBuf.Bytes(),
 		sig,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, con.client, tx.Hash())
 }
 
 func (con *PendingInbox) SendEthMessage(
@@ -86,12 +95,12 @@ func (con *PendingInbox) SendEthMessage(
 	data value.Value,
 	destination common.Address,
 	amount *big.Int,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(data, &dataBuf); err != nil {
 		return nil, err
 	}
-	return con.GlobalPendingInbox.SendEthMessage(
+	tx, err := con.GlobalPendingInbox.SendEthMessage(
 		&bind.TransactOpts{
 			From:     auth.From,
 			Signer:   auth.Signer,
@@ -101,23 +110,14 @@ func (con *PendingInbox) SendEthMessage(
 		destination,
 		dataBuf.Bytes(),
 	)
-}
-
-func sigsToBlock(signatures [][]byte) []byte {
-	sigData := make([]byte, 0, len(signatures)*65)
-	for _, sig := range signatures {
-		sigData = append(sigData, sig[:64]...)
-		v := uint8(int(sig[64]))
-		if v < 27 {
-			v += 27
-		}
-		sigData = append(sigData, v)
+	if err != nil {
+		return nil, err
 	}
-	return sigData
+	return waitForReceipt(auth.Context, con.client, tx.Hash())
 }
 
-func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) (*types.Transaction, error) {
-	return con.GlobalPendingInbox.DepositEth(
+func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) (*types.Receipt, error) {
+	tx, err := con.GlobalPendingInbox.DepositEth(
 		&bind.TransactOpts{
 			From:     auth.From,
 			Signer:   auth.Signer,
@@ -126,6 +126,10 @@ func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, 
 		},
 		dest,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, con.client, tx.Hash())
 }
 
 func (con *PendingInbox) GetTokenBalance(

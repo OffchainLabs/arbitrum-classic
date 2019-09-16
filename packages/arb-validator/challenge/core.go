@@ -55,7 +55,7 @@ func (bot TimedOutChallenger) UpdateState(ev ethconnection.Event, time uint64, b
 	case ethconnection.ChallengerTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutChallenger: VMTracker state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutChallenger: ArbChannel state got unsynchronized"}
 	}
 }
 
@@ -72,6 +72,6 @@ func (bot TimedOutAsserter) UpdateState(ev ethconnection.Event, time uint64, bri
 	case ethconnection.AsserterTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutAsserter: VMTracker state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutAsserter: ArbChannel state got unsynchronized"}
 	}
 }

@@ -101,7 +101,7 @@ func (bot bisectedAssert) UpdateState(ev ethconnection.Event, time uint64, bridg
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: bisectedAssert: VMTracker state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: bisectedAssert: ArbChannel state got unsynchronized"}
 	}
 }
 
@@ -130,7 +130,7 @@ func (bot waitingBisected) UpdateState(ev ethconnection.Event, time uint64, brid
 		}
 		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
 	default:
-		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: VMTracker state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: ArbChannel state got unsynchronized, %T", ev)}
 	}
 }
 
@@ -160,6 +160,6 @@ func (bot oneStepChallenged) UpdateState(ev ethconnection.Event, time uint64, br
 		fmt.Println("oneStepChallenged: Proof was accepted")
 		return nil, nil
 	default:
-		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: VMTracker state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: ArbChannel state got unsynchronized, %T", ev)}
 	}
 }

@@ -65,7 +65,7 @@ func (bot waitingChallenge) UpdateState(ev ethconnection.Event, time uint64, bri
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
 		return waitingBisected{bot.Config, deadline, preconditions, ev.Assertions}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingChallenge: VMTracker state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingChallenge: ArbChannel state got unsynchronized"}
 	}
 }
 
@@ -100,6 +100,6 @@ func (bot waitingBisected) UpdateState(ev ethconnection.Event, time uint64, brid
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingBisected: VMTracker state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingBisected: ArbChannel state got unsynchronized"}
 	}
 }

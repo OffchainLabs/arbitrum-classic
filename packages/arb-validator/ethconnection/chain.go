@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package ethconnection
 
 import (
 	"context"

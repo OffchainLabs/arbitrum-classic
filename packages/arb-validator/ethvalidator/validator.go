@@ -21,13 +21,13 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -41,17 +41,17 @@ type Validator struct {
 
 	// Not in thread, but internal only
 	serverAddress string
-	arbAddresses  ethbridge.ArbAddresses
+	arbAddresses  ethconnection.ArbAddresses
 	client        *ethclient.Client
 
-	*ethbridge.ChannelCreator
-	*ethbridge.PendingInbox
+	*ethconnection.ArbLauncher
+	*ethconnection.PendingInbox
 	auth *bind.TransactOpts
 }
 
 func NewValidator(
 	key *ecdsa.PrivateKey,
-	connectionInfo ethbridge.ArbAddresses,
+	connectionInfo ethconnection.ArbAddresses,
 	ethURL string,
 ) (*Validator, error) {
 	auth := bind.NewKeyedTransactor(key)
@@ -61,24 +61,24 @@ func NewValidator(
 		return nil, err
 	}
 
-	vmCreator, err := ethbridge.NewVMCreator(common.HexToAddress(connectionInfo.VMCreatorAddress), client)
+	vmCreator, err := ethconnection.NewArbLauncher(common.HexToAddress(connectionInfo.VMCreatorAddress), client)
 	if err != nil {
 		return nil, err
 	}
 
-	pendingInbox, err := ethbridge.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
+	pendingInbox, err := ethconnection.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Validator{
-		key:            key,
-		serverAddress:  ethURL,
-		arbAddresses:   connectionInfo,
-		client:         client,
-		ChannelCreator: vmCreator,
-		PendingInbox:   pendingInbox,
-		auth:           auth,
+		key:           key,
+		serverAddress: ethURL,
+		arbAddresses:  connectionInfo,
+		client:        client,
+		ArbLauncher:   vmCreator,
+		PendingInbox:  pendingInbox,
+		auth:          auth,
 	}, nil
 }
 
@@ -167,12 +167,24 @@ func (val *Validator) GetTokenBalance(
 	return amt, err
 }
 
-func (val *Validator) LaunchVM(
+func (val *Validator) LaunchChannel(
 	ctx context.Context,
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
-) (*types.Receipt, error) {
-	return val.ChannelCreator.LaunchVM(
+) (common.Address, error) {
+	return val.ArbLauncher.LaunchChannel(
+		val.makeAuth(ctx),
+		config,
+		vmState,
+	)
+}
+
+func (val *Validator) LaunchChain(
+	ctx context.Context,
+	config *valmessage.VMConfiguration,
+	vmState [32]byte,
+) (common.Address, error) {
+	return val.ArbLauncher.LaunchChain(
 		val.makeAuth(ctx),
 		config,
 		vmState,

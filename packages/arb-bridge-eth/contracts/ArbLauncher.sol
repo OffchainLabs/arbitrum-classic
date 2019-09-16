@@ -17,17 +17,16 @@
 pragma solidity ^0.5.3;
 
 import "./vm/ArbChannel.sol";
+import "./vm/ArbChain.sol";
 
 
-contract ChannelCreator {
+contract ArbLauncher {
     event ChannelCreated(
-        address vmAddress,
-        uint32 gracePeriod,
-        uint128 escrowRequired,
-        uint32 maxExecutionSteps,
-        bytes32 vmState,
-        address owner,
-        address[] validators
+        address vmAddress
+    );
+
+    event ChainCreated(
+        address vmAddress
     );
 
     address globalInboxAddress;
@@ -38,7 +37,7 @@ contract ChannelCreator {
         challengeManagerAddress = _challengeManagerAddress;
     }
 
-    function launchVM(
+    function launchChannel(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
@@ -59,13 +58,30 @@ contract ChannelCreator {
             _validatorKeys
         );
         emit ChannelCreated(
-            address(vm),
-            _gracePeriod,
-            _escrowRequired,
-            _maxExecutionSteps,
+            address(vm)
+        );
+    }
+
+    function launchChain(
+        bytes32 _vmState,
+        uint32 _gracePeriod,
+        uint32 _maxExecutionSteps,
+        uint128 _escrowRequired,
+        address payable _owner
+    )
+        public
+    {
+        ArbChain vm = new ArbChain(
             _vmState,
+            _gracePeriod,
+            _maxExecutionSteps,
+            _escrowRequired,
             _owner,
-            _validatorKeys
+            challengeManagerAddress,
+            globalInboxAddress
+        );
+        emit ChainCreated(
+            address(vm)
         );
     }
 }

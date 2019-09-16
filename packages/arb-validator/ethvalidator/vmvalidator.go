@@ -24,21 +24,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
-
 	errors2 "github.com/pkg/errors"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -54,7 +50,7 @@ type VMValidator struct {
 	mutex *sync.Mutex
 	// private thread only
 	validator               *Validator
-	vmTracker               *ethbridge.VMTracker
+	vmTracker               *ethconnection.ArbChannel
 	unprocessedMessageCount uint64
 }
 
@@ -85,7 +81,7 @@ func NewVMValidator(
 	challengeEverything bool,
 	maxCallSteps int32,
 ) (*VMValidator, error) {
-	con, err := ethbridge.NewVMTracker(vmID, val.client)
+	con, err := ethconnection.NewVMTracker(vmID, val.client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "VMValidator failed to create NewVMTracker")
 	}
@@ -117,7 +113,7 @@ func NewVMValidator(
 
 	_, found := manMap[val.Address()]
 	if !found {
-		return nil, errors.New("key is not a validator of chosen VMTracker")
+		return nil, errors.New("key is not a validator of chosen ArbChannel")
 	}
 
 	header, err := val.LatestHeader(context.Background())
@@ -216,7 +212,7 @@ func (val *VMValidator) Sign(msgHash [32]byte) ([]byte, error) {
 }
 
 func (val *VMValidator) restartConnection(ctx context.Context) (chan ethconnection.Notification, chan error, error) {
-	vmCon, err := ethbridge.NewVMTracker(val.VMID, val.validator.client)
+	vmCon, err := ethconnection.NewVMTracker(val.VMID, val.validator.client)
 	if err != nil {
 		return nil, nil, err
 	}

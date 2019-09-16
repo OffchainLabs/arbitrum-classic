@@ -28,6 +28,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -35,7 +37,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -55,7 +56,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var connectionInfo ethbridge.ArbAddresses
+	var connectionInfo ethconnection.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		log.Fatalln(err)
 	}
@@ -108,12 +109,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	receipt, err := val1.LaunchVM(context.Background(), config, machine.Hash())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	address, _, _, err := val1.ParseVMCreated(receipt.Logs[0])
+	address, err := val1.LaunchChannel(context.Background(), config, machine.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}

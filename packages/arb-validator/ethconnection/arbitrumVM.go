@@ -19,10 +19,12 @@ package ethconnection
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/channelcreator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/arblauncher"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	errors2 "github.com/pkg/errors"
@@ -38,19 +40,19 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 
-type VMTracker struct {
+type ArbitrumVM struct {
 	Client             *ethclient.Client
-	Tracker            *channelcreator.ArbChannel
+	Tracker            *arblauncher.ArbitrumVM
 	Challenge          *challengemanager.ChallengeManager
-	GlobalPendingInbox *channelcreator.IGlobalPendingInbox
+	GlobalPendingInbox *arblauncher.IGlobalPendingInbox
 
 	address common.Address
 }
 
-func NewVMTracker(address common.Address, client *ethclient.Client) (*VMTracker, error) {
-	trackerContract, err := channelcreator.NewArbChannel(address, client)
+func NewArbitrumVM(address common.Address, client *ethclient.Client) (*ArbitrumVM, error) {
+	trackerContract, err := arblauncher.NewArbitrumVM(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to VMTracker")
+		return nil, errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
 
 	challengeManagerAddress, err := trackerContract.ChallengeManager(&bind.CallOpts{
@@ -72,15 +74,15 @@ func NewVMTracker(address common.Address, client *ethclient.Client) (*VMTracker,
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
 	}
-	globalPendingContract, err := channelcreator.NewIGlobalPendingInbox(globalPendingInboxAddress, client)
+	globalPendingContract, err := arblauncher.NewIGlobalPendingInbox(globalPendingInboxAddress, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
 
-	return &VMTracker{client, trackerContract, challengeManagerContract, globalPendingContract, address}, nil
+	return &ArbitrumVM{client, trackerContract, challengeManagerContract, globalPendingContract, address}, nil
 }
 
-func (vm *VMTracker) CreateListeners(ctx context.Context) (chan Notification, chan error, error) {
+func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, chan error, error) {
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
 
@@ -96,43 +98,25 @@ func (vm *VMTracker) CreateListeners(ctx context.Context) (chan Notification, ch
 		return nil, nil, err
 	}
 
-	messageDeliveredChan := make(chan *channelcreator.IGlobalPendingInboxMessageDelivered)
+	messageDeliveredChan := make(chan *arblauncher.IGlobalPendingInboxMessageDelivered)
 	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	unanAssChan := make(chan *channelcreator.ArbChannelFinalizedUnanimousAssertion)
-	unanAssSub, err := vm.Tracker.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	unanPropChan := make(chan *channelcreator.ArbChannelPendingUnanimousAssertion)
-	unanPropSub, err := vm.Tracker.WatchPendingUnanimousAssertion(watch, unanPropChan)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	unanConfChan := make(chan *channelcreator.ArbChannelConfirmedUnanimousAssertion)
-	unanConfSub, err := vm.Tracker.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	dispAssChan := make(chan *channelcreator.ArbChannelPendingDisputableAssertion)
+	dispAssChan := make(chan *arblauncher.ArbitrumVMPendingDisputableAssertion)
 	dispAssSub, err := vm.Tracker.WatchPendingDisputableAssertion(watch, dispAssChan)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	confAssChan := make(chan *channelcreator.ArbChannelConfirmedDisputableAssertion)
+	confAssChan := make(chan *arblauncher.ArbitrumVMConfirmedDisputableAssertion)
 	confAssSub, err := vm.Tracker.WatchConfirmedDisputableAssertion(watch, confAssChan)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	challengeInitiatedChan := make(chan *channelcreator.ArbChannelInitiatedChallenge)
+	challengeInitiatedChan := make(chan *arblauncher.ArbitrumVMInitiatedChallenge)
 	challengeInitiatedSub, err := vm.Tracker.WatchInitiatedChallenge(watch, challengeInitiatedChan)
 	if err != nil {
 		return nil, nil, err
@@ -163,11 +147,8 @@ func (vm *VMTracker) CreateListeners(ctx context.Context) (chan Notification, ch
 	}
 
 	go func() {
-		defer close(outChan)
-		defer close(errChan)
 		defer headersSub.Unsubscribe()
 		defer messageDeliveredSub.Unsubscribe()
-		defer unanAssSub.Unsubscribe()
 		defer dispAssSub.Unsubscribe()
 		defer confAssSub.Unsubscribe()
 		defer challengeInitiatedSub.Unsubscribe()
@@ -219,49 +200,6 @@ func (vm *VMTracker) CreateListeners(ctx context.Context) (chan Notification, ch
 					VMID:   val.VmId,
 					Event: MessageDeliveredEvent{
 						Msg: msg,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-unanAssChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					errChan <- err
-					return
-				}
-				outChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: FinalizedUnanimousAssertEvent{
-						UnanHash: val.UnanHash,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-unanPropChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					errChan <- err
-					return
-				}
-				outChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: PendingUnanimousAssertEvent{
-						UnanHash:    val.UnanHash,
-						SequenceNum: val.SequenceNum,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-unanConfChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					errChan <- err
-					return
-				}
-				outChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: ConfirmedUnanimousAssertEvent{
-						SequenceNum: val.SequenceNum,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -379,15 +317,6 @@ func (vm *VMTracker) CreateListeners(ctx context.Context) (chan Notification, ch
 			case err := <-messageDeliveredSub.Err():
 				errChan <- err
 				return
-			case err := <-unanAssSub.Err():
-				errChan <- err
-				return
-			case err := <-unanPropSub.Err():
-				errChan <- err
-				return
-			case err := <-unanConfSub.Err():
-				errChan <- err
-				return
 			case err := <-dispAssSub.Err():
 				errChan <- err
 				return
@@ -415,125 +344,11 @@ func (vm *VMTracker) CreateListeners(ctx context.Context) (chan Notification, ch
 	return outChan, errChan, nil
 }
 
-func (vm *VMTracker) IncreaseDeposit(
-	auth *bind.TransactOpts,
-	amount *big.Int,
-) (*types.Transaction, error) {
-	call := &bind.TransactOpts{
-		From:     auth.From,
-		Nonce:    auth.Nonce,
-		Signer:   auth.Signer,
-		Value:    amount,
-		GasPrice: auth.GasPrice,
-		GasLimit: 100000,
-		Context:  auth.Context,
-	}
-	return vm.Tracker.IncreaseDeposit(call)
-}
-
-func (vm *VMTracker) FinalizedUnanimousAssert(
-	auth *bind.TransactOpts,
-	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
-	signatures [][]byte,
-) (*types.Transaction, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return vm.Tracker.FinalizedUnanimousAssert(
-		auth,
-		assertion.AfterHash,
-		newInboxHash,
-		tokenTypes,
-		messageData.Bytes(),
-		tokenNums,
-		amounts,
-		destinations,
-		assertion.LogsHash(),
-		sigsToBlock(signatures),
-	)
-}
-
-func (vm *VMTracker) PendingUnanimousAssert(
-	auth *bind.TransactOpts,
-	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
-	sequenceNum uint64,
-	signatures [][]byte,
-) (*types.Transaction, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var unanRest [32]byte
-	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
-		newInboxHash,
-		assertion,
-		messageData,
-		destinations,
-	))
-
-	return vm.Tracker.PendingUnanimousAssert(
-		auth,
-		unanRest,
-		tokenTypes,
-		tokenNums,
-		amounts,
-		sequenceNum,
-		assertion.LogsHash(),
-		sigsToBlock(signatures),
-	)
-}
-
-func (vm *VMTracker) ConfirmUnanimousAsserted(
-	auth *bind.TransactOpts,
-	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
-) (*types.Transaction, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	tx, err := vm.Tracker.ConfirmUnanimousAsserted(
-		auth,
-		assertion.AfterHash,
-		newInboxHash,
-		tokenTypes,
-		messageData.Bytes(),
-		tokenNums,
-		amounts,
-		destinations,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't confirm assertion: %v", err)
-	}
-	return tx, nil
-}
-
-func (vm *VMTracker) PendingDisputableAssert(
+func (vm *ArbChannel) PendingDisputableAssert(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	dataHashes := make([][32]byte, 0, len(assertion.OutMsgs))
@@ -541,7 +356,7 @@ func (vm *VMTracker) PendingDisputableAssert(
 		dataHashes = append(dataHashes, msg.Data.Hash())
 	}
 
-	return vm.Tracker.PendingDisputableAssert(
+	tx, err := vm.Tracker.PendingDisputableAssert(
 		auth,
 		[4][32]byte{
 			precondition.BeforeHash,
@@ -557,13 +372,17 @@ func (vm *VMTracker) PendingDisputableAssert(
 		amounts,
 		destinations,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
 }
 
-func (vm *VMTracker) ConfirmDisputableAsserted(
+func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	var messageData bytes.Buffer
@@ -587,32 +406,36 @@ func (vm *VMTracker) ConfirmDisputableAsserted(
 		assertion.LogsHash(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't confirm disputable assertion: %v", err)
+		return nil, err
 	}
-	return tx, nil
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
 }
 
-func (vm *VMTracker) InitiateChallenge(
+func (vm *ArbitrumVM) InitiateChallenge(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	var preAssHash [32]byte
 	copy(preAssHash[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(precondition.Hash()),
 		solsha3.Bytes32(assertion.Hash()),
 	))
-	return vm.Tracker.InitiateChallenge(
+	tx, err := vm.Tracker.InitiateChallenge(
 		auth,
 		preAssHash,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
 }
 
-func (vm *VMTracker) BisectAssertion(
+func (vm *ArbitrumVM) BisectAssertion(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
 	totalMessageAmounts := make([]*big.Int, 0)
 	totalSteps := uint32(0)
@@ -630,7 +453,7 @@ func (vm *VMTracker) BisectAssertion(
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHash)
 	}
 	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
-	return vm.Challenge.BisectAssertion(
+	tx, err := vm.Challenge.BisectAssertion(
 		auth,
 		vm.address,
 		[2][32]byte{
@@ -644,16 +467,20 @@ func (vm *VMTracker) BisectAssertion(
 		tokenTypes,
 		amounts,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
 }
 
-func (vm *VMTracker) ContinueChallenge(
+func (vm *ArbitrumVM) ContinueChallenge(
 	auth *bind.TransactOpts,
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,
 	assertions []*protocol.AssertionStub,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	tree := buildBisectionTree(preconditions, assertions)
-	return vm.Challenge.ContinueChallenge(
+	tx, err := vm.Challenge.ContinueChallenge(
 		auth,
 		vm.address,
 		big.NewInt(int64(assertionToChallenge)),
@@ -661,16 +488,20 @@ func (vm *VMTracker) ContinueChallenge(
 		tree.GetRoot(),
 		tree.GetNode(int(assertionToChallenge)),
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
 }
 
-func (vm *VMTracker) OneStepProof(
+func (vm *ArbitrumVM) OneStepProof(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	proof []byte,
-) (*types.Transaction, error) {
+) (*types.Receipt, error) {
 	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
-	return vm.Challenge.OneStepProof(
+	tx, err := vm.Challenge.OneStepProof(
 		auth,
 		vm.address,
 		[2][32]byte{precondition.BeforeHash, precondition.BeforeInbox.Hash()},
@@ -687,24 +518,94 @@ func (vm *VMTracker) OneStepProof(
 		assertion.TotalVals,
 		proof,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
 }
 
-func (vm *VMTracker) AsserterTimedOutChallenge(
+func (vm *ArbitrumVM) AsserterTimedOutChallenge(
 	auth *bind.TransactOpts,
-) (*types.Transaction, error) {
-	return vm.Challenge.AsserterTimedOut(
+) (*types.Receipt, error) {
+	tx, err := vm.Challenge.AsserterTimedOut(
 		auth,
 		vm.address,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
 }
 
-func (vm *VMTracker) ChallengerTimedOutChallenge(
+func (vm *ArbitrumVM) ChallengerTimedOutChallenge(
 	auth *bind.TransactOpts,
-) (*types.Transaction, error) {
-	return vm.Challenge.ChallengerTimedOut(
+) (*types.Receipt, error) {
+	tx, err := vm.Challenge.ChallengerTimedOut(
 		auth,
 		vm.address,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+}
+
+func (vm *ArbitrumVM) CurrentDeposit(
+	auth *bind.CallOpts,
+	address common.Address,
+) (*big.Int, error) {
+	return vm.Tracker.CurrentDeposit(auth, address)
+}
+
+func (vm *ArbitrumVM) EscrowRequired(
+	auth *bind.CallOpts,
+) (*big.Int, error) {
+	return vm.Tracker.EscrowRequired(auth)
+}
+
+func (vm *ArbitrumVM) IsEnabled(
+	auth *bind.CallOpts,
+) (bool, error) {
+	status, err := vm.Tracker.GetState(auth)
+	return status != 0, err
+}
+
+func (vm *ArbitrumVM) VerifyVM(
+	auth *bind.CallOpts,
+	config *valmessage.VMConfiguration,
+	machine [32]byte,
+) error {
+	//code, err := vm.contract.Client.CodeAt(auth.Context, vm.address, nil)
+	// Verify that VM has correct code
+	vmInfo, err := vm.Tracker.Vm(auth)
+	if err != nil {
+		return err
+	}
+
+	if vmInfo.MachineHash != machine {
+		return errors.New("VM has different machine hash")
+	}
+
+	if config.GracePeriod != uint64(vmInfo.GracePeriod) {
+		return errors.New("VM has different grace period")
+	}
+
+	if value.NewBigIntFromBuf(config.EscrowRequired).Cmp(vmInfo.EscrowRequired) != 0 {
+		return errors.New("VM has different escrow required")
+	}
+
+	if config.MaxExecutionStepCount != vmInfo.MaxExecutionSteps {
+		return errors.New("VM has different mxa steps")
+	}
+
+	owner, err := vm.Tracker.Owner(auth)
+	if err != nil {
+		return err
+	}
+	if protocol.NewAddressFromBuf(config.Owner) != owner {
+		return errors.New("VM has different owner")
+	}
+	return nil
 }
 
 func buildBisectionTree(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub) *MerkleTree {
@@ -745,7 +646,7 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 	return assertions
 }
 
-func translateDisputableAssertionEvent(event *channelcreator.ArbChannelPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
+func translateDisputableAssertionEvent(event *arblauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	balanceTracker := protocol.NewBalanceTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],

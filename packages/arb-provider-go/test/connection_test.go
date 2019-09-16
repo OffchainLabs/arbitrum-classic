@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -26,7 +28,6 @@ import (
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -53,7 +54,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 	t.Log("bridge_eth_addresses.json loaded")
-	var connectionInfo ethbridge.ArbAddresses
+	var connectionInfo ethconnection.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Errorf("setupValidators Unmarshal error %v", err)
 		return err
@@ -105,13 +106,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	receipt, err := val1.LaunchVM(context.Background(), config, mach.Hash())
-	if err != nil {
-		t.Error(err)
-		return err
-	}
-
-	address, _, _, err := val1.ParseVMCreated(receipt.Logs[0])
+	address, err := val1.LaunchChannel(context.Background(), config, mach.Hash())
 	if err != nil {
 		t.Error(err)
 		return err

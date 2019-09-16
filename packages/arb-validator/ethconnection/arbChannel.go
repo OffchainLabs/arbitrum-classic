@@ -1,0 +1,317 @@
+/*
+ * Copyright 2019, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package ethconnection
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/arblauncher"
+
+	errors2 "github.com/pkg/errors"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
+)
+
+type ArbChannel struct {
+	Client *ethclient.Client
+	*ArbitrumVM
+	Tracker *arblauncher.ArbChannel
+}
+
+func NewVMTracker(address common.Address, client *ethclient.Client) (*ArbChannel, error) {
+	arbVM, err := NewArbitrumVM(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ArbitrumVM")
+	}
+
+	trackerContract, err := arblauncher.NewArbChannel(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ArbChannel")
+	}
+
+	return &ArbChannel{client, arbVM, trackerContract}, nil
+}
+
+func (vm *ArbChannel) CreateListeners(ctx context.Context) (chan Notification, chan error, error) {
+	outChan, errChan, err := vm.ArbitrumVM.CreateListeners(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	start := uint64(0)
+	watch := &bind.WatchOpts{
+		Context: ctx,
+		Start:   &start,
+	}
+
+	unanAssChan := make(chan *arblauncher.ArbChannelFinalizedUnanimousAssertion)
+	unanAssSub, err := vm.Tracker.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	unanPropChan := make(chan *arblauncher.ArbChannelPendingUnanimousAssertion)
+	unanPropSub, err := vm.Tracker.WatchPendingUnanimousAssertion(watch, unanPropChan)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	unanConfChan := make(chan *arblauncher.ArbChannelConfirmedUnanimousAssertion)
+	unanConfSub, err := vm.Tracker.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	go func() {
+		defer close(outChan)
+		defer close(errChan)
+		defer unanAssSub.Unsubscribe()
+		defer unanConfSub.Unsubscribe()
+		defer unanPropSub.Unsubscribe()
+
+		for {
+			select {
+			case <-ctx.Done():
+				break
+			case val := <-unanAssChan:
+				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VMID:   vm.address,
+					Event: FinalizedUnanimousAssertEvent{
+						UnanHash: val.UnanHash,
+					},
+					TxHash: val.Raw.TxHash,
+				}
+			case val := <-unanPropChan:
+				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VMID:   vm.address,
+					Event: PendingUnanimousAssertEvent{
+						UnanHash:    val.UnanHash,
+						SequenceNum: val.SequenceNum,
+					},
+					TxHash: val.Raw.TxHash,
+				}
+			case val := <-unanConfChan:
+				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- Notification{
+					Header: header,
+					VMID:   vm.address,
+					Event: ConfirmedUnanimousAssertEvent{
+						SequenceNum: val.SequenceNum,
+					},
+					TxHash: val.Raw.TxHash,
+				}
+			case err := <-unanAssSub.Err():
+				errChan <- err
+				return
+			case err := <-unanPropSub.Err():
+				errChan <- err
+				return
+			case err := <-unanConfSub.Err():
+				errChan <- err
+				return
+			}
+		}
+	}()
+	return outChan, errChan, nil
+}
+
+func (vm *ArbChannel) IncreaseDeposit(
+	auth *bind.TransactOpts,
+	amount *big.Int,
+) (*types.Receipt, error) {
+	call := &bind.TransactOpts{
+		From:     auth.From,
+		Nonce:    auth.Nonce,
+		Signer:   auth.Signer,
+		Value:    amount,
+		GasPrice: auth.GasPrice,
+		GasLimit: 100000,
+		Context:  auth.Context,
+	}
+	tx, err := vm.Tracker.IncreaseDeposit(call)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+}
+
+func (vm *ArbChannel) FinalizedUnanimousAssert(
+	auth *bind.TransactOpts,
+	newInboxHash [32]byte,
+	assertion *protocol.Assertion,
+	signatures [][]byte,
+) (*types.Receipt, error) {
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
+
+	var messageData bytes.Buffer
+	for _, msg := range assertion.OutMsgs {
+		err := value.MarshalValue(msg.Data, &messageData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	tx, err := vm.Tracker.FinalizedUnanimousAssert(
+		auth,
+		assertion.AfterHash,
+		newInboxHash,
+		tokenTypes,
+		messageData.Bytes(),
+		tokenNums,
+		amounts,
+		destinations,
+		assertion.LogsHash(),
+		sigsToBlock(signatures),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+}
+
+func (vm *ArbChannel) PendingUnanimousAssert(
+	auth *bind.TransactOpts,
+	newInboxHash [32]byte,
+	assertion *protocol.Assertion,
+	sequenceNum uint64,
+	signatures [][]byte,
+) (*types.Receipt, error) {
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
+
+	var messageData bytes.Buffer
+	for _, msg := range assertion.OutMsgs {
+		err := value.MarshalValue(msg.Data, &messageData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var unanRest [32]byte
+	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
+		newInboxHash,
+		assertion,
+		messageData,
+		destinations,
+	))
+
+	tx, err := vm.Tracker.PendingUnanimousAssert(
+		auth,
+		unanRest,
+		tokenTypes,
+		tokenNums,
+		amounts,
+		sequenceNum,
+		assertion.LogsHash(),
+		sigsToBlock(signatures),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+}
+
+func (vm *ArbChannel) ConfirmUnanimousAsserted(
+	auth *bind.TransactOpts,
+	newInboxHash [32]byte,
+	assertion *protocol.Assertion,
+) (*types.Receipt, error) {
+	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
+
+	var messageData bytes.Buffer
+	for _, msg := range assertion.OutMsgs {
+		err := value.MarshalValue(msg.Data, &messageData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	tx, err := vm.Tracker.ConfirmUnanimousAsserted(
+		auth,
+		assertion.AfterHash,
+		newInboxHash,
+		tokenTypes,
+		messageData.Bytes(),
+		tokenNums,
+		amounts,
+		destinations,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+}
+
+func (vm *ArbChannel) VerifyVM(
+	auth *bind.CallOpts,
+	config *valmessage.VMConfiguration,
+	machine [32]byte,
+) error {
+	err := vm.ArbitrumVM.VerifyVM(auth, config, machine)
+	validators := make([]common.Address, 0, len(config.AssertKeys))
+	for _, assertKey := range config.AssertKeys {
+		validators = append(validators, protocol.NewAddressFromBuf(assertKey))
+	}
+	correctValidators, err := vm.Tracker.IsValidatorList(auth, validators)
+	if err != nil {
+		return err
+	}
+	if !correctValidators {
+		return errors.New("VM has different validator list")
+	}
+	return nil
+}
+
+func sigsToBlock(signatures [][]byte) []byte {
+	sigData := make([]byte, 0, len(signatures)*65)
+	for _, sig := range signatures {
+		sigData = append(sigData, sig[:64]...)
+		v := uint8(int(sig[64]))
+		if v < 27 {
+			v += 27
+		}
+		sigData = append(sigData, v)
+	}
+	return sigData
+}

@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./ArbitrumVM.sol";
 
-contract ArbChannel is ArbitrumVM {
+contract ArbChain is ArbitrumVM {
 
     constructor(
         bytes32 _vmState,

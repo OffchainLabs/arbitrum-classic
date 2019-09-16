@@ -29,11 +29,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -47,7 +48,7 @@ func NewFollowerServer(
 	machine machine.Machine,
 	key *ecdsa.PrivateKey,
 	validators []common.Address,
-	connectionInfo ethbridge.ArbAddresses,
+	connectionInfo ethconnection.ArbAddresses,
 	ethURL string,
 	coordinatorURL string,
 ) *FollowerServer {
@@ -163,7 +164,7 @@ func main() {
 	if err := jsonFile.Close(); err != nil {
 		log.Fatalln(err)
 	}
-	var connectionInfo ethbridge.ArbAddresses
+	var connectionInfo ethconnection.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		log.Fatalln(err)
 	}

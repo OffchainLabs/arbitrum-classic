@@ -7,15 +7,15 @@ yarn workspace arb-bridge-eth build
 cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../node_modules/solidity-bytes-utils/ ./solidity-bytes-utils
-abigen --sol=ChannelCreator.sol --pkg=channelcreator --out=channelcreator.go
+abigen --sol=ArbLauncher.sol --pkg=arblauncher --out=arblauncher.go
 abigen --sol=ChallengeManager.sol --pkg=challengemanager --out=challengemanager.go
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
-\cp channelcreator.go ../../arb-validator/ethconnection/channelcreator/
+\cp arblauncher.go ../../arb-validator/ethconnection/arblauncher/
 \cp challengemanager.go ../../arb-validator/ethconnection/challengemanager/
 \cp globalpendinginbox.go ../../arb-validator/ethconnection/globalpendinginbox/
 rm -rf @openzeppelin solidity-bytes-utils
 \cp ../build/contracts/VMTracker.json ../../arb-provider-ethers/src/lib/VMTracker.json
 \cp ../build/contracts/GlobalPendingInbox.json ../../arb-provider-ethers/src/lib/GlobalPendingInbox.json
-rm -f channelcreator.go challengemanager.go globalpendinginbox.go
+rm -f arblauncher.go challengemanager.go globalpendinginbox.go
 cd ../../..
 yarn workspace arb-provider-ethers shrinkABI

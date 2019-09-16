@@ -28,6 +28,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
@@ -40,7 +42,6 @@ import (
 	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
@@ -128,7 +129,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var connectionInfo ethbridge.ArbAddresses
+	var connectionInfo ethconnection.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		log.Fatalln(err)
 	}
@@ -155,12 +156,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	receipt, err := val.LaunchVM(context.Background(), config, mach.Hash())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	address, _, _, err := val.ParseVMCreated(receipt.Logs[0])
+	address, err := val.LaunchChannel(context.Background(), config, mach.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
