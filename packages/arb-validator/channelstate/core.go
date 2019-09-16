@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package state
+package channelstate
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"

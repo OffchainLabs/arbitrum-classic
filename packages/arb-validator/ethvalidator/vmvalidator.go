@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channelvalidator"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -36,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
@@ -44,7 +45,7 @@ type VMValidator struct {
 	// Safe public interface
 	VMID              common.Address
 	Validators        map[common.Address]validatorInfo
-	Bot               *validator.Validator
+	Bot               *channelvalidator.Validator
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
 	mutex *sync.Mutex
@@ -121,7 +122,7 @@ func NewVMValidator(
 		return nil, errors2.Wrap(err, "VMValidator couldn't get latest error")
 	}
 
-	bot := validator.NewValidator(
+	bot := channelvalidator.NewValidator(
 		name,
 		val.Address(),
 		header,

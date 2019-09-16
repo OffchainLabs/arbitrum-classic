@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package validator
+package channelvalidator
 
 import (
 	"bytes"
@@ -24,21 +24,21 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channelstate"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
@@ -48,10 +48,10 @@ type Validator struct {
 	maybeAssert chan bool
 
 	// Run loop only
-	bot                      state.State
+	bot                      channelstate.State
 	challengeBot             challenge.State
 	latestHeader             *types.Header
-	pendingDisputableRequest *state.DisputableAssertionRequest
+	pendingDisputableRequest *channelstate.DisputableAssertionRequest
 }
 
 func NewValidator(
@@ -76,7 +76,7 @@ func NewValidator(
 		name,
 		actions,
 		maybeAssert,
-		state.NewWaiting(valConfig, c),
+		channelstate.NewWaiting(valConfig, c),
 		nil,
 		latestHeader,
 		nil,
@@ -157,7 +157,7 @@ func (validator *Validator) PendingMessageCount() chan uint64 {
 func (validator *Validator) HasOpenAssertion() chan bool {
 	resultChan := make(chan bool, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
+		bot, ok := validator.bot.(channelstate.Waiting)
 		if !ok {
 			resultChan <- false
 		} else {
@@ -239,7 +239,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 				BeforeBalance: spentBalance,
 				BeforeInbox:   mClone.InboxHash(),
 			}
-			request := &state.DisputableAssertionRequest{
+			request := &channelstate.DisputableAssertionRequest{
 				AfterCore:    core.NewCore(mClone, balance),
 				Precondition: pre,
 				Assertion:    assertion,
@@ -290,7 +290,7 @@ func (validator *Validator) InitiateUnanimousRequest(
 			errChan <- errors.New("Can't unanimous assert when not running")
 			return
 		}
-		bot, ok := validator.bot.(state.Waiting)
+		bot, ok := validator.bot.(channelstate.Waiting)
 		if !ok {
 			errChan <- fmt.Errorf("recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 			return
@@ -362,7 +362,7 @@ func (validator *Validator) RequestFollowUnanimous(
 			errChan <- errors.New("Can't unanimous assert when not running")
 			return
 		}
-		bot, ok := validator.bot.(state.Waiting)
+		bot, ok := validator.bot.(channelstate.Waiting)
 		if !ok {
 			errChan <- fmt.Errorf("recieved follow unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 			return
@@ -397,7 +397,7 @@ func (validator *Validator) RequestFollowUnanimous(
 
 func (validator *Validator) requestUnanimousUpdate(request unanimousUpdateRequest) {
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
+		bot, ok := validator.bot.(channelstate.Waiting)
 		if !ok {
 			request.ErrChan <- fmt.Errorf("recieved unanimous update request, but was in the wrong state to handle it: %T", validator.bot)
 			return
@@ -429,7 +429,7 @@ func (validator *Validator) ConfirmOffchainUnanimousAssertion(
 	resultChan := make(chan bool, 1)
 	errChan := make(chan error, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
+		bot, ok := validator.bot.(channelstate.Waiting)
 		if !ok {
 			errChan <- fmt.Errorf("recieved unanimous confirm request, but was in the wrong state to handle it: %T", validator.bot)
 			return
@@ -474,7 +474,7 @@ func (validator *Validator) CloseUnanimousAssertionRequest() (<-chan bool, <-cha
 	resultChan := make(chan bool, 1)
 	errChan := make(chan error, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
+		bot, ok := validator.bot.(channelstate.Waiting)
 		if !ok {
 			errChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
 			return
@@ -494,7 +494,7 @@ func (validator *Validator) ClosingUnanimousAssertionRequest() (<-chan bool, <-c
 	resultChan := make(chan bool, 1)
 	errChan := make(chan error, 1)
 	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
+		bot, ok := validator.bot.(channelstate.Waiting)
 		if !ok {
 			errChan <- fmt.Errorf("can't close unanimous request. Validator was in the wrong state to handle it: %T", validator.bot)
 			return
@@ -553,7 +553,7 @@ func (validator *Validator) Run(recvChan <-chan ethconnection.Notification, brid
 		case <-validator.maybeAssert:
 		}
 
-		if bot, ok := validator.bot.(state.Waiting); ok && validator.pendingDisputableRequest != nil {
+		if bot, ok := validator.bot.(channelstate.Waiting); ok && validator.pendingDisputableRequest != nil {
 			validator.bot = bot.AttemptAssertion(context.Background(), *validator.pendingDisputableRequest, bridge)
 			validator.pendingDisputableRequest = nil
 		}
