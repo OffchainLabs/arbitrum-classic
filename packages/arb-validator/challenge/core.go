@@ -26,8 +26,8 @@ import (
 )
 
 type State interface {
-	UpdateTime(uint64, bridge.Bridge) (State, error)
-	UpdateState(ethconnection.Event, uint64, bridge.Bridge) (State, error)
+	UpdateTime(uint64, bridge.ArbVMBridge) (State, error)
+	UpdateState(ethconnection.Event, uint64, bridge.ArbVMBridge) (State, error)
 }
 
 type Error struct {
@@ -46,11 +46,11 @@ type TimedOutChallenger struct {
 	*core.Config
 }
 
-func (bot TimedOutChallenger) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot TimedOutChallenger) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (State, error) {
 	return bot, nil
 }
 
-func (bot TimedOutChallenger) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, error) {
+func (bot TimedOutChallenger) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
 	switch ev.(type) {
 	case ethconnection.ChallengerTimeoutEvent:
 		return nil, nil
@@ -63,11 +63,11 @@ type TimedOutAsserter struct {
 	*core.Config
 }
 
-func (bot TimedOutAsserter) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot TimedOutAsserter) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (State, error) {
 	return bot, nil
 }
 
-func (bot TimedOutAsserter) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, error) {
+func (bot TimedOutAsserter) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
 	switch ev.(type) {
 	case ethconnection.AsserterTimeoutEvent:
 		return nil, nil

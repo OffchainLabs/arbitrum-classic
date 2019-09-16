@@ -26,14 +26,7 @@ import (
 )
 
 type Bridge interface {
-	AddedNewMessages(count uint64)
-
-	FinalizedAssertion(
-		assertion *protocol.Assertion,
-		onChainTxHash []byte,
-		signatures [][]byte,
-		proposalResults *valmessage.UnanimousUpdateResults,
-	)
+	ArbVMBridge
 
 	FinalizedUnanimousAssert(
 		ctx context.Context,
@@ -55,6 +48,17 @@ type Bridge interface {
 		newInboxHash [32]byte,
 		assertion *protocol.Assertion,
 	) (chan *types.Receipt, chan error)
+}
+
+type ArbVMBridge interface {
+	AddedNewMessages(count uint64)
+
+	FinalizedAssertion(
+		assertion *protocol.Assertion,
+		onChainTxHash []byte,
+		signatures [][]byte,
+		proposalResults *valmessage.UnanimousUpdateResults,
+	)
 
 	PendingDisputableAssert(
 		ctx context.Context,
