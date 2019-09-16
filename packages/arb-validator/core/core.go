@@ -73,7 +73,7 @@ func (c *Core) SendMessageToVM(msg protocol.Message) {
 	c.balance.Add(msg.TokenType, msg.Currency)
 }
 
-func (c *Core) DeliverMessagesToVM(bridge bridge.Bridge) {
+func (c *Core) DeliverMessagesToVM(bridge bridge.ArbVMBridge) {
 	bridge.AddedNewMessages(c.machine.PendingMessageCount())
 	c.machine.DeliverOnchainMessage()
 }

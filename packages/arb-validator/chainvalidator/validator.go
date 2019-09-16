@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package channelvalidator
+package chainvalidator
 
 import (
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/disputable"
 
@@ -40,17 +41,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type Validator struct {
 	Name        string
-	actions     chan func(*Validator, bridge.Bridge)
+	actions     chan func(*Validator, bridge.ArbVMBridge)
 	maybeAssert chan bool
 
 	// Run loop only
-	bot                      state.State
+	bot                      state.ChainState
 	challengeBot             challenge.State
 	latestHeader             *types.Header
 	pendingDisputableRequest *disputable.AssertionRequest
@@ -66,7 +66,7 @@ func NewValidator(
 	challengeEverything bool,
 	maxCallSteps int32,
 ) *Validator {
-	actions := make(chan func(*Validator, bridge.Bridge), 100)
+	actions := make(chan func(*Validator, bridge.ArbVMBridge), 100)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
 		machine,
@@ -88,7 +88,7 @@ func NewValidator(
 func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Value, <-chan error) {
 	resultChan := make(chan value.Value, 1)
 	errChan := make(chan error, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
 		if !validator.canRun() {
 			errChan <- errors.New("Cannot call when ArbChannel is not running")
 			return
@@ -149,24 +149,10 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 
 func (validator *Validator) PendingMessageCount() chan uint64 {
 	resultChan := make(chan uint64, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
 		c := validator.bot.GetCore()
 		resultChan <- c.GetMachine().PendingMessageCount()
 	}
-	return resultChan
-}
-
-func (validator *Validator) HasOpenAssertion() chan bool {
-	resultChan := make(chan bool, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
-		if !ok {
-			resultChan <- false
-		} else {
-			resultChan <- bot.HasOpenAssertion()
-		}
-	}
-
 	return resultChan
 }
 
@@ -176,7 +162,7 @@ func (validator *Validator) canRun() bool {
 
 func (validator *Validator) CanRun() chan bool {
 	resultChan := make(chan bool, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
 		resultChan <- validator.canRun()
 	}
 	return resultChan
@@ -184,7 +170,7 @@ func (validator *Validator) CanRun() chan bool {
 
 func (validator *Validator) CanContinueRunning() chan bool {
 	resultChan := make(chan bool, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
 		if !validator.canRun() {
 			resultChan <- false
 		} else {
@@ -203,7 +189,7 @@ type VMStateData struct {
 
 func (validator *Validator) RequestVMState() <-chan VMStateData {
 	resultChan := make(chan VMStateData)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
+	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
 		c := validator.bot.GetCore()
 		machineHash := c.GetMachine().Hash()
 		resultChan <- VMStateData{
@@ -217,7 +203,7 @@ func (validator *Validator) RequestVMState() <-chan VMStateData {
 func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bool, <-chan error) {
 	resultChan := make(chan bool)
 	errChan := make(chan error)
-	validator.actions <- func(validator *Validator, b bridge.Bridge) {
+	validator.actions <- func(validator *Validator, b bridge.ArbVMBridge) {
 		if !validator.canRun() {
 			errChan <- errors.New("Can't disputable assert when not running")
 			return
@@ -248,265 +234,11 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 				ResultChan:   resultChan,
 				ErrorChan:    errChan,
 			}
-			validator.actions <- func(validator *Validator, b bridge.Bridge) {
+			validator.actions <- func(validator *Validator, b bridge.ArbVMBridge) {
 				validator.pendingDisputableRequest = request
 				validator.maybeAssert <- true
 			}
 		}()
-	}
-	return resultChan, errChan
-}
-
-type unanimousUpdateRequest struct {
-	valmessage.UnanimousRequestData
-
-	NewMessages []protocol.Message
-
-	Machine   machine.Machine
-	Assertion *protocol.Assertion
-
-	ShouldFinalize func(*protocol.Assertion) bool
-
-	ResultChan chan<- valmessage.UnanimousUpdateResults
-	ErrChan    chan<- error
-}
-
-func (validator *Validator) InitiateUnanimousRequest(
-	length uint64,
-	messages []protocol.Message,
-	messageHashes [][]byte,
-	final bool,
-	maxSteps int32,
-	shouldFinalize func(*protocol.Assertion) bool,
-) (
-	<-chan valmessage.UnanimousRequest,
-	<-chan valmessage.UnanimousUpdateResults,
-	<-chan error,
-) {
-	unanRequestChan := make(chan valmessage.UnanimousRequest, 1)
-	updateResultChan := make(chan valmessage.UnanimousUpdateResults, 1)
-	errChan := make(chan error, 1)
-
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		if !validator.canRun() {
-			errChan <- errors.New("Can't unanimous assert when not running")
-			return
-		}
-		bot, ok := validator.bot.(state.Waiting)
-		if !ok {
-			errChan <- fmt.Errorf("recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.bot)
-			return
-		}
-		newMessages := make([]protocol.Message, 0, len(messages))
-		messageRecords := make([]protocol.Message, 0, len(messages))
-		for i, msg := range messages {
-			msgHashInt := new(big.Int).SetBytes(messageHashes[i])
-			val, _ := value.NewTupleFromSlice([]value.Value{
-				msg.Data,
-				value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
-				value.NewIntValue(validator.latestHeader.Number),
-				value.NewIntValue(msgHashInt),
-			})
-			newMessages = append(newMessages, protocol.Message{
-				Data:        val,
-				TokenType:   msg.TokenType,
-				Currency:    msg.Currency,
-				Destination: msg.Destination,
-			})
-			messageRecords = append(messageRecords, protocol.Message{
-				Data:        val.Clone(),
-				TokenType:   msg.TokenType,
-				Currency:    msg.Currency,
-				Destination: msg.Destination,
-			})
-		}
-		timeBounds := [2]uint64{validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64() + length}
-		seqNum := bot.OffchainContext(timeBounds, final)
-		clonedMachine := bot.GetCore().GetMachine().Clone()
-		requestData := valmessage.UnanimousRequestData{
-			BeforeHash:  bot.OrigHash(),
-			BeforeInbox: bot.OrigInboxHash(),
-			SequenceNum: seqNum,
-			TimeBounds:  timeBounds,
-		}
-
-		unanRequestChan <- valmessage.UnanimousRequest{UnanimousRequestData: requestData, NewMessages: messageRecords}
-		go func() {
-			clonedMachine.SendOffchainMessages(newMessages)
-			assertion := clonedMachine.ExecuteAssertion(
-				maxSteps,
-				timeBounds,
-			)
-			validator.requestUnanimousUpdate(unanimousUpdateRequest{
-				UnanimousRequestData: requestData,
-				NewMessages:          newMessages,
-				Machine:              clonedMachine,
-				Assertion:            assertion,
-				ShouldFinalize:       shouldFinalize,
-				ResultChan:           updateResultChan,
-				ErrChan:              errChan,
-			})
-		}()
-	}
-	return unanRequestChan, updateResultChan, errChan
-}
-
-func (validator *Validator) RequestFollowUnanimous(
-	request valmessage.UnanimousRequestData,
-	messages []protocol.Message,
-	maxSteps int32,
-	shouldFinalize func(*protocol.Assertion) bool,
-) (<-chan valmessage.UnanimousUpdateResults, <-chan error) {
-	resultChan := make(chan valmessage.UnanimousUpdateResults, 1)
-	errChan := make(chan error, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		if !validator.canRun() {
-			errChan <- errors.New("Can't unanimous assert when not running")
-			return
-		}
-		bot, ok := validator.bot.(state.Waiting)
-		if !ok {
-			errChan <- fmt.Errorf("recieved follow unanimous request, but was in the wrong state to handle it: %T", validator.bot)
-			return
-		}
-
-		if err := bot.ValidateUnanimousRequest(request); err != nil {
-			errChan <- err
-			return
-		}
-
-		_ = bot.OffchainContext(request.TimeBounds, request.SequenceNum == math.MaxUint64)
-		clonedMachine := bot.GetCore().GetMachine().Clone()
-		go func() {
-			clonedMachine.SendOffchainMessages(messages)
-			assertion := clonedMachine.ExecuteAssertion(
-				maxSteps,
-				request.TimeBounds,
-			)
-			validator.requestUnanimousUpdate(unanimousUpdateRequest{
-				UnanimousRequestData: request,
-				NewMessages:          messages,
-				Machine:              clonedMachine,
-				Assertion:            assertion,
-				ShouldFinalize:       shouldFinalize,
-				ResultChan:           resultChan,
-				ErrChan:              errChan,
-			})
-		}()
-	}
-	return resultChan, errChan
-}
-
-func (validator *Validator) requestUnanimousUpdate(request unanimousUpdateRequest) {
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
-		if !ok {
-			request.ErrChan <- fmt.Errorf("recieved unanimous update request, but was in the wrong state to handle it: %T", validator.bot)
-			return
-		}
-
-		newBot, err := bot.PreparePendingUnanimous(
-			request.Assertion,
-			request.NewMessages,
-			request.Machine,
-			request.SequenceNum,
-			request.TimeBounds,
-			request.ShouldFinalize,
-		)
-
-		if err != nil {
-			request.ErrChan <- err
-			return
-		}
-		request.ResultChan <- newBot.ProposalResults()
-		validator.bot = newBot
-	}
-}
-
-func (validator *Validator) ConfirmOffchainUnanimousAssertion(
-	request valmessage.UnanimousRequestData,
-	signatures [][]byte,
-	canClose bool,
-) (<-chan bool, <-chan error) {
-	resultChan := make(chan bool, 1)
-	errChan := make(chan error, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
-		if !ok {
-			errChan <- fmt.Errorf("recieved unanimous confirm request, but was in the wrong state to handle it: %T", validator.bot)
-			return
-		}
-		if err := bot.ValidateUnanimousAssertion(request); err != nil {
-			errChan <- err
-			return
-		}
-
-		bridge.AddedNewMessages(bot.ProposedMessageCount())
-
-		proposalResults := bot.ProposalResults()
-		newBot, err := bot.FinalizePendingUnanimous(signatures)
-		if err != nil {
-			errChan <- err
-			return
-		}
-
-		bridge.FinalizedAssertion(
-			nil,
-			[]byte{},
-			signatures,
-			&proposalResults,
-		)
-
-		if request.SequenceNum == math.MaxUint64 {
-			if canClose {
-				newBot.CloseUnanimous(bridge)
-			}
-			// Can only error if there is no pending assertion which is guaranteed here
-			newBot2, _ := newBot.ClosingUnanimous(resultChan, errChan)
-			validator.bot = newBot2
-		} else {
-			validator.bot = newBot
-			resultChan <- true
-		}
-	}
-	return resultChan, errChan
-}
-
-func (validator *Validator) CloseUnanimousAssertionRequest() (<-chan bool, <-chan error) {
-	resultChan := make(chan bool, 1)
-	errChan := make(chan error, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
-		if !ok {
-			errChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.bot)
-			return
-		}
-		bot.CloseUnanimous(bridge)
-		newBot, err := bot.ClosingUnanimous(resultChan, errChan)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		validator.bot = newBot
-	}
-	return resultChan, errChan
-}
-
-func (validator *Validator) ClosingUnanimousAssertionRequest() (<-chan bool, <-chan error) {
-	resultChan := make(chan bool, 1)
-	errChan := make(chan error, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.Bridge) {
-		bot, ok := validator.bot.(state.Waiting)
-		if !ok {
-			errChan <- fmt.Errorf("can't close unanimous request. Validator was in the wrong state to handle it: %T", validator.bot)
-			return
-		}
-		newBot, err := bot.ClosingUnanimous(resultChan, errChan)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		validator.bot = newBot
 	}
 	return resultChan, errChan
 }
@@ -571,7 +303,7 @@ func (validator *Validator) timeUpdate(bridge bridge.Bridge) {
 		}
 		validator.challengeBot = newBot
 	}
-	newBot, err := validator.bot.UpdateTime(validator.latestHeader.Number.Uint64(), bridge)
+	newBot, err := validator.bot.ChainUpdateTime(validator.latestHeader.Number.Uint64(), bridge)
 	if err != nil {
 		fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, newBot)
 		return
@@ -592,7 +324,7 @@ func (validator *Validator) eventUpdate(ev ethconnection.VMEvent, header *types.
 		}
 		validator.challengeBot = newBot
 	} else {
-		newBot, challengeBot, err := validator.bot.UpdateState(ev, header.Number.Uint64(), bridge)
+		newBot, challengeBot, err := validator.bot.ChainUpdateState(ev, header.Number.Uint64(), bridge)
 		if err != nil {
 			fmt.Printf("%v: Error %v responding to event by %T\n", validator.Name, err, validator.bot)
 			return

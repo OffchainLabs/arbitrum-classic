@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package channelstate
+package state
 
 import (
 	"context"

@@ -14,21 +14,17 @@
  * limitations under the License.
  */
 
-package channelstate
+package disputable
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 )
 
-type State interface {
-	UpdateTime(uint64, bridge.Bridge) (State, error)
-	UpdateState(ethconnection.Event, uint64, bridge.Bridge) (State, challenge.State, error)
-
-	SendMessageToVM(msg protocol.Message)
-	GetCore() *core.Core
-	GetConfig() *core.Config
+type AssertionRequest struct {
+	AfterCore    *core.Core
+	Precondition *protocol.Precondition
+	Assertion    *protocol.Assertion
+	ResultChan   chan<- bool
+	ErrorChan    chan<- error
 }
