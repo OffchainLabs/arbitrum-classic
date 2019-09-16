@@ -61,13 +61,12 @@ contract ArbitrumVM {
 
     VM.Data public vm;
 
-    uint16 public activatedValidators;
     address payable public exitAddress;
     address payable public terminateAddress;
     address payable public owner;
 
-    modifier validatorOnly() {
-        require(vm.validators[msg.sender].valid, "Caller must be validator");
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only callable by owner");
         _;
     }
 
@@ -87,7 +86,6 @@ contract ArbitrumVM {
 
         globalInbox.registerForInbox();
         owner = _owner;
-        activatedValidators = 0;
 
         // Machine state
         vm.machineHash = _vmState;
@@ -100,12 +98,8 @@ contract ArbitrumVM {
         vm.maxExecutionSteps = _maxExecutionSteps;
     }
 
-    function isListedValidator(address validator) external view returns(bool) {
-        return vm.validators[validator].valid;
-    }
-
     function currentDeposit(address validator) external view returns(uint256) {
-        return vm.validators[validator].balance;
+        return vm.validatorBalances[validator];
     }
 
     function escrowRequired() external view returns(uint256) {
@@ -116,8 +110,13 @@ contract ArbitrumVM {
         return vm.state;
     }
 
-    function ownerShutdown() external {
-        require(msg.sender == owner, "Only owner can shutdown the VM");
+    function activateVM() external onlyOwner {
+        if (vm.state == VM.State.Uninitialized) {
+            vm.state = VM.State.Waiting;
+        }
+    }
+
+    function ownerShutdown() external onlyOwner {
         _shutdown();
     }
 
@@ -129,8 +128,8 @@ contract ArbitrumVM {
         require(vm.inChallenge, "VM must be in challenge to complete it");
 
         vm.inChallenge = false;
-        vm.validators[_players[0]].balance = vm.validators[_players[0]].balance.add(_rewards[0]);
-        vm.validators[_players[1]].balance = vm.validators[_players[1]].balance.add(_rewards[1]);
+        vm.validatorBalances[_players[0]] = vm.validatorBalances[_players[0]].add(_rewards[0]);
+        vm.validatorBalances[_players[1]] = vm.validatorBalances[_players[1]].add(_rewards[1]);
     }
 
     // fields:
@@ -150,7 +149,6 @@ contract ArbitrumVM {
         address[] memory _messageDestinations
     )
         public
-        validatorOnly
     {
         uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
             _tokenTypes,
@@ -214,7 +212,7 @@ contract ArbitrumVM {
         );
     }
 
-    function initiateChallenge(bytes32 _assertPreHash) public validatorOnly {
+    function initiateChallenge(bytes32 _assertPreHash) public {
         Disputable.initiateChallenge(
             vm,
             _assertPreHash

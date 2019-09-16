@@ -16,11 +16,12 @@
 
 pragma solidity ^0.5.3;
 
+import "./IArbChannel.sol";
 import "./ArbitrumVM.sol";
 import "./Unanimous.sol";
 
 
-contract ArbChannel is ArbitrumVM {
+contract ArbChannel is ArbitrumVM, IArbChannel {
     using SafeMath for uint256;
 
     event PendingUnanimousAssertion (
@@ -35,6 +36,10 @@ contract ArbChannel is ArbitrumVM {
     event FinalizedUnanimousAssertion(
         bytes32 unanHash
     );
+
+    mapping (address => bool) validators;
+    uint16 public validatorCount;
+    uint16 public activatedValidators;
 
     constructor(
         bytes32 _vmState,
@@ -57,27 +62,42 @@ contract ArbChannel is ArbitrumVM {
         )
         public
     {
-        uint16 validatorCount = uint16(_validatorKeys.length);
-        vm.validatorCount = validatorCount;
+        activatedValidators = 0;
+        validatorCount = uint16(_validatorKeys.length);
         for (uint16 i = 0; i < validatorCount; i++) {
-            vm.validators[_validatorKeys[i]] = VM.Validator(0, true);
+            validators[_validatorKeys[i]] = true;
         }
     }
 
-    function increaseDeposit() external payable validatorOnly {
-        VM.Validator storage validator = vm.validators[msg.sender];
-        bool wasInactive = validator.balance < uint256(vm.escrowRequired);
-        vm.validators[msg.sender].balance += msg.value;
-        if (wasInactive && validator.balance >= uint256(vm.escrowRequired)) {
+    function increaseDeposit() external payable {
+        require(validators[msg.sender], "Caller must be validator");
+        uint256 balance = vm.validatorBalances[msg.sender];
+        bool wasInactive = balance < uint256(vm.escrowRequired);
+        balance += msg.value;
+        vm.validatorBalances[msg.sender] = balance;
+        if (wasInactive && balance >= uint256(vm.escrowRequired)) {
             activatedValidators++;
         }
-        if (activatedValidators == vm.validatorCount && vm.state == VM.State.Uninitialized) {
+        if (activatedValidators == validatorCount && vm.state == VM.State.Uninitialized) {
             vm.state = VM.State.Waiting;
         }
     }
 
-    function isValidatorList(address[] memory _validators) public view returns(bool) {
-        return VM.isValidatorList(vm, _validators);
+    function isListedValidator(address validator) external view returns(bool) {
+        return validators[validator];
+    }
+
+    function isValidatorList(address[] calldata _validators) external view returns(bool) {
+        uint _validatorCount = _validators.length;
+        if (_validatorCount != validatorCount) {
+            return false;
+        }
+        for (uint i = 0; i < validatorCount; i++) {
+            if (!validators[_validators[i]]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     function finalizedUnanimousAssert(
@@ -95,6 +115,7 @@ contract ArbChannel is ArbitrumVM {
     {
         Unanimous.finalizedUnanimousAssert(
             vm,
+            this,
             [_afterHash, _newInbox, _logsAccHash],
             _tokenTypes,
             _messageData,
@@ -140,6 +161,7 @@ contract ArbChannel is ArbitrumVM {
         );
         Unanimous.pendingUnanimousAssert(
             vm,
+            this,
             _unanRest,
             _tokenTypes,
             _messageTokenNums,

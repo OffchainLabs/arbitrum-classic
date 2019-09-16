@@ -35,13 +35,8 @@ library VM {
         PendingUnanimous
     }
 
-    struct Validator {
-        uint balance;
-        bool valid;
-    }
-
     struct Data {
-        mapping(address => Validator) validators;
+        mapping(address => uint256) validatorBalances;
         bytes32 machineHash;
         bytes32 pendingHash; // Lock pending and confirm asserts together
         bytes32 inbox;
@@ -51,7 +46,6 @@ library VM {
         uint64 sequenceNum;
         uint32 gracePeriod;
         uint32 maxExecutionSteps;
-        uint16 validatorCount;
         State state;
         bool inChallenge;
     }
@@ -92,20 +86,7 @@ library VM {
 
         if (_vm.state == VM.State.PendingDisputable) {
             // If there is a pending disputable assertion, cancel it
-            _vm.validators[_vm.asserter].balance = _vm.validators[_vm.asserter].balance.add(_vm.escrowRequired);
+            _vm.validatorBalances[_vm.asserter] = _vm.validatorBalances[_vm.asserter].add(_vm.escrowRequired);
         }
-    }
-
-    function isValidatorList(Data storage _vm, address[] calldata _validators) external view returns(bool) {
-        uint validatorCount = _validators.length;
-        if (validatorCount != _vm.validatorCount) {
-            return false;
-        }
-        for (uint i = 0; i < validatorCount; i++) {
-            if (!_vm.validators[_validators[i]].valid) {
-                return false;
-            }
-        }
-        return true;
     }
 }

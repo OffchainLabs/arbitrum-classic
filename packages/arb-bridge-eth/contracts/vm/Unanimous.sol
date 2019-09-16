@@ -17,6 +17,7 @@
 pragma solidity ^0.5.3;
 
 import "./VM.sol";
+import "./IArbChannel.sol";
 
 import "../libraries/SigUtils.sol";
 import "../libraries/DebugPrint.sol";
@@ -62,6 +63,7 @@ library Unanimous {
 
     function finalizedUnanimousAssert(
         VM.Data storage _vm,
+        IArbChannel channel,
         bytes32[3] memory _fields,
         bytes21[] memory _tokenTypes,
         bytes memory _messageData,
@@ -74,6 +76,7 @@ library Unanimous {
     {
         _finalizedUnanimousAssert(
             _vm,
+            channel,
             FinalizedUnanimousAssertData(
                 _fields[0],
                 _fields[1],
@@ -92,6 +95,7 @@ library Unanimous {
 
     function pendingUnanimousAssert(
         VM.Data storage _vm,
+        IArbChannel channel,
         bytes32 _unanRest,
         bytes21[] memory _tokenTypes,
         uint16[] memory _messageTokenNums,
@@ -104,6 +108,7 @@ library Unanimous {
     {
         return _pendingUnanimousAssert(
             _vm,
+            channel,
             PendingUnanimousAssertData(
                 _unanRest,
                 _tokenTypes,
@@ -162,6 +167,7 @@ library Unanimous {
 
     function _requireAllSignedAssertion(
         VM.Data storage vm,
+        IArbChannel channel,
         bytes32 _unanRest,
         bytes21[] memory _tokenTypes,
         uint16[] memory _messageTokenNums,
@@ -189,7 +195,7 @@ library Unanimous {
         );
         address[] memory addresses = SigUtils.recoverAddresses(unanHash, _signatures);
         require(
-            VM.isValidatorList(vm, addresses),
+            channel.isValidatorList(addresses),
             "Invalid signature list"
         );
         return unanHash;
@@ -197,6 +203,7 @@ library Unanimous {
 
     function _finalizedUnanimousAssert(
         VM.Data storage vm,
+        IArbChannel channel,
         FinalizedUnanimousAssertData memory data
     )
         private
@@ -210,6 +217,7 @@ library Unanimous {
         );
         bytes32 unanHash = _requireAllSignedAssertion(
             vm,
+            channel,
             keccak256(
                 abi.encodePacked(
                     data.newInbox,
@@ -240,6 +248,7 @@ library Unanimous {
 
     function _pendingUnanimousAssert(
         VM.Data storage vm,
+        IArbChannel channel,
         PendingUnanimousAssertData memory data
     )
         private
@@ -253,6 +262,7 @@ library Unanimous {
         );
         bytes32 unanHash = _requireAllSignedAssertion(
             vm,
+            channel,
             data.unanRest,
             data.tokenTypes,
             data.messageTokenNums,

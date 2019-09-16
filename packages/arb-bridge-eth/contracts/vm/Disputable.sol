@@ -146,14 +146,14 @@ library Disputable {
         require(msg.sender != _vm.asserter, "Challenge was created by asserter");
         require(VM.withinDeadline(_vm), "Challenge did not come before deadline");
         require(_vm.state == VM.State.PendingDisputable, "Assertion must be pending to initiate challenge");
-        require(_vm.escrowRequired <= _vm.validators[msg.sender].balance, "Challenger did not have enough escrowed");
+        require(_vm.escrowRequired <= _vm.validatorBalances[msg.sender], "Challenger did not have enough escrowed");
 
         require(
             _assertPreHash == _vm.pendingHash,
             "Precondition and assertion do not match pending assertion"
         );
 
-        _vm.validators[msg.sender].balance -= _vm.escrowRequired;
+        _vm.validatorBalances[msg.sender] -= _vm.escrowRequired;
         _vm.pendingHash = 0;
         _vm.state = VM.State.Waiting;
         _vm.inChallenge = true;
@@ -179,7 +179,7 @@ library Disputable {
             "Can only disputable assert if machine is not errored or halted"
         );
         require(!_vm.inChallenge, "Can only disputable assert if not in challenge");
-        require(_vm.escrowRequired <= _vm.validators[msg.sender].balance, "Validator does not have required escrow");
+        require(_vm.escrowRequired <= _vm.validatorBalances[msg.sender], "Validator does not have required escrow");
         require(_data.numSteps <= _vm.maxExecutionSteps, "Tried to execute too many steps");
         require(withinTimeBounds(_data.timeBounds), "Precondition: not within time bounds");
         require(_data.beforeHash == _vm.machineHash, "Precondition: state hash does not match");
@@ -221,7 +221,7 @@ library Disputable {
                 )
             )
         );
-        _vm.validators[msg.sender].balance -= _vm.escrowRequired;
+        _vm.validatorBalances[msg.sender] -= _vm.escrowRequired;
         _vm.asserter = msg.sender;
         _vm.state = VM.State.PendingDisputable;
 
@@ -272,7 +272,7 @@ library Disputable {
             ) == _vm.pendingHash,
             "Precondition and assertion do not match pending assertion"
         );
-        _vm.validators[_vm.asserter].balance = _vm.validators[_vm.asserter].balance.add(_vm.escrowRequired);
+        _vm.validatorBalances[_vm.asserter] = _vm.validatorBalances[_vm.asserter].add(_vm.escrowRequired);
         VM.acceptAssertion(
             _vm,
             _data.afterHash

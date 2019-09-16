@@ -39,18 +39,12 @@ contract ArbChannel is ArbitrumVM {
             _globalInboxAddress
         )
         public
-    {}
+    {
+        vm.state = VM.State.Waiting;
+    }
 
     function increaseDeposit() external payable {
-        VM.Validator storage validator = vm.validators[msg.sender];
-        bool wasInactive = validator.balance < uint256(vm.escrowRequired);
-        vm.validators[msg.sender].balance += msg.value;
-        if (wasInactive && validator.balance >= uint256(vm.escrowRequired)) {
-            activatedValidators++;
-        }
-        if (activatedValidators == vm.validatorCount && vm.state == VM.State.Uninitialized) {
-            vm.state = VM.State.Waiting;
-        }
+        vm.validatorBalances[msg.sender] += msg.value;
     }
 
 }
