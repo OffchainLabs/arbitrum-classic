@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package chainvalidator
+package validator
 
 import (
 	"bytes"
@@ -44,9 +44,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type Validator struct {
+type ChainValidator struct {
 	Name        string
-	actions     chan func(*Validator, bridge.ArbVMBridge)
+	actions     chan func(bridge.ArbVMBridge)
 	maybeAssert chan bool
 
 	// Run loop only
@@ -56,7 +56,7 @@ type Validator struct {
 	pendingDisputableRequest *disputable.AssertionRequest
 }
 
-func NewValidator(
+func NewChainValidator(
 	name string,
 	address common.Address,
 	latestHeader *types.Header,
@@ -65,8 +65,8 @@ func NewValidator(
 	machine machine.Machine,
 	challengeEverything bool,
 	maxCallSteps int32,
-) *Validator {
-	actions := make(chan func(*Validator, bridge.ArbVMBridge), 100)
+) *ChainValidator {
+	actions := make(chan func(bridge.ArbVMBridge), 100)
 	maybeAssert := make(chan bool, 100)
 	c := core.NewCore(
 		machine,
@@ -74,7 +74,7 @@ func NewValidator(
 	)
 
 	valConfig := core.NewValidatorConfig(address, config, challengeEverything, maxCallSteps)
-	return &Validator{
+	return &ChainValidator{
 		name,
 		actions,
 		maybeAssert,
@@ -85,10 +85,10 @@ func NewValidator(
 	}
 }
 
-func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Value, <-chan error) {
+func (validator *ChainValidator) RequestCall(msg protocol.Message) (<-chan value.Value, <-chan error) {
 	resultChan := make(chan value.Value, 1)
 	errChan := make(chan error, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
+	validator.actions <- func(bridge bridge.ArbVMBridge) {
 		if !validator.canRun() {
 			errChan <- errors.New("Cannot call when ArbChannel is not running")
 			return
@@ -147,30 +147,30 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 	return resultChan, errChan
 }
 
-func (validator *Validator) PendingMessageCount() chan uint64 {
+func (validator *ChainValidator) PendingMessageCount() chan uint64 {
 	resultChan := make(chan uint64, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
+	validator.actions <- func(bridge bridge.ArbVMBridge) {
 		c := validator.bot.GetCore()
 		resultChan <- c.GetMachine().PendingMessageCount()
 	}
 	return resultChan
 }
 
-func (validator *Validator) canRun() bool {
+func (validator *ChainValidator) canRun() bool {
 	return validator.bot.GetCore().GetMachine().CurrentStatus() == machine.Extensive
 }
 
-func (validator *Validator) CanRun() chan bool {
+func (validator *ChainValidator) CanRun() chan bool {
 	resultChan := make(chan bool, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
+	validator.actions <- func(bridge bridge.ArbVMBridge) {
 		resultChan <- validator.canRun()
 	}
 	return resultChan
 }
 
-func (validator *Validator) CanContinueRunning() chan bool {
+func (validator *ChainValidator) CanContinueRunning() chan bool {
 	resultChan := make(chan bool, 1)
-	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
+	validator.actions <- func(bridge bridge.ArbVMBridge) {
 		if !validator.canRun() {
 			resultChan <- false
 		} else {
@@ -187,9 +187,9 @@ type VMStateData struct {
 	Config       valmessage.VMConfiguration
 }
 
-func (validator *Validator) RequestVMState() <-chan VMStateData {
+func (validator *ChainValidator) RequestVMState() <-chan VMStateData {
 	resultChan := make(chan VMStateData)
-	validator.actions <- func(validator *Validator, bridge bridge.ArbVMBridge) {
+	validator.actions <- func(bridge bridge.ArbVMBridge) {
 		c := validator.bot.GetCore()
 		machineHash := c.GetMachine().Hash()
 		resultChan <- VMStateData{
@@ -200,10 +200,10 @@ func (validator *Validator) RequestVMState() <-chan VMStateData {
 	return resultChan
 }
 
-func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bool, <-chan error) {
+func (validator *ChainValidator) RequestDisputableAssertion(length uint64) (<-chan bool, <-chan error) {
 	resultChan := make(chan bool)
 	errChan := make(chan error)
-	validator.actions <- func(validator *Validator, b bridge.ArbVMBridge) {
+	validator.actions <- func(b bridge.ArbVMBridge) {
 		if !validator.canRun() {
 			errChan <- errors.New("Can't disputable assert when not running")
 			return
@@ -234,7 +234,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 				ResultChan:   resultChan,
 				ErrorChan:    errChan,
 			}
-			validator.actions <- func(validator *Validator, b bridge.ArbVMBridge) {
+			validator.actions <- func(b bridge.ArbVMBridge) {
 				validator.pendingDisputableRequest = request
 				validator.maybeAssert <- true
 			}
@@ -243,7 +243,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 	return resultChan, errChan
 }
 
-func (validator *Validator) Run(recvChan <-chan ethconnection.Notification, bridge bridge.Bridge, ctx context.Context) {
+func (validator *ChainValidator) Run(recvChan <-chan ethconnection.Notification, bridge bridge.ArbVMBridge, ctx context.Context) {
 	defer fmt.Printf("%v: Exiting\n", validator.Name)
 	for {
 		select {
@@ -283,7 +283,7 @@ func (validator *Validator) Run(recvChan <-chan ethconnection.Notification, brid
 				panic("Should never recieve other kinds of events")
 			}
 		case action := <-validator.actions:
-			action(validator, bridge)
+			action(bridge)
 		case <-validator.maybeAssert:
 		}
 
@@ -294,7 +294,7 @@ func (validator *Validator) Run(recvChan <-chan ethconnection.Notification, brid
 	}
 }
 
-func (validator *Validator) timeUpdate(bridge bridge.Bridge) {
+func (validator *ChainValidator) timeUpdate(bridge bridge.ArbVMBridge) {
 	if validator.challengeBot != nil {
 		newBot, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64(), bridge)
 		if err != nil {
@@ -311,7 +311,7 @@ func (validator *Validator) timeUpdate(bridge bridge.Bridge) {
 	validator.bot = newBot
 }
 
-func (validator *Validator) eventUpdate(ev ethconnection.VMEvent, header *types.Header, bridge bridge.Bridge) {
+func (validator *ChainValidator) eventUpdate(ev ethconnection.VMEvent, header *types.Header, bridge bridge.ArbVMBridge) {
 	if ev.GetIncomingMessageType() == ethconnection.ChallengeMessage {
 		if validator.challengeBot == nil {
 			panic("challengeBot can't be nil if challenge message is recieved")

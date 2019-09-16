@@ -37,11 +37,11 @@ type attemptingUnanimousClosing struct {
 	errChan   chan<- error
 }
 
-func (bot attemptingUnanimousClosing) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot attemptingUnanimousClosing) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot, nil
 }
 
-func (bot attemptingUnanimousClosing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev.(type) {
 	case ethconnection.PendingUnanimousAssertEvent:
 		// Someone proposed a pending update
@@ -75,11 +75,11 @@ type attemptingOffchainClosing struct {
 	errChan     chan<- error
 }
 
-func (bot attemptingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot attemptingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot, nil
 }
 
-func (bot attemptingOffchainClosing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethconnection.PendingUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
@@ -129,7 +129,7 @@ type waitingOffchainClosing struct {
 	errChan   chan<- error
 }
 
-func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -145,7 +145,7 @@ func (bot waitingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) 
 	}, nil
 }
 
-func (bot waitingOffchainClosing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot waitingOffchainClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev.(type) {
 	case ethconnection.PendingUnanimousAssertEvent:
 		err := errors.New("unanimous Assertion unexpectedly superseded by sequence number")
@@ -174,11 +174,11 @@ type finalizingOffchainClosing struct {
 	retChan chan<- bool
 }
 
-func (bot finalizingOffchainClosing) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot finalizingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot, nil
 }
 
-func (bot finalizingOffchainClosing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot finalizingOffchainClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev.(type) {
 	case ethconnection.ConfirmedUnanimousAssertEvent:
 		bot.GetCore().DeliverMessagesToVM(bridge)

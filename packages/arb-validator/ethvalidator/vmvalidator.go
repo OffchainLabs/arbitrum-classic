@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channelvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 
 	errors2 "github.com/pkg/errors"
 
@@ -45,7 +45,7 @@ type VMValidator struct {
 	// Safe public interface
 	VMID              common.Address
 	Validators        map[common.Address]validatorInfo
-	Bot               *channelvalidator.Validator
+	Bot               *validator.ChannelValidator
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
 	mutex *sync.Mutex
@@ -122,7 +122,7 @@ func NewVMValidator(
 		return nil, errors2.Wrap(err, "VMValidator couldn't get latest error")
 	}
 
-	bot := channelvalidator.NewValidator(
+	bot := validator.NewChannelValidator(
 		name,
 		val.Address(),
 		header,
@@ -156,7 +156,7 @@ func (val *VMValidator) ensureVMActivated() error {
 	if err != nil {
 		return errors2.Wrap(err, "Error checking for VM activation")
 	}
-	log.Println("Validator is validating vm", hexutil.Encode(val.VMID[:]))
+	log.Println("ChannelValidator is validating vm", hexutil.Encode(val.VMID[:]))
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (val *VMValidator) topOffDeposit(ctx context.Context) error {
 	}
 	required, err := val.vmTracker.EscrowRequired(callOpts)
 	if current.Cmp(required) >= 0 {
-		// Validator already has escrow deposited
+		// ChannelValidator already has escrow deposited
 		return nil
 	}
 	depToAdd := new(big.Int).Sub(required, current)
@@ -251,14 +251,14 @@ func (val *VMValidator) StartListening(ctx context.Context) error {
 				parsedChan <- parse
 			case <-errChan:
 				// Ignore error and try to reset connection
-				// log.Printf("Validator recieved error: %v", err)
+				// log.Printf("ChannelValidator recieved error: %v", err)
 				// fmt.Println("Resetting channels")
 				for {
 					outChan, errChan, err = val.restartConnection(ctx)
 					if err == nil {
 						break
 					}
-					log.Println("Error: Validator can't connect to blockchain")
+					log.Println("Error: ChannelValidator can't connect to blockchain")
 					time.Sleep(5 * time.Second)
 				}
 			}

@@ -129,7 +129,7 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, ch
 	}
 }
 
-func (bot Waiting) ClosingUnanimous(retChan chan<- bool, errChan chan<- error) (State, error) {
+func (bot Waiting) ClosingUnanimous(retChan chan<- bool, errChan chan<- error) (ChannelState, error) {
 	// If there is no active unanimous assertion, there is nothing to close
 	// TODO: Validator should refuse to unanimous assert again from the same start point
 	if bot.assertion == nil {
@@ -398,11 +398,11 @@ func (bot Waiting) ChainUpdateState(ev ethconnection.Event, time uint64, bridge 
 	return bot.updateState(ev, time, bridge)
 }
 
-func (bot Waiting) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot Waiting) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot, nil
 }
 
-func (bot Waiting) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot Waiting) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethconnection.PendingUnanimousAssertEvent:
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
@@ -489,11 +489,11 @@ func (bot watchingAssertion) ChainUpdateState(ev ethconnection.Event, time uint6
 	return bot.updateState(ev, time, bridge)
 }
 
-func (bot watchingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot watchingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot.updateTime(time, bridge)
 }
 
-func (bot watchingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot watchingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -540,18 +540,18 @@ func (bot attemptingAssertion) ChainUpdateState(ev ethconnection.Event, time uin
 	}
 }
 
-func (bot attemptingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot attemptingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot, nil
 }
 
-func (bot attemptingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot attemptingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethconnection.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
 			bot.errorChan <- errors.New("attemptingAssertion: Other Assertion got in before ours")
 			close(bot.errorChan)
 			close(bot.resultChan)
-			return NewWaiting(bot.Config, bot.Core).UpdateState(ev, time, bridge)
+			return NewWaiting(bot.Config, bot.Core).ChannelUpdateState(ev, time, bridge)
 		}
 
 		deadline := time + bot.VMConfig.GracePeriod
@@ -616,11 +616,11 @@ func (bot waitingAssertion) ChainUpdateState(ev ethconnection.Event, time uint64
 	return bot.updateState(ev, time, bridge)
 }
 
-func (bot waitingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot waitingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot.updateTime(time, bridge)
 }
 
-func (bot waitingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot waitingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -658,10 +658,10 @@ func (bot finalizingAssertion) ChainUpdateState(ev ethconnection.Event, time uin
 	return bot.updateState(ev, time, bridge)
 }
 
-func (bot finalizingAssertion) UpdateTime(time uint64, bridge bridge.Bridge) (State, error) {
+func (bot finalizingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	return bot, nil
 }
 
-func (bot finalizingAssertion) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (State, challenge.State, error) {
+func (bot finalizingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }

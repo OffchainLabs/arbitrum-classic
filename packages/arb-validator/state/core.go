@@ -24,9 +24,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 )
 
-type State interface {
-	UpdateTime(uint64, bridge.Bridge) (State, error)
-	UpdateState(ethconnection.Event, uint64, bridge.Bridge) (State, challenge.State, error)
+type ChannelState interface {
+	ChannelUpdateTime(uint64, bridge.Bridge) (ChannelState, error)
+	ChannelUpdateState(ethconnection.Event, uint64, bridge.Bridge) (ChannelState, challenge.State, error)
 
 	SendMessageToVM(msg protocol.Message)
 	GetCore() *core.Core
@@ -34,7 +34,7 @@ type State interface {
 }
 
 type ChainState interface {
-	State
+	ChannelState
 	ChainUpdateTime(uint64, bridge.ArbVMBridge) (ChainState, error)
 	ChainUpdateState(ethconnection.Event, uint64, bridge.ArbVMBridge) (ChainState, challenge.State, error)
 }
