@@ -28,7 +28,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -129,7 +129,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var connectionInfo ethconnection.ArbAddresses
+	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		log.Fatalln(err)
 	}

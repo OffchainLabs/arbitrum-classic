@@ -109,8 +109,14 @@ func NewValidatorFollower(
 		return nil, errors2.Wrap(err, "Validator couldn't get latest error")
 	}
 
+	c, err := NewValidator(val, vmID, machine, config)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Error initializing Validator in follower")
+	}
+
 	channelVal := validator.NewChannelValidator(
 		name,
+		c,
 		vmID,
 		header,
 		protocol.NewBalanceTracker(),
@@ -119,11 +125,6 @@ func NewValidatorFollower(
 		challengeEverything,
 		maxCallSteps,
 	)
-
-	c, err := NewValidator(val, vmID, machine, config)
-	if err != nil {
-		return nil, errors2.Wrap(err, "Error initializing Validator in follower")
-	}
 
 	if _, ok := c.Validators[address]; !ok {
 		return nil, errors.New("coordinator had bad pubkey")
@@ -251,7 +252,7 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 	}
 
 	go func() {
-		m.channelVal.Run(ctx, parsedChan, m.Validator)
+		m.channelVal.Run(ctx, parsedChan)
 	}()
 
 	go func() {

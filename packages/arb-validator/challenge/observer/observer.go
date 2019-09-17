@@ -21,7 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func New(
@@ -58,9 +58,9 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot waitingChallenge) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.BisectionEvent:
+	case ethbridge.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
 		return waitingBisected{bot.Config, deadline, preconditions, ev.Assertions}, nil
@@ -89,9 +89,9 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (c
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
-func (bot waitingBisected) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.ContinueChallengeEvent:
+	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingChallenge{
 			bot.Config,

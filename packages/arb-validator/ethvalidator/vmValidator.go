@@ -34,7 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -47,7 +47,7 @@ type VMValidator struct {
 	Mutex *sync.Mutex
 	// private thread only
 	Validator               *Validator
-	arbitrumVM              ethconnection.VMConnection
+	arbitrumVM              ethbridge.VMConnection
 	unprocessedMessageCount uint64
 }
 
@@ -60,7 +60,7 @@ func NewVMValidator(
 	vmID common.Address,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
-	con ethconnection.VMConnection,
+	con ethbridge.VMConnection,
 ) (*VMValidator, error) {
 	callOpts := &bind.CallOpts{
 		Pending: false,
@@ -128,11 +128,11 @@ func (val *VMValidator) Sign(msgHash [32]byte) ([]byte, error) {
 	return val.Validator.Sign(msgHash[:])
 }
 
-func (val *VMValidator) StartListening(ctx context.Context) (chan ethconnection.Notification, error) {
+func (val *VMValidator) StartListening(ctx context.Context) (chan ethbridge.Notification, error) {
 	if err := val.ensureVMActivated(); err != nil {
 		return nil, err
 	}
-	parsedChan := make(chan ethconnection.Notification, 1024)
+	parsedChan := make(chan ethbridge.Notification, 1024)
 
 	if err := val.arbitrumVM.StartConnection(ctx); err != nil {
 		return nil, err

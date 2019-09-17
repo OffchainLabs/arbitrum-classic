@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -91,9 +91,9 @@ func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (ch
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot bisectedAssert) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev.(type) {
-	case ethconnection.BisectionEvent:
+	case ethbridge.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingBisected{
 			bot.Config,
@@ -122,9 +122,9 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (c
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
-func (bot waitingBisected) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.ContinueChallengeEvent:
+	case ethbridge.ContinueChallengeEvent:
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
 			return nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
@@ -154,9 +154,9 @@ func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot oneStepChallenged) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev.(type) {
-	case ethconnection.OneStepProofEvent:
+	case ethbridge.OneStepProofEvent:
 		fmt.Println("oneStepChallenged: Proof was accepted")
 		return nil, nil
 	default:

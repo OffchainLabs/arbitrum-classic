@@ -1,7 +1,7 @@
-package ethconnection
+package ethbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/arblauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arblauncher"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"

@@ -19,7 +19,7 @@ package challenge
 import (
 	"fmt"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
@@ -27,7 +27,7 @@ import (
 
 type State interface {
 	UpdateTime(uint64, bridge.ArbVMBridge) (State, error)
-	UpdateState(ethconnection.Event, uint64, bridge.ArbVMBridge) (State, error)
+	UpdateState(ethbridge.Event, uint64, bridge.ArbVMBridge) (State, error)
 }
 
 type Error struct {
@@ -50,9 +50,9 @@ func (bot TimedOutChallenger) UpdateTime(time uint64, bridge bridge.ArbVMBridge)
 	return bot, nil
 }
 
-func (bot TimedOutChallenger) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
+func (bot TimedOutChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
 	switch ev.(type) {
-	case ethconnection.ChallengerTimeoutEvent:
+	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil
 	default:
 		return nil, &Error{nil, "ERROR: TimedOutChallenger: ArbChannel state got unsynchronized"}
@@ -67,9 +67,9 @@ func (bot TimedOutAsserter) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (
 	return bot, nil
 }
 
-func (bot TimedOutAsserter) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
+func (bot TimedOutAsserter) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
 	switch ev.(type) {
-	case ethconnection.AsserterTimeoutEvent:
+	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil
 	default:
 		return nil, &Error{nil, "ERROR: TimedOutAsserter: ArbChannel state got unsynchronized"}

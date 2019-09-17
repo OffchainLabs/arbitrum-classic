@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethconnection
+package ethbridge
 
 import solsha3 "github.com/miguelmota/go-solidity-sha3"
 

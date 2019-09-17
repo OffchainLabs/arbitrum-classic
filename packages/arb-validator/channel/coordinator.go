@@ -354,8 +354,14 @@ func NewCoordinator(
 		return nil, errors2.Wrap(err, "Validator couldn't get latest error")
 	}
 
+	c, err := NewValidator(val, vmID, machine, config)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Error initializing Validator in coordinator")
+	}
+
 	channelVal := validator.NewChannelValidator(
 		name,
+		c,
 		vmID,
 		header,
 		protocol.NewBalanceTracker(),
@@ -364,10 +370,7 @@ func NewCoordinator(
 		challengeEverything,
 		maxCallSteps,
 	)
-	c, err := NewValidator(val, vmID, machine, config)
-	if err != nil {
-		return nil, errors2.Wrap(err, "Error initializing Validator in coordinator")
-	}
+
 	return &ValidatorCoordinator{
 		Val:               c,
 		ChannelVal:        channelVal,
@@ -400,7 +403,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 	}
 
 	go func() {
-		m.ChannelVal.Run(ctx, parsedChan, m.Val)
+		m.ChannelVal.Run(ctx, parsedChan)
 	}()
 
 	go func() {

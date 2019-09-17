@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethconnection
+package ethbridge
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/arblauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arblauncher"
 
 	errors2 "github.com/pkg/errors"
 

@@ -24,7 +24,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/disputable"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -353,9 +353,9 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (Waiting, error
 	}, nil
 }
 
-func (bot Waiting) updateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot Waiting) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.PendingDisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		c := bot.GetCore()
 		deadline := time + bot.VMConfig.GracePeriod
 		var inboxVal value.Value
@@ -394,7 +394,7 @@ func (bot Waiting) ChainUpdateTime(time uint64, bridge bridge.ArbVMBridge) (Chai
 	return bot, nil
 }
 
-func (bot Waiting) ChainUpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot Waiting) ChainUpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -402,9 +402,9 @@ func (bot Waiting) ChannelUpdateTime(time uint64, bridge bridge.Bridge) (Channel
 	return bot, nil
 }
 
-func (bot Waiting) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot Waiting) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.PendingUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, errors.New("waiting observer saw pending unanimous assertion that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
@@ -454,9 +454,9 @@ func (bot watchingAssertion) updateTime(time uint64, bridge bridge.ArbVMBridge) 
 	}, nil
 }
 
-func (bot watchingAssertion) updateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot watchingAssertion) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.InitiateChallengeEvent:
+	case ethbridge.InitiateChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		var challengeState challenge.State
 		if ev.Challenger == bot.Address {
@@ -485,7 +485,7 @@ func (bot watchingAssertion) ChainUpdateTime(time uint64, bridge bridge.ArbVMBri
 	return bot.updateTime(time, bridge)
 }
 
-func (bot watchingAssertion) ChainUpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot watchingAssertion) ChainUpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -493,7 +493,7 @@ func (bot watchingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Bridge
 	return bot.updateTime(time, bridge)
 }
 
-func (bot watchingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot watchingAssertion) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -520,9 +520,9 @@ func (bot attemptingAssertion) ChainUpdateTime(time uint64, bridge bridge.ArbVMB
 	return bot, nil
 }
 
-func (bot attemptingAssertion) ChainUpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot attemptingAssertion) ChainUpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.PendingDisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
 			bot.errorChan <- errors.New("attemptingAssertion: Other Assertion got in before ours")
 			close(bot.errorChan)
@@ -544,9 +544,9 @@ func (bot attemptingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Brid
 	return bot, nil
 }
 
-func (bot attemptingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot attemptingAssertion) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.PendingDisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
 			bot.errorChan <- errors.New("attemptingAssertion: Other Assertion got in before ours")
 			close(bot.errorChan)
@@ -587,9 +587,9 @@ func (bot waitingAssertion) updateTime(time uint64, bridge bridge.ArbVMBridge) (
 	}, nil
 }
 
-func (bot waitingAssertion) updateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev.(type) {
-	case ethconnection.InitiateChallengeEvent:
+	case ethbridge.InitiateChallengeEvent:
 		bot.resultChan <- false
 		ct, err := defender.New(
 			bot.Config,
@@ -612,7 +612,7 @@ func (bot waitingAssertion) ChainUpdateTime(time uint64, bridge bridge.ArbVMBrid
 	return bot.updateTime(time, bridge)
 }
 
-func (bot waitingAssertion) ChainUpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot waitingAssertion) ChainUpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -620,7 +620,7 @@ func (bot waitingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Bridge)
 	return bot.updateTime(time, bridge)
 }
 
-func (bot waitingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot waitingAssertion) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -631,9 +631,9 @@ type finalizingAssertion struct {
 	assertion  *protocol.Assertion
 }
 
-func (bot finalizingAssertion) updateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot finalizingAssertion) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.ConfirmedDisputableAssertEvent:
+	case ethbridge.ConfirmedDisputableAssertEvent:
 		if bot.ResultChan != nil {
 			bot.ResultChan <- true
 		}
@@ -654,7 +654,7 @@ func (bot finalizingAssertion) ChainUpdateTime(time uint64, bridge bridge.ArbVMB
 	return bot, nil
 }
 
-func (bot finalizingAssertion) ChainUpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot finalizingAssertion) ChainUpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }
 
@@ -662,6 +662,6 @@ func (bot finalizingAssertion) ChannelUpdateTime(time uint64, bridge bridge.Brid
 	return bot, nil
 }
 
-func (bot finalizingAssertion) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot finalizingAssertion) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	return bot.updateState(ev, time, bridge)
 }

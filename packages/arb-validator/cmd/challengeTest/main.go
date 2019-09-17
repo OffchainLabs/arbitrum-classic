@@ -30,7 +30,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -58,7 +58,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var connectionInfo ethconnection.ArbAddresses
+	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		log.Fatalln(err)
 	}

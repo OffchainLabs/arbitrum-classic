@@ -28,13 +28,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type Validator struct {
 	*ethvalidator.VMValidator
-	arbChain *ethconnection.ArbChain
+	arbChain *ethbridge.ArbChain
 }
 
 func (val *Validator) Address() common.Address {
@@ -47,7 +47,7 @@ func NewValidator(
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
 ) (*Validator, error) {
-	con, err := ethconnection.NewArbChain(vmID, val.Client)
+	con, err := ethbridge.NewArbChain(vmID, val.Client)
 	if err != nil {
 		return nil, err
 	}

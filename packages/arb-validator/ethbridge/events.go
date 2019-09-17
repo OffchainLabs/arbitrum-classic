@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethconnection
+package ethbridge
 
 import (
 	"github.com/ethereum/go-ethereum/common"

@@ -17,7 +17,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
 
@@ -56,7 +56,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 	t.Log("bridge_eth_addresses.json loaded")
-	var connectionInfo ethconnection.ArbAddresses
+	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Errorf("setupValidators Unmarshal error %v", err)
 		return err

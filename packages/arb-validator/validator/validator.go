@@ -18,8 +18,13 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
+	"log"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 
@@ -42,27 +47,93 @@ import (
 
 type ChainBot struct {
 	state.ChainState
+	bridge bridge.ArbVMBridge
 }
 
 func (bot *ChainBot) updateBot(state state.ChainState) {
 	bot.ChainState = state
 }
 
+func (bot *ChainBot) getBridge() bridge.ArbVMBridge {
+	return bot.bridge
+}
+
+func (bot *ChainBot) attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) bool {
+	if waitingBot, ok := bot.ChainState.(state.Waiting); ok && request != nil {
+		bot.ChainState = waitingBot.AttemptAssertion(ctx, *request, bot.bridge)
+		return true
+	}
+	return false
+}
+
+func (bot *ChainBot) updateTime(time uint64) error {
+	newBot, err := bot.ChainState.ChainUpdateTime(time, bot.bridge)
+	if err != nil {
+		return err
+	}
+	bot.ChainState = newBot
+	return nil
+}
+
+func (bot *ChainBot) updateState(ev ethbridge.Event, time uint64) (challenge.State, error) {
+	newBot, challengeBot, err := bot.ChainState.ChainUpdateState(ev, time, bot.bridge)
+	if err != nil {
+		return nil, err
+	}
+	bot.ChainState = newBot
+	return challengeBot, nil
+}
+
 type ChannelBot struct {
 	state.ChannelState
+	bridge bridge.Bridge
 }
 
 func (bot *ChannelBot) updateBot(state state.ChannelState) {
 	bot.ChannelState = state
 }
 
+func (bot *ChannelBot) getBridge() bridge.ArbVMBridge {
+	return bot.bridge
+}
+
+func (bot *ChannelBot) attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) bool {
+	if waitingBot, ok := bot.ChannelState.(state.Waiting); ok && request != nil {
+		bot.ChannelState = waitingBot.AttemptAssertion(ctx, *request, bot.bridge)
+		return true
+	}
+	return false
+}
+
+func (bot *ChannelBot) updateTime(time uint64) error {
+	newBot, err := bot.ChannelState.ChannelUpdateTime(time, bot.bridge)
+	if err != nil {
+		return err
+	}
+	bot.ChannelState = newBot
+	return nil
+}
+
+func (bot *ChannelBot) updateState(ev ethbridge.Event, time uint64) (challenge.State, error) {
+	newBot, challengeBot, err := bot.ChannelState.ChannelUpdateState(ev, time, bot.bridge)
+	if err != nil {
+		return nil, err
+	}
+	bot.ChannelState = newBot
+	return challengeBot, nil
+}
+
 type Bot interface {
 	state.State
+	updateTime(uint64) error
+	updateState(ethbridge.Event, uint64) (challenge.State, error)
+	getBridge() bridge.ArbVMBridge
+	attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) bool
 }
 
 type Validator struct {
 	Name        string
-	actions     chan func(bridge.ArbVMBridge)
+	actions     chan func()
 	maybeAssert chan bool
 
 	// Run loop only
@@ -74,10 +145,10 @@ type Validator struct {
 
 func NewValidator(
 	name string,
-	bot state.State,
+	bot Bot,
 	latestHeader *types.Header,
 ) *Validator {
-	actions := make(chan func(bridge.ArbVMBridge), 100)
+	actions := make(chan func(), 100)
 	maybeAssert := make(chan bool, 100)
 	return &Validator{
 		name,
@@ -93,7 +164,7 @@ func NewValidator(
 func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Value, <-chan error) {
 	resultChan := make(chan value.Value, 1)
 	errChan := make(chan error, 1)
-	validator.actions <- func(bridge bridge.ArbVMBridge) {
+	validator.actions <- func() {
 		if !validator.canRun() {
 			errChan <- errors.New("Cannot call when ArbChannel is not running")
 			return
@@ -154,7 +225,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 
 func (validator *Validator) PendingMessageCount() chan uint64 {
 	resultChan := make(chan uint64, 1)
-	validator.actions <- func(bridge bridge.ArbVMBridge) {
+	validator.actions <- func() {
 		c := validator.bot.GetCore()
 		resultChan <- c.GetMachine().PendingMessageCount()
 	}
@@ -167,7 +238,7 @@ func (validator *Validator) canRun() bool {
 
 func (validator *Validator) CanRun() chan bool {
 	resultChan := make(chan bool, 1)
-	validator.actions <- func(bridge bridge.ArbVMBridge) {
+	validator.actions <- func() {
 		resultChan <- validator.canRun()
 	}
 	return resultChan
@@ -175,7 +246,7 @@ func (validator *Validator) CanRun() chan bool {
 
 func (validator *Validator) CanContinueRunning() chan bool {
 	resultChan := make(chan bool, 1)
-	validator.actions <- func(bridge bridge.ArbVMBridge) {
+	validator.actions <- func() {
 		if !validator.canRun() {
 			resultChan <- false
 		} else {
@@ -194,7 +265,7 @@ type VMStateData struct {
 
 func (validator *Validator) RequestVMState() <-chan VMStateData {
 	resultChan := make(chan VMStateData)
-	validator.actions <- func(bridge bridge.ArbVMBridge) {
+	validator.actions <- func() {
 		c := validator.bot.GetCore()
 		machineHash := c.GetMachine().Hash()
 		resultChan <- VMStateData{
@@ -208,7 +279,7 @@ func (validator *Validator) RequestVMState() <-chan VMStateData {
 func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bool, <-chan error) {
 	resultChan := make(chan bool)
 	errChan := make(chan error)
-	validator.actions <- func(b bridge.ArbVMBridge) {
+	validator.actions <- func() {
 		if !validator.canRun() {
 			errChan <- errors.New("Can't disputable assert when not running")
 			return
@@ -239,11 +310,100 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 				ResultChan:   resultChan,
 				ErrorChan:    errChan,
 			}
-			validator.actions <- func(b bridge.ArbVMBridge) {
+			validator.actions <- func() {
 				validator.pendingDisputableRequest = request
 				validator.maybeAssert <- true
 			}
 		}()
 	}
 	return resultChan, errChan
+}
+
+func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.Notification) {
+	defer fmt.Printf("%v: Exiting\n", validator.Name)
+	for {
+		select {
+		case <-ctx.Done():
+			break
+		case notification, ok := <-recvChan:
+			// fmt.Printf("Got valmessage %T: %v\n", event, event)
+			if !ok {
+				fmt.Printf("%v: Error in recvChan\n", validator.Name)
+				return
+			}
+
+			newHeader := notification.Header
+			if validator.latestHeader == nil || newHeader.Number.Uint64() >= validator.latestHeader.Number.Uint64() && newHeader.Hash() != validator.latestHeader.Hash() {
+				validator.latestHeader = newHeader
+				err := validator.timeUpdate()
+				if err != nil {
+					log.Println("Error processing time update", err)
+				}
+				if validator.pendingDisputableRequest != nil {
+					pre := validator.pendingDisputableRequest.Precondition
+					if !validator.bot.GetCore().ValidateAssertion(pre, newHeader.Number.Uint64()) {
+						validator.pendingDisputableRequest.ErrorChan <- errors.New("Precondition was invalidated")
+						close(validator.pendingDisputableRequest.ErrorChan)
+						close(validator.pendingDisputableRequest.ResultChan)
+						validator.pendingDisputableRequest = nil
+					}
+				}
+			}
+
+			switch ev := notification.Event.(type) {
+			case ethbridge.NewTimeEvent:
+				break
+			case ethbridge.VMEvent:
+				err := validator.eventUpdate(ev, notification.Header)
+				if err != nil {
+					log.Println("Error processing event update", err)
+				}
+			case ethbridge.MessageDeliveredEvent:
+				validator.bot.SendMessageToVM(ev.Msg)
+			default:
+				panic("Should never recieve other kinds of events")
+			}
+		case action := <-validator.actions:
+			action()
+		case <-validator.maybeAssert:
+		}
+
+		if validator.bot.attemptDisputableAssertion(ctx, validator.pendingDisputableRequest) {
+			validator.pendingDisputableRequest = nil
+		}
+	}
+}
+
+func (validator *Validator) timeUpdate() error {
+	if validator.challengeBot != nil {
+		newBot, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64(), validator.bot.getBridge())
+		if err != nil {
+			return err
+		}
+		validator.challengeBot = newBot
+	}
+	return validator.bot.updateTime(validator.latestHeader.Number.Uint64())
+}
+
+func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Header) error {
+	if ev.GetIncomingMessageType() == ethbridge.ChallengeMessage {
+		if validator.challengeBot == nil {
+			panic("challengeBot can't be nil if challenge message is recieved")
+		}
+
+		newBot, err := validator.challengeBot.UpdateState(ev, header.Number.Uint64(), validator.bot.getBridge())
+		if err != nil {
+			return err
+		}
+		validator.challengeBot = newBot
+	} else {
+		challengeBot, err := validator.bot.updateState(ev, header.Number.Uint64())
+		if err != nil {
+			return err
+		}
+		if challengeBot != nil {
+			validator.challengeBot = challengeBot
+		}
+	}
+	return nil
 }

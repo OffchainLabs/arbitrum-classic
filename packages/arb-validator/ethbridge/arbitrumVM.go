@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethconnection
+package ethbridge
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/arblauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arblauncher"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -35,7 +35,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/challengemanager"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengemanager"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 

@@ -20,7 +20,7 @@ import (
 	"context"
 	"math/rand"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -60,9 +60,9 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot waitingContinuing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.BisectionEvent:
+	case ethbridge.BisectionEvent:
 		preconditions := protocol.GeneratePreconditions(bot.challengedPrecondition, ev.Assertions)
 		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions)
 		if err != nil && bot.ChallengeEverything {
@@ -92,7 +92,7 @@ func (bot waitingContinuing) UpdateState(ev ethconnection.Event, time uint64, br
 			preconditions:   preconditions,
 			assertions:      ev.Assertions,
 		}, nil
-	case ethconnection.OneStepProofEvent:
+	case ethbridge.OneStepProofEvent:
 		return nil, nil
 	default:
 		return nil, &challenge.Error{Message: "ERROR: waitingContinuing: ArbChannel state got unsynchronized"}
@@ -121,9 +121,9 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challe
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
-func (bot continuing) UpdateState(ev ethconnection.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.ContinueChallengeEvent:
+	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
 		return waitingContinuing{
 			bot.Config,

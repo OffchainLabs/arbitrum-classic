@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
@@ -41,17 +41,17 @@ func (bot attemptingUnanimousClosing) ChannelUpdateTime(time uint64, bridge brid
 	return bot, nil
 }
 
-func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev.(type) {
-	case ethconnection.PendingUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		// Someone proposed a pending update
 		// Final update has already been sent
 		return bot, nil, nil
-	case ethconnection.PendingDisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		// Someone proposed a disputable Assertion
 		// Final update has already been sent
 		return bot, nil, nil
-	case ethconnection.FinalizedUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		bot.Core.DeliverMessagesToVM(bridge)
 		if bot.retChan != nil {
 			bot.retChan <- true
@@ -79,9 +79,9 @@ func (bot attemptingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridg
 	return bot, nil
 }
 
-func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethconnection.PendingUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
 			// Someone proposed an old update
 			// Newer update has already been sent
@@ -103,11 +103,11 @@ func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethconnection.Event, 
 				errChan:   bot.errChan,
 			}, nil, nil
 		}
-	case ethconnection.PendingDisputableAssertionEvent:
+	case ethbridge.PendingDisputableAssertionEvent:
 		// Someone proposed a disputable Assertion
 		// Unanimous proposal has already been sent
 		return bot, nil, nil
-	case ethconnection.FinalizedUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
@@ -145,15 +145,15 @@ func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.B
 	}, nil
 }
 
-func (bot waitingOffchainClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev.(type) {
-	case ethconnection.PendingUnanimousAssertEvent:
+	case ethbridge.PendingUnanimousAssertEvent:
 		err := errors.New("unanimous Assertion unexpectedly superseded by sequence number")
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
 		return nil, nil, err
-	case ethconnection.FinalizedUnanimousAssertEvent:
+	case ethbridge.FinalizedUnanimousAssertEvent:
 		err := errors.New("unanimous Assertion unexpectedly superseded by final assert")
 		if bot.errChan != nil {
 			bot.errChan <- err
@@ -178,9 +178,9 @@ func (bot finalizingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridg
 	return bot, nil
 }
 
-func (bot finalizingOffchainClosing) ChannelUpdateState(ev ethconnection.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot finalizingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
 	switch ev.(type) {
-	case ethconnection.ConfirmedUnanimousAssertEvent:
+	case ethbridge.ConfirmedUnanimousAssertEvent:
 		bot.GetCore().DeliverMessagesToVM(bridge)
 		if bot.retChan != nil {
 			bot.retChan <- true

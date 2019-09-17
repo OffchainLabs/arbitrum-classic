@@ -21,7 +21,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -40,17 +40,17 @@ type Validator struct {
 
 	// Not in thread, but internal only
 	serverAddress string
-	arbAddresses  ethconnection.ArbAddresses
+	arbAddresses  ethbridge.ArbAddresses
 	Client        *ethclient.Client
 
-	*ethconnection.ArbLauncher
-	*ethconnection.PendingInbox
+	*ethbridge.ArbLauncher
+	*ethbridge.PendingInbox
 	auth *bind.TransactOpts
 }
 
 func NewValidator(
 	key *ecdsa.PrivateKey,
-	connectionInfo ethconnection.ArbAddresses,
+	connectionInfo ethbridge.ArbAddresses,
 	ethURL string,
 ) (*Validator, error) {
 	auth := bind.NewKeyedTransactor(key)
@@ -60,12 +60,12 @@ func NewValidator(
 		return nil, err
 	}
 
-	vmCreator, err := ethconnection.NewArbLauncher(common.HexToAddress(connectionInfo.VMCreatorAddress), client)
+	vmCreator, err := ethbridge.NewArbLauncher(common.HexToAddress(connectionInfo.VMCreatorAddress), client)
 	if err != nil {
 		return nil, err
 	}
 
-	pendingInbox, err := ethconnection.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
+	pendingInbox, err := ethbridge.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
 	if err != nil {
 		return nil, err
 	}

@@ -31,7 +31,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -39,7 +39,7 @@ import (
 type Validator struct {
 	*ethvalidator.VMValidator
 	Validators map[common.Address]validatorInfo
-	arbChannel *ethconnection.ArbChannel
+	arbChannel *ethbridge.ArbChannel
 }
 
 func (val *Validator) ValidatorCount() int {
@@ -56,7 +56,7 @@ func NewValidator(
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
 ) (*Validator, error) {
-	con, err := ethconnection.NewArbChannel(vmID, val.Client)
+	con, err := ethbridge.NewArbChannel(vmID, val.Client)
 	if err != nil {
 		return nil, err
 	}
