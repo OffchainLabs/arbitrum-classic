@@ -38,7 +38,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		if err != nil {
 			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
 		}
-		bridge.OneStepProof(
+		_, err = bridge.OneStepProof(
 			context.Background(),
 			assDef.GetPrecondition(),
 			assDef.GetAssertion().Stub(),
@@ -49,7 +49,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 			precondition: assDef.GetPrecondition(),
 			assertion:    assDef.GetAssertion().Stub(),
 			deadline:     deadline,
-		}, nil
+		}, err
 	}
 
 	defenders := assDef.NBisect(6)
@@ -57,7 +57,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 	for _, defender := range defenders {
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
-	bridge.BisectAssertion(
+	_, err := bridge.BisectAssertion(
 		context.Background(),
 		assDef.GetPrecondition(),
 		assertions,
@@ -68,7 +68,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		wholeAssertion:    assDef.GetAssertion().Stub(),
 		splitDefenders:    defenders,
 		deadline:          deadline,
-	}, nil
+	}, err
 }
 
 type bisectedAssert struct {
@@ -101,7 +101,7 @@ func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge br
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: bisectedAssert: ArbChannel state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: bisectedAssert: VM state got unsynchronized"}
 	}
 }
 
@@ -116,10 +116,10 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (c
 		return bot, nil
 	}
 
-	bridge.ChallengerTimedOut(
+	_, err := bridge.ChallengerTimedOut(
 		context.Background(),
 	)
-	return challenge.TimedOutChallenger{Config: bot.Config}, nil
+	return challenge.TimedOutChallenger{Config: bot.Config}, err
 }
 
 func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
@@ -130,7 +130,7 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge b
 		}
 		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
 	default:
-		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: ArbChannel state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: VM state got unsynchronized, %T", ev)}
 	}
 }
 
@@ -160,6 +160,6 @@ func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge
 		fmt.Println("oneStepChallenged: Proof was accepted")
 		return nil, nil
 	default:
-		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: ArbChannel state got unsynchronized, %T", ev)}
+		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: VM state got unsynchronized, %T", ev)}
 	}
 }

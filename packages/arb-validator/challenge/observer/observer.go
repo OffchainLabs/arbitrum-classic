@@ -65,7 +65,7 @@ func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, bridge 
 		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
 		return waitingBisected{bot.Config, deadline, preconditions, ev.Assertions}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingChallenge: ArbChannel state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingChallenge: VM state got unsynchronized"}
 	}
 }
 
@@ -100,6 +100,6 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge b
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingBisected: ArbChannel state got unsynchronized"}
+		return nil, &challenge.Error{Message: "ERROR: waitingBisected: VM state got unsynchronized"}
 	}
 }

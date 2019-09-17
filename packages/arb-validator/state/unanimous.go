@@ -133,7 +133,7 @@ func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.B
 	if time <= bot.deadline {
 		return bot, nil
 	}
-	bridge.ConfirmUnanimousAsserted(
+	_, err := bridge.ConfirmUnanimousAsserted(
 		context.Background(),
 		bot.Core.GetMachine().InboxHash().Hash(),
 		bot.assertion,
@@ -142,7 +142,7 @@ func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.B
 		Config:  bot.Config,
 		Core:    bot.Core,
 		retChan: bot.retChan,
-	}, nil
+	}, err
 }
 
 func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {

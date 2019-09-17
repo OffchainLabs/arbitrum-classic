@@ -127,27 +127,16 @@ func (val *Validator) FinalizedUnanimousAssert(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 	signatures [][]byte,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbChannel.FinalizedUnanimousAssert(
-			val.Validator.MakeAuth(ctx),
-			newInboxHash,
-			assertion,
-			signatures,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbChannel.FinalizedUnanimousAssert(
+		val.Validator.MakeAuth(ctx),
+		newInboxHash,
+		assertion,
+		signatures,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *Validator) PendingUnanimousAssert(
@@ -156,54 +145,32 @@ func (val *Validator) PendingUnanimousAssert(
 	assertion *protocol.Assertion,
 	sequenceNum uint64,
 	signatures [][]byte,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbChannel.PendingUnanimousAssert(
-			val.Validator.MakeAuth(ctx),
-			newInboxHash,
-			assertion,
-			sequenceNum,
-			signatures,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbChannel.PendingUnanimousAssert(
+		val.Validator.MakeAuth(ctx),
+		newInboxHash,
+		assertion,
+		sequenceNum,
+		signatures,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *Validator) ConfirmUnanimousAsserted(
 	ctx context.Context,
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbChannel.ConfirmUnanimousAsserted(
-			val.Validator.MakeAuth(ctx),
-			newInboxHash,
-			assertion,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbChannel.ConfirmUnanimousAsserted(
+		val.Validator.MakeAuth(ctx),
+		newInboxHash,
+		assertion,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *Validator) UnanimousAssertHash(

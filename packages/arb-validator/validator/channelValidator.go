@@ -115,7 +115,7 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 
 	validator.actions <- func() {
 		if !validator.canRun() {
-			errChan <- errors.New("Can't unanimous assert when not running")
+			errChan <- errors.New("can't unanimous assert when not running")
 			return
 		}
 		bot, ok := validator.channelBot.ChannelState.(state.Waiting)
@@ -187,7 +187,7 @@ func (validator *ChannelValidator) RequestFollowUnanimous(
 	errChan := make(chan error, 1)
 	validator.actions <- func() {
 		if !validator.canRun() {
-			errChan <- errors.New("Can't unanimous assert when not running")
+			errChan <- errors.New("can't unanimous assert when not running")
 			return
 		}
 		bot, ok := validator.channelBot.ChannelState.(state.Waiting)
@@ -285,7 +285,11 @@ func (validator *ChannelValidator) ConfirmOffchainUnanimousAssertion(
 
 		if request.SequenceNum == math.MaxUint64 {
 			if canClose {
-				newBot.CloseUnanimous(validator.channelBot.bridge)
+				_, err := newBot.CloseUnanimous(validator.channelBot.bridge)
+				if err != nil {
+					errChan <- err
+					return
+				}
 			}
 			// Can only error if there is no pending assertion which is guaranteed here
 			newBot2, _ := newBot.ClosingUnanimous(resultChan, errChan)
@@ -307,7 +311,11 @@ func (validator *ChannelValidator) CloseUnanimousAssertionRequest() (<-chan bool
 			errChan <- fmt.Errorf("can't close unanimous request, but was in the wrong state to handle it: %T", validator.channelBot.ChannelState)
 			return
 		}
-		bot.CloseUnanimous(validator.channelBot.bridge)
+		_, err := bot.CloseUnanimous(validator.channelBot.bridge)
+		if err != nil {
+			errChan <- err
+			return
+		}
 		newBot, err := bot.ClosingUnanimous(resultChan, errChan)
 		if err != nil {
 			errChan <- err

@@ -58,12 +58,16 @@ func (bot *ChainBot) getBridge() bridge.ArbVMBridge {
 	return bot.bridge
 }
 
-func (bot *ChainBot) attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) bool {
+func (bot *ChainBot) attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) (bool, error) {
 	if waitingBot, ok := bot.ChainState.(state.Waiting); ok && request != nil {
-		bot.ChainState = waitingBot.AttemptAssertion(ctx, *request, bot.bridge)
-		return true
+		newBot, err := waitingBot.AttemptAssertion(ctx, *request, bot.bridge)
+		if err != nil {
+			return false, err
+		}
+		bot.ChainState = newBot
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (bot *ChainBot) updateTime(time uint64) error {
@@ -97,12 +101,16 @@ func (bot *ChannelBot) getBridge() bridge.ArbVMBridge {
 	return bot.bridge
 }
 
-func (bot *ChannelBot) attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) bool {
+func (bot *ChannelBot) attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) (bool, error) {
 	if waitingBot, ok := bot.ChannelState.(state.Waiting); ok && request != nil {
-		bot.ChannelState = waitingBot.AttemptAssertion(ctx, *request, bot.bridge)
-		return true
+		newBot, err := waitingBot.AttemptAssertion(ctx, *request, bot.bridge)
+		if err != nil {
+			return false, err
+		}
+		bot.ChannelState = newBot
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 func (bot *ChannelBot) updateTime(time uint64) error {
@@ -128,7 +136,7 @@ type Bot interface {
 	updateTime(uint64) error
 	updateState(ethbridge.Event, uint64) (challenge.State, error)
 	getBridge() bridge.ArbVMBridge
-	attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) bool
+	attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) (bool, error)
 }
 
 type Validator struct {
@@ -166,7 +174,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 	errChan := make(chan error, 1)
 	validator.actions <- func() {
 		if !validator.canRun() {
-			errChan <- errors.New("Cannot call when ArbChannel is not running")
+			errChan <- errors.New("cannot call when ArbChannel is not running")
 			return
 		}
 		c := validator.bot.GetCore()
@@ -281,7 +289,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 	errChan := make(chan error)
 	validator.actions <- func() {
 		if !validator.canRun() {
-			errChan <- errors.New("Can't disputable assert when not running")
+			errChan <- errors.New("can't disputable assert when not running")
 			return
 		}
 		c := validator.bot.GetCore()
@@ -342,7 +350,7 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 				if validator.pendingDisputableRequest != nil {
 					pre := validator.pendingDisputableRequest.Precondition
 					if !validator.bot.GetCore().ValidateAssertion(pre, newHeader.Number.Uint64()) {
-						validator.pendingDisputableRequest.ErrorChan <- errors.New("Precondition was invalidated")
+						validator.pendingDisputableRequest.ErrorChan <- errors.New("precondition was invalidated")
 						close(validator.pendingDisputableRequest.ErrorChan)
 						close(validator.pendingDisputableRequest.ResultChan)
 						validator.pendingDisputableRequest = nil
@@ -368,7 +376,10 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 		case <-validator.maybeAssert:
 		}
 
-		if validator.bot.attemptDisputableAssertion(ctx, validator.pendingDisputableRequest) {
+		if asserted, err := validator.bot.attemptDisputableAssertion(ctx, validator.pendingDisputableRequest); asserted || err != nil {
+			if err != nil {
+				log.Println("Failed to disputable assert", err)
+			}
 			validator.pendingDisputableRequest = nil
 		}
 	}

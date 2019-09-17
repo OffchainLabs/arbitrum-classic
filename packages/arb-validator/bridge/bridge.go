@@ -33,7 +33,7 @@ type Bridge interface {
 		newInboxHash [32]byte,
 		assertion *protocol.Assertion,
 		signatures [][]byte,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	PendingUnanimousAssert(
 		ctx context.Context,
@@ -41,13 +41,13 @@ type Bridge interface {
 		assertion *protocol.Assertion,
 		sequenceNum uint64,
 		signatures [][]byte,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	ConfirmUnanimousAsserted(
 		ctx context.Context,
 		newInboxHash [32]byte,
 		assertion *protocol.Assertion,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 }
 
 type ArbVMBridge interface {
@@ -64,45 +64,45 @@ type ArbVMBridge interface {
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	ConfirmDisputableAsserted(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	InitiateChallenge(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	BisectAssertion(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		ctx context.Context,
 		assertionToChallenge uint16,
 		preconditions []*protocol.Precondition,
 		assertions []*protocol.AssertionStub,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	OneStepProof(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
 		proof []byte,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	AsserterTimedOut(
 		ctx context.Context,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	ChallengerTimedOut(
 		ctx context.Context,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 }

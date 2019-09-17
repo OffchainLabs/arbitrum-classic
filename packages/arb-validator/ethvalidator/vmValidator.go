@@ -175,11 +175,9 @@ func (val *VMValidator) StartListening(ctx context.Context) (chan ethbridge.Noti
 }
 
 func (val *VMValidator) AddedNewMessages(count uint64) {
-	go func() {
-		val.Mutex.Lock()
-		val.unprocessedMessageCount += count
-		val.Mutex.Unlock()
-	}()
+	val.Mutex.Lock()
+	val.unprocessedMessageCount += count
+	val.Mutex.Unlock()
 }
 
 func (val *VMValidator) FinalizedAssertion(
@@ -188,122 +186,76 @@ func (val *VMValidator) FinalizedAssertion(
 	signatures [][]byte,
 	proposalResults *valmessage.UnanimousUpdateResults,
 ) {
-	go func() {
-		val.Mutex.Lock()
-		finalizedAssertion := valmessage.FinalizedAssertion{
-			Assertion:       assertion,
-			OnChainTxHash:   onChainTxHash,
-			Signatures:      signatures,
-			ProposalResults: proposalResults,
-		}
-		val.unprocessedMessageCount -= uint64(len(finalizedAssertion.NewLogs()))
-		val.CompletedCallChan <- finalizedAssertion
-		val.Mutex.Unlock()
-	}()
+	val.Mutex.Lock()
+	finalizedAssertion := valmessage.FinalizedAssertion{
+		Assertion:       assertion,
+		OnChainTxHash:   onChainTxHash,
+		Signatures:      signatures,
+		ProposalResults: proposalResults,
+	}
+	val.unprocessedMessageCount -= uint64(len(finalizedAssertion.NewLogs()))
+	val.CompletedCallChan <- finalizedAssertion
+	val.Mutex.Unlock()
 }
 
 func (val *VMValidator) PendingDisputableAssert(
 	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.PendingDisputableAssert(
-			val.Validator.MakeAuth(ctx),
-			precondition,
-			assertion,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed initiating disputable assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.PendingDisputableAssert(
+		val.Validator.MakeAuth(ctx),
+		precondition,
+		assertion,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) ConfirmDisputableAsserted(
 	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.ConfirmDisputableAsserted(
-			val.Validator.MakeAuth(ctx),
-			precondition,
-			assertion,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed confirming disputable assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.ConfirmDisputableAsserted(
+		val.Validator.MakeAuth(ctx),
+		precondition,
+		assertion,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) InitiateChallenge(
 	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.InitiateChallenge(
-			val.Validator.MakeAuth(ctx),
-			precondition,
-			assertion,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed initiating challenge")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.InitiateChallenge(
+		val.Validator.MakeAuth(ctx),
+		precondition,
+		assertion,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) BisectAssertion(
 	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.BisectAssertion(
-			val.Validator.MakeAuth(ctx),
-			precondition,
-			assertions,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed initiating bisection")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.BisectAssertion(
+		val.Validator.MakeAuth(ctx),
+		precondition,
+		assertions,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) ContinueChallenge(
@@ -311,27 +263,16 @@ func (val *VMValidator) ContinueChallenge(
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,
 	assertions []*protocol.AssertionStub,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.ContinueChallenge(
-			val.Validator.MakeAuth(ctx),
-			assertionToChallenge,
-			preconditions,
-			assertions,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed continuing challenge")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.ContinueChallenge(
+		val.Validator.MakeAuth(ctx),
+		assertionToChallenge,
+		preconditions,
+		assertions,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) OneStepProof(
@@ -339,69 +280,36 @@ func (val *VMValidator) OneStepProof(
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 	proof []byte,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.OneStepProof(
-			val.Validator.MakeAuth(ctx),
-			precondition,
-			assertion,
-			proof,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed one step proof")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.OneStepProof(
+		val.Validator.MakeAuth(ctx),
+		precondition,
+		assertion,
+		proof,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) AsserterTimedOut(
 	ctx context.Context,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.AsserterTimedOutChallenge(val.Validator.MakeAuth(ctx))
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed timing out challenge")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.AsserterTimedOutChallenge(val.Validator.MakeAuth(ctx))
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) ChallengerTimedOut(
 	ctx context.Context,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.arbitrumVM.ChallengerTimedOutChallenge(
-			val.Validator.MakeAuth(ctx),
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed timing out challenge")
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.ChallengerTimedOutChallenge(
+		val.Validator.MakeAuth(ctx),
+	)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) SendMessage(
@@ -409,22 +317,11 @@ func (val *VMValidator) SendMessage(
 	data value.Value,
 	tokenType [21]byte,
 	currency *big.Int,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Unlock()
-		receipt, err := val.Validator.SendMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
-		if err != nil {
-			errChan <- err
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Unlock()
+	receipt, err := val.Validator.SendMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) ForwardMessage(
@@ -433,44 +330,22 @@ func (val *VMValidator) ForwardMessage(
 	tokenType [21]byte,
 	currency *big.Int,
 	sig []byte,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.Validator.ForwardMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
-		if err != nil {
-			errChan <- err
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.Validator.ForwardMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) SendEthMessage(
 	ctx context.Context,
 	data value.Value,
 	amount *big.Int,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.Mutex.Lock()
-		receipt, err := val.Validator.SendEthMessage(val.Validator.MakeAuth(ctx), data, val.VMID, amount)
-		if err != nil {
-			errChan <- err
-		} else {
-			receiptChan <- receipt
-		}
-		val.Mutex.Unlock()
-	}()
-	return receiptChan, errChan
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.Validator.SendEthMessage(val.Validator.MakeAuth(ctx), data, val.VMID, amount)
+	val.Mutex.Unlock()
+	return receipt, err
 }
 
 func (val *VMValidator) UnanimousAssertHash(

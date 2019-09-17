@@ -55,7 +55,7 @@ func (bot TimedOutChallenger) UpdateState(ev ethbridge.Event, time uint64, bridg
 	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutChallenger: ArbChannel state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutChallenger: VM state got unsynchronized"}
 	}
 }
 
@@ -72,6 +72,6 @@ func (bot TimedOutAsserter) UpdateState(ev ethbridge.Event, time uint64, bridge 
 	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutAsserter: ArbChannel state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutAsserter: VM state got unsynchronized"}
 	}
 }

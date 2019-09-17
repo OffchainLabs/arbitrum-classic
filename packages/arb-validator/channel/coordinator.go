@@ -457,10 +457,8 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					// Do the disputable assertion
 					messages := <-m.mpq.Fetch()
 					for _, msg := range messages {
-						receiptChan, errChan := m.Val.ForwardMessage(context.Background(), msg.Message.Data, msg.Message.TokenType, msg.Message.Currency, msg.Signature)
-						select {
-						case _ = <-receiptChan:
-						case err := <-errChan:
+						_, err := m.Val.ForwardMessage(context.Background(), msg.Message.Data, msg.Message.TokenType, msg.Message.Currency, msg.Signature)
+						if err != nil {
 							log.Fatalln("ForwardMessage err", err)
 						}
 					}

@@ -110,7 +110,7 @@ func (bot Waiting) HasOpenAssertion() bool {
 	return bot.assertion != nil
 }
 
-func (bot Waiting) CloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, chan error) {
+func (bot Waiting) CloseUnanimous(bridge bridge.Bridge) (*types.Receipt, error) {
 	if bot.sequenceNum == math.MaxUint64 {
 		return bridge.FinalizedUnanimousAssert(
 			context.Background(),
@@ -162,8 +162,8 @@ func (bot Waiting) ClosingUnanimous(retChan chan<- bool, errChan chan<- error) (
 	}
 }
 
-func (bot Waiting) AttemptAssertion(ctx context.Context, request disputable.AssertionRequest, bridge bridge.ArbVMBridge) ChainState {
-	bridge.PendingDisputableAssert(
+func (bot Waiting) AttemptAssertion(ctx context.Context, request disputable.AssertionRequest, bridge bridge.ArbVMBridge) (ChainState, error) {
+	_, err := bridge.PendingDisputableAssert(
 		ctx,
 		request.Precondition,
 		request.Assertion,
@@ -177,7 +177,7 @@ func (bot Waiting) AttemptAssertion(ctx context.Context, request disputable.Asse
 		request.Assertion,
 		request.ResultChan,
 		request.ErrorChan,
-	}}
+	}}, err
 }
 
 func (bot Waiting) GetCore() *core.Core {
@@ -368,11 +368,14 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, bridge bridge.Ar
 			ev.Precondition.TimeBounds,
 		)
 		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
-			bridge.InitiateChallenge(
+			_, err := bridge.InitiateChallenge(
 				context.Background(),
 				ev.Precondition,
 				ev.Assertion,
 			)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 		balance := c.GetBalance()
 		_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
@@ -408,7 +411,10 @@ func (bot Waiting) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge br
 		if bot.accepted == nil || ev.SequenceNum > bot.sequenceNum {
 			return nil, nil, errors.New("waiting observer saw pending unanimous assertion that it doesn't remember")
 		} else if ev.SequenceNum < bot.sequenceNum {
-			bot.CloseUnanimous(bridge)
+			_, err := bot.CloseUnanimous(bridge)
+			if err != nil {
+				return nil, nil, err
+			}
 			newBot, err := bot.ClosingUnanimous(nil, nil)
 			return newBot, nil, err
 		} else {
@@ -574,7 +580,7 @@ func (bot waitingAssertion) updateTime(time uint64, bridge bridge.ArbVMBridge) (
 		return bot, nil
 	}
 
-	bridge.ConfirmDisputableAsserted(
+	_, err := bridge.ConfirmDisputableAsserted(
 		context.Background(),
 		bot.precondition,
 		bot.assertion,
@@ -584,7 +590,7 @@ func (bot waitingAssertion) updateTime(time uint64, bridge bridge.ArbVMBridge) (
 		Config:     bot.Config,
 		ResultChan: bot.resultChan,
 		assertion:  bot.assertion,
-	}, nil
+	}, err
 }
 
 func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
