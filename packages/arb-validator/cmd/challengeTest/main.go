@@ -28,6 +28,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -114,8 +116,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	coordinator, err := val1.NewCoordinator(
+	coordinator, err := channel.NewCoordinator(
 		"Alice",
+		val1,
 		address,
 		machine.Clone(),
 		config,
@@ -130,8 +133,9 @@ func main() {
 
 	coordinator.StartServer(context.Background())
 
-	challenger, err := val2.NewFollower(
+	challenger, err := channel.NewValidatorFollower(
 		"Bob",
+		val2,
 		machine.Clone(),
 		config,
 		false,

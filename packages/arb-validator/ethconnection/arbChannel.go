@@ -39,31 +39,36 @@ import (
 )
 
 type ArbChannel struct {
-	Client *ethclient.Client
 	*ArbitrumVM
 	Tracker *arblauncher.ArbChannel
 }
 
-func NewVMTracker(address common.Address, client *ethclient.Client) (*ArbChannel, error) {
+func NewArbChannel(address common.Address, client *ethclient.Client) (*ArbChannel, error) {
 	arbVM, err := NewArbitrumVM(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbitrumVM")
+		return nil, err
 	}
-
-	trackerContract, err := arblauncher.NewArbChannel(address, client)
-	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbChannel")
-	}
-
-	return &ArbChannel{client, arbVM, trackerContract}, nil
+	channel := &ArbChannel{ArbitrumVM: arbVM}
+	err = channel.setupContracts()
+	return channel, err
 }
 
-func (vm *ArbChannel) CreateListeners(ctx context.Context) (chan Notification, chan error, error) {
-	outChan, errChan, err := vm.ArbitrumVM.CreateListeners(ctx)
+func (vm *ArbChannel) setupContracts() error {
+	trackerContract, err := arblauncher.NewArbChannel(vm.address, vm.Client)
 	if err != nil {
-		return nil, nil, err
+		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
+	vm.Tracker = trackerContract
+	return nil
+}
 
+func (vm *ArbChannel) StartConnection(ctx context.Context) error {
+	if err := vm.ArbitrumVM.StartConnection(ctx); err != nil {
+		return err
+	}
+	if err := vm.setupContracts(); err != nil {
+		return err
+	}
 	start := uint64(0)
 	watch := &bind.WatchOpts{
 		Context: ctx,
@@ -73,24 +78,22 @@ func (vm *ArbChannel) CreateListeners(ctx context.Context) (chan Notification, c
 	unanAssChan := make(chan *arblauncher.ArbChannelFinalizedUnanimousAssertion)
 	unanAssSub, err := vm.Tracker.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	unanPropChan := make(chan *arblauncher.ArbChannelPendingUnanimousAssertion)
 	unanPropSub, err := vm.Tracker.WatchPendingUnanimousAssertion(watch, unanPropChan)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	unanConfChan := make(chan *arblauncher.ArbChannelConfirmedUnanimousAssertion)
 	unanConfSub, err := vm.Tracker.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	go func() {
-		defer close(outChan)
-		defer close(errChan)
 		defer unanAssSub.Unsubscribe()
 		defer unanConfSub.Unsubscribe()
 		defer unanPropSub.Unsubscribe()
@@ -102,10 +105,10 @@ func (vm *ArbChannel) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-unanAssChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: FinalizedUnanimousAssertEvent{
@@ -116,10 +119,10 @@ func (vm *ArbChannel) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-unanPropChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: PendingUnanimousAssertEvent{
@@ -131,10 +134,10 @@ func (vm *ArbChannel) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-unanConfChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: ConfirmedUnanimousAssertEvent{
@@ -143,18 +146,18 @@ func (vm *ArbChannel) CreateListeners(ctx context.Context) (chan Notification, c
 					TxHash: val.Raw.TxHash,
 				}
 			case err := <-unanAssSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-unanPropSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-unanConfSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			}
 		}
 	}()
-	return outChan, errChan, nil
+	return nil
 }
 
 func (vm *ArbChannel) IncreaseDeposit(

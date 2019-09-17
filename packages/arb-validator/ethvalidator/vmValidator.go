@@ -24,8 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -44,109 +42,50 @@ import (
 type VMValidator struct {
 	// Safe public interface
 	VMID              common.Address
-	Validators        map[common.Address]validatorInfo
-	Bot               *validator.ChannelValidator
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
-	mutex *sync.Mutex
+	Mutex *sync.Mutex
 	// private thread only
-	validator               *Validator
-	vmTracker               *ethconnection.ArbChannel
+	Validator               *Validator
+	arbitrumVM              ethconnection.VMConnection
 	unprocessedMessageCount uint64
 }
 
 func (val *VMValidator) Address() common.Address {
-	return val.validator.Address()
-}
-
-func (val *VMValidator) ValidatorCount() int {
-	return len(val.Validators)
-}
-
-type validatorInfo struct {
-	indexNum uint16
-}
-
-type VMResponse struct {
-	Message protocol.Message
-	Result  value.Value
-	Proof   [][32]byte
+	return val.Validator.Address()
 }
 
 func NewVMValidator(
-	name string,
 	val *Validator,
 	vmID common.Address,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
-	challengeEverything bool,
-	maxCallSteps int32,
+	con ethconnection.VMConnection,
 ) (*VMValidator, error) {
-	con, err := ethconnection.NewVMTracker(vmID, val.client)
-	if err != nil {
-		return nil, errors2.Wrap(err, "VMValidator failed to create NewVMTracker")
-	}
-
 	callOpts := &bind.CallOpts{
 		Pending: false,
 		From:    val.Address(),
 		Context: context.Background(),
 	}
-	err = con.VerifyVM(
+
+	err := con.VerifyVM(
 		callOpts,
 		config,
 		machine.Hash(),
 	)
 	if err != nil {
-		return nil, errors2.Wrap(err, "VMValidator failed to verify vm")
+		return nil, errors2.Wrap(err, "ChannelValidator failed to verify vm")
 	}
-
-	manMap := make(map[common.Address]validatorInfo)
-	keys := make([]common.Address, 0, len(config.AssertKeys))
-	for _, key := range config.AssertKeys {
-		var address common.Address
-		copy(address[:], key.Value)
-		keys = append(keys, address)
-	}
-	for i, add := range keys {
-		manMap[add] = validatorInfo{uint16(i)}
-	}
-
-	_, found := manMap[val.Address()]
-	if !found {
-		return nil, errors.New("key is not a validator of chosen ArbChannel")
-	}
-
-	header, err := val.LatestHeader(context.Background())
-	if err != nil {
-		return nil, errors2.Wrap(err, "VMValidator couldn't get latest error")
-	}
-
-	bot := validator.NewChannelValidator(
-		name,
-		val.Address(),
-		header,
-		protocol.NewBalanceTracker(),
-		config,
-		machine,
-		challengeEverything,
-		maxCallSteps,
-	)
 
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
 
 	vmVal := &VMValidator{
 		vmID,
-		manMap,
-		bot,
 		completedCallChan,
 		&sync.Mutex{},
 		val,
 		con,
 		0,
-	}
-	if err := vmVal.topOffDeposit(context.Background()); err != nil {
-		return nil, errors2.Wrap(err, "VMValidator failed to top off deposit")
 	}
 	return vmVal, nil
 }
@@ -157,29 +96,6 @@ func (val *VMValidator) ensureVMActivated() error {
 		return errors2.Wrap(err, "Error checking for VM activation")
 	}
 	log.Println("ChannelValidator is validating vm", hexutil.Encode(val.VMID[:]))
-	return nil
-}
-
-func (val *VMValidator) topOffDeposit(ctx context.Context) error {
-	callOpts := &bind.CallOpts{
-		Pending: true,
-		From:    val.Address(),
-		Context: context.Background(),
-	}
-	current, err := val.vmTracker.CurrentDeposit(callOpts, val.Address())
-	if err != nil {
-		return err
-	}
-	required, err := val.vmTracker.EscrowRequired(callOpts)
-	if current.Cmp(required) >= 0 {
-		// ChannelValidator already has escrow deposited
-		return nil
-	}
-	depToAdd := new(big.Int).Sub(required, current)
-	_, err = val.vmTracker.IncreaseDeposit(val.validator.makeAuth(ctx), depToAdd)
-	if err != nil {
-		return errors2.Wrap(err, "failed calling IncreaseDeposit")
-	}
 	return nil
 }
 
@@ -195,7 +111,7 @@ func (val *VMValidator) waitForActivation(
 	for {
 		select {
 		case _ = <-time.After(time.Second):
-			enabled, err := val.vmTracker.IsEnabled(auth)
+			enabled, err := val.arbitrumVM.IsEnabled(auth)
 			if err != nil {
 				return err
 			}
@@ -209,53 +125,43 @@ func (val *VMValidator) waitForActivation(
 }
 
 func (val *VMValidator) Sign(msgHash [32]byte) ([]byte, error) {
-	return val.validator.Sign(msgHash[:])
+	return val.Validator.Sign(msgHash[:])
 }
 
-func (val *VMValidator) restartConnection(ctx context.Context) (chan ethconnection.Notification, chan error, error) {
-	vmCon, err := ethconnection.NewVMTracker(val.VMID, val.validator.client)
-	if err != nil {
-		return nil, nil, err
-	}
-	val.vmTracker = vmCon
-	return val.vmTracker.CreateListeners(ctx)
-}
-
-func (val *VMValidator) StartListening(ctx context.Context) error {
+func (val *VMValidator) StartListening(ctx context.Context) (chan ethconnection.Notification, error) {
 	if err := val.ensureVMActivated(); err != nil {
-		return err
-	}
-	outChan, errChan, err := val.vmTracker.CreateListeners(ctx)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	parsedChan := make(chan ethconnection.Notification, 1024)
 
-	go func() {
-		val.Bot.Run(parsedChan, val, ctx)
-	}()
+	if err := val.arbitrumVM.StartConnection(ctx); err != nil {
+		return nil, err
+	}
 
+	outChan, errChan := val.arbitrumVM.GetChans()
 	go func() {
 		for {
+			hitError := false
 			select {
 			case <-ctx.Done():
 				break
 			case parse, ok := <-outChan:
 				if !ok {
-					outChan, errChan, err = val.restartConnection(ctx)
-					if err != nil {
-						panic(err)
-					}
+					hitError = true
 					break
 				}
 				parsedChan <- parse
 			case <-errChan:
-				// Ignore error and try to reset connection
 				// log.Printf("ChannelValidator recieved error: %v", err)
 				// fmt.Println("Resetting channels")
+				hitError = true
+
+			}
+
+			if hitError {
+				// Ignore error and try to reset connection
 				for {
-					outChan, errChan, err = val.restartConnection(ctx)
-					if err == nil {
+					if err := val.arbitrumVM.StartConnection(ctx); err == nil {
 						break
 					}
 					log.Println("Error: ChannelValidator can't connect to blockchain")
@@ -265,14 +171,14 @@ func (val *VMValidator) StartListening(ctx context.Context) error {
 		}
 	}()
 
-	return nil
+	return parsedChan, nil
 }
 
 func (val *VMValidator) AddedNewMessages(count uint64) {
 	go func() {
-		val.mutex.Lock()
+		val.Mutex.Lock()
 		val.unprocessedMessageCount += count
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 }
 
@@ -283,7 +189,7 @@ func (val *VMValidator) FinalizedAssertion(
 	proposalResults *valmessage.UnanimousUpdateResults,
 ) {
 	go func() {
-		val.mutex.Lock()
+		val.Mutex.Lock()
 		finalizedAssertion := valmessage.FinalizedAssertion{
 			Assertion:       assertion,
 			OnChainTxHash:   onChainTxHash,
@@ -292,92 +198,8 @@ func (val *VMValidator) FinalizedAssertion(
 		}
 		val.unprocessedMessageCount -= uint64(len(finalizedAssertion.NewLogs()))
 		val.CompletedCallChan <- finalizedAssertion
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
-}
-
-func (val *VMValidator) FinalizedUnanimousAssert(
-	ctx context.Context,
-	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
-	signatures [][]byte,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.FinalizedUnanimousAssert(
-			val.validator.makeAuth(ctx),
-			newInboxHash,
-			assertion,
-			signatures,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed sending finalized unanimous assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.mutex.Unlock()
-	}()
-	return receiptChan, errChan
-}
-
-func (val *VMValidator) PendingUnanimousAssert(
-	ctx context.Context,
-	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
-	sequenceNum uint64,
-	signatures [][]byte,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.PendingUnanimousAssert(
-			val.validator.makeAuth(ctx),
-			newInboxHash,
-			assertion,
-			sequenceNum,
-			signatures,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed proposing unanimous assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.mutex.Unlock()
-	}()
-	return receiptChan, errChan
-}
-
-func (val *VMValidator) ConfirmUnanimousAsserted(
-	ctx context.Context,
-	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.ConfirmUnanimousAsserted(
-			val.validator.makeAuth(ctx),
-			newInboxHash,
-			assertion,
-		)
-		if err != nil {
-			errChan <- errors2.Wrap(err, "failed confirming unanimous assertion")
-		} else {
-			receiptChan <- receipt
-		}
-		val.mutex.Unlock()
-	}()
-	return receiptChan, errChan
 }
 
 func (val *VMValidator) PendingDisputableAssert(
@@ -390,9 +212,9 @@ func (val *VMValidator) PendingDisputableAssert(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.PendingDisputableAssert(
-			val.validator.makeAuth(ctx),
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.PendingDisputableAssert(
+			val.Validator.MakeAuth(ctx),
 			precondition,
 			assertion,
 		)
@@ -401,7 +223,7 @@ func (val *VMValidator) PendingDisputableAssert(
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -416,9 +238,9 @@ func (val *VMValidator) ConfirmDisputableAsserted(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.ConfirmDisputableAsserted(
-			val.validator.makeAuth(ctx),
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.ConfirmDisputableAsserted(
+			val.Validator.MakeAuth(ctx),
 			precondition,
 			assertion,
 		)
@@ -427,7 +249,7 @@ func (val *VMValidator) ConfirmDisputableAsserted(
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -442,9 +264,9 @@ func (val *VMValidator) InitiateChallenge(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.InitiateChallenge(
-			val.validator.makeAuth(ctx),
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.InitiateChallenge(
+			val.Validator.MakeAuth(ctx),
 			precondition,
 			assertion,
 		)
@@ -453,7 +275,7 @@ func (val *VMValidator) InitiateChallenge(
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -468,9 +290,9 @@ func (val *VMValidator) BisectAssertion(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.BisectAssertion(
-			val.validator.makeAuth(ctx),
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.BisectAssertion(
+			val.Validator.MakeAuth(ctx),
 			precondition,
 			assertions,
 		)
@@ -479,7 +301,7 @@ func (val *VMValidator) BisectAssertion(
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -495,9 +317,9 @@ func (val *VMValidator) ContinueChallenge(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.ContinueChallenge(
-			val.validator.makeAuth(ctx),
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.ContinueChallenge(
+			val.Validator.MakeAuth(ctx),
 			assertionToChallenge,
 			preconditions,
 			assertions,
@@ -507,7 +329,7 @@ func (val *VMValidator) ContinueChallenge(
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -523,9 +345,9 @@ func (val *VMValidator) OneStepProof(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.OneStepProof(
-			val.validator.makeAuth(ctx),
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.OneStepProof(
+			val.Validator.MakeAuth(ctx),
 			precondition,
 			assertion,
 			proof,
@@ -535,7 +357,7 @@ func (val *VMValidator) OneStepProof(
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -548,14 +370,14 @@ func (val *VMValidator) AsserterTimedOut(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.AsserterTimedOutChallenge(val.validator.makeAuth(ctx))
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.AsserterTimedOutChallenge(val.Validator.MakeAuth(ctx))
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -568,37 +390,16 @@ func (val *VMValidator) ChallengerTimedOut(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.vmTracker.ChallengerTimedOutChallenge(
-			val.validator.makeAuth(ctx),
+		val.Mutex.Lock()
+		receipt, err := val.arbitrumVM.ChallengerTimedOutChallenge(
+			val.Validator.MakeAuth(ctx),
 		)
 		if err != nil {
 			errChan <- errors2.Wrap(err, "failed timing out challenge")
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
-	}()
-	return receiptChan, errChan
-}
-
-func (val *VMValidator) DepositFunds(
-	ctx context.Context,
-	amount *big.Int,
-) (chan *types.Receipt, chan error) {
-	receiptChan := make(chan *types.Receipt, 1)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(receiptChan)
-		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.validator.DepositFunds(val.validator.makeAuth(ctx), amount, val.Address())
-		if err != nil {
-			errChan <- err
-		} else {
-			receiptChan <- receipt
-		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -614,14 +415,14 @@ func (val *VMValidator) SendMessage(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Unlock()
-		receipt, err := val.validator.SendMessage(val.validator.makeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
+		val.Mutex.Unlock()
+		receipt, err := val.Validator.SendMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
 		if err != nil {
 			errChan <- err
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -638,14 +439,14 @@ func (val *VMValidator) ForwardMessage(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.validator.ForwardMessage(val.validator.makeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
+		val.Mutex.Lock()
+		receipt, err := val.Validator.ForwardMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
 		if err != nil {
 			errChan <- err
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }
@@ -660,14 +461,14 @@ func (val *VMValidator) SendEthMessage(
 	go func() {
 		defer close(receiptChan)
 		defer close(errChan)
-		val.mutex.Lock()
-		receipt, err := val.validator.SendEthMessage(val.validator.makeAuth(ctx), data, val.VMID, amount)
+		val.Mutex.Lock()
+		receipt, err := val.Validator.SendEthMessage(val.Validator.MakeAuth(ctx), data, val.VMID, amount)
 		if err != nil {
 			errChan <- err
 		} else {
 			receiptChan <- receipt
 		}
-		val.mutex.Unlock()
+		val.Mutex.Unlock()
 	}()
 	return receiptChan, errChan
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethvalidator
+package channel
 
 import (
 	"log"

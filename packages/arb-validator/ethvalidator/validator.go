@@ -24,7 +24,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -42,7 +41,7 @@ type Validator struct {
 	// Not in thread, but internal only
 	serverAddress string
 	arbAddresses  ethconnection.ArbAddresses
-	client        *ethclient.Client
+	Client        *ethclient.Client
 
 	*ethconnection.ArbLauncher
 	*ethconnection.PendingInbox
@@ -75,60 +74,18 @@ func NewValidator(
 		key:           key,
 		serverAddress: ethURL,
 		arbAddresses:  connectionInfo,
-		client:        client,
+		Client:        client,
 		ArbLauncher:   vmCreator,
 		PendingInbox:  pendingInbox,
 		auth:          auth,
 	}, nil
 }
 
-func (val *Validator) NewFollower(
-	name string,
-	machine machine.Machine,
-	config *valmessage.VMConfiguration,
-	challengeEverything bool,
-	maxCallSteps int32,
-	maxStepsUnanSteps int32,
-	coordinatorURL string,
-) (*ValidatorFollower, error) {
-	return NewValidatorFollower(
-		name,
-		val,
-		machine,
-		config,
-		challengeEverything,
-		maxCallSteps,
-		maxStepsUnanSteps,
-		coordinatorURL,
-	)
-}
-
-func (val *Validator) NewCoordinator(
-	name string,
-	vmID common.Address,
-	machine machine.Machine,
-	config *valmessage.VMConfiguration,
-	challengeEverything bool,
-	maxCallSteps int32,
-	maxStepsUnanSteps int32,
-) (*ValidatorCoordinator, error) {
-	return NewCoordinator(
-		name,
-		val,
-		vmID,
-		machine,
-		config,
-		challengeEverything,
-		maxCallSteps,
-		maxStepsUnanSteps,
-	)
-}
-
 func (val *Validator) LatestHeader(ctx context.Context) (*types.Header, error) {
-	return val.client.HeaderByNumber(ctx, nil)
+	return val.Client.HeaderByNumber(ctx, nil)
 }
 
-func (val *Validator) makeAuth(ctx context.Context) *bind.TransactOpts {
+func (val *Validator) MakeAuth(ctx context.Context) *bind.TransactOpts {
 	return &bind.TransactOpts{
 		From:     val.auth.From,
 		Nonce:    val.auth.Nonce,
@@ -173,7 +130,7 @@ func (val *Validator) LaunchChannel(
 	vmState [32]byte,
 ) (common.Address, error) {
 	return val.ArbLauncher.LaunchChannel(
-		val.makeAuth(ctx),
+		val.MakeAuth(ctx),
 		config,
 		vmState,
 	)
@@ -185,7 +142,7 @@ func (val *Validator) LaunchChain(
 	vmState [32]byte,
 ) (common.Address, error) {
 	return val.ArbLauncher.LaunchChain(
-		val.makeAuth(ctx),
+		val.MakeAuth(ctx),
 		config,
 		vmState,
 	)

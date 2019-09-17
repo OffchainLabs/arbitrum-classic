@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
@@ -119,8 +121,9 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 
 	// follower/challenger creation
-	challenger, err := val2.NewFollower(
+	challenger, err := channel.NewValidatorFollower(
 		"Bob",
+		val2,
 		mach,
 		config,
 		false,

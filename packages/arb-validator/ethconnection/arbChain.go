@@ -17,6 +17,7 @@
 package ethconnection
 
 import (
+	"context"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/arblauncher"
@@ -30,23 +31,25 @@ import (
 )
 
 type ArbChain struct {
-	Client *ethclient.Client
 	*ArbitrumVM
 	Tracker *arblauncher.ArbChain
 }
 
 func NewArbChain(address common.Address, client *ethclient.Client) (*ArbChain, error) {
 	arbVM, err := NewArbitrumVM(address, client)
-	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbitrumVM")
-	}
+	return &ArbChain{ArbitrumVM: arbVM}, err
+}
 
-	trackerContract, err := arblauncher.NewArbChain(address, client)
-	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbChannel")
+func (vm *ArbChain) StartConnection(ctx context.Context) error {
+	if err := vm.ArbitrumVM.StartConnection(ctx); err != nil {
+		return err
 	}
-
-	return &ArbChain{client, arbVM, trackerContract}, nil
+	trackerContract, err := arblauncher.NewArbChain(vm.address, vm.Client)
+	if err != nil {
+		return errors2.Wrap(err, "Failed to connect to ArbChannel")
+	}
+	vm.Tracker = trackerContract
+	return nil
 }
 
 func (vm *ArbChain) IncreaseDeposit(

@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -41,7 +43,7 @@ import (
 
 // Server provides an interface for interacting with a a running coordinator
 type Server struct {
-	coordinator *ethvalidator.ValidatorCoordinator
+	coordinator *channel.ValidatorCoordinator
 	tracker     *txTracker
 }
 
@@ -52,8 +54,9 @@ func NewServer(
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
 ) (*Server, error) {
-	man, err := val.NewCoordinator(
+	man, err := channel.NewCoordinator(
 		"Alice",
+		val,
 		vmID,
 		machine.Clone(),
 		config,
@@ -124,7 +127,7 @@ func (m *Server) FindLogs(ctx context.Context, args *FindLogsArgs) (*FindLogsRep
 
 // SendMessage takes a request from a client and sends it to the VM
 func (m *Server) SendMessage(ctx context.Context, args *SendMessageArgs) (*SendMessageReply, error) {
-	if !<-m.coordinator.Val.Bot.CanRun() {
+	if !<-m.coordinator.ChannelVal.CanRun() {
 		return nil, errors.New("Cannot send message when machine can't run")
 	}
 	sigBytes, err := hexutil.Decode(args.Signature)
@@ -176,7 +179,7 @@ func (m *Server) SendMessage(ctx context.Context, args *SendMessageArgs) (*SendM
 		if !crypto.VerifySignature(pubkey, signedMsg, sigBytes[:len(sigBytes)-1]) {
 			return
 		}
-		m.coordinator.SendMessage(ethvalidator.OffchainMessage{
+		m.coordinator.SendMessage(channel.OffchainMessage{
 			Message: protocol.Message{
 				Data:        dataVal,
 				TokenType:   tokenType,
@@ -241,7 +244,7 @@ func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfo
 
 // GetValidatorList returns current this VM list of validators
 func (m *Server) GetValidatorList(ctx context.Context, args *GetValidatorListArgs) (*GetValidatorListReply, error) {
-	state := <-m.coordinator.Val.Bot.RequestVMState()
+	state := <-m.coordinator.ChannelVal.RequestVMState()
 	validators := make([]string, 0, len(state.Config.AssertKeys))
 	for _, key := range state.Config.AssertKeys {
 		validators = append(validators, protocol.NewAddressFromBuf(key).Hex())
@@ -253,7 +256,7 @@ func (m *Server) GetValidatorList(ctx context.Context, args *GetValidatorListArg
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
-	if !<-m.coordinator.Val.Bot.CanRun() {
+	if !<-m.coordinator.ChannelVal.CanRun() {
 		return nil, errors.New("Cannot call when machine can't run")
 	}
 	dataBytes, err := hexutil.Decode(args.Data)
@@ -274,7 +277,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	copy(sender[:], senderBytes)
 
 	msg := protocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
-	resultChan, errChan := m.coordinator.Val.Bot.RequestCall(msg)
+	resultChan, errChan := m.coordinator.ChannelVal.RequestCall(msg)
 
 	select {
 	case logVal := <-resultChan:

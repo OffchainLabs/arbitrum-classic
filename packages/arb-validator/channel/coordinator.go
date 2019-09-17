@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethvalidator
+package channel
 
 import (
 	"context"
@@ -24,6 +24,10 @@ import (
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -57,12 +61,12 @@ type ClientManager struct {
 	waitingChans    map[chan bool]bool
 	responses       map[[32]byte]chan LabeledFollowerResponse
 
-	val        *Validator
+	val        *ethvalidator.Validator
 	vmID       common.Address
 	validators map[common.Address]validatorInfo
 }
 
-func NewClientManager(val *Validator, vmID common.Address, validators map[common.Address]validatorInfo) *ClientManager {
+func NewClientManager(val *ethvalidator.Validator, vmID common.Address, validators map[common.Address]validatorInfo) *ClientManager {
 	return &ClientManager{
 		clients:         make(map[*Client]bool),
 		broadcast:       make(chan *valmessage.ValidatorRequest, 10),
@@ -100,7 +104,7 @@ func (m *ClientManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		uniqueVal := tlsCon.ConnectionState().TLSUnique
 		hashVal := crypto.Keccak256(uniqueVal)
-		pubkey, err := EthSigToPub(hashVal, signedUnique)
+		pubkey, err := ethvalidator.EthSigToPub(hashVal, signedUnique)
 		if err != nil {
 			return nil, err
 		}
@@ -325,8 +329,9 @@ func (m *MessageProcessingQueue) run() {
 }
 
 type ValidatorCoordinator struct {
-	Val *VMValidator
-	cm  *ClientManager
+	Val        *ChannelValidator
+	ChannelVal *validator.ChannelValidator
+	cm         *ClientManager
 
 	actions chan func(*ValidatorCoordinator)
 
@@ -336,7 +341,7 @@ type ValidatorCoordinator struct {
 
 func NewCoordinator(
 	name string,
-	val *Validator,
+	val *ethvalidator.Validator,
 	vmID common.Address,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
@@ -344,12 +349,28 @@ func NewCoordinator(
 	maxCallSteps int32,
 	maxStepsUnanSteps int32,
 ) (*ValidatorCoordinator, error) {
-	c, err := NewVMValidator(name, val, vmID, machine, config, challengeEverything, maxCallSteps)
+	header, err := val.LatestHeader(context.Background())
 	if err != nil {
-		return nil, errors2.Wrap(err, "Error initializing VMValidator in coordinator")
+		return nil, errors2.Wrap(err, "ChannelValidator couldn't get latest error")
+	}
+
+	channelVal := validator.NewChannelValidator(
+		name,
+		vmID,
+		header,
+		protocol.NewBalanceTracker(),
+		config,
+		machine,
+		challengeEverything,
+		maxCallSteps,
+	)
+	c, err := NewChannelValidator(val, vmID, machine, config)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Error initializing ChannelValidator in coordinator")
 	}
 	return &ValidatorCoordinator{
 		Val:               c,
+		ChannelVal:        channelVal,
 		cm:                NewClientManager(val, vmID, c.Validators),
 		actions:           make(chan func(*ValidatorCoordinator), 10),
 		mpq:               NewMessageProcessingQueue(),
@@ -373,21 +394,27 @@ func (m *ValidatorCoordinator) StartServer(ctx context.Context) {
 }
 
 func (m *ValidatorCoordinator) Run(ctx context.Context) error {
-	if err := m.Val.StartListening(ctx); err != nil {
+	parsedChan, err := m.Val.StartListening(ctx)
+	if err != nil {
 		return err
 	}
+
+	go func() {
+		m.ChannelVal.Run(parsedChan, m.Val, ctx)
+	}()
+
 	go func() {
 		for {
 			select {
 			case action := <-m.actions:
 				action(m)
 			case <-time.After(time.Second):
-				if !<-m.Val.Bot.CanRun() {
+				if !<-m.ChannelVal.CanRun() {
 					break
 				}
 				shouldUnan := false
 				forceFinal := false
-				pendingCount := <-m.Val.Bot.PendingMessageCount()
+				pendingCount := <-m.ChannelVal.PendingMessageCount()
 				if pendingCount > 0 {
 					// Force onchain assertion if there are pending on chain messages, then force an offchain assertion
 					log.Println("Unanimous asserting because of pending on chain messages")
@@ -396,7 +423,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 				} else if <-m.mpq.HasMessages() {
 					log.Println("Unanimous asserting because of pending off chain messages")
 					shouldUnan = true
-				} else if <-m.Val.Bot.CanContinueRunning() {
+				} else if <-m.ChannelVal.CanContinueRunning() {
 					log.Println("Unanimous asserting because machine is not blocked")
 					shouldUnan = true
 				}
@@ -412,9 +439,9 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					break
 				}
 				log.Println("Coordinator hit problem unanimously asserting", err)
-				if <-m.Val.Bot.HasOpenAssertion() {
+				if <-m.ChannelVal.HasOpenAssertion() {
 					log.Println("Coordinator is closing channel")
-					closedChan, errChan := m.Val.Bot.CloseUnanimousAssertionRequest()
+					closedChan, errChan := m.ChannelVal.CloseUnanimousAssertionRequest()
 					select {
 					case _ = <-closedChan:
 						log.Println("Coordinator successfully closed channel")
@@ -475,7 +502,7 @@ func (m *ValidatorCoordinator) InitiateUnanimousAssertion(final bool) (chan bool
 
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	start := time.Now()
-	resultChan, errChan := m.Val.Bot.RequestDisputableAssertion(10000)
+	resultChan, errChan := m.ChannelVal.RequestDisputableAssertion(10000)
 
 	select {
 	case <-resultChan:
@@ -509,7 +536,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 		}
 
 		start := time.Now()
-		requestChan, resultsChan, unanErrChan := m.Val.Bot.InitiateUnanimousRequest(10000, newMessages, messageHashes, forceFinal, maxSteps, shouldFinalize)
+		requestChan, resultsChan, unanErrChan := m.ChannelVal.InitiateUnanimousRequest(10000, newMessages, messageHashes, forceFinal, maxSteps, shouldFinalize)
 		responsesChan := make(chan []LabeledFollowerResponse, 1)
 
 		var unanRequest valmessage.UnanimousRequest
@@ -625,7 +652,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 			Signatures: signatures,
 		})
 
-		confRetChan, confErrChan := m.Val.Bot.ConfirmOffchainUnanimousAssertion(
+		confRetChan, confErrChan := m.ChannelVal.ConfirmOffchainUnanimousAssertion(
 			unanUpdate.UnanimousRequestData,
 			signatures,
 			true,

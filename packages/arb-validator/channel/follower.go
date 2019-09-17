@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package ethvalidator
+package channel
 
 import (
 	"context"
 	"crypto/tls"
 	"errors"
 	"log"
-	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -38,7 +41,8 @@ import (
 )
 
 type ValidatorFollower struct {
-	*VMValidator
+	*ChannelValidator
+	channelVal *validator.ChannelValidator
 
 	client *Client
 
@@ -48,7 +52,7 @@ type ValidatorFollower struct {
 
 func NewValidatorFollower(
 	name string,
-	val *Validator,
+	val *ethvalidator.Validator,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
@@ -94,16 +98,31 @@ func NewValidatorFollower(
 	}
 	var vmID common.Address
 	copy(vmID[:], vmData)
-	pubkey, err := EthSigToPub(hashVal, vmData[20:])
+	pubkey, err := ethvalidator.EthSigToPub(hashVal, vmData[20:])
 	if err != nil {
 		return nil, errors2.Wrap(err, "follower failed to get pubkey from sig")
 	}
 	address := crypto.PubkeyToAddress(*pubkey)
 
-	time.Sleep(time.Second * 2)
-	c, err := NewVMValidator(name, val, vmID, machine, config, challengeEverything, maxCallSteps)
+	header, err := val.LatestHeader(context.Background())
 	if err != nil {
-		return nil, errors2.Wrap(err, "Error initializing VMValidator in follower")
+		return nil, errors2.Wrap(err, "ChannelValidator couldn't get latest error")
+	}
+
+	channelVal := validator.NewChannelValidator(
+		name,
+		vmID,
+		header,
+		protocol.NewBalanceTracker(),
+		config,
+		machine,
+		challengeEverything,
+		maxCallSteps,
+	)
+
+	c, err := NewChannelValidator(val, vmID, machine, config)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Error initializing ChannelValidator in follower")
 	}
 
 	if _, ok := c.Validators[address]; !ok {
@@ -114,7 +133,8 @@ func NewValidatorFollower(
 	unanimousRequests := make(map[[32]byte]valmessage.UnanimousRequestData)
 	client := NewClient(coordinatorConn, address)
 	return &ValidatorFollower{
-		VMValidator:       c,
+		ChannelValidator:  c,
+		channelVal:        channelVal,
 		client:            client,
 		unanimousRequests: unanimousRequests,
 		maxStepsUnanSteps: maxStepsUnanSteps,
@@ -161,7 +181,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			return len(a.OutMsgs) > 0
 		}
 
-		resultsChan, unanErrChan := m.Bot.RequestFollowUnanimous(
+		resultsChan, unanErrChan := m.channelVal.RequestFollowUnanimous(
 			valmessage.UnanimousRequestData{
 				BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
 				BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
@@ -225,6 +245,15 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 }
 
 func (m *ValidatorFollower) Run(ctx context.Context) error {
+	parsedChan, err := m.StartListening(ctx)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		m.channelVal.Run(parsedChan, m.ChannelValidator, ctx)
+	}()
+
 	go func() {
 		if err := m.client.run(); err != nil {
 			log.Printf("Follower connection to coordinator ended with error %v\n", err)
@@ -252,7 +281,7 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
 				if request.UnanimousNotification.Accepted {
-					resultChan, errChan := m.Bot.ConfirmOffchainUnanimousAssertion(
+					resultChan, errChan := m.channelVal.ConfirmOffchainUnanimousAssertion(
 						requestInfo,
 						request.UnanimousNotification.Signatures,
 						false,
@@ -266,5 +295,5 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 			}
 		}
 	}()
-	return m.StartListening(ctx)
+	return nil
 }

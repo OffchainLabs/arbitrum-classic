@@ -29,6 +29,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -41,7 +43,7 @@ import (
 )
 
 type FollowerServer struct {
-	follower *ethvalidator.ValidatorFollower
+	follower *channel.ValidatorFollower
 }
 
 func NewFollowerServer(
@@ -72,8 +74,9 @@ func NewFollowerServer(
 		log.Fatalf("Failed to create validator %v\n", err)
 	}
 
-	man, err := val.NewFollower(
+	man, err := channel.NewValidatorFollower(
 		"Bob",
+		val,
 		machine,
 		config,
 		false,

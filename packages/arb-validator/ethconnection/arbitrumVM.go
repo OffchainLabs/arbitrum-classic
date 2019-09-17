@@ -23,16 +23,15 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+	errors2 "github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethconnection/arblauncher"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -41,18 +40,29 @@ import (
 )
 
 type ArbitrumVM struct {
+	OutChan            chan Notification
+	ErrChan            chan error
 	Client             *ethclient.Client
 	Tracker            *arblauncher.ArbitrumVM
 	Challenge          *challengemanager.ChallengeManager
 	GlobalPendingInbox *arblauncher.IGlobalPendingInbox
 
 	address common.Address
+	client  *ethclient.Client
 }
 
 func NewArbitrumVM(address common.Address, client *ethclient.Client) (*ArbitrumVM, error) {
-	trackerContract, err := arblauncher.NewArbitrumVM(address, client)
+	outChan := make(chan Notification, 1024)
+	errChan := make(chan error, 1024)
+	vm := &ArbitrumVM{OutChan: outChan, ErrChan: errChan, Client: client, address: address}
+	err := vm.setupContracts()
+	return vm, err
+}
+
+func (vm *ArbitrumVM) setupContracts() error {
+	trackerContract, err := arblauncher.NewArbitrumVM(vm.address, vm.Client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbChannel")
+		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
 
 	challengeManagerAddress, err := trackerContract.ChallengeManager(&bind.CallOpts{
@@ -60,11 +70,11 @@ func NewArbitrumVM(address common.Address, client *ethclient.Client) (*ArbitrumV
 		Context: context.Background(),
 	})
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to get ChallengeManager address")
+		return errors2.Wrap(err, "Failed to get ChallengeManager address")
 	}
-	challengeManagerContract, err := challengemanager.NewChallengeManager(challengeManagerAddress, client)
+	challengeManagerContract, err := challengemanager.NewChallengeManager(challengeManagerAddress, vm.Client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 
 	globalPendingInboxAddress, err := trackerContract.GlobalInbox(&bind.CallOpts{
@@ -72,19 +82,32 @@ func NewArbitrumVM(address common.Address, client *ethclient.Client) (*ArbitrumV
 		Context: context.Background(),
 	})
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
+		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
 	}
-	globalPendingContract, err := arblauncher.NewIGlobalPendingInbox(globalPendingInboxAddress, client)
+	globalPendingContract, err := arblauncher.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
+		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
 
-	return &ArbitrumVM{client, trackerContract, challengeManagerContract, globalPendingContract, address}, nil
+	vm.Tracker = trackerContract
+	vm.Challenge = challengeManagerContract
+	vm.GlobalPendingInbox = globalPendingContract
+	return nil
 }
 
-func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, chan error, error) {
-	outChan := make(chan Notification, 1024)
-	errChan := make(chan error, 1024)
+func (vm *ArbitrumVM) GetChans() (chan Notification, chan error) {
+	return vm.OutChan, vm.ErrChan
+}
+
+func (vm *ArbitrumVM) Close() {
+	close(vm.OutChan)
+	close(vm.ErrChan)
+}
+
+func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
+	if err := vm.setupContracts(); err != nil {
+		return err
+	}
 
 	start := uint64(0)
 	watch := &bind.WatchOpts{
@@ -95,55 +118,55 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 	headers := make(chan *types.Header)
 	headersSub, err := vm.Client.SubscribeNewHead(ctx, headers)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	messageDeliveredChan := make(chan *arblauncher.IGlobalPendingInboxMessageDelivered)
 	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	dispAssChan := make(chan *arblauncher.ArbitrumVMPendingDisputableAssertion)
 	dispAssSub, err := vm.Tracker.WatchPendingDisputableAssertion(watch, dispAssChan)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	confAssChan := make(chan *arblauncher.ArbitrumVMConfirmedDisputableAssertion)
 	confAssSub, err := vm.Tracker.WatchConfirmedDisputableAssertion(watch, confAssChan)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	challengeInitiatedChan := make(chan *arblauncher.ArbitrumVMInitiatedChallenge)
 	challengeInitiatedSub, err := vm.Tracker.WatchInitiatedChallenge(watch, challengeInitiatedChan)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	challengeBisectedChan := make(chan *challengemanager.ChallengeManagerBisectedAssertion)
 	challengeBisectedSub, err := vm.Challenge.WatchBisectedAssertion(watch, challengeBisectedChan, []common.Address{vm.address})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	challengeContinuedChan := make(chan *challengemanager.ChallengeManagerContinuedChallenge)
 	challengeContinuedSub, err := vm.Challenge.WatchContinuedChallenge(watch, challengeContinuedChan, []common.Address{vm.address})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	challengeTimedOutChan := make(chan *challengemanager.ChallengeManagerTimedOutChallenge)
 	challengeTimedOutSub, err := vm.Challenge.WatchTimedOutChallenge(watch, challengeTimedOutChan, []common.Address{vm.address})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	oneStepProofChan := make(chan *challengemanager.ChallengeManagerOneStepProofCompleted)
 	oneStepProofSub, err := vm.Challenge.WatchOneStepProofCompleted(watch, oneStepProofChan, []common.Address{vm.address})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	go func() {
@@ -162,20 +185,20 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case <-ctx.Done():
 				break
 			case header := <-headers:
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					Event:  NewTimeEvent{},
 				}
 			case val := <-messageDeliveredChan:
 				header, err := vm.Client.HeaderByHash(context.Background(), val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
 				rd := bytes.NewReader(val.Data)
 				msgData, err := value.UnmarshalValue(rd)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
 
@@ -195,7 +218,7 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 				})
 
 				msg := protocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   val.VmId,
 					Event: MessageDeliveredEvent{
@@ -206,12 +229,12 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-dispAssChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
 
 				precondition, assertion := translateDisputableAssertionEvent(val)
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: PendingDisputableAssertionEvent{
@@ -224,10 +247,10 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-confAssChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: ConfirmedDisputableAssertEvent{
@@ -239,10 +262,10 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-challengeInitiatedChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: InitiateChallengeEvent{
@@ -253,10 +276,10 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-challengeBisectedChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: BisectionEvent{
@@ -267,18 +290,18 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-challengeTimedOutChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
 				if val.ChallengerWrong {
-					outChan <- Notification{
+					vm.OutChan <- Notification{
 						Header: header,
 						VMID:   vm.address,
 						Event:  AsserterTimeoutEvent{},
 						TxHash: val.Raw.TxHash,
 					}
 				} else {
-					outChan <- Notification{
+					vm.OutChan <- Notification{
 						Header: header,
 						VMID:   vm.address,
 						Event:  ChallengerTimeoutEvent{},
@@ -288,10 +311,10 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-challengeContinuedChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: ContinueChallengeEvent{
@@ -302,49 +325,49 @@ func (vm *ArbitrumVM) CreateListeners(ctx context.Context) (chan Notification, c
 			case val := <-oneStepProofChan:
 				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
 				if err != nil {
-					errChan <- err
+					vm.ErrChan <- err
 					return
 				}
-				outChan <- Notification{
+				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event:  OneStepProofEvent{},
 					TxHash: val.Raw.TxHash,
 				}
 			case err := <-headersSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-messageDeliveredSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-dispAssSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-confAssSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-challengeInitiatedSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-challengeBisectedSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-challengeContinuedSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-challengeTimedOutSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			case err := <-oneStepProofSub.Err():
-				errChan <- err
+				vm.ErrChan <- err
 				return
 			}
 		}
 	}()
-	return outChan, errChan, nil
+	return nil
 }
 
-func (vm *ArbChannel) PendingDisputableAssert(
+func (vm *ArbitrumVM) PendingDisputableAssert(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
