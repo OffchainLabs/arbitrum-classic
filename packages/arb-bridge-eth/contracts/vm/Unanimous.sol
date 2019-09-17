@@ -175,7 +175,11 @@ library Unanimous {
         uint64 _sequenceNum,
         bytes32 _logsAccHash,
         bytes memory _signatures
-    ) private view returns(bytes32) {
+    )
+        private
+        view
+        returns(bytes32)
+    {
         bytes32 unanHash = keccak256(
             abi.encodePacked(
                 address(this),

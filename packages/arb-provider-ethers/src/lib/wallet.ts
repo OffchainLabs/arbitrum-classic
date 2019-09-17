@@ -59,7 +59,7 @@ export class ArbWallet extends ethers.Signer {
         });
     }
 
-    public async globalInboxConn() {
+    public async globalInboxConn(): Promise<ethers.Contract> {
         if (!this.inboxManagerCache) {
             const inboxManager = await this.provider.globalInboxConn();
             const linkedInboxManager = inboxManager.connect(this.signer);

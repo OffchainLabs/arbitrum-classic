@@ -329,7 +329,7 @@ func (m *MessageProcessingQueue) run() {
 }
 
 type ValidatorCoordinator struct {
-	Val        *ChannelValidator
+	Val        *Validator
 	ChannelVal *validator.ChannelValidator
 	cm         *ClientManager
 
@@ -351,7 +351,7 @@ func NewCoordinator(
 ) (*ValidatorCoordinator, error) {
 	header, err := val.LatestHeader(context.Background())
 	if err != nil {
-		return nil, errors2.Wrap(err, "ChannelValidator couldn't get latest error")
+		return nil, errors2.Wrap(err, "Validator couldn't get latest error")
 	}
 
 	channelVal := validator.NewChannelValidator(
@@ -364,9 +364,9 @@ func NewCoordinator(
 		challengeEverything,
 		maxCallSteps,
 	)
-	c, err := NewChannelValidator(val, vmID, machine, config)
+	c, err := NewValidator(val, vmID, machine, config)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Error initializing ChannelValidator in coordinator")
+		return nil, errors2.Wrap(err, "Error initializing Validator in coordinator")
 	}
 	return &ValidatorCoordinator{
 		Val:               c,
@@ -400,7 +400,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 	}
 
 	go func() {
-		m.ChannelVal.Run(parsedChan, m.Val, ctx)
+		m.ChannelVal.Run(ctx, parsedChan, m.Val)
 	}()
 
 	go func() {

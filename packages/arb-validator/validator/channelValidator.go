@@ -328,7 +328,7 @@ func (validator *ChannelValidator) ClosingUnanimousAssertionRequest() (<-chan bo
 	validator.channelActions <- func(bridge bridge.Bridge) {
 		bot, ok := validator.channelBot.ChannelState.(state.Waiting)
 		if !ok {
-			errChan <- fmt.Errorf("can't close unanimous request. ChannelValidator was in the wrong state to handle it: %T", validator.channelBot.ChannelState)
+			errChan <- fmt.Errorf("can't close unanimous request. Validator was in the wrong state to handle it: %T", validator.channelBot.ChannelState)
 			return
 		}
 		newBot, err := bot.ClosingUnanimous(resultChan, errChan)
@@ -341,7 +341,7 @@ func (validator *ChannelValidator) ClosingUnanimousAssertionRequest() (<-chan bo
 	return resultChan, errChan
 }
 
-func (validator *ChannelValidator) Run(recvChan <-chan ethconnection.Notification, bridge bridge.Bridge, ctx context.Context) {
+func (validator *ChannelValidator) Run(ctx context.Context, recvChan <-chan ethconnection.Notification, bridge bridge.Bridge) {
 	defer fmt.Printf("%v: Exiting\n", validator.Name)
 	for {
 		select {

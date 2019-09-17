@@ -36,13 +36,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type ChannelValidator struct {
+type Validator struct {
 	*ethvalidator.VMValidator
 	Validators map[common.Address]validatorInfo
 	arbChannel *ethconnection.ArbChannel
 }
 
-func (val *ChannelValidator) ValidatorCount() int {
+func (val *Validator) ValidatorCount() int {
 	return len(val.Validators)
 }
 
@@ -50,12 +50,12 @@ type validatorInfo struct {
 	indexNum uint16
 }
 
-func NewChannelValidator(
+func NewValidator(
 	val *ethvalidator.Validator,
 	vmID common.Address,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
-) (*ChannelValidator, error) {
+) (*Validator, error) {
 	con, err := ethconnection.NewArbChannel(vmID, val.Client)
 	if err != nil {
 		return nil, err
@@ -88,18 +88,18 @@ func NewChannelValidator(
 		return nil, errors.New("key is not a validator of chosen ArbChannel")
 	}
 
-	chanVal := &ChannelValidator{
+	chanVal := &Validator{
 		vmVal,
 		manMap,
 		con,
 	}
 	if err := chanVal.topOffDeposit(context.Background()); err != nil {
-		return nil, errors2.Wrap(err, "ChannelValidator failed to top off deposit")
+		return nil, errors2.Wrap(err, "Validator failed to top off deposit")
 	}
 	return chanVal, nil
 }
 
-func (val *ChannelValidator) topOffDeposit(ctx context.Context) error {
+func (val *Validator) topOffDeposit(ctx context.Context) error {
 	callOpts := &bind.CallOpts{
 		Pending: true,
 		From:    val.Address(),
@@ -111,7 +111,7 @@ func (val *ChannelValidator) topOffDeposit(ctx context.Context) error {
 	}
 	required, err := val.arbChannel.EscrowRequired(callOpts)
 	if current.Cmp(required) >= 0 {
-		// ChannelValidator already has escrow deposited
+		// Validator already has escrow deposited
 		return nil
 	}
 	depToAdd := new(big.Int).Sub(required, current)
@@ -122,7 +122,7 @@ func (val *ChannelValidator) topOffDeposit(ctx context.Context) error {
 	return nil
 }
 
-func (val *ChannelValidator) FinalizedUnanimousAssert(
+func (val *Validator) FinalizedUnanimousAssert(
 	ctx context.Context,
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
@@ -150,7 +150,7 @@ func (val *ChannelValidator) FinalizedUnanimousAssert(
 	return receiptChan, errChan
 }
 
-func (val *ChannelValidator) PendingUnanimousAssert(
+func (val *Validator) PendingUnanimousAssert(
 	ctx context.Context,
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
@@ -180,7 +180,7 @@ func (val *ChannelValidator) PendingUnanimousAssert(
 	return receiptChan, errChan
 }
 
-func (val *ChannelValidator) ConfirmUnanimousAsserted(
+func (val *Validator) ConfirmUnanimousAsserted(
 	ctx context.Context,
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
@@ -206,7 +206,7 @@ func (val *ChannelValidator) ConfirmUnanimousAsserted(
 	return receiptChan, errChan
 }
 
-func (val *ChannelValidator) UnanimousAssertHash(
+func (val *Validator) UnanimousAssertHash(
 	sequenceNum uint64,
 	beforeHash [32]byte,
 	newInboxHash [32]byte,

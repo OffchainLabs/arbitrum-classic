@@ -74,7 +74,7 @@ func NewVMValidator(
 		machine.Hash(),
 	)
 	if err != nil {
-		return nil, errors2.Wrap(err, "ChannelValidator failed to verify vm")
+		return nil, errors2.Wrap(err, "Validator failed to verify vm")
 	}
 
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
@@ -95,7 +95,7 @@ func (val *VMValidator) ensureVMActivated() error {
 	if err != nil {
 		return errors2.Wrap(err, "Error checking for VM activation")
 	}
-	log.Println("ChannelValidator is validating vm", hexutil.Encode(val.VMID[:]))
+	log.Println("Validator is validating vm", hexutil.Encode(val.VMID[:]))
 	return nil
 }
 
@@ -152,7 +152,7 @@ func (val *VMValidator) StartListening(ctx context.Context) (chan ethconnection.
 				}
 				parsedChan <- parse
 			case <-errChan:
-				// log.Printf("ChannelValidator recieved error: %v", err)
+				// log.Printf("Validator recieved error: %v", err)
 				// fmt.Println("Resetting channels")
 				hitError = true
 
@@ -164,7 +164,7 @@ func (val *VMValidator) StartListening(ctx context.Context) (chan ethconnection.
 					if err := val.arbitrumVM.StartConnection(ctx); err == nil {
 						break
 					}
-					log.Println("Error: ChannelValidator can't connect to blockchain")
+					log.Println("Error: Validator can't connect to blockchain")
 					time.Sleep(5 * time.Second)
 				}
 			}

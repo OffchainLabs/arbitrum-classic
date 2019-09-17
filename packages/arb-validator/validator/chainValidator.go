@@ -64,7 +64,7 @@ func NewChainValidator(
 	return &ChainValidator{val, chainBot}
 }
 
-func (validator *ChainValidator) Run(recvChan <-chan ethconnection.Notification, bridge bridge.ArbVMBridge, ctx context.Context) {
+func (validator *ChainValidator) Run(ctx context.Context, recvChan <-chan ethconnection.Notification, bridge bridge.ArbVMBridge) {
 	defer fmt.Printf("%v: Exiting\n", validator.Name)
 	for {
 		select {

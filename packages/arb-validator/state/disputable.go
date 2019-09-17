@@ -118,15 +118,15 @@ func (bot Waiting) CloseUnanimous(bridge bridge.Bridge) (chan *types.Receipt, ch
 			bot.assertion,
 			bot.signatures,
 		)
-	} else {
-		return bridge.PendingUnanimousAssert(
-			context.Background(),
-			bot.GetCore().GetMachine().InboxHash().Hash(),
-			bot.assertion,
-			bot.sequenceNum,
-			bot.signatures,
-		)
 	}
+
+	return bridge.PendingUnanimousAssert(
+		context.Background(),
+		bot.GetCore().GetMachine().InboxHash().Hash(),
+		bot.assertion,
+		bot.sequenceNum,
+		bot.signatures,
+	)
 }
 
 func (bot Waiting) ClosingUnanimous(retChan chan<- bool, errChan chan<- error) (ChannelState, error) {

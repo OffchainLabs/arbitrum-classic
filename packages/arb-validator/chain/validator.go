@@ -32,21 +32,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type ChainValidator struct {
+type Validator struct {
 	*ethvalidator.VMValidator
 	arbChain *ethconnection.ArbChain
 }
 
-func (val *ChainValidator) Address() common.Address {
+func (val *Validator) Address() common.Address {
 	return val.Validator.Address()
 }
 
-func NewChainValidator(
+func NewValidator(
 	val *ethvalidator.Validator,
 	vmID common.Address,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
-) (*ChainValidator, error) {
+) (*Validator, error) {
 	con, err := ethconnection.NewArbChain(vmID, val.Client)
 	if err != nil {
 		return nil, err
@@ -63,17 +63,17 @@ func NewChainValidator(
 		return nil, err
 	}
 
-	chanVal := &ChainValidator{
+	chanVal := &Validator{
 		vmVal,
 		con,
 	}
 	if err := chanVal.topOffDeposit(context.Background()); err != nil {
-		return nil, errors2.Wrap(err, "ChannelValidator failed to top off deposit")
+		return nil, errors2.Wrap(err, "Validator failed to top off deposit")
 	}
 	return chanVal, nil
 }
 
-func (val *ChainValidator) topOffDeposit(ctx context.Context) error {
+func (val *Validator) topOffDeposit(ctx context.Context) error {
 	callOpts := &bind.CallOpts{
 		Pending: true,
 		From:    val.Address(),
@@ -85,7 +85,7 @@ func (val *ChainValidator) topOffDeposit(ctx context.Context) error {
 	}
 	required, err := val.arbChain.EscrowRequired(callOpts)
 	if current.Cmp(required) >= 0 {
-		// ChannelValidator already has escrow deposited
+		// Validator already has escrow deposited
 		return nil
 	}
 	depToAdd := new(big.Int).Sub(required, current)

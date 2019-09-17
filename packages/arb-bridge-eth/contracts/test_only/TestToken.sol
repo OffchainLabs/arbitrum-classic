@@ -12,6 +12,7 @@ contract TestToken is ERC20, ERC20Detailed {
     }
 }
 
+
 contract TestItem is ERC721Full {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;

@@ -114,7 +114,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return this.validatorAddressesCache;
     }
 
-    public async verifyUnanimousSignatures(assertionHash: ethers.utils.Arrayish, validatorSigs: string[]) {
+    public async verifyUnanimousSignatures(assertionHash: ethers.utils.Arrayish, validatorSigs: string[]): void {
         const validatorAddresses = await this.getValidatorAddresses();
         if (validatorAddresses.length !== validatorSigs.length) {
             throw Error('Expected: ' + validatorAddresses.length + ' signatures.\nReceived: ' + validatorSigs.length);

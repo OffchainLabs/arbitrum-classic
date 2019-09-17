@@ -41,7 +41,7 @@ import (
 )
 
 type ValidatorFollower struct {
-	*ChannelValidator
+	*Validator
 	channelVal *validator.ChannelValidator
 
 	client *Client
@@ -106,7 +106,7 @@ func NewValidatorFollower(
 
 	header, err := val.LatestHeader(context.Background())
 	if err != nil {
-		return nil, errors2.Wrap(err, "ChannelValidator couldn't get latest error")
+		return nil, errors2.Wrap(err, "Validator couldn't get latest error")
 	}
 
 	channelVal := validator.NewChannelValidator(
@@ -120,9 +120,9 @@ func NewValidatorFollower(
 		maxCallSteps,
 	)
 
-	c, err := NewChannelValidator(val, vmID, machine, config)
+	c, err := NewValidator(val, vmID, machine, config)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Error initializing ChannelValidator in follower")
+		return nil, errors2.Wrap(err, "Error initializing Validator in follower")
 	}
 
 	if _, ok := c.Validators[address]; !ok {
@@ -133,7 +133,7 @@ func NewValidatorFollower(
 	unanimousRequests := make(map[[32]byte]valmessage.UnanimousRequestData)
 	client := NewClient(coordinatorConn, address)
 	return &ValidatorFollower{
-		ChannelValidator:  c,
+		Validator:         c,
 		channelVal:        channelVal,
 		client:            client,
 		unanimousRequests: unanimousRequests,
@@ -251,7 +251,7 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 	}
 
 	go func() {
-		m.channelVal.Run(parsedChan, m.ChannelValidator, ctx)
+		m.channelVal.Run(ctx, parsedChan, m.Validator)
 	}()
 
 	go func() {
