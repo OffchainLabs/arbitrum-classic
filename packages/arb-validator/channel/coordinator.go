@@ -434,7 +434,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					break
 				}
 
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 				err := m.initiateUnanimousAssertionImpl(ctx, forceFinal, m.maxStepsUnanSteps)
 				cancel()
 				if err == nil {

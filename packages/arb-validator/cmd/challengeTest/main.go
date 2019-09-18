@@ -83,7 +83,7 @@ func main() {
 	validators := []common.Address{auth1.From, auth2.From}
 	escrowRequired := big.NewInt(10)
 	config := valmessage.NewVMConfiguration(
-		10,
+		5,
 		escrowRequired,
 		common.Address{}, // Address 0 is eth
 		validators,
@@ -138,7 +138,7 @@ func main() {
 		val2,
 		machine.Clone(),
 		config,
-		false,
+		true,
 		math.MaxInt32, // maxCallSteps,
 		math.MaxInt32, // maxUnanSteps
 		"wss://127.0.0.1:1236/ws",
@@ -155,6 +155,12 @@ func main() {
 	if err := challenger.Run(context.Background()); err != nil {
 		log.Fatal(err)
 	}
+
+	log.Println("Everyone is running")
+
+	time.Sleep(2 * time.Second)
+
+	challenger.IgnoreCoordinator()
 
 	dataBytes, _ := hexutil.Decode("0x2ddec39b0000000000000000000000000000000000000000000000000000000000000028")
 	data, _ := evm.BytesToSizedByteArray(dataBytes)
@@ -176,21 +182,8 @@ func main() {
 		log.Fatalln("Send error", err)
 	}
 	if receipt.Status == 0 {
-		log.Fatalln("Follower could not deposit funds")
+		log.Fatalln("Follower could not send message")
 	}
 
-	time.Sleep(2000 * time.Millisecond)
-	successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
-	select {
-	case result := <-successChan:
-		fmt.Println("ChallengeTest: Unanimous assertion successful", result)
-	case err := <-errChan:
-		panic(fmt.Sprintf("Error Running unanimous assertion: %v", err))
-	}
-
-	successChan = coordinator.InitiateDisputableAssertion()
-	result := <-successChan
-	fmt.Println("Result", result)
-
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 }
