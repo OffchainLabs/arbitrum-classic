@@ -1519,7 +1519,7 @@ func TestSendFungible(t *testing.T) {
 	tok[20] = 0
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).Lsh(big.NewInt(4), 96)),
+		value.NewInt64Value(4),
 		value.NewInt64Value(7),
 		tok.ToIntValue(),
 	})
@@ -1563,7 +1563,7 @@ func TestSendNonFungible(t *testing.T) {
 	tok[20] = 1
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).Lsh(big.NewInt(4), 96)),
+		value.NewInt64Value(4),
 		value.NewInt64Value(7),
 		tok.ToIntValue(),
 	})
@@ -1607,7 +1607,7 @@ func TestSendLowBalance(t *testing.T) {
 	tok[20] = 0
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).Lsh(big.NewInt(4), 96)),
+		value.NewInt64Value(4),
 		value.NewInt64Value(17),
 		tok.ToIntValue(),
 	})
@@ -1644,7 +1644,7 @@ func TestNbsend1(t *testing.T) {
 	tok[20] = 1
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).Lsh(big.NewInt(4), 96)),
+		value.NewInt64Value(4),
 		value.NewInt64Value(10),
 		tok.ToIntValue(),
 	})
@@ -1685,7 +1685,7 @@ func TestNBSendFungible(t *testing.T) {
 	tok[20] = 0
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).Lsh(big.NewInt(4), 96)),
+		value.NewInt64Value(4),
 		value.NewInt64Value(7),
 		tok.ToIntValue(),
 	})
@@ -1731,7 +1731,7 @@ func TestNBSendNonFungible(t *testing.T) {
 	tok[20] = 1
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).Lsh(big.NewInt(4), 96)),
+		value.NewInt64Value(4),
 		value.NewInt64Value(7),
 		tok.ToIntValue(),
 	})
@@ -1776,7 +1776,7 @@ func TestNBSendLowBalance(t *testing.T) {
 	tok[20] = 0
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
-		value.NewIntValue(new(big.Int).Lsh(big.NewInt(4), 96)),
+		value.NewInt64Value(4),
 		value.NewInt64Value(17),
 		tok.ToIntValue(),
 	})
