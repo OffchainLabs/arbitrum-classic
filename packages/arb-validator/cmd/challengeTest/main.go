@@ -167,20 +167,18 @@ func main() {
 		seq,
 	})
 
-	receiptChan, errChan := coordinator.Val.SendEthMessage(
+	receipt, err := coordinator.Val.SendEthMessage(
 		context.Background(),
 		tup,
 		big.NewInt(0),
 	)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
-		log.Fatal(err)
+	if err != nil {
+		log.Fatalln("Send error", err)
 	}
-	fmt.Println("Send error", err)
+	if receipt.Status == 0 {
+		log.Fatalln("Follower could not deposit funds")
+	}
+
 	time.Sleep(2000 * time.Millisecond)
 	successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
 	select {
