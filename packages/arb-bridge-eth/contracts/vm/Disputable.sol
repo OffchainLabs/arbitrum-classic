@@ -150,7 +150,7 @@ library Disputable {
 
         require(
             _assertPreHash == _vm.pendingHash,
-            "Precondition and assertion do not match pending assertion"
+            "Initiate Challenge: Precondition and assertion do not match pending assertion"
         );
 
         _vm.pendingHash = 0;
@@ -267,7 +267,7 @@ library Disputable {
                     )
                 )
             ) == _vm.pendingHash,
-            "Precondition and assertion do not match pending assertion"
+            "Confirm Disputable: Precondition and assertion do not match pending assertion"
         );
         VM.acceptAssertion(
             _vm,
@@ -307,6 +307,7 @@ library Disputable {
             );
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
+        return hashVal;
     }
 
     function generateLastMessageHashStub(

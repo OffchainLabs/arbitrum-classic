@@ -106,7 +106,7 @@ func (a *Assertion) Stub() *AssertionStub {
 	_, amounts := tracker.GetTypesAndAmounts()
 	var lastHash [32]byte
 	for _, msg := range a.OutMsgs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
+		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.AsValue().Hash()))
 		copy(lastHash[:], next)
 	}
 

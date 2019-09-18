@@ -22,8 +22,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -115,18 +113,6 @@ func NewMessageFromValue(val value.Value) (Message, error) {
 		amountInt.BigInt(),
 		destInt.BigInt(),
 	), nil
-}
-
-func (msg Message) Hash() [32]byte {
-	var ret [32]byte
-	hashVal := solsha3.SoliditySHA3(
-		solsha3.Bytes32(msg.Data.Hash),
-		tokenTypeEncoded(msg.TokenType),
-		solsha3.Uint256(msg.Currency),
-		solsha3.Bytes32(msg.Destination),
-	)
-	copy(ret[:], hashVal)
-	return ret
 }
 
 func (msg Message) Clone() Message {
