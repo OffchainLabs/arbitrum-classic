@@ -41,6 +41,10 @@ type VMConnection interface {
 		auth *bind.CallOpts,
 	) (bool, error)
 
+	IsPendingUnanimous(
+		auth *bind.CallOpts,
+	) (bool, error)
+
 	PendingDisputableAssert(
 		auth *bind.TransactOpts,
 		precondition *protocol.Precondition,

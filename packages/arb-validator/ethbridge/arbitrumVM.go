@@ -593,6 +593,13 @@ func (vm *ArbitrumVM) IsEnabled(
 	return status != 0, err
 }
 
+func (vm *ArbitrumVM) IsPendingUnanimous(
+	auth *bind.CallOpts,
+) (bool, error) {
+	status, err := vm.ArbitrumVM.GetState(auth)
+	return status == 3, err
+}
+
 func (vm *ArbitrumVM) VerifyVM(
 	auth *bind.CallOpts,
 	config *valmessage.VMConfiguration,

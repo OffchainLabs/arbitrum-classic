@@ -138,11 +138,21 @@ func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.B
 		bot.Core.GetMachine().InboxHash().Hash(),
 		bot.assertion,
 	)
+
+	if err != nil {
+		isPending, err2 := bridge.IsPendingUnanimous(context.Background())
+		if err2 != nil {
+			return nil, err2
+		}
+		if isPending {
+			return nil, err
+		}
+	}
 	return finalizingOffchainClosing{
 		Config:  bot.Config,
 		Core:    bot.Core,
 		retChan: bot.retChan,
-	}, err
+	}, nil
 }
 
 func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {

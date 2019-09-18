@@ -105,4 +105,8 @@ type ArbVMBridge interface {
 	ChallengerTimedOut(
 		ctx context.Context,
 	) (*types.Receipt, error)
+
+	IsPendingUnanimous(
+		ctx context.Context,
+	) (bool, error)
 }
