@@ -155,6 +155,10 @@ class Machine {
     void sendOffchainMessages(const std::vector<Message>& messages);
 
     TuplePool& getPool() { return *m.pool; }
+
+    // should this be a tuple?
+    std::tuple<uint64_t, datastack, datastack, value, value>
+    getMachineStateData();
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

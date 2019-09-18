@@ -40,15 +40,16 @@ struct CodePoint;
 using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
-
+types GetType(const value& val);
 uint256_t hash(const value& value);
+int get_tuple_size(char*& bufptr);
 
 uint256_t deserialize_int(char*& srccode);
 Operation deserializeOperation(char*& bufptr, TuplePool& pool);
 CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(char*& srccode, TuplePool& pool);
-void marshal_value(const value val, std::vector<unsigned char>& buf);
+void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
 void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);

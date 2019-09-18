@@ -83,7 +83,7 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-void marshal_value(const value val, std::vector<unsigned char>& buf) {
+void marshal_value(const value& val, std::vector<unsigned char>& buf) {
     if (nonstd::holds_alternative<Tuple>(val))
         marshal_Tuple(nonstd::get<Tuple>(val), buf);
     else if (nonstd::holds_alternative<uint256_t>(val))
@@ -139,6 +139,13 @@ value deserialize_value(char*& bufptr, TuplePool& pool) {
     }
 }
 
+int get_tuple_size(char*& bufptr) {
+    uint8_t valType;
+    memcpy(&valType, bufptr, sizeof(valType));
+
+    return valType - TUPLE;
+}
+
 uint256_t hash(const value& value) {
     return nonstd::visit([](const auto& val) { return hash(val); }, value);
 }
@@ -166,4 +173,16 @@ struct ValuePrinter {
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
     return *nonstd::visit(ValuePrinter{os}, val);
+}
+
+struct GetValueType {
+    types operator()(const Tuple& val) { return TUPLE; }
+
+    types operator()(const uint256_t val) { return NUM; }
+
+    types operator()(const CodePoint& val) { return CODEPT; }
+};
+
+types GetType(const value& val) {
+    return nonstd::visit(GetValueType{}, val);
 }

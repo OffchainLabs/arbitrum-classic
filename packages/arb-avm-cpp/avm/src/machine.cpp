@@ -273,6 +273,12 @@ void Machine::sendOffchainMessages(const std::vector<Message>& messages) {
     m.sendOffchainMessages(messages);
 }
 
+std::tuple<uint64_t, datastack, datastack, value, value>
+Machine::getMachineStateData() {
+    return std::make_tuple(m.pc, m.stack, m.auxstack, m.registerVal,
+                           m.staticVal);
+}
+
 Assertion Machine::run(uint64_t stepCount,
                        uint64_t timeBoundStart,
                        uint64_t timeBoundEnd) {
