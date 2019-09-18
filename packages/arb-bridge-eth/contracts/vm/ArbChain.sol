@@ -45,7 +45,7 @@ contract ArbChain is ArbitrumVM {
     }
 
     function increaseDeposit() external payable {
-        vm.validatorBalances[msg.sender] += msg.value;
+        validatorBalances[msg.sender] += msg.value;
     }
 
 }

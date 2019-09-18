@@ -71,10 +71,10 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
 
     function increaseDeposit() external payable {
         require(validators[msg.sender], "Caller must be validator");
-        uint256 balance = vm.validatorBalances[msg.sender];
+        uint256 balance = validatorBalances[msg.sender];
         bool wasInactive = balance < uint256(vm.escrowRequired);
         balance += msg.value;
-        vm.validatorBalances[msg.sender] = balance;
+        validatorBalances[msg.sender] = balance;
         if (wasInactive && balance >= uint256(vm.escrowRequired)) {
             activatedValidators++;
         }
@@ -125,6 +125,15 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             _signatures
         );
 
+        if (vm.state == VM.State.PendingDisputable) {
+            validatorBalances[vm.asserter] = validatorBalances[vm.asserter].add(vm.escrowRequired);
+        }
+
+        VM.acceptAssertion(
+            vm,
+            _afterHash
+        );
+
         _completeAssertion(
             _tokenTypes,
             _messageData,
@@ -170,6 +179,11 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             _logsAccHash,
             _signatures
         );
+
+        if (vm.state == VM.State.PendingDisputable) {
+            validatorBalances[vm.asserter] = validatorBalances[vm.asserter].add(vm.escrowRequired);
+        }
+        vm.state = VM.State.PendingUnanimous;
     }
 
     function confirmUnanimousAsserted(

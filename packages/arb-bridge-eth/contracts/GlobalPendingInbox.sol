@@ -33,9 +33,9 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
 
     mapping(address => bytes32) pending;
 
-    function pullPendingMessages(address _vmId) external returns(bytes32) {
-        bytes32 messages = pending[_vmId];
-        pending[_vmId] = ArbValue.hashEmptyTuple();
+    function pullPendingMessages() external returns(bytes32) {
+        bytes32 messages = pending[msg.sender];
+        pending[msg.sender] = ArbValue.hashEmptyTuple();
         return messages;
     }
 

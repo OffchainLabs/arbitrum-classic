@@ -223,19 +223,10 @@ func (vm *ArbChannel) PendingUnanimousAssert(
 ) (*types.Receipt, error) {
 	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	var unanRest [32]byte
 	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
 		newInboxHash,
 		assertion,
-		messageData,
 		destinations,
 	))
 

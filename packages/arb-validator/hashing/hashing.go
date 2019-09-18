@@ -47,9 +47,13 @@ func SplitMessages(
 func UnanimousAssertPartialPartialHash(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
-	messageData bytes.Buffer,
 	destinations []common.Address,
 ) []byte {
+	var messageData bytes.Buffer
+	for _, msg := range assertion.OutMsgs {
+		_ = value.MarshalValue(msg.Data, &messageData)
+	}
+
 	return solsha3.SoliditySHA3(
 		solsha3.Bytes32(newInboxHash),
 		solsha3.Bytes32(assertion.AfterHash),
@@ -67,22 +71,14 @@ func UnanimousAssertPartialHash(
 ) ([32]byte, error) {
 	tokenNums, amounts, destinations, tokenTypes := SplitMessages(assertion.OutMsgs)
 
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return [32]byte{}, err
-		}
-	}
-
+	unanRest := UnanimousAssertPartialPartialHash(
+		newInboxHash,
+		assertion,
+		destinations,
+	)
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(
-		UnanimousAssertPartialPartialHash(
-			newInboxHash,
-			assertion,
-			messageData,
-			destinations,
-		),
+		solsha3.Bytes32(unanRest),
 		solsha3.Bytes32(beforeHash),
 		solsha3.Bytes32(originalInboxHash),
 		protocol.TokenTypeArrayEncoded(tokenTypes),

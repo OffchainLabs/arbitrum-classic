@@ -69,7 +69,7 @@ type Message struct {
 func NewMessage(data value.Value, tokenType [21]byte, currency *big.Int, destination *big.Int) Message {
 	var dest common.Address
 	destBytes := value.NewIntValue(destination).ToBytes()
-	copy(dest[:], destBytes[:])
+	copy(dest[:], destBytes[12:])
 	return Message{data, tokenType, new(big.Int).Set(currency), dest}
 }
 

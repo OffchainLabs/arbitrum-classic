@@ -22,6 +22,8 @@ import (
 	"math"
 	"math/big"
 
+	errors2 "github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -287,7 +289,7 @@ func (validator *ChannelValidator) ConfirmOffchainUnanimousAssertion(
 			if canClose {
 				_, err := newBot.CloseUnanimous(validator.channelBot.bridge)
 				if err != nil {
-					errChan <- err
+					errChan <- errors2.Wrap(err, "Error closing unanimous assertion")
 					return
 				}
 			}

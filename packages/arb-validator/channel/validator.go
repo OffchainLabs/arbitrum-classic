@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
@@ -171,21 +170,4 @@ func (val *Validator) ConfirmUnanimousAsserted(
 	)
 	val.Mutex.Unlock()
 	return receipt, err
-}
-
-func (val *Validator) UnanimousAssertHash(
-	sequenceNum uint64,
-	beforeHash [32]byte,
-	newInboxHash [32]byte,
-	originalInboxHash [32]byte,
-	assertion *protocol.Assertion,
-) ([32]byte, error) {
-	return hashing.UnanimousAssertHash(
-		val.VMID,
-		sequenceNum,
-		beforeHash,
-		newInboxHash,
-		originalInboxHash,
-		assertion,
-	)
 }

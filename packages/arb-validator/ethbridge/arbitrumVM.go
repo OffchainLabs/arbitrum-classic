@@ -203,7 +203,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 				}
 
 				messageHash := solsha3.SoliditySHA3(
-					solsha3.Bytes32(val.VmId),
+					solsha3.Address(val.VmId),
 					solsha3.Bytes32(msgData.Hash()),
 					solsha3.Uint256(val.Value),
 					val.TokenType[:],

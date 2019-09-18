@@ -60,6 +60,7 @@ contract ArbitrumVM {
     IGlobalPendingInbox public globalInbox;
 
     VM.Data public vm;
+    mapping(address => uint256) validatorBalances;
 
     address payable public exitAddress;
     address payable public terminateAddress;
@@ -99,7 +100,7 @@ contract ArbitrumVM {
     }
 
     function currentDeposit(address validator) external view returns(uint256) {
-        return vm.validatorBalances[validator];
+        return validatorBalances[validator];
     }
 
     function escrowRequired() external view returns(uint256) {
@@ -128,8 +129,8 @@ contract ArbitrumVM {
         require(vm.inChallenge, "VM must be in challenge to complete it");
 
         vm.inChallenge = false;
-        vm.validatorBalances[_players[0]] = vm.validatorBalances[_players[0]].add(_rewards[0]);
-        vm.validatorBalances[_players[1]] = vm.validatorBalances[_players[1]].add(_rewards[1]);
+        validatorBalances[_players[0]] = validatorBalances[_players[0]].add(_rewards[0]);
+        validatorBalances[_players[1]] = validatorBalances[_players[1]].add(_rewards[1]);
     }
 
     // fields:
@@ -150,6 +151,11 @@ contract ArbitrumVM {
     )
         public
     {
+        require(
+            vm.escrowRequired <= validatorBalances[msg.sender],
+            "Validator does not have required escrow"
+        );
+        validatorBalances[msg.sender] -= vm.escrowRequired;
         uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
             _tokenTypes,
             _messageTokenNums,
@@ -203,6 +209,8 @@ contract ArbitrumVM {
             _logsAccHash
         );
 
+        validatorBalances[vm.asserter] = validatorBalances[vm.asserter].add(vm.escrowRequired);
+
         _completeAssertion(
             _tokenTypes,
             _messageData,
@@ -213,6 +221,12 @@ contract ArbitrumVM {
     }
 
     function initiateChallenge(bytes32 _assertPreHash) public {
+        require(
+            vm.escrowRequired <= validatorBalances[msg.sender],
+            "Challenger did not have enough escrowed"
+        );
+        validatorBalances[msg.sender] -= vm.escrowRequired;
+
         Disputable.initiateChallenge(
             vm,
             _assertPreHash
@@ -235,7 +249,7 @@ contract ArbitrumVM {
     )
         internal
     {
-        bytes32 pending = globalInbox.pullPendingMessages(address(this));
+        bytes32 pending = globalInbox.pullPendingMessages();
         if (pending != ArbValue.hashEmptyTuple()) {
             vm.inbox = ArbProtocol.appendInboxMessages(vm.inbox, pending);
         }

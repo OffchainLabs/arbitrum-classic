@@ -20,7 +20,6 @@ import "./VM.sol";
 import "./IArbChannel.sol";
 
 import "../libraries/SigUtils.sol";
-import "../libraries/DebugPrint.sol";
 
 
 library Unanimous {
@@ -165,7 +164,7 @@ library Unanimous {
         );
     }
 
-    function _requireAllSignedAssertion(
+    function _checkAllSignedAssertion(
         VM.Data storage vm,
         IArbChannel channel,
         bytes32 _unanRest,
@@ -178,31 +177,28 @@ library Unanimous {
     )
         private
         view
-        returns(bytes32)
+        returns(bool, bytes32)
     {
+        bytes32 partialHash = keccak256(
+            abi.encodePacked(
+                _unanRest,
+                vm.machineHash,
+                vm.inbox,
+                _tokenTypes,
+                _messageTokenNums,
+                _messageAmounts,
+                _sequenceNum
+            )
+        );
         bytes32 unanHash = keccak256(
             abi.encodePacked(
                 address(this),
-                keccak256(
-                    abi.encodePacked(
-                        _unanRest,
-                        vm.machineHash,
-                        vm.inbox,
-                        _tokenTypes,
-                        _messageTokenNums,
-                        _messageAmounts,
-                        _sequenceNum
-                    )
-                ),
+                partialHash,
                 _logsAccHash
             )
         );
-        address[] memory addresses = SigUtils.recoverAddresses(unanHash, _signatures);
-        require(
-            channel.isValidatorList(addresses),
-            "Invalid signature list"
-        );
-        return unanHash;
+        bool allSigned = channel.isValidatorList(SigUtils.recoverAddresses(unanHash, _signatures));
+        return (allSigned, unanHash);
     }
 
     function _finalizedUnanimousAssert(
@@ -219,7 +215,12 @@ library Unanimous {
             vm.state == VM.State.PendingUnanimous,
             "Tried to finalize unanimous from invalid state"
         );
-        bytes32 unanHash = _requireAllSignedAssertion(
+        if (vm.state != VM.State.Waiting) {
+            require(block.number <= vm.deadline, "Can't cancel finalized state");
+        }
+        bool allSigned;
+        bytes32 unanHash;
+        (allSigned, unanHash) = _checkAllSignedAssertion(
             vm,
             channel,
             keccak256(
@@ -238,12 +239,9 @@ library Unanimous {
             data.signatures
         );
 
-        VM.cancelCurrentState(vm);
+        require(allSigned, "Invalid signature list");
+
         vm.inbox = data.newInbox;
-        VM.acceptAssertion(
-            vm,
-            data.afterHash
-        );
 
         emit FinalizedUnanimousAssertion(
             unanHash
@@ -264,7 +262,12 @@ library Unanimous {
             vm.state == VM.State.PendingUnanimous,
             "Tried to pending unanimous from invalid state"
         );
-        bytes32 unanHash = _requireAllSignedAssertion(
+        if (vm.state != VM.State.Waiting) {
+            require(block.number <= vm.deadline, "Can't cancel finalized state");
+        }
+        bool allSigned;
+        bytes32 unanHash;
+        (allSigned, unanHash) = _checkAllSignedAssertion(
             vm,
             channel,
             data.unanRest,
@@ -276,6 +279,8 @@ library Unanimous {
             data.signatures
         );
 
+        require(allSigned, "Invalid signature list");
+
         if (vm.state == VM.State.PendingUnanimous) {
             require(
                 data.sequenceNum > vm.sequenceNum,
@@ -283,10 +288,7 @@ library Unanimous {
             );
         }
 
-        VM.cancelCurrentState(vm);
         VM.resetDeadline(vm);
-
-        vm.state = VM.State.PendingUnanimous;
         vm.sequenceNum = data.sequenceNum;
         vm.pendingHash = keccak256(
             abi.encodePacked(

@@ -36,7 +36,6 @@ library VM {
     }
 
     struct Data {
-        mapping(address => uint256) validatorBalances;
         bytes32 machineHash;
         bytes32 pendingHash; // Lock pending and confirm asserts together
         bytes32 inbox;
@@ -77,16 +76,5 @@ library VM {
 
     function isHalted(Data storage _vm) external view returns(bool) {
         return _vm.machineHash == MACHINE_HALT_HASH;
-    }
-
-    function cancelCurrentState(Data storage _vm) external {
-        if (_vm.state != VM.State.Waiting) {
-            require(block.number <= _vm.deadline, "Can't cancel finalized state");
-        }
-
-        if (_vm.state == VM.State.PendingDisputable) {
-            // If there is a pending disputable assertion, cancel it
-            _vm.validatorBalances[_vm.asserter] = _vm.validatorBalances[_vm.asserter].add(_vm.escrowRequired);
-        }
     }
 }
