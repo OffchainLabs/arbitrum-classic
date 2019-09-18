@@ -398,7 +398,7 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "PendingDisputableAssert")
 }
 
 func (vm *ArbitrumVM) ConfirmDisputableAsserted(
@@ -431,7 +431,7 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmDisputableAsserted")
 }
 
 func (vm *ArbitrumVM) InitiateChallenge(
@@ -451,7 +451,7 @@ func (vm *ArbitrumVM) InitiateChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "InitiateChallenge")
 }
 
 func (vm *ArbitrumVM) BisectAssertion(
@@ -493,7 +493,7 @@ func (vm *ArbitrumVM) BisectAssertion(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "BisectAssertion")
 }
 
 func (vm *ArbitrumVM) ContinueChallenge(
@@ -514,7 +514,7 @@ func (vm *ArbitrumVM) ContinueChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ContinueChallenge")
 }
 
 func (vm *ArbitrumVM) OneStepProof(
@@ -544,7 +544,7 @@ func (vm *ArbitrumVM) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "OneStepProof")
 }
 
 func (vm *ArbitrumVM) AsserterTimedOutChallenge(
@@ -557,7 +557,7 @@ func (vm *ArbitrumVM) AsserterTimedOutChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "AsserterTimedOut")
 }
 
 func (vm *ArbitrumVM) ChallengerTimedOutChallenge(
@@ -570,7 +570,7 @@ func (vm *ArbitrumVM) ChallengerTimedOutChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ChallengerTimedOut")
 }
 
 func (vm *ArbitrumVM) CurrentDeposit(

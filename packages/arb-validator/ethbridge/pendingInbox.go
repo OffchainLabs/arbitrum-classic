@@ -64,7 +64,7 @@ func (con *PendingInbox) SendMessage(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, con.client, tx.Hash())
+	return waitForReceipt(auth.Context, con.client, tx.Hash(), "SendMessage")
 }
 
 func (con *PendingInbox) ForwardMessage(
@@ -87,7 +87,7 @@ func (con *PendingInbox) ForwardMessage(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, con.client, tx.Hash())
+	return waitForReceipt(auth.Context, con.client, tx.Hash(), "ForwardMessage")
 }
 
 func (con *PendingInbox) SendEthMessage(
@@ -113,7 +113,7 @@ func (con *PendingInbox) SendEthMessage(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, con.client, tx.Hash())
+	return waitForReceipt(auth.Context, con.client, tx.Hash(), "SendEthMessage")
 }
 
 func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) (*types.Receipt, error) {
@@ -129,7 +129,7 @@ func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, 
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, con.client, tx.Hash())
+	return waitForReceipt(auth.Context, con.client, tx.Hash(), "DepositFunds")
 }
 
 func (con *PendingInbox) GetTokenBalance(

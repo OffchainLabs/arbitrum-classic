@@ -54,7 +54,7 @@ func (con *ChainLauncher) LaunchChain(
 	if err != nil {
 		return common.Address{}, err
 	}
-	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash())
+	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash(), "LaunchChain")
 	if err != nil {
 		return common.Address{}, err
 	}

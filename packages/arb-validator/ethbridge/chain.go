@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -33,7 +34,7 @@ type ArbAddresses struct {
 	GlobalPendingInbox string `json:"GlobalPendingInbox"`
 }
 
-func waitForReceipt(ctx context.Context, client *ethclient.Client, hash common.Hash) (*types.Receipt, error) {
+func waitForReceipt(ctx context.Context, client *ethclient.Client, hash common.Hash, methodName string) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):
@@ -42,7 +43,11 @@ func waitForReceipt(ctx context.Context, client *ethclient.Client, hash common.H
 				return nil, err
 			}
 			if receipt.Status != 1 {
-				return nil, errors.New("Transaction failed")
+				data, err := receipt.MarshalJSON()
+				if err != nil {
+					return nil, errors.New("Failed unmarshalling receipt")
+				}
+				return nil, fmt.Errorf("Transaction %v failed %v", methodName, string(data))
 			}
 			return receipt, nil
 		case _ = <-ctx.Done():

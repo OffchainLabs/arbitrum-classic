@@ -60,7 +60,7 @@ func (con *ChannelLauncher) LaunchChannel(
 	if err != nil {
 		return common.Address{}, err
 	}
-	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash())
+	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash(), "LaunchChannel")
 	if err != nil {
 		return common.Address{}, err
 	}

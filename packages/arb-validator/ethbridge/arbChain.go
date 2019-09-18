@@ -69,5 +69,5 @@ func (vm *ArbChain) IncreaseDeposit(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash())
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "IncreaseDeposit")
 }
