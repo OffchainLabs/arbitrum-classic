@@ -41,7 +41,7 @@ ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS \
 
 # Generate bridge_eth_addresses.json for export
 RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
-    mkdir db && ganache-cli --db db --acctKeys keys.json \
+    mkdir ganachedb && ganache-cli --db ganachedb --acctKeys keys.json \
         -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
@@ -66,7 +66,7 @@ COPY --from=0 --chown=user /home/user/bridge_eth_addresses.json \
 # ganache-cli and truffle (placed in /bin and /lib) and build folder
 COPY --from=0 --chown=user /home/user/.npm-global /
 COPY --from=0 --chown=user /home/user/build /home/user/build
-COPY --from=0 --chown=user /home/user/db /home/user/db
+COPY --from=0 --chown=user /home/user/ganachedb /home/user/ganachedb
 
 # Source files
 COPY --chown=user . ./
@@ -88,6 +88,6 @@ ENV GAS_LIMIT=6721975 \
 # DOCKER=true makes ganache run on host 0.0.0.0
 
 # Start ganache-cli using --db to use the EthBridge contract
-CMD ganache-cli --db db -p $PORT -l $GAS_LIMIT -e $GAS_PER_WALLET \
+CMD ganache-cli --db ganachedb -p $PORT -l $GAS_LIMIT -e $GAS_PER_WALLET \
     -b $BLOCK_TIME -a $NUM_WALLETS -m "${MNEMONIC}" $VERBOSE
 EXPOSE ${PORT}
