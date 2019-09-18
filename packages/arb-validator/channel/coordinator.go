@@ -362,7 +362,7 @@ func NewCoordinator(
 	channelVal := validator.NewChannelValidator(
 		name,
 		c,
-		vmID,
+		val.Address(),
 		header,
 		protocol.NewBalanceTracker(),
 		config,
@@ -468,37 +468,6 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 		}
 	}()
 	return nil
-}
-
-type CoordinatorUnanimousRequest struct {
-	final   bool
-	retChan chan bool
-	errChan chan error
-}
-
-func (m *ValidatorCoordinator) InitiateDisputableAssertion() chan bool {
-	retChan := make(chan bool, 1)
-	m.actions <- func(m *ValidatorCoordinator) {
-		retChan <- m.initiateDisputableAssertionImpl()
-	}
-
-	return retChan
-}
-
-func (m *ValidatorCoordinator) InitiateUnanimousAssertion(final bool) (chan bool, chan error) {
-	retChan := make(chan bool, 1)
-	errChan := make(chan error, 1)
-	m.actions <- func(m *ValidatorCoordinator) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
-		err := m.initiateUnanimousAssertionImpl(ctx, final, m.maxStepsUnanSteps)
-		cancel()
-		if err != nil {
-			errChan <- err
-		} else {
-			retChan <- true
-		}
-	}
-	return retChan, errChan
 }
 
 func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {

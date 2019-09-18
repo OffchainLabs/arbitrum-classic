@@ -117,7 +117,7 @@ func NewValidatorFollower(
 	channelVal := validator.NewChannelValidator(
 		name,
 		c,
-		vmID,
+		val.Address(),
 		header,
 		protocol.NewBalanceTracker(),
 		config,
