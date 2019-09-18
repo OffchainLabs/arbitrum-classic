@@ -6,6 +6,7 @@ arb-provider-go
 arb-provider-truffle
 arb-provider-web3
 arb-validator.Dockerfile
+**/ganachedb
 
 **/vconan
 **/Dockerfile
