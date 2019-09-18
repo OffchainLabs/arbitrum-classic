@@ -22,22 +22,6 @@ import "./ArbValue.sol";
 library ArbProtocol {
     using ArbValue for ArbValue.Value;
 
-    function appendInboxMessages(bytes32 _inboxHash, bytes32 _pendingMessages) public pure returns (bytes32) {
-        return ArbValue.hashTupleValue([
-            ArbValue.newIntValue(1),
-            ArbValue.newHashOnlyValue(_inboxHash),
-            ArbValue.newHashOnlyValue(_pendingMessages)
-        ]);
-    }
-
-    function appendInboxPendingMessage(bytes32 _pendingMessages, bytes32 _newMessage) public pure returns (bytes32) {
-        return ArbValue.hashTupleValue([
-            ArbValue.newIntValue(0),
-            ArbValue.newHashOnlyValue(_pendingMessages),
-            ArbValue.newHashOnlyValue(_newMessage)
-        ]);
-    }
-
     function generateMessageStubHash(
         bytes32 _data,
         bytes21 _tokenType,
@@ -51,39 +35,6 @@ library ArbProtocol {
         ArbValue.Value[] memory values = new ArbValue.Value[](4);
         values[0] = ArbValue.newHashOnlyValue(_data);
         values[1] = ArbValue.newIntValue(uint256(_destination));
-        values[2] = ArbValue.newIntValue(_value);
-        values[3] = ArbValue.newIntValue(uint256(bytes32(_tokenType)));
-        return ArbValue.newTupleValue(values).hash().hash;
-    }
-
-    function generateSentMessageHash(
-        address _dest,
-        bytes32 _data,
-        bytes21 _tokenType,
-        uint256 _value,
-        address _sender
-    )
-        public
-        view
-        returns (bytes32)
-    {
-        bytes32 txHash = keccak256(
-            abi.encodePacked(
-                _dest,
-                _data,
-                _value,
-                _tokenType
-            )
-        );
-        ArbValue.Value[] memory dataValues = new ArbValue.Value[](4);
-        dataValues[0] = ArbValue.newHashOnlyValue(_data);
-        dataValues[1] = ArbValue.newIntValue(block.timestamp);
-        dataValues[2] = ArbValue.newIntValue(block.number);
-        dataValues[3] = ArbValue.newIntValue(uint(txHash));
-
-        ArbValue.Value[] memory values = new ArbValue.Value[](4);
-        values[0] = ArbValue.newTupleValue(dataValues);
-        values[1] = ArbValue.newIntValue(uint256(_sender));
         values[2] = ArbValue.newIntValue(_value);
         values[3] = ArbValue.newIntValue(uint256(bytes32(_tokenType)));
         return ArbValue.newTupleValue(values).hash().hash;
@@ -134,39 +85,6 @@ library ArbProtocol {
                 _firstLogHash,
                 _lastLogHash,
                 _totalMessageValueAmounts
-            )
-        );
-    }
-
-    // fields:
-    // vmId
-    // beforeHash
-    // beforeInbox
-    // afterHash
-    // newInbox
-
-    function unanimousAssertHash(
-        bytes32[5] memory _fields,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNum,
-        uint256[] memory _messageAmount,
-        address[] memory _messageDestination
-    )
-        public
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _fields,
-                _timeBounds,
-                _tokenTypes,
-                _messageData,
-                _messageTokenNum,
-                _messageAmount,
-                _messageDestination
             )
         );
     }
@@ -233,63 +151,5 @@ library ArbProtocol {
             }
         }
         return beforeBalances;
-    }
-
-    function generateLastMessageHash(
-        bytes21[] memory _tokenTypes,
-        bytes memory _data,
-        uint16[] memory _tokenNums,
-        uint256[] memory _amounts,
-        address[] memory _destinations
-    )
-        public
-        pure
-        returns (bytes32)
-    {
-        require(_amounts.length == _destinations.length, "Input size mismatch");
-        require(_amounts.length == _tokenNums.length, "Input size mismatch");
-        bytes32 hashVal = 0x00;
-        uint256 offset = 0;
-        bytes32 msgHash;
-        uint amountCount = _amounts.length;
-        for (uint i = 0; i < amountCount; i++) {
-            (offset, msgHash) = ArbValue.deserializeValidValueHash(_data, offset);
-            msgHash = generateMessageStubHash(
-                msgHash,
-                _tokenTypes[_tokenNums[i]],
-                _amounts[i],
-                _destinations[i]
-            );
-            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
-        }
-    }
-
-    function generateLastMessageHashStub(
-        bytes21[] memory _tokenTypes,
-        bytes32[] memory _dataHashes,
-        uint16[] memory _tokenNums,
-        uint256[] memory _amounts,
-        address[] memory _destinations
-    )
-        public
-        pure
-        returns (bytes32)
-    {
-        require(_dataHashes.length == _tokenNums.length, "Input size mismatch");
-        require(_dataHashes.length == _amounts.length, "Input size mismatch");
-        require(_dataHashes.length == _destinations.length, "Input size mismatch");
-        bytes32 hashVal = 0x00;
-        bytes32 msgHash;
-        uint dataHashCount = _dataHashes.length;
-        for (uint i = 0; i < dataHashCount; i++) {
-            msgHash = generateMessageStubHash(
-                _dataHashes[i],
-                _tokenTypes[_tokenNums[i]],
-                _amounts[i],
-                _destinations[i]
-            );
-            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
-        }
-        return hashVal;
     }
 }

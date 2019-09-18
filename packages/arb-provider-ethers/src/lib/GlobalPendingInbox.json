@@ -136,7 +136,7 @@
         },
         {
             "constant": false,
-            "inputs": [{ "name": "_vmId", "type": "address" }],
+            "inputs": [],
             "name": "pullPendingMessages",
             "outputs": [{ "name": "", "type": "bytes32" }],
             "payable": false,
@@ -203,6 +203,21 @@
             "outputs": [],
             "payable": true,
             "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                { "name": "_dest", "type": "address" },
+                { "name": "_data", "type": "bytes32" },
+                { "name": "_tokenType", "type": "bytes21" },
+                { "name": "_value", "type": "uint256" },
+                { "name": "_sender", "type": "address" }
+            ],
+            "name": "generateSentMessageHash",
+            "outputs": [{ "name": "", "type": "bytes32" }],
+            "payable": false,
+            "stateMutability": "view",
             "type": "function"
         }
     ]

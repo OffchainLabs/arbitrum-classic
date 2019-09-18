@@ -22,9 +22,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/channellauncher"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arblauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
 	errors2 "github.com/pkg/errors"
 
@@ -40,7 +40,7 @@ import (
 
 type ArbChannel struct {
 	*ArbitrumVM
-	Tracker *arblauncher.ArbChannel
+	contract *channellauncher.ArbChannel
 }
 
 func NewArbChannel(address common.Address, client *ethclient.Client) (*ArbChannel, error) {
@@ -54,11 +54,11 @@ func NewArbChannel(address common.Address, client *ethclient.Client) (*ArbChanne
 }
 
 func (vm *ArbChannel) setupContracts() error {
-	trackerContract, err := arblauncher.NewArbChannel(vm.address, vm.Client)
+	trackerContract, err := channellauncher.NewArbChannel(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
-	vm.Tracker = trackerContract
+	vm.contract = trackerContract
 	return nil
 }
 
@@ -75,20 +75,20 @@ func (vm *ArbChannel) StartConnection(ctx context.Context) error {
 		Start:   &start,
 	}
 
-	unanAssChan := make(chan *arblauncher.ArbChannelFinalizedUnanimousAssertion)
-	unanAssSub, err := vm.Tracker.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
+	unanAssChan := make(chan *channellauncher.ArbChannelFinalizedUnanimousAssertion)
+	unanAssSub, err := vm.contract.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
 	if err != nil {
 		return err
 	}
 
-	unanPropChan := make(chan *arblauncher.ArbChannelPendingUnanimousAssertion)
-	unanPropSub, err := vm.Tracker.WatchPendingUnanimousAssertion(watch, unanPropChan)
+	unanPropChan := make(chan *channellauncher.ArbChannelPendingUnanimousAssertion)
+	unanPropSub, err := vm.contract.WatchPendingUnanimousAssertion(watch, unanPropChan)
 	if err != nil {
 		return err
 	}
 
-	unanConfChan := make(chan *arblauncher.ArbChannelConfirmedUnanimousAssertion)
-	unanConfSub, err := vm.Tracker.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
+	unanConfChan := make(chan *channellauncher.ArbChannelConfirmedUnanimousAssertion)
+	unanConfSub, err := vm.contract.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (vm *ArbChannel) IncreaseDeposit(
 		GasLimit: 100000,
 		Context:  auth.Context,
 	}
-	tx, err := vm.Tracker.IncreaseDeposit(call)
+	tx, err := vm.contract.IncreaseDeposit(call)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 		}
 	}
 
-	tx, err := vm.Tracker.FinalizedUnanimousAssert(
+	tx, err := vm.contract.FinalizedUnanimousAssert(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
@@ -230,7 +230,7 @@ func (vm *ArbChannel) PendingUnanimousAssert(
 		destinations,
 	))
 
-	tx, err := vm.Tracker.PendingUnanimousAssert(
+	tx, err := vm.contract.PendingUnanimousAssert(
 		auth,
 		unanRest,
 		tokenTypes,
@@ -261,7 +261,7 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 		}
 	}
 
-	tx, err := vm.Tracker.ConfirmUnanimousAsserted(
+	tx, err := vm.contract.ConfirmUnanimousAsserted(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
@@ -287,7 +287,7 @@ func (vm *ArbChannel) VerifyVM(
 	for _, assertKey := range config.AssertKeys {
 		validators = append(validators, protocol.NewAddressFromBuf(assertKey))
 	}
-	correctValidators, err := vm.Tracker.IsValidatorList(auth, validators)
+	correctValidators, err := vm.contract.IsValidatorList(auth, validators)
 	if err != nil {
 		return err
 	}

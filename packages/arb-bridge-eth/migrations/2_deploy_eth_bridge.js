@@ -22,7 +22,8 @@ var ArbValue = artifacts.require("./ArbValue.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
 var Bisection = artifacts.require("./Bisection.sol");
-var ArbLauncher = artifacts.require("./ArbLauncher.sol");
+var ChainLauncher = artifacts.require("./ChainLauncher.sol");
+var ChannelLauncher = artifacts.require("./ChannelLauncher.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
@@ -30,6 +31,8 @@ var MerkleLib = artifacts.require("./MerkleLib.sol");
 var SigUtils = artifacts.require("./SigUtils.sol");
 var ChallengeManager = artifacts.require("./ChallengeManager.sol");
 var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
+var ArbitrumVM = artifacts.require("./ArbitrumVM.sol");
+var ArbChannel = artifacts.require("./ArbChannel.sol");
 
 module.exports = async function(deployer, network, accounts) {
   deployer.deploy(DebugPrint);
@@ -50,19 +53,20 @@ module.exports = async function(deployer, network, accounts) {
     OneStepProof,
     ArbMachine,
     ArbProtocol,
-    VM,
-    ArbLauncher
+    Disputable,
+    ArbitrumVM,
+    ChainLauncher,
+    ChannelLauncher
   ]);
 
   deployer.deploy(ArbProtocol);
   deployer.link(ArbProtocol, [
-    GlobalPendingInbox,
-    ArbLauncher,
-    ChallengeManager,
+    ArbitrumVM,
     OneStepProof,
-    VM,
     Disputable,
-    Bisection
+    Bisection,
+    ChainLauncher,
+    ChannelLauncher
   ]);
 
   deployer.deploy(ArbMachine);
@@ -75,26 +79,38 @@ module.exports = async function(deployer, network, accounts) {
   deployer.link(Bisection, ChallengeManager);
 
   deployer.deploy(VM);
-  deployer.link(VM, [Disputable, Unanimous, ArbLauncher]);
+  deployer.link(VM, [
+    Disputable,
+    Unanimous,
+    ArbitrumVM,
+    ChainLauncher,
+    ChannelLauncher
+  ]);
 
   deployer.deploy(Disputable);
-  deployer.link(Disputable, ArbLauncher);
+  deployer.link(Disputable, [ArbitrumVM, ChainLauncher, ChannelLauncher]);
 
   deployer.deploy(Unanimous);
-  deployer.link(Unanimous, ArbLauncher);
+  deployer.link(Unanimous, [ArbChannel, ChannelLauncher]);
 
   await deployer.deploy(GlobalPendingInbox);
   await deployer.deploy(ChallengeManager);
   await deployer.deploy(
-    ArbLauncher,
+    ChainLauncher,
+    GlobalPendingInbox.address,
+    ChallengeManager.address
+  );
+  await deployer.deploy(
+    ChannelLauncher,
     GlobalPendingInbox.address,
     ChallengeManager.address
   );
 
   const fs = require("fs");
   let addresses = {
-    vmCreator: ArbLauncher.address,
-    globalPendingInbox: GlobalPendingInbox.address
+    ChainLauncher: ChainLauncher.address,
+    ChannelLauncher: ChannelLauncher.address,
+    GlobalPendingInbox: GlobalPendingInbox.address
   };
   fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
 };

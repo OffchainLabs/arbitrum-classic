@@ -1,21 +1,16 @@
 const fs = require('fs');
 
-const vmTrackerPath = './src/lib/VMTracker.json';
-const vmTrackerJson = require(vmTrackerPath);
-fs.writeFileSync(
-    vmTrackerPath,
-    JSON.stringify({
-        contractName: vmTrackerJson.contractName,
-        abi: vmTrackerJson.abi,
-    }),
-);
+function shrinkABI(jsonPath) {
+    const jsonFile = require(jsonPath);
+    fs.writeFileSync(
+        jsonPath,
+        JSON.stringify({
+            contractName: jsonFile.contractName,
+            abi: jsonFile.abi,
+        }),
+    );
+}
 
-const inboxPath = './src/lib/GlobalPendingInbox.json';
-const inboxJson = require(inboxPath);
-fs.writeFileSync(
-    inboxPath,
-    JSON.stringify({
-        contractName: inboxJson.contractName,
-        abi: inboxJson.abi,
-    }),
-);
+shrinkABI('./src/lib/ArbChain.json');
+shrinkABI('./src/lib/ArbChannel.json');
+shrinkABI('./src/lib/GlobalPendingInbox.json');

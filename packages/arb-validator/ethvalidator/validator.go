@@ -43,7 +43,8 @@ type Validator struct {
 	arbAddresses  ethbridge.ArbAddresses
 	Client        *ethclient.Client
 
-	*ethbridge.ArbLauncher
+	*ethbridge.ChainLauncher
+	*ethbridge.ChannelLauncher
 	*ethbridge.PendingInbox
 	auth *bind.TransactOpts
 }
@@ -60,7 +61,12 @@ func NewValidator(
 		return nil, err
 	}
 
-	vmCreator, err := ethbridge.NewArbLauncher(common.HexToAddress(connectionInfo.VMCreatorAddress), client)
+	chainLauncher, err := ethbridge.NewChainLauncher(common.HexToAddress(connectionInfo.ChainLauncher), client)
+	if err != nil {
+		return nil, err
+	}
+
+	channelLauncher, err := ethbridge.NewChannelLauncher(common.HexToAddress(connectionInfo.ChannelLauncher), client)
 	if err != nil {
 		return nil, err
 	}
@@ -71,13 +77,14 @@ func NewValidator(
 	}
 
 	return &Validator{
-		key:           key,
-		serverAddress: ethURL,
-		arbAddresses:  connectionInfo,
-		Client:        client,
-		ArbLauncher:   vmCreator,
-		PendingInbox:  pendingInbox,
-		auth:          auth,
+		key:             key,
+		serverAddress:   ethURL,
+		arbAddresses:    connectionInfo,
+		Client:          client,
+		ChainLauncher:   chainLauncher,
+		ChannelLauncher: channelLauncher,
+		PendingInbox:    pendingInbox,
+		auth:            auth,
 	}, nil
 }
 
@@ -129,7 +136,7 @@ func (val *Validator) LaunchChannel(
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
 ) (common.Address, error) {
-	return val.ArbLauncher.LaunchChannel(
+	return val.ChannelLauncher.LaunchChannel(
 		val.MakeAuth(ctx),
 		config,
 		vmState,
@@ -141,7 +148,7 @@ func (val *Validator) LaunchChain(
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
 ) (common.Address, error) {
-	return val.ArbLauncher.LaunchChain(
+	return val.ChainLauncher.LaunchChain(
 		val.MakeAuth(ctx),
 		config,
 		vmState,

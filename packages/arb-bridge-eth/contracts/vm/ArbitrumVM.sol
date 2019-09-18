@@ -24,6 +24,7 @@ import "../IGlobalPendingInbox.sol";
 import "../challenge/IChallengeManager.sol";
 
 import "../libraries/ArbProtocol.sol";
+import "../libraries/ArbValue.sol";
 
 
 contract ArbitrumVM {
@@ -251,7 +252,11 @@ contract ArbitrumVM {
     {
         bytes32 pending = globalInbox.pullPendingMessages();
         if (pending != ArbValue.hashEmptyTuple()) {
-            vm.inbox = ArbProtocol.appendInboxMessages(vm.inbox, pending);
+            vm.inbox = ArbValue.hashTupleValue([
+                ArbValue.newIntValue(1),
+                ArbValue.newHashOnlyValue(vm.inbox),
+                ArbValue.newHashOnlyValue(pending)
+            ]);
         }
 
         globalInbox.sendMessages(

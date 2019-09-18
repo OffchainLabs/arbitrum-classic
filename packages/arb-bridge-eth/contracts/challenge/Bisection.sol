@@ -16,35 +16,13 @@
 
 pragma solidity ^0.5.3;
 
+import "./Challenge.sol";
+
 import "../libraries/MerkleLib.sol";
 import "../libraries/ArbProtocol.sol";
 
 
 library Bisection {
-    enum State {
-        NoChallenge,
-        Challenged,
-        Bisected
-    }
-
-    struct Challenge {
-        address vmAddress;
-        // After bisection this is an array of all sub-assertions
-        // After a challenge, the first assertion is the main assertion
-        bytes32 challengeState;
-
-        uint128[2] escrows;
-
-        address[2] players;
-
-        uint64 deadline;
-
-        // The current deadline at which the challenge timeouts and a winner is
-        // declared. This deadline resets at each step in the challenge
-        uint32 challengePeriod;
-
-        State state;
-    }
 
     event ContinuedChallenge (
         address indexed vmAddress,
@@ -61,7 +39,7 @@ library Bisection {
     );
 
     function continueChallenge(
-        Challenge storage _challenge,
+        Challenge.Data storage _challenge,
         uint _assertionToChallenge,
         bytes memory _proof,
         bytes32 _bisectionRoot,
@@ -91,7 +69,7 @@ library Bisection {
             "Invalid assertion selected"
         );
 
-        _challenge.state = Bisection.State.Challenged;
+        _challenge.state = Challenge.State.Challenged;
         _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
         _challenge.challengeState = _bisectionHash;
         emit ContinuedChallenge(_challenge.vmAddress, _challenge.players[1], _assertionToChallenge);
@@ -101,7 +79,7 @@ library Bisection {
     // _beforeHash
     // _beforeInbox
     function bisectAssertion(
-        Challenge storage _challenge,
+        Challenge.Data storage _challenge,
         bytes32[2] memory _fields,
         bytes32[] memory _afterHashAndMessageAndLogsBisections,
         uint256[] memory _totalMessageAmounts,
@@ -113,7 +91,7 @@ library Bisection {
         public
     {
         require(
-            _challenge.state == Bisection.State.Challenged,
+            _challenge.state == Challenge.State.Challenged,
             "Can only bisect assertion in response to a challenge"
         );
         require(
@@ -159,7 +137,7 @@ library Bisection {
             "Does not match prev state"
         );
 
-        _challenge.state = Bisection.State.Bisected;
+        _challenge.state = Challenge.State.Bisected;
         _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
         _challenge.challengeState = MerkleLib.generateRoot(bisectionHashes);
 

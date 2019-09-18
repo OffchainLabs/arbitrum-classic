@@ -40,7 +40,9 @@ library DebugPrint {
         out = string(s);
     }
 
-    function uintString(uint _i) internal pure returns (string memory _uintAsString) {
+    // Taken from https://github.com/oraclize/ethereum-api/blob/master/oraclizeAPI_0.5.sol
+    function uint2str(uint _iParam) internal pure returns (string memory _uintAsString) {
+        uint _i = _iParam;
         if (_i == 0) {
             return "0";
         }

@@ -1,7 +1,7 @@
 package ethbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arblauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/channellauncher"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -14,20 +14,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type ArbLauncher struct {
-	contract *arblauncher.ArbLauncher
+type ChannelLauncher struct {
+	contract *channellauncher.ChannelLauncher
 	client   *ethclient.Client
 }
 
-func NewArbLauncher(address common.Address, client *ethclient.Client) (*ArbLauncher, error) {
-	vmCreatorContract, err := arblauncher.NewArbLauncher(address, client)
+func NewChannelLauncher(address common.Address, client *ethclient.Client) (*ChannelLauncher, error) {
+	vmCreatorContract, err := channellauncher.NewChannelLauncher(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ArbLauncher")
 	}
-	return &ArbLauncher{vmCreatorContract, client}, nil
+	return &ChannelLauncher{vmCreatorContract, client}, nil
 }
 
-func (con *ArbLauncher) ParseChannelCreated(log *types.Log) (common.Address, error) {
+func (con *ChannelLauncher) ParseChannelCreated(log *types.Log) (common.Address, error) {
 	event, err := con.contract.ParseChannelCreated(*log)
 	if err != nil {
 		return common.Address{}, err
@@ -35,7 +35,7 @@ func (con *ArbLauncher) ParseChannelCreated(log *types.Log) (common.Address, err
 	return event.VmAddress, nil
 }
 
-func (con *ArbLauncher) LaunchChannel(
+func (con *ChannelLauncher) LaunchChannel(
 	auth *bind.TransactOpts,
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
@@ -68,40 +68,6 @@ func (con *ArbLauncher) LaunchChannel(
 		return common.Address{}, errors2.New("Wrong receipt count")
 	}
 	event, err := con.contract.ParseChannelCreated(*receipt.Logs[0])
-	if err != nil {
-		return common.Address{}, err
-	}
-	return event.VmAddress, nil
-}
-
-func (con *ArbLauncher) LaunchChain(
-	auth *bind.TransactOpts,
-	config *valmessage.VMConfiguration,
-	vmState [32]byte,
-) (common.Address, error) {
-	var owner common.Address
-	copy(owner[:], config.Owner.Value)
-	var escrowCurrency common.Address
-	copy(escrowCurrency[:], config.EscrowCurrency.Value)
-	tx, err := con.contract.LaunchChain(
-		auth,
-		vmState,
-		uint32(config.GracePeriod),
-		config.MaxExecutionStepCount,
-		value.NewBigIntFromBuf(config.EscrowRequired),
-		owner,
-	)
-	if err != nil {
-		return common.Address{}, err
-	}
-	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash())
-	if err != nil {
-		return common.Address{}, err
-	}
-	if len(receipt.Logs) != 1 {
-		return common.Address{}, errors2.New("Wrong receipt count")
-	}
-	event, err := con.contract.ParseChainCreated(*receipt.Logs[0])
 	if err != nil {
 		return common.Address{}, err
 	}

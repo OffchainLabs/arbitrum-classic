@@ -22,8 +22,6 @@ import "./challenge/Bisection.sol";
 
 import "./vm/IVMTracker.sol";
 
-import "./libraries/ArbProtocol.sol";
-
 
 contract ChallengeManager is IChallengeManager {
 
@@ -52,7 +50,7 @@ contract ChallengeManager is IChallengeManager {
         bool challengerWrong
     );
 
-    mapping(address => Bisection.Challenge) challenges;
+    mapping(address => Challenge.Data) challenges;
 
     function initiateChallenge(
         address[2] calldata _players,
@@ -64,14 +62,14 @@ contract ChallengeManager is IChallengeManager {
     {
         require(challenges[msg.sender].challengeState == 0x00, "There must be no existing challenge");
 
-        challenges[msg.sender] = Bisection.Challenge(
+        challenges[msg.sender] = Challenge.Data(
             msg.sender,
             _challengeRoot,
             _escrows,
             _players,
             uint64(block.number) + uint64(_challengePeriod),
             _challengePeriod,
-            Bisection.State.Challenged
+            Challenge.State.Challenged
         );
     }
 
@@ -90,7 +88,7 @@ contract ChallengeManager is IChallengeManager {
     )
         public
     {
-        Bisection.Challenge storage challenge = challenges[_challengeId];
+        Challenge.Data storage challenge = challenges[_challengeId];
         Bisection.bisectAssertion(
             challenge,
             _fields,
@@ -112,7 +110,7 @@ contract ChallengeManager is IChallengeManager {
     )
         public
     {
-        Bisection.Challenge storage challenge = challenges[_vmAddress];
+        Challenge.Data storage challenge = challenges[_vmAddress];
         Bisection.continueChallenge(
             challenge,
             _assertionToChallenge,
@@ -134,63 +132,25 @@ contract ChallengeManager is IChallengeManager {
     )
         public
     {
-        Bisection.Challenge storage challenge = challenges[_vmAddress];
-        require(
-            challenge.state == Bisection.State.Challenged,
-            "Can only one step proof following a single step challenge"
-        );
-        require(block.number <= challenge.deadline, "One step proof missed deadline");
-
-        require(
-            keccak256(
-                abi.encodePacked(
-                    ArbProtocol.generatePreconditionHash(
-                        _beforeHashAndInbox[0],
-                        _timeBounds,
-                        _beforeHashAndInbox[1],
-                        _tokenTypes,
-                        _beforeBalances
-                    ),
-                    ArbProtocol.generateAssertionHash(
-                        _afterHashAndMessages[0],
-                        1,
-                        _afterHashAndMessages[1],
-                        _afterHashAndMessages[2],
-                        _afterHashAndMessages[3],
-                        _afterHashAndMessages[4],
-                        _amounts
-                    )
-                )
-            ) == challenge.challengeState,
-            "One step proof with invalid prev state"
-        );
-
-        uint correctProof = OneStepProof.validateProof(
-            [
-                _beforeHashAndInbox[0],
-                _beforeHashAndInbox[1],
-                _afterHashAndMessages[0],
-                _afterHashAndMessages[1],
-                _afterHashAndMessages[2],
-                _afterHashAndMessages[3],
-                _afterHashAndMessages[4]
-            ],
+        Challenge.Data storage challenge = challenges[_vmAddress];
+        OneStepProof.oneStepProof(
+            challenge,
+            _beforeHashAndInbox,
             _timeBounds,
             _tokenTypes,
             _beforeBalances,
+            _afterHashAndMessages,
             _amounts,
             _proof
         );
-
-        require(correctProof == 0, "Proof was incorrect");
         _asserterWin(challenge);
         emit OneStepProofCompleted(_vmAddress, msg.sender, _proof);
     }
 
     function asserterTimedOut(address _vmAddress) public {
-        Bisection.Challenge storage challenge = challenges[_vmAddress];
+        Challenge.Data storage challenge = challenges[_vmAddress];
         require(
-            challenge.state == Bisection.State.Challenged,
+            challenge.state == Challenge.State.Challenged,
             "Can only time out asserter if it is their turn"
         );
         require(block.number > challenge.deadline, "Deadline hasn't expired");
@@ -201,9 +161,9 @@ contract ChallengeManager is IChallengeManager {
     }
 
     function challengerTimedOut(address _vmAddress) public {
-        Bisection.Challenge storage challenge = challenges[_vmAddress];
+        Challenge.Data storage challenge = challenges[_vmAddress];
         require(
-            challenge.state == Bisection.State.Bisected,
+            challenge.state == Challenge.State.Bisected,
             "Can only time out challenger if it is their turn"
         );
         require(block.number > challenge.deadline, "Deadline hasn't expired");
@@ -213,7 +173,7 @@ contract ChallengeManager is IChallengeManager {
         emit TimedOutChallenge(_vmAddress, false);
     }
 
-    function _asserterWin(Bisection.Challenge storage challenge) private {
+    function _asserterWin(Challenge.Data storage challenge) private {
         IVMTracker(challenge.vmAddress).completeChallenge(
             challenge.players,
             [
@@ -223,7 +183,7 @@ contract ChallengeManager is IChallengeManager {
         );
     }
 
-    function _challengerWin(Bisection.Challenge storage challenge) private {
+    function _challengerWin(Challenge.Data storage challenge) private {
         IVMTracker(challenge.vmAddress).completeChallenge(
             challenge.players,
             [

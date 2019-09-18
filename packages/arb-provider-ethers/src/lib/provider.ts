@@ -25,7 +25,7 @@ import * as ethers from 'ethers';
 
 const promisePoller = require('promise-poller').default;
 
-import vmTrackerJson from './VMTracker.json';
+import arbChannelJson from './ArbChannel.json';
 import inboxManagerJson from './GlobalPendingInbox.json';
 
 function sleep(ms: number): Promise<void> {
@@ -55,7 +55,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public client: ArbClient;
     public contracts: Map<string, Contract>;
 
-    private vmTrackerCache?: ethers.Contract;
+    private arbChannelCache?: ethers.Contract;
     private inboxManagerCache?: ethers.Contract;
     private validatorAddressesCache?: string[];
     private vmIdCache?: string;
@@ -71,20 +71,20 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
     }
 
-    private async vmTrackerConn(): Promise<ethers.Contract> {
-        if (!this.vmTrackerCache) {
+    private async arbChannelConn(): Promise<ethers.Contract> {
+        if (!this.arbChannelCache) {
             const vmID = await this.client.getVmID();
-            const tracker = new ethers.Contract(vmID, vmTrackerJson.abi, this.provider);
-            this.vmTrackerCache = tracker;
+            const tracker = new ethers.Contract(vmID, arbChannelJson.abi, this.provider);
+            this.arbChannelCache = tracker;
             return tracker;
         }
-        return this.vmTrackerCache;
+        return this.arbChannelCache;
     }
 
     public async globalInboxConn(): Promise<ethers.Contract> {
         if (!this.inboxManagerCache) {
-            const vmTracker = await this.vmTrackerConn();
-            const globalInboxAddress = vmTracker.globalInbox();
+            const arbChannel = await this.arbChannelConn();
+            const globalInboxAddress = arbChannel.globalInbox();
             const inboxManager = new ethers.Contract(globalInboxAddress, inboxManagerJson.abi, this.provider);
             this.inboxManagerCache = inboxManager;
             return inboxManager;
@@ -100,9 +100,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     public async getValidatorAddresses(): Promise<string[]> {
         if (!this.validatorAddressesCache) {
-            const vmTracker = await this.vmTrackerConn();
+            const arbChannel = await this.arbChannelConn();
             const validators = await this.client.getValidatorList();
-            const isValidators = await vmTracker.isValidatorList(validators);
+            const isValidators = await arbChannel.isValidatorList(validators);
             if (!isValidators) {
                 throw new Error('Incorrect validator list');
             }
@@ -377,8 +377,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         if (!receipt.logs) {
             throw Error('DisputableAssertion tx had no logs');
         }
-        const vmTracker = await this.vmTrackerConn();
-        const events = receipt.logs.map(l => vmTracker.interface.parseLog(l));
+        const arbChannel = await this.arbChannelConn();
+        const events = receipt.logs.map(l => arbChannel.interface.parseLog(l));
         // DisputableAssertion Event
         const cda = events.find(event => event.name === EB_EVENT_CDA);
         if (!cda) {

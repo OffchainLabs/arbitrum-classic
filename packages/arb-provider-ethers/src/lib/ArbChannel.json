@@ -1,5 +1,5 @@
 {
-    "contractName": "VMTracker",
+    "contractName": "ArbChannel",
     "abi": [
         {
             "constant": true,
@@ -8,6 +8,51 @@
             "outputs": [{ "name": "", "type": "address" }],
             "payable": false,
             "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [{ "name": "validator", "type": "address" }],
+            "name": "currentDeposit",
+            "outputs": [{ "name": "", "type": "uint256" }],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "validatorCount",
+            "outputs": [{ "name": "", "type": "uint16" }],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "getState",
+            "outputs": [{ "name": "", "type": "uint8" }],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [{ "name": "_players", "type": "address[2]" }, { "name": "_rewards", "type": "uint128[2]" }],
+            "name": "completeChallenge",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [{ "name": "_assertPreHash", "type": "bytes32" }],
+            "name": "initiateChallenge",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
             "type": "function"
         },
         {
@@ -24,12 +69,30 @@
                 { "name": "sequenceNum", "type": "uint64" },
                 { "name": "gracePeriod", "type": "uint32" },
                 { "name": "maxExecutionSteps", "type": "uint32" },
-                { "name": "validatorCount", "type": "uint16" },
                 { "name": "state", "type": "uint8" },
                 { "name": "inChallenge", "type": "bool" }
             ],
             "payable": false,
             "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                { "name": "_preconditionHash", "type": "bytes32" },
+                { "name": "_afterHash", "type": "bytes32" },
+                { "name": "_numSteps", "type": "uint32" },
+                { "name": "_tokenTypes", "type": "bytes21[]" },
+                { "name": "_messageData", "type": "bytes" },
+                { "name": "_messageTokenNums", "type": "uint16[]" },
+                { "name": "_messageAmounts", "type": "uint256[]" },
+                { "name": "_messageDestinations", "type": "address[]" },
+                { "name": "_logsAccHash", "type": "bytes32" }
+            ],
+            "name": "confirmDisputableAsserted",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
             "type": "function"
         },
         {
@@ -69,18 +132,54 @@
             "type": "function"
         },
         {
-            "constant": true,
+            "constant": false,
             "inputs": [],
-            "name": "globalInbox",
-            "outputs": [{ "name": "", "type": "address" }],
+            "name": "activateVM",
+            "outputs": [],
             "payable": false,
-            "stateMutability": "view",
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                { "name": "_fields", "type": "bytes32[4]" },
+                { "name": "_numSteps", "type": "uint32" },
+                { "name": "_timeBounds", "type": "uint64[2]" },
+                { "name": "_tokenTypes", "type": "bytes21[]" },
+                { "name": "_messageDataHash", "type": "bytes32[]" },
+                { "name": "_messageTokenNums", "type": "uint16[]" },
+                { "name": "_messageAmounts", "type": "uint256[]" },
+                { "name": "_messageDestinations", "type": "address[]" }
+            ],
+            "name": "pendingDisputableAssert",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
             "type": "function"
         },
         {
             "constant": true,
             "inputs": [],
-            "name": "escrowCurrency",
+            "name": "escrowRequired",
+            "outputs": [{ "name": "", "type": "uint256" }],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [],
+            "name": "ownerShutdown",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "globalInbox",
             "outputs": [{ "name": "", "type": "address" }],
             "payable": false,
             "stateMutability": "view",
@@ -92,7 +191,6 @@
                 { "name": "_gracePeriod", "type": "uint32" },
                 { "name": "_maxExecutionSteps", "type": "uint32" },
                 { "name": "_escrowRequired", "type": "uint128" },
-                { "name": "_escrowCurrency", "type": "address" },
                 { "name": "_owner", "type": "address" },
                 { "name": "_challengeManagerAddress", "type": "address" },
                 { "name": "_globalInboxAddress", "type": "address" },
@@ -154,6 +252,15 @@
             "type": "event"
         },
         {
+            "constant": false,
+            "inputs": [],
+            "name": "increaseDeposit",
+            "outputs": [],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
             "constant": true,
             "inputs": [{ "name": "validator", "type": "address" }],
             "name": "isListedValidator",
@@ -164,111 +271,11 @@
         },
         {
             "constant": true,
-            "inputs": [{ "name": "validator", "type": "address" }],
-            "name": "currentDeposit",
-            "outputs": [{ "name": "", "type": "uint256" }],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "escrowRequired",
-            "outputs": [{ "name": "", "type": "uint256" }],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "getState",
-            "outputs": [{ "name": "", "type": "uint8" }],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [],
-            "name": "increaseDeposit",
-            "outputs": [],
-            "payable": true,
-            "stateMutability": "payable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [],
-            "name": "ownerShutdown",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [{ "name": "_players", "type": "address[2]" }, { "name": "_rewards", "type": "uint128[2]" }],
-            "name": "completeChallenge",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": true,
             "inputs": [{ "name": "_validators", "type": "address[]" }],
             "name": "isValidatorList",
             "outputs": [{ "name": "", "type": "bool" }],
             "payable": false,
             "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                { "name": "_fields", "type": "bytes32[4]" },
-                { "name": "_numSteps", "type": "uint32" },
-                { "name": "_timeBounds", "type": "uint64[2]" },
-                { "name": "_tokenTypes", "type": "bytes21[]" },
-                { "name": "_messageDataHash", "type": "bytes32[]" },
-                { "name": "_messageTokenNums", "type": "uint16[]" },
-                { "name": "_messageAmounts", "type": "uint256[]" },
-                { "name": "_messageDestinations", "type": "address[]" }
-            ],
-            "name": "pendingDisputableAssert",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                { "name": "_preconditionHash", "type": "bytes32" },
-                { "name": "_afterHash", "type": "bytes32" },
-                { "name": "_numSteps", "type": "uint32" },
-                { "name": "_tokenTypes", "type": "bytes21[]" },
-                { "name": "_messageData", "type": "bytes" },
-                { "name": "_messageTokenNums", "type": "uint16[]" },
-                { "name": "_messageAmounts", "type": "uint256[]" },
-                { "name": "_messageDestinations", "type": "address[]" },
-                { "name": "_logsAccHash", "type": "bytes32" }
-            ],
-            "name": "confirmDisputableAsserted",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [{ "name": "_assertPreHash", "type": "bytes32" }],
-            "name": "initiateChallenge",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
             "type": "function"
         },
         {

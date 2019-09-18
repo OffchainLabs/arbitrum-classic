@@ -20,7 +20,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arblauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
 
 	errors2 "github.com/pkg/errors"
 
@@ -32,7 +32,7 @@ import (
 
 type ArbChain struct {
 	*ArbitrumVM
-	Tracker *arblauncher.ArbChain
+	contract *chainlauncher.ArbChain
 }
 
 func NewArbChain(address common.Address, client *ethclient.Client) (*ArbChain, error) {
@@ -44,11 +44,11 @@ func (vm *ArbChain) StartConnection(ctx context.Context) error {
 	if err := vm.ArbitrumVM.StartConnection(ctx); err != nil {
 		return err
 	}
-	trackerContract, err := arblauncher.NewArbChain(vm.address, vm.Client)
+	trackerContract, err := chainlauncher.NewArbChain(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
-	vm.Tracker = trackerContract
+	vm.contract = trackerContract
 	return nil
 }
 
@@ -65,7 +65,7 @@ func (vm *ArbChain) IncreaseDeposit(
 		GasLimit: 100000,
 		Context:  auth.Context,
 	}
-	tx, err := vm.Tracker.IncreaseDeposit(call)
+	tx, err := vm.contract.IncreaseDeposit(call)
 	if err != nil {
 		return nil, err
 	}

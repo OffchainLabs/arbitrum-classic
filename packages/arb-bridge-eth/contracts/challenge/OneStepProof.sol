@@ -16,6 +16,8 @@
 
 pragma solidity ^0.5.3;
 
+import "./Challenge.sol";
+
 import "../libraries/ArbProtocol.sol";
 import "../libraries/ArbValue.sol";
 import "../libraries/ArbMachine.sol";
@@ -26,6 +28,151 @@ import "../libraries/ArbMachine.sol";
 library OneStepProof {
     using ArbMachine for ArbMachine.Machine;
     using ArbValue for ArbValue.Value;
+
+    struct ValidateProofData {
+        bytes32 beforeHash;
+        uint64[2] timeBounds;
+        bytes32 beforeInbox;
+        bytes32 afterHash;
+        bytes32 firstMessage;
+        bytes32 lastMessage;
+        bytes32 firstLog;
+        bytes32 lastLog;
+        bytes21 tokenType;
+        uint amount;
+        bool foundAmount;
+        bytes proof;
+    }
+
+    function oneStepProof(
+        Challenge.Data storage _challenge,
+        bytes32[2] memory _beforeHashAndInbox,
+        uint64[2] memory _timeBounds,
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _beforeBalances,
+        bytes32[5] memory _afterHashAndMessages,
+        uint256[] memory _amounts,
+        bytes memory _proof
+    )
+        public view
+    {
+        require(
+            _challenge.state == Challenge.State.Challenged,
+            "Can only one step proof following a single step challenge"
+        );
+        require(block.number <= _challenge.deadline, "One step proof missed deadline");
+
+        require(
+            keccak256(
+                abi.encodePacked(
+                    ArbProtocol.generatePreconditionHash(
+                        _beforeHashAndInbox[0],
+                        _timeBounds,
+                        _beforeHashAndInbox[1],
+                        _tokenTypes,
+                        _beforeBalances
+                    ),
+                    ArbProtocol.generateAssertionHash(
+                        _afterHashAndMessages[0],
+                        1,
+                        _afterHashAndMessages[1],
+                        _afterHashAndMessages[2],
+                        _afterHashAndMessages[3],
+                        _afterHashAndMessages[4],
+                        _amounts
+                    )
+                )
+            ) == _challenge.challengeState,
+            "One step proof with invalid prev state"
+        );
+
+        uint correctProof = validateProof(
+            [
+                _beforeHashAndInbox[0],
+                _beforeHashAndInbox[1],
+                _afterHashAndMessages[0],
+                _afterHashAndMessages[1],
+                _afterHashAndMessages[2],
+                _afterHashAndMessages[3],
+                _afterHashAndMessages[4]
+            ],
+            _timeBounds,
+            _tokenTypes,
+            _beforeBalances,
+            _amounts,
+            _proof
+        );
+
+        require(correctProof == 0, "Proof was incorrect");
+    }
+
+    // fields
+    // _beforeHash
+    // _beforeInbox
+    // _afterHash
+    // _firstMessageHash
+    // _lastMessageHash
+    // _firstLogHash
+    // _lastLogHash
+
+    function validateProof(
+        bytes32[7] memory fields,
+        uint64[2] memory timeBounds,
+        bytes21[] memory tokenTypes,
+        uint256[] memory beforeValues,
+        uint256[] memory messageValue,
+        bytes memory proof
+    )
+        internal
+        pure
+        returns(uint)
+    {
+        // require(messageValue.length == 1 || messageValue.length == 0);
+        bytes21 tokenType;
+        uint amount;
+        bool foundAmount;
+
+        bool includesMessage = (fields[3] != fields[4]);
+        int64 amountIndex = -1;
+        if (includesMessage) {
+            for (uint64 i = 0; i < messageValue.length; i++) {
+                if (messageValue[i] != 0) {
+                    require(amountIndex == -1, "multiple out messages");
+                    amountIndex = int64(i);
+                }
+            }
+            if (amountIndex != -1) {
+                amount = messageValue[uint(amountIndex)];
+                tokenType = tokenTypes[uint(amountIndex)];
+                foundAmount = true;
+                if (tokenTypes[uint(amountIndex)][20] == 0x01) {
+                    require(beforeValues[uint(amountIndex)] == amount, "precondition must have nft");
+                } else {
+                    require(amount <= beforeValues[uint(amountIndex)], "precondition must have value");
+                }
+            }
+        } else {
+            for (uint64 i = 0; i < messageValue.length; i++) {
+                require(messageValue[i] == 0, "Must have no message values");
+            }
+        }
+        return checkProof(
+            ValidateProofData(
+                fields[0],
+                timeBounds,
+                fields[1],
+                fields[2],
+                fields[3],
+                fields[4],
+                fields[5],
+                fields[6],
+                tokenType,
+                amount,
+                foundAmount,
+                proof
+            )
+        );
+    }
 
     // Arithmetic
 
@@ -1072,119 +1219,6 @@ library OneStepProof {
         } else {
             require(false, "Invalid opcode");
         }
-    }
-
-    struct ValidateProofData {
-        bytes32 beforeHash;
-        uint64[2] timeBounds;
-        bytes32 beforeInbox;
-        bytes32 afterHash;
-        bytes32 firstMessage;
-        bytes32 lastMessage;
-        bytes32 firstLog;
-        bytes32 lastLog;
-        bytes21 tokenType;
-        uint amount;
-        bool foundAmount;
-        bytes proof;
-    }
-
-    // fields
-    // _beforeHash
-    // _beforeInbox
-    // _afterHash
-    // _firstMessageHash
-    // _lastMessageHash
-    // _firstLogHash
-    // _lastLogHash
-
-    event SawMachine(
-        bytes32 instructionStack,
-        bytes32 dataStack,
-        bytes32 auxStack,
-        bytes32 register,
-        bytes32 staticHash,
-        bytes32 errHandler
-    );
-
-    function validateProof(
-        bytes32[7] memory fields,
-        uint64[2] memory timeBounds,
-        bytes21[] memory tokenTypes,
-        uint256[] memory beforeValues,
-        uint256[] memory messageValue,
-        bytes memory proof
-    )
-        public
-        pure
-        returns(uint)
-    {
-        // require(messageValue.length == 1 || messageValue.length == 0);
-        bytes21 tokenType;
-        uint amount;
-        bool foundAmount;
-
-        bool includesMessage = (fields[3] != fields[4]);
-        int64 amountIndex = -1;
-        if (includesMessage) {
-            for (uint64 i = 0; i < messageValue.length; i++) {
-                if (messageValue[i] != 0) {
-                    require(amountIndex == -1, "multiple out messages");
-                    amountIndex = int64(i);
-                }
-            }
-            if (amountIndex != -1) {
-                amount = messageValue[uint(amountIndex)];
-                tokenType = tokenTypes[uint(amountIndex)];
-                foundAmount = true;
-                if (tokenTypes[uint(amountIndex)][20] == 0x01) {
-                    require(beforeValues[uint(amountIndex)] == amount, "precondition must have nft");
-                } else {
-                    require(amount <= beforeValues[uint(amountIndex)], "precondition must have value");
-                }
-            }
-        } else {
-            for (uint64 i = 0; i < messageValue.length; i++) {
-                require(messageValue[i] == 0, "Must have no message values");
-            }
-        }
-        return checkProof(
-            ValidateProofData(
-                fields[0],
-                timeBounds,
-                fields[1],
-                fields[2],
-                fields[3],
-                fields[4],
-                fields[5],
-                fields[6],
-                tokenType,
-                amount,
-                foundAmount,
-                proof
-            )
-        );
-    }
-
-    // Taken from https://github.com/oraclize/ethereum-api/blob/master/oraclizeAPI_0.5.sol
-    function uint2str(uint _iParam) internal pure returns (string memory _uintAsString) {
-        uint _i = _iParam;
-        if (_i == 0) {
-            return "0";
-        }
-        uint j = _i;
-        uint len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint k = len - 1;
-        while (_i != 0) {
-            bstr[k--] = byte(uint8(48 + _i % 10));
-            _i /= 10;
-        }
-        return string(bstr);
     }
 
     function opPopCount(uint8 opCode) internal pure returns(uint) {

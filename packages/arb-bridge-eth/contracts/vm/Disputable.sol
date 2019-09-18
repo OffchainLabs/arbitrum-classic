@@ -18,6 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 
+import "../libraries/ArbValue.sol";
 import "../libraries/ArbProtocol.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -190,7 +191,7 @@ library Disputable {
 
         VM.resetDeadline(_vm);
 
-        bytes32 lastMessageHash = ArbProtocol.generateLastMessageHashStub(
+        bytes32 lastMessageHash = generateLastMessageHashStub(
             _data.tokenTypes,
             _data.messageDataHash,
             _data.messageTokenNums,
@@ -249,7 +250,7 @@ library Disputable {
                         _data.afterHash,
                         _data.numSteps,
                         0x00,
-                        ArbProtocol.generateLastMessageHash(
+                        generateLastMessageHash(
                             _data.tokenTypes,
                             _data.assertion.messageData,
                             _data.assertion.messageTokenNums,
@@ -277,5 +278,63 @@ library Disputable {
             _data.afterHash,
             _data.assertion.logsAccHash
         );
+    }
+
+    function generateLastMessageHash(
+        bytes21[] memory _tokenTypes,
+        bytes memory _data,
+        uint16[] memory _tokenNums,
+        uint256[] memory _amounts,
+        address[] memory _destinations
+    )
+        private
+        pure
+        returns (bytes32)
+    {
+        require(_amounts.length == _destinations.length, "Input size mismatch");
+        require(_amounts.length == _tokenNums.length, "Input size mismatch");
+        bytes32 hashVal = 0x00;
+        uint256 offset = 0;
+        bytes32 msgHash;
+        uint amountCount = _amounts.length;
+        for (uint i = 0; i < amountCount; i++) {
+            (offset, msgHash) = ArbValue.deserializeValidValueHash(_data, offset);
+            msgHash = ArbProtocol.generateMessageStubHash(
+                msgHash,
+                _tokenTypes[_tokenNums[i]],
+                _amounts[i],
+                _destinations[i]
+            );
+            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
+        }
+    }
+
+    function generateLastMessageHashStub(
+        bytes21[] memory _tokenTypes,
+        bytes32[] memory _dataHashes,
+        uint16[] memory _tokenNums,
+        uint256[] memory _amounts,
+        address[] memory _destinations
+    )
+        public
+        pure
+        returns (bytes32)
+    {
+        require(_dataHashes.length == _tokenNums.length, "Input size mismatch");
+        require(_dataHashes.length == _amounts.length, "Input size mismatch");
+        require(_dataHashes.length == _destinations.length, "Input size mismatch");
+        bytes32 hashVal = 0x00;
+        bytes32 msgHash;
+        uint dataHashCount = _dataHashes.length;
+        for (uint i = 0; i < dataHashCount; i++) {
+            msgHash = ArbProtocol.generateMessageStubHash(
+                _dataHashes[i],
+                _tokenTypes[_tokenNums[i]],
+                _amounts[i],
+                _destinations[i]
+            );
+            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
+        }
+        return hashVal;
     }
 }

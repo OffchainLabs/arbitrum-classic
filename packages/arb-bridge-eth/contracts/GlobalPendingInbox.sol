@@ -19,7 +19,6 @@ pragma solidity ^0.5.3;
 import "./GlobalWallet.sol";
 import "./IGlobalPendingInbox.sol";
 
-import "./libraries/ArbProtocol.sol";
 import "./libraries/ArbValue.sol";
 import "./libraries/SigUtils.sol";
 
@@ -28,6 +27,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
     using SafeMath for uint256;
+    using ArbValue for ArbValue.Value;
 
     address internal constant ETH_ADDRESS = address(0);
 
@@ -159,6 +159,20 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
         );
     }
 
+    function generateSentMessageHash(
+        address _dest,
+        bytes32 _data,
+        bytes21 _tokenType,
+        uint256 _value,
+        address _sender
+    )
+        public
+        view
+        returns (bytes32)
+    {
+
+    }
+
     function _deliverMessage(
         address _destination,
         bytes21 _tokenType,
@@ -169,17 +183,33 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
         private
     {
         if (pending[_destination] != 0) {
-            bytes32 messageHash = ArbProtocol.generateSentMessageHash(
-                _destination,
-                ArbValue.deserializeValueHash(_data),
-                _tokenType,
-                _value,
-                _sender
+            bytes32 dataHash = ArbValue.deserializeValueHash(_data);
+            bytes32 txHash = keccak256(
+                abi.encodePacked(
+                    _destination,
+                    dataHash,
+                    _value,
+                    _tokenType
+                )
             );
-            pending[_destination] = ArbProtocol.appendInboxPendingMessage(
-                pending[_destination],
-                messageHash
-            );
+            ArbValue.Value[] memory dataValues = new ArbValue.Value[](4);
+            dataValues[0] = ArbValue.newHashOnlyValue(dataHash);
+            dataValues[1] = ArbValue.newIntValue(block.timestamp);
+            dataValues[2] = ArbValue.newIntValue(block.number);
+            dataValues[3] = ArbValue.newIntValue(uint(txHash));
+
+            ArbValue.Value[] memory values = new ArbValue.Value[](4);
+            values[0] = ArbValue.newTupleValue(dataValues);
+            values[1] = ArbValue.newIntValue(uint256(_sender));
+            values[2] = ArbValue.newIntValue(_value);
+            values[3] = ArbValue.newIntValue(uint256(bytes32(_tokenType)));
+            bytes32 messageHash =  ArbValue.newTupleValue(values).hash().hash;
+
+            pending[_destination] = ArbValue.hashTupleValue([
+                ArbValue.newIntValue(0),
+                ArbValue.newHashOnlyValue(pending[_destination]),
+                ArbValue.newHashOnlyValue(messageHash)
+            ]);
         }
 
         emit IGlobalPendingInbox.MessageDelivered(

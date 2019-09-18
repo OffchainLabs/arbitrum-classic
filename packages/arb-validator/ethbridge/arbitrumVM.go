@@ -22,10 +22,10 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arblauncher"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -43,9 +43,9 @@ type ArbitrumVM struct {
 	OutChan            chan Notification
 	ErrChan            chan error
 	Client             *ethclient.Client
-	Tracker            *arblauncher.ArbitrumVM
+	ArbitrumVM         *chainlauncher.ArbitrumVM
 	Challenge          *challengemanager.ChallengeManager
-	GlobalPendingInbox *arblauncher.IGlobalPendingInbox
+	GlobalPendingInbox *chainlauncher.IGlobalPendingInbox
 
 	address common.Address
 	client  *ethclient.Client
@@ -60,12 +60,12 @@ func NewArbitrumVM(address common.Address, client *ethclient.Client) (*ArbitrumV
 }
 
 func (vm *ArbitrumVM) setupContracts() error {
-	trackerContract, err := arblauncher.NewArbitrumVM(vm.address, vm.Client)
+	arbitrumVMContract, err := chainlauncher.NewArbitrumVM(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
 
-	challengeManagerAddress, err := trackerContract.ChallengeManager(&bind.CallOpts{
+	challengeManagerAddress, err := arbitrumVMContract.ChallengeManager(&bind.CallOpts{
 		Pending: false,
 		Context: context.Background(),
 	})
@@ -77,19 +77,19 @@ func (vm *ArbitrumVM) setupContracts() error {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 
-	globalPendingInboxAddress, err := trackerContract.GlobalInbox(&bind.CallOpts{
+	globalPendingInboxAddress, err := arbitrumVMContract.GlobalInbox(&bind.CallOpts{
 		Pending: false,
 		Context: context.Background(),
 	})
 	if err != nil {
 		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
 	}
-	globalPendingContract, err := arblauncher.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
+	globalPendingContract, err := chainlauncher.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
 
-	vm.Tracker = trackerContract
+	vm.ArbitrumVM = arbitrumVMContract
 	vm.Challenge = challengeManagerContract
 	vm.GlobalPendingInbox = globalPendingContract
 	return nil
@@ -121,26 +121,26 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 		return err
 	}
 
-	messageDeliveredChan := make(chan *arblauncher.IGlobalPendingInboxMessageDelivered)
+	messageDeliveredChan := make(chan *chainlauncher.IGlobalPendingInboxMessageDelivered)
 	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
 	if err != nil {
 		return err
 	}
 
-	dispAssChan := make(chan *arblauncher.ArbitrumVMPendingDisputableAssertion)
-	dispAssSub, err := vm.Tracker.WatchPendingDisputableAssertion(watch, dispAssChan)
+	dispAssChan := make(chan *chainlauncher.ArbitrumVMPendingDisputableAssertion)
+	dispAssSub, err := vm.ArbitrumVM.WatchPendingDisputableAssertion(watch, dispAssChan)
 	if err != nil {
 		return err
 	}
 
-	confAssChan := make(chan *arblauncher.ArbitrumVMConfirmedDisputableAssertion)
-	confAssSub, err := vm.Tracker.WatchConfirmedDisputableAssertion(watch, confAssChan)
+	confAssChan := make(chan *chainlauncher.ArbitrumVMConfirmedDisputableAssertion)
+	confAssSub, err := vm.ArbitrumVM.WatchConfirmedDisputableAssertion(watch, confAssChan)
 	if err != nil {
 		return err
 	}
 
-	challengeInitiatedChan := make(chan *arblauncher.ArbitrumVMInitiatedChallenge)
-	challengeInitiatedSub, err := vm.Tracker.WatchInitiatedChallenge(watch, challengeInitiatedChan)
+	challengeInitiatedChan := make(chan *chainlauncher.ArbitrumVMInitiatedChallenge)
+	challengeInitiatedSub, err := vm.ArbitrumVM.WatchInitiatedChallenge(watch, challengeInitiatedChan)
 	if err != nil {
 		return err
 	}
@@ -379,7 +379,7 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 		dataHashes = append(dataHashes, msg.Data.Hash())
 	}
 
-	tx, err := vm.Tracker.PendingDisputableAssert(
+	tx, err := vm.ArbitrumVM.PendingDisputableAssert(
 		auth,
 		[4][32]byte{
 			precondition.BeforeHash,
@@ -416,7 +416,7 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 		}
 	}
 
-	tx, err := vm.Tracker.ConfirmDisputableAsserted(
+	tx, err := vm.ArbitrumVM.ConfirmDisputableAsserted(
 		auth,
 		precondition.Hash(),
 		assertion.AfterHash,
@@ -444,7 +444,7 @@ func (vm *ArbitrumVM) InitiateChallenge(
 		solsha3.Bytes32(precondition.Hash()),
 		solsha3.Bytes32(assertion.Hash()),
 	))
-	tx, err := vm.Tracker.InitiateChallenge(
+	tx, err := vm.ArbitrumVM.InitiateChallenge(
 		auth,
 		preAssHash,
 	)
@@ -577,19 +577,19 @@ func (vm *ArbitrumVM) CurrentDeposit(
 	auth *bind.CallOpts,
 	address common.Address,
 ) (*big.Int, error) {
-	return vm.Tracker.CurrentDeposit(auth, address)
+	return vm.ArbitrumVM.CurrentDeposit(auth, address)
 }
 
 func (vm *ArbitrumVM) EscrowRequired(
 	auth *bind.CallOpts,
 ) (*big.Int, error) {
-	return vm.Tracker.EscrowRequired(auth)
+	return vm.ArbitrumVM.EscrowRequired(auth)
 }
 
 func (vm *ArbitrumVM) IsEnabled(
 	auth *bind.CallOpts,
 ) (bool, error) {
-	status, err := vm.Tracker.GetState(auth)
+	status, err := vm.ArbitrumVM.GetState(auth)
 	return status != 0, err
 }
 
@@ -600,7 +600,7 @@ func (vm *ArbitrumVM) VerifyVM(
 ) error {
 	//code, err := vm.contract.Client.CodeAt(auth.Context, vm.address, nil)
 	// Verify that VM has correct code
-	vmInfo, err := vm.Tracker.Vm(auth)
+	vmInfo, err := vm.ArbitrumVM.Vm(auth)
 	if err != nil {
 		return err
 	}
@@ -621,7 +621,7 @@ func (vm *ArbitrumVM) VerifyVM(
 		return errors.New("VM has different mxa steps")
 	}
 
-	owner, err := vm.Tracker.Owner(auth)
+	owner, err := vm.ArbitrumVM.Owner(auth)
 	if err != nil {
 		return err
 	}
@@ -669,7 +669,7 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 	return assertions
 }
 
-func translateDisputableAssertionEvent(event *arblauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
+func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	balanceTracker := protocol.NewBalanceTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],

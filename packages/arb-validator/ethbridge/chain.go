@@ -28,8 +28,9 @@ import (
 )
 
 type ArbAddresses struct {
-	VMCreatorAddress   string `json:"vmCreator"`
-	GlobalPendingInbox string `json:"globalPendingInbox"`
+	ChainLauncher      string `json:"ChainLauncher"`
+	ChannelLauncher    string `json:"ChannelLauncher"`
+	GlobalPendingInbox string `json:"GlobalPendingInbox"`
 }
 
 func waitForReceipt(ctx context.Context, client *ethclient.Client, hash common.Hash) (*types.Receipt, error) {
