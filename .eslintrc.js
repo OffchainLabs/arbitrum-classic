@@ -29,6 +29,7 @@ module.exports = {
       ],
       plugins: ["@typescript-eslint", "prettier"],
       rules: {
+        "no-empty-pattern": "warn",
         "prettier/prettier": ["error", { singleQuote: true }],
         "@typescript-eslint/no-use-before-define": [
           "error",

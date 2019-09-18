@@ -25,8 +25,11 @@ import * as ethers from 'ethers';
 
 const promisePoller = require('promise-poller').default;
 
-import arbChannelJson from './ArbChannel.json';
-import inboxManagerJson from './GlobalPendingInbox.json';
+import { ArbChannelFactory } from './ArbChannelFactory';
+import { ArbChannel } from './ArbChannel';
+
+import { GlobalPendingInboxFactory } from './GlobalPendingInboxFactory';
+import { GlobalPendingInbox } from './GlobalPendingInbox';
 
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve: any): void => {
@@ -55,8 +58,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public client: ArbClient;
     public contracts: Map<string, Contract>;
 
-    private arbChannelCache?: ethers.Contract;
-    private inboxManagerCache?: ethers.Contract;
+    private arbChannelCache?: ArbChannel;
+    private inboxManagerCache?: GlobalPendingInbox;
     private validatorAddressesCache?: string[];
     private vmIdCache?: string;
 
@@ -71,21 +74,21 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
     }
 
-    private async arbChannelConn(): Promise<ethers.Contract> {
+    private async arbChannelConn(): Promise<ArbChannel> {
         if (!this.arbChannelCache) {
             const vmID = await this.client.getVmID();
-            const tracker = new ethers.Contract(vmID, arbChannelJson.abi, this.provider);
-            this.arbChannelCache = tracker;
-            return tracker;
+            const arbChannel = ArbChannelFactory.connect(vmID, this.provider);
+            this.arbChannelCache = arbChannel;
+            return arbChannel;
         }
         return this.arbChannelCache;
     }
 
-    public async globalInboxConn(): Promise<ethers.Contract> {
+    public async globalInboxConn(): Promise<GlobalPendingInbox> {
         if (!this.inboxManagerCache) {
             const arbChannel = await this.arbChannelConn();
             const globalInboxAddress = arbChannel.globalInbox();
-            const inboxManager = new ethers.Contract(globalInboxAddress, inboxManagerJson.abi, this.provider);
+            const inboxManager = GlobalPendingInboxFactory.connect(globalInboxAddress, this.provider);
             this.inboxManagerCache = inboxManager;
             return inboxManager;
         }
@@ -114,7 +117,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         return this.validatorAddressesCache;
     }
 
-    public async verifyUnanimousSignatures(assertionHash: ethers.utils.Arrayish, validatorSigs: string[]): void {
+    public async verifyUnanimousSignatures(
+        assertionHash: ethers.utils.Arrayish,
+        validatorSigs: string[],
+    ): Promise<void> {
         const validatorAddresses = await this.getValidatorAddresses();
         if (validatorAddresses.length !== validatorSigs.length) {
             throw Error('Expected: ' + validatorAddresses.length + ' signatures.\nReceived: ' + validatorSigs.length);

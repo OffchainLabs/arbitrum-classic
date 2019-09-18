@@ -20,6 +20,7 @@ import { ArbClient } from './client';
 import { Contract } from './contract';
 import { ArbProvider } from './provider';
 import * as ArbValue from './value';
+import { GlobalPendingInbox } from './GlobalPendingInbox';
 
 import * as ethers from 'ethers';
 
@@ -28,7 +29,7 @@ export class ArbWallet extends ethers.Signer {
     public contracts: Map<string, Contract>;
     public signer: ethers.Signer;
     public provider: ArbProvider;
-    public inboxManagerCache?: ethers.Contract;
+    public inboxManagerCache?: GlobalPendingInbox;
     public seq: ethers.utils.BigNumber;
     public pubkey?: string;
 
@@ -59,7 +60,7 @@ export class ArbWallet extends ethers.Signer {
         });
     }
 
-    public async globalInboxConn(): Promise<ethers.Contract> {
+    public async globalInboxConn(): Promise<GlobalPendingInbox> {
         if (!this.inboxManagerCache) {
             const inboxManager = await this.provider.globalInboxConn();
             const linkedInboxManager = inboxManager.connect(this.signer);

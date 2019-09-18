@@ -16,9 +16,6 @@ abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpending
 \cp challengemanager.go ../../arb-validator/ethbridge/challengemanager/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 rm -rf @openzeppelin solidity-bytes-utils
-\cp ../build/contracts/ArbChain.json ../../arb-provider-ethers/src/lib/ArbChain.json
-\cp ../build/contracts/ArbChannel.json ../../arb-provider-ethers/src/lib/ArbChannel.json
-\cp ../build/contracts/GlobalPendingInbox.json ../../arb-provider-ethers/src/lib/GlobalPendingInbox.json
 rm -f chainlauncher.go channellauncher.go challengemanager.go globalpendinginbox.go
 cd ../../..
-yarn workspace arb-provider-ethers shrinkABI
+yarn workspace arb-provider-ethers update-abi
