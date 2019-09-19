@@ -23,6 +23,8 @@
 //    return str;
 //};
 
+using UCharVec = std::vector<unsigned char>;
+
 std::string dbPath = "tmp/rocksDbPath";
 std::string machine_code_key = "machine_code";
 
@@ -39,6 +41,21 @@ bool CheckpointDataLayer::Intialize() {
 
 void CheckpointDataLayer::Close() {
     delete txn_db;
+}
+
+rocksdb::Status SaveDataStack(const datastack& stack) {
+    auto value_vector = stack.values;
+
+    for (auto& val : value_vector) {
+    }
+}
+
+rocksdb::Status CheckpointDataLayer::SaveValue(const CodePoint& val) {
+    auto hash_key = GetHashKey(val);
+}
+
+rocksdb::Status CheckpointDataLayer::SaveValue(const uint256_t& val) {
+    auto hash_key = GetHashKey(val);
 }
 
 rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
@@ -156,6 +173,8 @@ std::string GetHash(const value& val) {
     return std::string(hash_key_vector.begin(), hash_key_vector.end());
 }
 
+enum value_types { UINT_256, CODE_PC, TUPL, STACK, VM_STATE };
+
 struct ValueProcessor {
     // is it correctly intialized?
     CheckpointDataLayer cp;
@@ -209,7 +228,60 @@ struct ValueProcessor {
     }
 };
 
+struct Serializer {
+    std::string operator()(const Tuple& value) {
+        std::string return_value;
+
+        auto type_code = (char)TUPLE;
+        auto hash_key = GetHash(value);
+
+        // make sure this works as intended
+        return_value += type_code;
+        return_value += hash_key;
+        return_value += hash_to_next;
+
+        return return_value;
+    }
+
+    // make sure thats a success status
+    std::string operator()(const uint256_t& value) {
+        std::string return_value;
+
+        auto type_code = (char)NUM;
+        // makesure correct conversion
+        std::ostringstream ss;
+        ss << value;
+        auto value_str = ss.str();
+
+        // make sure this works as intended
+        return_value += type_code;
+        return_value += value_str;
+        return_value += hash_to_next;
+
+        return return_value;
+    }
+
+    std::string operator()(const CodePoint& value) {
+        std::string return_value;
+
+        auto type_code = (char)CODEPT;
+        // fine?
+        auto value_str = std::to_string(value.pc);
+
+        // make sure this works as intended
+        return_value += type_code;
+        return_value += value_str;
+        return_value += hash_to_next;
+
+        return return_value;
+    }
+};
+
 std::tuple<rocksdb::Status, std::string> CheckpointDataLayer::ProcessValue(
     const value& value) {
     return nonstd::visit(ValueProcessor{}, value);
+}
+
+std::string CheckpointDataLayer::Serialize(const value& value) {
+    return nonstd::visit(Serializer{}, value);
 }
