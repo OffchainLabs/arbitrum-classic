@@ -213,6 +213,21 @@ func (val *VMValidator) IsPendingUnanimous(
 	return isPending, err
 }
 
+func (val *VMValidator) IsInChallenge(
+	ctx context.Context,
+) (bool, error) {
+	val.Mutex.Lock()
+	isPending, err := val.arbitrumVM.IsInChallenge(
+		&bind.CallOpts{
+			Pending: false,
+			From:    val.Address(),
+			Context: ctx,
+		},
+	)
+	val.Mutex.Unlock()
+	return isPending, err
+}
+
 func (val *VMValidator) PendingDisputableAssert(
 	ctx context.Context,
 	precondition *protocol.Precondition,
@@ -276,14 +291,14 @@ func (val *VMValidator) BisectAssertion(
 func (val *VMValidator) ContinueChallenge(
 	ctx context.Context,
 	assertionToChallenge uint16,
-	preconditions []*protocol.Precondition,
+	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbitrumVM.ContinueChallenge(
 		val.Validator.MakeAuth(ctx),
 		assertionToChallenge,
-		preconditions,
+		precondition,
 		assertions,
 	)
 	val.Mutex.Unlock()

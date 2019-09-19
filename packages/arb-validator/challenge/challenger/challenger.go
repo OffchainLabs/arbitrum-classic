@@ -63,15 +63,14 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
-		preconditions := protocol.GeneratePreconditions(bot.challengedPrecondition, ev.Assertions)
-		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, preconditions)
+		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
 		if err != nil && bot.ChallengeEverything {
 			assertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
 			m = bot.startState
 			for i := uint16(0); i < assertionNum; i++ {
 				m.ExecuteAssertion(
 					int32(ev.Assertions[i].NumSteps),
-					preconditions[i].TimeBounds,
+					bot.challengedPrecondition.TimeBounds,
 				)
 			}
 			err = nil
@@ -82,14 +81,14 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 		_, err = bridge.ContinueChallenge(
 			context.Background(),
 			assertionNum,
-			preconditions,
+			bot.challengedPrecondition,
 			ev.Assertions,
 		)
 		return continuing{
 			Config:          bot.Config,
 			challengedState: m,
 			deadline:        time + bot.VMConfig.GracePeriod,
-			preconditions:   preconditions,
+			precondition:    bot.challengedPrecondition,
 			assertions:      ev.Assertions,
 		}, err
 	case ethbridge.OneStepProofEvent:
@@ -103,7 +102,7 @@ type continuing struct {
 	*core.Config
 	challengedState machine.Machine
 	deadline        uint64
-	preconditions   []*protocol.Precondition
+	precondition    *protocol.Precondition
 	assertions      []*protocol.AssertionStub
 }
 
@@ -125,9 +124,10 @@ func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
+		preconditions := protocol.GeneratePreconditions(bot.precondition, bot.assertions)
 		return waitingContinuing{
 			bot.Config,
-			bot.preconditions[ev.ChallengedAssertion],
+			preconditions[ev.ChallengedAssertion],
 			bot.challengedState,
 			deadline,
 		}, nil

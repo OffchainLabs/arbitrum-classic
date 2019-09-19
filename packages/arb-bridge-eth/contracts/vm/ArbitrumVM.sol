@@ -154,7 +154,7 @@ contract ArbitrumVM {
     {
         require(
             vm.escrowRequired <= validatorBalances[msg.sender],
-            "Validator does not have required escrow"
+            "Validator does not have required escrow to assert"
         );
         validatorBalances[msg.sender] -= vm.escrowRequired;
         uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(

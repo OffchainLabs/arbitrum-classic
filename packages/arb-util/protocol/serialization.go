@@ -61,7 +61,7 @@ func NewAddressFromBuf(buf *AddressBuf) common.Address {
 	return ret
 }
 
-func NewBalanceTrackerBuf(bt *BalanceTracker) *BalanceTrackerBuf {
+func NewTokenTrackerBuf(bt *TokenTracker) *TokenTrackerBuf {
 	types := make([]*TokenTypeBuf, 0, len(bt.entries))
 	amounts := make([]*value.BigIntegerBuf, 0, len(bt.entries))
 	for _, entry := range bt.entries {
@@ -72,13 +72,13 @@ func NewBalanceTrackerBuf(bt *BalanceTracker) *BalanceTrackerBuf {
 			Value: entry.amount.Bytes(),
 		})
 	}
-	return &BalanceTrackerBuf{
+	return &TokenTrackerBuf{
 		Types:   types,
 		Amounts: amounts,
 	}
 }
 
-func NewBalanceTrackerFromBuf(buf *BalanceTrackerBuf) *BalanceTracker {
+func NewTokenTrackerFromBuf(buf *TokenTrackerBuf) *TokenTracker {
 	types := make([][21]byte, 0, len(buf.Types))
 	amounts := make([]*big.Int, 0, len(buf.Amounts))
 
@@ -90,14 +90,14 @@ func NewBalanceTrackerFromBuf(buf *BalanceTrackerBuf) *BalanceTracker {
 	for _, tokenAmount := range buf.Amounts {
 		amounts = append(amounts, value.NewBigIntFromBuf(tokenAmount))
 	}
-	return NewBalanceTrackerFromLists(types, amounts)
+	return NewTokenTrackerFromLists(types, amounts)
 }
 
 func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
 	return &PreconditionBuf{
 		BeforeHash:     value.NewHashBuf(pre.BeforeHash),
 		TimeBounds:     NewTimeBoundsBuf(pre.TimeBounds),
-		BalanceTracker: NewBalanceTrackerBuf(pre.BeforeBalance),
+		BalanceTracker: NewTokenTrackerBuf(pre.BeforeBalance),
 		BeforeInbox:    value.NewHashBuf(pre.BeforeInbox.Hash()),
 	}
 }
@@ -106,7 +106,7 @@ func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition {
 	return &Precondition{
 		value.NewHashFromBuf(buf.BeforeHash),
 		NewTimeBoundsFromBuf(buf.TimeBounds),
-		NewBalanceTrackerFromBuf(buf.BalanceTracker),
+		NewTokenTrackerFromBuf(buf.BalanceTracker),
 		value.NewHashOnlyValue(value.NewHashFromBuf(buf.BeforeInbox), 1),
 	}
 }

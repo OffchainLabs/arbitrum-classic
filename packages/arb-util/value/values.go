@@ -49,6 +49,7 @@ type Value interface {
 	Hash() [32]byte
 	Size() int64
 	Marshal(io.Writer) error
+	MarshalForProof(io.Writer) error
 }
 
 func Eq(x, y Value) bool {
@@ -85,6 +86,14 @@ func MarshalValue(v Value, w io.Writer) error {
 		return err
 	}
 	return v.Marshal(w)
+}
+
+func MarshalValueForProof(v Value, w io.Writer) error {
+	_, err := w.Write([]byte{v.InternalTypeCode()})
+	if err != nil {
+		return err
+	}
+	return v.MarshalForProof(w)
 }
 
 func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {

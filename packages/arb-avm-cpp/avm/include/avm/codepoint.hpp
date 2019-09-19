@@ -33,6 +33,9 @@ struct Operation {
     Operation& operator=(Operation&&);
     ~Operation();
     void marshal(std::vector<unsigned char>& buf) const;
+    void marshalShallow(std::vector<unsigned char>& buf) const;
+    void marshalForProof(std::vector<unsigned char>& buf,
+                         bool includeVal) const;
 };
 
 bool operator==(const Operation& val1, const Operation& val2);

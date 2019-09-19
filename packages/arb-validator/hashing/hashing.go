@@ -30,7 +30,7 @@ import (
 func SplitMessages(
 	outMsgs []protocol.Message,
 ) ([]uint16, []*big.Int, []common.Address, [][21]byte) {
-	balance := protocol.NewBalanceTrackerFromMessages(outMsgs)
+	balance := protocol.NewTokenTrackerFromMessages(outMsgs)
 	tokenNums := make([]uint16, 0, len(outMsgs))
 	amounts := make([]*big.Int, 0, len(outMsgs))
 	destinations := make([]common.Address, 0, len(outMsgs))

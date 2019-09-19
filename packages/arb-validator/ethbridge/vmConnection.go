@@ -45,6 +45,10 @@ type VMConnection interface {
 		auth *bind.CallOpts,
 	) (bool, error)
 
+	IsInChallenge(
+		auth *bind.CallOpts,
+	) (bool, error)
+
 	PendingDisputableAssert(
 		auth *bind.TransactOpts,
 		precondition *protocol.Precondition,
@@ -72,7 +76,7 @@ type VMConnection interface {
 	ContinueChallenge(
 		auth *bind.TransactOpts,
 		assertionToChallenge uint16,
-		preconditions []*protocol.Precondition,
+		precondition *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
 	) (*types.Receipt, error)
 

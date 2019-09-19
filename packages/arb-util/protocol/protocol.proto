@@ -23,7 +23,7 @@ message TimeBoundsBuf {
     uint64 endTime = 2;
 }
 
-message BalanceTrackerBuf {
+message TokenTrackerBuf {
     repeated TokenTypeBuf types = 1;
     repeated value.BigIntegerBuf amounts = 2;
 }
@@ -31,7 +31,7 @@ message BalanceTrackerBuf {
 message PreconditionBuf {
     value.HashBuf beforeHash = 1;
     TimeBoundsBuf timeBounds = 2;
-    BalanceTrackerBuf balanceTracker = 3;
+    TokenTrackerBuf balanceTracker = 3;
     value.HashBuf beforeInbox = 4;
 }
 

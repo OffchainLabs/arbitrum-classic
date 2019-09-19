@@ -140,3 +140,7 @@ func (iv IntValue) Marshal(w io.Writer) error {
 	_, err := w.Write(math.PaddedBigBytes(math.U256(new(big.Int).Set(iv.val)), 32))
 	return err
 }
+
+func (tv IntValue) MarshalForProof(wr io.Writer) error {
+	return tv.Marshal(wr)
+}

@@ -132,7 +132,7 @@ library Unanimous {
     )
         public
     {
-        require(_vm.state == VM.State.PendingUnanimous, "Can only confirm if there is a pending assertion");
+        require(_vm.state == VM.State.PendingUnanimous, "Can only confirm if there is a pending unanimous assertion");
         require(!VM.withinDeadline(_vm), "Can only confirm assertion whose challenge deadline has passed");
         require(
             keccak256(

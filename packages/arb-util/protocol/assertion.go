@@ -102,7 +102,7 @@ func (a *Assertion) LogsHash() [32]byte {
 }
 
 func (a *Assertion) Stub() *AssertionStub {
-	tracker := NewBalanceTrackerFromMessages(a.OutMsgs)
+	tracker := NewTokenTrackerFromMessages(a.OutMsgs)
 	_, amounts := tracker.GetTypesAndAmounts()
 	var lastHash [32]byte
 	for _, msg := range a.OutMsgs {

@@ -63,7 +63,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(os.Args[2], true, "go")
+	machine, err := loader.LoadMachineFromFile(os.Args[2], true, "test")
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
@@ -133,6 +133,8 @@ func main() {
 
 	coordinator.StartServer(context.Background())
 
+	time.Sleep(1 * time.Second)
+
 	challenger, err := channel.NewValidatorFollower(
 		"Bob",
 		val2,
@@ -185,5 +187,5 @@ func main() {
 		log.Fatalln("Follower could not send message")
 	}
 
-	time.Sleep(30 * time.Second)
+	time.Sleep(60 * time.Second)
 }

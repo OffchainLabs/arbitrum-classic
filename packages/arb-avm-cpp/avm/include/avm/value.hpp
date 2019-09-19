@@ -29,7 +29,7 @@ class bad_tuple_index : public std::exception {
     }
 };
 
-enum types { NUM, CODEPT, TUPLE = 3 };
+enum types { NUM, CODEPT, HASH_ONLY, TUPLE };
 
 class TuplePool;
 class Tuple;
@@ -52,5 +52,10 @@ void marshal_value(const value val, std::vector<unsigned char>& buf);
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
 void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
+
+void marshalShallow(const value& val, std::vector<unsigned char>& buf);
+void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf);
+void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf);
+void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf);
 
 #endif /* value_hpp */
