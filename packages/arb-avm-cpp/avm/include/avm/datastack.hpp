@@ -91,6 +91,8 @@ class datastack {
     uint64_t stacksize() { return values.size(); }
 
     uint256_t hash() const;
+
+    Tuple GetTupleRepresentation(TuplePool* pool);
 };
 
 std::ostream& operator<<(std::ostream& os, const datastack& val);

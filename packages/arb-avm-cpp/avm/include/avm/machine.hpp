@@ -97,14 +97,6 @@ struct MessageStack {
     }
 };
 
-struct MachineCheckPointInfo {
-    uint64_t pc;
-    value staticVal;
-    value registerVal;
-    datastack dataStack;
-    datastack auxStack;
-};
-
 struct MachineState {
     std::shared_ptr<TuplePool> pool;
     std::vector<CodePoint> code;
@@ -165,7 +157,7 @@ class Machine {
     TuplePool& getPool() { return *m.pool; }
 
     // should this be a tuple?
-    MachineCheckPointInfo getCheckPointInfo();
+    Tuple getCheckPointTuple();
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

@@ -43,19 +43,14 @@ void CheckpointDataLayer::Close() {
     delete txn_db;
 }
 
-rocksdb::Status SaveDataStack(const datastack& stack) {
-    auto value_vector = stack.values;
+rocksdb::Status CheckpointDataLayer::SaveValueAndMapToKey(
+    const Tuple& val,
+    std::string hash_key) {
+    auto status = SaveValue(val);
+    auto value_key = GetHashKey(val);
+    auto map_status = SaveValue(value_key, hash_key);
 
-    for (auto& val : value_vector) {
-    }
-}
-
-rocksdb::Status CheckpointDataLayer::SaveValue(const CodePoint& val) {
-    auto hash_key = GetHashKey(val);
-}
-
-rocksdb::Status CheckpointDataLayer::SaveValue(const uint256_t& val) {
-    auto hash_key = GetHashKey(val);
+    return map_status;
 }
 
 rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
@@ -83,7 +78,9 @@ rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
 
 rocksdb::Status CheckpointDataLayer::SaveValue(std::string val,
                                                std::string key) {
-    auto [ref_count, value] = GetValueAndCount(key);
+    auto results = GetValueAndCount(key);
+    auto ref_count = results.reference_count;
+    auto value = results.result_value;
 
     if (ref_count < 1) {
         value = val;
@@ -107,16 +104,18 @@ rocksdb::Status CheckpointDataLayer::SaveValue(std::string val,
 };
 
 // use variant to return status error or value
-std::tuple<int, std::string> CheckpointDataLayer::GetValueAndCount(
-    std::string hash_key) {
+GetResults CheckpointDataLayer::GetValueAndCount(std::string hash_key) {
     rocksdb::ReadOptions read_options;
     std::string return_value;
 
     auto get_status = txn_db->Get(read_options, hash_key, &return_value);
+
     if (get_status.ok()) {
         return ParseCountAndValue(return_value);
     } else {
-        return std::make_tuple(0, std::string());
+        GetResults results{0, std::string()};
+
+        return results;
     }
 }
 
@@ -143,7 +142,7 @@ std::string CheckpointDataLayer::GetHashKey(const value& val) {
     return std::string(hash_key_vector.begin(), hash_key_vector.end());
 }
 
-std::tuple<int, std::string> ParseCountAndValue(std::string string_value) {
+GetResults ParseCountAndValue(std::string string_value) {
     // is max 256 references good enough?
     const char* c_string = string_value.c_str();
     auto ref_count = (int)c_string[0];
@@ -151,7 +150,9 @@ std::tuple<int, std::string> ParseCountAndValue(std::string string_value) {
     // skips exactly the first char(byte) in order to extract value saved?
     auto saved_value = string_value.substr(1, string_value.size() - 1);
 
-    return std::make_tuple(ref_count, saved_value);
+    GetResults results{ref_count, saved_value};
+
+    return results;
 }
 
 std::string SerializeCountAndValue(int count, std::string value) {
@@ -162,15 +163,6 @@ std::string SerializeCountAndValue(int count, std::string value) {
         // does not replace
         value.insert(value.begin(), count_as_char);
     }
-}
-
-std::string GetHash(const value& val) {
-    auto hash_key = hash(val);
-
-    std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash_key, hash_key_vector);
-
-    return std::string(hash_key_vector.begin(), hash_key_vector.end());
 }
 
 enum value_types { UINT_256, CODE_PC, TUPL, STACK, VM_STATE };
@@ -238,7 +230,6 @@ struct Serializer {
         // make sure this works as intended
         return_value += type_code;
         return_value += hash_key;
-        return_value += hash_to_next;
 
         return return_value;
     }
@@ -256,7 +247,6 @@ struct Serializer {
         // make sure this works as intended
         return_value += type_code;
         return_value += value_str;
-        return_value += hash_to_next;
 
         return return_value;
     }
@@ -271,7 +261,6 @@ struct Serializer {
         // make sure this works as intended
         return_value += type_code;
         return_value += value_str;
-        return_value += hash_to_next;
 
         return return_value;
     }

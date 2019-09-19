@@ -89,3 +89,18 @@ std::ostream& operator<<(std::ostream& os, const datastack& val) {
     os << "]";
     return os;
 }
+
+Tuple datastack::GetTupleRepresentation(TuplePool* pool) {
+    auto size = values.size();
+
+    auto current_tuple = Tuple(values[0], pool);
+
+    for (unsigned int i = 1; i < size; i++) {
+        auto new_tuple = Tuple(values[i], current_tuple, pool);
+
+        // assert hashes[i] == prev_tuple.calculateHash()
+        current_tuple = new_tuple;
+    }
+
+    return current_tuple;
+}

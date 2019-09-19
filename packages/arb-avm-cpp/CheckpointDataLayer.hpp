@@ -12,6 +12,7 @@
 #include <avm/codepoint.hpp>
 #include <vector>
 #include "avm/datastack.hpp"
+#include "avm/machine.hpp"
 #include "checkpoint/checkpointutils.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
@@ -24,7 +25,7 @@ class CheckpointDataLayer {
     std::string GetHashKey(const value& val);
     rocksdb::Status SaveValue(std::string val, std::string key);
     std::string GetValue(std::string key);
-    std::tuple<int, std::string> ParseCountAndValue(std::string string_value);
+    GetResults ParseCountAndValue(std::string string_value);
     std::string SerializeCountAndValue(int count, std::string value);
 
    public:
@@ -32,11 +33,10 @@ class CheckpointDataLayer {
     bool Intialize();
     void Close();
     rocksdb::Status SaveValue(const Tuple& val);
-    rocksdb::Status SaveDataStack(const datastack& stack);
+    rocksdb::Status SaveValueAndMapToKey(const Tuple& val,
+                                         std::string hash_key);
     rocksdb::Status DeleteValue(std::string key);
-    std::tuple<int, std::string> GetValueAndCount(std::string hash_key);
-    rocksdb::Status SaveValue(const CodePoint& val);
-    rocksdb::Status SaveValue(const uint256_t& val);
+    GetResults GetValueAndCount(std::string hash_key);
 };
 
 #endif /* DataMapper_hpp */

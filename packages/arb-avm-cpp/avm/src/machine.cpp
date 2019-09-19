@@ -273,11 +273,16 @@ void Machine::sendOffchainMessages(const std::vector<Message>& messages) {
     m.sendOffchainMessages(messages);
 }
 
-MachineCheckPointInfo Machine::getCheckPointInfo() {
-    MachineCheckPointInfo checkpointInfo{m.pc, m.staticVal, m.registerVal,
-                                         m.stack, m.auxstack};
+Tuple Machine::getCheckPointTuple() {
+    auto pool = &getPool();
 
-    return checkpointInfo;
+    auto pc_value = CodePoint();
+    pc_value.pc = m.pc;
+
+    auto machine_state_as_tuple =
+        Tuple(pc_value, m.stack, m.auxstack, m.registerVal, m.staticVal, pool);
+
+    return machine_state_as_tuple;
 }
 
 Assertion Machine::run(uint64_t stepCount,
