@@ -73,12 +73,9 @@ contract ChallengeManager is IChallengeManager {
         );
     }
 
-    // fields
-    // _beforeHash
-    // _beforeInbox
     function bisectAssertion(
         address _challengeId,
-        bytes32[2] memory _fields,
+        bytes32 _beforeInbox,
         bytes32[] memory _afterHashAndMessageAndLogsBisections,
         uint256[] memory _totalMessageAmounts,
         uint32 _totalSteps,
@@ -91,7 +88,7 @@ contract ChallengeManager is IChallengeManager {
         Challenge.Data storage challenge = challenges[_challengeId];
         Bisection.bisectAssertion(
             challenge,
-            _fields,
+            _beforeInbox,
             _afterHashAndMessageAndLogsBisections,
             _totalMessageAmounts,
             _totalSteps,

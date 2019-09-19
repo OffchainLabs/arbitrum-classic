@@ -75,12 +75,9 @@ library Bisection {
         emit ContinuedChallenge(_challenge.vmAddress, _challenge.players[1], _assertionToChallenge);
     }
 
-    // fields
-    // _beforeHash
-    // _beforeInbox
     function bisectAssertion(
         Challenge.Data storage _challenge,
-        bytes32[2] memory _fields,
+        bytes32 _beforeInbox,
         bytes32[] memory _afterHashAndMessageAndLogsBisections,
         uint256[] memory _totalMessageAmounts,
         uint32 _totalSteps,
@@ -101,8 +98,8 @@ library Bisection {
         );
         require(
             _tokenTypes.length == 0 ||
-            ((_afterHashAndMessageAndLogsBisections.length - 1) / 3 ==
-            _totalMessageAmounts.length / _tokenTypes.length),
+            (_afterHashAndMessageAndLogsBisections.length / 3 - 1) ==
+            (_totalMessageAmounts.length / _tokenTypes.length),
             "Incorrect input length"
         );
         require(_tokenTypes.length == _beforeBalances.length, "Incorrect input length");
@@ -120,15 +117,14 @@ library Bisection {
         bytes32[] memory bisectionHashes;
         (fullHash, bisectionHashes) = generateBisectionDataImpl(
             BisectAssertionData(
-                uint32((_afterHashAndMessageAndLogsBisections.length - 1) / 3),
+                uint32(_afterHashAndMessageAndLogsBisections.length / 3 - 1),
                 _afterHashAndMessageAndLogsBisections,
                 _totalMessageAmounts,
                 _totalSteps,
-                _fields[0],
                 _timeBounds,
                 _tokenTypes,
                 _beforeBalances,
-                _fields[1]
+                _beforeInbox
             )
         );
 
@@ -151,16 +147,20 @@ library Bisection {
     }
 
     // bisectionFields:
-    // afterHash
-    // Message Bisections
-    // Logs Bisections
+    // beforeHash
+    // firstMessageHash
+    // firstLogHash
+
+    // then repeated
+    //    afterHash
+    //    lastMessageHash
+    //    lastLogHash
 
     struct BisectAssertionData {
         uint32 bisectionCount;
         bytes32[] bisectionFields;
         uint256[] totalMessageAmounts;
         uint32 totalSteps;
-        bytes32 beforeHash;
         uint64[2] timeBounds;
         bytes21[] tokenTypes;
         uint256[] beforeBalances;
@@ -168,7 +168,6 @@ library Bisection {
     }
 
     struct GenerateBisectionHashesImplFrame {
-        bytes32 beforeHash;
         bytes32 preconditionHash;
         bytes32 fullHash;
         bytes32[] hashes;
@@ -188,7 +187,6 @@ library Bisection {
         frame.stepCount = _data.totalSteps / _data.bisectionCount + 1;
         uint i;
         uint j;
-        frame.beforeHash = _data.beforeHash;
         for (j = 0; j < _data.bisectionCount; j++) {
             if (j == _data.totalSteps % _data.bisectionCount) {
                 frame.stepCount--;
@@ -198,7 +196,7 @@ library Bisection {
                 frame.coinAmounts[i] += _data.totalMessageAmounts[j * _data.tokenTypes.length + i];
             }
             frame.preconditionHash = ArbProtocol.generatePreconditionHash(
-                frame.beforeHash,
+                _data.bisectionFields[j * 3],
                 _data.timeBounds,
                 _data.beforeInbox,
                 _data.tokenTypes,
@@ -211,17 +209,16 @@ library Bisection {
                 abi.encodePacked(
                     frame.preconditionHash,
                     ArbProtocol.generateAssertionHash(
-                        _data.bisectionFields[j],
+                        _data.bisectionFields[(j + 1) * 3],
                         frame.stepCount,
-                        _data.bisectionFields[_data.bisectionCount + j],
-                        _data.bisectionFields[_data.bisectionCount + j + 1],
-                        _data.bisectionFields[_data.bisectionCount * 2 + 1 + j],
-                        _data.bisectionFields[_data.bisectionCount * 2 + 2 + j],
+                        _data.bisectionFields[j * 3 + 1],
+                        _data.bisectionFields[(j + 1) * 3 + 1],
+                        _data.bisectionFields[j * 3 + 2],
+                        _data.bisectionFields[(j + 1) * 3 + 2],
                         frame.coinAmounts
                     )
                 )
             );
-            frame.beforeHash = _data.bisectionFields[j];
 
             if (j == 0) {
                 frame.coinAmounts = new uint256[](_data.tokenTypes.length);
@@ -232,12 +229,12 @@ library Bisection {
                     abi.encodePacked(
                         frame.preconditionHash,
                         ArbProtocol.generateAssertionHash(
-                            _data.bisectionFields[_data.bisectionCount - 1],
+                            _data.bisectionFields[_data.bisectionCount * 3],
                             _data.totalSteps,
-                            _data.bisectionFields[_data.bisectionCount],
-                            _data.bisectionFields[_data.bisectionCount * 2],
-                            _data.bisectionFields[_data.bisectionCount * 2 + 1],
-                            _data.bisectionFields[_data.bisectionFields.length - 1],
+                            _data.bisectionFields[1],
+                            _data.bisectionFields[_data.bisectionCount * 3 + 1],
+                            _data.bisectionFields[2],
+                            _data.bisectionFields[_data.bisectionCount * 3 + 2],
                             frame.coinAmounts
                         )
                     )
