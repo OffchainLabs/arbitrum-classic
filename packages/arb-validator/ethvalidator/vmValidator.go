@@ -213,6 +213,21 @@ func (val *VMValidator) IsPendingUnanimous(
 	return isPending, err
 }
 
+func (val *VMValidator) IsInChallenge(
+	ctx context.Context,
+) (bool, error) {
+	val.Mutex.Lock()
+	isPending, err := val.arbitrumVM.IsInChallenge(
+		&bind.CallOpts{
+			Pending: false,
+			From:    val.Address(),
+			Context: ctx,
+		},
+	)
+	val.Mutex.Unlock()
+	return isPending, err
+}
+
 func (val *VMValidator) PendingDisputableAssert(
 	ctx context.Context,
 	precondition *protocol.Precondition,

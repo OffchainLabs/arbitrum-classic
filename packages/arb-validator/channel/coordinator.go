@@ -409,6 +409,8 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 	go func() {
 		for {
 			select {
+			case <-ctx.Done():
+				break
 			case action := <-m.actions:
 				action(m)
 			case <-time.After(time.Second):
@@ -434,8 +436,8 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					break
 				}
 
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-				err := m.initiateUnanimousAssertionImpl(ctx, forceFinal, m.maxStepsUnanSteps)
+				assertCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+				err := m.initiateUnanimousAssertionImpl(assertCtx, forceFinal, m.maxStepsUnanSteps)
 				cancel()
 				if err == nil {
 					// Assertion was successful so we are done
@@ -452,6 +454,14 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 						log.Println("Coordinator failed to close channel", err)
 					}
 				} else {
+					inChallenge, err := m.Val.IsInChallenge(ctx)
+					if err != nil {
+						log.Fatalln("IsInChallenge err", err)
+					}
+					if inChallenge {
+						log.Println("Coordinator failed to unanimously assert and VM is in challenge so progress is paused")
+						continue
+					}
 					log.Println("Coordinator is creating a disputable assertion")
 					// Get the message on-chain (in the inbox)
 					// Do the disputable assertion
@@ -475,8 +485,12 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	resultChan, errChan := m.ChannelVal.RequestDisputableAssertion(10000)
 
 	select {
-	case <-resultChan:
-		log.Printf("Coordinator made disputable assertion in %s seconds", time.Since(start))
+	case success := <-resultChan:
+		if success {
+			log.Printf("Coordinator made disputable assertion in %s seconds", time.Since(start))
+		} else {
+			log.Println("Coordinator failed to disputable assert.")
+		}
 		return true
 	case err := <-errChan:
 		log.Println("Disputable assertion failed", err)
