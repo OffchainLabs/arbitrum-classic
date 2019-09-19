@@ -58,6 +58,10 @@ func (nv HashOnlyValue) Marshal(wr io.Writer) error {
 	return err
 }
 
+func (tv HashOnlyValue) MarshalForProof(wr io.Writer) error {
+	return tv.Marshal(wr)
+}
+
 func (nv HashOnlyValue) TypeCode() byte {
 	return TypeCodeHashOnly
 }

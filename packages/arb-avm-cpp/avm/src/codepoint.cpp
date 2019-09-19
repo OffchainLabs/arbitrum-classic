@@ -81,6 +81,36 @@ void Operation::marshal(std::vector<unsigned char>& buf) const {
     }
 }
 
+void Operation::marshalShallow(std::vector<unsigned char>& buf) const {
+    if (immediate) {
+        buf.push_back(1);
+        buf.push_back((uint8_t)opcode);
+        ::marshalShallow(*immediate, buf);
+    } else {
+        buf.push_back(0);
+        buf.push_back((uint8_t)opcode);
+    }
+}
+
+void Operation::marshalForProof(std::vector<unsigned char>& buf,
+                                bool includeVal) const {
+    if (immediate) {
+        buf.push_back(1);
+        buf.push_back((uint8_t)opcode);
+        if (includeVal) {
+            ::marshalShallow(*immediate, buf);
+        } else {
+            buf.push_back(HASH_ONLY);
+            std::array<unsigned char, 32> tmpbuf;
+            to_big_endian(::hash(*immediate), tmpbuf.begin());
+            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+        }
+    } else {
+        buf.push_back(0);
+        buf.push_back((uint8_t)opcode);
+    }
+}
+
 bool operator==(const CodePoint& val1, const CodePoint& val2) {
     if (val1.pc != val2.pc)
         return false;
@@ -96,8 +126,8 @@ void CodePoint::marshal(std::vector<unsigned char>& buf) const {
         static_cast<const char*>(static_cast<const void*>(&bepc)) + sizeof bepc,
         std::back_inserter(buf));
     buf.push_back(static_cast<unsigned char>(op.opcode));
-    std::vector<unsigned char> val;
-    val.resize(32);
+    op.marshal(buf);
+    std::array<unsigned char, 32> val;
     to_big_endian(nextHash, val.begin());
     buf.insert(buf.end(), val.begin(), val.end());
 }

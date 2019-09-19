@@ -301,9 +301,9 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 			tb := [2]uint64{startTime, endTime}
 			beforeHash := mClone.Hash()
 			assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
-			spentBalance := protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs)
+			spentBalance := protocol.NewTokenTrackerFromMessages(assertion.OutMsgs)
 			balance := c.GetBalance()
-			_ = balance.SpendAll(spentBalance)
+			_ = balance.SpendAllTokens(spentBalance)
 
 			pre := &protocol.Precondition{
 				BeforeHash:    beforeHash,

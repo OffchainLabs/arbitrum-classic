@@ -45,32 +45,37 @@ void datastack::addHash() const {
     hashes.emplace_back(from_big_endian(hashData.begin(), hashData.end()));
 }
 
+void datastack::calculateAllHashes() const {
+    while (hashes.size() < values.size()) {
+        addHash();
+    }
+}
+
 uint256_t datastack::hash() const {
     if (values.empty()) {
         return ::hash(Tuple());
     }
-    while (hashes.size() < values.size()) {
-        addHash();
-    }
+    calculateAllHashes();
     return hashes.back();
 }
 
-uint256_t datastack::SolidityProofValue(std::vector<bool>& stackInfo,
-                                        std::vector<value>& vals) {
+std::pair<uint256_t, std::vector<unsigned char>> datastack::marshalForProof(
+    const std::vector<bool>& stackInfo) {
+    calculateAllHashes();
     datastack c = *this;
+    std::vector<unsigned char> buf;
     for (auto const& si : stackInfo) {
         value val = c.pop();
         if (si) {
-            if (nonstd::holds_alternative<Tuple>(val)) {
-                vals.push_back(nonstd::get<Tuple>(val).clone_shallow());
-            } else {
-                vals.push_back(val);
-            }
+            marshalShallow(val, buf);
         } else {
-            vals.push_back(::hash(val));
+            buf.push_back(HASH_ONLY);
+            std::array<unsigned char, 32> tmpbuf;
+            to_big_endian(::hash(val), tmpbuf.begin());
+            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
         }
     }
-    return c.hash();
+    return std::make_pair(c.hash(), std::move(buf));
 }
 
 std::ostream& operator<<(std::ostream& os, const datastack& val) {

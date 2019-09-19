@@ -27,6 +27,7 @@ class datastack {
     static constexpr int lazyCount = 100;
 
     void addHash() const;
+    void calculateAllHashes() const;
 
    public:
     std::vector<value> values;
@@ -76,8 +77,8 @@ class datastack {
         }
     }
 
-    uint256_t SolidityProofValue(std::vector<bool>& stackInfo,
-                                 std::vector<value>& vals);
+    std::pair<uint256_t, std::vector<unsigned char>> marshalForProof(
+        const std::vector<bool>& stackInfo);
 
     value& peek() {
         if (values.size() == 0) {

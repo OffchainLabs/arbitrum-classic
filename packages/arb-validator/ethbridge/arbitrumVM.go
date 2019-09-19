@@ -678,11 +678,11 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 }
 
 func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
-	balanceTracker := protocol.NewBalanceTrackerFromLists(event.TokenTypes, event.Amounts)
+	tokenTracker := protocol.NewTokenTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],
 		event.TimeBounds,
-		balanceTracker,
+		tokenTracker,
 		value.NewHashOnlyValue(event.Fields[1], 1),
 	)
 	assertion := &protocol.AssertionStub{AfterHash: event.Fields[2], NumSteps: event.NumSteps, LastMessageHash: event.LastMessageHash, TotalVals: event.Amounts}
