@@ -72,7 +72,7 @@ type VMConnection interface {
 	ContinueChallenge(
 		auth *bind.TransactOpts,
 		assertionToChallenge uint16,
-		preconditions []*protocol.Precondition,
+		precondition *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
 	) (*types.Receipt, error)
 

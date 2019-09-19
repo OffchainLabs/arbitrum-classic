@@ -499,10 +499,10 @@ func (vm *ArbitrumVM) BisectAssertion(
 func (vm *ArbitrumVM) ContinueChallenge(
 	auth *bind.TransactOpts,
 	assertionToChallenge uint16,
-	preconditions []*protocol.Precondition,
+	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
-	tree := buildBisectionTree(preconditions, assertions)
+	tree := buildBisectionTree(precondition, assertions)
 	tx, err := vm.Challenge.ContinueChallenge(
 		auth,
 		vm.address,
@@ -638,8 +638,9 @@ func (vm *ArbitrumVM) VerifyVM(
 	return nil
 }
 
-func buildBisectionTree(preconditions []*protocol.Precondition, assertions []*protocol.AssertionStub) *MerkleTree {
+func buildBisectionTree(precondition *protocol.Precondition, assertions []*protocol.AssertionStub) *MerkleTree {
 	bisectionHashes := make([][32]byte, 0, len(assertions))
+	preconditions := protocol.GeneratePreconditions(precondition, assertions)
 	for i := range assertions {
 		bisectionBytes := solsha3.SoliditySHA3(
 			solsha3.Bytes32(preconditions[i].Hash()),

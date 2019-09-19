@@ -87,7 +87,7 @@ type ArbVMBridge interface {
 	ContinueChallenge(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		preconditions []*protocol.Precondition,
+		preconditions *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
 	) (*types.Receipt, error)
 
