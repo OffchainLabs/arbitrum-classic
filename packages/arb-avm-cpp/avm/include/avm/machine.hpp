@@ -20,111 +20,15 @@
 #include <avm/datastack.hpp>
 #include <avm/tokenTracker.hpp>
 #include <avm/value.hpp>
-
 #include <memory>
 #include <vector>
-
-typedef std::array<uint256_t, 2> TimeBounds;
-
-enum class Status { Extensive, Halted, Error };
-
-struct NotBlocked {};
-
-struct HaltBlocked {};
-
-struct ErrorBlocked {};
-
-struct BreakpointBlocked {};
-
-struct InboxBlocked {
-    uint256_t inbox;
-};
-
-struct SendBlocked {
-    uint256_t currency;
-    TokenType tokenType;
-};
-
-using BlockReason = nonstd::variant<NotBlocked,
-                                    HaltBlocked,
-                                    ErrorBlocked,
-                                    BreakpointBlocked,
-                                    InboxBlocked,
-                                    SendBlocked>;
-
-struct AssertionContext {
-    uint32_t numSteps;
-    TimeBounds timeBounds;
-    std::vector<Message> outMessage;
-    std::vector<value> logs;
-
-    explicit AssertionContext(const TimeBounds& tb)
-        : numSteps{0}, timeBounds(tb) {}
-};
+#include "../exceptions.hpp"
+#include "../machinestate.hpp"
 
 struct Assertion {
     uint64_t stepCount;
     std::vector<Message> outMessages;
     std::vector<value> logs;
-};
-
-struct MessageStack {
-    Tuple messages;
-    uint64_t messageCount;
-    TuplePool& pool;
-
-    MessageStack(TuplePool& pool_) : pool(pool_) {}
-
-    bool isEmpty() const { return messageCount == 0; }
-
-    void addMessage(const Message& msg) {
-        messages =
-            Tuple{uint256_t{0}, std::move(messages), msg.toValue(pool), &pool};
-        messageCount++;
-    }
-
-    void addMessageStack(MessageStack&& stack) {
-        if (!stack.isEmpty()) {
-            messages = Tuple(uint256_t(1), std::move(messages),
-                             std::move(stack.messages), &pool);
-            messageCount += stack.messageCount;
-        }
-    }
-
-    void clear() {
-        messages = Tuple{};
-        messageCount = 0;
-    }
-};
-
-struct MachineState {
-    std::shared_ptr<TuplePool> pool;
-    std::vector<CodePoint> code;
-    value staticVal;
-    value registerVal;
-    datastack stack;
-    datastack auxstack;
-    Status state = Status::Extensive;
-    uint64_t pc = 0;
-    CodePoint errpc;
-    MessageStack pendingInbox;
-    AssertionContext context;
-    MessageStack inbox;
-    BalanceTracker balance;
-    BlockReason blockReason;
-
-    MachineState();
-
-    bool deserialize(char* data);
-
-    void readInbox(char* newInbox);
-    std::vector<unsigned char> marshalForProof();
-    uint64_t pendingMessageCount() const;
-    void sendOnchainMessage(const Message& msg);
-    void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message>& messages);
-    BlockReason runOp(OpCode opcode);
-    uint256_t hash() const;
 };
 
 class Machine {
@@ -134,11 +38,14 @@ class Machine {
     void runOne();
 
    public:
+    Machine() = default;
+    Machine(std::string filename);
     bool deserialize(char* data) { return m.deserialize(data); }
 
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,
                   uint64_t timeBoundEnd);
+
     Status currentStatus() { return m.state; }
     BlockReason lastBlockReason() { return m.blockReason; }
     uint256_t hash() const { return m.hash(); }
@@ -156,7 +63,7 @@ class Machine {
 
     TuplePool& getPool() { return *m.pool; }
 
-    // should this be a tuple?
+    // should this be a tuple or some struct?
     Tuple getCheckPointTuple();
 };
 

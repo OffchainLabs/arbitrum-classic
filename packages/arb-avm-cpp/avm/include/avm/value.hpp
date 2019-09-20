@@ -22,13 +22,6 @@
 
 #include <nonstd/variant.hpp>
 
-class bad_tuple_index : public std::exception {
-   public:
-    virtual const char* what() const noexcept override {
-        return "bad_tuple_index";
-    }
-};
-
 enum types { NUM, CODEPT, HASH_ONLY, TUPLE };
 
 class TuplePool;
@@ -58,5 +51,13 @@ void marshalShallow(const value& val, std::vector<unsigned char>& buf);
 void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf);
 void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf);
+
+template <typename T>
+static T shrink(uint256_t i);
+
+uint256_t& assumeInt(value& val);
+const uint256_t& assumeInt(const value& val);
+uint64_t assumeInt64(uint256_t& val);
+Tuple& assumeTuple(value& val);
 
 #endif /* value_hpp */

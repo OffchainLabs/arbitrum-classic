@@ -23,8 +23,6 @@ Checkpoint MachineCheckPoints::SaveMachine(std::string machine_state_name,
                                            Machine machine) {
     // should contain more data? like errpc?
     auto checkpoint_tuple = machine.getCheckPointTuple();
-    auto hash_key = machine.hash();
-    auto tuple_hash = hash(checkpoint_tuple);
 
     auto status =
         storage.SaveValueAndMapToKey(checkpoint_tuple, machine_state_name);
@@ -33,7 +31,14 @@ Checkpoint MachineCheckPoints::SaveMachine(std::string machine_state_name,
         return Checkpoint();
     } else {
         // retry
+        return Checkpoint();
     }
+}
+
+Machine MachineCheckPoints::RestoreMachine(std::string name,
+                                           std::string contract_filename) {
+    Machine machine;
+    machine
 }
 
 // private functions

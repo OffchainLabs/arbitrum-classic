@@ -61,11 +61,9 @@ rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
         auto item = val.get_element(i);
         //        auto value_type = GetType(item);
         auto processed_value = ProcessValue(item);
-        auto status = std::get<0>(processed_value);
-        auto value_str = std::get<1>(processed_value);
 
-        if (status.ok()) {
-            value_to_store += value_str;
+        if (processed_value.status.ok()) {
+            value_to_store += processed_value.string_value;
         } else {
             // log
         }
@@ -133,7 +131,7 @@ rocksdb::Status CheckpointDataLayer::DeleteValue(std::string key) {
     return commit_status;
 }
 
-std::string CheckpointDataLayer::GetHashKey(const value& val) {
+std::string GetHashKey(const value& val) {
     auto hash_key = hash(val);
 
     std::vector<unsigned char> hash_key_vector;
@@ -165,30 +163,29 @@ std::string SerializeCountAndValue(int count, std::string value) {
     }
 }
 
-enum value_types { UINT_256, CODE_PC, TUPL, STACK, VM_STATE };
-
 struct ValueProcessor {
     // is it correctly intialized?
     CheckpointDataLayer cp;
 
-    std::tuple<rocksdb::Status, std::string> operator()(const Tuple& value) {
+    ProcessStatus operator()(const Tuple& value) {
         auto status = cp.SaveValue(value);
 
         std::string return_value;
 
         auto type_code = (char)TUPLE;
-        auto hash_key = GetHash(value);
+        auto hash_key = GetHashKey(value);
 
         // make sure this works as intended
         return_value += type_code;
         return_value += hash_key;
 
-        return std::make_tuple(status, return_value);
+        ProcessStatus process_status{status, return_value};
+
+        return process_status;
     }
 
     // make sure thats a success status
-    std::tuple<rocksdb::Status, std::string> operator()(
-        const uint256_t& value) {
+    ProcessStatus operator()(const uint256_t& value) {
         std::string return_value;
 
         auto type_code = (char)NUM;
@@ -201,11 +198,12 @@ struct ValueProcessor {
         return_value += type_code;
         return_value += value_str;
 
-        return std::make_tuple(rocksdb::Status(), return_value);
+        ProcessStatus process_status{rocksdb::Status(), return_value};
+
+        return process_status;
     }
 
-    std::tuple<rocksdb::Status, std::string> operator()(
-        const CodePoint& value) {
+    ProcessStatus operator()(const CodePoint& value) {
         std::string return_value;
 
         auto type_code = (char)CODEPT;
@@ -216,61 +214,12 @@ struct ValueProcessor {
         return_value += type_code;
         return_value += value_str;
 
-        return std::make_tuple(rocksdb::Status(), return_value);
+        ProcessStatus process_status{rocksdb::Status(), return_value};
+
+        return process_status;
     }
 };
 
-struct Serializer {
-    std::string operator()(const Tuple& value) {
-        std::string return_value;
-
-        auto type_code = (char)TUPLE;
-        auto hash_key = GetHash(value);
-
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += hash_key;
-
-        return return_value;
-    }
-
-    // make sure thats a success status
-    std::string operator()(const uint256_t& value) {
-        std::string return_value;
-
-        auto type_code = (char)NUM;
-        // makesure correct conversion
-        std::ostringstream ss;
-        ss << value;
-        auto value_str = ss.str();
-
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += value_str;
-
-        return return_value;
-    }
-
-    std::string operator()(const CodePoint& value) {
-        std::string return_value;
-
-        auto type_code = (char)CODEPT;
-        // fine?
-        auto value_str = std::to_string(value.pc);
-
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += value_str;
-
-        return return_value;
-    }
-};
-
-std::tuple<rocksdb::Status, std::string> CheckpointDataLayer::ProcessValue(
-    const value& value) {
+ProcessStatus CheckpointDataLayer::ProcessValue(const value& value) {
     return nonstd::visit(ValueProcessor{}, value);
-}
-
-std::string CheckpointDataLayer::Serialize(const value& value) {
-    return nonstd::visit(Serializer{}, value);
 }

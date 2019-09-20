@@ -14,14 +14,14 @@
 #include "avm/datastack.hpp"
 #include "avm/machine.hpp"
 #include "checkpoint/checkpointutils.hpp"
+#include "checkpoint/processstatus.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
 
 class CheckpointDataLayer {
    private:
     rocksdb::TransactionDB* txn_db;
-    std::tuple<rocksdb::Status, std::string> ProcessValue(const value& value);
-    std::string Serialize(const value& value);
+    ProcessStatus ProcessValue(const value& value);
     std::string GetHashKey(const value& val);
     rocksdb::Status SaveValue(std::string val, std::string key);
     std::string GetValue(std::string key);

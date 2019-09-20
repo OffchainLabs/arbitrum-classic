@@ -175,6 +175,42 @@ std::ostream& operator<<(std::ostream& os, const value& val) {
     return *nonstd::visit(ValuePrinter{os}, val);
 }
 
+template <typename T>
+static T shrink(uint256_t i) {
+    return static_cast<T>(i & std::numeric_limits<T>::max());
+}
+
+uint256_t& assumeInt(value& val) {
+    auto aNum = nonstd::get_if<uint256_t>(&val);
+    if (!aNum) {
+        throw bad_pop_type{};
+    }
+    return *aNum;
+}
+
+const uint256_t& assumeInt(const value& val) {
+    auto aNum = nonstd::get_if<uint256_t>(&val);
+    if (!aNum) {
+        throw bad_pop_type{};
+    }
+    return *aNum;
+}
+
+uint64_t assumeInt64(uint256_t& val) {
+    if (val > std::numeric_limits<uint64_t>::max())
+        throw int_out_of_bounds{};
+
+    return static_cast<uint64_t>(val);
+}
+
+Tuple& assumeTuple(value& val) {
+    auto tup = nonstd::get_if<Tuple>(&val);
+    if (!tup) {
+        throw bad_pop_type{};
+    }
+    return *tup;
+}
+
 struct GetValueType {
     types operator()(const Tuple& val) { return TUPLE; }
 
