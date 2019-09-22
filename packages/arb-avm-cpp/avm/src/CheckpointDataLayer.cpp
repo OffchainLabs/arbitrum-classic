@@ -1,11 +1,11 @@
 //
-//  DataMapper.cpp
+//  checkpointdatalayer.cpp
 //  avm
 //
-//  Created by Minh Truong on 9/16/19.
+//  Created by Minh Truong on 9/22/19.
 //
 
-#include "CheckpointDataLayer.hpp"
+#include "checkpointdatalayer.hpp"
 #include <vector>
 #include "avm/tuple.hpp"
 #include "avm/value.hpp"
@@ -163,63 +163,63 @@ std::string SerializeCountAndValue(int count, std::string value) {
     }
 }
 
-struct ValueProcessor {
-    // is it correctly intialized?
-    CheckpointDataLayer cp;
-
-    ProcessStatus operator()(const Tuple& value) {
-        auto status = cp.SaveValue(value);
-
-        std::string return_value;
-
-        auto type_code = (char)TUPLE;
-        auto hash_key = GetHashKey(value);
-
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += hash_key;
-
-        ProcessStatus process_status{status, return_value};
-
-        return process_status;
-    }
-
-    // make sure thats a success status
-    ProcessStatus operator()(const uint256_t& value) {
-        std::string return_value;
-
-        auto type_code = (char)NUM;
-        // makesure correct conversion
-        std::ostringstream ss;
-        ss << value;
-        auto value_str = ss.str();
-
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += value_str;
-
-        ProcessStatus process_status{rocksdb::Status(), return_value};
-
-        return process_status;
-    }
-
-    ProcessStatus operator()(const CodePoint& value) {
-        std::string return_value;
-
-        auto type_code = (char)CODEPT;
-        // fine?
-        auto value_str = std::to_string(value.pc);
-
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += value_str;
-
-        ProcessStatus process_status{rocksdb::Status(), return_value};
-
-        return process_status;
-    }
-};
-
-ProcessStatus CheckpointDataLayer::ProcessValue(const value& value) {
-    return nonstd::visit(ValueProcessor{}, value);
-}
+// struct ValueProcessor {
+//    // is it correctly intialized?
+//    CheckpointDataLayer cp;
+//
+//    ProcessStatus operator()(const Tuple& value) {
+//        auto status = cp.SaveValue(value);
+//
+//        std::string return_value;
+//
+//        auto type_code = (char)TUPLE;
+//        auto hash_key = GetHashKey(value);
+//
+//        // make sure this works as intended
+//        return_value += type_code;
+//        return_value += hash_key;
+//
+//        ProcessStatus process_status{status, return_value};
+//
+//        return process_status;
+//    }
+//
+//    // make sure thats a success status
+//    ProcessStatus operator()(const uint256_t& value) {
+//        std::string return_value;
+//
+//        auto type_code = (char)NUM;
+//        // makesure correct conversion
+//        std::ostringstream ss;
+//        ss << value;
+//        auto value_str = ss.str();
+//
+//        // make sure this works as intended
+//        return_value += type_code;
+//        return_value += value_str;
+//
+//        ProcessStatus process_status{rocksdb::Status(), return_value};
+//
+//        return process_status;
+//    }
+//
+//    ProcessStatus operator()(const CodePoint& value) {
+//        std::string return_value;
+//
+//        auto type_code = (char)CODEPT;
+//        // fine?
+//        auto value_str = std::to_string(value.pc);
+//
+//        // make sure this works as intended
+//        return_value += type_code;
+//        return_value += value_str;
+//
+//        ProcessStatus process_status{rocksdb::Status(), return_value};
+//
+//        return process_status;
+//    }
+//};
+//
+// ProcessStatus CheckpointDataLayer::ProcessValue(const value& value) {
+//    return nonstd::visit(ValueProcessor{}, value);
+//}

@@ -53,7 +53,9 @@ void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf);
 
 template <typename T>
-static T shrink(uint256_t i);
+static T shrink(uint256_t i) {
+    return static_cast<T>(i & std::numeric_limits<T>::max());
+}
 
 uint256_t& assumeInt(value& val);
 const uint256_t& assumeInt(const value& val);

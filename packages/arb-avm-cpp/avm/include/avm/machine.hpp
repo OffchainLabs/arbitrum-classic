@@ -22,8 +22,8 @@
 #include <avm/value.hpp>
 #include <memory>
 #include <vector>
-#include "../exceptions.hpp"
-#include "../machinestate.hpp"
+#include "avm/exceptions.hpp"
+#include "avm/machinestate.hpp"
 
 struct Assertion {
     uint64_t stepCount;

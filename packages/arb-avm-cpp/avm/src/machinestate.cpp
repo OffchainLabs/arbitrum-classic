@@ -1,16 +1,15 @@
 //
-//  MachineState.cpp
+//  machinestate.cpp
 //  avm
 //
-//  Created by Minh Truong on 9/19/19.
+//  Created by Minh Truong on 9/22/19.
 //
 
 #include "machinestate.hpp"
+#include "avm/exceptions.hpp"
+#include "avm/machineoperation.hpp"
 #include "bigint_utils.hpp"
 #include "util.hpp"
-
-#include "exceptions.hpp"
-#include "machineoperation.hpp"
 
 namespace {
 

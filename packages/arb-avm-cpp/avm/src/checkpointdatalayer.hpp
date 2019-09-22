@@ -1,20 +1,20 @@
 //
-//  DataMapper.hpp
+//  checkpointdatalayer.hpp
 //  avm
 //
-//  Created by Minh Truong on 9/16/19.
+//  Created by Minh Truong on 9/22/19.
 //
 
-#ifndef CheckpointDataLayer_hpp
-#define CheckpointDataLayer_hpp
+#ifndef checkpointdatalayer_hpp
+#define checkpointdatalayer_hpp
 
 #include <stdio.h>
 #include <avm/codepoint.hpp>
 #include <vector>
 #include "avm/datastack.hpp"
 #include "avm/machine.hpp"
-#include "checkpoint/checkpointutils.hpp"
-#include "checkpoint/processstatus.hpp"
+#include "checkpointutils.hpp"
+#include "processstatus.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
 
@@ -39,4 +39,4 @@ class CheckpointDataLayer {
     GetResults GetValueAndCount(std::string hash_key);
 };
 
-#endif /* DataMapper_hpp */
+#endif /* checkpointdatalayer_hpp */

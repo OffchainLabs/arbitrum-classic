@@ -29,6 +29,12 @@ set(LIB_HEADERS
   include/avm/tokenTracker.hpp
   include/avm/tuple.hpp
   include/avm/value.hpp
+  include/avm/checkpoint.hpp
+  include/avm/machinestate.hpp
+  include/avm/machineoperation.hpp
+  include/avm/exceptions.hpp
+  include/avm/CheckpointStorage.hpp
+  include/avm/CheckpointDataLayer.hpp
 )
 
 set(LIB_SOURCES
@@ -40,6 +46,11 @@ set(LIB_SOURCES
   src/tuple.cpp
   src/value.cpp
   src/tokenTracker.cpp
+  src/checkpoint.cpp
+  src/machinestate.cpp
+  src/machineoperation.cpp
+  src/CheckpointStorage.cpp
+  src/CheckpointDataLayer.cpp
 
   src/util.hpp
 

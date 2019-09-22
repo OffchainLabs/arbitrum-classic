@@ -175,11 +175,6 @@ std::ostream& operator<<(std::ostream& os, const value& val) {
     return *nonstd::visit(ValuePrinter{os}, val);
 }
 
-template <typename T>
-static T shrink(uint256_t i) {
-    return static_cast<T>(i & std::numeric_limits<T>::max());
-}
-
 uint256_t& assumeInt(value& val) {
     auto aNum = nonstd::get_if<uint256_t>(&val);
     if (!aNum) {
@@ -209,16 +204,4 @@ Tuple& assumeTuple(value& val) {
         throw bad_pop_type{};
     }
     return *tup;
-}
-
-struct GetValueType {
-    types operator()(const Tuple& val) { return TUPLE; }
-
-    types operator()(const uint256_t val) { return NUM; }
-
-    types operator()(const CodePoint& val) { return CODEPT; }
-};
-
-types GetType(const value& val) {
-    return nonstd::visit(GetValueType{}, val);
 }
