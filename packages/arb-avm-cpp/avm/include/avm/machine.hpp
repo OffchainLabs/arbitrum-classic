@@ -22,9 +22,9 @@
 #include <avm/value.hpp>
 #include <memory>
 #include <vector>
+#include "avm/checkpointutils.hpp"
 #include "avm/exceptions.hpp"
 #include "avm/machinestate.hpp"
-#include "checkpointutils.hpp"
 
 struct Assertion {
     uint64_t stepCount;

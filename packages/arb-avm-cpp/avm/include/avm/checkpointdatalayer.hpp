@@ -11,12 +11,11 @@
 #include <stdio.h>
 #include <avm/codepoint.hpp>
 #include <vector>
+#include "avm/checkpointutils.hpp"
 #include "avm/datastack.hpp"
 #include "avm/machine.hpp"
-#include "checkpointutils.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
-#include "serializedvalue.hpp"
 
 class CheckpointDataLayer {
    private:

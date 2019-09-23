@@ -5,11 +5,11 @@
 //  Created by Minh Truong on 9/22/19.
 //
 
-#include "checkpointdatalayer.hpp"
+#include "avm/checkpointdatalayer.hpp"
 #include <vector>
+#include "avm/checkpointutils.hpp"
 #include "avm/tuple.hpp"
 #include "avm/value.hpp"
-#include "checkpointutils.hpp"
 
 using UCharVec = std::vector<unsigned char>;
 

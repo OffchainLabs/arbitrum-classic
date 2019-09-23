@@ -19,9 +19,10 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <iostream>
+#include "avm/checkpointutils.hpp"
+#include "avm/machinestatedata.hpp"
 #include "avm/opcodes.hpp"
 #include "bigint_utils.hpp"
-#include "checkpointutils.hpp"
 #include "util.hpp"
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
@@ -82,12 +83,15 @@ CheckpointData Machine::getCheckPointTuple() {
     pc_value.pc = m.pc;
 
     // what about blockreason
-    auto machine_state_as_tuple =
-        Tuple(pc_value, m.errpc, m.stack.GetTupleRepresentation(pool),
-              m.auxstack.GetTupleRepresentation(pool), m.registerVal,
-              m.staticVal, m.pendingInbox.messages, m.inbox.messages, pool);
+    //    auto machine_state_as_tuple =
+    //        Tuple(pc_value, m.errpc, m.stack.GetTupleRepresentation(pool),
+    //              m.auxstack.GetTupleRepresentation(pool), m.registerVal,
+    //              m.staticVal, m.pendingInbox.messages, m.inbox.messages,
+    //              pool);
 
-    CheckpointData cp_data = {machine_state_as_tuple, m.state, m.balance};
+    CheckpointData cp_data = {
+        m.staticVal, m.registerVal,  m.stack, m.auxstack, m.state,       m.pc,
+        m.errpc,     m.pendingInbox, m.inbox, m.balance,  m.blockReason, pool};
 
     return cp_data;
 }

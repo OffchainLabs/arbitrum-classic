@@ -14,63 +14,8 @@
 #include <avm/value.hpp>
 #include <memory>
 #include <vector>
-
-enum class Status { Extensive, Halted, Error };
-
-typedef std::array<uint256_t, 2> TimeBounds;
-
-struct NotBlocked {};
-
-struct HaltBlocked {};
-
-struct ErrorBlocked {};
-
-struct BreakpointBlocked {};
-
-struct InboxBlocked {
-    uint256_t inbox;
-};
-
-struct SendBlocked {
-    uint256_t currency;
-    TokenType tokenType;
-};
-
-using BlockReason = nonstd::variant<NotBlocked,
-                                    HaltBlocked,
-                                    ErrorBlocked,
-                                    BreakpointBlocked,
-                                    InboxBlocked,
-                                    SendBlocked>;
-
-struct MessageStack {
-    Tuple messages;
-    uint64_t messageCount;
-    TuplePool& pool;
-
-    MessageStack(TuplePool& pool_) : pool(pool_) {}
-
-    bool isEmpty() const { return messageCount == 0; }
-
-    void addMessage(const Message& msg) {
-        messages =
-            Tuple{uint256_t{0}, std::move(messages), msg.toValue(pool), &pool};
-        messageCount++;
-    }
-
-    void addMessageStack(MessageStack&& stack) {
-        if (!stack.isEmpty()) {
-            messages = Tuple(uint256_t(1), std::move(messages),
-                             std::move(stack.messages), &pool);
-            messageCount += stack.messageCount;
-        }
-    }
-
-    void clear() {
-        messages = Tuple{};
-        messageCount = 0;
-    }
-};
+#include "machinestatedata.hpp"
+#include "messagestack.hpp"
 
 struct AssertionContext {
     uint32_t numSteps;

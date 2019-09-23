@@ -35,6 +35,7 @@ set(LIB_HEADERS
   include/avm/exceptions.hpp
   include/avm/CheckpointStorage.hpp
   include/avm/CheckpointDataLayer.hpp
+  include/avm/checkpointutils.hpp
 )
 
 set(LIB_SOURCES
@@ -51,7 +52,7 @@ set(LIB_SOURCES
   src/machineoperation.cpp
   src/CheckpointStorage.cpp
   src/CheckpointDataLayer.cpp
-
+  src/checkpointutils.cpp
   src/util.hpp
 
   ${KECCAK_SOURCES}

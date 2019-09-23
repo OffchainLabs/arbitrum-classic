@@ -5,7 +5,7 @@
 //  Created by Minh Truong on 9/22/19.
 //
 
-#include "machineoperation.hpp"
+#include "avm/machineoperation.hpp"
 
 void MachineOperation::add(MachineState& m) {
     m.stack.prepForMod(2);

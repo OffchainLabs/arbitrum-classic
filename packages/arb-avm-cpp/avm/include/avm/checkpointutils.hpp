@@ -9,7 +9,8 @@
 #define checkpointutils_hpp
 
 #include <string>
-#include "machinestate.hpp"
+#include "machinestatedata.hpp"
+#include "messagestack.hpp"
 
 struct GetResults {
     int reference_count = 0;
@@ -17,9 +18,18 @@ struct GetResults {
 };
 
 struct CheckpointData {
-    Tuple value;
+    value staticVal;
+    value registerVal;
+    datastack stack;
+    datastack auxstack;
     Status state;
+    uint64_t pc;
+    CodePoint errpc;
+    MessageStack pendingInbox;
+    MessageStack inbox;
     BalanceTracker balance;
+    BlockReason blockReason;
+    TuplePool* pool;
 };
 
 struct CheckpointParsed {
