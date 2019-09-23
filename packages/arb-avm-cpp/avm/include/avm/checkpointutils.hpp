@@ -29,26 +29,11 @@ struct CheckpointData {
     MessageStack inbox;
     BalanceTracker balance;
     BlockReason blockReason;
-    TuplePool* pool;
-};
-
-struct CheckpointParsed {
-    value staticVal;
-    value registerVal;
-    datastack stack;
-    datastack auxstack;
-    Status state;
-    uint64_t pc;
-    CodePoint errpc;
-    MessageStack pendingInbox;
-    MessageStack inbox;
-    BalanceTracker balance;
-    BlockReason blockReason;
 };
 
 class CheckpointParser {
    public:
-    CheckpointParsed ParseData(std::string data);
+    CheckpointData ParseData(std::string data);
 };
 
 #endif /* checkpointutils_hpp */

@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <vector>
 #include "avm/machine.hpp"
-#include "checkpointdatalayer.hpp"
+#include "checkpointstorage.hpp"
 
 class Checkpoint {
     std::string checkPointName;
@@ -19,7 +19,7 @@ class Checkpoint {
 
 class MachineCheckPoints {
    private:
-    CheckpointDataLayer storage;
+    CheckpointStorage storage;
 
    public:
     MachineCheckPoints();

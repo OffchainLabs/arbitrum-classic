@@ -1,12 +1,12 @@
 //
-//  checkpointdatalayer.hpp
+//  checkpointstorage.hpp
 //  avm
 //
-//  Created by Minh Truong on 9/22/19.
+//  Created by Minh Truong on 9/23/19.
 //
 
-#ifndef checkpointdatalayer_hpp
-#define checkpointdatalayer_hpp
+#ifndef checkpointstorage_hpp
+#define checkpointstorage_hpp
 
 #include <stdio.h>
 #include <avm/codepoint.hpp>
@@ -17,7 +17,7 @@
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
 
-class CheckpointDataLayer {
+class CheckpointStorage {
    private:
     rocksdb::TransactionDB* txn_db;
     rocksdb::Status SaveValue(std::string val, std::string key);
@@ -37,4 +37,4 @@ class CheckpointDataLayer {
     std::string GetHashKey(const value& val);
 };
 
-#endif /* checkpointdatalayer_hpp */
+#endif /* checkpointstorage_hpp */

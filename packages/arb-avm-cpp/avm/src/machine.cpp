@@ -76,22 +76,13 @@ void Machine::sendOffchainMessages(const std::vector<Message>& messages) {
     m.sendOffchainMessages(messages);
 }
 
-CheckpointData Machine::getCheckPointTuple() {
-    auto pool = &getPool();
-
+CheckpointData Machine::getCheckPointData() {
     auto pc_value = CodePoint();
     pc_value.pc = m.pc;
 
-    // what about blockreason
-    //    auto machine_state_as_tuple =
-    //        Tuple(pc_value, m.errpc, m.stack.GetTupleRepresentation(pool),
-    //              m.auxstack.GetTupleRepresentation(pool), m.registerVal,
-    //              m.staticVal, m.pendingInbox.messages, m.inbox.messages,
-    //              pool);
-
     CheckpointData cp_data = {
-        m.staticVal, m.registerVal,  m.stack, m.auxstack, m.state,       m.pc,
-        m.errpc,     m.pendingInbox, m.inbox, m.balance,  m.blockReason, pool};
+        m.staticVal, m.registerVal,  m.stack, m.auxstack, m.state,      m.pc,
+        m.errpc,     m.pendingInbox, m.inbox, m.balance,  m.blockReason};
 
     return cp_data;
 }

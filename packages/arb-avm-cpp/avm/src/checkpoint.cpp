@@ -7,7 +7,7 @@
 
 #include "avm/checkpoint.hpp"
 #include <avm/tuple.hpp>
-#include "avm/checkpointdatalayer.hpp"
+#include "avm/checkpointstorage.hpp"
 #include "avm/machine.hpp"
 
 MachineCheckPoints::MachineCheckPoints() {
@@ -21,9 +21,8 @@ MachineCheckPoints::~MachineCheckPoints() {
 
 Checkpoint MachineCheckPoints::SaveMachine(std::string machine_state_name,
                                            Machine machine) {
-    // should contain more data? like errpc?
-    auto checkpoint_tuple = machine.getCheckPointTuple();
-
+    auto checkpoint_data = machine.getCheckPointData();
+    auto pool = machine.getPool();
     //    auto status = storage.SaveValueAndMapToKey(checkpoint_tuple.value,
     //                                               machine_state_name);
     //

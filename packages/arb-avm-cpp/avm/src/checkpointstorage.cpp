@@ -1,11 +1,11 @@
 //
-//  checkpointdatalayer.cpp
+//  checkpointstorage.cpp
 //  avm
 //
-//  Created by Minh Truong on 9/22/19.
+//  Created by Minh Truong on 9/23/19.
 //
 
-#include "avm/checkpointdatalayer.hpp"
+#include "avm/checkpointstorage.hpp"
 #include <vector>
 #include "avm/checkpointutils.hpp"
 #include "avm/tuple.hpp"
@@ -16,7 +16,7 @@ using UCharVec = std::vector<unsigned char>;
 std::string dbPath = "tmp/rocksDbPath";
 std::string machine_code_key = "machine_code";
 
-bool CheckpointDataLayer::Intialize() {
+bool CheckpointStorage::Intialize() {
     rocksdb::Options options;
     rocksdb::TransactionDBOptions txn_options;
     options.create_if_missing = true;
@@ -27,19 +27,18 @@ bool CheckpointDataLayer::Intialize() {
     return status.ok();
 };
 
-void CheckpointDataLayer::Close() {
+void CheckpointStorage::Close() {
     delete txn_db;
 }
 
-rocksdb::Status CheckpointDataLayer::GetMachineState(std::string machine_name) {
+rocksdb::Status CheckpointStorage::GetMachineState(std::string machine_name) {
     auto hash_results = GetValueAndCount(machine_name);
     auto data_hash = hash_results.result_value;
     auto data_results = GetValueAndCount(data_hash);
 }
 
-rocksdb::Status CheckpointDataLayer::SaveValueAndMapToKey(
-    const Tuple& val,
-    std::string hash_key) {
+rocksdb::Status CheckpointStorage::SaveValueAndMapToKey(const Tuple& val,
+                                                        std::string hash_key) {
     auto status = SaveValue(val);
     auto value_key = GetHashKey(val);
     auto map_status = SaveValue(value_key, hash_key);
@@ -47,7 +46,7 @@ rocksdb::Status CheckpointDataLayer::SaveValueAndMapToKey(
     return map_status;
 }
 
-rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
+rocksdb::Status CheckpointStorage::SaveValue(const Tuple& val) {
     // somtime it says no conversion
     auto hash_key = GetHashKey(val);
     auto value_to_store = std::string();
@@ -79,8 +78,7 @@ rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
     return save_status;
 };
 
-rocksdb::Status CheckpointDataLayer::SaveValue(std::string val,
-                                               std::string key) {
+rocksdb::Status CheckpointStorage::SaveValue(std::string val, std::string key) {
     auto results = GetValueAndCount(key);
     auto ref_count = results.reference_count;
     auto value = results.result_value;
@@ -107,7 +105,7 @@ rocksdb::Status CheckpointDataLayer::SaveValue(std::string val,
 };
 
 // use variant to return status error or value
-GetResults CheckpointDataLayer::GetValueAndCount(std::string hash_key) {
+GetResults CheckpointStorage::GetValueAndCount(std::string hash_key) {
     rocksdb::ReadOptions read_options;
     std::string return_value;
 
@@ -122,7 +120,7 @@ GetResults CheckpointDataLayer::GetValueAndCount(std::string hash_key) {
     }
 }
 
-rocksdb::Status CheckpointDataLayer::DeleteValue(std::string key) {
+rocksdb::Status CheckpointStorage::DeleteValue(std::string key) {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     assert(transaction);
@@ -136,7 +134,7 @@ rocksdb::Status CheckpointDataLayer::DeleteValue(std::string key) {
     return commit_status;
 }
 
-std::string CheckpointDataLayer::GetHashKey(const value& val) {
+std::string CheckpointStorage::GetHashKey(const value& val) {
     auto hash_key = hash(val);
 
     std::vector<unsigned char> hash_key_vector;
