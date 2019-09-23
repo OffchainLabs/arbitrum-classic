@@ -150,31 +150,6 @@ uint256_t hash(const value& value) {
     return nonstd::visit([](const auto& val) { return hash(val); }, value);
 }
 
-struct ValuePrinter {
-    std::ostream& os;
-
-    std::ostream* operator()(const Tuple& val) const {
-        os << val;
-        return &os;
-    }
-
-    std::ostream* operator()(const uint256_t& val) const {
-        os << val;
-        return &os;
-    }
-
-    std::ostream* operator()(const CodePoint& val) const {
-        //        std::printf("in CodePoint ostream operator\n");
-        os << "CodePoint(" << val.pc << ", " << val.op << ", "
-           << to_hex_str(val.nextHash) << ")";
-        return &os;
-    }
-};
-
-std::ostream& operator<<(std::ostream& os, const value& val) {
-    return *nonstd::visit(ValuePrinter{os}, val);
-}
-
 uint256_t& assumeInt(value& val) {
     auto aNum = nonstd::get_if<uint256_t>(&val);
     if (!aNum) {
@@ -204,4 +179,92 @@ Tuple& assumeTuple(value& val) {
         throw bad_pop_type{};
     }
     return *tup;
+}
+
+struct ValuePrinter {
+    std::ostream& os;
+
+    std::ostream* operator()(const Tuple& val) const {
+        os << val;
+        return &os;
+    }
+
+    std::ostream* operator()(const uint256_t& val) const {
+        os << val;
+        return &os;
+    }
+
+    std::ostream* operator()(const CodePoint& val) const {
+        //        std::printf("in CodePoint ostream operator\n");
+        os << "CodePoint(" << val.pc << ", " << val.op << ", "
+           << to_hex_str(val.nextHash) << ")";
+        return &os;
+    }
+};
+
+std::ostream& operator<<(std::ostream& os, const value& val) {
+    return *nonstd::visit(ValuePrinter{os}, val);
+}
+
+std::string ToHashString(uint256_t hash_key) {
+    std::vector<unsigned char> hash_key_vector;
+    marshal_value(hash_key, hash_key_vector);
+
+    return std::string(hash_key_vector.begin(), hash_key_vector.end());
+}
+
+struct Serializer {
+    SerializedValue operator()(const Tuple& val) const {
+        std::string return_value;
+
+        auto type_code = (char)TUPLE;
+        auto hash_key = ToHashString(val.calculateHash());
+
+        // make sure this works as intended
+        return_value += type_code;
+        return_value += hash_key;
+
+        SerializedValue serialized_value{TUPLE, return_value};
+
+        return serialized_value;
+    }
+
+    SerializedValue operator()(const uint256_t& val) const {
+        std::string return_value;
+
+        auto type_code = (char)NUM;
+        // makesure correct conversion
+        std::ostringstream ss;
+        ss << val;
+        auto value_str = ss.str();
+
+        // make sure this works as intended
+        return_value += type_code;
+        return_value += value_str;
+
+        SerializedValue serialized_value{NUM, return_value};
+
+        return serialized_value;
+    }
+
+    SerializedValue operator()(const CodePoint& val) const {
+        std::string return_value;
+
+        auto type_code = (char)CODEPT;
+        // fine?
+        auto c = val.pc;
+        auto value_str = std::to_string(c);
+
+        // make sure this works as intended
+        return_value += type_code;
+        return_value += value_str;
+
+        SerializedValue serialized_value{CODEPT, return_value};
+
+        return serialized_value;
+    }
+};
+
+SerializedValue SerializeValue(const value& val) {
+    return nonstd::visit(Serializer{}, val);
 }

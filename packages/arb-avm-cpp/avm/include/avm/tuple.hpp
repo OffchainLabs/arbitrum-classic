@@ -33,10 +33,9 @@ class Tuple {
 
     friend uint256_t hash(const Tuple&);
 
-    uint256_t calculateHash() const;
-
    public:
     Tuple() = default;
+    uint256_t calculateHash() const;
 
     Tuple(TuplePool* pool, size_t size) {
         if (size > 0) {

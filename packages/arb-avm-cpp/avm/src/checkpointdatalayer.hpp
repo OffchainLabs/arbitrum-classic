@@ -14,19 +14,19 @@
 #include "avm/datastack.hpp"
 #include "avm/machine.hpp"
 #include "checkpointutils.hpp"
-#include "processstatus.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
+#include "serializedvalue.hpp"
 
 class CheckpointDataLayer {
    private:
     rocksdb::TransactionDB* txn_db;
-    ProcessStatus ProcessValue(const value& value);
-    std::string GetHashKey(const value& val);
     rocksdb::Status SaveValue(std::string val, std::string key);
     std::string GetValue(std::string key);
     GetResults ParseCountAndValue(std::string string_value);
     std::string SerializeCountAndValue(int count, std::string value);
+    //    ProcessStatus ProcessValue(CheckpointDataLayer& cp, const value&
+    //    value);
 
    public:
     // static std::string ConvertMachineCode(std::vector<CodePoint> code);
@@ -37,6 +37,14 @@ class CheckpointDataLayer {
                                          std::string hash_key);
     rocksdb::Status DeleteValue(std::string key);
     GetResults GetValueAndCount(std::string hash_key);
+    std::string GetHashKey(const value& val);
 };
+
+// struct ValueProcessor{
+//    CheckpointDataLayer cp;
+//    ProcessStatus operator()(const Tuple& value);
+//    ProcessStatus operator()(const uint256_t& value);
+//    ProcessStatus operator()(const CodePoint& value);
+//};
 
 #endif /* checkpointdatalayer_hpp */

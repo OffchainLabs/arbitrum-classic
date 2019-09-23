@@ -10,19 +10,6 @@
 #include "avm/tuple.hpp"
 #include "avm/value.hpp"
 
-// std::string CheckpointDataLayer::ConvertMachineCode(std::vector<CodePoint>
-// codes){
-//
-//    std::vector<unsigned char> code_values;
-//
-//    for(auto code : codes){
-//        code_values.push_back((uint8_t)code.op.opcode);
-//    }
-//
-//    std::string str(code_values.begin(), code_values.end());
-//    return str;
-//};
-
 using UCharVec = std::vector<unsigned char>;
 
 std::string dbPath = "tmp/rocksDbPath";
@@ -59,14 +46,26 @@ rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
 
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto item = val.get_element(i);
-        //        auto value_type = GetType(item);
-        auto processed_value = ProcessValue(item);
+        auto serialized_value = SerializeValue(item);
 
-        if (processed_value.status.ok()) {
-            value_to_store += processed_value.string_value;
-        } else {
-            // log
+        switch (serialized_value.type) {
+            case TUPLE: {
+                value_to_store += serialized_value.string_value;
+            }
+            case NUM: {
+                value_to_store += serialized_value.string_value;
+            }
+            case CODEPT: {
+                value_to_store += serialized_value.string_value;
+            }
         }
+        // auto processed_value = ProcessValue(*this, item);
+
+        //        if (processed_value.status.ok()) {
+        //            value_to_store += processed_value.string_value;
+        //        } else {
+        //            // log
+        //        }
     }
 
     auto save_status = SaveValue(value_to_store, hash_key);
@@ -131,7 +130,7 @@ rocksdb::Status CheckpointDataLayer::DeleteValue(std::string key) {
     return commit_status;
 }
 
-std::string GetHashKey(const value& val) {
+std::string CheckpointDataLayer::GetHashKey(const value& val) {
     auto hash_key = hash(val);
 
     std::vector<unsigned char> hash_key_vector;
@@ -154,6 +153,7 @@ GetResults ParseCountAndValue(std::string string_value) {
 }
 
 std::string SerializeCountAndValue(int count, std::string value) {
+    std::string str;
     if (count > 255) {
         // error
     } else {
@@ -161,19 +161,20 @@ std::string SerializeCountAndValue(int count, std::string value) {
         // does not replace
         value.insert(value.begin(), count_as_char);
     }
+
+    return str;
 }
 
 // struct ValueProcessor {
 //    // is it correctly intialized?
 //    CheckpointDataLayer cp;
 //
-//    ProcessStatus operator()(const Tuple& value) {
+//    std::string operator()(const Tuple& value) {
 //        auto status = cp.SaveValue(value);
-//
 //        std::string return_value;
 //
 //        auto type_code = (char)TUPLE;
-//        auto hash_key = GetHashKey(value);
+//        auto hash_key = cp.GetHashKey(value);
 //
 //        // make sure this works as intended
 //        return_value += type_code;
@@ -185,7 +186,7 @@ std::string SerializeCountAndValue(int count, std::string value) {
 //    }
 //
 //    // make sure thats a success status
-//    ProcessStatus operator()(const uint256_t& value) {
+//    std::string operator()(const uint256_t& value){
 //        std::string return_value;
 //
 //        auto type_code = (char)NUM;
@@ -203,7 +204,7 @@ std::string SerializeCountAndValue(int count, std::string value) {
 //        return process_status;
 //    }
 //
-//    ProcessStatus operator()(const CodePoint& value) {
+//    std::string operator()(const CodePoint& value) {
 //        std::string return_value;
 //
 //        auto type_code = (char)CODEPT;
@@ -220,6 +221,8 @@ std::string SerializeCountAndValue(int count, std::string value) {
 //    }
 //};
 //
-// ProcessStatus CheckpointDataLayer::ProcessValue(const value& value) {
-//    return nonstd::visit(ValueProcessor{}, value);
+// ProcessStatus CheckpointDataLayer::ProcessValue(CheckpointDataLayer& cp,
+// const value& value) {
+//
+//    return nonstd::visit(ValueProcessor{cp}, value);
 //}

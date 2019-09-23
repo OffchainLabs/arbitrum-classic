@@ -19,7 +19,6 @@
 
 #include <avm/bigint.hpp>
 #include <avm/opcodes.hpp>
-
 #include <nonstd/variant.hpp>
 
 enum types { NUM, CODEPT, HASH_ONLY, TUPLE };
@@ -32,9 +31,18 @@ struct CodePoint;
 // Note: uint256_t is actually 48 bytes long
 using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
+struct SerializedValue {
+    types type;
+    std::string string_value;
+};
+
 std::ostream& operator<<(std::ostream& os, const value& val);
-types GetType(const value& val);
 uint256_t hash(const value& value);
+// std::string HashKey(const value& val);
+// std::string GetHashKey(const Tuple& val);
+// std::string GetHashKey(const uint256_t& val);
+// std::string GetHashKey(const CodePoint& val);
+SerializedValue SerializeValue(const value& val);
 int get_tuple_size(char*& bufptr);
 
 uint256_t deserialize_int(char*& srccode);
