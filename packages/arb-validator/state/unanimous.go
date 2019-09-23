@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -46,12 +47,15 @@ func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethbridge.Event, tim
 	case ethbridge.PendingUnanimousAssertEvent:
 		// Someone proposed a pending update
 		// Final update has already been sent
+		log.Println("Someone proposed a pending unanimous update, Final update has already been sent")
 		return bot, nil, nil
 	case ethbridge.PendingDisputableAssertionEvent:
 		// Someone proposed a disputable Assertion
 		// Final update has already been sent
+		log.Println("Someone proposed a pending disputable update, Final update has already been sent")
 		return bot, nil, nil
 	case ethbridge.FinalizedUnanimousAssertEvent:
+		log.Println("Channel update state - Finalized Unanimous Assert Event")
 		bot.Core.DeliverMessagesToVM(bridge)
 		if bot.retChan != nil {
 			bot.retChan <- true

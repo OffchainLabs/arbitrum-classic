@@ -257,6 +257,7 @@ func (tr *txTracker) processFinalizedAssertion(assertion valmessage.FinalizedAss
 		case evm.Return:
 			info.TxLogs = append(info.TxLogs, logsInfo{evmVal.Msg, evmVal.Logs})
 		case evm.Revert:
+			log.Print("*********** evm.Revert occurred")
 		}
 
 		msg := evmVal.GetEthMsg()

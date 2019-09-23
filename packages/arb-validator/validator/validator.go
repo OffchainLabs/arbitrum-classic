@@ -143,6 +143,7 @@ type Validator struct {
 	Name        string
 	actions     chan func()
 	maybeAssert chan bool
+	monitor     chan string
 
 	// Run loop only
 	bot                      Bot
@@ -158,15 +159,21 @@ func NewValidator(
 ) *Validator {
 	actions := make(chan func(), 100)
 	maybeAssert := make(chan bool, 100)
+	mon := make(chan string, 100)
 	return &Validator{
 		name,
 		actions,
 		maybeAssert,
+		mon,
 		bot,
 		nil,
 		latestHeader,
 		nil,
 	}
+}
+
+func (validator *Validator) GetMonitor() <-chan string {
+	return validator.monitor
 }
 
 func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Value, <-chan error) {
@@ -362,6 +369,11 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 			case ethbridge.NewTimeEvent:
 				break
 			case ethbridge.VMEvent:
+				log.Printf("validator %v received VMEvent type %T value = %v", validator.Name, ev, ev)
+				switch ev.(type) {
+				case ethbridge.OneStepProofEvent:
+					log.Printf("*******validator received ethbridge.OneStepProofEvent")
+				}
 				err := validator.eventUpdate(ev, notification.Header)
 				if err != nil {
 					log.Println("Error processing event update", err)
@@ -369,7 +381,7 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 			case ethbridge.MessageDeliveredEvent:
 				validator.bot.SendMessageToVM(ev.Msg)
 			default:
-				panic("Should never recieve other kinds of events")
+				panic("Should never receive other kinds of events")
 			}
 		case action := <-validator.actions:
 			action()
