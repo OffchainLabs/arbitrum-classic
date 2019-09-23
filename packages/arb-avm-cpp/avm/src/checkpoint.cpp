@@ -1,14 +1,14 @@
 //
-//  checkpointmaker.cpp
+//  checkpoint.cpp
 //  avm
 //
-//  Created by Minh Truong on 9/12/19.
+//  Created by Minh Truong on 9/22/19.
 //
 
 #include "checkpoint.hpp"
 #include <avm/tuple.hpp>
-#include "CheckpointDataLayer.hpp"
 #include "avm/machine.hpp"
+#include "checkpointdatalayer.hpp"
 
 MachineCheckPoints::MachineCheckPoints() {
     // storage = new CheckpointStorage   no work??
@@ -24,8 +24,8 @@ Checkpoint MachineCheckPoints::SaveMachine(std::string machine_state_name,
     // should contain more data? like errpc?
     auto checkpoint_tuple = machine.getCheckPointTuple();
 
-    auto status =
-        storage.SaveValueAndMapToKey(checkpoint_tuple, machine_state_name);
+    auto status = storage.SaveValueAndMapToKey(checkpoint_tuple.value,
+                                               machine_state_name);
 
     if (status.ok()) {
         return Checkpoint();
@@ -37,12 +37,5 @@ Checkpoint MachineCheckPoints::SaveMachine(std::string machine_state_name,
 
 Machine MachineCheckPoints::RestoreMachine(std::string name,
                                            std::string contract_filename) {
-    Machine machine;
-    machine
+    auto machine = Machine(contract_filename);
 }
-
-// private functions
-// ------------------------------------------------------------
-void SaveMachineCode(){
-
-};

@@ -15,7 +15,6 @@
  */
 
 #include <avm/machine.hpp>
-
 #include <catch2/catch.hpp>
 
 #include <stdio.h>

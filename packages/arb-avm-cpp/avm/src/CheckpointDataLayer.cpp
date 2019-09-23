@@ -9,6 +9,7 @@
 #include <vector>
 #include "avm/tuple.hpp"
 #include "avm/value.hpp"
+#include "checkpointutils.hpp"
 
 using UCharVec = std::vector<unsigned char>;
 
@@ -30,6 +31,12 @@ void CheckpointDataLayer::Close() {
     delete txn_db;
 }
 
+rocksdb::Status CheckpointDataLayer::GetMachineState(std::string machine_name) {
+    auto hash_results = GetValueAndCount(machine_name);
+    auto data_hash = hash_results.result_value;
+    auto data_results = GetValueAndCount(data_hash);
+}
+
 rocksdb::Status CheckpointDataLayer::SaveValueAndMapToKey(
     const Tuple& val,
     std::string hash_key) {
@@ -41,6 +48,7 @@ rocksdb::Status CheckpointDataLayer::SaveValueAndMapToKey(
 }
 
 rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
+    // somtime it says no conversion
     auto hash_key = GetHashKey(val);
     auto value_to_store = std::string();
 
@@ -51,6 +59,11 @@ rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
         switch (serialized_value.type) {
             case TUPLE: {
                 value_to_store += serialized_value.string_value;
+                auto tup = nonstd::get<Tuple>(item);
+                auto status = SaveValue(tup);
+
+                if (!status.ok()) {
+                }
             }
             case NUM: {
                 value_to_store += serialized_value.string_value;
@@ -59,13 +72,6 @@ rocksdb::Status CheckpointDataLayer::SaveValue(const Tuple& val) {
                 value_to_store += serialized_value.string_value;
             }
         }
-        // auto processed_value = ProcessValue(*this, item);
-
-        //        if (processed_value.status.ok()) {
-        //            value_to_store += processed_value.string_value;
-        //        } else {
-        //            // log
-        //        }
     }
 
     auto save_status = SaveValue(value_to_store, hash_key);
@@ -164,65 +170,3 @@ std::string SerializeCountAndValue(int count, std::string value) {
 
     return str;
 }
-
-// struct ValueProcessor {
-//    // is it correctly intialized?
-//    CheckpointDataLayer cp;
-//
-//    std::string operator()(const Tuple& value) {
-//        auto status = cp.SaveValue(value);
-//        std::string return_value;
-//
-//        auto type_code = (char)TUPLE;
-//        auto hash_key = cp.GetHashKey(value);
-//
-//        // make sure this works as intended
-//        return_value += type_code;
-//        return_value += hash_key;
-//
-//        ProcessStatus process_status{status, return_value};
-//
-//        return process_status;
-//    }
-//
-//    // make sure thats a success status
-//    std::string operator()(const uint256_t& value){
-//        std::string return_value;
-//
-//        auto type_code = (char)NUM;
-//        // makesure correct conversion
-//        std::ostringstream ss;
-//        ss << value;
-//        auto value_str = ss.str();
-//
-//        // make sure this works as intended
-//        return_value += type_code;
-//        return_value += value_str;
-//
-//        ProcessStatus process_status{rocksdb::Status(), return_value};
-//
-//        return process_status;
-//    }
-//
-//    std::string operator()(const CodePoint& value) {
-//        std::string return_value;
-//
-//        auto type_code = (char)CODEPT;
-//        // fine?
-//        auto value_str = std::to_string(value.pc);
-//
-//        // make sure this works as intended
-//        return_value += type_code;
-//        return_value += value_str;
-//
-//        ProcessStatus process_status{rocksdb::Status(), return_value};
-//
-//        return process_status;
-//    }
-//};
-//
-// ProcessStatus CheckpointDataLayer::ProcessValue(CheckpointDataLayer& cp,
-// const value& value) {
-//
-//    return nonstd::visit(ValueProcessor{cp}, value);
-//}

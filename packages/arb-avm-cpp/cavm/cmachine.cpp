@@ -28,23 +28,12 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    std::ifstream myfile;
+    auto machine = new Machine(filename);
 
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(filename, std::ios::in);
-    if (!myfile.is_open()) {
-        return nullptr;
-    }
-    myfile.read((char*)buf, filestatus.st_size);
-    auto machine = new Machine();
-    bool success = machine->deserialize(buf);
-    if (!success) {
-        return nullptr;
-    }
+    //    if (not correctly created)
+    //    {
+    //        return nullptr;
+    //    }
     return machine;
 }
 

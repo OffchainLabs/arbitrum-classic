@@ -21,6 +21,7 @@
 #include <iostream>
 #include "avm/opcodes.hpp"
 #include "bigint_utils.hpp"
+#include "checkpointutils.hpp"
 #include "util.hpp"
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
@@ -47,13 +48,19 @@ Machine::Machine(std::string filename) {
     char* buf = (char*)malloc(filestatus.st_size);
 
     myfile.open(filename, std::ios::in);
+
     if (myfile.is_open()) {
         myfile.read((char*)buf, filestatus.st_size);
         myfile.close();
-    }
 
-    Machine machine;
-    machine.deserialize(buf);
+        auto success = deserialize(buf);
+
+        if (!success) {
+            // log?
+        }
+    } else {
+        // log??
+    }
 }
 
 void Machine::sendOnchainMessage(const Message& msg) {
@@ -68,18 +75,21 @@ void Machine::sendOffchainMessages(const std::vector<Message>& messages) {
     m.sendOffchainMessages(messages);
 }
 
-Tuple Machine::getCheckPointTuple() {
+CheckpointData Machine::getCheckPointTuple() {
     auto pool = &getPool();
 
     auto pc_value = CodePoint();
     pc_value.pc = m.pc;
 
+    // what about blockreason
     auto machine_state_as_tuple =
         Tuple(pc_value, m.errpc, m.stack.GetTupleRepresentation(pool),
               m.auxstack.GetTupleRepresentation(pool), m.registerVal,
-              m.staticVal, pool);
+              m.staticVal, m.pendingInbox.messages, m.inbox.messages, pool);
 
-    return machine_state_as_tuple;
+    CheckpointData cp_data = {machine_state_as_tuple, m.state, m.balance};
+
+    return cp_data;
 }
 
 Assertion Machine::run(uint64_t stepCount,

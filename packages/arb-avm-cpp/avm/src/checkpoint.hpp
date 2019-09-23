@@ -1,8 +1,8 @@
 //
-//  checkpointmaker.hpp
+//  checkpoint.hpp
 //  avm
 //
-//  Created by Minh Truong on 9/12/19.
+//  Created by Minh Truong on 9/22/19.
 //
 
 #ifndef checkpoint_hpp
@@ -10,8 +10,8 @@
 
 #include <stdio.h>
 #include <vector>
-#include "CheckpointDataLayer.hpp"
 #include "avm/machine.hpp"
+#include "checkpointdatalayer.hpp"
 
 class Checkpoint {
     std::string checkPointName;

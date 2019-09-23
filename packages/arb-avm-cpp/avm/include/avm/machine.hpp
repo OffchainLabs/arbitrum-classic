@@ -24,6 +24,7 @@
 #include <vector>
 #include "avm/exceptions.hpp"
 #include "avm/machinestate.hpp"
+#include "checkpointutils.hpp"
 
 struct Assertion {
     uint64_t stepCount;
@@ -64,7 +65,7 @@ class Machine {
     TuplePool& getPool() { return *m.pool; }
 
     // should this be a tuple or some struct?
-    Tuple getCheckPointTuple();
+    CheckpointData getCheckPointTuple();
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

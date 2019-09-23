@@ -6,3 +6,11 @@
 //
 
 #include "checkpointutils.hpp"
+
+CheckpointParsed CheckpointParser::ParseData(std::string data) {
+    CheckpointParsed parsed = {
+
+    };
+
+    return parsed;
+}
