@@ -268,3 +268,15 @@ struct Serializer {
 SerializedValue SerializeValue(const value& val) {
     return nonstd::visit(Serializer{}, val);
 }
+
+// make sure correct
+std::vector<unsigned char> ConvertToCharVector(uint256_t value) {
+    unsigned char value_char_list[sizeof(value)];
+    std::memcpy(value_char_list, &value, sizeof(value));
+    std::vector<unsigned char> return_vector;
+
+    return_vector.insert(return_vector.end(), std::begin(value_char_list),
+                         std::end(value_char_list));
+
+    return return_vector;
+}

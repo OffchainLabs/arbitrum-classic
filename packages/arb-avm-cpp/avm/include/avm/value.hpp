@@ -38,10 +38,6 @@ struct SerializedValue {
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);
-// std::string HashKey(const value& val);
-// std::string GetHashKey(const Tuple& val);
-// std::string GetHashKey(const uint256_t& val);
-// std::string GetHashKey(const CodePoint& val);
 SerializedValue SerializeValue(const value& val);
 int get_tuple_size(char*& bufptr);
 
@@ -69,5 +65,7 @@ uint256_t& assumeInt(value& val);
 const uint256_t& assumeInt(const value& val);
 uint64_t assumeInt64(uint256_t& val);
 Tuple& assumeTuple(value& val);
+
+std::vector<unsigned char> ConvertToCharVector(uint256_t value);
 
 #endif /* value_hpp */

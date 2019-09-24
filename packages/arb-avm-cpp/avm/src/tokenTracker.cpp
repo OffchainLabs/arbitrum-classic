@@ -155,3 +155,14 @@ void BalanceTracker::add(const TokenType& tokType, const uint256_t& amount) {
         nftLookup.insert(key);
     }
 }
+
+std::vector<std::tuple<TokenType, uint256_t>>
+BalanceTracker::GetAllTokenPairs() {
+    std::vector<std::tuple<TokenType, uint256_t>> tokens;
+
+    for (const auto& pair : tokenLookup) {
+        tokens.push_back(std::make_tuple(pair.first, pair.second));
+    }
+
+    return tokens;
+}

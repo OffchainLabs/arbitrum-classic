@@ -31,37 +31,40 @@ void CheckpointStorage::Close() {
     delete txn_db;
 }
 
-rocksdb::Status CheckpointStorage::GetMachineState(std::string machine_name) {
-    auto hash_results = GetValueAndCount(machine_name);
-    auto data_hash = hash_results.result_value;
-    auto data_results = GetValueAndCount(data_hash);
-}
+// GetResults CheckpointStorage::GetMachineState(std::string machine_name) {
+//    auto hash_results = GetValue(machine_name);
+//    auto data_hash = hash_results.stored_value;
+//    auto data_results = GetValue(data_hash);
+//
+//    return
+//}
 
-rocksdb::Status CheckpointStorage::SaveValueAndMapToKey(const Tuple& val,
-                                                        std::string hash_key) {
+GetResults CheckpointStorage::SaveValueAndMapToKey(const Tuple& val,
+                                                   std::string hash_key) {
     auto status = SaveValue(val);
     auto value_key = GetHashKey(val);
-    auto map_status = SaveValue(value_key, hash_key);
+    auto map_status = SaveValueToDb(value_key, hash_key);
 
     return map_status;
 }
 
-rocksdb::Status CheckpointStorage::SaveValue(const Tuple& val) {
-    // somtime it says no conversion
+GetResults CheckpointStorage::SaveValue(const Tuple& val) {
     auto hash_key = GetHashKey(val);
     auto value_to_store = std::string();
 
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
         auto item = val.get_element(i);
+
         auto serialized_value = SerializeValue(item);
 
         switch (serialized_value.type) {
             case TUPLE: {
                 value_to_store += serialized_value.string_value;
                 auto tup = nonstd::get<Tuple>(item);
-                auto status = SaveValue(tup);
+                auto results = SaveValue(tup);
 
-                if (!status.ok()) {
+                if (!results.status.ok()) {
+                    // log
                 }
             }
             case NUM: {
@@ -70,23 +73,28 @@ rocksdb::Status CheckpointStorage::SaveValue(const Tuple& val) {
             case CODEPT: {
                 value_to_store += serialized_value.string_value;
             }
+            case HASH_ONLY: {
+                // huh? error
+            }
         }
     }
 
-    auto save_status = SaveValue(value_to_store, hash_key);
+    auto save_results = SaveValueToDb(value_to_store, hash_key);
 
-    return save_status;
+    return save_results;
 };
 
-rocksdb::Status CheckpointStorage::SaveValue(std::string val, std::string key) {
-    auto results = GetValueAndCount(key);
+GetResults CheckpointStorage::SaveValueToDb(std::string val, std::string key) {
+    auto results = GetValue(key);
     auto ref_count = results.reference_count;
-    auto value = results.result_value;
+    auto value = results.stored_value;
 
-    if (ref_count < 1) {
+    if (!results.status.ok() && ref_count < 1) {
         value = val;
+        ref_count = 1;
+    } else {
+        ref_count += 1;
     }
-    ref_count += 1;
 
     auto updated_value = SerializeCountAndValue(ref_count, value);
 
@@ -101,20 +109,36 @@ rocksdb::Status CheckpointStorage::SaveValue(std::string val, std::string key) {
     auto commit_status = transaction->Commit();
     assert(commit_status.ok());
 
-    return commit_status;
+    if (commit_status.ok()) {
+        GetResults save_results{ref_count, commit_status, key, val};
+
+        return save_results;
+    } else {
+        auto unsuccessful = rocksdb::Status().NotFound();
+        GetResults save_results{--ref_count, unsuccessful, key, val};
+
+        // log
+    }
 };
 
 // use variant to return status error or value
-GetResults CheckpointStorage::GetValueAndCount(std::string hash_key) {
+GetResults CheckpointStorage::GetValue(std::string hash_key) {
     rocksdb::ReadOptions read_options;
     std::string return_value;
 
     auto get_status = txn_db->Get(read_options, hash_key, &return_value);
 
     if (get_status.ok()) {
-        return ParseCountAndValue(return_value);
+        auto tuple = ParseCountAndValue(return_value);
+
+        GetResults results{std::get<0>(tuple), get_status, hash_key,
+                           std::get<1>(tuple)};
+
+        return results;
     } else {
-        GetResults results{0, std::string()};
+        // make sure this is correct
+        auto unsuccessful = rocksdb::Status().NotFound();
+        GetResults results{0, unsuccessful, std::string(), std::string()};
 
         return results;
     }
@@ -143,7 +167,7 @@ std::string CheckpointStorage::GetHashKey(const value& val) {
     return std::string(hash_key_vector.begin(), hash_key_vector.end());
 }
 
-GetResults ParseCountAndValue(std::string string_value) {
+std::tuple<int, std::string> ParseCountAndValue(std::string string_value) {
     // is max 256 references good enough?
     const char* c_string = string_value.c_str();
     auto ref_count = (int)c_string[0];
@@ -151,9 +175,7 @@ GetResults ParseCountAndValue(std::string string_value) {
     // skips exactly the first char(byte) in order to extract value saved?
     auto saved_value = string_value.substr(1, string_value.size() - 1);
 
-    GetResults results{ref_count, saved_value};
-
-    return results;
+    return std::make_tuple(ref_count, saved_value);
 }
 
 std::string SerializeCountAndValue(int count, std::string value) {

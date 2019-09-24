@@ -11,10 +11,13 @@
 #include <string>
 #include "machinestatedata.hpp"
 #include "messagestack.hpp"
+#include "rocksdb/db.h"
 
 struct GetResults {
     int reference_count = 0;
-    std::string result_value;
+    rocksdb::Status status;
+    std::string storage_key;
+    std::string stored_value;
 };
 
 struct CheckpointData {
@@ -22,12 +25,12 @@ struct CheckpointData {
     value registerVal;
     datastack stack;
     datastack auxstack;
-    Status state;
-    uint64_t pc;
-    CodePoint errpc;
     MessageStack pendingInbox;
     MessageStack inbox;
+    uint64_t pc;
+    CodePoint errpc;
     BalanceTracker balance;
+    Status state;
     BlockReason blockReason;
 };
 

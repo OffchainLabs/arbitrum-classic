@@ -11,24 +11,37 @@
 #include <stdio.h>
 #include <avm/tokenTracker.hpp>
 #include <avm/value.hpp>
+#include <nonstd/variant.hpp>
 
 enum class Status { Extensive, Halted, Error };
 
 typedef std::array<uint256_t, 2> TimeBounds;
 
-struct NotBlocked {};
+enum BlockType { Not, Halt, Error, Breakpoint, Inbox, Send };
 
-struct HaltBlocked {};
+struct NotBlocked {
+    BlockType type = Not;
+};
 
-struct ErrorBlocked {};
+struct HaltBlocked {
+    BlockType type = Halt;
+};
 
-struct BreakpointBlocked {};
+struct ErrorBlocked {
+    BlockType type = Error;
+};
+
+struct BreakpointBlocked {
+    BlockType type = Breakpoint;
+};
 
 struct InboxBlocked {
+    BlockType type = Inbox;
     uint256_t inbox;
 };
 
 struct SendBlocked {
+    BlockType type = Send;
     uint256_t currency;
     TokenType tokenType;
 };
@@ -39,5 +52,12 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     BreakpointBlocked,
                                     InboxBlocked,
                                     SendBlocked>;
+
+struct SerializedBlockReason {
+    BlockType type;
+    std::vector<unsigned char> data;
+};
+
+SerializedBlockReason SerializeBlockReason(const BlockReason& val);
 
 #endif /* machinestatedata_hpp */

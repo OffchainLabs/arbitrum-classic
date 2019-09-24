@@ -513,7 +513,7 @@ BlockReason MachineOperation::send(MachineState& m) {
         return NotBlocked();
     }
     if (!m.balance.spend(outMsg.token, outMsg.currency)) {
-        return SendBlocked{outMsg.currency, outMsg.token};
+        return SendBlocked{Send, outMsg.currency, outMsg.token};
     } else {
         m.stack.popClear();
         m.context.outMessage.push_back(outMsg);
@@ -554,7 +554,7 @@ BlockReason MachineOperation::inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
     auto stackTop = nonstd::get_if<Tuple>(&m.stack[0]);
     if (stackTop && m.inbox.messages == *stackTop) {
-        return InboxBlocked{hash(m.inbox.messages)};
+        return InboxBlocked{Inbox, hash(m.inbox.messages)};
     } else {
         value inboxCopy = m.inbox.messages;
         m.stack[0] = std::move(inboxCopy);

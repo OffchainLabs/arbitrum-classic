@@ -25,7 +25,7 @@ class MachineCheckPoints {
     MachineCheckPoints();
     ~MachineCheckPoints();
     bool Cleanup();
-    Checkpoint SaveMachine(std::string name, Machine machine);
+    Checkpoint SaveMachine(std::string name, Machine& machine);
     Machine RestoreMachine(std::string name, std::string contract_filename);
     std::vector<std::string> GetKeys();
 };

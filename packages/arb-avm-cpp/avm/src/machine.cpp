@@ -80,9 +80,10 @@ CheckpointData Machine::getCheckPointData() {
     auto pc_value = CodePoint();
     pc_value.pc = m.pc;
 
-    CheckpointData cp_data = {
-        m.staticVal, m.registerVal,  m.stack, m.auxstack, m.state,      m.pc,
-        m.errpc,     m.pendingInbox, m.inbox, m.balance,  m.blockReason};
+    CheckpointData cp_data = {m.staticVal, m.registerVal,  m.stack,
+                              m.auxstack,  m.pendingInbox, m.inbox,
+                              m.pc,        m.errpc,        m.balance,
+                              m.state,     m.blockReason};
 
     return cp_data;
 }

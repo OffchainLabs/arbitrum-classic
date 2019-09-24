@@ -77,6 +77,7 @@ class BalanceTracker {
     void add(const TokenType& tokType, const uint256_t& amount);
     uint256_t tokenValue(const TokenType& tokType) const;
     bool hasNFT(const TokenType& tokType, const uint256_t& id) const;
+    std::vector<std::tuple<TokenType, uint256_t>> GetAllTokenPairs();
 };
 
 #endif /* tokenTracker_hpp */
