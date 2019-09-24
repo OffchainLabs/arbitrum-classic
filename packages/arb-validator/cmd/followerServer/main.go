@@ -29,18 +29,21 @@ import (
 	"os"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 type FollowerServer struct {
-	follower *ethvalidator.ValidatorFollower
+	follower *channel.ValidatorFollower
 }
 
 func NewFollowerServer(
@@ -61,33 +64,31 @@ func NewFollowerServer(
 		common.Address{}, // Address 0 means no owner
 	)
 
-	man, err := ethvalidator.NewValidatorFollower(
-		"Bob",
-		machine,
+	val, err := ethvalidator.NewValidator(
 		key,
+		connectionInfo,
+		ethURL,
+	)
+
+	if err != nil {
+		log.Fatalf("Failed to create validator %v\n", err)
+	}
+
+	man, err := channel.NewValidatorFollower(
+		"Bob",
+		val,
+		machine,
 		config,
 		false,
 		math.MaxInt32, // maxCallSteps
-		connectionInfo,
-		ethURL,
-		coordinatorURL,
 		math.MaxInt32, // maxUnanSteps
+		coordinatorURL,
 	)
 	if err != nil {
 		log.Fatalf("Failed to create follower %v\n", err)
 	}
 
-	if err = man.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	receiptChan, errChan := man.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
+	if err = man.Run(context.Background()); err != nil {
 		log.Fatal(err)
 	}
 

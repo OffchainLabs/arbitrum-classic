@@ -26,6 +26,31 @@ import (
 )
 
 type Bridge interface {
+	ArbVMBridge
+
+	FinalizedUnanimousAssert(
+		ctx context.Context,
+		newInboxHash [32]byte,
+		assertion *protocol.Assertion,
+		signatures [][]byte,
+	) (*types.Receipt, error)
+
+	PendingUnanimousAssert(
+		ctx context.Context,
+		newInboxHash [32]byte,
+		assertion *protocol.Assertion,
+		sequenceNum uint64,
+		signatures [][]byte,
+	) (*types.Receipt, error)
+
+	ConfirmUnanimousAsserted(
+		ctx context.Context,
+		newInboxHash [32]byte,
+		assertion *protocol.Assertion,
+	) (*types.Receipt, error)
+}
+
+type ArbVMBridge interface {
 	AddedNewMessages(count uint64)
 
 	FinalizedAssertion(
@@ -35,70 +60,53 @@ type Bridge interface {
 		proposalResults *valmessage.UnanimousUpdateResults,
 	)
 
-	FinalizedUnanimousAssert(
-		ctx context.Context,
-		newInboxHash [32]byte,
-		assertion *protocol.Assertion,
-		signatures [][]byte,
-	) (chan *types.Receipt, chan error)
-
-	PendingUnanimousAssert(
-		ctx context.Context,
-		newInboxHash [32]byte,
-		assertion *protocol.Assertion,
-		sequenceNum uint64,
-		signatures [][]byte,
-	) (chan *types.Receipt, chan error)
-
-	ConfirmUnanimousAsserted(
-		ctx context.Context,
-		newInboxHash [32]byte,
-		assertion *protocol.Assertion,
-	) (chan *types.Receipt, chan error)
-
 	PendingDisputableAssert(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	ConfirmDisputableAsserted(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.Assertion,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	InitiateChallenge(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	BisectAssertion(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		preconditions []*protocol.Precondition,
+		preconditions *protocol.Precondition,
 		assertions []*protocol.AssertionStub,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	OneStepProof(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
 		proof []byte,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	AsserterTimedOut(
 		ctx context.Context,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
 
 	ChallengerTimedOut(
 		ctx context.Context,
-	) (chan *types.Receipt, chan error)
+	) (*types.Receipt, error)
+
+	IsPendingUnanimous(
+		ctx context.Context,
+	) (bool, error)
 }

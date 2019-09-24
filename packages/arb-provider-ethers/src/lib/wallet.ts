@@ -20,6 +20,7 @@ import { ArbClient } from './client';
 import { Contract } from './contract';
 import { ArbProvider } from './provider';
 import * as ArbValue from './value';
+import { GlobalPendingInbox } from './GlobalPendingInbox';
 
 import * as ethers from 'ethers';
 
@@ -28,7 +29,7 @@ export class ArbWallet extends ethers.Signer {
     public contracts: Map<string, Contract>;
     public signer: ethers.Signer;
     public provider: ArbProvider;
-    public vmTracker: ethers.Contract;
+    public inboxManagerCache?: GlobalPendingInbox;
     public seq: ethers.utils.BigNumber;
     public pubkey?: string;
 
@@ -38,7 +39,6 @@ export class ArbWallet extends ethers.Signer {
         this.signer = signer;
         this.provider = provider;
         this.client = client;
-        this.vmTracker = provider.vmTracker.connect(signer);
         this.seq = ethers.utils.bigNumberify(0);
         this.pubkey = undefined;
     }
@@ -58,6 +58,16 @@ export class ArbWallet extends ethers.Signer {
             seq = seq.mul(2);
             this.seq = seq;
         });
+    }
+
+    public async globalInboxConn(): Promise<GlobalPendingInbox> {
+        if (!this.inboxManagerCache) {
+            const inboxManager = await this.provider.globalInboxConn();
+            const linkedInboxManager = inboxManager.connect(this.signer);
+            this.inboxManagerCache = linkedInboxManager;
+            return linkedInboxManager;
+        }
+        return this.inboxManagerCache;
     }
 
     public getAddress(): Promise<string> {
@@ -93,7 +103,7 @@ export class ArbWallet extends ethers.Signer {
                 value = ethers.utils.bigNumberify(await transaction.value); // eslint-disable-line require-atomic-updates
             }
             const args = [vmId, arbMsg.hash(), value, ethers.utils.hexZeroPad('0x00', 21)];
-            const messageHash = ethers.utils.solidityKeccak256(['bytes32', 'bytes32', 'uint256', 'bytes21'], args);
+            const messageHash = ethers.utils.solidityKeccak256(['address', 'bytes32', 'uint256', 'bytes21'], args);
             const fromAddress = await this.getAddress();
             if (value.eq(0)) {
                 const messageHashBytes = ethers.utils.arrayify(messageHash);
@@ -106,7 +116,8 @@ export class ArbWallet extends ethers.Signer {
                 }
                 await this.client.sendMessage(arbMsg, sig, this.pubkey);
             } else {
-                const blockchainTx = await this.vmTracker.sendEthMessage(vmId, ArbValue.marshal(arbMsg), {
+                const inboxManager = await this.globalInboxConn();
+                const blockchainTx = await inboxManager.sendEthMessage(vmId, ArbValue.marshal(arbMsg), {
                     value,
                 });
 

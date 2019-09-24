@@ -8,7 +8,6 @@
 # Global build args (for multistage build)
 ARG MNEMONIC=\
 "jar deny prosper gasp flush glass core corn alarm treat leg smart"
-ARG NUM_VALIDATORS=10
 ARG NUM_WALLETS=110
 
 FROM alpine:3.9
@@ -34,10 +33,8 @@ RUN truffle compile
 
 # Global arguments
 ARG MNEMONIC
-ARG NUM_VALIDATORS
 ARG NUM_WALLETS
-ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_VALIDATORS=$NUM_VALIDATORS \
-    NUM_WALLETS=$NUM_WALLETS
+ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_WALLETS=$NUM_WALLETS
 
 # Generate bridge_eth_addresses.json for export
 RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
@@ -45,7 +42,7 @@ RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
         -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
     while ! nc -z localhost ${PORT}; do sleep 2; done; \
     echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate --reset --compile-all -q && [ -f bridge_eth_addresses.json ]
+    truffle migrate -q && [ -f bridge_eth_addresses.json ]
 
 
 # Minimize image
@@ -74,7 +71,6 @@ COPY --chown=user . ./
 # Global arguments
 ARG MNEMONIC
 ARG NUM_WALLETS
-ARG NUM_VALIDATORS
 
 ENV GAS_LIMIT=6721975 \
     VERBOSE="-q" \
@@ -83,7 +79,6 @@ ENV GAS_LIMIT=6721975 \
     PORT=7545 \
     MNEMONIC=$MNEMONIC \
     NUM_WALLETS=$NUM_WALLETS \
-    NUM_VALIDATORS=$NUM_VALIDATORS \
     DOCKER=true
 # DOCKER=true makes ganache run on host 0.0.0.0
 

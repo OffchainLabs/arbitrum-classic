@@ -51,7 +51,6 @@ services:
             args:
                 MNEMONIC: '%s'
                 NUM_WALLETS: %d
-                NUM_VALIDATORS: %d
         environment:
             - GAS_PER_WALLET=%d
             - GAS_LIMIT=%d
@@ -86,7 +85,6 @@ def compose_header(
     cethbridge,
     mnemonic,
     num_wallets,
-    num_validators,
     gas_per_wallet,
     gas_limit,
     block_time,
@@ -101,7 +99,6 @@ def compose_header(
         cethbridge,
         mnemonic,
         num_wallets,
-        num_validators,
         gas_per_wallet,
         gas_limit,
         block_time,
@@ -205,7 +202,6 @@ def deploy(
         os.path.abspath(os.path.join(ROOT_DIR, "packages", "arb-bridge-eth")),
         mnemonic,
         n_wallets,
-        n_validators,
         gas_per_wallet,
         gas_limit,
         block_time,

@@ -1,0 +1,21 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### update-go-abi
+### --------------------------------------------------------------------
+
+yarn workspace arb-bridge-eth build
+cd packages/arb-bridge-eth/contracts
+cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
+cp -r ../node_modules/solidity-bytes-utils/ ./solidity-bytes-utils
+abigen --sol=ChainLauncher.sol --pkg=chainlauncher --out=chainlauncher.go
+abigen --sol=ChannelLauncher.sol --pkg=channellauncher --out=channellauncher.go
+abigen --sol=ChallengeManager.sol --pkg=challengemanager --out=challengemanager.go
+abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
+\cp chainlauncher.go ../../arb-validator/ethbridge/chainlauncher/
+\cp channellauncher.go ../../arb-validator/ethbridge/channellauncher/
+\cp challengemanager.go ../../arb-validator/ethbridge/challengemanager/
+\cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
+rm -rf @openzeppelin solidity-bytes-utils
+rm -f chainlauncher.go channellauncher.go challengemanager.go globalpendinginbox.go
+cd ../../..
+yarn workspace arb-provider-ethers update-abi

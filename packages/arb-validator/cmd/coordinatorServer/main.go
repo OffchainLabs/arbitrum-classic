@@ -17,14 +17,21 @@
 package main
 
 import (
+	"context"
 	jsonenc "encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -35,7 +42,6 @@ import (
 	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 )
 
@@ -71,7 +77,7 @@ func main() {
 	}
 
 	// 1) Compiled Arbitrum bytecode
-	machine, err := loader.LoadMachineFromFile(flag.Arg(0), true, *vmType)
+	mach, err := loader.LoadMachineFromFile(flag.Arg(0), true, *vmType)
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
@@ -131,9 +137,39 @@ func main() {
 	// 5) URL
 	ethURL := flag.Arg(4)
 
+	config := valmessage.NewVMConfiguration(
+		10,
+		big.NewInt(10),
+		common.Address{}, // Address 0 is eth
+		validators,
+		200000,
+		common.Address{}, // Address 0 means no owner
+	)
+
 	// Validator creation
-	server := coordinator.NewRPCServer(machine, key, validators, connectionInfo, ethURL)
-	server.CreateVM()
+	val, err := ethvalidator.NewValidator(
+		key,
+		connectionInfo,
+		ethURL,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	address, err := val.LaunchChannel(context.Background(), config, mach.Hash())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	server, err := coordinator.NewRPCServer(val, address, mach, config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := server.Run(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
 	// Run server
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")

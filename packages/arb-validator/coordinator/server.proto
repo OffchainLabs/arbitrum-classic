@@ -73,20 +73,20 @@ message GetAssertionCountReply {
     int32 assertionCount = 1;
 }
 
-message GetVMCreatedTxHashArgs {
-
-}
-
-message GetVMCreatedTxHashReply {
-    string vmCreatedTxHash = 1;
-}
-
 message GetVMInfoArgs {
 
 }
 
 message GetVMInfoReply {
     string vmID = 1;
+}
+
+message GetValidatorListArgs {
+
+}
+
+message GetValidatorListReply {
+    repeated string validators = 1;
 }
 
 message CallMessageArgs {
@@ -104,6 +104,6 @@ service Coordinator {
     rpc CallMessage (CallMessageArgs) returns (CallMessageReply);
     rpc FindLogs (FindLogsArgs) returns (FindLogsReply);
     rpc GetAssertionCount (GetAssertionCountArgs) returns (GetAssertionCountReply);
-    rpc GetVMCreatedTxHash (GetVMCreatedTxHashArgs) returns (GetVMCreatedTxHashReply);
     rpc GetVMInfo (GetVMInfoArgs) returns (GetVMInfoReply);
+    rpc GetValidatorList (GetValidatorListArgs) returns (GetValidatorListReply);
 }

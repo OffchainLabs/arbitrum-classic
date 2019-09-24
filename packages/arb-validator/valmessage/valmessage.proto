@@ -20,10 +20,6 @@ import "protocol/protocol.proto";
 import "value/value.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage";
 
-message Address {
-    bytes value = 1;
-}
-
 message TokenTypeBuf {
     bytes value = 1;
 }
@@ -31,26 +27,15 @@ message TokenTypeBuf {
 message VMConfiguration {
     uint64 grace_period = 1;
     value.BigIntegerBuf escrow_required = 2;
-    Address escrow_currency = 3;
-    repeated Address assert_keys = 4;
+    protocol.AddressBuf escrow_currency = 3;
+    repeated protocol.AddressBuf assert_keys = 4;
     uint32 max_execution_step_count = 5;
-    Address owner = 6;
-}
-
-message CreateVMValidatorRequest {
-    valmessage.VMConfiguration config = 1;
-    value.HashBuf vm_id = 2;
-    value.HashBuf vm_state = 3;
-    uint32 challengeManagerNum = 4;
+    protocol.AddressBuf owner = 6;
 }
 
 message UnanimousAssertionValidatorNotification {
     bool accepted = 1;
     repeated bytes signatures = 2;
-}
-
-message CreateVMFinalizedValidatorNotification {
-    bool approved = 1;
 }
 
 message SignedMessage {
@@ -71,14 +56,7 @@ message ValidatorRequest {
     oneof request {
         UnanimousAssertionValidatorRequest unanimous = 2;
         UnanimousAssertionValidatorNotification unanimousNotification = 3;
-        CreateVMValidatorRequest create = 4;
-        CreateVMFinalizedValidatorNotification createNotification = 5;
     }
-}
-
-message CreateVMFollowerResponse {
-    bool accepted = 1;
-    bytes signature = 2;
 }
 
 message UnanimousAssertionFollowerResponse {
@@ -89,8 +67,5 @@ message UnanimousAssertionFollowerResponse {
 
 message FollowerResponse {
     value.HashBuf request_id = 1;
-    oneof response {
-        CreateVMFollowerResponse create = 2;
-        UnanimousAssertionFollowerResponse unanimous = 3;
-    }
+    UnanimousAssertionFollowerResponse unanimous = 3;
 }

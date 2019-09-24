@@ -80,11 +80,11 @@ func (tb TimeBounds) AsValue() value.Value {
 type Precondition struct {
 	BeforeHash    [32]byte
 	TimeBounds    TimeBounds
-	BeforeBalance *BalanceTracker
+	BeforeBalance *TokenTracker
 	BeforeInbox   value.HashOnlyValue
 }
 
-func NewPrecondition(beforeHash [32]byte, timeBounds TimeBounds, beforeBalance *BalanceTracker, beforeInbox value.Value) *Precondition {
+func NewPrecondition(beforeHash [32]byte, timeBounds TimeBounds, beforeBalance *TokenTracker, beforeInbox value.Value) *Precondition {
 	return &Precondition{beforeHash, timeBounds, beforeBalance, value.NewHashOnlyValueFromValue(beforeInbox)}
 }
 

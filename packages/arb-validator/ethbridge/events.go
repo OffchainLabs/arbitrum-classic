@@ -17,8 +17,6 @@
 package ethbridge
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -41,7 +39,7 @@ type VMEvent interface {
 
 type Notification struct {
 	Header *types.Header
-	VMID   [32]byte
+	VMID   common.Address
 	Event  Event
 	TxHash [32]byte
 }
@@ -130,21 +128,6 @@ type OneStepProofEvent struct{}
 
 func (OneStepProofEvent) GetIncomingMessageType() IncomingMessageType {
 	return ChallengeMessage
-}
-
-type VMCreatedEvent struct {
-	GracePeriod         uint32
-	EscrowRequired      *big.Int
-	EscrowCurrency      common.Address
-	MaxExecutionSteps   uint32
-	VMState             [32]byte
-	ChallengeManagerNum uint16
-	Owner               common.Address
-	Validators          []common.Address
-}
-
-func (VMCreatedEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
 }
 
 type MessageDeliveredEvent struct {

@@ -25,7 +25,11 @@ import * as ethers from 'ethers';
 
 const promisePoller = require('promise-poller').default;
 
-import vmTrackerJson from './VMTracker.json';
+import { ArbChannelFactory } from './ArbChannelFactory';
+import { ArbChannel } from './ArbChannel';
+
+import { GlobalPendingInboxFactory } from './GlobalPendingInboxFactory';
+import { GlobalPendingInbox } from './GlobalPendingInbox';
 
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve: any): void => {
@@ -52,9 +56,10 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public chainId: number;
     public provider: ethers.providers.JsonRpcProvider;
     public client: ArbClient;
-    public vmTracker: ethers.Contract;
     public contracts: Map<string, Contract>;
 
+    private arbChannelCache?: ArbChannel;
+    private inboxManagerCache?: GlobalPendingInbox;
     private validatorAddressesCache?: string[];
     private vmIdCache?: string;
 
@@ -63,12 +68,31 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         this.chainId = 123456789;
         this.provider = provider;
         this.client = new ArbClient(managerUrl);
-        const contractAddress = '0x7073c616a8A3F277Ea4511fCe9EBB2656a1b87B8';
-        this.vmTracker = new ethers.Contract(contractAddress, vmTrackerJson.abi, provider);
         this.contracts = new Map<string, Contract>();
         for (const contract of contracts) {
             this.contracts.set(contract.address.toLowerCase(), contract);
         }
+    }
+
+    private async arbChannelConn(): Promise<ArbChannel> {
+        if (!this.arbChannelCache) {
+            const vmID = await this.client.getVmID();
+            const arbChannel = ArbChannelFactory.connect(vmID, this.provider);
+            this.arbChannelCache = arbChannel;
+            return arbChannel;
+        }
+        return this.arbChannelCache;
+    }
+
+    public async globalInboxConn(): Promise<GlobalPendingInbox> {
+        if (!this.inboxManagerCache) {
+            const arbChannel = await this.arbChannelConn();
+            const globalInboxAddress = arbChannel.globalInbox();
+            const inboxManager = GlobalPendingInboxFactory.connect(globalInboxAddress, this.provider);
+            this.inboxManagerCache = inboxManager;
+            return inboxManager;
+        }
+        return this.inboxManagerCache;
     }
 
     public async getSigner(index: number): Promise<ArbWallet> {
@@ -79,37 +103,43 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
     public async getValidatorAddresses(): Promise<string[]> {
         if (!this.validatorAddressesCache) {
-            const eventTxHash = await this.client.getVMCreatedTxHash();
-            const receipt = await this.provider.waitForTransaction(eventTxHash);
-            if (!receipt.logs) {
-                throw new Error('VMCreated Tx has no logs');
+            const arbChannel = await this.arbChannelConn();
+            const validators = await this.client.getValidatorList();
+            const isValidators = await arbChannel.isValidatorList(validators);
+            if (!isValidators) {
+                throw new Error('Incorrect validator list');
             }
-            const events = receipt.logs.map(l => this.vmTracker.interface.parseLog(l));
-            const vmCreatedEvent = events.find(event => event.name === EB_EVENT_VMC);
-            if (!vmCreatedEvent) {
-                throw new Error('VMCreated Event not found');
-            }
-
-            // Get vmId
-            const vmId = await this.getVmID();
-            if (vmCreatedEvent.values.vmId !== vmId) {
-                throw new Error(
-                    'VMCreated Event TxHash is from the wrong VM ID:' +
-                        vmCreatedEvent.values.vmId +
-                        '\nExpected:' +
-                        vmId,
-                );
-            }
-
-            const addresses = vmCreatedEvent.values.validators
-                .map((addr: string) => addr.toLowerCase().slice(2))
-                .sort();
 
             // Cache the set of lowercase validator addresses (without "0x")
-            this.validatorAddressesCache = addresses;
-            return addresses;
+            this.validatorAddressesCache = validators.map((addr: string) => addr.toLowerCase().slice(2)).sort();
+            return this.validatorAddressesCache;
         }
         return this.validatorAddressesCache;
+    }
+
+    public async verifyUnanimousSignatures(
+        assertionHash: ethers.utils.Arrayish,
+        validatorSigs: string[],
+    ): Promise<void> {
+        const validatorAddresses = await this.getValidatorAddresses();
+        if (validatorAddresses.length !== validatorSigs.length) {
+            throw Error('Expected: ' + validatorAddresses.length + ' signatures.\nReceived: ' + validatorSigs.length);
+        }
+
+        const addresses = validatorSigs
+            .map(sig =>
+                ethers.utils
+                    .verifyMessage(ethers.utils.arrayify(assertionHash), sig)
+                    .toLowerCase()
+                    .slice(2),
+            )
+            .sort();
+
+        for (let i = 0; i < validatorAddresses.length; i++) {
+            if (validatorAddresses[i] !== addresses[i]) {
+                throw Error('Invalid signature');
+            }
+        }
     }
 
     public async sendMessages(messages: Message[]): Promise<string> {
@@ -150,7 +180,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
         const vmId = await this.getVmID();
         const txHashCheck = ethers.utils.solidityKeccak256(
-            ['bytes32', 'bytes32', 'uint256', 'bytes21'],
+            ['address', 'bytes32', 'uint256', 'bytes21'],
             [
                 vmId,
                 evmVal.orig.calldataHash,
@@ -338,30 +368,11 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         validatorSigs: string[],
     ): Promise<void> {
         const vmId = await this.getVmID();
-        const validatorAddresses = await this.getValidatorAddresses();
-        if (validatorAddresses.length !== validatorSigs.length) {
-            throw Error('Expected: ' + validatorAddresses.length + ' signatures.\nReceived: ' + validatorSigs.length);
-        }
-
         const assertionHash = ethers.utils.solidityKeccak256(
-            ['bytes32', 'bytes32', 'bytes32'],
+            ['address', 'bytes32', 'bytes32'],
             [vmId, partialHash, logPostHash],
         );
-
-        const addresses = validatorSigs
-            .map(sig =>
-                ethers.utils
-                    .verifyMessage(ethers.utils.arrayify(assertionHash), sig)
-                    .toLowerCase()
-                    .slice(2),
-            )
-            .sort();
-
-        for (let i = 0; i < validatorAddresses.length; i++) {
-            if (validatorAddresses[i] !== addresses[i]) {
-                throw Error('Invalid signature');
-            }
-        }
+        await this.verifyUnanimousSignatures(assertionHash, validatorSigs);
     }
 
     // logPostHash: hexString
@@ -372,7 +383,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         if (!receipt.logs) {
             throw Error('DisputableAssertion tx had no logs');
         }
-        const events = receipt.logs.map(l => this.vmTracker.interface.parseLog(l));
+        const arbChannel = await this.arbChannelConn();
+        const events = receipt.logs.map(l => arbChannel.interface.parseLog(l));
         // DisputableAssertion Event
         const cda = events.find(event => event.name === EB_EVENT_CDA);
         if (!cda) {

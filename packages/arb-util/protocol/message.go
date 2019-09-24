@@ -19,12 +19,9 @@ package protocol
 import (
 	"errors"
 	"fmt"
-	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -64,43 +61,18 @@ type Message struct {
 	Data        value.Value
 	TokenType   [21]byte
 	Currency    *big.Int
-	Destination [32]byte
+	Destination common.Address
 }
 
-func NewMessage(data value.Value, tokenType [21]byte, currency *big.Int, destination [32]byte) Message {
-	return Message{data, tokenType, new(big.Int).Set(currency), destination}
+func NewMessage(data value.Value, tokenType [21]byte, currency *big.Int, destination *big.Int) Message {
+	var dest common.Address
+	destBytes := value.NewIntValue(destination).ToBytes()
+	copy(dest[:], destBytes[12:])
+	return Message{data, tokenType, new(big.Int).Set(currency), dest}
 }
 
 func NewSimpleMessage(data value.Value, tokenType [21]byte, currency *big.Int, sender common.Address) Message {
-	senderArr := [32]byte{}
-	copy(senderArr[:], sender.Bytes())
-	return Message{data, tokenType, currency, senderArr}
-}
-
-func NewMessageFromReader(rd io.Reader) (Message, error) {
-	data, err := value.UnmarshalValue(rd)
-	if err != nil {
-		return Message{}, err
-	}
-
-	tokenType := [21]byte{}
-	_, err = rd.Read(tokenType[:])
-	if err != nil {
-		return Message{}, fmt.Errorf("error unmarshalling OutgoingMessage: %v", err)
-	}
-
-	currency, err := value.NewIntValueFromReader(rd)
-	if err != nil {
-		return Message{}, fmt.Errorf("error unmarshalling OutgoingMessage: %v", err)
-	}
-
-	dest := [32]byte{}
-	_, err = rd.Read(tokenType[:])
-	if err != nil {
-		return Message{}, fmt.Errorf("error unmarshalling OutgoingMessage: %v", err)
-	}
-
-	return NewMessage(data, tokenType, currency.BigInt(), dest), nil
+	return Message{data, tokenType, currency, sender}
 }
 
 func NewMessageFromValue(val value.Value) (Message, error) {
@@ -139,41 +111,8 @@ func NewMessageFromValue(val value.Value) (Message, error) {
 		data,
 		tokenType,
 		amountInt.BigInt(),
-		destInt.ToBytes(),
+		destInt.BigInt(),
 	), nil
-}
-
-func (msg Message) Marshal(w io.Writer) error {
-	if err := value.MarshalValue(msg.Data, w); err != nil {
-		return err
-	}
-
-	_, err := w.Write(msg.TokenType[:])
-	if err != nil {
-		return err
-	}
-
-	err = value.NewIntValue(msg.Currency).Marshal(w)
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(msg.Destination[:])
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (msg Message) Hash() [32]byte {
-	var ret [32]byte
-	hashVal := solsha3.SoliditySHA3(
-		solsha3.Bytes32(msg.Data.Hash),
-		tokenTypeEncoded(msg.TokenType),
-		solsha3.Uint256(msg.Currency),
-		solsha3.Bytes32(msg.Destination),
-	)
-	copy(ret[:], hashVal)
-	return ret
 }
 
 func (msg Message) Clone() Message {

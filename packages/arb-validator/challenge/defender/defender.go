@@ -21,15 +21,16 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
-func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	deadline := time + core.VMConfig.GracePeriod
 	if assDef.GetAssertion().NumSteps == 1 {
 		fmt.Println("Generating proof")
@@ -37,7 +38,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		if err != nil {
 			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
 		}
-		bridge.OneStepProof(
+		_, err = bridge.OneStepProof(
 			context.Background(),
 			assDef.GetPrecondition(),
 			assDef.GetAssertion().Stub(),
@@ -48,7 +49,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 			precondition: assDef.GetPrecondition(),
 			assertion:    assDef.GetAssertion().Stub(),
 			deadline:     deadline,
-		}, nil
+		}, err
 	}
 
 	defenders := assDef.NBisect(6)
@@ -56,7 +57,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 	for _, defender := range defenders {
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
-	bridge.BisectAssertion(
+	_, err := bridge.BisectAssertion(
 		context.Background(),
 		assDef.GetPrecondition(),
 		assertions,
@@ -67,7 +68,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		wholeAssertion:    assDef.GetAssertion().Stub(),
 		splitDefenders:    defenders,
 		deadline:          deadline,
-	}, nil
+	}, err
 }
 
 type bisectedAssert struct {
@@ -78,7 +79,7 @@ type bisectedAssert struct {
 	deadline          uint64
 }
 
-func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -90,7 +91,7 @@ func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.Bridge) (challen
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev.(type) {
 	case ethbridge.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
@@ -110,18 +111,18 @@ type waitingBisected struct {
 	deadline  uint64
 }
 
-func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
 
-	bridge.ChallengerTimedOut(
+	_, err := bridge.ChallengerTimedOut(
 		context.Background(),
 	)
-	return challenge.TimedOutChallenger{Config: bot.Config}, nil
+	return challenge.TimedOutChallenger{Config: bot.Config}, err
 }
 
-func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
@@ -140,7 +141,7 @@ type oneStepChallenged struct {
 	deadline     uint64
 }
 
-func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -153,7 +154,7 @@ func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.Bridge) (chal
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (challenge.State, error) {
+func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev.(type) {
 	case ethbridge.OneStepProofEvent:
 		fmt.Println("oneStepChallenged: Proof was accepted")

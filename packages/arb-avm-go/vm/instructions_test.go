@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -748,11 +750,11 @@ func TestInbox(t *testing.T) {
 	tok[0] = 15
 	tok[20] = 1
 
-	msg := protocol.NewMessage(
+	msg := protocol.NewSimpleMessage(
 		value.NewInt64Value(1),
 		tok,
 		big.NewInt(3),
-		value.NewInt64Value(7).ToBytes(),
+		common.HexToAddress("af3253"),
 	)
 	m.SendOnchainMessage(msg)
 	m.DeliverOnchainMessage()
@@ -1524,7 +1526,7 @@ func TestSendFungible(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
 
 	// send token 15 value=7 to dest 4
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
@@ -1537,9 +1539,9 @@ func TestSendFungible(t *testing.T) {
 		t.Error("No out message generated")
 	}
 
-	dest := [32]byte{}
-	dest[31] = 4
-	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
+	dest := common.Address{}
+	dest[19] = 4
+	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
 	if !ad.OutMsgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
@@ -1568,7 +1570,7 @@ func TestSendNonFungible(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(7), [32]byte{}))
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(7), common.Address{}))
 
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
@@ -1581,9 +1583,9 @@ func TestSendNonFungible(t *testing.T) {
 		t.Error("No out message generated")
 	}
 
-	dest := [32]byte{}
-	dest[31] = 4
-	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
+	dest := common.Address{}
+	dest[19] = 4
+	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
 	if !msgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
@@ -1612,7 +1614,7 @@ func TestSendLowBalance(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
 
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
@@ -1650,7 +1652,7 @@ func TestNbsend1(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
 
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 
@@ -1690,7 +1692,7 @@ func TestNBSendFungible(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
 
 	// send token 15 value=7 to dest 4
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
@@ -1705,9 +1707,9 @@ func TestNBSendFungible(t *testing.T) {
 		t.Error("No out message generated")
 	}
 
-	dest := [32]byte{}
-	dest[31] = 4
-	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
+	dest := common.Address{}
+	dest[19] = 4
+	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
 	if !msgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
@@ -1736,7 +1738,7 @@ func TestNBSendNonFungible(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(7), [32]byte{}))
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(7), common.Address{}))
 
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
@@ -1750,9 +1752,9 @@ func TestNBSendNonFungible(t *testing.T) {
 		t.Error("No out message generated")
 	}
 
-	dest := [32]byte{}
-	dest[31] = 4
-	knownmessage := protocol.NewMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
+	dest := common.Address{}
+	dest[19] = 4
+	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
 	if !msgs[0].Equals(knownmessage) {
 		t.Error("Out message incorrect")
 	}
@@ -1781,7 +1783,7 @@ func TestNBSendLowBalance(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewMessage(value.NewEmptyTuple(), tok, big.NewInt(10), [32]byte{}))
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
 
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match

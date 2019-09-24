@@ -89,9 +89,9 @@ func (op ImmediateOperation) MarshalProof(wr io.Writer, includeVal bool) error {
 		return err
 	}
 	if includeVal {
-		return MarshalValue(op.Val.CloneShallow(), wr)
+		return MarshalValueForProof(op.Val.CloneShallow(), wr)
 	}
-	return MarshalValue(NewHashOnlyValueFromValue(op.Val), wr)
+	return MarshalValueForProof(NewHashOnlyValueFromValue(op.Val), wr)
 }
 
 func (op BasicOperation) TypeCode() uint8 {
@@ -263,7 +263,7 @@ func (cv CodePointValue) Marshal(w io.Writer) error {
 }
 
 func (cv CodePointValue) MarshalForProof(w io.Writer) error {
-	if err := cv.Op.Marshal(w); err != nil {
+	if err := MarshalOperation(cv.Op, w); err != nil {
 		return err
 	}
 	_, err := w.Write(cv.NextHash[:])

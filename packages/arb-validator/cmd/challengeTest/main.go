@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	jsonenc "encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +28,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -36,7 +39,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -61,7 +63,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(os.Args[2], true, "go")
+	machine, err := loader.LoadMachineFromFile(os.Args[2], true, "test")
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
@@ -75,19 +77,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var vmID [32]byte
-	_, err = rand.Read(vmID[:])
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	auth1 := bind.NewKeyedTransactor(key1)
 	auth2 := bind.NewKeyedTransactor(key2)
 
 	validators := []common.Address{auth1.From, auth2.From}
 	escrowRequired := big.NewInt(10)
 	config := valmessage.NewVMConfiguration(
-		10,
+		5,
 		escrowRequired,
 		common.Address{}, // Address 0 is eth
 		validators,
@@ -97,75 +93,76 @@ func main() {
 
 	ethURL := os.Args[3]
 
-	coordinator, err := ethvalidator.NewCoordinator(
-		"Alice",
-		machine.Clone(),
-		key1, config,
-		false,
-		math.MaxInt32, // maxCallSteps
+	val1, err := ethvalidator.NewValidator(
+		key1,
 		connectionInfo,
 		ethURL,
-		math.MaxInt32, // maxUnanSteps
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := coordinator.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	receiptChan, errChan := coordinator.Val.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
-		log.Fatal(err)
-	}
-
-	challenger, err := ethvalidator.NewValidatorFollower(
-		"Bob",
-		machine,
+	val2, err := ethvalidator.NewValidator(
 		key2,
+		connectionInfo,
+		ethURL,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	address, err := val1.LaunchChannel(context.Background(), config, machine.Hash())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	coordinator, err := channel.NewCoordinator(
+		"Alice",
+		val1,
+		address,
+		machine.Clone(),
+		config,
+		false,
+		math.MaxInt32, // maxCallSteps,
+		math.MaxInt32, // maxUnanSteps
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	coordinator.StartServer(context.Background())
+
+	time.Sleep(1 * time.Second)
+
+	challenger, err := channel.NewValidatorFollower(
+		"Bob",
+		val2,
+		machine.Clone(),
 		config,
 		true,
-		math.MaxInt32, // maxCallSteps
-		connectionInfo,
-		ethURL,
-		"wss://127.0.0.1:1236/ws",
+		math.MaxInt32, // maxCallSteps,
 		math.MaxInt32, // maxUnanSteps
+		"wss://127.0.0.1:1236/ws",
 	)
-	if err != nil {
-		log.Fatalf("Failed to create follower %v\n", err)
-	}
 
-	err = challenger.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	receiptChan, errChan = challenger.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
+	if err := coordinator.Run(context.Background()); err != nil {
 		log.Fatal(err)
 	}
 
-	retChan, errChan := coordinator.CreateVM(time.Second * 10)
-
-	select {
-	case <-retChan:
-		log.Println("Coordinator created VM")
-	case err := <-errChan:
-		log.Fatalf("Failed to create vm: %v", err)
+	if err := challenger.Run(context.Background()); err != nil {
+		log.Fatal(err)
 	}
 
-	time.Sleep(500 * time.Millisecond)
+	log.Println("Everyone is running")
+
+	time.Sleep(2 * time.Second)
+
+	challenger.IgnoreCoordinator()
 
 	dataBytes, _ := hexutil.Decode("0x2ddec39b0000000000000000000000000000000000000000000000000000000000000028")
 	data, _ := evm.BytesToSizedByteArray(dataBytes)
@@ -178,32 +175,17 @@ func main() {
 		seq,
 	})
 
-	receiptChan, errChan = coordinator.Val.SendEthMessage(
+	receipt, err := coordinator.Val.SendEthMessage(
 		context.Background(),
 		tup,
 		big.NewInt(0),
 	)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Follower could not deposit funds")
-		}
-	case err := <-errChan:
-		log.Fatal(err)
+	if err != nil {
+		log.Fatalln("Send error", err)
 	}
-	// fmt.Println("Send error", err)
-	// time.Sleep(2000 * time.Millisecond)
-	// successChan, errChan := coordinator.InitiateUnanimousAssertion(true)
-	// select {
-	// case result := <-successChan:
-	//	fmt.Println("ChallengeTest: Unanimous assertion successful", result)
-	// case err := <-errChan:
-	//	panic(fmt.Sprintf("Error Running unanimous assertion: %v", err))
-	//}
+	if receipt.Status == 0 {
+		log.Fatalln("Follower could not send message")
+	}
 
-	successChan := coordinator.InitiateDisputableAssertion()
-	result := <-successChan
-	fmt.Println("Result", result)
-
-	time.Sleep(10 * time.Second)
+	time.Sleep(60 * time.Second)
 }

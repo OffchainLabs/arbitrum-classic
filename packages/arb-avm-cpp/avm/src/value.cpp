@@ -78,8 +78,7 @@ void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf) {
 
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.push_back(NUM);
-    std::vector<unsigned char> tmpbuf;
-    tmpbuf.resize(32);
+    std::array<unsigned char, 32> tmpbuf;
     to_big_endian(val, tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
@@ -91,6 +90,33 @@ void marshal_value(const value val, std::vector<unsigned char>& buf) {
         marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
     else if (nonstd::holds_alternative<CodePoint>(val))
         marshal_CodePoint(nonstd::get<CodePoint>(val), buf);
+}
+
+void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
+    return nonstd::visit([&](const auto& v) { return marshalShallow(v, buf); },
+                         val);
+}
+
+void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
+    buf.push_back(TUPLE + val.tuple_size());
+    for (uint64_t i = 0; i < val.tuple_size(); i++) {
+        buf.push_back(HASH_ONLY);
+        std::array<unsigned char, 32> tmpbuf;
+        to_big_endian(::hash(val.get_element(i)), tmpbuf.begin());
+        buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+    }
+}
+
+void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf) {
+    buf.push_back(CODEPT);
+    val.op.marshalShallow(buf);
+    std::array<unsigned char, 32> hashVal;
+    to_big_endian(val.nextHash, hashVal.begin());
+    buf.insert(buf.end(), hashVal.begin(), hashVal.end());
+}
+
+void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
+    marshal_uint256_t(val, buf);
 }
 
 value deserialize_value(char*& bufptr, TuplePool& pool) {

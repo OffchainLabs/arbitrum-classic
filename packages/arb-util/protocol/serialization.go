@@ -19,6 +19,8 @@ package protocol
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -47,7 +49,19 @@ func NewTokenTypeFromBuf(buf *TokenTypeBuf) [21]byte {
 	return ret
 }
 
-func NewBalanceTrackerBuf(bt *BalanceTracker) *BalanceTrackerBuf {
+func NewAddressBuf(tok common.Address) *AddressBuf {
+	return &AddressBuf{
+		Value: tok.Bytes(),
+	}
+}
+
+func NewAddressFromBuf(buf *AddressBuf) common.Address {
+	var ret common.Address
+	copy(ret[:], buf.Value)
+	return ret
+}
+
+func NewTokenTrackerBuf(bt *TokenTracker) *TokenTrackerBuf {
 	types := make([]*TokenTypeBuf, 0, len(bt.entries))
 	amounts := make([]*value.BigIntegerBuf, 0, len(bt.entries))
 	for _, entry := range bt.entries {
@@ -58,13 +72,13 @@ func NewBalanceTrackerBuf(bt *BalanceTracker) *BalanceTrackerBuf {
 			Value: entry.amount.Bytes(),
 		})
 	}
-	return &BalanceTrackerBuf{
+	return &TokenTrackerBuf{
 		Types:   types,
 		Amounts: amounts,
 	}
 }
 
-func NewBalanceTrackerFromBuf(buf *BalanceTrackerBuf) *BalanceTracker {
+func NewTokenTrackerFromBuf(buf *TokenTrackerBuf) *TokenTracker {
 	types := make([][21]byte, 0, len(buf.Types))
 	amounts := make([]*big.Int, 0, len(buf.Amounts))
 
@@ -76,14 +90,14 @@ func NewBalanceTrackerFromBuf(buf *BalanceTrackerBuf) *BalanceTracker {
 	for _, tokenAmount := range buf.Amounts {
 		amounts = append(amounts, value.NewBigIntFromBuf(tokenAmount))
 	}
-	return NewBalanceTrackerFromLists(types, amounts)
+	return NewTokenTrackerFromLists(types, amounts)
 }
 
 func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
 	return &PreconditionBuf{
 		BeforeHash:     value.NewHashBuf(pre.BeforeHash),
 		TimeBounds:     NewTimeBoundsBuf(pre.TimeBounds),
-		BalanceTracker: NewBalanceTrackerBuf(pre.BeforeBalance),
+		BalanceTracker: NewTokenTrackerBuf(pre.BeforeBalance),
 		BeforeInbox:    value.NewHashBuf(pre.BeforeInbox.Hash()),
 	}
 }
@@ -92,7 +106,7 @@ func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition {
 	return &Precondition{
 		value.NewHashFromBuf(buf.BeforeHash),
 		NewTimeBoundsFromBuf(buf.TimeBounds),
-		NewBalanceTrackerFromBuf(buf.BalanceTracker),
+		NewTokenTrackerFromBuf(buf.BalanceTracker),
 		value.NewHashOnlyValue(value.NewHashFromBuf(buf.BeforeInbox), 1),
 	}
 }
@@ -102,17 +116,17 @@ func NewMessageBuf(val Message) *MessageBuf {
 		Value:     value.NewValueBuf(val.Data),
 		TokenType: NewTokenTypeBuf(val.TokenType),
 		Amount:    value.NewBigIntBuf(val.Currency),
-		Sender:    value.NewHashBuf(val.Destination),
+		Sender:    NewAddressBuf(val.Destination),
 	}
 }
 
 func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 	val, err := value.NewValueFromBuf(buf.Value)
-	return NewMessage(
+	return NewSimpleMessage(
 		val,
 		NewTokenTypeFromBuf(buf.TokenType),
 		value.NewBigIntFromBuf(buf.Amount),
-		value.NewHashFromBuf(buf.Sender),
+		NewAddressFromBuf(buf.Sender),
 	), err
 }
 

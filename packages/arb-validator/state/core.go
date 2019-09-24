@@ -25,10 +25,19 @@ import (
 )
 
 type State interface {
-	UpdateTime(uint64, bridge.Bridge) (State, error)
-	UpdateState(ethbridge.Event, uint64, bridge.Bridge) (State, challenge.State, error)
-
 	SendMessageToVM(msg protocol.Message)
 	GetCore() *core.Core
 	GetConfig() *core.Config
+}
+
+type ChannelState interface {
+	State
+	ChannelUpdateTime(uint64, bridge.Bridge) (ChannelState, error)
+	ChannelUpdateState(ethbridge.Event, uint64, bridge.Bridge) (ChannelState, challenge.State, error)
+}
+
+type ChainState interface {
+	ChannelState
+	ChainUpdateTime(uint64, bridge.ArbVMBridge) (ChainState, error)
+	ChainUpdateState(ethbridge.Event, uint64, bridge.ArbVMBridge) (ChainState, challenge.State, error)
 }

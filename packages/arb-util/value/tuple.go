@@ -118,6 +118,10 @@ func (tv TupleValue) Marshal(wr io.Writer) error {
 	return nil
 }
 
+func (tv TupleValue) MarshalForProof(wr io.Writer) error {
+	return tv.Marshal(wr)
+}
+
 func IsValidTupleSizeI64(size int64) bool {
 	return size >= 0 && size <= MaxTupleSize
 }

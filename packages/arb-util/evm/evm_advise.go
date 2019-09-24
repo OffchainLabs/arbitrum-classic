@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -340,13 +342,13 @@ type EthMsg struct {
 	Data      EthMsgData
 	TokenType [21]byte
 	Currency  *big.Int
-	Caller    [32]byte
+	Caller    common.Address
 }
 
-func (msg EthMsg) MsgHash(vmID [32]byte) [32]byte {
+func (msg EthMsg) MsgHash(vmID common.Address) [32]byte {
 	ret := [32]byte{}
 	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(vmID),
+		solsha3.Address(vmID),
 		solsha3.Bytes32(msg.Data.dataHash),
 		solsha3.Uint256(msg.Currency),
 		msg.TokenType[:],

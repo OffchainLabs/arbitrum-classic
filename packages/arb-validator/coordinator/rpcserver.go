@@ -18,12 +18,15 @@ package coordinator
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --tstypes_out=../../arb-provider-ethers/src/lib --go_out=paths=source_relative,plugins=grpc:. *.proto"
@@ -34,18 +37,13 @@ type RPCServer struct {
 
 // NewServer returns a new instance of the Server class
 func NewRPCServer(
+	val *ethvalidator.Validator,
+	vmID common.Address,
 	machine machine.Machine,
-	key *ecdsa.PrivateKey,
-	validators []common.Address,
-	connectionInfo ethbridge.ArbAddresses,
-	ethURL string,
-) *RPCServer {
-	return &RPCServer{NewServer(machine, key, validators, connectionInfo, ethURL)}
-}
-
-// NewServer returns a new instance of the Server class
-func (m *RPCServer) CreateVM() {
-	createVM(m.Server)
+	config *valmessage.VMConfiguration,
+) (*RPCServer, error) {
+	server, err := NewServer(val, vmID, machine, config)
+	return &RPCServer{server}, err
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -84,22 +82,18 @@ func (m *RPCServer) GetAssertionCount(r *http.Request, args *GetAssertionCountAr
 	return err
 }
 
-// GetVMCreatedTxHash returns the txHash containing the CreateVM Event
-func (m *RPCServer) GetVMCreatedTxHash(
-	r *http.Request,
-	args *GetVMCreatedTxHashArgs,
-	reply *GetVMCreatedTxHashReply,
-) error {
-	ret, err := m.Server.GetVMCreatedTxHash(context.Background(), args)
+// GetVMInfo returns current metadata about this VM
+func (m *RPCServer) GetVMInfo(r *http.Request, args *GetVMInfoArgs, reply *GetVMInfoReply) error {
+	ret, err := m.Server.GetVMInfo(context.Background(), args)
 	if ret != nil {
 		*reply = *ret
 	}
 	return err
 }
 
-// GetVMInfo returns current metadata about this VM
-func (m *RPCServer) GetVMInfo(r *http.Request, args *GetVMInfoArgs, reply *GetVMInfoReply) error {
-	ret, err := m.Server.GetVMInfo(context.Background(), args)
+// GetValidatorList returns current this VM list of validators
+func (m *RPCServer) GetValidatorList(r *http.Request, args *GetValidatorListArgs, reply *GetValidatorListReply) error {
+	ret, err := m.Server.GetValidatorList(context.Background(), args)
 	if ret != nil {
 		*reply = *ret
 	}

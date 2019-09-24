@@ -229,42 +229,35 @@ void MachineState::deliverOnchainMessages() {
     pendingInbox.clear();
 }
 
-void uint256_t_to_buf(uint256_t val, std::vector<unsigned char>& buf) {
-    std::vector<unsigned char> tmpbuf;
-    tmpbuf.resize(32);
+void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
+    std::array<unsigned char, 32> tmpbuf;
     to_big_endian(val, tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;
-    std::vector<bool> stackPops = InstructionStackPops.at(code[pc].op.opcode);
-    if (code[pc].op.immediate) {
+    auto opcode = code[pc].op.opcode;
+    std::vector<bool> stackPops = InstructionStackPops.at(opcode);
+    bool includeImmediateVal = false;
+    if (code[pc].op.immediate && !stackPops.empty()) {
+        includeImmediateVal = stackPops[0] == true;
         stackPops.erase(stackPops.begin());
     }
-    std::vector<bool> auxStackPops =
-        InstructionAuxStackPops.at(code[pc].op.opcode);
-    std::vector<value> stackVals;
-    uint256_t baseStackHash = stack.SolidityProofValue(stackPops, stackVals);
-    std::vector<value> auxStackVals;
-    uint256_t baseAuxStackHash =
-        auxstack.SolidityProofValue(auxStackPops, auxStackVals);
-    uint256_t registerHash = ::hash(registerVal);
-    uint256_t staticHash = ::hash(staticVal);
-    uint256_t errHandlerHash = ::hash(errpc);
+    std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
+    auto stackProof = stack.marshalForProof(stackPops);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops);
     uint256_t_to_buf(code[pc].nextHash, buf);
-    uint256_t_to_buf(baseStackHash, buf);
-    uint256_t_to_buf(baseAuxStackHash, buf);
-    uint256_t_to_buf(registerHash, buf);
-    uint256_t_to_buf(staticHash, buf);
-    uint256_t_to_buf(errHandlerHash, buf);
-    code[pc].op.marshal(buf);
-    for (auto const& stackval : stackVals) {
-        marshal_value(stackval, buf);
-    }
-    for (auto const& auxstackval : auxStackVals) {
-        marshal_value(auxstackval, buf);
-    }
+    uint256_t_to_buf(stackProof.first, buf);
+    uint256_t_to_buf(auxStackProof.first, buf);
+    uint256_t_to_buf(::hash(registerVal), buf);
+    uint256_t_to_buf(::hash(staticVal), buf);
+    uint256_t_to_buf(::hash(errpc), buf);
+    code[pc].op.marshalForProof(buf, includeImmediateVal);
+
+    buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
+    buf.insert(buf.end(), auxStackProof.second.begin(),
+               auxStackProof.second.end());
     return buf;
 }
 

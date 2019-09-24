@@ -19,14 +19,14 @@ package coordinator
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"log"
 	"math"
 	"math/big"
 	"strconv"
-	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -35,7 +35,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -44,84 +43,43 @@ import (
 
 // Server provides an interface for interacting with a a running coordinator
 type Server struct {
-	coordinator *ethvalidator.ValidatorCoordinator
+	coordinator *channel.ValidatorCoordinator
 	tracker     *txTracker
 }
 
 // NewServer returns a new instance of the Server class
 func NewServer(
+	val *ethvalidator.Validator,
+	vmID common.Address,
 	machine machine.Machine,
-	key *ecdsa.PrivateKey,
-	validators []common.Address,
-	connectionInfo ethbridge.ArbAddresses,
-	ethURL string,
-) *Server {
-	// Commit all pending transactions in the simulator and print the names again
-	escrowRequired := big.NewInt(10)
-	config := valmessage.NewVMConfiguration(
-		10,
-		escrowRequired,
-		common.Address{}, // Address 0 is eth
-		validators,
-		200000,
-		common.Address{}, // Address 0 means no owner
-	)
-
-	man, err := ethvalidator.NewCoordinator(
+	config *valmessage.VMConfiguration,
+) (*Server, error) {
+	man, err := channel.NewCoordinator(
 		"Alice",
+		val,
+		vmID,
 		machine.Clone(),
-		key,
 		config,
 		false,
-		math.MaxInt32, // maxCallSteps
-		connectionInfo,
-		ethURL,
-		math.MaxInt32, // maxUnanSteps
+		math.MaxInt32,
+		math.MaxInt32,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	if err := man.Run(); err != nil {
-		log.Fatalln(err)
-	}
+	man.StartServer(context.Background())
 
-	receiptChan, errChan := man.Val.DepositFunds(context.Background(), escrowRequired)
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Coordinator could not deposit funds")
-		}
-	case err := <-errChan:
-		log.Fatal("Coordinator failed depositing funds: ", err)
-	}
-
-	return &Server{man, nil}
-}
-
-// creates the VM and waits for followers to connect
-func createVM(server *Server) {
-	log.Println("Coordinator is trying to create the VM")
-
-	receiptChan, errChan := server.coordinator.CreateVM(time.Second * 60)
-
-	select {
-	case receipt := <-receiptChan:
-		if receipt.Status == 0 {
-			log.Fatalln("Coordinator failed to create VM")
-		}
-		log.Println("Coordinator created VM")
-	case err := <-errChan:
-		log.Fatalf("Failed to create vm: %v", err)
-	}
-
-	time.Sleep(500 * time.Millisecond)
-	log.Print("creating txtracker")
-	server.tracker = newTxTracker(server.coordinator.Val.VMID, <-server.coordinator.Val.VMCreatedTxHashChan)
+	tracker := newTxTracker(man.Val.VMID)
 	go func() {
-		server.tracker.handleTxResults(server.coordinator.Val.CompletedCallChan)
+		tracker.handleTxResults(man.Val.CompletedCallChan)
 	}()
 
+	return &Server{man, tracker}, nil
+}
+
+func (m *Server) Run(ctx context.Context) error {
+	return m.coordinator.Run(ctx)
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -169,7 +127,7 @@ func (m *Server) FindLogs(ctx context.Context, args *FindLogsArgs) (*FindLogsRep
 
 // SendMessage takes a request from a client and sends it to the VM
 func (m *Server) SendMessage(ctx context.Context, args *SendMessageArgs) (*SendMessageReply, error) {
-	if !<-m.coordinator.Val.Bot.CanRun() {
+	if !<-m.coordinator.ChannelVal.CanRun() {
 		return nil, errors.New("Cannot send message when machine can't run")
 	}
 	sigBytes, err := hexutil.Decode(args.Signature)
@@ -201,7 +159,7 @@ func (m *Server) SendMessage(ctx context.Context, args *SendMessageArgs) (*SendM
 	tokenType := [21]byte{}
 
 	messageHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(m.coordinator.Val.VMID),
+		solsha3.Address(m.coordinator.Val.VMID),
 		solsha3.Bytes32(dataVal.Hash()),
 		solsha3.Uint256(amount),
 		tokenType[:],
@@ -221,16 +179,12 @@ func (m *Server) SendMessage(ctx context.Context, args *SendMessageArgs) (*SendM
 		if !crypto.VerifySignature(pubkey, signedMsg, sigBytes[:len(sigBytes)-1]) {
 			return
 		}
-
-		senderArr := [32]byte{}
-		copy(senderArr[12:], crypto.PubkeyToAddress(*pub).Bytes())
-
-		m.coordinator.SendMessage(ethvalidator.OffchainMessage{
+		m.coordinator.SendMessage(channel.OffchainMessage{
 			Message: protocol.Message{
 				Data:        dataVal,
 				TokenType:   tokenType,
 				Currency:    amount,
-				Destination: senderArr,
+				Destination: crypto.PubkeyToAddress(*pub),
 			},
 			Hash:      messageHash,
 			Signature: sigBytes,
@@ -281,14 +235,6 @@ func (m *Server) GetAssertionCount(ctx context.Context, args *GetAssertionCountA
 	}, nil
 }
 
-// GetVMCreatedTxHash returns the txHash containing the CreateVM Event
-func (m *Server) GetVMCreatedTxHash(ctx context.Context, args *GetVMCreatedTxHashArgs) (*GetVMCreatedTxHashReply, error) {
-	res := <-m.tracker.VMCreatedTxHash()
-	return &GetVMCreatedTxHashReply{
-		VmCreatedTxHash: hexutil.Encode(res[:]),
-	}, nil
-}
-
 // GetVMInfo returns current metadata about this VM
 func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfoReply, error) {
 	return &GetVMInfoReply{
@@ -296,9 +242,21 @@ func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfo
 	}, nil
 }
 
+// GetValidatorList returns current this VM list of validators
+func (m *Server) GetValidatorList(ctx context.Context, args *GetValidatorListArgs) (*GetValidatorListReply, error) {
+	state := <-m.coordinator.ChannelVal.RequestVMState()
+	validators := make([]string, 0, len(state.Config.AssertKeys))
+	for _, key := range state.Config.AssertKeys {
+		validators = append(validators, protocol.NewAddressFromBuf(key).Hex())
+	}
+	return &GetValidatorListReply{
+		Validators: validators,
+	}, nil
+}
+
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
-	if !<-m.coordinator.Val.Bot.CanRun() {
+	if !<-m.coordinator.ChannelVal.CanRun() {
 		return nil, errors.New("Cannot call when machine can't run")
 	}
 	dataBytes, err := hexutil.Decode(args.Data)
@@ -316,10 +274,10 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 		return nil, err
 	}
 	var sender common.Address
-	copy(sender[12:], senderBytes)
+	copy(sender[:], senderBytes)
 
 	msg := protocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
-	resultChan, errChan := m.coordinator.Val.Bot.RequestCall(msg)
+	resultChan, errChan := m.coordinator.ChannelVal.RequestCall(msg)
 
 	select {
 	case logVal := <-resultChan:
