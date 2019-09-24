@@ -46,7 +46,7 @@ Checkpoint MachineCheckPoints::SaveMachine(std::string machine_state_name,
     auto save_status =
         storage.SaveMachineState(machine_state_name, all_tuple, state_data);
 
-    return Checkpoint{machine_state_name, save_status.status};
+    return Checkpoint{machine_state_name, save_status};
 }
 
 Machine MachineCheckPoints::RestoreMachine(std::string name,

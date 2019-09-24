@@ -16,7 +16,7 @@
 struct GetResults {
     int reference_count = 0;
     rocksdb::Status status;
-    std::string storage_key;
+    std::vector<unsigned char> storage_key;
     std::string stored_value;
 };
 

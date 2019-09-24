@@ -20,7 +20,8 @@
 class CheckpointStorage {
    private:
     rocksdb::TransactionDB* txn_db;
-    GetResults SaveValueToDb(std::string val, std::string key);
+    rocksdb::Status SaveKeyValuePair(std::string value, std::string key);
+    GetResults SaveValueToDb(std::string val, std::vector<unsigned char> key);
     std::string GetValueFromDb(std::string key);
     std::tuple<int, std::string> ParseCountAndValue(std::string string_value);
     std::string SerializeCountAndValue(int count, std::string value);
@@ -29,13 +30,13 @@ class CheckpointStorage {
     bool Intialize();
     void Close();
     GetResults SaveValue(const Tuple& val);
-    GetResults SaveMachineState(std::string checkpoint_name,
-                                const Tuple& tuple,
-                                std::vector<unsigned char> state_data);
-    GetResults GetMachineState(std::string machine_name);
+    rocksdb::Status SaveMachineState(std::string checkpoint_name,
+                                     const Tuple& tuple,
+                                     std::vector<unsigned char> state_data);
+    GetResults GetMachineState(std::string checkpoint_name);
     rocksdb::Status DeleteValue(std::string key);
-    GetResults GetValue(std::string hash_key);
-    std::string GetHashKey(const value& val);
+    GetResults GetValue(std::vector<unsigned char> hash_key);
+    std::vector<unsigned char> GetHashKey(const value& val);
 };
 
 #endif /* checkpointstorage_hpp */
