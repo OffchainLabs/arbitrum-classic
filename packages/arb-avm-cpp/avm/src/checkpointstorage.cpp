@@ -31,19 +31,24 @@ void CheckpointStorage::Close() {
     delete txn_db;
 }
 
-// GetResults CheckpointStorage::GetMachineState(std::string machine_name) {
-//    auto hash_results = GetValue(machine_name);
-//    auto data_hash = hash_results.stored_value;
-//    auto data_results = GetValue(data_hash);
-//
-//    return
-//}
+GetResults CheckpointStorage::GetMachineState(std::string machine_name) {
+    auto machine_state_results = GetValue(machine_name);
+    auto data_hash = machine_state_results.stored_value;
+    auto data_results = GetValue(data_hash);
 
-GetResults CheckpointStorage::SaveValueAndMapToKey(const Tuple& val,
-                                                   std::string hash_key) {
-    auto status = SaveValue(val);
-    auto value_key = GetHashKey(val);
-    auto map_status = SaveValueToDb(value_key, hash_key);
+    return
+}
+
+GetResults CheckpointStorage::SaveMachineState(
+    std::string checkpoint_name,
+    const Tuple& tuple,
+    std::vector<unsigned char> state_data) {
+    auto tuple_save_status = SaveValue(tuple);
+    auto value_key = GetHashKey(tuple);
+
+    auto state_save_status = SaveValueToDb(state_data, checkpoint_name);
+
+    auto map_status = SaveValueToDb(value_key, checkpoint_name);
 
     return map_status;
 }

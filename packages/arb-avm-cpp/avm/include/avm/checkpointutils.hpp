@@ -39,4 +39,8 @@ class CheckpointParser {
     CheckpointData ParseData(std::string data);
 };
 
+std::vector<unsigned char> SerializeData(BalanceTracker& balance,
+                                         Status& state,
+                                         BlockReason& blockReason);
+
 #endif /* checkpointutils_hpp */

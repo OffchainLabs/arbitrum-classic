@@ -29,7 +29,9 @@ class CheckpointStorage {
     bool Intialize();
     void Close();
     GetResults SaveValue(const Tuple& val);
-    GetResults SaveValueAndMapToKey(const Tuple& val, std::string hash_key);
+    GetResults SaveMachineState(std::string checkpoint_name,
+                                const Tuple& tuple,
+                                std::vector<unsigned char> state_data);
     GetResults GetMachineState(std::string machine_name);
     rocksdb::Status DeleteValue(std::string key);
     GetResults GetValue(std::string hash_key);

@@ -13,8 +13,9 @@
 #include "avm/machine.hpp"
 #include "checkpointstorage.hpp"
 
-class Checkpoint {
+struct Checkpoint {
     std::string checkPointName;
+    rocksdb::Status status;
 };
 
 class MachineCheckPoints {
