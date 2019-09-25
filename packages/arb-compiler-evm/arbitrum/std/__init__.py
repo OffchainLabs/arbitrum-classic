@@ -18,7 +18,7 @@ from . import bitwise
 from .bigtuple import bigtuple, bigtuple_int, make_bigtuple_type
 from .boundedq import boundedq, make_boundedq_type
 from .keyvalue import keyvalue, keyvalue_int_int, make_keyvalue_type
-from .stack import stack, stack_tup, stack_code, make_stack_type
+from .stack import stack, stack_tup, stack_code, stack_int, make_stack_type, bytestack
 from .queue import queue, queue_tup, make_queue_type
 from . import byterange
 from . import sized_byterange
@@ -47,7 +47,9 @@ __all__ = [
     "stack",
     "stack_tup",
     "stack_code",
+    "stack_int",
     "make_stack_type",
+    "bytestack",
     "queue",
     "queue_tup",
     "make_queue_type",

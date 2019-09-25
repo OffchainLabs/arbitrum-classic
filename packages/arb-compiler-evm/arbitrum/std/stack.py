@@ -65,5 +65,8 @@ def make_stack_type(typ):
 
 
 stack = make_stack_type(value.ValueType())
+stack_int = make_stack_type(value.IntType())
 stack_tup = make_stack_type(value.TupleType())
 stack_code = make_stack_type(value.CodePointType())
+
+bytestack = Struct("bytestack", [("size", value.IntType()), ("stack", stack_int.typ)])
