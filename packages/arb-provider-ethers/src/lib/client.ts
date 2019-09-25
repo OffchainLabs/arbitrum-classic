@@ -40,7 +40,7 @@ function logValToLog(val: ArbValue.Value, index: number, orig: EthBridgeMessage)
         removed: false,
         transactionLogIndex: index,
         address: ethers.utils.hexlify((value.get(0) as ArbValue.IntValue).bignum),
-        data: ethers.utils.hexlify(ArbValue.sizedByteRangeToBytes(value.get(1) as ArbValue.TupleValue)),
+        data: ethers.utils.hexlify(ArbValue.bytestackToBytes(value.get(1) as ArbValue.TupleValue)),
         topics: value.contents
             .slice(2)
             .map(rawTopic => ethers.utils.hexZeroPad(ethers.utils.hexlify((rawTopic as ArbValue.IntValue).bignum), 32)),
@@ -155,7 +155,7 @@ export class EVMReturn {
     constructor(value: ArbValue.TupleValue) {
         this.bridgeData = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue);
         this.orig = this.bridgeData.getArbMessage();
-        this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
+        this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue);
         this.logs = stackValueToList(value.get(1) as ArbValue.TupleValue).map((val, index) => {
             return logValToLog(val, index, this.bridgeData);
         });
@@ -172,7 +172,7 @@ export class EVMRevert {
     constructor(value: ArbValue.TupleValue) {
         this.bridgeData = new EthBridgeMessage(value.get(0) as ArbValue.TupleValue);
         this.orig = this.bridgeData.getArbMessage();
-        this.data = ArbValue.sizedByteRangeToBytes(value.get(2) as ArbValue.TupleValue);
+        this.data = ArbValue.bytestackToBytes(value.get(2) as ArbValue.TupleValue);
         this.returnType = EVMCode.Revert;
     }
 }

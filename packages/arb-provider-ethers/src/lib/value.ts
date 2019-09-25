@@ -306,6 +306,20 @@ export function setBigTuple(tupleValue: TupleValue, index: number, value: Value)
     }
 }
 
+function bytesToIntValues(bytearray: Uint8Array): ethers.utils.BigNumber[] {
+    const bignums: ethers.utils.BigNumber[] = [];
+    const sizeBytes = bytearray.length;
+    const chunkCount = Math.ceil(sizeBytes / 32);
+    for (let i = 0; i < chunkCount; i++) {
+        const byteSlice = bytearray.slice(i * 32, (i + 1) * 32);
+        const nextNumBytes = new Uint8Array(32);
+        nextNumBytes.set(byteSlice);
+        const bignum = ethers.utils.bigNumberify(nextNumBytes);
+        bignums.push(bignum);
+    }
+    return bignums;
+}
+
 // twoTupleValue: (byterange: SizedTupleValue, size: IntValue)
 export function sizedByteRangeToBytes(twoTupleValue: TupleValue): Uint8Array {
     const byterange = twoTupleValue.get(0) as TupleValue;
@@ -323,21 +337,48 @@ export function sizedByteRangeToBytes(twoTupleValue: TupleValue): Uint8Array {
 // hexString: must be a byte string (hexString.length % 2 === 0)
 export function hexToSizedByteRange(hex: ethers.utils.Arrayish): TupleValue {
     const bytearray = ethers.utils.arrayify(hex);
-
-    // Emtpy tuple
-    let t = new TupleValue([]);
-
-    // Array of 32B BigNums
     const sizeBytes = bytearray.length;
-    const chunkCount = Math.ceil(sizeBytes / 32);
-    for (let i = 0; i < chunkCount; i++) {
-        const byteSlice = bytearray.slice(i * 32, (i + 1) * 32);
-        const nextNumBytes = new Uint8Array(32);
-        nextNumBytes.set(byteSlice);
-        const bignum = ethers.utils.bigNumberify(nextNumBytes);
-        t = setBigTuple(t, i, new IntValue(bignum));
+    const bignums = bytesToIntValues(bytearray);
+    // Empty tuple
+    let t = new TupleValue([]);
+    for (let i = 0; i < bignums.length; i++) {
+        t = setBigTuple(t, i, new IntValue(bignums[i]));
     }
     return new TupleValue([t, new IntValue(sizeBytes)]);
+}
+
+// twoTupleValue: (byterange: SizedTupleValue, size: IntValue)
+export function bytestackToBytes(twoTupleValue: TupleValue): Uint8Array {
+    const sizeInt = twoTupleValue.get(0) as IntValue;
+    let stack = twoTupleValue.get(1) as TupleValue;
+
+    const sizeBytes = sizeInt.bignum.toNumber();
+    const chunkCount = Math.ceil(sizeBytes / 32);
+    const result = new Uint8Array(chunkCount * 32);
+
+    let i = 0;
+    while (stack.contents.length == 2) {
+        const value = stack.get(1) as IntValue;
+        stack = stack.get(0) as TupleValue;
+        const chunk = ethers.utils.padZeros(ethers.utils.arrayify(value.bignum), 32);
+        const offset = (chunkCount - 1 - i) * 32;
+        result.set(chunk, offset);
+        i++;
+    }
+    return result.slice(0, sizeBytes);
+}
+
+// hexString: must be a byte string (hexString.length % 2 === 0)
+export function hexToBytestack(hex: ethers.utils.Arrayish): TupleValue {
+    const bytearray = ethers.utils.arrayify(hex);
+    const sizeBytes = bytearray.length;
+    const bignums = bytesToIntValues(bytearray);
+    // Empty tuple
+    let t = new TupleValue([]);
+    for (let i = 0; i < bignums.length; i++) {
+        t = new TupleValue([t, new IntValue(bignums[i])]);
+    }
+    return new TupleValue([new IntValue(sizeBytes), t]);
 }
 
 function _marshalValue(acc: Uint8Array, v: Value): Uint8Array {

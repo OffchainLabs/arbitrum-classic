@@ -334,7 +334,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         maxSeq = maxSeq.sub(2);
         let txData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
         if (transaction.data) {
-            txData = ArbValue.hexToSizedByteRange(await transaction.data);
+            txData = ArbValue.hexToBytestack(await transaction.data);
         }
         const sender = await this.provider.getSigner(0).getAddress();
         const resultData = await this.client.call(dest, sender, txData);
