@@ -152,9 +152,8 @@ func IntsToBigTuple(ints []*big.Int) (value.Value, error) {
 	return tuple, nil
 }
 
-func BytesToByteArray(val []byte) (value.Value, error) {
+func bytesToIntValues(val []byte) []*big.Int {
 	var ints []*big.Int
-
 	for i := 0; i < len(val); i += 32 {
 		remaining := len(val) - i
 		if remaining < 32 {
@@ -165,11 +164,11 @@ func BytesToByteArray(val []byte) (value.Value, error) {
 			ints = append(ints, new(big.Int).SetBytes(val[i:i+32]))
 		}
 	}
-	return IntsToBigTuple(ints)
+	return ints
 }
 
 func BytesToSizedByteArray(val []byte) (value.Value, error) {
-	arr, err := BytesToByteArray(val)
+	arr, err := IntsToBigTuple(bytesToIntValues(val))
 	if err != nil {
 		return nil, err
 	}
@@ -194,4 +193,56 @@ func StackValueToList(val value.Value) ([]value.Value, error) {
 		}
 	}
 	return values, nil
+}
+
+func ByteStackToHex(val value.Value) ([]byte, error) {
+	tup, ok := val.(value.TupleValue)
+	if !ok {
+		return nil, errors.New("bytestack expected tuple value")
+	}
+	if tup.Len() != 2 {
+		return nil, errors.New("bytestack expected to be 2-tuple")
+	}
+	lengthVal, _ := tup.GetByInt64(0)
+	lengthIntVal, ok := lengthVal.(value.IntValue)
+	if !ok {
+		return nil, errors.New("bytestack expected length to be int value")
+	}
+	intLength := lengthIntVal.BigInt().Uint64()
+
+	stackVal, _ := tup.GetByInt64(1)
+	tupVal, ok := stackVal.(value.TupleValue)
+	if !ok {
+		return nil, errors.New("bytestack expected 2 tuple value")
+	}
+
+	byteChunks := make([][32]byte, 0)
+	for tupVal.Len() == 2 {
+		val, _ := tupVal.GetByInt64(1)
+		intVal, ok := val.(value.IntValue)
+		if !ok {
+			return nil, errors.New("bytestack expected chunk to be int value")
+		}
+		valBytes := intVal.ToBytes()
+		byteChunks = append(byteChunks, valBytes)
+		nextVal, _ := tupVal.GetByInt64(0)
+		tupVal, ok = nextVal.(value.TupleValue)
+		if !ok {
+			return nil, errors.New("bytestack expected tuple value")
+		}
+	}
+	var buf bytes.Buffer
+	for i := range byteChunks {
+		buf.Write(byteChunks[len(byteChunks)-1-i][:])
+	}
+	return buf.Bytes()[:intLength], nil
+}
+
+func BytesToByteStack(val []byte) (value.Value, error) {
+	chunks := bytesToIntValues(val)
+	ret := value.NewEmptyTuple()
+	for _, chunk := range chunks {
+		ret = value.NewTuple2(ret, value.NewIntValue(chunk))
+	}
+	return value.NewTuple2(value.NewInt64Value(int64(len(val))), ret), nil
 }
