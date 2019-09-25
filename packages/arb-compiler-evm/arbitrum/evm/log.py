@@ -16,7 +16,7 @@ import eth_abi
 import eth_utils
 
 from . import contract_templates
-from ..std import sized_byterange, stack
+from ..std import stack, bytestack_tohex
 
 REVERT_CODE = 0
 INVALID_CODE = 1
@@ -33,7 +33,8 @@ class EVMLog:
         self.name = ""
         self.args = []
         self.contract_id = val[0]
-        self.data = eth_utils.to_bytes(hexstr=sized_byterange.tohex(val[1]))
+        print("val[1]", val[1])
+        self.data = eth_utils.to_bytes(hexstr=bytestack_tohex(val[1]))
         self.event_id = val[2]
         self.topics = []
         for topic in val[3:]:
@@ -83,7 +84,7 @@ class LogMessage:
             self.contract_id = tx_message[0]
             self.sequence_num = tx_message[1]
             self.value = tx_message[2]
-            self.data = sized_byterange.tohex(tx_message[3])
+            self.data = bytestack_tohex(tx_message[3])
         elif self.message_type in [2, 3]:
             token_message = wrapped_data[2]
             self.token_address = token_message[0]
@@ -153,7 +154,7 @@ class EVMOutput:
 class EVMCall(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
-        self.output_bytes = eth_utils.to_bytes(hexstr=sized_byterange.tohex(val[2]))
+        self.output_bytes = eth_utils.to_bytes(hexstr=bytestack_tohex(val[2]))
         self.output_values = []
         self.logs = [EVMLog(logVal) for logVal in stack.to_list(val[1])]
 
@@ -212,7 +213,7 @@ class EVMStop(EVMOutput):
 class EVMRevert(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
-        self.output_bytes = eth_utils.to_bytes(hexstr=sized_byterange.tohex(val[2]))
+        self.output_bytes = eth_utils.to_bytes(hexstr=bytestack_tohex(val[2]))
 
     def __repr__(self):
         return "EVMRevert({}, {})".format(self.name, self.output_bytes)

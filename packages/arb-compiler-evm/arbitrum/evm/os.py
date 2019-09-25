@@ -564,6 +564,8 @@ def evm_log1(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(3)(vm)
@@ -577,6 +579,8 @@ def evm_log2(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(4)(vm)
@@ -590,6 +594,8 @@ def evm_log3(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(5)(vm)
@@ -603,6 +609,8 @@ def evm_log4(vm):
     vm.swap1()
     get_mem_segment(vm)
     std.tup.make(2)(vm)
+    vm.cast(std.sized_byterange.typ)
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("contractID")(vm)
     std.tup.make(6)(vm)
@@ -759,6 +767,8 @@ def process_valid_tx_message(vm):
     vm.swap2()
     tx_message.get("data")(vm)
     # data dest value
+    vm.cast(std.bytestack.typ)
+    std.sized_byterange.from_bytestack(vm)
 
     vm.push(tx_call_data.make())
     vm.cast(tx_call_data.typ)
@@ -945,10 +955,11 @@ def process_withdraw_token_message(vm, account_create_func):
 
 
 # [code, data]
-@modifies_stack(2, 0)
+@modifies_stack([value.IntType(), std.sized_byterange.typ], 0)
 def log_func_result(vm):
     vm.swap1()
     # [data, code]
+    std.sized_byterange.to_bytestack(vm)
     get_call_frame(vm)
     call_frame.call_frame.get("logs")(vm)
     std.stack_tup.new(vm)
