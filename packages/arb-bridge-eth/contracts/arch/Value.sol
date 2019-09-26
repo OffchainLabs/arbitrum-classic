@@ -537,7 +537,6 @@ library Value {
 
             (valid, offset, seqNumber) = deserializeCheckedInt(data, offset);
 
-
             (valid, offset, value) = deserializeCheckedInt(data, offset);
 
             // fix incorrect
@@ -641,5 +640,46 @@ library Value {
             address(uint160((destRaw))),
             value
         );
+    }
+
+    function bytesToBytestackHash(bytes memory data) public pure returns (bytes32) {
+        uint dataLength = data.length;
+        uint wholeChunkCount = dataLength / 32;
+        uint chunkCount = (dataLength + 31) / 32;
+
+        // tuple code + size + (for each chunk tuple code + chunk val) + empty tuple code
+        bytes32 stackHash = hashEmptyTuple();
+        for (uint i = 0; i < wholeChunkCount; i++) {
+            stackHash = hashTuple([
+                newHashOnly(stackHash),
+                newInt(data.toUint(i * 32))
+            ]);
+        }
+        if (wholeChunkCount < chunkCount) {
+            uint lastVal = data.toUint(dataLength - 32);
+            lastVal <<= (32 - dataLength - wholeChunkCount * 32) * 8;
+            stackHash = hashTuple([
+                newHashOnly(stackHash),
+                newInt(lastVal)
+            ]);
+        }
+
+        return hashTuple([
+            newInt(dataLength),
+            newHashOnly(stackHash)
+        ]);
+    }
+
+    function bytestackToBytes(bytes memory data) public pure returns (bytes memory) {
+        uint byteCount = data.toUint(2);
+        uint chunkCount = (byteCount + 31) / 32;
+
+        bytes32[] memory chunks = new bytes32[](chunkCount);
+        uint offset = 35;
+        for (uint i = 0; i < chunkCount; i++) {
+            chunks[i] = data.toBytes32(offset + 2);
+            offset += 34;
+        }
+        return abi.encodePacked(chunks).slice(0, byteCount);
     }
 }
