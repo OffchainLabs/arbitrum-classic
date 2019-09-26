@@ -26,10 +26,18 @@
 #include <ostream>
 
 #define UINT256_SIZE 32
+#define UINT64_SIZE 8
 
 uint256_t deserialize_int(char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
+    return ret;
+}
+
+// make sure correct
+uint64_t deserialize_int64(char*& bufptr) {
+    uint64_t ret = from_big_endian64(bufptr, bufptr + UINT64_SIZE);
+    bufptr += UINT64_SIZE;
     return ret;
 }
 
@@ -81,6 +89,12 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     std::array<unsigned char, 32> tmpbuf;
     to_big_endian(val, tmpbuf.begin());
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+}
+
+// make sure correct
+void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
+    std::array<unsigned char, 8> tmpbuf;
+    to_big_endian(val, tmpbuf.begin());
 }
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
@@ -215,51 +229,56 @@ std::string ToHashString(uint256_t hash_key) {
 
 struct Serializer {
     SerializedValue operator()(const Tuple& val) const {
-        std::string return_value;
+        std::vector<unsigned char> value_vector;
 
-        auto type_code = (char)TUPLE;
-        auto hash_key = ToHashString(val.calculateHash());
+        auto type_code = (unsigned char)TUPLE;
+        value_vector.push_back(type_code);
 
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += hash_key;
+        auto hash_key = hash(val);
+        std::vector<unsigned char> hash_key_vector;
+        marshal_uint256_t(hash_key, hash_key_vector);
 
-        SerializedValue serialized_value{TUPLE, return_value};
+        value_vector.insert(value_vector.end(), hash_key_vector.begin(),
+                            hash_key_vector.end());
+
+        std::string str_value(value_vector.begin(), value_vector.end());
+
+        SerializedValue serialized_value{TUPLE, str_value};
 
         return serialized_value;
     }
 
     SerializedValue operator()(const uint256_t& val) const {
-        std::string return_value;
+        std::vector<unsigned char> value_vector;
+        auto type_code = (unsigned char)NUM;
+        value_vector.push_back(type_code);
 
-        auto type_code = (char)NUM;
-        // makesure correct conversion
-        std::ostringstream ss;
-        ss << val;
-        auto value_str = ss.str();
+        std::vector<unsigned char> num_vector;
+        marshal_uint256_t(val, num_vector);
 
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += value_str;
+        value_vector.insert(value_vector.end(), num_vector.begin(),
+                            num_vector.end());
+        std::string str_value(value_vector.begin(), value_vector.end());
 
-        SerializedValue serialized_value{NUM, return_value};
+        SerializedValue serialized_value{NUM, str_value};
 
         return serialized_value;
     }
 
     SerializedValue operator()(const CodePoint& val) const {
-        std::string return_value;
+        std::vector<unsigned char> value_vector;
+        auto type_code = (unsigned char)CODEPT;
+        value_vector.push_back(type_code);
 
-        auto type_code = (char)CODEPT;
-        // fine?
-        auto c = val.pc;
-        auto value_str = std::to_string(c);
+        std::vector<unsigned char> pc_vector;
+        marshal_uint64_t(val.pc, pc_vector);
 
-        // make sure this works as intended
-        return_value += type_code;
-        return_value += value_str;
+        value_vector.insert(value_vector.end(), pc_vector.begin(),
+                            pc_vector.end());
 
-        SerializedValue serialized_value{CODEPT, return_value};
+        std::string str_value(value_vector.begin(), value_vector.end());
+
+        SerializedValue serialized_value{CODEPT, str_value};
 
         return serialized_value;
     }
@@ -269,14 +288,16 @@ SerializedValue SerializeValue(const value& val) {
     return nonstd::visit(Serializer{}, val);
 }
 
+// marshal_uint256_t instead?
 // make sure correct
-std::vector<unsigned char> ConvertToCharVector(uint256_t value) {
-    unsigned char value_char_list[sizeof(value)];
-    std::memcpy(value_char_list, &value, sizeof(value));
-    std::vector<unsigned char> return_vector;
-
-    return_vector.insert(return_vector.end(), std::begin(value_char_list),
-                         std::end(value_char_list));
-
-    return return_vector;
-}
+// std::vector<unsigned char> ConvertToCharVector(uint256_t value) {
+//
+//    unsigned char value_char_list[sizeof(value)];
+//    std::memcpy(value_char_list, &value, sizeof(value));
+//    std::vector<unsigned char> return_vector;
+//
+//    return_vector.insert(return_vector.end(), std::begin(value_char_list),
+//    std::end(value_char_list));
+//
+//    return return_vector;
+//}

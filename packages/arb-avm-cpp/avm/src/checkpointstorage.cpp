@@ -31,26 +31,31 @@ void CheckpointStorage::Close() {
     delete txn_db;
 }
 
-GetResults CheckpointStorage::GetMachineState(std::string checkpoint_name) {
-    std::vector<unsigned char> name_vector(checkpoint_name.begin(),
-                                           checkpoint_name.end());
-    auto machine_state_results = GetValue(name_vector);
-
-    auto data_hash = machine_state_results.stored_value;
-    std::vector<unsigned char> checkpoint_data(data_hash.begin(),
-                                               data_hash.end());
-
-    auto data_results = GetValue(data_hash);
-
-    return
-}
-
 std::string SerializeMachineData(std::vector<unsigned char> tuple_key,
                                  std::vector<unsigned char> state_data) {
     tuple_key.insert(tuple_key.end(), state_data.begin(), state_data.end());
     std::string str(tuple_key.begin(), tuple_key.end());
 
     return str;
+}
+
+std::tuple<Tuple, SerializedStateData> CheckpointStorage::GetMachineState(
+    std::string checkpoint_name) {
+    std::vector<unsigned char> name_vector(checkpoint_name.begin(),
+                                           checkpoint_name.end());
+    auto machine_state_results = GetValue(name_vector);
+
+    std::vector<unsigned char> tuple_hash(
+        machine_state_results.stored_value.begin(),
+        machine_state_results.stored_value.begin() + 33);
+    std::vector<unsigned char> state_data(
+        machine_state_results.stored_value.begin() + 33,
+        machine_state_results.stored_value.end());
+
+    auto state_data_object = Deserialize(state_data);
+    auto tup = GetTuple(tuple_hash);
+
+    return std::make_tuple(tup, state_data_object);
 }
 
 rocksdb::Status CheckpointStorage::SaveMachineState(
@@ -66,6 +71,83 @@ rocksdb::Status CheckpointStorage::SaveMachineState(
 
     return state_save_results;
 }
+
+std::vector<std::vector<unsigned char>> breakIntoValues(
+    std::vector<unsigned char> data_vecgtor) {
+    std::vector<std::vector<unsigned char>> return_vector;
+
+    auto it = data_vecgtor.begin();
+
+    while (it != data_vecgtor.end()) {
+        auto val = *it;
+        std::vector<unsigned char> current;
+        current.push_back(val);
+
+        it++;
+
+        switch (val) {
+            case TUPLE: {
+                current.insert(current.end(), it, it + 33);
+                it += 33;
+            }
+            case NUM: {
+                current.insert(current.end(), it, it + 33);
+                it += 33;
+            }
+            case CODEPT: {
+                current.insert(current.end(), it, it + 8);
+                it += 8;
+            }
+            default: {
+            }
+        }
+
+        return_vector.push_back(current);
+    }
+
+    return return_vector;
+}
+
+Tuple CheckpointStorage::GetTuple(std::vector<unsigned char> hash_key) {
+    std::vector<value> values;
+
+    auto results = GetValue(hash_key);
+
+    std::vector<unsigned char> data_vector(results.stored_value.begin(),
+                                           results.stored_value.end());
+    auto value_vectors = breakIntoValues(data_vector);
+
+    for (auto& vec : value_vectors) {
+        auto it = vec.begin() + 1;
+        std::vector<unsigned char> current(it, vec.end());
+
+        switch (vec[0]) {
+            case TUPLE: {
+                auto tup = GetTuple(current);
+                values.push_back(tup);
+            }
+            case NUM: {
+                auto buff = reinterpret_cast<char*>(&current[0]);
+                auto num = deserialize_int(buff);
+                values.push_back(num);
+            }
+            case CODEPT: {
+                // not the rest?
+                auto buff = reinterpret_cast<char*>(&current[0]);
+                auto pc = deserialize_int64(buff);
+                auto code = CodePoint();
+                code.pc = pc;
+                values.push_back(code);
+            }
+        }
+    }
+
+    // get pool
+    TuplePool* pool;
+    auto tup = Tuple(values, pool);
+
+    return tup;
+};
 
 GetResults CheckpointStorage::SaveValue(const Tuple& val) {
     auto hash_key = GetHashKey(val);
@@ -201,7 +283,11 @@ std::vector<unsigned char> CheckpointStorage::GetHashKey(const value& val) {
 std::tuple<int, std::string> ParseCountAndValue(std::string string_value) {
     // is max 256 references good enough?
     const char* c_string = string_value.c_str();
-    auto ref_count = (int)c_string[0];
+    //    auto ref_count = (int)c_string[0];
+    //    auto ref_count = static_cast<int>(c_string[0]);
+    uint16_t ref_count;
+    memcpy(&ref_count, c_string, sizeof(ref_count));
+    //    auto ref_count = *reinterpret_cast<const int *>(&c_string[0]);
 
     // skips exactly the first char(byte) in order to extract value saved?
     auto saved_value = string_value.substr(1, string_value.size() - 1);

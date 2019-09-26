@@ -42,6 +42,7 @@ SerializedValue SerializeValue(const value& val);
 int get_tuple_size(char*& bufptr);
 
 uint256_t deserialize_int(char*& srccode);
+uint64_t deserialize_int64(char*& srccode);
 Operation deserializeOperation(char*& bufptr, TuplePool& pool);
 CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
@@ -66,6 +67,6 @@ const uint256_t& assumeInt(const value& val);
 uint64_t assumeInt64(uint256_t& val);
 Tuple& assumeTuple(value& val);
 
-std::vector<unsigned char> ConvertToCharVector(uint256_t value);
+// std::vector<unsigned char> ConvertToCharVector(uint256_t value);
 
 #endif /* value_hpp */

@@ -121,6 +121,15 @@ Tuple::Tuple(value val1,
     tpl->cachedHash = calculateHash();
 }
 
+Tuple::Tuple(std::vector<value> values, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(values.size())) {
+    for (auto& val : values) {
+        tpl->data.push_back(std::move(val));
+    }
+
+    tpl->cachedHash = calculateHash();
+}
+
 void Tuple::marshal(std::vector<unsigned char>& buf) const {
     buf.push_back(TUPLE + tuple_size());
     for (uint64_t i = 0; i < tuple_size(); i++) {

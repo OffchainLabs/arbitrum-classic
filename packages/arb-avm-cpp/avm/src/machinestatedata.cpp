@@ -9,40 +9,32 @@
 
 struct BlockSerializer {
     SerializedBlockReason operator()(const NotBlocked& val) const {
-        SerializedBlockReason x{val.type, std::vector<unsigned char>()};
-
-        return x;
+        return SerializedBlockReason{val.type, std::vector<unsigned char>()};
     }
     SerializedBlockReason operator()(const HaltBlocked& val) const {
-        SerializedBlockReason x{val.type, std::vector<unsigned char>()};
-
-        return x;
+        return SerializedBlockReason{val.type, std::vector<unsigned char>()};
     }
     SerializedBlockReason operator()(const ErrorBlocked& val) const {
-        SerializedBlockReason x{val.type, std::vector<unsigned char>()};
-
-        return x;
+        return SerializedBlockReason{val.type, std::vector<unsigned char>()};
     }
     SerializedBlockReason operator()(const BreakpointBlocked& val) const {
-        SerializedBlockReason x{val.type, std::vector<unsigned char>()};
-
-        return x;
+        return SerializedBlockReason{val.type, std::vector<unsigned char>()};
     }
+
     SerializedBlockReason operator()(const InboxBlocked& val) const {
-        auto inbox = ConvertToCharVector(val.inbox);
+        std::vector<unsigned char> inbox_char_vector;
+        marshal_uint256_t(val.inbox, inbox_char_vector);
 
-        SerializedBlockReason x{val.type, inbox};
-
-        return x;
+        return SerializedBlockReason{val.type, inbox_char_vector};
     }
     SerializedBlockReason operator()(const SendBlocked& val) const {
-        auto data = ConvertToCharVector(val.currency);
-        data.insert(data.end(), std::begin(val.tokenType),
-                    std::end(val.tokenType));
+        std::vector<unsigned char> data_vector;
+        marshal_uint256_t(val.currency, data_vector);
 
-        SerializedBlockReason x{val.type, data};
+        data_vector.insert(data_vector.end(), std::begin(val.tokenType),
+                           std::end(val.tokenType));
 
-        return x;
+        return SerializedBlockReason{val.type, data_vector};
     }
 };
 

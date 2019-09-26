@@ -33,10 +33,12 @@ class CheckpointStorage {
     rocksdb::Status SaveMachineState(std::string checkpoint_name,
                                      const Tuple& tuple,
                                      std::vector<unsigned char> state_data);
-    GetResults GetMachineState(std::string checkpoint_name);
+    std::tuple<Tuple, SerializedStateData> GetMachineState(
+        std::string checkpoint_name);
     rocksdb::Status DeleteValue(std::string key);
     GetResults GetValue(std::vector<unsigned char> hash_key);
     std::vector<unsigned char> GetHashKey(const value& val);
+    Tuple GetTuple(std::vector<unsigned char> hash_key);
 };
 
 #endif /* checkpointstorage_hpp */

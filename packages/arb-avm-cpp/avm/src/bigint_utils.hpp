@@ -51,6 +51,16 @@ auto from_big_endian(const Iterator begin, const Iterator end) {
     return v;
 }
 
+// definitely make sure
+template <typename Iterator>
+auto from_big_endian64(const Iterator begin, const Iterator end) {
+    uint64_t v;
+    // imports in big endian by default
+    boost::multiprecision::import_bits(
+        v, begin, end, std::numeric_limits<uint8_t>::digits, true);
+    return v;
+}
+
 template <typename Iterator>
 inline void to_big_endian(uint256_t v, Iterator out) {
     // boost::multiprecision::export_bits() does not work here, because it
@@ -63,6 +73,17 @@ inline void to_big_endian(uint256_t v, Iterator out) {
         v >>= 64;
         o[i] = boost::endian::native_to_big(n);
     }
+}
+
+// make sure this is correct
+template <typename Iterator>
+inline void to_big_endian(uint64_t v, Iterator out) {
+    uint64_t* o = reinterpret_cast<uint64_t*>(&*out);
+    constexpr uint64_t mask64 = 0xffffffff'ffffffff;
+
+    uint64_t n = static_cast<uint64_t>(v & mask64);
+    v >>= 64;
+    o[0] = boost::endian::native_to_big(n);
 }
 
 #endif /* bigint_utils_hpp */

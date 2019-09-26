@@ -90,6 +90,8 @@ class Tuple {
           value val8,
           TuplePool* pool);
 
+    Tuple(std::vector<value> values, TuplePool* pool);
+
     //    ~Tuple() {
     //        if (tpl.use_count() == 1) {
     //            tuplePool->returnResource(std::move(tpl));
