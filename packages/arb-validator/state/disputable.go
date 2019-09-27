@@ -600,7 +600,7 @@ func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge 
 		return NewWaiting(bot.Config, bot.Core), ct, err
 
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingAssertion: VM state got unsynchronized"}
+		return nil, nil, &Error{nil, "disputable.go ERROR: waitingAssertion: VM state got unsynchronized"}
 	}
 }
 

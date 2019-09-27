@@ -333,9 +333,7 @@ type ValidatorCoordinator struct {
 	ChannelVal *validator.ChannelValidator
 	cm         *ClientManager
 
-	actions    chan func(*ValidatorCoordinator)
-	monitor    *chan string
-	monitorSet bool
+	actions chan func(*ValidatorCoordinator)
 
 	mpq               *MessageProcessingQueue
 	maxStepsUnanSteps int32
@@ -380,17 +378,11 @@ func NewCoordinator(
 		actions:           make(chan func(*ValidatorCoordinator), 10),
 		mpq:               NewMessageProcessingQueue(),
 		maxStepsUnanSteps: maxStepsUnanSteps,
-		monitorSet:        false,
 	}, nil
 }
 
 func (m *ValidatorCoordinator) SendMessage(msg OffchainMessage) {
 	m.mpq.Send(msg)
-}
-
-func (m *ValidatorCoordinator) SetMonitor(monChan *chan string) {
-	m.monitor = monChan
-	m.monitorSet = true
 }
 
 func (m *ValidatorCoordinator) StartServer(ctx context.Context) {
@@ -438,7 +430,8 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					shouldUnan = true
 				} else if <-m.ChannelVal.CanContinueRunning() {
 					log.Println("Unanimous asserting because machine is not blocked")
-					shouldUnan = false
+					//shouldUnan = false
+					shouldUnan = true
 				}
 				if !shouldUnan {
 					break

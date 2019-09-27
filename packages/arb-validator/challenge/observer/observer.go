@@ -22,6 +22,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"log"
 )
 
 func New(
@@ -59,6 +60,7 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (
 }
 
 func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+	log.Printf("observer waitingChallenge UpdateState event %T", ev)
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
@@ -90,6 +92,7 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (c
 }
 
 func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+	log.Printf("observer waitingBisected UpdateState event %T", ev)
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod

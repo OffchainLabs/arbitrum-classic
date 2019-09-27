@@ -62,7 +62,7 @@ func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethbridge.Event, tim
 		}
 		return NewWaiting(bot.Config, bot.Core), nil, nil
 	default:
-		err := &Error{nil, "ERROR: waitingAssertion: VM state got unsynchronized"}
+		err := &Error{nil, "ERROR: attemptingUnanimousClosing: VM state got unsynchronized"}
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
@@ -120,7 +120,7 @@ func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, &Error{nil, "ERROR: waitingAssertion: VM state got unsynchronized"}
+		return nil, nil, &Error{nil, "ERROR: attemptingOffchainClosing: VM state got unsynchronized"}
 	}
 }
 
@@ -174,7 +174,7 @@ func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time ui
 		}
 		return nil, nil, err
 	default:
-		err := &Error{nil, "ERROR: waitingAssertion: VM state got unsynchronized"}
+		err := &Error{nil, "ERROR: waitingOffchainClosing: VM state got unsynchronized"}
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
@@ -201,6 +201,6 @@ func (bot finalizingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time
 		}
 		return NewWaiting(bot.Config, bot.Core), nil, nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingAssertion: VM state got unsynchronized"}
+		return nil, nil, &Error{nil, "ERROR: finalizingOffchainClosing: VM state got unsynchronized"}
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"math/big"
 	brand "math/rand"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
@@ -44,12 +45,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-func main() {
+func TestChallenge(t *testing.T) {
+
+	bridge_eth_addresses := "../../arb-provider-go/test/bridge_eth_addresses.json"
+	contract := "../../arb-provider-go/test/contract.ao"
+	ethURL := "ws://127.0.0.1:7545"
+
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)
 	brand.Seed(seed)
-	jsonFile, err := os.Open(os.Args[1])
+	jsonFile, err := os.Open(bridge_eth_addresses)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -63,7 +69,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(os.Args[2], true, "test")
+	machine, err := loader.LoadMachineFromFile(contract, true, "test")
 	if err != nil {
 		log.Fatal("Loader Error: ", err)
 	}
@@ -90,8 +96,6 @@ func main() {
 		200000,
 		common.Address{}, // Address 0 means no owner
 	)
-
-	ethURL := os.Args[3]
 
 	val1, err := ethvalidator.NewValidator(
 		key1,
@@ -141,7 +145,6 @@ func main() {
 		machine.Clone(),
 		config,
 		true,
-		//false,
 		math.MaxInt32, // maxCallSteps,
 		math.MaxInt32, // maxUnanSteps
 		"wss://127.0.0.1:1236/ws",
@@ -161,7 +164,6 @@ func main() {
 
 	log.Println("Everyone is running")
 	monitorChan := coordinator.ChannelVal.GetMonitor()
-
 	time.Sleep(2 * time.Second)
 
 	challenger.IgnoreCoordinator()
@@ -176,7 +178,7 @@ func main() {
 		value.NewIntValue(addressInt),
 		seq,
 	})
-
+	//coordinator.Val.Validator.
 	receipt, err := coordinator.Val.SendEthMessage(
 		context.Background(),
 		tup,
@@ -198,6 +200,5 @@ func main() {
 	log.Println("***************************")
 	log.Println("recoverable error continuing")
 	log.Println("***************************")
-
 	time.Sleep(60 * time.Second)
 }

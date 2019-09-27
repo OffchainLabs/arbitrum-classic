@@ -143,7 +143,7 @@ type Validator struct {
 	Name        string
 	actions     chan func()
 	maybeAssert chan bool
-	monitor     chan string
+	monitor     chan challenge.Error
 
 	// Run loop only
 	bot                      Bot
@@ -159,7 +159,7 @@ func NewValidator(
 ) *Validator {
 	actions := make(chan func(), 100)
 	maybeAssert := make(chan bool, 100)
-	mon := make(chan string, 100)
+	mon := make(chan challenge.Error, 100)
 	return &Validator{
 		name,
 		actions,
@@ -172,7 +172,7 @@ func NewValidator(
 	}
 }
 
-func (validator *Validator) GetMonitor() <-chan string {
+func (validator *Validator) GetMonitor() <-chan challenge.Error {
 	return validator.monitor
 }
 
@@ -230,7 +230,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 				errChan <- errors.New("call took too long to execute")
 				return
 			}
-
+			log.Printf("********************* validator requestCall reuslt = %v\n", results)
 			resultChan <- results[len(results)-1]
 		}()
 	}
@@ -341,7 +341,7 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 		case <-ctx.Done():
 			break
 		case notification, ok := <-recvChan:
-			// fmt.Printf("Got valmessage %T: %v\n", event, event)
+			//log.Printf("validator %v got notification %T: %v\n", validator.Name, notification, notification)
 			if !ok {
 				fmt.Printf("%v: Error in recvChan\n", validator.Name)
 				return
@@ -352,7 +352,20 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 				validator.latestHeader = newHeader
 				err := validator.timeUpdate()
 				if err != nil {
-					log.Println("Error processing time update", err)
+					log.Printf("Validator %v: Error processing time update - %v", validator.Name, err)
+					if errstat, ok := err.(*challenge.Error); ok {
+						if !errstat.Recoverable {
+							log.Printf("Validator %v: non recoverable error", validator.Name)
+							validator.monitor <- *errstat
+							return
+						} else {
+							log.Printf("Validator %v: recoverable error - contiuing", validator.Name)
+							validator.monitor <- *errstat
+						}
+					} else {
+						validator.monitor <- challenge.Error{err, "non recoverable error - exiting", false}
+						return
+					}
 				}
 				if validator.pendingDisputableRequest != nil {
 					pre := validator.pendingDisputableRequest.Precondition
@@ -364,19 +377,27 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 					}
 				}
 			}
-
+			//log.Printf("validator %v got notification event %T: %v\n", validator.Name, notification.Event, notification.Event)
 			switch ev := notification.Event.(type) {
 			case ethbridge.NewTimeEvent:
 				break
 			case ethbridge.VMEvent:
-				log.Printf("validator %v received VMEvent type %T value = %v", validator.Name, ev, ev)
-				switch ev.(type) {
-				case ethbridge.OneStepProofEvent:
-					log.Printf("*******validator received ethbridge.OneStepProofEvent")
-				}
+				log.Printf("validator %v received VMEvent type %T", validator.Name, ev)
 				err := validator.eventUpdate(ev, notification.Header)
 				if err != nil {
-					log.Println("Error processing event update", err)
+					if errstat, ok := err.(*challenge.Error); ok {
+						if !errstat.Recoverable {
+							log.Printf("Validator %v: non recoverable error - %v", validator.Name, err)
+							validator.monitor <- *errstat
+							return
+						} else {
+							log.Printf("Validator %v: recoverable error - %v - contiuing", validator.Name, err)
+							validator.monitor <- *errstat
+						}
+					} else {
+						log.Println("Error processing event update", err)
+						return
+					}
 				}
 			case ethbridge.MessageDeliveredEvent:
 				validator.bot.SendMessageToVM(ev.Msg)
@@ -401,10 +422,12 @@ func (validator *Validator) timeUpdate() error {
 	if validator.challengeBot != nil {
 		newBot, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64(), validator.bot.getBridge())
 		if err != nil {
+			//myerr := appError{err.Error(), 2}
 			return err
 		}
 		validator.challengeBot = newBot
 	}
+	//return appError{validator.bot.updateTime(validator.latestHeader.Number.Uint64()).Error(), 0}
 	return validator.bot.updateTime(validator.latestHeader.Number.Uint64())
 }
 
@@ -422,6 +445,7 @@ func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Head
 	} else {
 		challengeBot, err := validator.bot.updateState(ev, header.Number.Uint64())
 		if err != nil {
+			log.Printf("validator %v received error %v", validator.Name, err)
 			return err
 		}
 		if challengeBot != nil {

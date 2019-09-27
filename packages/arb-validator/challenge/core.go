@@ -18,6 +18,7 @@ package challenge
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -31,13 +32,14 @@ type State interface {
 }
 
 type Error struct {
-	Err     error
-	Message string
+	Err         error
+	Message     string
+	Recoverable bool
 }
 
 func (e *Error) Error() string {
 	if e.Err != nil {
-		return fmt.Sprintf("%v: %v", e.Message, e.Err)
+		return fmt.Sprintf("%v: Recoverable=%v %v", e.Message, e.Recoverable, e.Err)
 	}
 	return e.Message
 }
@@ -51,11 +53,12 @@ func (bot TimedOutChallenger) UpdateTime(time uint64, bridge bridge.ArbVMBridge)
 }
 
 func (bot TimedOutChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
+	log.Printf("TimedOutChallenger UpdateState event %T", ev)
 	switch ev.(type) {
 	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutChallenger: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutChallenger: VM state got unsynchronized", false}
 	}
 }
 
@@ -68,10 +71,11 @@ func (bot TimedOutAsserter) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (
 }
 
 func (bot TimedOutAsserter) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
+	log.Printf("TimedOutAsserter UpdateState event %T", ev)
 	switch ev.(type) {
 	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil
 	default:
-		return nil, &Error{nil, "ERROR: TimedOutAsserter: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: TimedOutAsserter: VM state got unsynchronized", false}
 	}
 }

@@ -234,12 +234,15 @@ func (val *VMValidator) PendingDisputableAssert(
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
+	//log.Println(" ********** PendingDisputableAssert")
+	//precondition.BeforeHash[0]=5
 	receipt, err := val.arbitrumVM.PendingDisputableAssert(
 		val.Validator.MakeAuth(ctx),
 		precondition,
 		assertion,
 	)
 	val.Mutex.Unlock()
+	//err = errors.New("my error")
 	return receipt, err
 }
 
@@ -295,6 +298,10 @@ func (val *VMValidator) ContinueChallenge(
 	assertions []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
+
+	//log.Println("*** forcing ContinueChallenge error")
+	//precondition.BeforeHash[0] = 5
+
 	receipt, err := val.arbitrumVM.ContinueChallenge(
 		val.Validator.MakeAuth(ctx),
 		assertionToChallenge,
@@ -327,6 +334,8 @@ func (val *VMValidator) AsserterTimedOut(
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbitrumVM.AsserterTimedOutChallenge(val.Validator.MakeAuth(ctx))
+	//log.Println(" ********** AsserterTimedOut")
+	//err = errors.New("AsserterTimedOut error")
 	val.Mutex.Unlock()
 	return receipt, err
 }
@@ -338,6 +347,8 @@ func (val *VMValidator) ChallengerTimedOut(
 	receipt, err := val.arbitrumVM.ChallengerTimedOutChallenge(
 		val.Validator.MakeAuth(ctx),
 	)
+	//log.Println(" ********** ChallengerTimedOut")
+	//err = errors.New("ChallengerTimedOut error")
 	val.Mutex.Unlock()
 	return receipt, err
 }
