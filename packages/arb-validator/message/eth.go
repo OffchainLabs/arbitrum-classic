@@ -53,7 +53,7 @@ func (m Eth) GetFuncName() string {
 func (m Eth) AsValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
-		value.NewIntValue(m.Value),
+		value.NewIntValue(new(big.Int).Set(m.Value)),
 	})
 	val2, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(big.NewInt(int64(m.Type()))),

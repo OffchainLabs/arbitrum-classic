@@ -69,8 +69,8 @@ func (m Transaction) Type() MessageType {
 func (m Transaction) AsValue() value.Value {
 	val1, _ := value.NewTupleFromSlice([]value.Value{
 		addressToIntValue(m.To),
-		value.NewIntValue(m.SequenceNum),
-		value.NewIntValue(m.Value),
+		value.NewIntValue(new(big.Int).Set(m.SequenceNum)),
+		value.NewIntValue(new(big.Int).Set(m.Value)),
 		BytesToByteStack(m.Data),
 	})
 	val2, _ := value.NewTupleFromSlice([]value.Value{
