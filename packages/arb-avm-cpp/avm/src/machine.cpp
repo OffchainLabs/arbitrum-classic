@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Machine& val) {
-    os << val.m;
+    os << val.machine_state;
     return os;
 }
 
@@ -65,42 +65,32 @@ Machine::Machine(std::string filename) {
 }
 
 void Machine::sendOnchainMessage(const Message& msg) {
-    m.sendOnchainMessage(msg);
+    machine_state.sendOnchainMessage(msg);
 }
 
 void Machine::deliverOnchainMessages() {
-    m.deliverOnchainMessages();
+    machine_state.deliverOnchainMessages();
 }
 
 void Machine::sendOffchainMessages(const std::vector<Message>& messages) {
-    m.sendOffchainMessages(messages);
-}
-
-CheckpointData Machine::getCheckPointData() {
-    auto pc_value = CodePoint();
-    pc_value.pc = m.pc;
-
-    CheckpointData cp_data = {m.staticVal, m.registerVal,  m.stack,
-                              m.auxstack,  m.pendingInbox, m.inbox,
-                              m.pc,        m.errpc,        m.balance,
-                              m.state,     m.blockReason};
-
-    return cp_data;
+    machine_state.sendOffchainMessages(messages);
 }
 
 Assertion Machine::run(uint64_t stepCount,
                        uint64_t timeBoundStart,
                        uint64_t timeBoundEnd) {
-    m.context = AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
-    m.blockReason = NotBlocked{};
-    while (m.context.numSteps < stepCount) {
+    machine_state.context =
+        AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
+    machine_state.blockReason = NotBlocked{};
+    while (machine_state.context.numSteps < stepCount) {
         runOne();
-        if (!nonstd::get_if<NotBlocked>(&m.blockReason)) {
+        if (!nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
             break;
         }
     }
-    return {m.context.numSteps, std::move(m.context.outMessage),
-            std::move(m.context.logs)};
+    return {machine_state.context.numSteps,
+            std::move(machine_state.context.outMessage),
+            std::move(machine_state.context.logs)};
 }
 
 bool isErrorCodePoint(const CodePoint& cp) {
@@ -108,54 +98,108 @@ bool isErrorCodePoint(const CodePoint& cp) {
 }
 
 void Machine::runOne() {
-    if (m.state == Status::Error) {
-        m.blockReason = ErrorBlocked();
+    if (machine_state.state == Status::Error) {
+        machine_state.blockReason = ErrorBlocked();
         return;
     }
 
-    if (m.state == Status::Halted) {
-        m.blockReason = HaltBlocked();
+    if (machine_state.state == Status::Halted) {
+        machine_state.blockReason = HaltBlocked();
         return;
     }
 
-    m.context.numSteps++;
+    machine_state.context.numSteps++;
 
-    auto& instruction = m.code[m.pc];
+    auto& instruction = machine_state.code[machine_state.pc];
 
-    auto startStackSize = m.stack.stacksize();
+    auto startStackSize = machine_state.stack.stacksize();
 
     if (!isValidOpcode(instruction.op.opcode)) {
-        m.state = Status::Error;
+        machine_state.state = Status::Error;
     } else {
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
-            m.stack.push(std::move(imm));
+            machine_state.stack.push(std::move(imm));
         }
 
         try {
-            m.blockReason = m.runOp(instruction.op.opcode);
+            machine_state.blockReason =
+                machine_state.runOp(instruction.op.opcode);
         } catch (const bad_pop_type& e) {
-            m.state = Status::Error;
+            machine_state.state = Status::Error;
         } catch (const bad_tuple_index& e) {
-            m.state = Status::Error;
+            machine_state.state = Status::Error;
         }
     }
 
-    if (m.state != Status::Error) {
+    if (machine_state.state != Status::Error) {
         return;
     }
 
     // Clear stack to base for instruction
     auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-    while (m.stack.stacksize() > 0 &&
-           startStackSize - m.stack.stacksize() < stackItems) {
-        m.stack.popClear();
+    while (machine_state.stack.stacksize() > 0 &&
+           startStackSize - machine_state.stack.stacksize() < stackItems) {
+        machine_state.stack.popClear();
     }
 
-    if (!isErrorCodePoint(m.errpc)) {
-        m.pc = m.errpc.pc;
-        m.state = Status::Extensive;
+    if (!isErrorCodePoint(machine_state.errpc)) {
+        machine_state.pc = machine_state.errpc.pc;
+        machine_state.state = Status::Extensive;
     }
 
     return;
 }
+
+CheckpointData Machine::getCheckPointData() {
+    auto pc_value = CodePoint();
+    pc_value.pc = machine_state.pc;
+
+    auto pool = &getPool();
+
+    CheckpointData cp_data = {
+        machine_state.staticVal,
+        machine_state.registerVal,
+        machine_state.stack.GetTupleRepresentation(pool),
+        machine_state.auxstack.GetTupleRepresentation(pool),
+        machine_state.pendingInbox,
+        machine_state.inbox,
+        machine_state.pc,
+        machine_state.errpc,
+        machine_state.balance,
+        machine_state.state,
+        machine_state.blockReason};
+
+    return cp_data;
+}
+
+int Machine::SetMachineState(CheckpointStorage* storage, CheckpointData data) {
+    auto pool = getPool();
+
+    machine_state.staticVal = data.staticVal;
+    machine_state.registerVal = data.registerVal;
+
+    auto data_stack = Datastack();
+    data_stack.initializeDataStack(data.stack);
+
+    auto aux_stack = Datastack();
+    aux_stack.initializeDataStack(data.auxstack);
+
+    machine_state.stack = data_stack;
+    machine_state.auxstack = aux_stack;
+
+    machine_state.pc = data.pc;
+    machine_state.errpc = data.errpc;
+
+    machine_state.setInbox(data.inbox_messages);
+    machine_state.setPendingInbox(data.pendingInbox_messages);
+
+    machine_state.state = data.state;
+    machine_state.blockReason = data.blockReason;
+    machine_state.balance = data.balance;
+
+    return 1;
+}
+
+int Machine::SaveMachine(CheckpointStorage* storage,
+                         std::string checkpoint_name) {}

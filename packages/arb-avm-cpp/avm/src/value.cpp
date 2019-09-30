@@ -36,9 +36,9 @@ uint256_t deserialize_int(char*& bufptr) {
 
 // make sure correct
 uint64_t deserialize_int64(char*& bufptr) {
-    uint64_t ret = from_big_endian64(bufptr, bufptr + UINT64_SIZE);
-    bufptr += UINT64_SIZE;
-    return ret;
+    uint64_t ret_value;
+    memcpy(&ret_value, bufptr, UINT64_SIZE);
+    return ret_value;
 }
 
 Operation deserializeOperation(char*& bufptr, TuplePool& pool) {
@@ -93,8 +93,11 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
 
 // make sure correct
 void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
+    auto big_endian_val = boost::endian::native_to_big(val);
     std::array<unsigned char, 8> tmpbuf;
-    to_big_endian(val, tmpbuf.begin());
+    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
+
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
@@ -225,6 +228,28 @@ std::string ToHashString(uint256_t hash_key) {
     marshal_value(hash_key, hash_key_vector);
 
     return std::string(hash_key_vector.begin(), hash_key_vector.end());
+}
+
+std::vector<unsigned char> GetHashKey(const value& val) {
+    auto hash_key = hash(val);
+    std::vector<unsigned char> hash_key_vector;
+    marshal_value(hash_key, hash_key_vector);
+
+    return hash_key_vector;
+}
+
+std::vector<unsigned char> serializeForCheckpoint(const uint256_t& val) {
+    std::vector<unsigned char> value_vector;
+    auto type_code = (unsigned char)NUM;
+    value_vector.push_back(type_code);
+
+    std::vector<unsigned char> num_vector;
+    marshal_uint256_t(val, num_vector);
+
+    value_vector.insert(value_vector.end(), num_vector.begin(),
+                        num_vector.end());
+
+    return value_vector;
 }
 
 struct Serializer {

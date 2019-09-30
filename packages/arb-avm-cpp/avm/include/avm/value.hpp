@@ -38,11 +38,9 @@ struct SerializedValue {
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);
-SerializedValue SerializeValue(const value& val);
 int get_tuple_size(char*& bufptr);
 
 uint256_t deserialize_int(char*& srccode);
-uint64_t deserialize_int64(char*& srccode);
 Operation deserializeOperation(char*& bufptr, TuplePool& pool);
 CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
@@ -66,6 +64,15 @@ uint256_t& assumeInt(value& val);
 const uint256_t& assumeInt(const value& val);
 uint64_t assumeInt64(uint256_t& val);
 Tuple& assumeTuple(value& val);
+
+std::vector<unsigned char> serializeForCheckpoint(const uint256_t& val);
+
+std::vector<unsigned char> checkpointMachineState();
+std::vector<unsigned char> GetHashKey(const value& val);
+
+uint64_t deserialize_int64(char*& srccode);
+void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf);
+SerializedValue SerializeValue(const value& val);
 
 // std::vector<unsigned char> ConvertToCharVector(uint256_t value);
 

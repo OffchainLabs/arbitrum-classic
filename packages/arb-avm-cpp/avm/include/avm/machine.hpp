@@ -22,8 +22,10 @@
 #include <avm/value.hpp>
 #include <memory>
 #include <vector>
+#include "avm/checkpointstorage.hpp"
 #include "avm/checkpointutils.hpp"
 #include "avm/exceptions.hpp"
+#include "avm/machine.hpp"
 #include "avm/machinestate.hpp"
 
 struct Assertion {
@@ -33,7 +35,7 @@ struct Assertion {
 };
 
 class Machine {
-    MachineState m;
+    MachineState machine_state;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
     void runOne();
@@ -41,31 +43,37 @@ class Machine {
    public:
     Machine() = default;
     Machine(std::string filename);
-    bool deserialize(char* data) { return m.deserialize(data); }
+    bool deserialize(char* data) { return machine_state.deserialize(data); }
 
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,
                   uint64_t timeBoundEnd);
 
-    Status currentStatus() { return m.state; }
-    BlockReason lastBlockReason() { return m.blockReason; }
-    uint256_t hash() const { return m.hash(); }
-    std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
-    uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }
+    Status currentStatus() { return machine_state.state; }
+    BlockReason lastBlockReason() { return machine_state.blockReason; }
+    uint256_t hash() const { return machine_state.hash(); }
+    std::vector<unsigned char> marshalForProof() {
+        return machine_state.marshalForProof();
+    }
+    uint64_t pendingMessageCount() const {
+        return machine_state.pendingMessageCount();
+    }
 
     bool canSpend(const TokenType& tokType, const uint256_t& amount) const {
-        return m.balance.canSpend(tokType, amount);
+        return machine_state.balance.canSpend(tokType, amount);
     }
-    uint256_t inboxHash() const { return ::hash(m.inbox.messages); }
+    uint256_t inboxHash() const { return ::hash(machine_state.inbox.messages); }
 
     void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();
     void sendOffchainMessages(const std::vector<Message>& messages);
 
-    TuplePool& getPool() { return *m.pool; }
+    TuplePool& getPool() { return *machine_state.pool; }
 
     // should this be a tuple or some struct?
     CheckpointData getCheckPointData();
+    int SetMachineState(CheckpointStorage* storage, CheckpointData data);
+    int SaveMachine(CheckpointStorage* storage, std::string checkpoint_name);
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

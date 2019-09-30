@@ -488,7 +488,7 @@ void MachineOperation::log(MachineState& m) {
 }
 
 void MachineOperation::debug(MachineState& m) {
-    datastack tmpstk;
+    Datastack tmpstk;
     std::cout << std::endl;
     std::cout << "full stack - size=" << m.stack.stacksize() << std::endl;
     while (m.stack.stacksize() > 0) {

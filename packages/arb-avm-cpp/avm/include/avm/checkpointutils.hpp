@@ -14,13 +14,6 @@
 #include "messagestack.hpp"
 #include "rocksdb/db.h"
 
-struct GetResults {
-    int reference_count = 0;
-    rocksdb::Status status;
-    std::vector<unsigned char> storage_key;
-    std::string stored_value;
-};
-
 struct StateData {
     BalanceTracker& balance;
     Status& state;
@@ -33,18 +26,44 @@ struct SerializedStateData {
     BlockReason br;
 };
 
+struct MachineLoadData {
+    Tuple tuple_values;
+    SerializedStateData state_data;
+};
+
+struct GetResults {
+    int reference_count = 0;
+    rocksdb::Status status;
+    std::vector<unsigned char> storage_key;
+    std::string stored_value;
+};
+
 struct CheckpointData {
     value staticVal;
     value registerVal;
-    datastack stack;
-    datastack auxstack;
-    MessageStack pendingInbox;
-    MessageStack inbox;
+    Tuple stack;
+    Tuple auxstack;
+    MessageStack pendingInbox_messages;
+    MessageStack inbox_messages;
     uint64_t pc;
     CodePoint errpc;
     BalanceTracker balance;
     Status state;
     BlockReason blockReason;
+};
+
+struct CHeckpointInfo {
+    value staticVal;
+    value registerVal;
+    Tuple stack;
+    Tuple auxstack;
+    MessageStack pendingInbox_messages;
+    MessageStack inbox_messages;
+    uint64_t pc;
+    CodePoint errpc;
+    std::vector<unsigned char> balance;
+    std::vector<unsigned char> state;
+    std::vector<unsigned char> blockReason;
 };
 
 class CheckpointParser {

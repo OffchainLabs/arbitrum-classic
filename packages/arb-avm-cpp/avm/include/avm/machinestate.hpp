@@ -16,6 +16,8 @@
 #include <vector>
 #include "machinestatedata.hpp"
 #include "messagestack.hpp"
+//#include "avm/checkpointstorage.hpp"
+#include "avm/machinestatesaver.hpp"
 
 struct AssertionContext {
     uint32_t numSteps;
@@ -28,12 +30,14 @@ struct AssertionContext {
 };
 
 struct MachineState {
+    MachineStateSaver msSaver;
+
     std::shared_ptr<TuplePool> pool;
     std::vector<CodePoint> code;
     value staticVal;
     value registerVal;
-    datastack stack;
-    datastack auxstack;
+    Datastack stack;
+    Datastack auxstack;
     Status state = Status::Extensive;
     uint64_t pc = 0;
     CodePoint errpc;
@@ -55,6 +59,12 @@ struct MachineState {
     void sendOffchainMessages(const std::vector<Message>& messages);
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
+
+    void setInbox(MessageStack ms);
+    void setPendingInbox(MessageStack ms);
+
+    //    int SetMachineState(CheckpointData data);
+    //    int SaveMachine(std::string checkpoint_name);
 };
 
 #endif /* machinestate_hpp */

@@ -79,14 +79,14 @@ inline void to_big_endian(uint256_t v, Iterator out) {
 }
 
 // make sure this is correct
-template <typename Iterator>
-inline void to_big_endian(uint64_t v, Iterator out) {
-    uint64_t* o = reinterpret_cast<uint64_t*>(&*out);
-    constexpr uint64_t mask64 = 0xffffffff'ffffffff;
-
-    uint64_t n = static_cast<uint64_t>(v & mask64);
-    v >>= 64;
-    o[0] = boost::endian::native_to_big(n);
-}
+// template <typename Iterator>
+// inline void to_big_endian(uint64_t v, Iterator out) {
+//    uint64_t* o = reinterpret_cast<uint64_t*>(&*out);
+//    constexpr uint64_t mask64 = 0xffffffff'ffffffff;
+//
+//    uint64_t n = static_cast<uint64_t>(v & mask64);
+//    v >>= 64;
+//    o[0] = boost::endian::native_to_big(n);
+//}
 
 #endif /* bigint_utils_hpp */

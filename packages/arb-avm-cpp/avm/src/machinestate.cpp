@@ -36,9 +36,9 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()),
-      pendingInbox(*pool.get()),
+      pendingInbox(pool.get()),
       context({0, 0}),
-      inbox(*pool.get()) {}
+      inbox(pool.get()) {}
 
 uint256_t MachineState::hash() const {
     if (state == Status::Halted)
@@ -151,7 +151,7 @@ void MachineState::sendOnchainMessage(const Message& msg) {
 }
 
 void MachineState::sendOffchainMessages(const std::vector<Message>& messages) {
-    MessageStack messageStack(*pool.get());
+    MessageStack messageStack(pool.get());
     for (const auto& message : messages) {
         messageStack.addMessage(message);
     }
@@ -162,6 +162,33 @@ void MachineState::deliverOnchainMessages() {
     inbox.addMessageStack(std::move(pendingInbox));
     pendingInbox.clear();
 }
+
+void MachineState::setInbox(MessageStack ms) {
+    inbox = ms;
+}
+
+void MachineState::setPendingInbox(MessageStack ms) {
+    pendingInbox = ms;
+}
+
+// std::vector<unsigned char> storeValues(){
+//
+//}
+
+// int MachineState::SaveMachine(std::string checkpoint_name){
+//
+//    auto stored_static_val = msSaver.SaveValue(staticVal);
+//    auto stored_register_val = msSaver.SaveValue(registerVal);
+//
+//    auto pc_value = CodePoint();
+//    pc_value.pc = pc;
+//
+//    auto stored_pc_val = msSaver.SaveValue(pc_value);
+//
+//    auto status_str = Serialize(state);
+//    auto serialized_blockreason = SerializeBlockReason(blockReason);
+//    auto serialized_balance = balance.serializeBalanceValues();
+//}
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;

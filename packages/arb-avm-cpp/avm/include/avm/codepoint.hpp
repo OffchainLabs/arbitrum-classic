@@ -54,6 +54,8 @@ struct CodePoint {
         return ((op.opcode != static_cast<OpCode>(0)) || (pc != 0) ||
                 (nextHash != 0));
     }
+
+    std::vector<unsigned char> deserializeForCheckpoint();
 };
 
 uint256_t hash(const CodePoint& cp);

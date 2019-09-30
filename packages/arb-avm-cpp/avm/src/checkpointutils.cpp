@@ -8,44 +8,44 @@
 #include "avm/checkpointutils.hpp"
 
 std::vector<unsigned char> CombineData(
-    std::vector<unsigned char> token_char_list,
-    unsigned char status_value,
-    SerializedBlockReason block_reason) {
-    std::vector<unsigned char> return_value;
+    std::vector<unsigned char> balance_value,
+    std::vector<unsigned char> status_value,
+    std::vector<unsigned char> block_reason) {
+    status_value.insert(status_value.end(), balance_value.begin(),
+                        balance_value.end());
 
-    return_value.push_back(status_value);
-    return_value.push_back((unsigned char)block_reason.type);
-    return_value.insert(return_value.end(), block_reason.data.begin(),
-                        block_reason.data.end());
-    return_value.insert(return_value.end(), token_char_list.begin(),
-                        token_char_list.end());
-
-    return return_value;
+    return status_value;
 }
 
 std::vector<unsigned char> SerializeData(BalanceTracker& balance,
                                          Status& state,
                                          BlockReason& blockReason) {
-    auto list_of_token_pairs = balance.GetAllTokenPairs();
-    std::vector<unsigned char> token_char_list;
+    //    auto list_of_token_pairs = balance.GetAllTokenPairs();
+    //    std::vector<unsigned char> token_char_list;
+    //
+    //    for (auto& pair : list_of_token_pairs) {
+    //        auto tokentype = std::get<0>(pair);
+    //        auto value = std::get<1>(pair);
+    //
+    //        std::vector<unsigned char> value_vector;
+    //        marshal_uint256_t(value, value_vector);
+    //
+    //        token_char_list.insert(token_char_list.end(),
+    //        std::begin(tokentype),
+    //                               std::end(tokentype));
+    //        token_char_list.insert(token_char_list.end(),
+    //        value_vector.begin(),
+    //                               value_vector.end());
+    //    }
+    //
+    //    auto status_value = (unsigned char)state;
+    //    auto blockreasondata = SerializeBlockReason(blockReason);
 
-    for (auto& pair : list_of_token_pairs) {
-        auto tokentype = std::get<0>(pair);
-        auto value = std::get<1>(pair);
+    auto br = balance.serializeBalanceValues();
+    auto stat = Serialize(state);
+    auto b = SerializeBlockReason(blockReason);
 
-        std::vector<unsigned char> value_vector;
-        marshal_uint256_t(value, value_vector);
-
-        token_char_list.insert(token_char_list.end(), std::begin(tokentype),
-                               std::end(tokentype));
-        token_char_list.insert(token_char_list.end(), value_vector.begin(),
-                               value_vector.end());
-    }
-
-    auto status_value = (unsigned char)state;
-    auto blockreasondata = SerializeBlockReason(blockReason);
-    auto state_data =
-        CombineData(token_char_list, status_value, blockreasondata);
+    auto state_data = CombineData(br, stat, b);
 
     return state_data;
 }
@@ -101,6 +101,8 @@ SerializedStateData Deserialize(std::vector<unsigned char> state_data) {
     } else if (blocktype == Breakpoint) {
         return_data.br = BreakpointBlocked();
     }
+
+    std::vector<unsigned char> balance(current_it, state_data.end());
 
     std::vector<std::tuple<TokenType, uint256_t>> pairs;
 

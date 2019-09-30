@@ -72,12 +72,17 @@ class BalanceTracker {
     std::unordered_set<nftKey> nftLookup;
 
    public:
+    BalanceTracker();
+    BalanceTracker(std::vector<unsigned char> data);
     bool canSpend(const TokenType& tokType, const uint256_t& amount) const;
     bool spend(const TokenType& tokType, const uint256_t& amount);
     void add(const TokenType& tokType, const uint256_t& amount);
     uint256_t tokenValue(const TokenType& tokType) const;
     bool hasNFT(const TokenType& tokType, const uint256_t& id) const;
-    std::vector<std::tuple<TokenType, uint256_t>> GetAllTokenPairs();
+    //    std::vector<std::tuple<TokenType, uint256_t>> GetAllTokenPairs();
+    std::vector<unsigned char> serializeBalanceValues();
+
+    //    GetResults CheckpointBalancaState(MachineStateSaver msSaver);
 };
 
 #endif /* tokenTracker_hpp */

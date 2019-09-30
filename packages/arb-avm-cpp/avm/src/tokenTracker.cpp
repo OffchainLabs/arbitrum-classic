@@ -156,13 +156,55 @@ void BalanceTracker::add(const TokenType& tokType, const uint256_t& amount) {
     }
 }
 
-std::vector<std::tuple<TokenType, uint256_t>>
-BalanceTracker::GetAllTokenPairs() {
-    std::vector<std::tuple<TokenType, uint256_t>> tokens;
+// std::vector<std::tuple<TokenType, uint256_t>>
+// BalanceTracker::GetAllTokenPairs() {
+//    std::vector<std::tuple<TokenType, uint256_t>> tokens;
+//
+//    for (const auto& pair : tokenLookup) {
+//        tokens.push_back(std::make_tuple(pair.first, pair.second));
+//    }
+//
+//    return tokens;
+//}
+
+std::vector<unsigned char> BalanceTracker::serializeBalanceValues() {
+    std::vector<unsigned char> return_vector;
 
     for (const auto& pair : tokenLookup) {
-        tokens.push_back(std::make_tuple(pair.first, pair.second));
+        std::vector<unsigned char> value_vector;
+        marshal_uint256_t(pair.second, value_vector);
+
+        return_vector.insert(return_vector.end(), std::begin(pair.first),
+                             std::end(pair.first));
+
+        return_vector.insert(return_vector.end(), value_vector.begin(),
+                             value_vector.end());
     }
 
-    return tokens;
+    return return_vector;
 }
+
+BalanceTracker::BalanceTracker() {}
+
+BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
+    auto current_it = data.begin();
+
+    while (current_it != data.end()) {
+        std::array<unsigned char, 21> token_type;
+
+        std::copy(current_it, current_it + 21, token_type.begin());
+        current_it += 21;
+
+        std::vector<unsigned char> value_vector(current_it, current_it + 33);
+        current_it += 33;
+
+        auto buff = reinterpret_cast<char*>(&value_vector[0]);
+        auto currency_val = deserialize_int(buff);
+
+        add(token_type, currency_val);
+    }
+}
+
+// GetResults BalanceTracker::CheckpointBalancaState(MachineStateSaver msSaver){
+//
+//}

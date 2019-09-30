@@ -23,7 +23,7 @@
 #include <iostream>
 #include <vector>
 
-class datastack {
+class Datastack {
     static constexpr int lazyCount = 100;
 
     void addHash() const;
@@ -33,7 +33,7 @@ class datastack {
     std::vector<value> values;
     mutable std::vector<uint256_t> hashes;
 
-    datastack() {
+    Datastack() {
         values.reserve(1000);
         hashes.reserve(1000);
     }
@@ -93,8 +93,12 @@ class datastack {
     uint256_t hash() const;
 
     Tuple GetTupleRepresentation(TuplePool* pool);
+
+    int initializeDataStack(Tuple tuple);
+
+    //    GetResults CheckpointState(MachineStateSaver msSaver);
 };
 
-std::ostream& operator<<(std::ostream& os, const datastack& val);
+std::ostream& operator<<(std::ostream& os, const Datastack& val);
 
 #endif /* datastack_hpp */

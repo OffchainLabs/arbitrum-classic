@@ -19,7 +19,7 @@
 #include "bigint_utils.hpp"
 #include "util.hpp"
 
-void datastack::addHash() const {
+void Datastack::addHash() const {
     uint256_t prev;
     if (hashes.size() > 0) {
         prev = hashes.back();
@@ -45,13 +45,13 @@ void datastack::addHash() const {
     hashes.emplace_back(from_big_endian(hashData.begin(), hashData.end()));
 }
 
-void datastack::calculateAllHashes() const {
+void Datastack::calculateAllHashes() const {
     while (hashes.size() < values.size()) {
         addHash();
     }
 }
 
-uint256_t datastack::hash() const {
+uint256_t Datastack::hash() const {
     if (values.empty()) {
         return ::hash(Tuple());
     }
@@ -59,10 +59,10 @@ uint256_t datastack::hash() const {
     return hashes.back();
 }
 
-std::pair<uint256_t, std::vector<unsigned char>> datastack::marshalForProof(
+std::pair<uint256_t, std::vector<unsigned char>> Datastack::marshalForProof(
     const std::vector<bool>& stackInfo) {
     calculateAllHashes();
-    datastack c = *this;
+    Datastack c = *this;
     std::vector<unsigned char> buf;
     for (auto const& si : stackInfo) {
         value val = c.pop();
@@ -78,7 +78,7 @@ std::pair<uint256_t, std::vector<unsigned char>> datastack::marshalForProof(
     return std::make_pair(c.hash(), std::move(buf));
 }
 
-std::ostream& operator<<(std::ostream& os, const datastack& val) {
+std::ostream& operator<<(std::ostream& os, const Datastack& val) {
     os << "[";
     for (uint64_t i = 0; i < val.values.size(); i++) {
         os << val.values[val.values.size() - 1 - i];
@@ -90,17 +90,30 @@ std::ostream& operator<<(std::ostream& os, const datastack& val) {
     return os;
 }
 
-Tuple datastack::GetTupleRepresentation(TuplePool* pool) {
+Tuple Datastack::GetTupleRepresentation(TuplePool* pool) {
     auto size = values.size();
-
     auto current_tuple = Tuple(values[0], pool);
 
     for (unsigned int i = 1; i < size; i++) {
         auto new_tuple = Tuple(values[i], current_tuple, pool);
-
         // assert hashes[i] == prev_tuple.calculateHash()
         current_tuple = new_tuple;
     }
 
     return current_tuple;
+}
+
+int Datastack::initializeDataStack(Tuple tuple) {
+    int ret_val = 0;
+
+    if (tuple.tuple_size() < 2) {
+        auto inner_tuple = nonstd::get<Tuple>(tuple.get_element(1));
+        ret_val = initializeDataStack(inner_tuple);
+
+        auto current_val = tuple.get_element(0);
+    }
+
+    push(tuple.get_element(0));
+
+    return ret_val;
 }

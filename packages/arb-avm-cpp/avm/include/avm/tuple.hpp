@@ -26,6 +26,8 @@
 
 uint256_t zeroHash();
 
+class SerialTup {};
+
 class Tuple {
    private:
     TuplePool* tuplePool;
@@ -91,6 +93,11 @@ class Tuple {
           TuplePool* pool);
 
     Tuple(std::vector<value> values, TuplePool* pool);
+
+    //    std::map<std::string, std::vector<std::string>> deserialize(){
+    //
+    //        auto h = calculateHash();
+    //    }
 
     //    ~Tuple() {
     //        if (tpl.use_count() == 1) {
