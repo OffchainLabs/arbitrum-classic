@@ -140,7 +140,7 @@ void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-std::vector<unsigned char> CodePoint::deserializeForCheckpoint() {
+std::vector<unsigned char> CodePoint::deserializeForCheckpoint() const {
     std::vector<unsigned char> value_vector;
     auto type_code = (unsigned char)CODEPT;
     value_vector.push_back(type_code);

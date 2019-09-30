@@ -71,7 +71,7 @@ std::vector<unsigned char> checkpointMachineState();
 std::vector<unsigned char> GetHashKey(const value& val);
 
 uint64_t deserialize_int64(char*& srccode);
-void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf);
+// void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf);
 SerializedValue SerializeValue(const value& val);
 
 // std::vector<unsigned char> ConvertToCharVector(uint256_t value);

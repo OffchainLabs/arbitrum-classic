@@ -55,7 +55,7 @@ struct CodePoint {
                 (nextHash != 0));
     }
 
-    std::vector<unsigned char> deserializeForCheckpoint();
+    std::vector<unsigned char> deserializeForCheckpoint() const;
 };
 
 uint256_t hash(const CodePoint& cp);

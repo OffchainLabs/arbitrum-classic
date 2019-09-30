@@ -15,6 +15,7 @@
 
 class MachineStateSaver {
    private:
+    TuplePool* pool;
     std::vector<std::vector<unsigned char>> breakIntoValues(
         std::vector<unsigned char> data_vecgtor);
 

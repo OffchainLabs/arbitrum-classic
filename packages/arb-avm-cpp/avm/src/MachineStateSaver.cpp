@@ -76,8 +76,7 @@ Tuple MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
         }
     }
 
-    // get pool
-    TuplePool* pool;
+    // get pool;
     auto tup = Tuple(values, pool);
 
     return tup;

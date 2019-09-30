@@ -92,13 +92,13 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
 }
 
 // make sure correct
-void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
-    auto big_endian_val = boost::endian::native_to_big(val);
-    std::array<unsigned char, 8> tmpbuf;
-    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
-
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
+// void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
+//    auto big_endian_val = boost::endian::native_to_big(val);
+//    std::array<unsigned char, 8> tmpbuf;
+//    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
+//
+//    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+//}
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
     if (nonstd::holds_alternative<Tuple>(val))
@@ -291,15 +291,7 @@ struct Serializer {
     }
 
     SerializedValue operator()(const CodePoint& val) const {
-        std::vector<unsigned char> value_vector;
-        auto type_code = (unsigned char)CODEPT;
-        value_vector.push_back(type_code);
-
-        std::vector<unsigned char> pc_vector;
-        marshal_uint64_t(val.pc, pc_vector);
-
-        value_vector.insert(value_vector.end(), pc_vector.begin(),
-                            pc_vector.end());
+        auto value_vector = val.deserializeForCheckpoint();
 
         std::string str_value(value_vector.begin(), value_vector.end());
 

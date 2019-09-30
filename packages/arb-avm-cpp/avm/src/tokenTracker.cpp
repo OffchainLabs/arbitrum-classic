@@ -156,17 +156,6 @@ void BalanceTracker::add(const TokenType& tokType, const uint256_t& amount) {
     }
 }
 
-// std::vector<std::tuple<TokenType, uint256_t>>
-// BalanceTracker::GetAllTokenPairs() {
-//    std::vector<std::tuple<TokenType, uint256_t>> tokens;
-//
-//    for (const auto& pair : tokenLookup) {
-//        tokens.push_back(std::make_tuple(pair.first, pair.second));
-//    }
-//
-//    return tokens;
-//}
-
 std::vector<unsigned char> BalanceTracker::serializeBalanceValues() {
     std::vector<unsigned char> return_vector;
 
@@ -204,7 +193,3 @@ BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
         add(token_type, currency_val);
     }
 }
-
-// GetResults BalanceTracker::CheckpointBalancaState(MachineStateSaver msSaver){
-//
-//}
