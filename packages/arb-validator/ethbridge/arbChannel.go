@@ -197,6 +197,8 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 		}
 	}
 
+	//log.Println("******FinalizedUnanimousAssert")
+	//newInboxHash[0] = 5
 	tx, err := vm.contract.FinalizedUnanimousAssert(
 		auth,
 		assertion.AfterHash,

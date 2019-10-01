@@ -128,6 +128,8 @@ func (val *Validator) FinalizedUnanimousAssert(
 	signatures [][]byte,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
+	//log.Println(" ********** FinalizedUnanimousAssert")
+	//newInboxHash[0]=5
 	receipt, err := val.arbChannel.FinalizedUnanimousAssert(
 		val.Validator.MakeAuth(ctx),
 		newInboxHash,
@@ -146,6 +148,8 @@ func (val *Validator) PendingUnanimousAssert(
 	signatures [][]byte,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
+	//log.Println(" ********** PendingUnanimousAssert")
+	//newInboxHash[0]=5
 	receipt, err := val.arbChannel.PendingUnanimousAssert(
 		val.Validator.MakeAuth(ctx),
 		newInboxHash,
@@ -163,6 +167,8 @@ func (val *Validator) ConfirmUnanimousAsserted(
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
+	//log.Println(" ********** ConfirmUnanimousAsserted")
+	//newInboxHash[0]=5
 	receipt, err := val.arbChannel.ConfirmUnanimousAsserted(
 		val.Validator.MakeAuth(ctx),
 		newInboxHash,

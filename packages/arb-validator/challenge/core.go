@@ -53,7 +53,7 @@ func (bot TimedOutChallenger) UpdateTime(time uint64, bridge bridge.ArbVMBridge)
 }
 
 func (bot TimedOutChallenger) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
-	log.Printf("TimedOutChallenger UpdateState event %T", ev)
+	log.Printf("TimedOutChallenger UpdateState event %T\n", ev)
 	switch ev.(type) {
 	case ethbridge.ChallengerTimeoutEvent:
 		return nil, nil
@@ -71,7 +71,7 @@ func (bot TimedOutAsserter) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (
 }
 
 func (bot TimedOutAsserter) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (State, error) {
-	log.Printf("TimedOutAsserter UpdateState event %T", ev)
+	log.Printf("TimedOutAsserter UpdateState event %T\n", ev)
 	switch ev.(type) {
 	case ethbridge.AsserterTimeoutEvent:
 		return nil, nil

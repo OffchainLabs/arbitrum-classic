@@ -60,7 +60,7 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (
 }
 
 func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
-	log.Printf("observer waitingChallenge UpdateState event %T", ev)
+	log.Printf("observer waitingChallenge UpdateState event %T\n", ev)
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		deadline := time + bot.VMConfig.GracePeriod
@@ -92,7 +92,7 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (c
 }
 
 func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
-	log.Printf("observer waitingBisected UpdateState event %T", ev)
+	log.Printf("observer waitingBisected UpdateState event %T\n", ev)
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod

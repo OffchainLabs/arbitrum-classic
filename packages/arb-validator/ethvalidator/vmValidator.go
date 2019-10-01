@@ -152,7 +152,7 @@ func (val *VMValidator) StartListening(ctx context.Context) (chan ethbridge.Noti
 				}
 				parsedChan <- parse
 			case <-errChan:
-				// log.Printf("Validator recieved error: %v", err)
+				// log.Printf("Validator recieved error: %v\n", err)
 				// fmt.Println("Resetting channels")
 				hitError = true
 
@@ -267,6 +267,8 @@ func (val *VMValidator) InitiateChallenge(
 	assertion *protocol.AssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
+	//log.Println(" ********** InitiateChallenge")
+	//precondition.BeforeHash[0]=5
 	receipt, err := val.arbitrumVM.InitiateChallenge(
 		val.Validator.MakeAuth(ctx),
 		precondition,

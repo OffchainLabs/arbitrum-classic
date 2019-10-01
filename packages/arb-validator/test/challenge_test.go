@@ -163,7 +163,8 @@ func TestChallenge(t *testing.T) {
 	}
 
 	log.Println("Everyone is running")
-	monitorChan := coordinator.ChannelVal.GetMonitor()
+	coordinatorMonitorChan := coordinator.ChannelVal.GetMonitor()
+	challengerMonitorChan := challenger.ChannelVal.GetMonitor()
 	time.Sleep(2 * time.Second)
 
 	challenger.IgnoreCoordinator()
@@ -190,15 +191,44 @@ func TestChallenge(t *testing.T) {
 	if receipt.Status == 0 {
 		log.Fatalln("Follower could not send message")
 	}
-	message := <-monitorChan
-	if !message.Recoverable {
-		log.Println("***************************")
-		log.Println("unrecoverable error exiting")
-		log.Println("***************************")
-		return
+	for {
+		select {
+		case message := <-coordinatorMonitorChan:
+			if !message.Recoverable {
+				t.Error("coordinator unexpected unrecoverable error")
+				log.Println("***************************")
+				log.Println("unrecoverable error exiting")
+				log.Println(message.Message)
+				log.Println(message.Err)
+				log.Println("***************************")
+				return
+			} else {
+				t.Error("coordinator unexpected recoverable error")
+				log.Println("****************************")
+				log.Println("recoverable error continuing")
+				log.Println(message)
+				log.Println("****************************")
+			}
+		case message := <-challengerMonitorChan:
+			if !message.Recoverable {
+				t.Error("challenger unexpected unrecoverable error")
+				log.Println("***************************")
+				log.Println("unrecoverable challenger error exiting")
+				log.Println(message.Message)
+				log.Println(message.Err)
+				log.Println("***************************")
+				return
+			} else {
+				t.Error("challenger unexpected recoverable error")
+				log.Println("****************************")
+				log.Println("recoverable challenger error continuing")
+				log.Println(message.Message)
+				log.Println("****************************")
+			}
+		case <-time.After(60 * time.Second):
+			fmt.Println("test complete")
+			return
+		}
 	}
-	log.Println("***************************")
-	log.Println("recoverable error continuing")
-	log.Println("***************************")
-	time.Sleep(60 * time.Second)
+	//time.Sleep(60 * time.Second)
 }

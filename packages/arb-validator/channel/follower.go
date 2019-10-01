@@ -42,7 +42,7 @@ import (
 
 type ValidatorFollower struct {
 	*Validator
-	channelVal *validator.ChannelValidator
+	ChannelVal *validator.ChannelValidator
 
 	client *Client
 
@@ -136,7 +136,7 @@ func NewValidatorFollower(
 	client := NewClient(coordinatorConn, address)
 	return &ValidatorFollower{
 		Validator:         c,
-		channelVal:        channelVal,
+		ChannelVal:        channelVal,
 		client:            client,
 		unanimousRequests: unanimousRequests,
 		maxStepsUnanSteps: maxStepsUnanSteps,
@@ -191,7 +191,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			return len(a.OutMsgs) > 0
 		}
 
-		resultsChan, unanErrChan := m.channelVal.RequestFollowUnanimous(
+		resultsChan, unanErrChan := m.ChannelVal.RequestFollowUnanimous(
 			valmessage.UnanimousRequestData{
 				BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
 				BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
@@ -261,7 +261,7 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 	}
 
 	go func() {
-		m.channelVal.Run(ctx, parsedChan)
+		m.ChannelVal.Run(ctx, parsedChan)
 	}()
 
 	go func() {
@@ -282,19 +282,19 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 			req := new(valmessage.ValidatorRequest)
 			err := proto.Unmarshal(message, req)
 			if err != nil {
-				log.Printf("Validator recieved malformed message")
+				log.Printf("Validator recieved malformed message\n")
 				continue
 			}
 			switch request := req.Request.(type) {
 			case *valmessage.ValidatorRequest_Unanimous:
 				err := m.HandleUnanimousRequest(request.Unanimous, value.NewHashFromBuf(req.RequestId))
 				if err != nil {
-					log.Printf("Follower error while trying to handle unanimous assertion request from coordinator")
+					log.Printf("Follower error while trying to handle unanimous assertion request from coordinator\n")
 				}
 			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
 				if request.UnanimousNotification.Accepted {
-					resultChan, errChan := m.channelVal.ConfirmOffchainUnanimousAssertion(
+					resultChan, errChan := m.ChannelVal.ConfirmOffchainUnanimousAssertion(
 						requestInfo,
 						request.UnanimousNotification.Signatures,
 						false,

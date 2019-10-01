@@ -334,8 +334,13 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 	return resultChan, errChan
 }
 
+func (validator *Validator) ValidatorClosing() {
+	fmt.Printf("%v: Exiting\n", validator.Name)
+	validator.monitor <- challenge.Error{errors.New("WARNING: validator closing"), "WARNING: validator closing", false}
+}
+
 func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.Notification) {
-	defer fmt.Printf("%v: Exiting\n", validator.Name)
+	defer validator.ValidatorClosing()
 	for {
 		select {
 		case <-ctx.Done():
@@ -352,14 +357,14 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 				validator.latestHeader = newHeader
 				err := validator.timeUpdate()
 				if err != nil {
-					log.Printf("Validator %v: Error processing time update - %v", validator.Name, err)
+					//log.Printf("Validator %v: Error processing time update - %v\n", validator.Name, err)
 					if errstat, ok := err.(*challenge.Error); ok {
 						if !errstat.Recoverable {
-							log.Printf("Validator %v: non recoverable error", validator.Name)
+							//log.Printf("Validator %v: non recoverable error\n", validator.Name)
 							validator.monitor <- *errstat
 							return
 						} else {
-							log.Printf("Validator %v: recoverable error - contiuing", validator.Name)
+							//log.Printf("Validator %v: recoverable error - contiuing\n", validator.Name)
 							validator.monitor <- *errstat
 						}
 					} else {
@@ -382,16 +387,17 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 			case ethbridge.NewTimeEvent:
 				break
 			case ethbridge.VMEvent:
-				log.Printf("validator %v received VMEvent type %T", validator.Name, ev)
+				//log.Printf("validator %v received VMEvent type %T\n", validator.Name, ev)
 				err := validator.eventUpdate(ev, notification.Header)
 				if err != nil {
+					//log.Printf("*****Validator %v: error - %v\n", validator.Name, err)
 					if errstat, ok := err.(*challenge.Error); ok {
 						if !errstat.Recoverable {
-							log.Printf("Validator %v: non recoverable error - %v", validator.Name, err)
+							//log.Printf("Validator %v: non recoverable error - %v\n", validator.Name, err)
 							validator.monitor <- *errstat
 							return
 						} else {
-							log.Printf("Validator %v: recoverable error - %v - contiuing", validator.Name, err)
+							//log.Printf("Validator %v: recoverable error - %v - contiuing\n", validator.Name, err)
 							validator.monitor <- *errstat
 						}
 					} else {
@@ -411,7 +417,8 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 
 		if asserted, err := validator.bot.attemptDisputableAssertion(ctx, validator.pendingDisputableRequest); asserted || err != nil {
 			if err != nil {
-				log.Println("Failed to disputable assert", err)
+				log.Printf("Validator %v: Failed to disputable assert - %v\n", validator.Name, err)
+				validator.monitor <- challenge.Error{err, "ERROR: failed to create disputable assertion", true}
 			}
 			validator.pendingDisputableRequest = nil
 		}
@@ -445,7 +452,7 @@ func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Head
 	} else {
 		challengeBot, err := validator.bot.updateState(ev, header.Number.Uint64())
 		if err != nil {
-			log.Printf("validator %v received error %v", validator.Name, err)
+			//log.Printf("validator %v received error %v\n", validator.Name, err)
 			return err
 		}
 		if challengeBot != nil {

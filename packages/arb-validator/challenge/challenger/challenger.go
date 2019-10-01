@@ -18,7 +18,6 @@ package challenger
 
 import (
 	"context"
-	"log"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -62,7 +61,6 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 }
 
 func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
-	log.Printf("waitingContinuing UpdateState event %T", ev)
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
@@ -76,6 +74,8 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 				)
 			}
 			err = nil
+			// turn off ChallengeEverything after bisection started
+			bot.ChallengeEverything = false
 		}
 		if err != nil {
 			return nil, &challenge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
@@ -123,7 +123,6 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challe
 }
 
 func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
-	log.Printf("continuing UpdateState event %T", ev)
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
