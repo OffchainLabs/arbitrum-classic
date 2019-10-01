@@ -175,20 +175,19 @@ void MachineState::setPendingInbox(MessageStack ms) {
 //
 //}
 
-// int MachineState::SaveMachine(std::string checkpoint_name){
-//
-//    auto stored_static_val = msSaver.SaveValue(staticVal);
-//    auto stored_register_val = msSaver.SaveValue(registerVal);
-//
-//    auto pc_value = CodePoint();
-//    pc_value.pc = pc;
-//
-//    auto stored_pc_val = msSaver.SaveValue(pc_value);
-//
-//    auto status_str = Serialize(state);
-//    auto serialized_blockreason = SerializeBlockReason(blockReason);
-//    auto serialized_balance = balance.serializeBalanceValues();
-//}
+int MachineState::SaveMachine(std::string checkpoint_name) {
+    auto stored_static_val = msSaver.SaveValue(staticVal);
+    auto stored_register_val = msSaver.SaveValue(registerVal);
+
+    auto pc_value = CodePoint();
+    pc_value.pc = pc;
+
+    auto stored_pc_val = msSaver.SaveValue(pc_value);
+
+    auto status_str = Serialize(state);
+    auto serialized_blockreason = SerializeBlockReason(blockReason);
+    auto serialized_balance = balance.serializeBalanceValues();
+}
 
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;

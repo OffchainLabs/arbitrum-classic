@@ -151,55 +151,56 @@ void Machine::runOne() {
     return;
 }
 
-CheckpointData Machine::getCheckPointData() {
-    auto pc_value = CodePoint();
-    pc_value.pc = machine_state.pc;
+// CheckpointData Machine::getCheckPointData() {
+//    auto pc_value = CodePoint();
+//    pc_value.pc = machine_state.pc;
+//
+//    auto pool = &getPool();
+//
+//    CheckpointData cp_data = {
+//        machine_state.staticVal,
+//        machine_state.registerVal,
+//        machine_state.stack.GetTupleRepresentation(pool),
+//        machine_state.auxstack.GetTupleRepresentation(pool),
+//        machine_state.pendingInbox,
+//        machine_state.inbox,
+//        machine_state.pc,
+//        machine_state.errpc,
+//        machine_state.balance,
+//        machine_state.state,
+//        machine_state.blockReason};
+//
+//    return cp_data;
+//}
 
-    auto pool = &getPool();
-
-    CheckpointData cp_data = {
-        machine_state.staticVal,
-        machine_state.registerVal,
-        machine_state.stack.GetTupleRepresentation(pool),
-        machine_state.auxstack.GetTupleRepresentation(pool),
-        machine_state.pendingInbox,
-        machine_state.inbox,
-        machine_state.pc,
-        machine_state.errpc,
-        machine_state.balance,
-        machine_state.state,
-        machine_state.blockReason};
-
-    return cp_data;
-}
-
-int Machine::SetMachineState(CheckpointStorage* storage, CheckpointData data) {
-    auto pool = getPool();
-
-    machine_state.staticVal = data.staticVal;
-    machine_state.registerVal = data.registerVal;
-
-    auto data_stack = Datastack();
-    data_stack.initializeDataStack(data.stack);
-
-    auto aux_stack = Datastack();
-    aux_stack.initializeDataStack(data.auxstack);
-
-    machine_state.stack = data_stack;
-    machine_state.auxstack = aux_stack;
-
-    machine_state.pc = data.pc;
-    machine_state.errpc = data.errpc;
-
-    machine_state.setInbox(data.inbox_messages);
-    machine_state.setPendingInbox(data.pendingInbox_messages);
-
-    machine_state.state = data.state;
-    machine_state.blockReason = data.blockReason;
-    machine_state.balance = data.balance;
-
-    return 1;
-}
+// int Machine::SetMachineState(CheckpointStorage* storage, CheckpointData data)
+// {
+//    auto pool = getPool();
+//
+//    machine_state.staticVal = data.staticVal;
+//    machine_state.registerVal = data.registerVal;
+//
+//    auto data_stack = Datastack();
+//    data_stack.initializeDataStack(data.stack);
+//
+//    auto aux_stack = Datastack();
+//    aux_stack.initializeDataStack(data.auxstack);
+//
+//    machine_state.stack = data_stack;
+//    machine_state.auxstack = aux_stack;
+//
+//    machine_state.pc = data.pc;
+//    machine_state.errpc = data.errpc;
+//
+//    machine_state.setInbox(data.inbox_messages);
+//    machine_state.setPendingInbox(data.pendingInbox_messages);
+//
+//    machine_state.state = data.state;
+//    machine_state.blockReason = data.blockReason;
+//    machine_state.balance = data.balance;
+//
+//    return 1;
+//}
 
 int Machine::SaveMachine(CheckpointStorage* storage,
                          std::string checkpoint_name) {}

@@ -91,15 +91,6 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-// make sure correct
-// void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
-//    auto big_endian_val = boost::endian::native_to_big(val);
-//    std::array<unsigned char, 8> tmpbuf;
-//    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
-//
-//    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-//}
-
 void marshal_value(const value& val, std::vector<unsigned char>& buf) {
     if (nonstd::holds_alternative<Tuple>(val))
         marshal_Tuple(nonstd::get<Tuple>(val), buf);
@@ -292,9 +283,7 @@ struct Serializer {
 
     SerializedValue operator()(const CodePoint& val) const {
         auto value_vector = val.deserializeForCheckpoint();
-
         std::string str_value(value_vector.begin(), value_vector.end());
-
         SerializedValue serialized_value{CODEPT, str_value};
 
         return serialized_value;
@@ -304,17 +293,3 @@ struct Serializer {
 SerializedValue SerializeValue(const value& val) {
     return nonstd::visit(Serializer{}, val);
 }
-
-// marshal_uint256_t instead?
-// make sure correct
-// std::vector<unsigned char> ConvertToCharVector(uint256_t value) {
-//
-//    unsigned char value_char_list[sizeof(value)];
-//    std::memcpy(value_char_list, &value, sizeof(value));
-//    std::vector<unsigned char> return_vector;
-//
-//    return_vector.insert(return_vector.end(), std::begin(value_char_list),
-//    std::end(value_char_list));
-//
-//    return return_vector;
-//}

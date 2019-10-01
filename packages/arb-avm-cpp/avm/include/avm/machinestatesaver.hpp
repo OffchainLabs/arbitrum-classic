@@ -8,10 +8,9 @@
 #ifndef machinestatesaver_hpp
 #define machinestatesaver_hpp
 
-#include <stdio.h>
 #include "avm/checkpointstorage.hpp"
+#include "avm/machinestatedata.hpp"
 #include "avm/value.hpp"
-//#include "avm/checkpointutils.hpp"
 
 class MachineStateSaver {
    private:

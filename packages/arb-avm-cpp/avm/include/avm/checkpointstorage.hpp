@@ -9,9 +9,15 @@
 #define checkpointstorage_hpp
 
 #include <vector>
-#include "avm/checkpointutils.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
+
+struct GetResults {
+    int reference_count = 0;
+    rocksdb::Status status;
+    std::vector<unsigned char> storage_key;
+    std::string stored_value;
+};
 
 class CheckpointStorage {
    private:

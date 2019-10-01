@@ -8,16 +8,14 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
-#include <stdio.h>
 #include <avm/datastack.hpp>
 #include <avm/tokenTracker.hpp>
 #include <avm/value.hpp>
 #include <memory>
 #include <vector>
+#include "avm/machinestatesaver.hpp"
 #include "machinestatedata.hpp"
 #include "messagestack.hpp"
-//#include "avm/checkpointstorage.hpp"
-#include "avm/machinestatesaver.hpp"
 
 struct AssertionContext {
     uint32_t numSteps;
@@ -64,7 +62,7 @@ struct MachineState {
     void setPendingInbox(MessageStack ms);
 
     //    int SetMachineState(CheckpointData data);
-    //    int SaveMachine(std::string checkpoint_name);
+    int SaveMachine(std::string checkpoint_name);
 };
 
 #endif /* machinestate_hpp */

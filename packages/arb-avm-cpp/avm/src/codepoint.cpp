@@ -150,10 +150,6 @@ std::vector<unsigned char> CodePoint::deserializeForCheckpoint() const {
 
     value_vector.insert(value_vector.end(), pc_vector.begin(), pc_vector.end());
 
-    // std::string str_value(value_vector.begin(), value_vector.end());
-
-    // SerializedValue serialized_value{CODEPT, str_value};
-
     return value_vector;
 }
 

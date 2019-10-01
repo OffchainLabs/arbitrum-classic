@@ -71,8 +71,8 @@ class Machine {
     TuplePool& getPool() { return *machine_state.pool; }
 
     // should this be a tuple or some struct?
-    CheckpointData getCheckPointData();
-    int SetMachineState(CheckpointStorage* storage, CheckpointData data);
+    // CheckpointData getCheckPointData();
+    // int SetMachineState(CheckpointStorage* storage, CheckpointData data);
     int SaveMachine(CheckpointStorage* storage, std::string checkpoint_name);
 };
 

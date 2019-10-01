@@ -7,6 +7,9 @@
 
 #include "avm/checkpointstorage.hpp"
 
+#include "rocksdb/options.h"
+#include "rocksdb/utilities/transaction.h"
+
 using UCharVec = std::vector<unsigned char>;
 
 std::string dbPath = "tmp/rocksDbPath";
@@ -76,10 +79,24 @@ GetResults CheckpointStorage::SaveValueToDb(
     }
 };
 
+rocksdb::Status CheckpointStorage::DeleteValue(std::string key) {
+    rocksdb::WriteOptions writeOptions;
+    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
+    assert(transaction);
+
+    auto delete_status = transaction->Delete(key);
+    assert(delete_status.ok());
+
+    auto commit_status = transaction->Commit();
+    assert(commit_status.ok());
+
+    return commit_status;
+}
+
 // use variant to return status error or value
 GetResults CheckpointStorage::getStoredValue(
     std::vector<unsigned char> hash_key) {
-    rocksdb::ReadOptions read_options;
+    auto read_options = rocksdb::ReadOptions();
     std::string return_value;
 
     std::string key_str(hash_key.begin(), hash_key.end());
@@ -102,21 +119,8 @@ GetResults CheckpointStorage::getStoredValue(
     }
 }
 
-rocksdb::Status CheckpointStorage::DeleteValue(std::string key) {
-    rocksdb::WriteOptions writeOptions;
-    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
-    assert(transaction);
-
-    auto delete_status = transaction->Delete(key);
-    assert(delete_status.ok());
-
-    auto commit_status = transaction->Commit();
-    assert(commit_status.ok());
-
-    return commit_status;
-}
-
-std::tuple<int, std::string> ParseCountAndValue(std::string string_value) {
+std::tuple<int, std::string> CheckpointStorage::ParseCountAndValue(
+    std::string string_value) {
     // is max 256 references good enough?
     const char* c_string = string_value.c_str();
     uint16_t ref_count;
@@ -126,7 +130,8 @@ std::tuple<int, std::string> ParseCountAndValue(std::string string_value) {
     return std::make_tuple(ref_count, saved_value);
 }
 
-std::string SerializeCountAndValue(int count, std::string value) {
+std::string CheckpointStorage::SerializeCountAndValue(int count,
+                                                      std::string value) {
     std::string str;
     if (count > 255) {
         // error

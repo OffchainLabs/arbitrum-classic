@@ -33,9 +33,11 @@ set(LIB_HEADERS
   include/avm/machinestate.hpp
   include/avm/machineoperation.hpp
   include/avm/exceptions.hpp
-  include/avm/CheckpointStorage.hpp
-  include/avm/CheckpointDataLayer.hpp
+  include/avm/checkpointstorage.hpp
+  include/avm/machinestatesaver.hpp
   include/avm/checkpointutils.hpp
+  include/avm/messagestack.hpp
+  include/avm/machinestatedata.hpp
 )
 
 set(LIB_SOURCES
@@ -50,10 +52,11 @@ set(LIB_SOURCES
   src/checkpoint.cpp
   src/machinestate.cpp
   src/machineoperation.cpp
-  src/CheckpointStorage.cpp
-  src/CheckpointDataLayer.cpp
+  src/checkpointstorage.cpp
+  src/machinestatedata.cpp
   src/checkpointutils.cpp
   src/util.hpp
+  src/machinestatesaver.cpp
 
   ${KECCAK_SOURCES}
 )

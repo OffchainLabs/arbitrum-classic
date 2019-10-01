@@ -23,6 +23,7 @@
 #include <iostream>
 #include <vector>
 
+#include "avm/machinestatesaver.hpp"
 class Datastack {
     static constexpr int lazyCount = 100;
 
@@ -96,7 +97,7 @@ class Datastack {
 
     int initializeDataStack(Tuple tuple);
 
-    //    GetResults CheckpointState(MachineStateSaver msSaver);
+    GetResults CheckpointState(MachineStateSaver msSaver);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

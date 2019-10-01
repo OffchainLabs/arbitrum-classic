@@ -6,38 +6,49 @@
 //
 
 #include "avm/machinestatesaver.hpp"
+#include <avm/codepoint.hpp>
+#include <avm/tuple.hpp>
 
-GetResults MachineStateSaver::SaveTuple(const Tuple& val) {
+GetResults MachineStateSaver::SaveValue(const value& val) {
+    auto serialized_value = SerializeValue(val);
     auto hash_key = GetHashKey(val);
-    auto value_to_store = std::string();
 
-    for (uint64_t i = 0; i < val.tuple_size(); i++) {
-        auto item = val.get_element(i);
-        auto serialized_value = SerializeValue(item);
+    if (serialized_value.type == TUPLE) {
+        auto tup = nonstd::get<Tuple>(val);
+        auto results = SaveValue(tup);
 
-        switch (serialized_value.type) {
-            case TUPLE: {
-                value_to_store += serialized_value.string_value;
-                auto tup = nonstd::get<Tuple>(item);
-                auto results = SaveValue(tup);
-
-                if (!results.status.ok()) {
-                    // log
-                }
-            }
-            case NUM: {
-                value_to_store += serialized_value.string_value;
-            }
-            case CODEPT: {
-                value_to_store += serialized_value.string_value;
-            }
-            case HASH_ONLY: {
-                // huh? error
-            }
+        if (!results.status.ok()) {
+            // log
         }
     }
 
-    auto save_results = storage.SaveValueToDb(value_to_store, hash_key);
+    auto save_results =
+        storage.SaveValueToDb(serialized_value.string_value, hash_key);
+
+    return save_results;
+}
+
+// can store somes values directly
+GetResults MachineStateSaver::SaveTuple(const Tuple& val) {
+    auto hash_key = GetHashKey(val);
+    std::vector<unsigned char> value_to_store;
+
+    for (uint64_t i = 0; i < val.tuple_size(); i++) {
+        auto item = val.get_element(i);
+
+        auto saved_val_result = SaveValue(item);
+
+        if (!saved_val_result.status.ok()) {
+            // log
+        }
+
+        value_to_store.insert(value_to_store.end(),
+                              std::begin(saved_val_result.stored_value),
+                              std::end(saved_val_result.stored_value));
+    }
+
+    std::string val_str(value_to_store.begin(), value_to_store.end());
+    auto save_results = storage.SaveValueToDb(val_str, hash_key);
 
     return save_results;
 };
