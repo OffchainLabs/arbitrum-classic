@@ -10,6 +10,7 @@
 
 #include <avm/tuple.hpp>
 #include <avm/value.hpp>
+#include "avm/machinestatesaver.hpp"
 #include "avm/tokenTracker.hpp"
 
 struct MessageStack {
@@ -40,9 +41,9 @@ struct MessageStack {
         messageCount = 0;
     }
 
-    //    GetResults CheckpointState(MachineStateSaver msSaver){
-    //        return msSaver.SaveValue(messages);
-    //    }
+    GetResults CheckpointState(MachineStateSaver msSaver) {
+        return msSaver.SaveValue(messages);
+    }
 };
 
 #endif /* messagestack_hpp */

@@ -61,8 +61,12 @@ struct MachineState {
     void setInbox(MessageStack ms);
     void setPendingInbox(MessageStack ms);
 
-    //    int SetMachineState(CheckpointData data);
-    int SaveMachine(std::string checkpoint_name);
+    int SaveMachine(MachineStateSaver msSaver,
+                    std::string checkpoint_name,
+                    TuplePool* pool);
+    int RestoreMachine(MachineStateSaver msSaver,
+                       std::string checkpoint_name,
+                       TuplePool* pool);
 };
 
 #endif /* machinestate_hpp */

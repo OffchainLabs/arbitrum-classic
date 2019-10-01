@@ -90,13 +90,14 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
     return os;
 }
 
+// get right
 Tuple Datastack::GetTupleRepresentation(TuplePool* pool) {
     auto size = values.size();
     auto current_tuple = Tuple(values[0], pool);
 
     for (unsigned int i = 1; i < size; i++) {
         auto new_tuple = Tuple(values[i], current_tuple, pool);
-        // assert hashes[i] == prev_tuple.calculateHash()
+        // assert hashes[i] == current_tuple.calculateHash()
         current_tuple = new_tuple;
     }
 
@@ -116,4 +117,19 @@ int Datastack::initializeDataStack(Tuple tuple) {
     push(tuple.get_element(0));
 
     return ret_val;
+}
+
+// can speed up by not creating tuple
+GetResults Datastack::CheckpointState(MachineStateSaver msSaver,
+                                      TuplePool* pool) {
+    //    if(!values.empty()){
+    //        auto iter = values.begin();
+    //
+    //        while(iter != values.end() && ){
+    //
+    //        }
+    //    }
+
+    auto tuple = GetTupleRepresentation(pool);
+    return msSaver.SaveTuple(tuple);
 }

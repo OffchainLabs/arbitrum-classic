@@ -171,24 +171,6 @@ void MachineState::setPendingInbox(MessageStack ms) {
     pendingInbox = ms;
 }
 
-// std::vector<unsigned char> storeValues(){
-//
-//}
-
-int MachineState::SaveMachine(std::string checkpoint_name) {
-    auto stored_static_val = msSaver.SaveValue(staticVal);
-    auto stored_register_val = msSaver.SaveValue(registerVal);
-
-    auto pc_value = CodePoint();
-    pc_value.pc = pc;
-
-    auto stored_pc_val = msSaver.SaveValue(pc_value);
-
-    auto status_str = Serialize(state);
-    auto serialized_blockreason = SerializeBlockReason(blockReason);
-    auto serialized_balance = balance.serializeBalanceValues();
-}
-
 std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<unsigned char> buf;
     auto opcode = code[pc].op.opcode;
@@ -213,6 +195,50 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     buf.insert(buf.end(), auxStackProof.second.begin(),
                auxStackProof.second.end());
     return buf;
+}
+
+int MachineState::SaveMachine(MachineStateSaver msSaver,
+                              std::string checkpoint_name,
+                              TuplePool* pool) {
+    // objects save themselves
+    auto datastack_results = stack.CheckpointState(msSaver, pool);
+    auto auxstack_results = auxstack.CheckpointState(msSaver, pool);
+
+    auto inbox_results = inbox.CheckpointState(msSaver);
+    auto pending_results = pendingInbox.CheckpointState(msSaver);
+
+    // value saved by Saver
+    auto static_val_results = msSaver.SaveValue(staticVal);
+    auto register_val_results = msSaver.SaveValue(registerVal);
+
+    auto pc_value = CodePoint();
+    pc_value.pc = pc;
+    auto pc_results = msSaver.SaveValue(pc_value);
+
+    // data serialized into chars
+    auto status_str = Serialize(state);
+    auto blockreason_str = SerializeBlockReason(blockReason);
+    auto balancetracker_str = balance.serializeBalanceValues();
+
+    auto machine_state_data = MachineStateData{
+        static_val_results, register_val_results, datastack_results,
+        auxstack_results,   inbox_results,        pending_results,
+        pc_results,         status_str,           blockreason_str,
+        balancetracker_str,
+    };
+
+    auto save_results =
+        msSaver.SaveMachineState(machine_state_data, checkpoint_name);
+
+    return save_results.status.ok() == true;
+}
+
+int MachineState::RestoreMachine(MachineStateSaver msSaver,
+                                 std::string checkpoint_name,
+                                 TuplePool* pool) {
+    std::vector<unsigned char> name_vector(checkpoint_name.begin(),
+                                           checkpoint_name.end());
+    auto machine_state_results = msSaver.getValue(name_vector);
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {

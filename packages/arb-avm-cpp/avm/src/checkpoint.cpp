@@ -20,22 +20,6 @@ MachineCheckPoints::~MachineCheckPoints() {
     storage.Close();
 }
 
-// Tuple makeCheckpointTuple(CheckpointData checkpoint_data, TuplePool* pool){
-//
-//    auto pc_codepoint = CodePoint();
-//    pc_codepoint.pc = checkpoint_data.pc;
-//
-//    return Tuple(checkpoint_data.staticVal,
-//                   checkpoint_data.registerVal,
-//                   checkpoint_data.stack,
-//                   checkpoint_data.auxstack,
-//                   checkpoint_data.pendingInbox_messages,
-//                   checkpoint_data.inbox_messages,
-//                   pc_codepoint,
-//                   checkpoint_data.errpc,
-//                   pool);
-//}
-
 // CheckpointData extractMachineStateData(MachineLoadData machine_data){
 //
 //    auto tuple = machine_data.tuple_values;
@@ -51,7 +35,7 @@ MachineCheckPoints::~MachineCheckPoints() {
 //    if(tuple.tuple_size() != 8){
 //        //error
 //    }
-
+//
 //    return CheckpointData{
 //        tuple.get_element(0),
 //        tuple.get_element(1),
@@ -64,15 +48,16 @@ MachineCheckPoints::~MachineCheckPoints() {
 //
 //    };
 //}
-
-// const machine?
+//
+// //const machine?
 // Checkpoint MachineCheckPoints::SaveMachine(std::string machine_state_name,
 // Machine& machine){
 //
 //    auto checkpoint_data = machine.getCheckPointData();
 //    auto all_tuple = makeCheckpointTuple(checkpoint_data, &machine.getPool());
 //    auto state_data = SerializeData(checkpoint_data.balance,
-//    checkpoint_data.state, checkpoint_data.blockReason); auto save_status =
+//    checkpoint_data.state, checkpoint_data.blockReason);
+//     auto save_status =
 //    storage.SaveMachineState(machine_state_name, all_tuple, state_data);
 //
 //    return Checkpoint{machine_state_name, save_status};

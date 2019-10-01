@@ -137,6 +137,62 @@ std::string SerializeMachineData(std::vector<unsigned char> tuple_key,
     return str;
 }
 
+std::vector<unsigned char> MachineStateSaver::serializeState(
+    MachineStateData state_data) {
+    std::vector<unsigned char> state_data_vector;
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.status_str.begin(),
+                             state_data.status_str.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.blockreason_str.begin(),
+                             state_data.blockreason_str.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.balancetracker_str.begin(),
+                             state_data.balancetracker_str.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.static_val_results.storage_key.begin(),
+                             state_data.static_val_results.storage_key.end());
+    state_data_vector.insert(
+        state_data_vector.end(),
+        state_data.register_val_results.storage_key.begin(),
+        state_data.register_val_results.storage_key.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.datastack_results.storage_key.begin(),
+                             state_data.datastack_results.storage_key.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.auxstack_results.storage_key.begin(),
+                             state_data.auxstack_results.storage_key.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.inbox_results.storage_key.begin(),
+                             state_data.inbox_results.storage_key.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.pending_results.storage_key.begin(),
+                             state_data.pending_results.storage_key.end());
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.pc_results.storage_key.begin(),
+                             state_data.pc_results.storage_key.end());
+
+    return state_data_vector;
+}
+
+MachineStateData MachineStateSaver::deserializeState(
+    std::vector<unsigned char> stored_state) {
+    auto iter = stored_state.begin();
+    auto status = std::vector<unsigned char>(*iter);
+    iter += 1;
+}
+
+GetResults MachineStateSaver::SaveMachineState(MachineStateData state_data,
+                                               std::string checkpoint_name) {
+    auto serialized_state = serializeState(state_data);
+    std::vector<unsigned char> checkpoint_name_vector(
+        std::begin(checkpoint_name), std::end(checkpoint_name));
+
+    return SaveStringValue(
+        std::string(serialized_state.begin(), serialized_state.end()),
+        checkpoint_name_vector);
+}
+
 // MachineLoadData MachineStateSaver::GetMachineState(std::string
 // checkpoint_name) {
 //
@@ -160,22 +216,6 @@ std::string SerializeMachineData(std::vector<unsigned char> tuple_key,
 //        tup,
 //        state_data_object
 //    };
-//}
-
-// rocksdb::Status MachineStateSaver::SaveMachineState(
-//                                                    std::string
-//                                                    checkpoint_name, const
-//                                                    Tuple& tuple,
-//                                                    std::vector<unsigned char>
-//                                                    state_data) {
-//    auto tuple_save_results = SaveValue(tuple);
-//
-//    auto serialized_state =
-//    SerializeMachineData(tuple_save_results.storage_key, state_data);
-//    auto state_save_results =
-//    storage.SaveKeyValuePair(serialized_state, checkpoint_name);
-//
-//    return state_save_results;
 //}
 
 GetResults MachineStateSaver::SaveStringValue(

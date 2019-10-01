@@ -151,28 +151,6 @@ void Machine::runOne() {
     return;
 }
 
-// CheckpointData Machine::getCheckPointData() {
-//    auto pc_value = CodePoint();
-//    pc_value.pc = machine_state.pc;
-//
-//    auto pool = &getPool();
-//
-//    CheckpointData cp_data = {
-//        machine_state.staticVal,
-//        machine_state.registerVal,
-//        machine_state.stack.GetTupleRepresentation(pool),
-//        machine_state.auxstack.GetTupleRepresentation(pool),
-//        machine_state.pendingInbox,
-//        machine_state.inbox,
-//        machine_state.pc,
-//        machine_state.errpc,
-//        machine_state.balance,
-//        machine_state.state,
-//        machine_state.blockReason};
-//
-//    return cp_data;
-//}
-
 // int Machine::SetMachineState(CheckpointStorage* storage, CheckpointData data)
 // {
 //    auto pool = getPool();
