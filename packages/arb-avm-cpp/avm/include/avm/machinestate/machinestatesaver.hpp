@@ -8,10 +8,9 @@
 #ifndef machinestatesaver_hpp
 #define machinestatesaver_hpp
 
-#include <avm/tuple.hpp>
-#include <avm/value.hpp>
 #include "avm/checkpointstorage.hpp"
-#include "avm/value.hpp"
+#include "value/tuple.hpp"
+#include "value/value.hpp"
 
 struct MachineStateStorageData {
     GetResults static_val_results;

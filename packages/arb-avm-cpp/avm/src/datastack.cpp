@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avm/datastack.hpp"
+#include "avm/machinestate/datastack.hpp"
 
 #include "bigint_utils.hpp"
 #include "util.hpp"

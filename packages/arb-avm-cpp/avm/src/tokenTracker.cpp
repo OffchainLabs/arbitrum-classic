@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avm/tokenTracker.hpp"
+#include "avm/machinestate/tokenTracker.hpp"
 
 #include "bigint_utils.hpp"
 

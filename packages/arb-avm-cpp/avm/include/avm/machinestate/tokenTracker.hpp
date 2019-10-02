@@ -17,8 +17,8 @@
 #ifndef tokenTracker_hpp
 #define tokenTracker_hpp
 
-#include <avm/datastack.hpp>
-#include <avm/value.hpp>
+#include <avm/machinestate/datastack.hpp>
+#include <avm/machinestate/value/value.hpp>
 
 #include <unordered_map>
 #include <unordered_set>

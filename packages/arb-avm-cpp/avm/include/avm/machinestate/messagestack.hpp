@@ -8,10 +8,10 @@
 #ifndef messagestack_hpp
 #define messagestack_hpp
 
-#include <avm/tuple.hpp>
-#include <avm/value.hpp>
-#include "avm/machinestatesaver.hpp"
-#include "avm/tokenTracker.hpp"
+#include "machinestatesaver.hpp"
+#include "tokenTracker.hpp"
+#include "value/tuple.hpp"
+#include "value/value.hpp"
 
 struct MessageStack {
     Tuple messages;

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "avm/codepoint.hpp"
+#include "avm/machinestate/value/codepoint.hpp"
 
-#include "avm/tuple.hpp"
+#include "avm/machinestate/value/tuple.hpp"
 
 #include "bigint_utils.hpp"
 #include "util.hpp"

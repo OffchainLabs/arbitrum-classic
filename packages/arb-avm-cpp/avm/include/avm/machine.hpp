@@ -17,15 +17,14 @@
 #ifndef machine_hpp
 #define machine_hpp
 
-#include <avm/datastack.hpp>
-#include <avm/tokenTracker.hpp>
-#include <avm/value.hpp>
+#include <avm/machinestate/datastack.hpp>
+#include <avm/machinestate/tokenTracker.hpp>
+#include <avm/machinestate/value/value.hpp>
 #include <memory>
 #include <vector>
 #include "avm/checkpointstorage.hpp"
 #include "avm/exceptions.hpp"
-#include "avm/machine.hpp"
-#include "avm/machinestate.hpp"
+#include "avm/machinestate/machinestate.hpp"
 
 struct Assertion {
     uint64_t stepCount;

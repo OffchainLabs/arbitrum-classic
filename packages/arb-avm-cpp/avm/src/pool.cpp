@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-#include "avm/pool.hpp"
-
-#include "avm/tuple.hpp"
-#include "avm/value.hpp"
+#include "avm/machinestate/value/pool.hpp"
+#include "avm/machinestate/value/tuple.hpp"
 
 #include <ostream>
 

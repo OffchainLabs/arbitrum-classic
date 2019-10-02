@@ -17,10 +17,10 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
-#include <avm/codepoint.hpp>
 #include <avm/exceptions.hpp>
-#include <avm/pool.hpp>
-#include <avm/value.hpp>
+#include <avm/machinestate/value/codepoint.hpp>
+#include <avm/machinestate/value/pool.hpp>
+#include <avm/machinestate/value/value.hpp>
 
 #include <memory>
 

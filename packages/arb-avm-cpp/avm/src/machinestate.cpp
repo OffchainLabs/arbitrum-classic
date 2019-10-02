@@ -5,9 +5,9 @@
 //  Created by Minh Truong on 9/22/19.
 //
 
-#include "avm/machinestate.hpp"
+#include "avm/machinestate/machinestate.hpp"
 #include "avm/exceptions.hpp"
-#include "avm/machineoperation.hpp"
+#include "avm/machinestate/machineoperation.hpp"
 #include "bigint_utils.hpp"
 #include "util.hpp"
 

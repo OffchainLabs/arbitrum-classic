@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "avm/value.hpp"
+#include "avm/machinestate/value/value.hpp"
 
-#include "avm/codepoint.hpp"
-#include "avm/pool.hpp"
-#include "avm/tuple.hpp"
+#include "avm/machinestate/value/codepoint.hpp"
+#include "avm/machinestate/value/pool.hpp"
+#include "avm/machinestate/value/tuple.hpp"
 
 #include "bigint_utils.hpp"
 #include "util.hpp"

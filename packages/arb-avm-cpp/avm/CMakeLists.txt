@@ -20,24 +20,22 @@ set (CMAKE_CXX_STANDARD 14)
 project (avm LANGUAGES CXX)
 
 set(LIB_HEADERS
-  include/avm/bigint.hpp
-  include/avm/codepoint.hpp
-  include/avm/datastack.hpp
+
   include/avm/machine.hpp
   include/avm/opcodes.hpp
-  include/avm/pool.hpp
-  include/avm/tokenTracker.hpp
-  include/avm/tuple.hpp
-  include/avm/value.hpp
-  include/avm/checkpoint.hpp
-  include/avm/machinestate.hpp
-  include/avm/machineoperation.hpp
   include/avm/exceptions.hpp
   include/avm/checkpointstorage.hpp
-  include/avm/machinestatesaver.hpp
-  include/avm/checkpointutils.hpp
-  include/avm/messagestack.hpp
-  include/avm/machinestatedata.hpp
+  include/avm/machinestate/machinestate.hpp
+  include/avm/machinestate/tokenTracker.hpp
+  include/avm/machinestate/datastack.hpp
+  include/avm/machinestate/machineoperation.hpp
+  include/avm/machinestate/machinestatesaver.hpp
+  include/avm/machinestate/messagestack.hpp
+  include/avm/machinestate/value/tuple.hpp
+  include/avm/machinestate/value/value.hpp
+  include/avm/machinestate/value/bigint.hpp
+  include/avm/machinestate/value/codepoint.hpp
+  include/avm/machinestate/value/pool.hpp
 )
 
 set(LIB_SOURCES

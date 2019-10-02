@@ -8,13 +8,13 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
-#include <avm/datastack.hpp>
-#include <avm/tokenTracker.hpp>
-#include <avm/value.hpp>
+#include <avm/machinestate/datastack.hpp>
+#include <avm/machinestate/tokenTracker.hpp>
 #include <memory>
 #include <vector>
-#include "avm/machinestatesaver.hpp"
-#include "messagestack.hpp"
+#include "avm/machinestate/machinestatesaver.hpp"
+#include "avm/machinestate/messagestack.hpp"
+#include "value/value.hpp"
 
 enum class Status { Extensive, Halted, Error };
 

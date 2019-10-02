@@ -5,10 +5,10 @@
 //  Created by Minh Truong on 9/30/19.
 //
 
-#include "avm/machinestatesaver.hpp"
-#include <avm/codepoint.hpp>
-#include <avm/tokenTracker.hpp>
-#include <avm/tuple.hpp>
+#include "avm/machinestate/machinestatesaver.hpp"
+#include <avm/machinestate/tokenTracker.hpp>
+#include <avm/machinestate/value/codepoint.hpp>
+#include <avm/machinestate/value/tuple.hpp>
 
 void MachineStateSaver::setStorage(CheckpointStorage* storage) {
     checkpoint_storage = storage;

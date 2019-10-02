@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avm/tuple.hpp"
+#include "avm/machinestate/value/tuple.hpp"
 
 #include "bigint_utils.hpp"
 #include "util.hpp"

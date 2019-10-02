@@ -17,7 +17,7 @@
 #ifndef value_hpp
 #define value_hpp
 
-#include <avm/bigint.hpp>
+#include <avm/machinestate/value/bigint.hpp>
 #include <avm/opcodes.hpp>
 #include <nonstd/variant.hpp>
 
