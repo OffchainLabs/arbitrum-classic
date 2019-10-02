@@ -19,7 +19,6 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <iostream>
-#include "avm/checkpointutils.hpp"
 #include "avm/opcodes.hpp"
 #include "bigint_utils.hpp"
 #include "util.hpp"

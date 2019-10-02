@@ -23,7 +23,6 @@
 #include <memory>
 #include <vector>
 #include "avm/checkpointstorage.hpp"
-#include "avm/checkpointutils.hpp"
 #include "avm/exceptions.hpp"
 #include "avm/machine.hpp"
 #include "avm/machinestate.hpp"

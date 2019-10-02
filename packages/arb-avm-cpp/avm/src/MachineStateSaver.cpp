@@ -27,7 +27,7 @@ GetResults MachineStateSaver::SaveValue(const value& val) {
         }
     } else {
         auto hash_key = GetHashKey(val);
-        auto save_results = checkpoint_storage->SaveValueToDb(
+        auto save_results = checkpoint_storage->saveValue(
             serialized_value.string_value, hash_key);
     }
 
@@ -59,7 +59,7 @@ GetResults MachineStateSaver::SaveTuple(const Tuple& val) {
     std::string val_str(value_to_store.begin(), value_to_store.end());
 
     auto hash_key = GetHashKey(val);
-    auto save_results = checkpoint_storage->SaveValueToDb(val_str, hash_key);
+    auto save_results = checkpoint_storage->saveValue(val_str, hash_key);
 
     return save_results;
 };
@@ -306,7 +306,7 @@ GetResults MachineStateSaver::SaveMachineState(
 GetResults MachineStateSaver::SaveStringValue(
     const std::string value,
     const std::vector<unsigned char> key) {
-    return checkpoint_storage->SaveValueToDb(value, key);
+    return checkpoint_storage->saveValue(value, key);
 }
 
 GetResults MachineStateSaver::GetStringValue(

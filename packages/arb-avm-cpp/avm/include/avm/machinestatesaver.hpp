@@ -8,6 +8,8 @@
 #ifndef machinestatesaver_hpp
 #define machinestatesaver_hpp
 
+#include <avm/tuple.hpp>
+#include <avm/value.hpp>
 #include "avm/checkpointstorage.hpp"
 #include "avm/value.hpp"
 
