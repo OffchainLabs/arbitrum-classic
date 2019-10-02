@@ -82,7 +82,7 @@ int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
     Machine* mach = static_cast<Machine*>(m);
     TokenType tokType;
     std::copy(cTokType, cTokType + 21, tokType.begin());
-    uint256_t amount = deserialize_int(cAmount);
+    uint256_t amount = deserialize_int256(cAmount);
     return mach->canSpend(tokType, amount);
 }
 

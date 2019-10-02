@@ -104,6 +104,7 @@ Tuple Datastack::GetTupleRepresentation(TuplePool* pool) {
     return current_tuple;
 }
 
+// make sure correct
 int Datastack::initializeDataStack(Tuple tuple) {
     int ret_val = 0;
 
@@ -122,14 +123,6 @@ int Datastack::initializeDataStack(Tuple tuple) {
 // can speed up by not creating tuple
 GetResults Datastack::CheckpointState(MachineStateSaver msSaver,
                                       TuplePool* pool) {
-    //    if(!values.empty()){
-    //        auto iter = values.begin();
-    //
-    //        while(iter != values.end() && ){
-    //
-    //        }
-    //    }
-
     auto tuple = GetTupleRepresentation(pool);
     return msSaver.SaveTuple(tuple);
 }

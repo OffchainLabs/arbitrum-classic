@@ -9,7 +9,6 @@
 #include <avm/tuple.hpp>
 #include "avm/checkpointstorage.hpp"
 #include "avm/machine.hpp"
-#include "avm/machinestatedata.hpp"
 
 MachineCheckPoints::MachineCheckPoints() {
     // storage = new CheckpointStorage   no work??

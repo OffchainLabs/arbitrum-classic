@@ -40,7 +40,7 @@ std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);
 int get_tuple_size(char*& bufptr);
 
-uint256_t deserialize_int(char*& srccode);
+uint256_t deserialize_int256(char*& srccode);
 Operation deserializeOperation(char*& bufptr, TuplePool& pool);
 CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
 Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
@@ -65,15 +65,9 @@ const uint256_t& assumeInt(const value& val);
 uint64_t assumeInt64(uint256_t& val);
 Tuple& assumeTuple(value& val);
 
-std::vector<unsigned char> serializeForCheckpoint(const uint256_t& val);
-
-std::vector<unsigned char> checkpointMachineState();
 std::vector<unsigned char> GetHashKey(const value& val);
-
-uint64_t deserialize_int64(char*& srccode);
-// void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf);
 SerializedValue SerializeValue(const value& val);
-
-// std::vector<unsigned char> ConvertToCharVector(uint256_t value);
+CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val);
+uint256_t deserializeCheckpoint256(std::vector<unsigned char> val);
 
 #endif /* value_hpp */

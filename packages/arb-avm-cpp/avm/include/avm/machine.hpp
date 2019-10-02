@@ -70,10 +70,9 @@ class Machine {
 
     TuplePool& getPool() { return *machine_state.pool; }
 
-    // should this be a tuple or some struct?
-    // CheckpointData getCheckPointData();
-    // int SetMachineState(CheckpointStorage* storage, CheckpointData data);
-    int SaveMachine(CheckpointStorage* storage, std::string checkpoint_name);
+    int checkpointMachine(CheckpointStorage* storage,
+                          std::string checkpoint_name);
+    int restoreMachine(CheckpointStorage* storage, std::string checkpoint_name);
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

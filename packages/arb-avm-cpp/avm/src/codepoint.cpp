@@ -132,27 +132,6 @@ void CodePoint::marshal(std::vector<unsigned char>& buf) const {
     buf.insert(buf.end(), val.begin(), val.end());
 }
 
-void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
-    auto big_endian_val = boost::endian::native_to_big(val);
-    std::array<unsigned char, 8> tmpbuf;
-    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
-
-    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
-}
-
-std::vector<unsigned char> CodePoint::deserializeForCheckpoint() const {
-    std::vector<unsigned char> value_vector;
-    auto type_code = (unsigned char)CODEPT;
-    value_vector.push_back(type_code);
-
-    std::vector<unsigned char> pc_vector;
-    marshal_uint64_t(pc, pc_vector);
-
-    value_vector.insert(value_vector.end(), pc_vector.begin(), pc_vector.end());
-
-    return value_vector;
-}
-
 uint256_t hash(const CodePoint& cp) {
     std::array<uint64_t, 4> nextHashInts;
     to_big_endian(cp.nextHash, nextHashInts.begin());

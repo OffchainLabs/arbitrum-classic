@@ -14,8 +14,11 @@
 #include <memory>
 #include <vector>
 #include "avm/machinestatesaver.hpp"
-#include "machinestatedata.hpp"
 #include "messagestack.hpp"
+
+enum class Status { Extensive, Halted, Error };
+
+typedef std::array<uint256_t, 2> TimeBounds;
 
 struct AssertionContext {
     uint32_t numSteps;
@@ -29,7 +32,6 @@ struct AssertionContext {
 
 struct MachineState {
     MachineStateSaver msSaver;
-
     std::shared_ptr<TuplePool> pool;
     std::vector<CodePoint> code;
     value staticVal;
@@ -61,12 +63,10 @@ struct MachineState {
     void setInbox(MessageStack ms);
     void setPendingInbox(MessageStack ms);
 
-    int SaveMachine(MachineStateSaver msSaver,
-                    std::string checkpoint_name,
-                    TuplePool* pool);
-    int RestoreMachine(MachineStateSaver msSaver,
-                       std::string checkpoint_name,
-                       TuplePool* pool);
+    int checkpointMachineState(CheckpointStorage* storage,
+                               std::string checkpoint_name);
+    int restoreMachineState(CheckpointStorage* storage,
+                            std::string checkpoint_name);
 };
 
 #endif /* machinestate_hpp */

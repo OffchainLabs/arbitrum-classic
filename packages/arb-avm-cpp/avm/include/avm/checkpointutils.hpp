@@ -10,7 +10,6 @@
 
 #include <string>
 #include <vector>
-#include "machinestatedata.hpp"
 #include "messagestack.hpp"
 #include "rocksdb/db.h"
 

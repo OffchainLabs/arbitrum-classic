@@ -50,16 +50,6 @@ auto from_big_endian(const Iterator begin, const Iterator end) {
         v, begin, end, std::numeric_limits<uint8_t>::digits, true);
     return v;
 }
-//
-//// definitely make sure
-// template <typename Iterator>
-// auto from_big_endian64(const Iterator begin, const Iterator end) {
-//    uint64_t v;
-//    // imports in big endian by default
-////    boost::multiprecision::import_bits(
-////        v, begin, end, std::numeric_limits<uint8_t>::digits, true);
-//    return v;
-//}
 
 template <typename Iterator>
 inline void to_big_endian(uint256_t v, Iterator out) {

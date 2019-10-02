@@ -113,6 +113,9 @@ struct SendBlocked {
     TokenType tokenType;
 };
 
+std::unordered_map<BlockType, int> blockreason_type_length = {
+    {Not, 1}, {Halt, 1}, {Error, 1}, {Breakpoint, 1}, {Inbox, 34}, {Send, 55}};
+
 using BlockReason = nonstd::variant<NotBlocked,
                                     HaltBlocked,
                                     ErrorBlocked,

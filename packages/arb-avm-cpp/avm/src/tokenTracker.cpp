@@ -156,8 +156,17 @@ void BalanceTracker::add(const TokenType& tokType, const uint256_t& amount) {
     }
 }
 
+// may be too long to store as one string
 std::vector<unsigned char> BalanceTracker::serializeBalanceValues() {
     std::vector<unsigned char> return_vector;
+
+    // protection around unisgned int
+    auto length = (unsigned int)tokenLookup.size();
+    std::vector<unsigned char> length_vector(sizeof(unsigned int));
+    memcpy(&length_vector[0], &length, sizeof(length));
+
+    return_vector.insert(return_vector.end(), length_vector.begin(),
+                         length_vector.end());
 
     for (const auto& pair : tokenLookup) {
         std::vector<unsigned char> value_vector;
@@ -176,7 +185,7 @@ std::vector<unsigned char> BalanceTracker::serializeBalanceValues() {
 BalanceTracker::BalanceTracker() {}
 
 BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
-    auto current_it = data.begin();
+    auto current_it = data.begin() + sizeof(unsigned int);
 
     while (current_it != data.end()) {
         std::array<unsigned char, 21> token_type;
@@ -188,7 +197,7 @@ BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
         current_it += 33;
 
         auto buff = reinterpret_cast<char*>(&value_vector[0]);
-        auto currency_val = deserialize_int(buff);
+        auto currency_val = deserialize_int256(buff);
 
         add(token_type, currency_val);
     }
@@ -258,55 +267,42 @@ struct SerializedBlockReason {
 };
 
 BlockReason deserializeBlockReason(std::vector<unsigned char> data) {
-    BlockReason blockreason;
-
     auto current_it = data.begin();
-
     auto blocktype = (BlockType)*current_it;
     current_it++;
 
-    if (blocktype == Inbox) {
-        std::vector<unsigned char> inbox_vector(current_it, current_it + 33);
+    switch (blocktype) {
+        case Inbox: {
+            std::vector<unsigned char> inbox_vector(current_it + 1,
+                                                    current_it + 32);
+            auto buff = reinterpret_cast<char*>(&inbox_vector[0]);
+            auto inbox = deserialize_int256(buff);
+            return InboxBlocked{Inbox, inbox};
+        }
+        case Send: {
+            std::vector<unsigned char> currency_vector(current_it + 1,
+                                                       current_it + 32);
+            auto buff = reinterpret_cast<char*>(&currency_vector[0]);
+            auto currency = deserialize_int256(buff);
 
-        auto buff = reinterpret_cast<char*>(&inbox_vector[0]);
-        auto inbox = deserialize_int(buff);
+            current_it += 33;
 
-        current_it += 33;
+            std::array<unsigned char, 21> token_type;
+            std::copy(current_it, current_it + 21, token_type.begin());
 
-        InboxBlocked br{Inbox, inbox};
-
-        blockreason = br;
-
-    } else if (blocktype == Send) {
-        std::vector<unsigned char> currency_vector(current_it, current_it + 33);
-
-        auto buff = reinterpret_cast<char*>(&currency_vector[0]);
-        auto currency = deserialize_int(buff);
-
-        current_it += 33;
-
-        std::array<unsigned char, 21> token_type;
-        std::copy(current_it, current_it + 21, token_type.begin());
-
-        current_it += 21;
-
-        SendBlocked sb{Send, currency, token_type};
-
-        blockreason = sb;
-
-    } else if (blocktype == Not) {
-        blockreason = NotBlocked();
-    } else if (blocktype == Halt) {
-        blockreason = HaltBlocked();
-    } else if (blocktype == Error) {
-        blockreason = ErrorBlocked();
-    } else if (blocktype == Breakpoint) {
-        blockreason = BreakpointBlocked();
+            return SendBlocked{Send, currency, token_type};
+        }
+        case Not: {
+            return NotBlocked();
+        }
+        case Halt: {
+            return HaltBlocked();
+        }
+        case Error: {
+            return ErrorBlocked();
+        }
+        case Breakpoint: {
+            return BreakpointBlocked();
+        }
     }
-
-    return blockreason;
-}
-
-std::vector<unsigned char> Serialize(Status status) {
-    return std::vector<unsigned char>((unsigned char)status);
 }

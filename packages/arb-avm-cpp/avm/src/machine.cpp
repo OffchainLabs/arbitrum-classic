@@ -20,7 +20,6 @@
 #include <fstream>
 #include <iostream>
 #include "avm/checkpointutils.hpp"
-#include "avm/machinestatedata.hpp"
 #include "avm/opcodes.hpp"
 #include "bigint_utils.hpp"
 #include "util.hpp"
@@ -151,34 +150,12 @@ void Machine::runOne() {
     return;
 }
 
-// int Machine::SetMachineState(CheckpointStorage* storage, CheckpointData data)
-// {
-//    auto pool = getPool();
-//
-//    machine_state.staticVal = data.staticVal;
-//    machine_state.registerVal = data.registerVal;
-//
-//    auto data_stack = Datastack();
-//    data_stack.initializeDataStack(data.stack);
-//
-//    auto aux_stack = Datastack();
-//    aux_stack.initializeDataStack(data.auxstack);
-//
-//    machine_state.stack = data_stack;
-//    machine_state.auxstack = aux_stack;
-//
-//    machine_state.pc = data.pc;
-//    machine_state.errpc = data.errpc;
-//
-//    machine_state.setInbox(data.inbox_messages);
-//    machine_state.setPendingInbox(data.pendingInbox_messages);
-//
-//    machine_state.state = data.state;
-//    machine_state.blockReason = data.blockReason;
-//    machine_state.balance = data.balance;
-//
-//    return 1;
-//}
+int Machine::checkpointMachine(CheckpointStorage* storage,
+                               std::string checkpoint_name) {
+    return machine_state.checkpointMachineState(storage, checkpoint_name);
+}
 
-int Machine::SaveMachine(CheckpointStorage* storage,
-                         std::string checkpoint_name) {}
+int Machine::restoreMachine(CheckpointStorage* storage,
+                            std::string checkpoint_name) {
+    return machine_state.restoreMachineState(storage, checkpoint_name);
+}

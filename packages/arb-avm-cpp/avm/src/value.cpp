@@ -28,7 +28,7 @@
 #define UINT256_SIZE 32
 #define UINT64_SIZE 8
 
-uint256_t deserialize_int(char*& bufptr) {
+uint256_t deserialize_int256(char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
     return ret;
@@ -133,7 +133,7 @@ value deserialize_value(char*& bufptr, TuplePool& pool) {
     bufptr += sizeof(valType);
     switch (valType) {
         case NUM:
-            return deserialize_int(bufptr);
+            return deserialize_int256(bufptr);
         case CODEPT:
             return deserializeCodePoint(bufptr, pool);
         default:
@@ -214,13 +214,6 @@ std::ostream& operator<<(std::ostream& os, const value& val) {
     return *nonstd::visit(ValuePrinter{os}, val);
 }
 
-std::string ToHashString(uint256_t hash_key) {
-    std::vector<unsigned char> hash_key_vector;
-    marshal_value(hash_key, hash_key_vector);
-
-    return std::string(hash_key_vector.begin(), hash_key_vector.end());
-}
-
 std::vector<unsigned char> GetHashKey(const value& val) {
     auto hash_key = hash(val);
     std::vector<unsigned char> hash_key_vector;
@@ -243,46 +236,77 @@ std::vector<unsigned char> serializeForCheckpoint(const uint256_t& val) {
     return value_vector;
 }
 
+std::vector<unsigned char> serializeForCheckpoint(const Tuple& val) {
+    std::vector<unsigned char> value_vector;
+    auto type_code = (unsigned char)TUPLE;
+    value_vector.push_back(type_code);
+
+    auto hash_key = hash(val);
+    std::vector<unsigned char> hash_key_vector;
+    marshal_uint256_t(hash_key, hash_key_vector);
+
+    value_vector.insert(value_vector.end(), hash_key_vector.begin(),
+                        hash_key_vector.end());
+
+    return value_vector;
+}
+
+void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
+    auto big_endian_val = boost::endian::native_to_big(val);
+    std::array<unsigned char, 8> tmpbuf;
+    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
+
+    buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+}
+
+std::vector<unsigned char> serializeForCheckpoint(const CodePoint& val) {
+    std::vector<unsigned char> value_vector;
+    auto type_code = (unsigned char)CODEPT;
+    value_vector.push_back(type_code);
+
+    std::vector<unsigned char> pc_vector;
+    marshal_uint64_t(val.pc, pc_vector);
+
+    value_vector.insert(value_vector.end(), pc_vector.begin(), pc_vector.end());
+
+    return value_vector;
+}
+
+CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val) {
+    CodePoint code_point;
+    auto buff = reinterpret_cast<char*>(&val[2]);
+    auto pc_val = deserialize_int64(buff);
+    code_point.pc = pc_val;
+
+    return code_point;
+}
+
+uint256_t deserializeCheckpoint256(std::vector<unsigned char> val) {
+    auto buff = reinterpret_cast<char*>(&val[2]);
+    auto num = deserialize_int256(buff);
+
+    return num;
+}
+
 struct Serializer {
     SerializedValue operator()(const Tuple& val) const {
-        std::vector<unsigned char> value_vector;
-
-        auto type_code = (unsigned char)TUPLE;
-        value_vector.push_back(type_code);
-
-        auto hash_key = hash(val);
-        std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(hash_key, hash_key_vector);
-
-        value_vector.insert(value_vector.end(), hash_key_vector.begin(),
-                            hash_key_vector.end());
-
+        auto value_vector = serializeForCheckpoint(val);
         std::string str_value(value_vector.begin(), value_vector.end());
-
         SerializedValue serialized_value{TUPLE, str_value};
 
         return serialized_value;
     }
 
     SerializedValue operator()(const uint256_t& val) const {
-        std::vector<unsigned char> value_vector;
-        auto type_code = (unsigned char)NUM;
-        value_vector.push_back(type_code);
-
-        std::vector<unsigned char> num_vector;
-        marshal_uint256_t(val, num_vector);
-
-        value_vector.insert(value_vector.end(), num_vector.begin(),
-                            num_vector.end());
+        auto value_vector = serializeForCheckpoint(val);
         std::string str_value(value_vector.begin(), value_vector.end());
-
         SerializedValue serialized_value{NUM, str_value};
 
         return serialized_value;
     }
 
     SerializedValue operator()(const CodePoint& val) const {
-        auto value_vector = val.deserializeForCheckpoint();
+        auto value_vector = serializeForCheckpoint(val);
         std::string str_value(value_vector.begin(), value_vector.end());
         SerializedValue serialized_value{CODEPT, str_value};
 

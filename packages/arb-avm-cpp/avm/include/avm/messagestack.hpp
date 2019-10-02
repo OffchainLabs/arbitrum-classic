@@ -41,8 +41,16 @@ struct MessageStack {
         messageCount = 0;
     }
 
+    void setMessageStackData() {}
+
     GetResults CheckpointState(MachineStateSaver msSaver) {
         return msSaver.SaveValue(messages);
+    }
+
+    void initializeMessageStack(Tuple& tuple) {
+        messages = tuple;
+        // is the sizing correct?
+        messageCount = tuple.tuple_size();
     }
 };
 
