@@ -47,12 +47,9 @@ set(LIB_SOURCES
   src/tuple.cpp
   src/value.cpp
   src/tokenTracker.cpp
-  src/checkpoint.cpp
   src/machinestate.cpp
   src/machineoperation.cpp
   src/checkpointstorage.cpp
-  src/machinestatedata.cpp
-  src/checkpointutils.cpp
   src/util.hpp
   src/machinestatesaver.cpp
 
@@ -80,7 +77,7 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm PUBLIC Boost::boost CONAN_PKG::variant-lite PRIVATE avm_utils)
+target_link_libraries(avm PUBLIC Boost::boost CONAN_PKG::variant-lite rocksdb PRIVATE avm_utils)
 
 target_code_coverage(avm AUTO ALL)
 
