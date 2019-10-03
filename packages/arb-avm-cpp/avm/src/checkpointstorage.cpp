@@ -38,91 +38,49 @@ CheckpointStorage::~CheckpointStorage() {
 
 SaveResults CheckpointStorage::incrementReference(
     std::vector<unsigned char> hash_key) {
-    auto results = getRawData(hash_key);
+    auto results = getStoredValue(hash_key);
 
     if (results.status.ok()) {
         auto updated_count = results.reference_count + 1;
-        auto updated_entry =
-            SerializeCountAndValue(updated_count, results.stored_value);
-        std::string key_str(hash_key.begin(), hash_key.end());
-        auto commit_status = SaveKeyValuePair(updated_entry, key_str);
-
-        if (commit_status.ok()) {
-            return SaveResults{updated_count, commit_status};
-        } else {
-            return SaveResults{results.reference_count, commit_status,
-                               hash_key};
-        }
+        auto save_results = saveValueWithRefCount(updated_count, hash_key,
+                                                  results.stored_value);
+        return save_results;
     } else {
         return SaveResults{-1, results.status, hash_key};
     }
 }
 
-SaveResults CheckpointStorage::saveValue(std::string val,
+SaveResults CheckpointStorage::saveValue(std::string value,
                                          std::vector<unsigned char> hash_key) {
-    auto results = getRawData(hash_key);
-    auto ref_count = results.reference_count;
+    auto results = getStoredValue(hash_key);
+    int ref_count;
 
-    if (!results.status.ok() || ref_count < 1) {
+    if (results.status.ok()) {
+        ref_count = results.reference_count + 1;
+    } else {
         ref_count = 1;
-    } else {
-        ref_count += 1;
     }
 
-    auto updated_entry = SerializeCountAndValue(ref_count, val);
-    std::string key_str(hash_key.begin(), hash_key.end());
-
-    auto commit_status = SaveKeyValuePair(updated_entry, key_str);
-
-    if (commit_status.ok()) {
-        SaveResults save_results{ref_count, commit_status, hash_key};
-
-        return save_results;
-    } else {
-        auto unsuccessful = rocksdb::Status().NotFound();
-        ref_count -= 1;
-        SaveResults save_results{ref_count, unsuccessful, hash_key};
-
-        // log
-        return save_results;
-    }
+    return saveValueWithRefCount(ref_count, hash_key, value);
 };
-
-// DeleteResults CheckpointStorage::decrementReference(std::vector<unsigned
-// char> hash_key){
-//    auto results = getRawData(hash_key);
-//
-//    if(results.status.ok()){
-//        auto updated_count = results.reference_count-1;
-//
-//        if(updated_count < 1){
-//
-//        }
-//    }else{
-//
-//    }
-//}
 
 DeleteResults CheckpointStorage::deleteStoredValue(
     std::vector<unsigned char> hash_key) {
-    auto results = getRawData(hash_key);
+    auto results = getStoredValue(hash_key);
 
     if (results.status.ok()) {
         auto value = results.stored_value;
 
         if (results.reference_count < 2) {
-            auto delete_status =
-                DeleteValue(std::string(hash_key.begin(), hash_key.end()));
+            auto delete_status = deleteValueFromDb(
+                std::string(hash_key.begin(), hash_key.end()));
             return DeleteResults{0, delete_status};
 
         } else {
             auto updated_ref_count = results.reference_count - 1;
-            auto updated_entry =
-                SerializeCountAndValue(updated_ref_count, value);
-            std::string key_str(hash_key.begin(), hash_key.end());
-            auto status = SaveKeyValuePair(updated_entry, key_str);
-
-            return DeleteResults{updated_ref_count, status};
+            auto update_result =
+                saveValueWithRefCount(updated_ref_count, hash_key, value);
+            return DeleteResults{updated_ref_count, update_result.status};
         }
     } else {
         return DeleteResults{0, rocksdb::Status().NotFound()};
@@ -131,36 +89,44 @@ DeleteResults CheckpointStorage::deleteStoredValue(
 
 GetResults CheckpointStorage::getStoredValue(
     std::vector<unsigned char> hash_key) {
-    auto results = getRawData(hash_key);
-
-    return GetResults{results.reference_count, results.status,
-                      results.stored_value};
-}
-
-RawData CheckpointStorage::getRawData(std::vector<unsigned char> hash_key) {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
     std::string key_str(hash_key.begin(), hash_key.end());
     auto get_status = txn_db->Get(read_options, key_str, &return_value);
 
     if (get_status.ok()) {
-        auto tuple = ParseCountAndValue(return_value);
-
-        RawData results{std::get<0>(tuple), get_status, hash_key,
-                        std::get<1>(tuple)};
+        auto tuple = parseCountAndValue(return_value);
+        GetResults results{std::get<0>(tuple), get_status, std::get<1>(tuple)};
 
         return results;
     } else {
         // make sure this is correct
         auto unsuccessful = rocksdb::Status().NotFound();
-        RawData results{0, unsuccessful, std::vector<unsigned char>(),
-                        std::string()};
+        GetResults results{0, unsuccessful, std::string()};
 
         return results;
     }
 }
 
-std::tuple<int, std::string> CheckpointStorage::ParseCountAndValue(
+// private
+// -------------------------------------------------------------------------------
+
+SaveResults CheckpointStorage::saveValueWithRefCount(
+    int updated_ref_count,
+    std::vector<unsigned char> hash_key,
+    std::string value) {
+    auto updated_entry = serializeCountAndValue(updated_ref_count, value);
+    std::string key_str(hash_key.begin(), hash_key.end());
+    auto status = saveValueToDb(updated_entry, key_str);
+
+    if (status.ok()) {
+        return SaveResults{updated_ref_count, status, hash_key};
+    } else {
+        return SaveResults{-1, rocksdb::Status().NotFound(), hash_key};
+    }
+}
+
+std::tuple<int, std::string> CheckpointStorage::parseCountAndValue(
     std::string string_value) {
     // is max 256 references good enough?
     const char* c_string = string_value.c_str();
@@ -171,7 +137,7 @@ std::tuple<int, std::string> CheckpointStorage::ParseCountAndValue(
     return std::make_tuple(ref_count, saved_value);
 }
 
-std::string CheckpointStorage::SerializeCountAndValue(int count,
+std::string CheckpointStorage::serializeCountAndValue(int count,
                                                       std::string value) {
     std::string str;
     if (count > 255) {
@@ -185,8 +151,8 @@ std::string CheckpointStorage::SerializeCountAndValue(int count,
     return str;
 }
 
-rocksdb::Status CheckpointStorage::SaveKeyValuePair(std::string value,
-                                                    std::string key) {
+rocksdb::Status CheckpointStorage::saveValueToDb(std::string value,
+                                                 std::string key) {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     assert(transaction);
@@ -202,7 +168,7 @@ rocksdb::Status CheckpointStorage::SaveKeyValuePair(std::string value,
     return commit_status;
 }
 
-rocksdb::Status CheckpointStorage::DeleteValue(std::string key) {
+rocksdb::Status CheckpointStorage::deleteValueFromDb(std::string key) {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     assert(transaction);
