@@ -25,6 +25,45 @@ void MachineStateSaver::setStorage(CheckpointStorage* storage,
     _pool = pool;
 }
 
+DeleteResults MachineStateSaver::deleteValue(
+    std::vector<unsigned char> hash_key) {
+    auto results = checkpoint_storage->getStoredValue(hash_key);
+
+    if (results.status.ok()) {
+        auto type = (valueTypes)results.stored_value[0];
+        if (type == TUPLE_TYPE) {
+            auto hash =
+                return deleteTuple(<#std::vector<unsigned char> hash_key #>)
+        }
+
+    } else {
+        return DeleteResults{0, rocksdb::Status().NotFound()};
+    }
+}
+
+DeleteResults MachineStateSaver::deleteTuple(
+    std::vector<unsigned char> hash_key) {
+    auto results = checkpoint_storage->getStoredValue(hash_key);
+
+    if (results.status.ok()) {
+        if (results.reference_count == 1) {
+            std::vector<unsigned char> data_vector(results.stored_value.begin(),
+                                                   results.stored_value.end());
+            auto value_vectors = parseSerializedTuple(data_vector);
+
+            for (auto& vector : value_vectors) {
+                if ((valueTypes)vector[0] == TUPLE_TYPE) {
+                    auto delete_stat = deleteTuple(std::vector<unsigned char>(
+                        vector.begin() + 1, vector.end()));
+                }
+            }
+        }
+        return checkpoint_storage->deleteStoredValue(hash_key);
+    } else {
+        return DeleteResults{0, rocksdb::Status().NotFound()};
+    }
+}
+
 SaveResults MachineStateSaver::SaveValue(const value& val) {
     SaveResults save_results;
     auto serialized_value = SerializeValue(val);
@@ -41,30 +80,7 @@ SaveResults MachineStateSaver::SaveValue(const value& val) {
         auto save_results = checkpoint_storage->saveValue(
             serialized_value.string_value, hash_key);
     }
-
     return save_results;
-}
-
-DeleteResults MachineStateSaver::Delete(Tuple& tuple) {
-    auto hash_key = GetHashKey(tuple);
-    auto results = checkpoint_storage->getStoredValue(hash_key);
-
-    if (results.status.ok()) {
-        if (results.reference_count == 1) {
-            for (uint64_t i = 0; i < tuple.tuple_size(); i++) {
-                auto current_val = tuple.get_element(i);
-                // doesnt need to serialize, just figure out if tuple
-                auto serialized_value = SerializeValue(current_val);
-
-                if (serialized_value.type == TUPLE_TYPE) {
-                    auto del_res = Delete(nonstd::get<Tuple>(current_val));
-                }
-            }
-        }
-        return checkpoint_storage->deleteStoredValue(hash_key);
-    } else {
-        return DeleteResults{0, rocksdb::Status().NotFound()};
-    }
 }
 
 SaveResults MachineStateSaver::SaveTuple(const Tuple& val) {
@@ -75,6 +91,7 @@ SaveResults MachineStateSaver::SaveTuple(const Tuple& val) {
         return checkpoint_storage->incrementReference(hash_key);
     } else {
         std::vector<unsigned char> value_to_store;
+        value_to_store.push_back((unsigned char)TUPLE_TYPE);
 
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto current_val = val.get_element(i);
@@ -127,9 +144,9 @@ ValueResult MachineStateSaver::getValue(std::vector<unsigned char> hash_key) {
     }
 }
 
+// review
 TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
     std::vector<value> values;
-
     auto results = checkpoint_storage->getStoredValue(hash_key);
 
     std::vector<unsigned char> data_vector(results.stored_value.begin(),
@@ -137,12 +154,13 @@ TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
     auto value_vectors = parseSerializedTuple(data_vector);
 
     for (auto& current_vector : value_vectors) {
-        switch ((valueTypes)current_vector[0]) {
+        auto value_type = (valueTypes)current_vector[0];
+        current_vector.erase(current_vector.begin());
+
+        switch (value_type) {
             case TUPLE_TYPE: {
-                std::vector<unsigned char> tup_hash(current_vector.begin() + 1,
-                                                    current_vector.end());
-                auto tup = getTuple(tup_hash).tuple;
-                values.push_back(tup);
+                auto tuple = getTuple(current_vector).tuple;
+                values.push_back(tuple);
             }
             case NUM_TYPE: {
                 auto num = deserializeCheckpoint256(current_vector);
@@ -192,16 +210,29 @@ DeleteResults MachineStateSaver::DeleteCheckpoint(std::string checkpoint_name) {
             std::end(machine_state_results.stored_value));
 
         auto parsed_state = parseCheckpointState(stored_state);
+
         auto delete_static_res =
             checkpoint_storage->deleteStoredValue(parsed_state.static_val_key);
         auto delete_register_res = checkpoint_storage->deleteStoredValue(
             parsed_state.register_val_key);
         auto delete_cp_key =
             checkpoint_storage->deleteStoredValue(parsed_state.pc_key);
+        auto delete_datastack_res = deleteTuple(parsed_state.datastack_key);
+        auto delete_auxstack_res = deleteTuple(parsed_state.auxstack_key);
+        auto delete_inbox_res = deleteTuple(parsed_state.inbox_key);
+        auto delete_pendinginbox_res = deleteTuple(parsed_state.pending_key);
 
-        return checkpoint_storage->deleteStoredValue(name_vector);
-
+        if (delete_static_res.status.ok() && delete_register_res.status.ok() &&
+            delete_cp_key.status.ok() && delete_datastack_res.status.ok() &&
+            delete_auxstack_res.status.ok() && delete_inbox_res.status.ok() &&
+            delete_pendinginbox_res.status.ok()) {
+            return checkpoint_storage->deleteStoredValue(name_vector);
+        } else {
+            // undo parshal delete?
+            // make these things atomic?
+        }
     } else {
+        return DeleteResults{0, machine_state_results.status};
     }
 }
 
@@ -243,7 +274,7 @@ std::vector<std::vector<unsigned char>> MachineStateSaver::parseSerializedTuple(
     std::vector<unsigned char> data_vector) {
     std::vector<std::vector<unsigned char>> return_vector;
 
-    auto it = data_vector.begin();
+    auto it = data_vector.begin() + 1;
 
     while (it != data_vector.end()) {
         auto value_type = (valueTypes)*it;

@@ -225,6 +225,7 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
     auto blockreason_str = SerializeBlockReason(blockReason);
     auto balancetracker_str = balance.serializeBalanceValues();
 
+    // make these things atomic?
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
         inbox_results.status.ok() && pending_results.status.ok() &&
         static_val_results.status.ok() && register_val_results.status.ok() &&

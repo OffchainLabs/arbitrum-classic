@@ -274,7 +274,7 @@ std::vector<unsigned char> serializeForCheckpoint(const CodePoint& val) {
 
 CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val) {
     CodePoint code_point;
-    auto buff = reinterpret_cast<char*>(&val[2]);
+    auto buff = reinterpret_cast<char*>(&val[1]);
     auto pc_val = deserialize_int64(buff);
     code_point.pc = pc_val;
 
@@ -282,7 +282,7 @@ CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val) {
 }
 
 uint256_t deserializeCheckpoint256(std::vector<unsigned char> val) {
-    auto buff = reinterpret_cast<char*>(&val[2]);
+    auto buff = reinterpret_cast<char*>(&val[1]);
     auto num = deserialize_int256(buff);
 
     return num;

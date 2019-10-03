@@ -89,12 +89,13 @@ class MachineStateSaver {
     uint256_t getInt256(std::vector<unsigned char> hash_key);
     ParsedCheckpointState parseCheckpointState(
         std::vector<unsigned char> stored_state);
+    DeleteResults deleteTuple(std::vector<unsigned char> hash_key);
+    DeleteResults deleteValue(std::vector<unsigned char> hash_key);
 
    public:
     void setStorage(CheckpointStorage* storage, TuplePool* pool);
     SaveResults SaveTuple(const Tuple& val);
     SaveResults SaveValue(const value& val);
-    DeleteResults Delete(Tuple& tuple);
 
     ValueResult getValue(std::vector<unsigned char> hash_key);
     TupleResult getTuple(std::vector<unsigned char> hash_key);
