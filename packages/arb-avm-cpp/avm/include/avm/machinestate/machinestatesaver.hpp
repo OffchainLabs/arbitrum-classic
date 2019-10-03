@@ -21,59 +21,88 @@
 #include "value/tuple.hpp"
 #include "value/value.hpp"
 
+struct ValueResult {
+    int reference_count = 0;
+    value val;
+};
+
+struct TupleResult {
+    int reference_count = 0;
+    Tuple tuple;
+};
+
 struct MachineStateStorageData {
-    GetResults static_val_results;
-    GetResults register_val_results;
-    GetResults datastack_results;
-    GetResults auxstack_results;
-    GetResults inbox_results;
-    GetResults pending_results;
-    GetResults pc_results;
-    unsigned char status_str;
+    SaveResults static_val_results;
+    SaveResults register_val_results;
+    SaveResults datastack_results;
+    SaveResults auxstack_results;
+    SaveResults inbox_results;
+    SaveResults pending_results;
+    SaveResults pc_results;
+    unsigned char status_char;
+    std::vector<unsigned char> blockreason_str;
+    std::vector<unsigned char> balancetracker_str;
+};
+
+struct ParsedCheckpointState {
+    std::vector<unsigned char> static_val_key;
+    std::vector<unsigned char> register_val_key;
+    std::vector<unsigned char> datastack_key;
+    std::vector<unsigned char> auxstack_key;
+    std::vector<unsigned char> inbox_key;
+    std::vector<unsigned char> pending_key;
+    std::vector<unsigned char> pc_key;
+    unsigned char status_char;
     std::vector<unsigned char> blockreason_str;
     std::vector<unsigned char> balancetracker_str;
 };
 
 struct MachineStateFetchedData {
-    value static_val_results;
-    value register_val_results;
-    Tuple datastack_results;
-    Tuple auxstack_results;
-    Tuple inbox_results;
-    Tuple pending_results;
-    CodePoint pc_results;
-    unsigned char status_str;
+    value static_val;
+    value register_val;
+    Tuple datastack_tuple;
+    Tuple auxstack_tuple;
+    Tuple inbox_tuple;
+    Tuple pending_inbox_tuple;
+    CodePoint pc_codepoint;
+    unsigned char status_char;
     std::vector<unsigned char> blockreason_str;
     std::vector<unsigned char> balancetracker_str;
 };
 
 class MachineStateSaver {
    private:
+    // smart pointer?
     CheckpointStorage* checkpoint_storage;
     TuplePool* pool;
     std::vector<std::vector<unsigned char>> breakIntoValues(
-        std::vector<unsigned char> data_vecgtor);
+        std::vector<unsigned char> data_vector);
     std::vector<unsigned char> serializeState(
         MachineStateStorageData state_data);
-    MachineStateFetchedData deserializeState(
-        std::vector<unsigned char> stored_state);
-    GetResults SaveStringValue(const std::string value,
-                               const std::vector<unsigned char> key);
+    MachineStateFetchedData deserializeCheckpointState(
+        ParsedCheckpointState stored_state);
+    // why not just use checkpointstorage directly
+    SaveResults SaveStringValue(const std::string value,
+                                const std::vector<unsigned char> key);
     GetResults GetStringValue(const std::vector<unsigned char> key);
     CodePoint getCodePoint(std::vector<unsigned char> hash_key);
     uint256_t getInt256(std::vector<unsigned char> hash_key);
+    ParsedCheckpointState parseCheckpointState(
+        std::vector<unsigned char> stored_state);
 
    public:
     void setStorage(CheckpointStorage* storage, TuplePool* pool);
-    GetResults SaveTuple(const Tuple& val);
-    GetResults SaveValue(const value& val);
-    value getValue(std::vector<unsigned char> hash_key);
-    Tuple getTuple(std::vector<unsigned char> hash_key);
+    SaveResults SaveTuple(const Tuple& val);
+    SaveResults SaveValue(const value& val);
+    DeleteResults Delete(Tuple& tuple);
 
-    GetResults SaveMachineState(MachineStateStorageData state_data,
-                                std::string checkpoint_name);
+    ValueResult getValue(std::vector<unsigned char> hash_key);
+    TupleResult getTuple(std::vector<unsigned char> hash_key);
 
+    SaveResults SaveMachineState(MachineStateStorageData state_data,
+                                 std::string checkpoint_name);
     MachineStateFetchedData GetMachineStateData(std::string checkpoint_name);
+    DeleteResults DeleteCheckpoint(std::string checkpoint_name);
 };
 
 #endif /* machinestatesaver_hpp */

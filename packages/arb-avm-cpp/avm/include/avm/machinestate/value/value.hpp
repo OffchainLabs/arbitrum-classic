@@ -20,6 +20,7 @@
 #include <avm/machinestate/value/bigint.hpp>
 #include <avm/opcodes.hpp>
 #include <nonstd/variant.hpp>
+#include <unordered_map>
 
 enum types { NUM, CODEPT, HASH_ONLY, TUPLE };
 
@@ -31,8 +32,10 @@ struct CodePoint;
 // Note: uint256_t is actually 48 bytes long
 using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
+enum valueTypes { NUM_TYPE, CODEPT_TYPE, TUPLE_TYPE };
+
 struct SerializedValue {
-    types type;
+    valueTypes type;
     std::string string_value;
 };
 

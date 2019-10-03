@@ -207,53 +207,62 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 
 int MachineState::checkpointMachineState(CheckpointStorage* storage,
                                          std::string checkpoint_name) {
-    msSaver.setStorage(storage, pool.get());
+    stateSaver.setStorage(storage, pool.get());
 
-    auto datastack_results = stack.CheckpointState(msSaver, pool.get());
-    auto auxstack_results = auxstack.CheckpointState(msSaver, pool.get());
-    auto inbox_results = inbox.CheckpointState(msSaver);
-    auto pending_results = pendingInbox.CheckpointState(msSaver);
+    auto datastack_results = stack.CheckpointState(stateSaver, pool.get());
+    auto auxstack_results = auxstack.CheckpointState(stateSaver, pool.get());
+    auto inbox_results = inbox.CheckpointState(stateSaver);
+    auto pending_results = pendingInbox.CheckpointState(stateSaver);
 
-    auto static_val_results = msSaver.SaveValue(staticVal);
-    auto register_val_results = msSaver.SaveValue(registerVal);
+    auto static_val_results = stateSaver.SaveValue(staticVal);
+    auto register_val_results = stateSaver.SaveValue(registerVal);
 
     auto pc_value = CodePoint();
     pc_value.pc = pc;
-    auto pc_results = msSaver.SaveValue(pc_value);
+    auto pc_results = stateSaver.SaveValue(pc_value);
 
     auto status_str = (unsigned char)(state);
     auto blockreason_str = SerializeBlockReason(blockReason);
     auto balancetracker_str = balance.serializeBalanceValues();
 
-    auto machine_state_data = MachineStateStorageData{
-        static_val_results, register_val_results, datastack_results,
-        auxstack_results,   inbox_results,        pending_results,
-        pc_results,         status_str,           blockreason_str,
-        balancetracker_str,
-    };
+    if (datastack_results.status.ok() && auxstack_results.status.ok() &&
+        inbox_results.status.ok() && pending_results.status.ok() &&
+        static_val_results.status.ok() && register_val_results.status.ok() &&
+        pc_results.status.ok()) {
+        auto machine_state_data = MachineStateStorageData{
+            static_val_results, register_val_results, datastack_results,
+            auxstack_results,   inbox_results,        pending_results,
+            pc_results,         status_str,           blockreason_str,
+            balancetracker_str,
+        };
 
-    auto save_results =
-        msSaver.SaveMachineState(machine_state_data, checkpoint_name);
+        auto save_results =
+            stateSaver.SaveMachineState(machine_state_data, checkpoint_name);
 
-    return save_results.status.ok() == true;
+        return save_results.status.ok() == true;
+    } else {
+        // undo successful saves?
+        return 0;
+    }
 }
 
 int MachineState::restoreMachineState(CheckpointStorage* storage,
                                       std::string checkpoint_name) {
-    msSaver.setStorage(storage, pool.get());
-    auto machine_state_data = msSaver.GetMachineStateData(checkpoint_name);
+    stateSaver.setStorage(storage, pool.get());
+    auto machine_state_data = stateSaver.GetMachineStateData(checkpoint_name);
 
-    staticVal = machine_state_data.static_val_results;
-    registerVal = machine_state_data.register_val_results;
-    stack = Datastack(machine_state_data.datastack_results);
-    auxstack = Datastack(machine_state_data.datastack_results);
-    inbox.initializeMessageStack(machine_state_data.inbox_results);
-    pendingInbox.initializeMessageStack(machine_state_data.pending_results);
-    pc = machine_state_data.pc_results.pc;
-    state = (Status)machine_state_data.status_str;
+    staticVal = machine_state_data.static_val;
+    registerVal = machine_state_data.register_val;
+    stack = Datastack(machine_state_data.datastack_tuple);
+    auxstack = Datastack(machine_state_data.datastack_tuple);
+    inbox.initializeMessageStack(machine_state_data.inbox_tuple);
+    pendingInbox.initializeMessageStack(machine_state_data.pending_inbox_tuple);
+    pc = machine_state_data.pc_codepoint.pc;
+    state = (Status)machine_state_data.status_char;
     blockReason = deserializeBlockReason(machine_state_data.blockreason_str);
     balance = BalanceTracker(machine_state_data.balancetracker_str);
 
+    // get failure status if not successful?
     return 1;
 }
 

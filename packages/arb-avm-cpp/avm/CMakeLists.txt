@@ -81,4 +81,4 @@ target_link_libraries(avm PUBLIC Boost::boost CONAN_PKG::variant-lite rocksdb PR
 
 target_code_coverage(avm AUTO ALL)
 
-source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES})
+#source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES})

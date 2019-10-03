@@ -21,23 +21,38 @@
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
 
-struct GetResults {
+struct RawData {
     int reference_count = 0;
     rocksdb::Status status;
     std::vector<unsigned char> storage_key;
     std::string stored_value;
 };
 
-struct SaveResults {
+struct IncrementResults {
+    int reference_count = 0;
     rocksdb::Status status;
-    std::vector<unsigned char> storage_key;
+};
+
+struct DecrementResults {
+    int reference_count = 0;
+    rocksdb::Status status;
+};
+
+struct GetResults {
+    int reference_count = 0;
+    rocksdb::Status status;
     std::string stored_value;
 };
 
-struct DeleteResults {
+struct SaveResults {
+    int reference_count = 0;
     rocksdb::Status status;
     std::vector<unsigned char> storage_key;
-    std::string stored_value;
+};
+
+struct DeleteResults {
+    int reference_count = 0;
+    rocksdb::Status status;
 };
 
 class CheckpointStorage {
@@ -47,14 +62,17 @@ class CheckpointStorage {
     std::tuple<int, std::string> ParseCountAndValue(std::string string_value);
     std::string SerializeCountAndValue(int count, std::string value);
     rocksdb::Status DeleteValue(std::string key);
+    RawData getRawData(std::vector<unsigned char> hash_key);
 
    public:
     CheckpointStorage();
     ~CheckpointStorage();
 
-    GetResults saveValue(std::string val, std::vector<unsigned char> hash_key);
+    DeleteResults decrementReference(std::vector<unsigned char> hash_key);
+    SaveResults incrementReference(std::vector<unsigned char> hash_key);
+    SaveResults saveValue(std::string val, std::vector<unsigned char> hash_key);
     GetResults getStoredValue(std::vector<unsigned char> hash_key);
-    GetResults deleteStoredValue(std::vector<unsigned char> hash_key);
+    DeleteResults deleteStoredValue(std::vector<unsigned char> hash_key);
 };
 
 #endif /* checkpointstorage_hpp */

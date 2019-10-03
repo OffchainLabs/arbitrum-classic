@@ -52,7 +52,7 @@ struct MessageStack {
 
     void setMessageStackData() {}
 
-    GetResults CheckpointState(MachineStateSaver msSaver) {
+    SaveResults CheckpointState(MachineStateSaver msSaver) {
         return msSaver.SaveValue(messages);
     }
 

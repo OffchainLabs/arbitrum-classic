@@ -292,7 +292,7 @@ struct Serializer {
     SerializedValue operator()(const Tuple& val) const {
         auto value_vector = serializeForCheckpoint(val);
         std::string str_value(value_vector.begin(), value_vector.end());
-        SerializedValue serialized_value{TUPLE, str_value};
+        SerializedValue serialized_value{TUPLE_TYPE, str_value};
 
         return serialized_value;
     }
@@ -300,7 +300,7 @@ struct Serializer {
     SerializedValue operator()(const uint256_t& val) const {
         auto value_vector = serializeForCheckpoint(val);
         std::string str_value(value_vector.begin(), value_vector.end());
-        SerializedValue serialized_value{NUM, str_value};
+        SerializedValue serialized_value{NUM_TYPE, str_value};
 
         return serialized_value;
     }
@@ -308,7 +308,7 @@ struct Serializer {
     SerializedValue operator()(const CodePoint& val) const {
         auto value_vector = serializeForCheckpoint(val);
         std::string str_value(value_vector.begin(), value_vector.end());
-        SerializedValue serialized_value{CODEPT, str_value};
+        SerializedValue serialized_value{CODEPT_TYPE, str_value};
 
         return serialized_value;
     }

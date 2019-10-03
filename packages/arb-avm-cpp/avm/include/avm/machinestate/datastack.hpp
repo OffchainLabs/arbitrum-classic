@@ -102,7 +102,7 @@ class Datastack {
 
     uint256_t hash() const;
 
-    GetResults CheckpointState(MachineStateSaver msSaver, TuplePool* pool);
+    SaveResults CheckpointState(MachineStateSaver msSaver, TuplePool* pool);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

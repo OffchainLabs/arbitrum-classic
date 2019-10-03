@@ -121,8 +121,8 @@ int Datastack::initializeDataStack(Tuple tuple) {
 }
 
 // can speed up by not creating tuple
-GetResults Datastack::CheckpointState(MachineStateSaver msSaver,
-                                      TuplePool* pool) {
+SaveResults Datastack::CheckpointState(MachineStateSaver msSaver,
+                                       TuplePool* pool) {
     auto tuple = GetTupleRepresentation(pool);
     return msSaver.SaveTuple(tuple);
 }
