@@ -25,45 +25,6 @@ void MachineStateSaver::setStorage(CheckpointStorage* storage,
     _pool = pool;
 }
 
-DeleteResults MachineStateSaver::deleteValue(
-    std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getStoredValue(hash_key);
-
-    if (results.status.ok()) {
-        auto type = (valueTypes)results.stored_value[0];
-        if (type == TUPLE_TYPE) {
-            auto hash =
-                return deleteTuple(<#std::vector<unsigned char> hash_key #>)
-        }
-
-    } else {
-        return DeleteResults{0, rocksdb::Status().NotFound()};
-    }
-}
-
-DeleteResults MachineStateSaver::deleteTuple(
-    std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getStoredValue(hash_key);
-
-    if (results.status.ok()) {
-        if (results.reference_count == 1) {
-            std::vector<unsigned char> data_vector(results.stored_value.begin(),
-                                                   results.stored_value.end());
-            auto value_vectors = parseSerializedTuple(data_vector);
-
-            for (auto& vector : value_vectors) {
-                if ((valueTypes)vector[0] == TUPLE_TYPE) {
-                    auto delete_stat = deleteTuple(std::vector<unsigned char>(
-                        vector.begin() + 1, vector.end()));
-                }
-            }
-        }
-        return checkpoint_storage->deleteStoredValue(hash_key);
-    } else {
-        return DeleteResults{0, rocksdb::Status().NotFound()};
-    }
-}
-
 SaveResults MachineStateSaver::SaveValue(const value& val) {
     SaveResults save_results;
     auto serialized_value = SerializeValue(val);
@@ -211,12 +172,9 @@ DeleteResults MachineStateSaver::DeleteCheckpoint(std::string checkpoint_name) {
 
         auto parsed_state = parseCheckpointState(stored_state);
 
-        auto delete_static_res =
-            checkpoint_storage->deleteStoredValue(parsed_state.static_val_key);
-        auto delete_register_res = checkpoint_storage->deleteStoredValue(
-            parsed_state.register_val_key);
-        auto delete_cp_key =
-            checkpoint_storage->deleteStoredValue(parsed_state.pc_key);
+        auto delete_static_res = deleteValue(parsed_state.static_val_key);
+        auto delete_register_res = deleteValue(parsed_state.register_val_key);
+        auto delete_cp_key = deleteValue(parsed_state.pc_key);
         auto delete_datastack_res = deleteTuple(parsed_state.datastack_key);
         auto delete_auxstack_res = deleteTuple(parsed_state.auxstack_key);
         auto delete_inbox_res = deleteTuple(parsed_state.inbox_key);
@@ -250,6 +208,47 @@ SaveResults MachineStateSaver::SaveMachineState(
 
 // private
 // -------------------------------------------------------------------------------
+
+DeleteResults MachineStateSaver::deleteValue(
+    std::vector<unsigned char> hash_key) {
+    auto results = checkpoint_storage->getStoredValue(hash_key);
+
+    if (results.status.ok()) {
+        auto type = (valueTypes)results.stored_value[0];
+
+        if (type == TUPLE_TYPE) {
+            return deleteTuple(hash_key);
+        } else {
+            return checkpoint_storage->deleteStoredValue(hash_key);
+        }
+    } else {
+        return DeleteResults{0, rocksdb::Status().NotFound()};
+    }
+}
+
+DeleteResults MachineStateSaver::deleteTuple(
+    std::vector<unsigned char> hash_key) {
+    // reduce extra db calls
+    auto results = checkpoint_storage->getStoredValue(hash_key);
+
+    if (results.status.ok()) {
+        if (results.reference_count == 1) {
+            std::vector<unsigned char> data_vector(results.stored_value.begin(),
+                                                   results.stored_value.end());
+            auto value_vectors = parseSerializedTuple(data_vector);
+
+            for (auto& vector : value_vectors) {
+                if ((valueTypes)vector[0] == TUPLE_TYPE) {
+                    auto delete_stat = deleteTuple(std::vector<unsigned char>(
+                        vector.begin() + 1, vector.end()));
+                }
+            }
+        }
+        return checkpoint_storage->deleteStoredValue(hash_key);
+    } else {
+        return DeleteResults{0, rocksdb::Status().NotFound()};
+    }
+}
 
 CodePoint MachineStateSaver::getCodePoint(std::vector<unsigned char> hash_key) {
     auto results = checkpoint_storage->getStoredValue(hash_key);
