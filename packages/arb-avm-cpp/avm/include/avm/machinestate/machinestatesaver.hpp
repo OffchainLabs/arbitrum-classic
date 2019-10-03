@@ -75,7 +75,7 @@ class MachineStateSaver {
     // smart pointer?
     CheckpointStorage* checkpoint_storage;
     TuplePool* pool;
-    std::vector<std::vector<unsigned char>> breakIntoValues(
+    std::vector<std::vector<unsigned char>> parseSerializedTuple(
         std::vector<unsigned char> data_vector);
     std::vector<unsigned char> serializeState(
         MachineStateStorageData state_data);
