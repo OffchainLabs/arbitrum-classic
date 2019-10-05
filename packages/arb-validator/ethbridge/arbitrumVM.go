@@ -233,14 +233,21 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					return
 				}
 
-				precondition, assertion := translateDisputableAssertionEvent(val)
+				tokenTracker := protocol.NewTokenTrackerFromLists(val.TokenTypes, val.BeforeBalances)
+				precondition := protocol.NewPrecondition(
+					val.BeforeHash,
+					val.TimeBounds,
+					tokenTracker,
+					value.NewHashOnlyValue(val.BeforeInbox, 1),
+				)
 				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: PendingDisputableAssertionEvent{
-						Precondition: precondition,
-						Assertion:    assertion,
-						Asserter:     val.Asserter,
+						Precondition:  precondition,
+						AssertionHash: val.AssertionHash,
+						NumSteps:      val.NumSteps,
+						Asserter:      val.Asserter,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -372,28 +379,17 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	dataHashes := make([][32]byte, 0, len(assertion.OutMsgs))
-	for _, msg := range assertion.OutMsgs {
-		dataHashes = append(dataHashes, msg.Data.Hash())
-	}
-
+	balance := protocol.NewTokenTrackerFromMessages(assertion.OutMsgs)
+	tokenTypes, beforeBalances := balance.GetTypesAndAmounts()
 	tx, err := vm.ArbitrumVM.PendingDisputableAssert(
 		auth,
-		[4][32]byte{
-			precondition.BeforeHash,
-			precondition.BeforeInbox.Hash(),
-			assertion.AfterHash,
-			assertion.LogsHash(),
-		},
-		assertion.NumSteps,
+		precondition.BeforeHash,
 		precondition.TimeBounds,
+		precondition.BeforeInbox.Hash(),
 		tokenTypes,
-		dataHashes,
-		tokenNums,
-		amounts,
-		destinations,
+		beforeBalances,
+		assertion.NumSteps,
+		assertion.Stub().Hash(),
 	)
 	if err != nil {
 		return nil, err
@@ -437,16 +433,14 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 func (vm *ArbitrumVM) InitiateChallenge(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
+	assertionHash [32]byte,
+	numSteps uint32,
 ) (*types.Receipt, error) {
-	var preAssHash [32]byte
-	copy(preAssHash[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(precondition.Hash()),
-		solsha3.Bytes32(assertion.Hash()),
-	))
 	tx, err := vm.ArbitrumVM.InitiateChallenge(
 		auth,
-		preAssHash,
+		precondition.Hash(),
+		assertionHash,
+		numSteps,
 	)
 	if err != nil {
 		return nil, err
@@ -679,24 +673,4 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 		assertions = append(assertions, assertion)
 	}
 	return assertions
-}
-
-func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
-	tokenTracker := protocol.NewTokenTrackerFromLists(event.TokenTypes, event.Amounts)
-	precondition := protocol.NewPrecondition(
-		event.Fields[0],
-		event.TimeBounds,
-		tokenTracker,
-		value.NewHashOnlyValue(event.Fields[1], 1),
-	)
-	assertion := &protocol.AssertionStub{
-		AfterHash:        event.Fields[2],
-		NumSteps:         event.NumSteps,
-		FirstMessageHash: [32]byte{},
-		LastMessageHash:  event.LastMessageHash,
-		FirstLogHash:     [32]byte{},
-		LastLogHash:      event.LogsAccHash,
-		TotalVals:        event.Amounts,
-	}
-	return precondition, assertion
 }

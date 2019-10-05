@@ -70,9 +70,10 @@ func (ConfirmedUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageTyp
 }
 
 type PendingDisputableAssertionEvent struct {
-	Precondition *protocol.Precondition
-	Assertion    *protocol.AssertionStub
-	Asserter     common.Address
+	Precondition  *protocol.Precondition
+	AssertionHash [32]byte
+	NumSteps      uint32
+	Asserter      common.Address
 }
 
 func (PendingDisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {

@@ -28,6 +28,28 @@ const _abi = [
         type: 'function',
     },
     {
+        constant: false,
+        inputs: [
+            {
+                name: '_preconditionHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_assertionHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+        ],
+        name: 'initiateChallenge',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
         constant: true,
         inputs: [
             {
@@ -73,20 +95,6 @@ const _abi = [
             },
         ],
         name: 'completeChallenge',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_assertPreHash',
-                type: 'bytes32',
-            },
-        ],
-        name: 'initiateChallenge',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
@@ -236,8 +244,37 @@ const _abi = [
     },
     {
         constant: false,
-        inputs: [],
-        name: 'activateVM',
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_tokenTypes',
+                type: 'bytes21[]',
+            },
+            {
+                name: '_beforeBalances',
+                type: 'uint256[]',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_assertionHash',
+                type: 'bytes32',
+            },
+        ],
+        name: 'pendingDisputableAssert',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
@@ -245,41 +282,8 @@ const _abi = [
     },
     {
         constant: false,
-        inputs: [
-            {
-                name: '_fields',
-                type: 'bytes32[4]',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_timeBounds',
-                type: 'uint64[2]',
-            },
-            {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_messageDataHash',
-                type: 'bytes32[]',
-            },
-            {
-                name: '_messageTokenNums',
-                type: 'uint16[]',
-            },
-            {
-                name: '_messageAmounts',
-                type: 'uint256[]',
-            },
-            {
-                name: '_messageDestinations',
-                type: 'address[]',
-            },
-        ],
-        name: 'pendingDisputableAssert',
+        inputs: [],
+        name: 'activateVM',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
@@ -362,13 +366,8 @@ const _abi = [
         inputs: [
             {
                 indexed: false,
-                name: 'fields',
-                type: 'bytes32[3]',
-            },
-            {
-                indexed: false,
-                name: 'asserter',
-                type: 'address',
+                name: 'beforeHash',
+                type: 'bytes32',
             },
             {
                 indexed: false,
@@ -377,28 +376,33 @@ const _abi = [
             },
             {
                 indexed: false,
+                name: 'beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                indexed: false,
                 name: 'tokenTypes',
                 type: 'bytes21[]',
             },
             {
                 indexed: false,
+                name: 'beforeBalances',
+                type: 'uint256[]',
+            },
+            {
+                indexed: false,
+                name: 'assertionHash',
+                type: 'bytes32',
+            },
+            {
+                indexed: false,
+                name: 'asserter',
+                type: 'address',
+            },
+            {
+                indexed: false,
                 name: 'numSteps',
                 type: 'uint32',
-            },
-            {
-                indexed: false,
-                name: 'lastMessageHash',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'logsAccHash',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'amounts',
-                type: 'uint256[]',
             },
         ],
         name: 'PendingDisputableAssertion',

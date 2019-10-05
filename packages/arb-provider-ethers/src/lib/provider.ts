@@ -385,6 +385,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         const arbChannel = await this.arbChannelConn();
         const events = receipt.logs.map(l => arbChannel.interface.parseLog(l));
+
         // DisputableAssertion Event
         const cda = events.find(event => event.name === EB_EVENT_CDA);
         if (!cda) {
@@ -392,9 +393,9 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         const vmId = await this.getVmID();
         // Check correct VM
-        if (cda.values.vmId !== vmId) {
+        if (receipt.to !== vmId) {
             throw Error(
-                'DisputableAssertion Event is from a different VM: ' + cda.values.vmId + '\nExpected VM ID: ' + vmId,
+                'DisputableAssertion Event is from a different VM: ' + receipt.to + '\nExpected VM ID: ' + vmId,
             );
         }
 

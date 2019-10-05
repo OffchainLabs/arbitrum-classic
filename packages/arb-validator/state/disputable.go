@@ -366,14 +366,15 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, bridge bridge.Ar
 		}
 		updatedState := c.GetMachine().Clone()
 		assertion := updatedState.ExecuteAssertion(
-			int32(ev.Assertion.NumSteps),
+			int32(ev.NumSteps),
 			ev.Precondition.TimeBounds,
 		)
-		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
+		if assertion.Stub().Hash() != ev.AssertionHash || bot.ChallengeEverything {
 			_, err := bridge.InitiateChallenge(
 				context.Background(),
 				ev.Precondition,
-				ev.Assertion,
+				ev.AssertionHash,
+				ev.NumSteps,
 			)
 			if err != nil {
 				return nil, nil, err

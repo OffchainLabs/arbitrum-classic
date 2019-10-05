@@ -30,20 +30,15 @@ import "../libraries/ArbValue.sol";
 contract ArbitrumVM {
     using SafeMath for uint256;
 
-    // fields:
-    // beforeHash
-    // beforeInbox
-    // afterHash
-
     event PendingDisputableAssertion (
-        bytes32[3] fields,
-        address asserter,
+        bytes32 beforeHash,
         uint64[2] timeBounds,
+        bytes32 beforeInbox,
         bytes21[] tokenTypes,
-        uint32 numSteps,
-        bytes32 lastMessageHash,
-        bytes32 logsAccHash,
-        uint256[] amounts
+        uint256[] beforeBalances,
+        bytes32 assertionHash,
+        address asserter,
+        uint32 numSteps
     );
 
     event ConfirmedDisputableAssertion(
@@ -134,21 +129,14 @@ contract ArbitrumVM {
         validatorBalances[_players[1]] = validatorBalances[_players[1]].add(_rewards[1]);
     }
 
-    // fields:
-    // _beforeHash
-    // _beforeInbox
-    // _afterHash
-    // _logsAccHash
-
     function pendingDisputableAssert(
-        bytes32[4] memory _fields,
-        uint32 _numSteps,
+        bytes32 _beforeHash,
         uint64[2] memory _timeBounds,
+        bytes32 _beforeInbox,
         bytes21[] memory _tokenTypes,
-        bytes32[] memory _messageDataHash,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
+        uint256[] memory _beforeBalances,
+        uint32 _numSteps,
+        bytes32 _assertionHash
     )
         public
     {
@@ -157,30 +145,25 @@ contract ArbitrumVM {
             "Validator does not have required escrow to assert"
         );
         validatorBalances[msg.sender] -= vm.escrowRequired;
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
+
+        require(ArbProtocol.beforeBalancesValid(_tokenTypes, _beforeBalances), "Token types must be valid and sorted");
         require(
             globalInbox.hasFunds(
                 address(this),
                 _tokenTypes,
-                beforeBalances
+                _beforeBalances
             ),
             "VM has insufficient balance"
         );
         Disputable.pendingDisputableAssert(
             vm,
-            _fields,
-            _numSteps,
+            _beforeHash,
             _timeBounds,
+            _beforeInbox,
             _tokenTypes,
-            _messageDataHash,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
+            _beforeBalances,
+            _numSteps,
+            _assertionHash
         );
     }
 
@@ -221,7 +204,13 @@ contract ArbitrumVM {
         );
     }
 
-    function initiateChallenge(bytes32 _assertPreHash) public {
+    function initiateChallenge(
+        bytes32 _preconditionHash,
+        bytes32 _assertionHash,
+        uint32 _numSteps
+    )
+        public
+    {
         require(
             vm.escrowRequired <= validatorBalances[msg.sender],
             "Challenger did not have enough escrowed"
@@ -230,14 +219,21 @@ contract ArbitrumVM {
 
         Disputable.initiateChallenge(
             vm,
-            _assertPreHash
+            _preconditionHash,
+            _assertionHash,
+            _numSteps
         );
 
         challengeManager.initiateChallenge(
             [vm.asserter, msg.sender],
             [vm.escrowRequired, vm.escrowRequired],
             vm.gracePeriod,
-            _assertPreHash
+            keccak256(
+                abi.encodePacked(
+                    _preconditionHash,
+                    _assertionHash
+                )
+            )
         );
     }
 

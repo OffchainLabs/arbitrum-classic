@@ -75,7 +75,8 @@ type ArbVMBridge interface {
 	InitiateChallenge(
 		ctx context.Context,
 		precondition *protocol.Precondition,
-		assertion *protocol.AssertionStub,
+		assertionHash [32]byte,
+		numSteps uint32,
 	) (*types.Receipt, error)
 
 	BisectAssertion(
