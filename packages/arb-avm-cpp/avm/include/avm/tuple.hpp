@@ -44,7 +44,8 @@ class Tuple {
             for (size_t i = 0; i < size; i++) {
                 tpl->data.push_back(Tuple{});
             }
-            tpl->cachedHash = calculateHash();
+            // tpl->cachedHash = calculateHash();
+            tpl->deferredHashing = true;
         }
     }
 
@@ -118,7 +119,8 @@ class Tuple {
         tpl = tmp;
         //        }
         tpl->data[pos] = std::move(newval);
-        tpl->cachedHash = calculateHash();
+        // tpl->cachedHash = calculateHash();
+        tpl->deferredHashing = true;
     }
 
     value get_element(uint64_t pos) const {
@@ -134,6 +136,10 @@ class Tuple {
 
 inline uint256_t hash(const Tuple& tup) {
     if (tup.tpl) {
+        if (tup.tpl->deferredHashing) {
+            tup.tpl->cachedHash = tup.calculateHash();
+            tup.tpl->deferredHashing = false;
+        }
         return tup.tpl->cachedHash;
     } else {
         static uint256_t zeroHashVal = zeroHash();

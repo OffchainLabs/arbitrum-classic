@@ -26,6 +26,7 @@
 struct RawTuple {
     std::vector<value> data;
     uint256_t cachedHash = 0;
+    bool deferredHashing = true;
 };
 
 class TuplePool {
