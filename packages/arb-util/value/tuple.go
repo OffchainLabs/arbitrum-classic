@@ -83,7 +83,6 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 func NewTuple2(value1 Value, value2 Value) TupleValue {
 	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, [32]byte{}, 0, true}
 	ret.size = ret.internalSize()
-	// ret.cachedHash = ret.internalHash()
 	return ret
 }
 
