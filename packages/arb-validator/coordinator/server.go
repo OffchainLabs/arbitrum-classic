@@ -256,9 +256,6 @@ func (m *Server) GetValidatorList(ctx context.Context, args *GetValidatorListArg
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
-	if !<-m.coordinator.ChannelVal.CanRun() {
-		return nil, errors.New("Cannot call when machine can't run")
-	}
 	dataBytes, err := hexutil.Decode(args.Data)
 	if err != nil {
 		return nil, err
