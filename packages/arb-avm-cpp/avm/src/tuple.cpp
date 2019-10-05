@@ -22,7 +22,6 @@
 Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
     tpl->data.push_back(std::move(val));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
@@ -30,7 +29,6 @@ Tuple::Tuple(value val1, value val2, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(2)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
@@ -39,7 +37,6 @@ Tuple::Tuple(value val1, value val2, value val3, TuplePool* pool)
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
@@ -49,7 +46,6 @@ Tuple::Tuple(value val1, value val2, value val3, value val4, TuplePool* pool)
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
@@ -65,7 +61,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val3));
     tpl->data.push_back(std::move(val4));
     tpl->data.push_back(std::move(val5));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
@@ -83,7 +78,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val4));
     tpl->data.push_back(std::move(val5));
     tpl->data.push_back(std::move(val6));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
@@ -103,7 +97,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val5));
     tpl->data.push_back(std::move(val6));
     tpl->data.push_back(std::move(val7));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
@@ -125,7 +118,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val6));
     tpl->data.push_back(std::move(val7));
     tpl->data.push_back(std::move(val8));
-    // tpl->cachedHash = calculateHash();
     tpl->deferredHashing = true;
 }
 
