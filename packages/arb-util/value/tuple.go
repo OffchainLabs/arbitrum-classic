@@ -37,22 +37,22 @@ func init() {
 }
 
 type TupleValue struct {
-	contentsArr  [MaxTupleSize]Value
-	itemCount    int8
-	cachedHash   [32]byte
-	size         int64
-	needsHashing bool
+	contentsArr     [MaxTupleSize]Value
+	itemCount       int8
+	cachedHash      [32]byte
+	size            int64
+	deferredHashing bool
 }
 
 func NewEmptyTuple() TupleValue {
-	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1, false }
+	return TupleValue{[MaxTupleSize]Value{}, 0, hashOfNone, 1, false}
 }
 
 func NewTupleOfSizeWithContents(contents [MaxTupleSize]Value, size int8) (TupleValue, error) {
 	if !IsValidTupleSizeI64(int64(size)) {
 		return TupleValue{}, errors.New("requested empty tuple size is too big")
 	}
-	ret := TupleValue{contents, size, [32]byte{}, 0, true }
+	ret := TupleValue{contents, size, [32]byte{}, 0, true}
 	ret.size = ret.internalSize()
 	return ret, nil
 }
@@ -81,7 +81,7 @@ func NewTupleFromSlice(slice []Value) (TupleValue, error) {
 }
 
 func NewTuple2(value1 Value, value2 Value) TupleValue {
-	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, [32]byte{}, 0, true }
+	ret := TupleValue{[MaxTupleSize]Value{value1, value2}, 2, [32]byte{}, 0, true}
 	ret.size = ret.internalSize()
 	// ret.cachedHash = ret.internalHash()
 	return ret
@@ -92,7 +92,7 @@ func (tv TupleValue) init2(value1 Value, value2 Value) {
 	tv.contentsArr[1] = value2
 	tv.itemCount = 2
 	tv.size = tv.internalSize()
-	tv.needsHashing = true
+	tv.deferredHashing = true
 }
 
 func NewSizedTupleFromReader(rd io.Reader, size byte) (TupleValue, error) {
@@ -181,7 +181,7 @@ func (tv TupleValue) Clone() Value {
 	for i, b := range tv.Contents() {
 		newContents[i] = b.Clone()
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.needsHashing }
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) CloneShallow() Value {
@@ -189,7 +189,7 @@ func (tv TupleValue) CloneShallow() Value {
 	for i, b := range tv.Contents() {
 		newContents[i] = NewHashOnlyValueFromValue(b)
 	}
-	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.needsHashing }
+	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
 }
 
 func (tv TupleValue) Equal(val Value) bool {
@@ -251,9 +251,9 @@ func (tv TupleValue) internalHash() [32]byte {
 }
 
 func (tv TupleValue) Hash() [32]byte {
-	if tv.needsHashing {
+	if tv.deferredHashing {
 		tv.cachedHash = tv.internalHash()
-		tv.needsHashing = false
+		tv.deferredHashing = false
 	}
 	return tv.cachedHash
 }
