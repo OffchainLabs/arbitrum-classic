@@ -257,6 +257,9 @@ struct BlockSerializer {
     }
 };
 
+std::unordered_map<BlockType, int> blockreason_type_length = {
+    {Not, 1}, {Halt, 1}, {Error, 1}, {Breakpoint, 1}, {Inbox, 34}, {Send, 55}};
+
 std::vector<unsigned char> SerializeBlockReason(const BlockReason& val) {
     return nonstd::visit(BlockSerializer{}, val);
 }

@@ -119,7 +119,6 @@ void Machine::runOne() {
             auto imm = *instruction.op.immediate;
             machine_state.stack.push(std::move(imm));
         }
-
         try {
             machine_state.blockReason =
                 machine_state.runOp(instruction.op.opcode);

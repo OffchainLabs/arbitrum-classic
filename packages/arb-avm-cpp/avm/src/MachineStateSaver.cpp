@@ -201,9 +201,12 @@ SaveResults MachineStateSaver::SaveMachineState(
     std::vector<unsigned char> checkpoint_name_vector(
         std::begin(checkpoint_name), std::end(checkpoint_name));
 
-    return SaveStringValue(
+    return checkpoint_storage->saveValue(
         std::string(serialized_state.begin(), serialized_state.end()),
         checkpoint_name_vector);
+    //    return SaveStringValue(
+    //        std::string(serialized_state.begin(), serialized_state.end()),
+    //        checkpoint_name_vector);
 }
 
 // private
@@ -343,7 +346,7 @@ std::vector<unsigned char> MachineStateSaver::serializeState(
     return state_data_vector;
 }
 
-ParsedCheckpointState parseCheckpointState(
+ParsedCheckpointState MachineStateSaver::parseCheckpointState(
     std::vector<unsigned char> stored_state) {
     auto iter = stored_state.begin();
     auto status = (unsigned char)(*iter);
@@ -394,11 +397,10 @@ ParsedCheckpointState parseCheckpointState(
 }
 
 MachineStateFetchedData MachineStateSaver::deserializeCheckpointState(
-    // status
     ParsedCheckpointState stored_state) {
     // staticval
     auto static_val_results = getValue(stored_state.static_val_key);
-    auto register_val_ressults = getValue(stored_state.auxstack_key);
+    auto register_val_results = getValue(stored_state.auxstack_key);
     auto datastack_results = getTuple(stored_state.datastack_key);
     auto auxstack_results = getTuple(stored_state.auxstack_key);
     auto inbox_results = getTuple(stored_state.inbox_key);
@@ -406,7 +408,7 @@ MachineStateFetchedData MachineStateSaver::deserializeCheckpointState(
     auto pc_results = getCodePoint(stored_state.pc_key);
 
     return MachineStateFetchedData{static_val_results.val,
-                                   register_val_ressults.val,
+                                   register_val_results.val,
                                    datastack_results.tuple,
                                    auxstack_results.tuple,
                                    inbox_results.tuple,

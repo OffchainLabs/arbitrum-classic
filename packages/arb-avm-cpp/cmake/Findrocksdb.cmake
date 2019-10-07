@@ -117,6 +117,7 @@ if(_ROCKSDB_EPIC_FAIL)
 else()
   set(ROCKSDB_INCLUDE_DIRS ${_ROCKSDB_INCLUDE_DIR})
   set(ROCKSDB_LIBRARIES ${ROCKSDB_LIBRARY})
+  link_directories(/usr/local/lib/)
   if(_ROCKSDB_output)
     message(STATUS
       "Found rocksdb ${ROCKSDB_VERSION} in ${ROCKSDB_INCLUDE_DIRS};${ROCKSDB_LIBRARIES}")
