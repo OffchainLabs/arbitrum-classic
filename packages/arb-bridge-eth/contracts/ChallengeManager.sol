@@ -34,9 +34,17 @@ contract ChallengeManager is IChallengeManager {
     event BisectedAssertion(
         address indexed vmAddress,
         address bisecter,
-        bytes32[] afterHashAndMessageAndLogsBisections,
-        uint32 totalSteps,
-        uint256[] totalMessageAmounts
+        bytes32 preconditionHash,
+        bytes32[] bisectionHashes,
+        uint32 numSteps
+    );
+
+    event BisectedAssertionOther(
+        address indexed vmAddress,
+        address bisecter,
+        bytes32[] bisectionHashes,
+        uint32 numSteps,
+        uint256[] prevOutputValues
     );
 
     event OneStepProofCompleted(
@@ -73,28 +81,51 @@ contract ChallengeManager is IChallengeManager {
         );
     }
 
-    function bisectAssertion(
+    function bisectAssertionFirst(
         address _challengeId,
-        bytes32 _beforeInbox,
-        bytes32[] memory _afterHashAndMessageAndLogsBisections,
-        uint256[] memory _totalMessageAmounts,
-        uint32 _totalSteps,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances
+        uint32 _numSteps,
+        bytes32 _preconditionHash,
+        bytes32 _assertionHash,
+        bytes32[] memory _bisectionHashes
     )
         public
     {
         Challenge.Data storage challenge = challenges[_challengeId];
-        Bisection.bisectAssertion(
+        Bisection.bisectAssertionFirst(
             challenge,
-            _beforeInbox,
-            _afterHashAndMessageAndLogsBisections,
-            _totalMessageAmounts,
-            _totalSteps,
+            _numSteps,
+            _preconditionHash,
+            _assertionHash,
+            _bisectionHashes
+        );
+    }
+
+    function bisectAssertionOther(
+        address _challengeId,
+        bytes32[10] memory _fields,
+        uint64[2] memory _timeBounds,
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _beforeBalances,
+        uint32 _a1NumSteps,
+        uint256[] memory _a1OutputValues,
+        uint32 _a2NumSteps,
+        uint256[] memory _a2OutputValues,
+        bytes32[] memory _bisectionHashes
+    )
+        public
+    {
+        Challenge.Data storage challenge = challenges[_challengeId];
+        Bisection.bisectAssertionOther(
+            challenge,
+            _fields,
             _timeBounds,
             _tokenTypes,
-            _beforeBalances
+            _beforeBalances,
+            _a1NumSteps,
+            _a1OutputValues,
+            _a2NumSteps,
+            _a2OutputValues,
+            _bisectionHashes
         );
     }
 
@@ -117,7 +148,7 @@ contract ChallengeManager is IChallengeManager {
         );
     }
 
-    function oneStepProof(
+    function oneStepProofFirst(
         address _vmAddress,
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
@@ -130,7 +161,7 @@ contract ChallengeManager is IChallengeManager {
         public
     {
         Challenge.Data storage challenge = challenges[_vmAddress];
-        OneStepProof.oneStepProof(
+        OneStepProof.oneStepProofFirst(
             challenge,
             _beforeHashAndInbox,
             _timeBounds,
@@ -138,6 +169,37 @@ contract ChallengeManager is IChallengeManager {
             _beforeBalances,
             _afterHashAndMessages,
             _amounts,
+            _proof
+        );
+        _asserterWin(challenge);
+        emit OneStepProofCompleted(_vmAddress, msg.sender, _proof);
+    }
+
+    function oneStepProofOther(
+        address _vmAddress,
+        bytes32[10] memory _fields,
+        uint64[2] memory _timeBounds,
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _beforeBalances,
+        uint32 _a1NumSteps,
+        uint256[] memory _a1OutputValues,
+        uint32 _a2NumSteps,
+        uint256[] memory _a2OutputValues,
+        bytes memory _proof
+    )
+        public
+    {
+        Challenge.Data storage challenge = challenges[_vmAddress];
+        OneStepProof.oneStepProofOther(
+            challenge,
+            _fields,
+            _timeBounds,
+            _tokenTypes,
+            _beforeBalances,
+            _a1NumSteps,
+            _a1OutputValues,
+            _a2NumSteps,
+            _a2OutputValues,
             _proof
         );
         _asserterWin(challenge);

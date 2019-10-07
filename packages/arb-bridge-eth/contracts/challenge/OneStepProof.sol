@@ -44,7 +44,7 @@ library OneStepProof {
         bytes proof;
     }
 
-    function oneStepProof(
+    function oneStepProofFirst(
         Challenge.Data storage _challenge,
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
@@ -54,7 +54,8 @@ library OneStepProof {
         uint256[] memory _amounts,
         bytes memory _proof
     )
-        public view
+        public
+        view
     {
         require(
             _challenge.state == Challenge.State.Challenged,
@@ -80,7 +81,8 @@ library OneStepProof {
                         _afterHashAndMessages[3],
                         _afterHashAndMessages[4],
                         _amounts
-                    )
+                    ),
+                    uint32(1)
                 )
             ) == _challenge.challengeState,
             "One step proof with invalid prev state"
@@ -100,6 +102,93 @@ library OneStepProof {
             _tokenTypes,
             _beforeBalances,
             _amounts,
+            _proof
+        );
+
+        require(correctProof == 0, "Proof was incorrect");
+    }
+
+    // fields
+    //   _beforeHash
+    //   _beforeInbox
+    //   _firstMessageHash
+    //   _firstLogHash
+    //   _a1AfterHash
+    //   _a1LastMessageHash
+    //   _a1LastLogHash
+    //   _a2AfterHash
+    //   _a2LastMessageHash
+    //   _a2LastLogHash
+    function oneStepProofOther(
+        Challenge.Data storage _challenge,
+        bytes32[10] memory _fields,
+        uint64[2] memory _timeBounds,
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _beforeBalances,
+        uint32 _a1NumSteps,
+        uint256[] memory _a1OutputValues,
+        uint32 _a2NumSteps,
+        uint256[] memory _a2OutputValues,
+        bytes memory _proof
+    )
+        public
+        view
+    {
+        _oneStepProofOther(
+            _challenge,
+            Challenge.BisectOtherData(
+                _fields[0],
+                _fields[1],
+                _timeBounds,
+                _tokenTypes,
+                _beforeBalances,
+                _fields[2],
+                _fields[3],
+                _fields[4],
+                _a1NumSteps,
+                _fields[5],
+                _fields[6],
+                _a1OutputValues,
+                _fields[7],
+                _a2NumSteps,
+                _fields[8],
+                _fields[9],
+                _a2OutputValues
+            ),
+            _proof
+        );
+    }
+
+    function _oneStepProofOther(
+        Challenge.Data storage _challenge,
+        Challenge.BisectOtherData memory _data,
+        bytes memory _proof
+    )
+        private
+        view
+    {
+        require(
+            _challenge.state == Challenge.State.Challenged,
+            "Can only one step proof following a single step challenge"
+        );
+        require(block.number <= _challenge.deadline, "One step proof missed deadline");
+
+        Challenge.validateBisectionOther(_challenge, _data);
+
+        uint correctProof = validateProof(
+            [
+                _data.a1AfterHash,
+                _data.beforeInbox,
+                _data.a2AfterHash,
+                _data.a1LastMessageHash,
+                _data.a2LastMessageHash,
+                _data.a1LastLogHash,
+                _data.a2LastLogHash
+            ],
+            _data.timeBounds,
+            _data.tokenTypes,
+            _data.beforeBalances,
+            _data.a2OutputValues,
             _proof
         );
 

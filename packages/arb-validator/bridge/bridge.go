@@ -79,23 +79,42 @@ type ArbVMBridge interface {
 		numSteps uint32,
 	) (*types.Receipt, error)
 
-	BisectAssertion(
+	BisectAssertionFirst(
 		ctx context.Context,
+		assertion *protocol.AssertionStub,
 		precondition *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		bisections []*protocol.AssertionStub,
+	) (*types.Receipt, error)
+
+	BisectAssertionOther(
+		ctx context.Context,
+		firstAssertion *protocol.AssertionStub,
+		secondAssertion *protocol.AssertionStub,
+		precondition *protocol.Precondition,
+		bisections []*protocol.AssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		preconditions *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		precondition *protocol.Precondition,
+		totalSteps uint32,
+		assertion [32]byte,
+		bisections [][32]byte,
 	) (*types.Receipt, error)
 
-	OneStepProof(
+	OneStepProofFirst(
 		ctx context.Context,
-		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
+		precondition *protocol.Precondition,
+		proof []byte,
+	) (*types.Receipt, error)
+
+	OneStepProofOther(
+		ctx context.Context,
+		firstAssertion *protocol.AssertionStub,
+		secondAssertion *protocol.AssertionStub,
+		precondition *protocol.Precondition,
 		proof []byte,
 	) (*types.Receipt, error)
 

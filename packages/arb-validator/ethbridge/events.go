@@ -17,6 +17,8 @@
 package ethbridge
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -98,7 +100,8 @@ func (InitiateChallengeEvent) GetIncomingMessageType() IncomingMessageType {
 }
 
 type BisectionEvent struct {
-	Assertions []*protocol.AssertionStub
+	BisectionHashes   [][32]byte
+	SpentOutputValues []*big.Int
 }
 
 func (BisectionEvent) GetIncomingMessageType() IncomingMessageType {

@@ -472,14 +472,14 @@ func (bot watchingAssertion) updateState(ev ethbridge.Event, time uint64, bridge
 			challengeState = challenger.New(
 				bot.Config,
 				bot.precondition,
+				bot.assertion.Stub().Hash(),
+				bot.assertion.NumSteps,
 				bot.GetMachine().Clone(),
 				deadline,
 			)
 		} else {
 			challengeState = observer.New(
 				bot.Config,
-				bot.precondition,
-				bot.assertion.Stub(),
 				deadline,
 			)
 		}
@@ -591,7 +591,7 @@ func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge 
 		ct, err := defender.New(
 			bot.Config,
 			machine.NewAssertionDefender(
-				bot.assertion,
+				bot.assertion.Stub(),
 				bot.precondition,
 				bot.GetMachine().Clone(),
 			),

@@ -18,7 +18,6 @@ package challenger
 
 import (
 	"context"
-	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -32,12 +31,16 @@ import (
 func New(
 	config *core.Config,
 	precondition *protocol.Precondition,
+	assertion [32]byte,
+	numSteps uint32,
 	machine machine.Machine,
 	deadline uint64,
 ) challenge.State {
 	return waitingContinuing{
 		config,
 		precondition,
+		assertion,
+		numSteps,
 		machine,
 		deadline,
 	}
@@ -46,6 +49,8 @@ func New(
 type waitingContinuing struct {
 	*core.Config
 	challengedPrecondition *protocol.Precondition
+	challengedAssertion    [32]byte
+	numSteps               uint32
 	startState             machine.Machine
 	deadline               uint64
 }
@@ -63,17 +68,10 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
-		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
+		startState := bot.startState.Clone()
+		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.BisectionHashes, bot.challengedPrecondition, bot.numSteps)
 		if err != nil && bot.ChallengeEverything {
-			assertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
-			m = bot.startState
-			for i := uint16(0); i < assertionNum; i++ {
-				m.ExecuteAssertion(
-					int32(ev.Assertions[i].NumSteps),
-					bot.challengedPrecondition.TimeBounds,
-				)
-			}
-			err = nil
+			assertionNum, m = machine.ChooseRandomAssertionToChallenge(startState, ev.BisectionHashes, bot.challengedPrecondition, bot.numSteps)
 		}
 		if err != nil {
 			return nil, &challenge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
@@ -82,14 +80,19 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 			context.Background(),
 			assertionNum,
 			bot.challengedPrecondition,
-			ev.Assertions,
+			bot.numSteps,
+			bot.challengedAssertion,
+			ev.BisectionHashes,
 		)
+		if ev.SpentOutputValues != nil {
+			bot.challengedPrecondition.BeforeBalance.RemoveAssertionValues(ev.SpentOutputValues)
+		}
 		return continuing{
 			Config:          bot.Config,
 			challengedState: m,
 			deadline:        time + bot.VMConfig.GracePeriod,
 			precondition:    bot.challengedPrecondition,
-			assertions:      ev.Assertions,
+			bisections:      ev.BisectionHashes,
 		}, err
 	case ethbridge.OneStepProofEvent:
 		return nil, nil
@@ -103,7 +106,8 @@ type continuing struct {
 	challengedState machine.Machine
 	deadline        uint64
 	precondition    *protocol.Precondition
-	assertions      []*protocol.AssertionStub
+	bisections      [][32]byte
+	numSteps        uint32
 }
 
 func (bot continuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
@@ -124,13 +128,15 @@ func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
-		preconditions := protocol.GeneratePreconditions(bot.precondition, bot.assertions)
-		return waitingContinuing{
+		stepCounts := machine.BisectionStepCounts(uint32(len(bot.bisections)+1), bot.numSteps)
+		return New(
 			bot.Config,
-			preconditions[ev.ChallengedAssertion],
+			bot.precondition,
+			bot.bisections[ev.ChallengedAssertion],
+			stepCounts[ev.ChallengedAssertion],
 			bot.challengedState,
 			deadline,
-		}, nil
+		), nil
 	default:
 		return nil, &challenge.Error{Message: "ERROR: continuing: VM state got unsynchronized"}
 	}

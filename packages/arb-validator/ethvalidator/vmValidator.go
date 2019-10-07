@@ -275,16 +275,37 @@ func (val *VMValidator) InitiateChallenge(
 	return receipt, err
 }
 
-func (val *VMValidator) BisectAssertion(
+func (val *VMValidator) BisectAssertionFirst(
 	ctx context.Context,
+	assertion *protocol.AssertionStub,
 	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
+	bisections []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
-	receipt, err := val.arbitrumVM.BisectAssertion(
+	receipt, err := val.arbitrumVM.BisectAssertionFirst(
 		val.Validator.MakeAuth(ctx),
+		assertion,
 		precondition,
-		assertions,
+		bisections,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
+}
+
+func (val *VMValidator) BisectAssertionOther(
+	ctx context.Context,
+	firstAssertion *protocol.AssertionStub,
+	secondAssertion *protocol.AssertionStub,
+	precondition *protocol.Precondition,
+	bisections []*protocol.AssertionStub,
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.BisectAssertionOther(
+		val.Validator.MakeAuth(ctx),
+		firstAssertion,
+		secondAssertion,
+		precondition,
+		bisections,
 	)
 	val.Mutex.Unlock()
 	return receipt, err
@@ -294,30 +315,53 @@ func (val *VMValidator) ContinueChallenge(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
+	totalSteps uint32,
+	assertion [32]byte,
+	bisections [][32]byte,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbitrumVM.ContinueChallenge(
 		val.Validator.MakeAuth(ctx),
 		assertionToChallenge,
 		precondition,
-		assertions,
+		totalSteps,
+		assertion,
+		bisections,
 	)
 	val.Mutex.Unlock()
 	return receipt, err
 }
 
-func (val *VMValidator) OneStepProof(
+func (val *VMValidator) OneStepProofFirst(
 	ctx context.Context,
-	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
+	precondition *protocol.Precondition,
 	proof []byte,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
-	receipt, err := val.arbitrumVM.OneStepProof(
+	receipt, err := val.arbitrumVM.OneStepProofFirst(
 		val.Validator.MakeAuth(ctx),
-		precondition,
 		assertion,
+		precondition,
+		proof,
+	)
+	val.Mutex.Unlock()
+	return receipt, err
+}
+
+func (val *VMValidator) OneStepProofOther(
+	ctx context.Context,
+	firstAssertion *protocol.AssertionStub,
+	secondAssertion *protocol.AssertionStub,
+	precondition *protocol.Precondition,
+	proof []byte,
+) (*types.Receipt, error) {
+	val.Mutex.Lock()
+	receipt, err := val.arbitrumVM.OneStepProofOther(
+		val.Validator.MakeAuth(ctx),
+		firstAssertion,
+		secondAssertion,
+		precondition,
 		proof,
 	)
 	val.Mutex.Unlock()

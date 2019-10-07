@@ -68,23 +68,42 @@ type VMConnection interface {
 		numSteps uint32,
 	) (*types.Receipt, error)
 
-	BisectAssertion(
+	BisectAssertionFirst(
 		auth *bind.TransactOpts,
+		assertion *protocol.AssertionStub,
 		precondition *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		bisections []*protocol.AssertionStub,
+	) (*types.Receipt, error)
+
+	BisectAssertionOther(
+		auth *bind.TransactOpts,
+		firstAssertion *protocol.AssertionStub,
+		secondAssertion *protocol.AssertionStub,
+		precondition *protocol.Precondition,
+		bisections []*protocol.AssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		auth *bind.TransactOpts,
 		assertionToChallenge uint16,
 		precondition *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		totalSteps uint32,
+		assertion [32]byte,
+		bisections [][32]byte,
 	) (*types.Receipt, error)
 
-	OneStepProof(
+	OneStepProofFirst(
 		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
+		precondition *protocol.Precondition,
+		proof []byte,
+	) (*types.Receipt, error)
+
+	OneStepProofOther(
+		auth *bind.TransactOpts,
+		firstAssertion *protocol.AssertionStub,
+		secondAssertion *protocol.AssertionStub,
+		precondition *protocol.Precondition,
 		proof []byte,
 	) (*types.Receipt, error)
 

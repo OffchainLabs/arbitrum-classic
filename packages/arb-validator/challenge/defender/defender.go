@@ -38,16 +38,16 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		if err != nil {
 			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
 		}
-		_, err = bridge.OneStepProof(
+		_, err = bridge.OneStepProofFirst(
 			context.Background(),
+			assDef.GetAssertion(),
 			assDef.GetPrecondition(),
-			assDef.GetAssertion().Stub(),
 			proofData,
 		)
 		return oneStepChallenged{
 			Config:       core,
 			precondition: assDef.GetPrecondition(),
-			assertion:    assDef.GetAssertion().Stub(),
+			assertion:    assDef.GetAssertion(),
 			deadline:     deadline,
 		}, err
 	}
@@ -55,17 +55,69 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 	defenders := assDef.NBisect(6)
 	assertions := make([]*protocol.AssertionStub, 0, len(defenders))
 	for _, defender := range defenders {
-		assertions = append(assertions, defender.GetAssertion().Stub())
+		assertions = append(assertions, defender.GetAssertion())
 	}
-	_, err := bridge.BisectAssertion(
+	_, err := bridge.BisectAssertionFirst(
 		context.Background(),
+		assDef.GetAssertion(),
 		assDef.GetPrecondition(),
 		assertions,
 	)
 	return bisectedAssert{
 		Config:            core,
 		wholePrecondition: assDef.GetPrecondition(),
-		wholeAssertion:    assDef.GetAssertion().Stub(),
+		wholeAssertion:    assDef.GetAssertion(),
+		splitDefenders:    defenders,
+		deadline:          deadline,
+	}, err
+}
+
+func NewOther(
+	core *core.Config,
+	precondition *protocol.Precondition,
+	prevAssDef machine.AssertionDefender,
+	assDef machine.AssertionDefender,
+	time uint64,
+	bridge bridge.ArbVMBridge,
+) (challenge.State, error) {
+	deadline := time + core.VMConfig.GracePeriod
+	if assDef.GetAssertion().NumSteps == 1 {
+		fmt.Println("Generating proof")
+		proofData, err := assDef.SolidityOneStepProof()
+		if err != nil {
+			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
+		}
+		_, err = bridge.OneStepProofOther(
+			context.Background(),
+			prevAssDef.GetAssertion(),
+			assDef.GetAssertion(),
+			assDef.GetPrecondition(),
+			proofData,
+		)
+		return oneStepChallenged{
+			Config:       core,
+			precondition: assDef.GetPrecondition(),
+			assertion:    assDef.GetAssertion(),
+			deadline:     deadline,
+		}, err
+	}
+
+	defenders := assDef.NBisect(6)
+	assertions := make([]*protocol.AssertionStub, 0, len(defenders))
+	for _, defender := range defenders {
+		assertions = append(assertions, defender.GetAssertion())
+	}
+	_, err := bridge.BisectAssertionOther(
+		context.Background(),
+		prevAssDef.GetAssertion(),
+		assDef.GetAssertion(),
+		assDef.GetPrecondition(),
+		assertions,
+	)
+	return bisectedAssert{
+		Config:            core,
+		wholePrecondition: assDef.GetPrecondition(),
+		wholeAssertion:    assDef.GetAssertion(),
 		splitDefenders:    defenders,
 		deadline:          deadline,
 	}, err
@@ -128,7 +180,19 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, bridge b
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
 			return nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
-		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
+		if ev.ChallengedAssertion == 0 {
+			return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, bridge)
+		} else {
+			return NewOther(
+				bot.Config,
+				bot.defenders[0].GetPrecondition(),
+				bot.defenders[ev.ChallengedAssertion-1],
+				bot.defenders[ev.ChallengedAssertion],
+				time,
+				bridge,
+			)
+		}
+
 	default:
 		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: VM state got unsynchronized, %T", ev)}
 	}
