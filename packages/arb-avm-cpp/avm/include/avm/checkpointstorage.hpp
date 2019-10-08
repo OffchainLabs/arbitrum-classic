@@ -18,32 +18,34 @@
 #define checkpointstorage_hpp
 
 #include <vector>
+
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
 
 struct GetResults {
-    int reference_count = 0;
+    int reference_count;
     rocksdb::Status status;
     std::string stored_value;
 };
 
 struct SaveResults {
-    int reference_count = 0;
+    int reference_count;
     rocksdb::Status status;
     std::vector<unsigned char> storage_key;
 };
 
 struct DeleteResults {
-    int reference_count = 0;
+    int reference_count;
     rocksdb::Status status;
 };
 
 class CheckpointStorage {
    private:
-    rocksdb::TransactionDB* txn_db;
+    std::string txn_db_path;
+    std::unique_ptr<rocksdb::TransactionDB*> txn_db;
+    rocksdb::Transaction* getTransaction();
     rocksdb::Status saveValueToDb(std::string value, std::string key);
     rocksdb::Status deleteValueFromDb(std::string key);
-
     std::tuple<int, std::string> parseCountAndValue(std::string string_value);
     std::string serializeCountAndValue(int count, std::string value);
     SaveResults saveValueWithRefCount(int new_count,
@@ -51,7 +53,7 @@ class CheckpointStorage {
                                       std::string value);
 
    public:
-    CheckpointStorage();
+    CheckpointStorage(std::string db_path);
     ~CheckpointStorage();
 
     SaveResults incrementReference(std::vector<unsigned char> hash_key);

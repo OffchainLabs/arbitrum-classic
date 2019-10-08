@@ -76,10 +76,8 @@ class MachineStateSaver {
     MachineStateSaver(CheckpointStorage* checkpoint_storage, TuplePool* pool);
     SaveResults SaveTuple(const Tuple& val);
     SaveResults SaveValue(const value& val);
-
     ValueResult getValue(std::vector<unsigned char> hash_key);
     TupleResult getTuple(std::vector<unsigned char> hash_key);
-
     SaveResults SaveMachineState(MachineStateStorageData state_data,
                                  std::string checkpoint_name);
     MachineStateFetchedData GetMachineStateData(std::string checkpoint_name);

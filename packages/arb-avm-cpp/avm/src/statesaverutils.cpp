@@ -78,7 +78,7 @@ std::vector<unsigned char> serializeForCheckpoint(const CodePoint& val) {
     return value_vector;
 }
 
-struct Serializer {
+struct ValueSerializer {
     SerializedValue operator()(const Tuple& val) const {
         auto value_vector = serializeForCheckpoint(val);
         std::string str_value(value_vector.begin(), value_vector.end());
@@ -216,6 +216,6 @@ uint256_t deserializeCheckpoint256(std::vector<unsigned char> val) {
 }
 
 SerializedValue SerializeValue(const value& val) {
-    return nonstd::visit(Serializer{}, val);
+    return nonstd::visit(ValueSerializer{}, val);
 }
 }  // namespace StateSaverUtils
