@@ -187,13 +187,15 @@ BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
     auto current_it = data.begin() + sizeof(unsigned int);
 
     while (current_it != data.end()) {
-        std::array<unsigned char, 21> token_type;
+        std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
 
-        std::copy(current_it, current_it + 21, token_type.begin());
-        current_it += 21;
+        std::copy(current_it, current_it + TOKEN_TYPE_LENGTH,
+                  token_type.begin());
+        current_it += TOKEN_TYPE_LENGTH;
 
-        std::vector<unsigned char> value_vector(current_it, current_it + 33);
-        current_it += 33;
+        std::vector<unsigned char> value_vector(current_it,
+                                                current_it + TOKEN_VAL_LENGTH);
+        current_it += TOKEN_VAL_LENGTH;
 
         auto buff = reinterpret_cast<char*>(&value_vector[0]);
         auto currency_val = deserialize_int256(buff);
@@ -202,7 +204,7 @@ BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
     }
 }
 
-struct BlockSerializer {
+struct CheckpointSerializer {
     std::vector<unsigned char> operator()(const NotBlocked& val) const {
         std::vector<unsigned char> return_value;
         return_value.push_back((unsigned char)val.type);
@@ -259,8 +261,8 @@ struct BlockSerializer {
 std::unordered_map<BlockType, int> blockreason_type_length = {
     {Not, 1}, {Halt, 1}, {Error, 1}, {Breakpoint, 1}, {Inbox, 34}, {Send, 55}};
 
-std::vector<unsigned char> SerializeBlockReason(const BlockReason& val) {
-    return nonstd::visit(BlockSerializer{}, val);
+std::vector<unsigned char> SerializeForCheckpoint(const BlockReason& val) {
+    return nonstd::visit(CheckpointSerializer{}, val);
 }
 
 struct SerializedBlockReason {

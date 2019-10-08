@@ -222,7 +222,7 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
     auto pc_results = stateSaver.SaveValue(pc_value);
 
     auto status_str = (unsigned char)(state);
-    auto blockreason_str = SerializeBlockReason(blockReason);
+    auto blockreason_str = SerializeForCheckpoint(blockReason);
     auto balancetracker_str = balance.serializeBalanceValues();
 
     // make these things atomic?

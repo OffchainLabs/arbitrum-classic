@@ -17,9 +17,9 @@
 #ifndef tokenTracker_hpp
 #define tokenTracker_hpp
 
-// data?
-#include <avm/machinestate/datastack.hpp>
+#include <avm/machinestate/value/codepoint.hpp>
 #include <avm/machinestate/value/value.hpp>
+#include "avm/machinestate/value/tuple.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -123,8 +123,10 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     InboxBlocked,
                                     SendBlocked>;
 
-std::vector<unsigned char> SerializeBlockReason(const BlockReason& val);
+#define TOKEN_TYPE_LENGTH 21
+#define TOKEN_VAL_LENGTH 33
 
+std::vector<unsigned char> SerializeForCheckpoint(const BlockReason& val);
 BlockReason deserializeBlockReason(std::vector<unsigned char> data);
 
 #endif /* tokenTracker_hpp */
