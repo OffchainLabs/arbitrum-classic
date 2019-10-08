@@ -207,7 +207,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 
 int MachineState::checkpointMachineState(CheckpointStorage* storage,
                                          std::string checkpoint_name) {
-    stateSaver.setStorage(storage, pool.get());
+    auto stateSaver = MachineStateSaver(storage, pool.get());
 
     auto datastack_results = stack.CheckpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.CheckpointState(stateSaver, pool.get());
@@ -249,7 +249,7 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
 
 int MachineState::restoreMachineState(CheckpointStorage* storage,
                                       std::string checkpoint_name) {
-    stateSaver.setStorage(storage, pool.get());
+    auto stateSaver = MachineStateSaver(storage, pool.get());
     auto machine_state_data = stateSaver.GetMachineStateData(checkpoint_name);
 
     staticVal = machine_state_data.static_val;

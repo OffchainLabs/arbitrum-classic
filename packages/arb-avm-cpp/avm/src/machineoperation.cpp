@@ -16,7 +16,40 @@
 
 #include "avm/machinestate/machineoperation.hpp"
 
-void MachineOperation::add(MachineState& m) {
+namespace MachineOperation {
+
+uint256_t& assumeInt(value& val) {
+    auto aNum = nonstd::get_if<uint256_t>(&val);
+    if (!aNum) {
+        throw bad_pop_type{};
+    }
+    return *aNum;
+}
+
+const uint256_t& assumeInt(const value& val) {
+    auto aNum = nonstd::get_if<uint256_t>(&val);
+    if (!aNum) {
+        throw bad_pop_type{};
+    }
+    return *aNum;
+}
+
+uint64_t assumeInt64(uint256_t& val) {
+    if (val > std::numeric_limits<uint64_t>::max())
+        throw int_out_of_bounds{};
+
+    return static_cast<uint64_t>(val);
+}
+
+Tuple& assumeTuple(value& val) {
+    auto tup = nonstd::get_if<Tuple>(&val);
+    if (!tup) {
+        throw bad_pop_type{};
+    }
+    return *tup;
+}
+
+void add(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -25,7 +58,7 @@ void MachineOperation::add(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::mul(MachineState& m) {
+void mul(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -34,7 +67,7 @@ void MachineOperation::mul(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::sub(MachineState& m) {
+void sub(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -43,7 +76,7 @@ void MachineOperation::sub(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::div(MachineState& m) {
+void div(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -56,7 +89,7 @@ void MachineOperation::div(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::sdiv(MachineState& m) {
+void sdiv(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -79,7 +112,7 @@ void MachineOperation::sdiv(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::mod(MachineState& m) {
+void mod(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -92,7 +125,7 @@ void MachineOperation::mod(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::smod(MachineState& m) {
+void smod(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -112,7 +145,7 @@ void MachineOperation::smod(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::addmod(MachineState& m) {
+void addmod(MachineState& m) {
     m.stack.prepForMod(3);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -130,7 +163,7 @@ void MachineOperation::addmod(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::mulmod(MachineState& m) {
+void mulmod(MachineState& m) {
     m.stack.prepForMod(3);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -148,7 +181,7 @@ void MachineOperation::mulmod(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::exp(MachineState& m) {
+void exp(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -158,7 +191,7 @@ void MachineOperation::exp(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::lt(MachineState& m) {
+void lt(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -167,7 +200,7 @@ void MachineOperation::lt(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::gt(MachineState& m) {
+void gt(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -176,7 +209,7 @@ void MachineOperation::gt(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::slt(MachineState& m) {
+void slt(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -196,7 +229,7 @@ void MachineOperation::slt(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::sgt(MachineState& m) {
+void sgt(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -216,7 +249,7 @@ void MachineOperation::sgt(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::eq(MachineState& m) {
+void eq(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aVal = m.stack[0];
     auto& bVal = m.stack[1];
@@ -225,14 +258,14 @@ void MachineOperation::eq(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::iszero(MachineState& m) {
+void iszero(MachineState& m) {
     m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
     m.stack[0] = aNum.is_zero() ? 1 : 0;
     ++m.pc;
 }
 
-void MachineOperation::bitwiseAnd(MachineState& m) {
+void bitwiseAnd(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -241,7 +274,7 @@ void MachineOperation::bitwiseAnd(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::bitwiseOr(MachineState& m) {
+void bitwiseOr(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -250,7 +283,7 @@ void MachineOperation::bitwiseOr(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::bitwiseXor(MachineState& m) {
+void bitwiseXor(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -259,14 +292,14 @@ void MachineOperation::bitwiseXor(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::bitwiseNot(MachineState& m) {
+void bitwiseNot(MachineState& m) {
     m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
     m.stack[0] = ~aNum;
     ++m.pc;
 }
 
-void MachineOperation::byte(MachineState& m) {
+void byte(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -282,7 +315,7 @@ void MachineOperation::byte(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::signExtend(MachineState& m) {
+void signExtend(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -304,13 +337,13 @@ void MachineOperation::signExtend(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::hashOp(MachineState& m) {
+void hashOp(MachineState& m) {
     m.stack.prepForMod(1);
     m.stack[0] = ::hash(m.stack[0]);
     ++m.pc;
 }
 
-void MachineOperation::typeOp(MachineState& m) {
+void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
     if (nonstd::holds_alternative<uint256_t>(m.stack[0]))
         m.stack[0] = NUM;
@@ -321,31 +354,31 @@ void MachineOperation::typeOp(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::pop(MachineState& m) {
+void pop(MachineState& m) {
     m.stack.popClear();
     ++m.pc;
 }
 
-void MachineOperation::spush(MachineState& m) {
+void spush(MachineState& m) {
     value copiedStatic = m.staticVal;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
 
-void MachineOperation::rpush(MachineState& m) {
+void rpush(MachineState& m) {
     value copiedRegister = m.registerVal;
     m.stack.push(std::move(copiedRegister));
     ++m.pc;
 }
 
-void MachineOperation::rset(MachineState& m) {
+void rset(MachineState& m) {
     m.stack.prepForMod(1);
     m.registerVal = m.stack[0];
     m.stack.popClear();
     ++m.pc;
 }
 
-void MachineOperation::jump(MachineState& m) {
+void jump(MachineState& m) {
     m.stack.prepForMod(1);
     auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
     if (target) {
@@ -356,7 +389,7 @@ void MachineOperation::jump(MachineState& m) {
     m.stack.popClear();
 }
 
-void MachineOperation::cjump(MachineState& m) {
+void cjump(MachineState& m) {
     m.stack.prepForMod(2);
     auto target = nonstd::get_if<CodePoint>(&m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
@@ -373,7 +406,7 @@ void MachineOperation::cjump(MachineState& m) {
     m.stack.popClear();
 }
 
-void MachineOperation::stackEmpty(MachineState& m) {
+void stackEmpty(MachineState& m) {
     if (m.stack.stacksize() == 0) {
         m.stack.push(uint256_t{1});
     } else {
@@ -382,26 +415,26 @@ void MachineOperation::stackEmpty(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::pcPush(MachineState& m) {
+void pcPush(MachineState& m) {
     m.stack.push(m.code[m.pc]);
     ++m.pc;
 }
 
-void MachineOperation::auxPush(MachineState& m) {
+void auxPush(MachineState& m) {
     m.stack.prepForMod(1);
     m.auxstack.push(std::move(m.stack[0]));
     m.stack.popClear();
     ++m.pc;
 }
 
-void MachineOperation::auxPop(MachineState& m) {
+void auxPop(MachineState& m) {
     m.auxstack.prepForMod(1);
     m.stack.push(std::move(m.auxstack[0]));
     m.auxstack.popClear();
     ++m.pc;
 }
 
-void MachineOperation::auxStackEmpty(MachineState& m) {
+void auxStackEmpty(MachineState& m) {
     if (m.auxstack.stacksize() == 0) {
         m.stack.push(uint256_t{1});
     } else {
@@ -410,12 +443,12 @@ void MachineOperation::auxStackEmpty(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::errPush(MachineState& m) {
+void errPush(MachineState& m) {
     m.stack.push(m.errpc);
     ++m.pc;
 }
 
-void MachineOperation::errSet(MachineState& m) {
+void errSet(MachineState& m) {
     m.stack.prepForMod(1);
     auto codePointVal = nonstd::get_if<CodePoint>(&m.stack[0]);
     if (!codePointVal) {
@@ -427,37 +460,37 @@ void MachineOperation::errSet(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::dup0(MachineState& m) {
+void dup0(MachineState& m) {
     value valACopy = m.stack[0];
     m.stack.push(std::move(valACopy));
     ++m.pc;
 }
 
-void MachineOperation::dup1(MachineState& m) {
+void dup1(MachineState& m) {
     value valBCopy = m.stack[1];
     m.stack.push(std::move(valBCopy));
     ++m.pc;
 }
 
-void MachineOperation::dup2(MachineState& m) {
+void dup2(MachineState& m) {
     value valCCopy = m.stack[2];
     m.stack.push(std::move(valCCopy));
     ++m.pc;
 }
 
-void MachineOperation::swap1(MachineState& m) {
+void swap1(MachineState& m) {
     m.stack.prepForMod(2);
     std::swap(m.stack[0], m.stack[1]);
     ++m.pc;
 }
 
-void MachineOperation::swap2(MachineState& m) {
+void swap2(MachineState& m) {
     m.stack.prepForMod(3);
     std::swap(m.stack[0], m.stack[2]);
     ++m.pc;
 }
 
-void MachineOperation::tget(MachineState& m) {
+void tget(MachineState& m) {
     m.stack.prepForMod(2);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
@@ -467,7 +500,7 @@ void MachineOperation::tget(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::tset(MachineState& m) {
+void tset(MachineState& m) {
     m.stack.prepForMod(3);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
@@ -479,24 +512,24 @@ void MachineOperation::tset(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::tlen(MachineState& m) {
+void tlen(MachineState& m) {
     m.stack.prepForMod(1);
     m.stack[0] = assumeTuple(m.stack[0]).tuple_size();
     ++m.pc;
 }
 
-BlockReason MachineOperation::breakpoint(MachineState&) {
+BlockReason breakpoint(MachineState&) {
     return BreakpointBlocked{};
 }
 
-void MachineOperation::log(MachineState& m) {
+void log(MachineState& m) {
     m.stack.prepForMod(1);
     m.context.logs.push_back(std::move(m.stack[0]));
     m.stack.popClear();
     ++m.pc;
 }
 
-void MachineOperation::debug(MachineState& m) {
+void debug(MachineState& m) {
     Datastack tmpstk;
     std::cout << std::endl;
     std::cout << "full stack - size=" << m.stack.stacksize() << std::endl;
@@ -513,7 +546,7 @@ void MachineOperation::debug(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason MachineOperation::send(MachineState& m) {
+BlockReason send(MachineState& m) {
     m.stack.prepForMod(1);
     Message outMsg;
     auto success = outMsg.deserialize(m.stack[0]);
@@ -531,7 +564,7 @@ BlockReason MachineOperation::send(MachineState& m) {
     }
 }
 
-void MachineOperation::nbsend(MachineState& m) {
+void nbsend(MachineState& m) {
     m.stack.prepForMod(1);
 
     Message outMsg;
@@ -551,7 +584,7 @@ void MachineOperation::nbsend(MachineState& m) {
     ++m.pc;
 }
 
-void MachineOperation::getTime(MachineState& m) {
+void getTime(MachineState& m) {
     Tuple tup(m.pool.get(), 2);
     tup.set_element(0, m.context.timeBounds[0]);
     tup.set_element(1, m.context.timeBounds[1]);
@@ -559,7 +592,7 @@ void MachineOperation::getTime(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason MachineOperation::inboxOp(MachineState& m) {
+BlockReason inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
     auto stackTop = nonstd::get_if<Tuple>(&m.stack[0]);
     if (stackTop && m.inbox.messages == *stackTop) {
@@ -571,3 +604,4 @@ BlockReason MachineOperation::inboxOp(MachineState& m) {
         return NotBlocked{};
     }
 }
+}  // namespace MachineOperation

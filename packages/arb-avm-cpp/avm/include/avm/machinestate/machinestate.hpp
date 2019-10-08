@@ -40,7 +40,6 @@ struct AssertionContext {
 };
 
 struct MachineState {
-    MachineStateSaver stateSaver;
     std::shared_ptr<TuplePool> pool;
     std::vector<CodePoint> code;
     value staticVal;

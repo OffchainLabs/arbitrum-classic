@@ -31,6 +31,7 @@ set(LIB_HEADERS
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/machinestatesaver.hpp
   include/avm/machinestate/messagestack.hpp
+  include/avm/machinestate/statesaverutils.hpp
   include/avm/machinestate/value/tuple.hpp
   include/avm/machinestate/value/value.hpp
   include/avm/machinestate/value/bigint.hpp
@@ -52,6 +53,7 @@ set(LIB_SOURCES
   src/checkpointstorage.cpp
   src/util.hpp
   src/machinestatesaver.cpp
+  src/statesaverutils.cpp
 
   ${KECCAK_SOURCES}
 )

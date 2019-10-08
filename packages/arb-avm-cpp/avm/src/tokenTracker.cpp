@@ -15,7 +15,6 @@
  */
 
 #include "avm/machinestate/tokenTracker.hpp"
-
 #include "bigint_utils.hpp"
 
 #include <boost/algorithm/hex.hpp>

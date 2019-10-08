@@ -15,7 +15,6 @@
  */
 
 #include "avm/machinestate/value/codepoint.hpp"
-
 #include "avm/machinestate/value/tuple.hpp"
 
 #include "bigint_utils.hpp"

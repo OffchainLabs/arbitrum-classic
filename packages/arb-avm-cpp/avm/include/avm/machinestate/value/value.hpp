@@ -34,10 +34,10 @@ using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
 enum valueTypes { NUM_TYPE, CODEPT_TYPE, TUPLE_TYPE };
 
-struct SerializedValue {
-    valueTypes type;
-    std::string string_value;
-};
+// struct SerializedValue {
+//    valueTypes type;
+//    std::string string_value;
+//};
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);
@@ -63,14 +63,9 @@ static T shrink(uint256_t i) {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
 
-uint256_t& assumeInt(value& val);
-const uint256_t& assumeInt(const value& val);
-uint64_t assumeInt64(uint256_t& val);
-Tuple& assumeTuple(value& val);
-
 std::vector<unsigned char> GetHashKey(const value& val);
-SerializedValue SerializeValue(const value& val);
-CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val);
-uint256_t deserializeCheckpoint256(std::vector<unsigned char> val);
+// SerializedValue SerializeValue(const value& val);
+// CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val);
+// uint256_t deserializeCheckpoint256(std::vector<unsigned char> val);
 
 #endif /* value_hpp */

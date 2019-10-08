@@ -18,6 +18,7 @@
 #define machinestatesaver_hpp
 
 #include "avm/checkpointstorage.hpp"
+#include "avm/machinestate/statesaverutils.hpp"
 #include "value/tuple.hpp"
 #include "value/value.hpp"
 
@@ -44,19 +45,6 @@ struct MachineStateStorageData {
     std::vector<unsigned char> balancetracker_str;
 };
 
-struct ParsedCheckpointState {
-    std::vector<unsigned char> static_val_key;
-    std::vector<unsigned char> register_val_key;
-    std::vector<unsigned char> datastack_key;
-    std::vector<unsigned char> auxstack_key;
-    std::vector<unsigned char> inbox_key;
-    std::vector<unsigned char> pending_key;
-    std::vector<unsigned char> pc_key;
-    unsigned char status_char;
-    std::vector<unsigned char> blockreason_str;
-    std::vector<unsigned char> balancetracker_str;
-};
-
 struct MachineStateFetchedData {
     value static_val;
     value register_val;
@@ -72,28 +60,20 @@ struct MachineStateFetchedData {
 
 class MachineStateSaver {
    private:
-    // smart pointer?
+    // unique pointer
     CheckpointStorage* checkpoint_storage;
     TuplePool* pool;
-    std::vector<std::vector<unsigned char>> parseSerializedTuple(
-        std::vector<unsigned char> data_vector);
     std::vector<unsigned char> serializeState(
         MachineStateStorageData state_data);
     MachineStateFetchedData deserializeCheckpointState(
         ParsedCheckpointState stored_state);
-    // why not just use checkpointstorage directly
-    SaveResults SaveStringValue(const std::string value,
-                                const std::vector<unsigned char> key);
-    GetResults GetStringValue(const std::vector<unsigned char> key);
     CodePoint getCodePoint(std::vector<unsigned char> hash_key);
     uint256_t getInt256(std::vector<unsigned char> hash_key);
-    ParsedCheckpointState parseCheckpointState(
-        std::vector<unsigned char> stored_state);
     DeleteResults deleteTuple(std::vector<unsigned char> hash_key);
     DeleteResults deleteValue(std::vector<unsigned char> hash_key);
 
    public:
-    void setStorage(CheckpointStorage* storage, TuplePool* pool);
+    MachineStateSaver(CheckpointStorage* checkpoint_storage, TuplePool* pool);
     SaveResults SaveTuple(const Tuple& val);
     SaveResults SaveValue(const value& val);
 
