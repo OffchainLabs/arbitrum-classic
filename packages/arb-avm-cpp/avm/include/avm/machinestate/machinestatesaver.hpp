@@ -19,16 +19,19 @@
 
 #include "avm/checkpointstorage.hpp"
 #include "avm/machinestate/statesaverutils.hpp"
+#include "rocksdb/db.h"
 #include "value/tuple.hpp"
 #include "value/value.hpp"
 
 struct ValueResult {
-    int reference_count = 0;
+    rocksdb::Status status;
+    int reference_count;
     value val;
 };
 
 struct TupleResult {
-    int reference_count = 0;
+    rocksdb::Status status;
+    int reference_count;
     Tuple tuple;
 };
 
