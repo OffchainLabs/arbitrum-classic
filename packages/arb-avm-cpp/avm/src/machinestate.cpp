@@ -217,8 +217,7 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
     auto static_val_results = stateSaver.SaveValue(staticVal);
     auto register_val_results = stateSaver.SaveValue(registerVal);
 
-    auto pc_value = CodePoint();
-    pc_value.pc = pc;
+    auto pc_value = CodePoint(pc, Operation(), 0);
     auto pc_results = stateSaver.SaveValue(pc_value);
 
     auto status_str = (unsigned char)(state);

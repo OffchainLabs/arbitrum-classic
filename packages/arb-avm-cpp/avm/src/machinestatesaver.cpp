@@ -22,7 +22,7 @@
 MachineStateSaver::MachineStateSaver(CheckpointStorage* storage,
                                      TuplePool* _pool) {
     checkpoint_storage = storage;
-    _pool = pool;
+    pool = _pool;
 }
 
 SaveResults MachineStateSaver::SaveValue(const value& val) {
@@ -94,6 +94,7 @@ ValueResult MachineStateSaver::getValue(std::vector<unsigned char> hash_key) {
             std::vector<unsigned char> data_vector(
                 std::begin(results.stored_value),
                 std::end(results.stored_value));
+            data_vector.erase(data_vector.begin());
             auto val = StateSaverUtils::deserializeCheckpoint256(data_vector);
             return ValueResult{results.status, results.reference_count, val};
         }
@@ -126,25 +127,27 @@ TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
                 case TUPLE_TYPE: {
                     auto tuple = getTuple(current_vector).tuple;
                     values.push_back(tuple);
+                    break;
                 }
                 case NUM_TYPE: {
                     auto num = StateSaverUtils::deserializeCheckpoint256(
                         current_vector);
                     values.push_back(num);
+                    break;
                 }
                 case CODEPT_TYPE: {
                     auto codept = StateSaverUtils::deserializeCheckpointCodePt(
                         current_vector);
                     values.push_back(codept);
+                    break;
                 }
             }
         }
-
         auto tuple = Tuple(values, pool);
         return TupleResult{results.status, results.reference_count, tuple};
     } else {
+        return TupleResult{results.status, results.reference_count, Tuple()};
     }
-    return TupleResult{results.status, results.reference_count, Tuple()};
 };
 
 MachineStateFetchedData MachineStateSaver::GetMachineStateData(

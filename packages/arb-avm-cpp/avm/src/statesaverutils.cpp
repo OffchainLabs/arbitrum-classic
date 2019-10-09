@@ -29,9 +29,9 @@ uint64_t deserialize_int64(char*& bufptr) {
 }
 
 void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
-    auto big_endian_val = boost::endian::native_to_big(val);
+    // auto big_endian_val = boost::endian::native_to_big(val);
     std::array<unsigned char, 8> tmpbuf;
-    memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
+    memcpy(tmpbuf.data(), &val, sizeof(val));
 
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
@@ -171,7 +171,7 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
 
     auto it = data_vector.begin() + 1;
 
-    while (it != data_vector.end()) {
+    while (it < data_vector.end()) {
         auto value_type = (valueTypes)*it;
         std::vector<unsigned char> current;
 
@@ -180,16 +180,19 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
                 auto next_it = it + TUP_TUPLE_LENGTH;
                 current.insert(current.end(), it, next_it);
                 it = next_it;
+                break;
             }
             case NUM_TYPE: {
                 auto next_it = it + TUP_NUM_LENGTH;
                 current.insert(current.end(), it, next_it);
                 it = next_it;
+                break;
             }
             case CODEPT_TYPE: {
                 auto next_it = it + TUP_CODEPT_LENGTH;
                 current.insert(current.end(), it, next_it);
                 it = next_it;
+                break;
             }
         }
 
@@ -200,10 +203,9 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
 }
 
 CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val) {
-    CodePoint code_point;
     auto buff = reinterpret_cast<char*>(&val[1]);
     auto pc_val = deserialize_int64(buff);
-    code_point.pc = pc_val;
+    CodePoint code_point(pc_val, Operation(), 0);
 
     return code_point;
 }
