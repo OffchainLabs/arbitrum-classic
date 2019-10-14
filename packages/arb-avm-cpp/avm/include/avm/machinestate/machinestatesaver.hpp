@@ -40,8 +40,10 @@ struct MachineStateStorageData {
     SaveResults register_val_results;
     SaveResults datastack_results;
     SaveResults auxstack_results;
-    SaveResults inbox_results;
-    SaveResults pending_results;
+    SaveResults inbox_messages_results;
+    SaveResults inbox_count_results;
+    SaveResults pending_messages_results;
+    SaveResults pending_count_results;
     SaveResults pc_results;
     unsigned char status_char;
     std::vector<unsigned char> blockreason_str;
@@ -54,7 +56,9 @@ struct MachineStateFetchedData {
     Tuple datastack_tuple;
     Tuple auxstack_tuple;
     Tuple inbox_tuple;
+    value inbox_count;
     Tuple pending_inbox_tuple;
+    value pending_count;
     CodePoint pc_codepoint;
     unsigned char status_char;
     std::vector<unsigned char> blockreason_str;

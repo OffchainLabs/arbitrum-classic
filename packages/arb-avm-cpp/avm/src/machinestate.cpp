@@ -209,10 +209,10 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
                                          std::string checkpoint_name) {
     auto stateSaver = MachineStateSaver(storage, pool.get());
 
-    auto datastack_results = stack.CheckpointState(stateSaver, pool.get());
-    auto auxstack_results = auxstack.CheckpointState(stateSaver, pool.get());
-    auto inbox_results = inbox.CheckpointState(stateSaver);
-    auto pending_results = pendingInbox.CheckpointState(stateSaver);
+    auto datastack_results = stack.checkpointState(stateSaver, pool.get());
+    auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
+    auto inbox_results = inbox.checkpointState(stateSaver);
+    auto pending_results = pendingInbox.checkpointState(stateSaver);
 
     auto static_val_results = stateSaver.SaveValue(staticVal);
     auto register_val_results = stateSaver.SaveValue(registerVal);
@@ -220,19 +220,30 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
     auto pc_value = CodePoint(pc, Operation(), 0);
     auto pc_results = stateSaver.SaveValue(pc_value);
 
-    auto status_str = (unsigned char)(state);
-    auto blockreason_str = SerializeForCheckpoint(blockReason);
+    auto status_str = (unsigned char)state;
+    auto blockreason_str = serializeForCheckpoint(blockReason);
     auto balancetracker_str = balance.serializeBalanceValues();
 
     // make these things atomic?
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
-        inbox_results.status.ok() && pending_results.status.ok() &&
+        inbox_results.msgs_tuple_results.status.ok() &&
+        inbox_results.msg_count_results.status.ok() &&
+        pending_results.msgs_tuple_results.status.ok() &&
+        pending_results.msg_count_results.status.ok() &&
         static_val_results.status.ok() && register_val_results.status.ok() &&
         pc_results.status.ok()) {
         auto machine_state_data = MachineStateStorageData{
-            static_val_results, register_val_results, datastack_results,
-            auxstack_results,   inbox_results,        pending_results,
-            pc_results,         status_str,           blockreason_str,
+            static_val_results,
+            register_val_results,
+            datastack_results,
+            auxstack_results,
+            inbox_results.msgs_tuple_results,
+            inbox_results.msg_count_results,
+            pending_results.msgs_tuple_results,
+            pending_results.msg_count_results,
+            pc_results,
+            status_str,
+            blockreason_str,
             balancetracker_str,
         };
 
@@ -255,8 +266,13 @@ int MachineState::restoreMachineState(CheckpointStorage* storage,
     registerVal = machine_state_data.register_val;
     stack = Datastack(machine_state_data.datastack_tuple);
     auxstack = Datastack(machine_state_data.datastack_tuple);
-    inbox.initializeMessageStack(machine_state_data.inbox_tuple);
-    pendingInbox.initializeMessageStack(machine_state_data.pending_inbox_tuple);
+    auto inbox_count = nonstd::get<uint256_t>(machine_state_data.inbox_count);
+    inbox =
+        MessageStack(pool.get(), machine_state_data.inbox_tuple, inbox_count);
+    auto pending_count =
+        nonstd::get<uint256_t>(machine_state_data.pending_count);
+    pendingInbox = MessageStack(
+        pool.get(), machine_state_data.pending_inbox_tuple, pending_count);
     pc = machine_state_data.pc_codepoint.pc;
     state = (Status)machine_state_data.status_char;
     blockReason = deserializeBlockReason(machine_state_data.blockreason_str);

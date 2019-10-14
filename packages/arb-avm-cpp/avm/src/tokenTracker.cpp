@@ -15,6 +15,7 @@
  */
 
 #include "avm/machinestate/tokenTracker.hpp"
+#include "avm/machinestate/statesaverutils.hpp"
 #include "bigint_utils.hpp"
 
 #include <boost/algorithm/hex.hpp>
@@ -197,8 +198,8 @@ BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
                                                 current_it + TOKEN_VAL_LENGTH);
         current_it += TOKEN_VAL_LENGTH;
 
-        auto buff = reinterpret_cast<char*>(&value_vector[0]);
-        auto currency_val = deserialize_int256(buff);
+        auto currency_val =
+            StateSaverUtils::deserializeCheckpoint256(value_vector);
 
         add(token_type, currency_val);
     }
@@ -261,7 +262,7 @@ struct CheckpointSerializer {
 std::unordered_map<BlockType, int> blockreason_type_length = {
     {Not, 1}, {Halt, 1}, {Error, 1}, {Breakpoint, 1}, {Inbox, 34}, {Send, 55}};
 
-std::vector<unsigned char> SerializeForCheckpoint(const BlockReason& val) {
+std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
     return nonstd::visit(CheckpointSerializer{}, val);
 }
 
@@ -277,24 +278,24 @@ BlockReason deserializeBlockReason(std::vector<unsigned char> data) {
 
     switch (blocktype) {
         case Inbox: {
-            std::vector<unsigned char> inbox_vector(current_it + 1,
-                                                    current_it + 32);
-            auto buff = reinterpret_cast<char*>(&inbox_vector[0]);
-            auto inbox = deserialize_int256(buff);
-            return InboxBlocked{Inbox, inbox};
+            std::vector<unsigned char> inbox_vector(current_it,
+                                                    current_it + 33);
+            auto inbox =
+                StateSaverUtils::deserializeCheckpoint256(inbox_vector);
+            return InboxBlocked(inbox);
         }
         case Send: {
-            std::vector<unsigned char> currency_vector(current_it + 1,
-                                                       current_it + 32);
-            auto buff = reinterpret_cast<char*>(&currency_vector[0]);
-            auto currency = deserialize_int256(buff);
+            std::vector<unsigned char> currency_vector(current_it,
+                                                       current_it + 33);
+            auto currency =
+                StateSaverUtils::deserializeCheckpoint256(currency_vector);
 
             current_it += 33;
 
             std::array<unsigned char, 21> token_type;
             std::copy(current_it, current_it + 21, token_type.begin());
 
-            return SendBlocked{Send, currency, token_type};
+            return SendBlocked(currency, token_type);
         }
         case Not: {
             return NotBlocked();

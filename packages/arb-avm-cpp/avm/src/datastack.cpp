@@ -90,38 +90,36 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
     return os;
 }
 
-// get right
 Tuple Datastack::GetTupleRepresentation(TuplePool* pool) {
-    auto size = values.size();
-    auto current_tuple = Tuple(values[0], pool);
+    if (values.empty()) {
+        return Tuple();
+    } else {
+        auto current_tuple = Tuple(values[0], pool);
 
-    for (unsigned int i = 1; i < size; i++) {
-        auto new_tuple = Tuple(values[i], current_tuple, pool);
-        // assert hashes[i] == current_tuple.calculateHash()
-        current_tuple = new_tuple;
+        for (size_t i = 1; i < values.size(); i++) {
+            auto new_tuple = Tuple(values[i], current_tuple, pool);
+            // assert hashes[i] == current_tuple.calculateHash()
+            current_tuple = new_tuple;
+        }
+        return current_tuple;
     }
-
-    return current_tuple;
 }
 
-// make sure correct
-int Datastack::initializeDataStack(Tuple tuple) {
-    int ret_val = 0;
-
-    if (tuple.tuple_size() < 2) {
+void Datastack::initializeDataStack(Tuple tuple) {
+    if (tuple.tuple_size() == 1) {
+        push(tuple.get_element(0));
+    } else if (tuple.tuple_size() == 2) {
+        // catch exception if not tuple?
         auto inner_tuple = nonstd::get<Tuple>(tuple.get_element(1));
-        ret_val = initializeDataStack(inner_tuple);
+        initializeDataStack(inner_tuple);
 
         auto current_val = tuple.get_element(0);
+        push(tuple.get_element(0));
     }
-
-    push(tuple.get_element(0));
-
-    return ret_val;
 }
 
 // can speed up by not creating tuple
-SaveResults Datastack::CheckpointState(MachineStateSaver msSaver,
+SaveResults Datastack::checkpointState(MachineStateSaver msSaver,
                                        TuplePool* pool) {
     auto tuple = GetTupleRepresentation(pool);
     return msSaver.SaveTuple(tuple);

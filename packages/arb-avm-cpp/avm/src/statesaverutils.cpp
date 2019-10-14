@@ -38,7 +38,7 @@ void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
 
 std::vector<unsigned char> serializeForCheckpoint(const Tuple& val) {
     std::vector<unsigned char> value_vector;
-    auto type_code = (unsigned char)TUPLE;
+    auto type_code = (unsigned char)TUPLE_TYPE;
     value_vector.push_back(type_code);
 
     auto hash_key = hash(val);
@@ -53,7 +53,7 @@ std::vector<unsigned char> serializeForCheckpoint(const Tuple& val) {
 
 std::vector<unsigned char> serializeForCheckpoint(const uint256_t& val) {
     std::vector<unsigned char> value_vector;
-    auto type_code = (unsigned char)NUM;
+    auto type_code = (unsigned char)NUM_TYPE;
     value_vector.push_back(type_code);
 
     std::vector<unsigned char> num_vector;
@@ -67,7 +67,7 @@ std::vector<unsigned char> serializeForCheckpoint(const uint256_t& val) {
 
 std::vector<unsigned char> serializeForCheckpoint(const CodePoint& val) {
     std::vector<unsigned char> value_vector;
-    auto type_code = (unsigned char)CODEPT;
+    auto type_code = (unsigned char)CODEPT_TYPE;
     value_vector.push_back(type_code);
 
     std::vector<unsigned char> pc_vector;
@@ -147,7 +147,13 @@ ParsedCheckpointState parseCheckpointState(
     std::vector<unsigned char> inbox(current_iter, next_iter);
     current_iter = next_iter;
     next_iter += HASH_KEY_LENGTH;
+    std::vector<unsigned char> inbox_count(current_iter, next_iter);
+    current_iter = next_iter;
+    next_iter += HASH_KEY_LENGTH;
     std::vector<unsigned char> pending(current_iter, next_iter);
+    current_iter = next_iter;
+    next_iter += HASH_KEY_LENGTH;
+    std::vector<unsigned char> pending_count(current_iter, next_iter);
     current_iter = next_iter;
     next_iter += HASH_KEY_LENGTH;
     std::vector<unsigned char> pc(current_iter, next_iter);
@@ -157,7 +163,9 @@ ParsedCheckpointState parseCheckpointState(
                                  datastack,
                                  auxstack,
                                  inbox,
+                                 inbox_count,
                                  pending,
+                                 pending_count,
                                  pc,
                                  status,
                                  blockreason_vector,
@@ -217,7 +225,7 @@ uint256_t deserializeCheckpoint256(std::vector<unsigned char> val) {
     return num;
 }
 
-SerializedValue SerializeValue(const value& val) {
+SerializedValue serializeValue(const value& val) {
     return nonstd::visit(ValueSerializer{}, val);
 }
 }  // namespace StateSaverUtils

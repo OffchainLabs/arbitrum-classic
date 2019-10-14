@@ -21,7 +21,9 @@ struct ParsedCheckpointState {
     std::vector<unsigned char> datastack_key;
     std::vector<unsigned char> auxstack_key;
     std::vector<unsigned char> inbox_key;
+    std::vector<unsigned char> inbox_count_key;
     std::vector<unsigned char> pending_key;
+    std::vector<unsigned char> pending_count_key;
     std::vector<unsigned char> pc_key;
     unsigned char status_char;
     std::vector<unsigned char> blockreason_str;
@@ -29,7 +31,7 @@ struct ParsedCheckpointState {
 };
 
 namespace StateSaverUtils {
-SerializedValue SerializeValue(const value& val);
+SerializedValue serializeValue(const value& val);
 CodePoint deserializeCheckpointCodePt(std::vector<unsigned char> val);
 uint256_t deserializeCheckpoint256(std::vector<unsigned char> val);
 std::vector<std::vector<unsigned char>> parseSerializedTuple(

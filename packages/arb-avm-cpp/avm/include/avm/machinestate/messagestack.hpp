@@ -22,12 +22,23 @@
 #include "value/tuple.hpp"
 #include "value/value.hpp"
 
+struct MessageStackSaveResults {
+    SaveResults msgs_tuple_results;
+    SaveResults msg_count_results;
+};
+
 struct MessageStack {
     Tuple messages;
     uint64_t messageCount;
     TuplePool* pool;
 
-    MessageStack(TuplePool* pool_) : pool(pool_) {}
+    MessageStack(TuplePool* pool_) : pool(pool_) { messageCount = 0; }
+
+    MessageStack(TuplePool* pool_, Tuple tuple, uint256_t message_count)
+        : pool(pool_) {
+        messages = tuple;
+        messageCount = (uint64_t)message_count;
+    }
 
     bool isEmpty() const { return messageCount == 0; }
 
@@ -50,16 +61,11 @@ struct MessageStack {
         messageCount = 0;
     }
 
-    void setMessageStackData() {}
+    MessageStackSaveResults checkpointState(MachineStateSaver msSaver) {
+        auto saved_msgs = msSaver.SaveTuple(messages);
+        auto saved_msg_count = msSaver.SaveValue((uint256_t)messageCount);
 
-    SaveResults CheckpointState(MachineStateSaver msSaver) {
-        return msSaver.SaveValue(messages);
-    }
-
-    void initializeMessageStack(Tuple& tuple) {
-        messages = tuple;
-        // is the sizing correct?
-        messageCount = tuple.tuple_size();
+        return MessageStackSaveResults{saved_msgs, saved_msg_count};
     }
 };
 

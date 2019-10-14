@@ -17,8 +17,6 @@
 #include <avm/machine.hpp>
 #include <catch2/catch.hpp>
 
-#include <stdio.h>
-
 void pushMessage(MachineState& m,
                  const value& data,
                  const uint256_t& dest,

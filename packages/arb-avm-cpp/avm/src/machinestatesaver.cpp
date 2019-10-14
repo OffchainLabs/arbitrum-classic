@@ -27,7 +27,7 @@ MachineStateSaver::MachineStateSaver(CheckpointStorage* storage,
 
 SaveResults MachineStateSaver::SaveValue(const value& val) {
     SaveResults save_results;
-    auto serialized_value = StateSaverUtils::SerializeValue(val);
+    auto serialized_value = StateSaverUtils::serializeValue(val);
 
     if (serialized_value.type == TUPLE_TYPE) {
         auto tuple = nonstd::get<Tuple>(val);
@@ -51,13 +51,14 @@ SaveResults MachineStateSaver::SaveTuple(const Tuple& val) {
     if (results.status.ok() && results.reference_count > 0) {
         return checkpoint_storage->incrementReference(hash_key);
     } else {
+        auto value_type = (unsigned char)TUPLE_TYPE;
         std::vector<unsigned char> value_to_store;
-        value_to_store.push_back((unsigned char)TUPLE_TYPE);
+        value_to_store.push_back(value_type);
 
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto current_val = val.get_element(i);
             auto serialized_value =
-                StateSaverUtils::SerializeValue(current_val);
+                StateSaverUtils::serializeValue(current_val);
 
             value_to_store.insert(value_to_store.end(),
                                   std::begin(serialized_value.string_value),
@@ -109,7 +110,6 @@ ValueResult MachineStateSaver::getValue(std::vector<unsigned char> hash_key) {
     }
 }
 
-// review
 TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
     std::vector<value> values;
     auto results = checkpoint_storage->getStoredValue(hash_key);
@@ -119,32 +119,38 @@ TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
                                                results.stored_value.end());
         auto value_vectors = StateSaverUtils::parseSerializedTuple(data_vector);
 
-        for (auto& current_vector : value_vectors) {
-            auto value_type = (valueTypes)current_vector[0];
-            current_vector.erase(current_vector.begin());
+        if (value_vectors.empty()) {
+            return TupleResult{results.status, results.reference_count,
+                               Tuple()};
+        } else {
+            for (auto& current_vector : value_vectors) {
+                auto value_type = (valueTypes)current_vector[0];
+                current_vector.erase(current_vector.begin());
 
-            switch (value_type) {
-                case TUPLE_TYPE: {
-                    auto tuple = getTuple(current_vector).tuple;
-                    values.push_back(tuple);
-                    break;
-                }
-                case NUM_TYPE: {
-                    auto num = StateSaverUtils::deserializeCheckpoint256(
-                        current_vector);
-                    values.push_back(num);
-                    break;
-                }
-                case CODEPT_TYPE: {
-                    auto codept = StateSaverUtils::deserializeCheckpointCodePt(
-                        current_vector);
-                    values.push_back(codept);
-                    break;
+                switch (value_type) {
+                    case TUPLE_TYPE: {
+                        auto tuple = getTuple(current_vector).tuple;
+                        values.push_back(tuple);
+                        break;
+                    }
+                    case NUM_TYPE: {
+                        auto num = StateSaverUtils::deserializeCheckpoint256(
+                            current_vector);
+                        values.push_back(num);
+                        break;
+                    }
+                    case CODEPT_TYPE: {
+                        auto codept =
+                            StateSaverUtils::deserializeCheckpointCodePt(
+                                current_vector);
+                        values.push_back(codept);
+                        break;
+                    }
                 }
             }
+            auto tuple = Tuple(values, pool);
+            return TupleResult{results.status, results.reference_count, tuple};
         }
-        auto tuple = Tuple(values, pool);
-        return TupleResult{results.status, results.reference_count, tuple};
     } else {
         return TupleResult{results.status, results.reference_count, Tuple()};
     }
@@ -312,13 +318,24 @@ std::vector<unsigned char> MachineStateSaver::serializeState(
                              state_data.auxstack_results.storage_key.begin(),
                              state_data.auxstack_results.storage_key.end());
 
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.inbox_results.storage_key.begin(),
-                             state_data.inbox_results.storage_key.end());
+    state_data_vector.insert(
+        state_data_vector.end(),
+        state_data.inbox_messages_results.storage_key.begin(),
+        state_data.inbox_messages_results.storage_key.end());
 
     state_data_vector.insert(state_data_vector.end(),
-                             state_data.pending_results.storage_key.begin(),
-                             state_data.pending_results.storage_key.end());
+                             state_data.inbox_count_results.storage_key.begin(),
+                             state_data.inbox_count_results.storage_key.end());
+
+    state_data_vector.insert(
+        state_data_vector.end(),
+        state_data.pending_messages_results.storage_key.begin(),
+        state_data.pending_messages_results.storage_key.end());
+
+    state_data_vector.insert(
+        state_data_vector.end(),
+        state_data.pending_count_results.storage_key.begin(),
+        state_data.pending_count_results.storage_key.end());
 
     state_data_vector.insert(state_data_vector.end(),
                              state_data.pc_results.storage_key.begin(),
@@ -328,13 +345,14 @@ std::vector<unsigned char> MachineStateSaver::serializeState(
 
 MachineStateFetchedData MachineStateSaver::deserializeCheckpointState(
     ParsedCheckpointState stored_state) {
-    // staticval
     auto static_val_results = getValue(stored_state.static_val_key);
     auto register_val_results = getValue(stored_state.auxstack_key);
     auto datastack_results = getTuple(stored_state.datastack_key);
     auto auxstack_results = getTuple(stored_state.auxstack_key);
     auto inbox_results = getTuple(stored_state.inbox_key);
+    auto inbox_count = getValue(stored_state.inbox_count_key);
     auto pending_results = getTuple(stored_state.pending_key);
+    auto pending_count = getValue(stored_state.pending_count_key);
     auto pc_results = getCodePoint(stored_state.pc_key);
 
     return MachineStateFetchedData{static_val_results.val,
@@ -342,7 +360,9 @@ MachineStateFetchedData MachineStateSaver::deserializeCheckpointState(
                                    datastack_results.tuple,
                                    auxstack_results.tuple,
                                    inbox_results.tuple,
+                                   inbox_count.val,
                                    pending_results.tuple,
+                                   pending_count.val,
                                    pc_results,
                                    stored_state.status_char,
                                    stored_state.blockreason_str,
