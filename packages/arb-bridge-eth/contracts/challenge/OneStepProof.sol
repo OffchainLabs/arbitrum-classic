@@ -63,15 +63,23 @@ library OneStepProof {
         );
         require(block.number <= _challenge.deadline, "One step proof missed deadline");
 
+
         require(
             keccak256(
                 abi.encodePacked(
-                    ArbProtocol.generatePreconditionHash(
-                        _beforeHashAndInbox[0],
-                        _timeBounds,
-                        _beforeHashAndInbox[1],
-                        _tokenTypes,
-                        _beforeBalances
+                    keccak256(
+                        abi.encodePacked(
+                            _beforeHashAndInbox[1],
+                            _timeBounds[0],
+                            _timeBounds[1],
+                            _tokenTypes
+                        )
+                    ),
+                    keccak256(
+                        abi.encodePacked(
+                            _beforeHashAndInbox[0],
+                            _beforeBalances
+                        )
                     ),
                     ArbProtocol.generateAssertionHash(
                         _afterHashAndMessages[0],
@@ -138,9 +146,13 @@ library OneStepProof {
             _challenge,
             Challenge.BisectOtherData(
                 _fields[0],
-                _fields[1],
-                _timeBounds,
-                _tokenTypes,
+                keccak256(
+                    abi.encodePacked(
+                        _fields[1],
+                        _timeBounds,
+                        _tokenTypes
+                    )
+                ),
                 _beforeBalances,
                 _fields[2],
                 _fields[3],
@@ -155,6 +167,9 @@ library OneStepProof {
                 _fields[9],
                 _a2OutputValues
             ),
+            _fields[1],
+            _timeBounds,
+            _tokenTypes,
             _proof
         );
     }
@@ -162,6 +177,9 @@ library OneStepProof {
     function _oneStepProofOther(
         Challenge.Data storage _challenge,
         Challenge.BisectOtherData memory _data,
+        bytes32 _beforeInbox,
+        uint64[2] memory _timeBounds,
+        bytes21[] memory _tokenTypes,
         bytes memory _proof
     )
         private
@@ -178,15 +196,15 @@ library OneStepProof {
         uint correctProof = validateProof(
             [
                 _data.a1AfterHash,
-                _data.beforeInbox,
+                _beforeInbox,
                 _data.a2AfterHash,
                 _data.a1LastMessageHash,
                 _data.a2LastMessageHash,
                 _data.a1LastLogHash,
                 _data.a2LastLogHash
             ],
-            _data.timeBounds,
-            _data.tokenTypes,
+            _timeBounds,
+            _tokenTypes,
             _data.beforeBalances,
             _data.a2OutputValues,
             _proof

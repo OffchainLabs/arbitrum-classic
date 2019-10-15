@@ -84,7 +84,8 @@ contract ChallengeManager is IChallengeManager {
     function bisectAssertionFirst(
         address _challengeId,
         uint32 _numSteps,
-        bytes32 _preconditionHash,
+        bytes32 _preconditionPart1Hash,
+        bytes32 _preconditionPart2Hash,
         bytes32 _assertionHash,
         bytes32[] memory _bisectionHashes
     )
@@ -94,7 +95,8 @@ contract ChallengeManager is IChallengeManager {
         Bisection.bisectAssertionFirst(
             challenge,
             _numSteps,
-            _preconditionHash,
+            _preconditionPart1Hash,
+            _preconditionPart2Hash,
             _assertionHash,
             _bisectionHashes
         );
@@ -103,8 +105,6 @@ contract ChallengeManager is IChallengeManager {
     function bisectAssertionOther(
         address _challengeId,
         bytes32[10] memory _fields,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
         uint256[] memory _beforeBalances,
         uint32 _a1NumSteps,
         uint256[] memory _a1OutputValues,
@@ -118,8 +118,6 @@ contract ChallengeManager is IChallengeManager {
         Bisection.bisectAssertionOther(
             challenge,
             _fields,
-            _timeBounds,
-            _tokenTypes,
             _beforeBalances,
             _a1NumSteps,
             _a1OutputValues,

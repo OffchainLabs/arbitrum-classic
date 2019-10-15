@@ -8,10 +8,6 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbChannelInterface extends Interface {
     functions: {
-        initiateChallenge: TypedFunctionDescription<{
-            encode([_preconditionHash, _assertionHash, _numSteps]: [Arrayish, Arrayish, BigNumberish]): string;
-        }>;
-
         completeChallenge: TypedFunctionDescription<{
             encode([_players, _rewards]: [(string)[], (BigNumberish)[]]): string;
         }>;
@@ -53,6 +49,18 @@ interface ArbChannelInterface extends Interface {
         }>;
 
         activateVM: TypedFunctionDescription<{ encode([]: []): string }>;
+
+        initiateChallenge: TypedFunctionDescription<{
+            encode([_beforeHash, _beforeInbox, _timeBounds, _tokenTypes, _beforeBalances, _assertionHash, _numSteps]: [
+                Arrayish,
+                Arrayish,
+                (BigNumberish)[],
+                (Arrayish)[],
+                (BigNumberish)[],
+                Arrayish,
+                BigNumberish,
+            ]): string;
+        }>;
 
         ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
 
@@ -188,13 +196,6 @@ export class ArbChannel extends Contract {
 
         isValidatorList(_validators: (string)[]): Promise<boolean>;
 
-        initiateChallenge(
-            _preconditionHash: Arrayish,
-            _assertionHash: Arrayish,
-            _numSteps: BigNumberish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
         completeChallenge(
             _players: (string)[],
             _rewards: (BigNumberish)[],
@@ -226,6 +227,17 @@ export class ArbChannel extends Contract {
         ): Promise<ContractTransaction>;
 
         activateVM(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        initiateChallenge(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _tokenTypes: (Arrayish)[],
+            _beforeBalances: (BigNumberish)[],
+            _assertionHash: Arrayish,
+            _numSteps: BigNumberish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
 
         ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -301,12 +313,6 @@ export class ArbChannel extends Contract {
     };
 
     estimate: {
-        initiateChallenge(
-            _preconditionHash: Arrayish,
-            _assertionHash: Arrayish,
-            _numSteps: BigNumberish,
-        ): Promise<BigNumber>;
-
         completeChallenge(_players: (string)[], _rewards: (BigNumberish)[]): Promise<BigNumber>;
 
         confirmDisputableAsserted(
@@ -332,6 +338,16 @@ export class ArbChannel extends Contract {
         ): Promise<BigNumber>;
 
         activateVM(): Promise<BigNumber>;
+
+        initiateChallenge(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _tokenTypes: (Arrayish)[],
+            _beforeBalances: (BigNumberish)[],
+            _assertionHash: Arrayish,
+            _numSteps: BigNumberish,
+        ): Promise<BigNumber>;
 
         ownerShutdown(): Promise<BigNumber>;
 

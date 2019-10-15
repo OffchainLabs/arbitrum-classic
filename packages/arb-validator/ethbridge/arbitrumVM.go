@@ -463,9 +463,14 @@ func (vm *ArbitrumVM) InitiateChallenge(
 	assertionHash [32]byte,
 	numSteps uint32,
 ) (*types.Receipt, error) {
+	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	tx, err := vm.ArbitrumVM.InitiateChallenge(
 		auth,
-		precondition.Hash(),
+		precondition.BeforeHash,
+		precondition.BeforeInbox.Hash(),
+		precondition.TimeBounds,
+		tokenTypes,
+		amounts,
 		assertionHash,
 		numSteps,
 	)
@@ -489,7 +494,8 @@ func (vm *ArbitrumVM) BisectAssertionFirst(
 		auth,
 		vm.address,
 		assertion.NumSteps,
-		precondition.Hash(),
+		precondition.Part1Hash(),
+		precondition.Part2Hash(),
 		assertion.Hash(),
 		bisectionHashes,
 	)
@@ -510,13 +516,13 @@ func (vm *ArbitrumVM) BisectAssertionOther(
 	for _, assertion := range bisections {
 		bisectionHashes = append(bisectionHashes, assertion.Hash())
 	}
-	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
+	_, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	tx, err := vm.Challenge.BisectAssertionOther(
 		auth,
 		vm.address,
 		[10][32]byte{
 			precondition.BeforeHash,
-			precondition.BeforeInbox.Hash(),
+			precondition.Part2Hash(),
 			firstAssertion.FirstMessageHash,
 			firstAssertion.FirstLogHash,
 			firstAssertion.AfterHash,
@@ -526,8 +532,6 @@ func (vm *ArbitrumVM) BisectAssertionOther(
 			secondAssertion.LastMessageHash,
 			secondAssertion.LastLogHash,
 		},
-		precondition.TimeBounds,
-		tokenTypes,
 		amounts,
 		firstAssertion.NumSteps,
 		firstAssertion.TotalVals,

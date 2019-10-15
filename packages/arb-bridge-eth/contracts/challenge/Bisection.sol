@@ -30,10 +30,9 @@ library Bisection {
         uint assertionIndex
     );
 
-    event BisectedAssertion(
+    event BisectedAssertionFirst(
         address indexed vmAddress,
         address bisecter,
-        bytes32 preconditionHash,
         bytes32[] bisectionHashes,
         uint32 numSteps
     );
@@ -88,7 +87,8 @@ library Bisection {
     function bisectAssertionFirst(
         Challenge.Data storage _challenge,
         uint32 _numSteps,
-        bytes32 _preconditionHash,
+        bytes32 _preconditionPart1Hash,
+        bytes32 _preconditionPart2Hash,
         bytes32 _assertionHash,
         bytes32[] memory _bisectionHashes
     )
@@ -99,7 +99,8 @@ library Bisection {
         require(
             keccak256(
                 abi.encodePacked(
-                    _preconditionHash,
+                    _preconditionPart1Hash,
+                    _preconditionPart2Hash,
                     _assertionHash,
                     _numSteps
                 )
@@ -109,16 +110,16 @@ library Bisection {
 
         executeBisection(
             _challenge,
-            _preconditionHash,
+            _preconditionPart1Hash,
+            _preconditionPart2Hash,
             _assertionHash,
             _numSteps,
             _bisectionHashes
         );
 
-        emit BisectedAssertion(
+        emit BisectedAssertionFirst(
             _challenge.vmAddress,
             _challenge.players[0],
-            _preconditionHash,
             _bisectionHashes,
             _numSteps
         );
@@ -126,7 +127,7 @@ library Bisection {
 
     // fields
     //   _beforeHash
-    //   _beforeInbox
+    //   _preconditionPart2Hash
     //   _firstMessageHash
     //   _firstLogHash
     //   _a1AfterHash
@@ -138,8 +139,6 @@ library Bisection {
     function bisectAssertionOther(
         Challenge.Data storage _challenge,
         bytes32[10] memory _fields,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
         uint256[] memory _beforeBalances,
         uint32 _a1NumSteps,
         uint256[] memory _a1OutputValues,
@@ -154,8 +153,6 @@ library Bisection {
             Challenge.BisectOtherData(
                 _fields[0],
                 _fields[1],
-                _timeBounds,
-                _tokenTypes,
                 _beforeBalances,
                 _fields[2],
                 _fields[3],
@@ -187,16 +184,15 @@ library Bisection {
 
         uint32 numSteps = _data.a2NumSteps - _data.a1NumSteps;
 
-        bytes32 newPre = ArbProtocol.generatePreconditionHash(
-            _data.a1AfterHash,
-            _data.timeBounds,
-            _data.beforeInbox,
-            _data.tokenTypes,
-            _data.beforeBalances
-        );
         executeBisection(
             _challenge,
-            newPre,
+            _data.preconditionPart1Hash,
+            keccak256(
+                abi.encodePacked(
+                    _data.a1AfterHash,
+                    _data.beforeBalances
+                )
+            ),
             ArbProtocol.generateAssertionHash(
                 _data.a2AfterHash,
                 numSteps,
@@ -237,7 +233,8 @@ library Bisection {
 
     function executeBisection(
         Challenge.Data storage _challenge,
-        bytes32 _preconditionHash,
+        bytes32 _preconditionPart1Hash,
+        bytes32 _preconditionPart2Hash,
         bytes32 _assertionHash,
         uint32 _totalSteps,
         bytes32[] memory _bisectionHashes
@@ -261,7 +258,8 @@ library Bisection {
         bytes32[] memory hashes = new bytes32[](bisectionCount + 1);
         hashes[0] = keccak256(
             abi.encodePacked(
-                _preconditionHash,
+                _preconditionPart1Hash,
+                _preconditionPart2Hash,
                 _bisectionHashes[0],
                 stepCount
             )
@@ -272,7 +270,8 @@ library Bisection {
             }
             hashes[i] = keccak256(
                 abi.encodePacked(
-                    _preconditionHash,
+                    _preconditionPart1Hash,
+                    _preconditionPart2Hash,
                     _bisectionHashes[i - 1],
                     _bisectionHashes[i],
                     stepCount
@@ -284,7 +283,8 @@ library Bisection {
         }
         hashes[bisectionCount] = keccak256(
             abi.encodePacked(
-                _preconditionHash,
+                _preconditionPart1Hash,
+                _preconditionPart2Hash,
                 _bisectionHashes[bisectionCount - 1],
                 _assertionHash,
                 stepCount

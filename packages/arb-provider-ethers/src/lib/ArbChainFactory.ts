@@ -28,28 +28,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: false,
-        inputs: [
-            {
-                name: '_preconditionHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_assertionHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-        ],
-        name: 'initiateChallenge',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
         constant: true,
         inputs: [
             {
@@ -301,6 +279,44 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+            {
+                name: '_tokenTypes',
+                type: 'bytes21[]',
+            },
+            {
+                name: '_beforeBalances',
+                type: 'uint256[]',
+            },
+            {
+                name: '_assertionHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+        ],
+        name: 'initiateChallenge',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
         type: 'function',
     },
     {

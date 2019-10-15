@@ -205,7 +205,11 @@ contract ArbitrumVM {
     }
 
     function initiateChallenge(
-        bytes32 _preconditionHash,
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] memory _timeBounds,
+        bytes21[] memory _tokenTypes,
+        uint256[] memory _beforeBalances,
         bytes32 _assertionHash,
         uint32 _numSteps
     )
@@ -219,7 +223,13 @@ contract ArbitrumVM {
 
         Disputable.initiateChallenge(
             vm,
-            _preconditionHash,
+            ArbProtocol.generatePreconditionHash(
+                _beforeHash,
+                _timeBounds,
+                _beforeInbox,
+                _tokenTypes,
+                _beforeBalances
+            ),
             _assertionHash,
             _numSteps
         );
@@ -230,8 +240,22 @@ contract ArbitrumVM {
             vm.gracePeriod,
             keccak256(
                 abi.encodePacked(
-                    _preconditionHash,
-                    _assertionHash
+                    keccak256(
+                        abi.encodePacked(
+                            _beforeInbox,
+                            _timeBounds[0],
+                            _timeBounds[1],
+                            _tokenTypes
+                        )
+                    ),
+                    keccak256(
+                        abi.encodePacked(
+                            _beforeHash,
+                            _beforeBalances
+                        )
+                    ),
+                    _assertionHash,
+                    _numSteps
                 )
             )
         );

@@ -154,3 +154,25 @@ func (pre *Precondition) Hash() [32]byte {
 	))
 	return ret
 }
+
+func (pre *Precondition) Part1Hash() [32]byte {
+	tokenTypes, _ := pre.BeforeBalance.GetTypesAndAmounts()
+	var ret [32]byte
+	copy(ret[:], solsha3.SoliditySHA3(
+		solsha3.Bytes32(pre.BeforeInbox.Hash()),
+		solsha3.Uint64(pre.TimeBounds[0]),
+		solsha3.Uint64(pre.TimeBounds[1]),
+		TokenTypeArrayEncoded(tokenTypes),
+	))
+	return ret
+}
+
+func (pre *Precondition) Part2Hash() [32]byte {
+	_, amounts := pre.BeforeBalance.GetTypesAndAmounts()
+	var ret [32]byte
+	copy(ret[:], solsha3.SoliditySHA3(
+		solsha3.Bytes32(pre.BeforeHash),
+		solsha3.Uint256Array(amounts),
+	))
+	return ret
+}

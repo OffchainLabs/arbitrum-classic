@@ -50,11 +50,7 @@ func (ad AssertionDefender) GetMachineState() Machine {
 }
 
 func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
-	nsteps := ad.NumSteps()
-	if nsteps < slices {
-		slices = nsteps
-	}
-	sliceSize := nsteps / slices
+	stepCounts := BisectionStepCounts(slices, ad.NumSteps())
 	defenders := make([]AssertionDefender, 0, slices)
 	m := ad.initState.Clone()
 
@@ -62,12 +58,7 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 	pre := ad.precondition
 	for i := uint32(0); i < slices; i++ {
 		initState := m.Clone()
-
-		stepCount := sliceSize
-		if i < nsteps%slices {
-			stepCount++
-		}
-		chunkAssertion := m.ExecuteAssertion(int32(stepCount), pre.TimeBounds)
+		chunkAssertion := m.ExecuteAssertion(int32(stepCounts[i]), pre.TimeBounds)
 		if i > 0 {
 			prevAssertion = protocol.NewAssertion(
 				chunkAssertion.AfterHash,

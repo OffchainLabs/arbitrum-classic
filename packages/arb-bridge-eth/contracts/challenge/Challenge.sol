@@ -47,9 +47,7 @@ library Challenge {
 
     struct BisectOtherData {
         bytes32 beforeHash;
-        bytes32 beforeInbox;
-        uint64[2] timeBounds;
-        bytes21[] tokenTypes;
+        bytes32 preconditionPart1Hash;
         uint256[] beforeBalances;
         bytes32 firstMessageHash;
         bytes32 firstLogHash;
@@ -72,18 +70,16 @@ library Challenge {
         internal
         view
     {
-        bytes32 oldPre = ArbProtocol.generatePreconditionHash(
-            _data.beforeHash,
-            _data.timeBounds,
-            _data.beforeInbox,
-            _data.tokenTypes,
-            _data.beforeBalances
-        );
-
         require(
             keccak256(
                 abi.encodePacked(
-                    oldPre,
+                    _data.preconditionPart1Hash,
+                    keccak256(
+                        abi.encodePacked(
+                            _data.beforeHash,
+                            _data.beforeBalances
+                        )
+                    ),
                     ArbProtocol.generateAssertionHash(
                         _data.a1AfterHash,
                         _data.a1NumSteps,
@@ -108,7 +104,7 @@ library Challenge {
             "Bisector incorrectly revealed bisection segments"
         );
 
-        uint tokenCount = _data.tokenTypes.length;
+        uint tokenCount = _data.beforeBalances.length;
 
         for (uint i = 0; i < tokenCount; i++) {
             _data.beforeBalances[i] -= _data.a1OutputValues[i];
