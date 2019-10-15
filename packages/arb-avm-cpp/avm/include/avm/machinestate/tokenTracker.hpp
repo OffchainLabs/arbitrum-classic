@@ -17,12 +17,15 @@
 #ifndef tokenTracker_hpp
 #define tokenTracker_hpp
 
-#include <avm/machinestate/value/codepoint.hpp>
-#include <avm/machinestate/value/value.hpp>
-#include "avm/machinestate/value/tuple.hpp"
+#include <avm/value/codepoint.hpp>
+#include <avm/value/tuple.hpp>
+#include <avm/value/value.hpp>
 
 #include <unordered_map>
 #include <unordered_set>
+
+#define TOKEN_TYPE_LENGTH 21
+#define TOKEN_VAL_LENGTH 33
 
 using TokenType = std::array<unsigned char, 21>;
 
@@ -86,58 +89,5 @@ class BalanceTracker {
     bool hasNFT(const TokenType& tokType, const uint256_t& id) const;
     std::vector<unsigned char> serializeBalanceValues();
 };
-
-enum BlockType { Not, Halt, Error, Breakpoint, Inbox, Send };
-
-struct NotBlocked {
-    BlockType type = Not;
-};
-
-struct HaltBlocked {
-    BlockType type = Halt;
-};
-
-struct ErrorBlocked {
-    BlockType type = Error;
-};
-
-struct BreakpointBlocked {
-    BlockType type = Breakpoint;
-};
-
-struct InboxBlocked {
-    BlockType type = Inbox;
-    uint256_t inbox;
-    InboxBlocked() {}
-
-    InboxBlocked(uint256_t inbox_) { inbox = inbox_; }
-};
-
-struct SendBlocked {
-    BlockType type = Send;
-    uint256_t currency;
-    TokenType tokenType;
-    SendBlocked() { tokenType = {}; }
-
-    SendBlocked(uint256_t currency_, TokenType tokenType_) {
-        currency = currency_;
-        tokenType = tokenType_;
-    }
-};
-
-extern std::unordered_map<BlockType, int> blockreason_type_length;
-
-using BlockReason = nonstd::variant<NotBlocked,
-                                    HaltBlocked,
-                                    ErrorBlocked,
-                                    BreakpointBlocked,
-                                    InboxBlocked,
-                                    SendBlocked>;
-
-#define TOKEN_TYPE_LENGTH 21
-#define TOKEN_VAL_LENGTH 33
-
-std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val);
-BlockReason deserializeBlockReason(std::vector<unsigned char> data);
 
 #endif /* tokenTracker_hpp */

@@ -20,14 +20,14 @@
 
 std::vector<unsigned char> hash_key1 = {1};
 std::vector<unsigned char> hash_key2 = {2};
-std::string value1("value");
-std::string value2("value2");
+std::vector<unsigned char> value1 = {'v', 'a', 'l', 'u', 'e'};
+std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 
 std::string dbPath =
     "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";
 
 void saveVal(CheckpointStorage& storage,
-             std::string val,
+             std::vector<unsigned char> val,
              std::vector<unsigned char> hash_key,
              int expected_ref_count,
              bool expected_status) {
@@ -40,7 +40,7 @@ void getVal(CheckpointStorage& storage,
             std::vector<unsigned char> hash_key,
             int expected_ref_count,
             bool expected_status,
-            std::string expected_val) {
+            std::vector<unsigned char> expected_val) {
     auto results = storage.getStoredValue(hash_key);
     REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(results.status.ok() == expected_status);
@@ -67,20 +67,15 @@ void deleteVal(CheckpointStorage& storage,
 
 TEST_CASE("Checkpointstorage initialize") {
     CheckpointStorage storage(dbPath);
-    SECTION("get") { getVal(storage, hash_key1, 0, false, std::string("")); }
-    SECTION("get") { getVal(storage, hash_key2, 0, false, std::string("")); }
+    SECTION("get") {
+        getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
+    }
+    SECTION("get") {
+        getVal(storage, hash_key2, 0, false, std::vector<unsigned char>());
+    }
     SECTION("save") { saveVal(storage, value1, hash_key1, 1, true); }
     SECTION("increment") { incrementRef(storage, hash_key1, 0, false); }
     SECTION("delete") { deleteVal(storage, hash_key1, 0, false); }
-}
-
-TEST_CASE("Invalid save") {
-    SECTION("cannot overwrite key") {
-        CheckpointStorage storage(dbPath);
-        saveVal(storage, value1, hash_key1, 1, true);
-        saveVal(storage, value2, hash_key1, -1, false);
-        getVal(storage, hash_key1, 1, true, value1);
-    }
 }
 
 TEST_CASE("Save and get values") {
@@ -91,7 +86,7 @@ TEST_CASE("Save and get values") {
     }
     SECTION("db cleared") {
         CheckpointStorage storage(dbPath);
-        getVal(storage, hash_key1, 0, false, std::string(""));
+        getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
     SECTION("save, increment, get") {
         CheckpointStorage storage(dbPath);
@@ -106,7 +101,7 @@ TEST_CASE("Save and get values") {
         getVal(storage, hash_key2, 1, true, value2);
         getVal(storage, hash_key1, 1, true, value1);
         deleteVal(storage, hash_key1, 0, true);
-        getVal(storage, hash_key1, 0, false, std::string(""));
+        getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
         getVal(storage, hash_key2, 1, true, value2);
     }
     SECTION("save, increment, delete, get") {
@@ -146,6 +141,6 @@ TEST_CASE("Save and get values") {
         saveVal(storage, value1, hash_key1, 1, true);
         deleteVal(storage, hash_key1, 0, true);
         incrementRef(storage, hash_key1, 0, false);
-        getVal(storage, hash_key1, 0, false, std::string(""));
+        getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
 }

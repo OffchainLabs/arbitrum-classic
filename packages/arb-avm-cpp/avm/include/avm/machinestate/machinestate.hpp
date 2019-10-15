@@ -17,13 +17,14 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
-#include <avm/machinestate/datastack.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
 #include <memory>
 #include <vector>
+#include "avm/machinestate/blockreason.hpp"
+#include "avm/machinestate/datastack.hpp"
 #include "avm/machinestate/machinestatesaver.hpp"
 #include "avm/machinestate/messagestack.hpp"
-#include "value/value.hpp"
+#include "avm/machinestate/tokenTracker.hpp"
+#include "avm/value/value.hpp"
 
 enum class Status { Extensive, Halted, Error };
 
@@ -58,7 +59,6 @@ struct MachineState {
     MachineState();
 
     bool deserialize(char* data);
-
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
     uint64_t pendingMessageCount() const;
@@ -67,14 +67,12 @@ struct MachineState {
     void sendOffchainMessages(const std::vector<Message>& messages);
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
-
     void setInbox(MessageStack ms);
     void setPendingInbox(MessageStack ms);
-
-    int checkpointMachineState(CheckpointStorage* storage,
-                               std::string checkpoint_name);
-    int restoreMachineState(CheckpointStorage* storage,
-                            std::string checkpoint_name);
+    bool checkpointMachineState(CheckpointStorage* storage,
+                                std::string checkpoint_name);
+    bool restoreMachineState(CheckpointStorage* storage,
+                             std::string checkpoint_name);
 };
 
 #endif /* machinestate_hpp */

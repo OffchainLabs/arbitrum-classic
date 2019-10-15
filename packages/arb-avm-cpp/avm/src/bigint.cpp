@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/value/bigint.hpp"
+#include "avm/value/bigint.hpp"
 
 #include "bigint_utils.hpp"
 #include "util.hpp"

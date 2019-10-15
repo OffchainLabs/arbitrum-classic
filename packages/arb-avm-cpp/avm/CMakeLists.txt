@@ -28,15 +28,16 @@ set(LIB_HEADERS
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/tokenTracker.hpp
   include/avm/machinestate/datastack.hpp
+  include/avm/machinestate/blockreason.hpp
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/machinestatesaver.hpp
   include/avm/machinestate/messagestack.hpp
   include/avm/machinestate/statesaverutils.hpp
-  include/avm/machinestate/value/tuple.hpp
-  include/avm/machinestate/value/value.hpp
-  include/avm/machinestate/value/bigint.hpp
-  include/avm/machinestate/value/codepoint.hpp
-  include/avm/machinestate/value/pool.hpp
+  include/avm/value/tuple.hpp
+  include/avm/value/value.hpp
+  include/avm/value/bigint.hpp
+  include/avm/value/codepoint.hpp
+  include/avm/value/pool.hpp
 )
 
 set(LIB_SOURCES
@@ -54,6 +55,7 @@ set(LIB_SOURCES
   src/util.hpp
   src/machinestatesaver.cpp
   src/statesaverutils.cpp
+  src/blockreason.cpp
 
   ${KECCAK_SOURCES}
 )

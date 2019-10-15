@@ -18,14 +18,13 @@
 #define checkpointstorage_hpp
 
 #include <vector>
-
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/transaction_db.h"
 
 struct GetResults {
     int reference_count;
     rocksdb::Status status;
-    std::string stored_value;
+    std::vector<unsigned char> stored_value;
 };
 
 struct SaveResults {
@@ -43,21 +42,24 @@ class CheckpointStorage {
    private:
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB*> txn_db;
-    rocksdb::Transaction* getTransaction();
+    rocksdb::Transaction* makeTransaction();
     rocksdb::Status saveValueToDb(std::string value, std::string key);
     rocksdb::Status deleteValueFromDb(std::string key);
     std::tuple<int, std::string> parseCountAndValue(std::string string_value);
-    std::string serializeCountAndValue(int count, std::string value);
+    std::vector<unsigned char> serializeCountAndValue(
+        int count,
+        std::vector<unsigned char> value);
     SaveResults saveValueWithRefCount(int new_count,
                                       std::vector<unsigned char> hash_key,
-                                      std::string value);
+                                      std::vector<unsigned char> value);
 
    public:
     CheckpointStorage(std::string db_path);
     ~CheckpointStorage();
 
     SaveResults incrementReference(std::vector<unsigned char> hash_key);
-    SaveResults saveValue(std::string val, std::vector<unsigned char> hash_key);
+    SaveResults saveValue(std::vector<unsigned char> value,
+                          std::vector<unsigned char> hash_key);
     GetResults getStoredValue(std::vector<unsigned char> hash_key);
     DeleteResults deleteStoredValue(std::vector<unsigned char> hash_key);
 };

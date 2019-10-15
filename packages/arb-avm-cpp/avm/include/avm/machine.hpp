@@ -19,7 +19,7 @@
 
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/tokenTracker.hpp>
-#include <avm/machinestate/value/value.hpp>
+#include <avm/value/value.hpp>
 #include <memory>
 #include <vector>
 #include "avm/checkpointstorage.hpp"

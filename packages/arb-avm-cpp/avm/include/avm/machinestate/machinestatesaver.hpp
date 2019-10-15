@@ -19,9 +19,9 @@
 
 #include "avm/checkpointstorage.hpp"
 #include "avm/machinestate/statesaverutils.hpp"
+#include "avm/value/tuple.hpp"
+#include "avm/value/value.hpp"
 #include "rocksdb/db.h"
-#include "value/tuple.hpp"
-#include "value/value.hpp"
 
 struct ValueResult {
     rocksdb::Status status;
@@ -82,19 +82,21 @@ class MachineStateSaver {
         ParsedCheckpointState stored_state);
     CodePoint getCodePoint(std::vector<unsigned char> hash_key);
     uint256_t getInt256(std::vector<unsigned char> hash_key);
+    DeleteResults deleteTuple(std::vector<unsigned char> hash_key,
+                              GetResults& results);
     DeleteResults deleteTuple(std::vector<unsigned char> hash_key);
     DeleteResults deleteValue(std::vector<unsigned char> hash_key);
 
    public:
     MachineStateSaver(CheckpointStorage* checkpoint_storage, TuplePool* pool);
-    SaveResults SaveTuple(const Tuple& val);
-    SaveResults SaveValue(const value& val);
+    SaveResults saveTuple(const Tuple& val);
+    SaveResults saveValue(const value& val);
     ValueResult getValue(std::vector<unsigned char> hash_key);
     TupleResult getTuple(std::vector<unsigned char> hash_key);
-    SaveResults SaveMachineState(MachineStateStorageData state_data,
-                                 std::string checkpoint_name);
-    StateResult GetMachineStateData(std::string checkpoint_name);
+    StateResult getMachineStateData(std::string checkpoint_name);
     DeleteResults deleteCheckpoint(std::string checkpoint_name);
+    SaveResults saveMachineState(MachineStateStorageData state_data,
+                                 std::string checkpoint_name);
 };
 
 #endif /* machinestatesaver_hpp */

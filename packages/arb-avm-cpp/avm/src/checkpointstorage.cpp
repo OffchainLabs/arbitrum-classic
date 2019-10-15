@@ -26,8 +26,8 @@ CheckpointStorage::CheckpointStorage(std::string db_path) {
     options.create_if_missing = true;
 
     txn_db_path = db_path;
-    auto s = rocksdb::TransactionDB::Open(options, txn_options, txn_db_path,
-                                          txn_db.get());
+    rocksdb::TransactionDB::Open(options, txn_options, txn_db_path,
+                                 txn_db.get());
 };
 
 // does destructor get called when everything shuts down
@@ -51,15 +51,14 @@ SaveResults CheckpointStorage::incrementReference(
     }
 }
 
-SaveResults CheckpointStorage::saveValue(std::string value,
+SaveResults CheckpointStorage::saveValue(std::vector<unsigned char> value,
                                          std::vector<unsigned char> hash_key) {
     auto results = getStoredValue(hash_key);
     int ref_count;
 
     if (results.status.ok()) {
         if (results.stored_value != value) {
-            return SaveResults{-1, rocksdb::Status().InvalidArgument(),
-                               hash_key};
+            ref_count = 1;
         } else {
             ref_count = results.reference_count + 1;
         }
@@ -88,7 +87,7 @@ DeleteResults CheckpointStorage::deleteStoredValue(
             return DeleteResults{updated_ref_count, update_result.status};
         }
     } else {
-        return DeleteResults{0, rocksdb::Status().NotFound()};
+        return DeleteResults{0, results.status};
     }
 }
 
@@ -102,22 +101,22 @@ GetResults CheckpointStorage::getStoredValue(
 
     if (get_status.ok()) {
         auto tuple = parseCountAndValue(return_value);
-        GetResults results{std::get<0>(tuple), get_status, std::get<1>(tuple)};
+        auto stored_val = std::get<1>(tuple);
+        auto ref_count = std::get<0>(tuple);
+        std::vector<unsigned char> value_vector(std::begin(stored_val),
+                                                std::end(stored_val));
 
-        return results;
+        return GetResults{ref_count, get_status, value_vector};
     } else {
-        // make sure this is correct
         auto unsuccessful = rocksdb::Status().NotFound();
-        GetResults results{0, unsuccessful, std::string()};
-
-        return results;
+        return GetResults{0, unsuccessful, std::vector<unsigned char>()};
     }
 }
 
 // private
-// -------------------------------------------------------------------------------
+// ----------------------------------------------------------------------
 
-rocksdb::Transaction* CheckpointStorage::getTransaction() {
+rocksdb::Transaction* CheckpointStorage::makeTransaction() {
     rocksdb::WriteOptions writeOptions;
     auto db = *(txn_db.get());
     rocksdb::Transaction* transaction = db->BeginTransaction(writeOptions);
@@ -128,15 +127,16 @@ rocksdb::Transaction* CheckpointStorage::getTransaction() {
 SaveResults CheckpointStorage::saveValueWithRefCount(
     int updated_ref_count,
     std::vector<unsigned char> hash_key,
-    std::string value) {
+    std::vector<unsigned char> value) {
     auto updated_entry = serializeCountAndValue(updated_ref_count, value);
+    std::string entry_str(updated_entry.begin(), updated_entry.end());
     std::string key_str(hash_key.begin(), hash_key.end());
-    auto status = saveValueToDb(updated_entry, key_str);
+    auto status = saveValueToDb(entry_str, key_str);
 
     if (status.ok()) {
         return SaveResults{updated_ref_count, status, hash_key};
     } else {
-        return SaveResults{0, rocksdb::Status().NotFound(), hash_key};
+        return SaveResults{0, status, hash_key};
     }
 }
 
@@ -145,7 +145,7 @@ std::tuple<int, std::string> CheckpointStorage::parseCountAndValue(
     if (string_value.empty()) {
         return std::make_tuple(0, "");
     } else {
-        // is max max int references good enough?
+        // is max int references good enough?
         const char* c_string = string_value.c_str();
         int ref_count;
         memcpy(&ref_count, c_string, sizeof(ref_count));
@@ -156,18 +156,19 @@ std::tuple<int, std::string> CheckpointStorage::parseCountAndValue(
     }
 }
 
-std::string CheckpointStorage::serializeCountAndValue(int count,
-                                                      std::string value) {
-    std::array<unsigned char, 4> tmpbuf;
-    memcpy(tmpbuf.data(), &count, sizeof(count));
-    value.insert(value.begin(), tmpbuf.begin(), tmpbuf.end());
+std::vector<unsigned char> CheckpointStorage::serializeCountAndValue(
+    int count,
+    std::vector<unsigned char> value) {
+    std::vector<unsigned char> output_vector(sizeof(count));
+    memcpy(&output_vector[0], &count, sizeof(count));
+    output_vector.insert(output_vector.end(), value.begin(), value.end());
 
-    return value;
+    return output_vector;
 }
 
 rocksdb::Status CheckpointStorage::saveValueToDb(std::string value,
                                                  std::string key) {
-    rocksdb::Transaction* transaction = getTransaction();
+    rocksdb::Transaction* transaction = makeTransaction();
     assert(transaction);
 
     auto put_status = transaction->Put(key, value);
@@ -182,7 +183,7 @@ rocksdb::Status CheckpointStorage::saveValueToDb(std::string value,
 }
 
 rocksdb::Status CheckpointStorage::deleteValueFromDb(std::string key) {
-    rocksdb::Transaction* transaction = getTransaction();
+    rocksdb::Transaction* transaction = makeTransaction();
     assert(transaction);
 
     auto delete_status = transaction->Delete(key);

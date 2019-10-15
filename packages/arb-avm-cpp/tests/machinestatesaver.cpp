@@ -25,7 +25,7 @@ void saveValue(MachineStateSaver& saver,
                const value& val,
                int expected_ref_count,
                bool expected_status) {
-    auto results = saver.SaveValue(val);
+    auto results = saver.saveValue(val);
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
 }
@@ -38,9 +38,11 @@ void getValue(MachineStateSaver& saver,
               bool expected_status) {
     auto results = saver.getValue(hash_key);
     auto serialized_val = StateSaverUtils::serializeValue(results.val);
+    auto type = (valueTypes)serialized_val[0];
+
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(serialized_val.type == expected_value_type);
+    REQUIRE(type == expected_value_type);
     REQUIRE(hash(results.val) == expected_hash);
 }
 
@@ -48,7 +50,7 @@ void saveTuple(MachineStateSaver& saver,
                const Tuple& tup,
                int expected_ref_count,
                bool expected_status) {
-    auto results = saver.SaveTuple(tup);
+    auto results = saver.saveTuple(tup);
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
 }
@@ -333,7 +335,7 @@ TEST_CASE("Save And Get Tuple") {
 void saveState(MachineStateSaver& saver,
                MachineStateStorageData storage_data,
                std::string checkpoint_name) {
-    auto results = saver.SaveMachineState(storage_data, checkpoint_name);
+    auto results = saver.saveMachineState(storage_data, checkpoint_name);
 
     REQUIRE(results.reference_count == 1);
     REQUIRE(results.status.ok());
@@ -343,7 +345,7 @@ void saveAndGetState(MachineStateSaver& saver,
                      std::string checkpoint_name,
                      MachineStateFetchedData expected_data,
                      int expected_ref_count) {
-    auto results = saver.GetMachineStateData(checkpoint_name);
+    auto results = saver.getMachineStateData(checkpoint_name);
 
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
@@ -373,7 +375,7 @@ void deleteCheckpoint(MachineStateSaver& saver,
                       std::string checkpoint_name,
                       std::vector<std::vector<unsigned char>> deleted_values) {
     saver.deleteCheckpoint(checkpoint_name);
-    auto results = saver.GetMachineStateData(checkpoint_name);
+    auto results = saver.getMachineStateData(checkpoint_name);
     REQUIRE(results.status.ok() == false);
 
     for (auto& hash_key : deleted_values) {
@@ -400,9 +402,9 @@ MachineStateStorageData makeStorageData(MachineStateSaver& stateSaver,
     auto inbox_results = inbox.checkpointState(stateSaver);
     auto pending_results = pendingInbox.checkpointState(stateSaver);
 
-    auto static_val_results = stateSaver.SaveValue(staticVal);
-    auto register_val_results = stateSaver.SaveValue(registerVal);
-    auto pc_results = stateSaver.SaveValue(pc);
+    auto static_val_results = stateSaver.saveValue(staticVal);
+    auto register_val_results = stateSaver.saveValue(registerVal);
+    auto pc_results = stateSaver.saveValue(pc);
 
     auto status_str = (unsigned char)state;
     auto blockreason_str = serializeForCheckpoint(blockReason);
@@ -574,7 +576,7 @@ TEST_CASE("Get Machinestate data") {
         auto data = std::get<0>(data_values);
         auto expected_data = std::get<1>(data_values);
 
-        saver.SaveMachineState(data, "checkpoint");
+        saver.saveMachineState(data, "checkpoint");
         saveAndGetState(saver, "checkpoint", expected_data, 1);
     }
     SECTION("with values") {
@@ -600,7 +602,7 @@ TEST_CASE("Delete checkpoint") {
         auto data_values = getDefaultValues(saver);
         auto data = std::get<0>(data_values);
 
-        saver.SaveMachineState(data, "checkpoint");
+        saver.saveMachineState(data, "checkpoint");
         std::vector<std::vector<unsigned char>> hash_keys;
 
         hash_keys.push_back(data.auxstack_results.storage_key);
@@ -623,7 +625,7 @@ TEST_CASE("Delete checkpoint") {
         auto data_values = getStateValues(saver);
         auto data = std::get<0>(data_values);
 
-        saver.SaveMachineState(data, "checkpoint");
+        saver.saveMachineState(data, "checkpoint");
         std::vector<std::vector<unsigned char>> hash_keys;
 
         hash_keys.push_back(data.auxstack_results.storage_key);

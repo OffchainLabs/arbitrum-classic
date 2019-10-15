@@ -18,9 +18,9 @@
 #define tuple_hpp
 
 #include <avm/exceptions.hpp>
-#include <avm/machinestate/value/codepoint.hpp>
-#include <avm/machinestate/value/pool.hpp>
-#include <avm/machinestate/value/value.hpp>
+#include <avm/value/codepoint.hpp>
+#include <avm/value/pool.hpp>
+#include <avm/value/value.hpp>
 
 #include <memory>
 

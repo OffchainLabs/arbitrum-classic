@@ -17,10 +17,10 @@
 #ifndef messagestack_hpp
 #define messagestack_hpp
 
+#include "avm/value/tuple.hpp"
+#include "avm/value/value.hpp"
 #include "machinestatesaver.hpp"
 #include "tokenTracker.hpp"
-#include "value/tuple.hpp"
-#include "value/value.hpp"
 
 struct MessageStackSaveResults {
     SaveResults msgs_tuple_results;
@@ -62,8 +62,8 @@ struct MessageStack {
     }
 
     MessageStackSaveResults checkpointState(MachineStateSaver msSaver) {
-        auto saved_msgs = msSaver.SaveTuple(messages);
-        auto saved_msg_count = msSaver.SaveValue((uint256_t)messageCount);
+        auto saved_msgs = msSaver.saveTuple(messages);
+        auto saved_msg_count = msSaver.saveValue((uint256_t)messageCount);
 
         return MessageStackSaveResults{saved_msgs, saved_msg_count};
     }

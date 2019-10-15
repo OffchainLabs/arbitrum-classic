@@ -17,8 +17,8 @@
 #ifndef datastack_hpp
 #define datastack_hpp
 
-#include "value/tuple.hpp"
-#include "value/value.hpp"
+#include "avm/value/tuple.hpp"
+#include "avm/value/value.hpp"
 
 #include <iostream>
 #include <vector>
@@ -31,7 +31,7 @@ class Datastack {
     void addHash() const;
     void calculateAllHashes() const;
 
-    Tuple GetTupleRepresentation(TuplePool* pool);
+    Tuple getTupleRepresentation(TuplePool* pool);
     void initializeDataStack(Tuple tuple);
 
    public:

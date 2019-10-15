@@ -205,8 +205,8 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     return buf;
 }
 
-int MachineState::checkpointMachineState(CheckpointStorage* storage,
-                                         std::string checkpoint_name) {
+bool MachineState::checkpointMachineState(CheckpointStorage* storage,
+                                          std::string checkpoint_name) {
     auto stateSaver = MachineStateSaver(storage, pool.get());
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
@@ -214,11 +214,11 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
     auto inbox_results = inbox.checkpointState(stateSaver);
     auto pending_results = pendingInbox.checkpointState(stateSaver);
 
-    auto static_val_results = stateSaver.SaveValue(staticVal);
-    auto register_val_results = stateSaver.SaveValue(registerVal);
+    auto static_val_results = stateSaver.saveValue(staticVal);
+    auto register_val_results = stateSaver.saveValue(registerVal);
 
     auto pc_value = CodePoint(pc, Operation(), 0);
-    auto pc_results = stateSaver.SaveValue(pc_value);
+    auto pc_results = stateSaver.saveValue(pc_value);
 
     auto status_str = (unsigned char)state;
     auto blockreason_str = serializeForCheckpoint(blockReason);
@@ -248,36 +248,43 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
         };
 
         auto save_results =
-            stateSaver.SaveMachineState(machine_state_data, checkpoint_name);
+            stateSaver.saveMachineState(machine_state_data, checkpoint_name);
 
-        return save_results.status.ok() == true;
+        return save_results.status.ok();
     } else {
         // undo successful saves?
-        return 0;
+        return false;
     }
 }
 
-int MachineState::restoreMachineState(CheckpointStorage* storage,
-                                      std::string checkpoint_name) {
+bool MachineState::restoreMachineState(CheckpointStorage* storage,
+                                       std::string checkpoint_name) {
     auto stateSaver = MachineStateSaver(storage, pool.get());
-    auto results = stateSaver.GetMachineStateData(checkpoint_name);
-    auto machine_state_data = results.state_data;
+    auto results = stateSaver.getMachineStateData(checkpoint_name);
 
-    staticVal = machine_state_data.static_val;
-    registerVal = machine_state_data.register_val;
-    stack = Datastack(machine_state_data.datastack_tuple);
-    auxstack = Datastack(machine_state_data.datastack_tuple);
-    auto inbox_count = nonstd::get<uint256_t>(machine_state_data.inbox_count);
-    inbox =
-        MessageStack(pool.get(), machine_state_data.inbox_tuple, inbox_count);
-    auto pending_count =
-        nonstd::get<uint256_t>(machine_state_data.pending_count);
-    pendingInbox = MessageStack(
-        pool.get(), machine_state_data.pending_inbox_tuple, pending_count);
-    pc = machine_state_data.pc_codepoint.pc;
-    state = (Status)machine_state_data.status_char;
-    blockReason = deserializeBlockReason(machine_state_data.blockreason_str);
-    balance = BalanceTracker(machine_state_data.balancetracker_str);
+    if (results.status.ok()) {
+        auto machine_state_data = results.state_data;
+
+        staticVal = machine_state_data.static_val;
+        registerVal = machine_state_data.register_val;
+        stack = Datastack(machine_state_data.datastack_tuple);
+        auxstack = Datastack(machine_state_data.datastack_tuple);
+        pc = machine_state_data.pc_codepoint.pc;
+
+        auto inbox_count =
+            nonstd::get<uint256_t>(machine_state_data.inbox_count);
+        inbox = MessageStack(pool.get(), machine_state_data.inbox_tuple,
+                             inbox_count);
+        auto pending_count =
+            nonstd::get<uint256_t>(machine_state_data.pending_count);
+        pendingInbox = MessageStack(
+            pool.get(), machine_state_data.pending_inbox_tuple, pending_count);
+
+        state = (Status)machine_state_data.status_char;
+        blockReason =
+            deserializeBlockReason(machine_state_data.blockreason_str);
+        balance = BalanceTracker(machine_state_data.balancetracker_str);
+    }
 
     return results.status.ok();
 }

@@ -17,7 +17,7 @@
 #ifndef codepoint_hpp
 #define codepoint_hpp
 
-#include <avm/machinestate/value/value.hpp>
+#include <avm/value/value.hpp>
 
 struct Operation {
     OpCode opcode;
@@ -47,7 +47,6 @@ struct CodePoint {
     uint256_t nextHash;
 
     CodePoint() {}
-    // CodePoint(uint64_t pc_) : pc(pc_){}
     CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
         : pc(pc_), op(op_), nextHash(nextHash_) {}
     void marshal(std::vector<unsigned char>& buf) const;
@@ -55,8 +54,6 @@ struct CodePoint {
         return ((op.opcode != static_cast<OpCode>(0)) || (pc != 0) ||
                 (nextHash != 0));
     }
-
-    // std::vector<unsigned char> serializeForCheckpoint() const;
 };
 
 uint256_t hash(const CodePoint& cp);
