@@ -99,9 +99,9 @@ TEST_CASE("deserialize send blocked") {
     }
 }
 
-void serializedBalancaVals(BalanceTracker& balance_tracker,
-                           int expected_length,
-                           unsigned int expected_pairs) {
+void serializedBalanceTracker(BalanceTracker& balance_tracker,
+                              int expected_length,
+                              unsigned int expected_pairs) {
     auto serialized = balance_tracker.serializeBalanceValues();
 
     unsigned int balance_tracker_length;
@@ -112,22 +112,40 @@ void serializedBalancaVals(BalanceTracker& balance_tracker,
     REQUIRE(balance_tracker_length == expected_pairs);
 }
 
+#define serialized_empty_balance_len 8
+
 TEST_CASE("serialize balance tracker") {
     SECTION("default") {
         auto tracker = BalanceTracker();
 
-        serializedBalancaVals(tracker, sizeof(unsigned int), 0);
+        serializedBalanceTracker(tracker, serialized_empty_balance_len, 0);
     }
-    SECTION("deafult pair") {
+    SECTION("default token pair, nft empty") {
         std::array<unsigned char, 21> token_type = {};
         uint256_t amount = 0;
         auto tracker = BalanceTracker();
         tracker.add(token_type, amount);
 
         auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
-        auto total_len = token_pair_length * 1 + sizeof(unsigned int);
+        auto total_len = token_pair_length + serialized_empty_balance_len;
 
-        serializedBalancaVals(tracker, total_len, 1);
+        serializedBalanceTracker(tracker, total_len, 1);
+    }
+    SECTION("default token pairs") {
+        std::array<unsigned char, 21> token_type = {};
+        uint256_t amount = 0;
+
+        std::array<unsigned char, 21> nft = {};
+        nft[20] = 1;
+
+        auto tracker = BalanceTracker();
+        tracker.add(token_type, amount);
+        tracker.add(nft, amount);
+
+        auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
+        auto total_len = token_pair_length * 2 + serialized_empty_balance_len;
+
+        serializedBalanceTracker(tracker, total_len, 1);
     }
     SECTION("pair with values") {
         std::array<unsigned char, 21> token_type = {1, 99};
@@ -136,11 +154,11 @@ TEST_CASE("serialize balance tracker") {
         tracker.add(token_type, amount);
 
         auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
-        auto total_len = token_pair_length * 1 + sizeof(unsigned int);
+        auto total_len = token_pair_length + serialized_empty_balance_len;
 
-        serializedBalancaVals(tracker, total_len, 1);
+        serializedBalanceTracker(tracker, total_len, 1);
     }
-    SECTION("multiple pair with values") {
+    SECTION("multiple pair with values, nft empty") {
         std::array<unsigned char, 21> token_type1 = {1, 99};
         uint256_t amount1 = 11;
         std::array<unsigned char, 21> token_type2 = {3, 9};
@@ -150,20 +168,42 @@ TEST_CASE("serialize balance tracker") {
         tracker.add(token_type2, amount2);
 
         auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
-        auto total_len = token_pair_length * 2 + sizeof(unsigned int);
+        auto total_len = token_pair_length * 2 + serialized_empty_balance_len;
 
-        serializedBalancaVals(tracker, total_len, 2);
+        serializedBalanceTracker(tracker, total_len, 2);
+    }
+    SECTION("multiple pair with values") {
+        std::array<unsigned char, 21> token_type1 = {1, 99};
+        uint256_t amount1 = 11;
+        std::array<unsigned char, 21> token_type2 = {3, 9};
+        uint256_t amount2 = 2;
+        std::array<unsigned char, 21> nft = {};
+        nft[20] = 2;
+
+        auto tracker = BalanceTracker();
+        tracker.add(token_type1, amount1);
+        tracker.add(token_type2, amount2);
+        tracker.add(nft, amount1);
+
+        auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
+        auto total_len = token_pair_length * 3 + serialized_empty_balance_len;
+
+        serializedBalanceTracker(tracker, total_len, 2);
     }
 }
 
-void intializeTracker(
-    std::vector<unsigned char> data,
-    std::unordered_map<TokenType, uint256_t> expected_lookup) {
+void intializeTracker(std::vector<unsigned char> data,
+                      std::unordered_map<TokenType, uint256_t> expected_lookup,
+                      std::unordered_set<nftKey> expected_nft_lookup) {
     BalanceTracker tracker(data);
 
     for (auto& pair : expected_lookup) {
         auto val = tracker.tokenValue(pair.first);
         REQUIRE(val == pair.second);
+    }
+
+    for (auto& nft : expected_nft_lookup) {
+        REQUIRE(tracker.hasNFT(nft.tokenType, nft.intVal));
     }
 }
 
@@ -171,44 +211,111 @@ TEST_CASE("deserialize and initialize tracker") {
     SECTION("default") {
         auto tracker = BalanceTracker();
         std::unordered_map<TokenType, uint256_t> expected_lookup;
+        std::unordered_set<nftKey> expected_nft_lookup;
 
-        intializeTracker(tracker.serializeBalanceValues(), expected_lookup);
+        intializeTracker(tracker.serializeBalanceValues(), expected_lookup,
+                         expected_nft_lookup);
     }
-    SECTION("deafult pair") {
+    SECTION("default pairs") {
         std::array<unsigned char, 21> token_type = {};
         uint256_t amount = 0;
+        std::array<unsigned char, 21> nft_type = {};
+        nft_type[20] = 1;
+
         auto tracker = BalanceTracker();
         tracker.add(token_type, amount);
-        std::unordered_map<TokenType, uint256_t> expected_lookup;
+        tracker.add(nft_type, amount);
 
+        std::unordered_map<TokenType, uint256_t> expected_lookup;
+        std::unordered_set<nftKey> expected_nft_lookup;
+
+        nftKey key = {nft_type, amount};
+        expected_nft_lookup.insert(key);
         expected_lookup[token_type] = amount;
 
-        intializeTracker(tracker.serializeBalanceValues(), expected_lookup);
+        intializeTracker(tracker.serializeBalanceValues(), expected_lookup,
+                         expected_nft_lookup);
     }
-    SECTION("pair with values") {
+    SECTION("token with values, nft empty") {
         std::array<unsigned char, 21> token_type = {1, 99};
         uint256_t amount = 11;
+
         auto tracker = BalanceTracker();
         tracker.add(token_type, amount);
 
         std::unordered_map<TokenType, uint256_t> expected_lookup;
         expected_lookup[token_type] = amount;
 
-        intializeTracker(tracker.serializeBalanceValues(), expected_lookup);
+        std::unordered_set<nftKey> expected_nft_lookup;
+
+        intializeTracker(tracker.serializeBalanceValues(), expected_lookup,
+                         expected_nft_lookup);
     }
-    SECTION("multiple pair with values") {
+    SECTION("nft with values, token empty") {
+        std::array<unsigned char, 21> nft_type = {1, 7};
+        nft_type[20] = 2;
+        uint256_t amount = 13;
+
+        auto tracker = BalanceTracker();
+        tracker.add(nft_type, amount);
+
+        std::unordered_map<TokenType, uint256_t> expected_lookup;
+
+        std::unordered_set<nftKey> expected_nft_lookup;
+        nftKey key = {nft_type, amount};
+        expected_nft_lookup.insert(key);
+
+        intializeTracker(tracker.serializeBalanceValues(), expected_lookup,
+                         expected_nft_lookup);
+    }
+    SECTION("with values") {
+        std::array<unsigned char, 21> token_type = {1, 99};
+        uint256_t amount = 11;
+        std::array<unsigned char, 21> nft_type = {1, 7};
+        nft_type[20] = 2;
+        uint256_t amount2 = 13;
+
+        auto tracker = BalanceTracker();
+        tracker.add(token_type, amount);
+        tracker.add(nft_type, amount2);
+
+        std::unordered_map<TokenType, uint256_t> expected_lookup;
+        expected_lookup[token_type] = amount;
+
+        std::unordered_set<nftKey> expected_nft_lookup;
+        nftKey key = {nft_type, amount2};
+        expected_nft_lookup.insert(key);
+
+        intializeTracker(tracker.serializeBalanceValues(), expected_lookup,
+                         expected_nft_lookup);
+    }
+    SECTION("multiple values") {
         std::array<unsigned char, 21> token_type1 = {1, 99};
-        uint256_t amount1 = 11;
         std::array<unsigned char, 21> token_type2 = {3, 9};
+        std::array<unsigned char, 21> nft_type = {1, 7};
+        nft_type[20] = 1;
+        std::array<unsigned char, 21> nft_type2 = {4, 7};
+        nft_type2[20] = 2;
         uint256_t amount2 = 2;
+        uint256_t amount1 = 11;
+
         auto tracker = BalanceTracker();
         tracker.add(token_type1, amount1);
         tracker.add(token_type2, amount2);
+        tracker.add(nft_type, amount2);
+        tracker.add(nft_type2, amount1);
 
         std::unordered_map<TokenType, uint256_t> expected_lookup;
         expected_lookup[token_type1] = amount1;
         expected_lookup[token_type2] = amount2;
 
-        intializeTracker(tracker.serializeBalanceValues(), expected_lookup);
+        std::unordered_set<nftKey> expected_nft_lookup;
+        nftKey key1 = {nft_type, amount2};
+        nftKey key2 = {nft_type2, amount1};
+        expected_nft_lookup.insert(key1);
+        expected_nft_lookup.insert(key2);
+
+        intializeTracker(tracker.serializeBalanceValues(), expected_lookup,
+                         expected_nft_lookup);
     }
 }

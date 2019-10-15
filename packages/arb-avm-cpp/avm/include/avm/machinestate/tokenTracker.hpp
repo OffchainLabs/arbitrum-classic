@@ -71,9 +71,13 @@ struct hash<nftKey> {
 class BalanceTracker {
     std::unordered_map<TokenType, uint256_t> tokenLookup;
     std::unordered_set<nftKey> nftLookup;
+    void insertTokenLookup(std::vector<unsigned char>& return_vector);
+    void insertNftLookup(std::vector<unsigned char>& return_vector);
+    void initializeTokenLookup(std::vector<unsigned char>& token_lookup);
+    void initializeNftLookup(std::vector<unsigned char>& nftkey_lookup);
 
    public:
-    BalanceTracker();
+    BalanceTracker() {}
     BalanceTracker(std::vector<unsigned char> data);
     bool canSpend(const TokenType& tokType, const uint256_t& amount) const;
     bool spend(const TokenType& tokType, const uint256_t& amount);

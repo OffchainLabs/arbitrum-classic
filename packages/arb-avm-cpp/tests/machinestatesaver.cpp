@@ -16,6 +16,7 @@
 
 #include "avm/machinestate/machinestatesaver.hpp"
 #include <catch2/catch.hpp>
+#include "avm/machinestate/machinestate.hpp"
 
 std::string path =
     "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";
@@ -329,31 +330,312 @@ TEST_CASE("Save And Get Tuple") {
     }
 }
 
-// MachineStateStorageData getStateStorageData(MachineStateSaver& saver){
-//    TuplePool pool;
-//
-//    uint256_t static_val = 100;
-//    auto register_val = Tuple(static_val, Tuple(), &pool);
-//
-//
-//}
+void saveState(MachineStateSaver& saver,
+               MachineStateStorageData storage_data,
+               std::string checkpoint_name) {
+    auto results = saver.SaveMachineState(storage_data, checkpoint_name);
 
-// TEST_CASE("Save Machinestate"){
-//    TuplePool pool;
-//    CheckpointStorage storage(path);
-//    auto saver = MachineStateSaver(&storage, &pool);
-//
-//    auto code_point = CodePoint(3, Operation(), 0);
-//    auto code_point2 = CodePoint(2, Operation(), 0);
-//    uint256_t num_val = 5;
-//
-//    uint256_t static_val = 100;
-//    auto register_val = Tuple(static_val, Tuple(), &pool);
-//
-//    auto data_stack = Tuple(code_point, static_val, Tuple(), &pool);
-//    auto aux_stack = Tuple(num_val, data_stack, &pool);
-//
-//    auto inbox_msgs = Tuple(code_point2, static_val, data_stack, &pool);
-//    auto pending_msgs = Tuple
-//
-//}
+    REQUIRE(results.reference_count == 1);
+    REQUIRE(results.status.ok());
+}
+
+void saveAndGetState(MachineStateSaver& saver,
+                     std::string checkpoint_name,
+                     MachineStateFetchedData expected_data,
+                     int expected_ref_count) {
+    auto results = saver.GetMachineStateData(checkpoint_name);
+
+    REQUIRE(results.status.ok());
+    REQUIRE(results.reference_count == expected_ref_count);
+
+    auto data = results.state_data;
+
+    REQUIRE(data.status_char == expected_data.status_char);
+    REQUIRE(data.blockreason_str == expected_data.blockreason_str);
+    REQUIRE(data.balancetracker_str == expected_data.balancetracker_str);
+    REQUIRE(hash(data.static_val) == hash(expected_data.static_val));
+    REQUIRE(hash(data.inbox_count) == hash(expected_data.inbox_count));
+    REQUIRE(hash(data.pending_count) == hash(expected_data.pending_count));
+    REQUIRE(hash(data.pc_codepoint) == hash(expected_data.pc_codepoint));
+    REQUIRE(hash(data.pending_count) == hash(expected_data.pending_count));
+    REQUIRE(data.inbox_tuple.calculateHash() ==
+            expected_data.inbox_tuple.calculateHash());
+    REQUIRE(data.pending_inbox_tuple.calculateHash() ==
+            expected_data.pending_inbox_tuple.calculateHash());
+    REQUIRE(data.datastack_tuple.calculateHash() ==
+            expected_data.datastack_tuple.calculateHash());
+    REQUIRE(data.auxstack_tuple.calculateHash() ==
+            expected_data.auxstack_tuple.calculateHash());
+    REQUIRE(hash(data.register_val) == hash(expected_data.register_val));
+}
+
+void deleteCheckpoint(MachineStateSaver& saver,
+                      std::string checkpoint_name,
+                      std::vector<std::vector<unsigned char>> deleted_values) {
+    saver.deleteCheckpoint(checkpoint_name);
+    auto results = saver.GetMachineStateData(checkpoint_name);
+    REQUIRE(results.status.ok() == false);
+
+    for (auto& hash_key : deleted_values) {
+        auto res = saver.getValue(hash_key);
+        REQUIRE(res.status.ok() == false);
+    }
+}
+
+MachineStateStorageData makeStorageData(MachineStateSaver& stateSaver,
+                                        value staticVal,
+                                        value registerVal,
+                                        Datastack stack,
+                                        Datastack auxstack,
+                                        Status state,
+                                        CodePoint pc,
+                                        MessageStack inbox,
+                                        MessageStack pendingInbox,
+                                        BalanceTracker balance,
+                                        BlockReason blockReason) {
+    TuplePool pool;
+
+    auto datastack_results = stack.checkpointState(stateSaver, &pool);
+    auto auxstack_results = auxstack.checkpointState(stateSaver, &pool);
+    auto inbox_results = inbox.checkpointState(stateSaver);
+    auto pending_results = pendingInbox.checkpointState(stateSaver);
+
+    auto static_val_results = stateSaver.SaveValue(staticVal);
+    auto register_val_results = stateSaver.SaveValue(registerVal);
+    auto pc_results = stateSaver.SaveValue(pc);
+
+    auto status_str = (unsigned char)state;
+    auto blockreason_str = serializeForCheckpoint(blockReason);
+    auto balancetracker_str = balance.serializeBalanceValues();
+
+    return MachineStateStorageData{
+        static_val_results,
+        register_val_results,
+        datastack_results,
+        auxstack_results,
+        inbox_results.msgs_tuple_results,
+        inbox_results.msg_count_results,
+        pending_results.msgs_tuple_results,
+        pending_results.msg_count_results,
+        pc_results,
+        status_str,
+        blockreason_str,
+        balancetracker_str,
+    };
+}
+
+MessageStack getMsgStack1() {
+    TuplePool pool;
+
+    auto inbox_stack = MessageStack(&pool);
+    uint256_t val_data = 111;
+    uint256_t destination = 2;
+    uint256_t currency = 3;
+    auto msg_token_type = std::array<unsigned char, 21>();
+    msg_token_type[0] = 'a';
+    auto msg = Message{val_data, destination, currency, msg_token_type};
+    inbox_stack.addMessage(msg);
+
+    return inbox_stack;
+}
+
+MessageStack getMsgStack2() {
+    TuplePool pool;
+
+    uint256_t val_data = 111;
+    uint256_t destination = 2;
+    uint256_t currency = 3;
+    auto pending_stack = MessageStack(&pool);
+    auto pending_token_type = std::array<unsigned char, 21>();
+    pending_token_type[0] = 'b';
+    auto pending_msg =
+        Message{val_data, destination, currency, pending_token_type};
+    pending_stack.addMessage(pending_msg);
+
+    return pending_stack;
+}
+
+std::tuple<MachineStateStorageData, MachineStateFetchedData> getStateValues(
+    MachineStateSaver& saver) {
+    TuplePool pool;
+    uint256_t register_val = 100;
+    auto static_val = Tuple(register_val, Tuple(), &pool);
+
+    auto code_point = CodePoint(3, Operation(), 0);
+    auto tup1 = Tuple(register_val, &pool);
+    auto tup2 = Tuple(code_point, tup1, &pool);
+
+    Datastack data_stack;
+    data_stack.push(register_val);
+    Datastack aux_stack;
+    aux_stack.push(register_val);
+    aux_stack.push(code_point);
+
+    auto inbox_stack = getMsgStack1();
+    auto pending_stack = getMsgStack2();
+
+    CodePoint pc_codepoint(1, Operation(), 0);
+    Status state = Status::Extensive;
+
+    std::array<unsigned char, 21> block_token_type = {10};
+    auto send_blocked = SendBlocked(999, block_token_type);
+
+    std::array<unsigned char, 21> token_type = {1, 99};
+    uint256_t amount = 11;
+    auto tracker = BalanceTracker();
+    tracker.add(token_type, amount);
+
+    auto saved_data = makeStorageData(
+        saver, static_val, register_val, data_stack, aux_stack, state,
+        pc_codepoint, inbox_stack, pending_stack, tracker, send_blocked);
+    auto expected_data =
+        MachineStateFetchedData{static_val,
+                                register_val,
+                                tup1,
+                                tup2,
+                                inbox_stack.messages,
+                                (uint256_t)inbox_stack.messageCount,
+                                pending_stack.messages,
+                                (uint256_t)pending_stack.messageCount,
+                                code_point,
+                                (unsigned char)state,
+                                serializeForCheckpoint(send_blocked),
+                                tracker.serializeBalanceValues()};
+
+    return std::make_tuple(saved_data, expected_data);
+}
+
+std::tuple<MachineStateStorageData, MachineStateFetchedData> getDefaultValues(
+    MachineStateSaver& saver) {
+    TuplePool pool;
+    uint256_t static_val = 0;
+    auto register_val = Tuple();
+    auto data_stack = Tuple();
+    auto aux_stack = Tuple();
+    auto inbox_mssage = MessageStack(&pool);
+    auto pending_mssage = MessageStack(&pool);
+    auto tracker = BalanceTracker();
+    auto block_reason = NotBlocked();
+    Status state = Status::Extensive;
+    CodePoint code_point(0, Operation(), 0);
+
+    auto data =
+        makeStorageData(saver, static_val, Tuple(), Datastack(), Datastack(),
+                        state, code_point, MessageStack(&pool),
+                        MessageStack(&pool), BalanceTracker(), NotBlocked());
+
+    auto expected =
+        MachineStateFetchedData{static_val,
+                                register_val,
+                                data_stack,
+                                aux_stack,
+                                inbox_mssage.messages,
+                                (uint256_t)inbox_mssage.messageCount,
+                                pending_mssage.messages,
+                                (uint256_t)pending_mssage.messageCount,
+                                code_point,
+                                (unsigned char)state,
+                                serializeForCheckpoint(block_reason),
+                                tracker.serializeBalanceValues()};
+
+    return std::make_tuple(data, expected);
+}
+
+TEST_CASE("Save Machinestatedata") {
+    SECTION("default") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto data_values = getDefaultValues(saver);
+        auto data = std::get<0>(data_values);
+
+        saveState(saver, data, "checkpoint");
+    }
+    SECTION("with values") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto state_data = getStateValues(saver);
+        auto data = std::get<0>(state_data);
+
+        saveState(saver, data, "checkpoint");
+    }
+}
+
+TEST_CASE("Get Machinestate data") {
+    SECTION("default") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto data_values = getDefaultValues(saver);
+        auto data = std::get<0>(data_values);
+        auto expected_data = std::get<1>(data_values);
+
+        saver.SaveMachineState(data, "checkpoint");
+        saveAndGetState(saver, "checkpoint", expected_data, 1);
+    }
+    SECTION("with values") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto state_data = getStateValues(saver);
+        auto stored_data = std::get<0>(state_data);
+        auto expected_data = std::get<1>(state_data);
+
+        saveState(saver, stored_data, "checkpoint");
+        saveAndGetState(saver, "checkpoint", expected_data, 1);
+    }
+}
+
+TEST_CASE("Delete checkpoint") {
+    SECTION("default") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto data_values = getDefaultValues(saver);
+        auto data = std::get<0>(data_values);
+
+        saver.SaveMachineState(data, "checkpoint");
+        std::vector<std::vector<unsigned char>> hash_keys;
+
+        hash_keys.push_back(data.auxstack_results.storage_key);
+        hash_keys.push_back(data.datastack_results.storage_key);
+        hash_keys.push_back(data.inbox_count_results.storage_key);
+        hash_keys.push_back(data.inbox_messages_results.storage_key);
+        hash_keys.push_back(data.pc_results.storage_key);
+        hash_keys.push_back(data.pending_count_results.storage_key);
+        hash_keys.push_back(data.pending_messages_results.storage_key);
+        hash_keys.push_back(data.register_val_results.storage_key);
+        hash_keys.push_back(data.static_val_results.storage_key);
+
+        deleteCheckpoint(saver, "checkpoint", hash_keys);
+    }
+    SECTION("with actual state values") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto data_values = getStateValues(saver);
+        auto data = std::get<0>(data_values);
+
+        saver.SaveMachineState(data, "checkpoint");
+        std::vector<std::vector<unsigned char>> hash_keys;
+
+        hash_keys.push_back(data.auxstack_results.storage_key);
+        hash_keys.push_back(data.datastack_results.storage_key);
+        hash_keys.push_back(data.inbox_count_results.storage_key);
+        hash_keys.push_back(data.inbox_messages_results.storage_key);
+        hash_keys.push_back(data.pc_results.storage_key);
+        hash_keys.push_back(data.pending_count_results.storage_key);
+        hash_keys.push_back(data.pending_messages_results.storage_key);
+        hash_keys.push_back(data.register_val_results.storage_key);
+        hash_keys.push_back(data.static_val_results.storage_key);
+
+        deleteCheckpoint(saver, "checkpoint", hash_keys);
+    }
+}

@@ -26,7 +26,7 @@ configure_file (
 
 configure_file(test_cases.json ${CMAKE_CURRENT_BINARY_DIR}/test_cases.json COPYONLY)
 
-add_executable(avm_tests main.cpp opcodes.cpp value.cpp balanceTracker.cpp checkpointstorage.cpp machinestatesaver.cpp datastack.cpp messagestack.cpp tokenTracker.cpp)
+add_executable(avm_tests main.cpp opcodes.cpp value.cpp balanceTracker.cpp checkpointstorage.cpp machinestatesaver.cpp datastack.cpp messagestack.cpp tokenTracker.cpp machinestate.cpp)
 
 target_link_libraries(
 	avm_tests

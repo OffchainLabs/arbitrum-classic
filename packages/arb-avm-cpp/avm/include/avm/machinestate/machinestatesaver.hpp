@@ -65,6 +65,12 @@ struct MachineStateFetchedData {
     std::vector<unsigned char> balancetracker_str;
 };
 
+struct StateResult {
+    rocksdb::Status status;
+    int reference_count;
+    MachineStateFetchedData state_data;
+};
+
 class MachineStateSaver {
    private:
     // unique pointer
@@ -87,8 +93,8 @@ class MachineStateSaver {
     TupleResult getTuple(std::vector<unsigned char> hash_key);
     SaveResults SaveMachineState(MachineStateStorageData state_data,
                                  std::string checkpoint_name);
-    MachineStateFetchedData GetMachineStateData(std::string checkpoint_name);
-    DeleteResults DeleteCheckpoint(std::string checkpoint_name);
+    StateResult GetMachineStateData(std::string checkpoint_name);
+    DeleteResults deleteCheckpoint(std::string checkpoint_name);
 };
 
 #endif /* machinestatesaver_hpp */

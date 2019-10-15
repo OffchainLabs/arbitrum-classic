@@ -43,6 +43,33 @@ std::size_t hash<TokenType>::operator()(const TokenType& k) const {
 }
 }  // namespace std
 
+BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
+    auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
+    auto current_it = data.begin();
+
+    unsigned int tracker_lookup_length;
+    memcpy(&tracker_lookup_length, &(*current_it),
+           sizeof(tracker_lookup_length));
+    current_it += sizeof(tracker_lookup_length);
+
+    auto total_lookup_len = token_pair_length * tracker_lookup_length;
+    std::vector<unsigned char> token_lookup(current_it,
+                                            current_it + total_lookup_len);
+    current_it += total_lookup_len;
+
+    initializeTokenLookup(token_lookup);
+
+    unsigned int nftkey_lookup_length;
+    memcpy(&nftkey_lookup_length, &(*current_it), sizeof(nftkey_lookup_length));
+    current_it += sizeof(nftkey_lookup_length);
+
+    auto total_nftlookup_len = token_pair_length * nftkey_lookup_length;
+    std::vector<unsigned char> nftkey_lookup(current_it,
+                                             current_it + total_nftlookup_len);
+
+    initializeNftLookup(nftkey_lookup);
+}
+
 std::ostream& operator<<(std::ostream& os, const Message& val) {
     std::string tokenType;
     boost::algorithm::hex(val.token.begin(), val.token.end(),
@@ -156,53 +183,12 @@ void BalanceTracker::add(const TokenType& tokType, const uint256_t& amount) {
     }
 }
 
-// may be too long to store as one string
 std::vector<unsigned char> BalanceTracker::serializeBalanceValues() {
     std::vector<unsigned char> return_vector;
-
-    // protection around unisgned int
-    auto length = (unsigned int)tokenLookup.size();
-    std::vector<unsigned char> length_vector(sizeof(unsigned int));
-    memcpy(&length_vector[0], &length, sizeof(length));
-
-    return_vector.insert(return_vector.end(), length_vector.begin(),
-                         length_vector.end());
-
-    for (const auto& pair : tokenLookup) {
-        std::vector<unsigned char> value_vector;
-        marshal_uint256_t(pair.second, value_vector);
-
-        return_vector.insert(return_vector.end(), std::begin(pair.first),
-                             std::end(pair.first));
-
-        return_vector.insert(return_vector.end(), value_vector.begin(),
-                             value_vector.end());
-    }
+    insertTokenLookup(return_vector);
+    insertNftLookup(return_vector);
 
     return return_vector;
-}
-
-BalanceTracker::BalanceTracker() {}
-
-BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
-    auto current_it = data.begin() + sizeof(unsigned int);
-
-    while (current_it != data.end()) {
-        std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
-
-        std::copy(current_it, current_it + TOKEN_TYPE_LENGTH,
-                  token_type.begin());
-        current_it += TOKEN_TYPE_LENGTH;
-
-        std::vector<unsigned char> value_vector(current_it,
-                                                current_it + TOKEN_VAL_LENGTH);
-        current_it += TOKEN_VAL_LENGTH;
-
-        auto currency_val =
-            StateSaverUtils::deserializeCheckpoint256(value_vector);
-
-        add(token_type, currency_val);
-    }
 }
 
 struct CheckpointSerializer {
@@ -266,11 +252,6 @@ std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
     return nonstd::visit(CheckpointSerializer{}, val);
 }
 
-struct SerializedBlockReason {
-    BlockType type;
-    std::vector<unsigned char> data;
-};
-
 BlockReason deserializeBlockReason(std::vector<unsigned char> data) {
     auto current_it = data.begin();
     auto blocktype = (BlockType)*current_it;
@@ -278,27 +259,25 @@ BlockReason deserializeBlockReason(std::vector<unsigned char> data) {
 
     switch (blocktype) {
         case Inbox: {
-            std::vector<unsigned char> inbox_vector(current_it,
-                                                    current_it + 33);
+            auto next_it = current_it + TOKEN_VAL_LENGTH;
+            std::vector<unsigned char> inbox_vector(current_it, next_it);
             auto inbox =
                 StateSaverUtils::deserializeCheckpoint256(inbox_vector);
             return InboxBlocked(inbox);
         }
         case Send: {
-            std::vector<unsigned char> currency_vector(current_it,
-                                                       current_it + 33);
+            auto next_it = current_it + TOKEN_VAL_LENGTH;
+            std::vector<unsigned char> currency_vector(current_it, next_it);
             auto currency =
                 StateSaverUtils::deserializeCheckpoint256(currency_vector);
 
-            current_it += 33;
+            current_it = next_it;
+            next_it = current_it + TOKEN_TYPE_LENGTH;
 
-            std::array<unsigned char, 21> token_type;
-            std::copy(current_it, current_it + 21, token_type.begin());
+            std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
+            std::copy(current_it, next_it, token_type.begin());
 
             return SendBlocked(currency, token_type);
-        }
-        case Not: {
-            return NotBlocked();
         }
         case Halt: {
             return HaltBlocked();
@@ -309,5 +288,92 @@ BlockReason deserializeBlockReason(std::vector<unsigned char> data) {
         case Breakpoint: {
             return BreakpointBlocked();
         }
+        default: {
+            return NotBlocked();
+        }
+    }
+}
+
+// private
+// --------------------------------------------------------------------------
+
+void BalanceTracker::initializeTokenLookup(
+    std::vector<unsigned char>& token_lookup) {
+    auto lookup_it = token_lookup.begin();
+
+    while (lookup_it != token_lookup.end()) {
+        std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
+        std::copy(lookup_it, lookup_it + TOKEN_TYPE_LENGTH, token_type.begin());
+        lookup_it += TOKEN_TYPE_LENGTH;
+
+        std::vector<unsigned char> value_vector(lookup_it,
+                                                lookup_it + TOKEN_VAL_LENGTH);
+        auto currency_val =
+            StateSaverUtils::deserializeCheckpoint256(value_vector);
+        lookup_it += TOKEN_VAL_LENGTH;
+
+        add(token_type, currency_val);
+    }
+}
+
+void BalanceTracker::initializeNftLookup(
+    std::vector<unsigned char>& nftkey_lookup) {
+    auto nftkey_it = nftkey_lookup.begin();
+
+    while (nftkey_it != nftkey_lookup.end()) {
+        std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
+        std::copy(nftkey_it, nftkey_it + TOKEN_TYPE_LENGTH, token_type.begin());
+        nftkey_it += TOKEN_TYPE_LENGTH;
+
+        std::vector<unsigned char> value_vector(nftkey_it,
+                                                nftkey_it + TOKEN_VAL_LENGTH);
+        auto currency_val =
+            StateSaverUtils::deserializeCheckpoint256(value_vector);
+        nftkey_it += TOKEN_VAL_LENGTH;
+
+        nftKey key = {token_type, currency_val};
+        nftLookup.insert(key);
+    }
+}
+
+void BalanceTracker::insertTokenLookup(
+    std::vector<unsigned char>& return_vector) {
+    auto length = (unsigned int)tokenLookup.size();
+    std::vector<unsigned char> length_vector(sizeof(unsigned int));
+    memcpy(&length_vector[0], &length, sizeof(length));
+
+    return_vector.insert(return_vector.end(), length_vector.begin(),
+                         length_vector.end());
+
+    for (const auto& pair : tokenLookup) {
+        return_vector.insert(return_vector.end(), std::begin(pair.first),
+                             std::end(pair.first));
+
+        std::vector<unsigned char> value_vector;
+        marshal_uint256_t(pair.second, value_vector);
+
+        return_vector.insert(return_vector.end(), value_vector.begin(),
+                             value_vector.end());
+    }
+}
+
+void BalanceTracker::insertNftLookup(
+    std::vector<unsigned char>& return_vector) {
+    auto nft_length = nftLookup.size();
+    std::vector<unsigned char> nft_length_vector(sizeof(unsigned int));
+    memcpy(&nft_length_vector[0], &nft_length, sizeof(nft_length));
+
+    return_vector.insert(return_vector.end(), nft_length_vector.begin(),
+                         nft_length_vector.end());
+
+    for (auto& nft_key : nftLookup) {
+        return_vector.insert(return_vector.end(), std::begin(nft_key.tokenType),
+                             std::end(nft_key.tokenType));
+
+        std::vector<unsigned char> value_vector;
+        marshal_uint256_t(nft_key.intVal, value_vector);
+
+        return_vector.insert(return_vector.end(), value_vector.begin(),
+                             value_vector.end());
     }
 }

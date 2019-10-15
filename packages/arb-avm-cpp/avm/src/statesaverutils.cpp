@@ -30,7 +30,7 @@ uint64_t deserialize_int64(char*& bufptr) {
 
 void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
     // auto big_endian_val = boost::endian::native_to_big(val);
-    std::array<unsigned char, 8> tmpbuf;
+    std::array<unsigned char, UINT64_SIZE> tmpbuf;
     memcpy(tmpbuf.data(), &val, sizeof(val));
 
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
@@ -107,6 +107,7 @@ struct ValueSerializer {
 
 ParsedCheckpointState parseCheckpointState(
     std::vector<unsigned char> stored_state) {
+    // status
     auto current_iter = stored_state.begin();
     auto status = (unsigned char)(*current_iter);
     current_iter += 1;
@@ -120,18 +121,17 @@ ParsedCheckpointState parseCheckpointState(
     current_iter += length_of_block_reason;
 
     // balancetracker
-    unsigned int balance_tracker_length;
-    memcpy(&balance_tracker_length, &(*current_iter),
-           sizeof(balance_tracker_length));
-    current_iter += sizeof(unsigned int);
+    unsigned int tracker_lookup_length;
+    memcpy(&tracker_lookup_length, &(*current_iter),
+           sizeof(tracker_lookup_length));
+    current_iter += sizeof(tracker_lookup_length);
 
-    auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
-    auto total_len = token_pair_length * balance_tracker_length;
-    std::vector<unsigned char> balance_track_vector(current_iter,
-                                                    current_iter + total_len);
-    current_iter += total_len;
+    std::vector<unsigned char> balance_track_vector(
+        current_iter, current_iter + tracker_lookup_length);
+    current_iter += tracker_lookup_length;
+
+    // saved values
     auto next_iter = current_iter + HASH_KEY_LENGTH;
-
     std::vector<unsigned char> static_val(current_iter, next_iter);
     current_iter = next_iter;
     next_iter += HASH_KEY_LENGTH;

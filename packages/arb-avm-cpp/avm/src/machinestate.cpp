@@ -260,7 +260,8 @@ int MachineState::checkpointMachineState(CheckpointStorage* storage,
 int MachineState::restoreMachineState(CheckpointStorage* storage,
                                       std::string checkpoint_name) {
     auto stateSaver = MachineStateSaver(storage, pool.get());
-    auto machine_state_data = stateSaver.GetMachineStateData(checkpoint_name);
+    auto results = stateSaver.GetMachineStateData(checkpoint_name);
+    auto machine_state_data = results.state_data;
 
     staticVal = machine_state_data.static_val;
     registerVal = machine_state_data.register_val;
@@ -278,8 +279,7 @@ int MachineState::restoreMachineState(CheckpointStorage* storage,
     blockReason = deserializeBlockReason(machine_state_data.blockreason_str);
     balance = BalanceTracker(machine_state_data.balancetracker_str);
 
-    // get failure status if not successful?
-    return 1;
+    return results.status.ok();
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {
