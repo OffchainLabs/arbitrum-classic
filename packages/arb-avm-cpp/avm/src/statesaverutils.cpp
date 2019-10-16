@@ -129,7 +129,6 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
 
     return hash_key;
 }
-
 }  // namespace
 
 ParsedCheckpointState parseCheckpointState(
