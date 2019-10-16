@@ -74,8 +74,6 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 				)
 			}
 			err = nil
-			// turn off ChallengeEverything after bisection started
-			bot.ChallengeEverything = false
 		}
 		if err != nil {
 			return nil, &challenge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}

@@ -25,6 +25,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
+type BridgeMessage uint
+
+const (
+	ProofAccepted BridgeMessage = iota
+)
+
 type Bridge interface {
 	ArbVMBridge
 
@@ -52,6 +58,7 @@ type Bridge interface {
 
 type ArbVMBridge interface {
 	AddedNewMessages(count uint64)
+	SendMonitorMsg(msg BridgeMessage)
 
 	FinalizedAssertion(
 		assertion *protocol.Assertion,

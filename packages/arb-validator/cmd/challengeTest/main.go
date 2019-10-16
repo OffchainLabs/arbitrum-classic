@@ -20,6 +20,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"io/ioutil"
 	"log"
 	"math"
@@ -160,6 +161,8 @@ func main() {
 	}
 
 	log.Println("Everyone is running")
+	coordinatorMsgMonitorChan := coordinator.Val.MonitorChan
+	challengerMsgMonitorChan := challenger.Validator.MonitorChan
 	coordinatorMonitorChan := coordinator.ChannelVal.GetMonitor()
 	challengerMonitorChan := challenger.ChannelVal.GetMonitor()
 
@@ -203,6 +206,19 @@ func main() {
 				log.Println("recoverable coordinator error continuing")
 				log.Println(message.Message)
 				log.Println("****************************")
+			}
+		case message := <-challengerMsgMonitorChan:
+			if message == bridge.ProofAccepted {
+				log.Println("***************************")
+				log.Println("Challenger received ProofAccepted message = ", message)
+				log.Println("***************************")
+			}
+		case message := <-coordinatorMsgMonitorChan:
+			if message == bridge.ProofAccepted {
+				log.Println("***************************")
+				log.Println("Coordinator received ProofAccepted message = ", message)
+				log.Println("***************************")
+				return
 			}
 		case message := <-challengerMonitorChan:
 			if !message.Recoverable {

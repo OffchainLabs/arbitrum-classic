@@ -19,6 +19,7 @@ package ethvalidator
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"log"
 	"math/big"
 	"sync"
@@ -49,10 +50,15 @@ type VMValidator struct {
 	Validator               *Validator
 	arbitrumVM              ethbridge.VMConnection
 	unprocessedMessageCount uint64
+	MonitorChan             chan bridge.BridgeMessage
 }
 
 func (val *VMValidator) Address() common.Address {
 	return val.Validator.Address()
+}
+
+func (val *VMValidator) SendMonitorMsg(msg bridge.BridgeMessage) {
+	val.MonitorChan <- msg
 }
 
 func NewVMValidator(
@@ -78,7 +84,7 @@ func NewVMValidator(
 	}
 
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
-
+	mon := make(chan bridge.BridgeMessage, 100)
 	vmVal := &VMValidator{
 		vmID,
 		completedCallChan,
@@ -86,6 +92,7 @@ func NewVMValidator(
 		val,
 		con,
 		0,
+		mon,
 	}
 	return vmVal, nil
 }

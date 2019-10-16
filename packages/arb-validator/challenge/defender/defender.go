@@ -37,7 +37,7 @@ func New(core *core.Config, assDef machine.AssertionDefender, time uint64, bridg
 		fmt.Println("Generating proof")
 		proofData, err := assDef.SolidityOneStepProof()
 		if err != nil {
-			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating one-step proof"}
+			return nil, &challenge.Error{Err: err, Message: "AssertAndDefendBot: error generating solidity one-step proof"}
 		}
 		_, err = bridge.OneStepProof(
 			context.Background(),
@@ -164,11 +164,12 @@ func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 	return challenge.TimedOutAsserter{Config: bot.Config}, nil
 }
 
-func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
 	log.Printf("oneStepChallenged UpdateState event %T\n", ev)
 	switch ev.(type) {
 	case ethbridge.OneStepProofEvent:
 		fmt.Println("oneStepChallenged: Proof was accepted")
+		brdg.SendMonitorMsg(bridge.ProofAccepted)
 		return nil, nil
 	default:
 		return nil, &challenge.Error{Message: fmt.Sprintf("ERROR: oneStepChallenged: VM state got unsynchronized, %T", ev)}

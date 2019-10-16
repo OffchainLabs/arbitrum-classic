@@ -20,6 +20,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"io/ioutil"
 	"log"
 	"math"
@@ -163,6 +164,8 @@ func TestChallenge(t *testing.T) {
 	}
 
 	log.Println("Everyone is running")
+	coordinatorMsgMonitorChan := coordinator.Val.MonitorChan
+	challengerMsgMonitorChan := challenger.Validator.MonitorChan
 	coordinatorMonitorChan := coordinator.ChannelVal.GetMonitor()
 	challengerMonitorChan := challenger.ChannelVal.GetMonitor()
 	time.Sleep(2 * time.Second)
@@ -193,6 +196,19 @@ func TestChallenge(t *testing.T) {
 	}
 	for {
 		select {
+		case message := <-challengerMsgMonitorChan:
+			if message == bridge.ProofAccepted {
+				log.Println("***************************")
+				log.Println("Challenger received ProofAccepted message = ", message)
+				log.Println("***************************")
+			}
+		case message := <-coordinatorMsgMonitorChan:
+			if message == bridge.ProofAccepted {
+				log.Println("***************************")
+				log.Println("Coordinator received ProofAccepted message = ", message)
+				log.Println("***************************")
+				return
+			}
 		case message := <-coordinatorMonitorChan:
 			if !message.Recoverable {
 				t.Error("coordinator unexpected unrecoverable error")
@@ -203,7 +219,6 @@ func TestChallenge(t *testing.T) {
 				log.Println("***************************")
 				return
 			} else {
-				t.Error("coordinator unexpected recoverable error")
 				log.Println("****************************")
 				log.Println("recoverable error continuing")
 				log.Println(message)
@@ -226,6 +241,7 @@ func TestChallenge(t *testing.T) {
 				log.Println("****************************")
 			}
 		case <-time.After(60 * time.Second):
+			t.Error("Never received proof accepted message")
 			fmt.Println("test complete")
 			return
 		}
