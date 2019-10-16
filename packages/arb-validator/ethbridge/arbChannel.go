@@ -197,8 +197,6 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 		}
 	}
 
-	//log.Println("******FinalizedUnanimousAssert")
-	//newInboxHash[0] = 5
 	tx, err := vm.contract.FinalizedUnanimousAssert(
 		auth,
 		assertion.AfterHash,
@@ -263,7 +261,7 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 			return nil, err
 		}
 	}
-	//newInboxHash[0] = 5
+
 	tx, err := vm.contract.ConfirmUnanimousAsserted(
 		auth,
 		assertion.AfterHash,
@@ -275,7 +273,6 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 		destinations,
 	)
 	if err != nil {
-		log.Println("ConfirmUnanimousAsserted error")
 		return nil, err
 	}
 	rcpt, rerr := waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmUnanimousAsserted")

@@ -430,7 +430,6 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					shouldUnan = true
 				} else if <-m.ChannelVal.CanContinueRunning() {
 					log.Println("Unanimous asserting because machine is not blocked")
-					//shouldUnan = false
 					shouldUnan = true
 				}
 				if !shouldUnan {

@@ -142,7 +142,6 @@ func main() {
 		machine.Clone(),
 		config,
 		true,
-		//false,
 		math.MaxInt32, // maxCallSteps,
 		math.MaxInt32, // maxUnanSteps
 		"wss://127.0.0.1:1236/ws",

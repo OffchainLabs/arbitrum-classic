@@ -230,7 +230,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 				errChan <- errors.New("call took too long to execute")
 				return
 			}
-			log.Printf("********************* validator requestCall reuslt = %v\n", results)
+
 			resultChan <- results[len(results)-1]
 		}()
 	}
@@ -382,12 +382,11 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 					}
 				}
 			}
-			//log.Printf("validator %v got notification event %T: %v\n", validator.Name, notification.Event, notification.Event)
+
 			switch ev := notification.Event.(type) {
 			case ethbridge.NewTimeEvent:
 				break
 			case ethbridge.VMEvent:
-				//log.Printf("validator %v received VMEvent type %T\n", validator.Name, ev)
 				err := validator.eventUpdate(ev, notification.Header)
 				if err != nil {
 					//log.Printf("*****Validator %v: error - %v\n", validator.Name, err)
@@ -429,12 +428,10 @@ func (validator *Validator) timeUpdate() error {
 	if validator.challengeBot != nil {
 		newBot, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64(), validator.bot.getBridge())
 		if err != nil {
-			//myerr := appError{err.Error(), 2}
 			return err
 		}
 		validator.challengeBot = newBot
 	}
-	//return appError{validator.bot.updateTime(validator.latestHeader.Number.Uint64()).Error(), 0}
 	return validator.bot.updateTime(validator.latestHeader.Number.Uint64())
 }
 
@@ -452,7 +449,6 @@ func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Head
 	} else {
 		challengeBot, err := validator.bot.updateState(ev, header.Number.Uint64())
 		if err != nil {
-			//log.Printf("validator %v received error %v\n", validator.Name, err)
 			return err
 		}
 		if challengeBot != nil {

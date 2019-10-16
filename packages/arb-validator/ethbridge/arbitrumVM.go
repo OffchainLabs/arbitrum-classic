@@ -450,7 +450,6 @@ func (vm *ArbitrumVM) InitiateChallenge(
 		preAssHash,
 	)
 	if err != nil {
-		log.Printf("InitiateChallenge error %v\n", err)
 		return nil, err
 	}
 	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "InitiateChallenge")
@@ -464,12 +463,6 @@ func (vm *ArbitrumVM) BisectAssertion(
 	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
 	totalMessageAmounts := make([]*big.Int, 0)
 	totalSteps := uint32(0)
-
-	///*************/
-	//log.Print("****** in BisectAssertion - forcing error ************")
-	//precondition.BeforeHash[0] = 5
-	///*************/
-
 	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHash)
 	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHash)
 	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHash)
@@ -493,7 +486,6 @@ func (vm *ArbitrumVM) BisectAssertion(
 		amounts,
 	)
 	if err != nil {
-		log.Printf("********** bisection error %v\n", err)
 		return nil, err
 	}
 	//sennd fake error to simulate error
