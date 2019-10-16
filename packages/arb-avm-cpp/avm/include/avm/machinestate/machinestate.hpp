@@ -23,7 +23,6 @@
 #include "avm/machinestate/datastack.hpp"
 #include "avm/machinestate/machinestatesaver.hpp"
 #include "avm/machinestate/messagestack.hpp"
-#include "avm/machinestate/tokenTracker.hpp"
 #include "avm/value/value.hpp"
 
 enum class Status { Extensive, Halted, Error };
