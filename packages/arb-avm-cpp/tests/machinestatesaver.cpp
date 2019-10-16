@@ -389,6 +389,22 @@ void deleteCheckpointSavedTwice(
     std::string checkpoint_name,
     std::vector<std::vector<unsigned char>> deleted_values) {
     saver.deleteCheckpoint(checkpoint_name);
+    saver.deleteCheckpoint(checkpoint_name);
+    auto results = saver.getMachineStateData(checkpoint_name);
+
+    REQUIRE(results.status.ok() == false);
+
+    for (auto& hash_key : deleted_values) {
+        auto res = saver.getValue(hash_key);
+        REQUIRE(res.status.ok() == false);
+    }
+}
+
+void deleteCheckpointSavedTwiceReordered(
+    MachineStateSaver& saver,
+    std::string checkpoint_name,
+    std::vector<std::vector<unsigned char>> deleted_values) {
+    saver.deleteCheckpoint(checkpoint_name);
     auto results = saver.getMachineStateData(checkpoint_name);
     REQUIRE(results.status.ok() == true);
 
@@ -663,28 +679,52 @@ TEST_CASE("Delete checkpoint") {
 
         deleteCheckpoint(saver, "checkpoint", hash_keys);
     }
-    //    SECTION("delete checkpoint saved twice") {
-    //        TuplePool pool;
-    //        CheckpointStorage storage(path);
-    //        auto saver = MachineStateSaver(&storage, &pool);
-    //
-    //        auto data_values = getStateValues(saver);
-    //        auto data = std::get<0>(data_values);
-    //
-    //        saver.saveMachineState(data, "checkpoint");
-    //        saver.saveMachineState(data, "checkpoint");
-    //        std::vector<std::vector<unsigned char>> hash_keys;
-    //
-    //        hash_keys.push_back(data.auxstack_results.storage_key);
-    //        hash_keys.push_back(data.datastack_results.storage_key);
-    //        hash_keys.push_back(data.inbox_count_results.storage_key);
-    //        hash_keys.push_back(data.inbox_messages_results.storage_key);
-    //        hash_keys.push_back(data.pc_results.storage_key);
-    //        hash_keys.push_back(data.pending_count_results.storage_key);
-    //        hash_keys.push_back(data.pending_messages_results.storage_key);
-    //        hash_keys.push_back(data.register_val_results.storage_key);
-    //        hash_keys.push_back(data.static_val_results.storage_key);
-    //
-    //        deleteCheckpointSavedTwice(saver, "checkpoint", hash_keys);
-    //    }
+    SECTION("delete checkpoint saved twice") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto data_values = getStateValues(saver);
+        auto data = std::get<0>(data_values);
+
+        saver.saveMachineState(data, "checkpoint");
+        saver.saveMachineState(data, "checkpoint");
+        std::vector<std::vector<unsigned char>> hash_keys;
+
+        hash_keys.push_back(data.auxstack_results.storage_key);
+        hash_keys.push_back(data.datastack_results.storage_key);
+        hash_keys.push_back(data.inbox_count_results.storage_key);
+        hash_keys.push_back(data.inbox_messages_results.storage_key);
+        hash_keys.push_back(data.pc_results.storage_key);
+        hash_keys.push_back(data.pending_count_results.storage_key);
+        hash_keys.push_back(data.pending_messages_results.storage_key);
+        hash_keys.push_back(data.register_val_results.storage_key);
+        hash_keys.push_back(data.static_val_results.storage_key);
+
+        deleteCheckpointSavedTwice(saver, "checkpoint", hash_keys);
+    }
+    SECTION("delete checkpoint saved twice, reordered") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        auto saver = MachineStateSaver(&storage, &pool);
+
+        auto data_values = getStateValues(saver);
+        auto data = std::get<0>(data_values);
+
+        saver.saveMachineState(data, "checkpoint");
+        saver.saveMachineState(data, "checkpoint");
+        std::vector<std::vector<unsigned char>> hash_keys;
+
+        hash_keys.push_back(data.auxstack_results.storage_key);
+        hash_keys.push_back(data.datastack_results.storage_key);
+        hash_keys.push_back(data.inbox_count_results.storage_key);
+        hash_keys.push_back(data.inbox_messages_results.storage_key);
+        hash_keys.push_back(data.pc_results.storage_key);
+        hash_keys.push_back(data.pending_count_results.storage_key);
+        hash_keys.push_back(data.pending_messages_results.storage_key);
+        hash_keys.push_back(data.register_val_results.storage_key);
+        hash_keys.push_back(data.static_val_results.storage_key);
+
+        deleteCheckpointSavedTwiceReordered(saver, "checkpoint", hash_keys);
+    }
 }

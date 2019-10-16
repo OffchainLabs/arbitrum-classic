@@ -171,27 +171,38 @@ DeleteResults MachineStateSaver::deleteCheckpoint(std::string checkpoint_name) {
     auto results = checkpoint_storage->getStoredValue(name_vector);
 
     if (results.status.ok()) {
-        auto parsed_state =
-            StateSaverUtils::parseCheckpointState(results.stored_value);
+        auto delete_results =
+            checkpoint_storage->deleteStoredValue(name_vector);
 
-        auto delete_static_res = deleteValue(parsed_state.static_val_key);
-        auto delete_register_res = deleteValue(parsed_state.register_val_key);
-        auto delete_cp_key = deleteValue(parsed_state.pc_key);
-        auto delete_datastack_res = deleteTuple(parsed_state.datastack_key);
-        auto delete_auxstack_res = deleteTuple(parsed_state.auxstack_key);
-        auto delete_inbox_res = deleteTuple(parsed_state.inbox_key);
-        auto delete_inbox_count = deleteValue(parsed_state.inbox_count_key);
-        auto delete_pendinginbox_res = deleteTuple(parsed_state.pending_key);
-        auto delete_pending_count = deleteValue(parsed_state.pending_count_key);
+        if (delete_results.reference_count < 1) {
+            auto parsed_state =
+                StateSaverUtils::parseCheckpointState(results.stored_value);
 
-        if (delete_static_res.status.ok() && delete_register_res.status.ok() &&
-            delete_cp_key.status.ok() && delete_datastack_res.status.ok() &&
-            delete_auxstack_res.status.ok() && delete_inbox_res.status.ok() &&
-            delete_pendinginbox_res.status.ok() &&
-            delete_inbox_count.status.ok() &&
-            delete_pending_count.status.ok()) {
+            auto delete_static_res = deleteValue(parsed_state.static_val_key);
+            auto delete_register_res =
+                deleteValue(parsed_state.register_val_key);
+            auto delete_cp_key = deleteValue(parsed_state.pc_key);
+            auto delete_datastack_res = deleteTuple(parsed_state.datastack_key);
+            auto delete_auxstack_res = deleteTuple(parsed_state.auxstack_key);
+            auto delete_inbox_res = deleteTuple(parsed_state.inbox_key);
+            auto delete_inbox_count = deleteValue(parsed_state.inbox_count_key);
+            auto delete_pendinginbox_res =
+                deleteTuple(parsed_state.pending_key);
+            auto delete_pending_count =
+                deleteValue(parsed_state.pending_count_key);
+
+            if (delete_static_res.status.ok() &&
+                delete_register_res.status.ok() && delete_cp_key.status.ok() &&
+                delete_datastack_res.status.ok() &&
+                delete_auxstack_res.status.ok() &&
+                delete_inbox_res.status.ok() &&
+                delete_pendinginbox_res.status.ok() &&
+                delete_inbox_count.status.ok() &&
+                delete_pending_count.status.ok()) {
+            }
         }
-        return checkpoint_storage->deleteStoredValue(name_vector);
+
+        return delete_results;
     } else {
         return DeleteResults{0, results.status};
     }
