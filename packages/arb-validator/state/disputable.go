@@ -355,7 +355,7 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (Waiting, error
 	}, nil
 }
 
-func (bot Waiting) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot Waiting) updateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.PendingDisputableAssertionEvent:
 		c := bot.GetCore()
@@ -370,13 +370,13 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, bridge bridge.Ar
 			ev.Precondition.TimeBounds,
 		)
 		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
-			_, err := bridge.InitiateChallenge(
+			_, err := brdg.InitiateChallenge(
 				context.Background(),
 				ev.Precondition,
 				ev.Assertion,
 			)
 			if err != nil {
-				return nil, nil, &challenge.Error{err, "ERROR: InitiateChallenge: failed", false}
+				return nil, nil, &bridge.Error{err, "ERROR: InitiateChallenge: failed", false}
 			}
 		}
 		balance := c.GetBalance()

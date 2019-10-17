@@ -50,7 +50,8 @@ type VMValidator struct {
 	Validator               *Validator
 	arbitrumVM              ethbridge.VMConnection
 	unprocessedMessageCount uint64
-	MonitorChan             chan bridge.BridgeMessage
+	MessageMonChan          chan bridge.BridgeMessage
+	ErrorMonChan            chan bridge.Error
 }
 
 func (val *VMValidator) Address() common.Address {
@@ -58,7 +59,11 @@ func (val *VMValidator) Address() common.Address {
 }
 
 func (val *VMValidator) SendMonitorMsg(msg bridge.BridgeMessage) {
-	val.MonitorChan <- msg
+	val.MessageMonChan <- msg
+}
+
+func (val *VMValidator) SendMonitorErr(msg bridge.Error) {
+	val.ErrorMonChan <- msg
 }
 
 func NewVMValidator(
@@ -84,7 +89,8 @@ func NewVMValidator(
 	}
 
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
-	mon := make(chan bridge.BridgeMessage, 100)
+	msgmon := make(chan bridge.BridgeMessage, 100)
+	errmon := make(chan bridge.Error, 100)
 	vmVal := &VMValidator{
 		vmID,
 		completedCallChan,
@@ -92,7 +98,8 @@ func NewVMValidator(
 		val,
 		con,
 		0,
-		mon,
+		msgmon,
+		errmon,
 	}
 	return vmVal, nil
 }

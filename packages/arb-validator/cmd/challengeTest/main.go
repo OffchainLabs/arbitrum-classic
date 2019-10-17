@@ -160,10 +160,10 @@ func main() {
 	}
 
 	log.Println("Everyone is running")
-	coordinatorMsgMonitorChan := coordinator.Val.MonitorChan
-	challengerMsgMonitorChan := challenger.Validator.MonitorChan
-	coordinatorMonitorChan := coordinator.ChannelVal.GetMonitor()
-	challengerMonitorChan := challenger.ChannelVal.GetMonitor()
+	coordinatorMsgMonitorChan := coordinator.Val.MessageMonChan
+	coordinatorErrMonitorChan := coordinator.Val.ErrorMonChan
+	challengerMsgMonitorChan := challenger.Validator.MessageMonChan
+	challengerErrMonitorChan := challenger.Validator.ErrorMonChan
 
 	time.Sleep(2 * time.Second)
 
@@ -193,7 +193,7 @@ func main() {
 	}
 	for {
 		select {
-		case message := <-coordinatorMonitorChan:
+		case message := <-coordinatorErrMonitorChan:
 			if !message.Recoverable {
 				log.Println("***************************")
 				log.Println("unrecoverable coordinator error exiting")
@@ -219,7 +219,7 @@ func main() {
 				log.Println("***************************")
 				return
 			}
-		case message := <-challengerMonitorChan:
+		case message := <-challengerErrMonitorChan:
 			if !message.Recoverable {
 				log.Println("***************************")
 				log.Println("unrecoverable challenger error exiting")

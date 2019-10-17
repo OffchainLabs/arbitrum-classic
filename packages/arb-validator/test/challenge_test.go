@@ -164,10 +164,10 @@ func TestChallenge(t *testing.T) {
 	}
 
 	log.Println("Everyone is running")
-	coordinatorMsgMonitorChan := coordinator.Val.MonitorChan
-	challengerMsgMonitorChan := challenger.Validator.MonitorChan
-	coordinatorMonitorChan := coordinator.ChannelVal.GetMonitor()
-	challengerMonitorChan := challenger.ChannelVal.GetMonitor()
+	coordinatorMsgMonitorChan := coordinator.Val.MessageMonChan
+	coordinatorErrMonitorChan := coordinator.Val.ErrorMonChan
+	challengerMsgMonitorChan := challenger.Validator.MessageMonChan
+	challengerErrMonitorChan := challenger.Validator.ErrorMonChan
 	time.Sleep(2 * time.Second)
 
 	challenger.IgnoreCoordinator()
@@ -209,7 +209,7 @@ func TestChallenge(t *testing.T) {
 				log.Println("***************************")
 				return
 			}
-		case message := <-coordinatorMonitorChan:
+		case message := <-coordinatorErrMonitorChan:
 			if !message.Recoverable {
 				t.Error("coordinator unexpected unrecoverable error")
 				log.Println("***************************")
@@ -224,7 +224,7 @@ func TestChallenge(t *testing.T) {
 				log.Println(message)
 				log.Println("****************************")
 			}
-		case message := <-challengerMonitorChan:
+		case message := <-challengerErrMonitorChan:
 			if !message.Recoverable {
 				t.Error("challenger unexpected unrecoverable error")
 				log.Println("***************************")
