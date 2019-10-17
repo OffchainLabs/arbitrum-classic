@@ -42,7 +42,7 @@ import (
 
 type ValidatorFollower struct {
 	*Validator
-	ChannelVal *validator.ChannelValidator
+	channelVal *validator.ChannelValidator
 
 	client *Client
 
@@ -136,7 +136,7 @@ func NewValidatorFollower(
 	client := NewClient(coordinatorConn, address)
 	return &ValidatorFollower{
 		Validator:         c,
-		ChannelVal:        channelVal,
+		channelVal:        channelVal,
 		client:            client,
 		unanimousRequests: unanimousRequests,
 		maxStepsUnanSteps: maxStepsUnanSteps,
@@ -191,7 +191,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 			return len(a.OutMsgs) > 0
 		}
 
-		resultsChan, unanErrChan := m.ChannelVal.RequestFollowUnanimous(
+		resultsChan, unanErrChan := m.channelVal.RequestFollowUnanimous(
 			valmessage.UnanimousRequestData{
 				BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
 				BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
@@ -261,7 +261,7 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 	}
 
 	go func() {
-		m.ChannelVal.Run(ctx, parsedChan)
+		m.channelVal.Run(ctx, parsedChan)
 	}()
 
 	go func() {
@@ -294,7 +294,7 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]
 				if request.UnanimousNotification.Accepted {
-					resultChan, errChan := m.ChannelVal.ConfirmOffchainUnanimousAssertion(
+					resultChan, errChan := m.channelVal.ConfirmOffchainUnanimousAssertion(
 						requestInfo,
 						request.UnanimousNotification.Signatures,
 						false,
