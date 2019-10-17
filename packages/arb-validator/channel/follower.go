@@ -49,6 +49,7 @@ type ValidatorFollower struct {
 	unanimousRequests map[[32]byte]valmessage.UnanimousRequestData
 	maxStepsUnanSteps int32
 	ignoreCoordinator bool
+	ignore            chan bool
 }
 
 func NewValidatorFollower(
@@ -144,11 +145,11 @@ func NewValidatorFollower(
 }
 
 func (m *ValidatorFollower) IgnoreCoordinator() {
-	m.ignoreCoordinator = true
+	m.ignore <- true
 }
 
 func (m *ValidatorFollower) ListenToCoordinator() {
-	m.ignoreCoordinator = false
+	m.ignore <- false
 }
 
 func (m *ValidatorFollower) HandleUnanimousRequest(
@@ -255,6 +256,8 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 }
 
 func (m *ValidatorFollower) Run(ctx context.Context) error {
+	m.ignore = make(chan bool, 1)
+
 	parsedChan, err := m.StartListening(ctx)
 	if err != nil {
 		return err
@@ -275,6 +278,12 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 			message, more := <-m.client.FromClient
 			if !more {
 				break
+			}
+			select {
+			case i := <-m.ignore:
+				m.ignoreCoordinator = i
+			default:
+				//non blocking
 			}
 			if m.ignoreCoordinator {
 				continue
