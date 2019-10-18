@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/channellauncher"
@@ -275,12 +274,7 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 	if err != nil {
 		return nil, err
 	}
-	rcpt, rerr := waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmUnanimousAsserted")
-	if rerr != nil {
-		log.Println("ConfirmUnanimousAsserted receipt error")
-	}
-	//return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "MYOHMYConfirmUnanimousAsserted")
-	return rcpt, rerr
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmUnanimousAsserted")
 }
 
 func (vm *ArbChannel) VerifyVM(

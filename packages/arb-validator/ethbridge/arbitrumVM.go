@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
@@ -488,13 +487,7 @@ func (vm *ArbitrumVM) BisectAssertion(
 	if err != nil {
 		return nil, err
 	}
-	//sennd fake error to simulate error
-	rcpt, bierr := waitForReceipt(auth.Context, vm.Client, tx.Hash(), "BisectAssertion")
-	if bierr != nil {
-		log.Printf("********** bisection error %v\n", bierr)
-	}
-	//	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "BisectAssertion")
-	return rcpt, bierr
+	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "BisectAssertion")
 }
 
 func (vm *ArbitrumVM) ContinueChallenge(

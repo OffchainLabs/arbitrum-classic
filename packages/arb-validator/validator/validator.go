@@ -327,13 +327,13 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 	return resultChan, errChan
 }
 
-func (validator *Validator) ValidatorClosing() {
+func (validator *Validator) validatorClosing() {
 	fmt.Printf("%v: Exiting\n", validator.Name)
 	validator.bot.getBridge().SendMonitorErr(bridge.Error{errors.New("WARNING: validator closing"), "WARNING: validator closing", false})
 }
 
 func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.Notification) {
-	defer validator.ValidatorClosing()
+	defer validator.validatorClosing()
 	for {
 		select {
 		case <-ctx.Done():
