@@ -203,7 +203,7 @@ void BalanceTracker::initializeTokenLookup(
 
         std::vector<unsigned char> value_vector(lookup_it,
                                                 lookup_it + TOKEN_VAL_LENGTH);
-        auto currency_val = StateSaverUtils::deserializeUint256(value_vector);
+        auto currency_val = Checkpoint::deserializeUint256(value_vector);
         lookup_it += TOKEN_VAL_LENGTH;
 
         add(token_type, currency_val);
@@ -221,7 +221,7 @@ void BalanceTracker::initializeNftLookup(
 
         std::vector<unsigned char> value_vector(nftkey_it,
                                                 nftkey_it + TOKEN_VAL_LENGTH);
-        auto currency_val = StateSaverUtils::deserializeUint256(value_vector);
+        auto currency_val = Checkpoint::deserializeUint256(value_vector);
         nftkey_it += TOKEN_VAL_LENGTH;
 
         nftKey key = {token_type, currency_val};

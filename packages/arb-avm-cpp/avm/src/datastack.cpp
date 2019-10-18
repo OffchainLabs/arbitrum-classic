@@ -59,10 +59,43 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
 }
 
 // can speed up by not creating tuple/save directly
-SaveResults Datastack::checkpointState(MachineStateSaver msSaver,
+SaveResults Datastack::checkpointState(MachineStateSaver& msSaver,
                                        TuplePool* pool) {
     auto tuple = getTupleRepresentation(pool);
     return msSaver.saveTuple(tuple);
+}
+
+void Datastack::initializeDataStack(MachineStateSaver& msSaver,
+                                    std::vector<unsigned char> hash_key) {
+    auto tuple = msSaver.getTuple(hash_key).tuple;
+    initializeDataStack(tuple);
+}
+
+Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
+    if (values.empty()) {
+        return Tuple();
+    } else {
+        auto current_tuple = Tuple(values[0], pool);
+
+        for (size_t i = 1; i < values.size(); i++) {
+            auto new_tuple = Tuple(values[i], current_tuple, pool);
+            current_tuple = new_tuple;
+        }
+        return current_tuple;
+    }
+}
+
+void Datastack::initializeDataStack(Tuple tuple) {
+    if (tuple.tuple_size() == 1) {
+        push(tuple.get_element(0));
+    } else if (tuple.tuple_size() == 2) {
+        // catch exception if not tuple?
+        auto inner_tuple = nonstd::get<Tuple>(tuple.get_element(1));
+        initializeDataStack(inner_tuple);
+
+        auto current_val = tuple.get_element(0);
+        push(tuple.get_element(0));
+    }
 }
 
 void Datastack::addHash() const {
@@ -94,32 +127,5 @@ void Datastack::addHash() const {
 void Datastack::calculateAllHashes() const {
     while (hashes.size() < values.size()) {
         addHash();
-    }
-}
-
-Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
-    if (values.empty()) {
-        return Tuple();
-    } else {
-        auto current_tuple = Tuple(values[0], pool);
-
-        for (size_t i = 1; i < values.size(); i++) {
-            auto new_tuple = Tuple(values[i], current_tuple, pool);
-            current_tuple = new_tuple;
-        }
-        return current_tuple;
-    }
-}
-
-void Datastack::initializeDataStack(Tuple tuple) {
-    if (tuple.tuple_size() == 1) {
-        push(tuple.get_element(0));
-    } else if (tuple.tuple_size() == 2) {
-        // catch exception if not tuple?
-        auto inner_tuple = nonstd::get<Tuple>(tuple.get_element(1));
-        initializeDataStack(inner_tuple);
-
-        auto current_val = tuple.get_element(0);
-        push(tuple.get_element(0));
     }
 }

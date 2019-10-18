@@ -207,7 +207,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 
 bool MachineState::checkpointMachineState(CheckpointStorage* storage,
                                           std::string checkpoint_name) {
-    auto stateSaver = MachineStateSaver(storage, pool.get());
+    auto stateSaver = MachineStateSaver(storage, pool.get(), code);
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
@@ -232,16 +232,16 @@ bool MachineState::checkpointMachineState(CheckpointStorage* storage,
         pending_results.msg_count_results.status.ok() &&
         static_val_results.status.ok() && register_val_results.status.ok() &&
         pc_results.status.ok()) {
-        auto machine_state_data = MachineStateStorageData{
-            static_val_results,
-            register_val_results,
-            datastack_results,
-            auxstack_results,
-            inbox_results.msgs_tuple_results,
-            inbox_results.msg_count_results,
-            pending_results.msgs_tuple_results,
-            pending_results.msg_count_results,
-            pc_results,
+        auto machine_state_data = ParsedState{
+            static_val_results.storage_key,
+            register_val_results.storage_key,
+            datastack_results.storage_key,
+            auxstack_results.storage_key,
+            inbox_results.msgs_tuple_results.storage_key,
+            inbox_results.msg_count_results.storage_key,
+            pending_results.msgs_tuple_results.storage_key,
+            pending_results.msg_count_results.storage_key,
+            pc_results.storage_key,
             status_str,
             blockreason_str,
             balancetracker_str,
@@ -259,26 +259,28 @@ bool MachineState::checkpointMachineState(CheckpointStorage* storage,
 
 bool MachineState::restoreMachineState(CheckpointStorage* storage,
                                        std::string checkpoint_name) {
-    auto stateSaver = MachineStateSaver(storage, pool.get());
+    auto stateSaver = MachineStateSaver(storage, pool.get(), code);
     auto results = stateSaver.getMachineStateData(checkpoint_name);
 
     if (results.status.ok()) {
         auto machine_state_data = results.state_data;
 
-        staticVal = machine_state_data.static_val;
-        registerVal = machine_state_data.register_val;
-        stack = Datastack(machine_state_data.datastack_tuple);
-        auxstack = Datastack(machine_state_data.datastack_tuple);
-        pc = machine_state_data.pc_codepoint.pc;
+        auto static_val_results =
+            stateSaver.getValue(machine_state_data.static_val_key);
+        auto register_val_results =
+            stateSaver.getValue(machine_state_data.register_val_key);
+        auto pc_results = stateSaver.getCodePoint(machine_state_data.pc_key);
 
-        auto inbox_count =
-            nonstd::get<uint256_t>(machine_state_data.inbox_count);
-        inbox = MessageStack(pool.get(), machine_state_data.inbox_tuple,
-                             inbox_count);
-        auto pending_count =
-            nonstd::get<uint256_t>(machine_state_data.pending_count);
-        pendingInbox = MessageStack(
-            pool.get(), machine_state_data.pending_inbox_tuple, pending_count);
+        stack.initializeDataStack(stateSaver, machine_state_data.datastack_key);
+        auxstack.initializeDataStack(stateSaver,
+                                     machine_state_data.auxstack_key);
+
+        inbox.initializeMessageStack(stateSaver, machine_state_data.inbox_key,
+                                     machine_state_data.inbox_count_key);
+
+        pendingInbox.initializeMessageStack(
+            stateSaver, machine_state_data.pending_key,
+            machine_state_data.pending_count_key);
 
         state = (Status)machine_state_data.status_char;
         blockReason =

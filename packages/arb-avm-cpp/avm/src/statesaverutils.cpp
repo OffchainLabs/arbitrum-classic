@@ -29,13 +29,14 @@
 #define TUP_NUM_LENGTH 34
 #define TUP_CODEPT_LENGTH 9
 
-namespace StateSaverUtils {
+namespace Checkpoint {
 
 namespace {
 uint64_t deserialize_int64(char*& bufptr) {
     uint64_t ret_value;
     memcpy(&ret_value, bufptr, UINT64_SIZE);
-    return ret_value;
+    auto val = boost::endian::big_to_native(ret_value);
+    return val;
 }
 
 void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
@@ -131,38 +132,6 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
 }
 }  // namespace
 
-ParsedCheckpointState parseCheckpointState(
-    std::vector<unsigned char> stored_state) {
-    auto current_iter = stored_state.begin();
-
-    auto status = extractStatus(current_iter);
-    auto blockreason_vector = extractBlockReason(current_iter);
-    auto balance_track_vector = extractBalanceTracker(current_iter);
-
-    auto static_val = extractHashKey(current_iter);
-    auto register_val = extractHashKey(current_iter);
-    auto datastack = extractHashKey(current_iter);
-    auto auxstack = extractHashKey(current_iter);
-    auto inbox = extractHashKey(current_iter);
-    auto inbox_count = extractHashKey(current_iter);
-    auto pending = extractHashKey(current_iter);
-    auto pending_count = extractHashKey(current_iter);
-    auto pc = extractHashKey(current_iter);
-
-    return ParsedCheckpointState{static_val,
-                                 register_val,
-                                 datastack,
-                                 auxstack,
-                                 inbox,
-                                 inbox_count,
-                                 pending,
-                                 pending_count,
-                                 pc,
-                                 status,
-                                 blockreason_vector,
-                                 balance_track_vector};
-}
-
 std::vector<std::vector<unsigned char>> parseSerializedTuple(
     std::vector<unsigned char> data_vector) {
     std::vector<std::vector<unsigned char>> return_vector;
@@ -198,13 +167,13 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
     return return_vector;
 }
 
-CodePoint deserializeCodepoint(std::vector<unsigned char> val) {
+CodePoint deserializeCodepoint(std::vector<unsigned char>& val) {
     auto buff = reinterpret_cast<char*>(&val[0]);
     auto pc_val = deserialize_int64(buff);
     return CodePoint(pc_val, Operation(), 0);
 }
 
-uint256_t deserializeUint256(std::vector<unsigned char> val) {
+uint256_t deserializeUint256(std::vector<unsigned char>& val) {
     auto buff = reinterpret_cast<char*>(&val[1]);
     return deserialize_int256(buff);
 }
@@ -212,4 +181,92 @@ uint256_t deserializeUint256(std::vector<unsigned char> val) {
 std::vector<unsigned char> serializeValue(const value& val) {
     return nonstd::visit(ValueSerializer{}, val);
 }
-}  // namespace StateSaverUtils
+
+ParsedState parseState(std::vector<unsigned char> stored_state) {
+    auto current_iter = stored_state.begin();
+
+    auto status = extractStatus(current_iter);
+    auto blockreason_vector = extractBlockReason(current_iter);
+    auto balance_track_vector = extractBalanceTracker(current_iter);
+
+    auto static_val = extractHashKey(current_iter);
+    auto register_val = extractHashKey(current_iter);
+    auto datastack = extractHashKey(current_iter);
+    auto auxstack = extractHashKey(current_iter);
+    auto inbox = extractHashKey(current_iter);
+    auto inbox_count = extractHashKey(current_iter);
+    auto pending = extractHashKey(current_iter);
+    auto pending_count = extractHashKey(current_iter);
+    auto pc = extractHashKey(current_iter);
+
+    return ParsedState{static_val,
+                       register_val,
+                       datastack,
+                       auxstack,
+                       inbox,
+                       inbox_count,
+                       pending,
+                       pending_count,
+                       pc,
+                       status,
+                       blockreason_vector,
+                       balance_track_vector};
+}
+
+std::vector<unsigned char> serializeState(ParsedState state_data) {
+    std::vector<unsigned char> state_data_vector;
+    state_data_vector.push_back(state_data.status_char);
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.blockreason_str.begin(),
+                             state_data.blockreason_str.end());
+
+    unsigned int tracker_length = state_data.balancetracker_str.size();
+    std::vector<unsigned char> tracker_len_vector(sizeof(tracker_length));
+    memcpy(&tracker_len_vector[0], &tracker_length, sizeof(tracker_length));
+
+    state_data_vector.insert(state_data_vector.end(),
+                             tracker_len_vector.begin(),
+                             tracker_len_vector.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.balancetracker_str.begin(),
+                             state_data.balancetracker_str.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.static_val_key.begin(),
+                             state_data.static_val_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.register_val_key.begin(),
+                             state_data.register_val_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.datastack_key.begin(),
+                             state_data.datastack_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.auxstack_key.begin(),
+                             state_data.auxstack_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.inbox_key.begin(),
+                             state_data.inbox_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.inbox_count_key.begin(),
+                             state_data.inbox_count_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.pending_key.begin(),
+                             state_data.pending_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.pending_count_key.begin(),
+                             state_data.pending_count_key.end());
+
+    state_data_vector.insert(state_data_vector.end(), state_data.pc_key.begin(),
+                             state_data.pc_key.end());
+    return state_data_vector;
+}
+}  // namespace Checkpoint

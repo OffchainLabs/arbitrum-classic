@@ -19,7 +19,7 @@
 
 #include "avm/value/value.hpp"
 
-struct ParsedCheckpointState {
+struct ParsedState {
     std::vector<unsigned char> static_val_key;
     std::vector<unsigned char> register_val_key;
     std::vector<unsigned char> datastack_key;
@@ -34,14 +34,14 @@ struct ParsedCheckpointState {
     std::vector<unsigned char> balancetracker_str;
 };
 
-namespace StateSaverUtils {
+namespace Checkpoint {
 std::vector<unsigned char> serializeValue(const value& val);
-CodePoint deserializeCodepoint(std::vector<unsigned char> val);
-uint256_t deserializeUint256(std::vector<unsigned char> val);
+CodePoint deserializeCodepoint(std::vector<unsigned char>& val);
+uint256_t deserializeUint256(std::vector<unsigned char>& val);
 std::vector<std::vector<unsigned char>> parseSerializedTuple(
     std::vector<unsigned char> data_vector);
-ParsedCheckpointState parseCheckpointState(
-    std::vector<unsigned char> stored_state);
-}  // namespace StateSaverUtils
+ParsedState parseState(std::vector<unsigned char> stored_state);
+std::vector<unsigned char> serializeState(ParsedState state_data);
+}  // namespace Checkpoint
 
 #endif /* statesaverutils_hpp */

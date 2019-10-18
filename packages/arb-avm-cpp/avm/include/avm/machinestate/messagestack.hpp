@@ -27,18 +27,17 @@ struct MessageStackSaveResults {
     SaveResults msg_count_results;
 };
 
+struct MessageStackGetResults {
+    GetResults msgs_tuple_results;
+    GetResults msg_count_results;
+};
+
 struct MessageStack {
     Tuple messages;
     uint64_t messageCount;
     TuplePool* pool;
 
     MessageStack(TuplePool* pool_) : pool(pool_) { messageCount = 0; }
-
-    MessageStack(TuplePool* pool_, Tuple tuple, uint256_t message_count)
-        : pool(pool_) {
-        messages = tuple;
-        messageCount = (uint64_t)message_count;
-    }
 
     bool isEmpty() const { return messageCount == 0; }
 
@@ -61,11 +60,27 @@ struct MessageStack {
         messageCount = 0;
     }
 
-    MessageStackSaveResults checkpointState(MachineStateSaver msSaver) {
+    MessageStackSaveResults checkpointState(MachineStateSaver& msSaver) {
         auto saved_msgs = msSaver.saveTuple(messages);
-        auto saved_msg_count = msSaver.saveValue((uint256_t)messageCount);
+        auto converted_num = (uint256_t)messageCount;
+        auto saved_msg_count = msSaver.saveValue(converted_num);
 
         return MessageStackSaveResults{saved_msgs, saved_msg_count};
+    }
+
+    bool initializeMessageStack(MachineStateSaver& msSaver,
+                                std::vector<unsigned char> msgs_key,
+                                std::vector<unsigned char> count_key) {
+        auto msgs_res = msSaver.getTuple(msgs_key);
+        auto count_res = msSaver.getInt256(count_key);
+
+        if (msgs_res.status.ok() && count_res.status.ok()) {
+            messages = msgs_res.tuple;
+            messageCount = (uint64_t)count_res.num;
+            return true;
+        } else {
+            return false;
+        }
     }
 };
 

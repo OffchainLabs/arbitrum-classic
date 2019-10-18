@@ -35,40 +35,22 @@ struct TupleResult {
     Tuple tuple;
 };
 
-struct MachineStateStorageData {
-    SaveResults static_val_results;
-    SaveResults register_val_results;
-    SaveResults datastack_results;
-    SaveResults auxstack_results;
-    SaveResults inbox_messages_results;
-    SaveResults inbox_count_results;
-    SaveResults pending_messages_results;
-    SaveResults pending_count_results;
-    SaveResults pc_results;
-    unsigned char status_char;
-    std::vector<unsigned char> blockreason_str;
-    std::vector<unsigned char> balancetracker_str;
+struct NumResult {
+    rocksdb::Status status;
+    int reference_count;
+    uint256_t num;
 };
 
-struct MachineStateFetchedData {
-    value static_val;
-    value register_val;
-    Tuple datastack_tuple;
-    Tuple auxstack_tuple;
-    Tuple inbox_tuple;
-    value inbox_count;
-    Tuple pending_inbox_tuple;
-    value pending_count;
-    CodePoint pc_codepoint;
-    unsigned char status_char;
-    std::vector<unsigned char> blockreason_str;
-    std::vector<unsigned char> balancetracker_str;
+struct CodepointResult {
+    rocksdb::Status status;
+    int reference_count;
+    CodePoint tuple;
 };
 
 struct StateResult {
     rocksdb::Status status;
     int reference_count;
-    MachineStateFetchedData state_data;
+    ParsedState state_data;
 };
 
 class MachineStateSaver {
@@ -76,26 +58,25 @@ class MachineStateSaver {
     // unique pointer
     CheckpointStorage* checkpoint_storage;
     TuplePool* pool;
-    std::vector<unsigned char> serializeState(
-        MachineStateStorageData state_data);
-    MachineStateFetchedData deserializeCheckpointState(
-        ParsedCheckpointState stored_state);
-    CodePoint getCodePoint(std::vector<unsigned char> hash_key);
-    uint256_t getInt256(std::vector<unsigned char> hash_key);
+    std::vector<CodePoint> code;
     DeleteResults deleteTuple(std::vector<unsigned char> hash_key,
                               GetResults& results);
     DeleteResults deleteTuple(std::vector<unsigned char> hash_key);
     DeleteResults deleteValue(std::vector<unsigned char> hash_key);
 
    public:
-    MachineStateSaver(CheckpointStorage* checkpoint_storage, TuplePool* pool);
+    MachineStateSaver(CheckpointStorage* checkpoint_storage,
+                      TuplePool* pool,
+                      std::vector<CodePoint> code);
+    CodepointResult getCodePoint(std::vector<unsigned char> hash_key);
+    NumResult getInt256(std::vector<unsigned char> hash_key);
     SaveResults saveTuple(const Tuple& val);
     SaveResults saveValue(const value& val);
     ValueResult getValue(std::vector<unsigned char> hash_key);
     TupleResult getTuple(std::vector<unsigned char> hash_key);
     StateResult getMachineStateData(std::string checkpoint_name);
     DeleteResults deleteCheckpoint(std::string checkpoint_name);
-    SaveResults saveMachineState(MachineStateStorageData state_data,
+    SaveResults saveMachineState(ParsedState state_data,
                                  std::string checkpoint_name);
 };
 

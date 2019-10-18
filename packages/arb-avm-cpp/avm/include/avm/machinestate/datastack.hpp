@@ -30,9 +30,8 @@ class Datastack {
 
     void addHash() const;
     void calculateAllHashes() const;
-
-    Tuple getTupleRepresentation(TuplePool* pool);
     void initializeDataStack(Tuple tuple);
+    Tuple getTupleRepresentation(TuplePool* pool);
 
    public:
     std::vector<value> values;
@@ -41,11 +40,6 @@ class Datastack {
     Datastack() {
         values.reserve(1000);
         hashes.reserve(1000);
-    }
-
-    Datastack(Tuple tuple) {
-        Datastack();
-        initializeDataStack(tuple);
     }
 
     void push(value&& newdata) {
@@ -102,7 +96,10 @@ class Datastack {
 
     uint256_t hash() const;
 
-    SaveResults checkpointState(MachineStateSaver msSaver, TuplePool* pool);
+    SaveResults checkpointState(MachineStateSaver& msSaver, TuplePool* pool);
+
+    void initializeDataStack(MachineStateSaver& msSaver,
+                             std::vector<unsigned char> hash_key);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);
