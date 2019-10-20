@@ -41,7 +41,7 @@ void getVal(CheckpointStorage& storage,
             int expected_ref_count,
             bool expected_status,
             std::vector<unsigned char> expected_val) {
-    auto results = storage.getStoredValue(hash_key);
+    auto results = storage.getValue(hash_key);
     REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.stored_value == expected_val);
@@ -60,7 +60,7 @@ void deleteVal(CheckpointStorage& storage,
                std::vector<unsigned char> hash_key,
                int expected_ref_count,
                bool expected_status) {
-    auto results = storage.deleteStoredValue(hash_key);
+    auto results = storage.deleteValue(hash_key);
     REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(results.status.ok() == expected_status);
 }

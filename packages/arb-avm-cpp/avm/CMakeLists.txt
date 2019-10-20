@@ -25,6 +25,11 @@ set(LIB_HEADERS
   include/avm/opcodes.hpp
   include/avm/exceptions.hpp
   include/avm/checkpointstorage.hpp
+  include/avm/value/tuple.hpp
+  include/avm/value/value.hpp
+  include/avm/value/bigint.hpp
+  include/avm/value/codepoint.hpp
+  include/avm/value/pool.hpp
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/tokenTracker.hpp
   include/avm/machinestate/datastack.hpp
@@ -33,29 +38,24 @@ set(LIB_HEADERS
   include/avm/machinestate/machinestatesaver.hpp
   include/avm/machinestate/messagestack.hpp
   include/avm/machinestate/statesaverutils.hpp
-  include/avm/value/tuple.hpp
-  include/avm/value/value.hpp
-  include/avm/value/bigint.hpp
-  include/avm/value/codepoint.hpp
-  include/avm/value/pool.hpp
 )
 
 set(LIB_SOURCES
-  src/bigint.cpp
-  src/codepoint.cpp
-  src/datastack.cpp
-  src/machine.cpp
-  src/pool.cpp
-  src/tuple.cpp
-  src/value.cpp
-  src/tokenTracker.cpp
-  src/machinestate.cpp
-  src/machineoperation.cpp
-  src/checkpointstorage.cpp
   src/util.hpp
-  src/machinestatesaver.cpp
-  src/statesaverutils.cpp
-  src/blockreason.cpp
+  src/machine.cpp
+  src/checkpointstorage.cpp
+  src/value/bigint.cpp
+  src/value/codepoint.cpp
+  src/value/pool.cpp
+  src/value/tuple.cpp
+  src/value/value.cpp
+  src/machinestate/tokenTracker.cpp
+  src/machinestate/machinestate.cpp
+  src/machinestate/machineoperation.cpp
+  src/machinestate/datastack.cpp
+  src/machinestate/machinestatesaver.cpp
+  src/machinestate/statesaverutils.cpp
+  src/machinestate/blockreason.cpp
 
   ${KECCAK_SOURCES}
 )

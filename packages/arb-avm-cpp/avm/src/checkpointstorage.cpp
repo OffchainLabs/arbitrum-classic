@@ -20,26 +20,26 @@
 #include "rocksdb/utilities/transaction.h"
 
 CheckpointStorage::CheckpointStorage(std::string db_path) {
-    txn_db = std::make_unique<rocksdb::TransactionDB*>();
     rocksdb::TransactionDBOptions txn_options;
     rocksdb::Options options;
     options.create_if_missing = true;
 
     txn_db_path = db_path;
-    rocksdb::TransactionDB::Open(options, txn_options, txn_db_path,
-                                 txn_db.get());
+    rocksdb::TransactionDB* db = nullptr;
+    rocksdb::TransactionDB::Open(options, txn_options, txn_db_path, &db);
+    txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
 };
 
 // does destructor get called when everything shuts down
 CheckpointStorage::~CheckpointStorage() {
-    (*txn_db.get())->Close();
+    txn_db->Close();
     txn_db.reset();
     DestroyDB(txn_db_path, rocksdb::Options());
 }
 
 SaveResults CheckpointStorage::incrementReference(
     std::vector<unsigned char> hash_key) {
-    auto results = getStoredValue(hash_key);
+    auto results = getValue(hash_key);
 
     if (results.status.ok()) {
         auto updated_count = results.reference_count + 1;
@@ -53,7 +53,7 @@ SaveResults CheckpointStorage::incrementReference(
 
 SaveResults CheckpointStorage::saveValue(std::vector<unsigned char> value,
                                          std::vector<unsigned char> hash_key) {
-    auto results = getStoredValue(hash_key);
+    auto results = getValue(hash_key);
     int ref_count;
 
     if (results.status.ok()) {
@@ -68,16 +68,16 @@ SaveResults CheckpointStorage::saveValue(std::vector<unsigned char> value,
     return saveValueWithRefCount(ref_count, hash_key, value);
 };
 
-DeleteResults CheckpointStorage::deleteStoredValue(
+DeleteResults CheckpointStorage::deleteValue(
     std::vector<unsigned char> hash_key) {
-    auto results = getStoredValue(hash_key);
+    auto results = getValue(hash_key);
 
     if (results.status.ok()) {
         auto value = results.stored_value;
 
         if (results.reference_count < 2) {
-            auto delete_status = deleteValueFromDb(
-                std::string(hash_key.begin(), hash_key.end()));
+            auto delete_status =
+                deleteValue(std::string(hash_key.begin(), hash_key.end()));
             return DeleteResults{0, delete_status};
 
         } else {
@@ -91,13 +91,11 @@ DeleteResults CheckpointStorage::deleteStoredValue(
     }
 }
 
-GetResults CheckpointStorage::getStoredValue(
-    std::vector<unsigned char> hash_key) {
+GetResults CheckpointStorage::getValue(std::vector<unsigned char> hash_key) {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
     std::string key_str(hash_key.begin(), hash_key.end());
-    auto db = *txn_db.get();
-    auto get_status = db->Get(read_options, key_str, &return_value);
+    auto get_status = txn_db->Get(read_options, key_str, &return_value);
 
     if (get_status.ok()) {
         auto tuple = parseCountAndValue(return_value);
@@ -116,22 +114,20 @@ GetResults CheckpointStorage::getStoredValue(
 // private
 // ----------------------------------------------------------------------
 
-rocksdb::Transaction* CheckpointStorage::makeTransaction() {
+std::unique_ptr<rocksdb::Transaction> CheckpointStorage::makeTransaction() {
     rocksdb::WriteOptions writeOptions;
-    auto db = *(txn_db.get());
-    rocksdb::Transaction* transaction = db->BeginTransaction(writeOptions);
-
-    return transaction;
+    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
+    return std::unique_ptr<rocksdb::Transaction>(transaction);
 }
 
 SaveResults CheckpointStorage::saveValueWithRefCount(
     int updated_ref_count,
-    std::vector<unsigned char> hash_key,
-    std::vector<unsigned char> value) {
+    const std::vector<unsigned char>& hash_key,
+    const std::vector<unsigned char>& value) {
     auto updated_entry = serializeCountAndValue(updated_ref_count, value);
     std::string entry_str(updated_entry.begin(), updated_entry.end());
     std::string key_str(hash_key.begin(), hash_key.end());
-    auto status = saveValueToDb(entry_str, key_str);
+    auto status = saveValue(entry_str, key_str);
 
     if (status.ok()) {
         return SaveResults{updated_ref_count, status, hash_key};
@@ -141,7 +137,7 @@ SaveResults CheckpointStorage::saveValueWithRefCount(
 }
 
 std::tuple<int, std::string> CheckpointStorage::parseCountAndValue(
-    std::string string_value) {
+    const std::string& string_value) {
     if (string_value.empty()) {
         return std::make_tuple(0, "");
     } else {
@@ -158,7 +154,7 @@ std::tuple<int, std::string> CheckpointStorage::parseCountAndValue(
 
 std::vector<unsigned char> CheckpointStorage::serializeCountAndValue(
     int count,
-    std::vector<unsigned char> value) {
+    const std::vector<unsigned char>& value) {
     std::vector<unsigned char> output_vector(sizeof(count));
     memcpy(&output_vector[0], &count, sizeof(count));
     output_vector.insert(output_vector.end(), value.begin(), value.end());
@@ -166,9 +162,9 @@ std::vector<unsigned char> CheckpointStorage::serializeCountAndValue(
     return output_vector;
 }
 
-rocksdb::Status CheckpointStorage::saveValueToDb(std::string value,
-                                                 std::string key) {
-    rocksdb::Transaction* transaction = makeTransaction();
+rocksdb::Status CheckpointStorage::saveValue(const std::string& value,
+                                             const std::string& key) {
+    auto transaction = makeTransaction();
     assert(transaction);
 
     auto put_status = transaction->Put(key, value);
@@ -177,13 +173,13 @@ rocksdb::Status CheckpointStorage::saveValueToDb(std::string value,
     auto commit_status = transaction->Commit();
     assert(commit_status.ok());
 
-    delete transaction;
+    transaction.reset();
 
     return commit_status;
 }
 
-rocksdb::Status CheckpointStorage::deleteValueFromDb(std::string key) {
-    rocksdb::Transaction* transaction = makeTransaction();
+rocksdb::Status CheckpointStorage::deleteValue(const std::string& key) {
+    auto transaction = makeTransaction();
     assert(transaction);
 
     auto delete_status = transaction->Delete(key);
@@ -192,7 +188,7 @@ rocksdb::Status CheckpointStorage::deleteValueFromDb(std::string key) {
     auto commit_status = transaction->Commit();
     assert(commit_status.ok());
 
-    delete transaction;
+    transaction.reset();
 
     return commit_status;
 }

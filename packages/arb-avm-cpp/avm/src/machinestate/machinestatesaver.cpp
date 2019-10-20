@@ -30,7 +30,7 @@ MachineStateSaver::MachineStateSaver(CheckpointStorage* storage,
 
 CodepointResult MachineStateSaver::getCodePoint(
     std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getStoredValue(hash_key);
+    auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         auto code_point =
@@ -47,7 +47,7 @@ CodepointResult MachineStateSaver::getCodePoint(
 }
 
 NumResult MachineStateSaver::getInt256(std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getStoredValue(hash_key);
+    auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         results.stored_value.erase(results.stored_value.begin());
@@ -73,7 +73,7 @@ SaveResults MachineStateSaver::saveValue(const value& val) {
 
 SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
     auto hash_key = GetHashKey(val);
-    auto results = checkpoint_storage->getStoredValue(hash_key);
+    auto results = checkpoint_storage->getValue(hash_key);
 
     auto incr_ref_count = results.status.ok() && results.reference_count > 0;
 
@@ -100,7 +100,7 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
 };
 
 ValueResult MachineStateSaver::getValue(std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getStoredValue(hash_key);
+    auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         auto value_type = (valueTypes)results.stored_value[0];
@@ -137,7 +137,7 @@ ValueResult MachineStateSaver::getValue(std::vector<unsigned char> hash_key) {
 
 TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
     std::vector<value> values;
-    auto results = checkpoint_storage->getStoredValue(hash_key);
+    auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         auto value_vectors =
@@ -187,7 +187,7 @@ StateResult MachineStateSaver::getMachineStateData(
     std::vector<unsigned char> name_vector(checkpoint_name.begin(),
                                            checkpoint_name.end());
 
-    auto results = checkpoint_storage->getStoredValue(name_vector);
+    auto results = checkpoint_storage->getValue(name_vector);
 
     if (results.status.ok()) {
         auto parsed_state = Checkpoint::parseState(results.stored_value);
@@ -213,11 +213,10 @@ DeleteResults MachineStateSaver::deleteCheckpoint(std::string checkpoint_name) {
     std::vector<unsigned char> name_vector(checkpoint_name.begin(),
                                            checkpoint_name.end());
 
-    auto results = checkpoint_storage->getStoredValue(name_vector);
+    auto results = checkpoint_storage->getValue(name_vector);
 
     if (results.status.ok()) {
-        auto delete_results =
-            checkpoint_storage->deleteStoredValue(name_vector);
+        auto delete_results = checkpoint_storage->deleteValue(name_vector);
 
         if (delete_results.reference_count < 1) {
             auto parsed_state = Checkpoint::parseState(results.stored_value);
@@ -256,7 +255,7 @@ DeleteResults MachineStateSaver::deleteCheckpoint(std::string checkpoint_name) {
 
 DeleteResults MachineStateSaver::deleteValue(
     std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getStoredValue(hash_key);
+    auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         auto type = (valueTypes)results.stored_value[0];
@@ -264,7 +263,7 @@ DeleteResults MachineStateSaver::deleteValue(
         if (type == TUPLE_TYPE) {
             return deleteTuple(hash_key, results);
         } else {
-            return checkpoint_storage->deleteStoredValue(hash_key);
+            return checkpoint_storage->deleteValue(hash_key);
         }
     } else {
         return DeleteResults{0, results.status};
@@ -273,7 +272,7 @@ DeleteResults MachineStateSaver::deleteValue(
 
 DeleteResults MachineStateSaver::deleteTuple(
     std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getStoredValue(hash_key);
+    auto results = checkpoint_storage->getValue(hash_key);
 
     return deleteTuple(hash_key, results);
 }
@@ -293,7 +292,7 @@ DeleteResults MachineStateSaver::deleteTuple(
                 }
             }
         }
-        return checkpoint_storage->deleteStoredValue(hash_key);
+        return checkpoint_storage->deleteValue(hash_key);
     } else {
         return DeleteResults{0, results.status};
     }
