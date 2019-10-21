@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/messagestack.hpp"
 #include <catch2/catch.hpp>
-#include "avm/machinestate/machinestatesaver.hpp"
+
+#include <avm/machinestate/machinestatesaver.hpp>
+#include <avm/machinestate/messagestack.hpp>
 
 std::string current_path =
     "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";

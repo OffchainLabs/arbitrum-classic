@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/machinestatesaver.hpp"
+#include <variant>
+
+#include <avm/machinestate/machinestatesaver.hpp>
 #include <avm/machinestate/tokenTracker.hpp>
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>
-#include <variant>
 
 MachineStateSaver::MachineStateSaver(CheckpointStorage* storage,
                                      TuplePool* pool_,

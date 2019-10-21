@@ -17,11 +17,12 @@
 #ifndef machinestatesaver_hpp
 #define machinestatesaver_hpp
 
-#include "avm/checkpointstorage.hpp"
-#include "avm/machinestate/checkpointutils.hpp"
-#include "avm/value/tuple.hpp"
-#include "avm/value/value.hpp"
-#include "rocksdb/db.h"
+#include <rocksdb/db.h>
+
+#include <avm/checkpointstorage.hpp>
+#include <avm/machinestate/checkpointutils.hpp>
+#include <avm/value/tuple.hpp>
+#include <avm/value/value.hpp>
 
 template <typename T>
 struct DbResult {

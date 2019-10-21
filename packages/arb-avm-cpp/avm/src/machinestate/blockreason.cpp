@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/blockreason.hpp"
-#include "avm/machinestate/checkpointutils.hpp"
+#include <avm/machinestate/blockreason.hpp>
+#include <avm/machinestate/checkpointutils.hpp>
 
 struct CheckpointSerializer {
     std::vector<unsigned char> operator()(const NotBlocked& val) const {

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/datastack.hpp"
-
-#include "bigint_utils.hpp"
-#include "util.hpp"
+#include <avm/machinestate/datastack.hpp>
+#include <bigint_utils.hpp>
+#include <util.hpp>
 
 uint256_t Datastack::hash() const {
     if (values.empty()) {

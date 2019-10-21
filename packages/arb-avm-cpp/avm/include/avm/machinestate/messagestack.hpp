@@ -17,10 +17,10 @@
 #ifndef messagestack_hpp
 #define messagestack_hpp
 
-#include "avm/value/tuple.hpp"
-#include "avm/value/value.hpp"
-#include "machinestatesaver.hpp"
-#include "tokenTracker.hpp"
+#include <avm/machinestate/machinestatesaver.hpp>
+#include <avm/machinestate/tokenTracker.hpp>
+#include <avm/value/tuple.hpp>
+#include <avm/value/value.hpp>
 
 struct MessageStackSaveResults {
     SaveResults msgs_tuple_results;

@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/checkpointutils.hpp"
 #include <iterator>
-#include "avm/machinestate/blockreason.hpp"
-#include "avm/machinestate/tokenTracker.hpp"
-#include "avm/value/codepoint.hpp"
-#include "avm/value/tuple.hpp"
-#include "bigint_utils.hpp"
-#include "util.hpp"
+
+#include <avm/machinestate/blockreason.hpp>
+#include <avm/machinestate/checkpointutils.hpp>
+#include <avm/machinestate/tokenTracker.hpp>
+#include <avm/value/codepoint.hpp>
+#include <avm/value/tuple.hpp>
+#include <bigint_utils.hpp>
+#include <util.hpp>
 
 #define UINT64_SIZE 8
 #define HASH_KEY_LENGTH 33

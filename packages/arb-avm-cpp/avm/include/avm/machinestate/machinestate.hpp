@@ -17,13 +17,13 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
+#include <avm/machinestate/blockreason.hpp>
+#include <avm/machinestate/datastack.hpp>
+#include <avm/machinestate/machinestatesaver.hpp>
+#include <avm/machinestate/messagestack.hpp>
+#include <avm/value/value.hpp>
 #include <memory>
 #include <vector>
-#include "avm/machinestate/blockreason.hpp"
-#include "avm/machinestate/datastack.hpp"
-#include "avm/machinestate/machinestatesaver.hpp"
-#include "avm/machinestate/messagestack.hpp"
-#include "avm/value/value.hpp"
 
 enum class Status { Extensive, Halted, Error };
 

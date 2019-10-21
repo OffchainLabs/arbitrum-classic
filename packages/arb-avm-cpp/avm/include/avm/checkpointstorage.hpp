@@ -17,9 +17,9 @@
 #ifndef checkpointstorage_hpp
 #define checkpointstorage_hpp
 
+#include <rocksdb/db.h>
+#include <rocksdb/utilities/transaction_db.h>
 #include <vector>
-#include "rocksdb/db.h"
-#include "rocksdb/utilities/transaction_db.h"
 
 struct GetResults {
     int reference_count;

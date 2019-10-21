@@ -17,8 +17,8 @@
 #ifndef checkpointdeleter_hpp
 #define checkpointdeleter_hpp
 
-#include "avm/checkpointstorage.hpp"
-#include "avm/machinestate/checkpointutils.hpp"
+#include <avm/checkpointstorage.hpp>
+#include <avm/machinestate/checkpointutils.hpp>
 
 class CheckpointDeleter {
    private:

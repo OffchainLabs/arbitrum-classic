@@ -17,7 +17,7 @@
 #ifndef blockreason_hpp
 #define blockreason_hpp
 
-#include "avm/machinestate/tokenTracker.hpp"
+#include <avm/machinestate/tokenTracker.hpp>
 
 enum BlockType { Not, Halt, Error, Breakpoint, Inbox, Send };
 

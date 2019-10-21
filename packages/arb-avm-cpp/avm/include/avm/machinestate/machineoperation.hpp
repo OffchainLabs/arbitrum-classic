@@ -17,8 +17,7 @@
 #ifndef machineoperation_hpp
 #define machineoperation_hpp
 
-#include <stdio.h>
-#include "machinestate.hpp"
+#include <avm/machinestate/machinestate.hpp>
 
 namespace MachineOperation {
 void add(MachineState& m);

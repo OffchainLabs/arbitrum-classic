@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include "bigint_utils.hpp"
-
 #include <avm/machine.hpp>
+#include <bigint_utils.hpp>
 
 #include <catch2/catch.hpp>
 

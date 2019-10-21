@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "avm/machine.hpp"
-#include "avm/machinestate/checkpointdeleter.hpp"
-
 #include <sys/stat.h>
 #include <fstream>
 #include <iostream>
-#include "avm/opcodes.hpp"
-#include "bigint_utils.hpp"
-#include "util.hpp"
+
+#include <avm/machine.hpp>
+#include <avm/machinestate/checkpointdeleter.hpp>
+#include <avm/opcodes.hpp>
+#include <bigint_utils.hpp>
+#include <util.hpp>
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";

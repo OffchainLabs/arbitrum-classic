@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include "avm/checkpointstorage.hpp"
+#include <rocksdb/options.h>
+#include <rocksdb/utilities/transaction.h>
 #include <array>
-#include "rocksdb/options.h"
-#include "rocksdb/utilities/transaction.h"
+
+#include <avm/checkpointstorage.hpp>
 
 CheckpointStorage::CheckpointStorage(std::string db_path) {
     rocksdb::TransactionDBOptions txn_options;

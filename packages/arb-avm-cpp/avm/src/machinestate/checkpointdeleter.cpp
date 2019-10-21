@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/checkpointdeleter.hpp"
+#include <avm/machinestate/checkpointdeleter.hpp>
 
 CheckpointDeleter::CheckpointDeleter(CheckpointStorage* storage) {
     checkpoint_storage = storage;
