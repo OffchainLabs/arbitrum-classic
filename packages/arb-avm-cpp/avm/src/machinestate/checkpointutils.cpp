@@ -136,29 +136,29 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
     std::vector<unsigned char> data_vector) {
     std::vector<std::vector<unsigned char>> return_vector;
 
-    auto it = data_vector.begin() + 1;
+    auto iter = data_vector.begin() + 1;
 
-    while (it < data_vector.end()) {
-        auto value_type = (valueTypes)*it;
+    while (iter < data_vector.end()) {
+        auto value_type = (valueTypes)*iter;
         std::vector<unsigned char> current;
 
         switch (value_type) {
             case TUPLE_TYPE: {
-                auto next_it = it + TUP_TUPLE_LENGTH;
-                current.insert(current.end(), it, next_it);
-                it = next_it;
+                auto next_it = iter + TUP_TUPLE_LENGTH;
+                current.insert(current.end(), iter, next_it);
+                iter = next_it;
                 break;
             }
             case NUM_TYPE: {
-                auto next_it = it + TUP_NUM_LENGTH;
-                current.insert(current.end(), it, next_it);
-                it = next_it;
+                auto next_it = iter + TUP_NUM_LENGTH;
+                current.insert(current.end(), iter, next_it);
+                iter = next_it;
                 break;
             }
             case CODEPT_TYPE: {
-                auto next_it = it + TUP_CODEPT_LENGTH;
-                current.insert(current.end(), it, next_it);
-                it = next_it;
+                auto next_it = iter + TUP_CODEPT_LENGTH;
+                current.insert(current.end(), iter, next_it);
+                iter = next_it;
                 break;
             }
         }
@@ -167,13 +167,14 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
     return return_vector;
 }
 
-CodePoint deserializeCodepoint(std::vector<unsigned char>& val) {
+CodePoint deserializeCodepoint(std::vector<unsigned char>& val,
+                               const std::vector<CodePoint>& code) {
     auto buff = reinterpret_cast<char*>(&val[0]);
     auto pc_val = deserialize_int64(buff);
-    return CodePoint(pc_val, Operation(), 0);
+    return code[pc_val];
 }
 
-uint256_t deserializeUint256(std::vector<unsigned char>& val) {
+uint256_t deserializeUint256_t(std::vector<unsigned char>& val) {
     auto buff = reinterpret_cast<char*>(&val[1]);
     return deserialize_int256(buff);
 }

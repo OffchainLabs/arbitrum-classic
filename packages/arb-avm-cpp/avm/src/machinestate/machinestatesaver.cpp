@@ -34,10 +34,7 @@ DbResult<CodePoint> MachineStateSaver::getCodePoint(
 
     if (results.status.ok()) {
         auto code_point =
-            Checkpoint::Utils::deserializeCodepoint(results.stored_value);
-        code_point.op = code[code_point.pc].op;
-        code_point.nextHash = code[code_point.pc].nextHash;
-
+            Checkpoint::Utils::deserializeCodepoint(results.stored_value, code);
         return DbResult<CodePoint>{results.status, results.reference_count,
                                    code_point};
     } else {
@@ -46,13 +43,14 @@ DbResult<CodePoint> MachineStateSaver::getCodePoint(
     }
 }
 
-DbResult<uint256_t> MachineStateSaver::getInt256(
+DbResult<uint256_t> MachineStateSaver::getUint256_t(
     const std::vector<unsigned char>& hash_key) {
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         results.stored_value.erase(results.stored_value.begin());
-        auto num = Checkpoint::Utils::deserializeUint256(results.stored_value);
+        auto num =
+            Checkpoint::Utils::deserializeUint256_t(results.stored_value);
         return DbResult<uint256_t>{results.status, results.reference_count,
                                    num};
     } else {
@@ -118,17 +116,14 @@ DbResult<value> MachineStateSaver::getValue(
                                        tuple_res.data};
             }
             case NUM_TYPE: {
-                auto val =
-                    Checkpoint::Utils::deserializeUint256(results.stored_value);
+                auto val = Checkpoint::Utils::deserializeUint256_t(
+                    results.stored_value);
                 return DbResult<value>{results.status, results.reference_count,
                                        val};
             }
             case CODEPT_TYPE: {
                 auto code_point = Checkpoint::Utils::deserializeCodepoint(
-                    results.stored_value);
-                code_point.op = code[code_point.pc].op;
-                code_point.nextHash = code[code_point.pc].nextHash;
-
+                    results.stored_value, code);
                 return DbResult<value>{results.status, results.reference_count,
                                        code_point};
             }
@@ -165,7 +160,7 @@ DbResult<Tuple> MachineStateSaver::getTuple(
                         break;
                     }
                     case NUM_TYPE: {
-                        auto num = Checkpoint::Utils::deserializeUint256(
+                        auto num = Checkpoint::Utils::deserializeUint256_t(
                             current_vector);
                         values.push_back(num);
                         break;
@@ -173,10 +168,7 @@ DbResult<Tuple> MachineStateSaver::getTuple(
                     case CODEPT_TYPE: {
                         auto code_point =
                             Checkpoint::Utils::deserializeCodepoint(
-                                current_vector);
-                        code_point.op = code[code_point.pc].op;
-                        code_point.nextHash = code[code_point.pc].nextHash;
-
+                                current_vector, code);
                         values.push_back(code_point);
                         break;
                     }

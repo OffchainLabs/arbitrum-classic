@@ -43,19 +43,19 @@ std::size_t hash<TokenType>::operator()(const TokenType& k) const {
 }
 }  // namespace std
 
-BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
+BalanceTracker::BalanceTracker(
+    const std::vector<unsigned char>& checkpoint_data) {
     auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
-    auto current_it = data.begin();
+    auto current_it = checkpoint_data.begin();
 
-    unsigned int tracker_lookup_length;
-    memcpy(&tracker_lookup_length, &(*current_it),
-           sizeof(tracker_lookup_length));
-    current_it += sizeof(tracker_lookup_length);
+    unsigned int token_lookup_length;
+    memcpy(&token_lookup_length, &(*current_it), sizeof(token_lookup_length));
+    current_it += sizeof(token_lookup_length);
 
-    auto total_lookup_len = token_pair_length * tracker_lookup_length;
-    std::vector<unsigned char> token_lookup(current_it,
-                                            current_it + total_lookup_len);
-    current_it += total_lookup_len;
+    auto total_lookup_len = token_pair_length * token_lookup_length;
+    auto end_token_lookup = current_it + total_lookup_len;
+    std::vector<unsigned char> token_lookup(current_it, end_token_lookup);
+    current_it = end_token_lookup;
 
     initializeTokenLookup(token_lookup);
 
@@ -64,8 +64,8 @@ BalanceTracker::BalanceTracker(std::vector<unsigned char> data) {
     current_it += sizeof(nftkey_lookup_length);
 
     auto total_nftlookup_len = token_pair_length * nftkey_lookup_length;
-    std::vector<unsigned char> nftkey_lookup(current_it,
-                                             current_it + total_nftlookup_len);
+    auto end_nft_lookup = current_it + total_nftlookup_len;
+    std::vector<unsigned char> nftkey_lookup(current_it, end_nft_lookup);
 
     initializeNftLookup(nftkey_lookup);
 }
@@ -194,17 +194,19 @@ std::vector<unsigned char> BalanceTracker::serializeBalanceValues() {
 
 void BalanceTracker::initializeTokenLookup(
     std::vector<unsigned char>& token_lookup) {
-    auto lookup_it = token_lookup.begin();
+    auto current_it = token_lookup.begin();
 
-    while (lookup_it != token_lookup.end()) {
+    while (current_it != token_lookup.end()) {
         std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
-        std::copy(lookup_it, lookup_it + TOKEN_TYPE_LENGTH, token_type.begin());
-        lookup_it += TOKEN_TYPE_LENGTH;
+        auto type_end_it = current_it + TOKEN_TYPE_LENGTH;
+        std::copy(current_it, type_end_it, token_type.begin());
+        current_it = type_end_it;
 
-        std::vector<unsigned char> value_vector(lookup_it,
-                                                lookup_it + TOKEN_VAL_LENGTH);
-        auto currency_val = Checkpoint::Utils::deserializeUint256(value_vector);
-        lookup_it += TOKEN_VAL_LENGTH;
+        auto tok_val_end = current_it + TOKEN_VAL_LENGTH;
+        std::vector<unsigned char> value_vector(current_it, tok_val_end);
+        auto currency_val =
+            Checkpoint::Utils::deserializeUint256_t(value_vector);
+        current_it = tok_val_end;
 
         add(token_type, currency_val);
     }
@@ -216,13 +218,15 @@ void BalanceTracker::initializeNftLookup(
 
     while (nftkey_it != nftkey_lookup.end()) {
         std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
-        std::copy(nftkey_it, nftkey_it + TOKEN_TYPE_LENGTH, token_type.begin());
-        nftkey_it += TOKEN_TYPE_LENGTH;
+        auto type_end_it = nftkey_it + TOKEN_TYPE_LENGTH;
+        std::copy(nftkey_it, type_end_it, token_type.begin());
+        nftkey_it = type_end_it;
 
-        std::vector<unsigned char> value_vector(nftkey_it,
-                                                nftkey_it + TOKEN_VAL_LENGTH);
-        auto currency_val = Checkpoint::Utils::deserializeUint256(value_vector);
-        nftkey_it += TOKEN_VAL_LENGTH;
+        auto tok_val_end = nftkey_it + TOKEN_VAL_LENGTH;
+        std::vector<unsigned char> value_vector(nftkey_it, tok_val_end);
+        auto currency_val =
+            Checkpoint::Utils::deserializeUint256_t(value_vector);
+        nftkey_it = tok_val_end;
 
         nftKey key = {token_type, currency_val};
         nftLookup.insert(key);

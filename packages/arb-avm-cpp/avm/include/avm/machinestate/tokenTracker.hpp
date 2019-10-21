@@ -81,7 +81,7 @@ class BalanceTracker {
 
    public:
     BalanceTracker() {}
-    BalanceTracker(std::vector<unsigned char> data);
+    BalanceTracker(const std::vector<unsigned char>& checkpoint_data);
     bool canSpend(const TokenType& tokType, const uint256_t& amount) const;
     bool spend(const TokenType& tokType, const uint256_t& amount);
     void add(const TokenType& tokType, const uint256_t& amount);

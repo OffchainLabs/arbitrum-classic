@@ -27,11 +27,6 @@ struct MessageStackSaveResults {
     SaveResults msg_count_results;
 };
 
-struct MessageStackGetResults {
-    GetResults msgs_tuple_results;
-    GetResults msg_count_results;
-};
-
 struct MessageStack {
     Tuple messages;
     uint64_t messageCount;
@@ -72,7 +67,7 @@ struct MessageStack {
                                 std::vector<unsigned char> msgs_key,
                                 std::vector<unsigned char> count_key) {
         auto msgs_res = msSaver.getTuple(msgs_key);
-        auto count_res = msSaver.getInt256(count_key);
+        auto count_res = msSaver.getUint256_t(count_key);
 
         if (msgs_res.status.ok() && count_res.status.ok()) {
             messages = msgs_res.data;

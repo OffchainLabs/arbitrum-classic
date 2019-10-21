@@ -43,7 +43,8 @@ class MachineStateSaver {
                       std::vector<CodePoint> code);
     DbResult<CodePoint> getCodePoint(
         const std::vector<unsigned char>& hash_key);
-    DbResult<uint256_t> getInt256(const std::vector<unsigned char>& hash_key);
+    DbResult<uint256_t> getUint256_t(
+        const std::vector<unsigned char>& hash_key);
     DbResult<value> getValue(const std::vector<unsigned char>& hash_key);
     DbResult<Tuple> getTuple(const std::vector<unsigned char>& hash_key);
     DbResult<ParsedState> getMachineState(
