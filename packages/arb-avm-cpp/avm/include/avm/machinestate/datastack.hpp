@@ -30,7 +30,7 @@ class Datastack {
 
     void addHash() const;
     void calculateAllHashes() const;
-    void initializeDataStack(Tuple tuple);
+    void initializeDataStack(const Tuple& tuple);
     Tuple getTupleRepresentation(TuplePool* pool);
 
    public:
@@ -98,8 +98,8 @@ class Datastack {
 
     SaveResults checkpointState(MachineStateSaver& msSaver, TuplePool* pool);
 
-    void initializeDataStack(MachineStateSaver& msSaver,
-                             std::vector<unsigned char> hash_key);
+    DbResult<Tuple> initializeDataStack(MachineStateSaver& msSaver,
+                                        std::vector<unsigned char> hash_key);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

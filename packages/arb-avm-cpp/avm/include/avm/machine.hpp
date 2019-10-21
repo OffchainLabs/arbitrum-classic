@@ -40,7 +40,7 @@ class Machine {
 
    public:
     Machine() = default;
-    Machine(std::string filename);
+    Machine(const std::string& filename);
     bool deserialize(char* data) { return machine_state.deserialize(data); }
 
     Assertion run(uint64_t stepCount,
@@ -68,9 +68,11 @@ class Machine {
 
     TuplePool& getPool() { return *machine_state.pool; }
 
-    int checkpointMachine(CheckpointStorage* storage,
-                          std::string checkpoint_name);
-    int restoreMachine(CheckpointStorage* storage, std::string checkpoint_name);
+    SaveResults checkpoint(CheckpointStorage& storage);
+    bool restoreCheckpoint(CheckpointStorage& storage,
+                           const std::vector<unsigned char>& checkpoint_key);
+    bool deleteCheckpoint(CheckpointStorage& storage,
+                          const std::vector<unsigned char>& checkpoint_key);
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

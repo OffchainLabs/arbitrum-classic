@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/statesaverutils.hpp"
+#include "avm/machinestate/checkpointutils.hpp"
 #include <iterator>
 #include "avm/machinestate/blockreason.hpp"
 #include "avm/machinestate/tokenTracker.hpp"
@@ -31,7 +31,6 @@
 
 namespace Checkpoint {
 
-namespace {
 uint64_t deserialize_int64(char*& bufptr) {
     uint64_t ret_value;
     memcpy(&ret_value, bufptr, UINT64_SIZE);
@@ -130,7 +129,8 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
 
     return hash_key;
 }
-}  // namespace
+
+namespace Utils {
 
 std::vector<std::vector<unsigned char>> parseSerializedTuple(
     std::vector<unsigned char> data_vector) {
@@ -269,4 +269,5 @@ std::vector<unsigned char> serializeState(ParsedState state_data) {
                              state_data.pc_key.end());
     return state_data_vector;
 }
+}  // namespace Utils
 }  // namespace Checkpoint

@@ -15,7 +15,7 @@
  */
 
 #include "avm/machinestate/blockreason.hpp"
-#include "avm/machinestate/statesaverutils.hpp"
+#include "avm/machinestate/checkpointutils.hpp"
 
 struct CheckpointSerializer {
     std::vector<unsigned char> operator()(const NotBlocked& val) const {
@@ -78,7 +78,7 @@ std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
     return nonstd::visit(CheckpointSerializer{}, val);
 }
 
-BlockReason deserializeBlockReason(std::vector<unsigned char> data) {
+BlockReason deserializeBlockReason(const std::vector<unsigned char>& data) {
     auto current_it = data.begin();
     auto blocktype = (BlockType)*current_it;
     current_it++;
@@ -87,13 +87,14 @@ BlockReason deserializeBlockReason(std::vector<unsigned char> data) {
         case Inbox: {
             auto next_it = current_it + TOKEN_VAL_LENGTH;
             std::vector<unsigned char> inbox_vector(current_it, next_it);
-            auto inbox = Checkpoint::deserializeUint256(inbox_vector);
+            auto inbox = Checkpoint::Utils::deserializeUint256(inbox_vector);
             return InboxBlocked(inbox);
         }
         case Send: {
             auto next_it = current_it + TOKEN_VAL_LENGTH;
             std::vector<unsigned char> currency_vector(current_it, next_it);
-            auto currency = Checkpoint::deserializeUint256(currency_vector);
+            auto currency =
+                Checkpoint::Utils::deserializeUint256(currency_vector);
 
             current_it = next_it;
             next_it = current_it + TOKEN_TYPE_LENGTH;

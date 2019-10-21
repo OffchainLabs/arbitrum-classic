@@ -75,8 +75,8 @@ struct MessageStack {
         auto count_res = msSaver.getInt256(count_key);
 
         if (msgs_res.status.ok() && count_res.status.ok()) {
-            messages = msgs_res.tuple;
-            messageCount = (uint64_t)count_res.num;
+            messages = msgs_res.data;
+            messageCount = (uint64_t)count_res.data;
             return true;
         } else {
             return false;

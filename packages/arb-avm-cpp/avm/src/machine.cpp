@@ -15,6 +15,7 @@
  */
 
 #include "avm/machine.hpp"
+#include "avm/machinestate/checkpointdeleter.hpp"
 
 #include <sys/stat.h>
 #include <fstream>
@@ -38,7 +39,7 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
     return os;
 }
 
-Machine::Machine(std::string filename) {
+Machine::Machine(const std::string& filename) {
     std::ifstream myfile;
 
     struct stat filestatus;
@@ -148,12 +149,19 @@ void Machine::runOne() {
     return;
 }
 
-int Machine::checkpointMachine(CheckpointStorage* storage,
-                               std::string checkpoint_name) {
-    return machine_state.checkpointMachineState(storage, checkpoint_name);
+SaveResults Machine::checkpoint(CheckpointStorage& storage) {
+    return machine_state.checkpointState(storage);
 }
 
-int Machine::restoreMachine(CheckpointStorage* storage,
-                            std::string checkpoint_name) {
-    return machine_state.restoreMachineState(storage, checkpoint_name);
+bool Machine::restoreCheckpoint(
+    CheckpointStorage& storage,
+    const std::vector<unsigned char>& checkpoint_key) {
+    return machine_state.restoreCheckpoint(storage, checkpoint_key).status.ok();
+}
+
+bool Machine::deleteCheckpoint(
+    CheckpointStorage& storage,
+    const std::vector<unsigned char>& checkpoint_key) {
+    CheckpointDeleter checkpoint_deleter(&storage);
+    return checkpoint_deleter.deleteCheckpoint(checkpoint_key).status.ok();
 }

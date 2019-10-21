@@ -205,9 +205,8 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     return buf;
 }
 
-bool MachineState::checkpointMachineState(CheckpointStorage* storage,
-                                          std::string checkpoint_name) {
-    auto stateSaver = MachineStateSaver(storage, pool.get(), code);
+SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
+    auto stateSaver = MachineStateSaver(&storage, pool.get(), code);
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
@@ -224,7 +223,9 @@ bool MachineState::checkpointMachineState(CheckpointStorage* storage,
     auto blockreason_str = serializeForCheckpoint(blockReason);
     auto balancetracker_str = balance.serializeBalanceValues();
 
-    // make these things atomic?
+    auto hash_key = GetHashKey(hash());
+
+    // make these things atomic at some point
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
         inbox_results.msgs_tuple_results.status.ok() &&
         inbox_results.msg_count_results.status.ok() &&
@@ -247,23 +248,20 @@ bool MachineState::checkpointMachineState(CheckpointStorage* storage,
             balancetracker_str,
         };
 
-        auto save_results =
-            stateSaver.saveMachineState(machine_state_data, checkpoint_name);
-
-        return save_results.status.ok();
+        return stateSaver.saveMachineState(machine_state_data, hash_key);
     } else {
-        // undo successful saves?
-        return false;
+        return SaveResults{-1, rocksdb::Status().InvalidArgument(), hash_key};
     }
 }
 
-bool MachineState::restoreMachineState(CheckpointStorage* storage,
-                                       std::string checkpoint_name) {
-    auto stateSaver = MachineStateSaver(storage, pool.get(), code);
-    auto results = stateSaver.getMachineStateData(checkpoint_name);
+DbResult<ParsedState> MachineState::restoreCheckpoint(
+    CheckpointStorage& storage,
+    const std::vector<unsigned char>& checkpoint_key) {
+    auto stateSaver = MachineStateSaver(&storage, pool.get(), code);
+    auto results = stateSaver.getMachineState(checkpoint_key);
 
     if (results.status.ok()) {
-        auto machine_state_data = results.state_data;
+        auto machine_state_data = results.data;
 
         auto static_val_results =
             stateSaver.getValue(machine_state_data.static_val_key);
@@ -288,7 +286,7 @@ bool MachineState::restoreMachineState(CheckpointStorage* storage,
         balance = BalanceTracker(machine_state_data.balancetracker_str);
     }
 
-    return results.status.ok();
+    return results;
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {

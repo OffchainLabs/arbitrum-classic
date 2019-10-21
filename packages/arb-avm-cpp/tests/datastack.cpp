@@ -71,7 +71,7 @@ void saveAndGetDataStack(MachineStateSaver& saver,
 
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 1);
-    REQUIRE(get_results.tuple.calculateHash() == expected_hash);
+    REQUIRE(get_results.data.calculateHash() == expected_hash);
 }
 
 void saveTwiceAndGetDataStack(MachineStateSaver& saver,
@@ -86,7 +86,7 @@ void saveTwiceAndGetDataStack(MachineStateSaver& saver,
 
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 2);
-    REQUIRE(get_results.tuple.calculateHash() == expected_hash);
+    REQUIRE(get_results.data.calculateHash() == expected_hash);
 }
 
 TEST_CASE("Initialize datastack") {

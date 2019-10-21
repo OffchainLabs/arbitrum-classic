@@ -18,66 +18,41 @@
 #define machinestatesaver_hpp
 
 #include "avm/checkpointstorage.hpp"
-#include "avm/machinestate/statesaverutils.hpp"
+#include "avm/machinestate/checkpointutils.hpp"
 #include "avm/value/tuple.hpp"
 #include "avm/value/value.hpp"
 #include "rocksdb/db.h"
 
-struct ValueResult {
+template <typename T>
+struct DbResult {
     rocksdb::Status status;
     int reference_count;
-    value val;
-};
-
-struct TupleResult {
-    rocksdb::Status status;
-    int reference_count;
-    Tuple tuple;
-};
-
-struct NumResult {
-    rocksdb::Status status;
-    int reference_count;
-    uint256_t num;
-};
-
-struct CodepointResult {
-    rocksdb::Status status;
-    int reference_count;
-    CodePoint tuple;
-};
-
-struct StateResult {
-    rocksdb::Status status;
-    int reference_count;
-    ParsedState state_data;
+    T data;
 };
 
 class MachineStateSaver {
    private:
-    // unique pointer
+    // when to use shared pointer for an object?
     CheckpointStorage* checkpoint_storage;
     TuplePool* pool;
     std::vector<CodePoint> code;
-    DeleteResults deleteTuple(std::vector<unsigned char> hash_key,
-                              GetResults& results);
-    DeleteResults deleteTuple(std::vector<unsigned char> hash_key);
-    DeleteResults deleteValue(std::vector<unsigned char> hash_key);
 
    public:
     MachineStateSaver(CheckpointStorage* checkpoint_storage,
                       TuplePool* pool,
                       std::vector<CodePoint> code);
-    CodepointResult getCodePoint(std::vector<unsigned char> hash_key);
-    NumResult getInt256(std::vector<unsigned char> hash_key);
+    DbResult<CodePoint> getCodePoint(
+        const std::vector<unsigned char>& hash_key);
+    DbResult<uint256_t> getInt256(const std::vector<unsigned char>& hash_key);
+    DbResult<value> getValue(const std::vector<unsigned char>& hash_key);
+    DbResult<Tuple> getTuple(const std::vector<unsigned char>& hash_key);
+    DbResult<ParsedState> getMachineState(
+        const std::vector<unsigned char>& checkpoint_name);
     SaveResults saveTuple(const Tuple& val);
     SaveResults saveValue(const value& val);
-    ValueResult getValue(std::vector<unsigned char> hash_key);
-    TupleResult getTuple(std::vector<unsigned char> hash_key);
-    StateResult getMachineStateData(std::string checkpoint_name);
-    DeleteResults deleteCheckpoint(std::string checkpoint_name);
-    SaveResults saveMachineState(ParsedState state_data,
-                                 std::string checkpoint_name);
+    SaveResults saveMachineState(
+        ParsedState state_data,
+        const std::vector<unsigned char>& checkpoint_name);
 };
 
 #endif /* machinestatesaver_hpp */

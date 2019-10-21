@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "avm/machinestate/machinestatesaver.hpp"
+
 #include <catch2/catch.hpp>
+#include "avm/machinestate/checkpointdeleter.hpp"
 #include "avm/machinestate/machinestate.hpp"
+#include "avm/machinestate/machinestatesaver.hpp"
 
 std::string path =
     "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";
@@ -36,13 +38,13 @@ void getValue(MachineStateSaver& saver,
               valueTypes expected_value_type,
               bool expected_status) {
     auto results = saver.getValue(hash_key);
-    auto serialized_val = Checkpoint::serializeValue(results.val);
+    auto serialized_val = Checkpoint::Utils::serializeValue(results.data);
     auto type = (valueTypes)serialized_val[0];
 
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(type == expected_value_type);
-    REQUIRE(hash(results.val) == expected_hash);
+    REQUIRE(hash(results.data) == expected_hash);
 }
 
 void saveTuple(MachineStateSaver& saver,
@@ -62,8 +64,8 @@ void getTuple(MachineStateSaver& saver,
               bool expected_status) {
     auto results = saver.getTuple(hash_key);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(results.tuple.calculateHash() == expected_hash);
-    REQUIRE(results.tuple.tuple_size() == expected_tuple_size);
+    REQUIRE(results.data.calculateHash() == expected_hash);
+    REQUIRE(results.data.tuple_size() == expected_tuple_size);
     REQUIRE(results.status.ok() == expected_status);
 }
 
@@ -71,10 +73,10 @@ void getTupleValues(MachineStateSaver& saver,
                     std::vector<unsigned char>& hash_key,
                     std::vector<uint256_t> value_hashes) {
     auto results = saver.getTuple(hash_key);
-    REQUIRE(results.tuple.tuple_size() == value_hashes.size());
+    REQUIRE(results.data.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {
-        REQUIRE(hash(results.tuple.get_element(i)) == value_hashes[i]);
+        REQUIRE(hash(results.data.get_element(i)) == value_hashes[i]);
     }
 }
 
@@ -415,7 +417,7 @@ TEST_CASE("Save And Get Tuple") {
 
 void saveState(MachineStateSaver& saver,
                ParsedState storage_data,
-               std::string checkpoint_name) {
+               std::vector<unsigned char> checkpoint_name) {
     auto results = saver.saveMachineState(storage_data, checkpoint_name);
 
     REQUIRE(results.reference_count == 1);
@@ -423,16 +425,16 @@ void saveState(MachineStateSaver& saver,
 }
 
 void getSavedState(MachineStateSaver& saver,
-                   std::string checkpoint_name,
+                   std::vector<unsigned char> checkpoint_name,
                    ParsedState expected_data,
                    int expected_ref_count,
                    std::vector<std::vector<unsigned char>> keys) {
-    auto results = saver.getMachineStateData(checkpoint_name);
+    auto results = saver.getMachineState(checkpoint_name);
 
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
 
-    auto data = results.state_data;
+    auto data = results.data;
 
     REQUIRE(data.status_char == expected_data.status_char);
     REQUIRE(data.blockreason_str == expected_data.blockreason_str);
@@ -454,11 +456,12 @@ void getSavedState(MachineStateSaver& saver,
     }
 }
 
-void deleteCheckpoint(MachineStateSaver& saver,
-                      std::string checkpoint_name,
+void deleteCheckpoint(CheckpointDeleter& checkpointer,
+                      MachineStateSaver& saver,
+                      std::vector<unsigned char> checkpoint_name,
                       std::vector<std::vector<unsigned char>> deleted_values) {
-    saver.deleteCheckpoint(checkpoint_name);
-    auto results = saver.getMachineStateData(checkpoint_name);
+    checkpointer.deleteCheckpoint(checkpoint_name);
+    auto results = saver.getMachineState(checkpoint_name);
     REQUIRE(results.status.ok() == false);
 
     for (auto& hash_key : deleted_values) {
@@ -468,12 +471,13 @@ void deleteCheckpoint(MachineStateSaver& saver,
 }
 
 void deleteCheckpointSavedTwice(
+    CheckpointDeleter& checkpointer,
     MachineStateSaver& saver,
-    std::string checkpoint_name,
+    std::vector<unsigned char> checkpoint_name,
     std::vector<std::vector<unsigned char>> deleted_values) {
-    saver.deleteCheckpoint(checkpoint_name);
-    saver.deleteCheckpoint(checkpoint_name);
-    auto results = saver.getMachineStateData(checkpoint_name);
+    checkpointer.deleteCheckpoint(checkpoint_name);
+    checkpointer.deleteCheckpoint(checkpoint_name);
+    auto results = saver.getMachineState(checkpoint_name);
 
     REQUIRE(results.status.ok() == false);
 
@@ -484,16 +488,17 @@ void deleteCheckpointSavedTwice(
 }
 
 void deleteCheckpointSavedTwiceReordered(
+    CheckpointDeleter& checkpointer,
     MachineStateSaver& saver,
-    std::string checkpoint_name,
+    std::vector<unsigned char> checkpoint_name,
     std::vector<std::vector<unsigned char>> deleted_values) {
-    auto resultsx = saver.getMachineStateData(checkpoint_name);
+    auto resultsx = saver.getMachineState(checkpoint_name);
     for (auto& hash_key : deleted_values) {
         auto res = saver.getValue(hash_key);
         REQUIRE(res.status.ok());
     }
-    saver.deleteCheckpoint(checkpoint_name);
-    auto results = saver.getMachineStateData(checkpoint_name);
+    checkpointer.deleteCheckpoint(checkpoint_name);
+    auto results = saver.getMachineState(checkpoint_name);
     REQUIRE(results.status.ok() == true);
 
     for (auto& hash_key : deleted_values) {
@@ -501,8 +506,8 @@ void deleteCheckpointSavedTwiceReordered(
         REQUIRE(res.status.ok());
     }
 
-    saver.deleteCheckpoint(checkpoint_name);
-    auto results2 = saver.getMachineStateData(checkpoint_name);
+    checkpointer.deleteCheckpoint(checkpoint_name);
+    auto results2 = saver.getMachineState(checkpoint_name);
     REQUIRE(results2.status.ok() == false);
 
     for (auto& hash_key : deleted_values) {
@@ -665,10 +670,10 @@ TEST_CASE("Save Machinestatedata") {
         code.push_back(code_point);
 
         auto saver = MachineStateSaver(&storage, &pool, code);
-
         auto data_values = getDefaultValues(saver);
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
 
-        saveState(saver, data_values, "checkpoint");
+        saveState(saver, data_values, checkpoint_key);
     }
     SECTION("with values") {
         TuplePool pool;
@@ -683,7 +688,9 @@ TEST_CASE("Save Machinestatedata") {
         auto saver = MachineStateSaver(&storage, &pool, code);
         auto state_data = getStateValues(saver);
 
-        saveState(saver, state_data, "checkpoint");
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+
+        saveState(saver, state_data, checkpoint_key);
     }
 }
 
@@ -700,8 +707,10 @@ TEST_CASE("Get Machinestate data") {
         auto data_values = getDefaultValues(saver);
         auto keys = getHashKeys(data_values);
 
-        saver.saveMachineState(data_values, "checkpoint");
-        getSavedState(saver, "checkpoint", data_values, 1, keys);
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+
+        saver.saveMachineState(data_values, checkpoint_key);
+        getSavedState(saver, checkpoint_key, data_values, 1, keys);
     }
     SECTION("with values") {
         TuplePool pool;
@@ -718,8 +727,10 @@ TEST_CASE("Get Machinestate data") {
         auto state_data = getStateValues(saver);
         auto keys = getHashKeys(state_data);
 
-        saveState(saver, state_data, "checkpoint");
-        getSavedState(saver, "checkpoint", state_data, 1, keys);
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+
+        saveState(saver, state_data, checkpoint_key);
+        getSavedState(saver, checkpoint_key, state_data, 1, keys);
     }
 }
 
@@ -732,13 +743,15 @@ TEST_CASE("Delete checkpoint") {
         code.push_back(code_point);
 
         auto saver = MachineStateSaver(&storage, &pool, code);
-
+        auto checkpointer = CheckpointDeleter(&storage);
         auto data_values = getDefaultValues(saver);
 
-        saver.saveMachineState(data_values, "checkpoint");
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+
+        saver.saveMachineState(data_values, checkpoint_key);
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpoint(saver, "checkpoint", hash_keys);
+        deleteCheckpoint(checkpointer, saver, checkpoint_key, hash_keys);
     }
     SECTION("with actual state values") {
         TuplePool pool;
@@ -751,13 +764,15 @@ TEST_CASE("Delete checkpoint") {
         code.push_back(code_point2);
 
         auto saver = MachineStateSaver(&storage, &pool, code);
-
+        auto checkpointer = CheckpointDeleter(&storage);
         auto data_values = getStateValues(saver);
 
-        saver.saveMachineState(data_values, "checkpoint");
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+
+        saver.saveMachineState(data_values, checkpoint_key);
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpoint(saver, "checkpoint", hash_keys);
+        deleteCheckpoint(checkpointer, saver, checkpoint_key, hash_keys);
     }
     SECTION("delete checkpoint saved twice") {
         TuplePool pool;
@@ -769,15 +784,18 @@ TEST_CASE("Delete checkpoint") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
+        auto checkpointer = CheckpointDeleter(&storage);
         auto saver = MachineStateSaver(&storage, &pool, code);
-
         auto data_values = getStateValues(saver);
 
-        saver.saveMachineState(data_values, "checkpoint");
-        saver.saveMachineState(data_values, "checkpoint");
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+
+        saver.saveMachineState(data_values, checkpoint_key);
+        saver.saveMachineState(data_values, checkpoint_key);
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpointSavedTwice(saver, "checkpoint", hash_keys);
+        deleteCheckpointSavedTwice(checkpointer, saver, checkpoint_key,
+                                   hash_keys);
     }
     SECTION("delete checkpoint saved twice, reordered") {
         TuplePool pool;
@@ -789,13 +807,17 @@ TEST_CASE("Delete checkpoint") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
+        auto checkpointer = CheckpointDeleter(&storage);
         auto saver = MachineStateSaver(&storage, &pool, code);
         auto data_values = getStateValues(saver);
 
-        saver.saveMachineState(data_values, "checkpoint");
-        saver.saveMachineState(data_values, "checkpoint");
+        std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
+
+        saver.saveMachineState(data_values, checkpoint_key);
+        saver.saveMachineState(data_values, checkpoint_key);
         auto hash_keys = getHashKeys(data_values);
 
-        deleteCheckpointSavedTwiceReordered(saver, "checkpoint", hash_keys);
+        deleteCheckpointSavedTwiceReordered(checkpointer, saver, checkpoint_key,
+                                            hash_keys);
     }
 }

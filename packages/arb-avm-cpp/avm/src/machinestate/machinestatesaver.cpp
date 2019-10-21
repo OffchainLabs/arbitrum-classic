@@ -28,38 +28,40 @@ MachineStateSaver::MachineStateSaver(CheckpointStorage* storage,
     code = code_;
 }
 
-CodepointResult MachineStateSaver::getCodePoint(
-    std::vector<unsigned char> hash_key) {
+DbResult<CodePoint> MachineStateSaver::getCodePoint(
+    const std::vector<unsigned char>& hash_key) {
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         auto code_point =
-            Checkpoint::deserializeCodepoint(results.stored_value);
+            Checkpoint::Utils::deserializeCodepoint(results.stored_value);
         code_point.op = code[code_point.pc].op;
         code_point.nextHash = code[code_point.pc].nextHash;
 
-        return CodepointResult{results.status, results.reference_count,
-                               code_point};
+        return DbResult<CodePoint>{results.status, results.reference_count,
+                                   code_point};
     } else {
-        return CodepointResult{results.status, results.reference_count,
-                               CodePoint()};
+        return DbResult<CodePoint>{results.status, results.reference_count,
+                                   CodePoint()};
     }
 }
 
-NumResult MachineStateSaver::getInt256(std::vector<unsigned char> hash_key) {
+DbResult<uint256_t> MachineStateSaver::getInt256(
+    const std::vector<unsigned char>& hash_key) {
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         results.stored_value.erase(results.stored_value.begin());
-        auto num = Checkpoint::deserializeUint256(results.stored_value);
-        return NumResult{results.status, results.reference_count, num};
+        auto num = Checkpoint::Utils::deserializeUint256(results.stored_value);
+        return DbResult<uint256_t>{results.status, results.reference_count,
+                                   num};
     } else {
-        return NumResult{results.status, results.reference_count, 0};
+        return DbResult<uint256_t>{results.status, results.reference_count, 0};
     }
 }
 
 SaveResults MachineStateSaver::saveValue(const value& val) {
-    auto serialized_value = Checkpoint::serializeValue(val);
+    auto serialized_value = Checkpoint::Utils::serializeValue(val);
     auto type = (valueTypes)serialized_value[0];
 
     if (type == TUPLE_TYPE) {
@@ -84,7 +86,8 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
 
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto current_val = val.get_element(i);
-            auto serialized_val = Checkpoint::serializeValue(current_val);
+            auto serialized_val =
+                Checkpoint::Utils::serializeValue(current_val);
 
             value_vector.insert(value_vector.end(), serialized_val.begin(),
                                 serialized_val.end());
@@ -99,7 +102,8 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
     }
 };
 
-ValueResult MachineStateSaver::getValue(std::vector<unsigned char> hash_key) {
+DbResult<value> MachineStateSaver::getValue(
+    const std::vector<unsigned char>& hash_key) {
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
@@ -109,43 +113,46 @@ ValueResult MachineStateSaver::getValue(std::vector<unsigned char> hash_key) {
         switch (value_type) {
             case TUPLE_TYPE: {
                 auto tuple_res = getTuple(hash_key);
-                return ValueResult{tuple_res.status, tuple_res.reference_count,
-                                   tuple_res.tuple};
+                return DbResult<value>{tuple_res.status,
+                                       tuple_res.reference_count,
+                                       tuple_res.data};
             }
             case NUM_TYPE: {
-                auto val = Checkpoint::deserializeUint256(results.stored_value);
-                return ValueResult{results.status, results.reference_count,
-                                   val};
+                auto val =
+                    Checkpoint::Utils::deserializeUint256(results.stored_value);
+                return DbResult<value>{results.status, results.reference_count,
+                                       val};
             }
             case CODEPT_TYPE: {
-                auto code_point =
-                    Checkpoint::deserializeCodepoint(results.stored_value);
+                auto code_point = Checkpoint::Utils::deserializeCodepoint(
+                    results.stored_value);
                 code_point.op = code[code_point.pc].op;
                 code_point.nextHash = code[code_point.pc].nextHash;
 
-                return ValueResult{results.status, results.reference_count,
-                                   code_point};
+                return DbResult<value>{results.status, results.reference_count,
+                                       code_point};
             }
         }
     } else {
-        auto error_res = ValueResult();
+        auto error_res = DbResult<value>();
         error_res.status = results.status;
         error_res.reference_count = results.reference_count;
         return error_res;
     }
 }
 
-TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
+DbResult<Tuple> MachineStateSaver::getTuple(
+    const std::vector<unsigned char>& hash_key) {
     std::vector<value> values;
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
         auto value_vectors =
-            Checkpoint::parseSerializedTuple(results.stored_value);
+            Checkpoint::Utils::parseSerializedTuple(results.stored_value);
 
         if (value_vectors.empty()) {
-            return TupleResult{results.status, results.reference_count,
-                               Tuple()};
+            return DbResult<Tuple>{results.status, results.reference_count,
+                                   Tuple()};
         } else {
             for (auto& current_vector : value_vectors) {
                 auto value_type = (valueTypes)current_vector[0];
@@ -153,19 +160,20 @@ TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
 
                 switch (value_type) {
                     case TUPLE_TYPE: {
-                        auto tuple = getTuple(current_vector).tuple;
+                        auto tuple = getTuple(current_vector).data;
                         values.push_back(tuple);
                         break;
                     }
                     case NUM_TYPE: {
-                        auto num =
-                            Checkpoint::deserializeUint256(current_vector);
+                        auto num = Checkpoint::Utils::deserializeUint256(
+                            current_vector);
                         values.push_back(num);
                         break;
                     }
                     case CODEPT_TYPE: {
                         auto code_point =
-                            Checkpoint::deserializeCodepoint(current_vector);
+                            Checkpoint::Utils::deserializeCodepoint(
+                                current_vector);
                         code_point.op = code[code_point.pc].op;
                         code_point.nextHash = code[code_point.pc].nextHash;
 
@@ -175,125 +183,36 @@ TupleResult MachineStateSaver::getTuple(std::vector<unsigned char> hash_key) {
                 }
             }
             auto tuple = Tuple(values, pool);
-            return TupleResult{results.status, results.reference_count, tuple};
+            return DbResult<Tuple>{results.status, results.reference_count,
+                                   tuple};
         }
     } else {
-        return TupleResult{results.status, results.reference_count, Tuple()};
+        return DbResult<Tuple>{results.status, results.reference_count,
+                               Tuple()};
     }
 };
 
-StateResult MachineStateSaver::getMachineStateData(
-    std::string checkpoint_name) {
+DbResult<ParsedState> MachineStateSaver::getMachineState(
+    const std::vector<unsigned char>& checkpoint_name) {
     std::vector<unsigned char> name_vector(checkpoint_name.begin(),
                                            checkpoint_name.end());
 
     auto results = checkpoint_storage->getValue(name_vector);
 
     if (results.status.ok()) {
-        auto parsed_state = Checkpoint::parseState(results.stored_value);
+        auto parsed_state = Checkpoint::Utils::parseState(results.stored_value);
 
-        return StateResult{results.status, results.reference_count,
-                           parsed_state};
+        return DbResult<ParsedState>{results.status, results.reference_count,
+                                     parsed_state};
     } else {
-        return StateResult{results.status, results.reference_count,
-                           ParsedState()};
+        return DbResult<ParsedState>{results.status, results.reference_count,
+                                     ParsedState()};
     }
 }
 
-SaveResults MachineStateSaver::saveMachineState(ParsedState state_data,
-                                                std::string checkpoint_name) {
-    auto serialized_state = Checkpoint::serializeState(state_data);
-    std::vector<unsigned char> name_vector(checkpoint_name.begin(),
-                                           checkpoint_name.end());
-
-    return checkpoint_storage->saveValue(serialized_state, name_vector);
-}
-
-DeleteResults MachineStateSaver::deleteCheckpoint(std::string checkpoint_name) {
-    std::vector<unsigned char> name_vector(checkpoint_name.begin(),
-                                           checkpoint_name.end());
-
-    auto results = checkpoint_storage->getValue(name_vector);
-
-    if (results.status.ok()) {
-        auto delete_results = checkpoint_storage->deleteValue(name_vector);
-
-        if (delete_results.reference_count < 1) {
-            auto parsed_state = Checkpoint::parseState(results.stored_value);
-
-            auto delete_static_res = deleteValue(parsed_state.static_val_key);
-            auto delete_register_res =
-                deleteValue(parsed_state.register_val_key);
-            auto delete_cp_key = deleteValue(parsed_state.pc_key);
-            auto delete_datastack_res = deleteTuple(parsed_state.datastack_key);
-            auto delete_auxstack_res = deleteTuple(parsed_state.auxstack_key);
-            auto delete_inbox_res = deleteTuple(parsed_state.inbox_key);
-            auto delete_inbox_count = deleteValue(parsed_state.inbox_count_key);
-            auto delete_pendinginbox_res =
-                deleteTuple(parsed_state.pending_key);
-            auto delete_pending_count =
-                deleteValue(parsed_state.pending_count_key);
-
-            if (delete_static_res.status.ok() &&
-                delete_register_res.status.ok() && delete_cp_key.status.ok() &&
-                delete_datastack_res.status.ok() &&
-                delete_auxstack_res.status.ok() &&
-                delete_inbox_res.status.ok() &&
-                delete_pendinginbox_res.status.ok() &&
-                delete_inbox_count.status.ok() &&
-                delete_pending_count.status.ok()) {
-            }
-        }
-
-        return delete_results;
-    } else {
-        return DeleteResults{0, results.status};
-    }
-}
-
-// private ------------------------------------------------------------------
-
-DeleteResults MachineStateSaver::deleteValue(
-    std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getValue(hash_key);
-
-    if (results.status.ok()) {
-        auto type = (valueTypes)results.stored_value[0];
-
-        if (type == TUPLE_TYPE) {
-            return deleteTuple(hash_key, results);
-        } else {
-            return checkpoint_storage->deleteValue(hash_key);
-        }
-    } else {
-        return DeleteResults{0, results.status};
-    }
-}
-
-DeleteResults MachineStateSaver::deleteTuple(
-    std::vector<unsigned char> hash_key) {
-    auto results = checkpoint_storage->getValue(hash_key);
-
-    return deleteTuple(hash_key, results);
-}
-
-DeleteResults MachineStateSaver::deleteTuple(
-    std::vector<unsigned char> hash_key,
-    GetResults& results) {
-    if (results.status.ok()) {
-        if (results.reference_count == 1) {
-            auto value_vectors =
-                Checkpoint::parseSerializedTuple(results.stored_value);
-
-            for (auto& vector : value_vectors) {
-                if ((valueTypes)vector[0] == TUPLE_TYPE) {
-                    vector.erase(vector.begin());
-                    auto delete_stat = deleteTuple(vector);
-                }
-            }
-        }
-        return checkpoint_storage->deleteValue(hash_key);
-    } else {
-        return DeleteResults{0, results.status};
-    }
+SaveResults MachineStateSaver::saveMachineState(
+    ParsedState state_data,
+    const std::vector<unsigned char>& checkpoint_name) {
+    auto serialized_state = Checkpoint::Utils::serializeState(state_data);
+    return checkpoint_storage->saveValue(serialized_state, checkpoint_name);
 }

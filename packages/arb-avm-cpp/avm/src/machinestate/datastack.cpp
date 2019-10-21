@@ -65,10 +65,13 @@ SaveResults Datastack::checkpointState(MachineStateSaver& msSaver,
     return msSaver.saveTuple(tuple);
 }
 
-void Datastack::initializeDataStack(MachineStateSaver& msSaver,
-                                    std::vector<unsigned char> hash_key) {
-    auto tuple = msSaver.getTuple(hash_key).tuple;
-    initializeDataStack(tuple);
+DbResult<Tuple> Datastack::initializeDataStack(
+    MachineStateSaver& msSaver,
+    std::vector<unsigned char> hash_key) {
+    auto results = msSaver.getTuple(hash_key);
+    initializeDataStack(results.data);
+
+    return results;
 }
 
 Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
@@ -85,7 +88,7 @@ Tuple Datastack::getTupleRepresentation(TuplePool* pool) {
     }
 }
 
-void Datastack::initializeDataStack(Tuple tuple) {
+void Datastack::initializeDataStack(const Tuple& tuple) {
     if (tuple.tuple_size() == 1) {
         push(tuple.get_element(0));
     } else if (tuple.tuple_size() == 2) {

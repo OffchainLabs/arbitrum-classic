@@ -35,6 +35,7 @@ struct ParsedState {
 };
 
 namespace Checkpoint {
+namespace Utils {
 std::vector<unsigned char> serializeValue(const value& val);
 CodePoint deserializeCodepoint(std::vector<unsigned char>& val);
 uint256_t deserializeUint256(std::vector<unsigned char>& val);
@@ -42,6 +43,7 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
     std::vector<unsigned char> data_vector);
 ParsedState parseState(std::vector<unsigned char> stored_state);
 std::vector<unsigned char> serializeState(ParsedState state_data);
+}  // namespace Utils
 }  // namespace Checkpoint
 
 #endif /* statesaverutils_hpp */

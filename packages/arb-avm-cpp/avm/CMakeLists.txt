@@ -37,7 +37,8 @@ set(LIB_HEADERS
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/machinestatesaver.hpp
   include/avm/machinestate/messagestack.hpp
-  include/avm/machinestate/statesaverutils.hpp
+  include/avm/machinestate/checkpointutils.hpp
+  include/avm/machinestate/checkpointdeleter.hpp
 )
 
 set(LIB_SOURCES
@@ -54,8 +55,9 @@ set(LIB_SOURCES
   src/machinestate/machineoperation.cpp
   src/machinestate/datastack.cpp
   src/machinestate/machinestatesaver.cpp
-  src/machinestate/statesaverutils.cpp
+  src/machinestate/checkpointutils.cpp
   src/machinestate/blockreason.cpp
+  src/machinestate/checkpointdeleter.cpp
 
   ${KECCAK_SOURCES}
 )
@@ -85,4 +87,4 @@ target_link_libraries(avm PUBLIC Boost::boost CONAN_PKG::variant-lite rocksdb PR
 
 target_code_coverage(avm AUTO ALL)
 
-#source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES})
+source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES})

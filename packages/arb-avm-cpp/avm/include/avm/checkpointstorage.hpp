@@ -45,7 +45,7 @@ class CheckpointStorage {
     std::unique_ptr<rocksdb::Transaction> makeTransaction();
     rocksdb::Status saveValue(const std::string& value, const std::string& key);
     rocksdb::Status deleteValue(const std::string& key);
-    std::tuple<int, std::string> parseCountAndValue(
+    std::tuple<int, std::vector<unsigned char>> parseCountAndValue(
         const std::string& string_value);
     std::vector<unsigned char> serializeCountAndValue(
         int count,
@@ -59,11 +59,11 @@ class CheckpointStorage {
     CheckpointStorage(std::string db_path);
     ~CheckpointStorage();
 
-    SaveResults incrementReference(std::vector<unsigned char> hash_key);
-    SaveResults saveValue(std::vector<unsigned char> value,
-                          std::vector<unsigned char> hash_key);
-    GetResults getValue(std::vector<unsigned char> hash_key);
-    DeleteResults deleteValue(std::vector<unsigned char> hash_key);
+    SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
+    SaveResults saveValue(const std::vector<unsigned char>& value,
+                          const std::vector<unsigned char>& hash_key);
+    GetResults getValue(const std::vector<unsigned char>& hash_key);
+    DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
 };
 
 #endif /* checkpointstorage_hpp */

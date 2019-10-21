@@ -68,10 +68,10 @@ struct MachineState {
     uint256_t hash() const;
     void setInbox(MessageStack ms);
     void setPendingInbox(MessageStack ms);
-    bool checkpointMachineState(CheckpointStorage* storage,
-                                std::string checkpoint_name);
-    bool restoreMachineState(CheckpointStorage* storage,
-                             std::string checkpoint_name);
+    SaveResults checkpointState(CheckpointStorage& storage);
+    DbResult<ParsedState> restoreCheckpoint(
+        CheckpointStorage& storage,
+        const std::vector<unsigned char>& checkpoint_key);
 };
 
 #endif /* machinestate_hpp */
