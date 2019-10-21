@@ -199,6 +199,7 @@ ParsedState parseState(std::vector<unsigned char> stored_state) {
     auto pending = extractHashKey(current_iter);
     auto pending_count = extractHashKey(current_iter);
     auto pc = extractHashKey(current_iter);
+    auto err_pc = extractHashKey(current_iter);
 
     return ParsedState{static_val,
                        register_val,
@@ -209,6 +210,7 @@ ParsedState parseState(std::vector<unsigned char> stored_state) {
                        pending,
                        pending_count,
                        pc,
+                       err_pc,
                        status,
                        blockreason_vector,
                        balance_track_vector};
@@ -268,6 +270,10 @@ std::vector<unsigned char> serializeState(ParsedState state_data) {
 
     state_data_vector.insert(state_data_vector.end(), state_data.pc_key.begin(),
                              state_data.pc_key.end());
+
+    state_data_vector.insert(state_data_vector.end(),
+                             state_data.err_pc_key.begin(),
+                             state_data.err_pc_key.end());
     return state_data_vector;
 }
 }  // namespace Utils

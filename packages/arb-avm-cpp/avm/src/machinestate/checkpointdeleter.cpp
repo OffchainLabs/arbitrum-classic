@@ -35,6 +35,7 @@ DeleteResults CheckpointDeleter::deleteCheckpoint(
             auto delete_register_res =
                 deleteValue(parsed_state.register_val_key);
             auto delete_cp_key = deleteValue(parsed_state.pc_key);
+            auto delete_err_pc = deleteValue(parsed_state.err_pc_key);
             auto delete_datastack_res = deleteTuple(parsed_state.datastack_key);
             auto delete_auxstack_res = deleteTuple(parsed_state.auxstack_key);
             auto delete_inbox_res = deleteTuple(parsed_state.inbox_key);
@@ -51,7 +52,7 @@ DeleteResults CheckpointDeleter::deleteCheckpoint(
                 delete_inbox_res.status.ok() &&
                 delete_pendinginbox_res.status.ok() &&
                 delete_inbox_count.status.ok() &&
-                delete_pending_count.status.ok()) {
+                delete_pending_count.status.ok() && delete_err_pc.status.ok()) {
             }
         }
 

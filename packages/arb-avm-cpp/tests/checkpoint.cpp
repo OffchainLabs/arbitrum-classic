@@ -523,6 +523,7 @@ ParsedState makeStorageData(MachineStateSaver& stateSaver,
                             Datastack auxstack,
                             Status state,
                             CodePoint pc,
+                            CodePoint err_pc,
                             MessageStack inbox,
                             MessageStack pendingInbox,
                             BalanceTracker balance,
@@ -537,6 +538,7 @@ ParsedState makeStorageData(MachineStateSaver& stateSaver,
     auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto pc_results = stateSaver.saveValue(pc);
+    auto err_pc_results = stateSaver.saveValue(err_pc);
 
     auto status_str = (unsigned char)state;
     auto blockreason_str = serializeForCheckpoint(blockReason);
@@ -552,6 +554,7 @@ ParsedState makeStorageData(MachineStateSaver& stateSaver,
         pending_results.msgs_tuple_results.storage_key,
         pending_results.msg_count_results.storage_key,
         pc_results.storage_key,
+        err_pc_results.storage_key,
         status_str,
         blockreason_str,
         balancetracker_str,
@@ -608,6 +611,7 @@ ParsedState getStateValues(MachineStateSaver& saver) {
     auto pending_stack = getMsgStack2();
 
     CodePoint pc_codepoint(0, Operation(), 0);
+    CodePoint err_pc_codepoint(0, Operation(), 0);
     Status state = Status::Extensive;
 
     std::array<unsigned char, 21> block_token_type = {10};
@@ -618,9 +622,10 @@ ParsedState getStateValues(MachineStateSaver& saver) {
     auto tracker = BalanceTracker();
     tracker.add(token_type, amount);
 
-    auto saved_data = makeStorageData(
-        saver, static_val, register_val, data_stack, aux_stack, state,
-        pc_codepoint, inbox_stack, pending_stack, tracker, send_blocked);
+    auto saved_data =
+        makeStorageData(saver, static_val, register_val, data_stack, aux_stack,
+                        state, pc_codepoint, err_pc_codepoint, inbox_stack,
+                        pending_stack, tracker, send_blocked);
 
     return saved_data;
 }
@@ -639,7 +644,7 @@ ParsedState getDefaultValues(MachineStateSaver& saver) {
 
     auto data =
         makeStorageData(saver, static_val, Tuple(), Datastack(), Datastack(),
-                        state, code_point, MessageStack(&pool),
+                        state, code_point, code_point, MessageStack(&pool),
                         MessageStack(&pool), BalanceTracker(), NotBlocked());
 
     return data;

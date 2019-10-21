@@ -215,6 +215,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
+    auto err_code_point = stateSaver.saveValue(errpc);
 
     auto pc_value = CodePoint(pc, Operation(), 0);
     auto pc_results = stateSaver.saveValue(pc_value);
@@ -232,7 +233,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
         pending_results.msgs_tuple_results.status.ok() &&
         pending_results.msg_count_results.status.ok() &&
         static_val_results.status.ok() && register_val_results.status.ok() &&
-        pc_results.status.ok()) {
+        pc_results.status.ok() && err_code_point.status.ok()) {
         auto machine_state_data = ParsedState{
             static_val_results.storage_key,
             register_val_results.storage_key,
@@ -243,6 +244,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
             pending_results.msgs_tuple_results.storage_key,
             pending_results.msg_count_results.storage_key,
             pc_results.storage_key,
+            err_code_point.storage_key,
             status_str,
             blockreason_str,
             balancetracker_str,
@@ -265,9 +267,18 @@ DbResult<ParsedState> MachineState::restoreCheckpoint(
 
         auto static_val_results =
             stateSaver.getValue(machine_state_data.static_val_key);
+        staticVal = static_val_results.data;
+
         auto register_val_results =
             stateSaver.getValue(machine_state_data.register_val_key);
+        registerVal = register_val_results.data;
+
         auto pc_results = stateSaver.getCodePoint(machine_state_data.pc_key);
+        pc = pc_results.data.pc;
+
+        auto err_pc_results =
+            stateSaver.getCodePoint(machine_state_data.err_pc_key);
+        errpc = err_pc_results.data;
 
         stack.initializeDataStack(stateSaver, machine_state_data.datastack_key);
         auxstack.initializeDataStack(stateSaver,
