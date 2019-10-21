@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+#include <boost/dll.hpp>
 #include <catch2/catch.hpp>
 
 #include <avm/machinestate/machinestatesaver.hpp>
 #include <avm/machinestate/messagestack.hpp>
 
 std::string current_path =
-    "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";
+    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
 
 void saveMessageStack(MachineStateSaver& saver,
                       MessageStack stack,

@@ -15,7 +15,10 @@
  */
 
 #include "avm/checkpointstorage.hpp"
+
+#include <boost/dll.hpp>
 #include <catch2/catch.hpp>
+#include <iostream>
 #include "rocksdb/db.h"
 
 std::vector<unsigned char> hash_key1 = {1};
@@ -23,8 +26,8 @@ std::vector<unsigned char> hash_key2 = {2};
 std::vector<unsigned char> value1 = {'v', 'a', 'l', 'u', 'e'};
 std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 
-std::string dbPath =
-    "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";
+auto dbPath =
+    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
 
 void saveVal(CheckpointStorage& storage,
              std::vector<unsigned char> val,

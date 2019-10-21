@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+#include <boost/dll.hpp>
 #include <catch2/catch.hpp>
 #include "avm/machinestate/checkpointdeleter.hpp"
 #include "avm/machinestate/machinestate.hpp"
 #include "avm/machinestate/machinestatesaver.hpp"
 
 std::string path =
-    "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";
+    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
 
 void saveValue(MachineStateSaver& saver,
                const value& val,

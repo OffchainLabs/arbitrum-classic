@@ -15,11 +15,12 @@
  */
 
 #include "avm/machinestate/datastack.hpp"
+#include <boost/dll.hpp>
 #include <catch2/catch.hpp>
 #include "avm/machinestate/machinestatesaver.hpp"
 
 std::string dbpath =
-    "/Users/minhtruong/Dev/arbitrum/packages/arb-avm-cpp/build/tests/rocksDb";
+    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
 
 void initializeDatastack(MachineStateSaver& msSaver,
                          std::vector<unsigned char> hash_key,
