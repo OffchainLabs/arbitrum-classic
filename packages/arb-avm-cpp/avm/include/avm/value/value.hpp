@@ -39,10 +39,10 @@ std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);
 int get_tuple_size(char*& bufptr);
 
-uint256_t deserialize_int256(char*& srccode);
+uint256_t deserializeUint256t(char*& srccode);
 Operation deserializeOperation(char*& bufptr, TuplePool& pool);
 CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
-Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
+Tuple deserializeTuple(char*& bufptr, int size, TuplePool& pool);
 value deserialize_value(char*& srccode, TuplePool& pool);
 void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);

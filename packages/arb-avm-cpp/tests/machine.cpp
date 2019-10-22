@@ -85,12 +85,12 @@ TEST_CASE("Delete machine checkpoint") {
     }
 }
 
-TEST_CASE("Restore checkpoint") {
-    SECTION("default") {
-        CheckpointStorage storage(save_path);
-        auto machine = Machine(contract_path);
-        auto results = machine.checkpoint(storage);
-
-        restoreCheckpoint(storage, machine, results.storage_key);
-    }
-}
+// TEST_CASE("Restore checkpoint") {
+//    SECTION("default") {
+//        CheckpointStorage storage(save_path);
+//        auto machine = Machine(contract_path);
+//        auto results = machine.checkpoint(storage);
+//
+//        restoreCheckpoint(storage, machine, results.storage_key);
+//    }
+//}

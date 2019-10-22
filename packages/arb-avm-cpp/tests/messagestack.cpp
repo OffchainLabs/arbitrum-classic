@@ -21,7 +21,7 @@
 #include <avm/machinestate/messagestack.hpp>
 
 std::string current_path =
-    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
+    boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
 
 void saveMessageStack(MachineStateSaver& saver,
                       MessageStack stack,

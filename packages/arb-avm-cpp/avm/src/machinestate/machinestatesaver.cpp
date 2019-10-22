@@ -34,7 +34,6 @@ DbResult<CodePoint> MachineStateSaver::getCodePoint(
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
-        results.stored_value.erase(results.stored_value.begin());
         auto code_point =
             Checkpoint::Utils::deserializeCodepoint(results.stored_value, code);
         return DbResult<CodePoint>{results.status, results.reference_count,
@@ -50,7 +49,6 @@ DbResult<uint256_t> MachineStateSaver::getUint256_t(
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
-        results.stored_value.erase(results.stored_value.begin());
         auto num =
             Checkpoint::Utils::deserializeUint256_t(results.stored_value);
         return DbResult<uint256_t>{results.status, results.reference_count,
@@ -70,6 +68,41 @@ SaveResults MachineStateSaver::saveValue(const value& val) {
     } else {
         auto hash_key = GetHashKey(val);
         return checkpoint_storage->saveValue(serialized_value, hash_key);
+    }
+}
+
+DbResult<value> MachineStateSaver::getValue(
+    const std::vector<unsigned char>& hash_key) {
+    auto results = checkpoint_storage->getValue(hash_key);
+
+    if (results.status.ok()) {
+        auto value_type = (valueTypes)results.stored_value[0];
+
+        switch (value_type) {
+            case TUPLE_TYPE: {
+                auto tuple_res = getTuple(hash_key);
+                return DbResult<value>{tuple_res.status,
+                                       tuple_res.reference_count,
+                                       tuple_res.data};
+            }
+            case NUM_TYPE: {
+                auto val = Checkpoint::Utils::deserializeUint256_t(
+                    results.stored_value);
+                return DbResult<value>{results.status, results.reference_count,
+                                       val};
+            }
+            case CODEPT_TYPE: {
+                auto code_point = Checkpoint::Utils::deserializeCodepoint(
+                    results.stored_value, code);
+                return DbResult<value>{results.status, results.reference_count,
+                                       code_point};
+            }
+        }
+    } else {
+        auto error_res = DbResult<value>();
+        error_res.status = results.status;
+        error_res.reference_count = results.reference_count;
+        return error_res;
     }
 }
 
@@ -102,42 +135,6 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
     }
 };
 
-DbResult<value> MachineStateSaver::getValue(
-    const std::vector<unsigned char>& hash_key) {
-    auto results = checkpoint_storage->getValue(hash_key);
-
-    if (results.status.ok()) {
-        auto value_type = (valueTypes)results.stored_value[0];
-        results.stored_value.erase(results.stored_value.begin());
-
-        switch (value_type) {
-            case TUPLE_TYPE: {
-                auto tuple_res = getTuple(hash_key);
-                return DbResult<value>{tuple_res.status,
-                                       tuple_res.reference_count,
-                                       tuple_res.data};
-            }
-            case NUM_TYPE: {
-                auto val = Checkpoint::Utils::deserializeUint256_t(
-                    results.stored_value);
-                return DbResult<value>{results.status, results.reference_count,
-                                       val};
-            }
-            case CODEPT_TYPE: {
-                auto code_point = Checkpoint::Utils::deserializeCodepoint(
-                    results.stored_value, code);
-                return DbResult<value>{results.status, results.reference_count,
-                                       code_point};
-            }
-        }
-    } else {
-        auto error_res = DbResult<value>();
-        error_res.status = results.status;
-        error_res.reference_count = results.reference_count;
-        return error_res;
-    }
-}
-
 DbResult<Tuple> MachineStateSaver::getTuple(
     const std::vector<unsigned char>& hash_key) {
     std::vector<value> values;
@@ -153,10 +150,10 @@ DbResult<Tuple> MachineStateSaver::getTuple(
         } else {
             for (auto& current_vector : value_vectors) {
                 auto value_type = (valueTypes)current_vector[0];
-                current_vector.erase(current_vector.begin());
 
                 switch (value_type) {
                     case TUPLE_TYPE: {
+                        current_vector.erase(current_vector.begin());
                         auto tuple = getTuple(current_vector).data;
                         values.push_back(tuple);
                         break;

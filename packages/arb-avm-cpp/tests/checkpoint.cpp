@@ -22,7 +22,7 @@
 #include <catch2/catch.hpp>
 
 std::string path =
-    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
+    boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
 
 void saveValue(MachineStateSaver& saver,
                const value& val,

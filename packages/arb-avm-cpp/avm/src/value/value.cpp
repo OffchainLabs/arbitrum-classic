@@ -27,7 +27,7 @@
 #define UINT256_SIZE 32
 #define UINT64_SIZE 8
 
-uint256_t deserialize_int256(char*& bufptr) {
+uint256_t deserializeUint256t(char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
     return ret;
@@ -60,7 +60,7 @@ CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool) {
     return ret;
 }
 
-Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool) {
+Tuple deserializeTuple(char*& bufptr, int size, TuplePool& pool) {
     Tuple tup(&pool, size);
     for (int i = 0; i < size; i++) {
         tup.set_element(i, deserialize_value(bufptr, pool));
@@ -125,12 +125,12 @@ value deserialize_value(char*& bufptr, TuplePool& pool) {
     bufptr += sizeof(valType);
     switch (valType) {
         case NUM:
-            return deserialize_int256(bufptr);
+            return deserializeUint256t(bufptr);
         case CODEPT:
             return deserializeCodePoint(bufptr, pool);
         default:
             if (valType >= TUPLE && valType <= TUPLE + 8) {
-                return deserialize_tuple(bufptr, valType - TUPLE, pool);
+                return deserializeTuple(bufptr, valType - TUPLE, pool);
             } else {
                 std::printf("in deserialize_value, unhandled type = %X\n",
                             valType);

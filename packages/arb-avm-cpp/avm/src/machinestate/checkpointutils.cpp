@@ -170,14 +170,14 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
 
 CodePoint deserializeCodepoint(std::vector<unsigned char>& val,
                                const std::vector<CodePoint>& code) {
-    auto buff = reinterpret_cast<char*>(&val[0]);
+    auto buff = reinterpret_cast<char*>(&val[1]);
     auto pc_val = deserialize_int64(buff);
     return code[pc_val];
 }
 
 uint256_t deserializeUint256_t(std::vector<unsigned char>& val) {
-    auto buff = reinterpret_cast<char*>(&val[1]);
-    return deserialize_int256(buff);
+    auto buff = reinterpret_cast<char*>(&val[2]);
+    return deserializeUint256t(buff);
 }
 
 std::vector<unsigned char> serializeValue(const value& val) {

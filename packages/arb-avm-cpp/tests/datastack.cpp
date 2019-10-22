@@ -20,7 +20,7 @@
 #include "avm/machinestate/machinestatesaver.hpp"
 
 std::string dbpath =
-    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
+    boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
 
 void initializeDatastack(MachineStateSaver& msSaver,
                          std::vector<unsigned char> hash_key,
