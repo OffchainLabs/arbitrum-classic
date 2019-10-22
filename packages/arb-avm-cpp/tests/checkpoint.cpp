@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include <boost/dll.hpp>
-#include <catch2/catch.hpp>
 #include "avm/machinestate/checkpointdeleter.hpp"
 #include "avm/machinestate/machinestate.hpp"
 #include "avm/machinestate/machinestatesaver.hpp"
+
+#include <boost/dll.hpp>
+#include <catch2/catch.hpp>
 
 std::string path =
     boost::dll::program_location().parent_path().generic_string() + "rocksDb";
@@ -659,6 +660,7 @@ std::vector<std::vector<unsigned char>> getHashKeys(ParsedState data) {
     hash_keys.push_back(data.inbox_count_key);
     hash_keys.push_back(data.inbox_key);
     hash_keys.push_back(data.pc_key);
+    hash_keys.push_back(data.err_pc_key);
     hash_keys.push_back(data.pending_key);
     hash_keys.push_back(data.pending_key);
     hash_keys.push_back(data.register_val_key);

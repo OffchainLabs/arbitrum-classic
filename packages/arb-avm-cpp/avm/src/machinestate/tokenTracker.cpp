@@ -198,9 +198,9 @@ void BalanceTracker::initializeTokenLookup(
 
     while (current_it != token_lookup.end()) {
         std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
-        auto type_end_it = current_it + TOKEN_TYPE_LENGTH;
-        std::copy(current_it, type_end_it, token_type.begin());
-        current_it = type_end_it;
+        auto tok_type_end = current_it + TOKEN_TYPE_LENGTH;
+        std::copy(current_it, tok_type_end, token_type.begin());
+        current_it = tok_type_end;
 
         auto tok_val_end = current_it + TOKEN_VAL_LENGTH;
         std::vector<unsigned char> value_vector(current_it, tok_val_end);
@@ -218,9 +218,9 @@ void BalanceTracker::initializeNftLookup(
 
     while (nftkey_it != nftkey_lookup.end()) {
         std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
-        auto type_end_it = nftkey_it + TOKEN_TYPE_LENGTH;
-        std::copy(nftkey_it, type_end_it, token_type.begin());
-        nftkey_it = type_end_it;
+        auto tok_type_end = nftkey_it + TOKEN_TYPE_LENGTH;
+        std::copy(nftkey_it, tok_type_end, token_type.begin());
+        nftkey_it = tok_type_end;
 
         auto tok_val_end = nftkey_it + TOKEN_VAL_LENGTH;
         std::vector<unsigned char> value_vector(nftkey_it, tok_val_end);

@@ -34,6 +34,7 @@ DbResult<CodePoint> MachineStateSaver::getCodePoint(
     auto results = checkpoint_storage->getValue(hash_key);
 
     if (results.status.ok()) {
+        results.stored_value.erase(results.stored_value.begin());
         auto code_point =
             Checkpoint::Utils::deserializeCodepoint(results.stored_value, code);
         return DbResult<CodePoint>{results.status, results.reference_count,

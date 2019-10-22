@@ -123,11 +123,13 @@ Tuple::Tuple(value val1,
 
 Tuple::Tuple(std::vector<value> values, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(values.size())) {
-    for (auto& val : values) {
-        tpl->data.push_back(std::move(val));
-    }
+    if (values.size() < 9) {
+        for (auto& val : values) {
+            tpl->data.push_back(std::move(val));
+        }
 
-    tpl->cachedHash = calculateHash();
+        tpl->cachedHash = calculateHash();
+    }
 }
 
 void Tuple::marshal(std::vector<unsigned char>& buf) const {

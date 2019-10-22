@@ -27,7 +27,7 @@
 #define TOKEN_TYPE_LENGTH 21
 #define TOKEN_VAL_LENGTH 33
 
-using TokenType = std::array<unsigned char, 21>;
+using TokenType = std::array<unsigned char, TOKEN_TYPE_LENGTH>;
 
 bool isToken(const TokenType& tok);
 TokenType toTokenType(const uint256_t& tokTypeVal);
