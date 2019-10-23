@@ -85,7 +85,8 @@ enum class OpCode : uint8_t {
     INBOX,
     ERROR,
     HALT,
-    DEBUG
+    DEBUG,
+    DEFAULT
 };
 
 inline bool isValidOpcode(OpCode op) {

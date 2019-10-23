@@ -25,7 +25,6 @@
 #include <ostream>
 
 #define UINT256_SIZE 32
-#define UINT64_SIZE 8
 
 uint256_t deserializeUint256t(char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);

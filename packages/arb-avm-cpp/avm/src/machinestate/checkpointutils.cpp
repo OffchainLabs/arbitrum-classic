@@ -172,7 +172,11 @@ CodePoint deserializeCodepoint(std::vector<unsigned char>& val,
                                const std::vector<CodePoint>& code) {
     auto buff = reinterpret_cast<char*>(&val[1]);
     auto pc_val = deserialize_int64(buff);
-    return code[pc_val];
+    if (pc_val == pc_default) {
+        return CodePoint();
+    } else {
+        return code[pc_val];
+    }
 }
 
 uint256_t deserializeUint256_t(std::vector<unsigned char>& val) {

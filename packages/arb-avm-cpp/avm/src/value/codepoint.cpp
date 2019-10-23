@@ -21,6 +21,7 @@
 
 Operation::Operation(OpCode opcode_, value immediate_)
     : opcode(opcode_), immediate(std::make_unique<value>(immediate_)) {}
+
 Operation::Operation(const Operation& op) {
     opcode = op.opcode;
     if (op.immediate) {
@@ -108,6 +109,8 @@ void Operation::marshalForProof(std::vector<unsigned char>& buf,
         buf.push_back((uint8_t)opcode);
     }
 }
+
+uint64_t pc_default = -1;
 
 bool operator==(const CodePoint& val1, const CodePoint& val2) {
     if (val1.pc != val2.pc)

@@ -217,8 +217,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto err_code_point = stateSaver.saveValue(errpc);
 
-    auto pc_value = CodePoint(pc, Operation(), 0);
-    auto pc_results = stateSaver.saveValue(pc_value);
+    auto pc_results = stateSaver.saveValue(code[pc]);
 
     auto status_str = (unsigned char)state;
     auto blockreason_str = serializeForCheckpoint(blockReason);
