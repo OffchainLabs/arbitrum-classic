@@ -133,3 +133,16 @@ func (m *MachinePC) SetPCForced(iv value.Value) error {
 	m.pc = iv64
 	return nil
 }
+
+func (m *MachinePC) SetIVForced(iv64 int64) error {
+	//codePointVal, ok := iv.(value.CodePointValue)
+	//if !ok {
+	//	return errors.New("SetPC: tried to set PC to unknown value. Cannot set PC")
+	//}
+	//iv64 := codePointVal.InsnNum
+	if !(iv64 >= -2 && iv64 < int64(len(m.flat))) {
+		m.warn.Warn("SetPC: set PC to invalid value")
+	}
+	m.pc = iv64
+	return nil
+}
