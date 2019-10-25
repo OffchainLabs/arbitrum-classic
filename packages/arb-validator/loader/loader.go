@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/ccheckpoint"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -36,4 +37,8 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 	} else {
 		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
 	}
+}
+
+func CreateCheckpointStorage(dbPath string) (machine.CheckpointStorage, error) {
+	return ccheckpoint.New(dbPath)
 }

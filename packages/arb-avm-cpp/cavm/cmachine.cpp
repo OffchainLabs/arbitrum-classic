@@ -28,13 +28,15 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    auto machine = new Machine(filename);
+    auto machine = Machine();
+    Machine* machine_ptr = &machine;
+    auto sucess = machine_ptr->initializeMachine(filename);
 
-    //    if (not correctly created)
-    //    {
-    //        return nullptr;
-    //    }
-    return machine;
+    if (sucess) {
+        return machine_ptr;
+    } else {
+        return nullptr;
+    }
 }
 
 // cmachine_t *machine_create(char *data)
@@ -47,6 +49,27 @@ void machineDestroy(CMachine* m) {
     if (m == NULL)
         return;
     delete static_cast<Machine*>(m);
+}
+
+int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
+    auto machine = *(static_cast<Machine*>(m));
+    auto result =
+        machine.checkpoint(*(static_cast<CheckpointStorage*>(storage)));
+
+    return result.status.ok();
+}
+
+int restoreMachine(CMachine* m,
+                   CCheckpointStorage* storage,
+                   const char* check_point) {
+    auto machine = *(static_cast<Machine*>(m));
+
+    auto name_str = std::string(check_point);
+    auto name_vector =
+        std::vector<unsigned char>(name_str.begin(), name_str.end());
+
+    return machine.restoreCheckpoint(
+        *(static_cast<CheckpointStorage*>(storage)), name_vector);
 }
 
 void machineHash(CMachine* m, void* ret) {

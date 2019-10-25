@@ -39,7 +39,7 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
     return os;
 }
 
-Machine::Machine(const std::string& filename) {
+bool Machine::initializeMachine(const std::string& filename) {
     std::ifstream myfile;
 
     struct stat filestatus;
@@ -53,13 +53,9 @@ Machine::Machine(const std::string& filename) {
         myfile.read((char*)buf, filestatus.st_size);
         myfile.close();
 
-        auto success = deserialize(buf);
-
-        if (!success) {
-            // log?
-        }
+        return deserialize(buf);
     } else {
-        // log??
+        return false;
     }
 }
 

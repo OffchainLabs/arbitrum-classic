@@ -40,8 +40,7 @@ class Machine {
     void runOne();
 
    public:
-    Machine() = default;
-    Machine(const std::string& filename);
+    bool initializeMachine(const std::string& filename);
     bool deserialize(char* data) { return machine_state.deserialize(data); }
 
     Assertion run(uint64_t stepCount,

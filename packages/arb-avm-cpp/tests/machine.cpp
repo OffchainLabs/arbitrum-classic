@@ -53,7 +53,8 @@ void deleteCheckpoint(CheckpointStorage& storage,
 void restoreCheckpoint(CheckpointStorage& storage,
                        Machine& expected_machine,
                        const std::vector<unsigned char>& checkpoint_key) {
-    auto machine = Machine(contract_path);
+    Machine machine;
+    machine.initializeMachine(contract_path);
     auto success = machine.restoreCheckpoint(storage, checkpoint_key);
 
     REQUIRE(success);
@@ -63,13 +64,15 @@ void restoreCheckpoint(CheckpointStorage& storage,
 TEST_CASE("Checkpoint State") {
     SECTION("default") {
         CheckpointStorage storage(save_path);
-        auto machine = Machine(contract_path);
+        Machine machine;
+        machine.initializeMachine(contract_path);
 
         checkpointState(storage, machine);
     }
     SECTION("save twice") {
         CheckpointStorage storage(save_path);
-        auto machine = Machine(contract_path);
+        Machine machine;
+        machine.initializeMachine(contract_path);
 
         checkpointStateTwice(storage, machine);
     }
@@ -78,28 +81,33 @@ TEST_CASE("Checkpoint State") {
 TEST_CASE("Delete machine checkpoint") {
     SECTION("default") {
         CheckpointStorage storage(save_path);
-        auto machine = Machine(contract_path);
+        Machine machine;
+        machine.initializeMachine(contract_path);
         auto results = machine.checkpoint(storage);
 
         deleteCheckpoint(storage, machine, results.storage_key);
     }
 }
 
-// TEST_CASE("Restore checkpoint fails") {
-//    SECTION("default") {
-//        TuplePool pool;
-//        CheckpointStorage storage(save_path);
-//        auto machine = Machine(contract_path);
-//        auto results = machine.checkpoint(storage);
-//
-//        restoreCheckpoint(storage, machine, results.storage_key);
-//
-//
-//        // testing
+TEST_CASE("Restore checkpoint fails") {
+    SECTION("default") {
+        TuplePool pool;
+        CheckpointStorage storage(save_path);
+        Machine machine;
+        machine.initializeMachine(contract_path);
+        auto results = machine.checkpoint(storage);
+
+        restoreCheckpoint(storage, machine, results.storage_key);
+    }
+}
+
+// testing
 //
 //        auto saver = MachineStateSaver(&storage, &pool,
-//        machine.machine_state.code); auto res =
-//        saver.saveValue(machine.machine_state.staticVal); auto res2 =
+//        machine.machine_state.code);
+//        auto res =
+//        saver.saveValue(machine.machine_state.staticVal);
+//        auto res2 =
 //        saver.getValue(res.storage_key);
 //
 //        auto tup1 = nonstd::get<Tuple>(machine.machine_state.staticVal);
@@ -110,6 +118,8 @@ TEST_CASE("Delete machine checkpoint") {
 //            auto item = nonstd::get<CodePoint>(tup1.get_element(i));
 //            auto saved_item = nonstd::get<CodePoint>(tup2.get_element(i));
 //            auto actual_item = machine.machine_state.code[item.pc];
+//
+//
 //            REQUIRE(item.pc == saved_item.pc);
 //            auto actual_nexthash =
 //            machine.machine_state.code[item.pc].nextHash;
