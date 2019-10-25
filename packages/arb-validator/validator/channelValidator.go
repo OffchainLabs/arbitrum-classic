@@ -71,6 +71,9 @@ func NewChannelValidator(
 	}
 }
 
+func (validator *ChannelValidator) GetBalance() *protocol.BalanceTracker {
+	return validator.channelBot.GetCore().GetBalance()
+}
 func (validator *ChannelValidator) HasOpenAssertion() chan bool {
 	resultChan := make(chan bool, 1)
 	validator.actions <- func() {
