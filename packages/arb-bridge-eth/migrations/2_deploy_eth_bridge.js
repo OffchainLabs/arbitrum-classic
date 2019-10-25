@@ -110,7 +110,8 @@ module.exports = async function(deployer, network, accounts) {
   let addresses = {
     ChainLauncher: ChainLauncher.address,
     ChannelLauncher: ChannelLauncher.address,
-    GlobalPendingInbox: GlobalPendingInbox.address
+    GlobalPendingInbox: GlobalPendingInbox.address,
+    OneStepProof: OneStepProof.address
   };
   fs.writeFileSync("bridge_eth_addresses.json", JSON.stringify(addresses));
 };
