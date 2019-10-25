@@ -18,11 +18,17 @@ package bridge
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+)
+
+type BridgeMessage uint
+
+const (
+	ProofAccepted BridgeMessage = iota
 )
 
 type Bridge interface {
@@ -52,6 +58,8 @@ type Bridge interface {
 
 type ArbVMBridge interface {
 	AddedNewMessages(count uint64)
+	SendMonitorMsg(msg BridgeMessage)
+	SendMonitorErr(msg Error)
 
 	FinalizedAssertion(
 		assertion *protocol.Assertion,
@@ -109,4 +117,17 @@ type ArbVMBridge interface {
 	IsPendingUnanimous(
 		ctx context.Context,
 	) (bool, error)
+}
+
+type Error struct {
+	Err         error
+	Message     string
+	Recoverable bool
+}
+
+func (e *Error) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("%v: Recoverable=%v %v", e.Message, e.Recoverable, e.Err)
+	}
+	return e.Message
 }

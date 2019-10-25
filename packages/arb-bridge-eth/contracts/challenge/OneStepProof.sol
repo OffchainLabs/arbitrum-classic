@@ -751,7 +751,7 @@ library OneStepProof {
         if (!val2.isInt()) {
             return false;
         }
-        if (val1.intVal != 0) {
+        if (val2.intVal != 0) {
             machine.instructionStackHash = val1.hash();
         }
         return true;
