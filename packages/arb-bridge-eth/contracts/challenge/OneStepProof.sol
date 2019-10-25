@@ -123,7 +123,7 @@ library OneStepProof {
         uint256[] memory messageValue,
         bytes memory proof
     )
-        internal
+        public
         pure
         returns(uint)
     {
