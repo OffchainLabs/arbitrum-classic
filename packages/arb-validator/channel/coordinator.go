@@ -451,6 +451,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					case _ = <-closedChan:
 						log.Println("Coordinator successfully closed channel")
 					case err := <-errChan:
+						// close channel failure, Ignore since other validators will close channel
 						log.Println("Coordinator failed to close channel", err)
 					}
 				} else {
@@ -487,7 +488,7 @@ func (m *ValidatorCoordinator) initiateDisputableAssertionImpl() bool {
 	select {
 	case success := <-resultChan:
 		if success {
-			log.Printf("Coordinator made disputable assertion in %s seconds", time.Since(start))
+			log.Printf("Coordinator made disputable assertion in %s seconds\n", time.Since(start))
 		} else {
 			log.Println("Coordinator failed to disputable assert.")
 		}

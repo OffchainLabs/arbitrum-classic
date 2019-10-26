@@ -49,6 +49,7 @@ type ValidatorFollower struct {
 	unanimousRequests map[[32]byte]valmessage.UnanimousRequestData
 	maxStepsUnanSteps int32
 	ignoreCoordinator bool
+	ignore            chan bool
 }
 
 func NewValidatorFollower(
@@ -144,11 +145,11 @@ func NewValidatorFollower(
 }
 
 func (m *ValidatorFollower) IgnoreCoordinator() {
-	m.ignoreCoordinator = true
+	m.ignore <- true
 }
 
 func (m *ValidatorFollower) ListenToCoordinator() {
-	m.ignoreCoordinator = false
+	m.ignore <- false
 }
 
 func (m *ValidatorFollower) HandleUnanimousRequest(
@@ -255,6 +256,8 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 }
 
 func (m *ValidatorFollower) Run(ctx context.Context) error {
+	m.ignore = make(chan bool, 1)
+
 	parsedChan, err := m.StartListening(ctx)
 	if err != nil {
 		return err
@@ -276,20 +279,26 @@ func (m *ValidatorFollower) Run(ctx context.Context) error {
 			if !more {
 				break
 			}
+			select {
+			case i := <-m.ignore:
+				m.ignoreCoordinator = i
+			default:
+				//non blocking
+			}
 			if m.ignoreCoordinator {
 				continue
 			}
 			req := new(valmessage.ValidatorRequest)
 			err := proto.Unmarshal(message, req)
 			if err != nil {
-				log.Printf("Validator recieved malformed message")
+				log.Printf("Validator recieved malformed message\n")
 				continue
 			}
 			switch request := req.Request.(type) {
 			case *valmessage.ValidatorRequest_Unanimous:
 				err := m.HandleUnanimousRequest(request.Unanimous, value.NewHashFromBuf(req.RequestId))
 				if err != nil {
-					log.Printf("Follower error while trying to handle unanimous assertion request from coordinator")
+					log.Printf("Follower error while trying to handle unanimous assertion request from coordinator\n")
 				}
 			case *valmessage.ValidatorRequest_UnanimousNotification:
 				requestInfo := m.unanimousRequests[value.NewHashFromBuf(req.RequestId)]

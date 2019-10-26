@@ -141,6 +141,7 @@ jobs:
       - run:
           name: test arb-validator
           command: |
+            ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             ../../codecovbash -R /home/user/arbitrum -cF arb_validator
           working_directory: /home/user/arbitrum/packages/arb-validator

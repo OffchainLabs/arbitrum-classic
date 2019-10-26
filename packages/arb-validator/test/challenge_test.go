@@ -20,12 +20,13 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"io/ioutil"
-	"log"
 	"math"
 	"math/big"
 	brand "math/rand"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
@@ -44,37 +45,42 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-func main() {
+func TestChallenge(t *testing.T) {
+
+	bridge_eth_addresses := "bridge_eth_addresses.json"
+	contract := "contract.ao"
+	ethURL := "ws://127.0.0.1:7545"
+
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)
 	brand.Seed(seed)
-	jsonFile, err := os.Open(os.Args[1])
+	jsonFile, err := os.Open(bridge_eth_addresses)
 	if err != nil {
-		log.Fatalln(err)
+		t.Fatal(err)
 	}
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	if err := jsonFile.Close(); err != nil {
-		log.Fatalln(err)
+		t.Fatal(err)
 	}
 
 	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
-		log.Fatalln(err)
+		t.Fatal(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(os.Args[2], true, "test")
+	machine, err := loader.LoadMachineFromFile(contract, true, "test")
 	if err != nil {
-		log.Fatal("Loader Error: ", err)
+		t.Fatal("Loader Error: ", err)
 	}
 
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	key2, err := crypto.HexToECDSA("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	auth1 := bind.NewKeyedTransactor(key1)
@@ -91,15 +97,13 @@ func main() {
 		common.Address{}, // Address 0 means no owner
 	)
 
-	ethURL := os.Args[3]
-
 	val1, err := ethvalidator.NewValidator(
 		key1,
 		connectionInfo,
 		ethURL,
 	)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	val2, err := ethvalidator.NewValidator(
@@ -108,12 +112,12 @@ func main() {
 		ethURL,
 	)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	address, err := val1.LaunchChannel(context.Background(), config, machine.Hash())
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	coordinator, err := channel.NewCoordinator(
@@ -128,7 +132,7 @@ func main() {
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	coordinator.StartServer(context.Background())
@@ -147,19 +151,22 @@ func main() {
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	if err := coordinator.Run(context.Background()); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	if err := challenger.Run(context.Background()); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
-	log.Println("Everyone is running")
-
+	t.Log("Everyone is running")
+	coordinatorMsgMonitorChan := coordinator.Val.MessageMonChan
+	coordinatorErrMonitorChan := coordinator.Val.ErrorMonChan
+	challengerMsgMonitorChan := challenger.Validator.MessageMonChan
+	challengerErrMonitorChan := challenger.Validator.ErrorMonChan
 	time.Sleep(2 * time.Second)
 
 	challenger.IgnoreCoordinator()
@@ -174,18 +181,69 @@ func main() {
 		value.NewIntValue(addressInt),
 		seq,
 	})
-
+	//coordinator.Val.Validator.
 	receipt, err := coordinator.Val.SendEthMessage(
 		context.Background(),
 		tup,
 		big.NewInt(0),
 	)
 	if err != nil {
-		log.Fatalln("Send error", err)
+		t.Fatal("Send error", err)
 	}
 	if receipt.Status == 0 {
-		log.Fatalln("Follower could not send message")
+		t.Fatal("Follower could not send message")
 	}
-
-	time.Sleep(60 * time.Second)
+	for {
+		select {
+		case message := <-challengerMsgMonitorChan:
+			if message == bridge.ProofAccepted {
+				t.Log("***************************")
+				t.Log("Challenger received ProofAccepted message = ", message)
+				t.Log("***************************")
+			}
+		case message := <-coordinatorMsgMonitorChan:
+			if message == bridge.ProofAccepted {
+				t.Log("***************************")
+				t.Log("Coordinator received ProofAccepted message = ", message)
+				t.Log("***************************")
+				return
+			}
+		case message := <-coordinatorErrMonitorChan:
+			if !message.Recoverable {
+				t.Error("coordinator unexpected unrecoverable error")
+				t.Log("***************************")
+				t.Log("unrecoverable error exiting")
+				t.Log(message.Message)
+				t.Log(message.Err)
+				t.Log("***************************")
+				return
+			} else {
+				t.Log("****************************")
+				t.Log("recoverable error continuing")
+				t.Log(message)
+				t.Log("****************************")
+			}
+		case message := <-challengerErrMonitorChan:
+			if !message.Recoverable {
+				t.Error("challenger unexpected unrecoverable error")
+				t.Log("***************************")
+				t.Log("unrecoverable challenger error exiting")
+				t.Log(message.Message)
+				t.Log(message.Err)
+				t.Log("***************************")
+				return
+			} else {
+				t.Error("challenger unexpected recoverable error")
+				t.Log("****************************")
+				t.Log("recoverable challenger error continuing")
+				t.Log(message.Message)
+				t.Log("****************************")
+			}
+		case <-time.After(60 * time.Second):
+			t.Error("Never received proof accepted message")
+			fmt.Println("test complete")
+			return
+		}
+	}
+	//time.Sleep(60 * time.Second)
 }

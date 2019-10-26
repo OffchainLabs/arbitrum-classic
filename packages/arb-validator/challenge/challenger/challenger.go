@@ -60,7 +60,7 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 	return challenge.TimedOutAsserter{Config: bot.Config}, err
 }
 
-func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
@@ -76,9 +76,9 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 			err = nil
 		}
 		if err != nil {
-			return nil, &challenge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
+			return nil, &bridge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
 		}
-		_, err = bridge.ContinueChallenge(
+		_, err = brdg.ContinueChallenge(
 			context.Background(),
 			assertionNum,
 			bot.challengedPrecondition,
@@ -94,7 +94,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, bridge
 	case ethbridge.OneStepProofEvent:
 		return nil, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: waitingContinuing: VM state got unsynchronized"}
+		return nil, &bridge.Error{Message: "ERROR: waitingContinuing: VM state got unsynchronized"}
 	}
 }
 
@@ -120,7 +120,7 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challe
 	return challenge.TimedOutChallenger{Config: bot.Config}, nil
 }
 
-func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		deadline := time + bot.VMConfig.GracePeriod
@@ -132,6 +132,6 @@ func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, bridge bridge
 			deadline,
 		}, nil
 	default:
-		return nil, &challenge.Error{Message: "ERROR: continuing: VM state got unsynchronized"}
+		return nil, &bridge.Error{Message: "ERROR: continuing: VM state got unsynchronized"}
 	}
 }
