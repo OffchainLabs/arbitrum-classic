@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 enum class OpCode : uint8_t {
     ADD = 0x01,
