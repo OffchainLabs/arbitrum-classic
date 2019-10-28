@@ -219,6 +219,20 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	return C.GoBytes(unsafe.Pointer(rawProof.data), rawProof.length), nil
 }
 
+func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
+
+	success := C.checkpointMachine(m.c, storage.GetCStorage())
+
+	return success == 1
+}
+
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+	cCheckpointName := C.CString(checkpointName)
+	sucess := C.restoreMachine(m.c, storage.GetCStorage(), cCheckpointName)
+
+	return sucess == 1
+}
+
 func bytesArrayToVals(data []byte, valCount int) []value.Value {
 	rd := bytes.NewReader(data)
 	vals := make([]value.Value, 0, valCount)

@@ -17,7 +17,7 @@
 #include <boost/dll.hpp>
 #include <catch2/catch.hpp>
 
-#include <avm/machinestate/machinestatesaver.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/messagestack.hpp>
 
 std::string current_path =
@@ -36,14 +36,15 @@ void saveMessageStack(MachineStateSaver& saver,
             expected_num_ref_count);
 }
 
-void getSavedMessageStack(MachineStateSaver& saver,
+void getSavedMessageStack(MachineStateFetcher& fetcher,
                           std::vector<unsigned char> msgs_key,
                           std::vector<unsigned char> count_key,
                           uint256_t expected_tuple_hash,
                           uint64_t expected_count) {
     TuplePool pool;
     MessageStack new_stack(&pool);
-    auto success = new_stack.initializeMessageStack(saver, msgs_key, count_key);
+    auto success =
+        new_stack.initializeMessageStack(fetcher, msgs_key, count_key);
 
     REQUIRE(success == true);
     REQUIRE(new_stack.messages.calculateHash() == expected_tuple_hash);
@@ -55,7 +56,7 @@ TEST_CASE("save messagestack") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
         auto stack = MessageStack(&pool);
 
         saveMessageStack(saver, stack, 1, 1);
@@ -64,7 +65,7 @@ TEST_CASE("save messagestack") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
         auto stack = MessageStack(&pool);
 
         stack.checkpointState(saver);
@@ -74,7 +75,7 @@ TEST_CASE("save messagestack") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
         auto stack = MessageStack(&pool);
 
         uint256_t val_data = 111;
@@ -91,7 +92,7 @@ TEST_CASE("save messagestack") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
         auto stack = MessageStack(&pool);
 
         uint256_t val_data = 111;
@@ -113,12 +114,13 @@ TEST_CASE("Get saved messagestack") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         auto stack = MessageStack(&pool);
         auto results = stack.checkpointState(saver);
 
-        getSavedMessageStack(saver, results.msgs_tuple_results.storage_key,
+        getSavedMessageStack(fetcher, results.msgs_tuple_results.storage_key,
                              results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 0);
     }
@@ -126,7 +128,8 @@ TEST_CASE("Get saved messagestack") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         auto stack = MessageStack(&pool);
 
@@ -140,7 +143,7 @@ TEST_CASE("Get saved messagestack") {
         stack.addMessage(msg);
         auto results = stack.checkpointState(saver);
 
-        getSavedMessageStack(saver, results.msgs_tuple_results.storage_key,
+        getSavedMessageStack(fetcher, results.msgs_tuple_results.storage_key,
                              results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 1);
     }
@@ -148,7 +151,8 @@ TEST_CASE("Get saved messagestack") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         auto stack = MessageStack(&pool);
 
@@ -163,7 +167,7 @@ TEST_CASE("Get saved messagestack") {
         auto results = stack.checkpointState(saver);
         auto results2 = stack.checkpointState(saver);
 
-        getSavedMessageStack(saver, results.msgs_tuple_results.storage_key,
+        getSavedMessageStack(fetcher, results.msgs_tuple_results.storage_key,
                              results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 1);
     }

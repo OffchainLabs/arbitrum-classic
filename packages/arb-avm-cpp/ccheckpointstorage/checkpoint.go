@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ccheckpoint
+package ccheckpointstorage
 
 /*
 #cgo CFLAGS: -I.
@@ -34,7 +34,7 @@ type CheckpointStorage struct {
 	c unsafe.Pointer
 }
 
-func New(dbPath string) (*CheckpointStorage, error) {
+func NewCheckpoint(dbPath string) (*CheckpointStorage, error) {
 	cDbPath := C.CString(dbPath)
 	cCheckpointStorage := C.createCheckpointStorage(cDbPath)
 
@@ -58,4 +58,8 @@ func (checkpoint *CheckpointStorage) DeleteCheckpoint(checkpointName string) boo
 	success := C.deleteCheckpoint(checkpoint.c, cCheckpointName)
 
 	return success == 1
+}
+
+func (checkpoint *CheckpointStorage) GetCStorage() unsafe.Pointer {
+	return checkpoint.c
 }

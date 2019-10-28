@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/exceptions.hpp>
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm/machinestate/machinestate.hpp>
@@ -206,7 +207,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 }
 
 SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
-    auto stateSaver = MachineStateSaver(&storage, pool.get(), code);
+    auto stateSaver = MachineStateSaver(&storage);
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
@@ -256,38 +257,39 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 }
 
 DbResult<ParsedState> MachineState::restoreCheckpoint(
-    CheckpointStorage& storage,
+    const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
-    auto stateSaver = MachineStateSaver(&storage, pool.get(), code);
-    auto results = stateSaver.getMachineState(checkpoint_key);
+    auto stateFetcher = MachineStateFetcher(&storage, pool.get(), code);
+    auto results = stateFetcher.getMachineState(checkpoint_key);
 
     if (results.status.ok()) {
         auto machine_state_data = results.data;
 
         auto static_val_results =
-            stateSaver.getValue(machine_state_data.static_val_key);
+            stateFetcher.getValue(machine_state_data.static_val_key);
         staticVal = static_val_results.data;
 
         auto register_val_results =
-            stateSaver.getValue(machine_state_data.register_val_key);
+            stateFetcher.getValue(machine_state_data.register_val_key);
         registerVal = register_val_results.data;
 
-        auto pc_results = stateSaver.getCodePoint(machine_state_data.pc_key);
+        auto pc_results = stateFetcher.getCodePoint(machine_state_data.pc_key);
         pc = pc_results.data.pc;
 
         auto err_pc_results =
-            stateSaver.getCodePoint(machine_state_data.err_pc_key);
+            stateFetcher.getCodePoint(machine_state_data.err_pc_key);
         errpc = err_pc_results.data;
 
-        stack.initializeDataStack(stateSaver, machine_state_data.datastack_key);
-        auxstack.initializeDataStack(stateSaver,
+        stack.initializeDataStack(stateFetcher,
+                                  machine_state_data.datastack_key);
+        auxstack.initializeDataStack(stateFetcher,
                                      machine_state_data.auxstack_key);
 
-        inbox.initializeMessageStack(stateSaver, machine_state_data.inbox_key,
+        inbox.initializeMessageStack(stateFetcher, machine_state_data.inbox_key,
                                      machine_state_data.inbox_count_key);
 
         pendingInbox.initializeMessageStack(
-            stateSaver, machine_state_data.pending_key,
+            stateFetcher, machine_state_data.pending_key,
             machine_state_data.pending_count_key);
 
         state = (Status)machine_state_data.status_char;

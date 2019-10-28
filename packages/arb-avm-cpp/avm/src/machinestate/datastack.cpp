@@ -65,9 +65,9 @@ SaveResults Datastack::checkpointState(MachineStateSaver& msSaver,
 }
 
 DbResult<Tuple> Datastack::initializeDataStack(
-    MachineStateSaver& msSaver,
+    const MachineStateFetcher& fetcher,
     std::vector<unsigned char> hash_key) {
-    auto results = msSaver.getTuple(hash_key);
+    auto results = fetcher.getTuple(hash_key);
     initializeDataStack(results.data);
 
     return results;

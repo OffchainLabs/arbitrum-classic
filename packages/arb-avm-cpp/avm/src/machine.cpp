@@ -18,8 +18,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <avm/checkpoint/checkpointdeleter.hpp>
 #include <avm/machine.hpp>
-#include <avm/machinestate/checkpointdeleter.hpp>
 #include <avm/opcodes.hpp>
 #include <bigint_utils.hpp>
 #include <util.hpp>
@@ -155,9 +155,8 @@ bool Machine::restoreCheckpoint(
     return machine_state.restoreCheckpoint(storage, checkpoint_key).status.ok();
 }
 
-DeleteResults Machine::deleteCheckpoint(
-    CheckpointStorage& storage,
-    const std::vector<unsigned char>& checkpoint_key) {
-    CheckpointDeleter checkpoint_deleter(&storage);
-    return checkpoint_deleter.deleteCheckpoint(checkpoint_key);
+DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
+    auto checkpoint_key = GetHashKey(hash());
+    auto results = ::deleteCheckpoint(storage, checkpoint_key);
+    return results;
 }

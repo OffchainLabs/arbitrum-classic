@@ -33,7 +33,7 @@ fi
 
 cmake --build . -j "${NPROC}"
 cp lib/lib* ../cmachine/
-cp lib/lib* ../ccheckpoint/
+cp lib/lib* ../ccheckpointstorage/
 cd ../../..
 
 # install arb-validator

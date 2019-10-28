@@ -16,8 +16,8 @@
 
 #include <iterator>
 
+#include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/machinestate/blockreason.hpp>
-#include <avm/machinestate/checkpointutils.hpp>
 #include <avm/machinestate/tokenTracker.hpp>
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>
@@ -30,7 +30,7 @@
 #define TUP_NUM_LENGTH 34
 #define TUP_CODEPT_LENGTH 9
 
-namespace Checkpoint {
+namespace checkpoint {
 
 uint64_t deserialize_int64(char*& bufptr) {
     uint64_t ret_value;
@@ -91,7 +91,7 @@ struct ValueSerializer {
     }
 };
 
-using iterator = std::vector<unsigned char>::iterator;
+using iterator = std::vector<unsigned char>::const_iterator;
 
 unsigned char extractStatus(iterator& iter) {
     auto status = (unsigned char)(*iter);
@@ -131,15 +131,15 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
     return hash_key;
 }
 
-namespace Utils {
+namespace utils {
 
 std::vector<std::vector<unsigned char>> parseSerializedTuple(
-    std::vector<unsigned char> data_vector) {
+    const std::vector<unsigned char>& data) {
     std::vector<std::vector<unsigned char>> return_vector;
 
-    auto iter = data_vector.begin() + 1;
+    auto iter = data.begin() + 1;
 
-    while (iter < data_vector.end()) {
+    while (iter < data.end()) {
         auto value_type = (valueTypes)*iter;
         std::vector<unsigned char> current;
 
@@ -188,7 +188,7 @@ std::vector<unsigned char> serializeValue(const value& val) {
     return nonstd::visit(ValueSerializer{}, val);
 }
 
-ParsedState parseState(std::vector<unsigned char> stored_state) {
+ParsedState parseState(const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 
     auto status = extractStatus(current_iter);
@@ -221,7 +221,7 @@ ParsedState parseState(std::vector<unsigned char> stored_state) {
                        balance_track_vector};
 }
 
-std::vector<unsigned char> serializeState(ParsedState state_data) {
+std::vector<unsigned char> serializeState(const ParsedState& state_data) {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(state_data.status_char);
 
@@ -281,5 +281,5 @@ std::vector<unsigned char> serializeState(ParsedState state_data) {
                              state_data.err_pc_key.end());
     return state_data_vector;
 }
-}  // namespace Utils
-}  // namespace Checkpoint
+}  // namespace utils
+}  // namespace checkpoint

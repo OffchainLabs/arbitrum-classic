@@ -20,7 +20,8 @@
 #include <iostream>
 #include <vector>
 
-#include <avm/machinestate/machinestatesaver.hpp>
+#include <avm/checkpoint/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
 
@@ -95,9 +96,9 @@ class Datastack {
 
     uint256_t hash() const;
 
-    SaveResults checkpointState(MachineStateSaver& msSaver, TuplePool* pool);
+    SaveResults checkpointState(MachineStateSaver& fetcher, TuplePool* pool);
 
-    DbResult<Tuple> initializeDataStack(MachineStateSaver& msSaver,
+    DbResult<Tuple> initializeDataStack(const MachineStateFetcher& fetcher,
                                         std::vector<unsigned char> hash_key);
 };
 

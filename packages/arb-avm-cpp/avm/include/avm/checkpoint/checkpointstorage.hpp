@@ -43,13 +43,9 @@ class CheckpointStorage {
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
     std::unique_ptr<rocksdb::Transaction> makeTransaction();
-    rocksdb::Status saveValue(const std::string& value, const std::string& key);
-    rocksdb::Status deleteValue(const std::string& key);
-    std::tuple<int, std::vector<unsigned char>> parseCountAndValue(
-        const std::string& string_value);
-    std::vector<unsigned char> serializeCountAndValue(
-        int count,
-        const std::vector<unsigned char>& value);
+    rocksdb::Status saveKeyValuePair(const std::vector<unsigned char>& key,
+                                     const std::vector<unsigned char>& value);
+    rocksdb::Status deleteKeyValuePair(const std::vector<unsigned char>& key);
     SaveResults saveValueWithRefCount(
         int new_count,
         const std::vector<unsigned char>& hash_key,
@@ -60,9 +56,9 @@ class CheckpointStorage {
     ~CheckpointStorage();
 
     SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
-    SaveResults saveValue(const std::vector<unsigned char>& value,
-                          const std::vector<unsigned char>& hash_key);
-    GetResults getValue(const std::vector<unsigned char>& hash_key);
+    SaveResults saveValue(const std::vector<unsigned char>& hash_key,
+                          const std::vector<unsigned char>& value);
+    GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
 };
 

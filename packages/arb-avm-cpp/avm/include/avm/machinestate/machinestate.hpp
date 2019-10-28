@@ -19,7 +19,6 @@
 
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
-#include <avm/machinestate/machinestatesaver.hpp>
 #include <avm/machinestate/messagestack.hpp>
 #include <avm/value/value.hpp>
 #include <memory>
@@ -70,7 +69,7 @@ struct MachineState {
     void setPendingInbox(MessageStack ms);
     SaveResults checkpointState(CheckpointStorage& storage);
     DbResult<ParsedState> restoreCheckpoint(
-        CheckpointStorage& storage,
+        const CheckpointStorage& storage,
         const std::vector<unsigned char>& checkpoint_key);
 };
 

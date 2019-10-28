@@ -45,7 +45,7 @@ void checkpointStateTwice(CheckpointStorage& storage, Machine& machine) {
 void deleteCheckpoint(CheckpointStorage& storage,
                       Machine& machine,
                       const std::vector<unsigned char>& checkpoint_key) {
-    auto results = machine.deleteCheckpoint(storage, checkpoint_key);
+    auto results = machine.deleteCheckpoint(storage);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 0);
 }
@@ -89,17 +89,17 @@ TEST_CASE("Delete machine checkpoint") {
     }
 }
 
-TEST_CASE("Restore checkpoint fails") {
-    SECTION("default") {
-        TuplePool pool;
-        CheckpointStorage storage(save_path);
-        Machine machine;
-        machine.initializeMachine(contract_path);
-        auto results = machine.checkpoint(storage);
-
-        restoreCheckpoint(storage, machine, results.storage_key);
-    }
-}
+// TEST_CASE("Restore checkpoint fails") {
+//    SECTION("default") {
+//        TuplePool pool;
+//        CheckpointStorage storage(save_path);
+//        Machine machine;
+//        machine.initializeMachine(contract_path);
+//        auto results = machine.checkpoint(storage);
+//
+//        restoreCheckpoint(storage, machine, results.storage_key);
+//    }
+//}
 
 // testing
 //

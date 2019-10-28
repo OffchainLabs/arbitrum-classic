@@ -17,7 +17,8 @@
 #ifndef messagestack_hpp
 #define messagestack_hpp
 
-#include <avm/machinestate/machinestatesaver.hpp>
+#include <avm/checkpoint/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/tokenTracker.hpp>
 #include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
@@ -63,11 +64,11 @@ struct MessageStack {
         return MessageStackSaveResults{saved_msgs, saved_msg_count};
     }
 
-    bool initializeMessageStack(MachineStateSaver& msSaver,
+    bool initializeMessageStack(const MachineStateFetcher& fetcher,
                                 std::vector<unsigned char> msgs_key,
                                 std::vector<unsigned char> count_key) {
-        auto msgs_res = msSaver.getTuple(msgs_key);
-        auto count_res = msSaver.getUint256_t(count_key);
+        auto msgs_res = fetcher.getTuple(msgs_key);
+        auto count_res = fetcher.getUint256_t(count_key);
 
         if (msgs_res.status.ok() && count_res.status.ok()) {
             messages = msgs_res.data;

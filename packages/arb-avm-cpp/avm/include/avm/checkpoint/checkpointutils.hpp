@@ -19,6 +19,15 @@
 
 #include <avm/value/value.hpp>
 
+#include <avm/checkpoint/checkpointstorage.hpp>
+
+template <typename T>
+struct DbResult {
+    rocksdb::Status status;
+    int reference_count;
+    T data;
+};
+
 struct ParsedState {
     std::vector<unsigned char> static_val_key;
     std::vector<unsigned char> register_val_key;
@@ -35,17 +44,17 @@ struct ParsedState {
     std::vector<unsigned char> balancetracker_str;
 };
 
-namespace Checkpoint {
-namespace Utils {
+namespace checkpoint {
+namespace utils {
 std::vector<unsigned char> serializeValue(const value& val);
 CodePoint deserializeCodepoint(std::vector<unsigned char>& val,
                                const std::vector<CodePoint>& code);
 uint256_t deserializeUint256_t(std::vector<unsigned char>& val);
 std::vector<std::vector<unsigned char>> parseSerializedTuple(
-    std::vector<unsigned char> data_vector);
-ParsedState parseState(std::vector<unsigned char> stored_state);
-std::vector<unsigned char> serializeState(ParsedState state_data);
-}  // namespace Utils
-}  // namespace Checkpoint
+    const std::vector<unsigned char>& data);
+ParsedState parseState(const std::vector<unsigned char>& stored_state);
+std::vector<unsigned char> serializeState(const ParsedState& state_data);
+}  // namespace utils
+}  // namespace checkpoint
 
 #endif /* statesaverutils_hpp */

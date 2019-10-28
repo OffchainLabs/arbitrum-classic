@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avm/checkpointstorage.hpp"
+#include "avm/checkpoint/checkpointstorage.hpp"
 
 #include <boost/dll.hpp>
 #include <catch2/catch.hpp>
@@ -34,7 +34,7 @@ void saveVal(CheckpointStorage& storage,
              std::vector<unsigned char> hash_key,
              int expected_ref_count,
              bool expected_status) {
-    auto results = storage.saveValue(val, hash_key);
+    auto results = storage.saveValue(hash_key, val);
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
 }

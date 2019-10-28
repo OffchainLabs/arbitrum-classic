@@ -24,7 +24,6 @@ set(LIB_HEADERS
   include/avm/machine.hpp
   include/avm/opcodes.hpp
   include/avm/exceptions.hpp
-  include/avm/checkpointstorage.hpp
   include/avm/value/tuple.hpp
   include/avm/value/value.hpp
   include/avm/value/bigint.hpp
@@ -35,16 +34,17 @@ set(LIB_HEADERS
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/blockreason.hpp
   include/avm/machinestate/machineoperation.hpp
-  include/avm/machinestate/machinestatesaver.hpp
   include/avm/machinestate/messagestack.hpp
-  include/avm/machinestate/checkpointutils.hpp
-  include/avm/machinestate/checkpointdeleter.hpp
+  include/avm/checkpoint/checkpointutils.hpp
+  include/avm/checkpoint/checkpointdeleter.hpp
+  include/avm/checkpoint/machinestatesaver.hpp
+  include/avm/checkpoint/machinestatefetcher.hpp
+  include/avm/checkpoint/checkpointstorage.hpp
 )
 
 set(LIB_SOURCES
   src/util.hpp
   src/machine.cpp
-  src/checkpointstorage.cpp
   src/value/bigint.cpp
   src/value/codepoint.cpp
   src/value/pool.cpp
@@ -54,10 +54,12 @@ set(LIB_SOURCES
   src/machinestate/machinestate.cpp
   src/machinestate/machineoperation.cpp
   src/machinestate/datastack.cpp
-  src/machinestate/machinestatesaver.cpp
-  src/machinestate/checkpointutils.cpp
   src/machinestate/blockreason.cpp
-  src/machinestate/checkpointdeleter.cpp
+  src/checkpoint/machinestatesaver.cpp
+  src/checkpoint/checkpointutils.cpp
+  src/checkpoint/machinestatefetcher.cpp
+  src/checkpoint/checkpointdeleter.cpp
+  src/checkpoint/checkpointstorage.cpp
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )

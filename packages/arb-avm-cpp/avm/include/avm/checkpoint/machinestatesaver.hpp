@@ -19,37 +19,18 @@
 
 #include <rocksdb/db.h>
 
-#include <avm/checkpointstorage.hpp>
-#include <avm/machinestate/checkpointutils.hpp>
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
-
-template <typename T>
-struct DbResult {
-    rocksdb::Status status;
-    int reference_count;
-    T data;
-};
 
 class MachineStateSaver {
    private:
     // when to use shared pointer for an object?
     CheckpointStorage* checkpoint_storage;
-    TuplePool* pool;
-    std::vector<CodePoint> code;
 
    public:
-    MachineStateSaver(CheckpointStorage* checkpoint_storage,
-                      TuplePool* pool,
-                      std::vector<CodePoint> code);
-    DbResult<CodePoint> getCodePoint(
-        const std::vector<unsigned char>& hash_key);
-    DbResult<uint256_t> getUint256_t(
-        const std::vector<unsigned char>& hash_key);
-    DbResult<value> getValue(const std::vector<unsigned char>& hash_key);
-    DbResult<Tuple> getTuple(const std::vector<unsigned char>& hash_key);
-    DbResult<ParsedState> getMachineState(
-        const std::vector<unsigned char>& checkpoint_name);
+    MachineStateSaver(CheckpointStorage* checkpoint_storage);
     SaveResults saveTuple(const Tuple& val);
     SaveResults saveValue(const value& val);
     SaveResults saveMachineState(

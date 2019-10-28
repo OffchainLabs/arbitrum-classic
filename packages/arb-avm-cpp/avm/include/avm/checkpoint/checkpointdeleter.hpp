@@ -17,21 +17,11 @@
 #ifndef checkpointdeleter_hpp
 #define checkpointdeleter_hpp
 
-#include <avm/checkpointstorage.hpp>
-#include <avm/machinestate/checkpointutils.hpp>
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
 
-class CheckpointDeleter {
-   private:
-    CheckpointStorage* checkpoint_storage;
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
-                              GetResults& results);
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key);
-    DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
-
-   public:
-    CheckpointDeleter(CheckpointStorage* storage);
-    DeleteResults deleteCheckpoint(
-        const std::vector<unsigned char>& checkpoint_name);
-};
+DeleteResults deleteCheckpoint(
+    CheckpointStorage& checkpoint_storage,
+    const std::vector<unsigned char>& checkpoint_name);
 
 #endif /* checkpointdeleter_h */

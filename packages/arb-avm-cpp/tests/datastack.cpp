@@ -15,19 +15,21 @@
  */
 
 #include "avm/machinestate/datastack.hpp"
+#include <avm/checkpoint/machinestatefetcher.hpp>
 #include <boost/dll.hpp>
 #include <catch2/catch.hpp>
-#include "avm/machinestate/machinestatesaver.hpp"
+#include "avm/checkpoint/machinestatesaver.hpp"
 
 std::string dbpath =
     boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
 
 void initializeDatastack(MachineStateSaver& msSaver,
+                         MachineStateFetcher& fetcher,
                          std::vector<unsigned char> hash_key,
                          uint256_t expected_hash,
                          int expected_size) {
     Datastack data_stack;
-    data_stack.initializeDataStack(msSaver, hash_key);
+    data_stack.initializeDataStack(fetcher, hash_key);
 
     REQUIRE(data_stack.hash() == expected_hash);
     REQUIRE(data_stack.stacksize() == expected_size);
@@ -38,7 +40,7 @@ void saveDataStack(Datastack data_stack,
     TuplePool pool;
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto saver = MachineStateSaver(&storage, &pool, code);
+    auto saver = MachineStateSaver(&storage);
 
     auto results = data_stack.checkpointState(saver, &pool);
 
@@ -52,7 +54,7 @@ void saveDataStackTwice(Datastack data_stack,
     TuplePool pool;
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto saver = MachineStateSaver(&storage, &pool, code);
+    auto saver = MachineStateSaver(&storage);
 
     auto results = data_stack.checkpointState(saver, &pool);
     auto results2 = data_stack.checkpointState(saver, &pool);
@@ -63,12 +65,13 @@ void saveDataStackTwice(Datastack data_stack,
 }
 
 void saveAndGetDataStack(MachineStateSaver& saver,
+                         MachineStateFetcher& fetcher,
                          Datastack data_stack,
                          std::vector<unsigned char> hash_key,
                          uint256_t expected_hash) {
     TuplePool pool;
     data_stack.checkpointState(saver, &pool);
-    auto get_results = saver.getTuple(hash_key);
+    auto get_results = fetcher.getTuple(hash_key);
 
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 1);
@@ -76,6 +79,7 @@ void saveAndGetDataStack(MachineStateSaver& saver,
 }
 
 void saveTwiceAndGetDataStack(MachineStateSaver& saver,
+                              MachineStateFetcher& fetcher,
                               Datastack data_stack,
                               std::vector<unsigned char> hash_key,
                               uint256_t expected_hash) {
@@ -83,7 +87,7 @@ void saveTwiceAndGetDataStack(MachineStateSaver& saver,
 
     data_stack.checkpointState(saver, &pool);
     data_stack.checkpointState(saver, &pool);
-    auto get_results = saver.getTuple(hash_key);
+    auto get_results = fetcher.getTuple(hash_key);
 
     REQUIRE(get_results.status.ok());
     REQUIRE(get_results.reference_count == 2);
@@ -95,21 +99,23 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         CheckpointStorage storage(dbpath);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         Datastack data_stack;
 
         auto results = data_stack.checkpointState(saver, &pool);
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(saver, results.storage_key, stack_hash, 0);
+        initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 0);
     }
 
     SECTION("push empty tuple") {
         TuplePool pool;
         CheckpointStorage storage(dbpath);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         Datastack data_stack;
         Tuple tuple;
@@ -118,7 +124,7 @@ TEST_CASE("Initialize datastack") {
         auto results = data_stack.checkpointState(saver, &pool);
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(saver, results.storage_key, stack_hash, 1);
+        initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 1);
     }
 
     SECTION("push num, tuple") {
@@ -130,7 +136,8 @@ TEST_CASE("Initialize datastack") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         Datastack data_stack;
         uint256_t num = 1;
@@ -142,7 +149,7 @@ TEST_CASE("Initialize datastack") {
         auto results = data_stack.checkpointState(saver, &pool);
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(saver, results.storage_key, stack_hash, 2);
+        initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 2);
     }
     SECTION("push codepoint, tuple") {
         TuplePool pool;
@@ -152,7 +159,8 @@ TEST_CASE("Initialize datastack") {
         auto code_point2 = CodePoint(1, Operation(), 0);
         code.push_back(code_point);
         code.push_back(code_point2);
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         Datastack data_stack;
 
@@ -165,7 +173,7 @@ TEST_CASE("Initialize datastack") {
         auto results = data_stack.checkpointState(saver, &pool);
         auto stack_hash = data_stack.hash();
 
-        initializeDatastack(saver, results.storage_key, stack_hash, 2);
+        initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 2);
     }
 }
 
@@ -231,7 +239,8 @@ TEST_CASE("Save and get datastack") {
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         code.push_back(code_point);
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(code_point, &pool);
@@ -246,7 +255,7 @@ TEST_CASE("Save and get datastack") {
         std::vector<unsigned char> hash_key_vector;
         marshal_value(tup_rep.calculateHash(), hash_key_vector);
 
-        saveAndGetDataStack(saver, datastack, hash_key_vector,
+        saveAndGetDataStack(saver, fetcher, datastack, hash_key_vector,
                             tup_rep.calculateHash());
     }
     SECTION("save datastack twice and get") {
@@ -255,7 +264,8 @@ TEST_CASE("Save and get datastack") {
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         code.push_back(code_point);
-        auto saver = MachineStateSaver(&storage, &pool, code);
+        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(&storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(code_point, &pool);
@@ -270,7 +280,7 @@ TEST_CASE("Save and get datastack") {
         std::vector<unsigned char> hash_key_vector;
         marshal_value(tup_rep.calculateHash(), hash_key_vector);
 
-        saveTwiceAndGetDataStack(saver, datastack, hash_key_vector,
+        saveTwiceAndGetDataStack(saver, fetcher, datastack, hash_key_vector,
                                  tup_rep.calculateHash());
     }
 }

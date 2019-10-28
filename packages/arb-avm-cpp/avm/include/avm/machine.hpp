@@ -20,7 +20,7 @@
 #include <memory>
 #include <vector>
 
-#include <avm/checkpointstorage.hpp>
+#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/exceptions.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/machinestate.hpp>
@@ -71,9 +71,7 @@ class Machine {
     SaveResults checkpoint(CheckpointStorage& storage);
     bool restoreCheckpoint(CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);
-    DeleteResults deleteCheckpoint(
-        CheckpointStorage& storage,
-        const std::vector<unsigned char>& checkpoint_key);
+    DeleteResults deleteCheckpoint(CheckpointStorage& storage);
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);
