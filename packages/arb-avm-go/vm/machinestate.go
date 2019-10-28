@@ -18,6 +18,7 @@ package vm
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math/big"
@@ -357,6 +358,9 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	errHandlerHash := m.errHandler.Hash()
 
 	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
+	fmt.Printf("codePoint = %v, baseStackValHash = %v\n", hex.EncodeToString(codePoint.NextHash[:]), hex.EncodeToString(baseStackValHash[:]))
+	fmt.Printf("auxStack = %v, register = %v\n", hex.EncodeToString(baseAuxStackValHash[:]), hex.EncodeToString(registerHash[:]))
+	fmt.Printf("staticHash = %v, errHandlerHash = %v\n", hex.EncodeToString(staticHash[:]), hex.EncodeToString(errHandlerHash[:]))
 
 	if _, err := wr.Write(codePoint.NextHash[:]); err != nil {
 		return err
