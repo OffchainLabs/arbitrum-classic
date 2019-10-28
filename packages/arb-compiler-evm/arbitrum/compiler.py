@@ -38,30 +38,40 @@ def build_bst(items):
     return value.Tuple(tree)
 
 
+class TempCodePoint:
+    def __init__(self, pc):
+        self.pc = pc
+
+
+def replace_code_points(x, block, i):
+    if isinstance(x, TempCodePoint):
+        return block[x.pc]
+
+    if isinstance(x, ast.AVMLabeledPos):
+        if x.pc <= i:
+            raise Exception("Immediate codepoint value can only jump forwards")
+        return block[x.pc]
+
+    if isinstance(x, value.Tuple):
+        return value.Tuple([replace_code_points(v, block, i) for v in x])
+
+    return x
+
+
 def generate_code_pointers(insns):
-    code_points = []
-    prev_hash = b""
-    total = len(insns)
+    code_points = [None] * len(insns)
+    next_hash = b""
+    imm_types = Counter()
     for i in range(len(insns) - 1, -1, -1):
         if isinstance(insns[i], ast.BasicOp):
-            code_point = value.AVMCodePoint(i, insns[i], prev_hash, insns[i].path)
+            code_point = value.AVMCodePoint(i, insns[i], next_hash, insns[i].path)
         elif isinstance(insns[i], ast.ImmediateOp):
-            val = insns[i].val
-            if isinstance(val, ast.AVMLabeledPos):
-                immediate = code_points[total - val.pc - 1]
-                if immediate.pc != val.pc:
-                    raise Exception(
-                        "Error calculating code points: Non matching pc {} and {}".format(
-                            immediate.pc, val.pc
-                        )
-                    )
-                assert immediate.pc == val.pc
-            else:
-                immediate = val
+            immediate = replace_code_points(insns[i].val, code_points, i)
+            imm_types[type(immediate)] += 1
             code_point = value.AVMCodePoint(
                 i,
                 ast.ImmediateOp(insns[i].op, immediate, insns[i].path),
-                prev_hash,
+                next_hash,
                 insns[i].path,
             )
         else:
@@ -70,34 +80,15 @@ def generate_code_pointers(insns):
                     i, insns[i]
                 )
             )
-        prev_hash = value.value_hash(code_point)
-        code_points.append(code_point)
-    assert len(code_points) == len(insns)
-    return code_points[::-1]
+        next_hash = value.value_hash(code_point)
+        code_points[i] = code_point
+    return code_points
 
 
 def check_compiled(insns):
     for i, insn in enumerate(insns):
         if not isinstance(insn, (ast.BasicOp, ast.AVMLabel, ast.AVMUniqueLabel)):
             raise Exception("Found not basic op {} at position {}".format(insn, i))
-
-
-class TempCodePoint:
-    def __init__(self, pc):
-        self.pc = pc
-
-
-def replace_code_points(x, block):
-    if isinstance(x, TempCodePoint):
-        return block[x.pc]
-
-    if isinstance(x, ast.AVMLabeledPos):
-        return ast.AVMLabeledCodePoint(x.name, block[x.pc])
-
-    if isinstance(x, value.Tuple):
-        return value.Tuple([replace_code_points(v, block) for v in x])
-
-    return x
 
 
 def build_call_graph(compiled_funcs):
@@ -571,7 +562,7 @@ class VMCompiler:
         self.block.append(ast.SetErrorHandlerFunctionStatement(func))
 
     def clear_exception_handler(self):
-        self.push(value.AVMCodePoint(0, ast.BasicOp(0), b""))
+        self.push(value.ERROR_CODE_POINT)
         self.errset()
 
     def while_loop(self, cond_block, body_block):
@@ -814,6 +805,5 @@ def compile_program(initialization, body, should_optimize=True):
     code_pointers = generate_code_pointers(full_code)
     vm = VM(code_pointers)
     vm.static = static_tracker.get_arb_value()
-    vm.static = replace_code_points(vm.static, code_pointers)
-    # print(vm.static)
+    vm.static = replace_code_points(vm.static, code_pointers, 0)
     return vm

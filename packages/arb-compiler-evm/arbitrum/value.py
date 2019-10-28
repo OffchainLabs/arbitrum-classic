@@ -152,7 +152,7 @@ class CodePointType:
         return "CodePointType()"
 
     def empty_val(self):
-        return AVMCodePoint(0, 0, b"")
+        return ERROR_CODE_POINT
 
     def typecode(self):
         return 1
@@ -351,7 +351,10 @@ class AVMCodePoint:
         self.path = path
 
     def __repr__(self):
-        return "AVMCodePoint({}, {})".format(self.pc, self.op)
+        return "AVMCodePoint({}, {}, {})".format(self.pc, self.op, self.next_hash.hex())
+
+
+ERROR_CODE_POINT = AVMCodePoint(0, 0, b"\0" * 32)
 
 
 def value_hash(val):
