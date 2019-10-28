@@ -21,6 +21,7 @@ import "./Challenge.sol";
 import "../libraries/ArbProtocol.sol";
 import "../libraries/ArbValue.sol";
 import "../libraries/ArbMachine.sol";
+import "../libraries/DebugPrint.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 
@@ -1505,10 +1506,10 @@ library OneStepProof {
         //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
         // );
         require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
-        // );
+         require(
+             _data.afterHash == endMachine.hash(),
+             string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
+         );
         require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;
