@@ -24,11 +24,11 @@
 #include <bigint_utils.hpp>
 #include <util.hpp>
 
-#define UINT64_SIZE 8
-#define HASH_KEY_LENGTH 33
-#define TUP_TUPLE_LENGTH 34
-#define TUP_NUM_LENGTH 34
-#define TUP_CODEPT_LENGTH 9
+constexpr int UINT64_SIZE = 8;
+constexpr int HASH_KEY_LENGTH = 33;
+constexpr int TUP_TUPLE_LENGTH = 34;
+constexpr int TUP_NUM_LENGTH = 34;
+constexpr int TUP_CODEPT_LENGTH = 9;
 
 namespace checkpoint {
 
@@ -39,7 +39,7 @@ uint64_t deserialize_int64(char*& bufptr) {
     return val;
 }
 
-void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
+void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     auto big_endian_val = boost::endian::native_to_big(val);
     std::array<unsigned char, UINT64_SIZE> tmpbuf;
     memcpy(tmpbuf.data(), &big_endian_val, sizeof(big_endian_val));
@@ -50,36 +50,28 @@ void marshal_uint64_t(const uint64_t& val, std::vector<unsigned char>& buf) {
 struct ValueSerializer {
     std::vector<unsigned char> operator()(const Tuple& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = (unsigned char)TUPLE_TYPE;
+        auto type_code = static_cast<unsigned char>(TUPLE_TYPE);
         value_vector.push_back(type_code);
 
         auto hash_key = hash(val);
-        std::vector<unsigned char> hash_key_vector;
-        marshal_uint256_t(hash_key, hash_key_vector);
-
-        value_vector.insert(value_vector.end(), hash_key_vector.begin(),
-                            hash_key_vector.end());
+        marshal_uint256_t(hash_key, value_vector);
 
         return value_vector;
     }
 
     std::vector<unsigned char> operator()(const uint256_t& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = (unsigned char)NUM_TYPE;
+        auto type_code = static_cast<unsigned char>(NUM_TYPE);
         value_vector.push_back(type_code);
 
-        std::vector<unsigned char> num_vector;
-        marshal_uint256_t(val, num_vector);
-
-        value_vector.insert(value_vector.end(), num_vector.begin(),
-                            num_vector.end());
+        marshal_uint256_t(val, value_vector);
 
         return value_vector;
     }
 
     std::vector<unsigned char> operator()(const CodePoint& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = (unsigned char)CODEPT_TYPE;
+        auto type_code = static_cast<unsigned char>(CODEPT_TYPE);
         value_vector.push_back(type_code);
 
         std::vector<unsigned char> pc_vector;
@@ -95,7 +87,7 @@ using iterator = std::vector<unsigned char>::const_iterator;
 
 unsigned char extractStatus(iterator& iter) {
     auto status = (unsigned char)(*iter);
-    iter += 1;
+    ++iter;
 
     return status;
 }
@@ -140,7 +132,7 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
     auto iter = data.begin() + 1;
 
     while (iter < data.end()) {
-        auto value_type = (valueTypes)*iter;
+        auto value_type = static_cast<valueTypes>(*iter);
         std::vector<unsigned char> current;
 
         switch (value_type) {

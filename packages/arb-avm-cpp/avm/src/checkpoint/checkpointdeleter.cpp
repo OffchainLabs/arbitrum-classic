@@ -26,7 +26,7 @@ DeleteResults deleteTuple(CheckpointStorage& checkpoint_storage,
                 checkpoint::utils::parseSerializedTuple(results.stored_value);
 
             for (auto& vector : value_vectors) {
-                if ((valueTypes)vector[0] == TUPLE_TYPE) {
+                if (static_cast<valueTypes>(vector[0]) == TUPLE_TYPE) {
                     vector.erase(vector.begin());
                     auto delete_status =
                         deleteTuple(checkpoint_storage, vector);

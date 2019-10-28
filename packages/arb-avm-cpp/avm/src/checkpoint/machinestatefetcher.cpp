@@ -23,7 +23,7 @@ MachineStateFetcher::MachineStateFetcher(const CheckpointStorage* storage,
                                          const std::vector<CodePoint> code_) {
     checkpoint_storage = storage;
     pool = pool_;
-    code = code_;
+    code = std::move(code_);
 }
 
 DbResult<ParsedState> MachineStateFetcher::getMachineState(

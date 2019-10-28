@@ -24,7 +24,7 @@
 template <typename T>
 struct DbResult {
     rocksdb::Status status;
-    int reference_count;
+    uint32_t reference_count;
     T data;
 };
 

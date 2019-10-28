@@ -20,13 +20,13 @@
 
 #include <avm/checkpoint/checkpointstorage.hpp>
 
-std::tuple<int, std::vector<unsigned char>> parseCountAndValue(
+std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
     const std::string& string_value) {
     if (string_value.empty()) {
         return std::make_tuple(0, std::vector<unsigned char>());
     } else {
         const char* c_string = string_value.c_str();
-        int ref_count;
+        uint32_t ref_count;
         memcpy(&ref_count, c_string, sizeof(ref_count));
         std::vector<unsigned char> saved_value(
             string_value.begin() + sizeof(ref_count), string_value.end());
@@ -50,7 +50,7 @@ CheckpointStorage::CheckpointStorage(std::string db_path) {
     rocksdb::Options options;
     options.create_if_missing = true;
 
-    txn_db_path = db_path;
+    txn_db_path = std::move(db_path);
     rocksdb::TransactionDB* db = nullptr;
     rocksdb::TransactionDB::Open(options, txn_options, txn_db_path, &db);
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
@@ -141,7 +141,7 @@ std::unique_ptr<rocksdb::Transaction> CheckpointStorage::makeTransaction() {
 }
 
 SaveResults CheckpointStorage::saveValueWithRefCount(
-    int updated_ref_count,
+    uint32_t updated_ref_count,
     const std::vector<unsigned char>& hash_key,
     const std::vector<unsigned char>& value) {
     auto updated_entry = serializeCountAndValue(updated_ref_count, value);

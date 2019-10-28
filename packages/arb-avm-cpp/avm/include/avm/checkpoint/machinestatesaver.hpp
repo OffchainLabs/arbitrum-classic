@@ -26,7 +26,6 @@
 
 class MachineStateSaver {
    private:
-    // when to use shared pointer for an object?
     CheckpointStorage* checkpoint_storage;
 
    public:

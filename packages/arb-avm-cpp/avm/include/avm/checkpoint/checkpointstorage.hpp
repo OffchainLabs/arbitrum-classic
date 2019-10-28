@@ -22,19 +22,19 @@
 #include <vector>
 
 struct GetResults {
-    int reference_count;
+    uint32_t reference_count;
     rocksdb::Status status;
     std::vector<unsigned char> stored_value;
 };
 
 struct SaveResults {
-    int reference_count;
+    uint32_t reference_count;
     rocksdb::Status status;
     std::vector<unsigned char> storage_key;
 };
 
 struct DeleteResults {
-    int reference_count;
+    uint32_t reference_count;
     rocksdb::Status status;
 };
 
@@ -47,7 +47,7 @@ class CheckpointStorage {
                                      const std::vector<unsigned char>& value);
     rocksdb::Status deleteKeyValuePair(const std::vector<unsigned char>& key);
     SaveResults saveValueWithRefCount(
-        int new_count,
+        uint32_t updated_ref_count,
         const std::vector<unsigned char>& hash_key,
         const std::vector<unsigned char>& value);
 

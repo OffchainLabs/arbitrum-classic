@@ -77,32 +77,26 @@ std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
     return nonstd::visit(CheckpointSerializer{}, val);
 }
 
-BlockReason deserializeBlockReason(const std::vector<unsigned char>& data) {
-    auto current_it = data.begin();
-    auto blocktype = (BlockType)*current_it;
-    current_it++;
+constexpr BlockType InboxBlocked::type;
+constexpr BlockType SendBlocked::type;
 
+BlockReason deserializeBlockReason(std::vector<unsigned char>& data) {
+    auto blocktype = static_cast<BlockType>(data[0]);
     switch (blocktype) {
         case Inbox: {
-            auto next_it = current_it + TOKEN_VAL_LENGTH;
-            std::vector<unsigned char> inbox_vector(current_it, next_it);
-
-            auto buff = reinterpret_cast<char*>(&inbox_vector[1]);
+            auto buff = reinterpret_cast<char*>(&data[2]);
             auto inbox = deserializeUint256t(buff);
             return InboxBlocked(inbox);
         }
         case Send: {
-            auto next_it = current_it + TOKEN_VAL_LENGTH;
-            std::vector<unsigned char> currency_vector(current_it, next_it);
-
-            auto buff = reinterpret_cast<char*>(&currency_vector[1]);
+            auto buff = reinterpret_cast<char*>(&data[2]);
             auto currency = deserializeUint256t(buff);
 
-            current_it = next_it;
-            next_it = current_it + TOKEN_TYPE_LENGTH;
+            auto start_it = data.begin() + TOKEN_VAL_LENGTH + 1;
+            auto end_it = start_it + TOKEN_TYPE_LENGTH;
 
             std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
-            std::copy(current_it, next_it, token_type.begin());
+            std::copy(start_it, end_it, token_type.begin());
 
             return SendBlocked(currency, token_type);
         }

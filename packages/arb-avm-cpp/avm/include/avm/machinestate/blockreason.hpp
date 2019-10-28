@@ -22,23 +22,23 @@
 enum BlockType { Not, Halt, Error, Breakpoint, Inbox, Send };
 
 struct NotBlocked {
-    BlockType type = Not;
+    static constexpr BlockType type = Not;
 };
 
 struct HaltBlocked {
-    BlockType type = Halt;
+    static constexpr BlockType type = Halt;
 };
 
 struct ErrorBlocked {
-    BlockType type = Error;
+    static constexpr BlockType type = Error;
 };
 
 struct BreakpointBlocked {
-    BlockType type = Breakpoint;
+    static constexpr BlockType type = Breakpoint;
 };
 
 struct InboxBlocked {
-    BlockType type = Inbox;
+    static constexpr BlockType type = Inbox;
     uint256_t inbox;
     InboxBlocked() {}
 
@@ -46,7 +46,7 @@ struct InboxBlocked {
 };
 
 struct SendBlocked {
-    BlockType type = Send;
+    static constexpr BlockType type = Send;
     uint256_t currency;
     TokenType tokenType;
     SendBlocked() { tokenType = {}; }
@@ -67,6 +67,6 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     SendBlocked>;
 
 std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val);
-BlockReason deserializeBlockReason(const std::vector<unsigned char>& data);
+BlockReason deserializeBlockReason(std::vector<unsigned char>& data);
 
 #endif /* blockreason_hpp */

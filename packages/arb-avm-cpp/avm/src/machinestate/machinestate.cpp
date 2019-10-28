@@ -252,7 +252,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
         return stateSaver.saveMachineState(machine_state_data, hash_key);
     } else {
-        return SaveResults{-1, rocksdb::Status().InvalidArgument(), hash_key};
+        return SaveResults{0, rocksdb::Status().InvalidArgument(), hash_key};
     }
 }
 
