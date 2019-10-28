@@ -36,7 +36,7 @@ var ArbChannel = artifacts.require("./ArbChannel.sol");
 
 module.exports = async function(deployer, network, accounts) {
   deployer.deploy(DebugPrint);
-  deployer.link(DebugPrint, [ArbMachine]);
+  deployer.link(DebugPrint, [ArbMachine, OneStepProof]);
 
   deployer.deploy(MerkleLib);
   deployer.link(MerkleLib, [Bisection]);
