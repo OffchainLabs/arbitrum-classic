@@ -7,7 +7,7 @@
 FROM alpine:3.9 as arb-avm-cpp
 # Alpine dependencies
 RUN apk add --no-cache boost-dev=1.67.0-r2 cmake=3.13.0-r0 g++=8.3.0-r0 \
-    make=4.2.1-r2 musl-dev=1.1.20-r5 python3-dev=3.6.8-r2 && \
+    make=4.2.1-r2 musl-dev=1.1.20-r5 python3-dev=3.6.9-r2 && \
     pip3 install conan==1.18.1 && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user

@@ -19,6 +19,7 @@ package ethvalidator
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"log"
 	"math/big"
 	"sync"
@@ -49,10 +50,20 @@ type VMValidator struct {
 	Validator               *Validator
 	arbitrumVM              ethbridge.VMConnection
 	unprocessedMessageCount uint64
+	MessageMonChan          chan bridge.BridgeMessage
+	ErrorMonChan            chan bridge.Error
 }
 
 func (val *VMValidator) Address() common.Address {
 	return val.Validator.Address()
+}
+
+func (val *VMValidator) SendMonitorMsg(msg bridge.BridgeMessage) {
+	val.MessageMonChan <- msg
+}
+
+func (val *VMValidator) SendMonitorErr(msg bridge.Error) {
+	val.ErrorMonChan <- msg
 }
 
 func NewVMValidator(
@@ -78,7 +89,8 @@ func NewVMValidator(
 	}
 
 	completedCallChan := make(chan valmessage.FinalizedAssertion, 1024)
-
+	msgmon := make(chan bridge.BridgeMessage, 100)
+	errmon := make(chan bridge.Error, 100)
 	vmVal := &VMValidator{
 		vmID,
 		completedCallChan,
@@ -86,6 +98,8 @@ func NewVMValidator(
 		val,
 		con,
 		0,
+		msgmon,
+		errmon,
 	}
 	return vmVal, nil
 }
@@ -152,7 +166,7 @@ func (val *VMValidator) StartListening(ctx context.Context) (chan ethbridge.Noti
 				}
 				parsedChan <- parse
 			case <-errChan:
-				// log.Printf("Validator recieved error: %v", err)
+				// log.Printf("Validator recieved error: %v\n", err)
 				// fmt.Println("Resetting channels")
 				hitError = true
 

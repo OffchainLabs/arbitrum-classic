@@ -355,7 +355,7 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (Waiting, error
 	}, nil
 }
 
-func (bot Waiting) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
+func (bot Waiting) updateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.PendingDisputableAssertionEvent:
 		c := bot.GetCore()
@@ -370,13 +370,13 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, bridge bridge.Ar
 			ev.Precondition.TimeBounds,
 		)
 		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
-			_, err := bridge.InitiateChallenge(
+			_, err := brdg.InitiateChallenge(
 				context.Background(),
 				ev.Precondition,
 				ev.Assertion,
 			)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, &bridge.Error{err, "ERROR: InitiateChallenge: failed", false}
 			}
 		}
 		balance := c.GetBalance()
@@ -415,6 +415,7 @@ func (bot Waiting) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge br
 		} else if ev.SequenceNum < bot.sequenceNum {
 			_, err := bot.CloseUnanimous(bridge)
 			if err != nil {
+				// add error handling
 				return nil, nil, err
 			}
 			newBot, err := bot.ClosingUnanimous(nil, nil)
@@ -600,7 +601,7 @@ func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge 
 		return NewWaiting(bot.Config, bot.Core), ct, err
 
 	default:
-		return nil, nil, &Error{nil, "ERROR: waitingAssertion: VM state got unsynchronized"}
+		return nil, nil, &Error{nil, "disputable.go ERROR: waitingAssertion: VM state got unsynchronized"}
 	}
 }
 
