@@ -81,11 +81,8 @@ SaveResults CheckpointStorage::saveValue(
     int ref_count;
 
     if (results.status.ok()) {
-        if (results.stored_value != value) {
-            ref_count = 1;
-        } else {
-            ref_count = results.reference_count + 1;
-        }
+        assert(results.stored_value == value);
+        ref_count = results.reference_count + 1;
     } else {
         ref_count = 1;
     }

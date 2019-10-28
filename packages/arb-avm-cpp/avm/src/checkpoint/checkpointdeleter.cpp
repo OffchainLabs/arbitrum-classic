@@ -17,16 +17,22 @@
 #include <avm/checkpoint/checkpointdeleter.hpp>
 
 DeleteResults deleteTuple(CheckpointStorage& checkpoint_storage,
-                          const std::vector<unsigned char>& hash_key) {
-    auto results = checkpoint_storage.getValue(hash_key);
+                          const std::vector<unsigned char>& hash_key);
 
+DeleteResults deleteTuple(CheckpointStorage& checkpoint_storage,
+                          const std::vector<unsigned char>& hash_key,
+                          GetResults results);
+
+DeleteResults deleteTuple(CheckpointStorage& checkpoint_storage,
+                          const std::vector<unsigned char>& hash_key,
+                          GetResults results) {
     if (results.status.ok()) {
         if (results.reference_count == 1) {
             auto value_vectors =
                 checkpoint::utils::parseSerializedTuple(results.stored_value);
 
             for (auto& vector : value_vectors) {
-                if (static_cast<valueTypes>(vector[0]) == TUPLE_TYPE) {
+                if (static_cast<ValueTypes>(vector[0]) == TUPLE) {
                     vector.erase(vector.begin());
                     auto delete_status =
                         deleteTuple(checkpoint_storage, vector);
@@ -39,15 +45,21 @@ DeleteResults deleteTuple(CheckpointStorage& checkpoint_storage,
     }
 }
 
+DeleteResults deleteTuple(CheckpointStorage& checkpoint_storage,
+                          const std::vector<unsigned char>& hash_key) {
+    auto results = checkpoint_storage.getValue(hash_key);
+    return deleteTuple(checkpoint_storage, hash_key, results);
+}
+
 DeleteResults deleteValue(CheckpointStorage& checkpoint_storage,
                           const std::vector<unsigned char>& hash_key) {
     auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
-        auto type = (valueTypes)results.stored_value[0];
+        auto type = static_cast<ValueTypes>(results.stored_value[0]);
 
-        if (type == TUPLE_TYPE) {
-            return deleteTuple(checkpoint_storage, hash_key);
+        if (type == TUPLE) {
+            return deleteTuple(checkpoint_storage, hash_key, results);
         } else {
             return checkpoint_storage.deleteValue(hash_key);
         }

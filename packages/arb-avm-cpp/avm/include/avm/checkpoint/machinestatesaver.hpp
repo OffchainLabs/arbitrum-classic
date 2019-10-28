@@ -26,10 +26,10 @@
 
 class MachineStateSaver {
    private:
-    CheckpointStorage* checkpoint_storage;
+    CheckpointStorage& checkpoint_storage;
 
    public:
-    MachineStateSaver(CheckpointStorage* checkpoint_storage);
+    MachineStateSaver(CheckpointStorage& checkpoint_storage);
     SaveResults saveTuple(const Tuple& val);
     SaveResults saveValue(const value& val);
     SaveResults saveMachineState(

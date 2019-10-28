@@ -18,32 +18,32 @@
 
 struct CheckpointSerializer {
     std::vector<unsigned char> operator()(const NotBlocked& val) const {
-        std::vector<unsigned char> return_value;
-        return_value.push_back((unsigned char)val.type);
+        auto block_type = static_cast<unsigned char>(val.type);
+        std::vector<unsigned char> return_value{block_type};
         return return_value;
     }
     std::vector<unsigned char> operator()(const HaltBlocked& val) const {
-        std::vector<unsigned char> return_value;
-        return_value.push_back((unsigned char)val.type);
+        auto block_type = static_cast<unsigned char>(val.type);
+        std::vector<unsigned char> return_value{block_type};
 
         return return_value;
     }
     std::vector<unsigned char> operator()(const ErrorBlocked& val) const {
-        std::vector<unsigned char> return_value;
-        return_value.push_back((unsigned char)val.type);
+        auto block_type = static_cast<unsigned char>(val.type);
+        std::vector<unsigned char> return_value{block_type};
 
         return return_value;
     }
     std::vector<unsigned char> operator()(const BreakpointBlocked& val) const {
-        std::vector<unsigned char> return_value;
-        return_value.push_back((unsigned char)val.type);
+        auto block_type = static_cast<unsigned char>(val.type);
+        std::vector<unsigned char> return_value{block_type};
 
         return return_value;
     }
 
     std::vector<unsigned char> operator()(const InboxBlocked& val) const {
-        std::vector<unsigned char> return_value;
-        return_value.push_back((unsigned char)val.type);
+        auto block_type = static_cast<unsigned char>(val.type);
+        std::vector<unsigned char> return_value{block_type};
 
         std::vector<unsigned char> inbox_char_vector;
         marshal_uint256_t(val.inbox, inbox_char_vector);
@@ -54,8 +54,8 @@ struct CheckpointSerializer {
         return return_value;
     }
     std::vector<unsigned char> operator()(const SendBlocked& val) const {
-        std::vector<unsigned char> return_value;
-        return_value.push_back((unsigned char)val.type);
+        auto block_type = static_cast<unsigned char>(val.type);
+        std::vector<unsigned char> return_value{block_type};
 
         std::vector<unsigned char> data_vector;
         marshal_uint256_t(val.currency, data_vector);
@@ -84,12 +84,12 @@ BlockReason deserializeBlockReason(std::vector<unsigned char>& data) {
     auto blocktype = static_cast<BlockType>(data[0]);
     switch (blocktype) {
         case Inbox: {
-            auto buff = reinterpret_cast<char*>(&data[2]);
+            auto buff = reinterpret_cast<const char*>(&data[2]);
             auto inbox = deserializeUint256t(buff);
             return InboxBlocked(inbox);
         }
         case Send: {
-            auto buff = reinterpret_cast<char*>(&data[2]);
+            auto buff = reinterpret_cast<const char*>(&data[2]);
             auto currency = deserializeUint256t(buff);
 
             auto start_it = data.begin() + TOKEN_VAL_LENGTH + 1;

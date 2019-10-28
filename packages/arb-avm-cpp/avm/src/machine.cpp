@@ -150,13 +150,12 @@ SaveResults Machine::checkpoint(CheckpointStorage& storage) {
 }
 
 bool Machine::restoreCheckpoint(
-    CheckpointStorage& storage,
+    const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
     return machine_state.restoreCheckpoint(storage, checkpoint_key).status.ok();
 }
 
 DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
     auto checkpoint_key = GetHashKey(hash());
-    auto results = ::deleteCheckpoint(storage, checkpoint_key);
-    return results;
+    return ::deleteCheckpoint(storage, checkpoint_key);
 }

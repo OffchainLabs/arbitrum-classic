@@ -56,7 +56,7 @@ struct MachineState {
 
     MachineState();
 
-    bool deserialize(char* data);
+    bool deserialize(const char* data);
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
     uint64_t pendingMessageCount() const;

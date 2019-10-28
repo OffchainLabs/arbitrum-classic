@@ -40,7 +40,7 @@ void saveDataStack(Datastack data_stack,
     TuplePool pool;
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto saver = MachineStateSaver(&storage);
+    auto saver = MachineStateSaver(storage);
 
     auto results = data_stack.checkpointState(saver, &pool);
 
@@ -54,7 +54,7 @@ void saveDataStackTwice(Datastack data_stack,
     TuplePool pool;
     CheckpointStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto saver = MachineStateSaver(&storage);
+    auto saver = MachineStateSaver(storage);
 
     auto results = data_stack.checkpointState(saver, &pool);
     auto results2 = data_stack.checkpointState(saver, &pool);
@@ -99,8 +99,8 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         CheckpointStorage storage(dbpath);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         Datastack data_stack;
 
@@ -114,8 +114,8 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         CheckpointStorage storage(dbpath);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         Datastack data_stack;
         Tuple tuple;
@@ -136,8 +136,8 @@ TEST_CASE("Initialize datastack") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         Datastack data_stack;
         uint256_t num = 1;
@@ -159,8 +159,8 @@ TEST_CASE("Initialize datastack") {
         auto code_point2 = CodePoint(1, Operation(), 0);
         code.push_back(code_point);
         code.push_back(code_point2);
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         Datastack data_stack;
 
@@ -239,8 +239,8 @@ TEST_CASE("Save and get datastack") {
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         code.push_back(code_point);
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(code_point, &pool);
@@ -264,8 +264,8 @@ TEST_CASE("Save and get datastack") {
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         code.push_back(code_point);
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(code_point, &pool);

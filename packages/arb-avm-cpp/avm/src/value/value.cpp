@@ -26,13 +26,13 @@
 
 #define UINT256_SIZE 32
 
-uint256_t deserializeUint256t(char*& bufptr) {
+uint256_t deserializeUint256t(const char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
     return ret;
 }
 
-Operation deserializeOperation(char*& bufptr, TuplePool& pool) {
+Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
     uint8_t immediateCount;
     memcpy(&immediateCount, bufptr, sizeof(immediateCount));
     bufptr += sizeof(immediateCount);
@@ -47,7 +47,7 @@ Operation deserializeOperation(char*& bufptr, TuplePool& pool) {
     }
 }
 
-CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool) {
+CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
     CodePoint ret;
     memcpy(&ret.pc, bufptr, sizeof(ret.pc));
     bufptr += sizeof(ret.pc);
@@ -59,7 +59,7 @@ CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool) {
     return ret;
 }
 
-Tuple deserializeTuple(char*& bufptr, int size, TuplePool& pool) {
+Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
     Tuple tup(&pool, size);
     for (int i = 0; i < size; i++) {
         tup.set_element(i, deserialize_value(bufptr, pool));
@@ -118,7 +118,7 @@ void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
     marshal_uint256_t(val, buf);
 }
 
-value deserialize_value(char*& bufptr, TuplePool& pool) {
+value deserialize_value(const char*& bufptr, TuplePool& pool) {
     uint8_t valType;
     memcpy(&valType, bufptr, sizeof(valType));
     bufptr += sizeof(valType);

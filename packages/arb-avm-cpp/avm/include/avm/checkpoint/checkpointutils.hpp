@@ -47,9 +47,9 @@ struct ParsedState {
 namespace checkpoint {
 namespace utils {
 std::vector<unsigned char> serializeValue(const value& val);
-CodePoint deserializeCodepoint(std::vector<unsigned char>& val,
+CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
                                const std::vector<CodePoint>& code);
-uint256_t deserializeUint256_t(std::vector<unsigned char>& val);
+uint256_t deserializeUint256_t(const std::vector<unsigned char>& val);
 std::vector<std::vector<unsigned char>> parseSerializedTuple(
     const std::vector<unsigned char>& data);
 ParsedState parseState(const std::vector<unsigned char>& stored_state);

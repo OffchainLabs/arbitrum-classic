@@ -111,7 +111,7 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-bool MachineState::deserialize(char* bufptr) {
+bool MachineState::deserialize(const char* bufptr) {
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
     version = __builtin_bswap32(version);
@@ -207,7 +207,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 }
 
 SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
-    auto stateSaver = MachineStateSaver(&storage);
+    auto stateSaver = MachineStateSaver(storage);
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
@@ -217,10 +217,9 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
     auto err_code_point = stateSaver.saveValue(errpc);
-
     auto pc_results = stateSaver.saveValue(code[pc]);
 
-    auto status_str = (unsigned char)state;
+    auto status_str = static_cast<unsigned char>(state);
     auto blockreason_str = serializeForCheckpoint(blockReason);
     auto balancetracker_str = balance.serializeBalanceValues();
 
@@ -259,43 +258,38 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 DbResult<ParsedState> MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
-    auto stateFetcher = MachineStateFetcher(&storage, pool.get(), code);
+    auto stateFetcher = MachineStateFetcher(storage, pool.get(), code);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
     if (results.status.ok()) {
-        auto machine_state_data = results.data;
+        auto state_data = results.data;
 
         auto static_val_results =
-            stateFetcher.getValue(machine_state_data.static_val_key);
+            stateFetcher.getValue(state_data.static_val_key);
         staticVal = static_val_results.data;
 
-        auto register_val_results =
-            stateFetcher.getValue(machine_state_data.register_val_key);
-        registerVal = register_val_results.data;
+        auto register_results =
+            stateFetcher.getValue(state_data.register_val_key);
+        registerVal = register_results.data;
 
-        auto pc_results = stateFetcher.getCodePoint(machine_state_data.pc_key);
+        auto pc_results = stateFetcher.getCodePoint(state_data.pc_key);
         pc = pc_results.data.pc;
 
-        auto err_pc_results =
-            stateFetcher.getCodePoint(machine_state_data.err_pc_key);
+        auto err_pc_results = stateFetcher.getCodePoint(state_data.err_pc_key);
         errpc = err_pc_results.data;
 
-        stack.initializeDataStack(stateFetcher,
-                                  machine_state_data.datastack_key);
-        auxstack.initializeDataStack(stateFetcher,
-                                     machine_state_data.auxstack_key);
+        stack.initializeDataStack(stateFetcher, state_data.datastack_key);
+        auxstack.initializeDataStack(stateFetcher, state_data.auxstack_key);
 
-        inbox.initializeMessageStack(stateFetcher, machine_state_data.inbox_key,
-                                     machine_state_data.inbox_count_key);
+        inbox.initializeMessageStack(stateFetcher, state_data.inbox_key,
+                                     state_data.inbox_count_key);
 
         pendingInbox.initializeMessageStack(
-            stateFetcher, machine_state_data.pending_key,
-            machine_state_data.pending_count_key);
+            stateFetcher, state_data.pending_key, state_data.pending_count_key);
 
-        state = (Status)machine_state_data.status_char;
-        blockReason =
-            deserializeBlockReason(machine_state_data.blockreason_str);
-        balance = BalanceTracker(machine_state_data.balancetracker_str);
+        state = static_cast<Status>(state_data.status_char);
+        blockReason = deserializeBlockReason(state_data.blockreason_str);
+        balance = BalanceTracker(state_data.balancetracker_str);
     }
 
     return results;

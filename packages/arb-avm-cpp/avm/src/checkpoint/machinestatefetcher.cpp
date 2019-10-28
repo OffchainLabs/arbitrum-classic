@@ -18,17 +18,14 @@
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>
 
-MachineStateFetcher::MachineStateFetcher(const CheckpointStorage* storage,
+MachineStateFetcher::MachineStateFetcher(const CheckpointStorage& storage,
                                          TuplePool* pool_,
-                                         const std::vector<CodePoint> code_) {
-    checkpoint_storage = storage;
-    pool = pool_;
-    code = std::move(code_);
-}
+                                         const std::vector<CodePoint> code_)
+    : checkpoint_storage(storage), pool(pool_), code(std::move(code_)) {}
 
 DbResult<ParsedState> MachineStateFetcher::getMachineState(
     const std::vector<unsigned char>& checkpoint_name) const {
-    auto results = checkpoint_storage->getValue(checkpoint_name);
+    auto results = checkpoint_storage.getValue(checkpoint_name);
 
     if (results.status.ok()) {
         auto parsed_state = checkpoint::utils::parseState(results.stored_value);
@@ -43,7 +40,7 @@ DbResult<ParsedState> MachineStateFetcher::getMachineState(
 
 DbResult<CodePoint> MachineStateFetcher::getCodePoint(
     const std::vector<unsigned char>& hash_key) const {
-    auto results = checkpoint_storage->getValue(hash_key);
+    auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
         auto code_point =
@@ -58,7 +55,7 @@ DbResult<CodePoint> MachineStateFetcher::getCodePoint(
 
 DbResult<uint256_t> MachineStateFetcher::getUint256_t(
     const std::vector<unsigned char>& hash_key) const {
-    auto results = checkpoint_storage->getValue(hash_key);
+    auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
         auto num =
@@ -73,7 +70,7 @@ DbResult<uint256_t> MachineStateFetcher::getUint256_t(
 DbResult<Tuple> MachineStateFetcher::getTuple(
     const std::vector<unsigned char>& hash_key) const {
     std::vector<value> values;
-    auto results = checkpoint_storage->getValue(hash_key);
+    auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
         auto value_vectors =
@@ -84,27 +81,30 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                                    Tuple()};
         } else {
             for (auto& current_vector : value_vectors) {
-                auto value_type = (valueTypes)current_vector[0];
+                auto value_type = static_cast<ValueTypes>(current_vector[0]);
 
                 switch (value_type) {
-                    case TUPLE_TYPE: {
+                    case TUPLE: {
                         current_vector.erase(current_vector.begin());
                         auto tuple = getTuple(current_vector).data;
                         values.push_back(tuple);
                         break;
                     }
-                    case NUM_TYPE: {
+                    case NUM: {
                         auto num = checkpoint::utils::deserializeUint256_t(
                             current_vector);
                         values.push_back(num);
                         break;
                     }
-                    case CODEPT_TYPE: {
+                    case CODEPT: {
                         auto code_point =
                             checkpoint::utils::deserializeCodepoint(
                                 current_vector, code);
                         values.push_back(code_point);
                         break;
+                    }
+                    case HASH_ONLY: {
+                        throw std::runtime_error("HASH_ONLY item");
                     }
                 }
             }
@@ -120,29 +120,32 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
 
 DbResult<value> MachineStateFetcher::getValue(
     const std::vector<unsigned char>& hash_key) const {
-    auto results = checkpoint_storage->getValue(hash_key);
+    auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
-        auto value_type = (valueTypes)results.stored_value[0];
+        auto value_type = static_cast<ValueTypes>(results.stored_value[0]);
 
         switch (value_type) {
-            case TUPLE_TYPE: {
+            case TUPLE: {
                 auto tuple_res = getTuple(hash_key);
                 return DbResult<value>{tuple_res.status,
                                        tuple_res.reference_count,
                                        tuple_res.data};
             }
-            case NUM_TYPE: {
+            case NUM: {
                 auto val = checkpoint::utils::deserializeUint256_t(
                     results.stored_value);
                 return DbResult<value>{results.status, results.reference_count,
                                        val};
             }
-            case CODEPT_TYPE: {
+            case CODEPT: {
                 auto code_point = checkpoint::utils::deserializeCodepoint(
                     results.stored_value, code);
                 return DbResult<value>{results.status, results.reference_count,
                                        code_point};
+            }
+            case HASH_ONLY: {
+                throw std::runtime_error("HASH_ONLY item");
             }
         }
     } else {

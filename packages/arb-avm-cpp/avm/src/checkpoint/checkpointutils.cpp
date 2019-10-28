@@ -32,10 +32,11 @@ constexpr int TUP_CODEPT_LENGTH = 9;
 
 namespace checkpoint {
 
-uint64_t deserialize_int64(char*& bufptr) {
+uint64_t deserialize_int64(const char*& bufptr) {
     uint64_t ret_value;
     memcpy(&ret_value, bufptr, UINT64_SIZE);
     auto val = boost::endian::big_to_native(ret_value);
+    bufptr += sizeof(uint64_t);
     return val;
 }
 
@@ -50,7 +51,7 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
 struct ValueSerializer {
     std::vector<unsigned char> operator()(const Tuple& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(TUPLE_TYPE);
+        auto type_code = static_cast<unsigned char>(TUPLE);
         value_vector.push_back(type_code);
 
         auto hash_key = hash(val);
@@ -61,7 +62,7 @@ struct ValueSerializer {
 
     std::vector<unsigned char> operator()(const uint256_t& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(NUM_TYPE);
+        auto type_code = static_cast<unsigned char>(NUM);
         value_vector.push_back(type_code);
 
         marshal_uint256_t(val, value_vector);
@@ -71,7 +72,7 @@ struct ValueSerializer {
 
     std::vector<unsigned char> operator()(const CodePoint& val) const {
         std::vector<unsigned char> value_vector;
-        auto type_code = static_cast<unsigned char>(CODEPT_TYPE);
+        auto type_code = static_cast<unsigned char>(CODEPT);
         value_vector.push_back(type_code);
 
         std::vector<unsigned char> pc_vector;
@@ -132,27 +133,30 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
     auto iter = data.begin() + 1;
 
     while (iter < data.end()) {
-        auto value_type = static_cast<valueTypes>(*iter);
+        auto value_type = static_cast<ValueTypes>(*iter);
         std::vector<unsigned char> current;
 
         switch (value_type) {
-            case TUPLE_TYPE: {
+            case TUPLE: {
                 auto next_it = iter + TUP_TUPLE_LENGTH;
                 current.insert(current.end(), iter, next_it);
                 iter = next_it;
                 break;
             }
-            case NUM_TYPE: {
+            case NUM: {
                 auto next_it = iter + TUP_NUM_LENGTH;
                 current.insert(current.end(), iter, next_it);
                 iter = next_it;
                 break;
             }
-            case CODEPT_TYPE: {
+            case CODEPT: {
                 auto next_it = iter + TUP_CODEPT_LENGTH;
                 current.insert(current.end(), iter, next_it);
                 iter = next_it;
                 break;
+            }
+            case HASH_ONLY: {
+                throw std::runtime_error("HASH_ONLY item");
             }
         }
         return_vector.push_back(current);
@@ -160,9 +164,9 @@ std::vector<std::vector<unsigned char>> parseSerializedTuple(
     return return_vector;
 }
 
-CodePoint deserializeCodepoint(std::vector<unsigned char>& val,
+CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
                                const std::vector<CodePoint>& code) {
-    auto buff = reinterpret_cast<char*>(&val[1]);
+    auto buff = reinterpret_cast<const char*>(&val[1]);
     auto pc_val = deserialize_int64(buff);
     if (pc_val == pc_default) {
         return CodePoint();
@@ -171,8 +175,8 @@ CodePoint deserializeCodepoint(std::vector<unsigned char>& val,
     }
 }
 
-uint256_t deserializeUint256_t(std::vector<unsigned char>& val) {
-    auto buff = reinterpret_cast<char*>(&val[2]);
+uint256_t deserializeUint256_t(const std::vector<unsigned char>& val) {
+    auto buff = reinterpret_cast<const char*>(&val[2]);
     return deserializeUint256t(buff);
 }
 

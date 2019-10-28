@@ -38,11 +38,11 @@ void getValue(MachineStateFetcher& fetcher,
               std::vector<unsigned char>& hash_key,
               int expected_ref_count,
               uint256_t& expected_hash,
-              valueTypes expected_value_type,
+              ValueTypes expected_value_type,
               bool expected_status) {
     auto results = fetcher.getValue(hash_key);
     auto serialized_val = checkpoint::utils::serializeValue(results.data);
-    auto type = (valueTypes)serialized_val[0];
+    auto type = (ValueTypes)serialized_val[0];
 
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
@@ -87,7 +87,7 @@ TEST_CASE("Save tuple") {
     TuplePool pool;
     CheckpointStorage storage(path);
     std::vector<CodePoint> code;
-    auto saver = MachineStateSaver(&storage);
+    auto saver = MachineStateSaver(storage);
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
@@ -113,7 +113,7 @@ TEST_CASE("Save value") {
     TuplePool pool;
     CheckpointStorage storage(path);
     std::vector<CodePoint> code;
-    auto saver = MachineStateSaver(&storage);
+    auto saver = MachineStateSaver(storage);
 
     SECTION("save 1 num tuple") {
         TuplePool pool;
@@ -136,22 +136,22 @@ TEST_CASE("Save and get value") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto tuple = Tuple();
         auto hash_key = GetHashKey(tuple);
         auto tup_hash = tuple.calculateHash();
 
         saveValue(saver, tuple, 1, true);
-        getValue(fetcher, hash_key, 1, tup_hash, TUPLE_TYPE, true);
+        getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
     }
     SECTION("save tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
@@ -159,21 +159,21 @@ TEST_CASE("Save and get value") {
         auto tup_hash = tuple.calculateHash();
 
         saveValue(saver, tuple, 1, true);
-        getValue(fetcher, hash_key, 1, tup_hash, TUPLE_TYPE, true);
+        getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
     }
     SECTION("save num") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto hash_key = GetHashKey(num);
         auto num_hash = hash(num);
 
         saveValue(saver, num, 1, true);
-        getValue(fetcher, hash_key, 1, num_hash, NUM_TYPE, true);
+        getValue(fetcher, hash_key, 1, num_hash, NUM, true);
     }
     SECTION("save codepoint") {
         TuplePool pool;
@@ -182,13 +182,13 @@ TEST_CASE("Save and get value") {
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto hash_key = GetHashKey(code_point);
         auto cp_hash = hash(code_point);
         saveValue(saver, code_point, 1, true);
-        getValue(fetcher, hash_key, 1, cp_hash, CODEPT_TYPE, true);
+        getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
     }
 }
 
@@ -197,8 +197,8 @@ TEST_CASE("Save and get tuple values") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
@@ -216,8 +216,8 @@ TEST_CASE("Save and get tuple values") {
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto tuple = Tuple(code_point, &pool);
 
@@ -234,8 +234,8 @@ TEST_CASE("Save and get tuple values") {
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto tuple = Tuple(code_point, &pool);
 
@@ -249,8 +249,8 @@ TEST_CASE("Save and get tuple values") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto inner_tuple = Tuple();
         auto tuple = Tuple(inner_tuple, &pool);
@@ -267,8 +267,8 @@ TEST_CASE("Save and get tuple values") {
         std::vector<CodePoint> code;
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto inner_tuple = Tuple();
         uint256_t num = 1;
@@ -287,8 +287,8 @@ TEST_CASE("Save and get tuple values") {
         std::vector<CodePoint> code;
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto inner_tuple = Tuple();
         uint256_t num = 1;
@@ -308,8 +308,8 @@ TEST_CASE("Save And Get Tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
@@ -325,8 +325,8 @@ TEST_CASE("Save And Get Tuple") {
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         code.push_back(code_point);
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto tuple = Tuple(code_point, &pool);
         auto tup_hash = tuple.calculateHash();
@@ -339,8 +339,8 @@ TEST_CASE("Save And Get Tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto tuple = Tuple(num, &pool);
@@ -355,8 +355,8 @@ TEST_CASE("Save And Get Tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         uint256_t num2 = 2;
@@ -371,8 +371,8 @@ TEST_CASE("Save And Get Tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
@@ -391,8 +391,8 @@ TEST_CASE("Save And Get Tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
@@ -416,8 +416,8 @@ TEST_CASE("Save And Get Tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
         std::vector<CodePoint> code;
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         uint256_t num = 1;
         auto inner_tuple = Tuple(num, &pool);
@@ -695,7 +695,7 @@ TEST_CASE("Save Machinestatedata") {
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
 
-        auto saver = MachineStateSaver(&storage);
+        auto saver = MachineStateSaver(storage);
         auto data_values = getDefaultValues(saver);
         std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
 
@@ -711,7 +711,7 @@ TEST_CASE("Save Machinestatedata") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
-        auto saver = MachineStateSaver(&storage);
+        auto saver = MachineStateSaver(storage);
         auto state_data = getStateValues(saver);
 
         std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
@@ -728,8 +728,8 @@ TEST_CASE("Get Machinestate data") {
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto data_values = getDefaultValues(saver);
         auto keys = getHashKeys(data_values);
@@ -749,8 +749,8 @@ TEST_CASE("Get Machinestate data") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
 
         auto state_data = getStateValues(saver);
         auto keys = getHashKeys(state_data);
@@ -770,8 +770,8 @@ TEST_CASE("Delete checkpoint") {
         CodePoint code_point(0, Operation(), 0);
         code.push_back(code_point);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
         auto data_values = getDefaultValues(saver);
 
         std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
@@ -791,8 +791,8 @@ TEST_CASE("Delete checkpoint") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
-        auto saver = MachineStateSaver(&storage);
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
         auto data_values = getStateValues(saver);
 
         std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
@@ -812,8 +812,8 @@ TEST_CASE("Delete checkpoint") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
-        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
         auto data_values = getStateValues(saver);
 
         std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};
@@ -834,8 +834,8 @@ TEST_CASE("Delete checkpoint") {
         code.push_back(code_point);
         code.push_back(code_point2);
 
-        auto fetcher = MachineStateFetcher(&storage, &pool, code);
-        auto saver = MachineStateSaver(&storage);
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto saver = MachineStateSaver(storage);
         auto data_values = getStateValues(saver);
 
         std::vector<unsigned char> checkpoint_key = {'k', 'e', 'y'};

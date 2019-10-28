@@ -17,13 +17,12 @@
 #ifndef value_hpp
 #define value_hpp
 
-#include <avm/value/bigint.hpp>
-
 #include <avm/opcodes.hpp>
+#include <avm/value/bigint.hpp>
 #include <nonstd/variant.hpp>
 #include <unordered_map>
 
-enum types { NUM, CODEPT, HASH_ONLY, TUPLE };
+enum ValueTypes { NUM, CODEPT, HASH_ONLY, TUPLE };
 
 class TuplePool;
 class Tuple;
@@ -33,17 +32,15 @@ struct CodePoint;
 // Note: uint256_t is actually 48 bytes long
 using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
-enum valueTypes { NUM_TYPE, CODEPT_TYPE, TUPLE_TYPE };
-
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash(const value& value);
 int get_tuple_size(char*& bufptr);
 
-uint256_t deserializeUint256t(char*& srccode);
-Operation deserializeOperation(char*& bufptr, TuplePool& pool);
-CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
-Tuple deserializeTuple(char*& bufptr, int size, TuplePool& pool);
-value deserialize_value(char*& srccode, TuplePool& pool);
+uint256_t deserializeUint256t(const char*& srccode);
+Operation deserializeOperation(const char*& bufptr, TuplePool& pool);
+CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool);
+Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool);
+value deserialize_value(const char*& srccode, TuplePool& pool);
 void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
 void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);

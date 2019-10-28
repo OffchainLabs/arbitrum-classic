@@ -22,12 +22,12 @@
 
 class MachineStateFetcher {
    private:
-    const CheckpointStorage* checkpoint_storage;
+    const CheckpointStorage& checkpoint_storage;
     TuplePool* pool;
     std::vector<CodePoint> code;
 
    public:
-    MachineStateFetcher(const CheckpointStorage* checkpoint_storage,
+    MachineStateFetcher(const CheckpointStorage& checkpoint_storage,
                         TuplePool* pool,
                         const std::vector<CodePoint> code);
     DbResult<CodePoint> getCodePoint(

@@ -69,7 +69,7 @@ class Machine {
     TuplePool& getPool() { return *machine_state.pool; }
 
     SaveResults checkpoint(CheckpointStorage& storage);
-    bool restoreCheckpoint(CheckpointStorage& storage,
+    bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);
     DeleteResults deleteCheckpoint(CheckpointStorage& storage);
 };
