@@ -86,7 +86,7 @@ class Stack:
 
 class BasicVM:
     def __init__(self):
-        self.pc = value.AVMCodePoint(0, 0, b"")
+        self.pc = value.ERROR_CODE_POINT
         self.stack = Stack()
         self.aux_stack = Stack()
         self.register = value.Tuple([])
