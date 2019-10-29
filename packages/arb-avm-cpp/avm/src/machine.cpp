@@ -253,11 +253,15 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     uint256_t_to_buf(::hash(registerVal), buf);
     uint256_t_to_buf(::hash(staticVal), buf);
     uint256_t_to_buf(::hash(errpc), buf);
+    std::cout << "size after hashes = " << buf.size() << std::endl;
     code[pc].op.marshalForProof(buf, includeImmediateVal);
+    std::cout << "size after codePoint = " << buf.size() << std::endl;
 
     buf.insert(buf.end(), stackProof.second.begin(), stackProof.second.end());
+    std::cout << "size after stack = " << buf.size() << std::endl;
     buf.insert(buf.end(), auxStackProof.second.begin(),
                auxStackProof.second.end());
+    std::cout << "size after aux stack = " << buf.size() << std::endl;
     return buf;
 }
 

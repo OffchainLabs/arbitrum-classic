@@ -142,9 +142,10 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 		if immediate, ok := op.(value.ImmediateOperation); ok {
 			m.stack.Push(immediate.Val)
 		}
-
+		fmt.Println("opcode = ", op.GetOp())
 		return Instructions[op.GetOp()].impl(m)
 	}()
+	fmt.Println("error = ", err)
 
 	if err == nil {
 		m.context.NotifyStep()
