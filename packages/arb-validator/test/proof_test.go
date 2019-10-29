@@ -181,7 +181,7 @@ func setupServers(t *testing.T) {
 	serversSetup = true
 }
 
-func TestProof(t *testing.T) {
+func testProof(t *testing.T) {
 
 	if !serversSetup {
 		setupServers(t)
