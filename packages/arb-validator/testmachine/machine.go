@@ -154,6 +154,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		a.NumSteps += a1.NumSteps
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
+
 		if a1.NumSteps < uint32(steps) {
 			break
 		}
