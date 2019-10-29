@@ -134,7 +134,6 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	if m.HaveSizeException() {
 		return NewStackMods(0, 0), machine.ErrorBlocked{}
 	}
-	m.context.NotifyStep()
 	mods, err := func() (StackMods, error) {
 		if _, ok := code.InstructionNames[op.GetOp()]; !ok {
 			return StackMods{}, errors.New("invalid opcode")
@@ -143,17 +142,20 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 		if immediate, ok := op.(value.ImmediateOperation); ok {
 			m.stack.Push(immediate.Val)
 		}
-
+		fmt.Println("opcode = ", op.GetOp())
 		return Instructions[op.GetOp()].impl(m)
 	}()
+	fmt.Println("error = ", err)
 
 	if err == nil {
+		m.context.NotifyStep()
 		return mods, nil
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
 		return mods, blocked.reason
 	}
+	m.context.NotifyStep()
 
 	//fmt.Printf("error running instruction %v: %v\n", code.InstructionNames[op.GetOp()], err)
 

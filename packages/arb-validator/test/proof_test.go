@@ -174,7 +174,7 @@ func setupServers(t *testing.T) {
 	serversSetup = true
 }
 
-func TestProof(t *testing.T) {
+func testProof(t *testing.T) {
 
 	if !serversSetup {
 		setupServers(t)
@@ -274,6 +274,7 @@ func TestValidateProof(t *testing.T) {
 	}
 	// see validator/validator.go RequestDisputableAssertion (line 287)
 	// context.Background()
+	//m := mach
 	m := mach.Clone()
 	var timeBounds [2]uint64
 
@@ -282,17 +283,22 @@ func TestValidateProof(t *testing.T) {
 	maxSteps := int32(1000)
 	for i := int32(0); i < maxSteps; i += stepIncrease {
 		timeBounds[0] = uint64(i)
-		timeBounds[1] = uint64(i + 1)
+		timeBounds[1] = uint64(i + stepIncrease)
 		proof, err := m.MarshalForProof()
-		steps := int32(1)
+		steps := int32(stepIncrease)
 		beforeHash := m.Hash()
 		inboxHash := m.InboxHash()
 
 		//pcStart := m.GetPC()
 		a := m.ExecuteAssertion(steps, timeBounds)
+		if a.NumSteps == 0 {
+			fmt.Println(" machine halted ")
+			break
+		}
 		if a.NumSteps != 1 {
 			t.Log("Num steps = ", a.NumSteps)
 		}
+		fmt.Println("executed up to step ", i)
 		t.Log("Assertion after - ")
 		//a2 := m.ExecuteAssertion(steps, timeBounds)
 		//
@@ -323,6 +329,7 @@ func TestValidateProof(t *testing.T) {
 			BeforeInbox:   inboxHash,
 		}
 
+		fmt.Println("calling ValidateProof")
 		t.Log("calling ValidateProof")
 		res, err := osp.ValidateProof(callOpts, precond, a.Stub(), proof)
 		if err != nil {
