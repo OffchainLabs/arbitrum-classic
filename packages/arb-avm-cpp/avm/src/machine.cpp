@@ -303,8 +303,6 @@ void Machine::runOne() {
         return;
     }
 
-    m.context.numSteps++;
-
     auto& instruction = m.code[m.pc];
 
     auto startStackSize = m.stack.stacksize();
@@ -324,6 +322,10 @@ void Machine::runOne() {
         } catch (const bad_tuple_index& e) {
             m.state = Status::Error;
         }
+    }
+
+    if (nonstd::get_if<NotBlocked>(&m.blockReason)) {
+        m.context.numSteps++;
     }
 
     if (m.state != Status::Error) {
