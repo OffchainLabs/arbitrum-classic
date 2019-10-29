@@ -182,7 +182,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::SLT, {true, true}},
     {OpCode::SGT, {true, true}},
     {OpCode::EQ, {false, false}},
-    {OpCode::ISZERO, {true, true}},
+    {OpCode::ISZERO, {true}},
     {OpCode::BITWISE_AND, {true, true}},
     {OpCode::BITWISE_OR, {true, true}},
     {OpCode::BITWISE_XOR, {true, true}},
