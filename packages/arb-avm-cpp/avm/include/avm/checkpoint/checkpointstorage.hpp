@@ -38,6 +38,17 @@ struct DeleteResults {
     rocksdb::Status status;
 };
 
+class Transaction {
+   private:
+    std::unique_ptr<rocksdb::Transaction> transaction;
+    std::unique_ptr<rocksdb::Transaction> makeTransaction();
+
+   public:
+    Transaction(std::unique_ptr<rocksdb::Transaction> transaction_);
+    ~Transaction();
+    rocksdb::Status Commit();
+};
+
 class CheckpointStorage {
    private:
     std::string txn_db_path;

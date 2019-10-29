@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ccheckpointstorage
+package cmachine
 
 /*
 #cgo CFLAGS: -I.
@@ -58,8 +58,4 @@ func (checkpoint *CheckpointStorage) DeleteCheckpoint(checkpointName string) boo
 	success := C.deleteCheckpoint(checkpoint.c, cCheckpointName)
 
 	return success == 1
-}
-
-func (checkpoint *CheckpointStorage) GetCStorage() unsafe.Pointer {
-	return checkpoint.c
 }

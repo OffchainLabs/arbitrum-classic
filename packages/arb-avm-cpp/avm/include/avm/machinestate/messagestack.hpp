@@ -58,7 +58,7 @@ struct MessageStack {
 
     MessageStackSaveResults checkpointState(MachineStateSaver& msSaver) {
         auto saved_msgs = msSaver.saveTuple(messages);
-        auto converted_num = (uint256_t)messageCount;
+        auto converted_num = static_cast<uint256_t>(messageCount);
         auto saved_msg_count = msSaver.saveValue(converted_num);
 
         return MessageStackSaveResults{saved_msgs, saved_msg_count};
@@ -72,7 +72,7 @@ struct MessageStack {
 
         if (msgs_res.status.ok() && count_res.status.ok()) {
             messages = msgs_res.data;
-            messageCount = (uint64_t)count_res.data;
+            messageCount = static_cast<uint64_t>(count_res.data);
             return true;
         } else {
             return false;

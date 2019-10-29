@@ -220,17 +220,22 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 }
 
 func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
-
-	success := C.checkpointMachine(m.c, storage.GetCStorage())
+	cCheckpointStorage := storage.(*CheckpointStorage)
+	success := C.checkpointMachine(m.c, cCheckpointStorage.c)
 
 	return success == 1
 }
 
 func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
 	cCheckpointName := C.CString(checkpointName)
-	sucess := C.restoreMachine(m.c, storage.GetCStorage(), cCheckpointName)
+	cCheckpointStorage, ok := storage.(*CheckpointStorage)
 
-	return sucess == 1
+	if ok {
+		success := C.restoreMachine(m.c, cCheckpointStorage.c, cCheckpointName)
+		return success == 1
+	} else {
+		return false
+	}
 }
 
 func bytesArrayToVals(data []byte, valCount int) []value.Value {

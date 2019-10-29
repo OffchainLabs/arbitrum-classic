@@ -105,7 +105,8 @@ int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
     Machine* mach = static_cast<Machine*>(m);
     TokenType tokType;
     std::copy(cTokType, cTokType + 21, tokType.begin());
-    uint256_t amount = deserializeUint256t(cAmount);
+    auto const_amount = const_cast<const char*>(cAmount);
+    uint256_t amount = deserializeUint256t(const_amount);
     return mach->canSpend(tokType, amount);
 }
 
@@ -189,7 +190,7 @@ uint64_t machinePendingMessageCount(CMachine* m) {
 void machineSendOnchainMessage(CMachine* m, void* data) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto dataPtr = reinterpret_cast<char*>(data);
+    auto dataPtr = reinterpret_cast<const char*>(data);
     auto val = deserialize_value(dataPtr, mach->getPool());
     Message msg;
     auto success = msg.deserialize(val);
@@ -220,7 +221,7 @@ void machineSendOffchainMessages(CMachine* m, void* rawData, int messageCount) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
     std::vector<Message> messages;
-    auto data = reinterpret_cast<char*>(rawData);
+    auto data = reinterpret_cast<const char*>(rawData);
     for (int i = 0; i < messageCount; i++) {
         auto val = deserialize_value(data, mach->getPool());
         messages.emplace_back();

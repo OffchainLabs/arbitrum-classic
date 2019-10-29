@@ -36,7 +36,7 @@ std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
 }
 
 std::vector<unsigned char> serializeCountAndValue(
-    int count,
+    uint32_t count,
     const std::vector<unsigned char>& value) {
     std::vector<unsigned char> output_vector(sizeof(count));
     memcpy(&output_vector[0], &count, sizeof(count));
@@ -126,6 +126,18 @@ GetResults CheckpointStorage::getValue(
         auto unsuccessful = rocksdb::Status().NotFound();
         return GetResults{0, unsuccessful, std::vector<unsigned char>()};
     }
+}
+
+Transaction::Transaction(std::unique_ptr<rocksdb::Transaction> transaction_) {
+    transaction = std::move(transaction_);
+}
+
+Transaction::~Transaction() {
+    transaction.reset();
+}
+
+rocksdb::Status Transaction::Commit() {
+    return transaction->Commit();
 }
 
 // private

@@ -15,8 +15,8 @@
  */
 
 #include "ccheckpointstorage.h"
-#include <avm/checkpointstorage.hpp>
-#include <avm/machinestate/checkpointdeleter.hpp>
+#include <avm/checkpoint/checkpointdeleter.hpp>
+#include <avm/checkpoint/checkpointstorage.hpp>
 #include <string>
 
 CCheckpointStorage* createCheckpointStorage(const char* filename) {
@@ -37,11 +37,10 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const char* checkpoint_name) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
 
-    auto deleter = CheckpointDeleter(storage);
     auto name_str = std::string(checkpoint_name);
     auto name_vector =
         std::vector<unsigned char>(name_str.begin(), name_str.end());
-    auto result = deleter.deleteCheckpoint(name_vector);
+    auto result = deleteCheckpoint(*storage, name_vector);
 
     return result.status.ok();
 }

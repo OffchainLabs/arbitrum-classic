@@ -18,7 +18,6 @@ package loader
 
 import (
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/ccheckpointstorage"
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -40,5 +39,5 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 }
 
 func CreateCheckpointStorage(dbPath string) (machine.CheckpointStorage, error) {
-	return ccheckpointstorage.NewCheckpoint(dbPath)
+	return cmachine.NewCheckpoint(dbPath)
 }
