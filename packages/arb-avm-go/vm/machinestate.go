@@ -363,60 +363,60 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	fmt.Printf("auxStack = %v, register = %v\n", hex.EncodeToString(baseAuxStackValHash[:]), hex.EncodeToString(registerHash[:]))
 	fmt.Printf("staticHash = %v, errHandlerHash = %v\n", hex.EncodeToString(staticHash[:]), hex.EncodeToString(errHandlerHash[:]))
 
-	size := len(codePoint.NextHash)
+	//size := len(codePoint.NextHash)
 	if _, err := wr.Write(codePoint.NextHash[:]); err != nil {
 		return err
 	}
-	size += len(baseStackValHash)
+	//size += len(baseStackValHash)
 	if _, err := wr.Write(baseStackValHash[:]); err != nil {
 		return err
 	}
-	size += len(baseStackValHash)
+	//size += len(baseStackValHash)
 	if _, err := wr.Write(baseAuxStackValHash[:]); err != nil {
 		return err
 	}
-	size += len(registerHash)
+	//size += len(registerHash)
 	if _, err := wr.Write(registerHash[:]); err != nil {
 		return err
 	}
-	size += len(staticHash)
+	//size += len(staticHash)
 	if _, err := wr.Write(staticHash[:]); err != nil {
 		return err
 	}
-	size += len(errHandlerHash)
+	//size += len(errHandlerHash)
 	if _, err := wr.Write(errHandlerHash[:]); err != nil {
 		return err
 	}
-	fmt.Println("size after hashes = ", size)
-	buf := new(bytes.Buffer)
-	if err := value.MarshalOperationProof(codePoint.Op, buf, includeImmediateVal); err != nil {
-		return err
-	}
-	size += buf.Len()
+	//fmt.Println("size after hashes = ", size)
+	//buf := new(bytes.Buffer)
+	//if err := value.MarshalOperationProof(codePoint.Op, buf, includeImmediateVal); err != nil {
+	//	return err
+	//}
+	//size += buf.Len()
 	if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
 		return err
 	}
-	fmt.Println("size after codePoint = ", size)
+	//fmt.Println("size after codePoint = ", size)
 	for _, val := range stackVals {
-		if err := value.MarshalValueForProof(val, buf); err != nil {
-			return err
-		}
-		size += buf.Len()
+		//if err := value.MarshalValueForProof(val, buf); err != nil {
+		//	return err
+		//}
+		//size += buf.Len()
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err
 		}
 	}
-	fmt.Println("size after stack = ", size)
+	//fmt.Println("size after stack = ", size)
 	for _, val := range auxStackVals {
-		if err := value.MarshalValueForProof(val, buf); err != nil {
-			return err
-		}
-		size += buf.Len()
+		//if err := value.MarshalValueForProof(val, buf); err != nil {
+		//	return err
+		//}
+		//size += buf.Len()
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err
 		}
 	}
-	fmt.Println("size after aux stack = ", size)
+	//fmt.Println("size after aux stack = ", size)
 	return nil
 }
 

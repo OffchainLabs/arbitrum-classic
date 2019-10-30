@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -370,13 +371,16 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, brdg bridge.ArbV
 			ev.Precondition.TimeBounds,
 		)
 		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
+			log.Println("******* Initiating challenge *******")
+			log.Println("ev.Precondition = ", ev.Precondition)
+			log.Println("ev.Assertion = ", ev.Assertion)
 			_, err := brdg.InitiateChallenge(
 				context.Background(),
 				ev.Precondition,
 				ev.Assertion,
 			)
 			if err != nil {
-				return nil, nil, &bridge.Error{err, "ERROR: InitiateChallenge: failed", false}
+				return nil, nil, &bridge.Error{err, "ERROR: disputable.go InitiateChallenge: failed", false}
 			}
 		}
 		balance := c.GetBalance()
