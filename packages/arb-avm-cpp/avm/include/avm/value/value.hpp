@@ -17,9 +17,9 @@
 #ifndef value_hpp
 #define value_hpp
 
+#include <avm/opcodes.hpp>
 #include <avm/value/bigint.hpp>
 
-#include <avm/opcodes.hpp>
 #include <nonstd/variant.hpp>
 #include <unordered_map>
 
