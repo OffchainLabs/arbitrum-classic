@@ -21,7 +21,9 @@ import (
 	jsonenc "encoding/json"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/testmachine"
 	"io/ioutil"
+	"log"
 	"math"
 	"math/big"
 	brand "math/rand"
@@ -69,7 +71,7 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(contract, true, "test")
+	machine, err := loader.LoadMachineFromFile(contract, true, "proof")
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}
@@ -136,6 +138,10 @@ func TestChallenge(t *testing.T) {
 	}
 
 	coordinator.StartServer(context.Background())
+	if tmp, ok := machine.(*testmachine.Machine); ok {
+		tmp.ProofMachineData(address, coordinator, key1)
+		log.Println("************************************************Proof data set")
+	}
 
 	time.Sleep(1 * time.Second)
 

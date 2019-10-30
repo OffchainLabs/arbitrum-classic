@@ -26,7 +26,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/testmachine"
 	"io/ioutil"
+	"log"
 	"math"
 	"math/big"
 	brand "math/rand"
@@ -43,7 +46,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
@@ -77,11 +79,12 @@ func setupServers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mach, err = loader.LoadMachineFromFile(contract, true, "test")
+	//mach, err = loader.LoadMachineFromFile(contract, true, "test")
+	mach, err = loader.LoadMachineFromFile(contract, true, "proof")
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}
-
+	log.Printf("machine type = %T", mach)
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		t.Fatal(err)
@@ -145,6 +148,10 @@ func setupServers(t *testing.T) {
 
 	coordinator.StartServer(context.Background())
 
+	if tmp, ok := mach.(*testmachine.Machine); ok {
+		tmp.ProofMachineData(address, coordinator, key1)
+	}
+
 	time.Sleep(1 * time.Second)
 
 	challenger, err = channel.NewValidatorFollower(
@@ -174,7 +181,7 @@ func setupServers(t *testing.T) {
 	serversSetup = true
 }
 
-func testProof(t *testing.T) {
+func TestProof(t *testing.T) {
 
 	if !serversSetup {
 		setupServers(t)
@@ -263,15 +270,15 @@ func testProof(t *testing.T) {
 	}
 }
 
-func TestValidateProof(t *testing.T) {
+func testValidateProof(t *testing.T) {
 	if !serversSetup {
 		setupServers(t)
 	}
 
-	osp, err := ethbridge.NewOneStepProof(common.HexToAddress(connectionInfo.OneStepProof), coordinator.Val.Validator.Client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	//osp, err := ethbridge.NewOneStepProof(common.HexToAddress(connectionInfo.OneStepProof), coordinator.Val.Validator.Client)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
 	// see validator/validator.go RequestDisputableAssertion (line 287)
 	// context.Background()
 	//m := mach
@@ -331,7 +338,12 @@ func TestValidateProof(t *testing.T) {
 
 		fmt.Println("calling ValidateProof")
 		t.Log("calling ValidateProof")
-		res, err := osp.ValidateProof(callOpts, precond, a.Stub(), proof)
+		fmt.Println("callOpts - ", callOpts)
+		fmt.Println("precond - ", precond)
+		fmt.Println("a.Stub - ", a.Stub())
+		fmt.Println("proof - ", proof)
+		fmt.Println("osp - ", coordinator.Val.Validator.OneStepProof)
+		res, err := coordinator.Val.Validator.OneStepProof.ValidateProof(callOpts, precond, a.Stub(), proof)
 		if err != nil {
 			t.Fatal("Proof invalid", err)
 		}

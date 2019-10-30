@@ -32,7 +32,7 @@ func NewMessageQueue() *MessageQueue {
 }
 
 func (in *MessageQueue) Clone() *MessageQueue {
-	return &MessageQueue{in.msg, in.msgCount}
+	return &MessageQueue{in.msg.Clone().(value.TupleValue), in.msgCount}
 }
 
 func (in *MessageQueue) String() string {

@@ -32,7 +32,9 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 	} else if strings.EqualFold(vmtype, "cpp") {
 		return cmachine.New(fileName)
 	} else if strings.EqualFold(vmtype, "test") {
-		return testmachine.New(fileName, warnMode)
+		return testmachine.New(fileName, warnMode, false)
+	} else if strings.EqualFold(vmtype, "proof") {
+		return testmachine.New(fileName, warnMode, true)
 	} else {
 		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
 	}
