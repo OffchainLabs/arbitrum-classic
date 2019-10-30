@@ -65,8 +65,8 @@ struct MessageStack {
     }
 
     bool initializeMessageStack(const MachineStateFetcher& fetcher,
-                                std::vector<unsigned char> msgs_key,
-                                std::vector<unsigned char> count_key) {
+                                const std::vector<unsigned char>& msgs_key,
+                                const std::vector<unsigned char>& count_key) {
         auto msgs_res = fetcher.getTuple(msgs_key);
         auto count_res = fetcher.getUint256_t(count_key);
 

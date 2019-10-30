@@ -56,7 +56,13 @@ GetResults CheckpointStorage::getValue(
     }
 }
 
-std::shared_ptr<Transaction> CheckpointStorage::makeTransaction() {
+std::unique_ptr<Transaction> CheckpointStorage::makeUniqueTranx() {
+    rocksdb::WriteOptions writeOptions;
+    rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
+    return std::make_unique<Transaction>(Transaction(transaction));
+}
+
+std::shared_ptr<Transaction> CheckpointStorage::makeSharedTranx() {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     return std::make_shared<Transaction>(Transaction(transaction));

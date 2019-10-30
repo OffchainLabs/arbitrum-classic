@@ -207,7 +207,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 }
 
 SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
-    auto stateSaver = MachineStateSaver(storage);
+    auto stateSaver = MachineStateSaver(storage.makeUniqueTranx());
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
@@ -225,7 +225,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     auto hash_key = GetHashKey(hash());
 
-    // make these things atomic at some point
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
         inbox_results.msgs_tuple_results.status.ok() &&
         inbox_results.msg_count_results.status.ok() &&
@@ -249,9 +248,12 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
             balancetracker_str,
         };
 
-        return stateSaver.saveMachineState(machine_state_data, hash_key);
+        auto results =
+            stateSaver.saveMachineState(machine_state_data, hash_key);
+        results.status = stateSaver.commitTransaction();
+        return results;
     } else {
-        return SaveResults{0, rocksdb::Status().InvalidArgument(), hash_key};
+        return SaveResults{0, rocksdb::Status().Aborted(), hash_key};
     }
 }
 

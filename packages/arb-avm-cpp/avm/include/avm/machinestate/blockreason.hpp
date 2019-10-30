@@ -67,6 +67,6 @@ using BlockReason = nonstd::variant<NotBlocked,
                                     SendBlocked>;
 
 std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val);
-BlockReason deserializeBlockReason(std::vector<unsigned char>& data);
+BlockReason deserializeBlockReason(const std::vector<unsigned char>& data);
 
 #endif /* blockreason_hpp */

@@ -70,11 +70,11 @@ DeleteResults deleteValue(std::shared_ptr<Transaction> transaction,
 DeleteResults deleteCheckpoint(
     CheckpointStorage& checkpoint_storage,
     const std::vector<unsigned char>& checkpoint_name) {
-    auto transaction = checkpoint_storage.makeTransaction();
-
-    auto results = transaction->getValue(checkpoint_name);
+    auto results = checkpoint_storage.getValue(checkpoint_name);
 
     if (results.status.ok()) {
+        auto transaction = checkpoint_storage.makeSharedTranx();
+
         auto delete_results = transaction->deleteValue(checkpoint_name);
 
         if (delete_results.reference_count < 1) {

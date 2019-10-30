@@ -96,10 +96,11 @@ class Datastack {
 
     uint256_t hash() const;
 
-    SaveResults checkpointState(MachineStateSaver& fetcher, TuplePool* pool);
+    SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
 
-    DbResult<Tuple> initializeDataStack(const MachineStateFetcher& fetcher,
-                                        std::vector<unsigned char> hash_key);
+    DbResult<Tuple> initializeDataStack(
+        const MachineStateFetcher& fetcher,
+        const std::vector<unsigned char>& hash_key);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

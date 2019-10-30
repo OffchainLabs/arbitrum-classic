@@ -58,15 +58,15 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
 }
 
 // can speed up by not creating tuple/save directly
-SaveResults Datastack::checkpointState(MachineStateSaver& msSaver,
+SaveResults Datastack::checkpointState(MachineStateSaver& saver,
                                        TuplePool* pool) {
     auto tuple = getTupleRepresentation(pool);
-    return msSaver.saveTuple(tuple);
+    return saver.saveTuple(tuple);
 }
 
 DbResult<Tuple> Datastack::initializeDataStack(
     const MachineStateFetcher& fetcher,
-    std::vector<unsigned char> hash_key) {
+    const std::vector<unsigned char>& hash_key) {
     auto results = fetcher.getTuple(hash_key);
     initializeDataStack(results.data);
 

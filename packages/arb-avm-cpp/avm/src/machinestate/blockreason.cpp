@@ -80,7 +80,7 @@ std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
 constexpr BlockType InboxBlocked::type;
 constexpr BlockType SendBlocked::type;
 
-BlockReason deserializeBlockReason(std::vector<unsigned char>& data) {
+BlockReason deserializeBlockReason(const std::vector<unsigned char>& data) {
     auto blocktype = static_cast<BlockType>(data[0]);
     switch (blocktype) {
         case Inbox: {

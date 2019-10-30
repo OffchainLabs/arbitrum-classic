@@ -26,23 +26,16 @@
 
 class MachineStateSaver {
    private:
-    CheckpointStorage& checkpoint_storage;
-    SaveResults saveTuple(std::shared_ptr<Transaction> transaction,
-                          const Tuple& val);
-    SaveResults saveValue(std::shared_ptr<Transaction> transaction,
-                          const value& val);
-    SaveResults saveMachineState(
-        Transaction transaction,
-        ParsedState state_data,
-        const std::vector<unsigned char>& checkpoint_name);
+    std::unique_ptr<Transaction> transaction;
 
    public:
-    MachineStateSaver(CheckpointStorage& checkpoint_storage);
+    MachineStateSaver(std::unique_ptr<Transaction> transaction_);
     SaveResults saveTuple(const Tuple& val);
     SaveResults saveValue(const value& val);
     SaveResults saveMachineState(
         ParsedState state_data,
         const std::vector<unsigned char>& checkpoint_name);
+    rocksdb::Status commitTransaction();
 };
 
 #endif /* machinestatesaver_hpp */
