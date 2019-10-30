@@ -21,56 +21,18 @@
 #include <rocksdb/utilities/transaction_db.h>
 #include <vector>
 
-struct GetResults {
-    uint32_t reference_count;
-    rocksdb::Status status;
-    std::vector<unsigned char> stored_value;
-};
-
-struct SaveResults {
-    uint32_t reference_count;
-    rocksdb::Status status;
-    std::vector<unsigned char> storage_key;
-};
-
-struct DeleteResults {
-    uint32_t reference_count;
-    rocksdb::Status status;
-};
-
-class Transaction {
-   private:
-    std::unique_ptr<rocksdb::Transaction> transaction;
-    std::unique_ptr<rocksdb::Transaction> makeTransaction();
-
-   public:
-    Transaction(std::unique_ptr<rocksdb::Transaction> transaction_);
-    ~Transaction();
-    rocksdb::Status Commit();
-};
+#include <avm/checkpoint/transaction.hpp>
 
 class CheckpointStorage {
    private:
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
-    std::unique_ptr<rocksdb::Transaction> makeTransaction();
-    rocksdb::Status saveKeyValuePair(const std::vector<unsigned char>& key,
-                                     const std::vector<unsigned char>& value);
-    rocksdb::Status deleteKeyValuePair(const std::vector<unsigned char>& key);
-    SaveResults saveValueWithRefCount(
-        uint32_t updated_ref_count,
-        const std::vector<unsigned char>& hash_key,
-        const std::vector<unsigned char>& value);
 
    public:
     CheckpointStorage(std::string db_path);
     ~CheckpointStorage();
-
-    SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
-    SaveResults saveValue(const std::vector<unsigned char>& hash_key,
-                          const std::vector<unsigned char>& value);
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
-    DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
+    std::shared_ptr<Transaction> makeTransaction();
 };
 
 #endif /* checkpointstorage_hpp */

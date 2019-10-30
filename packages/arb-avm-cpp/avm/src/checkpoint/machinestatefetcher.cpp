@@ -74,7 +74,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
 
     if (results.status.ok()) {
         auto value_vectors =
-            checkpoint::utils::parseSerializedTuple(results.stored_value);
+            checkpoint::utils::parseTuple(results.stored_value);
 
         if (value_vectors.empty()) {
             return DbResult<Tuple>{results.status, results.reference_count,

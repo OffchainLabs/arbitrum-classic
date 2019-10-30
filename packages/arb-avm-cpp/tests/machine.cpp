@@ -100,39 +100,3 @@ TEST_CASE("Delete machine checkpoint") {
 //        restoreCheckpoint(storage, machine, results.storage_key);
 //    }
 //}
-
-// testing
-//
-//        auto saver = MachineStateSaver(&storage, &pool,
-//        machine.machine_state.code);
-//        auto res =
-//        saver.saveValue(machine.machine_state.staticVal);
-//        auto res2 =
-//        saver.getValue(res.storage_key);
-//
-//        auto tup1 = nonstd::get<Tuple>(machine.machine_state.staticVal);
-//        auto tup2 = nonstd::get<Tuple>(res2.data);
-//
-//        for(auto i = 0 ; i < tup1.tuple_size(); i++){
-//
-//            auto item = nonstd::get<CodePoint>(tup1.get_element(i));
-//            auto saved_item = nonstd::get<CodePoint>(tup2.get_element(i));
-//            auto actual_item = machine.machine_state.code[item.pc];
-//
-//
-//            REQUIRE(item.pc == saved_item.pc);
-//            auto actual_nexthash =
-//            machine.machine_state.code[item.pc].nextHash;
-//            REQUIRE(actual_nexthash ==
-//            hash(machine.machine_state.code[item.pc+1]));
-//
-//            REQUIRE(actual_nexthash == saved_item.nextHash);
-//            REQUIRE(actual_nexthash == item.nextHash);
-//            REQUIRE(item.nextHash == saved_item.nextHash);
-//            REQUIRE(hash(item) == hash(saved_item));
-//
-//        }
-//
-//        restoreCheckpoint(storage, machine, results.storage_key);
-//    }
-//}

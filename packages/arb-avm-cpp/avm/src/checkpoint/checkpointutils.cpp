@@ -126,7 +126,7 @@ std::vector<unsigned char> extractHashKey(iterator& iter) {
 
 namespace utils {
 
-std::vector<std::vector<unsigned char>> parseSerializedTuple(
+std::vector<std::vector<unsigned char>> parseTuple(
     const std::vector<unsigned char>& data) {
     std::vector<std::vector<unsigned char>> return_vector;
 
@@ -278,4 +278,31 @@ std::vector<unsigned char> serializeState(const ParsedState& state_data) {
     return state_data_vector;
 }
 }  // namespace utils
+namespace storage {
+
+std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
+    const std::string& string_value) {
+    if (string_value.empty()) {
+        return std::make_tuple(0, std::vector<unsigned char>());
+    } else {
+        const char* c_string = string_value.c_str();
+        uint32_t ref_count;
+        memcpy(&ref_count, c_string, sizeof(ref_count));
+        std::vector<unsigned char> saved_value(
+            string_value.begin() + sizeof(ref_count), string_value.end());
+
+        return std::make_tuple(ref_count, saved_value);
+    }
+}
+
+std::vector<unsigned char> serializeCountAndValue(
+    uint32_t count,
+    const std::vector<unsigned char>& value) {
+    std::vector<unsigned char> output_vector(sizeof(count));
+    memcpy(&output_vector[0], &count, sizeof(count));
+    output_vector.insert(output_vector.end(), value.begin(), value.end());
+
+    return output_vector;
+}
+}  // namespace storage
 }  // namespace checkpoint

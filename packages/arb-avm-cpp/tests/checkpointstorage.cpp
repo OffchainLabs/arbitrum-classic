@@ -27,15 +27,19 @@ std::vector<unsigned char> value1 = {'v', 'a', 'l', 'u', 'e'};
 std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 
 auto dbPath =
-    boost::dll::program_location().parent_path().generic_string() + "rocksDb";
+    boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
 
 void saveVal(CheckpointStorage& storage,
              std::vector<unsigned char> val,
              std::vector<unsigned char> hash_key,
              int expected_ref_count,
              bool expected_status) {
-    auto results = storage.saveValue(hash_key, val);
-    REQUIRE(results.status.ok() == expected_status);
+    auto trans = storage.makeTransaction();
+    auto results = trans->saveValue(hash_key, val);
+    auto status = trans->Commit();
+    auto success = results.status.ok() && status.ok();
+
+    REQUIRE(success == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
 }
 
@@ -44,9 +48,13 @@ void getVal(CheckpointStorage& storage,
             int expected_ref_count,
             bool expected_status,
             std::vector<unsigned char> expected_val) {
-    auto results = storage.getValue(hash_key);
+    auto trans = storage.makeTransaction();
+    auto results = trans->getValue(hash_key);
+    auto status = trans->Commit();
+    auto success = results.status.ok() && status.ok();
+
+    REQUIRE(success == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.stored_value == expected_val);
 }
 
@@ -54,8 +62,12 @@ void incrementRef(CheckpointStorage& storage,
                   std::vector<unsigned char> hash_key,
                   int expected_ref_count,
                   bool expected_status) {
-    auto results = storage.incrementReference(hash_key);
-    REQUIRE(results.status.ok() == expected_status);
+    auto trans = storage.makeTransaction();
+    auto results = trans->incrementReference(hash_key);
+    auto status = trans->Commit();
+    auto success = results.status.ok() && status.ok();
+
+    REQUIRE(success == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
 }
 
@@ -63,9 +75,13 @@ void deleteVal(CheckpointStorage& storage,
                std::vector<unsigned char> hash_key,
                int expected_ref_count,
                bool expected_status) {
-    auto results = storage.deleteValue(hash_key);
+    auto trans = storage.makeTransaction();
+    auto results = trans->deleteValue(hash_key);
+    auto status = trans->Commit();
+    auto success = results.status.ok() && status.ok();
+
+    REQUIRE(success == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(results.status.ok() == expected_status);
 }
 
 TEST_CASE("Checkpointstorage initialize") {

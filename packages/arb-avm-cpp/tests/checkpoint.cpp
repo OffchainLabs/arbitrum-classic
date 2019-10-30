@@ -83,6 +83,28 @@ void getTupleValues(MachineStateFetcher& fetcher,
     }
 }
 
+TEST_CASE("Save value") {
+    TuplePool pool;
+    CheckpointStorage storage(path);
+    std::vector<CodePoint> code;
+    auto saver = MachineStateSaver(storage);
+
+    SECTION("save 1 num tuple") {
+        TuplePool pool;
+        uint256_t num = 1;
+        auto tuple = Tuple(num, &pool);
+        saveValue(saver, tuple, 1, true);
+    }
+    SECTION("save num") {
+        uint256_t num = 1;
+        saveValue(saver, num, 1, true);
+    }
+    SECTION("save codepoint") {
+        auto code_point = CodePoint(1, Operation(), 0);
+        saveValue(saver, code_point, 1, true);
+    }
+}
+
 TEST_CASE("Save tuple") {
     TuplePool pool;
     CheckpointStorage storage(path);
@@ -106,28 +128,6 @@ TEST_CASE("Save tuple") {
         auto tuple = Tuple(inner_tuple, &pool);
         saveTuple(saver, tuple, 1, true);
         saveTuple(saver, tuple, 2, true);
-    }
-}
-
-TEST_CASE("Save value") {
-    TuplePool pool;
-    CheckpointStorage storage(path);
-    std::vector<CodePoint> code;
-    auto saver = MachineStateSaver(storage);
-
-    SECTION("save 1 num tuple") {
-        TuplePool pool;
-        uint256_t num = 1;
-        auto tuple = Tuple(num, &pool);
-        saveValue(saver, tuple, 1, true);
-    }
-    SECTION("save num") {
-        uint256_t num = 1;
-        saveValue(saver, num, 1, true);
-    }
-    SECTION("save codepoint") {
-        auto code_point = CodePoint(1, Operation(), 0);
-        saveValue(saver, code_point, 1, true);
     }
 }
 

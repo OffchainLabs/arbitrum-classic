@@ -25,26 +25,63 @@ MachineStateSaver::MachineStateSaver(CheckpointStorage& storage)
     : checkpoint_storage(storage) {}
 
 SaveResults MachineStateSaver::saveValue(const value& val) {
+    auto transaction = checkpoint_storage.makeTransaction();
+    auto results = saveValue(transaction, val);
+    auto status = transaction->Commit();
+
+    results.status = status;
+    return results;
+}
+
+SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
+    auto transaction = checkpoint_storage.makeTransaction();
+    auto results = saveTuple(transaction, val);
+
+    auto status = transaction->Commit();
+
+    results.status = status;
+    return results;
+};
+
+SaveResults MachineStateSaver::saveMachineState(
+    ParsedState state_data,
+    const std::vector<unsigned char>& checkpoint_name) {
+    auto transaction = checkpoint_storage.makeTransaction();
+    auto serialized_state = checkpoint::utils::serializeState(state_data);
+
+    auto results = transaction->saveValue(checkpoint_name, serialized_state);
+    auto status = transaction->Commit();
+    results.status = status;
+    return results;
+}
+
+// pirvate ------------------------------------------
+
+SaveResults MachineStateSaver::saveValue(
+    std::shared_ptr<Transaction> transaction,
+    const value& val) {
     auto serialized_value = checkpoint::utils::serializeValue(val);
     auto type = static_cast<ValueTypes>(serialized_value[0]);
 
     if (type == TUPLE) {
         auto tuple = nonstd::get<Tuple>(val);
-        return saveTuple(tuple);
+        return saveTuple(transaction, tuple);
     } else {
         auto hash_key = GetHashKey(val);
-        return checkpoint_storage.saveValue(hash_key, serialized_value);
+        return transaction->saveValue(hash_key, serialized_value);
     }
 }
 
-SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
+SaveResults MachineStateSaver::saveTuple(
+    std::shared_ptr<Transaction> transaction,
+    const Tuple& val) {
     auto hash_key = GetHashKey(val);
-    auto results = checkpoint_storage.getValue(hash_key);
+    auto results = transaction->getValue(hash_key);
 
     auto incr_ref_count = results.status.ok() && results.reference_count > 0;
 
     if (incr_ref_count) {
-        return checkpoint_storage.incrementReference(hash_key);
+        return transaction->incrementReference(hash_key);
     } else {
         std::vector<unsigned char> value_vector{
             static_cast<unsigned char>(TUPLE)};
@@ -60,16 +97,9 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
             auto type = static_cast<ValueTypes>(serialized_val[0]);
             if (type == TUPLE) {
                 auto tup_val = nonstd::get<Tuple>(current_val);
-                auto tuple_save_results = saveTuple(tup_val);
+                auto tuple_save_results = saveTuple(transaction, tup_val);
             }
         }
-        return checkpoint_storage.saveValue(hash_key, value_vector);
+        return transaction->saveValue(hash_key, value_vector);
     }
-};
-
-SaveResults MachineStateSaver::saveMachineState(
-    ParsedState state_data,
-    const std::vector<unsigned char>& checkpoint_name) {
-    auto serialized_state = checkpoint::utils::serializeState(state_data);
-    return checkpoint_storage.saveValue(checkpoint_name, serialized_state);
 }

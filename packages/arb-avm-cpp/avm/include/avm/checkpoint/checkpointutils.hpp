@@ -19,7 +19,7 @@
 
 #include <avm/value/value.hpp>
 
-#include <avm/checkpoint/checkpointstorage.hpp>
+#include <rocksdb/db.h>
 
 template <typename T>
 struct DbResult {
@@ -50,11 +50,18 @@ std::vector<unsigned char> serializeValue(const value& val);
 CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
                                const std::vector<CodePoint>& code);
 uint256_t deserializeUint256_t(const std::vector<unsigned char>& val);
-std::vector<std::vector<unsigned char>> parseSerializedTuple(
+std::vector<std::vector<unsigned char>> parseTuple(
     const std::vector<unsigned char>& data);
 ParsedState parseState(const std::vector<unsigned char>& stored_state);
 std::vector<unsigned char> serializeState(const ParsedState& state_data);
 }  // namespace utils
+namespace storage {
+std::vector<unsigned char> serializeCountAndValue(
+    uint32_t count,
+    const std::vector<unsigned char>& value);
+std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
+    const std::string& string_value);
+}  // namespace storage
 }  // namespace checkpoint
 
 #endif /* statesaverutils_hpp */
