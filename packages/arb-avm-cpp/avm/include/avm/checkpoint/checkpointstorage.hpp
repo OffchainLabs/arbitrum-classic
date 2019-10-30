@@ -32,8 +32,7 @@ class CheckpointStorage {
     CheckpointStorage(std::string db_path);
     ~CheckpointStorage();
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
-    std::unique_ptr<Transaction> makeUniqueTranx();
-    std::shared_ptr<Transaction> makeSharedTranx();
+    std::unique_ptr<Transaction> makeTransaction();
 };
 
 #endif /* checkpointstorage_hpp */

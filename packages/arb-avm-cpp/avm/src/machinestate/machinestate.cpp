@@ -207,7 +207,7 @@ std::vector<unsigned char> MachineState::marshalForProof() {
 }
 
 SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
-    auto stateSaver = MachineStateSaver(storage.makeUniqueTranx());
+    auto stateSaver = MachineStateSaver(storage.makeTransaction());
 
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());

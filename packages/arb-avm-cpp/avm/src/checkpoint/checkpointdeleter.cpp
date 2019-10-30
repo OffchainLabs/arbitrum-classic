@@ -16,14 +16,14 @@
 
 #include <avm/checkpoint/checkpointdeleter.hpp>
 
-DeleteResults deleteTuple(std::shared_ptr<Transaction> transaction,
+DeleteResults deleteTuple(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key);
 
-DeleteResults deleteTuple(std::shared_ptr<Transaction> transaction,
+DeleteResults deleteTuple(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key,
                           GetResults results);
 
-DeleteResults deleteTuple(std::shared_ptr<Transaction> transaction,
+DeleteResults deleteTuple(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key,
                           GetResults results) {
     if (results.status.ok()) {
@@ -38,21 +38,21 @@ DeleteResults deleteTuple(std::shared_ptr<Transaction> transaction,
                 }
             }
         }
-        return transaction->deleteValue(hash_key);
+        return transaction.deleteValue(hash_key);
     } else {
         return DeleteResults{0, results.status};
     }
 }
 
-DeleteResults deleteTuple(std::shared_ptr<Transaction> transaction,
+DeleteResults deleteTuple(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key) {
-    auto results = transaction->getValue(hash_key);
+    auto results = transaction.getValue(hash_key);
     return deleteTuple(transaction, hash_key, results);
 }
 
-DeleteResults deleteValue(std::shared_ptr<Transaction> transaction,
+DeleteResults deleteValue(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key) {
-    auto results = transaction->getValue(hash_key);
+    auto results = transaction.getValue(hash_key);
 
     if (results.status.ok()) {
         auto type = static_cast<ValueTypes>(results.stored_value[0]);
@@ -60,7 +60,7 @@ DeleteResults deleteValue(std::shared_ptr<Transaction> transaction,
         if (type == TUPLE) {
             return deleteTuple(transaction, hash_key, results);
         } else {
-            return transaction->deleteValue(hash_key);
+            return transaction.deleteValue(hash_key);
         }
     } else {
         return DeleteResults{0, results.status};
@@ -73,7 +73,7 @@ DeleteResults deleteCheckpoint(
     auto results = checkpoint_storage.getValue(checkpoint_name);
 
     if (results.status.ok()) {
-        auto transaction = checkpoint_storage.makeSharedTranx();
+        auto transaction = checkpoint_storage.makeTransaction();
 
         auto delete_results = transaction->deleteValue(checkpoint_name);
 
@@ -82,24 +82,24 @@ DeleteResults deleteCheckpoint(
                 checkpoint::utils::parseState(results.stored_value);
 
             auto delete_static_res =
-                deleteValue(transaction, parsed_state.static_val_key);
+                deleteValue(*transaction, parsed_state.static_val_key);
             auto delete_register_res =
-                deleteValue(transaction, parsed_state.register_val_key);
-            auto delete_cp_key = deleteValue(transaction, parsed_state.pc_key);
+                deleteValue(*transaction, parsed_state.register_val_key);
+            auto delete_cp_key = deleteValue(*transaction, parsed_state.pc_key);
             auto delete_err_pc =
-                deleteValue(transaction, parsed_state.err_pc_key);
+                deleteValue(*transaction, parsed_state.err_pc_key);
             auto delete_datastack_res =
-                deleteTuple(transaction, parsed_state.datastack_key);
+                deleteTuple(*transaction, parsed_state.datastack_key);
             auto delete_auxstack_res =
-                deleteTuple(transaction, parsed_state.auxstack_key);
+                deleteTuple(*transaction, parsed_state.auxstack_key);
             auto delete_inbox_res =
-                deleteTuple(transaction, parsed_state.inbox_key);
+                deleteTuple(*transaction, parsed_state.inbox_key);
             auto delete_inbox_count =
-                deleteValue(transaction, parsed_state.inbox_count_key);
+                deleteValue(*transaction, parsed_state.inbox_count_key);
             auto delete_pendinginbox_res =
-                deleteTuple(transaction, parsed_state.pending_key);
+                deleteTuple(*transaction, parsed_state.pending_key);
             auto delete_pending_count =
-                deleteValue(transaction, parsed_state.pending_count_key);
+                deleteValue(*transaction, parsed_state.pending_count_key);
 
             if (delete_static_res.status.ok() &&
                 delete_register_res.status.ok() && delete_cp_key.status.ok() &&
@@ -109,14 +109,14 @@ DeleteResults deleteCheckpoint(
                 delete_pendinginbox_res.status.ok() &&
                 delete_inbox_count.status.ok() &&
                 delete_pending_count.status.ok() && delete_err_pc.status.ok()) {
-                auto status = transaction->Commit();
+                auto status = transaction->commit();
                 delete_results.status = status;
                 return delete_results;
             } else {
                 return DeleteResults{0, rocksdb::Status().Aborted()};
             }
         } else {
-            auto status = transaction->Commit();
+            auto status = transaction->commit();
             delete_results.status = status;
             return delete_results;
         }

@@ -78,5 +78,9 @@ SaveResults MachineStateSaver::saveMachineState(
 }
 
 rocksdb::Status MachineStateSaver::commitTransaction() {
-    return transaction->Commit();
+    return transaction->commit();
+}
+
+rocksdb::Status MachineStateSaver::rollBackTransaction() {
+    return transaction->rollBack();
 }

@@ -21,8 +21,16 @@ Transaction::Transaction(rocksdb::Transaction* transaction_) {
     transaction = std::unique_ptr<rocksdb::Transaction>(transaction_);
 }
 
-rocksdb::Status Transaction::Commit() {
+Transaction::~Transaction() {
+    assert(transaction->GetState() == rocksdb::Transaction::COMMITED);
+}
+
+rocksdb::Status Transaction::commit() {
     return transaction->Commit();
+}
+
+rocksdb::Status Transaction::rollBack() {
+    return transaction->Rollback();
 }
 
 SaveResults Transaction::incrementReference(
@@ -114,15 +122,11 @@ rocksdb::Status Transaction::saveKeyValuePair(
     const std::vector<unsigned char>& value) {
     std::string value_str(value.begin(), value.end());
     std::string key_str(key.begin(), key.end());
-    auto put_status = transaction->Put(key_str, value_str);
-
-    return put_status;
+    return transaction->Put(key_str, value_str);
 }
 
 rocksdb::Status Transaction::deleteKeyValuePair(
     const std::vector<unsigned char>& key) {
     std::string key_str(key.begin(), key.end());
-    auto delete_status = transaction->Delete(key_str);
-
-    return delete_status;
+    return transaction->Delete(key_str);
 }

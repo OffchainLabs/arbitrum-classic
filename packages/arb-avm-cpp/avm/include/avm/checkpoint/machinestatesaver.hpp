@@ -36,6 +36,7 @@ class MachineStateSaver {
         ParsedState state_data,
         const std::vector<unsigned char>& checkpoint_name);
     rocksdb::Status commitTransaction();
+    rocksdb::Status rollBackTransaction();
 };
 
 #endif /* machinestatesaver_hpp */

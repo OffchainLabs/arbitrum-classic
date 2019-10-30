@@ -34,9 +34,9 @@ void saveVal(CheckpointStorage& storage,
              std::vector<unsigned char> hash_key,
              int expected_ref_count,
              bool expected_status) {
-    auto trans = storage.makeUniqueTranx();
+    auto trans = storage.makeTransaction();
     auto results = trans->saveValue(hash_key, val);
-    auto status = trans->Commit();
+    auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 
     REQUIRE(success == expected_status);
@@ -48,9 +48,9 @@ void getVal(CheckpointStorage& storage,
             int expected_ref_count,
             bool expected_status,
             std::vector<unsigned char> expected_val) {
-    auto trans = storage.makeUniqueTranx();
+    auto trans = storage.makeTransaction();
     auto results = trans->getValue(hash_key);
-    auto status = trans->Commit();
+    auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 
     REQUIRE(success == expected_status);
@@ -62,9 +62,9 @@ void incrementRef(CheckpointStorage& storage,
                   std::vector<unsigned char> hash_key,
                   int expected_ref_count,
                   bool expected_status) {
-    auto trans = storage.makeUniqueTranx();
+    auto trans = storage.makeTransaction();
     auto results = trans->incrementReference(hash_key);
-    auto status = trans->Commit();
+    auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 
     REQUIRE(success == expected_status);
@@ -75,9 +75,9 @@ void deleteVal(CheckpointStorage& storage,
                std::vector<unsigned char> hash_key,
                int expected_ref_count,
                bool expected_status) {
-    auto trans = storage.makeUniqueTranx();
+    auto trans = storage.makeTransaction();
     auto results = trans->deleteValue(hash_key);
-    auto status = trans->Commit();
+    auto status = trans->commit();
     auto success = results.status.ok() && status.ok();
 
     REQUIRE(success == expected_status);

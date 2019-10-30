@@ -51,12 +51,14 @@ class Transaction {
 
    public:
     Transaction(rocksdb::Transaction* transaction_);
+    ~Transaction();
     SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
     SaveResults saveValue(const std::vector<unsigned char>& hash_key,
                           const std::vector<unsigned char>& value);
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
-    rocksdb::Status Commit();
+    rocksdb::Status commit();
+    rocksdb::Status rollBack();
 };
 
 #endif /* transaction_hpp */
