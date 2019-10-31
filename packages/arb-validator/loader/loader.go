@@ -18,6 +18,7 @@ package loader
 
 import (
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -32,9 +33,9 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 	} else if strings.EqualFold(vmtype, "cpp") {
 		return cmachine.New(fileName)
 	} else if strings.EqualFold(vmtype, "test") {
-		return testmachine.New(fileName, warnMode, false)
+		return testmachine.New(fileName, warnMode)
 	} else if strings.EqualFold(vmtype, "proof") {
-		return testmachine.New(fileName, warnMode, true)
+		return proofmachine.New(fileName, warnMode)
 	} else {
 		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
 	}
