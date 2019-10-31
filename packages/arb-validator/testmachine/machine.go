@@ -18,13 +18,7 @@ package testmachine
 
 import (
 	"bytes"
-	"context"
-	"crypto/ecdsa"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 	"log"
 	"math/big"
 
@@ -39,17 +33,9 @@ import (
 type Machine struct {
 	cppmachine *cmachine.Machine
 	gomachine  *gomachine.Machine
-	proofMode  bool
-	data       *ProofMachData
 }
 
-type ProofMachData struct {
-	fromAddress common.Address
-	coord       *channel.ValidatorCoordinator
-	balance     *protocol.BalanceTracker
-}
-
-func New(codeFile string, warnMode bool, proofMode bool) (*Machine, error) {
+func New(codeFile string, warnMode bool) (*Machine, error) {
 	gm, gmerr := goloader.LoadMachineFromFile(codeFile, warnMode)
 	cm, cmerr := cmachine.New(codeFile)
 	var err error
@@ -65,8 +51,6 @@ func New(codeFile string, warnMode bool, proofMode bool) (*Machine, error) {
 	return &Machine{
 		cm,
 		gm,
-		proofMode,
-		nil,
 	}, err
 }
 
@@ -80,7 +64,11 @@ func (m *Machine) Hash() [32]byte {
 }
 
 func (m *Machine) Clone() machine.Machine {
-	return &Machine{m.cppmachine.Clone().(*cmachine.Machine), m.gomachine.Clone().(*gomachine.Machine), m.proofMode, m.data}
+	return &Machine{m.cppmachine.Clone().(*cmachine.Machine), m.gomachine.Clone().(*gomachine.Machine)}
+}
+
+func (m *Machine) GetPC() value.CodePointValue {
+	return m.gomachine.GetPC()
 }
 
 func (m *Machine) GetPC() value.CodePointValue {
@@ -154,86 +142,7 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	m.gomachine.SendOffchainMessages(msgs)
 }
 
-func (m *Machine) ProofMachineData(contractAddress common.Address, coordinator *channel.ValidatorCoordinator, key *ecdsa.PrivateKey) {
-	keyAddr := crypto.PubkeyToAddress(key.PublicKey)
-	pd := ProofMachData{
-		coord:       coordinator,
-		fromAddress: keyAddr,
-	}
-	m.data = &pd
-}
-
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
-	if m.proofMode {
-		if m.data == nil {
-			log.Println("Proof data not set")
-			return m.ExecAssertion(maxSteps, timeBounds)
-		}
-		gomach := m.gomachine.Clone()
-		cppmach := m.cppmachine.Clone()
-		var timeBounds [2]uint64
-
-		//a := &protocol.Assertion{}
-		stepIncrease := int32(1)
-		maxSteps := int32(1000)
-		stepsRan := 0
-		for i := int32(0); i < maxSteps; i += stepIncrease {
-			timeBounds[0] = uint64(i)
-			timeBounds[1] = uint64(i + stepIncrease)
-			proof, err := gomach.MarshalForProof()
-			steps := int32(stepIncrease)
-			beforeHash := gomach.Hash()
-			inboxHash := gomach.InboxHash()
-
-			pcStart := m.gomachine.GetPC()
-			a1 := cppmach.ExecuteAssertion(steps, timeBounds)
-			a2 := gomach.ExecuteAssertion(steps, timeBounds)
-			if !a1.Equals(a2) {
-				pcEnd := m.gomachine.GetPC()
-				log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
-			}
-			if a1.NumSteps == 0 {
-				fmt.Println(" machine halted ")
-				break
-			}
-			if a1.NumSteps != 1 {
-				log.Println("Num steps = ", a1.NumSteps)
-			}
-			stepsRan++
-			fmt.Println("executed up to step ", i)
-			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
-			balance := m.data.coord.ChannelVal.GetBalance().Clone()
-			_ = balance.SpendAllTokens(spentBalance)
-			callOpts := &bind.CallOpts{
-				Pending: true,
-				From:    m.data.fromAddress,
-				Context: context.Background(),
-			}
-			// uncomment to force proof fail
-			//beforeHash[0] = 5
-			precond := &protocol.Precondition{
-				BeforeHash:    beforeHash,
-				TimeBounds:    timeBounds,
-				BeforeBalance: spentBalance,
-				BeforeInbox:   inboxHash,
-			}
-
-			res, err := m.data.coord.Val.Validator.OneStepProof.ValidateProof(callOpts, precond, a1.Stub(), proof)
-			if err != nil {
-				log.Fatal("Proof invalid", err)
-			}
-			if res.Cmp(big.NewInt(0)) == 0 {
-				log.Println("Proof valid")
-			} else {
-				log.Fatal("Proof invalid")
-			}
-		}
-		fmt.Println("Proof mode ran ", stepsRan, " steps")
-	}
-	return m.ExecAssertion(maxSteps, timeBounds)
-}
-
-func (m *Machine) ExecAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
 	stepIncrease := int32(50)
 	for i := int32(0); i < maxSteps; i += stepIncrease {
@@ -254,12 +163,11 @@ func (m *Machine) ExecAssertion(maxSteps int32, timeBounds protocol.TimeBounds) 
 		a.NumSteps += a1.NumSteps
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
-
 		if a1.NumSteps < uint32(steps) {
 			break
 		}
 	}
-	fmt.Println("Assertion ran", a.NumSteps, "steps")
+	fmt.Println("Ran", a.NumSteps, "steps")
 	return a
 }
 
