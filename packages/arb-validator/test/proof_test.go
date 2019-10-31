@@ -21,42 +21,31 @@ import (
 	jsonenc "encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/testmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
 	"log"
-	"math"
 	"math/big"
 	brand "math/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-var serversSetup bool = false
-var coordinator *channel.ValidatorCoordinator
-var challenger *channel.ValidatorFollower
-var mach machine.Machine
-var connectionInfo ethbridge.ArbAddresses
-var auth1 *bind.TransactOpts
-
-func setupServers(t *testing.T) {
+func TestValidateProof(t *testing.T) {
+	var mach machine.Machine
+	var connectionInfo ethbridge.ArbAddresses
+	var auth1 *bind.TransactOpts
 
 	bridge_eth_addresses := "bridge_eth_addresses.json"
 	contract := "contract.ao"
@@ -89,215 +78,50 @@ func setupServers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	key2, err := crypto.HexToECDSA("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	auth1 = bind.NewKeyedTransactor(key1)
-	auth2 := bind.NewKeyedTransactor(key2)
 
-	validators := []common.Address{auth1.From, auth2.From}
-	escrowRequired := big.NewInt(10)
-	config := valmessage.NewVMConfiguration(
-		5,
-		escrowRequired,
-		common.Address{}, // Address 0 is eth
-		validators,
-		200000,
-		common.Address{}, // Address 0 means no owner
-	)
+	if tmp, ok := mach.(*proofmachine.Machine); ok {
+		balance := protocol.NewBalanceTracker()
+		tmp.ProofMachineData(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
+	}
 
-	val1, err := ethvalidator.NewValidator(
-		key1,
-		connectionInfo,
-		ethURL,
-	)
+	var timeBounds [2]uint64
+
+	client, err := ethclient.Dial(ethURL)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal("Connection failure ", err)
 	}
-
-	val2, err := ethvalidator.NewValidator(
-		key2,
-		connectionInfo,
-		ethURL,
-	)
+	osp, err := ethbridge.NewOneStepProof(common.HexToAddress(connectionInfo.OneStepProof), client)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
-	address, err := val1.LaunchChannel(context.Background(), config, mach.Hash())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	coordinator, err = channel.NewCoordinator(
-		"Alice",
-		val1,
-		address,
-		mach.Clone(),
-		config,
-		false,
-		math.MaxInt32, // maxCallSteps,
-		math.MaxInt32, // maxUnanSteps
-	)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	coordinator.StartServer(context.Background())
-
-	if tmp, ok := mach.(*testmachine.Machine); ok {
-		tmp.ProofMachineData(address, coordinator, key1)
-	}
-
-	time.Sleep(1 * time.Second)
-
-	challenger, err = channel.NewValidatorFollower(
-		"Bob",
-		val2,
-		mach.Clone(),
-		config,
-		true,
-		math.MaxInt32, // maxCallSteps,
-		math.MaxInt32, // maxUnanSteps
-		"wss://127.0.0.1:1236/ws",
-	)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := coordinator.Run(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := challenger.Run(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-
-	t.Log("Everyone is running")
-	serversSetup = true
-}
-
-func testProof(t *testing.T) {
-
-	if !serversSetup {
-		setupServers(t)
-	}
-	coordinatorMsgMonitorChan := coordinator.Val.MessageMonChan
-	coordinatorErrMonitorChan := coordinator.Val.ErrorMonChan
-	challengerMsgMonitorChan := challenger.Validator.MessageMonChan
-	challengerErrMonitorChan := challenger.Validator.ErrorMonChan
-	time.Sleep(2 * time.Second)
-
-	challenger.IgnoreCoordinator()
+	keyAddr := crypto.PubkeyToAddress(key1.PublicKey)
+	balance := protocol.NewBalanceTracker()
 
 	dataBytes, _ := hexutil.Decode("0x2ddec39b0000000000000000000000000000000000000000000000000000000000000028")
 	data, _ := evm.BytesToSizedByteArray(dataBytes)
-	addressInt, _ := new(big.Int).SetString("784030224795475933405737832577560929931042096197", 10)
-	seq := value.NewInt64Value(100)
 
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		data,
-		value.NewIntValue(addressInt),
-		seq,
-	})
-
-	receipt, err := coordinator.Val.SendEthMessage(
-		context.Background(),
-		tup,
-		big.NewInt(0),
-	)
-	if err != nil {
-		t.Fatal("Send error", err)
+	msg := protocol.NewSimpleMessage(data, [21]byte{}, big.NewInt(0), keyAddr)
+	callingMessage := protocol.Message{
+		Data:        data,
+		TokenType:   msg.TokenType,
+		Currency:    msg.Currency,
+		Destination: msg.Destination,
 	}
-	if receipt.Status == 0 {
-		t.Fatal("Follower could not send message")
-	}
-	for {
-		select {
-		case message := <-challengerMsgMonitorChan:
-			if message == bridge.ProofAccepted {
-				t.Log("***************************")
-				t.Log("Challenger received ProofAccepted message = ", message)
-				t.Log("***************************")
-			}
-		case message := <-coordinatorMsgMonitorChan:
-			if message == bridge.ProofAccepted {
-				t.Log("***************************")
-				t.Log("Coordinator received ProofAccepted message = ", message)
-				t.Log("***************************")
-				return
-			}
-		case message := <-coordinatorErrMonitorChan:
-			if !message.Recoverable {
-				t.Error("coordinator unexpected unrecoverable error")
-				t.Log("***************************")
-				t.Log("unrecoverable error exiting")
-				t.Log(message.Message)
-				t.Log(message.Err)
-				t.Log("***************************")
-				return
-			} else {
-				t.Log("****************************")
-				t.Log("recoverable error continuing")
-				t.Log(message)
-				t.Log("****************************")
-			}
-		case message := <-challengerErrMonitorChan:
-			if !message.Recoverable {
-				t.Error("challenger unexpected unrecoverable error")
-				t.Log("***************************")
-				t.Log("unrecoverable challenger error exiting")
-				t.Log(message.Message)
-				t.Log(message.Err)
-				t.Log("***************************")
-				return
-			} else {
-				t.Error("challenger unexpected recoverable error")
-				t.Log("****************************")
-				t.Log("recoverable challenger error continuing")
-				t.Log(message.Message)
-				t.Log("****************************")
-			}
-		case <-time.After(60 * time.Second):
-			t.Error("Never received proof accepted message")
-			fmt.Println("test complete")
-			return
-		}
-	}
-}
+	mach.SendOffchainMessages([]protocol.Message{callingMessage})
 
-func testValidateProof(t *testing.T) {
-	if !serversSetup {
-		setupServers(t)
-	}
-
-	//osp, err := ethbridge.NewOneStepProof(common.HexToAddress(connectionInfo.OneStepProof), coordinator.Val.Validator.Client)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	// see validator/validator.go RequestDisputableAssertion (line 287)
-	// context.Background()
-	//m := mach
-	m := mach.Clone()
-	var timeBounds [2]uint64
-
-	//a := &protocol.Assertion{}
 	stepIncrease := int32(1)
 	maxSteps := int32(1000)
 	for i := int32(0); i < maxSteps; i += stepIncrease {
 		timeBounds[0] = uint64(i)
 		timeBounds[1] = uint64(i + stepIncrease)
-		proof, err := m.MarshalForProof()
+		proof, err := mach.MarshalForProof()
 		steps := int32(stepIncrease)
-		beforeHash := m.Hash()
-		inboxHash := m.InboxHash()
+		beforeHash := mach.Hash()
+		inboxHash := mach.InboxHash()
 
-		//pcStart := m.GetPC()
-		a := m.ExecuteAssertion(steps, timeBounds)
+		a := mach.ExecuteAssertion(steps, timeBounds)
 		if a.NumSteps == 0 {
 			fmt.Println(" machine halted ")
 			break
@@ -306,21 +130,8 @@ func testValidateProof(t *testing.T) {
 			t.Log("Num steps = ", a.NumSteps)
 		}
 		fmt.Println("executed up to step ", i)
-		t.Log("Assertion after - ")
-		//a2 := m.ExecuteAssertion(steps, timeBounds)
-		//
-		//if !a1.Equals(a2) {
-		//	pcEnd := m.GetPC()
-		//	log.Println("Go  - ", a1)
-		//	log.Println("Cpp - ", a2)
-		//	log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
-		//}
-		//a.AfterHash = a1.AfterHash
-		//a.NumSteps += a1.NumSteps
-		//a.Logs = append(a.Logs, a1.Logs...)
-		//a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
+
 		spentBalance := protocol.NewTokenTrackerFromMessages(a.OutMsgs)
-		balance := coordinator.ChannelVal.GetBalance()
 		_ = balance.SpendAllTokens(spentBalance)
 		callOpts := &bind.CallOpts{
 			Pending: true,
@@ -338,12 +149,7 @@ func testValidateProof(t *testing.T) {
 
 		fmt.Println("calling ValidateProof")
 		t.Log("calling ValidateProof")
-		fmt.Println("callOpts - ", callOpts)
-		fmt.Println("precond - ", precond)
-		fmt.Println("a.Stub - ", a.Stub())
-		fmt.Println("proof - ", proof)
-		fmt.Println("osp - ", coordinator.Val.Validator.OneStepProof)
-		res, err := coordinator.Val.Validator.OneStepProof.ValidateProof(callOpts, precond, a.Stub(), proof)
+		res, err := osp.ValidateProof(callOpts, precond, a.Stub(), proof)
 		if err != nil {
 			t.Fatal("Proof invalid", err)
 		}
@@ -352,16 +158,8 @@ func testValidateProof(t *testing.T) {
 		} else {
 			t.Fatal("Proof invalid")
 		}
-		//if a.NumSteps < uint32(steps) {
-		//	break
-		//}
 	}
 
-	//var i uint64
-	//for i=2; i< clone.PCCount(); i++ {
-	//	beforeHash := m.Hash()
-	//	proof, err := m.MarshalForProof()
-	//}
 	t.Log("called ValidateProof")
 	time.Sleep(5 * time.Second)
 	t.Log("done")

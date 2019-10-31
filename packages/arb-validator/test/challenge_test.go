@@ -20,8 +20,9 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/testmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
 	"log"
 	"math"
@@ -71,7 +72,7 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(contract, true, "proof")
+	machine, err := loader.LoadMachineFromFile(contract, true, "test")
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}
@@ -138,8 +139,9 @@ func TestChallenge(t *testing.T) {
 	}
 
 	coordinator.StartServer(context.Background())
-	if tmp, ok := machine.(*testmachine.Machine); ok {
-		tmp.ProofMachineData(address, coordinator, key1)
+	if tmp, ok := machine.(*proofmachine.Machine); ok {
+		balance := protocol.NewBalanceTracker()
+		tmp.ProofMachineData(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
 		log.Println("************************************************Proof data set")
 	}
 
