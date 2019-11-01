@@ -17,6 +17,7 @@
 #ifndef messagestack_hpp
 #define messagestack_hpp
 
+#include <avm/checkpoint/checkpointresult.hpp>
 #include <avm/checkpoint/transaction.hpp>
 #include <avm/value/tuple.hpp>
 

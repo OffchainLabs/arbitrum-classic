@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+#include <avm/machinestate/datastack.hpp>
+
+#include <avm/checkpoint/checkpointresult.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/checkpoint/transaction.hpp>
-#include <avm/machinestate/datastack.hpp>
 
 #include <bigint_utils.hpp>
 #include <util.hpp>

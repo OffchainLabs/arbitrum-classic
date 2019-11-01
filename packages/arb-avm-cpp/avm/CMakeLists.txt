@@ -37,6 +37,7 @@ set(LIB_HEADERS
   include/avm/machinestate/messagestack.hpp
   include/avm/checkpoint/checkpointutils.hpp
   include/avm/checkpoint/checkpointdeleter.hpp
+  include/avm/checkpoint/checkpointresult.hpp
   include/avm/checkpoint/machinestatesaver.hpp
   include/avm/checkpoint/machinestatefetcher.hpp
   include/avm/checkpoint/checkpointstorage.hpp

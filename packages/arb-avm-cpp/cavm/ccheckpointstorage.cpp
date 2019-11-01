@@ -15,8 +15,11 @@
  */
 
 #include "ccheckpointstorage.h"
+
 #include <avm/checkpoint/checkpointdeleter.hpp>
+#include <avm/checkpoint/checkpointresult.hpp>
 #include <avm/checkpoint/checkpointstorage.hpp>
+
 #include <string>
 
 CCheckpointStorage* createCheckpointStorage(const char* filename) {

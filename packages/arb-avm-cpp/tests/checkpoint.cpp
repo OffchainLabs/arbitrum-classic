@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
+#include <avm/checkpoint/checkpointdeleter.hpp>
+#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
-#include "avm/checkpoint/checkpointdeleter.hpp"
-#include "avm/checkpoint/machinestatesaver.hpp"
-#include "avm/machinestate/machinestate.hpp"
+#include <avm/checkpoint/machinestatesaver.hpp>
+#include <avm/machinestate/machinestate.hpp>
+
+#include <catch2/catch.hpp>
 
 #include <boost/dll.hpp>
-#include <catch2/catch.hpp>
 
 std::string path =
     boost::dll::program_location().parent_path().generic_string() + "/rocksDb";

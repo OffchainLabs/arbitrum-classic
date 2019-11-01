@@ -20,16 +20,10 @@
 #include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/value/value.hpp>
 
-#include <rocksdb/status.h>
-
 class CheckpointStorage;
 
 template <typename T>
-struct DbResult {
-    rocksdb::Status status;
-    uint32_t reference_count;
-    T data;
-};
+struct DbResult;
 
 class MachineStateFetcher {
    private:

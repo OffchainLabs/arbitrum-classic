@@ -16,6 +16,7 @@
 
 #include <avm/checkpoint/checkpointdeleter.hpp>
 
+#include <avm/checkpoint/checkpointresult.hpp>
 #include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/checkpoint/transaction.hpp>

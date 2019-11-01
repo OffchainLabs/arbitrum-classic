@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/blockreason.hpp"
+#include <avm/machinestate/blockreason.hpp>
+
 #include <catch2/catch.hpp>
 
 void serializeBlockReason(BlockReason& block_reason, BlockType expected_type) {

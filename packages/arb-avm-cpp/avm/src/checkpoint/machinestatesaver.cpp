@@ -16,6 +16,7 @@
 
 #include <avm/checkpoint/machinestatesaver.hpp>
 
+#include <avm/checkpoint/checkpointresult.hpp>
 #include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/checkpoint/transaction.hpp>
 #include <avm/machinestate/tokenTracker.hpp>

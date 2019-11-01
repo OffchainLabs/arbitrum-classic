@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/checkpoint/transaction.hpp>
+
+#include <avm/checkpoint/checkpointresult.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
 
 #include <rocksdb/utilities/transaction_db.h>
 
