@@ -305,8 +305,6 @@ void Machine::runOne() {
 
     auto& instruction = m.code[m.pc];
 
-    auto startStackSize = m.stack.stacksize();
-
     if (!isValidOpcode(instruction.op.opcode)) {
         m.state = Status::Error;
     } else {
@@ -324,6 +322,8 @@ void Machine::runOne() {
         }
     }
 
+    auto startStackSize = m.stack.stacksize();
+
     if (nonstd::get_if<NotBlocked>(&m.blockReason)) {
         m.context.numSteps++;
     }
@@ -332,11 +332,13 @@ void Machine::runOne() {
         return;
     }
 
-    // Clear stack to base for instruction
-    auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-    while (m.stack.stacksize() > 0 &&
-           startStackSize - m.stack.stacksize() < stackItems) {
-        m.stack.popClear();
+    if (isValidOpcode(instruction.op.opcode)) {
+        // Clear stack to base for instruction
+        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
+        while (m.stack.stacksize() > 0 &&
+               startStackSize - m.stack.stacksize() < stackItems) {
+            m.stack.popClear();
+        }
     }
 
     if (!isErrorCodePoint(m.errpc)) {
