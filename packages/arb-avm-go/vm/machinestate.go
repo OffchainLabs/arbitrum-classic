@@ -359,10 +359,10 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	staticHash := m.static.ProofValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
 
-	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
-	fmt.Printf("codePoint = %v, baseStackValHash = %v\n", hex.EncodeToString(codePoint.NextHash[:]), hex.EncodeToString(baseStackValHash[:]))
-	fmt.Printf("auxStack = %v, register = %v\n", hex.EncodeToString(baseAuxStackValHash[:]), hex.EncodeToString(registerHash[:]))
-	fmt.Printf("staticHash = %v, errHandlerHash = %v\n", hex.EncodeToString(staticHash[:]), hex.EncodeToString(errHandlerHash[:]))
+	log.Printf("Proof of %v has %d stack vals and %d aux stack vals\n", codePoint, len(stackVals), len(auxStackVals))
+	log.Printf("codePoint = %v, baseStackValHash = %v\n", hex.EncodeToString(codePoint.NextHash[:]), hex.EncodeToString(baseStackValHash[:]))
+	log.Printf("auxStack = %v, register = %v\n", hex.EncodeToString(baseAuxStackValHash[:]), hex.EncodeToString(registerHash[:]))
+	log.Printf("staticHash = %v, errHandlerHash = %v\n", hex.EncodeToString(staticHash[:]), hex.EncodeToString(errHandlerHash[:]))
 
 	if _, err := wr.Write(codePoint.NextHash[:]); err != nil {
 		return err
@@ -385,12 +385,14 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
 		return err
 	}
+	log.Println("Marshaling stackVals")
 	for _, val := range stackVals {
-		log.Println("marshalling ", val)
+		log.Print(val, ", ")
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err
 		}
 	}
+	log.Print("\n")
 	for _, val := range auxStackVals {
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err

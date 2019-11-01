@@ -19,7 +19,6 @@ package validator
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 
@@ -164,7 +163,6 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 
 		unanRequestChan <- valmessage.UnanimousRequest{UnanimousRequestData: requestData, NewMessages: messageRecords}
 		go func() {
-			log.Println("**************channelValidator line 167 calling SendOffchainMessages")
 			clonedMachine.SendOffchainMessages(newMessages)
 			assertion := clonedMachine.ExecuteAssertion(
 				maxSteps,
@@ -211,7 +209,6 @@ func (validator *ChannelValidator) RequestFollowUnanimous(
 		_ = bot.OffchainContext(request.TimeBounds, request.SequenceNum == math.MaxUint64)
 		clonedMachine := bot.GetCore().GetMachine().Clone()
 		go func() {
-			log.Println("****************channelValidator line 214 calling SendOffchainMessages")
 			clonedMachine.SendOffchainMessages(messages)
 			assertion := clonedMachine.ExecuteAssertion(
 				maxSteps,
