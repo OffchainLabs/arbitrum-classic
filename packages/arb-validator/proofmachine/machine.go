@@ -125,16 +125,14 @@ func (m *Machine) ProofMachineData(contractAddress common.Address, key *ecdsa.Pr
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
-	//if m.data == nil {
-	//	log.Println("Proof data not set")
-	//	return m.testmachine.ExecuteAssertion(maxSteps, timeBounds)
-	//}
-
 	a := &protocol.Assertion{}
 	stepIncrease := int32(1)
 	stepsRan := 0
 	for i := int32(0); i < maxSteps; i += stepIncrease {
 		proof, err := m.MarshalForProof()
+		if err != nil {
+			log.Println("error marshaling")
+		}
 		steps := int32(stepIncrease)
 		beforeHash := m.Hash()
 		inboxHash := m.InboxHash()
@@ -157,31 +155,33 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		}
 		stepsRan++
 
-		spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
-		//balance := m.balance.Clone()
-		//_ = balance.SpendAllTokens(spentBalance)
-		callOpts := &bind.CallOpts{
-			Pending: true,
-			From:    m.fromAddress,
-			Context: context.Background(),
-		}
-		// uncomment to force proof fail
-		//beforeHash[0] = 5
-		precond := &protocol.Precondition{
-			BeforeHash:    beforeHash,
-			TimeBounds:    timeBounds,
-			BeforeBalance: spentBalance,
-			BeforeInbox:   inboxHash,
-		}
+		if i > 22 {
+			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
+			//balance := m.balance.Clone()
+			//_ = balance.SpendAllTokens(spentBalance)
+			callOpts := &bind.CallOpts{
+				Pending: true,
+				From:    m.fromAddress,
+				Context: context.Background(),
+			}
+			// uncomment to force proof fail
+			//beforeHash[0] = 5
+			precond := &protocol.Precondition{
+				BeforeHash:    beforeHash,
+				TimeBounds:    timeBounds,
+				BeforeBalance: spentBalance,
+				BeforeInbox:   inboxHash,
+			}
 
-		res, err := m.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
-		if err != nil {
-			log.Fatal("Proof invalid ", err)
-		}
-		if res.Cmp(big.NewInt(0)) == 0 {
-			log.Println("Proof valid")
-		} else {
-			log.Fatalln("Proof invalid")
+			res, err := m.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
+			if err != nil {
+				log.Fatal("Proof invalid ", err)
+			}
+			if res.Cmp(big.NewInt(0)) == 0 {
+				log.Println("Proof valid")
+			} else {
+				log.Fatalln("Proof invalid")
+			}
 		}
 		fmt.Println("Proof mode ran ", stepsRan, " steps")
 	}
