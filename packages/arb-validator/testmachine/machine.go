@@ -133,6 +133,7 @@ func (m *Machine) DeliverOnchainMessage() {
 }
 
 func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
+	log.Println("**********************testmachine SendOffchainMessages")
 	m.cppmachine.SendOffchainMessages(msgs)
 	m.gomachine.SendOffchainMessages(msgs)
 }
