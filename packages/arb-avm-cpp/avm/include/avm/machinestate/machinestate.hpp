@@ -21,12 +21,15 @@
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/messagestack.hpp>
 #include <avm/value/value.hpp>
+
 #include <memory>
 #include <vector>
 
 enum class Status { Extensive, Halted, Error };
 
 typedef std::array<uint256_t, 2> TimeBounds;
+
+class CheckpointStorage;
 
 struct AssertionContext {
     uint32_t numSteps;

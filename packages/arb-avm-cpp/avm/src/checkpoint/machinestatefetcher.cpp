@@ -15,6 +15,9 @@
  */
 
 #include <avm/checkpoint/machinestatefetcher.hpp>
+
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/transaction.hpp>
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>
 

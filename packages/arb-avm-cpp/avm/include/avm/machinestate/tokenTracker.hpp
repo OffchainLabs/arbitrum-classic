@@ -17,10 +17,9 @@
 #ifndef tokenTracker_hpp
 #define tokenTracker_hpp
 
-#include <avm/value/codepoint.hpp>
+#include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
 
-#include <avm/value/tuple.hpp>
 #include <unordered_map>
 #include <unordered_set>
 

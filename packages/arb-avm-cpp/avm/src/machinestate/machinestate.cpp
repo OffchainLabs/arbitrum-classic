@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+#include <avm/machinestate/machinestate.hpp>
+
+#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/exceptions.hpp>
 #include <avm/machinestate/machineoperation.hpp>
-#include <avm/machinestate/machinestate.hpp>
+
 #include <bigint_utils.hpp>
 #include <util.hpp>
 

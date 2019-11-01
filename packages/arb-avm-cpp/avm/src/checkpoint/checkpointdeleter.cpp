@@ -16,6 +16,10 @@
 
 #include <avm/checkpoint/checkpointdeleter.hpp>
 
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
+#include <avm/checkpoint/transaction.hpp>
+
 DeleteResults deleteTuple(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key);
 

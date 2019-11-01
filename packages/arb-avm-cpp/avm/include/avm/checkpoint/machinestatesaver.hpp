@@ -17,12 +17,17 @@
 #ifndef machinestatesaver_hpp
 #define machinestatesaver_hpp
 
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
 
-#include <rocksdb/status.h>
+struct ParsedState;
+
+class Transaction;
+struct SaveResults;
+
+namespace rocksdb {
+class Status;
+}
 
 class MachineStateSaver {
    private:
@@ -33,7 +38,7 @@ class MachineStateSaver {
     SaveResults saveTuple(const Tuple& val);
     SaveResults saveValue(const value& val);
     SaveResults saveMachineState(
-        ParsedState state_data,
+        const ParsedState& state_data,
         const std::vector<unsigned char>& checkpoint_name);
     rocksdb::Status commitTransaction();
     rocksdb::Status rollBackTransaction();

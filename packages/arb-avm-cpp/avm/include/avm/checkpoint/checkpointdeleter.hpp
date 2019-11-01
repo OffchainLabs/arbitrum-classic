@@ -17,8 +17,10 @@
 #ifndef checkpointdeleter_hpp
 #define checkpointdeleter_hpp
 
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/checkpointutils.hpp>
+#include <vector>
+
+struct DeleteResults;
+class CheckpointStorage;
 
 DeleteResults deleteCheckpoint(
     CheckpointStorage& checkpoint_storage,

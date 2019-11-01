@@ -17,13 +17,14 @@
 #ifndef datastack_hpp
 #define datastack_hpp
 
-#include <iostream>
-#include <vector>
-
-#include <avm/checkpoint/machinestatefetcher.hpp>
-#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
+
+#include <vector>
+
+class MachineStateSaver;
+class MachineStateFetcher;
+struct SaveResults;
 
 class Datastack {
     static constexpr int lazyCount = 100;

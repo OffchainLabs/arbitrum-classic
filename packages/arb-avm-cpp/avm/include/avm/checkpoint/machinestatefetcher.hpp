@@ -17,10 +17,12 @@
 #ifndef machinestatefetcher_hpp
 #define machinestatefetcher_hpp
 
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/checkpointutils.hpp>
+#include <avm/value/value.hpp>
 
 #include <rocksdb/status.h>
+
+class CheckpointStorage;
 
 template <typename T>
 struct DbResult {

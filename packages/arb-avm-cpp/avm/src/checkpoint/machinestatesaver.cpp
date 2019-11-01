@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-#include <variant>
-
 #include <avm/checkpoint/machinestatesaver.hpp>
+
+#include <avm/checkpoint/checkpointutils.hpp>
+#include <avm/checkpoint/transaction.hpp>
 #include <avm/machinestate/tokenTracker.hpp>
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>
+
+#include <variant>
 
 MachineStateSaver::MachineStateSaver(
     std::unique_ptr<Transaction> transaction_) {
@@ -70,7 +73,7 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
 }
 
 SaveResults MachineStateSaver::saveMachineState(
-    ParsedState state_data,
+    const ParsedState& state_data,
     const std::vector<unsigned char>& checkpoint_name) {
     auto serialized_state = checkpoint::utils::serializeState(state_data);
 

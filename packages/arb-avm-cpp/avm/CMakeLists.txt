@@ -54,6 +54,7 @@ set(LIB_SOURCES
   src/machinestate/tokenTracker.cpp
   src/machinestate/machinestate.cpp
   src/machinestate/machineoperation.cpp
+  src/machinestate/messagestack.cpp
   src/machinestate/datastack.cpp
   src/machinestate/blockreason.cpp
   src/checkpoint/machinestatesaver.cpp

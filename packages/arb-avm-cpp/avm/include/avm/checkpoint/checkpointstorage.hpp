@@ -17,11 +17,12 @@
 #ifndef checkpointstorage_hpp
 #define checkpointstorage_hpp
 
-#include <avm/checkpoint/transaction.hpp>
-
 #include <memory>
 #include <string>
 #include <vector>
+
+class Transaction;
+struct GetResults;
 
 namespace rocksdb {
 class TransactionDB;
