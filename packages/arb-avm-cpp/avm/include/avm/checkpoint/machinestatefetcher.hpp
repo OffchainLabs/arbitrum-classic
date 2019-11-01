@@ -20,6 +20,15 @@
 #include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/checkpointutils.hpp>
 
+#include <rocksdb/status.h>
+
+template <typename T>
+struct DbResult {
+    rocksdb::Status status;
+    uint32_t reference_count;
+    T data;
+};
+
 class MachineStateFetcher {
    private:
     const CheckpointStorage& checkpoint_storage;

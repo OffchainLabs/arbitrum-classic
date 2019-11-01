@@ -64,13 +64,12 @@ SaveResults Datastack::checkpointState(MachineStateSaver& saver,
     return saver.saveTuple(tuple);
 }
 
-DbResult<Tuple> Datastack::initializeDataStack(
+bool Datastack::initializeDataStack(
     const MachineStateFetcher& fetcher,
     const std::vector<unsigned char>& hash_key) {
     auto results = fetcher.getTuple(hash_key);
     initializeDataStack(results.data);
-
-    return results;
+    return results.status.ok();
 }
 
 Tuple Datastack::getTupleRepresentation(TuplePool* pool) {

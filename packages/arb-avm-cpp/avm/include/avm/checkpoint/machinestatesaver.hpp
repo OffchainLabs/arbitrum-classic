@@ -17,12 +17,12 @@
 #ifndef machinestatesaver_hpp
 #define machinestatesaver_hpp
 
-#include <rocksdb/db.h>
-
 #include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
+
+#include <rocksdb/status.h>
 
 class MachineStateSaver {
    private:

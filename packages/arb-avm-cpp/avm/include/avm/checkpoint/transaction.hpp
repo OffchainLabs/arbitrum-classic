@@ -17,8 +17,13 @@
 #ifndef transaction_hpp
 #define transaction_hpp
 
-#include <rocksdb/db.h>
-#include <rocksdb/utilities/transaction_db.h>
+#include <rocksdb/status.h>
+
+#include <vector>
+
+namespace rocksdb {
+class Transaction;
+}
 
 struct GetResults {
     uint32_t reference_count;

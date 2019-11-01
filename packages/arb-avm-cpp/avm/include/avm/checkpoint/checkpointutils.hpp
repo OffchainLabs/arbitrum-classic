@@ -19,15 +19,6 @@
 
 #include <avm/value/value.hpp>
 
-#include <rocksdb/db.h>
-
-template <typename T>
-struct DbResult {
-    rocksdb::Status status;
-    uint32_t reference_count;
-    T data;
-};
-
 struct ParsedState {
     std::vector<unsigned char> static_val_key;
     std::vector<unsigned char> register_val_key;
