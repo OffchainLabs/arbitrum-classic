@@ -19,6 +19,7 @@ package stack
 import (
 	"bytes"
 	"fmt"
+	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -174,6 +175,7 @@ func (m *Tuple) SolidityProofValue(stackInfo []byte) (value.HashOnlyValue, []val
 			vals = append(vals, value.NewHashOnlyValueFromValue(val))
 		}
 	}
+	log.Println("tuple stack vals = ", len(vals))
 	return value.NewHashOnlyValueFromValue(c.StateValue()), vals
 }
 

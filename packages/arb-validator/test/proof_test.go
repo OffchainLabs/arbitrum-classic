@@ -21,12 +21,10 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
-	"log"
 	"math/big"
 	brand "math/rand"
 	"os"
@@ -40,7 +38,7 @@ import (
 )
 
 func TestValidateProof(t *testing.T) {
-	var mach machine.Machine
+	//var mach machine.Machine
 	var connectionInfo ethbridge.ArbAddresses
 
 	bridge_eth_addresses := "bridge_eth_addresses.json"
@@ -63,21 +61,17 @@ func TestValidateProof(t *testing.T) {
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Fatal(err)
 	}
+	balance := protocol.NewBalanceTracker()
 
-	//mach, err = loader.LoadMachineFromFile(contract, true, "test")
-	mach, err = loader.LoadMachineFromFile(contract, true, "proof")
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
-	}
-	log.Printf("machine type = %T", mach)
+	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if tmp, ok := mach.(*proofmachine.Machine); ok {
-		balance := protocol.NewBalanceTracker()
-		tmp.ProofMachineData(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
+	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
+	if err != nil {
+		t.Fatal("Loader Error: ", err)
 	}
 
 	var timeBounds [2]uint64

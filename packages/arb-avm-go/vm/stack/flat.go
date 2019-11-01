@@ -19,6 +19,7 @@ package stack
 import (
 	"bytes"
 	"fmt"
+	"log"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -287,6 +288,7 @@ func (f *Flat) SolidityProofValue(stackInfo []byte) (value.HashOnlyValue, []valu
 			vals = append(vals, value.NewHashOnlyValueFromValue(val))
 		}
 	}
+	log.Println("flat stack vals = ", len(vals))
 	return value.NewHashOnlyValueFromValue(c.StateValue()), vals
 }
 
