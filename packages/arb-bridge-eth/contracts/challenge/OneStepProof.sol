@@ -925,7 +925,7 @@ library OneStepProof {
             return false;
         }
 
-        if (val1.intVal > val2.valLength()) {
+        if (val1.intVal >= val2.valLength()) {
             return false;
         }
 
@@ -947,7 +947,7 @@ library OneStepProof {
             return false;
         }
 
-        if (val1.intVal > val2.valLength()) {
+        if (val1.intVal >= val2.valLength()) {
             return false;
         }
         val2.tupleVal[val1.intVal] = val3;
@@ -1218,7 +1218,8 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             return (0, 0);
         } else {
-            require(false, "Invalid opcode");
+           // require(false, "Invalid opcode");
+           require(false,string(abi.encodePacked("Invalid opcode: ", DebugPrint.uint2str(opCode))));
         }
     }
 

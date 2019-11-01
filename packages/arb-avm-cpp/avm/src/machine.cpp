@@ -247,6 +247,15 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
+    std::cout << "Proof of CodePoint " << std::hex << opcode << " has "
+              << stackProof.second.size() << " stack vals and "
+              << auxStackProof.second.size() << " aux stack vals" << std::endl;
+    std::cout << "codePoint = " << code[pc].nextHash
+              << " baseStackValHash = " << stackProof.first << std::endl;
+    std::cout << "auxStack = " << auxStackProof.first
+              << " register = " << ::hash(registerVal) << std::endl;
+    std::cout << "staticHash = " << ::hash(staticVal)
+              << " errHandlerHash = " << ::hash(errpc) << std::endl;
     uint256_t_to_buf(code[pc].nextHash, buf);
     uint256_t_to_buf(stackProof.first, buf);
     uint256_t_to_buf(auxStackProof.first, buf);
@@ -305,8 +314,6 @@ void Machine::runOne() {
 
     auto& instruction = m.code[m.pc];
 
-    auto startStackSize = m.stack.stacksize();
-
     if (!isValidOpcode(instruction.op.opcode)) {
         m.state = Status::Error;
     } else {
@@ -324,6 +331,8 @@ void Machine::runOne() {
         }
     }
 
+    auto startStackSize = m.stack.stacksize();
+
     if (nonstd::get_if<NotBlocked>(&m.blockReason)) {
         m.context.numSteps++;
     }
@@ -332,11 +341,17 @@ void Machine::runOne() {
         return;
     }
 
-    // Clear stack to base for instruction
-    auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-    while (m.stack.stacksize() > 0 &&
-           startStackSize - m.stack.stacksize() < stackItems) {
-        m.stack.popClear();
+    if (isValidOpcode(instruction.op.opcode)) {
+        // Clear stack to base for instruction
+        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
+        std::cout << "start stack size = " << startStackSize
+                  << " stacksize = " << m.stack.stacksize()
+                  << " stackItems = " << stackItems << std::endl;
+        while (m.stack.stacksize() > 0 &&
+               startStackSize - m.stack.stacksize() < stackItems) {
+            std::cout << "popping 1 item" << std::endl;
+            m.stack.popClear();
+        }
     }
 
     if (!isErrorCodePoint(m.errpc)) {

@@ -19,6 +19,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -162,6 +163,7 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	// PC to errHandler
 	m.Warn(err.Error())
 	for mods.popsRemaining > 0 {
+		log.Println("go popping 1 item")
 		var poperr error
 		_, mods, poperr = PopStackBox(m, mods)
 		if poperr != nil {
