@@ -201,6 +201,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 		}
 		maxCallSteps := validator.bot.GetConfig().MaxCallSteps
 		go func() {
+			log.Println("*************validator line 204 calling SendOffchainMessages")
 			updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
 			assertion := updatedState.ExecuteAssertion(
 				maxCallSteps,
