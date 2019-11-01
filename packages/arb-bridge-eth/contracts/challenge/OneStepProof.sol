@@ -1221,7 +1221,8 @@ library OneStepProof {
         } else if (opCode == OP_STOP) {
             return (0, 0);
         } else {
-            require(false, "Invalid opcode");
+           // require(false, "Invalid opcode");
+           require(false,string(abi.encodePacked("Invalid opcode: ", DebugPrint.uint2str(opCode))));
         }
     }
 

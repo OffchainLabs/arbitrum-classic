@@ -20,11 +20,8 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
-	"log"
 	"math"
 	"math/big"
 	brand "math/rand"
@@ -72,11 +69,6 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(contract, true, "test")
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
-	}
-
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		t.Fatal(err)
@@ -85,6 +77,17 @@ func TestChallenge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	basemachine, err := loader.LoadMachineFromFile(contract, true, "test")
+	if err != nil {
+		t.Fatal("Loader Error: ", err)
+	}
+	machine := basemachine
+	//balance := protocol.NewBalanceTracker()
+	//machine, err := proofmachine.New(contract, basemachine, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
+	//if err != nil {
+	//	t.Fatal("Loader Error: ", err)
+	//}
 
 	auth1 := bind.NewKeyedTransactor(key1)
 	auth2 := bind.NewKeyedTransactor(key2)
@@ -139,11 +142,6 @@ func TestChallenge(t *testing.T) {
 	}
 
 	coordinator.StartServer(context.Background())
-	if tmp, ok := machine.(*proofmachine.Machine); ok {
-		balance := protocol.NewBalanceTracker()
-		tmp.ProofMachineData(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
-		log.Println("************************************************Proof data set")
-	}
 
 	time.Sleep(1 * time.Second)
 

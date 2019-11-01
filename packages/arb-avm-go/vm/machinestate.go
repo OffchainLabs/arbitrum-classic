@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -385,6 +386,7 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 		return err
 	}
 	for _, val := range stackVals {
+		log.Println("marshalling ", val)
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err
 		}
