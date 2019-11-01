@@ -6,10 +6,10 @@ import (
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
+	"log"
 	"math"
 	"math/big"
 	brand "math/rand"
@@ -90,14 +90,14 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	)
 	ethURL := "ws://127.0.0.1:7545"
 	contract := "contract.ao"
-	balance := protocol.NewBalanceTracker()
 
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
 	if err != nil {
 		t.Errorf("setupValidators LoadMachineFromFile error %v", err)
 		return err
 	}
-	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
+	//mach := basemach
+	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL)
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}
@@ -291,20 +291,22 @@ func TestFib(t *testing.T) {
 		t.Errorf("Validator setup error %v", err)
 		t.FailNow()
 	}
-
 	t.Run("TestFibResult", func(t *testing.T) {
 		fibsize := 15
 		fibnum := 11
+		log.Println("******************calling GenerateFib")
 		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
 		if err != nil {
 			t.Errorf("GenerateFib error %v", err)
 			return
 		}
+		log.Println("*****************calling GetFib")
 		fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
 		if err != nil {
 			t.Errorf("GetFib error %v", err)
 			return
 		}
+		log.Println("***********got fib")
 		if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
 			t.Errorf("GetFib error - expected %v got %v", big.NewInt(int64(144)), fibval)
 		}

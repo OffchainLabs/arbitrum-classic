@@ -285,6 +285,7 @@ type MessageProcessingQueue struct {
 }
 
 func NewMessageProcessingQueue() *MessageProcessingQueue {
+	log.Println("NewMessageProcessingQueue")
 	return &MessageProcessingQueue{
 		queuedMessages: make([]OffchainMessage, 0),
 		actions:        make(chan func(*MessageProcessingQueue), 10),
@@ -292,6 +293,7 @@ func NewMessageProcessingQueue() *MessageProcessingQueue {
 }
 
 func (m *MessageProcessingQueue) Fetch() chan []OffchainMessage {
+	log.Println("MessageProcessingQueue Fetch")
 	retChan := make(chan []OffchainMessage, 1)
 	m.actions <- func(m *MessageProcessingQueue) {
 		retChan <- m.queuedMessages
@@ -301,6 +303,7 @@ func (m *MessageProcessingQueue) Fetch() chan []OffchainMessage {
 }
 
 func (m *MessageProcessingQueue) HasMessages() chan bool {
+	log.Println("MessageProcessingQueue HasMessages")
 	retChan := make(chan bool, 1)
 	m.actions <- func(m *MessageProcessingQueue) {
 		retChan <- len(m.queuedMessages) > 0
@@ -309,18 +312,21 @@ func (m *MessageProcessingQueue) HasMessages() chan bool {
 }
 
 func (m *MessageProcessingQueue) Return(messages []OffchainMessage) {
+	log.Println("MessageProcessingQueue Return")
 	m.actions <- func(m *MessageProcessingQueue) {
 		m.queuedMessages = append(messages, m.queuedMessages...)
 	}
 }
 
 func (m *MessageProcessingQueue) Send(message OffchainMessage) {
+	log.Println("MessageProcessingQueue Send")
 	m.actions <- func(m *MessageProcessingQueue) {
 		m.queuedMessages = append(m.queuedMessages, message)
 	}
 }
 
 func (m *MessageProcessingQueue) run() {
+	log.Println("MessageProcessingQueue run")
 	go func() {
 		for action := range m.actions {
 			action(m)

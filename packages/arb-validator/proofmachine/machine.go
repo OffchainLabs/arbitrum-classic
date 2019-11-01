@@ -37,14 +37,13 @@ type Machine struct {
 	machine     machine.Machine
 	fromAddress common.Address
 	osp         *ethbridge.OneStepProof
-	balance     *protocol.BalanceTracker
 	client      *ethclient.Client
 }
 
 type ProofMachData struct {
 }
 
-func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, balance *protocol.BalanceTracker) (*Machine, error) {
+func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string) (*Machine, error) {
 	//tm, err := testmachine.New(codeFile, warnMode)
 	//if err != nil {
 	//	err = fmt.Errorf("Test machine error: %v ", err)
@@ -63,7 +62,6 @@ func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress c
 		machine:     mach,
 		fromAddress: keyAddr,
 		osp:         osp,
-		balance:     balance,
 		client:      client,
 	}, err
 }
@@ -73,7 +71,7 @@ func (m *Machine) Hash() [32]byte {
 }
 
 func (m *Machine) Clone() machine.Machine {
-	return &Machine{m.machine.Clone(), m.fromAddress, m.osp, m.balance.Clone(), m.client}
+	return &Machine{m.machine.Clone(), m.fromAddress, m.osp, m.client}
 }
 
 func (m *Machine) CurrentStatus() machine.Status {
@@ -105,6 +103,7 @@ func (m *Machine) DeliverOnchainMessage() {
 }
 
 func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
+	log.Println("***************proofmachine SendOffchainMessages")
 	m.machine.SendOffchainMessages(msgs)
 }
 
@@ -123,7 +122,6 @@ func (m *Machine) ProofMachineData(contractAddress common.Address, key *ecdsa.Pr
 	m.fromAddress = keyAddr
 	m.osp = osp
 	m.client = client
-	m.balance = balance
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
@@ -160,8 +158,8 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		stepsRan++
 
 		spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
-		balance := m.balance.Clone()
-		_ = balance.SpendAllTokens(spentBalance)
+		//balance := m.balance.Clone()
+		//_ = balance.SpendAllTokens(spentBalance)
 		callOpts := &bind.CallOpts{
 			Pending: true,
 			From:    m.fromAddress,
