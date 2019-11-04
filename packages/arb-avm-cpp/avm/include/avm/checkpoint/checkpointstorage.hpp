@@ -17,11 +17,16 @@
 #ifndef checkpointstorage_hpp
 #define checkpointstorage_hpp
 
-#include <rocksdb/db.h>
-#include <rocksdb/utilities/transaction_db.h>
+#include <memory>
+#include <string>
 #include <vector>
 
-#include <avm/checkpoint/transaction.hpp>
+class Transaction;
+struct GetResults;
+
+namespace rocksdb {
+class TransactionDB;
+}
 
 class CheckpointStorage {
    private:

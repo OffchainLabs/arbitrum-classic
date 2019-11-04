@@ -17,8 +17,13 @@
 #ifndef machinestatefetcher_hpp
 #define machinestatefetcher_hpp
 
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/checkpointutils.hpp>
+#include <avm/value/value.hpp>
+
+class CheckpointStorage;
+
+template <typename T>
+struct DbResult;
 
 class MachineStateFetcher {
    private:

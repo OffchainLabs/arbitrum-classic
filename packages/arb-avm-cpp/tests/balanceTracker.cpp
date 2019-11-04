@@ -15,6 +15,7 @@
  */
 
 #include <avm/machine.hpp>
+
 #include <catch2/catch.hpp>
 
 void pushMessage(MachineState& m,

@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/checkpoint/transaction.hpp>
+
+#include <avm/checkpoint/checkpointresult.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
+
+#include <rocksdb/utilities/transaction_db.h>
 
 Transaction::Transaction(rocksdb::Transaction* transaction_) {
     transaction = std::unique_ptr<rocksdb::Transaction>(transaction_);
 }
 
 Transaction::~Transaction() {
-    assert(transaction->GetState() == rocksdb::Transaction::COMMITED);
+    assert(transaction->GetState() == rocksdb::Transaction::COMMITED ||
+           rocksdb::Transaction::ROLLEDBACK);
 }
 
 rocksdb::Status Transaction::commit() {

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#include "avm/machinestate/tokenTracker.hpp"
+#include <avm/machinestate/tokenTracker.hpp>
+
 #include <catch2/catch.hpp>
 
 #define serialized_empty_balance_len 8

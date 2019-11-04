@@ -17,25 +17,16 @@
 #ifndef transaction_hpp
 #define transaction_hpp
 
-#include <rocksdb/db.h>
-#include <rocksdb/utilities/transaction_db.h>
+#include <vector>
 
-struct GetResults {
-    uint32_t reference_count;
-    rocksdb::Status status;
-    std::vector<unsigned char> stored_value;
-};
+struct DeleteResults;
+struct GetResults;
+struct SaveResults;
 
-struct SaveResults {
-    uint32_t reference_count;
-    rocksdb::Status status;
-    std::vector<unsigned char> storage_key;
-};
-
-struct DeleteResults {
-    uint32_t reference_count;
-    rocksdb::Status status;
-};
+namespace rocksdb {
+class Transaction;
+class Status;
+}  // namespace rocksdb
 
 class Transaction {
    private:

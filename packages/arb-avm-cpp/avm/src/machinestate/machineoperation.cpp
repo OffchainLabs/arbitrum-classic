@@ -16,6 +16,8 @@
 
 #include <avm/machinestate/machineoperation.hpp>
 
+#include <avm/machinestate/machinestate.hpp>
+
 namespace MachineOperation {
 
 uint256_t& assumeInt(value& val) {

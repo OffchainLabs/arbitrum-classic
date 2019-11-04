@@ -17,13 +17,14 @@
 #ifndef datastack_hpp
 #define datastack_hpp
 
-#include <iostream>
-#include <vector>
-
-#include <avm/checkpoint/machinestatefetcher.hpp>
-#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/value/tuple.hpp>
 #include <avm/value/value.hpp>
+
+#include <vector>
+
+class MachineStateSaver;
+class MachineStateFetcher;
+struct SaveResults;
 
 class Datastack {
     static constexpr int lazyCount = 100;
@@ -98,9 +99,8 @@ class Datastack {
 
     SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
 
-    DbResult<Tuple> initializeDataStack(
-        const MachineStateFetcher& fetcher,
-        const std::vector<unsigned char>& hash_key);
+    bool initializeDataStack(const MachineStateFetcher& fetcher,
+                             const std::vector<unsigned char>& hash_key);
 };
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val);

@@ -17,6 +17,7 @@
 #ifndef codepoint_hpp
 #define codepoint_hpp
 
+#include <avm/opcodes.hpp>
 #include <avm/value/value.hpp>
 
 struct Operation {

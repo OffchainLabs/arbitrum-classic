@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+#include <avm/machinestate/machinestate.hpp>
+
+#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/exceptions.hpp>
 #include <avm/machinestate/machineoperation.hpp>
-#include <avm/machinestate/machinestate.hpp>
+
 #include <bigint_utils.hpp>
 #include <util.hpp>
 
@@ -257,7 +261,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     }
 }
 
-DbResult<ParsedState> MachineState::restoreCheckpoint(
+bool MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
     auto stateFetcher = MachineStateFetcher(storage, pool.get(), code);
@@ -280,21 +284,32 @@ DbResult<ParsedState> MachineState::restoreCheckpoint(
         auto err_pc_results = stateFetcher.getCodePoint(state_data.err_pc_key);
         errpc = err_pc_results.data;
 
-        stack.initializeDataStack(stateFetcher, state_data.datastack_key);
-        auxstack.initializeDataStack(stateFetcher, state_data.auxstack_key);
+        if (!stack.initializeDataStack(stateFetcher,
+                                       state_data.datastack_key)) {
+            return false;
+        }
 
-        inbox.initializeMessageStack(stateFetcher, state_data.inbox_key,
-                                     state_data.inbox_count_key);
+        if (!auxstack.initializeDataStack(stateFetcher,
+                                          state_data.auxstack_key)) {
+            return false;
+        }
 
-        pendingInbox.initializeMessageStack(
-            stateFetcher, state_data.pending_key, state_data.pending_count_key);
+        if (!inbox.initializeMessageStack(stateFetcher, state_data.inbox_key,
+                                          state_data.inbox_count_key)) {
+            return false;
+        }
+
+        if (!pendingInbox.initializeMessageStack(
+                stateFetcher, state_data.pending_key,
+                state_data.pending_count_key)) {
+            return false;
+        }
 
         state = static_cast<Status>(state_data.status_char);
         blockReason = deserializeBlockReason(state_data.blockreason_str);
         balance = BalanceTracker(state_data.balancetracker_str);
     }
-
-    return results;
+    return results.status.ok();
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {

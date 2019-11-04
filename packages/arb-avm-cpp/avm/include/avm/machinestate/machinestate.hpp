@@ -21,12 +21,15 @@
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/messagestack.hpp>
 #include <avm/value/value.hpp>
+
 #include <memory>
 #include <vector>
 
 enum class Status { Extensive, Halted, Error };
 
 typedef std::array<uint256_t, 2> TimeBounds;
+
+class CheckpointStorage;
 
 struct AssertionContext {
     uint32_t numSteps;
@@ -68,9 +71,8 @@ struct MachineState {
     void setInbox(MessageStack ms);
     void setPendingInbox(MessageStack ms);
     SaveResults checkpointState(CheckpointStorage& storage);
-    DbResult<ParsedState> restoreCheckpoint(
-        const CheckpointStorage& storage,
-        const std::vector<unsigned char>& checkpoint_key);
+    bool restoreCheckpoint(const CheckpointStorage& storage,
+                           const std::vector<unsigned char>& checkpoint_key);
 };
 
 #endif /* machinestate_hpp */

@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-#include "avm/checkpoint/checkpointstorage.hpp"
+#include <avm/checkpoint/checkpointresult.hpp>
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/transaction.hpp>
+
+#include <rocksdb/db.h>
+
+#include <catch2/catch.hpp>
 
 #include <boost/dll.hpp>
-#include <catch2/catch.hpp>
+
 #include <iostream>
-#include "rocksdb/db.h"
 
 std::vector<unsigned char> hash_key1 = {1};
 std::vector<unsigned char> hash_key2 = {2};

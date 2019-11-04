@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/machine.hpp>
 
-#include <boost/dll.hpp>
 #include <catch2/catch.hpp>
+
+#include <boost/dll.hpp>
 
 auto execution_path = boost::dll::program_location().parent_path();
 auto save_path = execution_path.generic_string() + "/rocksDb";

@@ -17,7 +17,9 @@
 #ifndef machineoperation_hpp
 #define machineoperation_hpp
 
-#include <avm/machinestate/machinestate.hpp>
+#include <avm/machinestate/blockreason.hpp>
+
+struct MachineState;
 
 namespace MachineOperation {
 void add(MachineState& m);

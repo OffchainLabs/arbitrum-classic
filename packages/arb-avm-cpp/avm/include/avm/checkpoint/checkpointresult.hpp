@@ -14,16 +14,35 @@
  * limitations under the License.
  */
 
-#ifndef checkpointdeleter_hpp
-#define checkpointdeleter_hpp
+#ifndef checkpointresult_hpp
+#define checkpointresult_hpp
+
+#include <rocksdb/status.h>
 
 #include <vector>
 
-struct DeleteResults;
-class CheckpointStorage;
+struct GetResults {
+    uint32_t reference_count;
+    rocksdb::Status status;
+    std::vector<unsigned char> stored_value;
+};
 
-DeleteResults deleteCheckpoint(
-    CheckpointStorage& checkpoint_storage,
-    const std::vector<unsigned char>& checkpoint_name);
+struct SaveResults {
+    uint32_t reference_count;
+    rocksdb::Status status;
+    std::vector<unsigned char> storage_key;
+};
 
-#endif /* checkpointdeleter_h */
+struct DeleteResults {
+    uint32_t reference_count;
+    rocksdb::Status status;
+};
+
+template <typename T>
+struct DbResult {
+    rocksdb::Status status;
+    uint32_t reference_count;
+    T data;
+};
+
+#endif /* checkpointresult_hpp */
