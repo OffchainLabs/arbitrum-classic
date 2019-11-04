@@ -16,6 +16,7 @@
 #  ROCKSDB_INCLUDE_DIRS        The location of RocksDB headers.
 
 message( ${CMAKE_CURRENT_SOURCE_DIR} )
+message( ${CMAKE_SOURCE_DIR} )
 message( ${CMAKE_CURRENT_BINARY_DIR} )
 
 include(ExternalProject)
@@ -30,14 +31,13 @@ ExternalProject_Add(rocksdb
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE ON
     BUILD_COMMAND make -j1 static_lib
-    UPDATE_COMMAND "" 
+    INSTALL_COMMAND cmake -E echo "Skipping install step."
 )
 
 ExternalProject_Get_Property(rocksdb BINARY_DIR)
 set(ROCKSDB_LIBRARIES
     ${BINARY_DIR}/librocksdb.a)
 
-message( ${BINARY_DIR} )
 link_directories(${BINARY_DIR})
 
 set(ROCKSDB_FOUND TRUE)
@@ -51,6 +51,7 @@ add_library(rocks INTERFACE)
 add_dependencies(rocks rocksdb)
 target_include_directories(rocks INTERFACE ${ROCKSDB_INCLUDE_DIRS})
 target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES})
+
 
 mark_as_advanced(
     ROCKSDB_LIBRARIES
