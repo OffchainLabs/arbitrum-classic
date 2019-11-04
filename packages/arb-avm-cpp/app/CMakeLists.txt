@@ -18,6 +18,6 @@ set (CMAKE_CXX_STANDARD 14)
 
 project (avm_runner LANGUAGES CXX)
 add_executable(avm_runner main.cpp)
-target_link_libraries(avm_runner PRIVATE avm avm_utils)
+target_link_libraries(avm_runner PRIVATE avm boost_filesystem avm_utils)
 
 target_code_coverage(avm_runner AUTO ALL EXCLUDE external/* tests/*)

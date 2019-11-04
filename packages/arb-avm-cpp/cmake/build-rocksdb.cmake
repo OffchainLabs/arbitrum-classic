@@ -31,6 +31,7 @@ ExternalProject_Add(rocksdb
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE ON
     BUILD_COMMAND make -j static_lib
+    UPDATE_COMMAND "" 
 )
 
 ExternalProject_Get_Property(rocksdb BINARY_DIR)

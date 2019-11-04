@@ -35,6 +35,8 @@ PRIVATE
     avm_utils
 	CONAN_PKG::Catch2
 	CONAN_PKG::jsonformoderncpp
+	rocks
+	boost_filesystem
 )
 
 include(CTest)
