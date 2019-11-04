@@ -16,7 +16,6 @@
 #  ROCKSDB_INCLUDE_DIRS        The location of RocksDB headers.
 
 message( ${CMAKE_CURRENT_SOURCE_DIR} )
-message( ${CMAKE_SOURCE_DIR} )
 message( ${CMAKE_CURRENT_BINARY_DIR} )
 
 include(ExternalProject)
@@ -30,7 +29,7 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE ON
-    BUILD_COMMAND make -j static_lib
+    BUILD_COMMAND make -j1 static_lib
     UPDATE_COMMAND "" 
 )
 
