@@ -99,8 +99,7 @@ GetResults Transaction::getValue(
     }
 }
 
-// private
-// ----------------------------------------------------------------------
+// private ------------------------------------------------------------------
 SaveResults Transaction::saveValueWithRefCount(
     uint32_t updated_ref_count,
     const std::vector<unsigned char>& hash_key,
