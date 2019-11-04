@@ -17,6 +17,7 @@
 #ifndef transaction_hpp
 #define transaction_hpp
 
+#include <memory>
 #include <vector>
 
 struct DeleteResults;

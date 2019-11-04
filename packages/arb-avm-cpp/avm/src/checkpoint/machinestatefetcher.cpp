@@ -120,7 +120,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
         return DbResult<Tuple>{results.status, results.reference_count,
                                Tuple()};
     }
-};
+}
 
 DbResult<value> MachineStateFetcher::getValue(
     const std::vector<unsigned char>& hash_key) const {
