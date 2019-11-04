@@ -38,6 +38,7 @@ ExternalProject_Get_Property(rocksdb BINARY_DIR)
 set(ROCKSDB_LIBRARIES
     ${BINARY_DIR}/librocksdb.a)
 
+message( ${BINARY_DIR} )
 link_directories(${BINARY_DIR})
 
 set(ROCKSDB_FOUND TRUE)
@@ -51,7 +52,6 @@ add_library(rocks INTERFACE)
 add_dependencies(rocks rocksdb)
 target_include_directories(rocks INTERFACE ${ROCKSDB_INCLUDE_DIRS})
 target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES})
-
 
 mark_as_advanced(
     ROCKSDB_LIBRARIES
