@@ -61,7 +61,6 @@ func TestValidateProof(t *testing.T) {
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Fatal(err)
 	}
-	balance := protocol.NewBalanceTracker()
 
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
@@ -69,7 +68,7 @@ func TestValidateProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, balance)
+	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL)
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}

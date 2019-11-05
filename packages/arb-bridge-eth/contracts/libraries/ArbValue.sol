@@ -15,7 +15,6 @@
  */
 
 pragma solidity ^0.5.3;
-
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 
