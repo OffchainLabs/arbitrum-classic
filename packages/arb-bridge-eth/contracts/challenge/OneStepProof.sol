@@ -827,6 +827,10 @@ library OneStepProof {
         pure
         returns (bool)
     {
+        if (!val.isCodePoint()) {
+            require (val.isCodePoint(), "executeErrsetInsn val is NOT CodePoint ");
+            return false;
+        }
         machine.errHandler = val.hash();
         return true;
     }
@@ -1282,6 +1286,7 @@ library OneStepProof {
         uint i = 0;
         for (i = immediate; i < popCount; i++) {
             (valid, offset, stackVals[i]) = ArbValue.deserializeValue(_data.proof, offset);
+            require(valid == 0,string(abi.encodePacked("Proof had bad stack value: ", DebugPrint.uint2str(i), " of ", DebugPrint.uint2str(popCount), " pop count, valid = ", DebugPrint.uint2str(valid))));
             require(valid == 0, "Proof had bad stack value");
         }
         if (stackVals.length > 0) {
@@ -1393,8 +1398,13 @@ library OneStepProof {
             require(valid == 0, "Proof of auxpop had bad aux value");
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
+        } else if (opCode == OP_AUXSTACKEMPTY) {
+            correct = executeAuxstackemptyInsn(endMachine);
         } else if (opCode == OP_NOP) {
-
+        } else if (opCode == OP_ERRPUSH) {
+            correct = executeErrpushInsn(endMachine);
+        } else if (opCode == OP_ERRSET) {
+            correct = executeErrsetInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_DUP0) {
             correct = executeDup0Insn(endMachine, stackVals[0]);
         } else if (opCode == OP_DUP1) {
@@ -1501,7 +1511,7 @@ library OneStepProof {
         require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
          require(
              _data.afterHash == endMachine.hash(),
-             string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
+             string(abi.encodePacked("Proof had non matching end state: ", DebugPrint.bytes32string(_data.afterHash), " endMach = ", DebugPrint.bytes32string(endMachine.hash()), " ", endMachine.toString()))
          );
         require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 

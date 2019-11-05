@@ -107,22 +107,22 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	m.machine.SendOffchainMessages(msgs)
 }
 
-func (m *Machine) ProofMachineData(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, balance *protocol.BalanceTracker) {
-	client, err := ethclient.Dial(ethURL)
-	if err != nil {
-		log.Fatal("Connection failure ", err)
-	}
-	osp, err := ethbridge.NewOneStepProof(contractAddress, client)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	keyAddr := crypto.PubkeyToAddress(key.PublicKey)
-	//pd := ProofMachData{
-	m.fromAddress = keyAddr
-	m.osp = osp
-	m.client = client
-}
+//func (m *Machine) ProofMachineData(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, balance *protocol.BalanceTracker) {
+//	client, err := ethclient.Dial(ethURL)
+//	if err != nil {
+//		log.Fatal("Connection failure ", err)
+//	}
+//	osp, err := ethbridge.NewOneStepProof(contractAddress, client)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	keyAddr := crypto.PubkeyToAddress(key.PublicKey)
+//	//pd := ProofMachData{
+//	m.fromAddress = keyAddr
+//	m.osp = osp
+//	m.client = client
+//}
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
@@ -155,7 +155,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		}
 		stepsRan++
 
-		if i > 22 {
+		if i > 2700 {
 			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
 			//balance := m.balance.Clone()
 			//_ = balance.SpendAllTokens(spentBalance)
