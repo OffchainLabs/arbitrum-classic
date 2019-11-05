@@ -148,7 +148,7 @@ DbResult<value> MachineStateFetcher::getValue(
                 return DbResult<value>{results.status, results.reference_count,
                                        code_point};
             }
-            case HASH_ONLY: {
+            default: {
                 throw std::runtime_error("HASH_ONLY item");
 
                 return DbResult<value>();
