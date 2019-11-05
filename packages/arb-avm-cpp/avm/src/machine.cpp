@@ -314,7 +314,6 @@ void Machine::runOne() {
     }
 
     auto& instruction = m.code[m.pc];
-    uint64_t startStackSize;
 
     // if opcode is invalid, increment step count and return error or
     // errorCodePoint
@@ -333,8 +332,6 @@ void Machine::runOne() {
         }
         // save stack size for stack cleanup in case of error
         uint64_t startStackSize = m.stack.stacksize();
-
-        startStackSize = m.stack.stacksize();
 
         try {
             m.blockReason = m.runOp(instruction.op.opcode);
