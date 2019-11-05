@@ -33,7 +33,7 @@ CheckpointStorage::CheckpointStorage(std::string db_path) {
     rocksdb::TransactionDB* db = nullptr;
     rocksdb::TransactionDB::Open(options, txn_options, txn_db_path, &db);
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
-};
+}
 
 CheckpointStorage::~CheckpointStorage() {
     txn_db->Close();

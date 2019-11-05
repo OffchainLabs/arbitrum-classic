@@ -63,7 +63,7 @@ SaveResults Transaction::saveValue(const std::vector<unsigned char>& hash_key,
         ref_count = 1;
     }
     return saveValueWithRefCount(ref_count, hash_key, value);
-};
+}
 
 DeleteResults Transaction::deleteValue(
     const std::vector<unsigned char>& hash_key) {

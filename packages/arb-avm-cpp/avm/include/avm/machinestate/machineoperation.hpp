@@ -74,6 +74,6 @@ BlockReason send(MachineState& m);
 void nbsend(MachineState& m);
 void getTime(MachineState& m);
 BlockReason inboxOp(MachineState& m);
-};  // namespace MachineOperation
+}  // namespace MachineOperation
 
 #endif /* machineoperation_hpp */
