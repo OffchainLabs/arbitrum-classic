@@ -827,7 +827,6 @@ library OneStepProof {
         returns (bool)
     {
         if (!val.isCodePoint()) {
-            require (val.isCodePoint(), "executeErrsetInsn val is NOT CodePoint ");
             return false;
         }
         machine.errHandler = val.hash();
