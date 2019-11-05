@@ -21,6 +21,10 @@ message( ${CMAKE_CURRENT_BINARY_DIR} )
 
 include(ExternalProject)
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
+
 ExternalProject_Add(rocksdb
     GIT_REPOSITORY "https://github.com/facebook/rocksdb.git"
     GIT_TAG "master"
@@ -50,7 +54,7 @@ message(STATUS "Found RocksDB includes: ${ROCKSDB_INCLUDE_DIRS}")
 add_library(rocks INTERFACE)
 add_dependencies(rocks rocksdb)
 target_include_directories(rocks INTERFACE ${ROCKSDB_INCLUDE_DIRS})
-target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES})
+target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES} Threads::Threads)
 
 
 mark_as_advanced(
