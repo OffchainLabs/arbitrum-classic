@@ -826,6 +826,10 @@ library OneStepProof {
         pure
         returns (bool)
     {
+        if (!val.isCodePoint()) {
+            require (val.isCodePoint(), "executeErrsetInsn val is NOT CodePoint ");
+            return false;
+        }
         machine.errHandler = val.hash();
         return true;
     }
@@ -1391,8 +1395,13 @@ library OneStepProof {
             require(valid == 0, "Proof of auxpop had bad aux value");
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
+        } else if (opCode == OP_AUXSTACKEMPTY) {
+            correct = executeAuxstackemptyInsn(endMachine);
         } else if (opCode == OP_NOP) {
-
+        } else if (opCode == OP_ERRPUSH) {
+            correct = executeErrpushInsn(endMachine);
+        } else if (opCode == OP_ERRSET) {
+            correct = executeErrsetInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_DUP0) {
             correct = executeDup0Insn(endMachine, stackVals[0]);
         } else if (opCode == OP_DUP1) {

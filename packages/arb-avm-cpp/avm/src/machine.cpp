@@ -304,6 +304,7 @@ void Machine::runOne() {
     }
 
     auto& instruction = m.code[m.pc];
+    uint64_t startStackSize;
 
     if (!isValidOpcode(instruction.op.opcode)) {
         m.state = Status::Error;
@@ -313,6 +314,8 @@ void Machine::runOne() {
             m.stack.push(std::move(imm));
         }
 
+        startStackSize = m.stack.stacksize();
+
         try {
             m.blockReason = m.runOp(instruction.op.opcode);
         } catch (const bad_pop_type& e) {
@@ -321,8 +324,6 @@ void Machine::runOne() {
             m.state = Status::Error;
         }
     }
-
-    auto startStackSize = m.stack.stacksize();
 
     if (nonstd::get_if<NotBlocked>(&m.blockReason)) {
         m.context.numSteps++;
