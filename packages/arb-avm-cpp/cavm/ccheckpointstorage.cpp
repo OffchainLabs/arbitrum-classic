@@ -25,9 +25,8 @@
 CCheckpointStorage* createCheckpointStorage(const char* filename) {
     auto string_filename = std::string(filename);
 
-    CheckpointStorage storage(string_filename);
-    CheckpointStorage* storage_ptr = &storage;
-    return static_cast<void*>(storage_ptr);
+    auto storage = new CheckpointStorage(string_filename);
+    return static_cast<void*>(storage);
 }
 
 void destroyCheckpointStorage(CCheckpointStorage* storage) {

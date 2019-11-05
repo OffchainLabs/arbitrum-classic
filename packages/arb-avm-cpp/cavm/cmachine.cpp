@@ -28,12 +28,11 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    auto machine = Machine();
-    Machine* machine_ptr = &machine;
-    auto sucess = machine_ptr->initializeMachine(filename);
+    auto machine = new Machine();
+    auto sucess = machine->initializeMachine(filename);
 
     if (sucess) {
-        return machine_ptr;
+        return machine;
     } else {
         return nullptr;
     }

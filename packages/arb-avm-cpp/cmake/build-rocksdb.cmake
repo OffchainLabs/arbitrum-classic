@@ -49,8 +49,8 @@ message(STATUS "Found RocksDB includes: ${ROCKSDB_INCLUDE_DIRS}")
 
 add_library(rocks INTERFACE)
 add_dependencies(rocks rocksdb)
-target_include_directories(rocks INTERFACE ${ROCKSDB_INCLUDE_DIRS} zlib)
-target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES} zlib )
+target_include_directories(rocks INTERFACE ${ROCKSDB_INCLUDE_DIRS})
+target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES})
 
 
 mark_as_advanced(
