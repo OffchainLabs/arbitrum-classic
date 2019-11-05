@@ -30,7 +30,7 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE ON
-    BUILD_COMMAND make -j1 static_lib
+    BUILD_COMMAND make static_lib
     INSTALL_COMMAND cmake -E echo "Skipping install step."
 )
 
