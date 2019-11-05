@@ -53,7 +53,8 @@ link_directories(${BINARY_DIR})
 set(ROCKSDB_FOUND TRUE)
 
 set(ROCKSDB_INCLUDE_DIRS
-    ${BINARY_DIR}/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/rocksdb/include)
+    
 message(STATUS "Found RocksDB library: ${ROCKSDB_LIBRARIES}")
 message(STATUS "Found RocksDB includes: ${ROCKSDB_INCLUDE_DIRS}")
 
