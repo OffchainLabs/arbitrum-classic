@@ -71,10 +71,6 @@ func (m *Machine) GetPC() value.CodePointValue {
 	return m.gomachine.GetPC()
 }
 
-func (m *Machine) GetPC() value.CodePointValue {
-	return m.gomachine.GetPC()
-}
-
 func (m *Machine) CurrentStatus() machine.Status {
 	b1 := m.cppmachine.CurrentStatus()
 	b2 := m.gomachine.CurrentStatus()
