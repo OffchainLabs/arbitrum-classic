@@ -2,7 +2,8 @@ version: 2
 jobs:
   build:
     docker:
-      - image: offchainlabs/build-base:0.1.2
+      - image: offchainlabs/build-base:0.1.3
+    resource_class: medium+
     working_directory: /home/user/arbitrum
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
