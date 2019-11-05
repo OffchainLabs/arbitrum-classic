@@ -24,8 +24,8 @@ include(ExternalProject)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
-find_package(zlib REQUIRED)
-find_package(bzip2 REQUIRED)
+# find_package(zlib REQUIRED)
+# find_package(bzip2 REQUIRED)
 
 ExternalProject_Add(rocksdb
     GIT_REPOSITORY "https://github.com/facebook/rocksdb.git"
@@ -36,6 +36,8 @@ ExternalProject_Add(rocksdb
         -DCMAKE_CXX_STANDARD=14
         -DWITH_TESTS=OFF
         -DCMAKE_POSITION_INDEPENDENT_CODE=True
+        -DWITH_ZLIB=OFF
+        -DWITH_BZ2=OFF
         -DWITH_LZ4=OFF
         -DWITH_ZSTD=OFF
         -DWITH_SNAPPY=OFF
@@ -60,7 +62,8 @@ message(STATUS "Found RocksDB includes: ${ROCKSDB_INCLUDE_DIRS}")
 add_library(rocks INTERFACE)
 add_dependencies(rocks rocksdb)
 target_include_directories(rocks INTERFACE ${ROCKSDB_INCLUDE_DIRS})
-target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES} Threads::Threads ZLIB::ZLIB BZip2::BZip2)
+# ZLIB::ZLIB BZip2::BZip2
+target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES} Threads::Threads)
 
 mark_as_advanced(
     ROCKSDB_LIBRARIES
