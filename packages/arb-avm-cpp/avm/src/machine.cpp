@@ -305,15 +305,23 @@ void Machine::runOne() {
 
     auto& instruction = m.code[m.pc];
 
-    auto startStackSize = m.stack.stacksize();
-
+    // if opcode is invalid, increment step count and return error or
+    // errorCodePoint
     if (!isValidOpcode(instruction.op.opcode)) {
         m.state = Status::Error;
+        m.context.numSteps++;
+        if (!isErrorCodePoint(m.errpc)) {
+            m.pc = m.errpc.pc;
+            m.state = Status::Extensive;
+        }
+        return;
     } else {
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
             m.stack.push(std::move(imm));
         }
+        // save stack size for stack cleanup in case of error
+        uint64_t startStackSize = m.stack.stacksize();
 
         try {
             m.blockReason = m.runOp(instruction.op.opcode);
@@ -322,26 +330,26 @@ void Machine::runOne() {
         } catch (const bad_tuple_index& e) {
             m.state = Status::Error;
         }
-    }
+        // if not blocked, increment step count
+        if (nonstd::get_if<NotBlocked>(&m.blockReason)) {
+            m.context.numSteps++;
+        }
 
-    if (nonstd::get_if<NotBlocked>(&m.blockReason)) {
-        m.context.numSteps++;
-    }
+        if (m.state != Status::Error) {
+            return;
+        }
+        // if state is Error, clean up stack
+        // Clear stack to base for instruction
+        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
+        while (m.stack.stacksize() > 0 &&
+               startStackSize - m.stack.stacksize() < stackItems) {
+            m.stack.popClear();
+        }
 
-    if (m.state != Status::Error) {
-        return;
-    }
-
-    // Clear stack to base for instruction
-    auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-    while (m.stack.stacksize() > 0 &&
-           startStackSize - m.stack.stacksize() < stackItems) {
-        m.stack.popClear();
-    }
-
-    if (!isErrorCodePoint(m.errpc)) {
-        m.pc = m.errpc.pc;
-        m.state = Status::Extensive;
+        if (!isErrorCodePoint(m.errpc)) {
+            m.pc = m.errpc.pc;
+            m.state = Status::Extensive;
+        }
     }
 
     return;

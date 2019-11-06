@@ -263,7 +263,7 @@ func (cv CodePointValue) Marshal(w io.Writer) error {
 }
 
 func (cv CodePointValue) MarshalForProof(w io.Writer) error {
-	if err := MarshalOperation(cv.Op, w); err != nil {
+	if err := MarshalOperationProof(cv.Op, w, false); err != nil {
 		return err
 	}
 	_, err := w.Write(cv.NextHash[:])

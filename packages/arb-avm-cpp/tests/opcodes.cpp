@@ -638,6 +638,22 @@ TEST_CASE("TGET opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
+TEST_CASE("TGET index out of range") {
+    SECTION("index ouf range") {
+        MachineState m;
+        m.stack.push(Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7},
+                           uint256_t{6}, m.pool.get()});
+        m.stack.push(uint256_t{5});
+        try {
+            m.runOp(OpCode::TGET);
+        } catch (const bad_tuple_index& e) {
+            m.state = Status::Error;
+        }
+        // should throw bad_tuple_index and leave two items on stack
+        REQUIRE(m.state == Status::Error);
+        REQUIRE(m.stack.stacksize() == 2);
+    }
+}
 
 TEST_CASE("TSET opcode is correct") {
     SECTION("2 tup") {
