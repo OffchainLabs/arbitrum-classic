@@ -39,6 +39,10 @@ jobs:
             - python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
             - python-packages-v1-{{ .Branch }}-
             - python-packages-v1-
+      - restore_cache:
+          keys:
+            - rocksdb-v1-{{ .Branch }}
+            - rocksdb-v1-
       - run:
           name: build all
           command: |
@@ -63,6 +67,11 @@ jobs:
           paths:
             - ~/.local/lib/python3.7/site-packages
           key: python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+      - save_cache:
+          paths:
+            - packages/arb-avm-cpp/rocksdb
+            - packages/arb-avm-cpp/build/rocksdb
+          key: rocksdb-v1-{{ .Branch }}
       - run:
           name: test arb-avm-cpp
           command: |
