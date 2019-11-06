@@ -32,6 +32,7 @@ type ArbAddresses struct {
 	ChainLauncher      string `json:"ChainLauncher"`
 	ChannelLauncher    string `json:"ChannelLauncher"`
 	GlobalPendingInbox string `json:"GlobalPendingInbox"`
+	OneStepProof       string `json:"OneStepProof"`
 }
 
 func waitForReceipt(ctx context.Context, client *ethclient.Client, hash common.Hash, methodName string) (*types.Receipt, error) {

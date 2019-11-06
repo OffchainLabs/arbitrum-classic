@@ -247,6 +247,16 @@ std::vector<unsigned char> MachineState::marshalForProof() {
     std::vector<bool> auxStackPops = InstructionAuxStackPops.at(opcode);
     auto stackProof = stack.marshalForProof(stackPops);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops);
+    //    std::cout << "Proof of CodePoint " << std::hex << opcode << " has "
+    //              << stackProof.second.size() << " stack vals and "
+    //              << auxStackProof.second.size() << " aux stack vals" <<
+    //              std::endl;
+    //    std::cout << "codePoint = " << code[pc].nextHash
+    //              << " baseStackValHash = " << stackProof.first << std::endl;
+    //    std::cout << "auxStack = " << auxStackProof.first
+    //              << " register = " << ::hash(registerVal) << std::endl;
+    //    std::cout << "staticHash = " << ::hash(staticVal)
+    //              << " errHandlerHash = " << ::hash(errpc) << std::endl;
     uint256_t_to_buf(code[pc].nextHash, buf);
     uint256_t_to_buf(stackProof.first, buf);
     uint256_t_to_buf(auxStackProof.first, buf);

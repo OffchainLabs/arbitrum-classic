@@ -142,7 +142,6 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 		if immediate, ok := op.(value.ImmediateOperation); ok {
 			m.stack.Push(immediate.Val)
 		}
-
 		return Instructions[op.GetOp()].impl(m)
 	}()
 

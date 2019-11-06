@@ -19,7 +19,6 @@ package stack
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 

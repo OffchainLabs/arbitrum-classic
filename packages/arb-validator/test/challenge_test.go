@@ -21,6 +21,7 @@ import (
 	jsonenc "encoding/json"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -69,11 +70,6 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(contract, true, "test")
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
-	}
-
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		t.Fatal(err)
@@ -81,6 +77,16 @@ func TestChallenge(t *testing.T) {
 	key2, err := crypto.HexToECDSA("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	basemachine, err := loader.LoadMachineFromFile(contract, true, "test")
+	if err != nil {
+		t.Fatal("Loader Error: ", err)
+	}
+	//machine := basemachine
+	machine, err := proofmachine.New(contract, basemachine, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL)
+	if err != nil {
+		t.Fatal("Loader Error: ", err)
 	}
 
 	auth1 := bind.NewKeyedTransactor(key1)

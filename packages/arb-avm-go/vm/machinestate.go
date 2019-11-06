@@ -18,8 +18,10 @@ package vm
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -246,6 +248,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 	for assCtx.StepCount() < uint32(maxSteps) {
 		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
 		if blocked != nil {
+			fmt.Println("machine blocked in ExecuteAssertion")
 			m.blockReason = blocked
 			break
 		}
@@ -356,7 +359,10 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	staticHash := m.static.ProofValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
 
-	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
+	log.Printf("Proof of %v has %d stack vals and %d aux stack vals\n", codePoint, len(stackVals), len(auxStackVals))
+	log.Printf("codePoint = %v, baseStackValHash = %v\n", hex.EncodeToString(codePoint.NextHash[:]), hex.EncodeToString(baseStackValHash[:]))
+	log.Printf("auxStack = %v, register = %v\n", hex.EncodeToString(baseAuxStackValHash[:]), hex.EncodeToString(registerHash[:]))
+	log.Printf("staticHash = %v, errHandlerHash = %v\n", hex.EncodeToString(staticHash[:]), hex.EncodeToString(errHandlerHash[:]))
 
 	if _, err := wr.Write(codePoint.NextHash[:]); err != nil {
 		return err
