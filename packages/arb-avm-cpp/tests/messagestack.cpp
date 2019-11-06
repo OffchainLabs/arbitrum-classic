@@ -25,7 +25,8 @@
 #include <boost/dll.hpp>
 
 std::string current_path =
-    boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
+    boost::filesystem::current_path().parent_path().generic_string() +
+    "/rocksDb";
 
 void saveMessageStack(MachineStateSaver& saver,
                       MessageStack stack,
