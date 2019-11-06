@@ -48,18 +48,18 @@ BalanceTracker::BalanceTracker(
     auto token_pair_length = TOKEN_VAL_LENGTH + TOKEN_TYPE_LENGTH;
     auto current_it = checkpoint_data.begin();
 
-    unsigned int token_lookup_length;
+    uint64_t token_lookup_length;
     memcpy(&token_lookup_length, &(*current_it), sizeof(token_lookup_length));
     current_it += sizeof(token_lookup_length);
 
-    auto total_lookup_len = token_pair_length * token_lookup_length;
+    uint64_t total_lookup_len = token_pair_length * token_lookup_length;
     auto end_token_lookup = current_it + total_lookup_len;
     std::vector<unsigned char> token_lookup(current_it, end_token_lookup);
     current_it = end_token_lookup;
 
     initializeTokenLookup(token_lookup);
 
-    unsigned int nftkey_lookup_length;
+    uint64_t nftkey_lookup_length;
     memcpy(&nftkey_lookup_length, &(*current_it), sizeof(nftkey_lookup_length));
     current_it += sizeof(nftkey_lookup_length);
 
@@ -235,12 +235,10 @@ void BalanceTracker::initializeNftLookup(
 
 void BalanceTracker::insertTokenLookup(
     std::vector<unsigned char>& return_vector) {
-    auto length = (unsigned int)tokenLookup.size();
-    std::vector<unsigned char> length_vector(sizeof(unsigned int));
-    memcpy(&length_vector[0], &length, sizeof(length));
-
-    return_vector.insert(return_vector.end(), length_vector.begin(),
-                         length_vector.end());
+    uint64_t length = tokenLookup.size();
+    auto length_it = reinterpret_cast<unsigned char*>(&length);
+    return_vector.insert(return_vector.end(), length_it,
+                         length_it + sizeof(length));
 
     for (const auto& pair : tokenLookup) {
         return_vector.insert(return_vector.end(), std::begin(pair.first),
@@ -256,12 +254,10 @@ void BalanceTracker::insertTokenLookup(
 
 void BalanceTracker::insertNftLookup(
     std::vector<unsigned char>& return_vector) {
-    auto nft_length = nftLookup.size();
-    std::vector<unsigned char> nft_length_vector(sizeof(unsigned int));
-    memcpy(&nft_length_vector[0], &nft_length, sizeof(nft_length));
-
-    return_vector.insert(return_vector.end(), nft_length_vector.begin(),
-                         nft_length_vector.end());
+    uint64_t nft_length = nftLookup.size();
+    auto nft_length_it = reinterpret_cast<unsigned char*>(&nft_length);
+    return_vector.insert(return_vector.end(), nft_length_it,
+                         nft_length_it + sizeof(nft_length));
 
     for (auto& nft_key : nftLookup) {
         return_vector.insert(return_vector.end(), std::begin(nft_key.tokenType),

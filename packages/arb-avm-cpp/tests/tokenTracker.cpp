@@ -18,7 +18,7 @@
 
 #include <catch2/catch.hpp>
 
-#define serialized_empty_balance_len 8
+#define serialized_empty_balance_len sizeof(uint64_t) * 2
 
 void serializedBalanceTracker(BalanceTracker& balance_tracker,
                               int expected_length,
