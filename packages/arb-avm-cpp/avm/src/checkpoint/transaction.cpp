@@ -27,7 +27,7 @@ Transaction::Transaction(rocksdb::Transaction* transaction_) {
 
 Transaction::~Transaction() {
     assert(transaction->GetState() == rocksdb::Transaction::COMMITED ||
-           rocksdb::Transaction::ROLLEDBACK);
+           transaction->GetState() == rocksdb::Transaction::ROLLEDBACK);
 }
 
 rocksdb::Status Transaction::commit() {
