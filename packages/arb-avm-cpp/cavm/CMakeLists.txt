@@ -29,6 +29,6 @@ set_target_properties(
 
 target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic)
 
-target_link_libraries(cavm PUBLIC avm PRIVATE avm_utils rocks)
+target_link_libraries(cavm PUBLIC avm PRIVATE avm_utils)
 
 source_group(cavm FILES cmachine.h cmachine.cpp ccheckpointstorage.h ccheckpointstorage.cpp)

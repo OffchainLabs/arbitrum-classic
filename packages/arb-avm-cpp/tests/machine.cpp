@@ -24,7 +24,8 @@
 auto execution_path = boost::filesystem::current_path();
 auto save_path = execution_path.generic_string() + "/machineDb";
 auto contract_path =
-    execution_path.parent_path().generic_string() + "/tests/contract.ao";
+    execution_path.parent_path().parent_path().generic_string() +
+    "/tests/contract.ao";
 
 void checkpointState(CheckpointStorage& storage, Machine& machine) {
     auto results = machine.checkpoint(storage);
