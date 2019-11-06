@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "config.hpp"
+
 #include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/machine.hpp>
 
@@ -23,9 +25,6 @@
 
 auto execution_path = boost::filesystem::current_path();
 auto save_path = execution_path.generic_string() + "/machineDb";
-auto contract_path =
-    execution_path.parent_path().parent_path().generic_string() +
-    "/tests/contract.ao";
 
 void checkpointState(CheckpointStorage& storage, Machine& machine) {
     auto results = machine.checkpoint(storage);
@@ -56,7 +55,7 @@ void restoreCheckpoint(CheckpointStorage& storage,
                        Machine& expected_machine,
                        const std::vector<unsigned char>& checkpoint_key) {
     Machine machine;
-    machine.initializeMachine(contract_path);
+    machine.initializeMachine(test_contract_path);
     auto success = machine.restoreCheckpoint(storage, checkpoint_key);
 
     REQUIRE(success);
@@ -68,7 +67,7 @@ TEST_CASE("Checkpoint State") {
         CheckpointStorage storage(save_path);
         Machine machine;
 
-        bool initialized = machine.initializeMachine(contract_path);
+        bool initialized = machine.initializeMachine(test_contract_path);
         REQUIRE(initialized);
 
         checkpointState(storage, machine);
@@ -77,7 +76,7 @@ TEST_CASE("Checkpoint State") {
     SECTION("save twice") {
         CheckpointStorage storage(save_path);
         Machine machine;
-        machine.initializeMachine(contract_path);
+        machine.initializeMachine(test_contract_path);
 
         checkpointStateTwice(storage, machine);
     }
@@ -88,7 +87,7 @@ TEST_CASE("Delete machine checkpoint") {
     SECTION("default") {
         CheckpointStorage storage(save_path);
         Machine machine;
-        machine.initializeMachine(contract_path);
+        machine.initializeMachine(test_contract_path);
         auto results = machine.checkpoint(storage);
 
         deleteCheckpoint(storage, machine, results.storage_key);
@@ -101,7 +100,7 @@ TEST_CASE("Delete machine checkpoint") {
 //        TuplePool pool;
 //        CheckpointStorage storage(save_path);
 //        Machine machine;
-//        machine.initializeMachine(contract_path);
+//        machine.initializeMachine(test_contract_path);
 //        auto results = machine.checkpoint(storage);
 //
 //        restoreCheckpoint(storage, machine, results.storage_key);
