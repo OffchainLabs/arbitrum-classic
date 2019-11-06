@@ -103,19 +103,26 @@ void Machine::runOne() {
         return;
     }
 
-    machine_state.context.numSteps++;
-
     auto& instruction = machine_state.code[machine_state.pc];
 
-    auto startStackSize = machine_state.stack.stacksize();
-
+    // if opcode is invalid, increment step count and return error or
+    // errorCodePoint
     if (!isValidOpcode(instruction.op.opcode)) {
         machine_state.state = Status::Error;
+        machine_state.context.numSteps++;
+        if (!isErrorCodePoint(machine_state.errpc)) {
+            machine_state.pc = machine_state.errpc.pc;
+            machine_state.state = Status::Extensive;
+        }
+        return;
     } else {
         if (instruction.op.immediate) {
             auto imm = *instruction.op.immediate;
             machine_state.stack.push(std::move(imm));
         }
+        // save stack size for stack cleanup in case of error
+        uint64_t startStackSize = machine_state.stack.stacksize();
+
         try {
             machine_state.blockReason =
                 machine_state.runOp(instruction.op.opcode);
@@ -124,22 +131,26 @@ void Machine::runOne() {
         } catch (const bad_tuple_index& e) {
             machine_state.state = Status::Error;
         }
-    }
+        // if not blocked, increment step count
+        if (nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
+            machine_state.context.numSteps++;
+        }
 
-    if (machine_state.state != Status::Error) {
-        return;
-    }
+        if (machine_state.state != Status::Error) {
+            return;
+        }
+        // if state is Error, clean up stack
+        // Clear stack to base for instruction
+        auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
+        while (machine_state.stack.stacksize() > 0 &&
+               startStackSize - machine_state.stack.stacksize() < stackItems) {
+            machine_state.stack.popClear();
+        }
 
-    // Clear stack to base for instruction
-    auto stackItems = InstructionStackPops.at(instruction.op.opcode).size();
-    while (machine_state.stack.stacksize() > 0 &&
-           startStackSize - machine_state.stack.stacksize() < stackItems) {
-        machine_state.stack.popClear();
-    }
-
-    if (!isErrorCodePoint(machine_state.errpc)) {
-        machine_state.pc = machine_state.errpc.pc;
-        machine_state.state = Status::Extensive;
+        if (!isErrorCodePoint(machine_state.errpc)) {
+            machine_state.pc = machine_state.errpc.pc;
+            machine_state.state = Status::Extensive;
+        }
     }
 
     return;
