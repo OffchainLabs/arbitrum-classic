@@ -67,7 +67,6 @@ TEST_CASE("Checkpoint State") {
         CheckpointStorage storage(save_path);
         Machine machine;
 
-        std::cout << contract_path << std::endl;
         machine.initializeMachine(contract_path);
 
         checkpointState(storage, machine);
