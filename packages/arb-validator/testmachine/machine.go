@@ -179,3 +179,21 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	}
 	return h1, nil
 }
+
+func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
+	h1 := m.cppmachine.Checkpoint(storage)
+	h2 := m.gomachine.Checkpoint(storage)
+	if h1 != h2 {
+		log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
+	}
+	return h1
+}
+
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+	h1 := m.cppmachine.RestoreCheckpoint(storage, checkpointName)
+	h2 := m.gomachine.RestoreCheckpoint(storage, checkpointName)
+	if h1 != h2 {
+		log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
+	}
+	return h1
+}
