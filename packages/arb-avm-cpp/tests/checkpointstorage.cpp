@@ -22,7 +22,7 @@
 
 #include <catch2/catch.hpp>
 
-#include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 
 #include <iostream>
 
@@ -31,8 +31,7 @@ std::vector<unsigned char> hash_key2 = {2};
 std::vector<unsigned char> value1 = {'v', 'a', 'l', 'u', 'e'};
 std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 
-auto dbPath = boost::filesystem::current_path().parent_path().generic_string() +
-              "/rocksDb";
+auto dbPath = boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void saveVal(CheckpointStorage& storage,
              std::vector<unsigned char> val,
@@ -100,6 +99,7 @@ TEST_CASE("Checkpointstorage initialize") {
     SECTION("save") { saveVal(storage, value1, hash_key1, 1, true); }
     SECTION("increment") { incrementRef(storage, hash_key1, 0, false); }
     SECTION("delete") { deleteVal(storage, hash_key1, 0, false); }
+    boost::filesystem::remove_all(dbPath);
 }
 
 TEST_CASE("Save and get values") {
@@ -108,16 +108,19 @@ TEST_CASE("Save and get values") {
         saveVal(storage, value1, hash_key1, 1, true);
         getVal(storage, hash_key1, 1, true, value1);
     }
+    boost::filesystem::remove_all(dbPath);
     SECTION("db cleared") {
         CheckpointStorage storage(dbPath);
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
+    boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, get") {
         CheckpointStorage storage(dbPath);
         saveVal(storage, value1, hash_key1, 1, true);
         incrementRef(storage, hash_key1, 2, true);
         getVal(storage, hash_key1, 2, true, value1);
     }
+    boost::filesystem::remove_all(dbPath);
     SECTION("save, delete, get") {
         CheckpointStorage storage(dbPath);
         saveVal(storage, value1, hash_key1, 1, true);
@@ -128,6 +131,7 @@ TEST_CASE("Save and get values") {
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
         getVal(storage, hash_key2, 1, true, value2);
     }
+    boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, delete, get") {
         CheckpointStorage storage(dbPath);
         saveVal(storage, value1, hash_key1, 1, true);
@@ -139,6 +143,7 @@ TEST_CASE("Save and get values") {
         getVal(storage, hash_key1, 1, true, value1);
         getVal(storage, hash_key2, 1, true, value2);
     }
+    boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, delete, get") {
         CheckpointStorage storage(dbPath);
         saveVal(storage, value1, hash_key1, 1, true);
@@ -151,6 +156,7 @@ TEST_CASE("Save and get values") {
         getVal(storage, hash_key1, 2, true, value1);
         getVal(storage, hash_key2, 1, true, value2);
     }
+    boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, get") {
         CheckpointStorage storage(dbPath);
         saveVal(storage, value1, hash_key1, 1, true);
@@ -160,6 +166,7 @@ TEST_CASE("Save and get values") {
         incrementRef(storage, hash_key1, 3, true);
         getVal(storage, hash_key1, 3, true, value1);
     }
+    boost::filesystem::remove_all(dbPath);
     SECTION("save, delete, increment, get") {
         CheckpointStorage storage(dbPath);
         saveVal(storage, value1, hash_key1, 1, true);
@@ -167,4 +174,5 @@ TEST_CASE("Save and get values") {
         incrementRef(storage, hash_key1, 0, false);
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
+    boost::filesystem::remove_all(dbPath);
 }

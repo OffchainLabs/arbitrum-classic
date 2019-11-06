@@ -22,11 +22,10 @@
 
 #include <catch2/catch.hpp>
 
-#include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 
 std::string current_path =
-    boost::filesystem::current_path().parent_path().generic_string() +
-    "/rocksDb";
+    boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void saveMessageStack(MachineStateSaver& saver,
                       MessageStack stack,
@@ -67,6 +66,7 @@ TEST_CASE("save messagestack") {
 
         saveMessageStack(saver, stack, 1, 1);
     }
+    boost::filesystem::remove_all(current_path);
     SECTION("empty stack, twice") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
@@ -77,6 +77,7 @@ TEST_CASE("save messagestack") {
         stack.checkpointState(saver);
         saveMessageStack(saver, stack, 2, 2);
     }
+    boost::filesystem::remove_all(current_path);
     SECTION("stack with values") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
@@ -94,6 +95,7 @@ TEST_CASE("save messagestack") {
         stack.addMessage(msg);
         saveMessageStack(saver, stack, 1, 1);
     }
+    boost::filesystem::remove_all(current_path);
     SECTION("stack with values, twice") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
@@ -113,6 +115,7 @@ TEST_CASE("save messagestack") {
 
         saveMessageStack(saver, stack, 2, 2);
     }
+    boost::filesystem::remove_all(current_path);
 }
 
 TEST_CASE("Get saved messagestack") {
@@ -131,6 +134,7 @@ TEST_CASE("Get saved messagestack") {
                              results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 0);
     }
+    boost::filesystem::remove_all(current_path);
     SECTION("stack with values") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
@@ -155,6 +159,7 @@ TEST_CASE("Get saved messagestack") {
                              results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 1);
     }
+    boost::filesystem::remove_all(current_path);
     SECTION("save stack twice, with values") {
         TuplePool pool;
         CheckpointStorage storage(current_path);
@@ -180,4 +185,5 @@ TEST_CASE("Get saved messagestack") {
                              results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 1);
     }
+    boost::filesystem::remove_all(current_path);
 }

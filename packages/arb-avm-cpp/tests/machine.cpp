@@ -19,9 +19,9 @@
 
 #include <catch2/catch.hpp>
 
-#include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 
-auto save_path = execution_path.generic_string() + "/rocksDb";
+auto execution_path = boost::filesystem::current_path();
 auto save_path = execution_path.generic_string() + "/machineDb";
 auto contract_path =
     execution_path.parent_path().generic_string() + "/tests/contract.ao";
@@ -67,12 +67,12 @@ TEST_CASE("Checkpoint State") {
         CheckpointStorage storage(save_path);
         Machine machine;
 
-        machine.initializeMachine(contract_path);
         bool initialized = machine.initializeMachine(contract_path);
         REQUIRE(initialized);
 
         checkpointState(storage, machine);
     }
+    boost::filesystem::remove_all(save_path);
     SECTION("save twice") {
         CheckpointStorage storage(save_path);
         Machine machine;
@@ -80,6 +80,7 @@ TEST_CASE("Checkpoint State") {
 
         checkpointStateTwice(storage, machine);
     }
+    boost::filesystem::remove_all(save_path);
 }
 
 TEST_CASE("Delete machine checkpoint") {
@@ -91,6 +92,7 @@ TEST_CASE("Delete machine checkpoint") {
 
         deleteCheckpoint(storage, machine, results.storage_key);
     }
+    boost::filesystem::remove_all(save_path);
 }
 
 // TEST_CASE("Restore checkpoint fails") {

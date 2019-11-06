@@ -22,11 +22,10 @@
 
 #include <catch2/catch.hpp>
 
-#include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 
 std::string path =
-    boost::filesystem::current_path().parent_path().generic_string() +
-    "/rocksDb";
+    boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void saveValue(MachineStateSaver& saver,
                const value& val,
@@ -108,6 +107,7 @@ TEST_CASE("Save value") {
         auto code_point = CodePoint(1, Operation(), 0);
         saveValue(saver, code_point, 1, true);
     }
+    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save tuple") {
@@ -134,6 +134,7 @@ TEST_CASE("Save tuple") {
         saveTuple(saver, tuple, 1, true);
         saveTuple(saver, tuple, 2, true);
     }
+    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save and get value") {
@@ -151,6 +152,7 @@ TEST_CASE("Save and get value") {
         saveValue(saver, tuple, 1, true);
         getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -166,6 +168,7 @@ TEST_CASE("Save and get value") {
         saveValue(saver, tuple, 1, true);
         getValue(fetcher, hash_key, 1, tup_hash, TUPLE, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save num") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -180,6 +183,7 @@ TEST_CASE("Save and get value") {
         saveValue(saver, num, 1, true);
         getValue(fetcher, hash_key, 1, num_hash, NUM, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save codepoint") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -195,6 +199,7 @@ TEST_CASE("Save and get value") {
         saveValue(saver, code_point, 1, true);
         getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
     }
+    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save and get tuple values") {
@@ -214,6 +219,7 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save codepoint tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -232,6 +238,7 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save codepoint tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -250,6 +257,7 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save nested tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -266,6 +274,7 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save multiple valued tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -286,6 +295,7 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save multiple valued tuple, saveValue()") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -306,6 +316,7 @@ TEST_CASE("Save and get tuple values") {
 
         getTupleValues(fetcher, hash_key, hashes);
     }
+    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Save And Get Tuple") {
@@ -324,6 +335,7 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver, tuple, 1, true);
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save codepoint in tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -340,6 +352,7 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver, tuple, 1, true);
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save 1 num tuple twice") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -357,6 +370,7 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver2, tuple, 2, true);
         getTuple(fetcher, hash_key, 2, tup_hash, 1, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save 2 num tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -373,6 +387,7 @@ TEST_CASE("Save And Get Tuple") {
         saveTuple(saver, tuple, 1, true);
         getTuple(fetcher, hash_key, 1, tup_hash, 2, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save tuple in tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -393,6 +408,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
         getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save 2 tuples in tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -418,6 +434,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(fetcher, inner_hash_key, 1, inner_tup_hash, 1, true);
         getTuple(fetcher, inner_hash_key2, 1, inner_tup_hash2, 1, true);
     }
+    boost::filesystem::remove_all(path);
     SECTION("save saved tuple in tuple") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -440,6 +457,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(fetcher, hash_key, 1, tup_hash, 1, true);
         getTuple(fetcher, inner_hash_key, 2, inner_tup_hash, 1, true);
     }
+    boost::filesystem::remove_all(path);
 }
 
 void saveState(MachineStateSaver& saver,
@@ -709,6 +727,7 @@ TEST_CASE("Save Machinestatedata") {
 
         saveState(saver, data_values, checkpoint_key);
     }
+    boost::filesystem::remove_all(path);
     SECTION("with values") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -726,6 +745,7 @@ TEST_CASE("Save Machinestatedata") {
 
         saveState(saver, state_data, checkpoint_key);
     }
+    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Get Machinestate data") {
@@ -748,6 +768,7 @@ TEST_CASE("Get Machinestate data") {
         saver.commitTransaction();
         getSavedState(fetcher, checkpoint_key, data_values, 1, keys);
     }
+    boost::filesystem::remove_all(path);
     SECTION("with values") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -769,6 +790,7 @@ TEST_CASE("Get Machinestate data") {
         saveState(saver, state_data, checkpoint_key);
         getSavedState(fetcher, checkpoint_key, state_data, 1, keys);
     }
+    boost::filesystem::remove_all(path);
 }
 
 TEST_CASE("Delete checkpoint") {
@@ -791,6 +813,7 @@ TEST_CASE("Delete checkpoint") {
 
         deleteCheckpoint(storage, fetcher, checkpoint_key, hash_keys);
     }
+    boost::filesystem::remove_all(path);
     SECTION("with actual state values") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -813,6 +836,7 @@ TEST_CASE("Delete checkpoint") {
 
         deleteCheckpoint(storage, fetcher, checkpoint_key, hash_keys);
     }
+    boost::filesystem::remove_all(path);
     SECTION("delete checkpoint saved twice") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -836,6 +860,7 @@ TEST_CASE("Delete checkpoint") {
 
         deleteCheckpointSavedTwice(storage, fetcher, checkpoint_key, hash_keys);
     }
+    boost::filesystem::remove_all(path);
     SECTION("delete checkpoint saved twice, reordered") {
         TuplePool pool;
         CheckpointStorage storage(path);
@@ -862,4 +887,5 @@ TEST_CASE("Delete checkpoint") {
         deleteCheckpointSavedTwiceReordered(storage, fetcher, checkpoint_key,
                                             hash_keys);
     }
+    boost::filesystem::remove_all(path);
 }

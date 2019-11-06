@@ -20,6 +20,9 @@
 #include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/checkpoint/transaction.hpp>
 
+#include <avm/value/codepoint.hpp>
+#include <avm/value/tuple.hpp>
+
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -31,13 +34,17 @@ CheckpointStorage::CheckpointStorage(std::string db_path) {
 
     txn_db_path = std::move(db_path);
     rocksdb::TransactionDB* db = nullptr;
-    rocksdb::TransactionDB::Open(options, txn_options, txn_db_path, &db);
+    auto status =
+        rocksdb::TransactionDB::Open(options, txn_options, txn_db_path, &db);
+    if (!status.ok()) {
+        std::cout << "db status " << status.ToString() << std::endl;
+    }
+    assert(status.ok());
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
 }
 
 CheckpointStorage::~CheckpointStorage() {
     txn_db->Close();
-    DestroyDB(txn_db_path, rocksdb::Options());
 }
 
 GetResults CheckpointStorage::getValue(

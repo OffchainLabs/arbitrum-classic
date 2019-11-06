@@ -25,11 +25,10 @@
 
 #include <catch2/catch.hpp>
 
-#include <boost/dll.hpp>
+#include <boost/filesystem.hpp>
 
 std::string dbpath =
-    boost::filesystem::current_path().parent_path().generic_string() +
-    "/rocksDb";
+    boost::filesystem::current_path().generic_string() + "/machineDb";
 
 void initializeDatastack(MachineStateSaver& msSaver,
                          MachineStateFetcher& fetcher,
@@ -125,6 +124,7 @@ TEST_CASE("Initialize datastack") {
 
         initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 0);
     }
+    boost::filesystem::remove_all(dbpath);
 
     SECTION("push empty tuple") {
         TuplePool pool;
@@ -143,6 +143,7 @@ TEST_CASE("Initialize datastack") {
 
         initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 1);
     }
+    boost::filesystem::remove_all(dbpath);
 
     SECTION("push num, tuple") {
         TuplePool pool;
@@ -169,6 +170,7 @@ TEST_CASE("Initialize datastack") {
 
         initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 2);
     }
+    boost::filesystem::remove_all(dbpath);
     SECTION("push codepoint, tuple") {
         TuplePool pool;
         CheckpointStorage storage(dbpath);
@@ -194,6 +196,7 @@ TEST_CASE("Initialize datastack") {
 
         initializeDatastack(saver, fetcher, results.storage_key, stack_hash, 2);
     }
+    boost::filesystem::remove_all(dbpath);
 }
 
 TEST_CASE("Save datastack") {
@@ -204,6 +207,7 @@ TEST_CASE("Save datastack") {
 
         saveDataStack(datastack, hash_key_vector);
     }
+    boost::filesystem::remove_all(dbpath);
     SECTION("save empty twice") {
         Datastack datastack;
         std::vector<unsigned char> hash_key_vector;
@@ -211,6 +215,7 @@ TEST_CASE("Save datastack") {
 
         saveDataStackTwice(datastack, hash_key_vector);
     }
+    boost::filesystem::remove_all(dbpath);
     SECTION("save with values") {
         TuplePool pool;
 
@@ -230,6 +235,7 @@ TEST_CASE("Save datastack") {
 
         saveDataStack(datastack, hash_key_vector);
     }
+    boost::filesystem::remove_all(dbpath);
     SECTION("save with values, twice") {
         TuplePool pool;
 
@@ -249,6 +255,7 @@ TEST_CASE("Save datastack") {
 
         saveDataStackTwice(datastack, hash_key_vector);
     }
+    boost::filesystem::remove_all(dbpath);
 }
 
 TEST_CASE("Save and get datastack") {
@@ -277,6 +284,7 @@ TEST_CASE("Save and get datastack") {
         saveAndGetDataStack(saver, fetcher, datastack, hash_key_vector,
                             tup_rep.calculateHash());
     }
+    boost::filesystem::remove_all(dbpath);
     SECTION("save datastack twice and get") {
         TuplePool pool;
         CheckpointStorage storage(dbpath);
@@ -302,4 +310,5 @@ TEST_CASE("Save and get datastack") {
         saveTwiceAndGetDataStack(saver, fetcher, datastack, hash_key_vector,
                                  tup_rep.calculateHash());
     }
+    boost::filesystem::remove_all(dbpath);
 }
