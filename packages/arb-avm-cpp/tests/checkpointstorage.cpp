@@ -31,8 +31,8 @@ std::vector<unsigned char> hash_key2 = {2};
 std::vector<unsigned char> value1 = {'v', 'a', 'l', 'u', 'e'};
 std::vector<unsigned char> value2 = {'v', 'a', 'l', 'u', 'e', '2'};
 
-auto dbPath =
-    boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
+auto dbPath = boost::filesystem::current_path().parent_path().generic_string() +
+              "/rocksDb";
 
 void saveVal(CheckpointStorage& storage,
              std::vector<unsigned char> val,

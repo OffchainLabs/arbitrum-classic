@@ -28,7 +28,8 @@
 #include <boost/dll.hpp>
 
 std::string dbpath =
-    boost::dll::program_location().parent_path().generic_string() + "/rocksDb";
+    boost::filesystem::current_path().parent_path().generic_string() +
+    "/rocksDb";
 
 void initializeDatastack(MachineStateSaver& msSaver,
                          MachineStateFetcher& fetcher,

@@ -21,11 +21,10 @@
 
 #include <boost/dll.hpp>
 
-auto execution_path = boost::dll::program_location().parent_path();
+auto execution_path = boost::filesystem::current_path().parent_path();
 auto save_path = execution_path.generic_string() + "/rocksDb";
 auto contract_path =
-    execution_path.parent_path().parent_path().generic_string() +
-    "/tests/contract.ao";
+    execution_path.parent_path().generic_string() + "/tests/contract.ao";
 
 void checkpointState(CheckpointStorage& storage, Machine& machine) {
     auto results = machine.checkpoint(storage);
@@ -67,6 +66,8 @@ TEST_CASE("Checkpoint State") {
     SECTION("default") {
         CheckpointStorage storage(save_path);
         Machine machine;
+
+        std::cout << contract_path << std::endl;
         machine.initializeMachine(contract_path);
 
         checkpointState(storage, machine);

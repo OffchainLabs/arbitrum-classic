@@ -48,7 +48,7 @@ ExternalProject_Add(rocksdb
 
 ExternalProject_Get_Property(rocksdb BINARY_DIR)
 set(ROCKSDB_LIBRARIES
-    ${BINARY_DIR}/librocksdb.a)
+    ${CMAKE_CURRENT_BINARY_DIR}/rocksdb/librocksdb.a)
 
 link_directories(${BINARY_DIR})
 
