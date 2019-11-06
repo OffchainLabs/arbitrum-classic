@@ -21,8 +21,8 @@
 
 #include <boost/dll.hpp>
 
-auto execution_path = boost::filesystem::current_path().parent_path();
 auto save_path = execution_path.generic_string() + "/rocksDb";
+auto save_path = execution_path.generic_string() + "/machineDb";
 auto contract_path =
     execution_path.parent_path().generic_string() + "/tests/contract.ao";
 
@@ -68,6 +68,8 @@ TEST_CASE("Checkpoint State") {
         Machine machine;
 
         machine.initializeMachine(contract_path);
+        bool initialized = machine.initializeMachine(contract_path);
+        REQUIRE(initialized);
 
         checkpointState(storage, machine);
     }
