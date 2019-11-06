@@ -72,6 +72,8 @@ jobs:
             - packages/arb-avm-cpp/rocksdb
             - packages/arb-avm-cpp/build/rocksdb
             - packages/arb-avm-cpp/build/rocksdb-prefix
+            - packages/arb-avm-cpp/ci/rocksdb
+            - packages/arb-avm-cpp/ci/rocksdb-prefix
           key: rocksdb-v2-{{ .Branch }}
       - run:
           name: test arb-avm-cpp
