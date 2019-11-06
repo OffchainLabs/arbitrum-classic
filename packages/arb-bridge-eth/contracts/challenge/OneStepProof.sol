@@ -748,6 +748,9 @@ library OneStepProof {
         pure
         returns (bool)
     {
+        if (!val1.isCodePoint()) {
+            return false;
+        }
         if (!val2.isInt()) {
             return false;
         }
@@ -1505,10 +1508,10 @@ library OneStepProof {
         //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
         // );
         require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
-        // );
+         require(
+             _data.afterHash == endMachine.hash(),
+             string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
+         );
         require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;

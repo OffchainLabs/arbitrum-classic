@@ -155,7 +155,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		}
 		stepsRan++
 
-		if i > 270 {
+		if i > 55 {
 			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
 			//balance := m.balance.Clone()
 			//_ = balance.SpendAllTokens(spentBalance)
