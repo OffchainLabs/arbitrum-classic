@@ -47,8 +47,7 @@ ExternalProject_Add(rocksdb
 )
 
 ExternalProject_Get_Property(rocksdb BINARY_DIR)
-set(ROCKSDB_LIBRARIES
-    ${CMAKE_CURRENT_BINARY_DIR}/rocksdb/librocksdb.a)
+set(ROCKSDB_LIBRARIES ${BINARY_DIR}/${CMAKE_CFG_INTDIR}/librocksdb.a)
 
 link_directories(${BINARY_DIR})
 
@@ -56,7 +55,7 @@ set(ROCKSDB_FOUND TRUE)
 
 set(ROCKSDB_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/rocksdb/include)
-    
+
 message(STATUS "Found RocksDB library: ${ROCKSDB_LIBRARIES}")
 message(STATUS "Found RocksDB includes: ${ROCKSDB_INCLUDE_DIRS}")
 
