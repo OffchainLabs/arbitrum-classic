@@ -150,7 +150,6 @@ DbResult<value> MachineStateFetcher::getValue(
             }
             default: {
                 throw std::runtime_error("HASH_ONLY item");
-
                 return DbResult<value>();
             }
         }

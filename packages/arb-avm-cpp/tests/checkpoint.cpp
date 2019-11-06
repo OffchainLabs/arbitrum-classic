@@ -199,6 +199,21 @@ TEST_CASE("Save and get value") {
         saveValue(saver, code_point, 1, true);
         getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
     }
+    SECTION("save err codepoint") {
+        TuplePool pool;
+        CheckpointStorage storage(path);
+        std::vector<CodePoint> code;
+        CodePoint code_point = getErrCodePoint();
+        code.push_back(code_point);
+
+        auto saver = MachineStateSaver(storage.makeTransaction());
+        auto fetcher = MachineStateFetcher(storage, &pool, code);
+
+        auto hash_key = GetHashKey(code_point);
+        auto cp_hash = hash(code_point);
+        saveValue(saver, code_point, 1, true);
+        getValue(fetcher, hash_key, 1, cp_hash, CODEPT, true);
+    }
     boost::filesystem::remove_all(path);
 }
 

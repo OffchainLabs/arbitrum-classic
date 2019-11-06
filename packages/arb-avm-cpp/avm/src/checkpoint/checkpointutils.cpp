@@ -169,7 +169,7 @@ CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
     auto buff = reinterpret_cast<const char*>(&val[1]);
     auto pc_val = deserialize_int64(buff);
     if (pc_val == pc_default) {
-        return CodePoint(-1, Operation(static_cast<OpCode>(0)), 0);
+        return getErrCodePoint();
     } else {
         return code[pc_val];
     }

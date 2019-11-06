@@ -62,6 +62,8 @@ struct CodePoint {
     }
 };
 
+CodePoint getErrCodePoint();
+
 uint256_t hash(const CodePoint& cp);
 
 bool operator==(const CodePoint& val1, const CodePoint& val2);
