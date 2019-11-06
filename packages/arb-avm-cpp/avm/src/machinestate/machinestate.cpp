@@ -148,7 +148,7 @@ bool MachineState::deserialize(const char* bufptr) {
         ops.emplace_back(deserializeOperation(bufptr, *pool));
     }
     code = opsToCodePoints(ops);
-
+    errpc = CodePoint(0, Operation(static_cast<OpCode>(0)), 0);
     staticVal = deserialize_value(bufptr, *pool);
     pc = 0;
     return true;
