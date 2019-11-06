@@ -95,14 +95,15 @@ TEST_CASE("Delete machine checkpoint") {
     boost::filesystem::remove_all(save_path);
 }
 
-// TEST_CASE("Restore checkpoint fails") {
-//    SECTION("default") {
-//        TuplePool pool;
-//        CheckpointStorage storage(save_path);
-//        Machine machine;
-//        machine.initializeMachine(test_contract_path);
-//        auto results = machine.checkpoint(storage);
-//
-//        restoreCheckpoint(storage, machine, results.storage_key);
-//    }
-//}
+TEST_CASE("Restore checkpoint") {
+    SECTION("default") {
+        TuplePool pool;
+        CheckpointStorage storage(save_path);
+        Machine machine;
+        machine.initializeMachine(test_contract_path);
+        auto results = machine.checkpoint(storage);
+
+        restoreCheckpoint(storage, machine, results.storage_key);
+    }
+    boost::filesystem::remove_all(save_path);
+}
