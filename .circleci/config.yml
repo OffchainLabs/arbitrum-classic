@@ -41,8 +41,8 @@ jobs:
             - python-packages-v1-
       - restore_cache:
           keys:
-            - rocksdb-v1-{{ .Branch }}
-            - rocksdb-v1-
+            - rocksdb-v2-{{ .Branch }}
+            - rocksdb-v2-
       - run:
           name: build all
           command: |
@@ -71,7 +71,8 @@ jobs:
           paths:
             - packages/arb-avm-cpp/rocksdb
             - packages/arb-avm-cpp/build/rocksdb
-          key: rocksdb-v1-{{ .Branch }}
+            - packages/arb-avm-cpp/build/rocksdb-prefix
+          key: rocksdb-v2-{{ .Branch }}
       - run:
           name: test arb-avm-cpp
           command: |
