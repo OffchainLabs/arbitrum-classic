@@ -10,5 +10,5 @@ networkx==2.3
 parsimonious==0.8.1
 pycryptodome==3.8.2
 pyevmasm==0.2.1
-six==1.12.0
+six==1.13.0
 toolz==0.10.0
