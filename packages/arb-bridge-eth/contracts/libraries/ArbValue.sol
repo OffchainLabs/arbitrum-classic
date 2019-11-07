@@ -31,7 +31,7 @@ library ArbValue {
 
     struct CodePoint {
         uint8 opcode;
-        uint256 nextCodePoint;
+        bytes32 nextCodePoint;
         bool immediate;
         bytes32 immediateVal;
     }
@@ -56,7 +56,7 @@ library ArbValue {
             uint8 opcode,
             bool immediate,
             bytes32 immediateVal,
-            uint256 nextCodePoint
+            bytes32 nextCodePoint
     ) public pure returns (bytes32) {
         if (immediate) {
             return keccak256(
@@ -297,7 +297,7 @@ library ArbValue {
             require(valid == 0, "Marshalled value must be valid");
             immediateVal = value.hash().hash;
         }
-        uint256 nextHash = data.toUint(offset);
+        bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
         if (immediateType == 1) {
             return (offset, CodePoint(opCode, nextHash, true, immediateVal));
