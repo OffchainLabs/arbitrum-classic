@@ -198,7 +198,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::RPUSH, {}},
     {OpCode::RSET, {false}},
     {OpCode::JUMP, {false}},
-    {OpCode::CJUMP, {false, true}},
+    {OpCode::CJUMP, {true, true}},
     {OpCode::STACKEMPTY, {}},
     {OpCode::PCPUSH, {}},
     {OpCode::AUXPUSH, {false}},

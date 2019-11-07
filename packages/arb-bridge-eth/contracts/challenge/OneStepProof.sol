@@ -749,13 +749,20 @@ library OneStepProof {
         returns (bool)
     {
         if (!val1.isCodePoint()) {
+            require(val1.isCodePoint(), "val1 is not a CodePoint");
             return false;
         }
         if (!val2.isInt()) {
+            require(val2.isInt(), "val1 is not an int");
             return false;
         }
         if (val2.intVal != 0) {
             machine.instructionStackHash = val1.hash();
+        }
+        if  (val1.cpVal.opcode == 56) {
+            require(!val1.isCodePoint(), string(abi.encodePacked("val1 is CodePoint ", DebugPrint.uint2str(val1.cpVal.opcode), " ",
+                       DebugPrint.uint2str(val1.cpVal.nextCodePoint), " immedVal = ", DebugPrint.bytes32string(val1.cpVal.immediateVal), " val2 = ", DebugPrint.uint2str(val2.intVal),
+                       " instHash = ", DebugPrint.bytes32string(machine.instructionStackHash.hash))));
         }
         return true;
     }
@@ -1286,6 +1293,7 @@ library OneStepProof {
         uint i = 0;
         for (i = immediate; i < popCount; i++) {
             (valid, offset, stackVals[i]) = ArbValue.deserializeValue(_data.proof, offset);
+            require(valid == 0, string(abi.encodePacked("Proof had bad stack value: i = ", DebugPrint.uint2str(i), " popCount = ", DebugPrint.uint2str(popCount))));
             require(valid == 0, "Proof had bad stack value");
         }
         if (stackVals.length > 0) {
@@ -1496,6 +1504,7 @@ library OneStepProof {
         }
 
         if (!correct) {
+            require(correct, "execute opCode NOT correct");
             if (endMachine.errHandler.hash == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {

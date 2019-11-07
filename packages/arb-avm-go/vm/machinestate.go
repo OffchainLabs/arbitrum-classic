@@ -385,11 +385,21 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
 		return err
 	}
+	log.Println("Marshaling stackVals")
 	for _, val := range stackVals {
+		log.Printf("marshaling type %v value = %v ", val.InternalTypeCode(), val)
+		//if _,ok :=val.(value.CodePointValue); ok {
+		//	log.Println("*************marshaling hash only of CodePointValue")
+		//	if err := value.MarshalValueForProof(value.NewHashOnlyValueFromValue(val), wr); err != nil {
+		//		return err
+		//	}
+		//} else {
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err
 		}
+		//}
 	}
+	log.Print("\n")
 	for _, val := range auxStackVals {
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err

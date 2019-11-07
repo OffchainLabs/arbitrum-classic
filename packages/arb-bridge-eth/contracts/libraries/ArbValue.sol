@@ -33,7 +33,7 @@ library ArbValue {
         uint8 opcode;
         uint256 nextCodePoint;
         bool immediate;
-        uint256 immediateVal;
+        bytes32 immediateVal;
     }
 
     function isTupleType(uint8 typeCode) private pure returns (bool) {
@@ -55,7 +55,7 @@ library ArbValue {
     function hashCodePoint(
             uint8 opcode,
             bool immediate,
-            uint256 immediateVal,
+            bytes32 immediateVal,
             uint256 nextCodePoint
     ) public pure returns (bytes32) {
         if (immediate) {
@@ -289,10 +289,13 @@ library ArbValue {
         offset ++;
         uint8 opCode = uint8(data[offset]);
         offset++;
-        uint256 immediateVal;
+        bytes32 immediateVal;
         if (immediateType == 1) {
-            immediateVal = data.toUint(offset);
-            offset += 32;
+            uint valid;
+            Value memory value;
+            (valid, offset, value) = deserializeValue(data, offset);
+            require(valid == 0, "Marshalled value must be valid");
+            immediateVal = value.hash().hash;
         }
         uint256 nextHash = data.toUint(offset);
         offset += 32;

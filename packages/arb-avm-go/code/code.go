@@ -206,7 +206,7 @@ var InstructionStackPops = map[value.Opcode][]byte{
 	RSET:  {0},
 
 	JUMP:          {0},
-	CJUMP:         {0, 1},
+	CJUMP:         {1, 1},
 	STACKEMPTY:    {},
 	PCPUSH:        {},
 	AUXPUSH:       {0},

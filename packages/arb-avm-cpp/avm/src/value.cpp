@@ -109,7 +109,7 @@ void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
 
 void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf) {
     buf.push_back(CODEPT);
-    val.op.marshalShallow(buf);
+    val.op.marshalForProof(buf, false);
     std::array<unsigned char, 32> hashVal;
     to_big_endian(val.nextHash, hashVal.begin());
     buf.insert(buf.end(), hashVal.begin(), hashVal.end());

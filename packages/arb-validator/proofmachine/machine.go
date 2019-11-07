@@ -129,6 +129,9 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 	stepIncrease := int32(1)
 	stepsRan := 0
 	for i := int32(0); i < maxSteps; i += stepIncrease {
+		if i == 65 {
+			log.Println("step 65")
+		}
 		proof, err := m.MarshalForProof()
 		if err != nil {
 			log.Println("error marshaling")
@@ -155,7 +158,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		}
 		stepsRan++
 
-		if i > 55 {
+		if i > 64 {
 			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
 			//balance := m.balance.Clone()
 			//_ = balance.SpendAllTokens(spentBalance)
