@@ -52,6 +52,7 @@ const (
 type Machine interface {
 	Hash() [32]byte
 	Clone() Machine
+	PrintState()
 
 	CurrentStatus() Status
 	LastBlockReason() BlockReason
