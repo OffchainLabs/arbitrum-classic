@@ -16,6 +16,7 @@
 
 package testmachine
 
+import "C"
 import (
 	"bytes"
 	"fmt"
@@ -61,6 +62,13 @@ func (m *Machine) Hash() [32]byte {
 		log.Fatalln("Hash error at pc", m.gomachine.GetPC())
 	}
 	return h1
+}
+
+func (m *Machine) PrintState() {
+	log.Println("Cpp state")
+	m.cppmachine.PrintState()
+	log.Println("Go state")
+	m.gomachine.PrintState()
 }
 
 func (m *Machine) Clone() machine.Machine {

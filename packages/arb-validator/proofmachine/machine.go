@@ -20,13 +20,14 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"log"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"log"
-	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -68,6 +69,10 @@ func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress c
 
 func (m *Machine) Hash() [32]byte {
 	return m.machine.Hash()
+}
+
+func (m *Machine) PrintState() {
+	m.machine.PrintState()
 }
 
 func (m *Machine) Clone() machine.Machine {
@@ -183,6 +188,8 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 			if res.Cmp(big.NewInt(0)) == 0 {
 				log.Println("Proof valid")
 			} else {
+				log.Println("Machine ended with:")
+				m.PrintState()
 				log.Fatalln("Proof invalid")
 			}
 		}
