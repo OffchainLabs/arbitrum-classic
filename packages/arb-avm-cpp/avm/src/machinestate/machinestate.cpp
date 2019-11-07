@@ -318,185 +318,185 @@ BlockReason MachineState::runOp(OpCode opcode) {
             /*  Arithmetic Operations */
             /**************************/
         case OpCode::ADD:
-            MachineOperation::add(*this);
+            machineoperation::add(*this);
             break;
         case OpCode::MUL:
-            MachineOperation::mul(*this);
+            machineoperation::mul(*this);
             break;
         case OpCode::SUB:
-            MachineOperation::sub(*this);
+            machineoperation::sub(*this);
             break;
         case OpCode::DIV:
-            MachineOperation::div(*this);
+            machineoperation::div(*this);
             break;
         case OpCode::SDIV:
-            MachineOperation::sdiv(*this);
+            machineoperation::sdiv(*this);
             break;
         case OpCode::MOD:
-            MachineOperation::mod(*this);
+            machineoperation::mod(*this);
             break;
         case OpCode::SMOD:
-            MachineOperation::smod(*this);
+            machineoperation::smod(*this);
             break;
         case OpCode::ADDMOD:
-            MachineOperation::addmod(*this);
+            machineoperation::addmod(*this);
             break;
         case OpCode::MULMOD:
-            MachineOperation::mulmod(*this);
+            machineoperation::mulmod(*this);
             break;
         case OpCode::EXP:
-            MachineOperation::exp(*this);
+            machineoperation::exp(*this);
             break;
             /******************************************/
             /*  Comparison & Bitwise Logic Operations */
             /******************************************/
         case OpCode::LT:
-            MachineOperation::lt(*this);
+            machineoperation::lt(*this);
             break;
         case OpCode::GT:
-            MachineOperation::gt(*this);
+            machineoperation::gt(*this);
             break;
         case OpCode::SLT:
-            MachineOperation::slt(*this);
+            machineoperation::slt(*this);
             break;
         case OpCode::SGT:
-            MachineOperation::sgt(*this);
+            machineoperation::sgt(*this);
             break;
         case OpCode::EQ:
-            MachineOperation::eq(*this);
+            machineoperation::eq(*this);
             break;
         case OpCode::ISZERO:
-            MachineOperation::iszero(*this);
+            machineoperation::iszero(*this);
             break;
         case OpCode::BITWISE_AND:
-            MachineOperation::bitwiseAnd(*this);
+            machineoperation::bitwiseAnd(*this);
             break;
         case OpCode::BITWISE_OR:
-            MachineOperation::bitwiseOr(*this);
+            machineoperation::bitwiseOr(*this);
             break;
         case OpCode::BITWISE_XOR:
-            MachineOperation::bitwiseXor(*this);
+            machineoperation::bitwiseXor(*this);
             break;
         case OpCode::BITWISE_NOT:
-            MachineOperation::bitwiseNot(*this);
+            machineoperation::bitwiseNot(*this);
             break;
         case OpCode::BYTE:
-            MachineOperation::byte(*this);
+            machineoperation::byte(*this);
             break;
         case OpCode::SIGNEXTEND:
-            MachineOperation::signExtend(*this);
+            machineoperation::signExtend(*this);
             break;
 
             /***********************/
             /*  Hashing Operations */
             /***********************/
         case OpCode::HASH:
-            MachineOperation::hashOp(*this);
+            machineoperation::hashOp(*this);
             break;
 
         case OpCode::TYPE:
-            MachineOperation::typeOp(*this);
+            machineoperation::typeOp(*this);
             break;
 
             /***********************************************/
             /*  Stack, Memory, Storage and Flow Operations */
             /***********************************************/
         case OpCode::POP:
-            MachineOperation::pop(*this);
+            machineoperation::pop(*this);
             break;
         case OpCode::SPUSH:
-            MachineOperation::spush(*this);
+            machineoperation::spush(*this);
             break;
         case OpCode::RPUSH:
-            MachineOperation::rpush(*this);
+            machineoperation::rpush(*this);
             break;
         case OpCode::RSET:
-            MachineOperation::rset(*this);
+            machineoperation::rset(*this);
             break;
         case OpCode::JUMP:
-            MachineOperation::jump(*this);
+            machineoperation::jump(*this);
             break;
         case OpCode::CJUMP:
-            MachineOperation::cjump(*this);
+            machineoperation::cjump(*this);
             break;
         case OpCode::STACKEMPTY:
-            MachineOperation::stackEmpty(*this);
+            machineoperation::stackEmpty(*this);
             break;
         case OpCode::PCPUSH:
-            MachineOperation::pcPush(*this);
+            machineoperation::pcPush(*this);
             break;
         case OpCode::AUXPUSH:
-            MachineOperation::auxPush(*this);
+            machineoperation::auxPush(*this);
             break;
         case OpCode::AUXPOP:
-            MachineOperation::auxPop(*this);
+            machineoperation::auxPop(*this);
             break;
         case OpCode::AUXSTACKEMPTY:
-            MachineOperation::auxStackEmpty(*this);
+            machineoperation::auxStackEmpty(*this);
             break;
         case OpCode::NOP:
             ++pc;
             break;
         case OpCode::ERRPUSH:
-            MachineOperation::errPush(*this);
+            machineoperation::errPush(*this);
             break;
         case OpCode::ERRSET:
-            MachineOperation::errSet(*this);
+            machineoperation::errSet(*this);
             break;
             /****************************************/
             /*  Duplication and Exchange Operations */
             /****************************************/
         case OpCode::DUP0:
-            MachineOperation::dup0(*this);
+            machineoperation::dup0(*this);
             break;
         case OpCode::DUP1:
-            MachineOperation::dup1(*this);
+            machineoperation::dup1(*this);
             break;
         case OpCode::DUP2:
-            MachineOperation::dup2(*this);
+            machineoperation::dup2(*this);
             break;
         case OpCode::SWAP1:
-            MachineOperation::swap1(*this);
+            machineoperation::swap1(*this);
             break;
         case OpCode::SWAP2:
-            MachineOperation::swap2(*this);
+            machineoperation::swap2(*this);
             break;
             /*********************/
             /*  Tuple Operations */
             /*********************/
         case OpCode::TGET:
-            MachineOperation::tget(*this);
+            machineoperation::tget(*this);
             break;
         case OpCode::TSET:
-            MachineOperation::tset(*this);
+            machineoperation::tset(*this);
             break;
         case OpCode::TLEN:
-            MachineOperation::tlen(*this);
+            machineoperation::tlen(*this);
             break;
             /***********************/
             /*  Logging Operations */
             /***********************/
         case OpCode::BREAKPOINT:
-            return MachineOperation::breakpoint(*this);
+            return machineoperation::breakpoint(*this);
         case OpCode::LOG:
-            MachineOperation::log(*this);
+            machineoperation::log(*this);
             break;
         case OpCode::DEBUG:
-            MachineOperation::debug(*this);
+            machineoperation::debug(*this);
             break;
             /**********************/
             /*  System Operations */
             /**********************/
         case OpCode::SEND:
-            return MachineOperation::send(*this);
+            return machineoperation::send(*this);
         case OpCode::NBSEND:
-            MachineOperation::nbsend(*this);
+            machineoperation::nbsend(*this);
             break;
         case OpCode::GETTIME:
-            MachineOperation::getTime(*this);
+            machineoperation::getTime(*this);
             break;
         case OpCode::INBOX:
-            return MachineOperation::inboxOp(*this);
+            return machineoperation::inboxOp(*this);
         case OpCode::ERROR:
             state = Status::Error;
             break;

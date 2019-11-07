@@ -18,7 +18,7 @@
 
 #include <avm/machinestate/machinestate.hpp>
 
-namespace MachineOperation {
+namespace machineoperation {
 
 uint256_t& assumeInt(value& val) {
     auto aNum = nonstd::get_if<uint256_t>(&val);
@@ -606,4 +606,4 @@ BlockReason inboxOp(MachineState& m) {
         return NotBlocked{};
     }
 }
-}  // namespace MachineOperation
+}  // namespace machineoperation

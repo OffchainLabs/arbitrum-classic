@@ -21,7 +21,7 @@
 
 struct MachineState;
 
-namespace MachineOperation {
+namespace machineoperation {
 void add(MachineState& m);
 void mul(MachineState& m);
 void sub(MachineState& m);
@@ -74,6 +74,6 @@ BlockReason send(MachineState& m);
 void nbsend(MachineState& m);
 void getTime(MachineState& m);
 BlockReason inboxOp(MachineState& m);
-}  // namespace MachineOperation
+}  // namespace machineoperation
 
 #endif /* machineoperation_hpp */
