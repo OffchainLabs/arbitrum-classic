@@ -7,7 +7,6 @@ import (
 	jsonenc "encoding/json"
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -95,11 +94,12 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		t.Errorf("setupValidators LoadMachineFromFile error %v", err)
 		return err
 	}
-	//mach := basemach
-	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL)
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
-	}
+	mach := basemach
+	//proofbounds := protocol.TimeBounds{25,30}
+	//mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	//if err != nil {
+	//	t.Fatal("Loader Error: ", err)
+	//}
 	t.Log("creating coordinator")
 	// Validator creation
 	val1, err := ethvalidator.NewValidator(key1, connectionInfo, ethURL)

@@ -18,7 +18,7 @@ package machine
 
 import (
 	"errors"
-
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
@@ -53,6 +53,7 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 	if nsteps < slices {
 		slices = nsteps
 	}
+	fmt.Println("nsteps=", nsteps, " slices=", slices)
 	sliceSize := nsteps / slices
 	defenders := make([]AssertionDefender, 0, slices)
 	m := ad.initState.Clone()

@@ -39,16 +39,10 @@ type Machine struct {
 	fromAddress common.Address
 	osp         *ethbridge.OneStepProof
 	client      *ethclient.Client
+	proofbounds protocol.TimeBounds
 }
 
-type ProofMachData struct {
-}
-
-func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string) (*Machine, error) {
-	//tm, err := testmachine.New(codeFile, warnMode)
-	//if err != nil {
-	//	err = fmt.Errorf("Test machine error: %v ", err)
-	//}
+func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds protocol.TimeBounds) (*Machine, error) {
 	client, err := ethclient.Dial(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
@@ -64,6 +58,7 @@ func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress c
 		fromAddress: keyAddr,
 		osp:         osp,
 		client:      client,
+		proofbounds: proofbounds,
 	}, err
 }
 
@@ -76,7 +71,7 @@ func (m *Machine) PrintState() {
 }
 
 func (m *Machine) Clone() machine.Machine {
-	return &Machine{m.machine.Clone(), m.fromAddress, m.osp, m.client}
+	return &Machine{m.machine.Clone(), m.fromAddress, m.osp, m.client, m.proofbounds}
 }
 
 func (m *Machine) CurrentStatus() machine.Status {
@@ -108,52 +103,35 @@ func (m *Machine) DeliverOnchainMessage() {
 }
 
 func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
-	log.Println("***************proofmachine SendOffchainMessages")
 	m.machine.SendOffchainMessages(msgs)
 }
 
-//func (m *Machine) ProofMachineData(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, balance *protocol.BalanceTracker) {
-//	client, err := ethclient.Dial(ethURL)
-//	if err != nil {
-//		log.Fatal("Connection failure ", err)
-//	}
-//	osp, err := ethbridge.NewOneStepProof(contractAddress, client)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	keyAddr := crypto.PubkeyToAddress(key.PublicKey)
-//	//pd := ProofMachData{
-//	m.fromAddress = keyAddr
-//	m.osp = osp
-//	m.client = client
-//}
-
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+	//if timeBounds[0] < m.proofbounds[0] || timeBounds[1] > m.proofbounds[1] {
+	//	return m.machine.ExecuteAssertion(maxSteps, timeBounds)
+	//}
 	a := &protocol.Assertion{}
 	stepIncrease := int32(1)
 	stepsRan := 0
 	for i := int32(0); i < maxSteps; i += stepIncrease {
-		if i == 65 {
-			log.Println("step 65")
-		}
-		proof, err := m.MarshalForProof()
-		if err != nil {
-			log.Println("error marshaling")
+		var proof []byte
+		var err error
+		// only marshall if we are going to validate (see below)
+		if i >= int32(m.proofbounds[0]) && i <= int32(m.proofbounds[1]) {
+			proof, err = m.MarshalForProof()
+			if err != nil {
+				log.Println("error marshaling")
+			}
 		}
 		steps := int32(stepIncrease)
 		beforeHash := m.Hash()
 		inboxHash := m.InboxHash()
-
 		a1 := m.machine.ExecuteAssertion(steps, timeBounds)
 		a.AfterHash = a1.AfterHash
 		a.NumSteps += a1.NumSteps
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
-		//if m.testmachine.CurrentStatus() != machine.Extensive {
-		//	fmt.Println(" machine status = ", m.testmachine.CurrentStatus())
-		//	break
-		//}
+
 		if a1.NumSteps == 0 {
 			fmt.Println(" machine halted ")
 			break
@@ -163,10 +141,9 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		}
 		stepsRan++
 
-		if i > 64 {
+		// only marshall and validate if step is within proofbounds
+		if i >= int32(m.proofbounds[0]) && i <= int32(m.proofbounds[1]) {
 			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
-			//balance := m.balance.Clone()
-			//_ = balance.SpendAllTokens(spentBalance)
 			callOpts := &bind.CallOpts{
 				Pending: true,
 				From:    m.fromAddress,
@@ -195,8 +172,8 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 				log.Fatalln("Proof invalid")
 			}
 		}
-		fmt.Println("Proof mode ran ", stepsRan, " steps")
 	}
+	fmt.Println("Proof mode ran ", stepsRan, " steps")
 	return a
 }
 

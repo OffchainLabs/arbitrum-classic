@@ -38,7 +38,7 @@ import (
 )
 
 func TestValidateProof(t *testing.T) {
-	//var mach machine.Machine
+	t.Skip("Skipping proof test for now")
 	var connectionInfo ethbridge.ArbAddresses
 
 	bridge_eth_addresses := "bridge_eth_addresses.json"
@@ -68,7 +68,8 @@ func TestValidateProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL)
+	proofbounds := protocol.TimeBounds{0, 10}
+	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}

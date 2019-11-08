@@ -21,7 +21,6 @@ import (
 	jsonenc "encoding/json"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -83,11 +82,12 @@ func TestChallenge(t *testing.T) {
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}
-	//machine := basemachine
-	machine, err := proofmachine.New(contract, basemachine, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL)
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
-	}
+	machine := basemachine
+	//proofbounds := protocol.TimeBounds{25,30}
+	//machine, err := proofmachine.New(contract, basemachine, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	//if err != nil {
+	//	t.Fatal("Loader Error: ", err)
+	//}
 
 	auth1 := bind.NewKeyedTransactor(key1)
 	auth2 := bind.NewKeyedTransactor(key2)
