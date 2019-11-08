@@ -245,7 +245,7 @@ func TestChallenge(t *testing.T) {
 				t.Log(message.Message)
 				t.Log("****************************")
 			}
-		case <-time.After(560 * time.Second):
+		case <-time.After(60 * time.Second):
 			t.Error("Never received proof accepted message")
 			fmt.Println("test complete")
 			return
