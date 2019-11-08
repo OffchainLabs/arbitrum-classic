@@ -9,7 +9,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
-	"log"
 	"math"
 	"math/big"
 	brand "math/rand"
@@ -295,19 +294,16 @@ func TestFib(t *testing.T) {
 	t.Run("TestFibResult", func(t *testing.T) {
 		fibsize := 15
 		fibnum := 11
-		log.Println("******************calling GenerateFib")
 		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
 		if err != nil {
 			t.Errorf("GenerateFib error %v", err)
 			return
 		}
-		log.Println("*****************calling GetFib")
 		fibval, err := session.GetFib(big.NewInt(int64(fibnum)))
 		if err != nil {
 			t.Errorf("GetFib error %v", err)
 			return
 		}
-		log.Println("***********got fib")
 		if fibval.Cmp(big.NewInt(144)) != 0 { // 11th fibanocci number
 			t.Errorf("GetFib error - expected %v got %v", big.NewInt(int64(144)), fibval)
 		}

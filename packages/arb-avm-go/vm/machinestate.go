@@ -18,10 +18,8 @@ package vm
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -248,7 +246,6 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 	for assCtx.StepCount() < uint32(maxSteps) {
 		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
 		if blocked != nil {
-			fmt.Println("machine blocked in ExecuteAssertion")
 			m.blockReason = blocked
 			break
 		}
@@ -359,10 +356,7 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	staticHash := m.static.ProofValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
 
-	log.Printf("Proof of %v has %d stack vals and %d aux stack vals\n", codePoint, len(stackVals), len(auxStackVals))
-	log.Printf("codePoint = %v, baseStackValHash = %v\n", hex.EncodeToString(codePoint.NextHash[:]), hex.EncodeToString(baseStackValHash[:]))
-	log.Printf("auxStack = %v, register = %v\n", hex.EncodeToString(baseAuxStackValHash[:]), hex.EncodeToString(registerHash[:]))
-	log.Printf("staticHash = %v, errHandlerHash = %v\n", hex.EncodeToString(staticHash[:]), hex.EncodeToString(errHandlerHash[:]))
+	fmt.Printf("Proof of %v has %d stack vals and %d aux stack vals s\n", codePoint, len(stackVals), len(auxStackVals))
 
 	if _, err := wr.Write(codePoint.NextHash[:]); err != nil {
 		return err
@@ -385,21 +379,11 @@ func (m *Machine) marshalForProof(wr io.Writer) error {
 	if err := value.MarshalOperationProof(codePoint.Op, wr, includeImmediateVal); err != nil {
 		return err
 	}
-	log.Println("Marshaling stackVals")
 	for _, val := range stackVals {
-		log.Printf("marshaling type %v value = %v ", val.InternalTypeCode(), val)
-		//if _,ok :=val.(value.CodePointValue); ok {
-		//	log.Println("*************marshaling hash only of CodePointValue")
-		//	if err := value.MarshalValueForProof(value.NewHashOnlyValueFromValue(val), wr); err != nil {
-		//		return err
-		//	}
-		//} else {
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err
 		}
-		//}
 	}
-	log.Print("\n")
 	for _, val := range auxStackVals {
 		if err := value.MarshalValueForProof(val, wr); err != nil {
 			return err

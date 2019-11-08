@@ -29,34 +29,34 @@ const (
 	SMOD
 	ADDMOD
 	MULMOD
-	EXP //10 0x0a
+	EXP
 )
 
 // 0x10 range - comparison ops.
 const (
-	LT value.Opcode = iota + 0x10 //16
+	LT value.Opcode = iota + 0x10
 	GT
 	SLT
 	SGT
-	EQ //20
+	EQ
 	ISZERO
 	AND
 	OR
 	XOR
 	NOT
 	BYTE
-	SIGNEXTEND //27 0x1b
+	SIGNEXTEND
 )
 
 // 0x10 range - hash functions.
 const (
-	SHA3 = iota + 0x20 //32
+	SHA3 = iota + 0x20
 	TYPE
 )
 
 // 0x50 range - 'storage' and execution.
 const (
-	POP value.Opcode = 0x30 + iota //48
+	POP value.Opcode = 0x30 + iota
 	SPUSH
 	RPUSH
 	RSET
@@ -69,12 +69,12 @@ const (
 	AUXSTACKEMPTY
 	NOP
 	ERRPUSH
-	ERRSET //61 0x3d
+	ERRSET
 )
 
 // 0x40 range.
 const (
-	DUP0 value.Opcode = 0x40 + iota //64
+	DUP0 value.Opcode = 0x40 + iota
 	DUP1
 	DUP2
 	SWAP1
@@ -83,20 +83,20 @@ const (
 
 // 0x50 range.
 const (
-	TGET value.Opcode = 0x50 + iota //80
+	TGET value.Opcode = 0x50 + iota
 	TSET
 	TLEN
 )
 
 // 0xa0 range.
 const (
-	BREAKPOINT value.Opcode = 0x60 + iota //96
+	BREAKPOINT value.Opcode = 0x60 + iota
 	LOG
 )
 
 // 0xf0 range.
 const (
-	SEND value.Opcode = 0x70 + iota //112
+	SEND value.Opcode = 0x70 + iota
 	NBSEND
 	GETTIME
 	INBOX

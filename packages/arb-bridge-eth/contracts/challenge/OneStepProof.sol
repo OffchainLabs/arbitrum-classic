@@ -749,11 +749,9 @@ library OneStepProof {
         returns (bool)
     {
         if (!val1.isCodePoint()) {
-            require(val1.isCodePoint(), "val1 is not a CodePoint");
             return false;
         }
         if (!val2.isInt()) {
-            require(val2.isInt(), "val1 is not an int");
             return false;
         }
         if (val2.intVal != 0) {
@@ -1288,7 +1286,6 @@ library OneStepProof {
         uint i = 0;
         for (i = immediate; i < popCount; i++) {
             (valid, offset, stackVals[i]) = ArbValue.deserializeValue(_data.proof, offset);
-            require(valid == 0, string(abi.encodePacked("Proof had bad stack value: i = ", DebugPrint.uint2str(i), " popCount = ", DebugPrint.uint2str(popCount))));
             require(valid == 0, "Proof had bad stack value");
         }
         if (stackVals.length > 0) {
@@ -1499,7 +1496,6 @@ library OneStepProof {
         }
 
         if (!correct) {
-            require(correct, "execute opCode NOT correct");
             if (endMachine.errHandler.hash == CODE_POINT_ERROR) {
                 endMachine.setErrorStop();
             } else {
@@ -1512,10 +1508,10 @@ library OneStepProof {
         //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
         // );
         require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-         require(
-             _data.afterHash == endMachine.hash(),
-             string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
-         );
+        // require(
+        //     _data.afterHash == endMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
+        // );
         require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;
