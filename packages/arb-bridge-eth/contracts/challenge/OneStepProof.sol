@@ -759,11 +759,6 @@ library OneStepProof {
         if (val2.intVal != 0) {
             machine.instructionStackHash = val1.hash();
         }
-       // if  (val1.cpVal.opcode == 56) {
-       //     require(!val1.isCodePoint(), string(abi.encodePacked("val1 is CodePoint ", DebugPrint.uint2str(val1.cpVal.opcode), " ",
-       //                DebugPrint.uint2str(val1.cpVal.nextCodePoint), " immedVal = ", DebugPrint.bytes32string(val1.cpVal.immediateVal), " val2 = ", DebugPrint.uint2str(val2.intVal),
-       //                " instHash = ", DebugPrint.bytes32string(machine.instructionStackHash.hash))));
-       // }
         return true;
     }
 
