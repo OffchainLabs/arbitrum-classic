@@ -14,25 +14,36 @@
 
 import arbitrum as arb
 
+count = 0
+
+
+def binaryOp(vm, arg1, arg2, res, op):
+    global count
+    vm.push(arg1)
+    vm.push(arg2)
+    op()
+    vm.push(res)
+    vm.eq()
+    vm.push(arb.ast.AVMLabel("next" + str(count)))
+    vm.cjump()
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("next" + str(count)))
+    count += 1
+
 
 def test(vm):
-    for i in range(10000):
-        vm.push(i)
-    for _ in range(9999):
-        vm.add()
-    vm.push(5)
-    vm.push(arb.value.Tuple([1, 2, 3, 4]))
-    vm.tsetn(1)
-    vm.tgetn(3)
+    binaryOp(vm, 4, 3, 7, vm.add)
+    #    binaryOp(vm,4,3,6,vm.add)
+    binaryOp(vm, 0, 0, 0, vm.add)
+    #    binaryOp(vm,neg1,4,vm.add)
+    #    binaryOp(vm,-2,1,vm.add)
+    binaryOp(vm, 4, 3, 12, vm.mul)
+    binaryOp(vm, 3, 0, 0, vm.mul)
     vm.halt()
 
 
 code = arb.compile_block(test)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 # print(vm.code)
-with open("test.ao", "wb") as f:
+with open("../arb-validator/test/opcodetest.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
-
-# vm2 = arb.VM()
-# test(vm2)
-# print(vm2.stack[:])

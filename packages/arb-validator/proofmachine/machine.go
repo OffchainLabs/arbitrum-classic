@@ -160,14 +160,14 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 
 			res, err := m.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
 			if err != nil {
-				log.Println("Machine ended with:")
+				log.Println("Machine ended with error:")
 				m.PrintState()
 				log.Fatal("Proof invalid ", err)
 			}
 			if res.Cmp(big.NewInt(0)) == 0 {
 				log.Println("Proof valid")
 			} else {
-				log.Println("Machine ended with:")
+				log.Println("Machine ended with invalid proof:")
 				m.PrintState()
 				log.Fatalln("Proof invalid")
 			}
