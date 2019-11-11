@@ -156,6 +156,10 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 
 		if !a1.Equals(a2) {
 			pcEnd := m.gomachine.GetPC()
+			m.cppmachine.PrintState()
+			m.gomachine.PrintState()
+			log.Println("cpp num steps", a1.NumSteps)
+			log.Println("go num steps", a2.NumSteps)
 			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
 		}
 		a.AfterHash = a1.AfterHash

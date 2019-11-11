@@ -319,6 +319,7 @@ func (m *Machine) PrintState() {
 	registerHash := m.register.StateValue().Hash()
 	staticHash := m.static.StateValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
+	fmt.Println("machine state", m.status)
 	fmt.Println("codePointHash", hexutil.Encode(codePointHash[:]))
 	fmt.Println("stackHash", hexutil.Encode(stackHash[:]))
 	fmt.Println("auxStackHash", hexutil.Encode(auxStackHash[:]))

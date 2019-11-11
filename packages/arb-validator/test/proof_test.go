@@ -38,11 +38,12 @@ import (
 )
 
 func TestValidateProof(t *testing.T) {
-	t.Skip("Skipping proof test for now")
+	//t.Skip("Skipping proof test for now")
 	var connectionInfo ethbridge.ArbAddresses
 
 	bridge_eth_addresses := "bridge_eth_addresses.json"
-	contract := "contract.ao"
+	//contract := "contract.ao"
+	contract := "opcodetest.ao"
 	ethURL := "ws://127.0.0.1:7545"
 
 	//seed := time.Now().UnixNano()
@@ -63,6 +64,9 @@ func TestValidateProof(t *testing.T) {
 	}
 
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		t.Fatal(err)

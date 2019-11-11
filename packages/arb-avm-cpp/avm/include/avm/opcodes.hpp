@@ -96,7 +96,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
            (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::ERROR);
+           (op >= OpCode::SEND && op <= OpCode::HALT);
 }
 
 const std::map<OpCode, std::string> InstructionNames = {
