@@ -256,6 +256,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := div(a, b)
@@ -278,6 +281,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := sdiv(a, b)
@@ -300,6 +306,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := mod(a, b)
@@ -322,6 +331,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := smod(a, b)
@@ -346,6 +358,9 @@ library OneStepProof {
         uint a = val1.intVal;
         uint b = val2.intVal;
         uint m = val3.intVal;
+        if (m == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := addmod(a, b, m)
@@ -370,6 +385,9 @@ library OneStepProof {
         uint a = val1.intVal;
         uint b = val2.intVal;
         uint m = val3.intVal;
+        if (m == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := mulmod(a, b, m)

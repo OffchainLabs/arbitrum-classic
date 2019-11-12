@@ -17,11 +17,20 @@ import arbitrum as arb
 count = 0
 
 
-def binaryOp(vm, arg1, arg2, res, op):
+def runBinaryOp(vm, arg1, arg2, op):
     global count
-    vm.push(arg1)
     vm.push(arg2)
+    vm.push(arg1)
     op()
+
+
+def binaryOp(vm, arg1, arg2, res, op):
+    runBinaryOp(vm, arg1, arg2, op)
+    cmpEqual(vm, res)
+
+
+def cmpEqual(vm, res):
+    global count
     vm.push(res)
     vm.eq()
     vm.push(arb.ast.AVMLabel("next" + str(count)))
@@ -31,14 +40,55 @@ def binaryOp(vm, arg1, arg2, res, op):
     count += 1
 
 
+def cmpNotEqual(vm, res):
+    global count
+    vm.push(res)
+    vm.eq()
+    vm.iszero()
+    vm.push(arb.ast.AVMLabel("next" + str(count)))
+    vm.cjump()
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("next" + str(count)))
+    count += 1
+
+
 def test(vm):
+    # ADD
     binaryOp(vm, 4, 3, 7, vm.add)
     #    binaryOp(vm,4,3,6,vm.add)
     binaryOp(vm, 0, 0, 0, vm.add)
-    #    binaryOp(vm,neg1,4,vm.add)
-    #    binaryOp(vm,-2,1,vm.add)
+    binaryOp(vm, 2 ** 256 - 1, 4, 3, vm.add)
+    binaryOp(vm, 2 ** 256 - 2, 1, 2 ** 256 - 1, vm.add)
+    # MUL
     binaryOp(vm, 4, 3, 12, vm.mul)
     binaryOp(vm, 3, 0, 0, vm.mul)
+    binaryOp(vm, 2 ** 256 - 1, 1, 2 ** 256 - 1, vm.mul)
+    binaryOp(vm, 2 ** 256 - 2, 1, 2 ** 256 - 2, vm.mul)
+    # SUB
+    binaryOp(vm, 4, 3, 1, vm.sub)
+    binaryOp(vm, 3, 4, 2 ** 256 - 1, vm.sub)
+    # DIV
+    binaryOp(vm, 12, 3, 4, vm.div)
+    runBinaryOp(vm, 2 ** 256 - 6, 3, vm.div)
+    cmpNotEqual(vm, 4)
+    # divide by 0
+    vm.push(arb.ast.AVMLabel("DIV_divide_by_0_expected"))
+    vm.errset()
+    runBinaryOp(vm, 12, 0, vm.div)
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("DIV_divide_by_0_expected"))
+    # SDIV
+    binaryOp(vm, 12, 3, 4, vm.sdiv)
+    binaryOp(vm, 12, 2 ** 256 - 3, 2 ** 256 - 4, vm.sdiv)
+    binaryOp(vm, 2 ** 256 - 12, 3, 2 ** 256 - 4, vm.sdiv)
+    binaryOp(vm, 2 ** 256 - 12, 2 ** 256 - 3, 4, vm.sdiv)
+    # sdivide by 0
+    vm.push(arb.ast.AVMLabel("SDIV_divide_by_0_expected"))
+    vm.errset()
+    runBinaryOp(vm, 12, 0, vm.sdiv)
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("SDIV_divide_by_0_expected"))
+    #
     vm.halt()
 
 
