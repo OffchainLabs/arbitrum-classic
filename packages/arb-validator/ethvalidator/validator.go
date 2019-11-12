@@ -46,7 +46,6 @@ type Validator struct {
 	*ethbridge.ChainLauncher
 	*ethbridge.ChannelLauncher
 	*ethbridge.PendingInbox
-	*ethbridge.OneStepProof
 	auth *bind.TransactOpts
 }
 
@@ -77,11 +76,6 @@ func NewValidator(
 		return nil, err
 	}
 
-	oneSP, err := ethbridge.NewOneStepProof(common.HexToAddress(connectionInfo.OneStepProof), client)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Validator{
 		key:             key,
 		serverAddress:   ethURL,
@@ -90,7 +84,6 @@ func NewValidator(
 		ChainLauncher:   chainLauncher,
 		ChannelLauncher: channelLauncher,
 		PendingInbox:    pendingInbox,
-		OneStepProof:    oneSP,
 		auth:            auth,
 	}, nil
 }

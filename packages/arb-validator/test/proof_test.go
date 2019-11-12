@@ -72,7 +72,7 @@ func TestValidateProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proofbounds := protocol.TimeBounds{0, 10}
+	proofbounds := [2]uint64{0, 10000}
 	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
 	if err != nil {
 		t.Fatal("Loader Error: ", err)

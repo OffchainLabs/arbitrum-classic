@@ -66,6 +66,10 @@ def cmpNotEqual(vm, res):
 
 
 def test(vm):
+    # uncomment push, jump and set_label and move set_label if we want to skip some tests
+    #    vm.push(arb.ast.AVMLabel("jump_to_test"))
+    #    vm.jump()
+    #    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     # ADD
     testBinaryOp(vm, 4, 3, 7, vm.add)
     #    testBinaryOp(vm,4,3,6,vm.add)
@@ -124,6 +128,37 @@ def test(vm):
     vm.set_label(arb.ast.AVMLabel("SMOD_by_0_expected"))
     # ADDMOD
     testTertiaryOp(vm, 8, 5, 3, 1, vm.addmod)
+    testTertiaryOp(vm, 2 ** 256 - 1, 1, 7, 2, vm.addmod)
+    testTertiaryOp(vm, 0, 0, 7, 0, vm.addmod)
+    # addmod by 0
+    vm.push(arb.ast.AVMLabel("ADDMOD_by_0_expected"))
+    vm.errset()
+    runTertiaryOp(vm, 8, 3, 0, vm.addmod)
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("ADDMOD_by_0_expected"))
+    # MULMOD
+    testTertiaryOp(vm, 8, 2, 3, 1, vm.mulmod)
+    testTertiaryOp(vm, 2 ** 256 - 1, 2, 7, 2, vm.mulmod)
+    testTertiaryOp(vm, 0, 0, 7, 0, vm.mulmod)
+    # addmod by 0
+    vm.push(arb.ast.AVMLabel("MULMOD_by_0_expected"))
+    vm.errset()
+    runTertiaryOp(vm, 8, 3, 0, vm.mulmod)
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("MULMOD_by_0_expected"))
+    # EXP
+    testBinaryOp(vm, 3, 2, 9, vm.exp)
+    testBinaryOp(vm, 2, 256, 0, vm.exp)
+    # LT
+    testBinaryOp(vm, 3, 9, 1, vm.lt)
+    testBinaryOp(vm, 9, 3, 0, vm.lt)
+    testBinaryOp(vm, 3, 3, 0, vm.lt)
+    testBinaryOp(vm, 2 ** 256 - 3, 9, 0, vm.lt)
+    # GT
+    testBinaryOp(vm, 3, 9, 0, vm.gt)
+    testBinaryOp(vm, 9, 3, 1, vm.gt)
+    testBinaryOp(vm, 3, 3, 0, vm.gt)
+    testBinaryOp(vm, 2 ** 256 - 3, 9, 1, vm.gt)
     #
     vm.halt()
 

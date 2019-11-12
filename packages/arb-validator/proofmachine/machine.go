@@ -39,10 +39,10 @@ type Machine struct {
 	fromAddress common.Address
 	osp         *ethbridge.OneStepProof
 	client      *ethclient.Client
-	proofbounds protocol.TimeBounds
+	proofbounds [2]uint64
 }
 
-func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds protocol.TimeBounds) (*Machine, error) {
+func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint64) (*Machine, error) {
 	client, err := ethclient.Dial(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
@@ -107,9 +107,6 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
-	//if timeBounds[0] < m.proofbounds[0] || timeBounds[1] > m.proofbounds[1] {
-	//	return m.machine.ExecuteAssertion(maxSteps, timeBounds)
-	//}
 	a := &protocol.Assertion{}
 	stepIncrease := int32(1)
 	stepsRan := 0

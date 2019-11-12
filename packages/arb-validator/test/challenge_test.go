@@ -83,11 +83,6 @@ func TestChallenge(t *testing.T) {
 		t.Fatal("Loader Error: ", err)
 	}
 	machine := basemachine
-	//proofbounds := protocol.TimeBounds{25,30}
-	//machine, err := proofmachine.New(contract, basemachine, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
-	//if err != nil {
-	//	t.Fatal("Loader Error: ", err)
-	//}
 
 	auth1 := bind.NewKeyedTransactor(key1)
 	auth2 := bind.NewKeyedTransactor(key2)
