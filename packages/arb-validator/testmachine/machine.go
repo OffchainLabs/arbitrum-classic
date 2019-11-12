@@ -187,6 +187,8 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	}
 
 	if !bytes.Equal(h1, h2) {
+		m.cppmachine.PrintState()
+		m.gomachine.PrintState()
 		log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
 	}
 	return h1, nil

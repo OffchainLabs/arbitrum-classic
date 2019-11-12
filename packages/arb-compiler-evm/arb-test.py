@@ -24,8 +24,21 @@ def runBinaryOp(vm, arg1, arg2, op):
     op()
 
 
-def binaryOp(vm, arg1, arg2, res, op):
+def runTertiaryOp(vm, arg1, arg2, arg3, op):
+    global count
+    vm.push(arg3)
+    vm.push(arg2)
+    vm.push(arg1)
+    op()
+
+
+def testBinaryOp(vm, arg1, arg2, res, op):
     runBinaryOp(vm, arg1, arg2, op)
+    cmpEqual(vm, res)
+
+
+def testTertiaryOp(vm, arg1, arg2, arg3, res, op):
+    runTertiaryOp(vm, arg1, arg2, arg3, op)
     cmpEqual(vm, res)
 
 
@@ -54,21 +67,21 @@ def cmpNotEqual(vm, res):
 
 def test(vm):
     # ADD
-    binaryOp(vm, 4, 3, 7, vm.add)
-    #    binaryOp(vm,4,3,6,vm.add)
-    binaryOp(vm, 0, 0, 0, vm.add)
-    binaryOp(vm, 2 ** 256 - 1, 4, 3, vm.add)
-    binaryOp(vm, 2 ** 256 - 2, 1, 2 ** 256 - 1, vm.add)
+    testBinaryOp(vm, 4, 3, 7, vm.add)
+    #    testBinaryOp(vm,4,3,6,vm.add)
+    testBinaryOp(vm, 0, 0, 0, vm.add)
+    testBinaryOp(vm, 2 ** 256 - 1, 4, 3, vm.add)
+    testBinaryOp(vm, 2 ** 256 - 2, 1, 2 ** 256 - 1, vm.add)
     # MUL
-    binaryOp(vm, 4, 3, 12, vm.mul)
-    binaryOp(vm, 3, 0, 0, vm.mul)
-    binaryOp(vm, 2 ** 256 - 1, 1, 2 ** 256 - 1, vm.mul)
-    binaryOp(vm, 2 ** 256 - 2, 1, 2 ** 256 - 2, vm.mul)
+    testBinaryOp(vm, 4, 3, 12, vm.mul)
+    testBinaryOp(vm, 3, 0, 0, vm.mul)
+    testBinaryOp(vm, 2 ** 256 - 1, 1, 2 ** 256 - 1, vm.mul)
+    testBinaryOp(vm, 2 ** 256 - 2, 1, 2 ** 256 - 2, vm.mul)
     # SUB
-    binaryOp(vm, 4, 3, 1, vm.sub)
-    binaryOp(vm, 3, 4, 2 ** 256 - 1, vm.sub)
+    testBinaryOp(vm, 4, 3, 1, vm.sub)
+    testBinaryOp(vm, 3, 4, 2 ** 256 - 1, vm.sub)
     # DIV
-    binaryOp(vm, 12, 3, 4, vm.div)
+    testBinaryOp(vm, 12, 3, 4, vm.div)
     runBinaryOp(vm, 2 ** 256 - 6, 3, vm.div)
     cmpNotEqual(vm, 4)
     # divide by 0
@@ -78,16 +91,39 @@ def test(vm):
     vm.error()
     vm.set_label(arb.ast.AVMLabel("DIV_divide_by_0_expected"))
     # SDIV
-    binaryOp(vm, 12, 3, 4, vm.sdiv)
-    binaryOp(vm, 12, 2 ** 256 - 3, 2 ** 256 - 4, vm.sdiv)
-    binaryOp(vm, 2 ** 256 - 12, 3, 2 ** 256 - 4, vm.sdiv)
-    binaryOp(vm, 2 ** 256 - 12, 2 ** 256 - 3, 4, vm.sdiv)
+    testBinaryOp(vm, 12, 3, 4, vm.sdiv)
+    testBinaryOp(vm, 12, 2 ** 256 - 3, 2 ** 256 - 4, vm.sdiv)
+    testBinaryOp(vm, 2 ** 256 - 12, 3, 2 ** 256 - 4, vm.sdiv)
+    testBinaryOp(vm, 2 ** 256 - 12, 2 ** 256 - 3, 4, vm.sdiv)
     # sdivide by 0
     vm.push(arb.ast.AVMLabel("SDIV_divide_by_0_expected"))
     vm.errset()
-    runBinaryOp(vm, 12, 0, vm.sdiv)
+    runBinaryOp(vm, 3, 0, vm.sdiv)
     vm.error()
     vm.set_label(arb.ast.AVMLabel("SDIV_divide_by_0_expected"))
+    # MOD
+    testBinaryOp(vm, 8, 3, 2, vm.mod)
+    testBinaryOp(vm, 8, 2 ** 256 - 3, 8, vm.mod)
+    testBinaryOp(vm, 0, 3, 0, vm.mod)
+    # mod by 0
+    vm.push(arb.ast.AVMLabel("MOD_by_0_expected"))
+    vm.errset()
+    runBinaryOp(vm, 3, 0, vm.mod)
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("MOD_by_0_expected"))
+    # SMOD
+    testBinaryOp(vm, 8, 3, 2, vm.smod)
+    testBinaryOp(vm, 8, 2 ** 256 - 3, 2, vm.smod)
+    testBinaryOp(vm, 2 ** 256 - 8, 3, 2 ** 256 - 2, vm.smod)
+    testBinaryOp(vm, 2 ** 256 - 8, 2 ** 256 - 3, 2 ** 256 - 2, vm.smod)
+    # smod by 0
+    vm.push(arb.ast.AVMLabel("SMOD_by_0_expected"))
+    vm.errset()
+    runBinaryOp(vm, 3, 0, vm.smod)
+    vm.error()
+    vm.set_label(arb.ast.AVMLabel("SMOD_by_0_expected"))
+    # ADDMOD
+    testTertiaryOp(vm, 8, 5, 3, 1, vm.addmod)
     #
     vm.halt()
 
