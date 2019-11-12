@@ -67,9 +67,9 @@ def cmpNotEqual(vm, res):
 
 def test(vm):
     # uncomment push, jump and set_label and move set_label if we want to skip some tests
-    #    vm.push(arb.ast.AVMLabel("jump_to_test"))
-    #    vm.jump()
-    #    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
+    vm.push(arb.ast.AVMLabel("jump_to_test"))
+    vm.jump()
+    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     # ADD
     testBinaryOp(vm, 4, 3, 7, vm.add)
     #    testBinaryOp(vm,4,3,6,vm.add)
@@ -159,6 +159,25 @@ def test(vm):
     testBinaryOp(vm, 9, 3, 1, vm.gt)
     testBinaryOp(vm, 3, 3, 0, vm.gt)
     testBinaryOp(vm, 2 ** 256 - 3, 9, 1, vm.gt)
+    # SLT
+    testBinaryOp(vm, 7, 3, 0, vm.slt)
+    testBinaryOp(vm, 3, 7, 1, vm.slt)
+    testBinaryOp(vm, 2 ** 256 - 3, 2 ** 256 - 7, 0, vm.slt)
+    testBinaryOp(vm, 2 ** 256 - 7, 2 ** 256 - 3, 1, vm.slt)
+    testBinaryOp(vm, 3, 2 ** 256 - 7, 0, vm.slt)
+    testBinaryOp(vm, 2 ** 256 - 3, 7, 1, vm.slt)
+    testBinaryOp(vm, 3, 3, 0, vm.slt)
+    # SGT
+    testBinaryOp(vm, 7, 3, 1, vm.sgt)
+    testBinaryOp(vm, 3, 7, 0, vm.sgt)
+    testBinaryOp(vm, 2 ** 256 - 3, 2 ** 256 - 7, 1, vm.sgt)
+    testBinaryOp(vm, 2 ** 256 - 7, 2 ** 256 - 3, 0, vm.sgt)
+    testBinaryOp(vm, 3, 2 ** 256 - 7, 1, vm.sgt)
+    testBinaryOp(vm, 2 ** 256 - 7, 3, 0, vm.sgt)
+    testBinaryOp(vm, 3, 3, 0, vm.sgt)
+    # EQ
+    testBinaryOp(vm, 7, 3, 0, vm.eq)
+    testBinaryOp(vm, 3, 3, 1, vm.eq)
     #
     vm.halt()
 

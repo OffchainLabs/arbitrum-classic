@@ -502,7 +502,7 @@ library OneStepProof {
         uint b = val2.intVal;
         uint c;
         assembly {
-            c := slt(a, b)
+            c := sgt(a, b)
         }
         machine.addDataStackInt(c);
         return true;
