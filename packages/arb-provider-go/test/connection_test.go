@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -31,7 +32,6 @@ import (
 	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
@@ -62,12 +62,6 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	mach, err := loader.LoadMachineFromFile("contract.ao", true, "test")
-	if err != nil {
-		t.Errorf("setupValidators LoadMachineFromFile error %v", err)
-		return err
-	}
-
 	key1, err := crypto.HexToECDSA(coordinatorKey)
 	if err != nil {
 		t.Errorf("setupValidators HexToECDSA error %v", err)
@@ -93,7 +87,19 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		common.Address{}, // Address 0 means no owner
 	)
 	ethURL := "ws://127.0.0.1:7545"
+	contract := "contract.ao"
 
+	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	if err != nil {
+		t.Errorf("setupValidators LoadMachineFromFile error %v", err)
+		return err
+	}
+	mach := basemach
+	//proofbounds := protocol.TimeBounds{25,30}
+	//mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	//if err != nil {
+	//	t.Fatal("Loader Error: ", err)
+	//}
 	t.Log("creating coordinator")
 	// Validator creation
 	val1, err := ethvalidator.NewValidator(key1, connectionInfo, ethURL)

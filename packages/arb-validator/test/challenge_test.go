@@ -69,11 +69,6 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	machine, err := loader.LoadMachineFromFile(contract, true, "test")
-	if err != nil {
-		t.Fatal("Loader Error: ", err)
-	}
-
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		t.Fatal(err)
@@ -82,6 +77,12 @@ func TestChallenge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	basemachine, err := loader.LoadMachineFromFile(contract, true, "test")
+	if err != nil {
+		t.Fatal("Loader Error: ", err)
+	}
+	machine := basemachine
 
 	auth1 := bind.NewKeyedTransactor(key1)
 	auth2 := bind.NewKeyedTransactor(key2)

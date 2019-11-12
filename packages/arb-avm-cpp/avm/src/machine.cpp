@@ -25,6 +25,7 @@
 #include <util.hpp>
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
+    os << "status " << static_cast<int>(val.state) << "\n";
     os << "codePointHash " << to_hex_str(hash(val.code[val.pc])) << "\n";
     os << "stackHash " << to_hex_str(val.stack.hash()) << "\n";
     os << "auxStackHash " << to_hex_str(val.auxstack.hash()) << "\n";

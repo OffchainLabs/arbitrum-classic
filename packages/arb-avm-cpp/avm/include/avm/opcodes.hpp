@@ -98,7 +98,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
            (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::ERROR);
+           (op >= OpCode::SEND && op <= OpCode::HALT);
 }
 
 const std::map<OpCode, std::string> InstructionNames = {
@@ -175,8 +175,8 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::SDIV, {true, true}},
     {OpCode::MOD, {true, true}},
     {OpCode::SMOD, {true, true}},
-    {OpCode::ADDMOD, {true, true}},
-    {OpCode::MULMOD, {true, true}},
+    {OpCode::ADDMOD, {true, true, true}},
+    {OpCode::MULMOD, {true, true, true}},
     {OpCode::EXP, {true, true}},
 
     {OpCode::LT, {true, true}},
@@ -200,7 +200,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::RPUSH, {}},
     {OpCode::RSET, {false}},
     {OpCode::JUMP, {false}},
-    {OpCode::CJUMP, {false, true}},
+    {OpCode::CJUMP, {true, true}},
     {OpCode::STACKEMPTY, {}},
     {OpCode::PCPUSH, {}},
     {OpCode::AUXPUSH, {false}},
