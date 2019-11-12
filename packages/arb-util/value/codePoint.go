@@ -106,6 +106,14 @@ func (op BasicOperation) GetOp() Opcode {
 	return op.Op
 }
 
+func (op BasicOperation) String() string {
+	return fmt.Sprintf("0x%x", op.GetOp())
+}
+
+func (op ImmediateOperation) String() string {
+	return fmt.Sprintf("0x%x Imd(%v)", op.GetOp(), op.Val)
+}
+
 // func (op BasicOperation) String() string {
 //	return fmt.Sprintf("Basic(%v)", code.InstructionNames[op.Op])
 //}

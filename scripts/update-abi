@@ -11,11 +11,13 @@ abigen --sol=ChainLauncher.sol --pkg=chainlauncher --out=chainlauncher.go
 abigen --sol=ChannelLauncher.sol --pkg=channellauncher --out=channellauncher.go
 abigen --sol=ChallengeManager.sol --pkg=challengemanager --out=challengemanager.go
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
+abigen --sol=challenge/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
 \cp chainlauncher.go ../../arb-validator/ethbridge/chainlauncher/
 \cp channellauncher.go ../../arb-validator/ethbridge/channellauncher/
 \cp challengemanager.go ../../arb-validator/ethbridge/challengemanager/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
+\cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin solidity-bytes-utils
-rm -f chainlauncher.go channellauncher.go challengemanager.go globalpendinginbox.go
+rm -f chainlauncher.go channellauncher.go challengemanager.go globalpendinginbox.go onestepproof.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

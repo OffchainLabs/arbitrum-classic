@@ -31,9 +31,9 @@ library ArbValue {
 
     struct CodePoint {
         uint8 opcode;
-        uint256 nextCodePoint;
+        bytes32 nextCodePoint;
         bool immediate;
-        uint256 immediateVal;
+        bytes32 immediateVal;
     }
 
     function isTupleType(uint8 typeCode) private pure returns (bool) {
@@ -55,8 +55,8 @@ library ArbValue {
     function hashCodePoint(
             uint8 opcode,
             bool immediate,
-            uint256 immediateVal,
-            uint256 nextCodePoint
+            bytes32 immediateVal,
+            bytes32 nextCodePoint
     ) public pure returns (bytes32) {
         if (immediate) {
             return keccak256(
@@ -289,12 +289,15 @@ library ArbValue {
         offset ++;
         uint8 opCode = uint8(data[offset]);
         offset++;
-        uint256 immediateVal;
+        bytes32 immediateVal;
         if (immediateType == 1) {
-            immediateVal = data.toUint(offset);
-            offset += 32;
+            uint valid;
+            Value memory value;
+            (valid, offset, value) = deserializeValue(data, offset);
+            require(valid == 0, "Marshalled value must be valid");
+            immediateVal = value.hash().hash;
         }
-        uint256 nextHash = data.toUint(offset);
+        bytes32 nextHash = data.toBytes32(offset);
         offset += 32;
         if (immediateType == 1) {
             return (offset, CodePoint(opCode, nextHash, true, immediateVal));

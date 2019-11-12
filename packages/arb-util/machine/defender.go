@@ -18,7 +18,6 @@ package machine
 
 import (
 	"errors"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 

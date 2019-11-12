@@ -26,7 +26,7 @@
 
 typedef std::array<uint256_t, 2> TimeBounds;
 
-enum class Status { Extensive, Halted, Error };
+enum class Status { Extensive, Error, Halted };
 
 struct NotBlocked {};
 
