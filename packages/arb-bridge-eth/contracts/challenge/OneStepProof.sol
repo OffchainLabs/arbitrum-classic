@@ -640,8 +640,8 @@ library OneStepProof {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
-        uint n = val1.intVal;
-        uint x = val2.intVal;
+        uint x = val1.intVal;
+        uint n = val2.intVal;
         uint c;
         assembly {
             c := byte(n, x)
@@ -662,8 +662,8 @@ library OneStepProof {
         if (!val1.isInt() || !val2.isInt()) {
             return false;
         }
-        uint a = val1.intVal;
-        uint b = val2.intVal;
+        uint b = val1.intVal;
+        uint a = val2.intVal;
         uint c;
         assembly {
             c := signextend(a, b)

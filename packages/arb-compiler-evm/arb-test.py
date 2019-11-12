@@ -17,6 +17,12 @@ import arbitrum as arb
 count = 0
 
 
+def runUnaryOp(vm, arg1, op):
+    global count
+    vm.push(arg1)
+    op()
+
+
 def runBinaryOp(vm, arg1, arg2, op):
     global count
     vm.push(arg2)
@@ -30,6 +36,11 @@ def runTertiaryOp(vm, arg1, arg2, arg3, op):
     vm.push(arg2)
     vm.push(arg1)
     op()
+
+
+def testUnaryOp(vm, arg1, res, op):
+    runUnaryOp(vm, arg1, op)
+    cmpEqual(vm, res)
 
 
 def testBinaryOp(vm, arg1, arg2, res, op):
@@ -69,7 +80,6 @@ def test(vm):
     # uncomment push, jump and set_label and move set_label if we want to skip some tests
     vm.push(arb.ast.AVMLabel("jump_to_test"))
     vm.jump()
-    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     # ADD
     testBinaryOp(vm, 4, 3, 7, vm.add)
     #    testBinaryOp(vm,4,3,6,vm.add)
@@ -178,6 +188,50 @@ def test(vm):
     # EQ
     testBinaryOp(vm, 7, 3, 0, vm.eq)
     testBinaryOp(vm, 3, 3, 1, vm.eq)
+    testBinaryOp(
+        vm,
+        arb.std.bigtuple.fromints([1, 2]),
+        arb.std.bigtuple.fromints([1, 2]),
+        1,
+        vm.eq,
+    )
+    testBinaryOp(
+        vm,
+        arb.std.bigtuple.fromints([1, 2]),
+        arb.std.bigtuple.fromints([1, 3]),
+        0,
+        vm.eq,
+    )
+    # ISZERO
+    testUnaryOp(vm, 0, 1, vm.iszero)
+    testUnaryOp(vm, 2, 0, vm.iszero)
+    # AND
+    testBinaryOp(vm, 3, 9, 1, vm.bitwise_and)
+    testBinaryOp(vm, 3, 3, 3, vm.bitwise_and)
+    # OR
+    testBinaryOp(vm, 3, 9, 11, vm.bitwise_or)
+    testBinaryOp(vm, 3, 3, 3, vm.bitwise_or)
+    # XOR
+    testBinaryOp(vm, 3, 9, 10, vm.bitwise_xor)
+    testBinaryOp(vm, 3, 3, 0, vm.bitwise_xor)
+    # NOT
+    testUnaryOp(vm, 0, 2 ** 256 - 1, vm.bitwise_not)
+    testUnaryOp(vm, 3, 2 ** 256 - 4, vm.bitwise_not)
+    testUnaryOp(vm, 2 ** 256 - 4, 3, vm.bitwise_not)
+    # BYTE
+    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
+    testBinaryOp(vm, 16, 31, 16, vm.byte)
+    testBinaryOp(vm, 3, 3, 0, vm.byte)
+    # SIGNEXTEND
+    testBinaryOp(vm, 2 ** 256 - 1, 0, 2 ** 256 - 1, vm.signextend)
+    testBinaryOp(vm, 1, 0, 1, vm.signextend)
+    testBinaryOp(vm, 127, 0, 127, vm.signextend)
+    testBinaryOp(vm, 128, 0, 2 ** 256 - 128, vm.signextend)
+    testBinaryOp(vm, 254, 0, 2 ** 256 - 2, vm.signextend)
+    testBinaryOp(vm, 257, 0, 1, vm.signextend)
+    testBinaryOp(vm, 65534, 1, 2 ** 256 - 2, vm.signextend)
+    testBinaryOp(vm, 65537, 1, 1, vm.signextend)
+    testBinaryOp(vm, 65537, 2, 65537, vm.signextend)
     #
     vm.halt()
 
