@@ -80,7 +80,6 @@ def test(vm):
     # uncomment push, jump and set_label and move set_label if we want to skip some tests
     vm.push(arb.ast.AVMLabel("jump_to_test"))
     vm.jump()
-    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     # ADD
     testBinaryOp(vm, 4, 3, 7, vm.add)
     #    testBinaryOp(vm,4,3,6,vm.add)
@@ -289,17 +288,59 @@ def test(vm):
     cmpEqual(vm, 0)
     vm.pop()
     # PCPUSH
-    # AUXPUSH
-    # AUXPOP
-    # AUXSTACKEMPTY
+    # vm.set_label(arb.ast.AVMLabel("pcpush_opcode_test"))
+    # vm.pcpush()
+    # cmpEqual(vm, arb.ast.AVMLabel("pcpush_opcode_test"))
+    # AUXPUSH/AUXPOP/AUXSTACKEMPTY
+    vm.push(5)
+    vm.auxpush()
+    vm.auxstackempty()
+    cmpEqual(vm, 0)
+    vm.auxpop()
+    vm.auxstackempty()
+    cmpEqual(vm, 1)
+    vm.pop()
     # NOP
+    vm.nop()
     # ERRPUSH
     # ERRSET
     # DUP0
+    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
+    vm.push(6)
+    vm.dup0()
+    cmpEqual(vm, 6)
+    cmpEqual(vm, 6)
     # DUP1
+    vm.push(6)
+    vm.push(7)
+    vm.dup1()
+    cmpEqual(vm, 6)
+    cmpEqual(vm, 7)
+    cmpEqual(vm, 6)
     # DUP2
+    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
+    vm.push(6)
+    vm.push(7)
+    vm.push(8)
+    vm.dup2()
+    cmpEqual(vm, 6)
+    cmpEqual(vm, 8)
+    cmpEqual(vm, 7)
+    cmpEqual(vm, 6)
     # SWAP1
+    vm.push(6)
+    vm.push(7)
+    vm.swap1()
+    cmpEqual(vm, 6)
+    cmpEqual(vm, 7)
     # SWAP2
+    vm.push(6)
+    vm.push(7)
+    vm.push(8)
+    vm.swap1()
+    cmpEqual(vm, 6)
+    cmpEqual(vm, 7)
+    cmpEqual(vm, 8)
     # TGET
     # TSET
     # TLEN
