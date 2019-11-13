@@ -38,6 +38,134 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+func TestValidateProofMath(t *testing.T) {
+	//t.Skip("Skipping proof test for now")
+	var connectionInfo ethbridge.ArbAddresses
+
+	bridge_eth_addresses := "bridge_eth_addresses.json"
+	//contract := "contract.ao"
+	contract := "opcodetestmath.ao"
+	ethURL := "ws://127.0.0.1:7545"
+
+	seed := time.Now().UnixNano()
+	//seed := int64(1571337692091150000)
+	fmt.Println("seed", seed)
+	brand.Seed(seed)
+	jsonFile, err := os.Open(bridge_eth_addresses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	if err := jsonFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		t.Fatal(err)
+	}
+
+	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proofbounds := [2]uint64{0, 10000}
+	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	if err != nil {
+		t.Fatal("Loader Error: ", err)
+	}
+
+	timeBounds := [2]uint64{0, 100000}
+	steps := int32(100000)
+
+	a := mach.ExecuteAssertion(steps, timeBounds)
+	lastReason := mach.LastBlockReason()
+	if lastReason != nil {
+		if lastReason.IsBlocked(mach, 0) && lastReason.Equals(machine.ErrorBlocked{}) {
+			t.Fatal("Machine in error state")
+		}
+	}
+	if a.NumSteps == 0 {
+		fmt.Println(" machine halted ")
+		//break
+	}
+	if a.NumSteps != 1 {
+		t.Log("Num steps = ", a.NumSteps)
+	}
+
+	t.Log("called ValidateProof")
+	time.Sleep(5 * time.Second)
+	t.Log("done")
+}
+
+func TestValidateProofLogic(t *testing.T) {
+	//t.Skip("Skipping proof test for now")
+	var connectionInfo ethbridge.ArbAddresses
+
+	bridge_eth_addresses := "bridge_eth_addresses.json"
+	//contract := "contract.ao"
+	contract := "opcodetestlogic.ao"
+	ethURL := "ws://127.0.0.1:7545"
+
+	seed := time.Now().UnixNano()
+	//seed := int64(1571337692091150000)
+	fmt.Println("seed", seed)
+	brand.Seed(seed)
+	jsonFile, err := os.Open(bridge_eth_addresses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	if err := jsonFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+		t.Fatal(err)
+	}
+
+	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proofbounds := [2]uint64{0, 10000}
+	mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	if err != nil {
+		t.Fatal("Loader Error: ", err)
+	}
+
+	timeBounds := [2]uint64{0, 100000}
+	steps := int32(100000)
+
+	a := mach.ExecuteAssertion(steps, timeBounds)
+	lastReason := mach.LastBlockReason()
+	if lastReason != nil {
+		if lastReason.IsBlocked(mach, 0) && lastReason.Equals(machine.ErrorBlocked{}) {
+			t.Fatal("Machine in error state")
+		}
+	}
+	if a.NumSteps == 0 {
+		fmt.Println(" machine halted ")
+		//break
+	}
+	if a.NumSteps != 1 {
+		t.Log("Num steps = ", a.NumSteps)
+	}
+
+	t.Log("called ValidateProof")
+	time.Sleep(5 * time.Second)
+	t.Log("done")
+}
+
 func TestValidateProof(t *testing.T) {
 	//t.Skip("Skipping proof test for now")
 	var connectionInfo ethbridge.ArbAddresses
@@ -64,7 +192,7 @@ func TestValidateProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	basemach, err := loader.LoadMachineFromFile(contract, true, "go")
 	if err != nil {
 		t.Fatal(err)
 	}
