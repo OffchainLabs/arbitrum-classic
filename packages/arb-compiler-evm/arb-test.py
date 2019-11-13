@@ -337,7 +337,7 @@ def test(vm):
     vm.push(6)
     vm.push(7)
     vm.push(8)
-    vm.swap1()
+    vm.swap2()
     cmpEqual(vm, 6)
     cmpEqual(vm, 7)
     cmpEqual(vm, 8)
