@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
@@ -102,6 +103,12 @@ func TestValidateProof(t *testing.T) {
 		steps := int32(stepIncrease)
 
 		a := mach.ExecuteAssertion(steps, timeBounds)
+		lastReason := mach.LastBlockReason()
+		if lastReason != nil {
+			if lastReason.IsBlocked(mach, 0) && lastReason.Equals(machine.ErrorBlocked{}) {
+				t.Fatal("Machine in error state")
+			}
+		}
 		if a.NumSteps == 0 {
 			fmt.Println(" machine halted ")
 			break
@@ -110,7 +117,6 @@ func TestValidateProof(t *testing.T) {
 			t.Log("Num steps = ", a.NumSteps)
 		}
 		fmt.Println("executed ", i, " steps")
-
 	}
 
 	t.Log("called ValidateProof")

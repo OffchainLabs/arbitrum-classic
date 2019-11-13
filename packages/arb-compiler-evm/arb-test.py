@@ -80,6 +80,7 @@ def test(vm):
     # uncomment push, jump and set_label and move set_label if we want to skip some tests
     vm.push(arb.ast.AVMLabel("jump_to_test"))
     vm.jump()
+    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     # ADD
     testBinaryOp(vm, 4, 3, 7, vm.add)
     #    testBinaryOp(vm,4,3,6,vm.add)
@@ -150,7 +151,7 @@ def test(vm):
     testTertiaryOp(vm, 8, 2, 3, 1, vm.mulmod)
     testTertiaryOp(vm, 2 ** 256 - 1, 2, 7, 2, vm.mulmod)
     testTertiaryOp(vm, 0, 0, 7, 0, vm.mulmod)
-    # addmod by 0
+    # mulmod by 0
     vm.push(arb.ast.AVMLabel("MULMOD_by_0_expected"))
     vm.errset()
     runTertiaryOp(vm, 8, 3, 0, vm.mulmod)
@@ -219,7 +220,6 @@ def test(vm):
     testUnaryOp(vm, 3, 2 ** 256 - 4, vm.bitwise_not)
     testUnaryOp(vm, 2 ** 256 - 4, 3, vm.bitwise_not)
     # BYTE
-    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     testBinaryOp(vm, 16, 31, 16, vm.byte)
     testBinaryOp(vm, 3, 3, 0, vm.byte)
     # SIGNEXTEND
@@ -232,7 +232,89 @@ def test(vm):
     testBinaryOp(vm, 65534, 1, 2 ** 256 - 2, vm.signextend)
     testBinaryOp(vm, 65537, 1, 1, vm.signextend)
     testBinaryOp(vm, 65537, 2, 65537, vm.signextend)
+    # HASH
+    testUnaryOp(
+        vm,
+        10,
+        int("c65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a8", 16),
+        vm.hash,
+    )
+    # TYPE
+    testUnaryOp(vm, 3, 0, vm.type)
+    testUnaryOp(vm, arb.value.AVMCodePoint(0, 0, b"\0" * 32), 1, vm.type)
+    testUnaryOp(vm, arb.std.bigtuple.fromints([1, 2]), 3, vm.type)
+    # POP
+    vm.push(3)
+    vm.push(5)
+    vm.pop()
+    cmpEqual(vm, 3)
+    # SPUSH
+    #    vm.static = 4
+    #    vm.spush()
+    #    cmpEqual(vm, 4)
+    # RPUSH
+    #    vm.register = 5
+    #    vm.rpush()
+    #    cmpEqual(vm, 5)
+    # RSET
+    vm.push(7)
+    vm.rset()
+    # JUMP
+    vm.push(arb.ast.AVMLabel("jump_opcode_test"))
+    vm.jump()
+    vm.nop()
+    vm.set_label(arb.ast.AVMLabel("jump_opcode_test"))
+    # CJUMP
+    vm.push(3)
+    vm.push(0)
+    vm.push(arb.ast.AVMLabel("cjump_opcode_test1"))
+    vm.cjump()
+    vm.push(4)
+    vm.set_label(arb.ast.AVMLabel("cjump_opcode_test1"))
+    cmpEqual(vm, 4)
+    vm.pop()
+    # CJUMP false
+    vm.push(3)
+    vm.push(1)
+    vm.push(arb.ast.AVMLabel("cjump_opcode_test2"))
+    vm.cjump()
+    vm.push(4)
+    vm.set_label(arb.ast.AVMLabel("cjump_opcode_test2"))
+    cmpEqual(vm, 3)
+    # STACKEMPTY
+    vm.stackempty()
+    cmpEqual(vm, 1)
+    vm.push(3)
+    vm.stackempty()
+    cmpEqual(vm, 0)
+    vm.pop()
+    # PCPUSH
+    # AUXPUSH
+    # AUXPOP
+    # AUXSTACKEMPTY
+    # NOP
+    # ERRPUSH
+    # ERRSET
+    # DUP0
+    # DUP1
+    # DUP2
+    # SWAP1
+    # SWAP2
+    # TGET
+    # TSET
+    # TLEN
+    # BREAKPOINT
+    # LOG
+    # SEND
+    # NBSEND
+    # GETTIME
+    # INBOX
+    # ERROR
+    # HALT
     #
+    vm.nop()
+    vm.nop()
+    vm.nop()
     vm.halt()
 
 
