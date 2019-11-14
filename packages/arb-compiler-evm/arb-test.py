@@ -340,9 +340,9 @@ def test_stack(vm):
     cmpEqual(vm, 0)
     vm.pop()
     # PCPUSH
-    # vm.set_label(arb.ast.AVMLabel("pcpush_opcode_test"))
-    # vm.pcpush()
-    # cmpEqual(vm, arb.ast.AVMLabel("pcpush_opcode_test"))
+    vm.set_label(arb.ast.AVMLabel("pcpush_opcode_test"))
+    vm.pcpush()
+    cmpEqual(vm, arb.ast.AVMLabel("pcpush_opcode_test"))
     # AUXPUSH/AUXPOP/AUXSTACKEMPTY
     vm.push(5)
     vm.auxpush()
