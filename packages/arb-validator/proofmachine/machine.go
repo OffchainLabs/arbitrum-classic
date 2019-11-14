@@ -35,14 +35,18 @@ import (
 )
 
 type Machine struct {
-	machine     machine.Machine
+	machine machine.Machine
+	ethConn *Connection
+}
+
+type Connection struct {
 	fromAddress common.Address
 	osp         *ethbridge.OneStepProof
 	client      *ethclient.Client
 	proofbounds [2]uint64
 }
 
-func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint64) (*Machine, error) {
+func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint64) (*Connection, error) {
 	client, err := ethclient.Dial(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
@@ -53,13 +57,19 @@ func New(codeFile string, mach machine.Machine, warnMode bool, contractAddress c
 	}
 
 	keyAddr := crypto.PubkeyToAddress(key.PublicKey)
-	return &Machine{
-		machine:     mach,
+	return &Connection{
 		fromAddress: keyAddr,
 		osp:         osp,
 		client:      client,
 		proofbounds: proofbounds,
 	}, err
+}
+
+func New(mach machine.Machine, ethConn *Connection) (*Machine, error) {
+	return &Machine{
+		machine: mach,
+		ethConn: ethConn,
+	}, nil
 }
 
 func (m *Machine) Hash() [32]byte {
@@ -71,7 +81,7 @@ func (m *Machine) PrintState() {
 }
 
 func (m *Machine) Clone() machine.Machine {
-	return &Machine{m.machine.Clone(), m.fromAddress, m.osp, m.client, m.proofbounds}
+	return &Machine{m.machine.Clone(), m.ethConn}
 }
 
 func (m *Machine) CurrentStatus() machine.Status {
@@ -114,7 +124,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		var proof []byte
 		var err error
 		// only marshall if we are going to validate (see below)
-		if i >= int32(m.proofbounds[0]) && i <= int32(m.proofbounds[1]) {
+		if i >= int32(m.ethConn.proofbounds[0]) && i <= int32(m.ethConn.proofbounds[1]) {
 			proof, err = m.MarshalForProof()
 			if err != nil {
 				log.Println("error marshaling")
@@ -139,11 +149,11 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 		stepsRan++
 
 		// only marshall and validate if step is within proofbounds
-		if i >= int32(m.proofbounds[0]) && i <= int32(m.proofbounds[1]) {
+		if i >= int32(m.ethConn.proofbounds[0]) && i <= int32(m.ethConn.proofbounds[1]) {
 			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
 			callOpts := &bind.CallOpts{
 				Pending: true,
-				From:    m.fromAddress,
+				From:    m.ethConn.fromAddress,
 				Context: context.Background(),
 			}
 			// uncomment to force proof fail
@@ -155,7 +165,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 				BeforeInbox:   inboxHash,
 			}
 
-			res, err := m.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
+			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
 			if err != nil {
 				log.Println("Machine ended with error:")
 				log.Fatal("Proof invalid ", err)

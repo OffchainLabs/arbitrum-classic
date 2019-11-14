@@ -298,8 +298,8 @@ def test_stack(vm):
     vm.pop()
     cmpEqual(vm, 3)
     # SPUSH
-    vm.spush()
-    cmpEqual(vm, 4)
+    # vm.spush()
+    # cmpEqual(vm, 4)
     # RPUSH
     vm.push(7)
     vm.rset()
@@ -451,15 +451,15 @@ def test_tuple(vm):
     vm.tlen()
     cmpEqual(vm, 4)
     # BREAKPOINT
-    vm.breakpoint()
+    # vm.breakpoint()
     # LOG
     vm.push(3)
     vm.log()
     # not sure how to verify it worked
     # SEND
     # NBSEND
-    # vm.push(arb.value.Tuple([1, 2345, 1, 4]))
-    # vm.nbsend()
+    vm.push(arb.value.Tuple([1, 2345, 1, 4]))
+    vm.nbsend()
     # GETTIME
     vm.gettime()
     # INBOX
@@ -493,7 +493,7 @@ with open("../arb-validator/test/opcodetesthash.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_stack)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
-vm.static = 4
+# vm.static = 4
 # print(vm.code)
 with open("../arb-validator/test/opcodeteststack.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
