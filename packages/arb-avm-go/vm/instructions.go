@@ -1012,7 +1012,7 @@ func sendImpl(state *Machine) (value.TupleValue, protocol.Message, StackMods, er
 	val2, _ := sendData.GetByInt64(1)
 	val3, _ := sendData.GetByInt64(2)
 	val4, _ := sendData.GetByInt64(3)
-	fmt.Printf("sendData[1] type = %T value = %v\n", val2, val2)
+
 	destination, ok2 := val2.(value.IntValue)
 	amount, ok3 := val3.(value.IntValue)
 	tokenType, ok4 := val4.(value.IntValue)

@@ -194,7 +194,6 @@ func (tv TupleValue) CloneShallow() Value {
 			newContents[i] = NewHashOnlyValueFromValue(b)
 		}
 	}
-	fmt.Println("go tuple val = ", TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size})
 	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
 }
 
