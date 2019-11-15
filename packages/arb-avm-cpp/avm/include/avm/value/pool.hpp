@@ -17,7 +17,7 @@
 #ifndef pool_hpp
 #define pool_hpp
 
-#include <avm/value.hpp>
+#include <avm/value/value.hpp>
 
 #include <array>
 #include <memory>

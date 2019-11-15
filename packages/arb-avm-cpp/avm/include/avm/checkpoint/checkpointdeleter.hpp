@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-#include "avm/bigint.hpp"
+#ifndef checkpointdeleter_hpp
+#define checkpointdeleter_hpp
 
-#include "bigint_utils.hpp"
-#include "util.hpp"
+#include <vector>
 
-#include <sstream>
+struct DeleteResults;
+class CheckpointStorage;
 
-uint256_t hash(const uint256_t& val) {
-    std::array<unsigned char, 32> intData;
-    to_big_endian(val, intData.begin());
+DeleteResults deleteCheckpoint(
+    CheckpointStorage& checkpoint_storage,
+    const std::vector<unsigned char>& checkpoint_name);
 
-    std::array<unsigned char, 32> hashData;
-    evm::Keccak_256(intData.data(), 32, hashData.data());
-    return from_big_endian(hashData.begin(), hashData.end());
-}
+#endif /* checkpointdeleter_h */

@@ -94,9 +94,9 @@ int main(int argc, char* argv[]) {
         "0000000000000000000000000000000000000000000000000000000000000000000000"
         "0000");
 
-    auto msg1DataRawPtr = msg1DataRaw.data();
-    auto msg2DataRawPtr = msg2DataRaw.data();
-    auto msg3DataRawPtr = msg3DataRaw.data();
+    auto msg1DataRawPtr = const_cast<const char*>(msg1DataRaw.data());
+    auto msg2DataRawPtr = const_cast<const char*>(msg2DataRaw.data());
+    auto msg3DataRawPtr = const_cast<const char*>(msg3DataRaw.data());
 
     auto msg1Data = deserialize_value(msg1DataRawPtr, mach.getPool());
     auto msg2Data = deserialize_value(msg2DataRawPtr, mach.getPool());

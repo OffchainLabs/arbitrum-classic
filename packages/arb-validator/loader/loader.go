@@ -37,3 +37,7 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 		return nil, fmt.Errorf("invalid machine type specified %v", vmtype)
 	}
 }
+
+func CreateCheckpointStorage(dbPath string) (machine.CheckpointStorage, error) {
+	return cmachine.NewCheckpoint(dbPath)
+}

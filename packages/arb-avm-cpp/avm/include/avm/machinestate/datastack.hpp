@@ -17,23 +17,28 @@
 #ifndef datastack_hpp
 #define datastack_hpp
 
-#include <avm/tuple.hpp>
-#include <avm/value.hpp>
+#include <avm/value/tuple.hpp>
+#include <avm/value/value.hpp>
 
-#include <iostream>
 #include <vector>
 
-class datastack {
+class MachineStateSaver;
+class MachineStateFetcher;
+struct SaveResults;
+
+class Datastack {
     static constexpr int lazyCount = 100;
 
     void addHash() const;
     void calculateAllHashes() const;
+    void initializeDataStack(const Tuple& tuple);
+    Tuple getTupleRepresentation(TuplePool* pool);
 
    public:
     std::vector<value> values;
     mutable std::vector<uint256_t> hashes;
 
-    datastack() {
+    Datastack() {
         values.reserve(1000);
         hashes.reserve(1000);
     }
@@ -91,8 +96,13 @@ class datastack {
     uint64_t stacksize() { return values.size(); }
 
     uint256_t hash() const;
+
+    SaveResults checkpointState(MachineStateSaver& saver, TuplePool* pool);
+
+    bool initializeDataStack(const MachineStateFetcher& fetcher,
+                             const std::vector<unsigned char>& hash_key);
 };
 
-std::ostream& operator<<(std::ostream& os, const datastack& val);
+std::ostream& operator<<(std::ostream& os, const Datastack& val);
 
 #endif /* datastack_hpp */

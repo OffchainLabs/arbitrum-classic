@@ -17,13 +17,14 @@
 #ifndef codepoint_hpp
 #define codepoint_hpp
 
-#include <avm/value.hpp>
+#include <avm/opcodes.hpp>
+#include <avm/value/value.hpp>
 
 struct Operation {
     OpCode opcode;
     std::unique_ptr<value> immediate;
 
-    Operation() = default;
+    Operation() { opcode = OpCode::DEFAULT; };
     Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);
 
@@ -41,12 +42,17 @@ struct Operation {
 bool operator==(const Operation& val1, const Operation& val2);
 bool operator!=(const Operation& val1, const Operation& val2);
 
+extern uint64_t pc_default;
+
 struct CodePoint {
     uint64_t pc;
     Operation op;
     uint256_t nextHash;
 
-    CodePoint() {}
+    CodePoint() {
+        pc = pc_default;
+        nextHash = 0;
+    }
     CodePoint(uint64_t pc_, Operation op_, uint256_t nextHash_)
         : pc(pc_), op(op_), nextHash(nextHash_) {}
     void marshal(std::vector<unsigned char>& buf) const;
@@ -55,6 +61,8 @@ struct CodePoint {
                 (nextHash != 0));
     }
 };
+
+CodePoint getErrCodePoint();
 
 uint256_t hash(const CodePoint& cp);
 

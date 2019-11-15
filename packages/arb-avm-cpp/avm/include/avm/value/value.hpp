@@ -17,19 +17,11 @@
 #ifndef value_hpp
 #define value_hpp
 
-#include <avm/bigint.hpp>
-#include <avm/opcodes.hpp>
+#include <avm/value/bigint.hpp>
 
 #include <nonstd/variant.hpp>
 
-class bad_tuple_index : public std::exception {
-   public:
-    virtual const char* what() const noexcept override {
-        return "bad_tuple_index";
-    }
-};
-
-enum types { NUM, CODEPT, HASH_ONLY, TUPLE };
+enum ValueTypes { NUM, CODEPT, HASH_ONLY, TUPLE };
 
 class TuplePool;
 class Tuple;
@@ -40,15 +32,15 @@ struct CodePoint;
 using value = nonstd::variant<Tuple, uint256_t, CodePoint>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
-
 uint256_t hash(const value& value);
+int get_tuple_size(char*& bufptr);
 
-uint256_t deserialize_int(char*& srccode);
-Operation deserializeOperation(char*& bufptr, TuplePool& pool);
-CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool);
-Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool);
-value deserialize_value(char*& srccode, TuplePool& pool);
-void marshal_value(const value val, std::vector<unsigned char>& buf);
+uint256_t deserializeUint256t(const char*& srccode);
+Operation deserializeOperation(const char*& bufptr, TuplePool& pool);
+CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool);
+Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool);
+value deserialize_value(const char*& srccode, TuplePool& pool);
+void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshal_Tuple(const Tuple& val, std::vector<unsigned char>& buf);
 void marshal_CodePoint(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);
@@ -57,5 +49,12 @@ void marshalShallow(const value& val, std::vector<unsigned char>& buf);
 void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf);
 void marshalShallow(const CodePoint& val, std::vector<unsigned char>& buf);
 void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf);
+
+template <typename T>
+static T shrink(uint256_t i) {
+    return static_cast<T>(i & std::numeric_limits<T>::max());
+}
+
+std::vector<unsigned char> GetHashKey(const value& val);
 
 #endif /* value_hpp */

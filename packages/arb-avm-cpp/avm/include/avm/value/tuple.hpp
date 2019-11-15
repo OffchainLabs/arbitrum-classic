@@ -17,9 +17,10 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
-#include <avm/codepoint.hpp>
-#include <avm/pool.hpp>
-#include <avm/value.hpp>
+#include <avm/exceptions.hpp>
+#include <avm/value/codepoint.hpp>
+#include <avm/value/pool.hpp>
+#include <avm/value/value.hpp>
 
 #include <memory>
 
@@ -32,10 +33,9 @@ class Tuple {
 
     friend uint256_t hash(const Tuple&);
 
-    uint256_t calculateHash() const;
-
    public:
     Tuple() = default;
+    uint256_t calculateHash() const;
 
     Tuple(TuplePool* pool, size_t size) {
         if (size > 0) {
@@ -89,6 +89,8 @@ class Tuple {
           value val7,
           value val8,
           TuplePool* pool);
+
+    Tuple(std::vector<value> values, TuplePool* pool);
 
     //    ~Tuple() {
     //        if (tpl.use_count() == 1) {
