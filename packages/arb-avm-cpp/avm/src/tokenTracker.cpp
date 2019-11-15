@@ -124,10 +124,14 @@ bool BalanceTracker::canSpend(const TokenType& tokType,
                               const uint256_t& amount) const {
     // if token is fungible check that the spend amount <= the amount assigned
     // to that token
-    if (isToken(tokType)) {
-        return amount <= tokenValue(tokType);
-    } else {
-        return hasNFT(tokType, amount);
+    try {
+        if (isToken(tokType)) {
+            return amount <= tokenValue(tokType);
+        } else {
+            return hasNFT(tokType, amount);
+        }
+    } catch (const std::out_of_range& oor) {
+        return 0;
     }
 }
 

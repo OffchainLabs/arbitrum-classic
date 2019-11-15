@@ -59,17 +59,17 @@ library ArbMachine {
             abi.encodePacked(
                 "Machine(",
                 DebugPrint.bytes32string(machine.instructionStackHash.hash),
-                ", ",
+                ", \n",
                 DebugPrint.bytes32string(machine.dataStackHash.hash),
-                ", ",
+                ", \n",
                 DebugPrint.bytes32string(machine.auxStackHash.hash),
-                ", ",
+                ", \n",
                 DebugPrint.bytes32string(machine.registerHash.hash),
-                ", ",
+                ", \n",
                 DebugPrint.bytes32string(machine.staticHash.hash),
-                ", ",
+                ", \n",
                 DebugPrint.bytes32string(machine.errHandler.hash),
-                ")"
+                ")\n"
             )
         );
     }

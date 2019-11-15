@@ -131,10 +131,12 @@ library OneStepProof {
         bytes21 tokenType;
         uint amount;
         bool foundAmount;
-
+        // if first message hash != last message hash then we have one or more messages
         bool includesMessage = (fields[3] != fields[4]);
         int64 amountIndex = -1;
         if (includesMessage) {
+            // check messages and verify that one and only one has a value
+            // use that index to check token type and amount
             for (uint64 i = 0; i < messageValue.length; i++) {
                 if (messageValue[i] != 0) {
                     require(amountIndex == -1, "multiple out messages");
@@ -1024,6 +1026,11 @@ library OneStepProof {
         bytes21 tokenType;
         uint amount;
         bytes32 messageHash;
+        require(val1.isTuple(), "val1 not tuple");
+        require(val1.valLength()==4,  string(abi.encodePacked("val1 tuple length = ", DebugPrint.uint2str(val1.valLength()))));
+        require(val1.tupleVal[1].isInt(), string(abi.encodePacked("val1.tupleVal[1] is type ", DebugPrint.uint2str(val1.tupleVal[1].typeCode))));
+        require(val1.tupleVal[2].isInt(), "val1.tupleVal[2] not int");
+        require(val1.tupleVal[3].isInt(), "val1.tupleVal[3] not int");
         if (!val1.isTuple()) {
             return (false, messageHash, tokenType, amount);
         }
@@ -1036,13 +1043,13 @@ library OneStepProof {
         if (!val1.tupleVal[3].isInt()) {
             return (false, messageHash, tokenType, amount);
         }
-        tokenType = bytes21(bytes32(val1.tupleVal[1].intVal));
+        tokenType = bytes21(bytes32(val1.tupleVal[3].intVal));
         amount = val1.tupleVal[2].intVal;
         messageHash = ArbProtocol.generateMessageStubHash(
             val1.hash().hash,
             tokenType,
             amount,
-            address(bytes20(bytes32(val1.tupleVal[3].intVal)))
+            address(val1.tupleVal[1].intVal)
         );
         return (true, messageHash, tokenType, amount);
     }
@@ -1471,6 +1478,8 @@ library OneStepProof {
             bytes21 tokenType;
             uint amount;
             (correct, messageHash, tokenType, amount) = sendInsnImpl(endMachine, stackVals[0]);
+            require( tokenType == _data.tokenType, "Token type does not match");
+            require( amount == _data.amount, "Amount does not match");
             require(
                 keccak256(
                     abi.encodePacked(
@@ -1485,16 +1494,19 @@ library OneStepProof {
             bytes21 tokenType;
             uint amount;
             (correct, messageHash, tokenType, amount) = sendInsnImpl(endMachine, stackVals[0]);
-            require(
-                keccak256(
+            if ( tokenType != _data.tokenType ||
+                 amount != _data.amount ||
+                 keccak256(
                     abi.encodePacked(
                         _data.firstMessage,
                         messageHash
                     )
-                ) == _data.lastMessage,
-                "sent message doesn't match output mesage"
-            );
-            require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+                 ) != _data.lastMessage) {
+                endMachine.addDataStackValue(ArbValue.newIntValue(0));
+                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+            } else {
+                endMachine.addDataStackValue(ArbValue.newIntValue(1));
+            }
         } else if (opCode == OP_GETTIME) {
             ArbValue.Value[] memory contents = new ArbValue.Value[](2);
             contents[0] = ArbValue.newIntValue(_data.timeBounds[0]);
@@ -1526,10 +1538,11 @@ library OneStepProof {
         //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
         // );
         require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-        // require(
-        //     _data.afterHash == endMachine.hash(),
-        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString()))
-        // );
+         require(
+             _data.afterHash == endMachine.hash(),
+             string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
+             " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
+         );
         require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;

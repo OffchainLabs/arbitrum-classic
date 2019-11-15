@@ -411,6 +411,9 @@ def test_dup(vm):
 def test_tuple(vm):
     vm.push(arb.ast.AVMLabel("base_error_handler"))
     vm.errset()
+    vm.push(arb.ast.AVMLabel("jump_to_test"))
+    vm.jump()
+    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     # TGET
     vm.push(arb.value.Tuple([9, 8, 7, 6]))
     vm.push(1)
@@ -451,8 +454,9 @@ def test_tuple(vm):
     vm.tlen()
     cmpEqual(vm, 4)
     # BREAKPOINT
-    # vm.breakpoint()
+    vm.breakpoint()
     # LOG
+    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     vm.push(3)
     vm.log()
     # not sure how to verify it worked
@@ -476,36 +480,41 @@ def test_tuple(vm):
 code = arb.compile_block(test_arithmetic)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
+print("math ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/test/opcodetestmath.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_logic)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
-# print(vm.code)
+print("logic ", len(vm.code), " codepoints")
 with open("../arb-validator/test/opcodetestlogic.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_hash)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
+print("hash ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/test/opcodetesthash.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_stack)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 # vm.static = 4
+print("stack ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/test/opcodeteststack.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_dup)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
+print("dup ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/test/opcodetestdup.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)
 code = arb.compile_block(test_tuple)
 vm = arb.compile_program(arb.ast.BlockStatement([]), code)
 vm.static = 4
+print("tuple ", len(vm.code), " codepoints")
 # print(vm.code)
 with open("../arb-validator/test/opcodetesttuple.ao", "wb") as f:
     arb.marshall.marshall_vm(vm, f)

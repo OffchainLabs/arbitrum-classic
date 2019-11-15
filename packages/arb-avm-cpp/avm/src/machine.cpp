@@ -831,7 +831,8 @@ static void tlen(MachineState& m) {
     ++m.pc;
 }
 
-static BlockReason breakpoint(MachineState&) {
+static BlockReason breakpoint(MachineState& m) {
+    ++m.pc;
     return BreakpointBlocked{};
 }
 

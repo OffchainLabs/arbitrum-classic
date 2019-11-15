@@ -724,6 +724,16 @@ TEST_CASE("SEND opcode is correct") {
 TEST_CASE("NBSEND opcode is correct") {
     SECTION("nbsend") {
         // TODO: fill in nbsend test
+        MachineState m;
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2345}, uint256_t{1},
+                           uint256_t{4}, m.pool.get()});
+
+        m.runOp(OpCode::NBSEND);
+        value res = m.stack.pop();
+        auto actual = nonstd::get_if<uint256_t>(&res);
+        REQUIRE(actual);
+        REQUIRE(*actual == 0);
+        REQUIRE(m.stack.stacksize() == 0);
     }
 }
 
