@@ -105,11 +105,11 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *proofmachine.Co
 
 func TestValidateProof(t *testing.T) {
 	testMachines := []string{
-		//"opcodetestmath.ao",
-		//"opcodetestlogic.ao",
-		//"opcodetesthash.ao",
-		//"opcodeteststack.ao",
-		//"opcodetestdup.ao",
+		"opcodetestmath.ao",
+		"opcodetestlogic.ao",
+		"opcodetesthash.ao",
+		"opcodeteststack.ao",
+		"opcodetestdup.ao",
 		"opcodetesttuple.ao",
 	}
 	ethCon, err := setupTestValidateProof(t)

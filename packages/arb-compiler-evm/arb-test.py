@@ -282,6 +282,9 @@ def test_hash(vm):
     testUnaryOp(vm, 3, 0, vm.type)
     testUnaryOp(vm, arb.value.AVMCodePoint(0, 0, b"\0" * 32), 1, vm.type)
     testUnaryOp(vm, arb.value.Tuple([1, 2]), 3, vm.type)
+    # SPUSH
+    vm.spush()
+    cmpEqual(vm, 4)
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))
     vm.push(arb.value.AVMCodePoint(0, 0, b"\0" * 32))
@@ -297,9 +300,6 @@ def test_stack(vm):
     vm.push(5)
     vm.pop()
     cmpEqual(vm, 3)
-    # SPUSH
-    # vm.spush()
-    # cmpEqual(vm, 4)
     # RPUSH
     vm.push(7)
     vm.rset()
@@ -411,9 +411,6 @@ def test_dup(vm):
 def test_tuple(vm):
     vm.push(arb.ast.AVMLabel("base_error_handler"))
     vm.errset()
-    vm.push(arb.ast.AVMLabel("jump_to_test"))
-    vm.jump()
-    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     # TGET
     vm.push(arb.value.Tuple([9, 8, 7, 6]))
     vm.push(1)
@@ -456,19 +453,23 @@ def test_tuple(vm):
     # BREAKPOINT
     vm.breakpoint()
     # LOG
-    vm.set_label(arb.ast.AVMLabel("jump_to_test"))
     vm.push(3)
     vm.log()
     # not sure how to verify it worked
     # SEND
+    # TODO add send test
     # NBSEND
     vm.push(arb.value.Tuple([1, 2345, 1, 4]))
     vm.nbsend()
+    # TODO add nbsend test with valid message
     # GETTIME
     vm.gettime()
     # INBOX
+    # TODO add inbox test
     # ERROR
+    # TODO add error test
     # HALT
+    # TODO add halt test
     #
     vm.halt()
     vm.set_label(arb.ast.AVMLabel("base_error_handler"))

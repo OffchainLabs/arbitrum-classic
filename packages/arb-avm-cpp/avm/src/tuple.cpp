@@ -128,11 +128,18 @@ void Tuple::marshal(std::vector<unsigned char>& buf) const {
     }
 }
 
+// marshalForProof does not use this
+// see similar functionality in value.marshalShallow
 value Tuple::clone_shallow() {
     Tuple tup(tuplePool, tuple_size());
     for (uint64_t i = 0; i < tuple_size(); i++) {
-        auto valHash = hash(get_element(i));
-        tup.set_element(i, valHash);
+        auto val = get_element(i);
+        if (nonstd::holds_alternative<uint256_t>(val)) {
+            tup.set_element(i, val);
+        } else {
+            auto valHash = hash(get_element(i));
+            tup.set_element(i, valHash);
+        }
     }
     return tup;
 }

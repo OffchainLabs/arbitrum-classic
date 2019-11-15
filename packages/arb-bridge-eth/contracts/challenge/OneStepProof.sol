@@ -1026,11 +1026,6 @@ library OneStepProof {
         bytes21 tokenType;
         uint amount;
         bytes32 messageHash;
-        require(val1.isTuple(), "val1 not tuple");
-        require(val1.valLength()==4,  string(abi.encodePacked("val1 tuple length = ", DebugPrint.uint2str(val1.valLength()))));
-        require(val1.tupleVal[1].isInt(), string(abi.encodePacked("val1.tupleVal[1] is type ", DebugPrint.uint2str(val1.tupleVal[1].typeCode))));
-        require(val1.tupleVal[2].isInt(), "val1.tupleVal[2] not int");
-        require(val1.tupleVal[3].isInt(), "val1.tupleVal[3] not int");
         if (!val1.isTuple()) {
             return (false, messageHash, tokenType, amount);
         }
@@ -1538,11 +1533,11 @@ library OneStepProof {
         //     string(abi.encodePacked("Proof had non matching start state: ", startMachine.toString()))
         // );
         require(_data.beforeHash == startMachine.hash(), "Proof had non matching start state");
-         require(
-             _data.afterHash == endMachine.hash(),
-             string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
-             " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
-         );
+        // require(
+        //     _data.afterHash == endMachine.hash(),
+        //     string(abi.encodePacked("Proof had non matching end state: ", endMachine.toString(),
+        //     " afterHash = ", DebugPrint.bytes32string(_data.afterHash), "\nendMachine = ", DebugPrint.bytes32string(endMachine.hash())))
+        // );
         require(_data.afterHash == endMachine.hash(), "Proof had non matching end state");
 
         return 0;

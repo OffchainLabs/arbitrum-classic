@@ -188,8 +188,13 @@ func (tv TupleValue) Clone() Value {
 func (tv TupleValue) CloneShallow() Value {
 	var newContents [MaxTupleSize]Value
 	for i, b := range tv.Contents() {
-		newContents[i] = NewHashOnlyValueFromValue(b)
+		if b.TypeCode() == TypeCodeInt {
+			newContents[i] = b
+		} else {
+			newContents[i] = NewHashOnlyValueFromValue(b)
+		}
 	}
+	fmt.Println("go tuple val = ", TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size})
 	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size}
 }
 
