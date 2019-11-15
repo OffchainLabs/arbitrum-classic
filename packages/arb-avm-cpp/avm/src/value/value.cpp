@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-#include "avm/value.hpp"
+#include <avm/value/codepoint.hpp>
+#include <avm/value/pool.hpp>
+#include <avm/value/tuple.hpp>
+#include <avm/value/value.hpp>
 
-#include "avm/codepoint.hpp"
-#include "avm/pool.hpp"
-#include "avm/tuple.hpp"
-
-#include "bigint_utils.hpp"
-#include "util.hpp"
+#include <bigint_utils.hpp>
+#include <util.hpp>
 
 #include <ostream>
 
 #define UINT256_SIZE 32
 
-uint256_t deserialize_int(char*& bufptr) {
+uint256_t deserializeUint256t(const char*& bufptr) {
     uint256_t ret = from_big_endian(bufptr, bufptr + UINT256_SIZE);
     bufptr += UINT256_SIZE;
     return ret;
 }
 
-Operation deserializeOperation(char*& bufptr, TuplePool& pool) {
+Operation deserializeOperation(const char*& bufptr, TuplePool& pool) {
     uint8_t immediateCount;
     memcpy(&immediateCount, bufptr, sizeof(immediateCount));
     bufptr += sizeof(immediateCount);
@@ -48,7 +47,7 @@ Operation deserializeOperation(char*& bufptr, TuplePool& pool) {
     }
 }
 
-CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool) {
+CodePoint deserializeCodePoint(const char*& bufptr, TuplePool& pool) {
     CodePoint ret;
     memcpy(&ret.pc, bufptr, sizeof(ret.pc));
     bufptr += sizeof(ret.pc);
@@ -60,7 +59,7 @@ CodePoint deserializeCodePoint(char*& bufptr, TuplePool& pool) {
     return ret;
 }
 
-Tuple deserialize_tuple(char*& bufptr, int size, TuplePool& pool) {
+Tuple deserializeTuple(const char*& bufptr, int size, TuplePool& pool) {
     Tuple tup(&pool, size);
     for (int i = 0; i < size; i++) {
         tup.set_element(i, deserialize_value(bufptr, pool));
@@ -83,7 +82,7 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
 }
 
-void marshal_value(const value val, std::vector<unsigned char>& buf) {
+void marshal_value(const value& val, std::vector<unsigned char>& buf) {
     if (nonstd::holds_alternative<Tuple>(val))
         marshal_Tuple(nonstd::get<Tuple>(val), buf);
     else if (nonstd::holds_alternative<uint256_t>(val))
@@ -125,24 +124,31 @@ void marshalShallow(const uint256_t& val, std::vector<unsigned char>& buf) {
     marshal_uint256_t(val, buf);
 }
 
-value deserialize_value(char*& bufptr, TuplePool& pool) {
+value deserialize_value(const char*& bufptr, TuplePool& pool) {
     uint8_t valType;
     memcpy(&valType, bufptr, sizeof(valType));
     bufptr += sizeof(valType);
     switch (valType) {
         case NUM:
-            return deserialize_int(bufptr);
+            return deserializeUint256t(bufptr);
         case CODEPT:
             return deserializeCodePoint(bufptr, pool);
         default:
             if (valType >= TUPLE && valType <= TUPLE + 8) {
-                return deserialize_tuple(bufptr, valType - TUPLE, pool);
+                return deserializeTuple(bufptr, valType - TUPLE, pool);
             } else {
                 std::printf("in deserialize_value, unhandled type = %X\n",
                             valType);
                 throw std::runtime_error("Tried to deserialize unhandled type");
             }
     }
+}
+
+int get_tuple_size(char*& bufptr) {
+    uint8_t valType;
+    memcpy(&valType, bufptr, sizeof(valType));
+
+    return valType - TUPLE;
 }
 
 uint256_t hash(const value& value) {
@@ -172,4 +178,12 @@ struct ValuePrinter {
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
     return *nonstd::visit(ValuePrinter{os}, val);
+}
+
+std::vector<unsigned char> GetHashKey(const value& val) {
+    auto hash_key = hash(val);
+    std::vector<unsigned char> hash_key_vector;
+    marshal_value(hash_key, hash_key_vector);
+
+    return hash_key_vector;
 }

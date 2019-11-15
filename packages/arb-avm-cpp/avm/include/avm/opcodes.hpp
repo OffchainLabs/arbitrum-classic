@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 enum class OpCode : uint8_t {
     ADD = 0x01,
@@ -85,7 +86,8 @@ enum class OpCode : uint8_t {
     INBOX,
     ERROR,
     HALT,
-    DEBUG
+    DEBUG,
+    DEFAULT
 };
 
 inline bool isValidOpcode(OpCode op) {

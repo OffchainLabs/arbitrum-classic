@@ -12,6 +12,7 @@ xcode
 validator-states
 docker-compose.yml
 packages/arb-avm-cpp/tests/config.hpp
+packages/arb-avm-cpp/rocksdb
 packages/arb-compiler-evm/tests/sol-syscall/code.txt
 bridge_eth_addresses.json
 keys.json

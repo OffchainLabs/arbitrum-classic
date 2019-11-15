@@ -20,33 +20,53 @@ set (CMAKE_CXX_STANDARD 14)
 project (avm LANGUAGES CXX)
 
 set(LIB_HEADERS
-  include/avm/bigint.hpp
-  include/avm/codepoint.hpp
-  include/avm/datastack.hpp
+
   include/avm/machine.hpp
   include/avm/opcodes.hpp
-  include/avm/pool.hpp
-  include/avm/tokenTracker.hpp
-  include/avm/tuple.hpp
-  include/avm/value.hpp
+  include/avm/exceptions.hpp
+  include/avm/value/tuple.hpp
+  include/avm/value/value.hpp
+  include/avm/value/bigint.hpp
+  include/avm/value/codepoint.hpp
+  include/avm/value/pool.hpp
+  include/avm/machinestate/machinestate.hpp
+  include/avm/machinestate/tokenTracker.hpp
+  include/avm/machinestate/datastack.hpp
+  include/avm/machinestate/blockreason.hpp
+  include/avm/machinestate/machineoperation.hpp
+  include/avm/machinestate/messagestack.hpp
+  include/avm/checkpoint/checkpointutils.hpp
+  include/avm/checkpoint/checkpointdeleter.hpp
+  include/avm/checkpoint/checkpointresult.hpp
+  include/avm/checkpoint/machinestatesaver.hpp
+  include/avm/checkpoint/machinestatefetcher.hpp
+  include/avm/checkpoint/checkpointstorage.hpp
+  include/avm/checkpoint/transaction.hpp
 )
 
 set(LIB_SOURCES
-  src/bigint.cpp
-  src/codepoint.cpp
-  src/datastack.cpp
-  src/machine.cpp
-  src/pool.cpp
-  src/tuple.cpp
-  src/value.cpp
-  src/tokenTracker.cpp
-
   src/util.hpp
-
-  ${KECCAK_SOURCES}
+  src/machine.cpp
+  src/value/bigint.cpp
+  src/value/codepoint.cpp
+  src/value/pool.cpp
+  src/value/tuple.cpp
+  src/value/value.cpp
+  src/machinestate/tokenTracker.cpp
+  src/machinestate/machinestate.cpp
+  src/machinestate/machineoperation.cpp
+  src/machinestate/messagestack.cpp
+  src/machinestate/datastack.cpp
+  src/machinestate/blockreason.cpp
+  src/checkpoint/machinestatesaver.cpp
+  src/checkpoint/checkpointutils.cpp
+  src/checkpoint/machinestatefetcher.cpp
+  src/checkpoint/checkpointdeleter.cpp
+  src/checkpoint/checkpointstorage.cpp
+  src/checkpoint/transaction.cpp
 )
 
-add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} )
+add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )
 
 set_target_properties(
     avm
@@ -67,8 +87,15 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm PUBLIC Boost::boost CONAN_PKG::variant-lite PRIVATE avm_utils)
+target_link_libraries(avm PUBLIC Boost::boost Boost::filesystem rocks CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
 
 target_code_coverage(avm AUTO ALL)
 
-source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES})
+if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
+    source_group(avm FILES ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
+else()
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/avm" FILES ${LIB_HEADERS})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../external" FILES ${KECCAK_SOURCES})
+endif()
+

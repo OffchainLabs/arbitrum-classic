@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "avm/tuple.hpp"
+#include <avm/value/tuple.hpp>
 
-#include "bigint_utils.hpp"
-#include "util.hpp"
+#include <bigint_utils.hpp>
+#include <util.hpp>
 
 Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {
@@ -119,6 +119,17 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val7));
     tpl->data.push_back(std::move(val8));
     tpl->cachedHash = calculateHash();
+}
+
+Tuple::Tuple(std::vector<value> values, TuplePool* pool)
+    : tuplePool(pool), tpl(pool->getResource(values.size())) {
+    if (values.size() < 9) {
+        for (auto& val : values) {
+            tpl->data.push_back(std::move(val));
+        }
+
+        tpl->cachedHash = calculateHash();
+    }
 }
 
 void Tuple::marshal(std::vector<unsigned char>& buf) const {

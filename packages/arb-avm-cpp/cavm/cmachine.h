@@ -18,6 +18,7 @@
 #define Machine_h
 
 #include <stdint.h>
+#include "ccheckpointstorage.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,6 +87,11 @@ RawAssertion machineExecuteAssertion(CMachine* m,
 ByteSlice machineMarshallForProof(CMachine* m);
 
 void machinePrint(CMachine* m);
+
+int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
+int restoreMachine(CMachine* m,
+                   CCheckpointStorage* storage,
+                   const char* check_point);
 
 #ifdef __cplusplus
 }

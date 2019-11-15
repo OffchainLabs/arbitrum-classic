@@ -187,3 +187,11 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 func (m *Machine) MarshalForProof() ([]byte, error) {
 	return m.machine.MarshalForProof()
 }
+
+func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
+	return m.machine.Checkpoint(storage)
+}
+
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+	return m.machine.RestoreCheckpoint(storage, checkpointName)
+}

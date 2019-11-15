@@ -65,6 +65,9 @@ type Machine interface {
 
 	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion
 	MarshalForProof() ([]byte, error)
+
+	Checkpoint(storage CheckpointStorage) bool
+	RestoreCheckpoint(storage CheckpointStorage, checkpointName string) bool
 }
 
 func IsMachineBlocked(machine Machine, currentTime uint64) bool {
