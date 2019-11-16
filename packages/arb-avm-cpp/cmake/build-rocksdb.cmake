@@ -27,6 +27,12 @@ find_package(Threads REQUIRED)
 # find_package(zlib REQUIRED)
 # find_package(bzip2 REQUIRED)
 
+if("${CMAKE_GENERATOR}" STREQUAL "Unix Makefiles")
+  set(BUILD_CMD $(MAKE) rocksdb)
+else()
+  set(BUILD_CMD ${CMAKE_COMMAND} --build <BINARY_DIR> --target rocksdb)
+endif()
+
 ExternalProject_Add(rocksdb
     GIT_REPOSITORY "https://github.com/facebook/rocksdb.git"
     GIT_TAG "v6.4.6"
@@ -35,6 +41,7 @@ ExternalProject_Add(rocksdb
     CMAKE_ARGS
         -DCMAKE_CXX_STANDARD=14
         -DWITH_TESTS=OFF
+        -DWITH_TOOLS=OFF
         -DCMAKE_POSITION_INDEPENDENT_CODE=True
         -DWITH_ZLIB=OFF
         -DWITH_BZ2=OFF
@@ -42,7 +49,9 @@ ExternalProject_Add(rocksdb
         -DWITH_ZSTD=OFF
         -DWITH_SNAPPY=OFF
         -DWITH_JEMALLOC=OFF
-    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target rocksdb
+        -DWITH_GFLAGS=OFF
+        -DFAIL_ON_WARNINGS=OFF
+    BUILD_COMMAND ${BUILD_CMD}
     INSTALL_COMMAND cmake -E echo "Skipping install step."
 )
 
