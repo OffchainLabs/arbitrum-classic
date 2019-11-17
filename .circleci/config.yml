@@ -45,18 +45,6 @@ aliases:
     paths:
       - ~/.conan/data
     key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-  - &restore_rocksdb_cache
-    keys:
-      - rocksdb-v2-{{ .Branch }}
-      - rocksdb-v2-
-  - &save_rocksdb_cache
-    paths:
-      - packages/arb-avm-cpp/rocksdb
-      - packages/arb-avm-cpp/build/rocksdb
-      - packages/arb-avm-cpp/build/rocksdb-prefix
-      - packages/arb-avm-cpp/ci/rocksdb
-      - packages/arb-avm-cpp/ci/rocksdb-prefix
-    key: rocksdb-v2-{{ .Branch }}
 version: 2
 workflows:
   version: 2
@@ -131,8 +119,8 @@ jobs:
       - restore_cache: *restore_yarn_cache
       - run:
           command: | # use pipenv to install dependencies
-            pip3 install -r requirements.txt
-            python3 setup.py develop
+            pip3 install --user -r requirements.txt
+            python3 setup.py --user develop
             yarn install --cache-folder ~/.cache/yarn
           working_directory: /home/user/project/packages/arb-compiler-evm
       - run:
@@ -209,7 +197,6 @@ jobs:
           at: /home/user/project/packages/arb-bridge-eth/db
       - restore_cache: *restore_go_cache
       - restore_cache: *restore_conan_cache
-      - restore_cache: *restore_rocksdb_cache
       - run:
           command: |
             . ../vconan/bin/activate
@@ -225,7 +212,6 @@ jobs:
             go mod download
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
-      - save_cache: *save_rocksdb_cache
       - run:
           name: test arb-util
           command: |
