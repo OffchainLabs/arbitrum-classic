@@ -7,9 +7,8 @@
 set -e
 
 . vconan/bin/activate
-mkdir -p packages/arb-avm-cpp
 cd packages/arb-avm-cpp
-mkdir ci build
+mkdir -p ci build
 cd ci
 conan install .. -s compiler.libcxx=libstdc++11
 cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
