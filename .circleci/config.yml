@@ -61,10 +61,13 @@ workflows:
       - ethbridge:
           requires:
             - yarn-deps
-      - backend:
+      - backend-build:
           requires:
             - go-deps
             - conan-deps
+      - backend:
+          requires:
+            - backend-build
             - ethbridge
 jobs:
   yarn-deps:
@@ -186,19 +189,13 @@ jobs:
             codecovbash -R /home/user/project -cF arb_bridge_eth
           working_directory: /home/user/project/packages/arb-bridge-eth
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/project/packages/arb-bridge-eth/db
+          root: /home/user/project/packages/arb-bridge-eth/
           paths:
-            - ./*
-  backend:
+            - db
+  backend-build:
     docker:
       - image: offchainlabs/build-base:0.1.4
-    environment: # environment variables for the build itself
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
-      - checkout
-      - run: mkdir -p $TEST_RESULTS
-      - attach_workspace:
-          at: /home/user/project/packages/arb-bridge-eth/db
       - restore_cache: *restore_go_cache
       - restore_cache: *restore_conan_cache
       - run:
@@ -211,9 +208,26 @@ jobs:
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
             cp lib/lib* rocksdb/librocksdb.a ../cmachine/
-            cd ../../..
+      - persist_to_workspace: # store the built files into the workspace for other jobs.
+          root: /home/user/project/packages/arb-avm-cpp/cmachine
+          paths:
+            - ./*.a
+  backend:
+    docker:
+      - image: offchainlabs/build-base:0.1.4
+    environment: # environment variables for the build itself
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+    steps:
+      - checkout
+      - run: mkdir -p $TEST_RESULTS
+      - attach_workspace:
+          at: /home/user/workspace
+      - restore_cache: *restore_go_cache
+      - restore_cache: *restore_conan_cache
+      - run:
+          command: |
+            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
             cd packages/arb-validator
-            go mod download
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
       - run:
@@ -241,7 +255,7 @@ jobs:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
+            ganache-cli --db /home/user/workspace/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_validator
           working_directory: /home/user/project/packages/arb-validator
@@ -249,7 +263,7 @@ jobs:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
+            ganache-cli --db /home/user/workspace/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
