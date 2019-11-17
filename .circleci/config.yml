@@ -15,7 +15,7 @@ aliases:
       - python-packages-v1-
   - &save_python_cache
     paths:
-      - /usr/lib/python3.7/site-packages
+      - ~/.local/lib/python3.7/site-packages
     key: python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
   - &restore_ethbridge_cache
     keys:
@@ -46,7 +46,7 @@ workflows:
 jobs:
   yarn-deps:
     docker:
-      - image: offchainlabs/frontend-base:0.1.0
+      - image: offchainlabs/build-base:0.1.4
     steps:
       - checkout
       - restore_cache: *restore_yarn_cache
@@ -54,7 +54,7 @@ jobs:
       - save_cache: *save_yarn_cache
   python-deps:
     docker:
-      - image: offchainlabs/frontend-base:0.1.0
+      - image: offchainlabs/build-base:0.1.4
     steps:
       - checkout
       - restore_cache: *restore_python_cache
@@ -64,7 +64,7 @@ jobs:
       - save_cache: *save_python_cache
   frontend:
     docker:
-      - image: offchainlabs/frontend-base:0.1.0
+      - image: offchainlabs/build-base:0.1.4
     steps:
       - checkout
       - restore_cache: *restore_python_cache
