@@ -29,11 +29,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v2-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v2-{{ .Branch }}-
-      - go-mod-v2-
+      - go-mod-v3-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v3-{{ .Branch }}-
+      - go-mod-v3-
   - &save_go_cache
-    key: go-mod-v2-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v3-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &restore_conan_cache
@@ -166,7 +166,7 @@ jobs:
           name: test arb-bridge-eth
           command: |
             mkdir db
-            echo arbitrum > password.txt
+            echo arbitrum > ~/password.txt
             mkdir -p /home/user/.local/share/io.parity.ethereum/
             cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
             parity --chain=parity/dev.json account import parity/keystore/
