@@ -196,6 +196,7 @@ jobs:
     docker:
       - image: offchainlabs/build-base:0.1.4
     steps:
+      - checkout
       - restore_cache: *restore_go_cache
       - restore_cache: *restore_conan_cache
       - run:
