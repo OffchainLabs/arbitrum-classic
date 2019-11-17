@@ -69,7 +69,7 @@ workflows:
 jobs:
   yarn-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/build-base:0.1.5
     steps:
       - checkout
       - restore_cache: *restore_yarn_cache
@@ -77,7 +77,7 @@ jobs:
       - save_cache: *save_yarn_cache
   python-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/build-base:0.1.5
     steps:
       - checkout
       - restore_cache: *restore_python_cache
@@ -87,7 +87,7 @@ jobs:
       - save_cache: *save_python_cache
   go-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/build-base:0.1.5
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -98,7 +98,7 @@ jobs:
       - save_cache: *save_go_cache
   frontend:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/build-base:0.1.5
     environment:
       TEST_RESULTS: /tmp/test-results
     steps:
@@ -154,7 +154,7 @@ jobs:
           path: /tmp/test-results
   ethbridge:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/build-base:0.1.5
     steps:
       - checkout
       - restore_cache: *restore_yarn_cache
@@ -166,18 +166,21 @@ jobs:
           name: test arb-bridge-eth
           command: |
             mkdir db
-            ganache-cli --db db -p 7545 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
-            truffle migrate --reset --compile-all
-            kill $!
+            echo arbitrum > password.txt
+            mkdir -p /home/user/.local/share/io.parity.ethereum/
+            cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
+            parity --chain=parity/dev.json account import parity/keystore/
+            parity --chain parity/dev.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt &
+            truffle migrate --network parity
             codecovbash -R /home/user/project -cF arb_bridge_eth
           working_directory: /home/user/project/packages/arb-bridge-eth
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/project/packages/arb-bridge-eth/
+          root: /home/user/.local/share/
           paths:
-            - db
+            - io.parity.ethereum
   cpp-avm:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/build-base:0.1.5
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
@@ -212,7 +215,7 @@ jobs:
           path: /tmp/test-results
   backend:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/build-base:0.1.5
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
@@ -220,13 +223,19 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/workspace
+      - run:
+          command: |
+            mv /home/user/workspace/io.parity.ethereum /home/user/.local/share
+            mv /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           command: |
-            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
             cd packages/arb-validator
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
+      - run:
+          name: start parity
+          command: parity --chain parity/poa.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt &
       - run:
           name: test arb-util
           command: |
@@ -243,7 +252,6 @@ jobs:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            ganache-cli --db /home/user/workspace/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_validator
           working_directory: /home/user/project/packages/arb-validator
@@ -251,7 +259,6 @@ jobs:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            ganache-cli --db /home/user/workspace/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go

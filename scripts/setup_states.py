@@ -18,6 +18,8 @@ import argparse
 import json
 import os
 import shutil
+from web3 import Web3
+from eth_account import Account
 
 from support.run import run
 
@@ -28,10 +30,9 @@ VALIDATOR_STATE = "validator%s"
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-# Retrieve bridge_eth_addresses.json and keys.json
+# Retrieve bridge_eth_addresses.json
 # arb-bridge-eth must be have been built first
 def setup_validator_states_ethbridge(contract, n_validators, sudo=False):
-    keys = "keys.json"
     ethaddrs = "bridge_eth_addresses.json"
 
     layer = run(
@@ -44,16 +45,14 @@ def setup_validator_states_ethbridge(contract, n_validators, sudo=False):
         "docker cp %s:/home/user/bridge_eth_addresses.json %s" % (layer, ethaddrs),
         sudo=sudo,
     )
-    run("docker cp %s:/home/user/keys.json %s" % (layer, keys), sudo=sudo)
     run("docker rm %s" % layer, quiet=True, sudo=sudo)
 
-    setup_validator_states(contract, n_validators, keys, ethaddrs)
+    setup_validator_states(contract, n_validators, ethaddrs)
 
-    os.remove(keys)
     os.remove(ethaddrs)
 
 
-def setup_validator_states(contract, n_validators, acct_keys, ethaddrs):
+def setup_validator_states(contract, n_validators, ethaddrs):
     ARB_VALIDATOR = os.path.join(ROOT_DIR, "packages", "arb-validator")
 
     # Check for validator_states in cwd
@@ -61,13 +60,16 @@ def setup_validator_states(contract, n_validators, acct_keys, ethaddrs):
         exit("Error:", VALIDATOR_STATES, "exists in the current working directory")
 
     # Extract keys from acct_keys
-    with open(acct_keys, "r") as f:
-        data = json.loads(f.read())["addresses"]
-    addresses = [addr for addr in list(data.keys())][-n_validators:]
-    privates = []
-    for key in [data[addr]["secretKey"]["data"] for addr in list(data.keys())]:
-        privates.append("".join([hex(byte)[2:].zfill(2) for byte in key]))
-    privates = privates[-n_validators:]
+    accounts = [Account.create() for _ in range(n_validators)]
+    addresses = [account.address for account in accounts]
+    privates = [account.key.hex()[2:] for account in accounts]
+
+    web3 = Web3(Web3.HTTPProvider("http://localhost:7545"))
+    address = "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82"
+    for dest in addresses:
+        web3.eth.sendTransaction(
+            {"to": dest, "from": address, "value": 100000000000000000000}
+        )
 
     # Create VALIDATOR_STATES
     os.mkdir(VALIDATOR_STATES)

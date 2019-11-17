@@ -19,22 +19,22 @@ package main
 import (
 	jsonenc "encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
 	"math/big"
-	brand "math/rand"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 )
 
 func TestValidateProof(t *testing.T) {
@@ -44,12 +44,12 @@ func TestValidateProof(t *testing.T) {
 	bridge_eth_addresses := "bridge_eth_addresses.json"
 	//contract := "contract.ao"
 	contract := "opcodetest.ao"
-	ethURL := "ws://127.0.0.1:7545"
+	ethURL := "ws://127.0.0.1:7546"
 
 	//seed := time.Now().UnixNano()
 	seed := int64(1571337692091150000)
 	fmt.Println("seed", seed)
-	brand.Seed(seed)
+	rand.Seed(seed)
 	jsonFile, err := os.Open(bridge_eth_addresses)
 	if err != nil {
 		t.Fatal(err)
@@ -67,7 +67,7 @@ func TestValidateProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	key1, err := crypto.HexToECDSA("4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d")
 	if err != nil {
 		t.Fatal(err)
 	}
