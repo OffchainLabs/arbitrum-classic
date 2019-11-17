@@ -50,10 +50,10 @@ workflows:
   version: 2
   build:
     jobs:
-      - conan-deps
       - yarn-deps
       - python-deps
       - go-deps
+      - cpp-avm
       - frontend:
           requires:
             - yarn-deps
@@ -61,12 +61,9 @@ workflows:
       - ethbridge:
           requires:
             - yarn-deps
-      - cpp-avm:
-          requires:
-            - go-deps
-            - conan-deps
       - backend:
           requires:
+            - go-deps
             - cpp-avm
             - ethbridge
 jobs:
@@ -88,20 +85,6 @@ jobs:
           command: pip3 install -r requirements.txt
           working_directory: /home/user/project/packages/arb-compiler-evm
       - save_cache: *save_python_cache
-  conan-deps:
-    docker:
-      - image: offchainlabs/build-base:0.1.4
-    steps:
-      - checkout
-      - restore_cache: *restore_conan_cache
-      - run:
-          command: |
-            . ../vconan/bin/activate
-            mkdir -p packages/arb-avm-cpp/build
-            cd packages/arb-avm-cpp/build
-            conan install ..
-            deactivate
-      - save_cache: *save_conan_cache
   go-deps:
     docker:
       - image: offchainlabs/build-base:0.1.4
@@ -197,7 +180,6 @@ jobs:
       - image: offchainlabs/build-base:0.1.4
     steps:
       - checkout
-      - restore_cache: *restore_go_cache
       - restore_cache: *restore_conan_cache
       - run:
           command: |
@@ -209,6 +191,7 @@ jobs:
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
             cp lib/lib* rocksdb/librocksdb.a ../cmachine/
+      - save_cache: *save_conan_cache
       - run:
           name: test arb-avm-cpp
           command: |
@@ -233,7 +216,6 @@ jobs:
       - attach_workspace:
           at: /home/user/workspace
       - restore_cache: *restore_go_cache
-      - restore_cache: *restore_conan_cache
       - run:
           command: |
             cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
