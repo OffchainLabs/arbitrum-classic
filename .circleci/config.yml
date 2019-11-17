@@ -113,8 +113,11 @@ jobs:
   frontend:
     docker:
       - image: offchainlabs/build-base:0.1.4
+    environment:
+      TEST_RESULTS: /tmp/test-results
     steps:
       - checkout
+      - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_python_cache
       - restore_cache: *restore_yarn_cache
       - run:
@@ -138,34 +141,34 @@ jobs:
           name: test arb-provider-ethers
           command: |
             yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o /tmp/test-results/arb-provider-ethers-lint.xml
+            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
             codecovbash -R /home/user/project -cF arb_provider_ethers
           environment:
-            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-ethers.xml"
+            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-ethers.xml"
           working_directory: /home/user/project/packages/arb-provider-ethers
       - run:
           name: test arb-provider-web3
           command: |
             yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o /tmp/test-results/arb-provider-web3-lint.xml
+            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
             codecovbash -R /home/user/project -cF arb_provider_web3
           environment:
-            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-web3.xml"
+            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-web3.xml"
           working_directory: /home/user/project/packages/arb-provider-web3
       - run:
           name: test arb-provider-truffle
           command: |
             yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o /tmp/test-results/arb-provider-truffle-lint.xml
+            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
             codecovbash -R /home/user/project -cF arb_provider_truffle
           environment:
-            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-truffle.xml"
+            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-truffle.xml"
           working_directory: /home/user/project/packages/arb-provider-truffle
+      - store_test_results:
+          path: /tmp/test-results
   ethbridge:
     docker:
       - image: offchainlabs/build-base:0.1.4
-    environment: # environment variables for the build itself
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
       - checkout
       - restore_cache: *restore_yarn_cache
@@ -193,6 +196,7 @@ jobs:
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
       - checkout
+      - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/project/packages/arb-bridge-eth/db
       - restore_cache: *restore_go_cache
@@ -247,3 +251,5 @@ jobs:
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
+      - store_test_results:
+          path: /tmp/test-results
