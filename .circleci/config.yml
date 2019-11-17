@@ -10,13 +10,13 @@ aliases:
     key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
   - &restore_python_cache
     keys:
-      - python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
-      - python-packages-v1-{{ .Branch }}-
-      - python-packages-v1-
+      - python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+      - python-packages-v2-{{ .Branch }}-
+      - python-packages-v2-
   - &save_python_cache
     paths:
       - ~/.local/lib/python3.7/site-packages
-    key: python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+    key: python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
   - &restore_ethbridge_cache
     keys:
       - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
