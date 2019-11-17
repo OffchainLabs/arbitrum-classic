@@ -26,13 +26,46 @@ aliases:
     paths:
       - ~/.cache/yarn
     key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+
+  - &restore_go_cache
+    keys:
+      - go-mod-v2-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v2-{{ .Branch }}-
+      - go-mod-v2-
+  - &save_go_cache
+    key: go-mod-v2-{{ checksum "packages/arb-validator/go.sum" }}
+    paths:
+      - ~/go/pkg/mod
+  - &restore_conan_cache
+    keys:
+      - conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+      - conan-packages-v1-{{ .Branch }}-
+      - conan-packages-v1-
+  - &save_conan_cache
+    paths:
+      - ~/.conan/data
+    key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+  - &restore_rocksdb_cache
+    keys:
+      - rocksdb-v2-{{ .Branch }}
+      - rocksdb-v2-
+  - &save_rocksdb_cache
+    paths:
+      - packages/arb-avm-cpp/rocksdb
+      - packages/arb-avm-cpp/build/rocksdb
+      - packages/arb-avm-cpp/build/rocksdb-prefix
+      - packages/arb-avm-cpp/ci/rocksdb
+      - packages/arb-avm-cpp/ci/rocksdb-prefix
+    key: rocksdb-v2-{{ .Branch }}
 version: 2
 workflows:
   version: 2
   build:
     jobs:
+      - conan-deps
       - yarn-deps
       - python-deps
+      - go-deps
       - frontend:
           requires:
             - yarn-deps
@@ -42,6 +75,8 @@ workflows:
             - yarn-deps
       - backend:
           requires:
+            - go-deps
+            - conan-deps
             - ethbridge
 jobs:
   yarn-deps:
@@ -62,6 +97,31 @@ jobs:
           command: pip3 install -r requirements.txt
           working_directory: /home/user/project/packages/arb-compiler-evm
       - save_cache: *save_python_cache
+  conan-deps:
+    docker:
+      - image: offchainlabs/build-base:0.1.4
+    steps:
+      - checkout
+      - restore_cache: *restore_conan_cache
+      - run:
+          command: |
+            . ../vconan/bin/activate
+            mkdir -p packages/arb-avm-cpp/build
+            cd packages/arb-avm-cpp/build
+            conan install ..
+            deactivate
+      - save_cache: *save_conan_cache
+  go-deps:
+    docker:
+      - image: offchainlabs/build-base:0.1.4
+    steps:
+      - checkout
+      - restore_cache: *restore_go_cache
+      - run:
+          command: |
+            cd packages/arb-provider-go
+            go mod download
+      - save_cache: *save_go_cache
   frontend:
     docker:
       - image: offchainlabs/build-base:0.1.4
@@ -147,6 +207,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: /home/user/project/packages/arb-bridge-eth/db
+      - restore_cache: *restore_go_cache
+      - restore_cache: *restore_conan_cache
+      - restore_cache: *restore_rocksdb_cache
       - run:
           command: |
             . ../vconan/bin/activate
@@ -162,6 +225,7 @@ jobs:
             go mod download
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
+      - save_cache: *save_rocksdb_cache
       - run:
           name: test arb-util
           command: |
