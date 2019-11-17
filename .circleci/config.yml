@@ -61,13 +61,13 @@ workflows:
       - ethbridge:
           requires:
             - yarn-deps
-      - backend-build:
+      - cpp-avm:
           requires:
             - go-deps
             - conan-deps
       - backend:
           requires:
-            - backend-build
+            - cpp-avm
             - ethbridge
 jobs:
   yarn-deps:
@@ -192,7 +192,7 @@ jobs:
           root: /home/user/project/packages/arb-bridge-eth/
           paths:
             - db
-  backend-build:
+  cpp-avm:
     docker:
       - image: offchainlabs/build-base:0.1.4
     steps:
@@ -209,6 +209,15 @@ jobs:
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
             cp lib/lib* rocksdb/librocksdb.a ../cmachine/
+      - run:
+          name: test arb-avm-cpp
+          command: |
+            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            lcov --capture --directory . --output-file coverage.info
+            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
+            lcov --list coverage.info
+            codecovbash -R /home/user/project -f coverage.info -cF arb_avm_cpp
+          working_directory: /home/user/project/packages/arb-avm-cpp/build
       - persist_to_workspace: # store the built files into the workspace for other jobs.
           root: /home/user/project/packages/arb-avm-cpp/cmachine
           paths:
@@ -231,15 +240,6 @@ jobs:
             cd packages/arb-validator
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
-      - run:
-          name: test arb-avm-cpp
-          command: |
-            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
-            lcov --capture --directory . --output-file coverage.info
-            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
-            lcov --list coverage.info
-            codecovbash -R /home/user/project -f coverage.info -cF arb_avm_cpp
-          working_directory: /home/user/project/packages/arb-avm-cpp/build
       - run:
           name: test arb-util
           command: |
