@@ -49,7 +49,6 @@ jobs:
             mv /home/user/vconan/ /home/user/arbitrum/vconan/
             mv ../codecovbash codecovbash
             yarn install --cache-folder ~/.cache/yarn
-            yarn install:validator
             yarn install:ci
       - save_cache:
           key: go-mod-v2-{{ checksum "packages/arb-validator/go.sum" }}
