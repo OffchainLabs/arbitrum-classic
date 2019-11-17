@@ -178,8 +178,11 @@ jobs:
   cpp-avm:
     docker:
       - image: offchainlabs/build-base:0.1.4
+    environment: # environment variables for the build itself
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
       - checkout
+      - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_conan_cache
       - run:
           command: |
@@ -205,6 +208,8 @@ jobs:
           root: /home/user/project/packages/arb-avm-cpp/cmachine
           paths:
             - ./*.a
+      - store_test_results:
+          path: /tmp/test-results
   backend:
     docker:
       - image: offchainlabs/build-base:0.1.4
