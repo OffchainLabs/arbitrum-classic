@@ -120,7 +120,7 @@ jobs:
       - run:
           command: | # use pipenv to install dependencies
             pip3 install --user -r requirements.txt
-            python3 setup.py --user develop
+            python3 setup.py install --user
             yarn install --cache-folder ~/.cache/yarn
           working_directory: /home/user/project/packages/arb-compiler-evm
       - run:
