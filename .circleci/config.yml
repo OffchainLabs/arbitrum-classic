@@ -1,95 +1,130 @@
+aliases:
+  - &restore_yarn_cache
+    keys:
+      - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+      - yarn-packages-v1-{{ .Branch }}-
+      - yarn-packages-v1-
+  - &save_yarn_cache
+    paths:
+      - ~/.cache/yarn
+    key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+  - &restore_python_cache
+    keys:
+      - python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+      - python-packages-v1-{{ .Branch }}-
+      - python-packages-v1-
+  - &save_python_cache
+    paths:
+      - /usr/lib/python3.7/site-packages
+    key: python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+  - &restore_ethbridge_cache
+    keys:
+      - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+      - yarn-packages-v1-{{ .Branch }}-
+      - yarn-packages-v1-
+  - &save_ethbridge_cache
+    paths:
+      - ~/.cache/yarn
+    key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
 version: 2
-jobs:
+workflows:
+  version: 2
   build:
+    jobs:
+      - yarn-deps
+      - python-deps
+      - frontend:
+          requires:
+            - yarn-deps
+            - python-deps
+      - ethbridge:
+          requires:
+            - yarn-deps
+      - backend:
+          requires:
+            - ethbridge
+jobs:
+  yarn-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.3
-    resource_class: medium+
-    working_directory: /home/user/arbitrum
+      - image: offchainlabs/frontend-base:0.1.0
+    steps:
+      - checkout
+      - restore_cache: *restore_yarn_cache
+      - run: yarn install --cache-folder ~/.cache/yarn
+      - save_cache: *save_yarn_cache
+  python-deps:
+    docker:
+      - image: offchainlabs/frontend-base:0.1.0
+    steps:
+      - checkout
+      - restore_cache: *restore_python_cache
+      - run:
+          command: pip3 install -r requirements.txt
+          working_directory: /home/user/project/packages/arb-compiler-evm
+      - save_cache: *save_python_cache
+  frontend:
+    docker:
+      - image: offchainlabs/frontend-base:0.1.0
+    steps:
+      - checkout
+      - restore_cache: *restore_python_cache
+      - restore_cache: *restore_yarn_cache
+      - run:
+          command: | # use pipenv to install dependencies
+            pip3 install -r requirements.txt
+            python3 setup.py develop
+            yarn install --cache-folder ~/.cache/yarn
+          working_directory: /home/user/project/packages/arb-compiler-evm
+      - run:
+          name: test arb-compiler-evm
+          command: |
+            coverage run --source=/home/user/project setup.py test
+            cd tests/sol-syscall
+            truffle migrate --reset --compile-all --network arbitrum
+            coverage run --source=/home/user/project truffle_runner.py compiled.json
+            cd ../..
+            coverage combine .coverage tests/sol-syscall/.coverage
+            codecovbash -R /home/user/project -cF arb_compiler_evm
+          working_directory: /home/user/project/packages/arb-compiler-evm
+      - run:
+          name: test arb-provider-ethers
+          command: |
+            yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn lint --format junit -o /tmp/test-results/arb-provider-ethers-lint.xml
+            codecovbash -R /home/user/project -cF arb_provider_ethers
+          environment:
+            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-ethers.xml"
+          working_directory: /home/user/project/packages/arb-provider-ethers
+      - run:
+          name: test arb-provider-web3
+          command: |
+            yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn lint --format junit -o /tmp/test-results/arb-provider-web3-lint.xml
+            codecovbash -R /home/user/project -cF arb_provider_web3
+          environment:
+            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-web3.xml"
+          working_directory: /home/user/project/packages/arb-provider-web3
+      - run:
+          name: test arb-provider-truffle
+          command: |
+            yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+            yarn lint --format junit -o /tmp/test-results/arb-provider-truffle-lint.xml
+            codecovbash -R /home/user/project -cF arb_provider_truffle
+          environment:
+            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-truffle.xml"
+          working_directory: /home/user/project/packages/arb-provider-truffle
+  ethbridge:
+    docker:
+      - image: offchainlabs/build-base:0.1.4
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
-      - run:
-          name: Setup enviroment
-          command: |
-            mv /home/user/arbitrum/vconan/ /home/user/vconan/
-            curl -s https://codecov.io/bash > ../codecovbash
-            chmod +x ../codecovbash
-            go get gotest.tools/gotestsum
       - checkout
-      - run: mkdir -p $TEST_RESULTS # create the test results directory
-
-      - restore_cache:
-          keys:
-            - go-mod-v2-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-            - go-mod-v2-{{ .Branch }}-
-            - go-mod-v2-
-      - restore_cache:
-          keys:
-            # when lock file changes, use increasingly general patterns to restore cache
-            - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
-            - yarn-packages-v1-{{ .Branch }}-
-            - yarn-packages-v1-
-      - restore_cache:
-          keys:
-            - conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-            - conan-packages-v1-{{ .Branch }}-
-            - conan-packages-v1-
-      - restore_cache:
-          keys:
-            - python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
-            - python-packages-v1-{{ .Branch }}-
-            - python-packages-v1-
-      - restore_cache:
-          keys:
-            - rocksdb-v2-{{ .Branch }}
-            - rocksdb-v2-
+      - restore_cache: *restore_yarn_cache
       - run:
-          name: build all
           command: |
-            mv /home/user/vconan/ /home/user/arbitrum/vconan/
-            mv ../codecovbash codecovbash
             yarn install --cache-folder ~/.cache/yarn
-            yarn install:ci
-      - save_cache:
-          key: go-mod-v2-{{ checksum "packages/arb-validator/go.sum" }}
-          paths:
-            - ~/go/pkg/mod
-      - save_cache:
-          paths:
-            - ~/.cache/yarn
-          key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
-      - save_cache:
-          paths:
-            - ~/.conan/data
-          key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-      - save_cache:
-          paths:
-            - ~/.local/lib/python3.7/site-packages
-          key: python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
-      - save_cache:
-          paths:
-            - packages/arb-avm-cpp/rocksdb
-            - packages/arb-avm-cpp/build/rocksdb
-            - packages/arb-avm-cpp/build/rocksdb-prefix
-            - packages/arb-avm-cpp/ci/rocksdb
-            - packages/arb-avm-cpp/ci/rocksdb-prefix
-          key: rocksdb-v2-{{ .Branch }}
-      - run:
-          name: test arb-avm-cpp
-          command: |
-            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
-            lcov --capture --directory . --output-file coverage.info
-            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
-            lcov --list coverage.info
-            ../../../codecovbash -R /home/user/arbitrum -f coverage.info -cF arb_avm_cpp
-            cd .. && rm -rf ci
-          working_directory: /home/user/arbitrum/packages/arb-avm-cpp/ci
-      - run:
-          name: test arb-avm-go
-          command: |
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
-            ../../codecovbash -R /home/user/arbitrum -cF arb_avm_go
-          working_directory: /home/user/arbitrum/packages/arb-avm-go
+          working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
           name: test arb-bridge-eth
           command: |
@@ -97,65 +132,68 @@ jobs:
             ganache-cli --db db -p 7545 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             truffle migrate --reset --compile-all
             kill $!
-            ../../codecovbash -R /home/user/arbitrum -cF arb_bridge_eth
-          working_directory: /home/user/arbitrum/packages/arb-bridge-eth
+            codecovbash -R /home/user/project -cF arb_bridge_eth
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - persist_to_workspace: # store the built files into the workspace for other jobs.
+          root: /home/user/project/packages/arb-bridge-eth/db
+          paths:
+            - ./*
+  backend:
+    docker:
+      - image: offchainlabs/build-base:0.1.4
+    environment: # environment variables for the build itself
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /home/user/project/packages/arb-bridge-eth/db
       - run:
-          name: test arb-compiler-evm
           command: |
-            coverage run --source=arbitrum/ setup.py test
-            cd tests/sol-syscall
-            truffle migrate --reset --compile-all --network arbitrum
-            coverage run --source=../../arbitrum/ truffle_runner.py compiled.json
-            cd ../..
-            coverage combine .coverage tests/sol-syscall/.coverage
-            ../../codecovbash -R /home/user/arbitrum -cF arb_compiler_evm
-          working_directory: /home/user/arbitrum/packages/arb-compiler-evm
-      - run:
-          name: test arb-provider-ethers
-          command: |
-            yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o /tmp/test-results/arb-provider-ethers-lint.xml
-            ../../codecovbash -R /home/user/arbitrum -cF arb_provider_ethers
-          environment:
-            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-ethers.xml"
-          working_directory: /home/user/arbitrum/packages/arb-provider-ethers
-      - run:
-          name: test arb-provider-go
-          command: |
-            ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
-            ../../codecovbash -R /home/user/arbitrum -cF arb_provider_go
-          working_directory: /home/user/arbitrum/packages/arb-provider-go
-      - run:
-          name: test arb-provider-truffle
-          command: |
-            yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o /tmp/test-results/arb-provider-truffle-lint.xml
-            ../../codecovbash -R /home/user/arbitrum -cF arb_provider_truffle
-          environment:
-            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-truffle.xml"
-          working_directory: /home/user/arbitrum/packages/arb-provider-truffle
-      - run:
-          name: test arb-provider-web3
-          command: |
-            yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o /tmp/test-results/arb-provider-web3-lint.xml
-            ../../codecovbash -R /home/user/arbitrum -cF arb_provider_web3
-          environment:
-            JEST_JUNIT_OUTPUT: "/tmp/test-results/arb-provider-web3.xml"
-          working_directory: /home/user/arbitrum/packages/arb-provider-web3
+            . ../vconan/bin/activate
+            mkdir -p packages/arb-avm-cpp/build
+            cd packages/arb-avm-cpp/build
+            conan install ..
+            deactivate
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
+            cmake --build . -j 2
+            cp lib/lib* rocksdb/librocksdb.a ../cmachine/
+            cd ../../..
+            cd packages/arb-validator
+            go mod download
+            export CGO_LDFLAGS="-lgcov --coverage"
+            go install -v ./...
       - run:
           name: test arb-util
           command: |
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
-            ../../codecovbash -R /home/user/arbitrum -cF arb_util
-          working_directory: /home/user/arbitrum/packages/arb-util
+            codecovbash -R /home/user/project -cF arb_util
+          working_directory: /home/user/project/packages/arb-util
+      - run:
+          name: test arb-avm-go
+          command: |
+            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            codecovbash -R /home/user/project -cF arb_avm_go
+          working_directory: /home/user/project/packages/arb-avm-go
+      - run:
+          name: test arb-avm-cpp
+          command: |
+            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            lcov --capture --directory . --output-file coverage.info
+            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
+            lcov --list coverage.info
+            codecovbash -R /home/user/project -f coverage.info -cF arb_avm_cpp
+          working_directory: /home/user/project/packages/arb-avm-cpp/build
       - run:
           name: test arb-validator
           command: |
             ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
-            ../../codecovbash -R /home/user/arbitrum -cF arb_validator
-          working_directory: /home/user/arbitrum/packages/arb-validator
-      - store_test_results: # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
-          path: /tmp/test-results
+            codecovbash -R /home/user/project -cF arb_validator
+          working_directory: /home/user/project/packages/arb-validator
+      - run:
+          name: test arb-provider-go
+          command: |
+            ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
+            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            codecovbash -R /home/user/project -cF arb_provider_go
+          working_directory: /home/user/project/packages/arb-provider-go
