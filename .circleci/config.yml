@@ -69,7 +69,7 @@ workflows:
 jobs:
   yarn-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.5
+      - image: offchainlabs/yarn-base:0.1.0
     steps:
       - checkout
       - restore_cache: *restore_yarn_cache
@@ -77,17 +77,17 @@ jobs:
       - save_cache: *save_yarn_cache
   python-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.5
+      - image: offchainlabs/python-base:0.1.0
     steps:
       - checkout
       - restore_cache: *restore_python_cache
       - run:
-          command: pip3 install -r requirements.txt
+          command: pip3 install --user -r requirements.txt
           working_directory: /home/user/project/packages/arb-compiler-evm
       - save_cache: *save_python_cache
   go-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.5
+      - image: offchainlabs/go-base:0.1.0
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -98,7 +98,7 @@ jobs:
       - save_cache: *save_go_cache
   frontend:
     docker:
-      - image: offchainlabs/build-base:0.1.5
+      - image: offchainlabs/frontend-base:0.1.0
     environment:
       TEST_RESULTS: /tmp/test-results
     steps:
@@ -154,7 +154,7 @@ jobs:
           path: /tmp/test-results
   ethbridge:
     docker:
-      - image: offchainlabs/build-base:0.1.5
+      - image: offchainlabs/ethbridge-base:0.1.0
     steps:
       - checkout
       - restore_cache: *restore_yarn_cache
@@ -180,7 +180,7 @@ jobs:
             - io.parity.ethereum
   cpp-avm:
     docker:
-      - image: offchainlabs/build-base:0.1.5
+      - image: offchainlabs/cpp-base:0.1.0
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
@@ -189,11 +189,9 @@ jobs:
       - restore_cache: *restore_conan_cache
       - run:
           command: |
-            . ../vconan/bin/activate
             mkdir -p packages/arb-avm-cpp/build
             cd packages/arb-avm-cpp/build
             conan install ..
-            deactivate
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
             cp lib/lib* rocksdb/librocksdb.a ../cmachine/
@@ -215,7 +213,7 @@ jobs:
           path: /tmp/test-results
   backend:
     docker:
-      - image: offchainlabs/build-base:0.1.5
+      - image: offchainlabs/backend-base:0.1.0
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
@@ -239,27 +237,27 @@ jobs:
       - run:
           name: test arb-util
           command: |
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_util
           working_directory: /home/user/project/packages/arb-util
       - run:
           name: test arb-avm-go
           command: |
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_avm_go
           working_directory: /home/user/project/packages/arb-avm-go
       - run:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_validator
           working_directory: /home/user/project/packages/arb-validator
       - run:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             codecovbash -R /home/user/project -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
       - store_test_results:

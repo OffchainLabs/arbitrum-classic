@@ -6,7 +6,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
     apt-get update && \
     apt-get install -y cmake g++ git golang lcov libboost-dev \
-        libboost-filesystem-dev libffi-dev python3-dev python3-pip sudo yarn && \
+        libboost-filesystem-dev libffi-dev node-gyp python3-dev python3-pip sudo yarn && \
     rm -rf /var/lib/apt/lists/* && \
     curl https://get.parity.io -L | bash /dev/stdin -r stable && \
     useradd -ms /bin/bash user
