@@ -5,7 +5,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
     apt-get update && \
-    apt-get install -y git node-gyp python2 sudo yarn && \
+    apt-get install -y git node-gyp psmisc python2 sudo yarn && \
     rm -rf /var/lib/apt/lists/* && \
     curl https://get.parity.io -L | bash /dev/stdin -r stable && \
     useradd -ms /bin/bash user
