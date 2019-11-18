@@ -170,7 +170,7 @@ jobs:
             parity --chain=parity/poa.json account import parity/keystore/
           working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
-          command: parity --chain parity/poa.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt &
+          command: parity --chain parity/poa.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
