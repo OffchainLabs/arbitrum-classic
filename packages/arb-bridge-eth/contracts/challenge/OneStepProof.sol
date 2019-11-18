@@ -123,7 +123,7 @@ library OneStepProof {
         uint256[] memory messageValue,
         bytes memory proof
     )
-        internal
+        public
         pure
         returns(uint)
     {
@@ -256,6 +256,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := div(a, b)
@@ -278,6 +281,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := sdiv(a, b)
@@ -300,6 +306,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := mod(a, b)
@@ -322,6 +331,9 @@ library OneStepProof {
         }
         uint a = val1.intVal;
         uint b = val2.intVal;
+        if (b == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := smod(a, b)
@@ -346,6 +358,9 @@ library OneStepProof {
         uint a = val1.intVal;
         uint b = val2.intVal;
         uint m = val3.intVal;
+        if (m == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := addmod(a, b, m)
@@ -370,6 +385,9 @@ library OneStepProof {
         uint a = val1.intVal;
         uint b = val2.intVal;
         uint m = val3.intVal;
+        if (m == 0) {
+            return false;
+        }
         uint c;
         assembly {
             c := mulmod(a, b, m)
@@ -484,7 +502,7 @@ library OneStepProof {
         uint b = val2.intVal;
         uint c;
         assembly {
-            c := slt(a, b)
+            c := sgt(a, b)
         }
         machine.addDataStackInt(c);
         return true;
@@ -748,10 +766,13 @@ library OneStepProof {
         pure
         returns (bool)
     {
+        if (!val1.isCodePoint()) {
+            return false;
+        }
         if (!val2.isInt()) {
             return false;
         }
-        if (val1.intVal != 0) {
+        if (val2.intVal != 0) {
             machine.instructionStackHash = val1.hash();
         }
         return true;
@@ -826,6 +847,9 @@ library OneStepProof {
         pure
         returns (bool)
     {
+        if (!val.isCodePoint()) {
+            return false;
+        }
         machine.errHandler = val.hash();
         return true;
     }
@@ -924,7 +948,7 @@ library OneStepProof {
             return false;
         }
 
-        if (val1.intVal > val2.valLength()) {
+        if (val1.intVal >= val2.valLength()) {
             return false;
         }
 
@@ -946,7 +970,7 @@ library OneStepProof {
             return false;
         }
 
-        if (val1.intVal > val2.valLength()) {
+        if (val1.intVal >= val2.valLength()) {
             return false;
         }
         val2.tupleVal[val1.intVal] = val3;
@@ -1391,8 +1415,13 @@ library OneStepProof {
             require(valid == 0, "Proof of auxpop had bad aux value");
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
+        } else if (opCode == OP_AUXSTACKEMPTY) {
+            correct = executeAuxstackemptyInsn(endMachine);
         } else if (opCode == OP_NOP) {
-
+        } else if (opCode == OP_ERRPUSH) {
+            correct = executeErrpushInsn(endMachine);
+        } else if (opCode == OP_ERRSET) {
+            correct = executeErrsetInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_DUP0) {
             correct = executeDup0Insn(endMachine, stackVals[0]);
         } else if (opCode == OP_DUP1) {

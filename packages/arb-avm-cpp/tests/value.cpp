@@ -16,10 +16,10 @@
 
 #include "config.hpp"
 
-#include "bigint_utils.hpp"
+#include <bigint_utils.hpp>
 
-#include <avm/tuple.hpp>
-#include <avm/value.hpp>
+#include <avm/value/tuple.hpp>
+#include <avm/value/value.hpp>
 
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>
@@ -44,7 +44,7 @@ TEST_CASE("Value hashing") {
         DYNAMIC_SECTION("Test " << valtest["name"].get<std::string>()) {
             auto valBytes =
                 hexStringToBytes(valtest["value"].get<std::string>());
-            auto valRaw = valBytes.data();
+            auto valRaw = reinterpret_cast<const char*>(valBytes.data());
             uint256_t givenHash = from_hex_str(valtest["hash"]);
             TuplePool pool;
             auto val = deserialize_value(valRaw, pool);
@@ -56,7 +56,7 @@ TEST_CASE("Value hashing") {
     //    SECTION("Non overlow is correct") { testBinaryOp(4, 3, 1,
     //    OpCode::SUB); }
     //
-    //    SECTION("Overlow is correct") { testBinaryOp(3, 4, -1, OpCode::SUB); }
+    //    SECTION("Overlow is correct") { testBinaryOp(3, 4, -1, OpCode::SUB);
 }
 
 TEST_CASE("Value marshaling") {
@@ -67,12 +67,12 @@ TEST_CASE("Value marshaling") {
         DYNAMIC_SECTION("Test " << valtest["name"].get<std::string>()) {
             auto valBytes =
                 hexStringToBytes(valtest["value"].get<std::string>());
-            auto valRaw = valBytes.data();
+            auto valRaw = reinterpret_cast<const char*>(valBytes.data());
             TuplePool pool;
             auto val = deserialize_value(valRaw, pool);
             std::vector<unsigned char> buf;
             marshal_value(val, buf);
-            char* valptr = (char*)&buf[0];
+            auto valptr = (const char*)&buf[0];
             auto newval = deserialize_value(valptr, pool);
             auto valsEqual = val == newval;
             REQUIRE(valsEqual);

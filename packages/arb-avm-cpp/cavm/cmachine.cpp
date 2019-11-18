@@ -28,24 +28,14 @@ typedef struct {
 } cassertion;
 
 Machine* read_files(std::string filename) {
-    std::ifstream myfile;
-
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(filename, std::ios::in);
-    if (!myfile.is_open()) {
-        return nullptr;
-    }
-    myfile.read((char*)buf, filestatus.st_size);
     auto machine = new Machine();
-    bool success = machine->deserialize(buf);
-    if (!success) {
+    auto sucess = machine->initializeMachine(filename);
+
+    if (sucess) {
+        return machine;
+    } else {
         return nullptr;
     }
-    return machine;
 }
 
 // cmachine_t *machine_create(char *data)
@@ -58,6 +48,27 @@ void machineDestroy(CMachine* m) {
     if (m == NULL)
         return;
     delete static_cast<Machine*>(m);
+}
+
+int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
+    auto machine = *(static_cast<Machine*>(m));
+    auto result =
+        machine.checkpoint(*(static_cast<CheckpointStorage*>(storage)));
+
+    return result.status.ok();
+}
+
+int restoreMachine(CMachine* m,
+                   CCheckpointStorage* storage,
+                   const char* check_point) {
+    auto machine = *(static_cast<Machine*>(m));
+
+    auto name_str = std::string(check_point);
+    auto name_vector =
+        std::vector<unsigned char>(name_str.begin(), name_str.end());
+
+    return machine.restoreCheckpoint(
+        *(static_cast<CheckpointStorage*>(storage)), name_vector);
 }
 
 void machineHash(CMachine* m, void* ret) {
@@ -93,7 +104,8 @@ int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
     Machine* mach = static_cast<Machine*>(m);
     TokenType tokType;
     std::copy(cTokType, cTokType + 21, tokType.begin());
-    uint256_t amount = deserialize_int(cAmount);
+    auto const_amount = const_cast<const char*>(cAmount);
+    uint256_t amount = deserializeUint256t(const_amount);
     return mach->canSpend(tokType, amount);
 }
 
@@ -177,7 +189,7 @@ uint64_t machinePendingMessageCount(CMachine* m) {
 void machineSendOnchainMessage(CMachine* m, void* data) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    auto dataPtr = reinterpret_cast<char*>(data);
+    auto dataPtr = reinterpret_cast<const char*>(data);
     auto val = deserialize_value(dataPtr, mach->getPool());
     Message msg;
     auto success = msg.deserialize(val);
@@ -208,7 +220,7 @@ void machineSendOffchainMessages(CMachine* m, void* rawData, int messageCount) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
     std::vector<Message> messages;
-    auto data = reinterpret_cast<char*>(rawData);
+    auto data = reinterpret_cast<const char*>(rawData);
     for (int i = 0; i < messageCount; i++) {
         auto val = deserialize_value(data, mach->getPool());
         messages.emplace_back();

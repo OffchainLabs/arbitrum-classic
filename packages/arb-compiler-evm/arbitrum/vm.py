@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .value import AVMCodePoint
 from . import value
 from .basic_vm import BasicVM
 from .instructions import OP_CODES
@@ -37,7 +36,7 @@ class VM(BasicVM):
         if code:
             self.pc = code[0]
         else:
-            self.pc = AVMCodePoint(0, 0, b"")
+            self.pc = value.ERROR_CODE_POINT
 
     def debug_print(self):
         print(

@@ -29,6 +29,13 @@ library ArbValue {
     uint8 internal constant TUPLE_TYPECODE = 3;
     uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 9;
 
+    struct CodePoint {
+        uint8 opcode;
+        bytes32 nextCodePoint;
+        bool immediate;
+        bytes32 immediateVal;
+    }
+
     function isTupleType(uint8 typeCode) private pure returns (bool) {
         return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
     }
@@ -43,6 +50,31 @@ library ArbValue {
 
     function hashIntValue(uint256 val) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(val));
+    }
+
+    function hashCodePoint(
+            uint8 opcode,
+            bool immediate,
+            bytes32 immediateVal,
+            bytes32 nextCodePoint
+    ) public pure returns (bytes32) {
+        if (immediate) {
+            return keccak256(
+                abi.encodePacked(
+                    CODE_POINT_TYPECODE,
+                    opcode,
+                    immediateVal,
+                    nextCodePoint
+                )
+            );
+        }
+        return keccak256(
+            abi.encodePacked(
+                CODE_POINT_TYPECODE,
+                opcode,
+                nextCodePoint
+            )
+        );
     }
 
     function hashCodePointBasicValue(uint8 opcode, bytes32 nextCodePoint) public pure returns (bytes32) {
@@ -147,6 +179,7 @@ library ArbValue {
 
     struct Value {
         uint256 intVal;
+        CodePoint cpVal;
         Value[] tupleVal;
         uint8 typeCode;
     }
@@ -170,6 +203,10 @@ library ArbValue {
         return val.typeCode == INT_TYPECODE;
     }
 
+    function isCodePoint(Value memory val) internal pure returns (bool) {
+        return val.typeCode == CODE_POINT_TYPECODE;
+    }
+
     function isTuple(Value memory val) internal pure returns (bool) {
         return isTupleType(val.typeCode);
     }
@@ -178,6 +215,8 @@ library ArbValue {
         require(val.typeCode < VALUE_TYPE_COUNT, "Invalid type code");
         if (val.typeCode == INT_TYPECODE) {
             return HashOnlyValue(hashIntValue(val.intVal));
+        } else if (val.typeCode == CODE_POINT_TYPECODE) {
+            return HashOnlyValue(hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint));
         } else if (val.typeCode == HASH_ONLY_TYPECODE) {
             return HashOnlyValue(bytes32(val.intVal));
         } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
@@ -188,7 +227,7 @@ library ArbValue {
     }
 
     function newNoneValue() internal pure returns (Value memory) {
-        return Value(0, new Value[](0), TUPLE_TYPECODE);
+        return Value(0, CodePoint(0, 0, false, 0), new Value[](0), TUPLE_TYPECODE);
     }
 
     function newBooleanValue(bool val) internal pure returns (Value memory) {
@@ -200,7 +239,11 @@ library ArbValue {
     }
 
     function newIntValue(uint256 _val) internal pure returns (Value memory) {
-        return Value(_val, new Value[](0), INT_TYPECODE);
+        return Value(_val, CodePoint(0, 0, false, 0), new Value[](0), INT_TYPECODE);
+    }
+
+    function newCodePointValue(CodePoint memory _val) internal pure returns (Value memory) {
+        return Value(0, _val, new Value[](0), CODE_POINT_TYPECODE);
     }
 
     function isValidTupleSize(uint size) public pure returns (bool) {
@@ -209,7 +252,7 @@ library ArbValue {
 
     function newTupleValue(Value[] memory _val) internal pure returns (Value memory) {
         require(isValidTupleSize(_val.length), "Tuple must have valid size");
-        return Value(0, _val, uint8(TUPLE_TYPECODE + _val.length));
+        return Value(0, CodePoint(0, 0, false, 0), _val, uint8(TUPLE_TYPECODE + _val.length));
     }
 
     function newTupleHashValues(HashOnlyValue[] memory _val) internal pure returns (Value memory) {
@@ -230,7 +273,7 @@ library ArbValue {
     }
 
     function newHashOnlyValue(bytes32 _val) internal pure returns (Value memory) {
-        return Value(uint256(_val), new Value[](0), HASH_ONLY_TYPECODE);
+        return Value(uint256(_val), CodePoint(0, 0, false, 0), new Value[](0), HASH_ONLY_TYPECODE);
     }
 
     function deserializeInt(bytes memory data, uint startOffset) internal pure returns (uint, uint256) {
@@ -238,6 +281,28 @@ library ArbValue {
         uint256 intVal = data.toUint(offset);
         offset += 32;
         return (offset, intVal);
+    }
+
+    function deserializeCodePoint(bytes memory data, uint startOffset) internal pure returns (uint, CodePoint memory) {
+        uint offset = startOffset;
+        uint8 immediateType = uint8(data[offset]);
+        offset ++;
+        uint8 opCode = uint8(data[offset]);
+        offset++;
+        bytes32 immediateVal;
+        if (immediateType == 1) {
+            uint valid;
+            Value memory value;
+            (valid, offset, value) = deserializeValue(data, offset);
+            require(valid == 0, "Marshalled value must be valid");
+            immediateVal = value.hash().hash;
+        }
+        bytes32 nextHash = data.toBytes32(offset);
+        offset += 32;
+        if (immediateType == 1) {
+            return (offset, CodePoint(opCode, nextHash, true, immediateVal));
+        }
+        return (offset, CodePoint(opCode, nextHash, false, 0));
     }
 
     function deserializeTuple(
@@ -274,9 +339,13 @@ library ArbValue {
         uint8 valType = uint8(data[offset]);
         offset++;
         uint256 intVal;
+        CodePoint memory cpVal;
         if (valType == INT_TYPECODE) {
             (offset, intVal) = deserializeInt(data, offset);
             return (0, offset, newIntValue(intVal));
+        } else if (valType == CODE_POINT_TYPECODE) {
+            (offset, cpVal) = deserializeCodePoint(data, offset);
+            return (0, offset, newCodePointValue(cpVal));
         } else if (valType == HASH_ONLY_TYPECODE) {
             (offset, intVal) = deserializeInt(data, offset);
             return (0, offset, newHashOnlyValue(bytes32(intVal)));

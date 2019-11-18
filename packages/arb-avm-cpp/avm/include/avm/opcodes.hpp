@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 enum class OpCode : uint8_t {
     ADD = 0x01,
@@ -85,7 +86,8 @@ enum class OpCode : uint8_t {
     INBOX,
     ERROR,
     HALT,
-    DEBUG
+    DEBUG,
+    DEFAULT
 };
 
 inline bool isValidOpcode(OpCode op) {
@@ -96,7 +98,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::DUP0 && op <= OpCode::SWAP2) ||
            (op >= OpCode::TGET && op <= OpCode::TLEN) ||
            (op >= OpCode::BREAKPOINT && op <= OpCode::LOG) ||
-           (op >= OpCode::SEND && op <= OpCode::ERROR);
+           (op >= OpCode::SEND && op <= OpCode::HALT);
 }
 
 const std::map<OpCode, std::string> InstructionNames = {
@@ -173,8 +175,8 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::SDIV, {true, true}},
     {OpCode::MOD, {true, true}},
     {OpCode::SMOD, {true, true}},
-    {OpCode::ADDMOD, {true, true}},
-    {OpCode::MULMOD, {true, true}},
+    {OpCode::ADDMOD, {true, true, true}},
+    {OpCode::MULMOD, {true, true, true}},
     {OpCode::EXP, {true, true}},
 
     {OpCode::LT, {true, true}},
@@ -182,7 +184,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::SLT, {true, true}},
     {OpCode::SGT, {true, true}},
     {OpCode::EQ, {false, false}},
-    {OpCode::ISZERO, {true, true}},
+    {OpCode::ISZERO, {true}},
     {OpCode::BITWISE_AND, {true, true}},
     {OpCode::BITWISE_OR, {true, true}},
     {OpCode::BITWISE_XOR, {true, true}},
@@ -198,7 +200,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::RPUSH, {}},
     {OpCode::RSET, {false}},
     {OpCode::JUMP, {false}},
-    {OpCode::CJUMP, {false, true}},
+    {OpCode::CJUMP, {true, true}},
     {OpCode::STACKEMPTY, {}},
     {OpCode::PCPUSH, {}},
     {OpCode::AUXPUSH, {false}},

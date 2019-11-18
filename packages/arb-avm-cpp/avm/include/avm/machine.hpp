@@ -17,50 +17,11 @@
 #ifndef machine_hpp
 #define machine_hpp
 
-#include <avm/datastack.hpp>
-#include <avm/tokenTracker.hpp>
-#include <avm/value.hpp>
+#include <avm/machinestate/machinestate.hpp>
+#include <avm/value/value.hpp>
 
 #include <memory>
 #include <vector>
-
-typedef std::array<uint256_t, 2> TimeBounds;
-
-enum class Status { Extensive, Halted, Error };
-
-struct NotBlocked {};
-
-struct HaltBlocked {};
-
-struct ErrorBlocked {};
-
-struct BreakpointBlocked {};
-
-struct InboxBlocked {
-    uint256_t inbox;
-};
-
-struct SendBlocked {
-    uint256_t currency;
-    TokenType tokenType;
-};
-
-using BlockReason = nonstd::variant<NotBlocked,
-                                    HaltBlocked,
-                                    ErrorBlocked,
-                                    BreakpointBlocked,
-                                    InboxBlocked,
-                                    SendBlocked>;
-
-struct AssertionContext {
-    uint32_t numSteps;
-    TimeBounds timeBounds;
-    std::vector<Message> outMessage;
-    std::vector<value> logs;
-
-    explicit AssertionContext(const TimeBounds& tb)
-        : numSteps{0}, timeBounds(tb) {}
-};
 
 struct Assertion {
     uint64_t stepCount;
@@ -68,93 +29,45 @@ struct Assertion {
     std::vector<value> logs;
 };
 
-struct MessageStack {
-    Tuple messages;
-    uint64_t messageCount;
-    TuplePool& pool;
-
-    MessageStack(TuplePool& pool_) : pool(pool_) {}
-
-    bool isEmpty() const { return messageCount == 0; }
-
-    void addMessage(const Message& msg) {
-        messages =
-            Tuple{uint256_t{0}, std::move(messages), msg.toValue(pool), &pool};
-        messageCount++;
-    }
-
-    void addMessageStack(MessageStack&& stack) {
-        if (!stack.isEmpty()) {
-            messages = Tuple(uint256_t(1), std::move(messages),
-                             std::move(stack.messages), &pool);
-            messageCount += stack.messageCount;
-        }
-    }
-
-    void clear() {
-        messages = Tuple{};
-        messageCount = 0;
-    }
-};
-
-struct MachineState {
-    std::shared_ptr<TuplePool> pool;
-    std::vector<CodePoint> code;
-    value staticVal;
-    value registerVal;
-    datastack stack;
-    datastack auxstack;
-    Status state = Status::Extensive;
-    uint64_t pc = 0;
-    CodePoint errpc;
-    MessageStack pendingInbox;
-    AssertionContext context;
-    MessageStack inbox;
-    BalanceTracker balance;
-    BlockReason blockReason;
-
-    MachineState();
-
-    bool deserialize(char* data);
-
-    void readInbox(char* newInbox);
-    std::vector<unsigned char> marshalForProof();
-    uint64_t pendingMessageCount() const;
-    void sendOnchainMessage(const Message& msg);
-    void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message>& messages);
-    BlockReason runOp(OpCode opcode);
-    uint256_t hash() const;
-};
-
 class Machine {
-    MachineState m;
+    MachineState machine_state;
 
     friend std::ostream& operator<<(std::ostream&, const Machine&);
     void runOne();
 
    public:
-    bool deserialize(char* data) { return m.deserialize(data); }
+    bool initializeMachine(const std::string& filename);
+    bool deserialize(char* data) { return machine_state.deserialize(data); }
 
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,
                   uint64_t timeBoundEnd);
-    Status currentStatus() { return m.state; }
-    BlockReason lastBlockReason() { return m.blockReason; }
-    uint256_t hash() const { return m.hash(); }
-    std::vector<unsigned char> marshalForProof() { return m.marshalForProof(); }
-    uint64_t pendingMessageCount() const { return m.pendingMessageCount(); }
+
+    Status currentStatus() { return machine_state.state; }
+    BlockReason lastBlockReason() { return machine_state.blockReason; }
+    uint256_t hash() const { return machine_state.hash(); }
+    std::vector<unsigned char> marshalForProof() {
+        return machine_state.marshalForProof();
+    }
+    uint64_t pendingMessageCount() const {
+        return machine_state.pendingMessageCount();
+    }
 
     bool canSpend(const TokenType& tokType, const uint256_t& amount) const {
-        return m.balance.canSpend(tokType, amount);
+        return machine_state.balance.canSpend(tokType, amount);
     }
-    uint256_t inboxHash() const { return ::hash(m.inbox.messages); }
+    uint256_t inboxHash() const { return ::hash(machine_state.inbox.messages); }
 
     void sendOnchainMessage(const Message& msg);
     void deliverOnchainMessages();
     void sendOffchainMessages(const std::vector<Message>& messages);
 
-    TuplePool& getPool() { return *m.pool; }
+    TuplePool& getPool() { return *machine_state.pool; }
+
+    SaveResults checkpoint(CheckpointStorage& storage);
+    bool restoreCheckpoint(const CheckpointStorage& storage,
+                           const std::vector<unsigned char>& checkpoint_key);
+    DeleteResults deleteCheckpoint(CheckpointStorage& storage);
 };
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val);

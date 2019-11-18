@@ -2,7 +2,8 @@ version: 2
 jobs:
   build:
     docker:
-      - image: offchainlabs/build-base:0.1.2
+      - image: offchainlabs/build-base:0.1.3
+    resource_class: medium+
     working_directory: /home/user/arbitrum
     environment: # environment variables for the build itself
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
@@ -38,6 +39,10 @@ jobs:
             - python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
             - python-packages-v1-{{ .Branch }}-
             - python-packages-v1-
+      - restore_cache:
+          keys:
+            - rocksdb-v2-{{ .Branch }}
+            - rocksdb-v2-
       - run:
           name: build all
           command: |
@@ -62,6 +67,14 @@ jobs:
           paths:
             - ~/.local/lib/python3.7/site-packages
           key: python-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+      - save_cache:
+          paths:
+            - packages/arb-avm-cpp/rocksdb
+            - packages/arb-avm-cpp/build/rocksdb
+            - packages/arb-avm-cpp/build/rocksdb-prefix
+            - packages/arb-avm-cpp/ci/rocksdb
+            - packages/arb-avm-cpp/ci/rocksdb-prefix
+          key: rocksdb-v2-{{ .Branch }}
       - run:
           name: test arb-avm-cpp
           command: |
@@ -141,6 +154,7 @@ jobs:
       - run:
           name: test arb-validator
           command: |
+            ganache-cli --db ../arb-bridge-eth/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
             /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
             ../../codecovbash -R /home/user/arbitrum -cF arb_validator
           working_directory: /home/user/arbitrum/packages/arb-validator

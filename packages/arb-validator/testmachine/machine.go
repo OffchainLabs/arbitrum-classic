@@ -16,6 +16,7 @@
 
 package testmachine
 
+import "C"
 import (
 	"bytes"
 	"fmt"
@@ -61,6 +62,13 @@ func (m *Machine) Hash() [32]byte {
 		log.Fatalln("Hash error at pc", m.gomachine.GetPC())
 	}
 	return h1
+}
+
+func (m *Machine) PrintState() {
+	log.Println("Cpp state")
+	m.cppmachine.PrintState()
+	log.Println("Go state")
+	m.gomachine.PrintState()
 }
 
 func (m *Machine) Clone() machine.Machine {
@@ -148,6 +156,10 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 
 		if !a1.Equals(a2) {
 			pcEnd := m.gomachine.GetPC()
+			m.cppmachine.PrintState()
+			m.gomachine.PrintState()
+			log.Println("cpp num steps", a1.NumSteps)
+			log.Println("go num steps", a2.NumSteps)
 			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
 		}
 		a.AfterHash = a1.AfterHash
@@ -175,7 +187,27 @@ func (m *Machine) MarshalForProof() ([]byte, error) {
 	}
 
 	if !bytes.Equal(h1, h2) {
+		m.cppmachine.PrintState()
+		m.gomachine.PrintState()
 		log.Fatalln("MarshalForProof error at pc", m.gomachine.GetPC())
 	}
 	return h1, nil
+}
+
+func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
+	h1 := m.cppmachine.Checkpoint(storage)
+	h2 := m.gomachine.Checkpoint(storage)
+	if h1 != h2 {
+		log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
+	}
+	return h1
+}
+
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+	h1 := m.cppmachine.RestoreCheckpoint(storage, checkpointName)
+	h2 := m.gomachine.RestoreCheckpoint(storage, checkpointName)
+	if h1 != h2 {
+		log.Fatalln("Checkpoint error at pc", m.gomachine.GetPC())
+	}
+	return h1
 }

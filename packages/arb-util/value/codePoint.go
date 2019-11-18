@@ -106,6 +106,14 @@ func (op BasicOperation) GetOp() Opcode {
 	return op.Op
 }
 
+func (op BasicOperation) String() string {
+	return fmt.Sprintf("0x%x", op.GetOp())
+}
+
+func (op ImmediateOperation) String() string {
+	return fmt.Sprintf("0x%x Imd(%v)", op.GetOp(), op.Val)
+}
+
 // func (op BasicOperation) String() string {
 //	return fmt.Sprintf("Basic(%v)", code.InstructionNames[op.Op])
 //}
@@ -263,7 +271,7 @@ func (cv CodePointValue) Marshal(w io.Writer) error {
 }
 
 func (cv CodePointValue) MarshalForProof(w io.Writer) error {
-	if err := MarshalOperation(cv.Op, w); err != nil {
+	if err := MarshalOperationProof(cv.Op, w, false); err != nil {
 		return err
 	}
 	_, err := w.Write(cv.NextHash[:])

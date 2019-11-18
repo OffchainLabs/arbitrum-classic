@@ -53,6 +53,14 @@ type Machine struct {
 	warnHandler WarningHandler
 }
 
+func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
+	panic("implement me")
+}
+
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+	panic("implement me")
+}
+
 func Equal(x, y *Machine) (bool, string) {
 	if ok, err := x.stack.Equal(y.stack); !ok {
 		tmp := "stack error: "
@@ -319,6 +327,7 @@ func (m *Machine) PrintState() {
 	registerHash := m.register.StateValue().Hash()
 	staticHash := m.static.StateValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
+	fmt.Println("machine state", m.status)
 	fmt.Println("codePointHash", hexutil.Encode(codePointHash[:]))
 	fmt.Println("stackHash", hexutil.Encode(stackHash[:]))
 	fmt.Println("auxStackHash", hexutil.Encode(auxStackHash[:]))
