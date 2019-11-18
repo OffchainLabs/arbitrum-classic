@@ -1,11 +1,13 @@
-FROM alpine:3.10
-# Alpine dependencies
-RUN apk add --no-cache bash curl git go libc-dev libstdc++ linux-headers && \
-    addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user && \
-    wget https://codecov.io/bash -O codecovbash && chmod +x codecovbash && \
-    mv codecovbash /usr/local/bin/
+FROM debian:buster-slim
+
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
+    apt-get install -y curl git golang sudo && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl https://get.parity.io -L | bash /dev/stdin -r stable && \
+    useradd -ms /bin/bash user
 USER user
-WORKDIR "/home/user"
-ENV PATH="/home/user/go/bin:${PATH}"
-RUN go get gotest.tools/gotestsum
+WORKDIR /home/user/
+ENV PATH="/home/user/bin:/home/user/.local/bin:/home/user/.yarn/bin:${PATH}"
+RUN mkdir bin && curl -s https://codecov.io/bash > ~/bin/codecovbash && \
+    chmod +x /home/user/bin/codecovbash && \
+    go get gotest.tools/gotestsum

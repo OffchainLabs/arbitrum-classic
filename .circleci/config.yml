@@ -223,8 +223,9 @@ jobs:
           at: /home/user/workspace
       - run:
           command: |
-            mv /home/user/workspace/io.parity.ethereum /home/user/.local/share
-            mv /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
+            mkdir -p /home/user/.local/share
+            cp -r /home/user/workspace/io.parity.ethereum /home/user/.local/share
+            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           command: |
