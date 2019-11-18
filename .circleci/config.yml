@@ -29,11 +29,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v3-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v3-{{ .Branch }}-
-      - go-mod-v3-
+      - go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v4-{{ .Branch }}-
+      - go-mod-v4-
   - &save_go_cache
-    key: go-mod-v3-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v4-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &restore_conan_cache
@@ -87,7 +87,7 @@ jobs:
       - save_cache: *save_python_cache
   go-deps:
     docker:
-      - image: offchainlabs/go-base:0.1.0
+      - image: offchainlabs/backend-base:0.1.0
     steps:
       - checkout
       - restore_cache: *restore_go_cache
