@@ -6,6 +6,8 @@ arb-provider-go
 arb-provider-truffle
 arb-provider-web3
 arb-validator.Dockerfile
+**/arb-avm-cpp/rocksdb
+**/arb-avm-cpp/rocksdb-prefix
 **/ganachedb
 
 **/vconan
@@ -16,7 +18,6 @@ arb-validator.Dockerfile
 **/.DS_Store
 **/.idea
 **/.vscode
-**/*.ao
 **/compiled.json
 **/ci
 **/debug
