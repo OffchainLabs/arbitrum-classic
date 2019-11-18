@@ -241,7 +241,7 @@ jobs:
             go install -v ./...
       - run:
           name: start parity
-          command: parity --chain parity/poa.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt
+          command: parity --chain parity/poa.json --geth --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt
           background: true
           working_directory: /home/user/project/packages/arb-bridge-eth
       - run:
