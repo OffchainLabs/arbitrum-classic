@@ -142,9 +142,10 @@ def compose_validator(validator_id, state_abspath, contract_abspath, avm):
 
 
 DOCKERFILE_CACHE = """FROM alpine:3.9
-RUN mkdir /build /cpp-build
+RUN mkdir /build /cpp-build /rocksdb
 FROM scratch
 COPY --from=0 /cpp-build /cpp-build
+COPY --from=0 /rocksdb /rocksdb
 COPY --from=0 /build /build"""
 
 ### ----------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 FROM alpine:3.9 as arb-avm-cpp
 # Alpine dependencies
 RUN apk add --no-cache boost-dev=1.67.0-r2 cmake=3.13.0-r0 g++=8.3.0-r0 \
-    make=4.2.1-r2 musl-dev=1.1.20-r5 python3-dev=3.6.9-r2 && \
+    make=4.2.1-r2 musl-dev=1.1.20-r5 python3-dev=3.6.9-r2 git && \
     pip3 install conan==1.20.2 && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
@@ -24,11 +24,12 @@ RUN mkdir -p build && cd build && \
 COPY --chown=user arb-avm-cpp/ ./
 # Copy build cache
 COPY --from=arb-validator --chown=user /cpp-build build/
+COPY --from=arb-validator --chown=user /rocksdb rocksdb/
 # Build arb-avm-cpp
 RUN cd build && conan install .. && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . -j $(nproc) && \
-    cp lib/* ../cmachine
+    cp lib/* rocksdb/librocksdb.a ../cmachine
 
 
 FROM alpine:3.9 as arb-validator-builder
@@ -54,6 +55,7 @@ RUN go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp=.
 # Copy source code
 COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-cpp/
 COPY --from=arb-avm-cpp /home/user/cavm/cmachine.h /home/user/arb-avm-cpp/cavm/cmachine.h
+COPY --from=arb-avm-cpp /home/user/cavm/ccheckpointstorage.h /home/user/arb-avm-cpp/cavm/ccheckpointstorage.h
 COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
 COPY --chown=user arb-avm-go/ /home/user/arb-avm-go/
 COPY --chown=user arb-util/ /home/user/arb-util/
@@ -92,6 +94,7 @@ ENV ID=0 \
 # Build cache
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
 COPY --from=arb-avm-cpp /home/user/build /cpp-build
+COPY --from=arb-avm-cpp /home/user/rocksdb /rocksdb
 
 # 1) Waits for host:port if $WAIT_FOR is set
 # 2) Copies address files from ../ to ./ (state volume)
