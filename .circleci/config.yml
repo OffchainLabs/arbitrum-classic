@@ -169,8 +169,8 @@ jobs:
             echo arbitrum > ~/password.txt
             mkdir -p /home/user/.local/share/io.parity.ethereum/
             cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
-            parity --chain=parity/dev.json account import parity/keystore/
-            parity --chain parity/dev.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt &
+            parity --chain=parity/poa.json account import parity/keystore/
+            parity --chain parity/poa.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt &
             truffle migrate --network parity
             codecovbash -R /home/user/project -cF arb_bridge_eth
           working_directory: /home/user/project/packages/arb-bridge-eth
