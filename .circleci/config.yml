@@ -45,6 +45,7 @@ aliases:
     paths:
       - ~/.conan/data
     key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+  - &test-path /tmp/test-results
 version: 2
 workflows:
   version: 2
@@ -100,7 +101,7 @@ jobs:
     docker:
       - image: offchainlabs/build-base:0.1.4
     environment:
-      TEST_RESULTS: /tmp/test-results
+      TEST_RESULTS: *test-path
     steps:
       - checkout
       - run: mkdir -p $TEST_RESULTS
@@ -151,7 +152,7 @@ jobs:
             JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-truffle.xml"
           working_directory: /home/user/project/packages/arb-provider-truffle
       - store_test_results:
-          path: /tmp/test-results
+          path: *test-path
   ethbridge:
     docker:
       - image: offchainlabs/build-base:0.1.4
@@ -179,7 +180,7 @@ jobs:
     docker:
       - image: offchainlabs/build-base:0.1.4
     environment: # environment variables for the build itself
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+      TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
       - run: mkdir -p $TEST_RESULTS
@@ -209,12 +210,12 @@ jobs:
           paths:
             - ./*.a
       - store_test_results:
-          path: /tmp/test-results
+          path: *test-path
   backend:
     docker:
       - image: offchainlabs/build-base:0.1.4
     environment: # environment variables for the build itself
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+      TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
       - run: mkdir -p $TEST_RESULTS
@@ -256,4 +257,4 @@ jobs:
             codecovbash -R /home/user/project -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
       - store_test_results:
-          path: /tmp/test-results
+          path: *test-path
