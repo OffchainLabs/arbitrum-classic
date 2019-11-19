@@ -1,15 +1,15 @@
 [rpc]
 port = 7545
-interface = "0.0.0.0"
+interface = "all"
 cors = ["all"]
 hosts = ["all"]
-apis = ["web3", "eth", "net", "parity", "pubsub", "traces", "rpc", "personal", "parity_accounts", "signer", "parity_set"]
+apis = ["all"]
 
 [websockets]
 disable = false
 port = 7546
 interface = "all"
-apis = ["web3", "eth", "net", "parity", "pubsub", "traces", "rpc", "secretstore"]
+apis = ["all"]
 hosts = ["all"]
 
 [mining]

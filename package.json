@@ -38,8 +38,5 @@
       "demos/*",
       "workspace/*"
     ]
-  },
-  "devDependencies": {
-    "ganache-cli": "6.5.0"
   }
 }

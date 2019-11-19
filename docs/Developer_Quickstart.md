@@ -24,7 +24,7 @@ list of dependencies.
 Using [Homebrew](https://brew.sh/):
 
 ```bash
-brew install python3 docker docker-compose
+brew install python3 docker docker-compose parity
 brew cask install docker
 open -a Docker
 ```
@@ -40,6 +40,7 @@ Using apt:
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-pip docker docker-compose
+bash <(curl https://get.parity.io -L)
 ```
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
@@ -53,7 +54,7 @@ curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | b
 curl -o- -L https://yarnpkg.com/install.sh | bash
 nvm install 10.16.3
 . ~/.bashrc
-yarn global add ganache-cli truffle
+yarn global add truffle
 ```
 
 ### Full List
@@ -65,7 +66,7 @@ Here are the important dependencies in case you are not running on a supported O
 -   [node](https://nodejs.org/en/)
 -   [python3 and pip3](https://www.python.org/downloads/)
 -   [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
--   [ganache](https://www.npmjs.com/package/ganache-cli)
+-   [parity](https://www.parity.io/ethereum)
 -   [yarn](https://yarnpkg.com/en/)
 
 > Requires `node -v` version 8 or 10
@@ -230,7 +231,7 @@ The dApp must:
 
 Here are the steps needed to port your dApp to Arbitrum:
 
-1. Make sure your dApp compiles and runs correctly on Ethereum or ganache
+1. Make sure your dApp compiles and runs correctly on Ethereum or a local testnet
 2. Configure the Truffle project to use the Arbitrum Truffle provider (arb-provider-truffle)
 3. Add the Arbitrum front-end provider (arb-provider-web3 or arb-provider-ethers)
 4. Compile your Truffle project to Arbitrum bytecode (output as contract.ao)
