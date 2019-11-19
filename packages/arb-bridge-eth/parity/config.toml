@@ -14,6 +14,7 @@ hosts = ["all"]
 
 [mining]
 engine_signer = "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82"
+force_sealing = true
 min_gas_price = 1
 # Targeting 7500000 gas per block when sealing a new block.
 gas_floor_target = "7500000"

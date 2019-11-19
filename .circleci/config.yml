@@ -158,10 +158,7 @@ jobs:
     steps:
       - checkout
       - restore_cache: *restore_yarn_cache
-      - run:
-          command: |
-            yarn install --cache-folder ~/.cache/yarn
-          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run: yarn install --cache-folder ~/.cache/yarn
       - run:
           command: |
             echo arbitrum > ~/password.txt

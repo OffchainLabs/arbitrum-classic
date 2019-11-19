@@ -9,7 +9,7 @@
 ARG MNEMONIC=\
 "jar deny prosper gasp flush glass core corn alarm treat leg smart"
 ARG NUM_WALLETS=110
-ARG NETWORK=dev.json
+ARG NETWORK=poa.json
 
 FROM debian:buster-slim
 

@@ -88,7 +88,7 @@ func TestChallenge(t *testing.T) {
 	validators := []common.Address{auth1.From, auth2.From}
 	escrowRequired := big.NewInt(10)
 	config := valmessage.NewVMConfiguration(
-		5,
+		2,
 		escrowRequired,
 		common.Address{}, // Address 0 is eth
 		validators,
@@ -128,6 +128,7 @@ func TestChallenge(t *testing.T) {
 		false,
 		math.MaxInt32, // maxCallSteps,
 		math.MaxInt32, // maxUnanSteps
+		time.Second,
 	)
 
 	if err != nil {
@@ -238,7 +239,7 @@ func TestChallenge(t *testing.T) {
 				t.Log(message.Message)
 				t.Log("****************************")
 			}
-		case <-time.After(60 * time.Second):
+		case <-time.After(100 * time.Second):
 			t.Error("Never received proof accepted message")
 			fmt.Println("test complete")
 			return
