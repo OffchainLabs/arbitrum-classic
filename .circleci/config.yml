@@ -222,27 +222,27 @@ jobs:
       - run:
           name: test arb-util
           command: |
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
             codecovbash -R /home/user/project -cF arb_util
           working_directory: /home/user/project/packages/arb-util
       - run:
           name: test arb-avm-go
           command: |
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
             codecovbash -R /home/user/project -cF arb_avm_go
           working_directory: /home/user/project/packages/arb-avm-go
       - run:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
             codecovbash -R /home/user/project -cF arb_validator
           working_directory: /home/user/project/packages/arb-validator
       - run:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
             codecovbash -R /home/user/project -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
       - store_test_results:
