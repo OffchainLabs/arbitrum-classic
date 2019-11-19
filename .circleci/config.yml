@@ -151,8 +151,8 @@ jobs:
           name: test arb-bridge-eth
           command: |
             truffle migrate --network parity
-            codecovbash -R /home/user/project -cF arb_bridge_eth
-          working_directory: /home/user/project/packages/arb-bridge-eth
+            codecovbash -R /home/user/arb-bridge-eth -cF arb_bridge_eth
+          working_directory: /home/user/arb-bridge-eth
       - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
       - run: killall -HUP parity
       - persist_to_workspace: # store the built files into the workspace for other jobs.
