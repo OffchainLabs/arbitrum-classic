@@ -4,7 +4,7 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM alpine:edge
+FROM alpine:3.10
 # Alpine dependencies
 RUN apk update && apk add --no-cache bash boost-dev cmake curl findutils g++ git \
     make musl-dev perl python3 python3-dev && \
