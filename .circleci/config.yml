@@ -228,22 +228,37 @@ jobs:
       - run:
           name: test arb-avm-go
           command: |
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
-            codecovbash -R /home/user/project -cF arb_avm_go
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
+            codecovbash -f coverageutil.txt -cF arb_util
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
+            codecovbash -f coverageavm.txt -cF arb_avm_go
           working_directory: /home/user/project/packages/arb-avm-go
       - run:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
-            codecovbash -R /home/user/project -cF arb_validator
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/... ./...
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
+            codecovbash -f coverageutil.txt -cF arb_util
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
+            codecovbash -f coverageavm.txt -cF arb_avm_go
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-validator/p' coverage.txt >> coverageval.txt
+            codecovbash -f coverageval.txt -cF arb_validator
           working_directory: /home/user/project/packages/arb-validator
       - run:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
-            codecovbash -R /home/user/project -cF arb_provider_go
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/...,../arb-validator/... ./...
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
+            codecovbash -f coverageutil.txt -cF arb_util
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
+            codecovbash -f coverageavm.txt -cF arb_avm_go
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-validator/p' coverage.txt >> coverageval.txt
+            codecovbash -f coverageval.txt -cF arb_validator
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-provider-go/p' coverage.txt >> coverageprov.txt
+            codecovbash -f coverageprov.txt -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
       - store_test_results:
           path: /tmp/test-results
