@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -15,6 +14,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
@@ -86,7 +87,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		200000,
 		common.Address{}, // Address 0 means no owner
 	)
-	ethURL := "ws://127.0.0.1:7545"
+	ethURL := "ws://127.0.0.1:7546"
 	contract := "contract.ao"
 
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
