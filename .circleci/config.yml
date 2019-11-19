@@ -198,7 +198,7 @@ jobs:
             conan install ..
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
-            cp lib/lib* rocksdb/librocksdb.a ../cmachine/
+            cp lib/lib* ../cmachine/
       - save_cache: *save_conan_cache
       - run:
           name: test arb-avm-cpp

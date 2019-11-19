@@ -4,10 +4,11 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM alpine:3.10
+FROM alpine:edge
 # Alpine dependencies
 RUN apk update && apk add --no-cache bash boost-dev cmake curl findutils g++ git \
     make musl-dev perl python3 python3-dev && \
+    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     pip3 install --upgrade pip && \
     pip3 install conan && \
     addgroup -g 1000 -S user && \

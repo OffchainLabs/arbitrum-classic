@@ -33,7 +33,7 @@ else()
   set(BUILD_CMD ${CMAKE_COMMAND} --build <BINARY_DIR> --target rocksdb)
 endif()
 
-ExternalProject_Add(rocksdb
+ExternalProject_Add(rocks
     GIT_REPOSITORY "https://github.com/facebook/rocksdb.git"
     GIT_TAG "v6.4.6"
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rocksdb"
@@ -55,7 +55,7 @@ ExternalProject_Add(rocksdb
     INSTALL_COMMAND cmake -E echo "Skipping install step."
 )
 
-ExternalProject_Get_Property(rocksdb BINARY_DIR)
+ExternalProject_Get_Property(rocks BINARY_DIR)
 set(ROCKSDB_LIBRARIES ${BINARY_DIR}/${CMAKE_CFG_INTDIR}/librocksdb.a)
 
 link_directories(${BINARY_DIR})
@@ -65,14 +65,11 @@ set(ROCKSDB_FOUND TRUE)
 set(ROCKSDB_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/rocksdb/include)
 
-message(STATUS "Found RocksDB library: ${ROCKSDB_LIBRARIES}")
-message(STATUS "Found RocksDB includes: ${ROCKSDB_INCLUDE_DIRS}")
-
-add_library(rocks INTERFACE)
-add_dependencies(rocks rocksdb)
-target_include_directories(rocks INTERFACE ${ROCKSDB_INCLUDE_DIRS})
+add_library(RocksDB::RocksDB INTERFACE)
+add_dependencies(RocksDB::RocksDB rocks)
+target_include_directories(RocksDB::RocksDB INTERFACE ${ROCKSDB_INCLUDE_DIRS})
 # ZLIB::ZLIB BZip2::BZip2
-target_link_libraries(rocks INTERFACE ${ROCKSDB_LIBRARIES} Threads::Threads)
+target_link_libraries(RocksDB::RocksDB INTERFACE ${ROCKSDB_LIBRARIES} Threads::Threads)
 
 mark_as_advanced(
     ROCKSDB_LIBRARIES
