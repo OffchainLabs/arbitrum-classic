@@ -366,7 +366,7 @@ TEST_CASE("POP opcode is correct") {
 }
 
 TEST_CASE("SPUSH opcode is correct") {
-    SECTION("pop") {
+    SECTION("spush") {
         MachineState m;
         m.staticVal = uint256_t(5);
         m.runOp(OpCode::SPUSH);
@@ -378,7 +378,7 @@ TEST_CASE("SPUSH opcode is correct") {
 }
 
 TEST_CASE("RPUSH opcode is correct") {
-    SECTION("pop") {
+    SECTION("rpush") {
         MachineState m;
         m.registerVal = uint256_t(5);
         m.runOp(OpCode::RPUSH);
@@ -390,7 +390,7 @@ TEST_CASE("RPUSH opcode is correct") {
 }
 
 TEST_CASE("RSET opcode is correct") {
-    SECTION("pop") {
+    SECTION("rset") {
         MachineState m;
         m.stack.push(value{uint256_t(5)});
         m.runOp(OpCode::RSET);
@@ -476,7 +476,7 @@ TEST_CASE("AUXPUSH opcode is correct") {
 }
 
 TEST_CASE("AUXPOP opcode is correct") {
-    SECTION("auxpush") {
+    SECTION("auxpop") {
         MachineState m;
         m.auxstack.push(value{uint256_t(5)});
         m.runOp(OpCode::AUXPOP);
@@ -531,7 +531,7 @@ TEST_CASE("ERRPUSH opcode is correct") {
 }
 
 TEST_CASE("ERRSET opcode is correct") {
-    SECTION("errpush") {
+    SECTION("errset") {
         MachineState m;
         m.stack.push(value{CodePoint(0, OpCode::ADD, 0)});
         m.runOp(OpCode::ERRSET);
@@ -608,7 +608,7 @@ TEST_CASE("SWAP1 opcode is correct") {
 }
 
 TEST_CASE("SWAP2 opcode is correct") {
-    SECTION("dup") {
+    SECTION("swap") {
         MachineState m;
         m.stack.push(uint256_t{7});
         m.stack.push(uint256_t{5});
@@ -723,6 +723,16 @@ TEST_CASE("SEND opcode is correct") {
 TEST_CASE("NBSEND opcode is correct") {
     SECTION("nbsend") {
         // TODO: fill in nbsend test
+        MachineState m;
+        m.stack.push(Tuple{uint256_t{1}, uint256_t{2345}, uint256_t{1},
+                           uint256_t{4}, m.pool.get()});
+
+        m.runOp(OpCode::NBSEND);
+        value res = m.stack.pop();
+        auto actual = nonstd::get_if<uint256_t>(&res);
+        REQUIRE(actual);
+        REQUIRE(*actual == 0);
+        REQUIRE(m.stack.stacksize() == 0);
     }
 }
 
