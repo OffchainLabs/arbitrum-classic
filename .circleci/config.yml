@@ -50,41 +50,16 @@ workflows:
   version: 2
   build:
     jobs:
-      - yarn-deps
-      - python-deps
       - go-deps
       - cpp-avm
-      - frontend:
-          requires:
-            - yarn-deps
-            - python-deps
-      - ethbridge:
-          requires:
-            - yarn-deps
+      - frontend
+      - ethbridge
       - backend:
           requires:
             - go-deps
             - cpp-avm
             - ethbridge
 jobs:
-  yarn-deps:
-    docker:
-      - image: offchainlabs/yarn-base:0.1.0
-    steps:
-      - checkout
-      - restore_cache: *restore_yarn_cache
-      - run: yarn install --cache-folder ~/.cache/yarn
-      - save_cache: *save_yarn_cache
-  python-deps:
-    docker:
-      - image: offchainlabs/python-base:0.1.0
-    steps:
-      - checkout
-      - restore_cache: *restore_python_cache
-      - run:
-          command: pip3 install --user -r requirements.txt
-          working_directory: /home/user/project/packages/arb-compiler-evm
-      - save_cache: *save_python_cache
   go-deps:
     docker:
       - image: offchainlabs/backend-base:0.1.0
@@ -104,14 +79,16 @@ jobs:
     steps:
       - checkout
       - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_python_cache
       - restore_cache: *restore_yarn_cache
+      - run: yarn install --cache-folder ~/.cache/yarn
+      - save_cache: *save_yarn_cache
+      - restore_cache: *restore_python_cache
       - run:
           command: | # use pipenv to install dependencies
             pip3 install --user -r requirements.txt
             python3 setup.py install --user
-            yarn install --cache-folder ~/.cache/yarn
           working_directory: /home/user/project/packages/arb-compiler-evm
+      - save_cache: *save_python_cache
       - run:
           name: test arb-compiler-evm
           command: |
@@ -157,26 +134,26 @@ jobs:
       - image: offchainlabs/ethbridge-base:0.1.0
     steps:
       - checkout
-      - restore_cache: *restore_yarn_cache
-      - run: yarn install --cache-folder ~/.cache/yarn
+      - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
       - run:
           command: |
+            yarn --production
             echo arbitrum > ~/password.txt
             mkdir -p /home/user/.local/share/io.parity.ethereum/
             cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
             parity --chain=parity/poa.json account import parity/keystore/
-          working_directory: /home/user/project/packages/arb-bridge-eth
+          working_directory: /home/user/arb-bridge-eth
       - run:
           command: parity --chain parity/poa.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt
           background: true
-          working_directory: /home/user/project/packages/arb-bridge-eth
+          working_directory: /home/user/arb-bridge-eth
       - run:
           name: test arb-bridge-eth
           command: |
             truffle migrate --network parity
             codecovbash -R /home/user/project -cF arb_bridge_eth
           working_directory: /home/user/project/packages/arb-bridge-eth
-      - run: cat /home/user/project/packages/arb-bridge-eth/bridge_eth_addresses.json
+      - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
       - run: killall -HUP parity
       - persist_to_workspace: # store the built files into the workspace for other jobs.
           root: /home/user/.local/share/
