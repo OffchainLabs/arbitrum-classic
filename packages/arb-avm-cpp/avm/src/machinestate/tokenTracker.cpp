@@ -137,7 +137,12 @@ value Message::toValue(TuplePool& pool) const {
 
 uint256_t BalanceTracker::tokenValue(const TokenType& tokType) const {
     assert(isToken(tokType));
-    return tokenLookup.at(tokType);
+    auto it = tokenLookup.find(tokType);
+    if (it != tokenLookup.end()) {
+        return it->second;
+    } else {
+        return 0;
+    }
 }
 
 bool BalanceTracker::hasNFT(const TokenType& tokType,

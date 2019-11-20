@@ -520,7 +520,8 @@ void tlen(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason breakpoint(MachineState&) {
+BlockReason breakpoint(MachineState& m) {
+    ++m.pc;
     return BreakpointBlocked{};
 }
 

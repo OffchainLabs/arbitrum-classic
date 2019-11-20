@@ -96,13 +96,19 @@ void marshalShallow(const value& val, std::vector<unsigned char>& buf) {
                          val);
 }
 
+// see similar functionality in tuple.cloneShallow and tuple.marshal
 void marshalShallow(const Tuple& val, std::vector<unsigned char>& buf) {
     buf.push_back(TUPLE + val.tuple_size());
     for (uint64_t i = 0; i < val.tuple_size(); i++) {
-        buf.push_back(HASH_ONLY);
-        std::array<unsigned char, 32> tmpbuf;
-        to_big_endian(::hash(val.get_element(i)), tmpbuf.begin());
-        buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+        auto itemval = val.get_element(i);
+        if (nonstd::holds_alternative<uint256_t>(itemval)) {
+            marshalShallow(itemval, buf);
+        } else {
+            buf.push_back(HASH_ONLY);
+            std::array<unsigned char, 32> tmpbuf;
+            to_big_endian(::hash(val.get_element(i)), tmpbuf.begin());
+            buf.insert(buf.end(), tmpbuf.begin(), tmpbuf.end());
+        }
     }
 }
 

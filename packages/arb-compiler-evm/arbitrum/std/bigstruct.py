@@ -77,19 +77,22 @@ def _set_static_impl(node, i, recipe, val):
 
 class BigStruct:
     def __init__(self, items):  # each item is (weight, name, initialValue)
-        trees = [(item[0], i, item[1], item[2]) for i, item in enumerate(items)]
-        heapq.heapify(trees)
-        self.next_nonce = len(trees)
-        while len(trees) > 1:
-            self._reduce(trees)
+        if not items:
+            self.initial_val = value.Tuple([])
+            self.recipes = []
+        elif len(items) == 1:
+            self.initial_val = items[0][2]
+            self.recipes = {items[0][1]: []}
+        else:
+            trees = [(item[0], i, item[1], item[2]) for i, item in enumerate(items)]
+            heapq.heapify(trees)
+            self.next_nonce = len(trees)
+            while len(trees) > 1:
+                self._reduce(trees)
 
-        if trees:
             self.structure = trees[0][2]
             self.initial_val = trees[0][3]
             self.recipes = _generate_recipes(self.structure)
-        else:
-            self.initial_val = value.Tuple([])
-            self.recipes = []
 
     def _reduce(self, trees):
         size = ((len(trees) - 1) % 7) + 1
@@ -122,7 +125,10 @@ class BigStruct:
 
     def set_static(self, field_name, val):
         recipe = self.recipes[field_name]
-        self.initial_val = _set_static_impl(self.initial_val, 0, recipe, val)
+        if len(recipe) == 0:
+            self.initial_val = val
+        else:
+            self.initial_val = _set_static_impl(self.initial_val, 0, recipe, val)
 
     def __getitem__(self, field_name):
         node = self.initial_val
@@ -132,7 +138,9 @@ class BigStruct:
 
     def set_val(self, field_name, vm):  # bigstruct val -> updatedBigstruct
         recipe = self.recipes[field_name]
-        if len(recipe) == 1:
+        if len(recipe) == 0:
+            vm.pop()
+        elif len(recipe) == 1:
             vm.tsetn(recipe[0])
         else:
             vm.swap1()
