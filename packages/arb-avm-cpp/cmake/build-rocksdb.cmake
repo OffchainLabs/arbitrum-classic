@@ -65,11 +65,12 @@ set(ROCKSDB_FOUND TRUE)
 set(ROCKSDB_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/rocksdb/include)
 
-add_library(RocksDB::RocksDB INTERFACE)
-add_dependencies(RocksDB::RocksDB rocks)
-target_include_directories(RocksDB::RocksDB INTERFACE ${ROCKSDB_INCLUDE_DIRS})
-# ZLIB::ZLIB BZip2::BZip2
-target_link_libraries(RocksDB::RocksDB INTERFACE ${ROCKSDB_LIBRARIES} Threads::Threads)
+add_library(RocksDB::RocksDB UNKNOWN IMPORTED)
+set_target_properties(RocksDB::RocksDB PROPERTIES
+    IMPORTED_LOCATION "${ROCKSDB_LIBRARIES}"
+    INTERFACE_INCLUDE_DIRECTORIES "${ROCKSDB_INCLUDE_DIRS}"
+)
+target_link_libraries(RocksDB::RocksDB INTERFACE Threads::Threads)
 
 mark_as_advanced(
     ROCKSDB_LIBRARIES
