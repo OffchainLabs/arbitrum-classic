@@ -177,7 +177,7 @@ def deploy(contract_name, n_validators, sudo_flag, build_flag, up_flag, avm):
         shutil.rmtree(setup_states.VALIDATOR_STATES)
 
     # Setup validator states
-    setup_states.setup_validator_states_ethbridge(
+    setup_states.setup_validator_states_docker(
         os.path.abspath(contract_name), n_validators, sudo_flag
     )
 
