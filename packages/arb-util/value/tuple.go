@@ -186,7 +186,11 @@ func (tv TupleValue) Clone() Value {
 func (tv TupleValue) CloneShallow() Value {
 	var newContents [MaxTupleSize]Value
 	for i, b := range tv.Contents() {
-		newContents[i] = NewHashOnlyValueFromValue(b)
+		if b.TypeCode() == TypeCodeInt {
+			newContents[i] = b
+		} else {
+			newContents[i] = NewHashOnlyValueFromValue(b)
+		}
 	}
 	return TupleValue{newContents, tv.itemCount, tv.cachedHash, tv.size, tv.deferredHashing}
 }

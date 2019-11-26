@@ -1798,6 +1798,46 @@ func TestNBSendLowBalance(t *testing.T) {
 	}
 }
 
+func TestNbsendBadData(t *testing.T) {
+	// test
+	insns := []value.Operation{
+		value.BasicOperation{Op: code.NBSEND},
+		value.BasicOperation{Op: code.HALT},
+	}
+
+	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
+	knownMachine := m.Clone().(*Machine)
+
+	var tok protocol.TokenType
+	tok[0] = 15
+	tok[20] = 1
+	tup, _ := value.NewTupleFromSlice([]value.Value{
+		value.NewInt64Value(1),
+		value.NewInt64Value(2345),
+		value.NewInt64Value(1),
+		value.NewInt64Value(4),
+	})
+
+	m.Stack().Push(tup)
+
+	// add tokens to balanceTracker
+	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
+
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+
+	// verify known and unknown match
+	knownMachine.Stack().Push(value.NewInt64Value(0))
+	if ok, err := Equal(knownMachine, m); !ok {
+		t.Error(err)
+	}
+
+	msgs := ad.OutMsgs
+	// verify out message
+	if len(msgs) != 0 {
+		t.Error("Message found when no out message should be generated")
+	}
+}
+
 func TestGettime(t *testing.T) {
 	// test
 	insns := []value.Operation{
