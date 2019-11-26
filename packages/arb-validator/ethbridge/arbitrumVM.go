@@ -383,9 +383,9 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 		[5][32]byte{
 			precondition.BeforeHashValue(),
 			precondition.BeforeInboxValue(),
-			stub.AfterHash,
-			stub.LastMessageHash,
-			stub.LastLogHash,
+			stub.AfterHashValue(),
+			stub.LastMessageHashValue(),
+			stub.LastLogHashValue(),
 		},
 		assertion.NumSteps,
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
@@ -457,12 +457,12 @@ func (vm *ArbitrumVM) BisectAssertion(
 	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
 	totalSteps := uint32(0)
 	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHashValue())
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHash)
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHash)
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHashValue())
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHashValue())
 	for _, assertion := range assertions {
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHash)
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHash)
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHash)
+		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHashValue())
+		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHashValue())
+		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHashValue())
 		totalSteps += assertion.NumSteps
 	}
 	tx, err := vm.Challenge.BisectAssertion(
@@ -512,11 +512,11 @@ func (vm *ArbitrumVM) OneStepProof(
 		[2][32]byte{precondition.BeforeHashValue(), precondition.BeforeInboxValue()},
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		[5][32]byte{
-			assertion.AfterHash,
-			assertion.FirstMessageHash,
-			assertion.LastMessageHash,
-			assertion.FirstLogHash,
-			assertion.LastLogHash,
+			assertion.AfterHashValue(),
+			assertion.FirstMessageHashValue(),
+			assertion.LastMessageHashValue(),
+			assertion.FirstLogHashValue(),
+			assertion.LastLogHashValue(),
 		},
 		proof,
 	)
@@ -652,12 +652,12 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 			steps++
 		}
 		assertion := &protocol.AssertionStub{
-			AfterHash:        event.AfterHashAndMessageAndLogsBisections[(i+1)*3],
+			AfterHash:        value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3]),
 			NumSteps:         steps,
-			FirstMessageHash: event.AfterHashAndMessageAndLogsBisections[i*3+1],
-			LastMessageHash:  event.AfterHashAndMessageAndLogsBisections[(i+1)*3+1],
-			FirstLogHash:     event.AfterHashAndMessageAndLogsBisections[i*3+2],
-			LastLogHash:      event.AfterHashAndMessageAndLogsBisections[(i+1)*3+2],
+			FirstMessageHash: value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+1]),
+			LastMessageHash:  value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+1]),
+			FirstLogHash:     value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+2]),
+			LastLogHash:      value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+2]),
 		}
 		assertions = append(assertions, assertion)
 	}
@@ -671,12 +671,12 @@ func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDis
 		value.NewHashOnlyValue(event.Fields[1], 1),
 	)
 	assertion := &protocol.AssertionStub{
-		AfterHash:        event.Fields[2],
+		AfterHash:        value.NewHashBuf(event.Fields[2]),
 		NumSteps:         event.NumSteps,
-		FirstMessageHash: [32]byte{},
-		LastMessageHash:  event.Fields[3],
-		FirstLogHash:     [32]byte{},
-		LastLogHash:      event.Fields[4],
+		FirstMessageHash: value.NewHashBuf([32]byte{}),
+		LastMessageHash:  value.NewHashBuf(event.Fields[3]),
+		FirstLogHash:     value.NewHashBuf([32]byte{}),
+		LastLogHash:      value.NewHashBuf(event.Fields[4]),
 	}
 	return precondition, assertion
 }

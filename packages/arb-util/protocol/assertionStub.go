@@ -17,45 +17,62 @@
 package protocol
 
 import (
-	"fmt"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"bytes"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
-type AssertionStub struct {
-	AfterHash        [32]byte
-	NumSteps         uint32
-	FirstMessageHash [32]byte
-	LastMessageHash  [32]byte
-	FirstLogHash     [32]byte
-	LastLogHash      [32]byte
-}
-
-func (a *AssertionStub) String() string {
-	return fmt.Sprintf("AssertionStub(%x, %v, %x, %x)", a.AfterHash, a.NumSteps, a.FirstMessageHash, a.LastMessageHash)
-}
-
 func (a *AssertionStub) Equals(b *AssertionStub) bool {
 	if a.AfterHash != b.AfterHash ||
 		a.NumSteps != b.NumSteps ||
-		a.FirstMessageHash != b.FirstMessageHash ||
-		a.LastMessageHash != b.LastMessageHash {
+		!bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) ||
+		!bytes.Equal(a.LastMessageHash.Value, b.LastMessageHash.Value) ||
+		!bytes.Equal(a.FirstLogHash.Value, b.FirstLogHash.Value) ||
+		!bytes.Equal(a.LastLogHash.Value, b.LastLogHash.Value) {
 		return false
 	}
 	return true
 }
 
+func (a *AssertionStub) AfterHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.AfterHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) FirstMessageHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.FirstMessageHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) LastMessageHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.LastMessageHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) FirstLogHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.FirstLogHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) LastLogHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.LastLogHash.Value)
+	return ret
+}
+
 func (a *AssertionStub) Hash() [32]byte {
 	var ret [32]byte
 	hashVal := solsha3.SoliditySHA3(
-		solsha3.Bytes32(a.AfterHash),
+		solsha3.Bytes32(a.AfterHash.Value),
 		solsha3.Uint32(a.NumSteps),
-		solsha3.Bytes32(a.FirstMessageHash),
-		solsha3.Bytes32(a.LastMessageHash),
-		solsha3.Bytes32(a.FirstLogHash),
-		solsha3.Bytes32(a.LastLogHash),
+		solsha3.Bytes32(a.FirstMessageHash.Value),
+		solsha3.Bytes32(a.LastMessageHash.Value),
+		solsha3.Bytes32(a.FirstLogHash.Value),
+		solsha3.Bytes32(a.LastLogHash.Value),
 	)
 	copy(ret[:], hashVal)
 	return ret
@@ -63,7 +80,7 @@ func (a *AssertionStub) Hash() [32]byte {
 
 func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
 	return &Precondition{
-		BeforeHash:  value.NewHashBuf(a.AfterHash),
+		BeforeHash:  a.AfterHash,
 		TimeBounds:  pre.TimeBounds,
 		BeforeInbox: pre.BeforeInbox,
 	}

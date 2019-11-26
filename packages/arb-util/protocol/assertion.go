@@ -74,11 +74,11 @@ func (a *Assertion) Stub() *AssertionStub {
 	}
 
 	return &AssertionStub{
-		a.AfterHash,
-		a.NumSteps,
-		[32]byte{},
-		lastHash,
-		[32]byte{},
-		a.LogsHash(),
+		AfterHash:        value.NewHashBuf(a.AfterHash),
+		NumSteps:         a.NumSteps,
+		FirstMessageHash: value.NewHashBuf([32]byte{}),
+		LastMessageHash:  value.NewHashBuf(lastHash),
+		FirstLogHash:     value.NewHashBuf([32]byte{}),
+		LastLogHash:      value.NewHashBuf(a.LogsHash()),
 	}
 }

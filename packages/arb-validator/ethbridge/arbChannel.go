@@ -233,8 +233,8 @@ func (vm *ArbChannel) PendingUnanimousAssert(
 		auth,
 		unanRest,
 		sequenceNum,
-		stub.LastMessageHash,
-		stub.LastLogHash,
+		stub.LastMessageHashValue(),
+		stub.LastLogHashValue(),
 		sigsToBlock(signatures),
 	)
 	if err != nil {

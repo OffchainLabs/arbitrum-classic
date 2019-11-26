@@ -28,14 +28,16 @@ contract ChallengeManager is IChallengeManager {
     event ContinuedChallenge (
         address indexed vmAddress,
         address challenger,
-        uint assertionIndex
+        uint assertionIndex,
+        uint64 deadline
     );
 
     event BisectedAssertion(
         address indexed vmAddress,
         address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
-        uint32 totalSteps
+        uint32 totalSteps,
+        uint64 deadline
     );
 
     event OneStepProofCompleted(
