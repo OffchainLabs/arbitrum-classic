@@ -157,20 +157,7 @@ contract ArbitrumVM {
             "Validator does not have required escrow to assert"
         );
         validatorBalances[msg.sender] -= vm.escrowRequired;
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
-        require(
-            globalInbox.hasFunds(
-                address(this),
-                _tokenTypes,
-                beforeBalances
-            ),
-            "VM has insufficient balance"
-        );
+
         Disputable.pendingDisputableAssert(
             vm,
             _fields,

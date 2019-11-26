@@ -265,6 +265,14 @@ library Unanimous {
         if (vm.state != VM.State.Waiting) {
             require(block.number <= vm.deadline, "Can't cancel finalized state");
         }
+
+        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
+            data.tokenTypes,
+            _messageTokenNums,
+            _messageAmounts
+        );
+        require(ArbProtocol.beforeBalancesValid(data.tokenTypes, beforeBalances), "Token types must be valid and sorted");
+
         bool allSigned;
         bytes32 unanHash;
         (allSigned, unanHash) = _checkAllSignedAssertion(

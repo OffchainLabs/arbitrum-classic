@@ -80,8 +80,7 @@ contract ChallengeManager is IChallengeManager {
         uint256[] memory _totalMessageAmounts,
         uint32 _totalSteps,
         uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances
+        bytes21[] memory _tokenTypes
     )
         public
     {
@@ -93,8 +92,7 @@ contract ChallengeManager is IChallengeManager {
             _totalMessageAmounts,
             _totalSteps,
             _timeBounds,
-            _tokenTypes,
-            _beforeBalances
+            _tokenTypes
         );
     }
 
@@ -122,7 +120,6 @@ contract ChallengeManager is IChallengeManager {
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
         bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances,
         bytes32[5] memory _afterHashAndMessages,
         uint256[] memory _amounts,
         bytes memory _proof
@@ -135,7 +132,6 @@ contract ChallengeManager is IChallengeManager {
             _beforeHashAndInbox,
             _timeBounds,
             _tokenTypes,
-            _beforeBalances,
             _afterHashAndMessages,
             _amounts,
             _proof

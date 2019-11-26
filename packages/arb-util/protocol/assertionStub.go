@@ -34,6 +34,7 @@ type AssertionStub struct {
 	LastMessageHash  [32]byte
 	FirstLogHash     [32]byte
 	LastLogHash      [32]byte
+	TokenTypes       [][21]byte
 	TotalVals        []*big.Int
 }
 
@@ -132,6 +133,11 @@ func (a *AssertionStub) Equals(b *AssertionStub) bool {
 		(len(a.TotalVals) != len(b.TotalVals)) {
 		return false
 	}
+	for i, tt := range a.TokenTypes {
+		if tt != b.TokenTypes[i] {
+			return false
+		}
+	}
 	for i, ao := range a.TotalVals {
 		if ao.Cmp(b.TotalVals[i]) != 0 {
 			return false
@@ -149,6 +155,7 @@ func (a *AssertionStub) Hash() [32]byte {
 		solsha3.Bytes32(a.LastMessageHash),
 		solsha3.Bytes32(a.FirstLogHash),
 		solsha3.Bytes32(a.LastLogHash),
+		TokenTypeArrayEncoded(a.TokenTypes),
 		solsha3.Uint256Array(a.TotalVals),
 	)
 	copy(ret[:], hashVal)

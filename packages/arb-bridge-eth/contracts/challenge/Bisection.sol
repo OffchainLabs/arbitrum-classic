@@ -82,8 +82,7 @@ library Bisection {
         uint256[] memory _totalMessageAmounts,
         uint32 _totalSteps,
         uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances
+        bytes21[] memory _tokenTypes
     )
         public
     {
@@ -102,7 +101,6 @@ library Bisection {
             (_totalMessageAmounts.length / _tokenTypes.length),
             "Incorrect input length"
         );
-        require(_tokenTypes.length == _beforeBalances.length, "Incorrect input length");
 
         require(
             block.number <= _challenge.deadline,
@@ -123,7 +121,6 @@ library Bisection {
                 _totalSteps,
                 _timeBounds,
                 _tokenTypes,
-                _beforeBalances,
                 _beforeInbox
             )
         );
@@ -163,7 +160,6 @@ library Bisection {
         uint32 totalSteps;
         uint64[2] timeBounds;
         bytes21[] tokenTypes;
-        uint256[] beforeBalances;
         bytes32 beforeInbox;
     }
 
@@ -198,13 +194,8 @@ library Bisection {
             frame.preconditionHash = ArbProtocol.generatePreconditionHash(
                 _data.bisectionFields[j * 3],
                 _data.timeBounds,
-                _data.beforeInbox,
-                _data.tokenTypes,
-                _data.beforeBalances
+                _data.beforeInbox
             );
-            for (i = 0; i < _data.tokenTypes.length; i++) {
-                _data.beforeBalances[i] -= frame.coinAmounts[i];
-            }
             frame.hashes[j] = keccak256(
                 abi.encodePacked(
                     frame.preconditionHash,
@@ -215,6 +206,7 @@ library Bisection {
                         _data.bisectionFields[(j + 1) * 3 + 1],
                         _data.bisectionFields[j * 3 + 2],
                         _data.bisectionFields[(j + 1) * 3 + 2],
+                        _data.tokenTypes,
                         frame.coinAmounts
                     )
                 )
@@ -235,6 +227,7 @@ library Bisection {
                             _data.bisectionFields[_data.bisectionCount * 3 + 1],
                             _data.bisectionFields[2],
                             _data.bisectionFields[_data.bisectionCount * 3 + 2],
+                            _data.tokenTypes,
                             frame.coinAmounts
                         )
                     )

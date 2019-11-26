@@ -78,18 +78,17 @@ func (tb TimeBounds) AsValue() value.Value {
 }
 
 type Precondition struct {
-	BeforeHash    [32]byte
-	TimeBounds    TimeBounds
-	BeforeBalance *TokenTracker
-	BeforeInbox   value.HashOnlyValue
+	BeforeHash  [32]byte
+	TimeBounds  TimeBounds
+	BeforeInbox value.HashOnlyValue
 }
 
-func NewPrecondition(beforeHash [32]byte, timeBounds TimeBounds, beforeBalance *TokenTracker, beforeInbox value.Value) *Precondition {
-	return &Precondition{beforeHash, timeBounds, beforeBalance, value.NewHashOnlyValueFromValue(beforeInbox)}
+func NewPrecondition(beforeHash [32]byte, timeBounds TimeBounds, beforeInbox value.Value) *Precondition {
+	return &Precondition{beforeHash, timeBounds, value.NewHashOnlyValueFromValue(beforeInbox)}
 }
 
 func (pre *Precondition) Clone() *Precondition {
-	return NewPrecondition(pre.BeforeHash, pre.TimeBounds, pre.BeforeBalance.Clone(), pre.BeforeInbox.Clone())
+	return NewPrecondition(pre.BeforeHash, pre.TimeBounds, pre.BeforeInbox.Clone())
 }
 
 func NewPreconditionFromReader(rd io.Reader) (*Precondition, error) {
@@ -132,9 +131,6 @@ func (pre *Precondition) Equals(b *Precondition) bool {
 	if pre.TimeBounds != b.TimeBounds {
 		return false
 	}
-	if !pre.BeforeBalance.Equals(b.BeforeBalance) {
-		return false
-	}
 	if !value.Eq(pre.BeforeInbox, b.BeforeInbox) {
 		return false
 	}
@@ -142,15 +138,12 @@ func (pre *Precondition) Equals(b *Precondition) bool {
 }
 
 func (pre *Precondition) Hash() [32]byte {
-	tokenTypes, amounts := pre.BeforeBalance.GetTypesAndAmounts()
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(pre.BeforeHash),
 		solsha3.Uint64(pre.TimeBounds[0]),
 		solsha3.Uint64(pre.TimeBounds[1]),
 		solsha3.Bytes32(pre.BeforeInbox.Hash()),
-		TokenTypeArrayEncoded(tokenTypes),
-		solsha3.Uint256Array(amounts),
 	))
 	return ret
 }

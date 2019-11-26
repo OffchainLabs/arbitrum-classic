@@ -43,9 +43,7 @@ library ArbProtocol {
     function generatePreconditionHash(
         bytes32 _beforeHash,
         uint64[2] memory _timeBounds,
-        bytes32 _beforeInbox,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances
+        bytes32 _beforeInbox
     )
         public
         pure
@@ -56,9 +54,7 @@ library ArbProtocol {
                 _beforeHash,
                 _timeBounds[0],
                 _timeBounds[1],
-                _beforeInbox,
-                _tokenTypes,
-                _beforeBalances
+                _beforeInbox
             )
         );
     }
@@ -70,6 +66,7 @@ library ArbProtocol {
         bytes32 _lastMessageHash,
         bytes32 _firstLogHash,
         bytes32 _lastLogHash,
+        bytes21[] memory _tokenTypes,
         uint256[] memory _totalMessageValueAmounts
     )
         public
@@ -84,6 +81,7 @@ library ArbProtocol {
                 _lastMessageHash,
                 _firstLogHash,
                 _lastLogHash,
+                _tokenTypes,
                 _totalMessageValueAmounts
             )
         );

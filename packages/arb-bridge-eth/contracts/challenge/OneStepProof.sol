@@ -49,7 +49,6 @@ library OneStepProof {
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
         bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances,
         bytes32[5] memory _afterHashAndMessages,
         uint256[] memory _amounts,
         bytes memory _proof
@@ -68,9 +67,7 @@ library OneStepProof {
                     ArbProtocol.generatePreconditionHash(
                         _beforeHashAndInbox[0],
                         _timeBounds,
-                        _beforeHashAndInbox[1],
-                        _tokenTypes,
-                        _beforeBalances
+                        _beforeHashAndInbox[1]
                     ),
                     ArbProtocol.generateAssertionHash(
                         _afterHashAndMessages[0],
@@ -79,6 +76,7 @@ library OneStepProof {
                         _afterHashAndMessages[2],
                         _afterHashAndMessages[3],
                         _afterHashAndMessages[4],
+                        _tokenTypes,
                         _amounts
                     )
                 )
@@ -98,7 +96,6 @@ library OneStepProof {
             ],
             _timeBounds,
             _tokenTypes,
-            _beforeBalances,
             _amounts,
             _proof
         );
@@ -119,7 +116,6 @@ library OneStepProof {
         bytes32[7] memory fields,
         uint64[2] memory timeBounds,
         bytes21[] memory tokenTypes,
-        uint256[] memory beforeValues,
         uint256[] memory messageValue,
         bytes memory proof
     )
@@ -147,11 +143,6 @@ library OneStepProof {
                 amount = messageValue[uint(amountIndex)];
                 tokenType = tokenTypes[uint(amountIndex)];
                 foundAmount = true;
-                if (tokenTypes[uint(amountIndex)][20] == 0x01) {
-                    require(beforeValues[uint(amountIndex)] == amount, "precondition must have nft");
-                } else {
-                    require(amount <= beforeValues[uint(amountIndex)], "precondition must have value");
-                }
             }
         } else {
             for (uint64 i = 0; i < messageValue.length; i++) {
@@ -1015,7 +1006,7 @@ library OneStepProof {
 
     // System operations
 
-    function sendInsnImpl(
+    function sendInsn(
         ArbMachine.Machine memory,
         ArbValue.Value memory val1
     )
@@ -1472,7 +1463,7 @@ library OneStepProof {
         } else if (opCode == OP_SEND) {
             bytes21 tokenType;
             uint amount;
-            (correct, messageHash, tokenType, amount) = sendInsnImpl(endMachine, stackVals[0]);
+            (correct, messageHash, tokenType, amount) = sendInsn(endMachine, stackVals[0]);
             require( tokenType == _data.tokenType, "Token type does not match");
             require( amount == _data.amount, "Amount does not match");
             require(
@@ -1485,23 +1476,6 @@ library OneStepProof {
                 "sent message doesn't match output mesage"
             );
             require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-        } else if (opCode == OP_NBSEND) {
-            bytes21 tokenType;
-            uint amount;
-            (correct, messageHash, tokenType, amount) = sendInsnImpl(endMachine, stackVals[0]);
-            if ( tokenType != _data.tokenType ||
-                 amount != _data.amount ||
-                 keccak256(
-                    abi.encodePacked(
-                        _data.firstMessage,
-                        messageHash
-                    )
-                 ) != _data.lastMessage) {
-                endMachine.addDataStackValue(ArbValue.newIntValue(0));
-                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-            } else {
-                endMachine.addDataStackValue(ArbValue.newIntValue(1));
-            }
         } else if (opCode == OP_GETTIME) {
             ArbValue.Value[] memory contents = new ArbValue.Value[](2);
             contents[0] = ArbValue.newIntValue(_data.timeBounds[0]);

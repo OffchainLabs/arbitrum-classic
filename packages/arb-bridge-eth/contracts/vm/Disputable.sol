@@ -188,6 +188,7 @@ library Disputable {
             _data.messageTokenNums,
             _data.messageAmounts
         );
+        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
 
         VM.resetDeadline(_vm);
 
@@ -204,9 +205,7 @@ library Disputable {
                 ArbProtocol.generatePreconditionHash(
                     _data.beforeHash,
                     _data.timeBounds,
-                    _data.beforeInbox,
-                    _data.tokenTypes,
-                    beforeBalances
+                    _data.beforeInbox
                 ),
                 ArbProtocol.generateAssertionHash(
                     _data.afterHash,
@@ -215,6 +214,7 @@ library Disputable {
                     lastMessageHash,
                     0x00,
                     _data.logsAccHash,
+                    _data.tokenTypes,
                     beforeBalances
                 )
             )
@@ -259,6 +259,7 @@ library Disputable {
                         ),
                         0x00,
                         _data.assertion.logsAccHash,
+                        _data.tokenTypes,
                         ArbProtocol.calculateBeforeValues(
                             _data.tokenTypes,
                             _data.assertion.messageTokenNums,

@@ -154,20 +154,6 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     )
         public
     {
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
-        require(
-            globalInbox.hasFunds(
-                address(this),
-                _tokenTypes,
-                beforeBalances
-            ),
-            "VM has insufficient balance"
-        );
         Unanimous.pendingUnanimousAssert(
             vm,
             this,

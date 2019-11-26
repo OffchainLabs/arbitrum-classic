@@ -135,28 +135,31 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
     )
         private
     {
+        bool sent = false;
         if (_tokenType[20] == 0x01) {
-            transferNFT(
+            sent = transferNFT(
                 _sender,
                 _destination,
                 address(bytes20(_tokenType)),
                 _value
             );
         } else {
-            transferToken(
+            sent = transferToken(
                 _sender,
                 _destination,
                 address(bytes20(_tokenType)),
                 _value
             );
         }
-        _deliverMessage(
-            _destination,
-            _tokenType,
-            _value,
-            _sender,
-            _data
-        );
+        if (sent) {
+            _deliverMessage(
+                _destination,
+                _tokenType,
+                _value,
+                _sender,
+                _data
+            );
+        }
     }
 
     function generateSentMessageHash(

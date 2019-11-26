@@ -472,7 +472,7 @@ func (vm *ArbitrumVM) BisectAssertion(
 		totalMessageAmounts = append(totalMessageAmounts, assertion.TotalVals...)
 		totalSteps += assertion.NumSteps
 	}
-	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
+	tokenTypes, _ := precondition.BeforeBalance.GetTypesAndAmounts()
 	tx, err := vm.Challenge.BisectAssertion(
 		auth,
 		vm.address,
@@ -482,7 +482,6 @@ func (vm *ArbitrumVM) BisectAssertion(
 		totalSteps,
 		precondition.TimeBounds,
 		tokenTypes,
-		amounts,
 	)
 	if err != nil {
 		return nil, err
@@ -517,14 +516,12 @@ func (vm *ArbitrumVM) OneStepProof(
 	assertion *protocol.AssertionStub,
 	proof []byte,
 ) (*types.Receipt, error) {
-	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	tx, err := vm.Challenge.OneStepProof(
 		auth,
 		vm.address,
 		[2][32]byte{precondition.BeforeHash, precondition.BeforeInbox.Hash()},
 		precondition.TimeBounds,
-		tokenTypes,
-		amounts,
+		assertion.TokenTypes,
 		[5][32]byte{
 			assertion.AfterHash,
 			assertion.FirstMessageHash,
@@ -682,11 +679,9 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 }
 
 func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
-	tokenTracker := protocol.NewTokenTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],
 		event.TimeBounds,
-		tokenTracker,
 		value.NewHashOnlyValue(event.Fields[1], 1),
 	)
 	assertion := &protocol.AssertionStub{
@@ -696,6 +691,7 @@ func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDis
 		LastMessageHash:  event.LastMessageHash,
 		FirstLogHash:     [32]byte{},
 		LastLogHash:      event.LogsAccHash,
+		TokenTypes:       event.TokenTypes,
 		TotalVals:        event.Amounts,
 	}
 	return precondition, assertion
