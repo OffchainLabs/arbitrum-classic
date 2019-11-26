@@ -206,7 +206,28 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 //
 // TODO(karalabe): Deprecate when the subscription one can return past data too.
 func (conn *ArbConnection) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
-	return nil, _nyiError("FilterLogs")
+	var ret []types.Log
+	address, topics := _extractAddrTopics(query)
+	logInfos, err := conn.proxy.FindLogs(0, math.MaxInt32, address[:], topics)
+	if err != nil {
+		return nil, err
+	}
+	for _, logInfo := range logInfos {
+		outs, err := _decodeLogInfo(logInfo)
+		if err != nil {
+			return nil, err
+		}
+		ok := true
+		for i, targetTopic := range topics {
+			if targetTopic != outs.Topics[i] {
+				ok = false
+			}
+		}
+		if ok {
+			ret = append(ret, *outs)
+		}
+	}
+	return ret, nil
 }
 
 // SubscribeFilterLogs creates a background log filtering operation, returning
