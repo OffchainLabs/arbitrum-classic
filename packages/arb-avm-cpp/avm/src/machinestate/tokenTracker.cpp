@@ -44,7 +44,7 @@ TokenType toTokenType(const uint256_t& tokTypeVal) {
     TokenType tok;
     std::array<unsigned char, 32> val;
     to_big_endian(tokTypeVal, val.begin());
-    std::copy(val.begin(), val.begin() + 21, tok.begin());
+    std::copy(val.begin() + 11, val.end(), tok.begin());
     return tok;
 }
 

@@ -31,7 +31,7 @@ type TokenType [21]byte
 func TokenTypeFromIntValue(val value.IntValue) TokenType {
 	var tokType TokenType
 	tokBytes := val.ToBytes()
-	copy(tokType[:], tokBytes[:])
+	copy(tokType[:], tokBytes[11:])
 	return tokType
 }
 
@@ -126,12 +126,12 @@ func (msg Message) Clone() Message {
 }
 
 func (msg Message) AsValue() value.Value {
-	destination := big.NewInt(0)
-	destination.SetBytes(msg.Destination[:])
+	destinationBytes := [32]byte{}
+	copy(destinationBytes[12:], msg.Destination[:])
+	destination := big.NewInt(0).SetBytes(destinationBytes[:])
 	tokTypeBytes := [32]byte{}
-	copy(tokTypeBytes[:], msg.TokenType[:])
-	tokTypeInt := big.NewInt(0)
-	tokTypeInt.SetBytes(tokTypeBytes[:])
+	copy(tokTypeBytes[11:], msg.TokenType[:])
+	tokTypeInt := big.NewInt(0).SetBytes(tokTypeBytes[:])
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
 		msg.Data,
 		value.NewIntValue(destination),

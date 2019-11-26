@@ -17,21 +17,22 @@
 package main
 
 import (
-	jsonenc "encoding/json"
+	"encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 	"io/ioutil"
-	brand "math/rand"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
 )
 
 func setupTestValidateProof(t *testing.T) (*proofmachine.Connection, error) {
@@ -43,7 +44,7 @@ func setupTestValidateProof(t *testing.T) (*proofmachine.Connection, error) {
 	seed := time.Now().UnixNano()
 	//seed := int64(1571337692091150000)
 	fmt.Println("seed", seed)
-	brand.Seed(seed)
+	rand.Seed(seed)
 	jsonFile, err := os.Open(bridge_eth_addresses)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +53,7 @@ func setupTestValidateProof(t *testing.T) (*proofmachine.Connection, error) {
 	if err := jsonFile.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
+	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Fatal(err)
 	}
 	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
@@ -74,7 +75,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *proofmachine.Co
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := [2]uint64{0, 100000}
+	timeBounds := protocol.NewTimeBounds(0, 10000)
 	steps := int32(100000)
 	cont := true
 

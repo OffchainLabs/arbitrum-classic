@@ -972,32 +972,22 @@ library OneStepProof {
     )
         internal
         pure
-        returns (bool, bytes32, bytes21, uint)
+        returns (bool, bytes32)
     {
-        bytes21 tokenType;
-        uint amount;
         bytes32 messageHash;
         if (!val1.isTuple()) {
-            return (false, messageHash, tokenType, amount);
+            return (false, messageHash);
         }
         if (!val1.tupleVal[1].isInt()) {
-            return (false, messageHash, tokenType, amount);
+            return (false, messageHash);
         }
         if (!val1.tupleVal[2].isInt()) {
-            return (false, messageHash, tokenType, amount);
+            return (false, messageHash);
         }
         if (!val1.tupleVal[3].isInt()) {
-            return (false, messageHash, tokenType, amount);
+            return (false, messageHash);
         }
-        tokenType = bytes21(bytes32(val1.tupleVal[3].intVal));
-        amount = val1.tupleVal[2].intVal;
-        messageHash = ArbProtocol.generateMessageStubHash(
-            val1.hash().hash,
-            tokenType,
-            amount,
-            address(val1.tupleVal[1].intVal)
-        );
-        return (true, messageHash, tokenType, amount);
+        return (true, val1.hash().hash);
     }
 
     function executeInboxInsn(
@@ -1078,11 +1068,10 @@ library OneStepProof {
 
     // System operations
     uint8 constant internal OP_SEND = 0x70;
-    uint8 constant internal OP_NBSEND = 0x71;
-    uint8 constant internal OP_GETTIME = 0x72;
-    uint8 constant internal OP_INBOX = 0x73;
-    uint8 constant internal OP_ERROR = 0x74;
-    uint8 constant internal OP_STOP = 0x75;
+    uint8 constant internal OP_GETTIME = 0x71;
+    uint8 constant internal OP_INBOX = 0x72;
+    uint8 constant internal OP_ERROR = 0x73;
+    uint8 constant internal OP_STOP = 0x74;
 
     function opInfo(uint opCode) internal pure returns (uint, uint) {
         if (opCode == OP_ADD) {
@@ -1183,8 +1172,6 @@ library OneStepProof {
             return (1, 0);
         } else if (opCode == OP_SEND) {
             return (1, 0);
-        } else if (opCode == OP_NBSEND) {
-            return (1, 1);
         } else if (opCode == OP_GETTIME) {
             return (0, 1);
         } else if (opCode == OP_INBOX) {
@@ -1410,30 +1397,57 @@ library OneStepProof {
             correct = executeBreakpointInsn(endMachine);
         } else if (opCode == OP_LOG) {
             (correct, messageHash) = executeLogInsn(endMachine, stackVals[0]);
-            require(
-                keccak256(
-                    abi.encodePacked(
-                        _data.firstLog,
-                        messageHash
-                    )
-                ) == _data.lastLog,
-                "Logged value doesn't match output log"
-            );
-            require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
+            if (correct) {
+                require(
+                    keccak256(
+                        abi.encodePacked(
+                            _data.firstLog,
+                            messageHash
+                        )
+                    ) == _data.lastLog,
+                    "Logged value doesn't match output log"
+                );
+                require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
+            } else {
+                messageHash = 0;
+            }
+
         } else if (opCode == OP_SEND) {
-            bytes21 tokenType;
-            uint amount;
-            (correct, messageHash, tokenType, amount) = sendInsn(endMachine, stackVals[0]);
-            require(
-                keccak256(
-                    abi.encodePacked(
-                        _data.firstMessage,
-                        messageHash
-                    )
-                ) == _data.lastMessage,
-                "sent message doesn't match output mesage"
-            );
-            require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+            (correct, messageHash) = sendInsn(endMachine, stackVals[0]);
+            if (correct) {
+                // require(
+                //     keccak256(
+                //         abi.encodePacked(
+                //             _data.firstMessage,
+                //             messageHash
+                //         )
+                //     ) == _data.lastMessage,
+                //     "sent message doesn't match output message"
+                // );
+
+                require(
+                    keccak256(
+                        abi.encodePacked(
+                            _data.firstMessage,
+                            messageHash
+                        )
+                    ) == _data.lastMessage,
+                    string(abi.encodePacked(
+                        "sent message doesn't match output message\n",
+                        DebugPrint.bytes32string(_data.firstMessage),
+                        "\n",
+                        DebugPrint.bytes32string(messageHash),
+                        "\n",
+                        DebugPrint.bytes32string(_data.lastMessage),
+                        "\n"
+                    ))
+                );
+
+
+                require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
+            } else {
+                messageHash = 0;
+            }
         } else if (opCode == OP_GETTIME) {
             ArbValue.Value[] memory contents = new ArbValue.Value[](2);
             contents[0] = ArbValue.newIntValue(_data.timeBounds[0]);
