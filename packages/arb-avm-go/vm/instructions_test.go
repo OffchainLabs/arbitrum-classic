@@ -762,7 +762,7 @@ func TestInbox(t *testing.T) {
 	knowninbox.SendMessage(msg)
 	knowninbox.DeliverMessages()
 
-	NewMachineAssertionContext(m, [2]uint64{0, 10000})
+	NewMachineAssertionContext(m, protocol.NewTimeBounds(0, 100000))
 
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
@@ -1547,124 +1547,6 @@ func TestSendFungible(t *testing.T) {
 	}
 }
 
-func TestSendNonFungible(t *testing.T) {
-	// test
-	insns := []value.Operation{
-		value.BasicOperation{Op: code.SEND},
-		value.BasicOperation{Op: code.HALT},
-	}
-
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := m.Clone().(*Machine)
-
-	// test send of non fungible
-	var tok protocol.TokenType
-	tok[0] = 16
-	tok[20] = 1
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-		value.NewInt64Value(7),
-		tok.ToIntValue(),
-	})
-	m.Stack().Push(tup)
-
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(7), common.Address{}))
-
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
-	// verify known and unknown match
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-	msgs := ad.OutMsgs
-	// verify out message
-	if len(msgs) != 1 {
-		t.Error("No out message generated")
-	}
-
-	dest := common.Address{}
-	dest[19] = 4
-	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	if !msgs[0].Equals(knownmessage) {
-		t.Error("Out message incorrect")
-	}
-}
-
-func TestSendLowBalance(t *testing.T) {
-	// test
-	insns := []value.Operation{
-		value.BasicOperation{Op: code.SEND},
-		value.BasicOperation{Op: code.HALT},
-	}
-
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := m.Clone().(*Machine)
-
-	// test send with insufficient funds
-	var tok protocol.TokenType
-	tok[0] = 17
-	tok[20] = 0
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-		value.NewInt64Value(17),
-		tok.ToIntValue(),
-	})
-	m.Stack().Push(tup)
-
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
-
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
-	// verify known and unknown match
-	knownMachine.Stack().Push(tup)
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-	msgs := ad.OutMsgs
-	// verify out message
-	if len(msgs) != 0 {
-		t.Error("No out message generated")
-	}
-}
-
-func TestSend(t *testing.T) {
-	// test
-	insns := []value.Operation{
-		value.BasicOperation{Op: code.SEND},
-		value.BasicOperation{Op: code.HALT},
-	}
-
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := m.Clone().(*Machine)
-
-	var tok protocol.TokenType
-	tok[0] = 15
-	tok[20] = 1
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-		value.NewInt64Value(10),
-		tok.ToIntValue(),
-	})
-
-	m.Stack().Push(tup)
-
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
-
-	// verify known and unknown match
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-
-	msgs := ad.OutMsgs
-	// verify out message
-	if len(msgs) != 1 {
-		t.Error("No out message generated")
-	}
-}
-
 func TestGettime(t *testing.T) {
 	// test
 	insns := []value.Operation{
@@ -1675,7 +1557,7 @@ func TestGettime(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 
-	m.ExecuteAssertion(10, [2]uint64{5, 10})
+	m.ExecuteAssertion(10, protocol.NewTimeBounds(5, 10))
 
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
