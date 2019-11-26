@@ -17,14 +17,12 @@
 package hashing
 
 import (
-	"bytes"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func SplitMessages(
@@ -47,18 +45,10 @@ func SplitMessages(
 func UnanimousAssertPartialPartialHash(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
-	destinations []common.Address,
 ) []byte {
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		_ = value.MarshalValue(msg.Data, &messageData)
-	}
-
 	return solsha3.SoliditySHA3(
 		solsha3.Bytes32(newInboxHash),
 		solsha3.Bytes32(assertion.AfterHash),
-		messageData.Bytes(),
-		solsha3.AddressArray(destinations),
 	)
 }
 
@@ -69,22 +59,18 @@ func UnanimousAssertPartialHash(
 	originalInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) ([32]byte, error) {
-	tokenNums, amounts, destinations, tokenTypes := SplitMessages(assertion.OutMsgs)
-
+	stub := assertion.Stub()
 	unanRest := UnanimousAssertPartialPartialHash(
 		newInboxHash,
 		assertion,
-		destinations,
 	)
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(unanRest),
 		solsha3.Bytes32(beforeHash),
 		solsha3.Bytes32(originalInboxHash),
-		protocol.TokenTypeArrayEncoded(tokenTypes),
-		solsha3.Uint16Array(tokenNums),
-		solsha3.Uint256Array(amounts),
 		solsha3.Uint64(sequenceNum),
+		solsha3.Bytes32(stub.LastMessageHash),
 	))
 	return ret, nil
 }

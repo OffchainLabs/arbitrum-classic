@@ -95,10 +95,6 @@ func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
 		return false
 	}
 
-	if c.balance.CanSpendAllTokens(pre.BeforeBalance) {
-		return false
-	}
-
 	if time < pre.TimeBounds[0] || time > pre.TimeBounds[1] {
 		return false
 	}

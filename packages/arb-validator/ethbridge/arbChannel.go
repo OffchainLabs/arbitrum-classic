@@ -221,23 +221,20 @@ func (vm *ArbChannel) PendingUnanimousAssert(
 	sequenceNum uint64,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
 	var unanRest [32]byte
 	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
 		newInboxHash,
 		assertion,
-		destinations,
 	))
+
+	stub := assertion.Stub()
 
 	tx, err := vm.contract.PendingUnanimousAssert(
 		auth,
 		unanRest,
-		tokenTypes,
-		tokenNums,
-		amounts,
 		sequenceNum,
-		assertion.LogsHash(),
+		stub.LastMessageHash,
+		stub.LastLogHash,
 		sigsToBlock(signatures),
 	)
 	if err != nil {

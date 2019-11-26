@@ -65,9 +65,7 @@ library ArbProtocol {
         bytes32 _firstMessageHash,
         bytes32 _lastMessageHash,
         bytes32 _firstLogHash,
-        bytes32 _lastLogHash,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _totalMessageValueAmounts
+        bytes32 _lastLogHash
     )
         public
         pure
@@ -80,74 +78,38 @@ library ArbProtocol {
                 _firstMessageHash,
                 _lastMessageHash,
                 _firstLogHash,
-                _lastLogHash,
-                _tokenTypes,
-                _totalMessageValueAmounts
+                _lastLogHash
             )
         );
     }
 
-    function beforeBalancesValid(
+    function generateLastMessageHash(
         bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances
+        bytes memory _data,
+        uint16[] memory _tokenNums,
+        uint256[] memory _amounts,
+        address[] memory _destinations
     )
         public
         pure
-        returns(bool)
+        returns (bytes32)
     {
-        uint itemCount = _tokenTypes.length;
-        if (itemCount == 0 || itemCount == 1) {
-            return true;
+        require(_amounts.length == _destinations.length, "Input size mismatch");
+        require(_amounts.length == _tokenNums.length, "Input size mismatch");
+        bytes32 hashVal = 0x00;
+        uint256 offset = 0;
+        bytes32 msgHash;
+        uint amountCount = _amounts.length;
+        for (uint i = 0; i < amountCount; i++) {
+            (offset, msgHash) = ArbValue.deserializeValidValueHash(_data, offset);
+            msgHash = generateMessageStubHash(
+                msgHash,
+                _tokenTypes[_tokenNums[i]],
+                _amounts[i],
+                _destinations[i]
+            );
+            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
-        for (uint i = 0; i < itemCount - 1; i++) {
-            byte tokenType = _tokenTypes[i][20];
-            if (tokenType == 0x00) {
-                if (_tokenTypes[i + 1] <= _tokenTypes[i]) {
-                    return false;
-                }
-            } else if (tokenType == 0x01) {
-                if (
-                    _tokenTypes[i + 1] < _tokenTypes[i] || (
-                        _tokenTypes[i + 1] == _tokenTypes[i] &&
-                        _beforeBalances[i + 1] <= _beforeBalances[i]
-                    )
-                ) {
-                    return false;
-                }
-
-            } else {
-                return false;
-            }
-        }
-
-        if (_tokenTypes[itemCount - 1][20] > 0x01) {
-            return false;
-        }
-        return true;
-    }
-
-    function calculateBeforeValues(
-        bytes21[] memory _tokenTypes,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts
-    )
-        public
-        pure
-        returns(uint256[] memory)
-    {
-        uint messageCount = _messageTokenNums.length;
-        uint256[] memory beforeBalances = new uint256[](_tokenTypes.length);
-
-        for (uint i = 0; i < messageCount; i++) {
-            uint16 tokenNum = _messageTokenNums[i];
-            if (_tokenTypes[tokenNum][20] == 0x00) {
-                beforeBalances[tokenNum] += _messageAmounts[i];
-            } else {
-                require(beforeBalances[tokenNum] == 0, "Can't include NFT token twice");
-                require(_messageAmounts[i] != 0, "NFT token must have non-zero id");
-                beforeBalances[tokenNum] = _messageAmounts[i];
-            }
-        }
-        return beforeBalances;
+        return hashVal;
     }
 }

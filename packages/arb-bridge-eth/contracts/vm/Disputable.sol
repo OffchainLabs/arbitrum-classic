@@ -27,20 +27,18 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 library Disputable {
     using SafeMath for uint256;
 
-    // fields
-    //    beforeHash
-    //    beforeInbox
-    //    afterHash
+    // fields:
+    // beforeHash
+    // beforeInbox
+    // afterHash
+    // messagesAccHash
+    // logsAccHash
 
     event PendingDisputableAssertion (
-        bytes32[3] fields,
+        bytes32[5] fields,
         address asserter,
         uint64[2] timeBounds,
-        bytes21[] tokenTypes,
-        uint32 numSteps,
-        bytes32 lastMessageHash,
-        bytes32 logsAccHash,
-        uint256[] amounts
+        uint32 numSteps
     );
 
     event ConfirmedDisputableAssertion(
@@ -51,20 +49,6 @@ library Disputable {
     event InitiatedChallenge(
         address challenger
     );
-
-    struct PendingDisputableAssertData {
-        bytes32 beforeHash;
-        bytes32 beforeInbox;
-        bytes32 afterHash;
-        uint32 numSteps;
-        uint64[2] timeBounds;
-        bytes21[] tokenTypes;
-        bytes32[] messageDataHash;
-        uint16[] messageTokenNums;
-        uint256[] messageAmounts;
-        address[] messageDestinations;
-        bytes32 logsAccHash;
-    }
 
     struct ConfirmDisputableAssertedData {
         bytes32 preconditionHash;
@@ -78,36 +62,55 @@ library Disputable {
     // _beforeHash
     // _beforeInbox
     // _afterHash
+    // _messagesAccHash
     // _logsAccHash
 
     function pendingDisputableAssert(
         VM.Data storage _vm,
-        bytes32[4] memory _fields,
+        bytes32[5] memory _fields,
         uint32 _numSteps,
-        uint64[2] memory timeBounds,
-        bytes21[] memory _tokenTypes,
-        bytes32[] memory _messageDataHash,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
+        uint64[2] memory _timeBounds
     )
         public
     {
-        return _pendingDisputableAssert(
-            _vm,
-            PendingDisputableAssertData(
-                _fields[0],
-                _fields[1],
-                _fields[2],
-                _numSteps,
-                timeBounds,
-                _tokenTypes,
-                _messageDataHash,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestinations,
-                _fields[3]
+        require(_vm.state == VM.State.Waiting, "Can only disputable assert from waiting state");
+        require(
+            !VM.isErrored(_vm) && !VM.isHalted(_vm),
+            "Can only disputable assert if machine is not errored or halted"
+        );
+        require(!_vm.inChallenge, "Can only disputable assert if not in challenge");
+        require(_numSteps <= _vm.maxExecutionSteps, "Tried to execute too many steps");
+        require(withinTimeBounds(_timeBounds), "Precondition: not within time bounds");
+        require(_fields[0] == _vm.machineHash, "Precondition: state hash does not match");
+        require(_fields[1] == _vm.inbox, "Precondition: inbox does not match");
+
+        VM.resetDeadline(_vm);
+
+        _vm.pendingHash = keccak256(
+            abi.encodePacked(
+                ArbProtocol.generatePreconditionHash(
+                    _fields[0],
+                    _timeBounds,
+                    _fields[1]
+                ),
+                ArbProtocol.generateAssertionHash(
+                    _fields[2],
+                    _numSteps,
+                    0x00,
+                    _fields[3],
+                    0x00,
+                    _fields[4]
+                )
             )
+        );
+        _vm.asserter = msg.sender;
+        _vm.state = VM.State.PendingDisputable;
+
+        emit PendingDisputableAssertion(
+            _fields,
+            msg.sender,
+            _timeBounds,
+            _numSteps
         );
     }
 
@@ -166,74 +169,6 @@ library Disputable {
         return block.number >= _timeBounds[0] && block.number <= _timeBounds[1];
     }
 
-    function _pendingDisputableAssert(
-        VM.Data storage _vm,
-        PendingDisputableAssertData memory _data
-    )
-        internal
-    {
-        require(_vm.state == VM.State.Waiting, "Can only disputable assert from waiting state");
-        require(
-            !VM.isErrored(_vm) && !VM.isHalted(_vm),
-            "Can only disputable assert if machine is not errored or halted"
-        );
-        require(!_vm.inChallenge, "Can only disputable assert if not in challenge");
-        require(_data.numSteps <= _vm.maxExecutionSteps, "Tried to execute too many steps");
-        require(withinTimeBounds(_data.timeBounds), "Precondition: not within time bounds");
-        require(_data.beforeHash == _vm.machineHash, "Precondition: state hash does not match");
-        require(_vm.inbox == _data.beforeInbox, "Precondition: inbox does not match");
-
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            _data.tokenTypes,
-            _data.messageTokenNums,
-            _data.messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
-
-        VM.resetDeadline(_vm);
-
-        bytes32 lastMessageHash = generateLastMessageHashStub(
-            _data.tokenTypes,
-            _data.messageDataHash,
-            _data.messageTokenNums,
-            _data.messageAmounts,
-            _data.messageDestinations
-        );
-
-        _vm.pendingHash = keccak256(
-            abi.encodePacked(
-                ArbProtocol.generatePreconditionHash(
-                    _data.beforeHash,
-                    _data.timeBounds,
-                    _data.beforeInbox
-                ),
-                ArbProtocol.generateAssertionHash(
-                    _data.afterHash,
-                    _data.numSteps,
-                    0x00,
-                    lastMessageHash,
-                    0x00,
-                    _data.logsAccHash,
-                    _data.tokenTypes,
-                    beforeBalances
-                )
-            )
-        );
-        _vm.asserter = msg.sender;
-        _vm.state = VM.State.PendingDisputable;
-
-        emit PendingDisputableAssertion(
-            [_data.beforeHash, _data.beforeInbox, _data.afterHash],
-            msg.sender,
-            _data.timeBounds,
-            _data.tokenTypes,
-            _data.numSteps,
-            lastMessageHash,
-            _data.logsAccHash,
-            beforeBalances
-        );
-    }
-
     function _confirmDisputableAsserted(
         VM.Data storage _vm,
         ConfirmDisputableAssertedData memory _data
@@ -250,7 +185,7 @@ library Disputable {
                         _data.afterHash,
                         _data.numSteps,
                         0x00,
-                        generateLastMessageHash(
+                        ArbProtocol.generateLastMessageHash(
                             _data.tokenTypes,
                             _data.assertion.messageData,
                             _data.assertion.messageTokenNums,
@@ -258,13 +193,7 @@ library Disputable {
                             _data.assertion.messageDestinations
                         ),
                         0x00,
-                        _data.assertion.logsAccHash,
-                        _data.tokenTypes,
-                        ArbProtocol.calculateBeforeValues(
-                            _data.tokenTypes,
-                            _data.assertion.messageTokenNums,
-                            _data.assertion.messageAmounts
-                        )
+                        _data.assertion.logsAccHash
                     )
                 )
             ) == _vm.pendingHash,
@@ -279,64 +208,5 @@ library Disputable {
             _data.afterHash,
             _data.assertion.logsAccHash
         );
-    }
-
-    function generateLastMessageHash(
-        bytes21[] memory _tokenTypes,
-        bytes memory _data,
-        uint16[] memory _tokenNums,
-        uint256[] memory _amounts,
-        address[] memory _destinations
-    )
-        private
-        pure
-        returns (bytes32)
-    {
-        require(_amounts.length == _destinations.length, "Input size mismatch");
-        require(_amounts.length == _tokenNums.length, "Input size mismatch");
-        bytes32 hashVal = 0x00;
-        uint256 offset = 0;
-        bytes32 msgHash;
-        uint amountCount = _amounts.length;
-        for (uint i = 0; i < amountCount; i++) {
-            (offset, msgHash) = ArbValue.deserializeValidValueHash(_data, offset);
-            msgHash = ArbProtocol.generateMessageStubHash(
-                msgHash,
-                _tokenTypes[_tokenNums[i]],
-                _amounts[i],
-                _destinations[i]
-            );
-            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
-        }
-        return hashVal;
-    }
-
-    function generateLastMessageHashStub(
-        bytes21[] memory _tokenTypes,
-        bytes32[] memory _dataHashes,
-        uint16[] memory _tokenNums,
-        uint256[] memory _amounts,
-        address[] memory _destinations
-    )
-        public
-        pure
-        returns (bytes32)
-    {
-        require(_dataHashes.length == _tokenNums.length, "Input size mismatch");
-        require(_dataHashes.length == _amounts.length, "Input size mismatch");
-        require(_dataHashes.length == _destinations.length, "Input size mismatch");
-        bytes32 hashVal = 0x00;
-        bytes32 msgHash;
-        uint dataHashCount = _dataHashes.length;
-        for (uint i = 0; i < dataHashCount; i++) {
-            msgHash = ArbProtocol.generateMessageStubHash(
-                _dataHashes[i],
-                _tokenTypes[_tokenNums[i]],
-                _amounts[i],
-                _destinations[i]
-            );
-            hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
-        }
-        return hashVal;
     }
 }

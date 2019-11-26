@@ -306,10 +306,9 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 			_ = balance.SpendAllTokens(spentBalance)
 
 			pre := &protocol.Precondition{
-				BeforeHash:    beforeHash,
-				TimeBounds:    tb,
-				BeforeBalance: spentBalance,
-				BeforeInbox:   mClone.InboxHash(),
+				BeforeHash:  beforeHash,
+				TimeBounds:  tb,
+				BeforeInbox: mClone.InboxHash(),
 			}
 			request := &disputable.AssertionRequest{
 				AfterCore:    core.NewCore(mClone, balance),

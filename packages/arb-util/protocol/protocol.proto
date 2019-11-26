@@ -31,8 +31,7 @@ message TokenTrackerBuf {
 message PreconditionBuf {
     value.HashBuf beforeHash = 1;
     TimeBoundsBuf timeBounds = 2;
-    TokenTrackerBuf balanceTracker = 3;
-    value.HashBuf beforeInbox = 4;
+    value.HashBuf beforeInbox = 3;
 }
 
 message AssertionBuf {

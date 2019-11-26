@@ -22,7 +22,6 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/golang/protobuf/proto"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -89,39 +88,6 @@ func NewPrecondition(beforeHash [32]byte, timeBounds TimeBounds, beforeInbox val
 
 func (pre *Precondition) Clone() *Precondition {
 	return NewPrecondition(pre.BeforeHash, pre.TimeBounds, pre.BeforeInbox.Clone())
-}
-
-func NewPreconditionFromReader(rd io.Reader) (*Precondition, error) {
-	length := uint64(0)
-	err := binary.Read(rd, binary.LittleEndian, &length)
-	if err != nil {
-		return nil, err
-	}
-	buf := make([]byte, 0, length)
-	_, err = io.ReadFull(rd, buf)
-	if err != nil {
-		return nil, err
-	}
-	pre := &PreconditionBuf{}
-	err = proto.Unmarshal(buf, pre)
-	if err != nil {
-		return nil, err
-	}
-	return NewPreconditionFromBuf(pre), nil
-}
-
-func (pre *Precondition) Marshal(wr io.Writer) error {
-	preData, err := proto.Marshal(NewPreconditionBuf(pre))
-	if err != nil {
-		return err
-	}
-	length := uint64(len(preData))
-	err = binary.Write(wr, binary.LittleEndian, &length)
-	if err != nil {
-		return err
-	}
-	_, err = wr.Write(preData)
-	return err
 }
 
 func (pre *Precondition) Equals(b *Precondition) bool {

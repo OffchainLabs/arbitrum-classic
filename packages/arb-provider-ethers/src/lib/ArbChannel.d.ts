@@ -42,29 +42,11 @@ interface ArbChannelInterface extends Interface {
 
         activateVM: TypedFunctionDescription<{ encode([]: []): string }>;
 
-        pendingDisputableAssert: TypedFunctionDescription<{
-            encode([
-                _fields,
-                _numSteps,
-                _timeBounds,
-                _tokenTypes,
-                _messageDataHash,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestinations,
-            ]: [
-                (Arrayish)[],
-                BigNumberish,
-                (BigNumberish)[],
-                (Arrayish)[],
-                (Arrayish)[],
-                (BigNumberish)[],
-                (BigNumberish)[],
-                (string)[],
-            ]): string;
-        }>;
-
         ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
+
+        pendingDisputableAssert: TypedFunctionDescription<{
+            encode([_fields, _numSteps, _timeBounds]: [(Arrayish)[], BigNumberish, (BigNumberish)[]]): string;
+        }>;
 
         increaseDeposit: TypedFunctionDescription<{ encode([]: []): string }>;
 
@@ -93,15 +75,13 @@ interface ArbChannelInterface extends Interface {
         }>;
 
         pendingUnanimousAssert: TypedFunctionDescription<{
-            encode([
-                _unanRest,
-                _tokenTypes,
-                _messageTokenNums,
-                _messageAmounts,
-                _sequenceNum,
-                _logsAccHash,
-                _signatures,
-            ]: [Arrayish, (Arrayish)[], (BigNumberish)[], (BigNumberish)[], BigNumberish, Arrayish, Arrayish]): string;
+            encode([_unanRest, _sequenceNum, _messagesAccHash, _logsAccHash, _signatures]: [
+                Arrayish,
+                BigNumberish,
+                Arrayish,
+                Arrayish,
+                Arrayish,
+            ]): string;
         }>;
 
         confirmUnanimousAsserted: TypedFunctionDescription<{
@@ -131,16 +111,7 @@ interface ArbChannelInterface extends Interface {
         }>;
 
         PendingDisputableAssertion: TypedEventDescription<{
-            encodeTopics([fields, asserter, timeBounds, tokenTypes, numSteps, lastMessageHash, logsAccHash, amounts]: [
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-            ]): string[];
+            encodeTopics([fields, asserter, timeBounds, numSteps]: [null, null, null, null]): string[];
         }>;
 
         ConfirmedDisputableAssertion: TypedEventDescription<{
@@ -221,19 +192,14 @@ export class ArbChannel extends Contract {
 
         activateVM(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
+        ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
         pendingDisputableAssert(
             _fields: (Arrayish)[],
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
-            _tokenTypes: (Arrayish)[],
-            _messageDataHash: (Arrayish)[],
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
-
-        ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         increaseDeposit(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -252,10 +218,8 @@ export class ArbChannel extends Contract {
 
         pendingUnanimousAssert(
             _unanRest: Arrayish,
-            _tokenTypes: (Arrayish)[],
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
             _sequenceNum: BigNumberish,
+            _messagesAccHash: Arrayish,
             _logsAccHash: Arrayish,
             _signatures: Arrayish,
             overrides?: TransactionOverrides,
@@ -290,16 +254,7 @@ export class ArbChannel extends Contract {
 
         FinalizedUnanimousAssertion(unanHash: null): EventFilter;
 
-        PendingDisputableAssertion(
-            fields: null,
-            asserter: null,
-            timeBounds: null,
-            tokenTypes: null,
-            numSteps: null,
-            lastMessageHash: null,
-            logsAccHash: null,
-            amounts: null,
-        ): EventFilter;
+        PendingDisputableAssertion(fields: null, asserter: null, timeBounds: null, numSteps: null): EventFilter;
 
         ConfirmedDisputableAssertion(newState: null, logsAccHash: null): EventFilter;
 
@@ -325,18 +280,13 @@ export class ArbChannel extends Contract {
 
         activateVM(): Promise<BigNumber>;
 
+        ownerShutdown(): Promise<BigNumber>;
+
         pendingDisputableAssert(
             _fields: (Arrayish)[],
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
-            _tokenTypes: (Arrayish)[],
-            _messageDataHash: (Arrayish)[],
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
         ): Promise<BigNumber>;
-
-        ownerShutdown(): Promise<BigNumber>;
 
         increaseDeposit(): Promise<BigNumber>;
 
@@ -354,10 +304,8 @@ export class ArbChannel extends Contract {
 
         pendingUnanimousAssert(
             _unanRest: Arrayish,
-            _tokenTypes: (Arrayish)[],
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
             _sequenceNum: BigNumberish,
+            _messagesAccHash: Arrayish,
             _logsAccHash: Arrayish,
             _signatures: Arrayish,
         ): Promise<BigNumber>;

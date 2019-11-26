@@ -150,7 +150,6 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 
 		// only marshall and validate if step is within proofbounds
 		if i >= int32(m.ethConn.proofbounds[0]) && i <= int32(m.ethConn.proofbounds[1]) {
-			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
 			callOpts := &bind.CallOpts{
 				Pending: true,
 				From:    m.ethConn.fromAddress,
@@ -159,10 +158,9 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
 			precond := &protocol.Precondition{
-				BeforeHash:    beforeHash,
-				TimeBounds:    timeBounds,
-				BeforeBalance: spentBalance,
-				BeforeInbox:   inboxHash,
+				BeforeHash:  beforeHash,
+				TimeBounds:  timeBounds,
+				BeforeInbox: inboxHash,
 			}
 
 			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)

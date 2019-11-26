@@ -34,16 +34,14 @@ contract ArbitrumVM {
     // beforeHash
     // beforeInbox
     // afterHash
+    // messagesAccHash
+    // logsAccHash
 
-    event PendingDisputableAssertion (
-        bytes32[3] fields,
+    event PendingDisputableAssertion(
+        bytes32[5] fields,
         address asserter,
         uint64[2] timeBounds,
-        bytes21[] tokenTypes,
-        uint32 numSteps,
-        bytes32 lastMessageHash,
-        bytes32 logsAccHash,
-        uint256[] amounts
+        uint32 numSteps
     );
 
     event ConfirmedDisputableAssertion(
@@ -139,16 +137,12 @@ contract ArbitrumVM {
     // _beforeInbox
     // _afterHash
     // _logsAccHash
+    // _messagesAccHash
 
     function pendingDisputableAssert(
-        bytes32[4] memory _fields,
+        bytes32[5] memory _fields,
         uint32 _numSteps,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        bytes32[] memory _messageDataHash,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
+        uint64[2] memory _timeBounds
     )
         public
     {
@@ -162,12 +156,7 @@ contract ArbitrumVM {
             vm,
             _fields,
             _numSteps,
-            _timeBounds,
-            _tokenTypes,
-            _messageDataHash,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
+            _timeBounds
         );
     }
 

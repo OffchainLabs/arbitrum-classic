@@ -145,10 +145,8 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
 
     function pendingUnanimousAssert(
         bytes32 _unanRest,
-        bytes21[] memory _tokenTypes,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
         uint64 _sequenceNum,
+        bytes32 _messagesAccHash,
         bytes32 _logsAccHash,
         bytes memory _signatures
     )
@@ -158,10 +156,8 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             vm,
             this,
             _unanRest,
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts,
             _sequenceNum,
+            _messagesAccHash,
             _logsAccHash,
             _signatures
         );

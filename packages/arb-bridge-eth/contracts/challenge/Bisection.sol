@@ -34,8 +34,7 @@ library Bisection {
         address indexed vmAddress,
         address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
-        uint32 totalSteps,
-        uint256[] totalMessageAmounts
+        uint32 totalSteps
     );
 
     function continueChallenge(
@@ -79,27 +78,14 @@ library Bisection {
         Challenge.Data storage _challenge,
         bytes32 _beforeInbox,
         bytes32[] memory _afterHashAndMessageAndLogsBisections,
-        uint256[] memory _totalMessageAmounts,
         uint32 _totalSteps,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes
+        uint64[2] memory _timeBounds
     )
         public
     {
         require(
             _challenge.state == Challenge.State.Challenged,
             "Can only bisect assertion in response to a challenge"
-        );
-        require(
-            _tokenTypes.length == 0 ||
-            (_totalMessageAmounts.length % _tokenTypes.length == 0),
-            "Incorrect input length"
-        );
-        require(
-            _tokenTypes.length == 0 ||
-            (_afterHashAndMessageAndLogsBisections.length / 3 - 1) ==
-            (_totalMessageAmounts.length / _tokenTypes.length),
-            "Incorrect input length"
         );
 
         require(
@@ -117,10 +103,8 @@ library Bisection {
             BisectAssertionData(
                 uint32(_afterHashAndMessageAndLogsBisections.length / 3 - 1),
                 _afterHashAndMessageAndLogsBisections,
-                _totalMessageAmounts,
                 _totalSteps,
                 _timeBounds,
-                _tokenTypes,
                 _beforeInbox
             )
         );
@@ -138,8 +122,7 @@ library Bisection {
             _challenge.vmAddress,
             _challenge.players[0],
             _afterHashAndMessageAndLogsBisections,
-            _totalSteps,
-            _totalMessageAmounts
+            _totalSteps
         );
     }
 
@@ -156,10 +139,8 @@ library Bisection {
     struct BisectAssertionData {
         uint32 bisectionCount;
         bytes32[] bisectionFields;
-        uint256[] totalMessageAmounts;
         uint32 totalSteps;
         uint64[2] timeBounds;
-        bytes21[] tokenTypes;
         bytes32 beforeInbox;
     }
 
@@ -167,7 +148,6 @@ library Bisection {
         bytes32 preconditionHash;
         bytes32 fullHash;
         bytes32[] hashes;
-        uint256[] coinAmounts;
         uint32 stepCount;
     }
 
@@ -181,15 +161,10 @@ library Bisection {
         GenerateBisectionHashesImplFrame memory frame;
         frame.hashes = new bytes32[](_data.bisectionCount);
         frame.stepCount = _data.totalSteps / _data.bisectionCount + 1;
-        uint i;
         uint j;
         for (j = 0; j < _data.bisectionCount; j++) {
             if (j == _data.totalSteps % _data.bisectionCount) {
                 frame.stepCount--;
-            }
-            frame.coinAmounts = new uint256[](_data.tokenTypes.length);
-            for (i = 0; i < _data.tokenTypes.length; i++) {
-                frame.coinAmounts[i] += _data.totalMessageAmounts[j * _data.tokenTypes.length + i];
             }
             frame.preconditionHash = ArbProtocol.generatePreconditionHash(
                 _data.bisectionFields[j * 3],
@@ -205,18 +180,12 @@ library Bisection {
                         _data.bisectionFields[j * 3 + 1],
                         _data.bisectionFields[(j + 1) * 3 + 1],
                         _data.bisectionFields[j * 3 + 2],
-                        _data.bisectionFields[(j + 1) * 3 + 2],
-                        _data.tokenTypes,
-                        frame.coinAmounts
+                        _data.bisectionFields[(j + 1) * 3 + 2]
                     )
                 )
             );
 
             if (j == 0) {
-                frame.coinAmounts = new uint256[](_data.tokenTypes.length);
-                for (i = 0; i < _data.totalMessageAmounts.length; i++) {
-                    frame.coinAmounts[i % _data.tokenTypes.length] += _data.totalMessageAmounts[i];
-                }
                 frame.fullHash = keccak256(
                     abi.encodePacked(
                         frame.preconditionHash,
@@ -226,9 +195,7 @@ library Bisection {
                             _data.bisectionFields[1],
                             _data.bisectionFields[_data.bisectionCount * 3 + 1],
                             _data.bisectionFields[2],
-                            _data.bisectionFields[_data.bisectionCount * 3 + 2],
-                            _data.tokenTypes,
-                            frame.coinAmounts
+                            _data.bisectionFields[_data.bisectionCount * 3 + 2]
                         )
                     )
                 );

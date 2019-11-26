@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "./VM.sol";
 import "./IArbChannel.sol";
 
+import "../libraries/ArbProtocol.sol";
 import "../libraries/SigUtils.sol";
 
 
@@ -39,10 +40,8 @@ library Unanimous {
 
     struct PendingUnanimousAssertData {
         bytes32 unanRest;
-        bytes21[] tokenTypes;
-        uint16[] messageTokenNums;
-        uint256[] messageAmounts;
         uint64 sequenceNum;
+        bytes32 messagesAccHash;
         bytes32 logsAccHash;
         bytes signatures;
     }
@@ -93,30 +92,60 @@ library Unanimous {
     }
 
     function pendingUnanimousAssert(
-        VM.Data storage _vm,
+        VM.Data storage vm,
         IArbChannel channel,
-        bytes32 _unanRest,
-        bytes21[] memory _tokenTypes,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        uint64 _sequenceNum,
-        bytes32 _logsAccHash,
-        bytes memory _signatures
+        bytes32 unanRest,
+        uint64 sequenceNum,
+        bytes32 messagesAccHash,
+        bytes32 logsAccHash,
+        bytes memory signatures
     )
         public
     {
-        return _pendingUnanimousAssert(
-            _vm,
+        require(!VM.isHalted(vm), "Can't assert halted machine");
+        require(
+            vm.state == VM.State.Waiting ||
+            vm.state == VM.State.PendingDisputable ||
+            vm.state == VM.State.PendingUnanimous,
+            "Tried to pending unanimous from invalid state"
+        );
+        if (vm.state != VM.State.Waiting) {
+            require(block.number <= vm.deadline, "Can't cancel finalized state");
+        }
+
+        bool allSigned;
+        bytes32 unanHash;
+        (allSigned, unanHash) = _checkAllSignedAssertion(
+            vm,
             channel,
-            PendingUnanimousAssertData(
-                _unanRest,
-                _tokenTypes,
-                _messageTokenNums,
-                _messageAmounts,
-                _sequenceNum,
-                _logsAccHash,
-                _signatures
+            unanRest,
+            sequenceNum,
+            messagesAccHash,
+            logsAccHash,
+            signatures
+        );
+
+        require(allSigned, "Invalid signature list");
+
+        if (vm.state == VM.State.PendingUnanimous) {
+            require(
+                sequenceNum > vm.sequenceNum,
+                "Can only supersede previous assertion with greater sequence number"
+            );
+        }
+
+        VM.resetDeadline(vm);
+        vm.sequenceNum = sequenceNum;
+        vm.pendingHash = keccak256(
+            abi.encodePacked(
+                messagesAccHash,
+                unanRest
             )
+        );
+
+        emit PendingUnanimousAssertion(
+            unanHash,
+            sequenceNum
         );
     }
 
@@ -137,15 +166,17 @@ library Unanimous {
         require(
             keccak256(
                 abi.encodePacked(
-                    _tokenTypes,
-                    _messageTokenNums,
-                    _messageAmounts,
+                    ArbProtocol.generateLastMessageHash(
+                        _tokenTypes,
+                        _messageData,
+                        _messageTokenNums,
+                        _messageAmounts,
+                        _messageDestinations
+                    ),
                     keccak256(
                         abi.encodePacked(
                             _newInbox,
-                            _afterHash,
-                            _messageData,
-                            _messageDestinations
+                            _afterHash
                         )
                     )
                 )
@@ -168,10 +199,8 @@ library Unanimous {
         VM.Data storage vm,
         IArbChannel channel,
         bytes32 _unanRest,
-        bytes21[] memory _tokenTypes,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
         uint64 _sequenceNum,
+        bytes32 _messagesAccHash,
         bytes32 _logsAccHash,
         bytes memory _signatures
     )
@@ -184,10 +213,9 @@ library Unanimous {
                 _unanRest,
                 vm.machineHash,
                 vm.inbox,
-                _tokenTypes,
-                _messageTokenNums,
-                _messageAmounts,
-                _sequenceNum
+                _sequenceNum,
+                _messagesAccHash
+
             )
         );
         bytes32 unanHash = keccak256(
@@ -226,15 +254,17 @@ library Unanimous {
             keccak256(
                 abi.encodePacked(
                     data.newInbox,
-                    data.afterHash,
-                    data.assertion.messageData,
-                    data.assertion.messageDestinations
+                    data.afterHash
                 )
             ),
-            data.tokenTypes,
-            data.assertion.messageTokenNums,
-            data.assertion.messageAmounts,
             ~uint64(0),
+            ArbProtocol.generateLastMessageHash(
+                data.tokenTypes,
+                data.assertion.messageData,
+                data.assertion.messageTokenNums,
+                data.assertion.messageAmounts,
+                data.assertion.messageDestinations
+            ),
             data.assertion.logsAccHash,
             data.signatures
         );
@@ -245,71 +275,6 @@ library Unanimous {
 
         emit FinalizedUnanimousAssertion(
             unanHash
-        );
-    }
-
-    function _pendingUnanimousAssert(
-        VM.Data storage vm,
-        IArbChannel channel,
-        PendingUnanimousAssertData memory data
-    )
-        private
-    {
-        require(!VM.isHalted(vm), "Can't assert halted machine");
-        require(
-            vm.state == VM.State.Waiting ||
-            vm.state == VM.State.PendingDisputable ||
-            vm.state == VM.State.PendingUnanimous,
-            "Tried to pending unanimous from invalid state"
-        );
-        if (vm.state != VM.State.Waiting) {
-            require(block.number <= vm.deadline, "Can't cancel finalized state");
-        }
-
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            data.tokenTypes,
-            _messageTokenNums,
-            _messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(data.tokenTypes, beforeBalances), "Token types must be valid and sorted");
-
-        bool allSigned;
-        bytes32 unanHash;
-        (allSigned, unanHash) = _checkAllSignedAssertion(
-            vm,
-            channel,
-            data.unanRest,
-            data.tokenTypes,
-            data.messageTokenNums,
-            data.messageAmounts,
-            data.sequenceNum,
-            data.logsAccHash,
-            data.signatures
-        );
-
-        require(allSigned, "Invalid signature list");
-
-        if (vm.state == VM.State.PendingUnanimous) {
-            require(
-                data.sequenceNum > vm.sequenceNum,
-                "Can only supersede previous assertion with greater sequence number"
-            );
-        }
-
-        VM.resetDeadline(vm);
-        vm.sequenceNum = data.sequenceNum;
-        vm.pendingHash = keccak256(
-            abi.encodePacked(
-                data.tokenTypes,
-                data.messageTokenNums,
-                data.messageAmounts,
-                data.unanRest
-            )
-        );
-
-        emit PendingUnanimousAssertion(
-            unanHash,
-            data.sequenceNum
         );
     }
 }

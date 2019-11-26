@@ -95,10 +95,9 @@ func NewTokenTrackerFromBuf(buf *TokenTrackerBuf) *TokenTracker {
 
 func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
 	return &PreconditionBuf{
-		BeforeHash:     value.NewHashBuf(pre.BeforeHash),
-		TimeBounds:     NewTimeBoundsBuf(pre.TimeBounds),
-		BalanceTracker: NewTokenTrackerBuf(pre.BeforeBalance),
-		BeforeInbox:    value.NewHashBuf(pre.BeforeInbox.Hash()),
+		BeforeHash:  value.NewHashBuf(pre.BeforeHash),
+		TimeBounds:  NewTimeBoundsBuf(pre.TimeBounds),
+		BeforeInbox: value.NewHashBuf(pre.BeforeInbox.Hash()),
 	}
 }
 
@@ -106,7 +105,6 @@ func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition {
 	return &Precondition{
 		value.NewHashFromBuf(buf.BeforeHash),
 		NewTimeBoundsFromBuf(buf.TimeBounds),
-		NewTokenTrackerFromBuf(buf.BalanceTracker),
 		value.NewHashOnlyValue(value.NewHashFromBuf(buf.BeforeInbox), 1),
 	}
 }

@@ -35,8 +35,7 @@ contract ChallengeManager is IChallengeManager {
         address indexed vmAddress,
         address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
-        uint32 totalSteps,
-        uint256[] totalMessageAmounts
+        uint32 totalSteps
     );
 
     event OneStepProofCompleted(
@@ -77,10 +76,8 @@ contract ChallengeManager is IChallengeManager {
         address _challengeId,
         bytes32 _beforeInbox,
         bytes32[] memory _afterHashAndMessageAndLogsBisections,
-        uint256[] memory _totalMessageAmounts,
         uint32 _totalSteps,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes
+        uint64[2] memory _timeBounds
     )
         public
     {
@@ -89,10 +86,8 @@ contract ChallengeManager is IChallengeManager {
             challenge,
             _beforeInbox,
             _afterHashAndMessageAndLogsBisections,
-            _totalMessageAmounts,
             _totalSteps,
-            _timeBounds,
-            _tokenTypes
+            _timeBounds
         );
     }
 
@@ -119,9 +114,7 @@ contract ChallengeManager is IChallengeManager {
         address _vmAddress,
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
         bytes32[5] memory _afterHashAndMessages,
-        uint256[] memory _amounts,
         bytes memory _proof
     )
         public
@@ -131,9 +124,7 @@ contract ChallengeManager is IChallengeManager {
             challenge,
             _beforeHashAndInbox,
             _timeBounds,
-            _tokenTypes,
             _afterHashAndMessages,
-            _amounts,
             _proof
         );
         _asserterWin(challenge);

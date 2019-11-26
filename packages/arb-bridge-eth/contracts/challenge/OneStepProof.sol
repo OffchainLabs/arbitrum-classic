@@ -38,9 +38,6 @@ library OneStepProof {
         bytes32 lastMessage;
         bytes32 firstLog;
         bytes32 lastLog;
-        bytes21 tokenType;
-        uint amount;
-        bool foundAmount;
         bytes proof;
     }
 
@@ -48,9 +45,7 @@ library OneStepProof {
         Challenge.Data storage _challenge,
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
         bytes32[5] memory _afterHashAndMessages,
-        uint256[] memory _amounts,
         bytes memory _proof
     )
         public view
@@ -75,9 +70,7 @@ library OneStepProof {
                         _afterHashAndMessages[1],
                         _afterHashAndMessages[2],
                         _afterHashAndMessages[3],
-                        _afterHashAndMessages[4],
-                        _tokenTypes,
-                        _amounts
+                        _afterHashAndMessages[4]
                     )
                 )
             ) == _challenge.challengeState,
@@ -95,8 +88,6 @@ library OneStepProof {
                 _afterHashAndMessages[4]
             ],
             _timeBounds,
-            _tokenTypes,
-            _amounts,
             _proof
         );
 
@@ -115,40 +106,12 @@ library OneStepProof {
     function validateProof(
         bytes32[7] memory fields,
         uint64[2] memory timeBounds,
-        bytes21[] memory tokenTypes,
-        uint256[] memory messageValue,
         bytes memory proof
     )
         public
         pure
         returns(uint)
     {
-        // require(messageValue.length == 1 || messageValue.length == 0);
-        bytes21 tokenType;
-        uint amount;
-        bool foundAmount;
-        // if first message hash != last message hash then we have one or more messages
-        bool includesMessage = (fields[3] != fields[4]);
-        int64 amountIndex = -1;
-        if (includesMessage) {
-            // check messages and verify that one and only one has a value
-            // use that index to check token type and amount
-            for (uint64 i = 0; i < messageValue.length; i++) {
-                if (messageValue[i] != 0) {
-                    require(amountIndex == -1, "multiple out messages");
-                    amountIndex = int64(i);
-                }
-            }
-            if (amountIndex != -1) {
-                amount = messageValue[uint(amountIndex)];
-                tokenType = tokenTypes[uint(amountIndex)];
-                foundAmount = true;
-            }
-        } else {
-            for (uint64 i = 0; i < messageValue.length; i++) {
-                require(messageValue[i] == 0, "Must have no message values");
-            }
-        }
         return checkProof(
             ValidateProofData(
                 fields[0],
@@ -159,9 +122,6 @@ library OneStepProof {
                 fields[4],
                 fields[5],
                 fields[6],
-                tokenType,
-                amount,
-                foundAmount,
                 proof
             )
         );
@@ -1464,8 +1424,6 @@ library OneStepProof {
             bytes21 tokenType;
             uint amount;
             (correct, messageHash, tokenType, amount) = sendInsn(endMachine, stackVals[0]);
-            require( tokenType == _data.tokenType, "Token type does not match");
-            require( amount == _data.amount, "Amount does not match");
             require(
                 keccak256(
                     abi.encodePacked(
