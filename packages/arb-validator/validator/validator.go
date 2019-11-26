@@ -204,7 +204,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 			updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
 			assertion := updatedState.ExecuteAssertion(
 				maxCallSteps,
-				[2]uint64{startTime, startTime + 1},
+				protocol.NewTimeBounds(startTime, startTime+1),
 			)
 			results := assertion.Logs
 			if len(results) == 0 {
@@ -298,7 +298,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 		startTime := validator.latestHeader.Number.Uint64()
 		go func() {
 			endTime := startTime + length
-			tb := [2]uint64{startTime, endTime}
+			tb := protocol.NewTimeBounds(startTime, endTime)
 			beforeHash := mClone.Hash()
 			assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
 			pre := &protocol.Precondition{

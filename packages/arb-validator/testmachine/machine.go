@@ -131,7 +131,7 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	m.gomachine.SendOffchainMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
 	stepIncrease := int32(50)
 	for i := int32(0); i < maxSteps; i += stepIncrease {

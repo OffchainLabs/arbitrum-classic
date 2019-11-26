@@ -18,7 +18,7 @@ message MessageBuf {
     AddressBuf sender = 4;
 }
 
-message TimeBoundsBuf {
+message TimeBounds {
     uint64 startTime = 1;
     uint64 endTime = 2;
 }
@@ -30,7 +30,7 @@ message TokenTrackerBuf {
 
 message PreconditionBuf {
     value.HashBuf beforeHash = 1;
-    TimeBoundsBuf timeBounds = 2;
+    TimeBounds timeBounds = 2;
     value.HashBuf beforeInbox = 3;
 }
 

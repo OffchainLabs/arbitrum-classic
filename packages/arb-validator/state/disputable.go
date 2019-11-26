@@ -58,7 +58,7 @@ type proposedUpdate struct {
 	machine         machine.Machine
 	newMessageCount uint64
 	Assertion       *protocol.Assertion
-	timeBounds      protocol.TimeBounds
+	timeBounds      *protocol.TimeBounds
 	sequenceNum     uint64
 	NewLogCount     int
 }
@@ -83,7 +83,7 @@ type Waiting struct {
 	sequenceNum uint64
 	signatures  [][]byte
 
-	timeBounds protocol.TimeBounds
+	timeBounds *protocol.TimeBounds
 	orig       *core.Core
 }
 
@@ -95,7 +95,7 @@ func NewWaiting(config *core.Config, c *core.Core) Waiting {
 		assertion:   nil,
 		sequenceNum: 0,
 		signatures:  nil,
-		timeBounds:  protocol.TimeBounds{},
+		timeBounds:  nil,
 		orig:        c,
 	}
 }
@@ -231,7 +231,6 @@ func (bot Waiting) Clone() Waiting {
 }
 
 func (bot Waiting) OffchainContext(
-	timeBounds protocol.TimeBounds,
 	final bool,
 ) uint64 {
 	var seqNum uint64
@@ -260,7 +259,7 @@ func (bot Waiting) ValidateUnanimousRequest(request valmessage.UnanimousRequestD
 	}
 
 	if bot.accepted != nil {
-		if request.TimeBounds[0] < bot.timeBounds[0] {
+		if request.TimeBounds.StartTime < bot.timeBounds.StartTime {
 			return errors.New("unanimous assertion request starting time bound may only increase")
 		}
 		if request.SequenceNum <= bot.sequenceNum {
@@ -283,7 +282,7 @@ func (bot Waiting) ValidateUnanimousAssertion(request valmessage.UnanimousReques
 	}
 
 	if bot.accepted != nil {
-		if request.TimeBounds[0] < bot.timeBounds[0] {
+		if request.TimeBounds.StartTime < bot.timeBounds.StartTime {
 			return errors.New("unanimous assertion starting time bound may only increase")
 		}
 	}
@@ -299,7 +298,7 @@ func (bot Waiting) PreparePendingUnanimous(
 	messages []protocol.Message,
 	machine machine.Machine,
 	sequenceNum uint64,
-	timeBounds protocol.TimeBounds,
+	timeBounds *protocol.TimeBounds,
 	shouldFinalize func(*protocol.Assertion) bool,
 ) (Waiting, error) {
 	newLogCount := len(newAssertion.Logs)

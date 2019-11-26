@@ -388,7 +388,7 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 			stub.LastLogHash,
 		},
 		assertion.NumSteps,
-		precondition.TimeBounds,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
 	if err != nil {
 		return nil, err
@@ -471,7 +471,7 @@ func (vm *ArbitrumVM) BisectAssertion(
 		precondition.BeforeInbox.Hash(),
 		afterHashAndMessageAndLogsBisections,
 		totalSteps,
-		precondition.TimeBounds,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
 	if err != nil {
 		return nil, err
@@ -510,7 +510,7 @@ func (vm *ArbitrumVM) OneStepProof(
 		auth,
 		vm.address,
 		[2][32]byte{precondition.BeforeHash, precondition.BeforeInbox.Hash()},
-		precondition.TimeBounds,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		[5][32]byte{
 			assertion.AfterHash,
 			assertion.FirstMessageHash,
@@ -667,7 +667,7 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],
-		event.TimeBounds,
+		protocol.NewTimeBounds(event.TimeBounds[0], event.TimeBounds[1]),
 		value.NewHashOnlyValue(event.Fields[1], 1),
 	)
 	assertion := &protocol.AssertionStub{

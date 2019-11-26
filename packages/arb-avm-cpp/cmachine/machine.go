@@ -154,12 +154,12 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	}
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		C.uint64_t(timeBounds[0]),
-		C.uint64_t(timeBounds[1]),
+		C.uint64_t(timeBounds.StartTime),
+		C.uint64_t(timeBounds.EndTime),
 	)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)

@@ -112,7 +112,7 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	m.machine.SendOffchainMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
 	stepIncrease := int32(1)
 	stepsRan := 0

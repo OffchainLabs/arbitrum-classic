@@ -43,7 +43,7 @@ func (con *OneStepProof) ValidateProof(
 			assertion.FirstLogHash,
 			assertion.LastLogHash,
 		},
-		precondition.TimeBounds,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		proof,
 	)
 }

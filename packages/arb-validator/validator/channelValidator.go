@@ -146,8 +146,8 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 				Destination: msg.Destination,
 			})
 		}
-		timeBounds := [2]uint64{validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64() + length}
-		seqNum := bot.OffchainContext(timeBounds, final)
+		timeBounds := protocol.NewTimeBounds(validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64()+length)
+		seqNum := bot.OffchainContext(final)
 		clonedMachine := bot.GetCore().GetMachine().Clone()
 		requestData := valmessage.UnanimousRequestData{
 			BeforeHash:  bot.OrigHash(),
@@ -201,7 +201,7 @@ func (validator *ChannelValidator) RequestFollowUnanimous(
 			return
 		}
 
-		_ = bot.OffchainContext(request.TimeBounds, request.SequenceNum == math.MaxUint64)
+		_ = bot.OffchainContext(request.SequenceNum == math.MaxUint64)
 		clonedMachine := bot.GetCore().GetMachine().Clone()
 		go func() {
 			clonedMachine.SendOffchainMessages(messages)

@@ -17,9 +17,7 @@
 package protocol
 
 import (
-	"encoding/binary"
 	"errors"
-	"io"
 	"math/big"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -27,62 +25,39 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type TimeBounds [2]uint64
-
-func NewTimeBounds(startTime, endTime uint64) TimeBounds {
-	return TimeBounds{startTime, endTime}
+func NewTimeBounds(startTime, endTime uint64) *TimeBounds {
+	return &TimeBounds{StartTime: startTime, EndTime: endTime}
 }
 
-func NewTimeBoundsFromReader(rd io.Reader) (TimeBounds, error) {
-	var tb TimeBounds
-	if err := binary.Read(rd, binary.LittleEndian, &tb[0]); err != nil {
-		return tb, err
-	}
-	if err := binary.Read(rd, binary.LittleEndian, &tb[1]); err != nil {
-		return tb, err
-	}
-	return tb, nil
+func (tb *TimeBounds) Equals(other TimeBounds) bool {
+	return tb.StartTime == other.StartTime && tb.EndTime == other.EndTime
 }
 
-func (tb TimeBounds) Equals(other TimeBounds) bool {
-	return tb == other
-}
-
-func (tb TimeBounds) IsValidTime(time uint64) error {
-	if time < tb[0] {
+func (tb *TimeBounds) IsValidTime(time uint64) error {
+	if time < tb.StartTime {
 		return errors.New("TimeBounds minimum time must less than the time")
 	}
-	if time > tb[1] {
+	if time > tb.EndTime {
 		return errors.New("TimeBounds maximum time must greater than the time")
 	}
 	return nil
 }
 
-func (tb TimeBounds) Marshal(wr io.Writer) error {
-	if err := binary.Write(wr, binary.LittleEndian, &tb[0]); err != nil {
-		return err
-	}
-	if err := binary.Write(wr, binary.LittleEndian, &tb[1]); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (tb TimeBounds) AsValue() value.Value {
+func (tb *TimeBounds) AsValue() value.Value {
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(new(big.Int).SetUint64(tb[0])),
-		value.NewIntValue(new(big.Int).SetUint64(tb[1])),
+		value.NewIntValue(new(big.Int).SetUint64(tb.StartTime)),
+		value.NewIntValue(new(big.Int).SetUint64(tb.EndTime)),
 	})
 	return newTup
 }
 
 type Precondition struct {
 	BeforeHash  [32]byte
-	TimeBounds  TimeBounds
+	TimeBounds  *TimeBounds
 	BeforeInbox value.HashOnlyValue
 }
 
-func NewPrecondition(beforeHash [32]byte, timeBounds TimeBounds, beforeInbox value.Value) *Precondition {
+func NewPrecondition(beforeHash [32]byte, timeBounds *TimeBounds, beforeInbox value.Value) *Precondition {
 	return &Precondition{beforeHash, timeBounds, value.NewHashOnlyValueFromValue(beforeInbox)}
 }
 
@@ -107,8 +82,8 @@ func (pre *Precondition) Hash() [32]byte {
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(pre.BeforeHash),
-		solsha3.Uint64(pre.TimeBounds[0]),
-		solsha3.Uint64(pre.TimeBounds[1]),
+		solsha3.Uint64(pre.TimeBounds.StartTime),
+		solsha3.Uint64(pre.TimeBounds.EndTime),
 		solsha3.Bytes32(pre.BeforeInbox.Hash()),
 	))
 	return ret

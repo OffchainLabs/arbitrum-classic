@@ -24,13 +24,13 @@ import (
 
 type MachineAssertionContext struct {
 	machine    *Machine
-	timeBounds protocol.TimeBounds
+	timeBounds *protocol.TimeBounds
 	numSteps   uint32
 	outMsgs    []protocol.Message
 	logs       []value.Value
 }
 
-func NewMachineAssertionContext(m *Machine, timeBounds protocol.TimeBounds) *MachineAssertionContext {
+func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBounds) *MachineAssertionContext {
 	outMsgs := make([]protocol.Message, 0)
 	ret := &MachineAssertionContext{
 		m,

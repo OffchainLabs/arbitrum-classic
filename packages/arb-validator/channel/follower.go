@@ -196,7 +196,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 				BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
 				BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
 				SequenceNum: request.SequenceNum,
-				TimeBounds:  protocol.NewTimeBoundsFromBuf(request.TimeBounds),
+				TimeBounds:  request.TimeBounds,
 			},
 			messages,
 			m.maxStepsUnanSteps,

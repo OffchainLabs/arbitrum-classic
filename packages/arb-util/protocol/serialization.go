@@ -24,17 +24,6 @@ import (
 
 //go:generate protoc -I.. -I. --go_out=paths=source_relative:. protocol.proto
 
-func NewTimeBoundsBuf(tb TimeBounds) *TimeBoundsBuf {
-	return &TimeBoundsBuf{
-		StartTime: tb[0],
-		EndTime:   tb[1],
-	}
-}
-
-func NewTimeBoundsFromBuf(buf *TimeBoundsBuf) TimeBounds {
-	return TimeBounds{buf.StartTime, buf.EndTime}
-}
-
 func NewTokenTypeBuf(tok [21]byte) *TokenTypeBuf {
 	return &TokenTypeBuf{
 		Value: tok[:],
@@ -62,7 +51,7 @@ func NewAddressFromBuf(buf *AddressBuf) common.Address {
 func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
 	return &PreconditionBuf{
 		BeforeHash:  value.NewHashBuf(pre.BeforeHash),
-		TimeBounds:  NewTimeBoundsBuf(pre.TimeBounds),
+		TimeBounds:  pre.TimeBounds,
 		BeforeInbox: value.NewHashBuf(pre.BeforeInbox.Hash()),
 	}
 }
@@ -70,7 +59,7 @@ func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
 func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition {
 	return &Precondition{
 		value.NewHashFromBuf(buf.BeforeHash),
-		NewTimeBoundsFromBuf(buf.TimeBounds),
+		buf.TimeBounds,
 		value.NewHashOnlyValue(value.NewHashFromBuf(buf.BeforeInbox), 1),
 	}
 }

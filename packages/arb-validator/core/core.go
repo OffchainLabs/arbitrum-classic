@@ -86,7 +86,7 @@ func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
 		return false
 	}
 
-	if time < pre.TimeBounds[0] || time > pre.TimeBounds[1] {
+	if pre.TimeBounds.IsValidTime(time) != nil {
 		return false
 	}
 

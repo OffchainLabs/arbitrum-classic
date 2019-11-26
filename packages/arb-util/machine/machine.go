@@ -56,7 +56,7 @@ type Machine interface {
 	DeliverOnchainMessage()
 	SendOffchainMessages([]protocol.Message)
 
-	ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion
+	ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion
 	MarshalForProof() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool
