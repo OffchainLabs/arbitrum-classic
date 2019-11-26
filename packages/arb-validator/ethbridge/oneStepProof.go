@@ -35,8 +35,8 @@ func (con *OneStepProof) ValidateProof(
 	return con.contract.ValidateProof(
 		auth,
 		[7][32]byte{
-			precondition.BeforeHash,
-			precondition.BeforeInbox.Hash(),
+			precondition.BeforeHashValue(),
+			precondition.BeforeInboxValue(),
 			assertion.AfterHash,
 			assertion.FirstMessageHash,
 			assertion.LastMessageHash,

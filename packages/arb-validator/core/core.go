@@ -78,11 +78,11 @@ func (c *Core) GetMachine() machine.Machine {
 }
 
 func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
-	if pre.BeforeHash != c.machine.Hash() {
+	if pre.BeforeHashValue() != c.machine.Hash() {
 		return false
 	}
 
-	if !pre.BeforeInbox.Equal(c.machine.InboxHash()) {
+	if pre.BeforeInboxValue() != c.machine.InboxHash().Hash() {
 		return false
 	}
 

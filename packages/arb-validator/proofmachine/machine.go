@@ -153,11 +153,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 			}
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
-			precond := &protocol.Precondition{
-				BeforeHash:  beforeHash,
-				TimeBounds:  timeBounds,
-				BeforeInbox: inboxHash,
-			}
+			precond := protocol.NewPrecondition(beforeHash, timeBounds, inboxHash)
 
 			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
 			if err != nil {

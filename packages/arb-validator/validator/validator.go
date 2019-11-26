@@ -301,11 +301,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 			tb := protocol.NewTimeBounds(startTime, endTime)
 			beforeHash := mClone.Hash()
 			assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
-			pre := &protocol.Precondition{
-				BeforeHash:  beforeHash,
-				TimeBounds:  tb,
-				BeforeInbox: mClone.InboxHash(),
-			}
+			pre := protocol.NewPrecondition(beforeHash, tb, mClone.InboxHash())
 			request := &disputable.AssertionRequest{
 				AfterCore:    core.NewCore(mClone),
 				Precondition: pre,

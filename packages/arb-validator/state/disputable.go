@@ -356,7 +356,7 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, brdg bridge.ArbV
 		c := bot.GetCore()
 		deadline := time + bot.VMConfig.GracePeriod
 		var inboxVal value.Value
-		if c.GetMachine().InboxHash().Hash() != ev.Precondition.BeforeInbox.Hash() {
+		if c.GetMachine().InboxHash().Hash() != ev.Precondition.BeforeInboxValue() {
 			return nil, nil, errors.New("waiting observer has incorrect valmessage")
 		}
 		updatedState := c.GetMachine().Clone()

@@ -381,8 +381,8 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 	tx, err := vm.ArbitrumVM.PendingDisputableAssert(
 		auth,
 		[5][32]byte{
-			precondition.BeforeHash,
-			precondition.BeforeInbox.Hash(),
+			precondition.BeforeHashValue(),
+			precondition.BeforeInboxValue(),
 			stub.AfterHash,
 			stub.LastMessageHash,
 			stub.LastLogHash,
@@ -456,7 +456,7 @@ func (vm *ArbitrumVM) BisectAssertion(
 ) (*types.Receipt, error) {
 	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
 	totalSteps := uint32(0)
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHash)
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHashValue())
 	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHash)
 	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHash)
 	for _, assertion := range assertions {
@@ -468,7 +468,7 @@ func (vm *ArbitrumVM) BisectAssertion(
 	tx, err := vm.Challenge.BisectAssertion(
 		auth,
 		vm.address,
-		precondition.BeforeInbox.Hash(),
+		precondition.BeforeInboxValue(),
 		afterHashAndMessageAndLogsBisections,
 		totalSteps,
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
@@ -509,7 +509,7 @@ func (vm *ArbitrumVM) OneStepProof(
 	tx, err := vm.Challenge.OneStepProof(
 		auth,
 		vm.address,
-		[2][32]byte{precondition.BeforeHash, precondition.BeforeInbox.Hash()},
+		[2][32]byte{precondition.BeforeHashValue(), precondition.BeforeInboxValue()},
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		[5][32]byte{
 			assertion.AfterHash,

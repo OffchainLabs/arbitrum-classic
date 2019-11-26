@@ -19,6 +19,8 @@ package protocol
 import (
 	"fmt"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
@@ -60,7 +62,11 @@ func (a *AssertionStub) Hash() [32]byte {
 }
 
 func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
-	return NewPrecondition(a.AfterHash, pre.TimeBounds, pre.BeforeInbox)
+	return &Precondition{
+		BeforeHash:  value.NewHashBuf(a.AfterHash),
+		TimeBounds:  pre.TimeBounds,
+		BeforeInbox: pre.BeforeInbox,
+	}
 }
 
 func GeneratePreconditions(pre *Precondition, assertions []*AssertionStub) []*Precondition {

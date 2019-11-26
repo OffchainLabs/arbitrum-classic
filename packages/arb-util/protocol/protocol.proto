@@ -23,12 +23,7 @@ message TimeBounds {
     uint64 endTime = 2;
 }
 
-message TokenTrackerBuf {
-    repeated TokenTypeBuf types = 1;
-    repeated value.BigIntegerBuf amounts = 2;
-}
-
-message PreconditionBuf {
+message Precondition {
     value.HashBuf beforeHash = 1;
     TimeBounds timeBounds = 2;
     value.HashBuf beforeInbox = 3;

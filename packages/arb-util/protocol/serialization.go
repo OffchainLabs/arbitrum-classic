@@ -48,22 +48,6 @@ func NewAddressFromBuf(buf *AddressBuf) common.Address {
 	return ret
 }
 
-func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
-	return &PreconditionBuf{
-		BeforeHash:  value.NewHashBuf(pre.BeforeHash),
-		TimeBounds:  pre.TimeBounds,
-		BeforeInbox: value.NewHashBuf(pre.BeforeInbox.Hash()),
-	}
-}
-
-func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition {
-	return &Precondition{
-		value.NewHashFromBuf(buf.BeforeHash),
-		buf.TimeBounds,
-		value.NewHashOnlyValue(value.NewHashFromBuf(buf.BeforeInbox), 1),
-	}
-}
-
 func NewMessageBuf(val Message) *MessageBuf {
 	return &MessageBuf{
 		Value:     value.NewValueBuf(val.Data),
