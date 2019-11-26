@@ -97,7 +97,6 @@ const (
 // 0xf0 range.
 const (
 	SEND value.Opcode = 0x70 + iota
-	NBSEND
 	GETTIME
 	INBOX
 	ERROR
@@ -164,7 +163,6 @@ var InstructionNames = map[value.Opcode]string{
 	LOG:        "log",
 
 	SEND:    "send",
-	NBSEND:  "nbsend",
 	GETTIME: "gettime",
 	INBOX:   "inbox",
 	ERROR:   "error",
@@ -230,7 +228,6 @@ var InstructionStackPops = map[value.Opcode][]byte{
 	LOG:        {0},
 
 	SEND:    {1},
-	NBSEND:  {1},
 	GETTIME: {},
 	INBOX:   {0},
 	ERROR:   {},
@@ -296,7 +293,6 @@ var InstructionAuxStackPops = map[value.Opcode][]byte{
 	LOG:        {},
 
 	SEND:    {},
-	NBSEND:  {},
 	GETTIME: {},
 	INBOX:   {},
 	ERROR:   {},

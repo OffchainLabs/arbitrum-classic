@@ -56,37 +56,4 @@ struct nftKey {
     }
 };
 
-namespace std {
-template <>
-struct hash<TokenType> {
-    std::size_t operator()(const TokenType& k) const;
-};
-}  // namespace std
-
-namespace std {
-template <>
-struct hash<nftKey> {
-    std::size_t operator()(const nftKey& k) const;
-};
-}  // namespace std
-
-class BalanceTracker {
-    std::unordered_map<TokenType, uint256_t> tokenLookup;
-    std::unordered_set<nftKey> nftLookup;
-    void insertTokenLookup(std::vector<unsigned char>& return_vector);
-    void insertNftLookup(std::vector<unsigned char>& return_vector);
-    void initializeTokenLookup(std::vector<unsigned char>& token_lookup);
-    void initializeNftLookup(std::vector<unsigned char>& nftkey_lookup);
-
-   public:
-    BalanceTracker() {}
-    BalanceTracker(const std::vector<unsigned char>& checkpoint_data);
-    bool canSpend(const TokenType& tokType, const uint256_t& amount) const;
-    bool spend(const TokenType& tokType, const uint256_t& amount);
-    void add(const TokenType& tokType, const uint256_t& amount);
-    uint256_t tokenValue(const TokenType& tokType) const;
-    bool hasNFT(const TokenType& tokType, const uint256_t& id) const;
-    std::vector<unsigned char> serializeBalanceValues();
-};
-
 #endif /* tokenTracker_hpp */

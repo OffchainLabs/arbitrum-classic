@@ -99,16 +99,6 @@ void machineInboxHash(CMachine* m, void* ret) {
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 }
 
-int machineCanSpend(CMachine* m, char* cTokType, char* cAmount) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    TokenType tokType;
-    std::copy(cTokType, cTokType + 21, tokType.begin());
-    auto const_amount = const_cast<const char*>(cAmount);
-    uint256_t amount = deserializeUint256t(const_amount);
-    return mach->canSpend(tokType, amount);
-}
-
 CStatus machineCurrentStatus(CMachine* m) {
     Machine* mach = static_cast<Machine*>(m);
     switch (mach->currentStatus()) {
@@ -153,24 +143,6 @@ struct ReasonConverter {
             BLOCK_TYPE_INBOX,
             ByteSlice{cInboxData, static_cast<int>(inboxDataVec.size())},
             ByteSlice{nullptr, 0}};
-    }
-
-    CBlockReason operator()(const SendBlocked& val) const {
-        std::vector<unsigned char> currencyDataVec;
-        marshal_value(val.currency, currencyDataVec);
-        unsigned char* cCurrencyData =
-            (unsigned char*)malloc(currencyDataVec.size());
-        std::copy(currencyDataVec.begin(), currencyDataVec.end(),
-                  cCurrencyData);
-
-        unsigned char* cTokenData =
-            (unsigned char*)malloc(val.tokenType.size());
-        std::copy(val.tokenType.begin(), val.tokenType.end(), cTokenData);
-        return CBlockReason{
-            BLOCK_TYPE_SEND,
-            ByteSlice{cCurrencyData, static_cast<int>(currencyDataVec.size())},
-            ByteSlice{cTokenData, static_cast<int>(val.tokenType.size())},
-        };
     }
 };
 

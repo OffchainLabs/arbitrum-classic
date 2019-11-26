@@ -29,7 +29,6 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 	"runtime"
 	"unsafe"
 
@@ -108,37 +107,9 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 		}
 		C.free(cBlockReason.val1.data)
 		return machine.InboxBlocked{Inbox: value.NewHashOnlyValue(inboxHashInt.ToBytes(), 0)}
-	case C.BLOCK_TYPE_SEND:
-		rawCurrency := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
-		currency, err := value.UnmarshalValue(bytes.NewReader(rawCurrency[:]))
-		if err != nil {
-			panic(err)
-		}
-		currencyInt, ok := currency.(value.IntValue)
-		if !ok {
-			panic("Inbox hash must be an int")
-		}
-		C.free(cBlockReason.val1.data)
-
-		rawTokenType := C.GoBytes(unsafe.Pointer(cBlockReason.val2.data), cBlockReason.val2.length)
-		var tokType protocol.TokenType
-		copy(tokType[:], rawTokenType)
-		C.free(cBlockReason.val2.data)
-		return machine.SendBlocked{
-			Currency:  currencyInt.BigInt(),
-			TokenType: tokType,
-		}
 	default:
 	}
 	return nil
-}
-
-func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
-	var currencyBuf bytes.Buffer
-	_ = value.NewIntValue(currency).Marshal(&currencyBuf)
-	currencyData := currencyBuf.Bytes()
-	canSpend := C.machineCanSpend(m.c, (*C.char)(unsafe.Pointer(&tokenType[0])), (*C.char)(unsafe.Pointer(&currencyData[0])))
-	return int(canSpend) != 0
 }
 
 func (m *Machine) InboxHash() value.HashOnlyValue {

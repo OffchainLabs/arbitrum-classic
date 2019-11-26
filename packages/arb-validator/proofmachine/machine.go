@@ -92,10 +92,6 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	return m.machine.LastBlockReason()
 }
 
-func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
-	return m.machine.CanSpend(tokenType, currency)
-}
-
 func (m *Machine) InboxHash() value.HashOnlyValue {
 	return m.machine.InboxHash()
 }

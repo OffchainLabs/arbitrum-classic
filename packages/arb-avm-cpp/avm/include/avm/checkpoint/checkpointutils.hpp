@@ -32,7 +32,6 @@ struct ParsedState {
     std::vector<unsigned char> err_pc_key;
     unsigned char status_char;
     std::vector<unsigned char> blockreason_str;
-    std::vector<unsigned char> balancetracker_str;
 };
 
 namespace checkpoint {

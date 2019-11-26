@@ -54,7 +54,6 @@ struct MachineState {
     MessageStack pendingInbox;
     AssertionContext context;
     MessageStack inbox;
-    BalanceTracker balance;
     BlockReason blockReason;
 
     MachineState();

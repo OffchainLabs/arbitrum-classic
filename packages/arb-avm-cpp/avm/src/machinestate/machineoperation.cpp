@@ -557,34 +557,10 @@ BlockReason send(MachineState& m) {
         m.state = Status::Error;
         return NotBlocked();
     }
-    if (!m.balance.spend(outMsg.token, outMsg.currency)) {
-        return SendBlocked(outMsg.currency, outMsg.token);
-    } else {
-        m.stack.popClear();
-        m.context.outMessage.push_back(outMsg);
-        ++m.pc;
-        return NotBlocked();
-    }
-}
-
-void nbsend(MachineState& m) {
-    m.stack.prepForMod(1);
-
-    Message outMsg;
-    auto success = outMsg.deserialize(m.stack[0]);
-    if (!success) {
-        m.state = Status::Error;
-        return;
-    }
-
-    bool spent = m.balance.spend(outMsg.token, outMsg.currency);
-    if (!spent) {
-        m.stack[0] = 0;
-    } else {
-        m.context.outMessage.push_back(outMsg);
-        m.stack[0] = 1;
-    }
+    m.stack.popClear();
+    m.context.outMessage.push_back(outMsg);
     ++m.pc;
+    return NotBlocked();
 }
 
 void getTime(MachineState& m) {

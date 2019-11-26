@@ -67,15 +67,13 @@ func NewTokenTrackerFromMessages(msgs []Message) *TokenTracker {
 }
 
 func NewTokenTrackerFromLists(types [][21]byte, amounts []*big.Int) *TokenTracker {
-	balanceTracker := NewBalanceTrackerFromLists(types, amounts)
-	entries := make([]tokenEntry, 0, len(balanceTracker.nftLookup)+len(balanceTracker.tokenLookup))
+	entries := make([]tokenEntry, 0, len(types))
 
-	for key, val := range balanceTracker.tokenLookup {
-		entries = append(entries, tokenEntry{key, val})
-	}
-
-	for key, _ := range balanceTracker.nftLookup {
-		entries = append(entries, tokenEntry{key.tokenType, new(big.Int).SetBytes(key.intVal[:])})
+	for i := 0; i < len(types); i++ {
+		entries = append(entries, tokenEntry{
+			tokenType: types[i],
+			amount:    amounts[i],
+		})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
@@ -89,8 +87,8 @@ func NewTokenTrackerFromLists(types [][21]byte, amounts []*big.Int) *TokenTracke
 		}
 	})
 
-	tokenLookup := make(map[TokenType]int, len(balanceTracker.tokenLookup))
-	nftLookup := make(map[NFTKey]int, len(balanceTracker.nftLookup))
+	tokenLookup := make(map[TokenType]int)
+	nftLookup := make(map[NFTKey]int)
 
 	for i, entry := range entries {
 		if entry.tokenType.IsToken() {

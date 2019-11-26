@@ -19,7 +19,7 @@
 
 #include <avm/machinestate/tokenTracker.hpp>
 
-enum BlockType { Not, Halt, Error, Breakpoint, Inbox, Send };
+enum BlockType { Not, Halt, Error, Breakpoint, Inbox };
 
 struct NotBlocked {
     static constexpr BlockType type = Not;
@@ -45,26 +45,13 @@ struct InboxBlocked {
     InboxBlocked(uint256_t inbox_) { inbox = inbox_; }
 };
 
-struct SendBlocked {
-    static constexpr BlockType type = Send;
-    uint256_t currency;
-    TokenType tokenType;
-    SendBlocked() { tokenType = {}; }
-
-    SendBlocked(uint256_t currency_, TokenType tokenType_) {
-        currency = currency_;
-        tokenType = tokenType_;
-    }
-};
-
 extern std::unordered_map<BlockType, int> blockreason_type_length;
 
 using BlockReason = nonstd::variant<NotBlocked,
                                     HaltBlocked,
                                     ErrorBlocked,
                                     BreakpointBlocked,
-                                    InboxBlocked,
-                                    SendBlocked>;
+                                    InboxBlocked>;
 
 std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val);
 BlockReason deserializeBlockReason(const std::vector<unsigned char>& data);

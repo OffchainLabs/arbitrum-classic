@@ -53,9 +53,6 @@ class Machine {
         return machine_state.pendingMessageCount();
     }
 
-    bool canSpend(const TokenType& tokType, const uint256_t& amount) const {
-        return machine_state.balance.canSpend(tokType, amount);
-    }
     uint256_t inboxHash() const { return ::hash(machine_state.inbox.messages); }
 
     void sendOnchainMessage(const Message& msg);

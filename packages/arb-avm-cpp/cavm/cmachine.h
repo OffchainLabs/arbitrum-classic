@@ -71,7 +71,6 @@ CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 void machineInboxHash(CMachine* m, void* ret);
-int machineCanSpend(CMachine* m, char* tokType, char* amount);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineLastBlockReason(CMachine* m);
 uint64_t machinePendingMessageCount(CMachine* m);

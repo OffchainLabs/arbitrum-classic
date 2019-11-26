@@ -1629,10 +1629,10 @@ func TestSendLowBalance(t *testing.T) {
 	}
 }
 
-func TestNbsend1(t *testing.T) {
+func TestSend(t *testing.T) {
 	// test
 	insns := []value.Operation{
-		value.BasicOperation{Op: code.NBSEND},
+		value.BasicOperation{Op: code.SEND},
 		value.BasicOperation{Op: code.HALT},
 	}
 
@@ -1651,13 +1651,9 @@ func TestNbsend1(t *testing.T) {
 
 	m.Stack().Push(tup)
 
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
-
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 
 	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(1))
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}
@@ -1666,175 +1662,6 @@ func TestNbsend1(t *testing.T) {
 	// verify out message
 	if len(msgs) != 1 {
 		t.Error("No out message generated")
-	}
-}
-
-func TestNBSendFungible(t *testing.T) {
-	// test
-	insns := []value.Operation{
-		value.BasicOperation{Op: code.NBSEND},
-		value.BasicOperation{Op: code.HALT},
-	}
-
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := m.Clone().(*Machine)
-
-	// fungible value=10
-	var tok protocol.TokenType
-	tok[0] = 15
-	tok[20] = 0
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-		value.NewInt64Value(7),
-		tok.ToIntValue(),
-	})
-	m.Stack().Push(tup)
-
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
-
-	// send token 15 value=7 to dest 4
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
-	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-	msgs := ad.OutMsgs
-	// verify out message
-	if len(msgs) != 1 {
-		t.Error("No out message generated")
-	}
-
-	dest := common.Address{}
-	dest[19] = 4
-	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	if !msgs[0].Equals(knownmessage) {
-		t.Error("Out message incorrect")
-	}
-}
-
-func TestNBSendNonFungible(t *testing.T) {
-	// test
-	insns := []value.Operation{
-		value.BasicOperation{Op: code.NBSEND},
-		value.BasicOperation{Op: code.HALT},
-	}
-
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := m.Clone().(*Machine)
-
-	// test send of non fungible
-	var tok protocol.TokenType
-	tok[0] = 16
-	tok[20] = 1
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-		value.NewInt64Value(7),
-		tok.ToIntValue(),
-	})
-	m.Stack().Push(tup)
-
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(7), common.Address{}))
-
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
-	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(1))
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-	msgs := ad.OutMsgs
-	// verify out message
-	if len(msgs) != 1 {
-		t.Error("No out message generated")
-	}
-
-	dest := common.Address{}
-	dest[19] = 4
-	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	if !msgs[0].Equals(knownmessage) {
-		t.Error("Out message incorrect")
-	}
-}
-
-func TestNBSendLowBalance(t *testing.T) {
-	// test
-	insns := []value.Operation{
-		value.BasicOperation{Op: code.NBSEND},
-		value.BasicOperation{Op: code.HALT},
-	}
-
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := m.Clone().(*Machine)
-
-	// test send with insufficient funds
-	var tok protocol.TokenType
-	tok[0] = 17
-	tok[20] = 0
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-		value.NewInt64Value(17),
-		tok.ToIntValue(),
-	})
-	m.Stack().Push(tup)
-
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
-
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
-	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-	msgs := ad.OutMsgs
-	// verify out message
-	if len(msgs) != 0 {
-		t.Error("No out message generated")
-	}
-}
-
-func TestNbsendBadData(t *testing.T) {
-	// test
-	insns := []value.Operation{
-		value.BasicOperation{Op: code.NBSEND},
-		value.BasicOperation{Op: code.HALT},
-	}
-
-	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	knownMachine := m.Clone().(*Machine)
-
-	var tok protocol.TokenType
-	tok[0] = 15
-	tok[20] = 1
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(2345),
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-	})
-
-	m.Stack().Push(tup)
-
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
-
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
-
-	// verify known and unknown match
-	knownMachine.Stack().Push(value.NewInt64Value(0))
-	if ok, err := Equal(knownMachine, m); !ok {
-		t.Error(err)
-	}
-
-	msgs := ad.OutMsgs
-	// verify out message
-	if len(msgs) != 0 {
-		t.Error("Message found when no out message should be generated")
 	}
 }
 

@@ -1,8 +1,6 @@
 package machine
 
 import (
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -20,10 +18,6 @@ type NoContext struct{}
 
 func (m *NoContext) LoggedValue(data value.Value) {
 
-}
-
-func (m *NoContext) CanSpend(tokenType value.IntValue, currency value.IntValue) bool {
-	return false
 }
 
 func (m *NoContext) Send(message protocol.Message) {
@@ -56,7 +50,6 @@ type Machine interface {
 
 	CurrentStatus() Status
 	LastBlockReason() BlockReason
-	CanSpend(tokenType protocol.TokenType, currency *big.Int) bool
 	InboxHash() value.HashOnlyValue
 	PendingMessageCount() uint64
 	SendOnchainMessage(protocol.Message)

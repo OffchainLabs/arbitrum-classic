@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -44,8 +43,7 @@ type Machine struct {
 	status      machine.Status
 	blockReason machine.BlockReason
 
-	inbox   *protocol.Inbox
-	balance *protocol.BalanceTracker
+	inbox *protocol.Inbox
 
 	sizeLimit     int64
 	sizeException bool
@@ -97,7 +95,6 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	static := NewMachineValue(staticVal)
 	errHandler := value.ErrorCodePoint
 	inbox := protocol.NewEmptyInbox()
-	balance := protocol.NewBalanceTracker()
 	var wh WarningHandler
 	if warn {
 		wh = NewVerboseWarningHandler(nil)
@@ -117,7 +114,6 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		machine.Extensive,
 		nil,
 		inbox,
-		balance,
 		sizeLimit,
 		false,
 		wh,
@@ -160,10 +156,6 @@ func (m *Machine) SetContext(mc machine.Context) {
 
 func (m *Machine) ReadInbox() value.Value {
 	return m.inbox.Receive()
-}
-
-func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
-	return m.balance.CanSpend(tokenType, currency)
 }
 
 func (m *Machine) GetTimeBounds() value.Value {
@@ -263,7 +255,6 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 
 func (m *Machine) SendOnchainMessage(msg protocol.Message) {
 	m.inbox.SendMessage(msg.Clone())
-	m.balance.Add(msg.TokenType, msg.Currency)
 }
 
 func (m *Machine) DeliverOnchainMessage() {
@@ -282,13 +273,8 @@ func (m *Machine) PendingMessageCount() uint64 {
 	return m.inbox.PendingQueue.MessageCount()
 }
 
-func (m *Machine) Send(message protocol.Message) error {
-	err := m.balance.Spend(message.TokenType, message.Currency)
-	if err != nil {
-		return err
-	}
+func (m *Machine) Send(message protocol.Message) {
 	m.context.Send(message)
-	return nil
 }
 
 func (m *Machine) Warn(str string) {
@@ -418,7 +404,6 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.status,
 		m.blockReason,
 		m.inbox.Clone(),
-		m.balance.Clone(),
 		m.sizeLimit,
 		m.sizeException,
 		newWarnHandler,
