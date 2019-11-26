@@ -17,8 +17,6 @@
 package protocol
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -59,38 +57,6 @@ func NewAddressFromBuf(buf *AddressBuf) common.Address {
 	var ret common.Address
 	copy(ret[:], buf.Value)
 	return ret
-}
-
-func NewTokenTrackerBuf(bt *TokenTracker) *TokenTrackerBuf {
-	types := make([]*TokenTypeBuf, 0, len(bt.entries))
-	amounts := make([]*value.BigIntegerBuf, 0, len(bt.entries))
-	for _, entry := range bt.entries {
-		types = append(types, &TokenTypeBuf{
-			Value: entry.tokenType[:],
-		})
-		amounts = append(amounts, &value.BigIntegerBuf{
-			Value: entry.amount.Bytes(),
-		})
-	}
-	return &TokenTrackerBuf{
-		Types:   types,
-		Amounts: amounts,
-	}
-}
-
-func NewTokenTrackerFromBuf(buf *TokenTrackerBuf) *TokenTracker {
-	types := make([][21]byte, 0, len(buf.Types))
-	amounts := make([]*big.Int, 0, len(buf.Amounts))
-
-	for _, tokenType := range buf.Types {
-		var typ [21]byte
-		copy(typ[:], tokenType.Value)
-		types = append(types, typ)
-	}
-	for _, tokenAmount := range buf.Amounts {
-		amounts = append(amounts, value.NewBigIntFromBuf(tokenAmount))
-	}
-	return NewTokenTrackerFromLists(types, amounts)
 }
 
 func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
