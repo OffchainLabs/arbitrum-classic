@@ -337,15 +337,11 @@ func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (Waiting, error
 		return Waiting{}, errors.New("no pending Assertion")
 	}
 
-	balance := bot.GetCore().GetBalance()
-	_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(bot.proposed.Assertion.OutMsgs))
-
 	return Waiting{
 		Config:   bot.Config,
 		proposed: nil,
 		accepted: core.NewCore(
 			bot.proposed.machine,
-			balance,
 		),
 		assertion:   bot.proposed.Assertion,
 		sequenceNum: bot.proposed.sequenceNum,
@@ -379,13 +375,11 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, brdg bridge.ArbV
 				return nil, nil, &bridge.Error{err, "ERROR: InitiateChallenge: failed", false}
 			}
 		}
-		balance := c.GetBalance()
-		_ = balance.SpendAll(protocol.NewBalanceTrackerFromMessages(assertion.OutMsgs))
 		return watchingAssertion{
 			c,
 			bot.Config,
 			inboxVal,
-			core.NewCore(updatedState, balance),
+			core.NewCore(updatedState),
 			deadline,
 			ev.Precondition,
 			assertion,

@@ -364,7 +364,6 @@ func NewCoordinator(
 		c,
 		val.Address(),
 		header,
-		protocol.NewBalanceTracker(),
 		config,
 		machine,
 		challengeEverything,

@@ -19,6 +19,7 @@ package bridge
 import (
 	"context"
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -57,7 +58,6 @@ type Bridge interface {
 }
 
 type ArbVMBridge interface {
-	AddedNewMessages(count uint64)
 	SendMonitorMsg(msg BridgeMessage)
 	SendMonitorErr(msg Error)
 

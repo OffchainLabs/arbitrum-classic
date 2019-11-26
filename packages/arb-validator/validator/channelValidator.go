@@ -47,7 +47,6 @@ func NewChannelValidator(
 	b bridge.Bridge,
 	address common.Address,
 	latestHeader *types.Header,
-	balance *protocol.BalanceTracker,
 	config *valmessage.VMConfiguration,
 	machine machine.Machine,
 	challengeEverything bool,
@@ -55,7 +54,6 @@ func NewChannelValidator(
 ) *ChannelValidator {
 	c := core.NewCore(
 		machine,
-		balance,
 	)
 
 	valConfig := core.NewValidatorConfig(address, config, challengeEverything, maxCallSteps)
@@ -268,8 +266,6 @@ func (validator *ChannelValidator) ConfirmOffchainUnanimousAssertion(
 			errChan <- err
 			return
 		}
-
-		validator.channelBot.bridge.AddedNewMessages(bot.ProposedMessageCount())
 
 		proposalResults := bot.ProposalResults()
 		newBot, err := bot.FinalizePendingUnanimous(signatures)
