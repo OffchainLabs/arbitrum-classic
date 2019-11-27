@@ -20,7 +20,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 )
 
 type State interface {
@@ -29,7 +28,6 @@ type State interface {
 }
 
 type TimedOutChallenger struct {
-	*core.Config
 }
 
 func (bot TimedOutChallenger) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (State, error) {
@@ -46,7 +44,6 @@ func (bot TimedOutChallenger) UpdateState(ev ethbridge.Event, time uint64, brdg 
 }
 
 type TimedOutAsserter struct {
-	*core.Config
 }
 
 func (bot TimedOutAsserter) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (State, error) {

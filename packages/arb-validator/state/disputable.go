@@ -461,14 +461,13 @@ func (bot watchingAssertion) updateState(ev ethbridge.Event, time uint64, bridge
 		var challengeState challenge.State
 		if ev.Challenger == bot.Address {
 			challengeState = challenger.New(
-				bot.Config,
 				bot.precondition,
 				bot.GetMachine().Clone(),
 				ev.Deadline,
+				bot.Config.ChallengeEverything,
 			)
 		} else {
 			challengeState = observer.New(
-				bot.Config,
 				bot.precondition,
 				bot.assertion.Stub(),
 				ev.Deadline,
@@ -579,7 +578,6 @@ func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge 
 	case ethbridge.InitiateChallengeEvent:
 		bot.resultChan <- false
 		ct, err := defender.New(
-			bot.Config,
 			machine.NewAssertionDefender(
 				bot.assertion,
 				bot.precondition,
