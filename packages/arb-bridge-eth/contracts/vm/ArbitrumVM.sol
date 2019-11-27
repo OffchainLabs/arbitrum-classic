@@ -30,15 +30,19 @@ import "../libraries/ArbValue.sol";
 contract ArbitrumVM {
     using SafeMath for uint256;
 
+    // fields:
+        // beforeHash
+        // beforeInbox
+        // afterHash
+        // messagesAccHash
+        // logsAccHash
+
     event PendingDisputableAssertion (
-        bytes32 beforeHash,
-        bytes32 beforeInbox,
-        bytes32 afterHash,
-        bytes32 messagesAccHash,
-        bytes32 logsAccHash,
+        bytes32[5] fields,
         address asserter,
         uint64[2] timeBounds,
-        uint32 numSteps
+        uint32 numSteps,
+        uint64 deadline
     );
 
     event ConfirmedDisputableAssertion(
@@ -46,9 +50,7 @@ contract ArbitrumVM {
         bytes32 logsAccHash
     );
 
-    event InitiatedChallenge(
-        address challenger
-    );
+    event PendingAssertionCanceled();
 
     address internal constant ETH_ADDRESS = address(0);
 

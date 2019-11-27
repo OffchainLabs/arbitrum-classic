@@ -342,28 +342,8 @@ const _abi = [
         inputs: [
             {
                 indexed: false,
-                name: 'beforeHash',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'beforeInbox',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'afterHash',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'messagesAccHash',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'logsAccHash',
-                type: 'bytes32',
+                name: 'fields',
+                type: 'bytes32[5]',
             },
             {
                 indexed: false,
@@ -379,6 +359,11 @@ const _abi = [
                 indexed: false,
                 name: 'numSteps',
                 type: 'uint32',
+            },
+            {
+                indexed: false,
+                name: 'deadline',
+                type: 'uint64',
             },
         ],
         name: 'PendingDisputableAssertion',
@@ -403,14 +388,8 @@ const _abi = [
     },
     {
         anonymous: false,
-        inputs: [
-            {
-                indexed: false,
-                name: 'challenger',
-                type: 'address',
-            },
-        ],
-        name: 'InitiatedChallenge',
+        inputs: [],
+        name: 'PendingAssertionCanceled',
         type: 'event',
     },
     {

@@ -55,6 +55,7 @@ func (FinalizedUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageTyp
 type PendingUnanimousAssertEvent struct {
 	UnanHash    [32]byte
 	SequenceNum uint64
+	Deadline    uint64
 }
 
 func (PendingUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
@@ -73,6 +74,7 @@ type PendingDisputableAssertionEvent struct {
 	Precondition *protocol.Precondition
 	Assertion    *protocol.AssertionStub
 	Asserter     common.Address
+	Deadline     uint64
 }
 
 func (PendingDisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {
@@ -90,6 +92,7 @@ func (ConfirmedDisputableAssertEvent) GetIncomingMessageType() IncomingMessageTy
 
 type InitiateChallengeEvent struct {
 	Challenger common.Address
+	Deadline   uint64
 }
 
 func (InitiateChallengeEvent) GetIncomingMessageType() IncomingMessageType {
@@ -98,6 +101,7 @@ func (InitiateChallengeEvent) GetIncomingMessageType() IncomingMessageType {
 
 type BisectionEvent struct {
 	Assertions []*protocol.AssertionStub
+	Deadline   uint64
 }
 
 func (BisectionEvent) GetIncomingMessageType() IncomingMessageType {
@@ -106,6 +110,7 @@ func (BisectionEvent) GetIncomingMessageType() IncomingMessageType {
 
 type ContinueChallengeEvent struct {
 	ChallengedAssertion uint16
+	Deadline            uint64
 }
 
 func (ContinueChallengeEvent) GetIncomingMessageType() IncomingMessageType {

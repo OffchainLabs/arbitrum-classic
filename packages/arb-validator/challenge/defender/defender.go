@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -29,8 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 )
 
-func New(core *core.Config, assDef machine.AssertionDefender, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
-	deadline := time + core.VMConfig.GracePeriod
+func New(core *core.Config, assDef machine.AssertionDefender, deadline uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
 	if assDef.GetAssertion().NumSteps == 1 {
 		fmt.Println("Generating proof")
 		proofData, err := assDef.SolidityOneStepProof()
@@ -94,13 +94,12 @@ func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (ch
 }
 
 func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
-	switch ev.(type) {
+	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
-		deadline := time + bot.VMConfig.GracePeriod
 		return waitingBisected{
 			bot.Config,
 			bot.splitDefenders,
-			deadline,
+			ev.Deadline,
 		}, nil
 	default:
 		return nil, &bridge.Error{Message: "ERROR: bisectedAssert: VM state got unsynchronized"}
@@ -135,7 +134,7 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, brdg bri
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
 			return nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
-		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], time, brdg)
+		return New(bot.Config, bot.defenders[ev.ChallengedAssertion], ev.Deadline, brdg)
 	default:
 		return nil, &bridge.Error{Message: fmt.Sprintf("ERROR: waitingBisected: VM state got unsynchronized, %T", ev)}
 	}

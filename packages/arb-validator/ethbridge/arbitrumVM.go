@@ -139,8 +139,8 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 		return err
 	}
 
-	challengeInitiatedChan := make(chan *chainlauncher.ArbitrumVMInitiatedChallenge)
-	challengeInitiatedSub, err := vm.ArbitrumVM.WatchInitiatedChallenge(watch, challengeInitiatedChan)
+	challengeInitiatedChan := make(chan *challengemanager.ChallengeManagerInitiatedChallenge)
+	challengeInitiatedSub, err := vm.Challenge.WatchInitiatedChallenge(watch, challengeInitiatedChan, []common.Address{vm.address})
 	if err != nil {
 		return err
 	}
@@ -241,6 +241,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 						Precondition: precondition,
 						Assertion:    assertion,
 						Asserter:     val.Asserter,
+						Deadline:     val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -270,6 +271,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					VMID:   vm.address,
 					Event: InitiateChallengeEvent{
 						Challenger: val.Challenger,
+						Deadline:   val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -279,11 +281,13 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					vm.ErrChan <- err
 					return
 				}
+
 				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: BisectionEvent{
 						Assertions: translateBisectionEvent(val),
+						Deadline:   val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -319,6 +323,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					VMID:   vm.address,
 					Event: ContinueChallengeEvent{
 						ChallengedAssertion: uint16(val.AssertionIndex.Uint64()),
+						Deadline:            val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -647,17 +652,17 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 
 func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	precondition := protocol.NewPrecondition(
-		event.BeforeHash,
+		event.Fields[0],
 		protocol.NewTimeBounds(event.TimeBounds[0], event.TimeBounds[1]),
-		value.NewHashOnlyValue(event.BeforeInbox, 1),
+		value.NewHashOnlyValue(event.Fields[1], 1),
 	)
 	assertion := &protocol.AssertionStub{
-		AfterHash:        value.NewHashBuf(event.AfterHash),
+		AfterHash:        value.NewHashBuf(event.Fields[2]),
 		NumSteps:         event.NumSteps,
 		FirstMessageHash: value.NewHashBuf([32]byte{}),
-		LastMessageHash:  value.NewHashBuf(event.MessagesAccHash),
+		LastMessageHash:  value.NewHashBuf(event.Fields[3]),
 		FirstLogHash:     value.NewHashBuf([32]byte{}),
-		LastLogHash:      value.NewHashBuf(event.LogsAccHash),
+		LastLogHash:      value.NewHashBuf(event.Fields[4]),
 	}
 	return precondition, assertion
 }

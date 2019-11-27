@@ -25,12 +25,13 @@ import "../libraries/SigUtils.sol";
 
 library Unanimous {
 
-    event PendingUnanimousAssertion (
+    event PendingUnanimousAssertion(
         bytes32 unanHash,
-        uint64 sequenceNum
+        uint64 sequenceNum,
+        uint64 deadline
     );
 
-    event ConfirmedUnanimousAssertion (
+    event ConfirmedUnanimousAssertion(
         uint64 sequenceNum
     );
 
@@ -139,7 +140,8 @@ library Unanimous {
 
         emit PendingUnanimousAssertion(
             unanHash,
-            sequenceNum
+            sequenceNum,
+            vm.deadline
         );
     }
 

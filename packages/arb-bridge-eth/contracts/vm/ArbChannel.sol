@@ -26,7 +26,8 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
 
     event PendingUnanimousAssertion (
         bytes32 unanHash,
-        uint64 sequenceNum
+        uint64 sequenceNum,
+        uint64 deadline
     );
 
     event ConfirmedUnanimousAssertion (

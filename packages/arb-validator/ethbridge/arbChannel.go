@@ -126,6 +126,7 @@ func (vm *ArbChannel) StartConnection(ctx context.Context) error {
 					Event: PendingUnanimousAssertEvent{
 						UnanHash:    val.UnanHash,
 						SequenceNum: val.SequenceNum,
+						Deadline:    val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}

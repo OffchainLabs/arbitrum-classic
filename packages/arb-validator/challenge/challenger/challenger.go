@@ -87,7 +87,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg b
 		return continuing{
 			Config:          bot.Config,
 			challengedState: m,
-			deadline:        time + bot.VMConfig.GracePeriod,
+			deadline:        ev.Deadline,
 			precondition:    bot.challengedPrecondition,
 			assertions:      ev.Assertions,
 		}, err
@@ -123,13 +123,12 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challe
 func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
-		deadline := time + bot.VMConfig.GracePeriod
 		preconditions := protocol.GeneratePreconditions(bot.precondition, bot.assertions)
 		return waitingContinuing{
 			bot.Config,
 			preconditions[ev.ChallengedAssertion],
 			bot.challengedState,
-			deadline,
+			ev.Deadline,
 		}, nil
 	default:
 		return nil, &bridge.Error{Message: "ERROR: continuing: VM state got unsynchronized"}

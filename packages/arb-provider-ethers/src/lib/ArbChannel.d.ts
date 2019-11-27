@@ -71,7 +71,7 @@ interface ArbChannelInterface extends Interface {
 
     events: {
         PendingUnanimousAssertion: TypedEventDescription<{
-            encodeTopics([unanHash, sequenceNum]: [null, null]): string[];
+            encodeTopics([unanHash, sequenceNum, deadline]: [null, null, null]): string[];
         }>;
 
         ConfirmedUnanimousAssertion: TypedEventDescription<{
@@ -83,24 +83,15 @@ interface ArbChannelInterface extends Interface {
         }>;
 
         PendingDisputableAssertion: TypedEventDescription<{
-            encodeTopics([
-                beforeHash,
-                beforeInbox,
-                afterHash,
-                messagesAccHash,
-                logsAccHash,
-                asserter,
-                timeBounds,
-                numSteps,
-            ]: [null, null, null, null, null, null, null, null]): string[];
+            encodeTopics([fields, asserter, timeBounds, numSteps, deadline]: [null, null, null, null, null]): string[];
         }>;
 
         ConfirmedDisputableAssertion: TypedEventDescription<{
             encodeTopics([newState, logsAccHash]: [null, null]): string[];
         }>;
 
-        InitiatedChallenge: TypedEventDescription<{
-            encodeTopics([challenger]: [null]): string[];
+        PendingAssertionCanceled: TypedEventDescription<{
+            encodeTopics([]: []): string[];
         }>;
     };
 }
@@ -221,26 +212,23 @@ export class ArbChannel extends Contract {
     };
 
     filters: {
-        PendingUnanimousAssertion(unanHash: null, sequenceNum: null): EventFilter;
+        PendingUnanimousAssertion(unanHash: null, sequenceNum: null, deadline: null): EventFilter;
 
         ConfirmedUnanimousAssertion(sequenceNum: null): EventFilter;
 
         FinalizedUnanimousAssertion(unanHash: null): EventFilter;
 
         PendingDisputableAssertion(
-            beforeHash: null,
-            beforeInbox: null,
-            afterHash: null,
-            messagesAccHash: null,
-            logsAccHash: null,
+            fields: null,
             asserter: null,
             timeBounds: null,
             numSteps: null,
+            deadline: null,
         ): EventFilter;
 
         ConfirmedDisputableAssertion(newState: null, logsAccHash: null): EventFilter;
 
-        InitiatedChallenge(challenger: null): EventFilter;
+        PendingAssertionCanceled(): EventFilter;
     };
 
     estimate: {

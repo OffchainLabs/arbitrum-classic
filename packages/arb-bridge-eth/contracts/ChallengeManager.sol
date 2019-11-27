@@ -51,6 +51,12 @@ contract ChallengeManager is IChallengeManager {
         bool challengerWrong
     );
 
+    event InitiatedChallenge(
+        address indexed vmAddress,
+        address challenger,
+        uint64 deadline
+    );
+
     mapping(address => Challenge.Data) challenges;
 
     function initiateChallenge(
@@ -63,14 +69,21 @@ contract ChallengeManager is IChallengeManager {
     {
         require(challenges[msg.sender].challengeState == 0x00, "There must be no existing challenge");
 
+        uint64 deadline = uint64(block.number) + uint64(_challengePeriod);
         challenges[msg.sender] = Challenge.Data(
             msg.sender,
             _challengeRoot,
             _escrows,
             _players,
-            uint64(block.number) + uint64(_challengePeriod),
+            deadline,
             _challengePeriod,
             Challenge.State.Challenged
+        );
+
+        emit InitiatedChallenge(
+            msg.sender,
+            _players[1],
+            deadline
         );
     }
 

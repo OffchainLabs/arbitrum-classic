@@ -26,15 +26,19 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 library Disputable {
     using SafeMath for uint256;
 
-    event PendingDisputableAssertion (
-        bytes32 beforeHash,
-        bytes32 beforeInbox,
-        bytes32 afterHash,
-        bytes32 messagesAccHash,
-        bytes32 logsAccHash,
+    // fields:
+        // beforeHash
+        // beforeInbox
+        // afterHash
+        // messagesAccHash
+        // logsAccHash
+
+    event PendingDisputableAssertion(
+        bytes32[5] fields,
         address asserter,
         uint64[2] timeBounds,
-        uint32 numSteps
+        uint32 numSteps,
+        uint64 deadline
     );
 
     event ConfirmedDisputableAssertion(
@@ -42,9 +46,7 @@ library Disputable {
         bytes32 logsAccHash
     );
 
-    event InitiatedChallenge(
-        address challenger
-    );
+    event PendingAssertionCanceled();
 
 
     function pendingDisputableAssert(
@@ -93,14 +95,11 @@ library Disputable {
         vm.state = VM.State.PendingDisputable;
 
         emit PendingDisputableAssertion(
-            beforeHash,
-            beforeInbox,
-            afterHash,
-            messagesAccHash,
-            logsAccHash,
+            [beforeHash, beforeInbox, afterHash, messagesAccHash, logsAccHash],
             msg.sender,
             timeBounds,
-            numSteps
+            numSteps,
+            vm.deadline
         );
     }
 
@@ -156,10 +155,7 @@ library Disputable {
         _vm.pendingHash = 0;
         _vm.state = VM.State.Waiting;
         _vm.inChallenge = true;
-
-        emit InitiatedChallenge(
-            msg.sender
-        );
+        emit PendingAssertionCanceled();
     }
 
     function withinTimeBounds(uint64[2] memory _timeBounds) public view returns (bool) {

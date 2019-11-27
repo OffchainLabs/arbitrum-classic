@@ -354,7 +354,6 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, brdg bridge.ArbV
 	switch ev := ev.(type) {
 	case ethbridge.PendingDisputableAssertionEvent:
 		c := bot.GetCore()
-		deadline := time + bot.VMConfig.GracePeriod
 		var inboxVal value.Value
 		if c.GetMachine().InboxHash().Hash() != ev.Precondition.BeforeInboxValue() {
 			return nil, nil, errors.New("waiting observer has incorrect valmessage")
@@ -379,7 +378,7 @@ func (bot Waiting) updateState(ev ethbridge.Event, time uint64, brdg bridge.ArbV
 			bot.Config,
 			inboxVal,
 			core.NewCore(updatedState),
-			deadline,
+			ev.Deadline,
 			ev.Precondition,
 			assertion,
 		}, nil, nil
@@ -418,7 +417,7 @@ func (bot Waiting) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge br
 				bot.Config,
 				bot.GetCore(),
 				bot.assertion,
-				time + bot.VMConfig.GracePeriod,
+				ev.Deadline,
 				nil,
 				nil,
 			}, nil, nil
@@ -459,21 +458,20 @@ func (bot watchingAssertion) updateTime(time uint64, bridge bridge.ArbVMBridge) 
 func (bot watchingAssertion) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
-		deadline := time + bot.VMConfig.GracePeriod
 		var challengeState challenge.State
 		if ev.Challenger == bot.Address {
 			challengeState = challenger.New(
 				bot.Config,
 				bot.precondition,
 				bot.GetMachine().Clone(),
-				deadline,
+				ev.Deadline,
 			)
 		} else {
 			challengeState = observer.New(
 				bot.Config,
 				bot.precondition,
 				bot.assertion.Stub(),
-				deadline,
+				ev.Deadline,
 			)
 		}
 		return NewWaiting(bot.Config, bot.Core), challengeState, nil
@@ -528,10 +526,9 @@ func (bot attemptingAssertion) updateState(ev ethbridge.Event, time uint64, brid
 			return NewWaiting(bot.Config, bot.Core).ChainUpdateState(ev, time, bridge)
 		}
 
-		deadline := time + bot.VMConfig.GracePeriod
 		return waitingAssertion{
 			bot.disputableAssertCore,
-			deadline,
+			ev.Deadline,
 		}, nil, nil
 	default:
 		return nil, nil, &Error{nil, "ERROR: attemptingAssertion: VM state got unsynchronized"}
@@ -578,7 +575,7 @@ func (bot waitingAssertion) updateTime(time uint64, bridge bridge.ArbVMBridge) (
 }
 
 func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, challenge.State, error) {
-	switch ev.(type) {
+	switch ev := ev.(type) {
 	case ethbridge.InitiateChallengeEvent:
 		bot.resultChan <- false
 		ct, err := defender.New(
@@ -588,7 +585,7 @@ func (bot waitingAssertion) updateState(ev ethbridge.Event, time uint64, bridge 
 				bot.precondition,
 				bot.GetMachine().Clone(),
 			),
-			time,
+			ev.Deadline,
 			bridge,
 		)
 		return NewWaiting(bot.Config, bot.Core), ct, err
