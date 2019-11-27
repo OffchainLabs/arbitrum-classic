@@ -147,39 +147,32 @@ library Bisection {
         bytes32 beforeInbox;
     }
 
-    struct GenerateBisectionHashesImplFrame {
-        bytes32 preconditionHash;
-        bytes32 fullHash;
-        bytes32[] hashes;
-        uint32 stepCount;
-    }
-
     function generateBisectionDataImpl(
         BisectAssertionData memory _data
     )
         private
         pure
-        returns (bytes32, bytes32[] memory)
+        returns (bytes32 fullHash, bytes32[] memory hashes)
     {
-        GenerateBisectionHashesImplFrame memory frame;
-        frame.hashes = new bytes32[](_data.bisectionCount);
-        frame.stepCount = _data.totalSteps / _data.bisectionCount + 1;
+        bytes32 preconditionHash;
+        uint32 stepCount = _data.totalSteps / _data.bisectionCount + 1;
+        hashes = new bytes32[](_data.bisectionCount);
         uint j;
         for (j = 0; j < _data.bisectionCount; j++) {
             if (j == _data.totalSteps % _data.bisectionCount) {
-                frame.stepCount--;
+                stepCount--;
             }
-            frame.preconditionHash = ArbProtocol.generatePreconditionHash(
+            preconditionHash = ArbProtocol.generatePreconditionHash(
                 _data.bisectionFields[j * 3],
                 _data.timeBounds,
                 _data.beforeInbox
             );
-            frame.hashes[j] = keccak256(
+            hashes[j] = keccak256(
                 abi.encodePacked(
-                    frame.preconditionHash,
+                    preconditionHash,
                     ArbProtocol.generateAssertionHash(
                         _data.bisectionFields[(j + 1) * 3],
-                        frame.stepCount,
+                        stepCount,
                         _data.bisectionFields[j * 3 + 1],
                         _data.bisectionFields[(j + 1) * 3 + 1],
                         _data.bisectionFields[j * 3 + 2],
@@ -189,9 +182,9 @@ library Bisection {
             );
 
             if (j == 0) {
-                frame.fullHash = keccak256(
+                fullHash = keccak256(
                     abi.encodePacked(
-                        frame.preconditionHash,
+                        preconditionHash,
                         ArbProtocol.generateAssertionHash(
                             _data.bisectionFields[_data.bisectionCount * 3],
                             _data.totalSteps,
@@ -204,6 +197,6 @@ library Bisection {
                 );
             }
         }
-        return (frame.fullHash, frame.hashes);
+        return (fullHash, hashes);
     }
 }
