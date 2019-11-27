@@ -34,7 +34,7 @@ class CheckpointStorage;
 struct AssertionContext {
     uint32_t numSteps;
     TimeBounds timeBounds;
-    std::vector<Message> outMessage;
+    std::vector<value> outMessage;
     std::vector<value> logs;
 
     explicit AssertionContext(const TimeBounds& tb)

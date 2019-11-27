@@ -1525,9 +1525,6 @@ func TestSendFungible(t *testing.T) {
 	})
 	m.Stack().Push(tup)
 
-	// add tokens to balanceTracker
-	m.SendOnchainMessage(protocol.NewSimpleMessage(value.NewEmptyTuple(), tok, big.NewInt(10), common.Address{}))
-
 	// send token 15 value=7 to dest 4
 	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
 	// verify known and unknown match
@@ -1542,8 +1539,8 @@ func TestSendFungible(t *testing.T) {
 	dest := common.Address{}
 	dest[19] = 4
 	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	if !ad.OutMsgs[0].Equals(knownmessage) {
-		t.Error("Out message incorrect")
+	if !value.Eq(ad.OutMsgs[0], knownmessage.AsValue()) {
+		t.Errorf("Out message incorrect\nGot %v\nExpected %v\n", ad.OutMsgs[0], knownmessage.AsValue())
 	}
 }
 

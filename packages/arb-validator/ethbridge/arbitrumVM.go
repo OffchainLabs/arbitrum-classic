@@ -372,11 +372,6 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	dataHashes := make([][32]byte, 0, len(assertion.OutMsgs))
-	for _, msg := range assertion.OutMsgs {
-		dataHashes = append(dataHashes, msg.Data.Hash())
-	}
-
 	stub := assertion.Stub()
 	tx, err := vm.ArbitrumVM.PendingDisputableAssert(
 		auth,
@@ -401,15 +396,7 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messageData, tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	tx, err := vm.ArbitrumVM.ConfirmDisputableAsserted(
 		auth,
@@ -417,7 +404,7 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 		assertion.AfterHash,
 		assertion.NumSteps,
 		tokenTypes,
-		messageData.Bytes(),
+		messageData,
 		tokenNums,
 		amounts,
 		destinations,

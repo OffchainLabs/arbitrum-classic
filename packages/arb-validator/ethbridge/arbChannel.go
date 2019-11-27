@@ -17,7 +17,6 @@
 package ethbridge
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"math/big"
@@ -34,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 
@@ -186,22 +184,14 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messageData, tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.FinalizedUnanimousAssert(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
 		tokenTypes,
-		messageData.Bytes(),
+		messageData,
 		tokenNums,
 		amounts,
 		destinations,
@@ -248,22 +238,14 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messageData, tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.ConfirmUnanimousAsserted(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
 		tokenTypes,
-		messageData.Bytes(),
+		messageData,
 		tokenNums,
 		amounts,
 		destinations,

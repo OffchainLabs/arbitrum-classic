@@ -6,7 +6,7 @@ import (
 )
 
 type Context interface {
-	Send(message protocol.Message)
+	Send(message value.Value)
 	GetTimeBounds() value.Value
 	NotifyStep()
 	LoggedValue(value.Value)
@@ -20,7 +20,7 @@ func (m *NoContext) LoggedValue(data value.Value) {
 
 }
 
-func (m *NoContext) Send(message protocol.Message) {
+func (m *NoContext) Send(message value.Value) {
 
 }
 

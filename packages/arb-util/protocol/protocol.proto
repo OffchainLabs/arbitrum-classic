@@ -41,6 +41,6 @@ message AssertionStub {
 message AssertionBuf {
     value.HashBuf afterHash = 1;
     uint32 numSteps = 2;
-    repeated MessageBuf messages = 3;
+    repeated value.ValueBuf messages = 3;
     repeated value.ValueBuf logs = 4;
 }

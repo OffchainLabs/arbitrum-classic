@@ -25,7 +25,7 @@
 
 struct Assertion {
     uint64_t stepCount;
-    std::vector<Message> outMessages;
+    std::vector<value> outMessages;
     std::vector<value> logs;
 };
 

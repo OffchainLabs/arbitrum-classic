@@ -27,7 +27,7 @@ import (
 type Assertion struct {
 	AfterHash [32]byte
 	NumSteps  uint32
-	OutMsgs   []Message
+	OutMsgs   []value.Value
 	Logs      []value.Value
 }
 
@@ -36,7 +36,7 @@ type MultiReader interface {
 	io.ByteReader
 }
 
-func NewAssertion(afterHash [32]byte, numSteps uint32, outMsgs []Message, logs []value.Value) *Assertion {
+func NewAssertion(afterHash [32]byte, numSteps uint32, outMsgs []value.Value, logs []value.Value) *Assertion {
 	return &Assertion{afterHash, numSteps, outMsgs, logs}
 }
 
@@ -45,7 +45,7 @@ func (a *Assertion) Equals(b *Assertion) bool {
 		return false
 	}
 	for i, ao := range a.OutMsgs {
-		if !ao.Equals(b.OutMsgs[i]) {
+		if !value.Eq(ao, b.OutMsgs[i]) {
 			return false
 		}
 	}
@@ -69,7 +69,7 @@ func (a *Assertion) LogsHash() [32]byte {
 func (a *Assertion) Stub() *AssertionStub {
 	var lastHash [32]byte
 	for _, msg := range a.OutMsgs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.AsValue().Hash()))
+		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
 		copy(lastHash[:], next)
 	}
 

@@ -273,7 +273,7 @@ func (m *Machine) PendingMessageCount() uint64 {
 	return m.inbox.PendingQueue.MessageCount()
 }
 
-func (m *Machine) Send(message protocol.Message) {
+func (m *Machine) Send(message value.Value) {
 	m.context.Send(message)
 }
 

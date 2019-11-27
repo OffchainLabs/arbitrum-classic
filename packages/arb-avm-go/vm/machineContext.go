@@ -26,17 +26,16 @@ type MachineAssertionContext struct {
 	machine    *Machine
 	timeBounds *protocol.TimeBounds
 	numSteps   uint32
-	outMsgs    []protocol.Message
+	outMsgs    []value.Value
 	logs       []value.Value
 }
 
 func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBounds) *MachineAssertionContext {
-	outMsgs := make([]protocol.Message, 0)
 	ret := &MachineAssertionContext{
 		m,
 		timeBounds,
 		0,
-		outMsgs,
+		make([]value.Value, 0),
 		make([]value.Value, 0),
 	}
 	ret.machine.SetContext(ret)
@@ -47,7 +46,7 @@ func (ac *MachineAssertionContext) LoggedValue(data value.Value) {
 	ac.logs = append(ac.logs, data)
 }
 
-func (ac *MachineAssertionContext) Send(message protocol.Message) {
+func (ac *MachineAssertionContext) Send(message value.Value) {
 	ac.outMsgs = append(ac.outMsgs, message)
 }
 

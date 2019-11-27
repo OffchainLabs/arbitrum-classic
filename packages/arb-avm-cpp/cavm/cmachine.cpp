@@ -213,7 +213,7 @@ RawAssertion machineExecuteAssertion(CMachine* m,
     Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd);
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
-        marshal_value(outMsg.toValue(mach->getPool()), outMsgData);
+        marshal_value(outMsg, outMsgData);
     }
     std::vector<unsigned char> logData;
     for (const auto& log : assertion.logs) {

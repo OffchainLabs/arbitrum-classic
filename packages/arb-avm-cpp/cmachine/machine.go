@@ -164,23 +164,13 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
 	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)
-
 	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
-	outMessages := make([]protocol.Message, 0, len(outMessageVals))
-	for _, msgVal := range outMessageVals {
-		msg, err := protocol.NewMessageFromValue(msgVal)
-		if err != nil {
-			panic(err)
-		}
-		outMessages = append(outMessages, msg)
-	}
-
 	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
 
 	return protocol.NewAssertion(
 		m.Hash(),
 		uint32(assertion.numSteps),
-		outMessages,
+		outMessageVals,
 		logVals,
 	)
 }

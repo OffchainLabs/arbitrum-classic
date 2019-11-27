@@ -37,7 +37,7 @@ func TokenTypeFromIntValue(val value.IntValue) TokenType {
 
 func (t TokenType) ToIntValue() value.IntValue {
 	var bigtok [32]byte
-	copy(bigtok[:], t[:])
+	copy(bigtok[11:], t[:])
 	return value.NewIntValue(new(big.Int).SetBytes(bigtok[:]))
 }
 

@@ -22,7 +22,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -996,40 +995,30 @@ func insnLog(state *Machine) (StackMods, error) {
 	return mods, nil
 }
 
-func sendImpl(state *Machine) (protocol.Message, StackMods, error) {
+func insnSend(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 0)
 	sendData, mods, err := PopStackTuple(state, mods)
-	if err != nil {
-		return protocol.Message{}, mods, err
-	}
-
-	if sendData.Len() != 4 {
-		return protocol.Message{}, mods, err
-	}
-
-	data, _ := sendData.GetByInt64(0)
-	val2, _ := sendData.GetByInt64(1)
-	val3, _ := sendData.GetByInt64(2)
-	val4, _ := sendData.GetByInt64(3)
-
-	destination, ok2 := val2.(value.IntValue)
-	amount, ok3 := val3.(value.IntValue)
-	tokenType, ok4 := val4.(value.IntValue)
-
-	if !ok2 || !ok3 || !ok4 {
-		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
-		return protocol.Message{}, mods, err
-	}
-	return protocol.NewMessage(data, protocol.TokenTypeFromIntValue(tokenType), amount.BigInt(), destination.BigInt()), mods, nil
-}
-
-func insnSend(state *Machine) (StackMods, error) {
-	msg, mods, err := sendImpl(state)
 	if err != nil {
 		return mods, err
 	}
 
-	state.Send(msg)
+	if sendData.Len() != 4 {
+		return mods, err
+	}
+
+	val2, _ := sendData.GetByInt64(1)
+	val3, _ := sendData.GetByInt64(2)
+	val4, _ := sendData.GetByInt64(3)
+
+	_, ok2 := val2.(value.IntValue)
+	_, ok3 := val3.(value.IntValue)
+	_, ok4 := val4.(value.IntValue)
+
+	if !ok2 || !ok3 || !ok4 {
+		return mods, errors.New("Send instruction got incorrect type")
+	}
+
+	state.Send(sendData)
 	state.IncrPC()
 	return mods, nil
 }

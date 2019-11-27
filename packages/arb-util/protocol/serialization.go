@@ -68,25 +68,30 @@ func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 }
 
 func NewAssertionBuf(a *Assertion) *AssertionBuf {
-	messages := make([]*MessageBuf, 0, len(a.OutMsgs))
+	messages := make([]*value.ValueBuf, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {
-		messages = append(messages, NewMessageBuf(msg))
+		messages = append(messages, value.NewValueBuf(msg))
+	}
+	logs := make([]*value.ValueBuf, 0, len(a.Logs))
+	for _, msg := range a.OutMsgs {
+		logs = append(logs, value.NewValueBuf(msg))
 	}
 	return &AssertionBuf{
 		AfterHash: value.NewHashBuf(a.AfterHash),
 		NumSteps:  a.NumSteps,
 		Messages:  messages,
+		Logs:      logs,
 	}
 }
 
 func NewAssertionFromBuf(buf *AssertionBuf) (*Assertion, error) {
-	messages := make([]Message, 0, len(buf.Messages))
-	for _, msg := range buf.Messages {
-		m, err := NewMessageFromBuf(msg)
+	messages := make([]value.Value, 0, len(buf.Logs))
+	for _, valLog := range buf.Messages {
+		v, err := value.NewValueFromBuf(valLog)
 		if err != nil {
 			return nil, err
 		}
-		messages = append(messages, m)
+		messages = append(messages, v)
 	}
 
 	logs := make([]value.Value, 0, len(buf.Logs))
