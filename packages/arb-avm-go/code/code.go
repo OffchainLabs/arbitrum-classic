@@ -227,7 +227,7 @@ var InstructionStackPops = map[value.Opcode][]byte{
 	BREAKPOINT: {},
 	LOG:        {0},
 
-	SEND:    {1},
+	SEND:    {0},
 	GETTIME: {},
 	INBOX:   {0},
 	ERROR:   {},

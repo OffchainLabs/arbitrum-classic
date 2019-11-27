@@ -997,25 +997,9 @@ func insnLog(state *Machine) (StackMods, error) {
 
 func insnSend(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 0)
-	sendData, mods, err := PopStackTuple(state, mods)
+	sendData, mods, err := PopStackBox(state, mods)
 	if err != nil {
 		return mods, err
-	}
-
-	if sendData.Len() != 4 {
-		return mods, err
-	}
-
-	val2, _ := sendData.GetByInt64(1)
-	val3, _ := sendData.GetByInt64(2)
-	val4, _ := sendData.GetByInt64(3)
-
-	_, ok2 := val2.(value.IntValue)
-	_, ok3 := val3.(value.IntValue)
-	_, ok4 := val4.(value.IntValue)
-
-	if !ok2 || !ok3 || !ok4 {
-		return mods, errors.New("Send instruction got incorrect type")
 	}
 
 	state.Send(sendData)

@@ -221,7 +221,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::BREAKPOINT, {}},
     {OpCode::LOG, {false}},
 
-    {OpCode::SEND, {true}},
+    {OpCode::SEND, {false}},
     {OpCode::GETTIME, {}},
     {OpCode::INBOX, {false}},
     {OpCode::ERROR, {}},

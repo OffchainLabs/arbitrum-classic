@@ -966,7 +966,7 @@ library OneStepProof {
 
     // System operations
 
-    function sendInsn(
+    function executeSendInsn(
         ArbMachine.Machine memory,
         ArbValue.Value memory val1
     )
@@ -974,19 +974,6 @@ library OneStepProof {
         pure
         returns (bool, bytes32)
     {
-        bytes32 messageHash;
-        if (!val1.isTuple()) {
-            return (false, messageHash);
-        }
-        if (!val1.tupleVal[1].isInt()) {
-            return (false, messageHash);
-        }
-        if (!val1.tupleVal[2].isInt()) {
-            return (false, messageHash);
-        }
-        if (!val1.tupleVal[3].isInt()) {
-            return (false, messageHash);
-        }
         return (true, val1.hash().hash);
     }
 
@@ -1413,18 +1400,8 @@ library OneStepProof {
             }
 
         } else if (opCode == OP_SEND) {
-            (correct, messageHash) = sendInsn(endMachine, stackVals[0]);
+            (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
             if (correct) {
-                // require(
-                //     keccak256(
-                //         abi.encodePacked(
-                //             _data.firstMessage,
-                //             messageHash
-                //         )
-                //     ) == _data.lastMessage,
-                //     "sent message doesn't match output message"
-                // );
-
                 require(
                     keccak256(
                         abi.encodePacked(
@@ -1432,17 +1409,8 @@ library OneStepProof {
                             messageHash
                         )
                     ) == _data.lastMessage,
-                    string(abi.encodePacked(
-                        "sent message doesn't match output message\n",
-                        DebugPrint.bytes32string(_data.firstMessage),
-                        "\n",
-                        DebugPrint.bytes32string(messageHash),
-                        "\n",
-                        DebugPrint.bytes32string(_data.lastMessage),
-                        "\n"
-                    ))
+                    "sent message doesn't match output message"
                 );
-
 
                 require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
             } else {

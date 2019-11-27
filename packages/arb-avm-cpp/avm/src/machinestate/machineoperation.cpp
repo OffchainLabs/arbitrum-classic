@@ -551,12 +551,6 @@ void debug(MachineState& m) {
 
 BlockReason send(MachineState& m) {
     m.stack.prepForMod(1);
-    Message outMsg;
-    auto success = outMsg.deserialize(m.stack[0]);
-    if (!success) {
-        m.state = Status::Error;
-        return NotBlocked();
-    }
     m.context.outMessage.push_back(std::move(m.stack[0]));
     m.stack.popClear();
     ++m.pc;
