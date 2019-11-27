@@ -46,9 +46,6 @@ library Disputable {
         bytes32 logsAccHash
     );
 
-    event PendingAssertionCanceled();
-
-
     function pendingDisputableAssert(
         VM.Data storage vm,
         bytes32 beforeHash,
@@ -66,7 +63,7 @@ library Disputable {
             !VM.isErrored(vm) && !VM.isHalted(vm),
             "Can only disputable assert if machine is not errored or halted"
         );
-        require(!vm.inChallenge, "Can only disputable assert if not in challenge");
+        require(vm.activeChallengeManager == address(0), "Can only disputable assert if not in challenge");
         require(numSteps <= vm.maxExecutionSteps, "Tried to execute too many steps");
         require(withinTimeBounds(timeBounds), "Precondition: not within time bounds");
         require(beforeHash == vm.machineHash, "Precondition: state hash does not match");
@@ -154,8 +151,6 @@ library Disputable {
 
         _vm.pendingHash = 0;
         _vm.state = VM.State.Waiting;
-        _vm.inChallenge = true;
-        emit PendingAssertionCanceled();
     }
 
     function withinTimeBounds(uint64[2] memory _timeBounds) public view returns (bool) {

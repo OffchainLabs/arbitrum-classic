@@ -354,7 +354,7 @@ func NewCoordinator(
 		return nil, errors2.Wrap(err, "Validator couldn't get latest error")
 	}
 
-	c, err := NewValidator(val, vmID, machine, config)
+	c, err := NewValidator(val, vmID, machine, config, challengeEverything)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Error initializing Validator in coordinator")
 	}
@@ -365,8 +365,8 @@ func NewCoordinator(
 		val.Address(),
 		header,
 		config,
-		machine,
 		challengeEverything,
+		machine,
 		maxCallSteps,
 	)
 

@@ -20,8 +20,7 @@ import "./VM.sol";
 import "./Disputable.sol";
 
 import "../IGlobalPendingInbox.sol";
-
-import "../challenge/IChallengeManager.sol";
+import "../IChallengeLauncher.sol";
 
 import "../libraries/ArbProtocol.sol";
 import "../libraries/ArbValue.sol";
@@ -50,11 +49,14 @@ contract ArbitrumVM {
         bytes32 logsAccHash
     );
 
-    event PendingAssertionCanceled();
+    event ChallengeLaunched(
+        address challengeContract,
+        address challenger
+    );
 
     address internal constant ETH_ADDRESS = address(0);
 
-    IChallengeManager public challengeManager;
+    IChallengeLauncher public challengeLauncher;
     IGlobalPendingInbox public globalInbox;
 
     VM.Data public vm;
@@ -75,13 +77,13 @@ contract ArbitrumVM {
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
         address payable _owner,
-        address _challengeManagerAddress,
+        address _challengeLauncherAddress,
         address _globalInboxAddress
     )
         public
     {
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
-        challengeManager = IChallengeManager(_challengeManagerAddress);
+        challengeLauncher = IChallengeLauncher(_challengeLauncherAddress);
 
         globalInbox.registerForInbox();
         owner = _owner;
@@ -121,12 +123,11 @@ contract ArbitrumVM {
 
     function completeChallenge(address[2] calldata _players, uint128[2] calldata _rewards) external {
         require(
-            msg.sender == address(challengeManager),
+            msg.sender == address(vm.activeChallengeManager),
             "Only challenge manager can complete challenge"
         );
-        require(vm.inChallenge, "VM must be in challenge to complete it");
 
-        vm.inChallenge = false;
+        vm.activeChallengeManager = address(0);
         validatorBalances[_players[0]] = validatorBalances[_players[0]].add(_rewards[0]);
         validatorBalances[_players[1]] = validatorBalances[_players[1]].add(_rewards[1]);
     }
@@ -195,12 +196,14 @@ contract ArbitrumVM {
             _assertPreHash
         );
 
-        challengeManager.initiateChallenge(
+        vm.activeChallengeManager = challengeLauncher.launchChallenge(
             [vm.asserter, msg.sender],
             [vm.escrowRequired, vm.escrowRequired],
             vm.gracePeriod,
             _assertPreHash
         );
+
+        emit ChallengeLaunched(vm.activeChallengeManager, msg.sender);
     }
 
     function _completeAssertion(bytes memory _messages) internal {

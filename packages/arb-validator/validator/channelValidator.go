@@ -48,8 +48,8 @@ func NewChannelValidator(
 	address common.Address,
 	latestHeader *types.Header,
 	config *valmessage.VMConfiguration,
-	machine machine.Machine,
 	challengeEverything bool,
+	machine machine.Machine,
 	maxCallSteps int32,
 ) *ChannelValidator {
 	c := core.NewCore(

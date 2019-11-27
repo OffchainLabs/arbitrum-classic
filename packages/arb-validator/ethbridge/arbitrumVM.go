@@ -21,30 +21,45 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 	errors2 "github.com/pkg/errors"
 
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengemanager"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
+
+var pendingDisputableAssertionID common.Hash
+var confirmedDisputableAssertionID common.Hash
+var challengeLaunchedID common.Hash
+
+func init() {
+	parsed, err := abi.JSON(strings.NewReader(chainlauncher.ArbitrumVMABI))
+	if err != nil {
+		panic(err)
+	}
+	pendingDisputableAssertionID = parsed.Events["PendingDisputableAssertion"].ID()
+	confirmedDisputableAssertionID = parsed.Events["ConfirmedDisputableAssertion"].ID()
+	challengeLaunchedID = parsed.Events["ChallengeLaunched"].ID()
+}
 
 type ArbitrumVM struct {
 	OutChan            chan Notification
 	ErrChan            chan error
 	Client             *ethclient.Client
 	ArbitrumVM         *chainlauncher.ArbitrumVM
-	Challenge          *challengemanager.ChallengeManager
 	GlobalPendingInbox *chainlauncher.IGlobalPendingInbox
 
 	address common.Address
@@ -65,18 +80,6 @@ func (vm *ArbitrumVM) setupContracts() error {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
 
-	challengeManagerAddress, err := arbitrumVMContract.ChallengeManager(&bind.CallOpts{
-		Pending: false,
-		Context: context.Background(),
-	})
-	if err != nil {
-		return errors2.Wrap(err, "Failed to get ChallengeManager address")
-	}
-	challengeManagerContract, err := challengemanager.NewChallengeManager(challengeManagerAddress, vm.Client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
-	}
-
 	globalPendingInboxAddress, err := arbitrumVMContract.GlobalInbox(&bind.CallOpts{
 		Pending: false,
 		Context: context.Background(),
@@ -90,7 +93,6 @@ func (vm *ArbitrumVM) setupContracts() error {
 	}
 
 	vm.ArbitrumVM = arbitrumVMContract
-	vm.Challenge = challengeManagerContract
 	vm.GlobalPendingInbox = globalPendingContract
 	return nil
 }
@@ -121,50 +123,21 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 		return err
 	}
 
+	filter := ethereum.FilterQuery{
+		Addresses: []common.Address{vm.address},
+		Topics: [][]common.Hash{
+			{pendingDisputableAssertionID, confirmedDisputableAssertionID, challengeLaunchedID},
+		},
+	}
+
+	logChan := make(chan types.Log)
+	logSub, err := vm.Client.SubscribeFilterLogs(ctx, filter, logChan)
+	if err != nil {
+		return err
+	}
+
 	messageDeliveredChan := make(chan *chainlauncher.IGlobalPendingInboxMessageDelivered)
 	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
-	if err != nil {
-		return err
-	}
-
-	dispAssChan := make(chan *chainlauncher.ArbitrumVMPendingDisputableAssertion)
-	dispAssSub, err := vm.ArbitrumVM.WatchPendingDisputableAssertion(watch, dispAssChan)
-	if err != nil {
-		return err
-	}
-
-	confAssChan := make(chan *chainlauncher.ArbitrumVMConfirmedDisputableAssertion)
-	confAssSub, err := vm.ArbitrumVM.WatchConfirmedDisputableAssertion(watch, confAssChan)
-	if err != nil {
-		return err
-	}
-
-	challengeInitiatedChan := make(chan *challengemanager.ChallengeManagerInitiatedChallenge)
-	challengeInitiatedSub, err := vm.Challenge.WatchInitiatedChallenge(watch, challengeInitiatedChan, []common.Address{vm.address})
-	if err != nil {
-		return err
-	}
-
-	challengeBisectedChan := make(chan *challengemanager.ChallengeManagerBisectedAssertion)
-	challengeBisectedSub, err := vm.Challenge.WatchBisectedAssertion(watch, challengeBisectedChan, []common.Address{vm.address})
-	if err != nil {
-		return err
-	}
-
-	challengeContinuedChan := make(chan *challengemanager.ChallengeManagerContinuedChallenge)
-	challengeContinuedSub, err := vm.Challenge.WatchContinuedChallenge(watch, challengeContinuedChan, []common.Address{vm.address})
-	if err != nil {
-		return err
-	}
-
-	challengeTimedOutChan := make(chan *challengemanager.ChallengeManagerTimedOutChallenge)
-	challengeTimedOutSub, err := vm.Challenge.WatchTimedOutChallenge(watch, challengeTimedOutChan, []common.Address{vm.address})
-	if err != nil {
-		return err
-	}
-
-	oneStepProofChan := make(chan *challengemanager.ChallengeManagerOneStepProofCompleted)
-	oneStepProofSub, err := vm.Challenge.WatchOneStepProofCompleted(watch, oneStepProofChan, []common.Address{vm.address})
 	if err != nil {
 		return err
 	}
@@ -172,13 +145,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 	go func() {
 		defer headersSub.Unsubscribe()
 		defer messageDeliveredSub.Unsubscribe()
-		defer dispAssSub.Unsubscribe()
-		defer confAssSub.Unsubscribe()
-		defer challengeInitiatedSub.Unsubscribe()
-		defer challengeBisectedSub.Unsubscribe()
-		defer challengeInitiatedSub.Unsubscribe()
-		defer challengeContinuedSub.Unsubscribe()
-		defer oneStepProofSub.Unsubscribe()
+		defer logSub.Unsubscribe()
 
 		for {
 			select {
@@ -226,118 +193,10 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					},
 					TxHash: val.Raw.TxHash,
 				}
-			case val := <-dispAssChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
+			case log := <-logChan:
+				if err := vm.processEvents(ctx, log); err != nil {
 					vm.ErrChan <- err
 					return
-				}
-
-				precondition, assertion := translateDisputableAssertionEvent(val)
-				vm.OutChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: PendingDisputableAssertionEvent{
-						Precondition: precondition,
-						Assertion:    assertion,
-						Asserter:     val.Asserter,
-						Deadline:     val.Deadline,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-confAssChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-				vm.OutChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: ConfirmedDisputableAssertEvent{
-						val.Raw.TxHash,
-						val.LogsAccHash,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-challengeInitiatedChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-				vm.OutChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: InitiateChallengeEvent{
-						Challenger: val.Challenger,
-						Deadline:   val.Deadline,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-challengeBisectedChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-
-				vm.OutChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: BisectionEvent{
-						Assertions: translateBisectionEvent(val),
-						Deadline:   val.Deadline,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-challengeTimedOutChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-				if val.ChallengerWrong {
-					vm.OutChan <- Notification{
-						Header: header,
-						VMID:   vm.address,
-						Event:  AsserterTimeoutEvent{},
-						TxHash: val.Raw.TxHash,
-					}
-				} else {
-					vm.OutChan <- Notification{
-						Header: header,
-						VMID:   vm.address,
-						Event:  ChallengerTimeoutEvent{},
-						TxHash: val.Raw.TxHash,
-					}
-				}
-			case val := <-challengeContinuedChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-				vm.OutChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event: ContinueChallengeEvent{
-						ChallengedAssertion: uint16(val.AssertionIndex.Uint64()),
-						Deadline:            val.Deadline,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case val := <-oneStepProofChan:
-				header, err := vm.Client.HeaderByHash(ctx, val.Raw.BlockHash)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-				vm.OutChan <- Notification{
-					Header: header,
-					VMID:   vm.address,
-					Event:  OneStepProofEvent{},
-					TxHash: val.Raw.TxHash,
 				}
 			case err := <-headersSub.Err():
 				vm.ErrChan <- err
@@ -345,30 +204,66 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 			case err := <-messageDeliveredSub.Err():
 				vm.ErrChan <- err
 				return
-			case err := <-dispAssSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-confAssSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-challengeInitiatedSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-challengeBisectedSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-challengeContinuedSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-challengeTimedOutSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-oneStepProofSub.Err():
+			case err := <-logSub.Err():
 				vm.ErrChan <- err
 				return
 			}
 		}
 	}()
+	return nil
+}
+
+func (vm *ArbitrumVM) processEvents(ctx context.Context, log types.Log) error {
+	header, err := vm.Client.HeaderByHash(ctx, log.BlockHash)
+	if err != nil {
+		return err
+	}
+	if log.Topics[0] == pendingDisputableAssertionID {
+		pendingDisVal, err := vm.ArbitrumVM.ParsePendingDisputableAssertion(log)
+		if err != nil {
+			return err
+		}
+		precondition, assertion := translateDisputableAssertionEvent(pendingDisVal)
+		vm.OutChan <- Notification{
+			Header: header,
+			VMID:   vm.address,
+			Event: PendingDisputableAssertionEvent{
+				Precondition: precondition,
+				Assertion:    assertion,
+				Asserter:     pendingDisVal.Asserter,
+				Deadline:     pendingDisVal.Deadline,
+			},
+			TxHash: log.TxHash,
+		}
+	} else if log.Topics[0] == confirmedDisputableAssertionID {
+		confDisVal, err := vm.ArbitrumVM.ParseConfirmedDisputableAssertion(log)
+		if err != nil {
+			return err
+		}
+		vm.OutChan <- Notification{
+			Header: header,
+			VMID:   vm.address,
+			Event: ConfirmedDisputableAssertEvent{
+				log.TxHash,
+				confDisVal.LogsAccHash,
+			},
+			TxHash: log.TxHash,
+		}
+	} else if log.Topics[0] == challengeLaunchedID {
+		challengedVal, err := vm.ArbitrumVM.ParseChallengeLaunched(log)
+		if err != nil {
+			return err
+		}
+		vm.OutChan <- Notification{
+			Header: header,
+			VMID:   vm.address,
+			Event: ChallengeLaunchedEvent{
+				ChallengeAddress: challengedVal.ChallengeContract,
+				Challenger:       challengedVal.Challenger,
+			},
+			TxHash: log.TxHash,
+		}
+	}
 	return nil
 }
 
@@ -435,109 +330,6 @@ func (vm *ArbitrumVM) InitiateChallenge(
 	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "InitiateChallenge")
 }
 
-func (vm *ArbitrumVM) BisectAssertion(
-	auth *bind.TransactOpts,
-	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
-) (*types.Receipt, error) {
-	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
-	totalSteps := uint32(0)
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHashValue())
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHashValue())
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHashValue())
-	for _, assertion := range assertions {
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHashValue())
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHashValue())
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHashValue())
-		totalSteps += assertion.NumSteps
-	}
-	tx, err := vm.Challenge.BisectAssertion(
-		auth,
-		vm.address,
-		precondition.BeforeInboxValue(),
-		afterHashAndMessageAndLogsBisections,
-		totalSteps,
-		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
-	)
-	if err != nil {
-		return nil, err
-	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "BisectAssertion")
-}
-
-func (vm *ArbitrumVM) ContinueChallenge(
-	auth *bind.TransactOpts,
-	assertionToChallenge uint16,
-	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
-) (*types.Receipt, error) {
-	tree := buildBisectionTree(precondition, assertions)
-	tx, err := vm.Challenge.ContinueChallenge(
-		auth,
-		vm.address,
-		big.NewInt(int64(assertionToChallenge)),
-		tree.GetProofFlat(int(assertionToChallenge)),
-		tree.GetRoot(),
-		tree.GetNode(int(assertionToChallenge)),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ContinueChallenge")
-}
-
-func (vm *ArbitrumVM) OneStepProof(
-	auth *bind.TransactOpts,
-	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
-	proof []byte,
-) (*types.Receipt, error) {
-	tx, err := vm.Challenge.OneStepProof(
-		auth,
-		vm.address,
-		[2][32]byte{precondition.BeforeHashValue(), precondition.BeforeInboxValue()},
-		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
-		[5][32]byte{
-			assertion.AfterHashValue(),
-			assertion.FirstMessageHashValue(),
-			assertion.LastMessageHashValue(),
-			assertion.FirstLogHashValue(),
-			assertion.LastLogHashValue(),
-		},
-		proof,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "OneStepProof")
-}
-
-func (vm *ArbitrumVM) AsserterTimedOutChallenge(
-	auth *bind.TransactOpts,
-) (*types.Receipt, error) {
-	tx, err := vm.Challenge.AsserterTimedOut(
-		auth,
-		vm.address,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "AsserterTimedOut")
-}
-
-func (vm *ArbitrumVM) ChallengerTimedOutChallenge(
-	auth *bind.TransactOpts,
-) (*types.Receipt, error) {
-	tx, err := vm.Challenge.ChallengerTimedOut(
-		auth,
-		vm.address,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ChallengerTimedOut")
-}
-
 func (vm *ArbitrumVM) CurrentDeposit(
 	auth *bind.CallOpts,
 	address common.Address,
@@ -565,7 +357,7 @@ func (vm *ArbitrumVM) IsInChallenge(
 	if err != nil {
 		return false, err
 	}
-	return vmState.InChallenge, nil
+	return vmState.ActiveChallengeManager != [20]byte{}, nil
 }
 
 func (vm *ArbitrumVM) IsPendingUnanimous(
@@ -611,43 +403,6 @@ func (vm *ArbitrumVM) VerifyVM(
 		return errors.New("VM has different owner")
 	}
 	return nil
-}
-
-func buildBisectionTree(precondition *protocol.Precondition, assertions []*protocol.AssertionStub) *MerkleTree {
-	bisectionHashes := make([][32]byte, 0, len(assertions))
-	preconditions := protocol.GeneratePreconditions(precondition, assertions)
-	for i := range assertions {
-		bisectionBytes := solsha3.SoliditySHA3(
-			solsha3.Bytes32(preconditions[i].Hash()),
-			solsha3.Bytes32(assertions[i].Hash()),
-		)
-		bisectionHash := [32]byte{}
-		copy(bisectionHash[:], bisectionBytes)
-		bisectionHashes = append(bisectionHashes, bisectionHash)
-	}
-	return NewMerkleTree(bisectionHashes)
-}
-
-func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAssertion) []*protocol.AssertionStub {
-	bisectionCount := len(event.AfterHashAndMessageAndLogsBisections)/3 - 1
-	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
-	stepCount := event.TotalSteps / uint32(bisectionCount)
-	for i := 0; i < bisectionCount; i++ {
-		steps := stepCount
-		if uint32(i) < event.TotalSteps%uint32(bisectionCount) {
-			steps++
-		}
-		assertion := &protocol.AssertionStub{
-			AfterHash:        value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3]),
-			NumSteps:         steps,
-			FirstMessageHash: value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+1]),
-			LastMessageHash:  value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+1]),
-			FirstLogHash:     value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+2]),
-			LastLogHash:      value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+2]),
-		}
-		assertions = append(assertions, assertion)
-	}
-	return assertions
 }
 
 func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {

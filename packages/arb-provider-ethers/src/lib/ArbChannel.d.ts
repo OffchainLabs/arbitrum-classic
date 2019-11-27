@@ -90,8 +90,8 @@ interface ArbChannelInterface extends Interface {
             encodeTopics([newState, logsAccHash]: [null, null]): string[];
         }>;
 
-        PendingAssertionCanceled: TypedEventDescription<{
-            encodeTopics([]: []): string[];
+        ChallengeLaunched: TypedEventDescription<{
+            encodeTopics([challengeContract, challenger]: [null, null]): string[];
         }>;
     };
 }
@@ -123,7 +123,7 @@ export class ArbChannel extends Contract {
             gracePeriod: number;
             maxExecutionSteps: number;
             state: number;
-            inChallenge: boolean;
+            activeChallengeManager: string;
             0: string;
             1: string;
             2: string;
@@ -134,7 +134,7 @@ export class ArbChannel extends Contract {
             7: number;
             8: number;
             9: number;
-            10: boolean;
+            10: string;
         }>;
 
         isListedValidator(validator: string): Promise<boolean>;
@@ -200,12 +200,12 @@ export class ArbChannel extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        challengeManager(): Promise<string>;
         validatorCount(): Promise<number>;
         getState(): Promise<number>;
         terminateAddress(): Promise<string>;
         exitAddress(): Promise<string>;
         activatedValidators(): Promise<number>;
+        challengeLauncher(): Promise<string>;
         owner(): Promise<string>;
         escrowRequired(): Promise<BigNumber>;
         globalInbox(): Promise<string>;
@@ -228,7 +228,7 @@ export class ArbChannel extends Contract {
 
         ConfirmedDisputableAssertion(newState: null, logsAccHash: null): EventFilter;
 
-        PendingAssertionCanceled(): EventFilter;
+        ChallengeLaunched(challengeContract: null, challenger: null): EventFilter;
     };
 
     estimate: {

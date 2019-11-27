@@ -40,7 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -79,13 +78,13 @@ func (bot *ChainBot) updateTime(time uint64) error {
 	return nil
 }
 
-func (bot *ChainBot) updateState(ev ethbridge.Event, time uint64) (challenge.State, error) {
-	newBot, challengeBot, err := bot.ChainState.ChainUpdateState(ev, time, bot.bridge)
+func (bot *ChainBot) updateState(ev ethbridge.Event, time uint64) error {
+	newBot, err := bot.ChainState.ChainUpdateState(ev, time, bot.bridge)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	bot.ChainState = newBot
-	return challengeBot, nil
+	return nil
 }
 
 type ChannelBot struct {
@@ -122,19 +121,19 @@ func (bot *ChannelBot) updateTime(time uint64) error {
 	return nil
 }
 
-func (bot *ChannelBot) updateState(ev ethbridge.Event, time uint64) (challenge.State, error) {
-	newBot, challengeBot, err := bot.ChannelState.ChannelUpdateState(ev, time, bot.bridge)
+func (bot *ChannelBot) updateState(ev ethbridge.Event, time uint64) error {
+	newBot, err := bot.ChannelState.ChannelUpdateState(ev, time, bot.bridge)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	bot.ChannelState = newBot
-	return challengeBot, nil
+	return nil
 }
 
 type Bot interface {
 	state.State
 	updateTime(uint64) error
-	updateState(ethbridge.Event, uint64) (challenge.State, error)
+	updateState(ethbridge.Event, uint64) error
 	getBridge() bridge.ArbVMBridge
 	attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) (bool, error)
 }
@@ -146,7 +145,6 @@ type Validator struct {
 
 	// Run loop only
 	bot                      Bot
-	challengeBot             challenge.State
 	latestHeader             *types.Header
 	pendingDisputableRequest *disputable.AssertionRequest
 }
@@ -163,7 +161,6 @@ func NewValidator(
 		actions,
 		maybeAssert,
 		bot,
-		nil,
 		latestHeader,
 		nil,
 	}
@@ -339,7 +336,7 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 			newHeader := notification.Header
 			if validator.latestHeader == nil || newHeader.Number.Uint64() >= validator.latestHeader.Number.Uint64() && newHeader.Hash() != validator.latestHeader.Hash() {
 				validator.latestHeader = newHeader
-				err := validator.timeUpdate()
+				err := validator.bot.updateTime(validator.latestHeader.Number.Uint64())
 				if err != nil {
 					//log.Printf("Validator %v: Error processing time update - %v\n", validator.Name, err)
 					if errstat, ok := err.(*bridge.Error); ok {
@@ -371,7 +368,7 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 			case ethbridge.NewTimeEvent:
 				break
 			case ethbridge.VMEvent:
-				err := validator.eventUpdate(ev, notification.Header)
+				err := validator.bot.updateState(ev, notification.Header.Number.Uint64())
 				if err != nil {
 					//log.Printf("*****Validator %v: error - %v\n", validator.Name, err)
 					if errstat, ok := err.(*bridge.Error); ok {
@@ -406,38 +403,4 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 			validator.pendingDisputableRequest = nil
 		}
 	}
-}
-
-func (validator *Validator) timeUpdate() error {
-	if validator.challengeBot != nil {
-		newBot, err := validator.challengeBot.UpdateTime(validator.latestHeader.Number.Uint64(), validator.bot.getBridge())
-		if err != nil {
-			return err
-		}
-		validator.challengeBot = newBot
-	}
-	return validator.bot.updateTime(validator.latestHeader.Number.Uint64())
-}
-
-func (validator *Validator) eventUpdate(ev ethbridge.VMEvent, header *types.Header) error {
-	if ev.GetIncomingMessageType() == ethbridge.ChallengeMessage {
-		if validator.challengeBot == nil {
-			panic("challengeBot can't be nil if challenge message is recieved")
-		}
-
-		newBot, err := validator.challengeBot.UpdateState(ev, header.Number.Uint64(), validator.bot.getBridge())
-		if err != nil {
-			return err
-		}
-		validator.challengeBot = newBot
-	} else {
-		challengeBot, err := validator.bot.updateState(ev, header.Number.Uint64())
-		if err != nil {
-			return err
-		}
-		if challengeBot != nil {
-			validator.challengeBot = challengeBot
-		}
-	}
-	return nil
 }

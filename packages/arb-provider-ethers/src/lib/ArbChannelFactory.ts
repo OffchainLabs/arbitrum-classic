@@ -15,20 +15,6 @@ export class ArbChannelFactory {
 const _abi = [
     {
         constant: true,
-        inputs: [],
-        name: 'challengeManager',
-        outputs: [
-            {
-                name: '',
-                type: 'address',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        constant: true,
         inputs: [
             {
                 name: 'validator',
@@ -152,8 +138,8 @@ const _abi = [
                 type: 'uint8',
             },
             {
-                name: 'inChallenge',
-                type: 'bool',
+                name: 'activeChallengeManager',
+                type: 'address',
             },
         ],
         payable: false,
@@ -196,6 +182,20 @@ const _abi = [
             {
                 name: '',
                 type: 'uint16',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [],
+        name: 'challengeLauncher',
+        outputs: [
+            {
+                name: '',
+                type: 'address',
             },
         ],
         payable: false,
@@ -353,7 +353,7 @@ const _abi = [
                 type: 'address',
             },
             {
-                name: '_challengeManagerAddress',
+                name: '_challengeLauncherAddress',
                 type: 'address',
             },
             {
@@ -466,8 +466,19 @@ const _abi = [
     },
     {
         anonymous: false,
-        inputs: [],
-        name: 'PendingAssertionCanceled',
+        inputs: [
+            {
+                indexed: false,
+                name: 'challengeContract',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'challenger',
+                type: 'address',
+            },
+        ],
+        name: 'ChallengeLaunched',
         type: 'event',
     },
     {

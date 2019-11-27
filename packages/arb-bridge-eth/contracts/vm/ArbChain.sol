@@ -27,7 +27,7 @@ contract ArbChain is ArbitrumVM {
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
         address payable _owner,
-        address _challengeManagerAddress,
+        address _challengeLauncherAddress,
         address _globalInboxAddress
     )
         ArbitrumVM(
@@ -36,7 +36,7 @@ contract ArbChain is ArbitrumVM {
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            _challengeManagerAddress,
+            _challengeLauncherAddress,
             _globalInboxAddress
         )
         public

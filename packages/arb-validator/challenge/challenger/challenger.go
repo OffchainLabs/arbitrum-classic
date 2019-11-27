@@ -49,7 +49,7 @@ type waitingContinuing struct {
 	challengeEverything    bool
 }
 
-func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Challenge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -59,7 +59,7 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) 
 	return challenge.TimedOutAsserter{}, err
 }
 
-func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
 		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
@@ -105,7 +105,7 @@ type continuing struct {
 	challengeEverything bool
 }
 
-func (bot continuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot continuing) UpdateTime(time uint64, bridge bridge.Challenge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -119,7 +119,7 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challe
 	return challenge.TimedOutChallenger{}, nil
 }
 
-func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
+func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		preconditions := protocol.GeneratePreconditions(bot.precondition, bot.assertions)

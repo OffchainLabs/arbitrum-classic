@@ -48,7 +48,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
         address payable _owner,
-        address _challengeManagerAddress,
+        address _challengeLauncherAddress,
         address _globalInboxAddress,
         address[] memory _validatorKeys
     )
@@ -58,7 +58,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            _challengeManagerAddress,
+            _challengeLauncherAddress,
             _globalInboxAddress
         )
         public

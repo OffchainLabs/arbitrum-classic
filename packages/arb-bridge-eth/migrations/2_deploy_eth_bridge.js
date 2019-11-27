@@ -22,17 +22,16 @@ var ArbValue = artifacts.require("./ArbValue.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
 var Bisection = artifacts.require("./Bisection.sol");
-var ChainLauncher = artifacts.require("./ChainLauncher.sol");
-var ChannelLauncher = artifacts.require("./ChannelLauncher.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
 var MerkleLib = artifacts.require("./MerkleLib.sol");
 var SigUtils = artifacts.require("./SigUtils.sol");
-var ChallengeManager = artifacts.require("./ChallengeManager.sol");
+
+var ChallengeLauncher = artifacts.require("./ChallengeLauncher.sol");
+var ChainLauncher = artifacts.require("./ChainLauncher.sol");
+var ChannelLauncher = artifacts.require("./ChannelLauncher.sol");
 var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
-var ArbitrumVM = artifacts.require("./ArbitrumVM.sol");
-var ArbChannel = artifacts.require("./ArbChannel.sol");
 
 module.exports = async function(deployer, network, accounts) {
   deployer.deploy(DebugPrint);
@@ -54,14 +53,12 @@ module.exports = async function(deployer, network, accounts) {
     ArbMachine,
     ArbProtocol,
     Disputable,
-    ArbitrumVM,
     ChainLauncher,
     ChannelLauncher
   ]);
 
   deployer.deploy(ArbProtocol);
   deployer.link(ArbProtocol, [
-    ArbitrumVM,
     OneStepProof,
     Disputable,
     Bisection,
@@ -74,37 +71,31 @@ module.exports = async function(deployer, network, accounts) {
   deployer.link(ArbMachine, [OneStepProof]);
 
   deployer.deploy(OneStepProof);
-  deployer.link(OneStepProof, ChallengeManager);
+  deployer.link(OneStepProof, ChallengeLauncher);
 
   deployer.deploy(Bisection);
-  deployer.link(Bisection, ChallengeManager);
+  deployer.link(Bisection, ChallengeLauncher);
 
   deployer.deploy(VM);
-  deployer.link(VM, [
-    Disputable,
-    Unanimous,
-    ArbitrumVM,
-    ChainLauncher,
-    ChannelLauncher
-  ]);
+  deployer.link(VM, [Disputable, Unanimous, ChainLauncher, ChannelLauncher]);
 
   deployer.deploy(Disputable);
-  deployer.link(Disputable, [ArbitrumVM, ChainLauncher, ChannelLauncher]);
+  deployer.link(Disputable, [ChainLauncher, ChannelLauncher]);
 
   deployer.deploy(Unanimous);
-  deployer.link(Unanimous, [ArbChannel, ChannelLauncher]);
+  deployer.link(Unanimous, [ChannelLauncher]);
 
   await deployer.deploy(GlobalPendingInbox);
-  await deployer.deploy(ChallengeManager);
+  await deployer.deploy(ChallengeLauncher);
   await deployer.deploy(
     ChainLauncher,
     GlobalPendingInbox.address,
-    ChallengeManager.address
+    ChallengeLauncher.address
   );
   await deployer.deploy(
     ChannelLauncher,
     GlobalPendingInbox.address,
-    ChallengeManager.address
+    ChallengeLauncher.address
   );
 
   const fs = require("fs");

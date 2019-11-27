@@ -25,11 +25,11 @@ contract ChannelLauncher {
     );
 
     address globalInboxAddress;
-    address challengeManagerAddress;
+    address challengeLauncherAddress;
 
-    constructor(address _globalInboxAddress, address _challengeManagerAddress) public {
+    constructor(address _globalInboxAddress, address _challengeLauncherAddress) public {
         globalInboxAddress = _globalInboxAddress;
-        challengeManagerAddress = _challengeManagerAddress;
+        challengeLauncherAddress = _challengeLauncherAddress;
     }
 
     function launchChannel(
@@ -48,7 +48,7 @@ contract ChannelLauncher {
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            challengeManagerAddress,
+            challengeLauncherAddress,
             globalInboxAddress,
             _validatorKeys
         );

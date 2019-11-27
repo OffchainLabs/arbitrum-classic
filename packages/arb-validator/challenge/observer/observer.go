@@ -17,31 +17,24 @@
 package observer
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func New(
-	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
 	deadline uint64,
 ) challenge.State {
 	return waitingChallenge{
-		precondition: precondition,
-		assertion:    assertion,
-		deadline:     deadline,
+		deadline: deadline,
 	}
 }
 
 type waitingChallenge struct {
-	precondition *protocol.Precondition
-	assertion    *protocol.AssertionStub
-	deadline     uint64
+	deadline uint64
 }
 
-func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.Challenge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -54,23 +47,20 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (
 	return challenge.TimedOutAsserter{}, nil
 }
 
-func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.BisectionEvent:
-		preconditions := protocol.GeneratePreconditions(bot.precondition, ev.Assertions)
-		return waitingBisected{ev.Deadline, preconditions, ev.Assertions}, nil
+		return waitingBisected{ev.Deadline}, nil
 	default:
 		return nil, &bridge.Error{Message: "ERROR: waitingChallenge: VM state got unsynchronized"}
 	}
 }
 
 type waitingBisected struct {
-	deadline      uint64
-	preconditions []*protocol.Precondition
-	assertions    []*protocol.AssertionStub
+	deadline uint64
 }
 
-func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Challenge) (challenge.State, error) {
 	if time <= bot.deadline {
 		return bot, nil
 	}
@@ -83,12 +73,10 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.ArbVMBridge) (c
 	return challenge.TimedOutChallenger{}, nil
 }
 
-func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.ArbVMBridge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case ethbridge.ContinueChallengeEvent:
 		return waitingChallenge{
-			bot.preconditions[ev.ChallengedAssertion],
-			bot.assertions[ev.ChallengedAssertion],
 			ev.Deadline,
 		}, nil
 	default:

@@ -25,11 +25,11 @@ contract ChainLauncher {
     );
 
     address globalInboxAddress;
-    address challengeManagerAddress;
+    address challengeLauncherAddress;
 
-    constructor(address _globalInboxAddress, address _challengeManagerAddress) public {
+    constructor(address _globalInboxAddress, address _challengeLauncherAddress) public {
         globalInboxAddress = _globalInboxAddress;
-        challengeManagerAddress = _challengeManagerAddress;
+        challengeLauncherAddress = _challengeLauncherAddress;
     }
 
     function launchChain(
@@ -47,7 +47,7 @@ contract ChainLauncher {
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            challengeManagerAddress,
+            challengeLauncherAddress,
             globalInboxAddress
         );
         emit ChainCreated(

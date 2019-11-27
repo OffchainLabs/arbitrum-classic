@@ -25,14 +25,12 @@ import "../libraries/ArbProtocol.sol";
 library Bisection {
 
     event ContinuedChallenge (
-        address indexed vmAddress,
         address challenger,
         uint assertionIndex,
         uint64 deadline
     );
 
     event BisectedAssertion(
-        address indexed vmAddress,
         address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
         uint32 totalSteps,
@@ -73,7 +71,7 @@ library Bisection {
         _challenge.state = Challenge.State.Challenged;
         _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
         _challenge.challengeState = _bisectionHash;
-        emit ContinuedChallenge(_challenge.vmAddress, _challenge.players[1], _assertionToChallenge, _challenge.deadline);
+        emit ContinuedChallenge(_challenge.players[1], _assertionToChallenge, _challenge.deadline);
     }
 
     function bisectAssertion(
@@ -121,7 +119,6 @@ library Bisection {
         _challenge.challengeState = MerkleLib.generateRoot(bisectionHashes);
 
         emit BisectedAssertion(
-            _challenge.vmAddress,
             _challenge.players[0],
             _afterHashAndMessageAndLogsBisections,
             _totalSteps,

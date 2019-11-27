@@ -54,8 +54,8 @@ interface ArbChainInterface extends Interface {
             encodeTopics([newState, logsAccHash]: [null, null]): string[];
         }>;
 
-        PendingAssertionCanceled: TypedEventDescription<{
-            encodeTopics([]: []): string[];
+        ChallengeLaunched: TypedEventDescription<{
+            encodeTopics([challengeContract, challenger]: [null, null]): string[];
         }>;
     };
 }
@@ -87,7 +87,7 @@ export class ArbChain extends Contract {
             gracePeriod: number;
             maxExecutionSteps: number;
             state: number;
-            inChallenge: boolean;
+            activeChallengeManager: string;
             0: string;
             1: string;
             2: string;
@@ -98,7 +98,7 @@ export class ArbChain extends Contract {
             7: number;
             8: number;
             9: number;
-            10: boolean;
+            10: string;
         }>;
 
         completeChallenge(
@@ -135,10 +135,10 @@ export class ArbChain extends Contract {
 
         increaseDeposit(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        challengeManager(): Promise<string>;
         getState(): Promise<number>;
         terminateAddress(): Promise<string>;
         exitAddress(): Promise<string>;
+        challengeLauncher(): Promise<string>;
         owner(): Promise<string>;
         escrowRequired(): Promise<BigNumber>;
         globalInbox(): Promise<string>;
@@ -155,7 +155,7 @@ export class ArbChain extends Contract {
 
         ConfirmedDisputableAssertion(newState: null, logsAccHash: null): EventFilter;
 
-        PendingAssertionCanceled(): EventFilter;
+        ChallengeLaunched(challengeContract: null, challenger: null): EventFilter;
     };
 
     estimate: {
