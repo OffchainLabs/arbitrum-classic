@@ -38,56 +38,50 @@ library Unanimous {
         bytes32 unanHash
     );
 
-    struct PendingUnanimousAssertData {
-        bytes32 unanRest;
-        uint64 sequenceNum;
-        bytes32 messagesAccHash;
-        bytes32 logsAccHash;
-        bytes signatures;
-    }
-
-    struct FinalizedUnanimousAssertData {
-        bytes32 afterHash;
-        bytes32 newInbox;
-        bytes21[] tokenTypes;
-        VM.FullAssertion assertion;
-        bytes signatures;
-    }
-
-    // fields
-    //   _afterHash
-    //   _newInbox
-    //   _logsAccHash
-
     function finalizedUnanimousAssert(
-        VM.Data storage _vm,
+        VM.Data storage vm,
         IArbChannel channel,
-        bytes32[3] memory _fields,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations,
-        bytes memory _signatures
+        bytes32 afterHash,
+        bytes32 newInbox,
+        bytes memory messages,
+        bytes32 logsAccHash,
+        bytes memory signatures
     )
         public
     {
-        _finalizedUnanimousAssert(
-            _vm,
+        require(!VM.isHalted(vm), "Can't assert halted machine");
+        require(
+            vm.state == VM.State.Waiting ||
+            vm.state == VM.State.PendingDisputable ||
+            vm.state == VM.State.PendingUnanimous,
+            "Tried to finalize unanimous from invalid state"
+        );
+        if (vm.state != VM.State.Waiting) {
+            require(block.number <= vm.deadline, "Can't cancel finalized state");
+        }
+        bool allSigned;
+        bytes32 unanHash;
+        (allSigned, unanHash) = _checkAllSignedAssertion(
+            vm,
             channel,
-            FinalizedUnanimousAssertData(
-                _fields[0],
-                _fields[1],
-                _tokenTypes,
-                VM.FullAssertion(
-                    _messageData,
-                    _messageTokenNums,
-                    _messageAmounts,
-                    _messageDestinations,
-                    _fields[2]
-                ),
-                _signatures
-            )
+            keccak256(
+                abi.encodePacked(
+                    newInbox,
+                    afterHash
+                )
+            ),
+            ~uint64(0),
+            ArbProtocol.generateLastMessageHash(messages),
+            logsAccHash,
+            signatures
+        );
+
+        require(allSigned, "Invalid signature list");
+
+        vm.inbox = newInbox;
+
+        emit FinalizedUnanimousAssertion(
+            unanHash
         );
     }
 
@@ -153,11 +147,7 @@ library Unanimous {
         VM.Data storage _vm,
         bytes32 _afterHash,
         bytes32 _newInbox,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
+        bytes memory _messages
     )
         public
     {
@@ -166,13 +156,7 @@ library Unanimous {
         require(
             keccak256(
                 abi.encodePacked(
-                    ArbProtocol.generateLastMessageHash(
-                        _tokenTypes,
-                        _messageData,
-                        _messageTokenNums,
-                        _messageAmounts,
-                        _messageDestinations
-                    ),
+                    ArbProtocol.generateLastMessageHash(_messages),
                     keccak256(
                         abi.encodePacked(
                             _newInbox,
@@ -227,54 +211,5 @@ library Unanimous {
         );
         bool allSigned = channel.isValidatorList(SigUtils.recoverAddresses(unanHash, _signatures));
         return (allSigned, unanHash);
-    }
-
-    function _finalizedUnanimousAssert(
-        VM.Data storage vm,
-        IArbChannel channel,
-        FinalizedUnanimousAssertData memory data
-    )
-        private
-    {
-        require(!VM.isHalted(vm), "Can't assert halted machine");
-        require(
-            vm.state == VM.State.Waiting ||
-            vm.state == VM.State.PendingDisputable ||
-            vm.state == VM.State.PendingUnanimous,
-            "Tried to finalize unanimous from invalid state"
-        );
-        if (vm.state != VM.State.Waiting) {
-            require(block.number <= vm.deadline, "Can't cancel finalized state");
-        }
-        bool allSigned;
-        bytes32 unanHash;
-        (allSigned, unanHash) = _checkAllSignedAssertion(
-            vm,
-            channel,
-            keccak256(
-                abi.encodePacked(
-                    data.newInbox,
-                    data.afterHash
-                )
-            ),
-            ~uint64(0),
-            ArbProtocol.generateLastMessageHash(
-                data.tokenTypes,
-                data.assertion.messageData,
-                data.assertion.messageTokenNums,
-                data.assertion.messageAmounts,
-                data.assertion.messageDestinations
-            ),
-            data.assertion.logsAccHash,
-            data.signatures
-        );
-
-        require(allSigned, "Invalid signature list");
-
-        vm.inbox = data.newInbox;
-
-        emit FinalizedUnanimousAssertion(
-            unanHash
-        );
     }
 }

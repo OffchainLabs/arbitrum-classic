@@ -375,13 +375,11 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 	stub := assertion.Stub()
 	tx, err := vm.ArbitrumVM.PendingDisputableAssert(
 		auth,
-		[5][32]byte{
-			precondition.BeforeHashValue(),
-			precondition.BeforeInboxValue(),
-			stub.AfterHashValue(),
-			stub.LastMessageHashValue(),
-			stub.LastLogHashValue(),
-		},
+		precondition.BeforeHashValue(),
+		precondition.BeforeInboxValue(),
+		stub.AfterHashValue(),
+		stub.LastMessageHashValue(),
+		stub.LastLogHashValue(),
 		assertion.NumSteps,
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
@@ -396,18 +394,14 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	messageData, tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.ArbitrumVM.ConfirmDisputableAsserted(
 		auth,
 		precondition.Hash(),
 		assertion.AfterHash,
 		assertion.NumSteps,
-		tokenTypes,
-		messageData,
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 		assertion.LogsHash(),
 	)
 	if err != nil {
@@ -653,17 +647,17 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 
 func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	precondition := protocol.NewPrecondition(
-		event.Fields[0],
+		event.BeforeHash,
 		protocol.NewTimeBounds(event.TimeBounds[0], event.TimeBounds[1]),
-		value.NewHashOnlyValue(event.Fields[1], 1),
+		value.NewHashOnlyValue(event.BeforeInbox, 1),
 	)
 	assertion := &protocol.AssertionStub{
-		AfterHash:        value.NewHashBuf(event.Fields[2]),
+		AfterHash:        value.NewHashBuf(event.AfterHash),
 		NumSteps:         event.NumSteps,
 		FirstMessageHash: value.NewHashBuf([32]byte{}),
-		LastMessageHash:  value.NewHashBuf(event.Fields[3]),
+		LastMessageHash:  value.NewHashBuf(event.MessagesAccHash),
 		FirstLogHash:     value.NewHashBuf([32]byte{}),
-		LastLogHash:      value.NewHashBuf(event.Fields[4]),
+		LastLogHash:      value.NewHashBuf(event.LogsAccHash),
 	}
 	return precondition, assertion
 }

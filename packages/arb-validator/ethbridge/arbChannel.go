@@ -184,17 +184,13 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
-	messageData, tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.FinalizedUnanimousAssert(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
-		tokenTypes,
-		messageData,
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 		assertion.LogsHash(),
 		sigsToBlock(signatures),
 	)
@@ -238,17 +234,13 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	messageData, tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.ConfirmUnanimousAsserted(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
-		tokenTypes,
-		messageData,
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 	)
 	if err != nil {
 		return nil, err

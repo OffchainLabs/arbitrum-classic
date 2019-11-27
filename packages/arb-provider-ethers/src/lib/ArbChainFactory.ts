@@ -147,52 +147,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: false,
-        inputs: [
-            {
-                name: '_preconditionHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_afterHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_messageData',
-                type: 'bytes',
-            },
-            {
-                name: '_messageTokenNums',
-                type: 'uint16[]',
-            },
-            {
-                name: '_messageAmounts',
-                type: 'uint256[]',
-            },
-            {
-                name: '_messageDestinations',
-                type: 'address[]',
-            },
-            {
-                name: '_logsAccHash',
-                type: 'bytes32',
-            },
-        ],
-        name: 'confirmDisputableAsserted',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
         constant: true,
         inputs: [],
         name: 'terminateAddress',
@@ -284,8 +238,54 @@ const _abi = [
         constant: false,
         inputs: [
             {
-                name: '_fields',
-                type: 'bytes32[5]',
+                name: '_preconditionHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_messages',
+                type: 'bytes',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
+            },
+        ],
+        name: 'confirmDisputableAsserted',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_messagesAccHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
             },
             {
                 name: '_numSteps',
@@ -342,8 +342,28 @@ const _abi = [
         inputs: [
             {
                 indexed: false,
-                name: 'fields',
-                type: 'bytes32[5]',
+                name: 'beforeHash',
+                type: 'bytes32',
+            },
+            {
+                indexed: false,
+                name: 'beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                indexed: false,
+                name: 'afterHash',
+                type: 'bytes32',
+            },
+            {
+                indexed: false,
+                name: 'messagesAccHash',
+                type: 'bytes32',
+            },
+            {
+                indexed: false,
+                name: 'logsAccHash',
+                type: 'bytes32',
             },
             {
                 indexed: false,

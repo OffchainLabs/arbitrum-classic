@@ -39,27 +39,34 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
         return messages;
     }
 
-    function sendMessages(
-        bytes21[] calldata _tokenTypes,
-        bytes calldata _messageData,
-        uint16[] calldata _tokenTypeNum,
-        uint256[] calldata _amounts,
-        address[] calldata _destinations
-    )
-        external
-    {
+    function sendMessages(bytes calldata _messages) external {
         uint offset = 0;
-        bytes memory msgData;
-        uint amountCount = _amounts.length;
-        for (uint i = 0; i < amountCount; i++) {
-            (offset, msgData) = ArbValue.getNextValidValue(_messageData, offset);
-            _sendUnpaidMessage(
-                _destinations[i],
-                _tokenTypes[_tokenTypeNum[i]],
-                _amounts[i],
-                msg.sender,
-                msgData
-            );
+        bool valid;
+        bytes32 messageHash;
+        uint256 destination;
+        uint256 value;
+        uint256 tokenType;
+        bytes memory messageData;
+        uint totalLength = _messages.length;
+        while (offset < totalLength) {
+            (
+                valid,
+                offset,
+                messageHash,
+                destination,
+                value,
+                tokenType,
+                messageData
+            ) = ArbValue.deserializeMessage(_messages, offset);
+            if (valid) {
+                _sendUnpaidMessage(
+                    address(bytes20(bytes32(destination))),
+                    bytes21(bytes32(tokenType)),
+                    value,
+                    msg.sender,
+                    messageData
+                );
+            }
         }
     }
 

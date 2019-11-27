@@ -103,11 +103,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     function finalizedUnanimousAssert(
         bytes32 _afterHash,
         bytes32 _newInbox,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations,
+        bytes memory _messages,
         bytes32 _logsAccHash,
         bytes memory _signatures
     )
@@ -116,12 +112,10 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
         Unanimous.finalizedUnanimousAssert(
             vm,
             this,
-            [_afterHash, _newInbox, _logsAccHash],
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations,
+            _afterHash,
+            _newInbox,
+            _messages,
+            _logsAccHash,
             _signatures
         );
 
@@ -134,13 +128,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             _afterHash
         );
 
-        _completeAssertion(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        _completeAssertion(_messages);
     }
 
     function pendingUnanimousAssert(
@@ -171,11 +159,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     function confirmUnanimousAsserted(
         bytes32 _afterHash,
         bytes32 _newInbox,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
+        bytes memory _messages
     )
         public
     {
@@ -183,19 +167,9 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             vm,
             _afterHash,
             _newInbox,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
+            _messages
         );
 
-        _completeAssertion(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        _completeAssertion(_messages);
     }
 }

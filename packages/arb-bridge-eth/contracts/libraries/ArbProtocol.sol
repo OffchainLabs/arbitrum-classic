@@ -83,31 +83,13 @@ library ArbProtocol {
         );
     }
 
-    function generateLastMessageHash(
-        bytes21[] memory _tokenTypes,
-        bytes memory _data,
-        uint16[] memory _tokenNums,
-        uint256[] memory _amounts,
-        address[] memory _destinations
-    )
-        public
-        pure
-        returns (bytes32)
-    {
-        require(_amounts.length == _destinations.length, "Input size mismatch");
-        require(_amounts.length == _tokenNums.length, "Input size mismatch");
+    function generateLastMessageHash(bytes memory _messages) public pure returns (bytes32){
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;
-        uint amountCount = _amounts.length;
+        uint amountCount = _messages.length;
         for (uint i = 0; i < amountCount; i++) {
-            (offset, msgHash) = ArbValue.deserializeValidValueHash(_data, offset);
-            msgHash = generateMessageStubHash(
-                msgHash,
-                _tokenTypes[_tokenNums[i]],
-                _amounts[i],
-                _destinations[i]
-            );
+            (offset, msgHash) = ArbValue.deserializeValidValueHash(_messages, offset);
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
         return hashVal;

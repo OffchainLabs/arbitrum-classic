@@ -18,40 +18,22 @@ package hashing
 
 import (
 	"bytes"
-	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/ethereum/go-ethereum/common"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func SplitMessages(
-	rawMessages []value.Value,
-) ([]byte, []uint16, []*big.Int, []common.Address, [][21]byte) {
-	outMsgs := make([]protocol.Message, 0, len(rawMessages))
-	for _, msg := range rawMessages {
-		// Only values with valid message encodings are passed here
-		parsedMsg, _ := protocol.NewMessageFromValue(msg)
-		outMsgs = append(outMsgs, parsedMsg)
-	}
-
+func CombineMessages(
+	messages []value.Value,
+) []byte {
 	var messageData bytes.Buffer
-	balance := protocol.NewTokenTrackerFromMessages(outMsgs)
-	tokenNums := make([]uint16, 0, len(outMsgs))
-	amounts := make([]*big.Int, 0, len(outMsgs))
-	destinations := make([]common.Address, 0, len(outMsgs))
-	for _, msg := range outMsgs {
-		tokenNums = append(tokenNums,
-			uint16(balance.TokenIndex(msg.TokenType, msg.Currency)))
-		amounts = append(amounts, msg.Currency)
-		destinations = append(destinations, msg.Destination)
-		_ = value.MarshalValue(msg.Data, &messageData)
+	for _, msg := range messages {
+		_ = value.MarshalValue(msg, &messageData)
 	}
-	tokenTypes, _ := balance.GetTypesAndAmounts()
-	return messageData.Bytes(), tokenNums, amounts, destinations, tokenTypes
+	return messageData.Bytes()
 }
 
 func UnanimousAssertPartialPartialHash(

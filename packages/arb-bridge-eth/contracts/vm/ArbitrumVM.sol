@@ -30,15 +30,12 @@ import "../libraries/ArbValue.sol";
 contract ArbitrumVM {
     using SafeMath for uint256;
 
-    // fields:
-    // beforeHash
-    // beforeInbox
-    // afterHash
-    // messagesAccHash
-    // logsAccHash
-
-    event PendingDisputableAssertion(
-        bytes32[5] fields,
+    event PendingDisputableAssertion (
+        bytes32 beforeHash,
+        bytes32 beforeInbox,
+        bytes32 afterHash,
+        bytes32 messagesAccHash,
+        bytes32 logsAccHash,
         address asserter,
         uint64[2] timeBounds,
         uint32 numSteps
@@ -132,15 +129,12 @@ contract ArbitrumVM {
         validatorBalances[_players[1]] = validatorBalances[_players[1]].add(_rewards[1]);
     }
 
-    // fields:
-    // _beforeHash
-    // _beforeInbox
-    // _afterHash
-    // _logsAccHash
-    // _messagesAccHash
-
     function pendingDisputableAssert(
-        bytes32[5] memory _fields,
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        bytes32 _afterHash,
+        bytes32 _messagesAccHash,
+        bytes32 _logsAccHash,
         uint32 _numSteps,
         uint64[2] memory _timeBounds
     )
@@ -154,7 +148,11 @@ contract ArbitrumVM {
 
         Disputable.pendingDisputableAssert(
             vm,
-            _fields,
+            _beforeHash,
+            _beforeInbox,
+            _afterHash,
+            _messagesAccHash,
+            _logsAccHash,
             _numSteps,
             _timeBounds
         );
@@ -164,11 +162,7 @@ contract ArbitrumVM {
         bytes32 _preconditionHash,
         bytes32 _afterHash,
         uint32 _numSteps,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations,
+        bytes memory _messages,
         bytes32 _logsAccHash
     )
         public
@@ -178,23 +172,13 @@ contract ArbitrumVM {
             _preconditionHash,
             _afterHash,
             _numSteps,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations,
+            _messages,
             _logsAccHash
         );
 
         validatorBalances[vm.asserter] = validatorBalances[vm.asserter].add(vm.escrowRequired);
 
-        _completeAssertion(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        _completeAssertion(_messages);
     }
 
     function initiateChallenge(bytes32 _assertPreHash) public {
@@ -217,15 +201,7 @@ contract ArbitrumVM {
         );
     }
 
-    function _completeAssertion(
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
-    )
-        internal
-    {
+    function _completeAssertion(bytes memory _messages) internal {
         bytes32 pending = globalInbox.pullPendingMessages();
         if (pending != ArbValue.hashEmptyTuple()) {
             vm.inbox = ArbValue.hashTupleValue([
@@ -235,13 +211,7 @@ contract ArbitrumVM {
             ]);
         }
 
-        globalInbox.sendMessages(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        globalInbox.sendMessages(_messages);
     }
 
     function _shutdown() private {

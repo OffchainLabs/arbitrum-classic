@@ -16,59 +16,39 @@ interface ArbChannelInterface extends Interface {
             encode([_assertPreHash]: [Arrayish]): string;
         }>;
 
-        confirmDisputableAsserted: TypedFunctionDescription<{
-            encode([
-                _preconditionHash,
-                _afterHash,
-                _numSteps,
-                _tokenTypes,
-                _messageData,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestinations,
-                _logsAccHash,
-            ]: [
-                Arrayish,
-                Arrayish,
-                BigNumberish,
-                (Arrayish)[],
-                Arrayish,
-                (BigNumberish)[],
-                (BigNumberish)[],
-                (string)[],
-                Arrayish,
-            ]): string;
-        }>;
-
         activateVM: TypedFunctionDescription<{ encode([]: []): string }>;
 
         ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
 
+        confirmDisputableAsserted: TypedFunctionDescription<{
+            encode([_preconditionHash, _afterHash, _numSteps, _messages, _logsAccHash]: [
+                Arrayish,
+                Arrayish,
+                BigNumberish,
+                Arrayish,
+                Arrayish,
+            ]): string;
+        }>;
+
         pendingDisputableAssert: TypedFunctionDescription<{
-            encode([_fields, _numSteps, _timeBounds]: [(Arrayish)[], BigNumberish, (BigNumberish)[]]): string;
+            encode([_beforeHash, _beforeInbox, _afterHash, _messagesAccHash, _logsAccHash, _numSteps, _timeBounds]: [
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                BigNumberish,
+                (BigNumberish)[],
+            ]): string;
         }>;
 
         increaseDeposit: TypedFunctionDescription<{ encode([]: []): string }>;
 
         finalizedUnanimousAssert: TypedFunctionDescription<{
-            encode([
-                _afterHash,
-                _newInbox,
-                _tokenTypes,
-                _messageData,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestinations,
-                _logsAccHash,
-                _signatures,
-            ]: [
+            encode([_afterHash, _newInbox, _messages, _logsAccHash, _signatures]: [
                 Arrayish,
                 Arrayish,
-                (Arrayish)[],
                 Arrayish,
-                (BigNumberish)[],
-                (BigNumberish)[],
-                (string)[],
                 Arrayish,
                 Arrayish,
             ]): string;
@@ -85,15 +65,7 @@ interface ArbChannelInterface extends Interface {
         }>;
 
         confirmUnanimousAsserted: TypedFunctionDescription<{
-            encode([
-                _afterHash,
-                _newInbox,
-                _tokenTypes,
-                _messageData,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestinations,
-            ]: [Arrayish, Arrayish, (Arrayish)[], Arrayish, (BigNumberish)[], (BigNumberish)[], (string)[]]): string;
+            encode([_afterHash, _newInbox, _messages]: [Arrayish, Arrayish, Arrayish]): string;
         }>;
     };
 
@@ -111,7 +83,16 @@ interface ArbChannelInterface extends Interface {
         }>;
 
         PendingDisputableAssertion: TypedEventDescription<{
-            encodeTopics([fields, asserter, timeBounds, numSteps]: [null, null, null, null]): string[];
+            encodeTopics([
+                beforeHash,
+                beforeInbox,
+                afterHash,
+                messagesAccHash,
+                logsAccHash,
+                asserter,
+                timeBounds,
+                numSteps,
+            ]: [null, null, null, null, null, null, null, null]): string[];
         }>;
 
         ConfirmedDisputableAssertion: TypedEventDescription<{
@@ -177,25 +158,25 @@ export class ArbChannel extends Contract {
 
         initiateChallenge(_assertPreHash: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        confirmDisputableAsserted(
-            _preconditionHash: Arrayish,
-            _afterHash: Arrayish,
-            _numSteps: BigNumberish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
-            _logsAccHash: Arrayish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
         activateVM(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
+        confirmDisputableAsserted(
+            _preconditionHash: Arrayish,
+            _afterHash: Arrayish,
+            _numSteps: BigNumberish,
+            _messages: Arrayish,
+            _logsAccHash: Arrayish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
         pendingDisputableAssert(
-            _fields: (Arrayish)[],
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _afterHash: Arrayish,
+            _messagesAccHash: Arrayish,
+            _logsAccHash: Arrayish,
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
             overrides?: TransactionOverrides,
@@ -206,11 +187,7 @@ export class ArbChannel extends Contract {
         finalizedUnanimousAssert(
             _afterHash: Arrayish,
             _newInbox: Arrayish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
+            _messages: Arrayish,
             _logsAccHash: Arrayish,
             _signatures: Arrayish,
             overrides?: TransactionOverrides,
@@ -228,11 +205,7 @@ export class ArbChannel extends Contract {
         confirmUnanimousAsserted(
             _afterHash: Arrayish,
             _newInbox: Arrayish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
+            _messages: Arrayish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -254,7 +227,16 @@ export class ArbChannel extends Contract {
 
         FinalizedUnanimousAssertion(unanHash: null): EventFilter;
 
-        PendingDisputableAssertion(fields: null, asserter: null, timeBounds: null, numSteps: null): EventFilter;
+        PendingDisputableAssertion(
+            beforeHash: null,
+            beforeInbox: null,
+            afterHash: null,
+            messagesAccHash: null,
+            logsAccHash: null,
+            asserter: null,
+            timeBounds: null,
+            numSteps: null,
+        ): EventFilter;
 
         ConfirmedDisputableAssertion(newState: null, logsAccHash: null): EventFilter;
 
@@ -266,24 +248,24 @@ export class ArbChannel extends Contract {
 
         initiateChallenge(_assertPreHash: Arrayish): Promise<BigNumber>;
 
-        confirmDisputableAsserted(
-            _preconditionHash: Arrayish,
-            _afterHash: Arrayish,
-            _numSteps: BigNumberish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
-            _logsAccHash: Arrayish,
-        ): Promise<BigNumber>;
-
         activateVM(): Promise<BigNumber>;
 
         ownerShutdown(): Promise<BigNumber>;
 
+        confirmDisputableAsserted(
+            _preconditionHash: Arrayish,
+            _afterHash: Arrayish,
+            _numSteps: BigNumberish,
+            _messages: Arrayish,
+            _logsAccHash: Arrayish,
+        ): Promise<BigNumber>;
+
         pendingDisputableAssert(
-            _fields: (Arrayish)[],
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _afterHash: Arrayish,
+            _messagesAccHash: Arrayish,
+            _logsAccHash: Arrayish,
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
         ): Promise<BigNumber>;
@@ -293,11 +275,7 @@ export class ArbChannel extends Contract {
         finalizedUnanimousAssert(
             _afterHash: Arrayish,
             _newInbox: Arrayish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
+            _messages: Arrayish,
             _logsAccHash: Arrayish,
             _signatures: Arrayish,
         ): Promise<BigNumber>;
@@ -310,14 +288,6 @@ export class ArbChannel extends Contract {
             _signatures: Arrayish,
         ): Promise<BigNumber>;
 
-        confirmUnanimousAsserted(
-            _afterHash: Arrayish,
-            _newInbox: Arrayish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
-        ): Promise<BigNumber>;
+        confirmUnanimousAsserted(_afterHash: Arrayish, _newInbox: Arrayish, _messages: Arrayish): Promise<BigNumber>;
     };
 }

@@ -317,24 +317,8 @@ const _abi = [
         constant: false,
         inputs: [
             {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_messageData',
+                name: '_messages',
                 type: 'bytes',
-            },
-            {
-                name: '_tokenTypeNum',
-                type: 'uint16[]',
-            },
-            {
-                name: '_amounts',
-                type: 'uint256[]',
-            },
-            {
-                name: '_destinations',
-                type: 'address[]',
             },
         ],
         name: 'sendMessages',
