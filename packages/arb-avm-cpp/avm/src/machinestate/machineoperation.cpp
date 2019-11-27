@@ -557,8 +557,8 @@ BlockReason send(MachineState& m) {
         m.state = Status::Error;
         return NotBlocked();
     }
-    m.stack.popClear();
     m.context.outMessage.push_back(std::move(m.stack[0]));
+    m.stack.popClear();
     ++m.pc;
     return NotBlocked();
 }
