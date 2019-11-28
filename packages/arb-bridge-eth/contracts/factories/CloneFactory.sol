@@ -1,3 +1,5 @@
+// Taken from https://github.com/AugurProject/augur/blob/master/packages/augur-core/source/contracts/libraries/CloneFactory.sol
+
 pragma solidity ^0.5.10;
 
 // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1167.md

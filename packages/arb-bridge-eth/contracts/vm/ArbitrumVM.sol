@@ -21,7 +21,7 @@ import "./Disputable.sol";
 import "./IArbitrumVM.sol";
 
 import "../IGlobalPendingInbox.sol";
-import "../IChallengeFactory.sol";
+import "../factories/IChallengeFactory.sol";
 
 import "../libraries/ArbProtocol.sol";
 import "../libraries/ArbValue.sol";

@@ -8,8 +8,8 @@ cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../node_modules/solidity-bytes-utils/ ./solidity-bytes-utils
 
-abigen --sol=ChainFactory.sol --pkg=chainfactory --out=chainfactory.go
-abigen --sol=ChannelFactory.sol --pkg=channelfactory --out=channelfactory.go
+abigen --sol=factories/ChainFactory.sol --pkg=chainfactory --out=chainfactory.go
+abigen --sol=factories/ChannelFactory.sol --pkg=channelfactory --out=channelfactory.go
 
 abigen --sol=vm/ArbChain.sol --pkg=arbchain --out=arbchain.go
 abigen --sol=vm/ArbChannel.sol --pkg=arbchannel --out=arbchannel.go
@@ -25,6 +25,6 @@ abigen --sol=challenge/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin solidity-bytes-utils
-rm -f chainfactory.go channelfactory.go arbchallenge.go globalpendinginbox.go onestepproof.go
+rm -f arbchain.go arbchannel.go chainfactory.go channelfactory.go arbchallenge.go globalpendinginbox.go onestepproof.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

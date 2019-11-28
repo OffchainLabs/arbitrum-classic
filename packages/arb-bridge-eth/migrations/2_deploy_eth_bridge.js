@@ -32,9 +32,10 @@ var ArbChain = artifacts.require("./vm/ArbChain.sol");
 var ArbChannel = artifacts.require("./vm/ArbChannel.sol");
 var ArbChallenge = artifacts.require("./challenge/ArbChallenge.sol");
 
-var ChallengeFactory = artifacts.require("./ChallengeFactory.sol");
-var ChainFactory = artifacts.require("./ChainFactory.sol");
-var ChannelFactory = artifacts.require("./ChannelFactory.sol");
+var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
+var ChainFactory = artifacts.require("./factories/ChainFactory.sol");
+var ChannelFactory = artifacts.require("./factories/ChannelFactory.sol");
+
 var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
 
 module.exports = async function(deployer, network, accounts) {

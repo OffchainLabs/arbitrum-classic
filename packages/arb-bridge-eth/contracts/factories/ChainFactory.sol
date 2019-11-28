@@ -16,54 +16,51 @@
 
 pragma solidity ^0.5.3;
 
-import "./libraries/CloneFactory.sol";
-import "./vm/IArbChannel.sol";
+import "./CloneFactory.sol";
+import "../vm/IArbChain.sol";
 
 
-contract ChannelFactory is CloneFactory {
-    event ChannelCreated(
+contract ChainFactory is CloneFactory {
+    event ChainCreated(
         address vmAddress
     );
 
-    address channelTemplate;
+    address chainTemplate;
     address globalInboxAddress;
     address challengeFactoryAddress;
 
     constructor(
-        address _channelTemplate,
+        address _chainTemplate,
         address _globalInboxAddress,
         address _challengeFactoryAddress
     )
         public
     {
-        channelTemplate = _channelTemplate;
+        chainTemplate = _chainTemplate;
         globalInboxAddress = _globalInboxAddress;
         challengeFactoryAddress = _challengeFactoryAddress;
     }
 
-    function createChannel(
+    function createChain(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
-        address payable _owner,
-        address[] memory _validatorKeys
+        address payable _owner
     )
         public
     {
-        address clone = createClone(channelTemplate);
-        IArbChannel(clone).init(
+        address clone = createClone(chainTemplate);
+        IArbChain(clone).init(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
             challengeFactoryAddress,
-            globalInboxAddress,
-            _validatorKeys
+            globalInboxAddress
         );
-
-        emit ChannelCreated(
+        emit ChainCreated(
             clone
         );
     }
