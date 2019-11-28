@@ -42,7 +42,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     uint16 public validatorCount;
     uint16 public activatedValidators;
 
-    constructor(
+    function init(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
@@ -50,9 +50,11 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
         address payable _owner,
         address _challengeLauncherAddress,
         address _globalInboxAddress,
-        address[] memory _validatorKeys
+        address[] calldata _validatorKeys
     )
-        ArbitrumVM(
+        external
+    {
+        ArbitrumVM.initialize(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
@@ -60,9 +62,8 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             _owner,
             _challengeLauncherAddress,
             _globalInboxAddress
-        )
-        public
-    {
+        );
+
         activatedValidators = 0;
         validatorCount = uint16(_validatorKeys.length);
         for (uint16 i = 0; i < validatorCount; i++) {

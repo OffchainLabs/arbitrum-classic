@@ -16,12 +16,20 @@
 
 pragma solidity ^0.5.3;
 
-import "./challenge/ArbChallenge.sol";
+import "./libraries/CloneFactory.sol";
+import "./IChallengeFactory.sol";
+import "./challenge/IArbChallenge.sol";
 
 
-contract ChallengeLauncher {
+contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
-    function launchChallenge(
+    address public challengeTemplate;
+
+    constructor(address _challengeTemplate) public {
+        challengeTemplate = _challengeTemplate;
+    }
+
+    function createChallenge(
         address[2] calldata _players,
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,
@@ -30,13 +38,15 @@ contract ChallengeLauncher {
         external
         returns(address)
     {
-        ArbChallenge challenge = new ArbChallenge(
+        address clone = createClone(challengeTemplate);
+        IArbChallenge(clone).init(
             msg.sender,
             _players,
             _escrows,
             _challengePeriod,
             _challengeRoot
         );
-        return address(challenge);
+        return address(clone);
     }
 }
+

@@ -1,7 +1,7 @@
 package ethbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/channellauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/channelfactory"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -14,20 +14,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type ChannelLauncher struct {
-	contract *channellauncher.ChannelLauncher
+type ChannelFactory struct {
+	contract *channelfactory.ChannelFactory
 	client   *ethclient.Client
 }
 
-func NewChannelLauncher(address common.Address, client *ethclient.Client) (*ChannelLauncher, error) {
-	vmCreatorContract, err := channellauncher.NewChannelLauncher(address, client)
+func NewChannelFactory(address common.Address, client *ethclient.Client) (*ChannelFactory, error) {
+	vmCreatorContract, err := channelfactory.NewChannelFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ArbLauncher")
 	}
-	return &ChannelLauncher{vmCreatorContract, client}, nil
+	return &ChannelFactory{vmCreatorContract, client}, nil
 }
 
-func (con *ChannelLauncher) ParseChannelCreated(log *types.Log) (common.Address, error) {
+func (con *ChannelFactory) ParseChannelCreated(log *types.Log) (common.Address, error) {
 	event, err := con.contract.ParseChannelCreated(*log)
 	if err != nil {
 		return common.Address{}, err
@@ -35,7 +35,7 @@ func (con *ChannelLauncher) ParseChannelCreated(log *types.Log) (common.Address,
 	return event.VmAddress, nil
 }
 
-func (con *ChannelLauncher) LaunchChannel(
+func (con *ChannelFactory) CreateChannel(
 	auth *bind.TransactOpts,
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
@@ -48,7 +48,7 @@ func (con *ChannelLauncher) LaunchChannel(
 	for _, key := range config.AssertKeys {
 		validatorKeys = append(validatorKeys, protocol.NewAddressFromBuf(key))
 	}
-	tx, err := con.contract.LaunchChannel(
+	tx, err := con.contract.CreateChannel(
 		auth,
 		vmState,
 		uint32(config.GracePeriod),
@@ -60,7 +60,7 @@ func (con *ChannelLauncher) LaunchChannel(
 	if err != nil {
 		return common.Address{}, err
 	}
-	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash(), "LaunchChannel")
+	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash(), "CreateChannel")
 	if err != nil {
 		return common.Address{}, err
 	}

@@ -127,33 +127,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: true,
-        inputs: [
-            {
-                name: '_owner',
-                type: 'address',
-            },
-            {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_amounts',
-                type: 'uint256[]',
-            },
-        ],
-        name: 'hasFunds',
-        outputs: [
-            {
-                name: '',
-                type: 'bool',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
         constant: false,
         inputs: [
             {

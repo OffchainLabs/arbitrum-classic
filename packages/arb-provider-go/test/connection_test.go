@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -15,6 +14,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
@@ -114,7 +115,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	address, err := val1.LaunchChannel(context.Background(), config, mach.Hash())
+	address, err := val1.CreateChannel(context.Background(), config, mach.Hash())
 	if err != nil {
 		t.Error(err)
 		return err

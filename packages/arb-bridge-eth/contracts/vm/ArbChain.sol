@@ -17,11 +17,12 @@
 pragma solidity ^0.5.3;
 
 import "./ArbitrumVM.sol";
+import "./IArbChain.sol";
 
 
-contract ArbChain is ArbitrumVM {
+contract ArbChain is ArbitrumVM, IArbChain {
 
-    constructor(
+    function init(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
@@ -30,7 +31,9 @@ contract ArbChain is ArbitrumVM {
         address _challengeLauncherAddress,
         address _globalInboxAddress
     )
-        ArbitrumVM(
+        external
+    {
+        ArbitrumVM.initialize(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
@@ -38,9 +41,7 @@ contract ArbChain is ArbitrumVM {
             _owner,
             _challengeLauncherAddress,
             _globalInboxAddress
-        )
-        public
-    {
+        );
         vm.state = VM.State.Waiting;
     }
 

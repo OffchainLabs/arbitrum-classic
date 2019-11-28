@@ -43,8 +43,8 @@ type Validator struct {
 	arbAddresses  ethbridge.ArbAddresses
 	Client        *ethclient.Client
 
-	*ethbridge.ChainLauncher
-	*ethbridge.ChannelLauncher
+	*ethbridge.ChainFactory
+	*ethbridge.ChannelFactory
 	*ethbridge.PendingInbox
 	auth *bind.TransactOpts
 }
@@ -61,12 +61,12 @@ func NewValidator(
 		return nil, err
 	}
 
-	chainLauncher, err := ethbridge.NewChainLauncher(common.HexToAddress(connectionInfo.ChainLauncher), client)
+	chainFactory, err := ethbridge.NewChainFactory(common.HexToAddress(connectionInfo.ChainFactory), client)
 	if err != nil {
 		return nil, err
 	}
 
-	channelLauncher, err := ethbridge.NewChannelLauncher(common.HexToAddress(connectionInfo.ChannelLauncher), client)
+	channelFactory, err := ethbridge.NewChannelFactory(common.HexToAddress(connectionInfo.ChannelFactory), client)
 	if err != nil {
 		return nil, err
 	}
@@ -77,14 +77,14 @@ func NewValidator(
 	}
 
 	return &Validator{
-		key:             key,
-		serverAddress:   ethURL,
-		arbAddresses:    connectionInfo,
-		Client:          client,
-		ChainLauncher:   chainLauncher,
-		ChannelLauncher: channelLauncher,
-		PendingInbox:    pendingInbox,
-		auth:            auth,
+		key:            key,
+		serverAddress:  ethURL,
+		arbAddresses:   connectionInfo,
+		Client:         client,
+		ChainFactory:   chainFactory,
+		ChannelFactory: channelFactory,
+		PendingInbox:   pendingInbox,
+		auth:           auth,
 	}, nil
 }
 
@@ -131,24 +131,24 @@ func (val *Validator) GetTokenBalance(
 	return amt, err
 }
 
-func (val *Validator) LaunchChannel(
+func (val *Validator) CreateChannel(
 	ctx context.Context,
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
 ) (common.Address, error) {
-	return val.ChannelLauncher.LaunchChannel(
+	return val.ChannelFactory.CreateChannel(
 		val.MakeAuth(ctx),
 		config,
 		vmState,
 	)
 }
 
-func (val *Validator) LaunchChain(
+func (val *Validator) CreateChain(
 	ctx context.Context,
 	config *valmessage.VMConfiguration,
 	vmState [32]byte,
 ) (common.Address, error) {
-	return val.ChainLauncher.LaunchChain(
+	return val.ChainFactory.CreateChain(
 		val.MakeAuth(ctx),
 		config,
 		vmState,

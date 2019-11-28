@@ -29,8 +29,8 @@ import (
 )
 
 type ArbAddresses struct {
-	ChainLauncher      string `json:"ChainLauncher"`
-	ChannelLauncher    string `json:"ChannelLauncher"`
+	ChainFactory       string `json:"ChainFactory"`
+	ChannelFactory     string `json:"ChannelFactory"`
 	GlobalPendingInbox string `json:"GlobalPendingInbox"`
 	OneStepProof       string `json:"OneStepProof"`
 }

@@ -7,17 +7,24 @@ yarn workspace arb-bridge-eth build
 cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../node_modules/solidity-bytes-utils/ ./solidity-bytes-utils
-abigen --sol=ChainLauncher.sol --pkg=chainlauncher --out=chainlauncher.go
-abigen --sol=ChannelLauncher.sol --pkg=channellauncher --out=channellauncher.go
-abigen --sol=ChallengeLauncher.sol --pkg=challengelauncher --out=challengelauncher.go
+
+abigen --sol=ChainFactory.sol --pkg=chainfactory --out=chainfactory.go
+abigen --sol=ChannelFactory.sol --pkg=channelfactory --out=channelfactory.go
+
+abigen --sol=vm/ArbChain.sol --pkg=arbchain --out=arbchain.go
+abigen --sol=vm/ArbChannel.sol --pkg=arbchannel --out=arbchannel.go
+abigen --sol=challenge/ArbChallenge.sol --pkg=arbchallenge --out=arbchallenge.go
+
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
 abigen --sol=challenge/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
-\cp chainlauncher.go ../../arb-validator/ethbridge/chainlauncher/
-\cp channellauncher.go ../../arb-validator/ethbridge/channellauncher/
-\cp challengelauncher.go ../../arb-validator/ethbridge/challengelauncher/
+\cp chainfactory.go ../../arb-validator/ethbridge/chainfactory/
+\cp channelfactory.go ../../arb-validator/ethbridge/channelfactory/
+\cp arbchain.go ../../arb-validator/ethbridge/arbchain/
+\cp arbchannel.go ../../arb-validator/ethbridge/arbchannel/
+\cp arbchallenge.go ../../arb-validator/ethbridge/arbchallenge/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin solidity-bytes-utils
-rm -f chainlauncher.go channellauncher.go challengelauncher.go globalpendinginbox.go onestepproof.go
+rm -f chainfactory.go channelfactory.go arbchallenge.go globalpendinginbox.go onestepproof.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

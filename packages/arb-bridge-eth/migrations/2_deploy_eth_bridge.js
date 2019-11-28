@@ -28,80 +28,81 @@ var BytesLib = artifacts.require("bytes/BytesLib.sol");
 var MerkleLib = artifacts.require("./MerkleLib.sol");
 var SigUtils = artifacts.require("./SigUtils.sol");
 
-var ChallengeLauncher = artifacts.require("./ChallengeLauncher.sol");
-var ChainLauncher = artifacts.require("./ChainLauncher.sol");
-var ChannelLauncher = artifacts.require("./ChannelLauncher.sol");
+var ArbChain = artifacts.require("./vm/ArbChain.sol");
+var ArbChannel = artifacts.require("./vm/ArbChannel.sol");
+var ArbChallenge = artifacts.require("./challenge/ArbChallenge.sol");
+
+var ChallengeFactory = artifacts.require("./ChallengeFactory.sol");
+var ChainFactory = artifacts.require("./ChainFactory.sol");
+var ChannelFactory = artifacts.require("./ChannelFactory.sol");
 var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
 
 module.exports = async function(deployer, network, accounts) {
   deployer.deploy(DebugPrint);
-  deployer.link(DebugPrint, [ArbMachine, OneStepProof]);
+  deployer.link(DebugPrint, []);
 
   deployer.deploy(MerkleLib);
   deployer.link(MerkleLib, [Bisection]);
 
   deployer.deploy(SigUtils);
-  deployer.link(SigUtils, [Unanimous, GlobalPendingInbox]);
+  deployer.link(SigUtils, [GlobalPendingInbox, Unanimous]);
 
   deployer.deploy(BytesLib);
-  deployer.link(BytesLib, [ArbValue]);
+  deployer.link(BytesLib, []);
 
   deployer.deploy(ArbValue);
   deployer.link(ArbValue, [
-    GlobalPendingInbox,
-    OneStepProof,
-    ArbMachine,
+    ArbChain,
+    ArbChannel,
     ArbProtocol,
-    Disputable,
-    ChainLauncher,
-    ChannelLauncher
+    GlobalPendingInbox,
+    OneStepProof
   ]);
 
   deployer.deploy(ArbProtocol);
-  deployer.link(ArbProtocol, [
-    OneStepProof,
-    Disputable,
-    Bisection,
-    Unanimous,
-    ChainLauncher,
-    ChannelLauncher
-  ]);
+  deployer.link(ArbProtocol, [Bisection, Disputable, OneStepProof, Unanimous]);
 
   deployer.deploy(ArbMachine);
-  deployer.link(ArbMachine, [OneStepProof]);
+  deployer.link(ArbMachine, []);
 
   deployer.deploy(OneStepProof);
-  deployer.link(OneStepProof, ChallengeLauncher);
+  deployer.link(OneStepProof, [ArbChallenge]);
 
   deployer.deploy(Bisection);
-  deployer.link(Bisection, ChallengeLauncher);
+  deployer.link(Bisection, [ArbChallenge]);
 
   deployer.deploy(VM);
-  deployer.link(VM, [Disputable, Unanimous, ChainLauncher, ChannelLauncher]);
+  deployer.link(VM, [ArbChannel, Disputable, Unanimous]);
 
   deployer.deploy(Disputable);
-  deployer.link(Disputable, [ChainLauncher, ChannelLauncher]);
+  deployer.link(Disputable, [ArbChain, ArbChannel]);
 
   deployer.deploy(Unanimous);
-  deployer.link(Unanimous, [ChannelLauncher]);
+  deployer.link(Unanimous, [ArbChannel]);
+
+  await deployer.deploy(ArbChallenge);
+  await deployer.deploy(ArbChain);
+  await deployer.deploy(ArbChannel);
 
   await deployer.deploy(GlobalPendingInbox);
-  await deployer.deploy(ChallengeLauncher);
+  await deployer.deploy(ChallengeFactory, ArbChallenge.address);
   await deployer.deploy(
-    ChainLauncher,
+    ChainFactory,
+    ArbChain.address,
     GlobalPendingInbox.address,
-    ChallengeLauncher.address
+    ChallengeFactory.address
   );
   await deployer.deploy(
-    ChannelLauncher,
+    ChannelFactory,
+    ArbChannel.address,
     GlobalPendingInbox.address,
-    ChallengeLauncher.address
+    ChallengeFactory.address
   );
 
   const fs = require("fs");
   let addresses = {
-    ChainLauncher: ChainLauncher.address,
-    ChannelLauncher: ChannelLauncher.address,
+    ChainFactory: ChainFactory.address,
+    ChannelFactory: ChannelFactory.address,
     GlobalPendingInbox: GlobalPendingInbox.address,
     OneStepProof: OneStepProof.address
   };

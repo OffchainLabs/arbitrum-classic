@@ -16,6 +16,18 @@ interface ArbChainInterface extends Interface {
             encode([_assertPreHash]: [Arrayish]): string;
         }>;
 
+        initialize: TypedFunctionDescription<{
+            encode([
+                _vmState,
+                _gracePeriod,
+                _maxExecutionSteps,
+                _escrowRequired,
+                _owner,
+                _challengeFactoryAddress,
+                _globalInboxAddress,
+            ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, string, string, string]): string;
+        }>;
+
         activateVM: TypedFunctionDescription<{ encode([]: []): string }>;
 
         ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -40,6 +52,18 @@ interface ArbChainInterface extends Interface {
                 BigNumberish,
                 (BigNumberish)[],
             ]): string;
+        }>;
+
+        init: TypedFunctionDescription<{
+            encode([
+                _vmState,
+                _gracePeriod,
+                _maxExecutionSteps,
+                _escrowRequired,
+                _owner,
+                _challengeLauncherAddress,
+                _globalInboxAddress,
+            ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, string, string, string]): string;
         }>;
 
         increaseDeposit: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -109,6 +133,17 @@ export class ArbChain extends Contract {
 
         initiateChallenge(_assertPreHash: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
+        initialize(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeFactoryAddress: string,
+            _globalInboxAddress: string,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
         activateVM(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
@@ -133,12 +168,23 @@ export class ArbChain extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
+        init(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeLauncherAddress: string,
+            _globalInboxAddress: string,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
         increaseDeposit(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         getState(): Promise<number>;
+        challengeFactory(): Promise<string>;
         terminateAddress(): Promise<string>;
         exitAddress(): Promise<string>;
-        challengeLauncher(): Promise<string>;
         owner(): Promise<string>;
         escrowRequired(): Promise<BigNumber>;
         globalInbox(): Promise<string>;
@@ -163,6 +209,16 @@ export class ArbChain extends Contract {
 
         initiateChallenge(_assertPreHash: Arrayish): Promise<BigNumber>;
 
+        initialize(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeFactoryAddress: string,
+            _globalInboxAddress: string,
+        ): Promise<BigNumber>;
+
         activateVM(): Promise<BigNumber>;
 
         ownerShutdown(): Promise<BigNumber>;
@@ -183,6 +239,16 @@ export class ArbChain extends Contract {
             _logsAccHash: Arrayish,
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
+        ): Promise<BigNumber>;
+
+        init(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeLauncherAddress: string,
+            _globalInboxAddress: string,
         ): Promise<BigNumber>;
 
         increaseDeposit(): Promise<BigNumber>;

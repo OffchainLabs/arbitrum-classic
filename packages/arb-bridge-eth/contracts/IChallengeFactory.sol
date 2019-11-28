@@ -16,12 +16,9 @@
 
 pragma solidity ^0.5.3;
 
-import "./challenge/ArbChallenge.sol";
+interface IChallengeFactory {
 
-
-interface IChallengeLauncher {
-
-    function launchChallenge(
+    function createChallenge(
         address[2] calldata _players,
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,

@@ -34,8 +34,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengelauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbchallenge"
 )
 
 var initiatedChallengeID common.Hash
@@ -45,7 +44,7 @@ var continuedChallengeID common.Hash
 var oneStepProofCompletedID common.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(chainlauncher.ArbChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(arbchallenge.ArbChallengeABI))
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +59,7 @@ type Challenge struct {
 	OutChan   chan Notification
 	ErrChan   chan error
 	Client    *ethclient.Client
-	Challenge *challengelauncher.ArbChallenge
+	Challenge *arbchallenge.ArbChallenge
 
 	address common.Address
 	client  *ethclient.Client
@@ -75,7 +74,7 @@ func NewChallenge(address common.Address, client *ethclient.Client) (*Challenge,
 }
 
 func (c *Challenge) setupContracts() error {
-	challengeManagerContract, err := challengelauncher.NewArbChallenge(c.address, c.Client)
+	challengeManagerContract, err := arbchallenge.NewArbChallenge(c.address, c.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -362,7 +361,7 @@ func buildBisectionTree(precondition *protocol.Precondition, assertions []*proto
 	return NewMerkleTree(bisectionHashes)
 }
 
-func translateBisectionEvent(event *challengelauncher.ArbChallengeBisectedAssertion) []*protocol.AssertionStub {
+func translateBisectionEvent(event *arbchallenge.ArbChallengeBisectedAssertion) []*protocol.AssertionStub {
 	bisectionCount := len(event.AfterHashAndMessageAndLogsBisections)/3 - 1
 	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
 	stepCount := event.TotalSteps / uint32(bisectionCount)

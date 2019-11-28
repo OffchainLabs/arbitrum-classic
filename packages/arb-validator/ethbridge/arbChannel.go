@@ -21,7 +21,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/channellauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbchannel"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
@@ -38,7 +38,7 @@ import (
 
 type ArbChannel struct {
 	*ArbitrumVM
-	contract *channellauncher.ArbChannel
+	contract *arbchannel.ArbChannel
 }
 
 func NewArbChannel(address common.Address, client *ethclient.Client) (*ArbChannel, error) {
@@ -52,7 +52,7 @@ func NewArbChannel(address common.Address, client *ethclient.Client) (*ArbChanne
 }
 
 func (vm *ArbChannel) setupContracts() error {
-	trackerContract, err := channellauncher.NewArbChannel(vm.address, vm.Client)
+	trackerContract, err := arbchannel.NewArbChannel(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
@@ -73,19 +73,19 @@ func (vm *ArbChannel) StartConnection(ctx context.Context) error {
 		Start:   &start,
 	}
 
-	unanAssChan := make(chan *channellauncher.ArbChannelFinalizedUnanimousAssertion)
+	unanAssChan := make(chan *arbchannel.ArbChannelFinalizedUnanimousAssertion)
 	unanAssSub, err := vm.contract.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
 	if err != nil {
 		return err
 	}
 
-	unanPropChan := make(chan *channellauncher.ArbChannelPendingUnanimousAssertion)
+	unanPropChan := make(chan *arbchannel.ArbChannelPendingUnanimousAssertion)
 	unanPropSub, err := vm.contract.WatchPendingUnanimousAssertion(watch, unanPropChan)
 	if err != nil {
 		return err
 	}
 
-	unanConfChan := make(chan *channellauncher.ArbChannelConfirmedUnanimousAssertion)
+	unanConfChan := make(chan *arbchannel.ArbChannelConfirmedUnanimousAssertion)
 	unanConfSub, err := vm.contract.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
 	if err != nil {
 		return err

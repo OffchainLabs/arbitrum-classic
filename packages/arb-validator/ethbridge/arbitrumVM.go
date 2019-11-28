@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbchain"
+
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -36,7 +38,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -46,7 +47,7 @@ var confirmedDisputableAssertionID common.Hash
 var challengeLaunchedID common.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(chainlauncher.ArbitrumVMABI))
+	parsed, err := abi.JSON(strings.NewReader(arbchain.ArbitrumVMABI))
 	if err != nil {
 		panic(err)
 	}
@@ -59,8 +60,8 @@ type ArbitrumVM struct {
 	OutChan            chan Notification
 	ErrChan            chan error
 	Client             *ethclient.Client
-	ArbitrumVM         *chainlauncher.ArbitrumVM
-	GlobalPendingInbox *chainlauncher.IGlobalPendingInbox
+	ArbitrumVM         *arbchain.ArbitrumVM
+	GlobalPendingInbox *arbchain.IGlobalPendingInbox
 
 	address common.Address
 	client  *ethclient.Client
@@ -75,7 +76,7 @@ func NewArbitrumVM(address common.Address, client *ethclient.Client) (*ArbitrumV
 }
 
 func (vm *ArbitrumVM) setupContracts() error {
-	arbitrumVMContract, err := chainlauncher.NewArbitrumVM(vm.address, vm.Client)
+	arbitrumVMContract, err := arbchain.NewArbitrumVM(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
@@ -87,7 +88,7 @@ func (vm *ArbitrumVM) setupContracts() error {
 	if err != nil {
 		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
 	}
-	globalPendingContract, err := chainlauncher.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
+	globalPendingContract, err := arbchain.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
@@ -136,7 +137,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 		return err
 	}
 
-	messageDeliveredChan := make(chan *chainlauncher.IGlobalPendingInboxMessageDelivered)
+	messageDeliveredChan := make(chan *arbchain.IGlobalPendingInboxMessageDelivered)
 	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
 	if err != nil {
 		return err
@@ -405,7 +406,7 @@ func (vm *ArbitrumVM) VerifyVM(
 	return nil
 }
 
-func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
+func translateDisputableAssertionEvent(event *arbchain.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],
 		protocol.NewTimeBounds(event.TimeBounds[0], event.TimeBounds[1]),

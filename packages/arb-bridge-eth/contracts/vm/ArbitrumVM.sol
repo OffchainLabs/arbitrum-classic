@@ -18,15 +18,16 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 import "./Disputable.sol";
+import "./IArbitrumVM.sol";
 
 import "../IGlobalPendingInbox.sol";
-import "../IChallengeLauncher.sol";
+import "../IChallengeFactory.sol";
 
 import "../libraries/ArbProtocol.sol";
 import "../libraries/ArbValue.sol";
 
 
-contract ArbitrumVM {
+contract ArbitrumVM is IArbitrumVM {
     using SafeMath for uint256;
 
     // fields:
@@ -56,7 +57,7 @@ contract ArbitrumVM {
 
     address internal constant ETH_ADDRESS = address(0);
 
-    IChallengeLauncher public challengeLauncher;
+    IChallengeFactory public challengeFactory;
     IGlobalPendingInbox public globalInbox;
 
     VM.Data public vm;
@@ -71,19 +72,19 @@ contract ArbitrumVM {
         _;
     }
 
-    constructor(
+    function initialize(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
         address payable _owner,
-        address _challengeLauncherAddress,
+        address _challengeFactoryAddress,
         address _globalInboxAddress
     )
         public
     {
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
-        challengeLauncher = IChallengeLauncher(_challengeLauncherAddress);
+        challengeFactory = IChallengeFactory(_challengeFactoryAddress);
 
         globalInbox.registerForInbox();
         owner = _owner;
@@ -196,7 +197,7 @@ contract ArbitrumVM {
             _assertPreHash
         );
 
-        vm.activeChallengeManager = challengeLauncher.launchChallenge(
+        vm.activeChallengeManager = challengeFactory.createChallenge(
             [vm.asserter, msg.sender],
             [vm.escrowRequired, vm.escrowRequired],
             vm.gracePeriod,

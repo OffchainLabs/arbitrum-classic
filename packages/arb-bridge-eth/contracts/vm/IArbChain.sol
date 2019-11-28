@@ -16,6 +16,16 @@
 
 pragma solidity ^0.5.3;
 
-interface IVMTracker {
-    function completeChallenge(address[2] calldata _players, uint128[2] calldata _rewards) external;
+
+interface IArbChain {
+    function init(
+        bytes32 _vmState,
+        uint32 _gracePeriod,
+        uint32 _maxExecutionSteps,
+        uint128 _escrowRequired,
+        address payable _owner,
+        address _challengeLauncherAddress,
+        address _globalInboxAddress
+    )
+        external;
 }

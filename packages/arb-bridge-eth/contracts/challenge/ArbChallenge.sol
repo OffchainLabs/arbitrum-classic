@@ -18,11 +18,12 @@ pragma solidity ^0.5.3;
 
 import "./OneStepProof.sol";
 import "./Bisection.sol";
+import "./IArbChallenge.sol";
 
-import "../vm/IVMTracker.sol";
+import "../vm/IArbitrumVM.sol";
 
 
-contract ArbChallenge {
+contract ArbChallenge is IArbChallenge {
 
     event ContinuedChallenge (
         address challenger,
@@ -53,14 +54,14 @@ contract ArbChallenge {
 
     Challenge.Data challenge;
 
-    constructor(
+    function init(
         address vmAddress,
-        address[2] memory _players,
-        uint128[2] memory _escrows,
+        address[2] calldata _players,
+        uint128[2] calldata _escrows,
         uint32 _challengePeriod,
         bytes32 _challengeRoot
     )
-        public
+        external
     {
         uint64 deadline = uint64(block.number) + uint64(_challengePeriod);
         challenge = Challenge.Data(
@@ -157,7 +158,7 @@ contract ArbChallenge {
     }
 
     function _asserterWin() private {
-        IVMTracker(challenge.vmAddress).completeChallenge(
+        IArbitrumVM(challenge.vmAddress).completeChallenge(
             challenge.players,
             [
                 challenge.escrows[0] + challenge.escrows[1] / 2,
@@ -167,7 +168,7 @@ contract ArbChallenge {
     }
 
     function _challengerWin() private {
-        IVMTracker(challenge.vmAddress).completeChallenge(
+        IArbitrumVM(challenge.vmAddress).completeChallenge(
             challenge.players,
             [
                 0,

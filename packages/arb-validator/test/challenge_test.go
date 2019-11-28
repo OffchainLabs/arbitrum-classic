@@ -20,7 +20,6 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -28,6 +27,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
@@ -116,7 +117,7 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	address, err := val1.LaunchChannel(context.Background(), config, machine.Hash())
+	address, err := val1.CreateChannel(context.Background(), config, machine.Hash())
 	if err != nil {
 		t.Fatal(err)
 	}

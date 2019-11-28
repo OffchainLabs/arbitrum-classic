@@ -16,23 +16,32 @@
 
 pragma solidity ^0.5.3;
 
-import "./vm/ArbChain.sol";
+import "./libraries/CloneFactory.sol";
+import "./vm/IArbChain.sol";
 
 
-contract ChainLauncher {
+contract ChainFactory is CloneFactory {
     event ChainCreated(
         address vmAddress
     );
 
+    address chainTemplate;
     address globalInboxAddress;
-    address challengeLauncherAddress;
+    address challengeFactoryAddress;
 
-    constructor(address _globalInboxAddress, address _challengeLauncherAddress) public {
+    constructor(
+        address _chainTemplate,
+        address _globalInboxAddress,
+        address _challengeFactoryAddress
+    )
+        public
+    {
+        chainTemplate = _chainTemplate;
         globalInboxAddress = _globalInboxAddress;
-        challengeLauncherAddress = _challengeLauncherAddress;
+        challengeFactoryAddress = _challengeFactoryAddress;
     }
 
-    function launchChain(
+    function createChain(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
@@ -41,17 +50,18 @@ contract ChainLauncher {
     )
         public
     {
-        ArbChain vm = new ArbChain(
+        address clone = createClone(chainTemplate);
+        IArbChain(clone).init(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            challengeLauncherAddress,
+            challengeFactoryAddress,
             globalInboxAddress
         );
         emit ChainCreated(
-            address(vm)
+            clone
         );
     }
 }

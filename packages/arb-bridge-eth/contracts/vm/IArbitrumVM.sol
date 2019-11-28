@@ -16,11 +16,6 @@
 
 pragma solidity ^0.5.3;
 
-interface IChallengeManager {
-    function initiateChallenge(
-        address[2] calldata players,
-        uint128[2] calldata escrows,
-        uint32 challengePeriod,
-        bytes32 challengeRoot
-    ) external;
+interface IArbitrumVM {
+    function completeChallenge(address[2] calldata _players, uint128[2] calldata _rewards) external;
 }

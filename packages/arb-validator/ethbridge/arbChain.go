@@ -20,19 +20,19 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainlauncher"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbchain"
 )
 
 type ArbChain struct {
 	*ArbitrumVM
-	contract *chainlauncher.ArbChain
+	contract *arbchain.ArbChain
 }
 
 func NewArbChain(address common.Address, client *ethclient.Client) (*ArbChain, error) {
@@ -44,7 +44,7 @@ func (vm *ArbChain) StartConnection(ctx context.Context) error {
 	if err := vm.ArbitrumVM.StartConnection(ctx); err != nil {
 		return err
 	}
-	trackerContract, err := chainlauncher.NewArbChain(vm.address, vm.Client)
+	trackerContract, err := arbchain.NewArbChain(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}

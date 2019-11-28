@@ -16,23 +16,32 @@
 
 pragma solidity ^0.5.3;
 
-import "./vm/ArbChannel.sol";
+import "./libraries/CloneFactory.sol";
+import "./vm/IArbChannel.sol";
 
 
-contract ChannelLauncher {
+contract ChannelFactory is CloneFactory {
     event ChannelCreated(
         address vmAddress
     );
 
+    address channelTemplate;
     address globalInboxAddress;
-    address challengeLauncherAddress;
+    address challengeFactoryAddress;
 
-    constructor(address _globalInboxAddress, address _challengeLauncherAddress) public {
+    constructor(
+        address _channelTemplate,
+        address _globalInboxAddress,
+        address _challengeFactoryAddress
+    )
+        public
+    {
+        channelTemplate = _channelTemplate;
         globalInboxAddress = _globalInboxAddress;
-        challengeLauncherAddress = _challengeLauncherAddress;
+        challengeFactoryAddress = _challengeFactoryAddress;
     }
 
-    function launchChannel(
+    function createChannel(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
@@ -42,18 +51,20 @@ contract ChannelLauncher {
     )
         public
     {
-        ArbChannel vm = new ArbChannel(
+        address clone = createClone(channelTemplate);
+        IArbChannel(clone).init(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            challengeLauncherAddress,
+            challengeFactoryAddress,
             globalInboxAddress,
             _validatorKeys
         );
+
         emit ChannelCreated(
-            address(vm)
+            clone
         );
     }
 }

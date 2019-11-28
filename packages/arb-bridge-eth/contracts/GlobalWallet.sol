@@ -16,8 +16,8 @@
 
 pragma solidity ^0.5.3;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 
@@ -83,34 +83,6 @@ contract GlobalWallet {
         return (addresses, tokens);
     }
 
-    // This function assumes that tokenTypes and amounts are valid and in canonical
-    // order. The pair (tokenType, amount) are sorted in ascending order with
-    // tokenTypes as the primary key and amount as the secondary key
-    // Token type only allows repeats for NFTs and amounts disallow repeats for NFTs
-    function hasFunds(
-        address _owner,
-        bytes21[] calldata _tokenTypes,
-        uint256[] calldata _amounts
-    )
-        external
-        view
-        returns(bool)
-    {
-        uint tokenTypeCount = _tokenTypes.length;
-        for (uint i = 0; i < tokenTypeCount; i++) {
-            if (_tokenTypes[i][20] == 0x01) {
-                if (!hasNFT(address(bytes20(_tokenTypes[i])), _owner, _amounts[i])) {
-                    return false;
-                }
-            } else {
-                if (_amounts[i] > getTokenBalance(address(bytes20(_tokenTypes[i])), _owner)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
     function withdrawEth(uint256 _value) external {
         require(
             removeToken(msg.sender, ETH_ADDRESS, _value),
@@ -120,7 +92,7 @@ contract GlobalWallet {
     }
 
     function depositERC20(address _tokenContract, uint256 _value) external {
-        ERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
+        IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
         addToken(msg.sender, _tokenContract, _value);
     }
 
@@ -129,7 +101,7 @@ contract GlobalWallet {
             removeToken(msg.sender, _tokenContract, _value),
             "Wallet doesn't own sufficient balance of token"
         );
-        ERC20(_tokenContract).transfer(msg.sender, _value);
+        IERC20(_tokenContract).transfer(msg.sender, _value);
     }
 
     function onERC721Received(
@@ -146,7 +118,7 @@ contract GlobalWallet {
     }
 
     function depositERC721(address _tokenContract, uint256 _tokenId) external {
-        ERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
+        IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
         addNFTToken(msg.sender, _tokenContract, _tokenId);
     }
 
@@ -155,7 +127,7 @@ contract GlobalWallet {
             removeNFTToken(msg.sender, _tokenContract, _tokenId),
             "Wallet doesn't own token"
         );
-        ERC721(_tokenContract).safeTransferFrom(address(this), msg.sender, _tokenId);
+        IERC721(_tokenContract).safeTransferFrom(address(this), msg.sender, _tokenId);
     }
 
     function depositEth(address _destination) public payable {

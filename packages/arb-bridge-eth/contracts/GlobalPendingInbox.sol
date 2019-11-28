@@ -25,7 +25,7 @@ import "./libraries/SigUtils.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
-contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
+contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     using SafeMath for uint256;
     using ArbValue for ArbValue.Value;
 
