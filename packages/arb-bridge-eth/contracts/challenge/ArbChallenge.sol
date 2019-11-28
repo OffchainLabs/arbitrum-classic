@@ -165,6 +165,7 @@ contract ArbChallenge is IArbChallenge {
                 0
             ]
         );
+        selfdestruct(msg.sender);
     }
 
     function _challengerWin() private {
@@ -175,5 +176,6 @@ contract ArbChallenge is IArbChallenge {
                 challenge.escrows[1] + challenge.escrows[0] / 2
             ]
         );
+        selfdestruct(msg.sender);
     }
 }
