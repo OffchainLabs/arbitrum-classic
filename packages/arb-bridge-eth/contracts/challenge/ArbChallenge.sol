@@ -129,8 +129,8 @@ contract ArbChallenge is IArbChallenge {
             _afterHashAndMessages,
             _proof
         );
-        _asserterWin();
         emit OneStepProofCompleted(msg.sender, _proof);
+        _asserterWin();
     }
 
     function asserterTimedOut() public {
@@ -140,9 +140,8 @@ contract ArbChallenge is IArbChallenge {
         );
         require(block.number > challenge.deadline, "Deadline hasn't expired");
 
-        _challengerWin();
-
         emit TimedOutChallenge(true);
+        _challengerWin();
     }
 
     function challengerTimedOut() public {
@@ -151,10 +150,8 @@ contract ArbChallenge is IArbChallenge {
             "Can only time out challenger if it is their turn"
         );
         require(block.number > challenge.deadline, "Deadline hasn't expired");
-
-        _asserterWin();
-
         emit TimedOutChallenge(false);
+        _asserterWin();
     }
 
     function _asserterWin() private {
