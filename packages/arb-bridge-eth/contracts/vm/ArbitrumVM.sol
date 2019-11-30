@@ -83,6 +83,9 @@ contract ArbitrumVM is IArbitrumVM {
     )
         public
     {
+        require(address(challengeFactory) == address(0), "VM already initialized");
+        require(_challengeFactoryAddress != address(0), "Challenge factory address not set");
+
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
         challengeFactory = IChallengeFactory(_challengeFactoryAddress);
 
