@@ -25,13 +25,11 @@ import "../libraries/ArbProtocol.sol";
 library Bisection {
 
     event ContinuedChallenge (
-        address challenger,
         uint assertionIndex,
         uint64 deadline
     );
 
     event BisectedAssertion(
-        address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
         uint32 totalSteps,
         uint64 deadline
@@ -69,9 +67,10 @@ library Bisection {
         );
 
         _challenge.state = Challenge.State.Challenged;
-        _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
+        uint64 deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
+        _challenge.deadline = deadline;
         _challenge.challengeState = _bisectionHash;
-        emit ContinuedChallenge(_challenge.players[1], _assertionToChallenge, _challenge.deadline);
+        emit ContinuedChallenge(_assertionToChallenge, deadline);
     }
 
     // bisectionFields:
@@ -93,7 +92,7 @@ library Bisection {
         public
     {
         require(
-            _challenge.state == Challenge.State.Challenged,
+            Challenge.State.Challenged == _challenge.state,
             "Can only bisect assertion in response to a challenge"
         );
 
@@ -150,13 +149,13 @@ library Bisection {
         }
         _challenge.challengeState = MerkleLib.generateRoot(hashes);
         _challenge.state = Challenge.State.Bisected;
-        _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
+        uint64 deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
+        _challenge.deadline = deadline;
 
         emit BisectedAssertion(
-            _challenge.players[0],
             _bisectionFields,
             _totalSteps,
-            _challenge.deadline
+            deadline
         );
     }
 }

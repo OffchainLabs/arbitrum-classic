@@ -100,8 +100,7 @@ func (ChallengeLaunchedEvent) GetIncomingMessageType() IncomingMessageType {
 }
 
 type InitiateChallengeEvent struct {
-	Challenger common.Address
-	Deadline   uint64
+	Deadline uint64
 }
 
 func (InitiateChallengeEvent) GetIncomingMessageType() IncomingMessageType {

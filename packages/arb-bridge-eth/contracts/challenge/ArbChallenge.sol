@@ -26,20 +26,17 @@ import "../vm/IArbitrumVM.sol";
 contract ArbChallenge is IArbChallenge {
 
     event ContinuedChallenge (
-        address challenger,
         uint assertionIndex,
         uint64 deadline
     );
 
     event BisectedAssertion(
-        address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
         uint32 totalSteps,
         uint64 deadline
     );
 
     event OneStepProofCompleted(
-        address asserter,
         bytes proof
     );
 
@@ -48,7 +45,6 @@ contract ArbChallenge is IArbChallenge {
     );
 
     event InitiatedChallenge(
-        address challenger,
         uint64 deadline
     );
 
@@ -90,7 +86,6 @@ contract ArbChallenge is IArbChallenge {
         );
 
         emit InitiatedChallenge(
-            _players[1],
             deadline
         );
     }
@@ -152,7 +147,7 @@ contract ArbChallenge is IArbChallenge {
             _afterHashAndMessages,
             _proof
         );
-        emit OneStepProofCompleted(msg.sender, _proof);
+        emit OneStepProofCompleted(_proof);
         _asserterWin();
     }
 

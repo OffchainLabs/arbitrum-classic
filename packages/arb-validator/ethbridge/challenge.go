@@ -180,8 +180,7 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log) error {
 			Header: header,
 			VMID:   c.address,
 			Event: InitiateChallengeEvent{
-				Challenger: initChal.Challenger,
-				Deadline:   initChal.Deadline,
+				Deadline: initChal.Deadline,
 			},
 			TxHash: log.TxHash,
 		}
