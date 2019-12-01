@@ -35,6 +35,33 @@ library Bisection {
         uint64 deadline
     );
 
+    // Can only continue challenge in response to bisection
+    string constant CON_STATE = "CON_STATE";
+
+    // Incorrect previous state
+    string constant CON_PREV = "CON_PREV";
+
+    // deadline expired
+    string constant CON_DEADLINE = "CON_DEADLINE";
+
+    // Only original challenger can continue challenge
+    string constant CON_SENDER = "CON_SENDER";
+
+    // Invalid assertion selected
+    string constant CON_PROOF = "CON_PROOF";
+
+    // Can only bisect assertion in response to a challenge
+    string constant BIS_STATE = "BIS_STATE";
+
+    // Incorrect previous state
+    string constant BIS_PREV = "BIS_PREV";
+
+    // deadline expired
+    string constant BIS_DEADLINE = "BIS_DEADLINE";
+
+    // Only original asserter can continue bisect
+    string constant BIS_SENDER = "BIS_SENDER";
+
     function continueChallenge(
         Challenge.Data storage _challenge,
         uint _assertionToChallenge,
@@ -44,18 +71,10 @@ library Bisection {
     )
         public
     {
-        require(
-            _bisectionRoot == _challenge.challengeState,
-            "continueChallenge: Incorrect previous state"
-        );
-        require(
-            block.number <= _challenge.deadline,
-            "Challenge deadline expired"
-        );
-        require(
-            msg.sender == _challenge.players[1],
-            "Only original challenger can continue challenge"
-        );
+        require(_challenge.state == Challenge.State.Bisected, CON_STATE);
+        require(_bisectionRoot == _challenge.challengeState, CON_PREV);
+        require(block.number <= _challenge.deadline, CON_DEADLINE);
+        require(msg.sender == _challenge.players[1], CON_SENDER);
         require(
             MerkleLib.verifyProof(
                 _proof,
@@ -63,7 +82,7 @@ library Bisection {
                 _bisectionHash,
                 _assertionToChallenge + 1
             ),
-            "Invalid assertion selected"
+            CON_PROOF
         );
 
         _challenge.state = Challenge.State.Challenged;
@@ -91,19 +110,9 @@ library Bisection {
     )
         public
     {
-        require(
-            Challenge.State.Challenged == _challenge.state,
-            "Can only bisect assertion in response to a challenge"
-        );
-
-        require(
-            block.number <= _challenge.deadline,
-            "Challenge deadline expired"
-        );
-        require(
-            msg.sender == _challenge.players[0],
-            "Only orignal asserter can bisect"
-        );
+        require(Challenge.State.Challenged == _challenge.state, BIS_STATE);
+        require(block.number <= _challenge.deadline, BIS_DEADLINE);
+        require(msg.sender == _challenge.players[0], BIS_SENDER);
 
         uint dataLength = _bisectionFields.length;
 
@@ -122,7 +131,7 @@ library Bisection {
                     )
                 )
             ) == _challenge.challengeState,
-            "Does not match prev state"
+            BIS_PREV
         );
 
         uint32 bisectionCount = uint32(dataLength / 3 - 1);
