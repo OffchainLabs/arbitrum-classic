@@ -52,7 +52,7 @@ func New(assDef machine.AssertionDefender, deadline uint64, brdg bridge.Challeng
 		}, err
 	}
 
-	defenders := assDef.NBisect(6)
+	defenders := assDef.NBisect(50)
 	assertions := make([]*protocol.AssertionStub, 0, len(defenders))
 	for _, defender := range defenders {
 		assertions = append(assertions, defender.GetAssertion().Stub())
