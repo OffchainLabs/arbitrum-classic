@@ -139,13 +139,28 @@ library Disputable {
         );
     }
 
-    function initiateChallenge(VM.Data storage _vm, bytes32 _assertPreHash) public {
+    function initiateChallenge(
+        VM.Data storage _vm,
+        bytes32 beforeHash,
+        bytes32 beforeInbox,
+        uint64[2] memory timeBounds,
+        bytes32 assertionHash
+    ) public {
         require(msg.sender != _vm.asserter, "Challenge was created by asserter");
         require(VM.withinDeadline(_vm), "Challenge did not come before deadline");
         require(_vm.state == VM.State.PendingDisputable, "Assertion must be pending to initiate challenge");
 
         require(
-            _assertPreHash == _vm.pendingHash,
+            keccak256(
+                abi.encodePacked(
+                    ArbProtocol.generatePreconditionHash(
+                        beforeHash,
+                        timeBounds,
+                        beforeInbox
+                    ),
+                    assertionHash
+                )
+            ) == _vm.pendingHash,
             "Initiate Challenge: Precondition and assertion do not match pending assertion"
         );
 

@@ -55,18 +55,33 @@ contract ArbChallenge is IArbChallenge {
     Challenge.Data challenge;
 
     function init(
-        address vmAddress,
+        address _vmAddress,
         address[2] calldata _players,
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,
-        bytes32 _challengeRoot
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] calldata _timeBounds,
+        bytes32 _assertionHash
     )
         external
     {
         uint64 deadline = uint64(block.number) + uint64(_challengePeriod);
         challenge = Challenge.Data(
-            vmAddress,
-            _challengeRoot,
+            _vmAddress,
+            keccak256(
+                abi.encodePacked(
+                    keccak256(
+                        abi.encodePacked(
+                            _timeBounds[0],
+                            _timeBounds[1],
+                            _beforeInbox
+                        )
+                    ),
+                    _beforeHash,
+                    _assertionHash
+                )
+            ),
             _escrows,
             _players,
             deadline,
@@ -80,20 +95,28 @@ contract ArbChallenge is IArbChallenge {
         );
     }
 
+    // bisectionFields:
+    // beforeHash
+    // firstMessageHash
+    // firstLogHash
+
+    // then repeated
+    //    afterHash
+    //    lastMessageHash
+    //    lastLogHash
+
     function bisectAssertion(
-        bytes32 _beforeInbox,
-        bytes32[] memory _afterHashAndMessageAndLogsBisections,
-        uint32 _totalSteps,
-        uint64[2] memory _timeBounds
+        bytes32 _preData,
+        bytes32[] memory _bisectionFields,
+        uint32 _totalSteps
     )
         public
     {
         Bisection.bisectAssertion(
             challenge,
-            _beforeInbox,
-            _afterHashAndMessageAndLogsBisections,
-            _totalSteps,
-            _timeBounds
+            _preData,
+            _bisectionFields,
+            _totalSteps
         );
     }
 

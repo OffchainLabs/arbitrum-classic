@@ -316,14 +316,12 @@ func (vm *ArbitrumVM) InitiateChallenge(
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
 ) (*types.Receipt, error) {
-	var preAssHash [32]byte
-	copy(preAssHash[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(precondition.Hash()),
-		solsha3.Bytes32(assertion.Hash()),
-	))
 	tx, err := vm.ArbitrumVM.InitiateChallenge(
 		auth,
-		preAssHash,
+		precondition.BeforeHashValue(),
+		precondition.BeforeInboxValue(),
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
+		assertion.Hash(),
 	)
 	if err != nil {
 		return nil, err

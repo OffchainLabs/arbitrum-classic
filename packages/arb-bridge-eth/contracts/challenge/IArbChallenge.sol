@@ -22,7 +22,10 @@ interface IArbChallenge {
         address[2] calldata _players,
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,
-        bytes32 _challengeRoot
+        bytes32 beforeHash,
+        bytes32 beforeInbox,
+        uint64[2] calldata timeBounds,
+        bytes32 _assertionHash
     )
         external;
 }

@@ -33,6 +33,32 @@ const _abi = [
         type: 'function',
     },
     {
+        constant: false,
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+            {
+                name: '_assertionHash',
+                type: 'bytes32',
+            },
+        ],
+        name: 'initiateChallenge',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
         constant: true,
         inputs: [],
         name: 'getState',
@@ -59,20 +85,6 @@ const _abi = [
             },
         ],
         name: 'completeChallenge',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_assertPreHash',
-                type: 'bytes32',
-            },
-        ],
-        name: 'initiateChallenge',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',

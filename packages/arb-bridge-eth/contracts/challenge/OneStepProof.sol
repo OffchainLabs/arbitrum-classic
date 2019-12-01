@@ -59,11 +59,14 @@ library OneStepProof {
         require(
             keccak256(
                 abi.encodePacked(
-                    ArbProtocol.generatePreconditionHash(
-                        _beforeHashAndInbox[0],
-                        _timeBounds,
-                        _beforeHashAndInbox[1]
+                    keccak256(
+                        abi.encodePacked(
+                            _timeBounds[0],
+                            _timeBounds[1],
+                            _beforeHashAndInbox[1]
+                        )
                     ),
+                    _beforeHashAndInbox[0],
                     ArbProtocol.generateAssertionHash(
                         _afterHashAndMessages[0],
                         1,

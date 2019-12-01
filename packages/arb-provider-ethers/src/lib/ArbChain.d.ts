@@ -8,12 +8,17 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbChainInterface extends Interface {
     functions: {
-        completeChallenge: TypedFunctionDescription<{
-            encode([_players, _rewards]: [(string)[], (BigNumberish)[]]): string;
+        initiateChallenge: TypedFunctionDescription<{
+            encode([_beforeHash, _beforeInbox, _timeBounds, _assertionHash]: [
+                Arrayish,
+                Arrayish,
+                (BigNumberish)[],
+                Arrayish,
+            ]): string;
         }>;
 
-        initiateChallenge: TypedFunctionDescription<{
-            encode([_assertPreHash]: [Arrayish]): string;
+        completeChallenge: TypedFunctionDescription<{
+            encode([_players, _rewards]: [(string)[], (BigNumberish)[]]): string;
         }>;
 
         initialize: TypedFunctionDescription<{
@@ -125,13 +130,19 @@ export class ArbChain extends Contract {
             10: string;
         }>;
 
+        initiateChallenge(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _assertionHash: Arrayish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
         completeChallenge(
             _players: (string)[],
             _rewards: (BigNumberish)[],
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
-
-        initiateChallenge(_assertPreHash: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         initialize(
             _vmState: Arrayish,
@@ -205,9 +216,14 @@ export class ArbChain extends Contract {
     };
 
     estimate: {
-        completeChallenge(_players: (string)[], _rewards: (BigNumberish)[]): Promise<BigNumber>;
+        initiateChallenge(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _assertionHash: Arrayish,
+        ): Promise<BigNumber>;
 
-        initiateChallenge(_assertPreHash: Arrayish): Promise<BigNumber>;
+        completeChallenge(_players: (string)[], _rewards: (BigNumberish)[]): Promise<BigNumber>;
 
         initialize(
             _vmState: Arrayish,

@@ -264,12 +264,17 @@ func (c *Challenge) BisectAssertion(
 		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHashValue())
 		totalSteps += assertion.NumSteps
 	}
+	var preData [32]byte
+	copy(preData[:], solsha3.SoliditySHA3(
+		solsha3.Uint64(precondition.TimeBounds.StartTime),
+		solsha3.Uint64(precondition.TimeBounds.EndTime),
+		solsha3.Bytes32(precondition.BeforeInbox.Value),
+	))
 	tx, err := c.Challenge.BisectAssertion(
 		auth,
-		precondition.BeforeInboxValue(),
+		preData,
 		afterHashAndMessageAndLogsBisections,
 		totalSteps,
-		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
 	if err != nil {
 		return nil, err
@@ -283,7 +288,25 @@ func (c *Challenge) ContinueChallenge(
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
-	tree := buildBisectionTree(precondition, assertions)
+	var preData [32]byte
+	copy(preData[:], solsha3.SoliditySHA3(
+		solsha3.Uint64(precondition.TimeBounds.StartTime),
+		solsha3.Uint64(precondition.TimeBounds.EndTime),
+		solsha3.Bytes32(precondition.BeforeInbox.Value),
+	))
+
+	bisectionHashes := make([][32]byte, 0, len(assertions))
+	preconditions := protocol.GeneratePreconditions(precondition, assertions)
+	for i := range assertions {
+		bisectionHash := [32]byte{}
+		copy(bisectionHash[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(preData),
+			solsha3.Bytes32(preconditions[i].BeforeHashValue()),
+			solsha3.Bytes32(assertions[i].Hash()),
+		))
+		bisectionHashes = append(bisectionHashes, bisectionHash)
+	}
+	tree := NewMerkleTree(bisectionHashes)
 	tx, err := c.Challenge.ContinueChallenge(
 		auth,
 		big.NewInt(int64(assertionToChallenge)),
@@ -344,21 +367,6 @@ func (c *Challenge) ChallengerTimedOutChallenge(
 		return nil, err
 	}
 	return waitForReceipt(auth.Context, c.Client, tx.Hash(), "ChallengerTimedOut")
-}
-
-func buildBisectionTree(precondition *protocol.Precondition, assertions []*protocol.AssertionStub) *MerkleTree {
-	bisectionHashes := make([][32]byte, 0, len(assertions))
-	preconditions := protocol.GeneratePreconditions(precondition, assertions)
-	for i := range assertions {
-		bisectionBytes := solsha3.SoliditySHA3(
-			solsha3.Bytes32(preconditions[i].Hash()),
-			solsha3.Bytes32(assertions[i].Hash()),
-		)
-		bisectionHash := [32]byte{}
-		copy(bisectionHash[:], bisectionBytes)
-		bisectionHashes = append(bisectionHashes, bisectionHash)
-	}
-	return NewMerkleTree(bisectionHashes)
 }
 
 func translateBisectionEvent(event *arbchallenge.ArbChallengeBisectedAssertion) []*protocol.AssertionStub {

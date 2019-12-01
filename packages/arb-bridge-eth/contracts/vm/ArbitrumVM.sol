@@ -188,7 +188,14 @@ contract ArbitrumVM is IArbitrumVM {
         _completeAssertion(_messages);
     }
 
-    function initiateChallenge(bytes32 _assertPreHash) public {
+    function initiateChallenge(
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] memory _timeBounds,
+        bytes32 _assertionHash
+    )
+        public
+    {
         require(
             vm.escrowRequired <= validatorBalances[msg.sender],
             "Challenger did not have enough escrowed"
@@ -197,14 +204,20 @@ contract ArbitrumVM is IArbitrumVM {
 
         Disputable.initiateChallenge(
             vm,
-            _assertPreHash
+            _beforeHash,
+            _beforeInbox,
+            _timeBounds,
+            _assertionHash
         );
 
         vm.activeChallengeManager = challengeFactory.createChallenge(
             [vm.asserter, msg.sender],
             [vm.escrowRequired, vm.escrowRequired],
             vm.gracePeriod,
-            _assertPreHash
+            _beforeHash,
+            _beforeInbox,
+            _timeBounds,
+            _assertionHash
         );
 
         emit ChallengeLaunched(vm.activeChallengeManager, msg.sender);

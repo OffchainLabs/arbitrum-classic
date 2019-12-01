@@ -74,12 +74,21 @@ library Bisection {
         emit ContinuedChallenge(_challenge.players[1], _assertionToChallenge, _challenge.deadline);
     }
 
+    // bisectionFields:
+    // beforeHash
+    // firstMessageHash
+    // firstLogHash
+
+    // then repeated
+    //    afterHash
+    //    lastMessageHash
+    //    lastLogHash
+
     function bisectAssertion(
         Challenge.Data storage _challenge,
-        bytes32 _beforeInbox,
-        bytes32[] memory _afterHashAndMessageAndLogsBisections,
-        uint32 _totalSteps,
-        uint64[2] memory _timeBounds
+        bytes32 _preData,
+        bytes32[] memory _bisectionFields,
+        uint32 _totalSteps
     )
         public
     {
@@ -97,103 +106,57 @@ library Bisection {
             "Only orignal asserter can bisect"
         );
 
-        bytes32 fullHash;
-        bytes32[] memory bisectionHashes;
-        (fullHash, bisectionHashes) = generateBisectionDataImpl(
-            BisectAssertionData(
-                uint32(_afterHashAndMessageAndLogsBisections.length / 3 - 1),
-                _afterHashAndMessageAndLogsBisections,
-                _totalSteps,
-                _timeBounds,
-                _beforeInbox
-            )
-        );
+        uint dataLength = _bisectionFields.length;
 
         require(
-            fullHash == _challenge.challengeState,
+            keccak256(
+                abi.encodePacked(
+                    _preData,
+                    _bisectionFields[0],
+                    ArbProtocol.generateAssertionHash(
+                        _bisectionFields[dataLength - 3],
+                        _totalSteps,
+                        _bisectionFields[1],
+                        _bisectionFields[dataLength - 2],
+                        _bisectionFields[2],
+                        _bisectionFields[dataLength - 1]
+                    )
+                )
+            ) == _challenge.challengeState,
             "Does not match prev state"
         );
 
-        _challenge.state = Challenge.State.Bisected;
-        _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
-        _challenge.challengeState = MerkleLib.generateRoot(bisectionHashes);
-
-        emit BisectedAssertion(
-            _challenge.players[0],
-            _afterHashAndMessageAndLogsBisections,
-            _totalSteps,
-            _challenge.deadline
-        );
-    }
-
-    // bisectionFields:
-    // beforeHash
-    // firstMessageHash
-    // firstLogHash
-
-    // then repeated
-    //    afterHash
-    //    lastMessageHash
-    //    lastLogHash
-
-    struct BisectAssertionData {
-        uint32 bisectionCount;
-        bytes32[] bisectionFields;
-        uint32 totalSteps;
-        uint64[2] timeBounds;
-        bytes32 beforeInbox;
-    }
-
-    function generateBisectionDataImpl(
-        BisectAssertionData memory _data
-    )
-        private
-        pure
-        returns (bytes32 fullHash, bytes32[] memory hashes)
-    {
-        bytes32 preconditionHash;
-        uint32 stepCount = _data.totalSteps / _data.bisectionCount + 1;
-        hashes = new bytes32[](_data.bisectionCount);
-        uint j;
-        for (j = 0; j < _data.bisectionCount; j++) {
-            if (j == _data.totalSteps % _data.bisectionCount) {
+        uint32 bisectionCount = uint32(dataLength / 3 - 1);
+        bytes32[] memory hashes = new bytes32[](bisectionCount);
+        uint32 stepCount = _totalSteps / bisectionCount + 1;
+        for (uint j = 0; j < bisectionCount; j++) {
+            if (j == _totalSteps % bisectionCount) {
                 stepCount--;
             }
-            preconditionHash = ArbProtocol.generatePreconditionHash(
-                _data.bisectionFields[j * 3],
-                _data.timeBounds,
-                _data.beforeInbox
-            );
             hashes[j] = keccak256(
                 abi.encodePacked(
-                    preconditionHash,
+                    _preData,
+                    _bisectionFields[j * 3],
                     ArbProtocol.generateAssertionHash(
-                        _data.bisectionFields[(j + 1) * 3],
+                        _bisectionFields[(j + 1) * 3],
                         stepCount,
-                        _data.bisectionFields[j * 3 + 1],
-                        _data.bisectionFields[(j + 1) * 3 + 1],
-                        _data.bisectionFields[j * 3 + 2],
-                        _data.bisectionFields[(j + 1) * 3 + 2]
+                        _bisectionFields[j * 3 + 1],
+                        _bisectionFields[(j + 1) * 3 + 1],
+                        _bisectionFields[j * 3 + 2],
+                        _bisectionFields[(j + 1) * 3 + 2]
                     )
                 )
             );
-
-            if (j == 0) {
-                fullHash = keccak256(
-                    abi.encodePacked(
-                        preconditionHash,
-                        ArbProtocol.generateAssertionHash(
-                            _data.bisectionFields[_data.bisectionCount * 3],
-                            _data.totalSteps,
-                            _data.bisectionFields[1],
-                            _data.bisectionFields[_data.bisectionCount * 3 + 1],
-                            _data.bisectionFields[2],
-                            _data.bisectionFields[_data.bisectionCount * 3 + 2]
-                        )
-                    )
-                );
-            }
         }
-        return (fullHash, hashes);
+        _challenge.challengeState = MerkleLib.generateRoot(hashes);
+        _challenge.state = Challenge.State.Bisected;
+        _challenge.deadline = uint64(block.number) + uint64(_challenge.challengePeriod);
+
+        emit BisectedAssertion(
+            _challenge.players[0],
+            _bisectionFields,
+            _totalSteps,
+            _challenge.deadline
+        );
     }
 }

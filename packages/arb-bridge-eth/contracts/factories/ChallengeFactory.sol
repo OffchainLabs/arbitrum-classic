@@ -33,7 +33,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address[2] calldata _players,
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,
-        bytes32 _challengeRoot
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] calldata _timeBounds,
+        bytes32 _assertionHash
     )
         external
         returns(address)
@@ -44,7 +47,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             _players,
             _escrows,
             _challengePeriod,
-            _challengeRoot
+            _beforeHash,
+            _beforeInbox,
+            _timeBounds,
+            _assertionHash
         );
         return address(clone);
     }

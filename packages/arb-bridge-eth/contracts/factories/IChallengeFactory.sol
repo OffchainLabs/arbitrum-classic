@@ -22,7 +22,10 @@ interface IChallengeFactory {
         address[2] calldata _players,
         uint128[2] calldata _escrows,
         uint32 _challengePeriod,
-        bytes32 _challengeRoot
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] calldata _timeBounds,
+        bytes32 _assertionHash
     )
         external
         returns(address);
