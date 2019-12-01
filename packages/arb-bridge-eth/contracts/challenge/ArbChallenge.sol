@@ -16,8 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-import "./OneStepProof.sol";
-import "./Bisection.sol";
+import "./ChallengeImpl.sol";
 import "./IArbChallenge.sol";
 
 import "../vm/IArbitrumVM.sol";
@@ -25,27 +24,27 @@ import "../vm/IArbitrumVM.sol";
 
 contract ArbChallenge is IArbChallenge {
 
+    event InitiatedChallenge(
+        uint64 deadline
+    );
+
     event ContinuedChallenge (
         uint assertionIndex,
         uint64 deadline
     );
 
     event BisectedAssertion(
-        bytes32[] afterHashAndMessageAndLogsBisections,
+        bytes32[] machineHashes,
+        bytes32[] messageAccs,
+        bytes32[] logAccs,
         uint32 totalSteps,
         uint64 deadline
     );
 
-    event OneStepProofCompleted(
-        bytes proof
-    );
+    event OneStepProofCompleted();
 
     event TimedOutChallenge (
         bool challengerWrong
-    );
-
-    event InitiatedChallenge(
-        uint64 deadline
     );
 
     Challenge.Data challenge;
@@ -62,55 +61,34 @@ contract ArbChallenge is IArbChallenge {
     )
         external
     {
-        uint64 deadline = uint64(block.number) + uint64(_challengePeriod);
-        challenge = Challenge.Data(
+        ChallengeImpl.initializeChallenge(
+            challenge,
             _vmAddress,
-            keccak256(
-                abi.encodePacked(
-                    keccak256(
-                        abi.encodePacked(
-                            _timeBounds[0],
-                            _timeBounds[1],
-                            _beforeInbox
-                        )
-                    ),
-                    _beforeHash,
-                    _assertionHash
-                )
-            ),
-            _escrows,
             _players,
-            deadline,
+            _escrows,
             _challengePeriod,
-            Challenge.State.Challenged
-        );
-
-        emit InitiatedChallenge(
-            deadline
+            _beforeHash,
+            _beforeInbox,
+            _timeBounds,
+            _assertionHash
         );
     }
 
-    // bisectionFields:
-    // beforeHash
-    // firstMessageHash
-    // firstLogHash
-
-    // then repeated
-    //    afterHash
-    //    lastMessageHash
-    //    lastLogHash
-
     function bisectAssertion(
         bytes32 _preData,
-        bytes32[] memory _bisectionFields,
+        bytes32[] memory _machineHashes,
+        bytes32[] memory _messageAccs,
+        bytes32[] memory _logAccs,
         uint32 _totalSteps
     )
         public
     {
-        Bisection.bisectAssertion(
+        ChallengeImpl.bisectAssertion(
             challenge,
             _preData,
-            _bisectionFields,
+            _machineHashes,
+            _messageAccs,
+            _logAccs,
             _totalSteps
         );
     }
@@ -123,7 +101,7 @@ contract ArbChallenge is IArbChallenge {
     )
         public
     {
-        Bisection.continueChallenge(
+        ChallengeImpl.continueChallenge(
             challenge,
             _assertionToChallenge,
             _proof,
@@ -133,21 +111,31 @@ contract ArbChallenge is IArbChallenge {
     }
 
     function oneStepProof(
-        bytes32[2] memory _beforeHashAndInbox,
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
         uint64[2] memory _timeBounds,
-        bytes32[5] memory _afterHashAndMessages,
+        bytes32 _afterHash,
+        bytes32 _firstMessage,
+        bytes32 _lastMessage,
+        bytes32 _firstLog,
+        bytes32 _lastLog,
         bytes memory _proof
     )
         public
     {
-        OneStepProof.oneStepProof(
+        ChallengeImpl.oneStepProof(
             challenge,
-            _beforeHashAndInbox,
+            _beforeHash,
+            _beforeInbox,
             _timeBounds,
-            _afterHashAndMessages,
+            _afterHash,
+            _firstMessage,
+            _lastMessage,
+            _firstLog,
+            _lastLog,
             _proof
         );
-        emit OneStepProofCompleted(_proof);
+        emit OneStepProofCompleted();
         _asserterWin();
     }
 

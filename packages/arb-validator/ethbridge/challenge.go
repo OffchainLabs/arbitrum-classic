@@ -252,15 +252,17 @@ func (c *Challenge) BisectAssertion(
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
-	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
+	machineHashes := make([][32]byte, 0, len(assertions)+1)
+	messageAccs := make([][32]byte, 0, len(assertions)+1)
+	logAccs := make([][32]byte, 0, len(assertions)+1)
 	totalSteps := uint32(0)
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHashValue())
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHashValue())
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHashValue())
+	machineHashes = append(machineHashes, precondition.BeforeHashValue())
+	messageAccs = append(messageAccs, assertions[0].FirstMessageHashValue())
+	logAccs = append(logAccs, assertions[0].FirstLogHashValue())
 	for _, assertion := range assertions {
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHashValue())
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHashValue())
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHashValue())
+		machineHashes = append(machineHashes, assertion.AfterHashValue())
+		messageAccs = append(messageAccs, assertion.LastMessageHashValue())
+		logAccs = append(logAccs, assertion.LastLogHashValue())
 		totalSteps += assertion.NumSteps
 	}
 	var preData [32]byte
@@ -272,7 +274,9 @@ func (c *Challenge) BisectAssertion(
 	tx, err := c.Challenge.BisectAssertion(
 		auth,
 		preData,
-		afterHashAndMessageAndLogsBisections,
+		machineHashes,
+		messageAccs,
+		logAccs,
 		totalSteps,
 	)
 	if err != nil {
@@ -327,15 +331,14 @@ func (c *Challenge) OneStepProof(
 ) (*types.Receipt, error) {
 	tx, err := c.Challenge.OneStepProof(
 		auth,
-		[2][32]byte{precondition.BeforeHashValue(), precondition.BeforeInboxValue()},
+		precondition.BeforeHashValue(),
+		precondition.BeforeInboxValue(),
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
-		[5][32]byte{
-			assertion.AfterHashValue(),
-			assertion.FirstMessageHashValue(),
-			assertion.LastMessageHashValue(),
-			assertion.FirstLogHashValue(),
-			assertion.LastLogHashValue(),
-		},
+		assertion.AfterHashValue(),
+		assertion.FirstMessageHashValue(),
+		assertion.LastMessageHashValue(),
+		assertion.FirstLogHashValue(),
+		assertion.LastLogHashValue(),
 		proof,
 	)
 	if err != nil {
@@ -369,7 +372,7 @@ func (c *Challenge) ChallengerTimedOutChallenge(
 }
 
 func translateBisectionEvent(event *arbchallenge.ArbChallengeBisectedAssertion) []*protocol.AssertionStub {
-	bisectionCount := len(event.AfterHashAndMessageAndLogsBisections)/3 - 1
+	bisectionCount := len(event.MachineHashes) - 1
 	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
 	for i := 0; i < bisectionCount; i++ {
 		steps := uint32(0)
@@ -379,12 +382,12 @@ func translateBisectionEvent(event *arbchallenge.ArbChallengeBisectedAssertion) 
 			steps = event.TotalSteps / uint32(bisectionCount)
 		}
 		assertion := &protocol.AssertionStub{
-			AfterHash:        value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3]),
+			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
 			NumSteps:         steps,
-			FirstMessageHash: value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+1]),
-			LastMessageHash:  value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+1]),
-			FirstLogHash:     value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+2]),
-			LastLogHash:      value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+2]),
+			FirstMessageHash: value.NewHashBuf(event.MessageAccs[i]),
+			LastMessageHash:  value.NewHashBuf(event.MessageAccs[i+1]),
+			FirstLogHash:     value.NewHashBuf(event.LogAccs[i]),
+			LastLogHash:      value.NewHashBuf(event.LogAccs[i+1]),
 		}
 		assertions = append(assertions, assertion)
 	}

@@ -21,7 +21,7 @@ var VM = artifacts.require("./VM.sol");
 var ArbValue = artifacts.require("./ArbValue.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
-var Bisection = artifacts.require("./Bisection.sol");
+var ChallengeImpl = artifacts.require("./ChallengeImpl.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
@@ -43,7 +43,7 @@ module.exports = async function(deployer, network, accounts) {
   deployer.link(DebugPrint, []);
 
   deployer.deploy(MerkleLib);
-  deployer.link(MerkleLib, [Bisection]);
+  deployer.link(MerkleLib, [ChallengeImpl]);
 
   deployer.deploy(SigUtils);
   deployer.link(SigUtils, [GlobalPendingInbox, Unanimous]);
@@ -61,16 +61,21 @@ module.exports = async function(deployer, network, accounts) {
   ]);
 
   deployer.deploy(ArbProtocol);
-  deployer.link(ArbProtocol, [Bisection, Disputable, OneStepProof, Unanimous]);
+  deployer.link(ArbProtocol, [
+    ChallengeImpl,
+    Disputable,
+    OneStepProof,
+    Unanimous
+  ]);
 
   deployer.deploy(ArbMachine);
   deployer.link(ArbMachine, []);
 
   deployer.deploy(OneStepProof);
-  deployer.link(OneStepProof, [ArbChallenge]);
+  deployer.link(OneStepProof, [ChallengeImpl]);
 
-  deployer.deploy(Bisection);
-  deployer.link(Bisection, [ArbChallenge]);
+  deployer.deploy(ChallengeImpl);
+  deployer.link(ChallengeImpl, [ArbChallenge]);
 
   deployer.deploy(VM);
   deployer.link(VM, [ArbChannel, Disputable, Unanimous]);

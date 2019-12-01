@@ -41,74 +41,15 @@ library OneStepProof {
         bytes proof;
     }
 
-    function oneStepProof(
-        Challenge.Data storage _challenge,
-        bytes32[2] memory _beforeHashAndInbox,
-        uint64[2] memory _timeBounds,
-        bytes32[5] memory _afterHashAndMessages,
-        bytes memory _proof
-    )
-        public view
-    {
-        require(
-            _challenge.state == Challenge.State.Challenged,
-            "Can only one step proof following a single step challenge"
-        );
-        require(block.number <= _challenge.deadline, "One step proof missed deadline");
-
-        require(
-            keccak256(
-                abi.encodePacked(
-                    keccak256(
-                        abi.encodePacked(
-                            _timeBounds[0],
-                            _timeBounds[1],
-                            _beforeHashAndInbox[1]
-                        )
-                    ),
-                    _beforeHashAndInbox[0],
-                    ArbProtocol.generateAssertionHash(
-                        _afterHashAndMessages[0],
-                        1,
-                        _afterHashAndMessages[1],
-                        _afterHashAndMessages[2],
-                        _afterHashAndMessages[3],
-                        _afterHashAndMessages[4]
-                    )
-                )
-            ) == _challenge.challengeState,
-            "One step proof with invalid prev state"
-        );
-
-        uint correctProof = validateProof(
-            [
-                _beforeHashAndInbox[0],
-                _beforeHashAndInbox[1],
-                _afterHashAndMessages[0],
-                _afterHashAndMessages[1],
-                _afterHashAndMessages[2],
-                _afterHashAndMessages[3],
-                _afterHashAndMessages[4]
-            ],
-            _timeBounds,
-            _proof
-        );
-
-        require(correctProof == 0, "Proof was incorrect");
-    }
-
-    // fields
-    // _beforeHash
-    // _beforeInbox
-    // _afterHash
-    // _firstMessageHash
-    // _lastMessageHash
-    // _firstLogHash
-    // _lastLogHash
-
     function validateProof(
-        bytes32[7] memory fields,
+        bytes32 beforeHash,
         uint64[2] memory timeBounds,
+        bytes32 beforeInbox,
+        bytes32 afterHash,
+        bytes32 firstMessage,
+        bytes32 lastMessage,
+        bytes32 firstLog,
+        bytes32 lastLog,
         bytes memory proof
     )
         public
@@ -117,14 +58,14 @@ library OneStepProof {
     {
         return checkProof(
             ValidateProofData(
-                fields[0],
+                beforeHash,
                 timeBounds,
-                fields[1],
-                fields[2],
-                fields[3],
-                fields[4],
-                fields[5],
-                fields[6],
+                beforeInbox,
+                afterHash,
+                firstMessage,
+                lastMessage,
+                firstLog,
+                lastLog,
                 proof
             )
         );
