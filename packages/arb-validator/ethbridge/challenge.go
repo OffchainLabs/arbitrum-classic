@@ -371,11 +371,12 @@ func (c *Challenge) ChallengerTimedOutChallenge(
 func translateBisectionEvent(event *arbchallenge.ArbChallengeBisectedAssertion) []*protocol.AssertionStub {
 	bisectionCount := len(event.AfterHashAndMessageAndLogsBisections)/3 - 1
 	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
-	stepCount := event.TotalSteps / uint32(bisectionCount)
 	for i := 0; i < bisectionCount; i++ {
-		steps := stepCount
-		if uint32(i) < event.TotalSteps%uint32(bisectionCount) {
-			steps++
+		steps := uint32(0)
+		if i == 0 {
+			steps = event.TotalSteps/uint32(bisectionCount) + event.TotalSteps%uint32(bisectionCount)
+		} else {
+			steps = event.TotalSteps / uint32(bisectionCount)
 		}
 		assertion := &protocol.AssertionStub{
 			AfterHash:        value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3]),

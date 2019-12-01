@@ -127,18 +127,28 @@ library Bisection {
 
         uint32 bisectionCount = uint32(dataLength / 3 - 1);
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        uint32 stepCount = _totalSteps / bisectionCount + 1;
-        for (uint j = 0; j < bisectionCount; j++) {
-            if (j == _totalSteps % bisectionCount) {
-                stepCount--;
-            }
+        hashes[0] = keccak256(
+            abi.encodePacked(
+                _preData,
+                _bisectionFields[0],
+                ArbProtocol.generateAssertionHash(
+                    _bisectionFields[3],
+                    _totalSteps / bisectionCount + _totalSteps%bisectionCount,
+                    _bisectionFields[1],
+                    _bisectionFields[4],
+                    _bisectionFields[2],
+                    _bisectionFields[5]
+                )
+            )
+        );
+        for (uint j = 1; j < bisectionCount; j++) {
             hashes[j] = keccak256(
                 abi.encodePacked(
                     _preData,
                     _bisectionFields[j * 3],
                     ArbProtocol.generateAssertionHash(
                         _bisectionFields[(j + 1) * 3],
-                        stepCount,
+                        _totalSteps / bisectionCount,
                         _bisectionFields[j * 3 + 1],
                         _bisectionFields[(j + 1) * 3 + 1],
                         _bisectionFields[j * 3 + 2],
