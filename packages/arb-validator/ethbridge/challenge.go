@@ -34,7 +34,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challenge"
 )
 
 var initiatedChallengeID common.Hash
@@ -44,7 +44,7 @@ var continuedChallengeID common.Hash
 var oneStepProofCompletedID common.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(arbchallenge.ArbChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(challenge.ChallengeABI))
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ type Challenge struct {
 	OutChan   chan Notification
 	ErrChan   chan error
 	Client    *ethclient.Client
-	Challenge *arbchallenge.ArbChallenge
+	Challenge *challenge.Challenge
 
 	address common.Address
 	client  *ethclient.Client
@@ -74,7 +74,7 @@ func NewChallenge(address common.Address, client *ethclient.Client) (*Challenge,
 }
 
 func (c *Challenge) setupContracts() error {
-	challengeManagerContract, err := arbchallenge.NewArbChallenge(c.address, c.Client)
+	challengeManagerContract, err := challenge.NewChallenge(c.address, c.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -371,7 +371,7 @@ func (c *Challenge) ChallengerTimedOutChallenge(
 	return waitForReceipt(auth.Context, c.Client, tx.Hash(), "ChallengerTimedOut")
 }
 
-func translateBisectionEvent(event *arbchallenge.ArbChallengeBisectedAssertion) []*protocol.AssertionStub {
+func translateBisectionEvent(event *challenge.ChallengeBisectedAssertion) []*protocol.AssertionStub {
 	bisectionCount := len(event.MachineHashes) - 1
 	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
 	for i := 0; i < bisectionCount; i++ {

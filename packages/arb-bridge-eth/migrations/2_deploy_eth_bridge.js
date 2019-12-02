@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-var DebugPrint = artifacts.require("./DebugPrint.sol");
+var BytesLib = artifacts.require("bytes/BytesLib.sol");
 
-var ArbProtocol = artifacts.require("./ArbProtocol.sol");
+var DebugPrint = artifacts.require("./DebugPrint.sol");
+var Machine = artifacts.require("./Machine.sol");
+var MerkleLib = artifacts.require("./MerkleLib.sol");
+var OneStepProof = artifacts.require("./OneStepProof.sol");
+var Protocol = artifacts.require("./Protocol.sol");
+var SigUtils = artifacts.require("./SigUtils.sol");
+var Value = artifacts.require("./Value.sol");
+
+var Challenge = artifacts.require("./challenge/Challenge.sol");
+
 var VM = artifacts.require("./VM.sol");
-var ArbValue = artifacts.require("./ArbValue.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
-var OneStepProof = artifacts.require("./OneStepProof.sol");
-var ArbMachine = artifacts.require("./ArbMachine.sol");
-var BytesLib = artifacts.require("bytes/BytesLib.sol");
-var MerkleLib = artifacts.require("./MerkleLib.sol");
-var SigUtils = artifacts.require("./SigUtils.sol");
-
 var ArbChain = artifacts.require("./vm/ArbChain.sol");
 var ArbChannel = artifacts.require("./vm/ArbChannel.sol");
-var Challenge = artifacts.require("./challenge/Challenge.sol");
 
 var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
 var ChainFactory = artifacts.require("./factories/ChainFactory.sol");
@@ -50,20 +51,20 @@ module.exports = async function(deployer, network, accounts) {
   deployer.deploy(BytesLib);
   deployer.link(BytesLib, []);
 
-  deployer.deploy(ArbValue);
-  deployer.link(ArbValue, [
+  deployer.deploy(Value);
+  deployer.link(Value, [
     ArbChain,
     ArbChannel,
-    ArbProtocol,
+    Protocol,
     GlobalPendingInbox,
     OneStepProof
   ]);
 
-  deployer.deploy(ArbProtocol);
-  deployer.link(ArbProtocol, [Challenge, Disputable, OneStepProof, Unanimous]);
+  deployer.deploy(Protocol);
+  deployer.link(Protocol, [Challenge, Disputable, Unanimous]);
 
-  deployer.deploy(ArbMachine);
-  deployer.link(ArbMachine, []);
+  deployer.deploy(Machine);
+  deployer.link(Machine, []);
 
   deployer.deploy(OneStepProof);
   deployer.link(OneStepProof, [Challenge]);

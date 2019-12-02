@@ -16,45 +16,45 @@
 
 pragma solidity ^0.5.3;
 
-import "./ArbValue.sol";
+import "./Value.sol";
 import "./DebugPrint.sol";
 
 
-library ArbMachine {
-    using ArbValue for ArbValue.Value;
+library Machine {
+    using Value for Value.Data;
 
     uint internal constant MACHINE_EXTENSIVE = uint(0);
     uint internal constant MACHINE_ERRORSTOP = uint(1);
     uint internal constant MACHINE_HALT = uint(2);
 
     function addStackVal(
-        ArbValue.HashOnlyValue memory stackVal,
-        ArbValue.HashOnlyValue memory valHash
+        Value.HashOnly memory stackVal,
+        Value.HashOnly memory valHash
     )
         internal
         pure
-        returns (ArbValue.HashOnlyValue memory)
+        returns (Value.HashOnly memory)
     {
-        ArbValue.HashOnlyValue[] memory values = new ArbValue.HashOnlyValue[](2);
+        Value.HashOnly[] memory values = new Value.HashOnly[](2);
         values[0] = valHash;
         values[1] = stackVal;
-        return ArbValue.HashOnlyValue(ArbValue.hashTupleValue([
-            ArbValue.newHashOnlyValue(valHash.hash),
-            ArbValue.newHashOnlyValue(stackVal.hash)
+        return Value.HashOnly(Value.hashTuple([
+            Value.newHashOnly(valHash.hash),
+            Value.newHashOnly(stackVal.hash)
         ]));
     }
 
-    struct Machine {
-        ArbValue.HashOnlyValue instructionStackHash;
-        ArbValue.HashOnlyValue dataStackHash;
-        ArbValue.HashOnlyValue auxStackHash;
-        ArbValue.HashOnlyValue registerHash;
-        ArbValue.HashOnlyValue staticHash;
-        ArbValue.HashOnlyValue errHandler;
+    struct Data {
+        Value.HashOnly instructionStackHash;
+        Value.HashOnly dataStackHash;
+        Value.HashOnly auxStackHash;
+        Value.HashOnly registerHash;
+        Value.HashOnly staticHash;
+        Value.HashOnly errHandler;
         uint status;
     }
 
-    function toString(Machine memory machine) internal pure returns (string memory) {
+    function toString(Data memory machine) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 "Machine(",
@@ -74,38 +74,38 @@ library ArbMachine {
         );
     }
 
-    function setExtensive(Machine memory machine) internal pure {
+    function setExtensive(Data memory machine) internal pure {
         machine.status = MACHINE_EXTENSIVE;
     }
 
-    function setErrorStop(Machine memory machine) internal pure {
+    function setErrorStop(Data memory machine) internal pure {
         machine.status = MACHINE_ERRORSTOP;
     }
 
-    function setHalt(Machine memory machine) internal pure {
+    function setHalt(Data memory machine) internal pure {
         machine.status = MACHINE_HALT;
     }
 
-    function addDataStackHashValue(Machine memory machine, ArbValue.HashOnlyValue memory val) internal pure {
+    function addDataStackHashValue(Data memory machine, Value.HashOnly memory val) internal pure {
         machine.dataStackHash = addStackVal(machine.dataStackHash, val);
     }
 
-    function addAuxStackHashValue(Machine memory machine, ArbValue.HashOnlyValue memory val) internal pure {
+    function addAuxStackHashValue(Data memory machine, Value.HashOnly memory val) internal pure {
         machine.auxStackHash = addStackVal(machine.auxStackHash, val);
     }
 
-    function addDataStackValue(Machine memory machine, ArbValue.Value memory val) internal pure {
+    function addDataStackValue(Data memory machine, Value.Data memory val) internal pure {
         machine.dataStackHash = addStackVal(machine.dataStackHash, val.hash());
     }
 
-    function addAuxStackValue(Machine memory machine, ArbValue.Value memory val) internal pure {
+    function addAuxStackValue(Data memory machine, Value.Data memory val) internal pure {
         machine.auxStackHash = addStackVal(machine.auxStackHash, val.hash());
     }
 
-    function addDataStackInt(Machine memory machine, uint val) internal pure {
+    function addDataStackInt(Data memory machine, uint val) internal pure {
         machine.dataStackHash = addStackVal(
             machine.dataStackHash,
-            ArbValue.newIntValue(val).hash()
+            Value.newInt(val).hash()
         );
     }
 
@@ -122,19 +122,19 @@ library ArbMachine {
         returns (bytes32)
     {
         return hash(
-            Machine(
-                ArbValue.HashOnlyValue(instructionStackHash),
-                ArbValue.HashOnlyValue(dataStackHash),
-                ArbValue.HashOnlyValue(auxStackHash),
-                ArbValue.HashOnlyValue(registerHash),
-                ArbValue.HashOnlyValue(staticHash),
-                ArbValue.HashOnlyValue(errHandlerHash),
+            Data(
+                Value.HashOnly(instructionStackHash),
+                Value.HashOnly(dataStackHash),
+                Value.HashOnly(auxStackHash),
+                Value.HashOnly(registerHash),
+                Value.HashOnly(staticHash),
+                Value.HashOnly(errHandlerHash),
                 MACHINE_EXTENSIVE
             )
         );
     }
 
-    function hash(Machine memory machine) internal pure returns (bytes32) {
+    function hash(Data memory machine) internal pure returns (bytes32) {
         if (machine.status == MACHINE_HALT) {
             return bytes32(uint(0));
         } else if (machine.status == MACHINE_ERRORSTOP) {
@@ -154,8 +154,8 @@ library ArbMachine {
 
     }
 
-    function clone(Machine memory machine) internal pure returns (Machine memory) {
-        return Machine(
+    function clone(Data memory machine) internal pure returns (Data memory) {
+        return Data(
             machine.instructionStackHash,
             machine.dataStackHash,
             machine.auxStackHash,
@@ -166,31 +166,31 @@ library ArbMachine {
         );
     }
 
-    function deserializeMachine(bytes memory data, uint offset) internal pure returns (uint, uint, Machine memory) {
-        Machine memory m;
+    function deserializeMachine(bytes memory data, uint offset) internal pure returns (uint, uint, Data memory) {
+        Data memory m;
         m.status = MACHINE_EXTENSIVE;
         uint retVal;
-        (retVal, offset, m.instructionStackHash) = ArbValue.deserializeHashOnlyValue(data, offset);
+        (retVal, offset, m.instructionStackHash) = Value.deserializeHashOnly(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.dataStackHash) = ArbValue.deserializeHashOnlyValue(data, offset);
+        (retVal, offset, m.dataStackHash) = Value.deserializeHashOnly(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.auxStackHash) = ArbValue.deserializeHashOnlyValue(data, offset);
+        (retVal, offset, m.auxStackHash) = Value.deserializeHashOnly(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.registerHash) = ArbValue.deserializeHashOnlyValue(data, offset);
+        (retVal, offset, m.registerHash) = Value.deserializeHashOnly(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.staticHash) = ArbValue.deserializeHashOnlyValue(data, offset);
+        (retVal, offset, m.staticHash) = Value.deserializeHashOnly(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }
-        (retVal, offset, m.errHandler) = ArbValue.deserializeHashOnlyValue(data, offset);
+        (retVal, offset, m.errHandler) = Value.deserializeHashOnly(data, offset);
         if (retVal != 0) {
             return (retVal, offset, m);
         }

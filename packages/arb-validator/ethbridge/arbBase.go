@@ -47,7 +47,7 @@ var confirmedDisputableAssertionID common.Hash
 var challengeLaunchedID common.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(arbchain.ArbitrumVMABI))
+	parsed, err := abi.JSON(strings.NewReader(arbchain.ArbBaseABI))
 	if err != nil {
 		panic(err)
 	}
@@ -56,27 +56,27 @@ func init() {
 	challengeLaunchedID = parsed.Events["ChallengeLaunched"].ID()
 }
 
-type ArbitrumVM struct {
+type ArbBase struct {
 	OutChan            chan Notification
 	ErrChan            chan error
 	Client             *ethclient.Client
-	ArbitrumVM         *arbchain.ArbitrumVM
+	ArbitrumVM         *arbchain.ArbBase
 	GlobalPendingInbox *arbchain.IGlobalPendingInbox
 
 	address common.Address
 	client  *ethclient.Client
 }
 
-func NewArbitrumVM(address common.Address, client *ethclient.Client) (*ArbitrumVM, error) {
+func NewArbBase(address common.Address, client *ethclient.Client) (*ArbBase, error) {
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
-	vm := &ArbitrumVM{OutChan: outChan, ErrChan: errChan, Client: client, address: address}
+	vm := &ArbBase{OutChan: outChan, ErrChan: errChan, Client: client, address: address}
 	err := vm.setupContracts()
 	return vm, err
 }
 
-func (vm *ArbitrumVM) setupContracts() error {
-	arbitrumVMContract, err := arbchain.NewArbitrumVM(vm.address, vm.Client)
+func (vm *ArbBase) setupContracts() error {
+	arbitrumVMContract, err := arbchain.NewArbBase(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
@@ -98,16 +98,16 @@ func (vm *ArbitrumVM) setupContracts() error {
 	return nil
 }
 
-func (vm *ArbitrumVM) GetChans() (chan Notification, chan error) {
+func (vm *ArbBase) GetChans() (chan Notification, chan error) {
 	return vm.OutChan, vm.ErrChan
 }
 
-func (vm *ArbitrumVM) Close() {
+func (vm *ArbBase) Close() {
 	close(vm.OutChan)
 	close(vm.ErrChan)
 }
 
-func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
+func (vm *ArbBase) StartConnection(ctx context.Context) error {
 	if err := vm.setupContracts(); err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 	return nil
 }
 
-func (vm *ArbitrumVM) processEvents(ctx context.Context, log types.Log) error {
+func (vm *ArbBase) processEvents(ctx context.Context, log types.Log) error {
 	header, err := vm.Client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
@@ -268,7 +268,7 @@ func (vm *ArbitrumVM) processEvents(ctx context.Context, log types.Log) error {
 	return nil
 }
 
-func (vm *ArbitrumVM) PendingDisputableAssert(
+func (vm *ArbBase) PendingDisputableAssert(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
@@ -290,7 +290,7 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "PendingDisputableAssert")
 }
 
-func (vm *ArbitrumVM) ConfirmDisputableAsserted(
+func (vm *ArbBase) ConfirmDisputableAsserted(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
@@ -311,7 +311,7 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmDisputableAsserted")
 }
 
-func (vm *ArbitrumVM) InitiateChallenge(
+func (vm *ArbBase) InitiateChallenge(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertion *protocol.AssertionStub,
@@ -329,27 +329,27 @@ func (vm *ArbitrumVM) InitiateChallenge(
 	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "InitiateChallenge")
 }
 
-func (vm *ArbitrumVM) CurrentDeposit(
+func (vm *ArbBase) CurrentDeposit(
 	auth *bind.CallOpts,
 	address common.Address,
 ) (*big.Int, error) {
 	return vm.ArbitrumVM.CurrentDeposit(auth, address)
 }
 
-func (vm *ArbitrumVM) EscrowRequired(
+func (vm *ArbBase) EscrowRequired(
 	auth *bind.CallOpts,
 ) (*big.Int, error) {
 	return vm.ArbitrumVM.EscrowRequired(auth)
 }
 
-func (vm *ArbitrumVM) IsEnabled(
+func (vm *ArbBase) IsEnabled(
 	auth *bind.CallOpts,
 ) (bool, error) {
 	status, err := vm.ArbitrumVM.GetState(auth)
 	return status != 0, err
 }
 
-func (vm *ArbitrumVM) IsInChallenge(
+func (vm *ArbBase) IsInChallenge(
 	auth *bind.CallOpts,
 ) (bool, error) {
 	vmState, err := vm.ArbitrumVM.Vm(auth)
@@ -359,14 +359,14 @@ func (vm *ArbitrumVM) IsInChallenge(
 	return vmState.ActiveChallengeManager != [20]byte{}, nil
 }
 
-func (vm *ArbitrumVM) IsPendingUnanimous(
+func (vm *ArbBase) IsPendingUnanimous(
 	auth *bind.CallOpts,
 ) (bool, error) {
 	status, err := vm.ArbitrumVM.GetState(auth)
 	return status == 3, err
 }
 
-func (vm *ArbitrumVM) VerifyVM(
+func (vm *ArbBase) VerifyVM(
 	auth *bind.CallOpts,
 	config *valmessage.VMConfiguration,
 	machine [32]byte,
@@ -404,7 +404,7 @@ func (vm *ArbitrumVM) VerifyVM(
 	return nil
 }
 
-func translateDisputableAssertionEvent(event *arbchain.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
+func translateDisputableAssertionEvent(event *arbchain.ArbBasePendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],
 		protocol.NewTimeBounds(event.TimeBounds[0], event.TimeBounds[1]),

@@ -13,15 +13,15 @@ abigen --sol=factories/ChannelFactory.sol --pkg=channelfactory --out=channelfact
 
 abigen --sol=vm/ArbChain.sol --pkg=arbchain --out=arbchain.go
 abigen --sol=vm/ArbChannel.sol --pkg=arbchannel --out=arbchannel.go
-abigen --sol=challenge/ArbChallenge.sol --pkg=arbchallenge --out=arbchallenge.go
+abigen --sol=challenge/Challenge.sol --pkg=challenge --out=challenge.go
 
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
-abigen --sol=challenge/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
+abigen --sol=libraries/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
 \cp chainfactory.go ../../arb-validator/ethbridge/chainfactory/
 \cp channelfactory.go ../../arb-validator/ethbridge/channelfactory/
 \cp arbchain.go ../../arb-validator/ethbridge/arbchain/
 \cp arbchannel.go ../../arb-validator/ethbridge/arbchannel/
-\cp arbchallenge.go ../../arb-validator/ethbridge/arbchallenge/
+\cp challenge.go ../../arb-validator/ethbridge/challenge/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin solidity-bytes-utils

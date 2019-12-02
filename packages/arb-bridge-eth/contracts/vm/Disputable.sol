@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 
-import "../libraries/ArbProtocol.sol";
+import "../libraries/Protocol.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -73,12 +73,12 @@ library Disputable {
 
         vm.pendingHash = keccak256(
             abi.encodePacked(
-                ArbProtocol.generatePreconditionHash(
+                Protocol.generatePreconditionHash(
                     beforeHash,
                     timeBounds,
                     beforeInbox
                 ),
-                ArbProtocol.generateAssertionHash(
+                Protocol.generateAssertionHash(
                     afterHash,
                     numSteps,
                     0x00,
@@ -116,11 +116,11 @@ library Disputable {
             keccak256(
                 abi.encodePacked(
                     preconditionHash,
-                    ArbProtocol.generateAssertionHash(
+                    Protocol.generateAssertionHash(
                         afterHash,
                         numSteps,
                         0x00,
-                        ArbProtocol.generateLastMessageHash(messages),
+                        Protocol.generateLastMessageHash(messages),
                         0x00,
                         logsAccHash
                     )
@@ -153,7 +153,7 @@ library Disputable {
         require(
             keccak256(
                 abi.encodePacked(
-                    ArbProtocol.generatePreconditionHash(
+                    Protocol.generatePreconditionHash(
                         beforeHash,
                         timeBounds,
                         beforeInbox

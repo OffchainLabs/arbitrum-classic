@@ -31,17 +31,17 @@ import (
 )
 
 type ArbChain struct {
-	*ArbitrumVM
+	*ArbBase
 	contract *arbchain.ArbChain
 }
 
 func NewArbChain(address common.Address, client *ethclient.Client) (*ArbChain, error) {
-	arbVM, err := NewArbitrumVM(address, client)
-	return &ArbChain{ArbitrumVM: arbVM}, err
+	arbVM, err := NewArbBase(address, client)
+	return &ArbChain{ArbBase: arbVM}, err
 }
 
 func (vm *ArbChain) StartConnection(ctx context.Context) error {
-	if err := vm.ArbitrumVM.StartConnection(ctx); err != nil {
+	if err := vm.ArbBase.StartConnection(ctx); err != nil {
 		return err
 	}
 	trackerContract, err := arbchain.NewArbChain(vm.address, vm.Client)

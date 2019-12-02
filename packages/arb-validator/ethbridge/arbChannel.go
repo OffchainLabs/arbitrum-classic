@@ -37,16 +37,16 @@ import (
 )
 
 type ArbChannel struct {
-	*ArbitrumVM
+	*ArbBase
 	contract *arbchannel.ArbChannel
 }
 
 func NewArbChannel(address common.Address, client *ethclient.Client) (*ArbChannel, error) {
-	arbVM, err := NewArbitrumVM(address, client)
+	arbVM, err := NewArbBase(address, client)
 	if err != nil {
 		return nil, err
 	}
-	channel := &ArbChannel{ArbitrumVM: arbVM}
+	channel := &ArbChannel{ArbBase: arbVM}
 	err = channel.setupContracts()
 	return channel, err
 }
@@ -61,7 +61,7 @@ func (vm *ArbChannel) setupContracts() error {
 }
 
 func (vm *ArbChannel) StartConnection(ctx context.Context) error {
-	if err := vm.ArbitrumVM.StartConnection(ctx); err != nil {
+	if err := vm.ArbBase.StartConnection(ctx); err != nil {
 		return err
 	}
 	if err := vm.setupContracts(); err != nil {
@@ -254,7 +254,7 @@ func (vm *ArbChannel) VerifyVM(
 	config *valmessage.VMConfiguration,
 	machine [32]byte,
 ) error {
-	err := vm.ArbitrumVM.VerifyVM(auth, config, machine)
+	err := vm.ArbBase.VerifyVM(auth, config, machine)
 	validators := make([]common.Address, 0, len(config.AssertKeys))
 	for _, assertKey := range config.AssertKeys {
 		validators = append(validators, protocol.NewAddressFromBuf(assertKey))

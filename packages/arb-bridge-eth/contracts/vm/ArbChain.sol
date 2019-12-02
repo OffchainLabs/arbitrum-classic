@@ -16,11 +16,11 @@
 
 pragma solidity ^0.5.3;
 
-import "./ArbitrumVM.sol";
+import "./ArbBase.sol";
 import "./IArbChain.sol";
 
 
-contract ArbChain is ArbitrumVM, IArbChain {
+contract ArbChain is ArbBase, IArbChain {
 
     function init(
         bytes32 _vmState,
@@ -33,7 +33,7 @@ contract ArbChain is ArbitrumVM, IArbChain {
     )
         external
     {
-        ArbitrumVM.initialize(
+        ArbBase.initialize(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,

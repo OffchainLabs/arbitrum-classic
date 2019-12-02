@@ -16,16 +16,15 @@
 
 pragma solidity ^0.5.3;
 
-import "../libraries/ArbProtocol.sol";
-import "../libraries/ArbValue.sol";
-import "../libraries/ArbMachine.sol";
+import "../libraries/Value.sol";
+import "../libraries/Machine.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 
 
 library OneStepProof {
-    using ArbMachine for ArbMachine.Machine;
-    using ArbValue for ArbValue.Value;
+    using Machine for Machine.Data;
+    using Value for Value.Data;
 
     struct ValidateProofData {
         bytes32 beforeHash;
@@ -72,9 +71,9 @@ library OneStepProof {
     // Arithmetic
 
     function executeAddInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -94,9 +93,9 @@ library OneStepProof {
     }
 
     function executeMulInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -116,9 +115,9 @@ library OneStepProof {
     }
 
     function executeSubInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -138,9 +137,9 @@ library OneStepProof {
     }
 
     function executeDivInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -163,9 +162,9 @@ library OneStepProof {
     }
 
     function executeSdivInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -188,9 +187,9 @@ library OneStepProof {
     }
 
     function executeModInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -213,9 +212,9 @@ library OneStepProof {
     }
 
     function executeSmodInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -238,10 +237,10 @@ library OneStepProof {
     }
 
     function executeAddmodInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2,
-        ArbValue.Value memory val3
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3
     )
         internal
         pure
@@ -265,10 +264,10 @@ library OneStepProof {
     }
 
     function executeMulmodInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2,
-        ArbValue.Value memory val3
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3
     )
         internal
         pure
@@ -292,9 +291,9 @@ library OneStepProof {
     }
 
     function executeExpInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -316,9 +315,9 @@ library OneStepProof {
     // Comparison
 
     function executeLtInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -338,9 +337,9 @@ library OneStepProof {
     }
 
     function executeGtInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -360,9 +359,9 @@ library OneStepProof {
     }
 
     function executeSltInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -382,9 +381,9 @@ library OneStepProof {
     }
 
     function executeSgtInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -404,21 +403,21 @@ library OneStepProof {
     }
 
     function executeEqInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
         returns (bool)
     {
-        machine.addDataStackValue(ArbValue.newBooleanValue(val1.hash().hash == val2.hash().hash));
+        machine.addDataStackValue(Value.newBoolean(val1.hash().hash == val2.hash().hash));
         return true;
     }
 
     function executeIszeroInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -438,9 +437,9 @@ library OneStepProof {
     }
 
     function executeAndInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -460,9 +459,9 @@ library OneStepProof {
     }
 
     function executeOrInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -482,9 +481,9 @@ library OneStepProof {
     }
 
     function executeXorInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -504,8 +503,8 @@ library OneStepProof {
     }
 
     function executeNotInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -524,9 +523,9 @@ library OneStepProof {
     }
 
     function executeByteInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -546,9 +545,9 @@ library OneStepProof {
     }
 
     function executeSignextendInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -570,8 +569,8 @@ library OneStepProof {
     // Hash
 
     function executeSha3Insn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -582,8 +581,8 @@ library OneStepProof {
     }
 
     function executeTypeInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -596,8 +595,8 @@ library OneStepProof {
     // Stack ops
 
     function executePopInsn(
-        ArbMachine.Machine memory,
-        ArbValue.Value memory
+        Machine.Data memory,
+        Value.Data memory
     )
         internal
         pure
@@ -607,7 +606,7 @@ library OneStepProof {
     }
 
     function executeSpushInsn(
-        ArbMachine.Machine memory machine
+        Machine.Data memory machine
     )
         internal
         pure
@@ -618,7 +617,7 @@ library OneStepProof {
     }
 
     function executeRpushInsn(
-        ArbMachine.Machine memory machine
+        Machine.Data memory machine
     )
         internal
         pure
@@ -629,8 +628,8 @@ library OneStepProof {
     }
 
     function executeRsetInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -641,8 +640,8 @@ library OneStepProof {
     }
 
     function executeJumpInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -653,9 +652,9 @@ library OneStepProof {
     }
 
     function executeCjumpInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -674,21 +673,21 @@ library OneStepProof {
     }
 
     function executeStackemptyInsn(
-        ArbMachine.Machine memory machine
+        Machine.Data memory machine
     )
         internal
         pure
         returns (bool)
     {
         machine.addDataStackValue(
-            ArbValue.newBooleanValue(machine.dataStackHash.hash == ArbValue.newNoneValue().hash().hash)
+            Value.newBoolean(machine.dataStackHash.hash == Value.newNone().hash().hash)
         );
         return true;
     }
 
     function executePcpushInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.HashOnlyValue memory pc
+        Machine.Data memory machine,
+        Value.HashOnly memory pc
     )
         internal
         pure
@@ -699,8 +698,8 @@ library OneStepProof {
     }
 
     function executeAuxpushInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val
+        Machine.Data memory machine,
+        Value.Data memory val
     )
         internal
         pure
@@ -711,20 +710,20 @@ library OneStepProof {
     }
 
     function executeAuxstackemptyInsn(
-        ArbMachine.Machine memory machine
+        Machine.Data memory machine
     )
         internal
         pure
         returns (bool)
     {
         machine.addDataStackValue(
-            ArbValue.newBooleanValue(machine.auxStackHash.hash == ArbValue.newNoneValue().hash().hash)
+            Value.newBoolean(machine.auxStackHash.hash == Value.newNone().hash().hash)
         );
         return true;
     }
 
     function executeErrpushInsn(
-        ArbMachine.Machine memory machine
+        Machine.Data memory machine
     )
         internal
         pure
@@ -735,8 +734,8 @@ library OneStepProof {
     }
 
     function executeErrsetInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val
+        Machine.Data memory machine,
+        Value.Data memory val
     )
         internal
         pure
@@ -752,8 +751,8 @@ library OneStepProof {
     // Dup ops
 
     function executeDup0Insn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -765,9 +764,9 @@ library OneStepProof {
     }
 
     function executeDup1Insn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -780,10 +779,10 @@ library OneStepProof {
     }
 
     function executeDup2Insn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2,
-        ArbValue.Value memory val3
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3
     )
         internal
         pure
@@ -799,9 +798,9 @@ library OneStepProof {
     // Swap ops
 
     function executeSwap1Insn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -813,10 +812,10 @@ library OneStepProof {
     }
 
     function executeSwap2Insn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2,
-        ArbValue.Value memory val3
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3
     )
         internal
         pure
@@ -831,9 +830,9 @@ library OneStepProof {
     // Tuple ops
 
     function executeTgetInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2
     )
         internal
         pure
@@ -852,10 +851,10 @@ library OneStepProof {
     }
 
     function executeTsetInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.Value memory val2,
-        ArbValue.Value memory val3
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.Data memory val2,
+        Value.Data memory val3
     )
         internal
         pure
@@ -874,8 +873,8 @@ library OneStepProof {
     }
 
     function executeTlenInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1
+        Machine.Data memory machine,
+        Value.Data memory val1
     )
         internal
         pure
@@ -890,27 +889,27 @@ library OneStepProof {
 
     // Logging
 
-    function executeBreakpointInsn(ArbMachine.Machine memory) internal pure returns (bool) {
+    function executeBreakpointInsn(Machine.Data memory) internal pure returns (bool) {
         return true;
     }
 
     function executeLogInsn(
-        ArbMachine.Machine memory,
-        ArbValue.Value memory val1
+        Machine.Data memory,
+        Value.Data memory val1
     )
         internal
         pure
         returns (bool, bytes32)
     {
-        ArbValue.HashOnlyValue memory hashVal = val1.hash();
+        Value.HashOnly memory hashVal = val1.hash();
         return (true, hashVal.hash);
     }
 
     // System operations
 
     function executeSendInsn(
-        ArbMachine.Machine memory,
-        ArbValue.Value memory val1
+        Machine.Data memory,
+        Value.Data memory val1
     )
         internal
         pure
@@ -920,9 +919,9 @@ library OneStepProof {
     }
 
     function executeInboxInsn(
-        ArbMachine.Machine memory machine,
-        ArbValue.Value memory val1,
-        ArbValue.HashOnlyValue memory beforeInbox
+        Machine.Data memory machine,
+        Value.Data memory val1,
+        Value.HashOnly memory beforeInbox
     )
         internal
         pure
@@ -1128,33 +1127,33 @@ library OneStepProof {
         pure
         returns (
             uint8,
-            ArbValue.Value[] memory,
-            ArbMachine.Machine memory,
-            ArbMachine.Machine memory,
+            Value.Data[] memory,
+            Machine.Data memory,
+            Machine.Data memory,
             uint
         )
     {
         uint offset = 0;
         uint valid = 0;
-        ArbMachine.Machine memory startMachine;
+        Machine.Data memory startMachine;
         startMachine.setExtensive();
-        (valid, offset, startMachine) = ArbMachine.deserializeMachine(_data.proof, offset);
-        ArbMachine.Machine memory endMachine = startMachine.clone();
+        (valid, offset, startMachine) = Machine.deserializeMachine(_data.proof, offset);
+        Machine.Data memory endMachine = startMachine.clone();
         uint8 immediate = uint8(_data.proof[offset]);
         uint8 opCode = uint8(_data.proof[offset + 1]);
         uint popCount = opPopCount(opCode);
-        ArbValue.Value[] memory stackVals = new ArbValue.Value[](popCount);
+        Value.Data[] memory stackVals = new Value.Data[](popCount);
         offset += 2;
 
         require(immediate == 0 || immediate == 1, "Proof had bad operation type");
         if (immediate == 0) {
-            startMachine.instructionStackHash = ArbValue.HashOnlyValue(ArbValue.hashCodePointBasicValue(
+            startMachine.instructionStackHash = Value.HashOnly(Value.hashCodePointBasic(
                 uint8(opCode),
                 startMachine.instructionStackHash.hash
             ));
         } else {
-            ArbValue.Value memory immediateVal;
-            (valid, offset, immediateVal) = ArbValue.deserializeValue(_data.proof, offset);
+            Value.Data memory immediateVal;
+            (valid, offset, immediateVal) = Value.deserialize(_data.proof, offset);
             // string(abi.encodePacked("Proof had bad immediate value ", uint2str(valid)))
             require(valid == 0, "Proof had bad immediate value");
             if (popCount > 0) {
@@ -1163,7 +1162,7 @@ library OneStepProof {
                 endMachine.addDataStackValue(immediateVal);
             }
 
-            startMachine.instructionStackHash = ArbValue.HashOnlyValue(ArbValue.hashCodePointImmediateValue(
+            startMachine.instructionStackHash = Value.HashOnly(Value.hashCodePointImmediate(
                 uint8(opCode),
                 immediateVal.hash().hash,
                 startMachine.instructionStackHash.hash
@@ -1172,7 +1171,7 @@ library OneStepProof {
 
         uint i = 0;
         for (i = immediate; i < popCount; i++) {
-            (valid, offset, stackVals[i]) = ArbValue.deserializeValue(_data.proof, offset);
+            (valid, offset, stackVals[i]) = Value.deserialize(_data.proof, offset);
             require(valid == 0, "Proof had bad stack value");
         }
         if (stackVals.length > 0) {
@@ -1196,9 +1195,9 @@ library OneStepProof {
         uint8 opCode;
         uint valid = 0;
         uint offset;
-        ArbValue.Value[] memory stackVals;
-        ArbMachine.Machine memory startMachine;
-        ArbMachine.Machine memory endMachine;
+        Value.Data[] memory stackVals;
+        Machine.Data memory startMachine;
+        Machine.Data memory endMachine;
         (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(_data);
         bool correct = true;
         bytes32 messageHash;
@@ -1279,8 +1278,8 @@ library OneStepProof {
         } else if (opCode == OP_AUXPUSH) {
             correct = executeAuxpushInsn(endMachine, stackVals[0]);
         } else if (opCode == OP_AUXPOP) {
-            ArbValue.Value memory auxVal;
-            (valid, offset, auxVal) = ArbValue.deserializeValue(_data.proof, offset);
+            Value.Data memory auxVal;
+            (valid, offset, auxVal) = Value.deserialize(_data.proof, offset);
             require(valid == 0, "Proof of auxpop had bad aux value");
             startMachine.addAuxStackValue(auxVal);
             endMachine.addDataStackValue(auxVal);
@@ -1359,12 +1358,12 @@ library OneStepProof {
                 messageHash = 0;
             }
         } else if (opCode == OP_GETTIME) {
-            ArbValue.Value[] memory contents = new ArbValue.Value[](2);
-            contents[0] = ArbValue.newIntValue(_data.timeBounds[0]);
-            contents[1] = ArbValue.newIntValue(_data.timeBounds[1]);
-            endMachine.addDataStackValue(ArbValue.newTupleValue(contents));
+            Value.Data[] memory contents = new Value.Data[](2);
+            contents[0] = Value.newInt(_data.timeBounds[0]);
+            contents[1] = Value.newInt(_data.timeBounds[1]);
+            endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], ArbValue.HashOnlyValue(_data.beforeInbox));
+            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox));
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {

@@ -19,7 +19,7 @@ pragma solidity ^0.5.3;
 import "./VM.sol";
 import "./IArbChannel.sol";
 
-import "../libraries/ArbProtocol.sol";
+import "../libraries/Protocol.sol";
 import "../libraries/SigUtils.sol";
 
 
@@ -72,7 +72,7 @@ library Unanimous {
                 )
             ),
             ~uint64(0),
-            ArbProtocol.generateLastMessageHash(messages),
+            Protocol.generateLastMessageHash(messages),
             logsAccHash,
             signatures
         );
@@ -158,7 +158,7 @@ library Unanimous {
         require(
             keccak256(
                 abi.encodePacked(
-                    ArbProtocol.generateLastMessageHash(_messages),
+                    Protocol.generateLastMessageHash(_messages),
                     keccak256(
                         abi.encodePacked(
                             _newInbox,

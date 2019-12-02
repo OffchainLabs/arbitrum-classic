@@ -18,16 +18,16 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 import "./Disputable.sol";
-import "./IArbitrumVM.sol";
+import "./IArbBase.sol";
 
 import "../IGlobalPendingInbox.sol";
 import "../factories/IChallengeFactory.sol";
 
-import "../libraries/ArbProtocol.sol";
-import "../libraries/ArbValue.sol";
+import "../libraries/Protocol.sol";
+import "../libraries/Value.sol";
 
 
-contract ArbitrumVM is IArbitrumVM {
+contract ArbBase is IArbBase {
     using SafeMath for uint256;
 
     // fields:
@@ -95,7 +95,7 @@ contract ArbitrumVM is IArbitrumVM {
         // Machine state
         vm.machineHash = _vmState;
         vm.state = VM.State.Uninitialized;
-        vm.inbox = ArbValue.hashEmptyTuple();
+        vm.inbox = Value.hashEmptyTuple();
 
         // Validator options
         vm.escrowRequired = _escrowRequired;
@@ -225,11 +225,11 @@ contract ArbitrumVM is IArbitrumVM {
 
     function _completeAssertion(bytes memory _messages) internal {
         bytes32 pending = globalInbox.pullPendingMessages();
-        if (pending != ArbValue.hashEmptyTuple()) {
-            vm.inbox = ArbValue.hashTupleValue([
-                ArbValue.newIntValue(1),
-                ArbValue.newHashOnlyValue(vm.inbox),
-                ArbValue.newHashOnlyValue(pending)
+        if (pending != Value.hashEmptyTuple()) {
+            vm.inbox = Value.hashTuple([
+                Value.newInt(1),
+                Value.newHashOnly(vm.inbox),
+                Value.newHashOnly(pending)
             ]);
         }
 

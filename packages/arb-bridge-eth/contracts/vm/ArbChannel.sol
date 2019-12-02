@@ -17,11 +17,11 @@
 pragma solidity ^0.5.3;
 
 import "./IArbChannel.sol";
-import "./ArbitrumVM.sol";
+import "./ArbBase.sol";
 import "./Unanimous.sol";
 
 
-contract ArbChannel is ArbitrumVM, IArbChannel {
+contract ArbChannel is ArbBase, IArbChannel {
     using SafeMath for uint256;
 
     event PendingUnanimousAssertion (
@@ -54,7 +54,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     )
         external
     {
-        ArbitrumVM.initialize(
+        ArbBase.initialize(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,

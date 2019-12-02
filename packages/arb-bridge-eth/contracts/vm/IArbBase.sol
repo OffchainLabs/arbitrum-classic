@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-interface IArbitrumVM {
+
+interface IArbBase {
     function completeChallenge(address[2] calldata _players, uint128[2] calldata _rewards) external;
 }

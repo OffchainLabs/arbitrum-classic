@@ -18,10 +18,10 @@ pragma solidity ^0.5.3;
 
 import "./IChallenge.sol";
 
-import "../vm/IArbitrumVM.sol";
+import "../vm/IArbBase.sol";
 
 import "../libraries/OneStepProof.sol";
-import "../libraries/ArbProtocol.sol";
+import "../libraries/Protocol.sol";
 import "../libraries/MerkleLib.sol";
 
 
@@ -170,7 +170,7 @@ contract Challenge is IChallenge {
                 abi.encodePacked(
                     _preData,
                     _machineHashes[0],
-                    ArbProtocol.generateAssertionHash(
+                    Protocol.generateAssertionHash(
                         _machineHashes[bisectionCount],
                         _totalSteps,
                         _messageAccs[0],
@@ -188,7 +188,7 @@ contract Challenge is IChallenge {
             abi.encodePacked(
                 _preData,
                 _machineHashes[0],
-                ArbProtocol.generateAssertionHash(
+                Protocol.generateAssertionHash(
                     _machineHashes[1],
                     _totalSteps / uint32(bisectionCount) + _totalSteps%uint32(bisectionCount),
                     _messageAccs[0],
@@ -203,7 +203,7 @@ contract Challenge is IChallenge {
                 abi.encodePacked(
                     _preData,
                     _machineHashes[i],
-                    ArbProtocol.generateAssertionHash(
+                    Protocol.generateAssertionHash(
                         _machineHashes[i + 1],
                         _totalSteps / uint32(bisectionCount),
                         _messageAccs[i],
@@ -283,7 +283,7 @@ contract Challenge is IChallenge {
                         )
                     ),
                     _beforeHash,
-                    ArbProtocol.generateAssertionHash(
+                    Protocol.generateAssertionHash(
                         _afterHash,
                         1,
                         _firstMessage,
@@ -335,7 +335,7 @@ contract Challenge is IChallenge {
     }
 
     function _asserterWin() private {
-        IArbitrumVM(vmAddress).completeChallenge(
+        IArbBase(vmAddress).completeChallenge(
             players,
             [
                 escrows[0] + escrows[1] / 2,
@@ -346,7 +346,7 @@ contract Challenge is IChallenge {
     }
 
     function _challengerWin() private {
-        IArbitrumVM(vmAddress).completeChallenge(
+        IArbBase(vmAddress).completeChallenge(
             players,
             [
                 0,
