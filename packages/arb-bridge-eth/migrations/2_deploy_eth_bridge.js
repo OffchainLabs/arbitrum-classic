@@ -21,7 +21,6 @@ var VM = artifacts.require("./VM.sol");
 var ArbValue = artifacts.require("./ArbValue.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
-var ChallengeImpl = artifacts.require("./ChallengeImpl.sol");
 var OneStepProof = artifacts.require("./OneStepProof.sol");
 var ArbMachine = artifacts.require("./ArbMachine.sol");
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
@@ -30,7 +29,7 @@ var SigUtils = artifacts.require("./SigUtils.sol");
 
 var ArbChain = artifacts.require("./vm/ArbChain.sol");
 var ArbChannel = artifacts.require("./vm/ArbChannel.sol");
-var ArbChallenge = artifacts.require("./challenge/ArbChallenge.sol");
+var Challenge = artifacts.require("./challenge/Challenge.sol");
 
 var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
 var ChainFactory = artifacts.require("./factories/ChainFactory.sol");
@@ -43,7 +42,7 @@ module.exports = async function(deployer, network, accounts) {
   deployer.link(DebugPrint, []);
 
   deployer.deploy(MerkleLib);
-  deployer.link(MerkleLib, [ChallengeImpl]);
+  deployer.link(MerkleLib, [Challenge]);
 
   deployer.deploy(SigUtils);
   deployer.link(SigUtils, [GlobalPendingInbox, Unanimous]);
@@ -61,21 +60,13 @@ module.exports = async function(deployer, network, accounts) {
   ]);
 
   deployer.deploy(ArbProtocol);
-  deployer.link(ArbProtocol, [
-    ChallengeImpl,
-    Disputable,
-    OneStepProof,
-    Unanimous
-  ]);
+  deployer.link(ArbProtocol, [Challenge, Disputable, OneStepProof, Unanimous]);
 
   deployer.deploy(ArbMachine);
   deployer.link(ArbMachine, []);
 
   deployer.deploy(OneStepProof);
-  deployer.link(OneStepProof, [ChallengeImpl]);
-
-  deployer.deploy(ChallengeImpl);
-  deployer.link(ChallengeImpl, [ArbChallenge]);
+  deployer.link(OneStepProof, [Challenge]);
 
   deployer.deploy(VM);
   deployer.link(VM, [ArbChannel, Disputable, Unanimous]);
@@ -86,12 +77,12 @@ module.exports = async function(deployer, network, accounts) {
   deployer.deploy(Unanimous);
   deployer.link(Unanimous, [ArbChannel]);
 
-  await deployer.deploy(ArbChallenge);
+  await deployer.deploy(Challenge);
   await deployer.deploy(ArbChain);
   await deployer.deploy(ArbChannel);
 
   await deployer.deploy(GlobalPendingInbox);
-  await deployer.deploy(ChallengeFactory, ArbChallenge.address);
+  await deployer.deploy(ChallengeFactory, Challenge.address);
   await deployer.deploy(
     ChainFactory,
     ArbChain.address,

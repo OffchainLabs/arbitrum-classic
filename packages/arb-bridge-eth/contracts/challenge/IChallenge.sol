@@ -16,7 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-interface IArbChallenge {
+interface IChallenge {
     function init(
         address vmAddress,
         address[2] calldata _players,

@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./CloneFactory.sol";
 import "./IChallengeFactory.sol";
-import "../challenge/IArbChallenge.sol";
+import "../challenge/IChallenge.sol";
 
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
@@ -42,7 +42,7 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         returns(address)
     {
         address clone = createClone(challengeTemplate);
-        IArbChallenge(clone).init(
+        IChallenge(clone).init(
             msg.sender,
             _players,
             _escrows,

@@ -16,8 +16,6 @@
 
 pragma solidity ^0.5.3;
 
-import "./Challenge.sol";
-
 import "../libraries/ArbProtocol.sol";
 import "../libraries/ArbValue.sol";
 import "../libraries/ArbMachine.sol";
