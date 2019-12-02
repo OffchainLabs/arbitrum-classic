@@ -16,23 +16,23 @@
 
 var BytesLib = artifacts.require("bytes/BytesLib.sol");
 
-var DebugPrint = artifacts.require("./DebugPrint.sol");
-var Machine = artifacts.require("./Machine.sol");
-var MerkleLib = artifacts.require("./MerkleLib.sol");
-var OneStepProof = artifacts.require("./OneStepProof.sol");
-var Protocol = artifacts.require("./Protocol.sol");
-var SigUtils = artifacts.require("./SigUtils.sol");
-var Value = artifacts.require("./Value.sol");
+var DebugPrint = artifacts.require("./libraries/DebugPrint.sol");
+var SigUtils = artifacts.require("./libraries/SigUtils.sol");
+var MerkleLib = artifacts.require("./libraries/MerkleLib.sol");
+
+var Machine = artifacts.require("./arch/Machine.sol");
+var OneStepProof = artifacts.require("./arch/OneStepProof.sol");
+var Protocol = artifacts.require("./arch/Protocol.sol");
+var Value = artifacts.require("./arch/Value.sol");
 
 var Challenge = artifacts.require("./challenge/Challenge.sol");
+var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
 
 var VM = artifacts.require("./VM.sol");
 var Disputable = artifacts.require("./Disputable.sol");
 var Unanimous = artifacts.require("./Unanimous.sol");
 var ArbChain = artifacts.require("./vm/ArbChain.sol");
 var ArbChannel = artifacts.require("./vm/ArbChannel.sol");
-
-var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
 var ChainFactory = artifacts.require("./factories/ChainFactory.sol");
 var ChannelFactory = artifacts.require("./factories/ChannelFactory.sol");
 

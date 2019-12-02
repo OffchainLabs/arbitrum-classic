@@ -8,15 +8,16 @@ cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../node_modules/solidity-bytes-utils/ ./solidity-bytes-utils
 
-abigen --sol=factories/ChainFactory.sol --pkg=chainfactory --out=chainfactory.go
-abigen --sol=factories/ChannelFactory.sol --pkg=channelfactory --out=channelfactory.go
-
+abigen --sol=vm/ChainFactory.sol --pkg=chainfactory --out=chainfactory.go
+abigen --sol=vm/ChannelFactory.sol --pkg=channelfactory --out=channelfactory.go
 abigen --sol=vm/ArbChain.sol --pkg=arbchain --out=arbchain.go
 abigen --sol=vm/ArbChannel.sol --pkg=arbchannel --out=arbchannel.go
+
 abigen --sol=challenge/Challenge.sol --pkg=challenge --out=challenge.go
 
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
-abigen --sol=libraries/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
+abigen --sol=arch/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
+
 \cp chainfactory.go ../../arb-validator/ethbridge/chainfactory/
 \cp channelfactory.go ../../arb-validator/ethbridge/channelfactory/
 \cp arbchain.go ../../arb-validator/ethbridge/arbchain/
@@ -25,6 +26,6 @@ abigen --sol=libraries/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin solidity-bytes-utils
-rm -f arbchain.go arbchannel.go chainfactory.go channelfactory.go arbchallenge.go globalpendinginbox.go onestepproof.go
+rm -f arbchain.go arbchannel.go chainfactory.go channelfactory.go challenge.go globalpendinginbox.go onestepproof.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

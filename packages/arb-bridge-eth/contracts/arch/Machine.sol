@@ -17,7 +17,8 @@
 pragma solidity ^0.5.3;
 
 import "./Value.sol";
-import "./DebugPrint.sol";
+
+import "../libraries/DebugPrint.sol";
 
 
 library Machine {

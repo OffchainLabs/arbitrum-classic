@@ -21,10 +21,11 @@ import "./Disputable.sol";
 import "./IArbBase.sol";
 
 import "../IGlobalPendingInbox.sol";
-import "../factories/IChallengeFactory.sol";
 
-import "../libraries/Protocol.sol";
-import "../libraries/Value.sol";
+import "../challenge/IChallengeFactory.sol";
+
+import "../arch/Protocol.sol";
+import "../arch/Value.sol";
 
 
 contract ArbBase is IArbBase {

@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 
-import "../libraries/Protocol.sol";
+import "../arch/Protocol.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 

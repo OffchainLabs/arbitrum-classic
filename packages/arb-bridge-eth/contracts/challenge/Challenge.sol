@@ -20,8 +20,9 @@ import "./IChallenge.sol";
 
 import "../vm/IArbBase.sol";
 
-import "../libraries/OneStepProof.sol";
-import "../libraries/Protocol.sol";
+import "../arch/OneStepProof.sol";
+import "../arch/Protocol.sol";
+
 import "../libraries/MerkleLib.sol";
 
 

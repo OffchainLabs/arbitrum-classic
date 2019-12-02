@@ -19,7 +19,8 @@ pragma solidity ^0.5.3;
 import "./GlobalWallet.sol";
 import "./IGlobalPendingInbox.sol";
 
-import "./libraries/Value.sol";
+import "./arch/Value.sol";
+
 import "./libraries/SigUtils.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";

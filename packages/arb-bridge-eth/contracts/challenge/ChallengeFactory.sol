@@ -16,9 +16,10 @@
 
 pragma solidity ^0.5.3;
 
-import "./CloneFactory.sol";
+import "../libraries/CloneFactory.sol";
+
 import "./IChallengeFactory.sol";
-import "../challenge/IChallenge.sol";
+import "./IChallenge.sol";
 
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {

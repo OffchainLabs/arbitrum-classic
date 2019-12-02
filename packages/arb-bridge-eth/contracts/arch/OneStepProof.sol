@@ -16,8 +16,8 @@
 
 pragma solidity ^0.5.3;
 
-import "../libraries/Value.sol";
-import "../libraries/Machine.sol";
+import "./Value.sol";
+import "./Machine.sol";
 
 // Sourced from https://github.com/leapdao/solEVM-enforcer/tree/master
 
