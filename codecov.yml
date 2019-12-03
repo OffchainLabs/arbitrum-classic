@@ -50,9 +50,11 @@ flags:
       - packages/arb-validator
 
 ignore:
-  - "packages/arb-validator/ethbridge/chainlauncher/chainlauncher.go"
-  - "packages/arb-validator/ethbridge/challengemanager/challengemanager.go"
-  - "packages/arb-validator/ethbridge/channellauncher/channellauncher.go"
-  - "packages/arb-validator/ethbridge/globalpendinginbox/globalpendinginbox.go"
-  - "packages/arb-validator/ethbridge/onestepproof/onestepproof.go"
+  - "packages/arb-validator/ethbridge/arbchain/*"
+  - "packages/arb-validator/ethbridge/arbchannel/*"
+  - "packages/arb-validator/ethbridge/chainfactory/*"
+  - "packages/arb-validator/ethbridge/challenge/*"
+  - "packages/arb-validator/ethbridge/channelfactory/*"
+  - "packages/arb-validator/ethbridge/globalpendinginbox/*"
+  - "packages/arb-validator/ethbridge/onestepproof/*"
   - "**/*.pb.go"
