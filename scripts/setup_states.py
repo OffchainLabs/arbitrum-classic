@@ -18,6 +18,8 @@ import argparse
 import json
 import os
 import shutil
+from web3 import Web3
+from eth_account import Account
 
 from support.run import run
 
@@ -28,10 +30,9 @@ VALIDATOR_STATE = "validator%s"
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-# Retrieve bridge_eth_addresses.json and keys.json
+# Retrieve bridge_eth_addresses.json
 # arb-bridge-eth must be have been built first
-def setup_validator_states_ethbridge(contract, n_validators, sudo=False):
-    keys = "keys.json"
+def setup_validator_states_docker(contract, n_validators, sudo=False):
     ethaddrs = "bridge_eth_addresses.json"
 
     layer = run(
@@ -44,16 +45,20 @@ def setup_validator_states_ethbridge(contract, n_validators, sudo=False):
         "docker cp %s:/home/user/bridge_eth_addresses.json %s" % (layer, ethaddrs),
         sudo=sudo,
     )
-    run("docker cp %s:/home/user/keys.json %s" % (layer, keys), sudo=sudo)
     run("docker rm %s" % layer, quiet=True, sudo=sudo)
 
-    setup_validator_states(contract, n_validators, keys, ethaddrs)
+    setup_validator_states(
+        contract,
+        n_validators,
+        ethaddrs,
+        "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82",
+        "7545",
+    )
 
-    os.remove(keys)
     os.remove(ethaddrs)
 
 
-def setup_validator_states(contract, n_validators, acct_keys, ethaddrs):
+def setup_validator_states(contract, n_validators, ethaddrs, source_address, port):
     ARB_VALIDATOR = os.path.join(ROOT_DIR, "packages", "arb-validator")
 
     # Check for validator_states in cwd
@@ -61,13 +66,15 @@ def setup_validator_states(contract, n_validators, acct_keys, ethaddrs):
         exit("Error:", VALIDATOR_STATES, "exists in the current working directory")
 
     # Extract keys from acct_keys
-    with open(acct_keys, "r") as f:
-        data = json.loads(f.read())["addresses"]
-    addresses = [addr for addr in list(data.keys())][-n_validators:]
-    privates = []
-    for key in [data[addr]["secretKey"]["data"] for addr in list(data.keys())]:
-        privates.append("".join([hex(byte)[2:].zfill(2) for byte in key]))
-    privates = privates[-n_validators:]
+    accounts = [Account.create() for _ in range(n_validators)]
+    addresses = [account.address for account in accounts]
+    privates = [account.key.hex()[2:] for account in accounts]
+
+    web3 = Web3(Web3.HTTPProvider("http://localhost:" + str(port)))
+    for dest in addresses:
+        web3.eth.sendTransaction(
+            {"to": dest, "from": source_address, "value": 100000000000000000000}
+        )
 
     # Create VALIDATOR_STATES
     os.mkdir(VALIDATOR_STATES)
@@ -122,45 +129,48 @@ def main():
     group.add_argument(
         "--docker",
         action="store_true",
-        dest="is_ethbridge",
+        dest="is_docker",
         help="Generate states based on arb-bridge-eth docker images",
     )
     group.add_argument(
         "--local",
         action="store_false",
-        dest="is_ethbridge",
+        dest="is_docker",
         help="Generate states based on local inputs",
     )
     parser.add_argument(
         "-a",
-        "--acctKeys",
-        type=check_json,
+        "--funder_key",
         required=False,
-        help='Generate with: ganache-cli --acctKeys keys.json -m "$MNEMONIC" -a "$NUM_WALLETS"',
+        help="Unlocked key holding ETH to fund validators",
     )
     parser.add_argument(
         "-b",
         "--bridge_eth_addresses",
+        required=False,
         type=check_json,
         help="EthBridge contract addresses",
     )
     parser.add_argument(
         "-p",
         "--port",
+        required=False,
         type=int,
         default=7545,
-        help="Port number to search for Ganache on",
+        help="Port number to search for local node on",
     )
 
     args = parser.parse_args()
 
-    print("is_ethbridge", args.is_ethbridge)
-
-    if args.is_ethbridge:
-        setup_validator_states_ethbridge(args.contract, args.n_validators)
+    if args.is_docker:
+        setup_validator_states_docker(args.contract, args.n_validators)
     else:
         setup_validator_states(
-            args.contract, args.n_validators, args.acctKeys, args.bridge_eth_addresses
+            args.contract,
+            args.n_validators,
+            args.funder_key,
+            args.bridge_eth_addresses,
+            args.port,
         )
 
 

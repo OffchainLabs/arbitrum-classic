@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
@@ -63,6 +64,7 @@ func NewServer(
 		false,
 		math.MaxInt32,
 		math.MaxInt32,
+		time.Second*5,
 	)
 	if err != nil {
 		return nil, err

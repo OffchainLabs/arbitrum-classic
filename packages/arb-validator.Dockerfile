@@ -4,11 +4,12 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM alpine:3.9 as arb-avm-cpp
+FROM alpine:edge as arb-avm-cpp
 # Alpine dependencies
-RUN apk add --no-cache boost-dev=1.67.0-r2 cmake=3.13.0-r0 g++=8.3.0-r0 \
-    make=4.2.1-r2 musl-dev=1.1.20-r5 python3-dev=3.6.9-r2 git && \
-    pip3 install conan==1.20.2 && \
+RUN apk update && apk add --no-cache boost-dev cmake g++ \
+    git make musl-dev python3-dev && \
+    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
+    pip3 install conan && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -24,18 +25,18 @@ RUN mkdir -p build && cd build && \
 COPY --chown=user arb-avm-cpp/ ./
 # Copy build cache
 COPY --from=arb-validator --chown=user /cpp-build build/
-COPY --from=arb-validator --chown=user /rocksdb rocksdb/
 # Build arb-avm-cpp
 RUN cd build && conan install .. && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . -j $(nproc) && \
-    cp lib/* rocksdb/librocksdb.a ../cmachine
+    cp lib/* ../cmachine
 
 
-FROM alpine:3.9 as arb-validator-builder
+FROM alpine:edge as arb-validator-builder
 # Alpine dependencies
-RUN apk add --no-cache build-base=0.5-r1 git=2.20.1-r0 go=1.11.5-r0 \
-    libc-dev=0.7.1-r0 linux-headers=4.18.13-r1 && \
+RUN apk add --no-cache build-base git go \
+    libc-dev linux-headers && \
+    apk add rocksdb-dev --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -45,17 +46,10 @@ COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
 COPY --chown=user arb-avm-go/go.* /home/user/arb-avm-go/
 COPY --chown=user arb-util/go.* /home/user/arb-util/
 COPY --chown=user arb-validator/go.* /home/user/arb-validator/
-RUN go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp=../arb-avm-cpp && \
-    go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-avm-go=../arb-avm-go && \
-    go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-util=../arb-util && \
-    cd ../arb-avm-go && \
-    go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-util=../arb-util && \
-    cd ../arb-validator && \
-    go mod download
+RUN go mod download
 # Copy source code
 COPY --from=arb-avm-cpp /home/user/go.mod /home/user/go.sum /home/user/arb-avm-cpp/
-COPY --from=arb-avm-cpp /home/user/cavm/cmachine.h /home/user/arb-avm-cpp/cavm/cmachine.h
-COPY --from=arb-avm-cpp /home/user/cavm/ccheckpointstorage.h /home/user/arb-avm-cpp/cavm/ccheckpointstorage.h
+COPY --from=arb-avm-cpp /home/user/cavm/cmachine.h /home/user/cavm/ccheckpointstorage.h /home/user/arb-avm-cpp/cavm/
 COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
 COPY --chown=user arb-avm-go/ /home/user/arb-avm-go/
 COPY --chown=user arb-util/ /home/user/arb-util/
@@ -63,18 +57,13 @@ COPY --chown=user arb-validator/ /home/user/arb-validator/
 # Copy build cache
 COPY --from=arb-validator --chown=user /build /home/user/.cache/go-build
 # Build arb-validator
-RUN go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp=../arb-avm-cpp && \
-    go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-avm-go=../arb-avm-go && \
-    go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-util=../arb-util && \
-    cd ../arb-avm-go && \
-    go mod edit -replace github.com/offchainlabs/arbitrum/packages/arb-util=../arb-util && \
-    cd ../arb-validator && \
-    go install -v ./cmd/followerServer ./cmd/coordinatorServer
+RUN go install -v ./cmd/followerServer ./cmd/coordinatorServer
 
 
 FROM alpine:3.9 as arb-validator
 # Export binary
 RUN apk add --no-cache libstdc++=8.3.0-r0 libgcc=8.3.0-r0 && \
+    apk add rocksdb --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ && \
     addgroup -g 1000 -S user && \
     adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
 USER user
@@ -85,8 +74,8 @@ COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/b
 COPY --chown=user arb-validator/server.crt arb-validator/server.key ./
 
 ENV ID=0 \
-    WAIT_FOR="arb-bridge-eth:7545" \
-    ETH_URL="ws://arb-bridge-eth:7545" \
+    WAIT_FOR="host.docker.internal:7546" \
+    ETH_URL="ws://host.docker.internal:7546" \
     COORDINATOR_URL="" \
     AVM="cpp" \
     PATH="/home/user/go/bin:${PATH}"
@@ -94,7 +83,6 @@ ENV ID=0 \
 # Build cache
 COPY --chown=user --from=arb-validator-builder /home/user/.cache/go-build /build
 COPY --from=arb-avm-cpp /home/user/build /cpp-build
-COPY --from=arb-avm-cpp /home/user/rocksdb /rocksdb
 
 # 1) Waits for host:port if $WAIT_FOR is set
 # 2) Copies address files from ../ to ./ (state volume)
