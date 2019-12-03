@@ -33,7 +33,7 @@ aliases:
       - go-mod-v4-{{ .Branch }}-
       - go-mod-v4-
   - &save_go_cache
-    key: go-mod-v4-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &restore_conan_cache
