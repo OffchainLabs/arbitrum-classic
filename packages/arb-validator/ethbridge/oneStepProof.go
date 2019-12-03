@@ -34,16 +34,14 @@ func (con *OneStepProof) ValidateProof(
 ) (*big.Int, error) {
 	return con.contract.ValidateProof(
 		auth,
-		[7][32]byte{
-			precondition.BeforeHashValue(),
-			precondition.BeforeInboxValue(),
-			assertion.AfterHashValue(),
-			assertion.FirstMessageHashValue(),
-			assertion.LastMessageHashValue(),
-			assertion.FirstLogHashValue(),
-			assertion.LastLogHashValue(),
-		},
+		precondition.BeforeHashValue(),
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
+		precondition.BeforeInboxValue(),
+		assertion.AfterHashValue(),
+		assertion.FirstMessageHashValue(),
+		assertion.LastMessageHashValue(),
+		assertion.FirstLogHashValue(),
+		assertion.LastLogHashValue(),
 		proof,
 	)
 }

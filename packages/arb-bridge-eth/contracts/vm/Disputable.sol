@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 
-import "../libraries/ArbProtocol.sol";
+import "../arch/Protocol.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -46,9 +46,6 @@ library Disputable {
         bytes32 logsAccHash
     );
 
-    event PendingAssertionCanceled();
-
-
     function pendingDisputableAssert(
         VM.Data storage vm,
         bytes32 beforeHash,
@@ -66,7 +63,7 @@ library Disputable {
             !VM.isErrored(vm) && !VM.isHalted(vm),
             "Can only disputable assert if machine is not errored or halted"
         );
-        require(!vm.inChallenge, "Can only disputable assert if not in challenge");
+        require(vm.activeChallengeManager == address(0), "Can only disputable assert if not in challenge");
         require(numSteps <= vm.maxExecutionSteps, "Tried to execute too many steps");
         require(withinTimeBounds(timeBounds), "Precondition: not within time bounds");
         require(beforeHash == vm.machineHash, "Precondition: state hash does not match");
@@ -76,12 +73,12 @@ library Disputable {
 
         vm.pendingHash = keccak256(
             abi.encodePacked(
-                ArbProtocol.generatePreconditionHash(
+                Protocol.generatePreconditionHash(
                     beforeHash,
                     timeBounds,
                     beforeInbox
                 ),
-                ArbProtocol.generateAssertionHash(
+                Protocol.generateAssertionHash(
                     afterHash,
                     numSteps,
                     0x00,
@@ -119,11 +116,11 @@ library Disputable {
             keccak256(
                 abi.encodePacked(
                     preconditionHash,
-                    ArbProtocol.generateAssertionHash(
+                    Protocol.generateAssertionHash(
                         afterHash,
                         numSteps,
                         0x00,
-                        ArbProtocol.generateLastMessageHash(messages),
+                        Protocol.generateLastMessageHash(messages),
                         0x00,
                         logsAccHash
                     )
@@ -142,20 +139,33 @@ library Disputable {
         );
     }
 
-    function initiateChallenge(VM.Data storage _vm, bytes32 _assertPreHash) public {
+    function initiateChallenge(
+        VM.Data storage _vm,
+        bytes32 beforeHash,
+        bytes32 beforeInbox,
+        uint64[2] memory timeBounds,
+        bytes32 assertionHash
+    ) public {
         require(msg.sender != _vm.asserter, "Challenge was created by asserter");
         require(VM.withinDeadline(_vm), "Challenge did not come before deadline");
         require(_vm.state == VM.State.PendingDisputable, "Assertion must be pending to initiate challenge");
 
         require(
-            _assertPreHash == _vm.pendingHash,
+            keccak256(
+                abi.encodePacked(
+                    Protocol.generatePreconditionHash(
+                        beforeHash,
+                        timeBounds,
+                        beforeInbox
+                    ),
+                    assertionHash
+                )
+            ) == _vm.pendingHash,
             "Initiate Challenge: Precondition and assertion do not match pending assertion"
         );
 
         _vm.pendingHash = 0;
         _vm.state = VM.State.Waiting;
-        _vm.inChallenge = true;
-        emit PendingAssertionCanceled();
     }
 
     function withinTimeBounds(uint64[2] memory _timeBounds) public view returns (bool) {

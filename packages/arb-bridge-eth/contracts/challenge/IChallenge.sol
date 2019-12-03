@@ -16,11 +16,16 @@
 
 pragma solidity ^0.5.3;
 
-interface IChallengeManager {
-    function initiateChallenge(
-        address[2] calldata players,
-        uint128[2] calldata escrows,
-        uint32 challengePeriod,
-        bytes32 challengeRoot
-    ) external;
+interface IChallenge {
+    function init(
+        address vmAddress,
+        address[2] calldata _players,
+        uint128[2] calldata _escrows,
+        uint32 _challengePeriod,
+        bytes32 beforeHash,
+        bytes32 beforeInbox,
+        uint64[2] calldata timeBounds,
+        bytes32 _assertionHash
+    )
+        external;
 }

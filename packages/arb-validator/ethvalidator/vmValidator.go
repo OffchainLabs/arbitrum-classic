@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 
 	errors2 "github.com/pkg/errors"
@@ -46,7 +48,8 @@ type VMValidator struct {
 	VMID              common.Address
 	CompletedCallChan chan valmessage.FinalizedAssertion
 
-	Mutex *sync.Mutex
+	challengeEverything bool
+	Mutex               *sync.Mutex
 	// private thread only
 	Validator      *Validator
 	arbitrumVM     ethbridge.VMConnection
@@ -71,6 +74,7 @@ func NewVMValidator(
 	vmID common.Address,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
+	challengeEverything bool,
 	con ethbridge.VMConnection,
 ) (*VMValidator, error) {
 	callOpts := &bind.CallOpts{
@@ -94,6 +98,7 @@ func NewVMValidator(
 	vmVal := &VMValidator{
 		vmID,
 		completedCallChan,
+		challengeEverything,
 		&sync.Mutex{},
 		val,
 		con,
@@ -279,75 +284,6 @@ func (val *VMValidator) InitiateChallenge(
 	return receipt, err
 }
 
-func (val *VMValidator) BisectAssertion(
-	ctx context.Context,
-	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
-) (*types.Receipt, error) {
-	val.Mutex.Lock()
-	receipt, err := val.arbitrumVM.BisectAssertion(
-		val.Validator.MakeAuth(ctx),
-		precondition,
-		assertions,
-	)
-	val.Mutex.Unlock()
-	return receipt, err
-}
-
-func (val *VMValidator) ContinueChallenge(
-	ctx context.Context,
-	assertionToChallenge uint16,
-	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
-) (*types.Receipt, error) {
-	val.Mutex.Lock()
-	receipt, err := val.arbitrumVM.ContinueChallenge(
-		val.Validator.MakeAuth(ctx),
-		assertionToChallenge,
-		precondition,
-		assertions,
-	)
-	val.Mutex.Unlock()
-	return receipt, err
-}
-
-func (val *VMValidator) OneStepProof(
-	ctx context.Context,
-	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
-	proof []byte,
-) (*types.Receipt, error) {
-	val.Mutex.Lock()
-	receipt, err := val.arbitrumVM.OneStepProof(
-		val.Validator.MakeAuth(ctx),
-		precondition,
-		assertion,
-		proof,
-	)
-	val.Mutex.Unlock()
-	return receipt, err
-}
-
-func (val *VMValidator) AsserterTimedOut(
-	ctx context.Context,
-) (*types.Receipt, error) {
-	val.Mutex.Lock()
-	receipt, err := val.arbitrumVM.AsserterTimedOutChallenge(val.Validator.MakeAuth(ctx))
-	val.Mutex.Unlock()
-	return receipt, err
-}
-
-func (val *VMValidator) ChallengerTimedOut(
-	ctx context.Context,
-) (*types.Receipt, error) {
-	val.Mutex.Lock()
-	receipt, err := val.arbitrumVM.ChallengerTimedOutChallenge(
-		val.Validator.MakeAuth(ctx),
-	)
-	val.Mutex.Unlock()
-	return receipt, err
-}
-
 func (val *VMValidator) SendMessage(
 	ctx context.Context,
 	data value.Value,
@@ -399,4 +335,94 @@ func (val *VMValidator) UnanimousAssertHash(
 		originalInboxHash,
 		assertion,
 	)
+}
+
+func (val *VMValidator) Challenge(
+	ctx context.Context,
+	address common.Address,
+	precondition *protocol.Precondition,
+	machine machine.Machine,
+) error {
+	challenge, err := NewChallengeValidator(val.Validator, address)
+
+	header, err := val.Validator.LatestHeader(context.Background())
+	if err != nil {
+		return errors2.Wrap(err, "Validator couldn't get latest error")
+	}
+	challengeEvents, err := challenge.StartListening(ctx)
+	if err != nil {
+		return err
+	}
+	challengeVal := validator.NewChallengerValidator(challenge, header, precondition, machine, val.challengeEverything)
+	go challengeVal.Run(ctx, challengeEvents)
+	go func() {
+		for err := range challenge.ErrorMonChan {
+			val.ErrorMonChan <- err
+		}
+	}()
+	go func() {
+		for msg := range challenge.MessageMonChan {
+			val.MessageMonChan <- msg
+		}
+	}()
+	return err
+}
+
+func (val *VMValidator) DefendChallenge(
+	ctx context.Context,
+	address common.Address,
+	assDef machine.AssertionDefender,
+) error {
+	challenge, err := NewChallengeValidator(val.Validator, address)
+
+	header, err := val.Validator.LatestHeader(context.Background())
+	if err != nil {
+		return errors2.Wrap(err, "Validator couldn't get latest error")
+	}
+	challengeEvents, err := challenge.StartListening(ctx)
+	if err != nil {
+		return err
+	}
+	challengeVal := validator.NewDefenderValidator(challenge, header, assDef)
+	go challengeVal.Run(ctx, challengeEvents)
+	go func() {
+		for err := range challenge.ErrorMonChan {
+			val.ErrorMonChan <- err
+		}
+	}()
+	go func() {
+		for msg := range challenge.MessageMonChan {
+			val.MessageMonChan <- msg
+		}
+	}()
+	return err
+}
+
+func (val *VMValidator) ObserveChallenge(
+	ctx context.Context,
+	address common.Address,
+) error {
+	challenge, err := NewChallengeValidator(val.Validator, address)
+
+	header, err := val.Validator.LatestHeader(context.Background())
+	if err != nil {
+		return errors2.Wrap(err, "Validator couldn't get latest error")
+	}
+	challengeEvents, err := challenge.StartListening(ctx)
+	if err != nil {
+		return err
+	}
+	challengeVal := validator.NewObserverValidator(challenge, header)
+	go challengeVal.Run(ctx, challengeEvents)
+	go func() {
+		for err := range challenge.ErrorMonChan {
+			val.ErrorMonChan <- err
+		}
+	}()
+	go func() {
+		for msg := range challenge.MessageMonChan {
+			val.MessageMonChan <- msg
+		}
+	}()
+	return err
 }

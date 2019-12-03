@@ -17,11 +17,11 @@
 pragma solidity ^0.5.3;
 
 import "./IArbChannel.sol";
-import "./ArbitrumVM.sol";
+import "./ArbBase.sol";
 import "./Unanimous.sol";
 
 
-contract ArbChannel is ArbitrumVM, IArbChannel {
+contract ArbChannel is ArbBase, IArbChannel {
     using SafeMath for uint256;
 
     event PendingUnanimousAssertion (
@@ -42,27 +42,28 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     uint16 public validatorCount;
     uint16 public activatedValidators;
 
-    constructor(
+    function init(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
         address payable _owner,
-        address _challengeManagerAddress,
+        address _challengeLauncherAddress,
         address _globalInboxAddress,
-        address[] memory _validatorKeys
+        address[] calldata _validatorKeys
     )
-        ArbitrumVM(
+        external
+    {
+        ArbBase.initialize(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            _challengeManagerAddress,
+            _challengeLauncherAddress,
             _globalInboxAddress
-        )
-        public
-    {
+        );
+
         activatedValidators = 0;
         validatorCount = uint16(_validatorKeys.length);
         for (uint16 i = 0; i < validatorCount; i++) {

@@ -115,7 +115,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	address, err := val1.LaunchChannel(context.Background(), config, mach.Hash())
+	address, err := val1.CreateChannel(context.Background(), config, mach.Hash())
 	if err != nil {
 		t.Error(err)
 		return err

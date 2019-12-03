@@ -19,15 +19,16 @@ pragma solidity ^0.5.3;
 import "./GlobalWallet.sol";
 import "./IGlobalPendingInbox.sol";
 
-import "./libraries/ArbValue.sol";
+import "./arch/Value.sol";
+
 import "./libraries/SigUtils.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
-contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
+contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     using SafeMath for uint256;
-    using ArbValue for ArbValue.Value;
+    using Value for Value.Data;
 
     address internal constant ETH_ADDRESS = address(0);
 
@@ -35,7 +36,7 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
 
     function pullPendingMessages() external returns(bytes32) {
         bytes32 messages = pending[msg.sender];
-        pending[msg.sender] = ArbValue.hashEmptyTuple();
+        pending[msg.sender] = Value.hashEmptyTuple();
         return messages;
     }
 
@@ -57,7 +58,7 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
                 value,
                 tokenType,
                 messageData
-            ) = ArbValue.deserializeMessage(_messages, offset);
+            ) = Value.deserializeMessage(_messages, offset);
             if (valid) {
                 _sendUnpaidMessage(
                     address(bytes20(bytes32(destination))),
@@ -72,7 +73,7 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
 
     function registerForInbox() external {
         require(pending[msg.sender] == 0, "Pending must be uninitialized");
-        pending[msg.sender] = ArbValue.hashEmptyTuple();
+        pending[msg.sender] = Value.hashEmptyTuple();
     }
 
     function sendMessage(
@@ -105,7 +106,7 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
             keccak256(
                 abi.encodePacked(
                     _destination,
-                    ArbValue.deserializeValueHash(_data),
+                    Value.deserializeHashed(_data),
                     _amount,
                     _tokenType
                 )
@@ -193,7 +194,7 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
         private
     {
         if (pending[_destination] != 0) {
-            bytes32 dataHash = ArbValue.deserializeValueHash(_data);
+            bytes32 dataHash = Value.deserializeHashed(_data);
             bytes32 txHash = keccak256(
                 abi.encodePacked(
                     _destination,
@@ -202,23 +203,23 @@ contract GlobalPendingInbox is IGlobalPendingInbox, GlobalWallet {
                     _tokenType
                 )
             );
-            ArbValue.Value[] memory dataValues = new ArbValue.Value[](4);
-            dataValues[0] = ArbValue.newHashOnlyValue(dataHash);
-            dataValues[1] = ArbValue.newIntValue(block.timestamp);
-            dataValues[2] = ArbValue.newIntValue(block.number);
-            dataValues[3] = ArbValue.newIntValue(uint(txHash));
+            Value.Data[] memory dataValues = new Value.Data[](4);
+            dataValues[0] = Value.newHashOnly(dataHash);
+            dataValues[1] = Value.newInt(block.timestamp);
+            dataValues[2] = Value.newInt(block.number);
+            dataValues[3] = Value.newInt(uint(txHash));
 
-            ArbValue.Value[] memory values = new ArbValue.Value[](4);
-            values[0] = ArbValue.newTupleValue(dataValues);
-            values[1] = ArbValue.newIntValue(uint256(_sender));
-            values[2] = ArbValue.newIntValue(_value);
-            values[3] = ArbValue.newIntValue(uint256(bytes32(_tokenType)));
-            bytes32 messageHash =  ArbValue.newTupleValue(values).hash().hash;
+            Value.Data[] memory values = new Value.Data[](4);
+            values[0] = Value.newTuple(dataValues);
+            values[1] = Value.newInt(uint256(_sender));
+            values[2] = Value.newInt(_value);
+            values[3] = Value.newInt(uint256(bytes32(_tokenType)));
+            bytes32 messageHash =  Value.newTuple(values).hash().hash;
 
-            pending[_destination] = ArbValue.hashTupleValue([
-                ArbValue.newIntValue(0),
-                ArbValue.newHashOnlyValue(pending[_destination]),
-                ArbValue.newHashOnlyValue(messageHash)
+            pending[_destination] = Value.hashTuple([
+                Value.newInt(0),
+                Value.newHashOnly(pending[_destination]),
+                Value.newHashOnly(messageHash)
             ]);
         }
 

@@ -98,8 +98,6 @@ export class GlobalPendingInbox extends Contract {
             1: (BigNumber)[];
         }>;
 
-        hasFunds(_owner: string, _tokenTypes: (Arrayish)[], _amounts: (BigNumberish)[]): Promise<boolean>;
-
         getTokenBalance(_tokenContract: string, _owner: string): Promise<BigNumber>;
 
         hasNFT(_tokenContract: string, _owner: string, _tokenId: BigNumberish): Promise<boolean>;

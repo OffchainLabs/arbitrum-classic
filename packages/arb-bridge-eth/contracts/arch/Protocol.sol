@@ -16,11 +16,11 @@
 
 pragma solidity ^0.5.3;
 
-import "./ArbValue.sol";
+import "./Value.sol";
 
 
-library ArbProtocol {
-    using ArbValue for ArbValue.Value;
+library Protocol {
+    using Value for Value.Data;
 
     function generateMessageStubHash(
         bytes32 _data,
@@ -32,12 +32,12 @@ library ArbProtocol {
         pure
         returns (bytes32)
     {
-        ArbValue.Value[] memory values = new ArbValue.Value[](4);
-        values[0] = ArbValue.newHashOnlyValue(_data);
-        values[1] = ArbValue.newIntValue(uint256(_destination));
-        values[2] = ArbValue.newIntValue(_value);
-        values[3] = ArbValue.newIntValue(uint256(bytes32(_tokenType)));
-        return ArbValue.newTupleValue(values).hash().hash;
+        Value.Data[] memory values = new Value.Data[](4);
+        values[0] = Value.newHashOnly(_data);
+        values[1] = Value.newInt(uint256(_destination));
+        values[2] = Value.newInt(_value);
+        values[3] = Value.newInt(uint256(bytes32(_tokenType)));
+        return Value.newTuple(values).hash().hash;
     }
 
     function generatePreconditionHash(
@@ -89,7 +89,7 @@ library ArbProtocol {
         bytes32 msgHash;
         uint amountCount = _messages.length;
         for (uint i = 0; i < amountCount; i++) {
-            (offset, msgHash) = ArbValue.deserializeValidValueHash(_messages, offset);
+            (offset, msgHash) = Value.deserializeValidHashed(_messages, offset);
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }
         return hashVal;

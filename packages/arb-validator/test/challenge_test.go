@@ -114,7 +114,7 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	address, err := val1.LaunchChannel(context.Background(), config, machine.Hash())
+	address, err := val1.CreateChannel(context.Background(), config, machine.Hash())
 	if err != nil {
 		t.Fatal(err)
 	}

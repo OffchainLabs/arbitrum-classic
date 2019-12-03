@@ -50,17 +50,4 @@ interface IGlobalPendingInbox {
         external;
 
     function sendEthMessage(address _destination, bytes calldata _data) external payable;
-
-    // This function assumes that tokenTypes and amounts are valid and in canonical
-    // order. The pair (tokenType, amount) are sorted in ascending order with
-    // tokenTypes as the primary key and amount as the secondary key
-    // Token type only allows repeats for NFTs and amounts disallow repeats for NFTs
-    function hasFunds(
-        address _owner,
-        bytes21[] calldata _tokenTypes,
-        uint256[] calldata _amounts
-    )
-        external
-        view
-        returns(bool);
 }

@@ -19,9 +19,9 @@ pragma solidity ^0.5.3;
 import "bytes/contracts/BytesLib.sol";
 
 
-library ArbValue {
+library Value {
     using BytesLib for bytes;
-    using ArbValue for Value;
+    using Value for Data;
 
     uint8 internal constant INT_TYPECODE = 0;
     uint8 internal constant CODE_POINT_TYPECODE = 1;
@@ -36,6 +36,17 @@ library ArbValue {
         bytes32 immediateVal;
     }
 
+    struct HashOnly {
+        bytes32 hash;
+    }
+
+    struct Data {
+        uint256 intVal;
+        CodePoint cpVal;
+        Data[] tupleVal;
+        uint8 typeCode;
+    }
+
     function isTupleType(uint8 typeCode) private pure returns (bool) {
         return typeCode < VALUE_TYPE_COUNT && typeCode >= TUPLE_TYPECODE;
     }
@@ -48,7 +59,7 @@ library ArbValue {
         }
     }
 
-    function hashIntValue(uint256 val) public pure returns (bytes32) {
+    function hashInt(uint256 val) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(val));
     }
 
@@ -77,7 +88,7 @@ library ArbValue {
         );
     }
 
-    function hashCodePointBasicValue(uint8 opcode, bytes32 nextCodePoint) public pure returns (bytes32) {
+    function hashCodePointBasic(uint8 opcode, bytes32 nextCodePoint) public pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
                 CODE_POINT_TYPECODE,
@@ -87,7 +98,7 @@ library ArbValue {
         );
     }
 
-    function hashCodePointImmediateValue(
+    function hashCodePointImmediate(
         uint8 opcode,
         bytes32 immediateVal,
         bytes32 nextCodePoint
@@ -116,39 +127,39 @@ library ArbValue {
         );
     }
 
-    function hashTupleValue(Value[1] memory val) internal pure returns (bytes32) {
-        Value[] memory vals = new Value[](val.length);
+    function hashTuple(Data[1] memory val) internal pure returns (bytes32) {
+        Data[] memory vals = new Data[](val.length);
         uint valCount = vals.length;
         for (uint i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
-        return hashTupleValue(vals);
+        return hashTuple(vals);
     }
 
-    function hashTupleValue(Value[2] memory val) internal pure returns (bytes32) {
-        Value[] memory vals = new Value[](val.length);
+    function hashTuple(Data[2] memory val) internal pure returns (bytes32) {
+        Data[] memory vals = new Data[](val.length);
         uint valCount = vals.length;
         for (uint i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
-        return hashTupleValue(vals);
+        return hashTuple(vals);
     }
 
-    function hashTupleValue(Value[3] memory val) internal pure returns (bytes32) {
-        Value[] memory vals = new Value[](val.length);
+    function hashTuple(Data[3] memory val) internal pure returns (bytes32) {
+        Data[] memory vals = new Data[](val.length);
         uint valCount = vals.length;
         for (uint i = 0; i < valCount; i++) {
             vals[i] = val[i];
         }
-        return hashTupleValue(vals);
+        return hashTuple(vals);
     }
 
-    function hashTupleValue(Value[] memory val) private pure returns (bytes32) {
+    function hashTuple(Data[] memory val) private pure returns (bytes32) {
         require(val.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](val.length);
         uint hashCount = hashes.length;
         for (uint i = 0; i < hashCount; i++) {
-            HashOnlyValue memory hashVal = val[i].hash();
+            HashOnly memory hashVal = val[i].hash();
             hashes[i] = hashVal.hash;
         }
         return keccak256(
@@ -159,7 +170,7 @@ library ArbValue {
         );
     }
 
-    function hashTupleValue(bytes32[] memory hashes) private pure returns (bytes32) {
+    function hashTuple(bytes32[] memory hashes) private pure returns (bytes32) {
         require(hashes.length <= 8, "Invalid tuple length");
         return keccak256(
             abi.encodePacked(
@@ -169,121 +180,110 @@ library ArbValue {
         );
     }
 
-    struct HashOnlyValue {
-        bytes32 hash;
-    }
-
-    function deserializeHashOnlyValue(
+    function deserializeHashOnly(
         bytes memory data,
         uint startOffset
     )
         internal
         pure
-        returns(uint retCode, uint, HashOnlyValue memory)
+        returns(uint retCode, uint, HashOnly memory)
     {
         uint offset = startOffset;
         bytes32 valHash = data.toBytes32(offset);
         offset += 32;
-        return (0, offset, HashOnlyValue(valHash));
+        return (0, offset, HashOnly(valHash));
     }
 
-    struct Value {
-        uint256 intVal;
-        CodePoint cpVal;
-        Value[] tupleVal;
-        uint8 typeCode;
-    }
-
-    function typeCodeVal(Value memory val) internal pure returns (Value memory) {
+    function typeCodeVal(Data memory val) internal pure returns (Data memory) {
         require(val.typeCode != 2, "Value must have a valid type code");
         if (val.typeCode == 0) {
-            return newIntValue(0);
+            return newInt(0);
         } else if (val.typeCode == 1) {
-            return newIntValue(1);
+            return newInt(1);
         } else {
-            return newIntValue(3);
+            return newInt(3);
         }
     }
 
-    function valLength(Value memory val) internal pure returns (uint8) {
+    function valLength(Data memory val) internal pure returns (uint8) {
         return typeLength(val.typeCode);
     }
 
-    function isInt(Value memory val) internal pure returns (bool) {
+    function isInt(Data memory val) internal pure returns (bool) {
         return val.typeCode == INT_TYPECODE;
     }
 
-    function isCodePoint(Value memory val) internal pure returns (bool) {
+    function isCodePoint(Data memory val) internal pure returns (bool) {
         return val.typeCode == CODE_POINT_TYPECODE;
     }
 
-    function isTuple(Value memory val) internal pure returns (bool) {
+    function isTuple(Data memory val) internal pure returns (bool) {
         return isTupleType(val.typeCode);
     }
 
-    function hash(Value memory val) internal pure returns (HashOnlyValue memory) {
+    function hash(Data memory val) internal pure returns (HashOnly memory) {
         require(val.typeCode < VALUE_TYPE_COUNT, "Invalid type code");
         if (val.typeCode == INT_TYPECODE) {
-            return HashOnlyValue(hashIntValue(val.intVal));
+            return HashOnly(hashInt(val.intVal));
         } else if (val.typeCode == CODE_POINT_TYPECODE) {
-            return HashOnlyValue(hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint));
+            return HashOnly(hashCodePoint(val.cpVal.opcode, val.cpVal.immediate, val.cpVal.immediateVal, val.cpVal.nextCodePoint));
         } else if (val.typeCode == HASH_ONLY_TYPECODE) {
-            return HashOnlyValue(bytes32(val.intVal));
+            return HashOnly(bytes32(val.intVal));
         } else if (val.typeCode >= TUPLE_TYPECODE && val.typeCode < VALUE_TYPE_COUNT) {
-            return HashOnlyValue(hashTupleValue(val.tupleVal));
+            return HashOnly(hashTuple(val.tupleVal));
         } else {
             assert(false);
         }
     }
 
-    function newNoneValue() internal pure returns (Value memory) {
-        return Value(0, CodePoint(0, 0, false, 0), new Value[](0), TUPLE_TYPECODE);
+    function newNone() internal pure returns (Data memory) {
+        return Data(0, CodePoint(0, 0, false, 0), new Data[](0), TUPLE_TYPECODE);
     }
 
-    function newBooleanValue(bool val) internal pure returns (Value memory) {
+    function newBoolean(bool val) internal pure returns (Data memory) {
         if (val) {
-            return newIntValue(1);
+            return newInt(1);
         } else {
-            return newIntValue(0);
+            return newInt(0);
         }
     }
 
-    function newIntValue(uint256 _val) internal pure returns (Value memory) {
-        return Value(_val, CodePoint(0, 0, false, 0), new Value[](0), INT_TYPECODE);
+    function newInt(uint256 _val) internal pure returns (Data memory) {
+        return Data(_val, CodePoint(0, 0, false, 0), new Data[](0), INT_TYPECODE);
     }
 
-    function newCodePointValue(CodePoint memory _val) internal pure returns (Value memory) {
-        return Value(0, _val, new Value[](0), CODE_POINT_TYPECODE);
+    function newCodePoint(CodePoint memory _val) internal pure returns (Data memory) {
+        return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE);
     }
 
     function isValidTupleSize(uint size) public pure returns (bool) {
         return size <= 8;
     }
 
-    function newTupleValue(Value[] memory _val) internal pure returns (Value memory) {
+    function newTuple(Data[] memory _val) internal pure returns (Data memory) {
         require(isValidTupleSize(_val.length), "Tuple must have valid size");
-        return Value(0, CodePoint(0, 0, false, 0), _val, uint8(TUPLE_TYPECODE + _val.length));
+        return Data(0, CodePoint(0, 0, false, 0), _val, uint8(TUPLE_TYPECODE + _val.length));
     }
 
-    function newTupleHashValues(HashOnlyValue[] memory _val) internal pure returns (Value memory) {
-        Value[] memory values = new Value[](_val.length);
+    function newTupleHashValues(HashOnly[] memory _val) internal pure returns (Data memory) {
+        Data[] memory values = new Data[](_val.length);
         uint valCount = _val.length;
         for (uint i = 0; i < valCount; i++) {
-            values[i] = newHashOnlyValue(_val[i].hash);
+            values[i] = newHashOnly(_val[i].hash);
         }
-        return newTupleValue(values);
+        return newTuple(values);
     }
 
-    function newRepeatedTuple(Value memory _val, uint8 _count) internal pure returns (Value memory) {
-        Value[] memory values = new Value[](_count);
+    function newRepeatedTuple(Data memory _val, uint8 _count) internal pure returns (Data memory) {
+        Data[] memory values = new Data[](_count);
         for (uint i = 0; i < _count; i++) {
             values[i] = _val;
         }
-        return newTupleValue(values);
+        return newTuple(values);
     }
 
-    function newHashOnlyValue(bytes32 _val) internal pure returns (Value memory) {
-        return Value(uint256(_val), CodePoint(0, 0, false, 0), new Value[](0), HASH_ONLY_TYPECODE);
+    function newHashOnly(bytes32 _val) internal pure returns (Data memory) {
+        return Data(uint256(_val), CodePoint(0, 0, false, 0), new Data[](0), HASH_ONLY_TYPECODE);
     }
 
     function deserializeInt(bytes memory data, uint startOffset) internal pure returns (uint, uint256) {
@@ -302,8 +302,8 @@ library ArbValue {
         bytes32 immediateVal;
         if (immediateType == 1) {
             uint valid;
-            Value memory value;
-            (valid, offset, value) = deserializeValue(data, offset);
+            Data memory value;
+            (valid, offset, value) = deserialize(data, offset);
             require(valid == 0, "Marshalled value must be valid");
             immediateVal = value.hash().hash;
         }
@@ -322,13 +322,13 @@ library ArbValue {
     )
         internal
         pure
-        returns (uint, uint, Value[] memory)
+        returns (uint, uint, Data[] memory)
     {
         uint offset = startOffset;
         uint retVal;
-        Value[] memory members = new Value[](memberCount);
+        Data[] memory members = new Data[](memberCount);
         for (uint8 i = 0; i < memberCount; i++) {
-            (retVal, offset, members[i]) = deserializeValue(data, offset);
+            (retVal, offset, members[i]) = deserialize(data, offset);
             if (retVal != 0) {
                 return (retVal, offset, members);
             }
@@ -336,13 +336,13 @@ library ArbValue {
         return (0, offset, members);
     }
 
-    function deserializeValue(
+    function deserialize(
         bytes memory data,
         uint startOffset
     )
         internal
         pure
-        returns(uint retCode, uint, Value memory)
+        returns(uint retCode, uint, Data memory)
     {
         require(startOffset < data.length, "Data offset out of bounds");
         uint offset = startOffset;
@@ -352,46 +352,46 @@ library ArbValue {
         CodePoint memory cpVal;
         if (valType == INT_TYPECODE) {
             (offset, intVal) = deserializeInt(data, offset);
-            return (0, offset, newIntValue(intVal));
+            return (0, offset, newInt(intVal));
         } else if (valType == CODE_POINT_TYPECODE) {
             (offset, cpVal) = deserializeCodePoint(data, offset);
-            return (0, offset, newCodePointValue(cpVal));
+            return (0, offset, newCodePoint(cpVal));
         } else if (valType == HASH_ONLY_TYPECODE) {
             (offset, intVal) = deserializeInt(data, offset);
-            return (0, offset, newHashOnlyValue(bytes32(intVal)));
+            return (0, offset, newHashOnly(bytes32(intVal)));
         } else if (valType >= TUPLE_TYPECODE && valType < VALUE_TYPE_COUNT) {
             uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
-            Value[] memory tupleVal;
+            Data[] memory tupleVal;
             uint valid;
             (valid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
-            return (valid, offset, newTupleValue(tupleVal));
+            return (valid, offset, newTuple(tupleVal));
         }
-        return (10000 + uint(valType), 0, newIntValue(0));
+        return (10000 + uint(valType), 0, newInt(0));
     }
 
-    function deserializeValidValueHash(bytes memory data, uint offset) public pure returns(uint, bytes32) {
+    function deserializeValidHashed(bytes memory data, uint offset) public pure returns(uint, bytes32) {
         uint valid;
         uint newOffset;
-        Value memory value;
-        (valid, newOffset, value) = deserializeValue(data, offset);
+        Data memory value;
+        (valid, newOffset, value) = deserialize(data, offset);
         require(valid == 0, "Marshalled value must be valid");
         return (newOffset, value.hash().hash);
     }
 
-    function getNextValidValue(bytes memory data, uint offset) public pure returns(uint, bytes memory) {
+    function getNextValid(bytes memory data, uint offset) public pure returns(uint, bytes memory) {
         uint valid;
         uint nextOffset;
-        Value memory value;
-        (valid, nextOffset, value) = deserializeValue(data, offset);
+        Data memory value;
+        (valid, nextOffset, value) = deserialize(data, offset);
         require(valid == 0, "Marshalled value must be valid");
         return (nextOffset, data.slice(offset, nextOffset - offset));
     }
 
-    function deserializeValueHash(bytes memory data) public pure returns (bytes32) {
+    function deserializeHashed(bytes memory data) public pure returns (bytes32) {
         uint valid;
         uint offset = 0;
-        Value memory value;
-        (valid, offset, value) = deserializeValue(data, 0);
+        Data memory value;
+        (valid, offset, value) = deserialize(data, 0);
         require(valid == 0, "Marshalled value must be valid");
         return value.hash().hash;
     }
@@ -417,17 +417,17 @@ library ArbValue {
         uint8 valType = uint8(data[offset]);
         offset++;
         if (valType != TUPLE_TYPECODE + 4) {
-            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
             return (valid, offset, messageHash, destination, value, tokenType, messageData);
         }
 
-        (offset, messageDataHash) = deserializeValidValueHash(data, offset);
+        (offset, messageDataHash) = deserializeValidHashed(data, offset);
         messageData = data.slice(startOffset + 1, offset - startOffset - 1);
 
         valType = uint8(data[offset]);
         offset++;
         if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
             return (valid, offset, messageHash, destination, value, tokenType, messageData);
         }
         (destination, offset) = deserializeInt(data, offset);
@@ -435,7 +435,7 @@ library ArbValue {
         valType = uint8(data[offset]);
         offset++;
         if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
             return (valid, offset, messageHash, destination, value, tokenType, messageData);
         }
         (value, offset) = deserializeInt(data, offset);
@@ -443,7 +443,7 @@ library ArbValue {
         valType = uint8(data[offset]);
         offset++;
         if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
             return (valid, offset, messageHash, destination, value, tokenType, messageData);
         }
         (tokenType, offset) = deserializeInt(data, offset);
@@ -452,10 +452,10 @@ library ArbValue {
 
         bytes32[] memory hashes = new bytes32[](4);
         hashes[0] = messageDataHash;
-        hashes[1] = hashIntValue(destination);
-        hashes[2] = hashIntValue(value);
-        hashes[3] = hashIntValue(tokenType);
-        messageHash = hashTupleValue(hashes);
+        hashes[1] = hashInt(destination);
+        hashes[2] = hashInt(value);
+        hashes[3] = hashInt(tokenType);
+        messageHash = hashTuple(hashes);
 
         return (valid, offset, messageHash, destination, value, tokenType, messageData);
     }

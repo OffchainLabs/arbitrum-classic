@@ -18,16 +18,17 @@ pragma solidity ^0.5.3;
 
 import "./VM.sol";
 import "./Disputable.sol";
+import "./IArbBase.sol";
 
 import "../IGlobalPendingInbox.sol";
 
-import "../challenge/IChallengeManager.sol";
+import "../challenge/IChallengeFactory.sol";
 
-import "../libraries/ArbProtocol.sol";
-import "../libraries/ArbValue.sol";
+import "../arch/Protocol.sol";
+import "../arch/Value.sol";
 
 
-contract ArbitrumVM {
+contract ArbBase is IArbBase {
     using SafeMath for uint256;
 
     // fields:
@@ -50,11 +51,14 @@ contract ArbitrumVM {
         bytes32 logsAccHash
     );
 
-    event PendingAssertionCanceled();
+    event ChallengeLaunched(
+        address challengeContract,
+        address challenger
+    );
 
     address internal constant ETH_ADDRESS = address(0);
 
-    IChallengeManager public challengeManager;
+    IChallengeFactory public challengeFactory;
     IGlobalPendingInbox public globalInbox;
 
     VM.Data public vm;
@@ -69,19 +73,22 @@ contract ArbitrumVM {
         _;
     }
 
-    constructor(
+    function initialize(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
         address payable _owner,
-        address _challengeManagerAddress,
+        address _challengeFactoryAddress,
         address _globalInboxAddress
     )
         public
     {
+        require(address(challengeFactory) == address(0), "VM already initialized");
+        require(_challengeFactoryAddress != address(0), "Challenge factory address not set");
+
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
-        challengeManager = IChallengeManager(_challengeManagerAddress);
+        challengeFactory = IChallengeFactory(_challengeFactoryAddress);
 
         globalInbox.registerForInbox();
         owner = _owner;
@@ -89,7 +96,7 @@ contract ArbitrumVM {
         // Machine state
         vm.machineHash = _vmState;
         vm.state = VM.State.Uninitialized;
-        vm.inbox = ArbValue.hashEmptyTuple();
+        vm.inbox = Value.hashEmptyTuple();
 
         // Validator options
         vm.escrowRequired = _escrowRequired;
@@ -121,12 +128,11 @@ contract ArbitrumVM {
 
     function completeChallenge(address[2] calldata _players, uint128[2] calldata _rewards) external {
         require(
-            msg.sender == address(challengeManager),
+            msg.sender == address(vm.activeChallengeManager),
             "Only challenge manager can complete challenge"
         );
-        require(vm.inChallenge, "VM must be in challenge to complete it");
 
-        vm.inChallenge = false;
+        vm.activeChallengeManager = address(0);
         validatorBalances[_players[0]] = validatorBalances[_players[0]].add(_rewards[0]);
         validatorBalances[_players[1]] = validatorBalances[_players[1]].add(_rewards[1]);
     }
@@ -183,7 +189,14 @@ contract ArbitrumVM {
         _completeAssertion(_messages);
     }
 
-    function initiateChallenge(bytes32 _assertPreHash) public {
+    function initiateChallenge(
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] memory _timeBounds,
+        bytes32 _assertionHash
+    )
+        public
+    {
         require(
             vm.escrowRequired <= validatorBalances[msg.sender],
             "Challenger did not have enough escrowed"
@@ -192,24 +205,32 @@ contract ArbitrumVM {
 
         Disputable.initiateChallenge(
             vm,
-            _assertPreHash
+            _beforeHash,
+            _beforeInbox,
+            _timeBounds,
+            _assertionHash
         );
 
-        challengeManager.initiateChallenge(
+        vm.activeChallengeManager = challengeFactory.createChallenge(
             [vm.asserter, msg.sender],
             [vm.escrowRequired, vm.escrowRequired],
             vm.gracePeriod,
-            _assertPreHash
+            _beforeHash,
+            _beforeInbox,
+            _timeBounds,
+            _assertionHash
         );
+
+        emit ChallengeLaunched(vm.activeChallengeManager, msg.sender);
     }
 
     function _completeAssertion(bytes memory _messages) internal {
         bytes32 pending = globalInbox.pullPendingMessages();
-        if (pending != ArbValue.hashEmptyTuple()) {
-            vm.inbox = ArbValue.hashTupleValue([
-                ArbValue.newIntValue(1),
-                ArbValue.newHashOnlyValue(vm.inbox),
-                ArbValue.newHashOnlyValue(pending)
+        if (pending != Value.hashEmptyTuple()) {
+            vm.inbox = Value.hashTuple([
+                Value.newInt(1),
+                Value.newHashOnly(vm.inbox),
+                Value.newHashOnly(pending)
             ]);
         }
 

@@ -15,20 +15,6 @@ export class ArbChannelFactory {
 const _abi = [
     {
         constant: true,
-        inputs: [],
-        name: 'challengeManager',
-        outputs: [
-            {
-                name: '',
-                type: 'address',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        constant: true,
         inputs: [
             {
                 name: 'validator',
@@ -44,6 +30,32 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+            {
+                name: '_assertionHash',
+                type: 'bytes32',
+            },
+        ],
+        name: 'initiateChallenge',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
         type: 'function',
     },
     {
@@ -87,20 +99,6 @@ const _abi = [
             },
         ],
         name: 'completeChallenge',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_assertPreHash',
-                type: 'bytes32',
-            },
-        ],
-        name: 'initiateChallenge',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
@@ -152,8 +150,60 @@ const _abi = [
                 type: 'uint8',
             },
             {
-                name: 'inChallenge',
-                type: 'bool',
+                name: 'activeChallengeManager',
+                type: 'address',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_vmState',
+                type: 'bytes32',
+            },
+            {
+                name: '_gracePeriod',
+                type: 'uint32',
+            },
+            {
+                name: '_maxExecutionSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_escrowRequired',
+                type: 'uint128',
+            },
+            {
+                name: '_owner',
+                type: 'address',
+            },
+            {
+                name: '_challengeFactoryAddress',
+                type: 'address',
+            },
+            {
+                name: '_globalInboxAddress',
+                type: 'address',
+            },
+        ],
+        name: 'initialize',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [],
+        name: 'challengeFactory',
+        outputs: [
+            {
+                name: '',
+                type: 'address',
             },
         ],
         payable: false,
@@ -331,45 +381,6 @@ const _abi = [
         type: 'function',
     },
     {
-        inputs: [
-            {
-                name: '_vmState',
-                type: 'bytes32',
-            },
-            {
-                name: '_gracePeriod',
-                type: 'uint32',
-            },
-            {
-                name: '_maxExecutionSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_escrowRequired',
-                type: 'uint128',
-            },
-            {
-                name: '_owner',
-                type: 'address',
-            },
-            {
-                name: '_challengeManagerAddress',
-                type: 'address',
-            },
-            {
-                name: '_globalInboxAddress',
-                type: 'address',
-            },
-            {
-                name: '_validatorKeys',
-                type: 'address[]',
-            },
-        ],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'constructor',
-    },
-    {
         anonymous: false,
         inputs: [
             {
@@ -466,9 +477,62 @@ const _abi = [
     },
     {
         anonymous: false,
-        inputs: [],
-        name: 'PendingAssertionCanceled',
+        inputs: [
+            {
+                indexed: false,
+                name: 'challengeContract',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'challenger',
+                type: 'address',
+            },
+        ],
+        name: 'ChallengeLaunched',
         type: 'event',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_vmState',
+                type: 'bytes32',
+            },
+            {
+                name: '_gracePeriod',
+                type: 'uint32',
+            },
+            {
+                name: '_maxExecutionSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_escrowRequired',
+                type: 'uint128',
+            },
+            {
+                name: '_owner',
+                type: 'address',
+            },
+            {
+                name: '_challengeLauncherAddress',
+                type: 'address',
+            },
+            {
+                name: '_globalInboxAddress',
+                type: 'address',
+            },
+            {
+                name: '_validatorKeys',
+                type: 'address[]',
+            },
+        ],
+        name: 'init',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
     },
     {
         constant: false,

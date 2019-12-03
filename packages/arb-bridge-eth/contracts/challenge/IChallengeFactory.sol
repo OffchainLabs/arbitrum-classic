@@ -16,6 +16,18 @@
 
 pragma solidity ^0.5.3;
 
-interface IVMTracker {
-    function completeChallenge(address[2] calldata _players, uint128[2] calldata _rewards) external;
+
+interface IChallengeFactory {
+
+    function createChallenge(
+        address[2] calldata _players,
+        uint128[2] calldata _escrows,
+        uint32 _challengePeriod,
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] calldata _timeBounds,
+        bytes32 _assertionHash
+    )
+        external
+        returns(address);
 }

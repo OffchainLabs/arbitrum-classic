@@ -8,12 +8,29 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbChannelInterface extends Interface {
     functions: {
+        initiateChallenge: TypedFunctionDescription<{
+            encode([_beforeHash, _beforeInbox, _timeBounds, _assertionHash]: [
+                Arrayish,
+                Arrayish,
+                (BigNumberish)[],
+                Arrayish,
+            ]): string;
+        }>;
+
         completeChallenge: TypedFunctionDescription<{
             encode([_players, _rewards]: [(string)[], (BigNumberish)[]]): string;
         }>;
 
-        initiateChallenge: TypedFunctionDescription<{
-            encode([_assertPreHash]: [Arrayish]): string;
+        initialize: TypedFunctionDescription<{
+            encode([
+                _vmState,
+                _gracePeriod,
+                _maxExecutionSteps,
+                _escrowRequired,
+                _owner,
+                _challengeFactoryAddress,
+                _globalInboxAddress,
+            ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, string, string, string]): string;
         }>;
 
         activateVM: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -40,6 +57,19 @@ interface ArbChannelInterface extends Interface {
                 BigNumberish,
                 (BigNumberish)[],
             ]): string;
+        }>;
+
+        init: TypedFunctionDescription<{
+            encode([
+                _vmState,
+                _gracePeriod,
+                _maxExecutionSteps,
+                _escrowRequired,
+                _owner,
+                _challengeLauncherAddress,
+                _globalInboxAddress,
+                _validatorKeys,
+            ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, string, string, string, (string)[]]): string;
         }>;
 
         increaseDeposit: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -90,8 +120,8 @@ interface ArbChannelInterface extends Interface {
             encodeTopics([newState, logsAccHash]: [null, null]): string[];
         }>;
 
-        PendingAssertionCanceled: TypedEventDescription<{
-            encodeTopics([]: []): string[];
+        ChallengeLaunched: TypedEventDescription<{
+            encodeTopics([challengeContract, challenger]: [null, null]): string[];
         }>;
     };
 }
@@ -123,7 +153,7 @@ export class ArbChannel extends Contract {
             gracePeriod: number;
             maxExecutionSteps: number;
             state: number;
-            inChallenge: boolean;
+            activeChallengeManager: string;
             0: string;
             1: string;
             2: string;
@@ -134,12 +164,20 @@ export class ArbChannel extends Contract {
             7: number;
             8: number;
             9: number;
-            10: boolean;
+            10: string;
         }>;
 
         isListedValidator(validator: string): Promise<boolean>;
 
         isValidatorList(_validators: (string)[]): Promise<boolean>;
+
+        initiateChallenge(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _assertionHash: Arrayish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
 
         completeChallenge(
             _players: (string)[],
@@ -147,7 +185,16 @@ export class ArbChannel extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        initiateChallenge(_assertPreHash: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
+        initialize(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeFactoryAddress: string,
+            _globalInboxAddress: string,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
 
         activateVM(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -170,6 +217,18 @@ export class ArbChannel extends Contract {
             _logsAccHash: Arrayish,
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        init(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeLauncherAddress: string,
+            _globalInboxAddress: string,
+            _validatorKeys: (string)[],
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -200,9 +259,9 @@ export class ArbChannel extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        challengeManager(): Promise<string>;
         validatorCount(): Promise<number>;
         getState(): Promise<number>;
+        challengeFactory(): Promise<string>;
         terminateAddress(): Promise<string>;
         exitAddress(): Promise<string>;
         activatedValidators(): Promise<number>;
@@ -228,13 +287,28 @@ export class ArbChannel extends Contract {
 
         ConfirmedDisputableAssertion(newState: null, logsAccHash: null): EventFilter;
 
-        PendingAssertionCanceled(): EventFilter;
+        ChallengeLaunched(challengeContract: null, challenger: null): EventFilter;
     };
 
     estimate: {
+        initiateChallenge(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _assertionHash: Arrayish,
+        ): Promise<BigNumber>;
+
         completeChallenge(_players: (string)[], _rewards: (BigNumberish)[]): Promise<BigNumber>;
 
-        initiateChallenge(_assertPreHash: Arrayish): Promise<BigNumber>;
+        initialize(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeFactoryAddress: string,
+            _globalInboxAddress: string,
+        ): Promise<BigNumber>;
 
         activateVM(): Promise<BigNumber>;
 
@@ -256,6 +330,17 @@ export class ArbChannel extends Contract {
             _logsAccHash: Arrayish,
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
+        ): Promise<BigNumber>;
+
+        init(
+            _vmState: Arrayish,
+            _gracePeriod: BigNumberish,
+            _maxExecutionSteps: BigNumberish,
+            _escrowRequired: BigNumberish,
+            _owner: string,
+            _challengeLauncherAddress: string,
+            _globalInboxAddress: string,
+            _validatorKeys: (string)[],
         ): Promise<BigNumber>;
 
         increaseDeposit(): Promise<BigNumber>;

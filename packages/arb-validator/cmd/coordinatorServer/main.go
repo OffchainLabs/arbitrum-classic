@@ -156,7 +156,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	address, err := val.LaunchChannel(context.Background(), config, mach.Hash())
+	address, err := val.CreateChannel(context.Background(), config, mach.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}

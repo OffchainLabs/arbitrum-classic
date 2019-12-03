@@ -90,9 +90,17 @@ func (ConfirmedDisputableAssertEvent) GetIncomingMessageType() IncomingMessageTy
 	return CommonMessage
 }
 
+type ChallengeLaunchedEvent struct {
+	ChallengeAddress common.Address
+	Challenger       common.Address
+}
+
+func (ChallengeLaunchedEvent) GetIncomingMessageType() IncomingMessageType {
+	return CommonMessage
+}
+
 type InitiateChallengeEvent struct {
-	Challenger common.Address
-	Deadline   uint64
+	Deadline uint64
 }
 
 func (InitiateChallengeEvent) GetIncomingMessageType() IncomingMessageType {
