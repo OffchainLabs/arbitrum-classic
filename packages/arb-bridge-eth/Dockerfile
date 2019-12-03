@@ -6,83 +6,64 @@
 ### --------------------------------------------------------------------
 
 # Global build args (for multistage build)
-ARG MNEMONIC=\
-"jar deny prosper gasp flush glass core corn alarm treat leg smart"
-ARG NUM_WALLETS=110
+ARG NETWORK=poa.json
 
-FROM alpine:3.9
+FROM debian:buster-slim
 
-# Alpine dependencies and Non-root user
-# Check dependencies
-RUN apk add --no-cache g++=8.3.0-r0 git=2.20.1-r0 make=4.2.1-r2 \
-    nodejs=10.14.2-r0 npm=10.14.2-r0 python2=2.7.16-r1 && \
-    addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get install -y \
+    curl \
+    sudo && \
+    curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
+    apt-get install -y \
+    git \
+    netcat \
+    nodejs \
+    psmisc &&\
+    rm -rf /var/lib/apt/lists/* && \
+    curl https://get.parity.io -L | bash /dev/stdin -r stable && \
+    useradd -ms /bin/bash user
 USER user
-ENV PATH="/home/user/.npm-global/bin:${PATH}"
-WORKDIR "/home/user/"
+WORKDIR /home/user/
+ENV PATH="/home/user/.local/bin:/home/user/.npm-global/bin:${PATH}"
 RUN mkdir -p /home/user/.npm-global && \
     npm config set prefix "/home/user/.npm-global" && \
-    npm install -g ganache-cli@6.5.0 truffle@5.0.30 yarn@1.17.3
+    npm install -g truffle@5.0.30 yarn@1.17.3
 COPY package.json ./
 RUN yarn --production --frozen-lockfile --non-interactive
+COPY contracts ./contracts
+COPY migrations ./migrations
+COPY test ./test
+COPY installed_contracts ./installed_contracts
+COPY truffle-config.js ./
 
-# Source code
-COPY . ./
 RUN truffle compile
 
-# Global arguments
-ARG MNEMONIC
-ARG NUM_WALLETS
-ENV DOCKER=true MNEMONIC=$MNEMONIC NUM_WALLETS=$NUM_WALLETS
-
+# # Global arguments
+ARG NETWORK
+ENV NETWORK=$NETWORK
 # Generate bridge_eth_addresses.json for export
-RUN PORT=$(awk '/port: / {print $2}' truffle-config.js | sed 's/,//g');\
-    mkdir ganachedb && ganache-cli --db ganachedb --acctKeys keys.json \
-        -p "${PORT}" -a "${NUM_WALLETS}" -m "${MNEMONIC}" & \
-    while ! nc -z localhost ${PORT}; do sleep 2; done; \
-    echo "Finished waiting for ganache on localhost:${PORT}..." && \
-    truffle migrate -q && [ -f bridge_eth_addresses.json ]
+COPY parity ./parity
+COPY --chown=user parity/config.toml /home/user/.local/share/io.parity.ethereum/config.toml
+RUN echo arbitrum > password.txt && \
+    parity --chain=parity/$NETWORK account import parity/keystore/ && \
+    parity --chain parity/$NETWORK --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt & \
+    while ! nc -z localhost 7545; do sleep 2; done; \
+    echo "Finished waiting for parity on localhost:8545..." && \
+    truffle migrate --network parity -q && [ -f bridge_eth_addresses.json ]
 
+FROM debian:buster-slim
 
-# Minimize image
-FROM alpine:3.9
+ARG NETWORK
+ENV NETWORK=$NETWORK
 
-RUN apk add --no-cache nodejs=10.14.2-r0
-
-# Non-root user
-RUN addgroup -g 1000 -S user && \
-    adduser -u 1000 -S user -G user -s /bin/ash -h /home/user
+RUN useradd -ms /bin/bash user
 USER user
-WORKDIR "/home/user"
-
-# Addresses and keys
-COPY --from=0 --chown=user /home/user/bridge_eth_addresses.json \
-    /home/user/keys.json ./
-
-# ganache-cli and truffle (placed in /bin and /lib) and build folder
-COPY --from=0 --chown=user /home/user/.npm-global /
-COPY --from=0 --chown=user /home/user/build /home/user/build
-COPY --from=0 --chown=user /home/user/ganachedb /home/user/ganachedb
-
-# Source files
-COPY --chown=user . ./
-
-# Global arguments
-ARG MNEMONIC
-ARG NUM_WALLETS
-
-ENV GAS_LIMIT=6721975 \
-    VERBOSE="-q" \
-    GAS_PER_WALLET=100 \
-    BLOCK_TIME=0 \
-    PORT=7545 \
-    MNEMONIC=$MNEMONIC \
-    NUM_WALLETS=$NUM_WALLETS \
-    DOCKER=true
-# DOCKER=true makes ganache run on host 0.0.0.0
-
-# Start ganache-cli using --db to use the EthBridge contract
-CMD ganache-cli --db ganachedb -p $PORT -l $GAS_LIMIT -e $GAS_PER_WALLET \
-    -b $BLOCK_TIME -a $NUM_WALLETS -m "${MNEMONIC}" $VERBOSE
-EXPOSE ${PORT}
+WORKDIR /home/user/
+COPY --from=0 --chown=user /home/user/parity/ /home/user/parity/
+COPY --from=0 --chown=user /usr/bin/parity /usr/bin/parity
+COPY --from=0 --chown=user /home/user/.local/share/io.parity.ethereum/ /home/user/.local/share/io.parity.ethereum/
+COPY --from=0 --chown=user /home/user/bridge_eth_addresses.json ./
+RUN echo arbitrum > password.txt
+ENTRYPOINT ["/usr/bin/parity", "--unlock", "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82", "--password", "/home/user/password.txt"]

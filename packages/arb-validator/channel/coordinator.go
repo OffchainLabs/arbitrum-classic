@@ -335,8 +335,9 @@ type ValidatorCoordinator struct {
 
 	actions chan func(*ValidatorCoordinator)
 
-	mpq               *MessageProcessingQueue
-	maxStepsUnanSteps int32
+	mpq                 *MessageProcessingQueue
+	maxStepsUnanSteps   int32
+	unanAssertionTimout time.Duration
 }
 
 func NewCoordinator(
@@ -348,6 +349,7 @@ func NewCoordinator(
 	challengeEverything bool,
 	maxCallSteps int32,
 	maxStepsUnanSteps int32,
+	unanAssertionTimout time.Duration,
 ) (*ValidatorCoordinator, error) {
 	header, err := val.LatestHeader(context.Background())
 	if err != nil {
@@ -371,12 +373,13 @@ func NewCoordinator(
 	)
 
 	return &ValidatorCoordinator{
-		Val:               c,
-		ChannelVal:        channelVal,
-		cm:                NewClientManager(val, vmID, c.Validators),
-		actions:           make(chan func(*ValidatorCoordinator), 10),
-		mpq:               NewMessageProcessingQueue(),
-		maxStepsUnanSteps: maxStepsUnanSteps,
+		Val:                 c,
+		ChannelVal:          channelVal,
+		cm:                  NewClientManager(val, vmID, c.Validators),
+		actions:             make(chan func(*ValidatorCoordinator), 10),
+		mpq:                 NewMessageProcessingQueue(),
+		maxStepsUnanSteps:   maxStepsUnanSteps,
+		unanAssertionTimout: unanAssertionTimout,
 	}, nil
 }
 
@@ -435,7 +438,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					break
 				}
 
-				assertCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+				assertCtx, cancel := context.WithTimeout(context.Background(), m.unanAssertionTimout)
 				err := m.initiateUnanimousAssertionImpl(assertCtx, forceFinal, m.maxStepsUnanSteps)
 				cancel()
 				if err == nil {

@@ -8,7 +8,6 @@ arb-provider-web3
 arb-validator.Dockerfile
 **/arb-avm-cpp/rocksdb
 **/arb-avm-cpp/rocksdb-prefix
-**/ganachedb
 
 **/vconan
 **/Dockerfile

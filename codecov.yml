@@ -48,3 +48,11 @@ flags:
   arb_validator:
     paths:
       - packages/arb-validator
+
+ignore:
+  - "packages/arb-validator/ethbridge/chainlauncher/chainlauncher.go"
+  - "packages/arb-validator/ethbridge/challengemanager/challengemanager.go"
+  - "packages/arb-validator/ethbridge/channellauncher/channellauncher.go"
+  - "packages/arb-validator/ethbridge/globalpendinginbox/globalpendinginbox.go"
+  - "packages/arb-validator/ethbridge/onestepproof/onestepproof.go"
+  - "**/*.pb.go"

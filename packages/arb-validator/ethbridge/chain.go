@@ -21,11 +21,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/pkg/errors"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type ArbAddresses struct {
@@ -41,6 +42,9 @@ func waitForReceipt(ctx context.Context, client *ethclient.Client, hash common.H
 		case _ = <-time.After(time.Second):
 			receipt, err := client.TransactionReceipt(context.Background(), hash)
 			if err != nil {
+				if err.Error() == ethereum.NotFound.Error() {
+					continue
+				}
 				return nil, err
 			}
 			if receipt.Status != 1 {

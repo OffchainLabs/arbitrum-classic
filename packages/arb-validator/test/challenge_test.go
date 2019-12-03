@@ -28,12 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -41,6 +35,9 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -50,7 +47,7 @@ func TestChallenge(t *testing.T) {
 
 	bridge_eth_addresses := "bridge_eth_addresses.json"
 	contract := "contract.ao"
-	ethURL := "ws://127.0.0.1:7545"
+	ethURL := "ws://127.0.0.1:7546"
 
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
@@ -70,11 +67,11 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	key1, err := crypto.HexToECDSA("4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d")
 	if err != nil {
 		t.Fatal(err)
 	}
-	key2, err := crypto.HexToECDSA("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
+	key2, err := crypto.HexToECDSA("6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +88,7 @@ func TestChallenge(t *testing.T) {
 	validators := []common.Address{auth1.From, auth2.From}
 	escrowRequired := big.NewInt(10)
 	config := valmessage.NewVMConfiguration(
-		5,
+		2,
 		escrowRequired,
 		common.Address{}, // Address 0 is eth
 		validators,
@@ -131,6 +128,7 @@ func TestChallenge(t *testing.T) {
 		false,
 		math.MaxInt32, // maxCallSteps,
 		math.MaxInt32, // maxUnanSteps
+		time.Second,
 	)
 
 	if err != nil {
@@ -241,7 +239,7 @@ func TestChallenge(t *testing.T) {
 				t.Log(message.Message)
 				t.Log("****************************")
 			}
-		case <-time.After(60 * time.Second):
+		case <-time.After(100 * time.Second):
 			t.Error("Never received proof accepted message")
 			fmt.Println("test complete")
 			return
