@@ -54,7 +54,7 @@ func (con *ChainFactory) CreateChain(
 	if err != nil {
 		return common.Address{}, err
 	}
-	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash(), "CreateChain")
+	receipt, err := waitForReceipt(auth.Context, con.client, auth, tx, "CreateChain")
 	if err != nil {
 		return common.Address{}, err
 	}

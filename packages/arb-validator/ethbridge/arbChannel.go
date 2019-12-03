@@ -176,7 +176,7 @@ func (vm *ArbChannel) IncreaseDeposit(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "IncreaseDeposit")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "IncreaseDeposit")
 }
 
 func (vm *ArbChannel) FinalizedUnanimousAssert(
@@ -198,7 +198,7 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "FinalizedUnanimousAssert")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "FinalizedUnanimousAssert")
 }
 
 func (vm *ArbChannel) PendingUnanimousAssert(
@@ -227,7 +227,7 @@ func (vm *ArbChannel) PendingUnanimousAssert(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "PendingUnanimousAssert")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "PendingUnanimousAssert")
 }
 
 func (vm *ArbChannel) ConfirmUnanimousAsserted(
@@ -246,7 +246,7 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmUnanimousAsserted")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "ConfirmUnanimousAsserted")
 }
 
 func (vm *ArbChannel) VerifyVM(

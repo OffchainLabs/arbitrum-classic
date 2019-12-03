@@ -282,7 +282,7 @@ func (c *Challenge) BisectAssertion(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, tx.Hash(), "BisectAssertion")
+	return waitForReceipt(auth.Context, c.Client, auth, tx, "BisectAssertion")
 }
 
 func (c *Challenge) ContinueChallenge(
@@ -320,7 +320,7 @@ func (c *Challenge) ContinueChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, tx.Hash(), "ContinueChallenge")
+	return waitForReceipt(auth.Context, c.Client, auth, tx, "ContinueChallenge")
 }
 
 func (c *Challenge) OneStepProof(
@@ -344,7 +344,7 @@ func (c *Challenge) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, tx.Hash(), "OneStepProof")
+	return waitForReceipt(auth.Context, c.Client, auth, tx, "OneStepProof")
 }
 
 func (c *Challenge) AsserterTimedOutChallenge(
@@ -356,7 +356,7 @@ func (c *Challenge) AsserterTimedOutChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, tx.Hash(), "AsserterTimedOut")
+	return waitForReceipt(auth.Context, c.Client, auth, tx, "AsserterTimedOut")
 }
 
 func (c *Challenge) ChallengerTimedOutChallenge(
@@ -368,7 +368,7 @@ func (c *Challenge) ChallengerTimedOutChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, tx.Hash(), "ChallengerTimedOut")
+	return waitForReceipt(auth.Context, c.Client, auth, tx, "ChallengerTimedOut")
 }
 
 func translateBisectionEvent(event *challenge.ChallengeBisectedAssertion) []*protocol.AssertionStub {

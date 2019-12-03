@@ -60,7 +60,7 @@ func (con *ChannelFactory) CreateChannel(
 	if err != nil {
 		return common.Address{}, err
 	}
-	receipt, err := waitForReceipt(auth.Context, con.client, tx.Hash(), "CreateChannel")
+	receipt, err := waitForReceipt(auth.Context, con.client, auth, tx, "CreateChannel")
 	if err != nil {
 		return common.Address{}, err
 	}

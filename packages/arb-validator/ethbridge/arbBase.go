@@ -287,7 +287,7 @@ func (vm *ArbBase) PendingDisputableAssert(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "PendingDisputableAssert")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "PendingDisputableAssert")
 }
 
 func (vm *ArbBase) ConfirmDisputableAsserted(
@@ -308,7 +308,7 @@ func (vm *ArbBase) ConfirmDisputableAsserted(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmDisputableAsserted")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "ConfirmDisputableAsserted")
 }
 
 func (vm *ArbBase) InitiateChallenge(
@@ -326,7 +326,7 @@ func (vm *ArbBase) InitiateChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "InitiateChallenge")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "InitiateChallenge")
 }
 
 func (vm *ArbBase) CurrentDeposit(
