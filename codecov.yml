@@ -57,4 +57,5 @@ ignore:
   - "packages/arb-validator/ethbridge/channelfactory/*"
   - "packages/arb-validator/ethbridge/globalpendinginbox/*"
   - "packages/arb-validator/ethbridge/onestepproof/*"
+  - "packages/arb-provider-go/test/fibabi.go"
   - "**/*.pb.go"
