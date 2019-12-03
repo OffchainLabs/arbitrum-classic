@@ -28,7 +28,8 @@ contract ChallengeManager is IChallengeManager {
     event ContinuedChallenge (
         address indexed vmAddress,
         address challenger,
-        uint assertionIndex
+        uint assertionIndex,
+        uint64 deadline
     );
 
     event BisectedAssertion(
@@ -36,7 +37,7 @@ contract ChallengeManager is IChallengeManager {
         address bisecter,
         bytes32[] afterHashAndMessageAndLogsBisections,
         uint32 totalSteps,
-        uint256[] totalMessageAmounts
+        uint64 deadline
     );
 
     event OneStepProofCompleted(
@@ -48,6 +49,12 @@ contract ChallengeManager is IChallengeManager {
     event TimedOutChallenge (
         address indexed vmAddress,
         bool challengerWrong
+    );
+
+    event InitiatedChallenge(
+        address indexed vmAddress,
+        address challenger,
+        uint64 deadline
     );
 
     mapping(address => Challenge.Data) challenges;
@@ -62,14 +69,21 @@ contract ChallengeManager is IChallengeManager {
     {
         require(challenges[msg.sender].challengeState == 0x00, "There must be no existing challenge");
 
+        uint64 deadline = uint64(block.number) + uint64(_challengePeriod);
         challenges[msg.sender] = Challenge.Data(
             msg.sender,
             _challengeRoot,
             _escrows,
             _players,
-            uint64(block.number) + uint64(_challengePeriod),
+            deadline,
             _challengePeriod,
             Challenge.State.Challenged
+        );
+
+        emit InitiatedChallenge(
+            msg.sender,
+            _players[1],
+            deadline
         );
     }
 
@@ -77,11 +91,8 @@ contract ChallengeManager is IChallengeManager {
         address _challengeId,
         bytes32 _beforeInbox,
         bytes32[] memory _afterHashAndMessageAndLogsBisections,
-        uint256[] memory _totalMessageAmounts,
         uint32 _totalSteps,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances
+        uint64[2] memory _timeBounds
     )
         public
     {
@@ -90,11 +101,8 @@ contract ChallengeManager is IChallengeManager {
             challenge,
             _beforeInbox,
             _afterHashAndMessageAndLogsBisections,
-            _totalMessageAmounts,
             _totalSteps,
-            _timeBounds,
-            _tokenTypes,
-            _beforeBalances
+            _timeBounds
         );
     }
 
@@ -121,10 +129,7 @@ contract ChallengeManager is IChallengeManager {
         address _vmAddress,
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances,
         bytes32[5] memory _afterHashAndMessages,
-        uint256[] memory _amounts,
         bytes memory _proof
     )
         public
@@ -134,10 +139,7 @@ contract ChallengeManager is IChallengeManager {
             challenge,
             _beforeHashAndInbox,
             _timeBounds,
-            _tokenTypes,
-            _beforeBalances,
             _afterHashAndMessages,
-            _amounts,
             _proof
         );
         _asserterWin(challenge);

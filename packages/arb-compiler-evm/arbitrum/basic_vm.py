@@ -127,11 +127,6 @@ class BasicVM:
         msg = self.stack.pop()
         self.sent_messages.append(msg)
 
-    def nbsend(self):
-        msg = self.stack.pop()
-        self.sent_messages.append(msg)
-        self.stack.push(1)
-
     def auxpush(self):
         item = self.stack.pop()
         self.aux_stack.push(item)

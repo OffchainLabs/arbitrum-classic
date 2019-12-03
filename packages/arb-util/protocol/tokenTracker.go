@@ -56,28 +56,13 @@ type TokenTracker struct {
 }
 
 func NewTokenTrackerFromMessages(msgs []Message) *TokenTracker {
-	types := make([][21]byte, 0, len(msgs))
-	amounts := make([]*big.Int, 0, len(msgs))
-
+	entries := make([]tokenEntry, 0, len(msgs))
 	for _, msg := range msgs {
-		types = append(types, msg.TokenType)
-		amounts = append(amounts, msg.Currency)
+		entries = append(entries, tokenEntry{
+			tokenType: msg.TokenType,
+			amount:    msg.Currency,
+		})
 	}
-	return NewTokenTrackerFromLists(types, amounts)
-}
-
-func NewTokenTrackerFromLists(types [][21]byte, amounts []*big.Int) *TokenTracker {
-	balanceTracker := NewBalanceTrackerFromLists(types, amounts)
-	entries := make([]tokenEntry, 0, len(balanceTracker.nftLookup)+len(balanceTracker.tokenLookup))
-
-	for key, val := range balanceTracker.tokenLookup {
-		entries = append(entries, tokenEntry{key, val})
-	}
-
-	for key, _ := range balanceTracker.nftLookup {
-		entries = append(entries, tokenEntry{key.tokenType, new(big.Int).SetBytes(key.intVal[:])})
-	}
-
 	sort.Slice(entries, func(i, j int) bool {
 		tokDiff := entries[i].tokenType.ToIntValue().BigInt().Cmp(entries[j].tokenType.ToIntValue().BigInt())
 		if tokDiff < 0 {
@@ -89,8 +74,8 @@ func NewTokenTrackerFromLists(types [][21]byte, amounts []*big.Int) *TokenTracke
 		}
 	})
 
-	tokenLookup := make(map[TokenType]int, len(balanceTracker.tokenLookup))
-	nftLookup := make(map[NFTKey]int, len(balanceTracker.nftLookup))
+	tokenLookup := make(map[TokenType]int)
+	nftLookup := make(map[NFTKey]int)
 
 	for i, entry := range entries {
 		if entry.tokenType.IsToken() {
@@ -116,30 +101,6 @@ func (b *TokenTracker) GetTypesAndAmounts() ([][21]byte, []*big.Int) {
 	return tokTypes, amounts
 }
 
-func (b *TokenTracker) Equals(o *TokenTracker) bool {
-	if len(b.entries) != len(o.entries) {
-		return false
-	}
-
-	for i := 0; i < len(b.entries); i++ {
-		if b.entries[i].tokenType != o.entries[i].tokenType || b.entries[i].amount.Cmp(o.entries[i].amount) != 0 {
-			return false
-		}
-	}
-	return true
-}
-
-func (b *TokenTracker) Clone() *TokenTracker {
-	tokenTypes := make([][21]byte, 0, len(b.entries))
-	tokenAmounts := make([]*big.Int, 0, len(b.entries))
-	for _, entry := range b.entries {
-		tokenTypes = append(tokenTypes, entry.tokenType)
-		newAmount := big.NewInt(0).Set(entry.amount)
-		tokenAmounts = append(tokenAmounts, newAmount)
-	}
-	return NewTokenTrackerFromLists(tokenTypes, tokenAmounts)
-}
-
 func (b *TokenTracker) TokenIndex(tokenType [21]byte, amount *big.Int) int {
 	tokType := TokenType{}
 	copy(tokType[:], tokenType[:])
@@ -147,10 +108,4 @@ func (b *TokenTracker) TokenIndex(tokenType [21]byte, amount *big.Int) int {
 		return b.tokenLookup[tokType]
 	}
 	return b.nftLookup[NewNFTKey(tokType, amount)]
-}
-
-func (b *TokenTracker) RemoveAssertionValues(totalVals []*big.Int) {
-	for i, val := range totalVals {
-		b.entries[i].amount.Sub(b.entries[i].amount, val)
-	}
 }

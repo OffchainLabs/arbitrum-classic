@@ -16,79 +16,46 @@ interface ArbChainInterface extends Interface {
             encode([_assertPreHash]: [Arrayish]): string;
         }>;
 
-        confirmDisputableAsserted: TypedFunctionDescription<{
-            encode([
-                _preconditionHash,
-                _afterHash,
-                _numSteps,
-                _tokenTypes,
-                _messageData,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestinations,
-                _logsAccHash,
-            ]: [
-                Arrayish,
-                Arrayish,
-                BigNumberish,
-                (Arrayish)[],
-                Arrayish,
-                (BigNumberish)[],
-                (BigNumberish)[],
-                (string)[],
-                Arrayish,
-            ]): string;
-        }>;
-
         activateVM: TypedFunctionDescription<{ encode([]: []): string }>;
 
-        pendingDisputableAssert: TypedFunctionDescription<{
-            encode([
-                _fields,
-                _numSteps,
-                _timeBounds,
-                _tokenTypes,
-                _messageDataHash,
-                _messageTokenNums,
-                _messageAmounts,
-                _messageDestinations,
-            ]: [
-                (Arrayish)[],
+        ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
+
+        confirmDisputableAsserted: TypedFunctionDescription<{
+            encode([_preconditionHash, _afterHash, _numSteps, _messages, _logsAccHash]: [
+                Arrayish,
+                Arrayish,
                 BigNumberish,
-                (BigNumberish)[],
-                (Arrayish)[],
-                (Arrayish)[],
-                (BigNumberish)[],
-                (BigNumberish)[],
-                (string)[],
+                Arrayish,
+                Arrayish,
             ]): string;
         }>;
 
-        ownerShutdown: TypedFunctionDescription<{ encode([]: []): string }>;
+        pendingDisputableAssert: TypedFunctionDescription<{
+            encode([_beforeHash, _beforeInbox, _afterHash, _messagesAccHash, _logsAccHash, _numSteps, _timeBounds]: [
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                BigNumberish,
+                (BigNumberish)[],
+            ]): string;
+        }>;
 
         increaseDeposit: TypedFunctionDescription<{ encode([]: []): string }>;
     };
 
     events: {
         PendingDisputableAssertion: TypedEventDescription<{
-            encodeTopics([fields, asserter, timeBounds, tokenTypes, numSteps, lastMessageHash, logsAccHash, amounts]: [
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-            ]): string[];
+            encodeTopics([fields, asserter, timeBounds, numSteps, deadline]: [null, null, null, null, null]): string[];
         }>;
 
         ConfirmedDisputableAssertion: TypedEventDescription<{
             encodeTopics([newState, logsAccHash]: [null, null]): string[];
         }>;
 
-        InitiatedChallenge: TypedEventDescription<{
-            encodeTopics([challenger]: [null]): string[];
+        PendingAssertionCanceled: TypedEventDescription<{
+            encodeTopics([]: []): string[];
         }>;
     };
 }
@@ -142,34 +109,29 @@ export class ArbChain extends Contract {
 
         initiateChallenge(_assertPreHash: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
+        activateVM(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
+        ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
+
         confirmDisputableAsserted(
             _preconditionHash: Arrayish,
             _afterHash: Arrayish,
             _numSteps: BigNumberish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
+            _messages: Arrayish,
             _logsAccHash: Arrayish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        activateVM(overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
         pendingDisputableAssert(
-            _fields: (Arrayish)[],
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _afterHash: Arrayish,
+            _messagesAccHash: Arrayish,
+            _logsAccHash: Arrayish,
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
-            _tokenTypes: (Arrayish)[],
-            _messageDataHash: (Arrayish)[],
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
-
-        ownerShutdown(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         increaseDeposit(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -187,16 +149,13 @@ export class ArbChain extends Contract {
             fields: null,
             asserter: null,
             timeBounds: null,
-            tokenTypes: null,
             numSteps: null,
-            lastMessageHash: null,
-            logsAccHash: null,
-            amounts: null,
+            deadline: null,
         ): EventFilter;
 
         ConfirmedDisputableAssertion(newState: null, logsAccHash: null): EventFilter;
 
-        InitiatedChallenge(challenger: null): EventFilter;
+        PendingAssertionCanceled(): EventFilter;
     };
 
     estimate: {
@@ -204,32 +163,27 @@ export class ArbChain extends Contract {
 
         initiateChallenge(_assertPreHash: Arrayish): Promise<BigNumber>;
 
+        activateVM(): Promise<BigNumber>;
+
+        ownerShutdown(): Promise<BigNumber>;
+
         confirmDisputableAsserted(
             _preconditionHash: Arrayish,
             _afterHash: Arrayish,
             _numSteps: BigNumberish,
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
+            _messages: Arrayish,
             _logsAccHash: Arrayish,
         ): Promise<BigNumber>;
 
-        activateVM(): Promise<BigNumber>;
-
         pendingDisputableAssert(
-            _fields: (Arrayish)[],
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _afterHash: Arrayish,
+            _messagesAccHash: Arrayish,
+            _logsAccHash: Arrayish,
             _numSteps: BigNumberish,
             _timeBounds: (BigNumberish)[],
-            _tokenTypes: (Arrayish)[],
-            _messageDataHash: (Arrayish)[],
-            _messageTokenNums: (BigNumberish)[],
-            _messageAmounts: (BigNumberish)[],
-            _messageDestinations: (string)[],
         ): Promise<BigNumber>;
-
-        ownerShutdown(): Promise<BigNumber>;
 
         increaseDeposit(): Promise<BigNumber>;
     };

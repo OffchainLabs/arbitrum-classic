@@ -159,6 +159,16 @@ library ArbValue {
         );
     }
 
+    function hashTupleValue(bytes32[] memory hashes) private pure returns (bytes32) {
+        require(hashes.length <= 8, "Invalid tuple length");
+        return keccak256(
+            abi.encodePacked(
+                uint8(TUPLE_TYPECODE + hashes.length),
+                hashes
+            )
+        );
+    }
+
     struct HashOnlyValue {
         bytes32 hash;
     }
@@ -384,5 +394,69 @@ library ArbValue {
         (valid, offset, value) = deserializeValue(data, 0);
         require(valid == 0, "Marshalled value must be valid");
         return value.hash().hash;
+    }
+
+    function deserializeMessage(
+        bytes memory data,
+        uint startOffset
+    )
+        public
+        pure
+        returns(
+            bool valid,
+            uint offset,
+            bytes32 messageHash,
+            uint256 destination,
+            uint256 value,
+            uint256 tokenType,
+            bytes memory messageData
+        )
+    {
+        bytes32 messageDataHash;
+        offset = startOffset;
+        uint8 valType = uint8(data[offset]);
+        offset++;
+        if (valType != TUPLE_TYPECODE + 4) {
+            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        }
+
+        (offset, messageDataHash) = deserializeValidValueHash(data, offset);
+        messageData = data.slice(startOffset + 1, offset - startOffset - 1);
+
+        valType = uint8(data[offset]);
+        offset++;
+        if (valType != INT_TYPECODE) {
+            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        }
+        (destination, offset) = deserializeInt(data, offset);
+
+        valType = uint8(data[offset]);
+        offset++;
+        if (valType != INT_TYPECODE) {
+            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        }
+        (value, offset) = deserializeInt(data, offset);
+
+        valType = uint8(data[offset]);
+        offset++;
+        if (valType != INT_TYPECODE) {
+            (offset, messageHash) = deserializeValidValueHash(data, offset - 1);
+            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        }
+        (tokenType, offset) = deserializeInt(data, offset);
+
+        valid = true;
+
+        bytes32[] memory hashes = new bytes32[](4);
+        hashes[0] = messageDataHash;
+        hashes[1] = hashIntValue(destination);
+        hashes[2] = hashIntValue(value);
+        hashes[3] = hashIntValue(tokenType);
+        messageHash = hashTupleValue(hashes);
+
+        return (valid, offset, messageHash, destination, value, tokenType, messageData);
     }
 }

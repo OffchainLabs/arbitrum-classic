@@ -98,7 +98,7 @@ func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time
 				Config:    bot.Config,
 				Core:      bot.GetCore(),
 				assertion: bot.assertion,
-				deadline:  time + bot.VMConfig.GracePeriod,
+				deadline:  ev.Deadline,
 				retChan:   bot.retChan,
 				errChan:   bot.errChan,
 			}, nil, nil

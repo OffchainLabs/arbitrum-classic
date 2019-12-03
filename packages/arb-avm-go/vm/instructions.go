@@ -22,7 +22,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -92,7 +91,6 @@ var allInsns = []Instruction{ // code, not necessarily in order
 	{code.LOG, insnLog},
 
 	{code.SEND, insnSend},
-	{code.NBSEND, insnNBSend},
 	{code.GETTIME, insnGettime},
 	{code.INBOX, insnInbox},
 	{code.ERROR, insnError},
@@ -997,65 +995,14 @@ func insnLog(state *Machine) (StackMods, error) {
 	return mods, nil
 }
 
-func sendImpl(state *Machine) (value.TupleValue, protocol.Message, StackMods, error) {
-	mods := NewStackMods(1, 0)
-	sendData, mods, err := PopStackTuple(state, mods)
-	if err != nil {
-		return sendData, protocol.Message{}, mods, err
-	}
-
-	if sendData.Len() != 4 {
-		return sendData, protocol.Message{}, mods, err
-	}
-
-	data, _ := sendData.GetByInt64(0)
-	val2, _ := sendData.GetByInt64(1)
-	val3, _ := sendData.GetByInt64(2)
-	val4, _ := sendData.GetByInt64(3)
-
-	destination, ok2 := val2.(value.IntValue)
-	amount, ok3 := val3.(value.IntValue)
-	tokenType, ok4 := val4.(value.IntValue)
-
-	if !ok2 || !ok3 || !ok4 {
-		// mods, err := handlePopError(state, mods, PopTypeWarning{"Inbox pop tuple wrong", mods})
-		return sendData, protocol.Message{}, mods, err
-	}
-	return sendData, protocol.NewMessage(data, protocol.TokenTypeFromIntValue(tokenType), amount.BigInt(), destination.BigInt()), mods, nil
-}
-
 func insnSend(state *Machine) (StackMods, error) {
-	sendData, msg, mods, err := sendImpl(state)
+	mods := NewStackMods(1, 0)
+	sendData, mods, err := PopStackBox(state, mods)
 	if err != nil {
 		return mods, err
 	}
 
-	err = state.Send(msg)
-	if err != nil {
-		state.stack.PushTuple(sendData)
-		return mods, BlockedError{machine.SendBlocked{
-			Currency:  msg.Currency,
-			TokenType: msg.TokenType,
-		}}
-	}
-
-	state.IncrPC()
-	return mods, nil
-}
-
-func insnNBSend(state *Machine) (StackMods, error) {
-	_, msg, mods, err := sendImpl(state)
-	if err != nil {
-		return mods, err
-	}
-
-	if err := state.Send(msg); err != nil {
-		state.Warn(err.Error())
-		mods = PushStackInt(state, mods, value.NewInt64Value(0))
-	} else {
-		mods = PushStackInt(state, mods, value.NewInt64Value(1))
-	}
-
+	state.Send(sendData)
 	state.IncrPC()
 	return mods, nil
 }

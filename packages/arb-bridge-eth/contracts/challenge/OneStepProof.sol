@@ -38,9 +38,6 @@ library OneStepProof {
         bytes32 lastMessage;
         bytes32 firstLog;
         bytes32 lastLog;
-        bytes21 tokenType;
-        uint amount;
-        bool foundAmount;
         bytes proof;
     }
 
@@ -48,10 +45,7 @@ library OneStepProof {
         Challenge.Data storage _challenge,
         bytes32[2] memory _beforeHashAndInbox,
         uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        uint256[] memory _beforeBalances,
         bytes32[5] memory _afterHashAndMessages,
-        uint256[] memory _amounts,
         bytes memory _proof
     )
         public view
@@ -68,9 +62,7 @@ library OneStepProof {
                     ArbProtocol.generatePreconditionHash(
                         _beforeHashAndInbox[0],
                         _timeBounds,
-                        _beforeHashAndInbox[1],
-                        _tokenTypes,
-                        _beforeBalances
+                        _beforeHashAndInbox[1]
                     ),
                     ArbProtocol.generateAssertionHash(
                         _afterHashAndMessages[0],
@@ -78,8 +70,7 @@ library OneStepProof {
                         _afterHashAndMessages[1],
                         _afterHashAndMessages[2],
                         _afterHashAndMessages[3],
-                        _afterHashAndMessages[4],
-                        _amounts
+                        _afterHashAndMessages[4]
                     )
                 )
             ) == _challenge.challengeState,
@@ -97,9 +88,6 @@ library OneStepProof {
                 _afterHashAndMessages[4]
             ],
             _timeBounds,
-            _tokenTypes,
-            _beforeBalances,
-            _amounts,
             _proof
         );
 
@@ -118,46 +106,12 @@ library OneStepProof {
     function validateProof(
         bytes32[7] memory fields,
         uint64[2] memory timeBounds,
-        bytes21[] memory tokenTypes,
-        uint256[] memory beforeValues,
-        uint256[] memory messageValue,
         bytes memory proof
     )
         public
         pure
         returns(uint)
     {
-        // require(messageValue.length == 1 || messageValue.length == 0);
-        bytes21 tokenType;
-        uint amount;
-        bool foundAmount;
-        // if first message hash != last message hash then we have one or more messages
-        bool includesMessage = (fields[3] != fields[4]);
-        int64 amountIndex = -1;
-        if (includesMessage) {
-            // check messages and verify that one and only one has a value
-            // use that index to check token type and amount
-            for (uint64 i = 0; i < messageValue.length; i++) {
-                if (messageValue[i] != 0) {
-                    require(amountIndex == -1, "multiple out messages");
-                    amountIndex = int64(i);
-                }
-            }
-            if (amountIndex != -1) {
-                amount = messageValue[uint(amountIndex)];
-                tokenType = tokenTypes[uint(amountIndex)];
-                foundAmount = true;
-                if (tokenTypes[uint(amountIndex)][20] == 0x01) {
-                    require(beforeValues[uint(amountIndex)] == amount, "precondition must have nft");
-                } else {
-                    require(amount <= beforeValues[uint(amountIndex)], "precondition must have value");
-                }
-            }
-        } else {
-            for (uint64 i = 0; i < messageValue.length; i++) {
-                require(messageValue[i] == 0, "Must have no message values");
-            }
-        }
         return checkProof(
             ValidateProofData(
                 fields[0],
@@ -168,9 +122,6 @@ library OneStepProof {
                 fields[4],
                 fields[5],
                 fields[6],
-                tokenType,
-                amount,
-                foundAmount,
                 proof
             )
         );
@@ -1015,38 +966,15 @@ library OneStepProof {
 
     // System operations
 
-    function sendInsnImpl(
+    function executeSendInsn(
         ArbMachine.Machine memory,
         ArbValue.Value memory val1
     )
         internal
         pure
-        returns (bool, bytes32, bytes21, uint)
+        returns (bool, bytes32)
     {
-        bytes21 tokenType;
-        uint amount;
-        bytes32 messageHash;
-        if (!val1.isTuple()) {
-            return (false, messageHash, tokenType, amount);
-        }
-        if (!val1.tupleVal[1].isInt()) {
-            return (false, messageHash, tokenType, amount);
-        }
-        if (!val1.tupleVal[2].isInt()) {
-            return (false, messageHash, tokenType, amount);
-        }
-        if (!val1.tupleVal[3].isInt()) {
-            return (false, messageHash, tokenType, amount);
-        }
-        tokenType = bytes21(bytes32(val1.tupleVal[3].intVal));
-        amount = val1.tupleVal[2].intVal;
-        messageHash = ArbProtocol.generateMessageStubHash(
-            val1.hash().hash,
-            tokenType,
-            amount,
-            address(val1.tupleVal[1].intVal)
-        );
-        return (true, messageHash, tokenType, amount);
+        return (true, val1.hash().hash);
     }
 
     function executeInboxInsn(
@@ -1127,11 +1055,10 @@ library OneStepProof {
 
     // System operations
     uint8 constant internal OP_SEND = 0x70;
-    uint8 constant internal OP_NBSEND = 0x71;
-    uint8 constant internal OP_GETTIME = 0x72;
-    uint8 constant internal OP_INBOX = 0x73;
-    uint8 constant internal OP_ERROR = 0x74;
-    uint8 constant internal OP_STOP = 0x75;
+    uint8 constant internal OP_GETTIME = 0x71;
+    uint8 constant internal OP_INBOX = 0x72;
+    uint8 constant internal OP_ERROR = 0x73;
+    uint8 constant internal OP_STOP = 0x74;
 
     function opInfo(uint opCode) internal pure returns (uint, uint) {
         if (opCode == OP_ADD) {
@@ -1232,8 +1159,6 @@ library OneStepProof {
             return (1, 0);
         } else if (opCode == OP_SEND) {
             return (1, 0);
-        } else if (opCode == OP_NBSEND) {
-            return (1, 1);
         } else if (opCode == OP_GETTIME) {
             return (0, 1);
         } else if (opCode == OP_INBOX) {
@@ -1459,48 +1384,37 @@ library OneStepProof {
             correct = executeBreakpointInsn(endMachine);
         } else if (opCode == OP_LOG) {
             (correct, messageHash) = executeLogInsn(endMachine, stackVals[0]);
-            require(
-                keccak256(
-                    abi.encodePacked(
-                        _data.firstLog,
-                        messageHash
-                    )
-                ) == _data.lastLog,
-                "Logged value doesn't match output log"
-            );
-            require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
+            if (correct) {
+                require(
+                    keccak256(
+                        abi.encodePacked(
+                            _data.firstLog,
+                            messageHash
+                        )
+                    ) == _data.lastLog,
+                    "Logged value doesn't match output log"
+                );
+                require(_data.firstMessage == _data.lastMessage, "Send not called, but message is nonzero");
+            } else {
+                messageHash = 0;
+            }
+
         } else if (opCode == OP_SEND) {
-            bytes21 tokenType;
-            uint amount;
-            (correct, messageHash, tokenType, amount) = sendInsnImpl(endMachine, stackVals[0]);
-            require( tokenType == _data.tokenType, "Token type does not match");
-            require( amount == _data.amount, "Amount does not match");
-            require(
-                keccak256(
-                    abi.encodePacked(
-                        _data.firstMessage,
-                        messageHash
-                    )
-                ) == _data.lastMessage,
-                "sent message doesn't match output mesage"
-            );
-            require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
-        } else if (opCode == OP_NBSEND) {
-            bytes21 tokenType;
-            uint amount;
-            (correct, messageHash, tokenType, amount) = sendInsnImpl(endMachine, stackVals[0]);
-            if ( tokenType != _data.tokenType ||
-                 amount != _data.amount ||
-                 keccak256(
-                    abi.encodePacked(
-                        _data.firstMessage,
-                        messageHash
-                    )
-                 ) != _data.lastMessage) {
-                endMachine.addDataStackValue(ArbValue.newIntValue(0));
+            (correct, messageHash) = executeSendInsn(endMachine, stackVals[0]);
+            if (correct) {
+                require(
+                    keccak256(
+                        abi.encodePacked(
+                            _data.firstMessage,
+                            messageHash
+                        )
+                    ) == _data.lastMessage,
+                    "sent message doesn't match output message"
+                );
+
                 require(_data.firstLog == _data.lastLog, "Log not called, but message is nonzero");
             } else {
-                endMachine.addDataStackValue(ArbValue.newIntValue(1));
+                messageHash = 0;
             }
         } else if (opCode == OP_GETTIME) {
             ArbValue.Value[] memory contents = new ArbValue.Value[](2);

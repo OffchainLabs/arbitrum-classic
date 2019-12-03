@@ -17,9 +17,6 @@
 package machine
 
 import (
-	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -78,21 +75,4 @@ func (b InboxBlocked) Equals(a BlockReason) bool {
 		return false
 	}
 	return value.Eq(aBlock.Inbox, b.Inbox)
-}
-
-type SendBlocked struct {
-	Currency  *big.Int
-	TokenType protocol.TokenType
-}
-
-func (b SendBlocked) IsBlocked(m Machine, currentTime uint64) bool {
-	return m.CanSpend(b.TokenType, b.Currency)
-}
-
-func (b SendBlocked) Equals(a BlockReason) bool {
-	aBlock, ok := a.(SendBlocked)
-	if !ok {
-		return false
-	}
-	return aBlock.Currency.Cmp(b.Currency) == 0 && aBlock.TokenType == b.TokenType
 }

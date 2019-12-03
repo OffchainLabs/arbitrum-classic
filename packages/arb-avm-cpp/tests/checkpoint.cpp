@@ -499,7 +499,6 @@ void getSavedState(MachineStateFetcher& fetcher,
 
     REQUIRE(data.status_char == expected_data.status_char);
     REQUIRE(data.blockreason_str == expected_data.blockreason_str);
-    REQUIRE(data.balancetracker_str == expected_data.balancetracker_str);
     REQUIRE(data.static_val_key == expected_data.static_val_key);
     REQUIRE(data.inbox_count_key == expected_data.inbox_count_key);
     REQUIRE(data.pending_count_key == expected_data.pending_count_key);
@@ -587,7 +586,6 @@ ParsedState makeStorageData(MachineStateSaver& stateSaver,
                             CodePoint err_pc,
                             MessageStack inbox,
                             MessageStack pendingInbox,
-                            BalanceTracker balance,
                             BlockReason blockReason) {
     TuplePool pool;
 
@@ -603,23 +601,19 @@ ParsedState makeStorageData(MachineStateSaver& stateSaver,
 
     auto status_str = (unsigned char)state;
     auto blockreason_str = serializeForCheckpoint(blockReason);
-    auto balancetracker_str = balance.serializeBalanceValues();
 
-    return ParsedState{
-        static_val_results.storage_key,
-        register_val_results.storage_key,
-        datastack_results.storage_key,
-        auxstack_results.storage_key,
-        inbox_results.msgs_tuple_results.storage_key,
-        inbox_results.msg_count_results.storage_key,
-        pending_results.msgs_tuple_results.storage_key,
-        pending_results.msg_count_results.storage_key,
-        pc_results.storage_key,
-        err_pc_results.storage_key,
-        status_str,
-        blockreason_str,
-        balancetracker_str,
-    };
+    return ParsedState{static_val_results.storage_key,
+                       register_val_results.storage_key,
+                       datastack_results.storage_key,
+                       auxstack_results.storage_key,
+                       inbox_results.msgs_tuple_results.storage_key,
+                       inbox_results.msg_count_results.storage_key,
+                       pending_results.msgs_tuple_results.storage_key,
+                       pending_results.msg_count_results.storage_key,
+                       pc_results.storage_key,
+                       err_pc_results.storage_key,
+                       status_str,
+                       blockreason_str};
 }
 
 MessageStack getMsgStack1() {
@@ -675,18 +669,12 @@ ParsedState getStateValues(MachineStateSaver& saver) {
     CodePoint err_pc_codepoint(0, Operation(), 0);
     Status state = Status::Extensive;
 
-    std::array<unsigned char, 21> block_token_type = {10};
-    auto send_blocked = SendBlocked(999, block_token_type);
-
-    std::array<unsigned char, 21> token_type = {1, 99};
-    uint256_t amount = 11;
-    auto tracker = BalanceTracker();
-    tracker.add(token_type, amount);
+    auto inbox_blocked = InboxBlocked(::hash(inbox_stack.messages));
 
     auto saved_data =
         makeStorageData(saver, static_val, register_val, data_stack, aux_stack,
                         state, pc_codepoint, err_pc_codepoint, inbox_stack,
-                        pending_stack, tracker, send_blocked);
+                        pending_stack, inbox_blocked);
 
     return saved_data;
 }
@@ -703,10 +691,9 @@ ParsedState getDefaultValues(MachineStateSaver& saver) {
     Status state = Status::Extensive;
     CodePoint code_point(0, Operation(), 0);
 
-    auto data =
-        makeStorageData(saver, static_val, Tuple(), Datastack(), Datastack(),
-                        state, code_point, code_point, MessageStack(&pool),
-                        MessageStack(&pool), BalanceTracker(), NotBlocked());
+    auto data = makeStorageData(
+        saver, static_val, Tuple(), Datastack(), Datastack(), state, code_point,
+        code_point, MessageStack(&pool), MessageStack(&pool), NotBlocked());
 
     return data;
 }

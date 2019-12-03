@@ -17,7 +17,6 @@
 package ethbridge
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"math/big"
@@ -34,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 
@@ -128,6 +126,7 @@ func (vm *ArbChannel) StartConnection(ctx context.Context) error {
 					Event: PendingUnanimousAssertEvent{
 						UnanHash:    val.UnanHash,
 						SequenceNum: val.SequenceNum,
+						Deadline:    val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -186,25 +185,13 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.FinalizedUnanimousAssert(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
-		tokenTypes,
-		messageData.Bytes(),
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 		assertion.LogsHash(),
 		sigsToBlock(signatures),
 	)
@@ -221,23 +208,20 @@ func (vm *ArbChannel) PendingUnanimousAssert(
 	sequenceNum uint64,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
 	var unanRest [32]byte
 	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
 		newInboxHash,
 		assertion,
-		destinations,
 	))
+
+	stub := assertion.Stub()
 
 	tx, err := vm.contract.PendingUnanimousAssert(
 		auth,
 		unanRest,
-		tokenTypes,
-		tokenNums,
-		amounts,
 		sequenceNum,
-		assertion.LogsHash(),
+		stub.LastMessageHashValue(),
+		stub.LastLogHashValue(),
 		sigsToBlock(signatures),
 	)
 	if err != nil {
@@ -251,25 +235,13 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.ConfirmUnanimousAsserted(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
-		tokenTypes,
-		messageData.Bytes(),
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 	)
 	if err != nil {
 		return nil, err

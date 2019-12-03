@@ -19,11 +19,12 @@ package ethvalidator
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"log"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 
 	errors2 "github.com/pkg/errors"
 
@@ -47,11 +48,10 @@ type VMValidator struct {
 
 	Mutex *sync.Mutex
 	// private thread only
-	Validator               *Validator
-	arbitrumVM              ethbridge.VMConnection
-	unprocessedMessageCount uint64
-	MessageMonChan          chan bridge.BridgeMessage
-	ErrorMonChan            chan bridge.Error
+	Validator      *Validator
+	arbitrumVM     ethbridge.VMConnection
+	MessageMonChan chan bridge.BridgeMessage
+	ErrorMonChan   chan bridge.Error
 }
 
 func (val *VMValidator) Address() common.Address {
@@ -97,7 +97,6 @@ func NewVMValidator(
 		&sync.Mutex{},
 		val,
 		con,
-		0,
 		msgmon,
 		errmon,
 	}
@@ -188,12 +187,6 @@ func (val *VMValidator) StartListening(ctx context.Context) (chan ethbridge.Noti
 	return parsedChan, nil
 }
 
-func (val *VMValidator) AddedNewMessages(count uint64) {
-	val.Mutex.Lock()
-	val.unprocessedMessageCount += count
-	val.Mutex.Unlock()
-}
-
 func (val *VMValidator) FinalizedAssertion(
 	assertion *protocol.Assertion,
 	onChainTxHash []byte,
@@ -207,7 +200,6 @@ func (val *VMValidator) FinalizedAssertion(
 		Signatures:      signatures,
 		ProposalResults: proposalResults,
 	}
-	val.unprocessedMessageCount -= uint64(len(finalizedAssertion.NewLogs()))
 	val.CompletedCallChan <- finalizedAssertion
 	val.Mutex.Unlock()
 }

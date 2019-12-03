@@ -139,8 +139,8 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 		return err
 	}
 
-	challengeInitiatedChan := make(chan *chainlauncher.ArbitrumVMInitiatedChallenge)
-	challengeInitiatedSub, err := vm.ArbitrumVM.WatchInitiatedChallenge(watch, challengeInitiatedChan)
+	challengeInitiatedChan := make(chan *challengemanager.ChallengeManagerInitiatedChallenge)
+	challengeInitiatedSub, err := vm.Challenge.WatchInitiatedChallenge(watch, challengeInitiatedChan, []common.Address{vm.address})
 	if err != nil {
 		return err
 	}
@@ -241,6 +241,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 						Precondition: precondition,
 						Assertion:    assertion,
 						Asserter:     val.Asserter,
+						Deadline:     val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -270,6 +271,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					VMID:   vm.address,
 					Event: InitiateChallengeEvent{
 						Challenger: val.Challenger,
+						Deadline:   val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -279,11 +281,13 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					vm.ErrChan <- err
 					return
 				}
+
 				vm.OutChan <- Notification{
 					Header: header,
 					VMID:   vm.address,
 					Event: BisectionEvent{
 						Assertions: translateBisectionEvent(val),
+						Deadline:   val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -319,6 +323,7 @@ func (vm *ArbitrumVM) StartConnection(ctx context.Context) error {
 					VMID:   vm.address,
 					Event: ContinueChallengeEvent{
 						ChallengedAssertion: uint16(val.AssertionIndex.Uint64()),
+						Deadline:            val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -372,28 +377,16 @@ func (vm *ArbitrumVM) PendingDisputableAssert(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	dataHashes := make([][32]byte, 0, len(assertion.OutMsgs))
-	for _, msg := range assertion.OutMsgs {
-		dataHashes = append(dataHashes, msg.Data.Hash())
-	}
-
+	stub := assertion.Stub()
 	tx, err := vm.ArbitrumVM.PendingDisputableAssert(
 		auth,
-		[4][32]byte{
-			precondition.BeforeHash,
-			precondition.BeforeInbox.Hash(),
-			assertion.AfterHash,
-			assertion.LogsHash(),
-		},
+		precondition.BeforeHashValue(),
+		precondition.BeforeInboxValue(),
+		stub.AfterHashValue(),
+		stub.LastMessageHashValue(),
+		stub.LastLogHashValue(),
 		assertion.NumSteps,
-		precondition.TimeBounds,
-		tokenTypes,
-		dataHashes,
-		tokenNums,
-		amounts,
-		destinations,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
 	if err != nil {
 		return nil, err
@@ -406,26 +399,14 @@ func (vm *ArbitrumVM) ConfirmDisputableAsserted(
 	precondition *protocol.Precondition,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.ArbitrumVM.ConfirmDisputableAsserted(
 		auth,
 		precondition.Hash(),
 		assertion.AfterHash,
 		assertion.NumSteps,
-		tokenTypes,
-		messageData.Bytes(),
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 		assertion.LogsHash(),
 	)
 	if err != nil {
@@ -460,29 +441,23 @@ func (vm *ArbitrumVM) BisectAssertion(
 	assertions []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
 	afterHashAndMessageAndLogsBisections := make([][32]byte, 0, len(assertions)*3+2)
-	totalMessageAmounts := make([]*big.Int, 0)
 	totalSteps := uint32(0)
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHash)
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHash)
-	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHash)
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, precondition.BeforeHashValue())
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstMessageHashValue())
+	afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertions[0].FirstLogHashValue())
 	for _, assertion := range assertions {
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHash)
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHash)
-		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHash)
-		totalMessageAmounts = append(totalMessageAmounts, assertion.TotalVals...)
+		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.AfterHashValue())
+		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastMessageHashValue())
+		afterHashAndMessageAndLogsBisections = append(afterHashAndMessageAndLogsBisections, assertion.LastLogHashValue())
 		totalSteps += assertion.NumSteps
 	}
-	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	tx, err := vm.Challenge.BisectAssertion(
 		auth,
 		vm.address,
-		precondition.BeforeInbox.Hash(),
+		precondition.BeforeInboxValue(),
 		afterHashAndMessageAndLogsBisections,
-		totalMessageAmounts,
 		totalSteps,
-		precondition.TimeBounds,
-		tokenTypes,
-		amounts,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
 	if err != nil {
 		return nil, err
@@ -517,22 +492,18 @@ func (vm *ArbitrumVM) OneStepProof(
 	assertion *protocol.AssertionStub,
 	proof []byte,
 ) (*types.Receipt, error) {
-	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	tx, err := vm.Challenge.OneStepProof(
 		auth,
 		vm.address,
-		[2][32]byte{precondition.BeforeHash, precondition.BeforeInbox.Hash()},
-		precondition.TimeBounds,
-		tokenTypes,
-		amounts,
+		[2][32]byte{precondition.BeforeHashValue(), precondition.BeforeInboxValue()},
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		[5][32]byte{
-			assertion.AfterHash,
-			assertion.FirstMessageHash,
-			assertion.LastMessageHash,
-			assertion.FirstLogHash,
-			assertion.LastLogHash,
+			assertion.AfterHashValue(),
+			assertion.FirstMessageHashValue(),
+			assertion.LastMessageHashValue(),
+			assertion.FirstLogHashValue(),
+			assertion.LastLogHashValue(),
 		},
-		assertion.TotalVals,
 		proof,
 	)
 	if err != nil {
@@ -661,20 +632,18 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 	bisectionCount := len(event.AfterHashAndMessageAndLogsBisections)/3 - 1
 	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
 	stepCount := event.TotalSteps / uint32(bisectionCount)
-	tokenTypeCount := len(event.TotalMessageAmounts) / bisectionCount
 	for i := 0; i < bisectionCount; i++ {
 		steps := stepCount
 		if uint32(i) < event.TotalSteps%uint32(bisectionCount) {
 			steps++
 		}
 		assertion := &protocol.AssertionStub{
-			AfterHash:        event.AfterHashAndMessageAndLogsBisections[(i+1)*3],
+			AfterHash:        value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3]),
 			NumSteps:         steps,
-			FirstMessageHash: event.AfterHashAndMessageAndLogsBisections[i*3+1],
-			LastMessageHash:  event.AfterHashAndMessageAndLogsBisections[(i+1)*3+1],
-			FirstLogHash:     event.AfterHashAndMessageAndLogsBisections[i*3+2],
-			LastLogHash:      event.AfterHashAndMessageAndLogsBisections[(i+1)*3+2],
-			TotalVals:        event.TotalMessageAmounts[i*tokenTypeCount : (i+1)*tokenTypeCount],
+			FirstMessageHash: value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+1]),
+			LastMessageHash:  value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+1]),
+			FirstLogHash:     value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[i*3+2]),
+			LastLogHash:      value.NewHashBuf(event.AfterHashAndMessageAndLogsBisections[(i+1)*3+2]),
 		}
 		assertions = append(assertions, assertion)
 	}
@@ -682,21 +651,18 @@ func translateBisectionEvent(event *challengemanager.ChallengeManagerBisectedAss
 }
 
 func translateDisputableAssertionEvent(event *chainlauncher.ArbitrumVMPendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
-	tokenTracker := protocol.NewTokenTrackerFromLists(event.TokenTypes, event.Amounts)
 	precondition := protocol.NewPrecondition(
 		event.Fields[0],
-		event.TimeBounds,
-		tokenTracker,
+		protocol.NewTimeBounds(event.TimeBounds[0], event.TimeBounds[1]),
 		value.NewHashOnlyValue(event.Fields[1], 1),
 	)
 	assertion := &protocol.AssertionStub{
-		AfterHash:        event.Fields[2],
+		AfterHash:        value.NewHashBuf(event.Fields[2]),
 		NumSteps:         event.NumSteps,
-		FirstMessageHash: [32]byte{},
-		LastMessageHash:  event.LastMessageHash,
-		FirstLogHash:     [32]byte{},
-		LastLogHash:      event.LogsAccHash,
-		TotalVals:        event.Amounts,
+		FirstMessageHash: value.NewHashBuf([32]byte{}),
+		LastMessageHash:  value.NewHashBuf(event.Fields[3]),
+		FirstLogHash:     value.NewHashBuf([32]byte{}),
+		LastLogHash:      value.NewHashBuf(event.Fields[4]),
 	}
 	return precondition, assertion
 }

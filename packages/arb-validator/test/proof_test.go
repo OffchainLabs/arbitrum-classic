@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
@@ -75,7 +76,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *proofmachine.Co
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := [2]uint64{0, 100000}
+	timeBounds := protocol.NewTimeBounds(0, 10000)
 	steps := int32(100000)
 	cont := true
 

@@ -17,25 +17,12 @@
 package protocol
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 //go:generate protoc -I.. -I. --go_out=paths=source_relative:. protocol.proto
-
-func NewTimeBoundsBuf(tb TimeBounds) *TimeBoundsBuf {
-	return &TimeBoundsBuf{
-		StartTime: tb[0],
-		EndTime:   tb[1],
-	}
-}
-
-func NewTimeBoundsFromBuf(buf *TimeBoundsBuf) TimeBounds {
-	return TimeBounds{buf.StartTime, buf.EndTime}
-}
 
 func NewTokenTypeBuf(tok [21]byte) *TokenTypeBuf {
 	return &TokenTypeBuf{
@@ -61,56 +48,6 @@ func NewAddressFromBuf(buf *AddressBuf) common.Address {
 	return ret
 }
 
-func NewTokenTrackerBuf(bt *TokenTracker) *TokenTrackerBuf {
-	types := make([]*TokenTypeBuf, 0, len(bt.entries))
-	amounts := make([]*value.BigIntegerBuf, 0, len(bt.entries))
-	for _, entry := range bt.entries {
-		types = append(types, &TokenTypeBuf{
-			Value: entry.tokenType[:],
-		})
-		amounts = append(amounts, &value.BigIntegerBuf{
-			Value: entry.amount.Bytes(),
-		})
-	}
-	return &TokenTrackerBuf{
-		Types:   types,
-		Amounts: amounts,
-	}
-}
-
-func NewTokenTrackerFromBuf(buf *TokenTrackerBuf) *TokenTracker {
-	types := make([][21]byte, 0, len(buf.Types))
-	amounts := make([]*big.Int, 0, len(buf.Amounts))
-
-	for _, tokenType := range buf.Types {
-		var typ [21]byte
-		copy(typ[:], tokenType.Value)
-		types = append(types, typ)
-	}
-	for _, tokenAmount := range buf.Amounts {
-		amounts = append(amounts, value.NewBigIntFromBuf(tokenAmount))
-	}
-	return NewTokenTrackerFromLists(types, amounts)
-}
-
-func NewPreconditionBuf(pre *Precondition) *PreconditionBuf {
-	return &PreconditionBuf{
-		BeforeHash:     value.NewHashBuf(pre.BeforeHash),
-		TimeBounds:     NewTimeBoundsBuf(pre.TimeBounds),
-		BalanceTracker: NewTokenTrackerBuf(pre.BeforeBalance),
-		BeforeInbox:    value.NewHashBuf(pre.BeforeInbox.Hash()),
-	}
-}
-
-func NewPreconditionFromBuf(buf *PreconditionBuf) *Precondition {
-	return &Precondition{
-		value.NewHashFromBuf(buf.BeforeHash),
-		NewTimeBoundsFromBuf(buf.TimeBounds),
-		NewTokenTrackerFromBuf(buf.BalanceTracker),
-		value.NewHashOnlyValue(value.NewHashFromBuf(buf.BeforeInbox), 1),
-	}
-}
-
 func NewMessageBuf(val Message) *MessageBuf {
 	return &MessageBuf{
 		Value:     value.NewValueBuf(val.Data),
@@ -131,25 +68,30 @@ func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 }
 
 func NewAssertionBuf(a *Assertion) *AssertionBuf {
-	messages := make([]*MessageBuf, 0, len(a.OutMsgs))
+	messages := make([]*value.ValueBuf, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {
-		messages = append(messages, NewMessageBuf(msg))
+		messages = append(messages, value.NewValueBuf(msg))
+	}
+	logs := make([]*value.ValueBuf, 0, len(a.Logs))
+	for _, msg := range a.OutMsgs {
+		logs = append(logs, value.NewValueBuf(msg))
 	}
 	return &AssertionBuf{
 		AfterHash: value.NewHashBuf(a.AfterHash),
 		NumSteps:  a.NumSteps,
 		Messages:  messages,
+		Logs:      logs,
 	}
 }
 
 func NewAssertionFromBuf(buf *AssertionBuf) (*Assertion, error) {
-	messages := make([]Message, 0, len(buf.Messages))
-	for _, msg := range buf.Messages {
-		m, err := NewMessageFromBuf(msg)
+	messages := make([]value.Value, 0, len(buf.Logs))
+	for _, valLog := range buf.Messages {
+		v, err := value.NewValueFromBuf(valLog)
 		if err != nil {
 			return nil, err
 		}
-		messages = append(messages, m)
+		messages = append(messages, v)
 	}
 
 	logs := make([]value.Value, 0, len(buf.Logs))

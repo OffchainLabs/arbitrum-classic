@@ -147,52 +147,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: false,
-        inputs: [
-            {
-                name: '_preconditionHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_afterHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_messageData',
-                type: 'bytes',
-            },
-            {
-                name: '_messageTokenNums',
-                type: 'uint16[]',
-            },
-            {
-                name: '_messageAmounts',
-                type: 'uint256[]',
-            },
-            {
-                name: '_messageDestinations',
-                type: 'address[]',
-            },
-            {
-                name: '_logsAccHash',
-                type: 'bytes32',
-            },
-        ],
-        name: 'confirmDisputableAsserted',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
         constant: true,
         inputs: [],
         name: 'terminateAddress',
@@ -244,48 +198,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: false,
-        inputs: [
-            {
-                name: '_fields',
-                type: 'bytes32[4]',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_timeBounds',
-                type: 'uint64[2]',
-            },
-            {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_messageDataHash',
-                type: 'bytes32[]',
-            },
-            {
-                name: '_messageTokenNums',
-                type: 'uint16[]',
-            },
-            {
-                name: '_messageAmounts',
-                type: 'uint256[]',
-            },
-            {
-                name: '_messageDestinations',
-                type: 'address[]',
-            },
-        ],
-        name: 'pendingDisputableAssert',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
         constant: true,
         inputs: [],
         name: 'escrowRequired',
@@ -320,6 +232,74 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_preconditionHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_messages',
+                type: 'bytes',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
+            },
+        ],
+        name: 'confirmDisputableAsserted',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_messagesAccHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+        ],
+        name: 'pendingDisputableAssert',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
         type: 'function',
     },
     {
@@ -363,7 +343,7 @@ const _abi = [
             {
                 indexed: false,
                 name: 'fields',
-                type: 'bytes32[3]',
+                type: 'bytes32[5]',
             },
             {
                 indexed: false,
@@ -377,28 +357,13 @@ const _abi = [
             },
             {
                 indexed: false,
-                name: 'tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                indexed: false,
                 name: 'numSteps',
                 type: 'uint32',
             },
             {
                 indexed: false,
-                name: 'lastMessageHash',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'logsAccHash',
-                type: 'bytes32',
-            },
-            {
-                indexed: false,
-                name: 'amounts',
-                type: 'uint256[]',
+                name: 'deadline',
+                type: 'uint64',
             },
         ],
         name: 'PendingDisputableAssertion',
@@ -423,14 +388,8 @@ const _abi = [
     },
     {
         anonymous: false,
-        inputs: [
-            {
-                indexed: false,
-                name: 'challenger',
-                type: 'address',
-            },
-        ],
-        name: 'InitiatedChallenge',
+        inputs: [],
+        name: 'PendingAssertionCanceled',
         type: 'event',
     },
     {

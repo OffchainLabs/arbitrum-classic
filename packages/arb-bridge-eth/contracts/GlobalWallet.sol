@@ -187,12 +187,13 @@ contract GlobalWallet {
         uint256 _value
     )
         internal
+        returns (bool)
     {
-        require(
-            removeToken(_from, _tokenContract, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
+        if (!removeToken(_from, _tokenContract, _value)) {
+            return false;
+        }
         addToken(_to, _tokenContract, _value);
+        return true;
     }
 
     function transferNFT(
@@ -202,9 +203,13 @@ contract GlobalWallet {
         uint256 _tokenId
     )
         internal
+        returns (bool)
     {
-        require(removeNFTToken(_from, _tokenContract, _tokenId), "Wallet doesn't own token");
+        if(!removeNFTToken(_from, _tokenContract, _tokenId)) {
+            return false;
+        }
         addNFTToken(_to, _tokenContract, _tokenId);
+        return true;
     }
 
     function addNFTToken(address _user, address _tokenContract, uint256 _tokenId) private {

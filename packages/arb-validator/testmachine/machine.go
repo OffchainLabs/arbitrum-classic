@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
@@ -99,15 +98,6 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	return b1
 }
 
-func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
-	b1 := m.cppmachine.CanSpend(tokenType, currency)
-	b2 := m.gomachine.CanSpend(tokenType, currency)
-	if b1 != b2 {
-		log.Fatalln("CanSpend error at pc", m.gomachine.GetPC())
-	}
-	return b1
-}
-
 func (m *Machine) InboxHash() value.HashOnlyValue {
 	h1 := m.cppmachine.InboxHash()
 	h2 := m.gomachine.InboxHash()
@@ -141,7 +131,7 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	m.gomachine.SendOffchainMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
 	stepIncrease := int32(50)
 	for i := int32(0); i < maxSteps; i += stepIncrease {

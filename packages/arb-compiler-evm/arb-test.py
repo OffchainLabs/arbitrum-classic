@@ -460,7 +460,7 @@ def test_tuple(vm):
     # TODO add send test
     # NBSEND
     vm.push(arb.value.Tuple([1, 2345, 1, 4]))
-    vm.nbsend()
+    vm.send()
     # TODO add nbsend test with valid message
     # GETTIME
     vm.gettime()

@@ -31,19 +31,18 @@ contract ArbitrumVM {
     using SafeMath for uint256;
 
     // fields:
-    // beforeHash
-    // beforeInbox
-    // afterHash
+        // beforeHash
+        // beforeInbox
+        // afterHash
+        // messagesAccHash
+        // logsAccHash
 
     event PendingDisputableAssertion (
-        bytes32[3] fields,
+        bytes32[5] fields,
         address asserter,
         uint64[2] timeBounds,
-        bytes21[] tokenTypes,
         uint32 numSteps,
-        bytes32 lastMessageHash,
-        bytes32 logsAccHash,
-        uint256[] amounts
+        uint64 deadline
     );
 
     event ConfirmedDisputableAssertion(
@@ -51,9 +50,7 @@ contract ArbitrumVM {
         bytes32 logsAccHash
     );
 
-    event InitiatedChallenge(
-        address challenger
-    );
+    event PendingAssertionCanceled();
 
     address internal constant ETH_ADDRESS = address(0);
 
@@ -134,21 +131,14 @@ contract ArbitrumVM {
         validatorBalances[_players[1]] = validatorBalances[_players[1]].add(_rewards[1]);
     }
 
-    // fields:
-    // _beforeHash
-    // _beforeInbox
-    // _afterHash
-    // _logsAccHash
-
     function pendingDisputableAssert(
-        bytes32[4] memory _fields,
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        bytes32 _afterHash,
+        bytes32 _messagesAccHash,
+        bytes32 _logsAccHash,
         uint32 _numSteps,
-        uint64[2] memory _timeBounds,
-        bytes21[] memory _tokenTypes,
-        bytes32[] memory _messageDataHash,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
+        uint64[2] memory _timeBounds
     )
         public
     {
@@ -157,30 +147,16 @@ contract ArbitrumVM {
             "Validator does not have required escrow to assert"
         );
         validatorBalances[msg.sender] -= vm.escrowRequired;
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
-        require(
-            globalInbox.hasFunds(
-                address(this),
-                _tokenTypes,
-                beforeBalances
-            ),
-            "VM has insufficient balance"
-        );
+
         Disputable.pendingDisputableAssert(
             vm,
-            _fields,
+            _beforeHash,
+            _beforeInbox,
+            _afterHash,
+            _messagesAccHash,
+            _logsAccHash,
             _numSteps,
-            _timeBounds,
-            _tokenTypes,
-            _messageDataHash,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
+            _timeBounds
         );
     }
 
@@ -188,11 +164,7 @@ contract ArbitrumVM {
         bytes32 _preconditionHash,
         bytes32 _afterHash,
         uint32 _numSteps,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations,
+        bytes memory _messages,
         bytes32 _logsAccHash
     )
         public
@@ -202,23 +174,13 @@ contract ArbitrumVM {
             _preconditionHash,
             _afterHash,
             _numSteps,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations,
+            _messages,
             _logsAccHash
         );
 
         validatorBalances[vm.asserter] = validatorBalances[vm.asserter].add(vm.escrowRequired);
 
-        _completeAssertion(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        _completeAssertion(_messages);
     }
 
     function initiateChallenge(bytes32 _assertPreHash) public {
@@ -241,15 +203,7 @@ contract ArbitrumVM {
         );
     }
 
-    function _completeAssertion(
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
-    )
-        internal
-    {
+    function _completeAssertion(bytes memory _messages) internal {
         bytes32 pending = globalInbox.pullPendingMessages();
         if (pending != ArbValue.hashEmptyTuple()) {
             vm.inbox = ArbValue.hashTupleValue([
@@ -259,13 +213,7 @@ contract ArbitrumVM {
             ]);
         }
 
-        globalInbox.sendMessages(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        globalInbox.sendMessages(_messages);
     }
 
     function _shutdown() private {

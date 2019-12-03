@@ -366,7 +366,6 @@ func NewCoordinator(
 		c,
 		val.Address(),
 		header,
-		protocol.NewBalanceTracker(),
 		config,
 		machine,
 		challengeEverything,
@@ -556,7 +555,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 				BeforeHash:     value.NewHashBuf(unanRequest.BeforeHash),
 				BeforeInbox:    value.NewHashBuf(unanRequest.BeforeInbox),
 				SequenceNum:    unanRequest.SequenceNum,
-				TimeBounds:     protocol.NewTimeBoundsBuf(unanRequest.TimeBounds),
+				TimeBounds:     unanRequest.TimeBounds,
 				SignedMessages: requestMessages,
 			}
 			responsesChan <- m.cm.gatherSignatures(

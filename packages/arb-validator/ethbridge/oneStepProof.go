@@ -32,22 +32,18 @@ func (con *OneStepProof) ValidateProof(
 	assertion *protocol.AssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
-	tokenTypes, amounts := precondition.BeforeBalance.GetTypesAndAmounts()
 	return con.contract.ValidateProof(
 		auth,
 		[7][32]byte{
-			precondition.BeforeHash,
-			precondition.BeforeInbox.Hash(),
-			assertion.AfterHash,
-			assertion.FirstMessageHash,
-			assertion.LastMessageHash,
-			assertion.FirstLogHash,
-			assertion.LastLogHash,
+			precondition.BeforeHashValue(),
+			precondition.BeforeInboxValue(),
+			assertion.AfterHashValue(),
+			assertion.FirstMessageHashValue(),
+			assertion.LastMessageHashValue(),
+			assertion.FirstLogHashValue(),
+			assertion.LastLogHashValue(),
 		},
-		precondition.TimeBounds,
-		tokenTypes,
-		amounts,
-		assertion.TotalVals,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		proof,
 	)
 }
