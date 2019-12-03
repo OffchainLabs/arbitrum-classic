@@ -24,7 +24,7 @@ list of dependencies.
 Using [Homebrew](https://brew.sh/):
 
 ```bash
-brew install python3 docker docker-compose
+brew install python3 docker docker-compose parity
 brew cask install docker
 open -a Docker
 ```
@@ -40,6 +40,7 @@ Using apt:
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-pip docker docker-compose
+bash <(curl https://get.parity.io -L)
 ```
 
 > Docker [can be used without sudo](https://docs.docker.com/install/linux/linux-postinstall/)
@@ -53,7 +54,7 @@ curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | b
 curl -o- -L https://yarnpkg.com/install.sh | bash
 nvm install 10.16.3
 . ~/.bashrc
-yarn global add ganache-cli truffle
+yarn global add truffle
 ```
 
 ### Full List
@@ -65,7 +66,7 @@ Here are the important dependencies in case you are not running on a supported O
 -   [node](https://nodejs.org/en/)
 -   [python3 and pip3](https://www.python.org/downloads/)
 -   [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
--   [ganache](https://www.npmjs.com/package/ganache-cli)
+-   [parity](https://www.parity.io/ethereum)
 -   [yarn](https://yarnpkg.com/en/)
 
 > Requires `node -v` version 8 or 10
@@ -86,15 +87,35 @@ yarn build
 yarn install:deps
 ```
 
+Build the local test blockchain docker image:
+
+```bash
+yarn docker:build:parity
+```
+
 Check `arbc-truffle` was installed:
 
-```
+```bash
 which arbc-truffle
 ```
 
 Expected output:
 
 > /usr/local/bin/arbc-truffle
+
+## Setup Blockchain
+
+In the current alpha, Arbitrum is setup to run against a local test blockchain rather than a public blockchain.
+
+To start the local blockchain with Arbitrum smart contracts already deployed,
+inside the Arbitrum monorepo run:
+
+```bash
+yarn docker:parity
+```
+
+The local test blockchain should be running for all steps inside this tutorial. Note that
+stopping and restarting the client will lose all blockchain state.
 
 ## Hello, Arbitrum
 
@@ -103,7 +124,7 @@ a simple Pet Shop dApp that is used in a Truffle tutorial.
 
 Inside the Arbitrum monorepo, open the `pet-shop` demo dApp:
 
-```
+```bash
 cd demos/pet-shop
 ```
 
@@ -159,26 +180,26 @@ this dApp, you do not need to change any Solidity files.
     > derived from the mnemonic listed above:
     >
     > ```
-    > 0x41a9550a0ae23fd52f3b99acab194db2e4474262db64dfd46807bca9e061e211
-    > 0x77500b500284eab4d5201d230ca015b82c32752e42c79dc3d6ff3668ada9d340
-    > 0x54f4370ee20fd563acaac3ea63eef5cc62d3e0cb11f7f03e70180e538c882bc8
-    > 0xa36dd563650acd8305d222a68abcaa4b3db69f28cc40d0abba391ec58ac12fba
-    > 0x2090bf383976cdcb04fc776585f5e65f71929be0e36d53ffc8eb066ef8ec2d18
-    > 0x1b153b674c13af2974acbb66027fa4386b85b31cb27d159276d05e9542359f3f
+    > 0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d
+    > 0x6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1
+    > 0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c
+    > 0x646f1ce2fdad0e6deeeb5c7e8e5543bdde65e86029e2fd9fc169899c440a7913
+    > 0xadd53f9a7e588d003326d1cbf9e4a43c061aadd9bc938c843a79e7b4fd2ad743
+    > 0x395df67f0c2d2d9fe1ad08d1bc8b6627011959b79c53d7dd6a3536a33ab8a4fd
     > ```
 
     This mnemonic is the default used by `arb_deploy.py` and these accounts will
     be pre-funded.
 
-2. Select Ganache local network in Metamask
+2. Select local network test in Metamask
 
     - Go back to Metamask or click the extension icon
     - Select `Main Ethereum Network` top right hand side
     - Choose `Custom RPC`
-    - Enter `Ganache` as the network name
+    - Enter `Local Test` as the network name
     - Enter `http://127.0.0.1:7545` as the RPC url
     - Press the save button
-    - Metamask should now have an Ganache testnet account holding ETH
+    - Metamask should now have an Local Test account holding ETH
 
 3. Launch the front-end
 
@@ -200,7 +221,7 @@ this dApp, you do not need to change any Solidity files.
 ### Summary
 
 If you want to try another dapp run, first run the following to compile the
-Solidity contract:
+Solidity contract and deploy validators:
 
 ```bash
 cd demos/election
@@ -230,7 +251,7 @@ The dApp must:
 
 Here are the steps needed to port your dApp to Arbitrum:
 
-1. Make sure your dApp compiles and runs correctly on Ethereum or ganache
+1. Make sure your dApp compiles and runs correctly on Ethereum or a local testnet
 2. Configure the Truffle project to use the Arbitrum Truffle provider (arb-provider-truffle)
 3. Add the Arbitrum front-end provider (arb-provider-web3 or arb-provider-ethers)
 4. Compile your Truffle project to Arbitrum bytecode (output as contract.ao)

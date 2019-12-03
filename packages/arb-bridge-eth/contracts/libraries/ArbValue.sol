@@ -16,7 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-import "solidity-bytes-utils/contracts/BytesLib.sol";
+import "bytes/contracts/BytesLib.sol";
 
 
 library ArbValue {

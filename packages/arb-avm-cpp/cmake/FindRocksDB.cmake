@@ -28,7 +28,7 @@ else()
 endif()
 
 find_path(_ROCKSDB_INCLUDE_DIR rocksdb/db.h
-  HINTS ${CMAKE_SOURCE_DIR}/../../.. $ENV{ROCKSDB_ROOT} ${ROCKSDB_ROOT}
+  HINTS $ENV{ROCKSDB_ROOT} ${ROCKSDB_ROOT}
   PATH_SUFFIXES include
   PATHS /usr /usr/local /opt /opt/local)
 
@@ -117,7 +117,12 @@ if(_ROCKSDB_EPIC_FAIL)
 else()
   set(ROCKSDB_INCLUDE_DIRS ${_ROCKSDB_INCLUDE_DIR})
   set(ROCKSDB_LIBRARIES ${ROCKSDB_LIBRARY})
-  link_directories(/usr/local/lib/)
+
+  add_library(RocksDB::RocksDB UNKNOWN IMPORTED)
+  set_target_properties(RocksDB::RocksDB PROPERTIES
+    IMPORTED_LOCATION "${ROCKSDB_LIBRARIES}"
+    INTERFACE_INCLUDE_DIRECTORIES "${ROCKSDB_INCLUDE_DIRS}"
+  )
   if(_ROCKSDB_output)
     message(STATUS
       "Found rocksdb ${ROCKSDB_VERSION} in ${ROCKSDB_INCLUDE_DIRS};${ROCKSDB_LIBRARIES}")

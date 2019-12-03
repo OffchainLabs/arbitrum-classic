@@ -1,0 +1,11 @@
+{
+  "package_name": "arb-bridge-eth",
+  "version": "0.2.0",
+  "description": "",
+  "authors": ["Offchain Labs, Inc. <info@offchainlabs.com"],
+  "keywords": ["ethereum", "arbitrum"],
+  "dependencies": {
+    "bytes": "^0.0.8"
+  },
+  "license": "Apache-2.0"
+}

@@ -30,9 +30,12 @@ conan_basic_setup(TARGETS)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 message(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")
 
+find_package(Threads REQUIRED)
 find_package(Boost 1.65 COMPONENTS filesystem REQUIRED)
-
-include(build-rocksdb)
+find_package(RocksDB)
+if (NOT ROCKSDB_FOUND)
+    include(build-rocksdb)
+endif()
 include(CodeCoverage)
 include(Formatting)
 

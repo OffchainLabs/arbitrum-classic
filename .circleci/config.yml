@@ -29,11 +29,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v2-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v2-{{ .Branch }}-
-      - go-mod-v2-
+      - go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+      - go-mod-v4-{{ .Branch }}-
+      - go-mod-v4-
   - &save_go_cache
-    key: go-mod-v2-{{ checksum "packages/arb-validator/go.sum" }}
+    key: go-mod-v4-{{ checksum "packages/arb-validator/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &restore_conan_cache
@@ -51,44 +51,19 @@ workflows:
   version: 2
   build:
     jobs:
-      - yarn-deps
-      - python-deps
       - go-deps
       - cpp-avm
-      - frontend:
-          requires:
-            - yarn-deps
-            - python-deps
-      - ethbridge:
-          requires:
-            - yarn-deps
+      - frontend
+      - ethbridge
       - backend:
           requires:
             - go-deps
             - cpp-avm
             - ethbridge
 jobs:
-  yarn-deps:
-    docker:
-      - image: offchainlabs/build-base:0.1.4
-    steps:
-      - checkout
-      - restore_cache: *restore_yarn_cache
-      - run: yarn install --cache-folder ~/.cache/yarn
-      - save_cache: *save_yarn_cache
-  python-deps:
-    docker:
-      - image: offchainlabs/build-base:0.1.4
-    steps:
-      - checkout
-      - restore_cache: *restore_python_cache
-      - run:
-          command: pip3 install -r requirements.txt
-          working_directory: /home/user/project/packages/arb-compiler-evm
-      - save_cache: *save_python_cache
   go-deps:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/backend-base:0.1.0
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -99,20 +74,22 @@ jobs:
       - save_cache: *save_go_cache
   frontend:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/frontend-base:0.1.0
     environment:
       TEST_RESULTS: *test-path
     steps:
       - checkout
       - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_python_cache
       - restore_cache: *restore_yarn_cache
+      - run: yarn install --cache-folder ~/.cache/yarn
+      - save_cache: *save_yarn_cache
+      - restore_cache: *restore_python_cache
       - run:
           command: | # use pipenv to install dependencies
             pip3 install --user -r requirements.txt
             python3 setup.py install --user
-            yarn install --cache-folder ~/.cache/yarn
           working_directory: /home/user/project/packages/arb-compiler-evm
+      - save_cache: *save_python_cache
       - run:
           name: test arb-compiler-evm
           command: |
@@ -155,30 +132,37 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/ethbridge-base:0.1.0
     steps:
       - checkout
-      - restore_cache: *restore_yarn_cache
+      - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
       - run:
           command: |
-            yarn install --cache-folder ~/.cache/yarn
-          working_directory: /home/user/project/packages/arb-bridge-eth
+            yarn --production
+            echo arbitrum > ~/password.txt
+            mkdir -p /home/user/.local/share/io.parity.ethereum/
+            cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
+            parity --chain=parity/poa.json account import parity/keystore/
+          working_directory: /home/user/arb-bridge-eth
+      - run:
+          command: parity --chain parity/poa.json --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt
+          background: true
+          working_directory: /home/user/arb-bridge-eth
       - run:
           name: test arb-bridge-eth
           command: |
-            mkdir db
-            ganache-cli --db db -p 7545 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
-            truffle migrate --reset --compile-all
-            kill $!
-            codecovbash -R /home/user/project -cF arb_bridge_eth
-          working_directory: /home/user/project/packages/arb-bridge-eth
+            truffle migrate --network parity
+            codecovbash -R /home/user/arb-bridge-eth -cF arb_bridge_eth
+          working_directory: /home/user/arb-bridge-eth
+      - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
+      - run: killall -HUP parity
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/project/packages/arb-bridge-eth/
+          root: /home/user/.local/share/
           paths:
-            - db
+            - io.parity.ethereum
   cpp-avm:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/cpp-base:0.1.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -187,14 +171,12 @@ jobs:
       - restore_cache: *restore_conan_cache
       - run:
           command: |
-            . ../vconan/bin/activate
             mkdir -p packages/arb-avm-cpp/build
             cd packages/arb-avm-cpp/build
             conan install ..
-            deactivate
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
-            cp lib/lib* rocksdb/librocksdb.a ../cmachine/
+            cp lib/lib* ../cmachine/
       - save_cache: *save_conan_cache
       - run:
           name: test arb-avm-cpp
@@ -213,7 +195,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/build-base:0.1.4
+      - image: offchainlabs/backend-base:0.1.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -221,40 +203,63 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/workspace
+      - run:
+          command: |
+            echo arbitrum > ~/password.txt
+            mkdir -p /home/user/.local/share
+            cp -r /home/user/workspace/io.parity.ethereum /home/user/.local/share
+            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           command: |
-            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
             cd packages/arb-validator
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
       - run:
+          name: start parity
+          command: parity --chain parity/poa.json --geth --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt
+          background: true
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run:
           name: test arb-util
           command: |
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
             codecovbash -R /home/user/project -cF arb_util
           working_directory: /home/user/project/packages/arb-util
       - run:
           name: test arb-avm-go
           command: |
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
-            codecovbash -R /home/user/project -cF arb_avm_go
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
+            codecovbash -f coverageutil.txt -cF arb_util
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
+            codecovbash -f coverageavm.txt -cF arb_avm_go
           working_directory: /home/user/project/packages/arb-avm-go
       - run:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            ganache-cli --db /home/user/workspace/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
-            codecovbash -R /home/user/project -cF arb_validator
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/... ./...
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
+            codecovbash -f coverageutil.txt -cF arb_util
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
+            codecovbash -f coverageavm.txt -cF arb_avm_go
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-validator/p' coverage.txt >> coverageval.txt
+            codecovbash -f coverageval.txt -cF arb_validator
           working_directory: /home/user/project/packages/arb-validator
       - run:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
-            ganache-cli --db /home/user/workspace/db -p 7545 -b 1 -m "jar deny prosper gasp flush glass core corn alarm treat leg smart" -q &
-            /home/user/go/bin/gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic ./...
-            codecovbash -R /home/user/project -cF arb_provider_go
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/...,../arb-validator/... ./...
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
+            codecovbash -f coverageutil.txt -cF arb_util
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
+            codecovbash -f coverageavm.txt -cF arb_avm_go
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-validator/p' coverage.txt >> coverageval.txt
+            codecovbash -f coverageval.txt -cF arb_validator
+            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-provider-go/p' coverage.txt >> coverageprov.txt
+            codecovbash -f coverageprov.txt -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
       - store_test_results:
           path: *test-path
