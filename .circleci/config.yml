@@ -99,14 +99,12 @@ jobs:
             coverage run --source=/home/user/project truffle_runner.py compiled.json
             cd ../..
             coverage combine .coverage tests/sol-syscall/.coverage
-            codecovbash -R /home/user/project -cF arb_compiler_evm
           working_directory: /home/user/project/packages/arb-compiler-evm
       - run:
           name: test arb-provider-ethers
           command: |
             yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
-            codecovbash -R /home/user/project -cF arb_provider_ethers
           environment:
             JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-ethers.xml"
           working_directory: /home/user/project/packages/arb-provider-ethers
@@ -115,7 +113,6 @@ jobs:
           command: |
             yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
-            codecovbash -R /home/user/project -cF arb_provider_web3
           environment:
             JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-web3.xml"
           working_directory: /home/user/project/packages/arb-provider-web3
@@ -124,10 +121,10 @@ jobs:
           command: |
             yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
-            codecovbash -R /home/user/project -cF arb_provider_truffle
           environment:
             JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-truffle.xml"
           working_directory: /home/user/project/packages/arb-provider-truffle
+      - run: codecovbash -R /home/user/project
       - store_test_results:
           path: *test-path
   ethbridge:
@@ -152,7 +149,6 @@ jobs:
           name: test arb-bridge-eth
           command: |
             truffle migrate --network parity
-            codecovbash -R /home/user/arb-bridge-eth -cF arb_bridge_eth
           working_directory: /home/user/arb-bridge-eth
       - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
       - run: killall -HUP parity
@@ -185,12 +181,12 @@ jobs:
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
-            codecovbash -R /home/user/project -f coverage.info -cF arb_avm_cpp
           working_directory: /home/user/project/packages/arb-avm-cpp/build
       - persist_to_workspace: # store the built files into the workspace for other jobs.
           root: /home/user/project/packages/arb-avm-cpp/cmachine
           paths:
             - ./*.a
+      - run: codecovbash -R /home/user/project
       - store_test_results:
           path: *test-path
   backend:
@@ -224,42 +220,24 @@ jobs:
           name: test arb-util
           command: |
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
-            codecovbash -R /home/user/project -cF arb_util
           working_directory: /home/user/project/packages/arb-util
       - run:
           name: test arb-avm-go
           command: |
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
-            codecovbash -f coverageutil.txt -cF arb_util
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
-            codecovbash -f coverageavm.txt -cF arb_avm_go
           working_directory: /home/user/project/packages/arb-avm-go
       - run:
           name: test arb-validator
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/... ./...
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
-            codecovbash -f coverageutil.txt -cF arb_util
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
-            codecovbash -f coverageavm.txt -cF arb_avm_go
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-validator/p' coverage.txt >> coverageval.txt
-            codecovbash -f coverageval.txt -cF arb_validator
           working_directory: /home/user/project/packages/arb-validator
       - run:
           name: test arb-provider-go
           command: |
             export CGO_LDFLAGS="-lgcov --coverage"
             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/...,../arb-validator/... ./...
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-util/p' coverage.txt >> coverageutil.txt
-            codecovbash -f coverageutil.txt -cF arb_util
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-avm-go/p' coverage.txt >> coverageavm.txt
-            codecovbash -f coverageavm.txt -cF arb_avm_go
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-validator/p' coverage.txt >> coverageval.txt
-            codecovbash -f coverageval.txt -cF arb_validator
-            echo "mode: set" > covergo.out && sed -n -e '/^github.com\/offchainlabs\/arbitrum\/packages\/arb-provider-go/p' coverage.txt >> coverageprov.txt
-            codecovbash -f coverageprov.txt -cF arb_provider_go
           working_directory: /home/user/project/packages/arb-provider-go
+      - run: codecovbash -R /home/user/project
       - store_test_results:
           path: *test-path
