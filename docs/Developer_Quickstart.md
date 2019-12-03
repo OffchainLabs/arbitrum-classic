@@ -87,6 +87,12 @@ yarn build
 yarn install:deps
 ```
 
+Build the local test blockchain docker image:
+
+```bash
+yarn docker:build:parity
+```
+
 Check `arbc-truffle` was installed:
 
 ```bash
