@@ -21,6 +21,7 @@ from .. import value
 from .types import message, message_blockchain_data, message_data, local_exec_state
 from . import call_frame
 
+from . import accounts
 from .accounts import account_store, account_state
 
 # Blockchain Simulator
@@ -195,7 +196,6 @@ def create_initial_evm_state(contracts):
     std.keyvalue.new(vm)
     for contract in contracts:
         vm.push(contract["contractID"])
-        std.currency_store.new(vm)
 
         for storage_item in contract["storage"]:
             vm.push(contract["storage"][storage_item])
@@ -206,11 +206,8 @@ def create_initial_evm_state(contracts):
             std.keyvalue.set_val(vm)
 
         vm.push(contract["code_point"])
-
-        account_state.new(vm)
-        account_state.set_val("code_point")(vm)
+        accounts.create_account(vm)
         account_state.set_val("storage")(vm)
-        account_state.set_val("wallet")(vm)
         vm.swap2()
         std.keyvalue.set_val(vm)
 
