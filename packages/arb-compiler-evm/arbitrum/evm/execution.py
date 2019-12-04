@@ -118,7 +118,7 @@ def setup_initial_call(vm):
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 @noreturn
-def call(vm, dispatch_func, call_num, contract_id):
+def call(vm, call_num, contract_id):
     std.tup.make(7)(vm)
     vm.dup0()
     os.is_simple_send(vm)
@@ -156,7 +156,7 @@ def call(vm, dispatch_func, call_num, contract_id):
                         ],
                     ),
                 ],
-                lambda vm: [_inner_call(vm, dispatch_func, call_num, contract_id)],
+                lambda vm: [_inner_call(vm, call_num, contract_id)],
             ),
         ],
     )
@@ -263,7 +263,7 @@ def _save_call_frame(vm):
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 @noreturn
-def _inner_call(vm, dispatch_func, call_num, contract_id):
+def _inner_call(vm, call_num, contract_id):
     vm.dup0()
     os.evm_call_to_send(vm)
     # msg
@@ -305,7 +305,7 @@ def callcode(vm, call_num, contract_id):
 
 # [gas, dest, arg offset, arg length, ret offset, ret length]
 @noreturn
-def delegatecall(vm, dispatch_func, call_num, contract_id):
+def delegatecall(vm, call_num, contract_id):
     os.message_value(vm)
     # value, gas, dest
     vm.swap2()
@@ -330,7 +330,7 @@ def delegatecall(vm, dispatch_func, call_num, contract_id):
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 @noreturn
-def staticcall(vm, dispatch_func, call_num, contract_id):
+def staticcall(vm, call_num, contract_id):
     vm.push(0)
     # value, gas, dest
     vm.swap2()
