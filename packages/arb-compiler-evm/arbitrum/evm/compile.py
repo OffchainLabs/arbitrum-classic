@@ -402,17 +402,16 @@ def generate_contract_code(
                 )
             execution.revert(vm)
 
+        call_id = "{}_{}".format(contract_id, instr.pc)
         evm_instr_ops = {
             "PUSH": lambda vm: vm.push(instr.operand),
             "JUMPDEST": lambda vm: vm.set_label(
-                AVMLabel("jumpdest_{}_{}".format(contract_id, instr.pc))
+                AVMLabel("jumpdest_{}".format(call_id))
             ),
-            "CALL": lambda vm: execution.call(vm, instr.pc, contract_id),
-            "CALLCODE": lambda vm: execution.call(vm, instr.pc, contract_id),
-            "DELEGATECALL": lambda vm: execution.delegatecall(
-                vm, instr.pc, contract_id
-            ),
-            "STATICCALL": lambda vm: execution.staticcall(vm, instr.pc, contract_id),
+            "CALL": lambda vm: execution.call(vm, call_id, contract_id),
+            "CALLCODE": lambda vm: execution.call(vm, call_id, contract_id),
+            "DELEGATECALL": lambda vm: execution.delegatecall(vm, call_id, contract_id),
+            "STATICCALL": lambda vm: execution.staticcall(vm, call_id, contract_id),
             "INVALID": evm_invalid_op,
         }
 
