@@ -36,7 +36,12 @@ class Contract:
         return "ArbContract({})".format(self.address_string)
 
 
-def create_evm_vm(contracts, should_optimize=True):
+def strip_cbor(code):
+    cbor_length = int.from_bytes(code[-2:], byteorder="big")
+    return code[: -(cbor_length + 2)]
+
+
+def create_evm_vm(contracts, should_optimize=True, includes_metadata=True):
     raw_contract_templates_data = read_text("arbitrum.evm", "contract-templates.json")
     raw_contract_templates = json.loads(raw_contract_templates_data)
     token_templates = {}
@@ -49,12 +54,22 @@ def create_evm_vm(contracts, should_optimize=True):
     token_templates["ArbERC721"][
         "address"
     ] = "0xfffffffffffffffffffffffffffffffffffffffd"
-    contracts.append(Contract(token_templates["ArbERC20"]))
-    contracts.append(Contract(token_templates["ArbERC721"]))
+    erc20 = Contract(token_templates["ArbERC20"])
+    erc721 = Contract(token_templates["ArbERC721"])
+
     code = {}
     storage = {}
+
+    for contract in [erc20, erc721]:
+        code[contract.address] = strip_cbor(contract.code)
+        storage[contract.address] = contract.storage
+
     for contract in contracts:
-        code[contract.address] = contract.code
+        if includes_metadata:
+            contract_code = strip_cbor(contract.code)(contract.code)
+        else:
+            contract_code = contract.code
+        code[contract.address] = contract_code
         storage[contract.address] = contract.storage
 
     initial_block, code = generate_evm_code(code, storage)

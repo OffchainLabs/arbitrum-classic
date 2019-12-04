@@ -55,23 +55,10 @@ def replace_self_balance(instrs):
     return out
 
 
-def contains_endcode(val):
-    if not isinstance(val, int):
-        return False
-    while val >= 0xA265:
-        if (val & 0xFFFF == 0xA165) or (val & 0xFFFF == 0xA265):
-            return True
-        val = val // 256
-    return False
-
-
 def generate_evm_code(raw_code, storage):
     contracts = {}
     for contract in raw_code:
-        cbor_length = int.from_bytes(raw_code[contract][-2:], byteorder="big")
-        contracts[contract] = list(
-            pyevmasm.disassemble_all(raw_code[contract][: -(cbor_length + 2)])
-        )
+        contracts[contract] = list(pyevmasm.disassemble_all(raw_code[contract]))
 
     code_tuples_data = {}
     for contract in raw_code:
