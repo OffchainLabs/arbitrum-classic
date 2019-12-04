@@ -65,22 +65,13 @@ def contains_endcode(val):
     return False
 
 
-def remove_metadata(instrs):
-    for i in range(len(instrs) - 2, -1, -1):
-        first_byte = instrs[i].opcode
-        second_byte = instrs[i + 1].opcode
-        if ((first_byte == 0xA1) or (first_byte == 0xA2)) and second_byte == 0x65:
-            return instrs[:i]
-        if hasattr(instrs[i], "operand") and contains_endcode(instrs[i].operand):
-            # leave the boundary instruction in--it's probably valid and minimal testing suggests this reduces errors
-            return instrs[: i + 1]
-    return instrs
-
-
 def generate_evm_code(raw_code, storage):
     contracts = {}
     for contract in raw_code:
-        contracts[contract] = list(pyevmasm.disassemble_all(raw_code[contract]))
+        cbor_length = int.from_bytes(raw_code[contract][-2:], byteorder="big")
+        contracts[contract] = list(
+            pyevmasm.disassemble_all(raw_code[contract][: -(cbor_length + 2)])
+        )
 
     code_tuples_data = {}
     for contract in raw_code:
@@ -335,7 +326,6 @@ def get_opcode_name(instr):
 def generate_contract_code(
     label, code, code_tuple, contract_id, code_size, code_tuples, code_hashes
 ):
-    code = remove_metadata(code)
     code = replace_self_balance(code)
 
     jump_table = {}
