@@ -34,6 +34,7 @@
       "packages/arb-provider-ethers",
       "packages/arb-provider-truffle",
       "packages/arb-provider-web3",
+      "packages/arb-compiler-evm/contract-templates",
       "packages/arb-compiler-evm/tests/sol-syscall",
       "demos/*",
       "workspace/*"
