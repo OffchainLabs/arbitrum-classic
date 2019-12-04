@@ -25,8 +25,8 @@ call_frame = std.struct.Struct(
     [
         ("contractID", value.IntType()),  # transient
         ("memory", std.sized_byterange.sized_byterange.typ),  # transient
-        ("contract_state", types.contract_state.typ),  # record
-        ("contracts", types.contract_store.typ),  # record
+        ("account_state", types.account_state.typ),  # record
+        ("accounts", types.account_store.typ),  # record
         ("local_exec_state", types.local_exec_state.typ),  # transient
         ("return_data", std.sized_byterange.sized_byterange.typ),  # transient
         ("sent_queue", sent_queue.typ),  # record
@@ -57,27 +57,27 @@ def make_empty():
     return vm.stack.items[0]
 
 
-@modifies_stack([call_frame.typ], [types.contract_state.typ])
+@modifies_stack([call_frame.typ], [types.account_state.typ])
 def lookup_current_state(vm):
     vm.dup0()
     call_frame.get("contractID")(vm)
     vm.swap1()
-    call_frame.get("contracts")(vm)
-    types.contract_store.get(vm)
+    call_frame.get("accounts")(vm)
+    types.account_store.get(vm)
 
 
 @modifies_stack([call_frame.typ], [call_frame.typ])
 def save_state(vm):
     # frame
     vm.dup0()
-    call_frame.get("contract_state")(vm)
+    call_frame.get("account_state")(vm)
     vm.dup1()
     call_frame.get("contractID")(vm)
     vm.dup2()
-    call_frame.get("contracts")(vm)
-    types.contract_store.set_val(vm)
+    call_frame.get("accounts")(vm)
+    types.account_store.set_val(vm)
     vm.swap1()
-    call_frame.set_val("contracts")(vm)
+    call_frame.set_val("accounts")(vm)
 
 
 @modifies_stack([call_frame.typ], [call_frame.typ])
@@ -86,7 +86,7 @@ def setup_state(vm):
     vm.dup0()
     lookup_current_state(vm)
     vm.swap1()
-    call_frame.set_val("contract_state")(vm)
+    call_frame.set_val("account_state")(vm)
 
 
 @modifies_stack([call_frame.typ, call_frame.typ], [call_frame.typ])
@@ -97,9 +97,9 @@ def merge(vm):
     vm.swap1()
     # parent_frame current_frame
     vm.dup1()
-    call_frame.get("contracts")(vm)
+    call_frame.get("accounts")(vm)
     vm.swap1()
-    call_frame.set_val("contracts")(vm)
+    call_frame.set_val("accounts")(vm)
     # parent_frame current_frame
     vm.dup1()
     call_frame.get("sent_queue")(vm)
@@ -123,7 +123,7 @@ def merge(vm):
 #   storage
 #   wallet
 # maintain:
-#   contracts
+#   accounts
 #   sent_queue
 #   logs
 # unhandled (BUG):
@@ -157,9 +157,9 @@ def spawn(vm):
     call_frame.set_val("memory")(vm)
 
 
-@modifies_stack([types.contract_store.typ], [call_frame.typ])
+@modifies_stack([types.account_store.typ], [call_frame.typ])
 def new_fresh(vm):
     # chain_state
     vm.push(make_empty())
     vm.cast(call_frame.typ)
-    call_frame.set_val("contracts")(vm)
+    call_frame.set_val("accounts")(vm)

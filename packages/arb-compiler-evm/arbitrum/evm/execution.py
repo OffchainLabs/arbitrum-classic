@@ -18,7 +18,7 @@ from . import call_frame
 from . import os
 from .. import ast
 from .. import value
-from .types import local_exec_state, contract_state
+from .types import local_exec_state, account_state
 
 
 @noreturn
@@ -53,8 +53,8 @@ def _perform_call(vm, call_num):
 
     # Enter call frame
     os.get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("code_point")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("code_point")(vm)
 
     vm.jump()
 
@@ -79,7 +79,7 @@ def setup_initial_call(vm):
     # contractID message
     vm.set_exception_handler(invalid_tx)
     os.get_chain_state(vm)
-    os.chain_state.get("contracts")(vm)
+    os.chain_state.get("accounts")(vm)
     call_frame.new_fresh(vm)
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
@@ -99,9 +99,9 @@ def setup_initial_call(vm):
     os.set_chain_state(vm)
 
     os.get_call_frame(vm)
-    call_frame.call_frame.get("contracts")(vm)
+    call_frame.call_frame.get("accounts")(vm)
     os.get_chain_state(vm)
-    os.chain_state.set_val("contracts")(vm)
+    os.chain_state.set_val("accounts")(vm)
     os.set_chain_state(vm)
 
     os.get_call_frame(vm)

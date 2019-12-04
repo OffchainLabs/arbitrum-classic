@@ -15,8 +15,8 @@
 from .. import std
 from .. import value
 
-contract_state = std.Struct(
-    "contract_state",
+account_state = std.Struct(
+    "account_state",
     [
         ("code_point", value.CodePointType()),
         ("storage", std.keyvalue_int_int.typ),
@@ -53,7 +53,7 @@ message_data = std.Struct(
     ],
 )
 
-contract_store = std.make_keyvalue_type(value.IntType(), contract_state.typ)
+account_store = std.make_keyvalue_type(value.IntType(), account_state.typ)
 
 local_exec_state = std.Struct(
     "local_exec_state",

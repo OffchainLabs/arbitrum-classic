@@ -19,8 +19,8 @@ from ..annotation import modifies_stack
 from ..vm import VM
 from .. import value
 from .types import (
-    contract_store,
-    contract_state,
+    account_store,
+    account_state,
     message,
     message_blockchain_data,
     message_data,
@@ -54,7 +54,7 @@ global_exec_state = Struct(
 chain_state = Struct(
     "chain_state",
     [
-        ("contracts", contract_store.typ),
+        ("accounts", account_store.typ),
         ("inbox", std.inboxctx.typ),
         ("call_frame", call_frame.typ),
         ("sender_seq", std.keyvalue_int_int.typ),
@@ -188,8 +188,8 @@ def add_message_to_wallet(vm):
     local_exec_state.get("type")(vm)
     # amount type
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("wallet")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("wallet")(vm)
     std.currency_store.add(vm)
     set_current_wallet(vm)
 
@@ -212,10 +212,10 @@ def create_initial_evm_state(contracts):
 
         vm.push(contract["code_point"])
 
-        contract_state.new(vm)
-        contract_state.set_val("code_point")(vm)
-        contract_state.set_val("storage")(vm)
-        contract_state.set_val("wallet")(vm)
+        account_state.new(vm)
+        account_state.set_val("code_point")(vm)
+        account_state.set_val("storage")(vm)
+        account_state.set_val("wallet")(vm)
         vm.swap2()
         std.keyvalue.set_val(vm)
 
@@ -226,7 +226,7 @@ def create_initial_evm_state(contracts):
     chain_state.set_val("global_exec_state")(vm)
     chain_state.set_val("sender_seq")(vm)
     chain_state.set_val("inbox")(vm)
-    chain_state.set_val("contracts")(vm)
+    chain_state.set_val("accounts")(vm)
     return vm.stack.items[0]
 
 
@@ -245,15 +245,15 @@ def _set_call_frame_member_impl(vm, field):
     set_chain_state(vm)
 
 
-def _set_contract_state_member_impl(vm, field):
+def _set_account_state_member_impl(vm, field):
     # val
     get_chain_state(vm)
     chain_state.get("call_frame")(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.set_val(field)(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.set_val(field)(vm)
     get_chain_state(vm)
     chain_state.get("call_frame")(vm)
-    call_frame.call_frame.set_val("contract_state")(vm)
+    call_frame.call_frame.set_val("account_state")(vm)
     get_chain_state(vm)
     chain_state.set_val("call_frame")(vm)
     set_chain_state(vm)
@@ -281,12 +281,12 @@ def set_current_logs(vm):
 
 @modifies_stack([std.keyvalue_int_int.typ], 0)
 def set_current_storage(vm):
-    _set_contract_state_member_impl(vm, "storage")
+    _set_account_state_member_impl(vm, "storage")
 
 
 @modifies_stack([std.currency_store.typ], 0)
 def set_current_wallet(vm):
-    _set_contract_state_member_impl(vm, "wallet")
+    _set_account_state_member_impl(vm, "wallet")
 
 
 @modifies_stack(0, [std.byterange.typ])
@@ -304,8 +304,8 @@ def add_send_to_queue(vm):
     vm.dup1()
     local_exec_state.get("type")(vm)
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("wallet")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("wallet")(vm)
     std.currency_store.deduct(vm)
     vm.swap1()
     set_current_wallet(vm)
@@ -325,8 +325,8 @@ def add_send_to_queue(vm):
 @modifies_stack(1, 1)
 def balance_get(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("wallet")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("wallet")(vm)
     std.currency_store.get_fung(vm)
 
 
@@ -334,13 +334,13 @@ def balance_get(vm):
 def ext_balance(vm):
     # address token_type
     get_call_frame(vm)
-    call_frame.call_frame.get("contracts")(vm)
-    contract_store.get(vm)
+    call_frame.call_frame.get("accounts")(vm)
+    account_store.get(vm)
     vm.dup0()
     vm.tnewn(0)
     vm.eq()
     vm.ifelse(lambda vm: [vm.error()])
-    contract_state.get("wallet")(vm)
+    account_state.get("wallet")(vm)
     std.currency_store.get_fung(vm)
 
 
@@ -435,8 +435,8 @@ def memory_store8(vm):
 @modifies_stack([value.IntType()], [value.IntType()])
 def storage_load(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("storage")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("storage")(vm)
     std.keyvalue_int_int.get(vm)
 
 
@@ -444,8 +444,8 @@ def storage_load(vm):
 @modifies_stack([value.IntType(), value.IntType()], [])
 def storage_store(vm):
     get_call_frame(vm)
-    call_frame.call_frame.get("contract_state")(vm)
-    contract_state.get("storage")(vm)
+    call_frame.call_frame.get("account_state")(vm)
+    account_state.get("storage")(vm)
     std.keyvalue_int_int.set_val(vm)
     set_current_storage(vm)
 
