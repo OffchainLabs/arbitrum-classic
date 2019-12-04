@@ -121,6 +121,8 @@ def create_many_contracts(contract_a):
 
 
 class TestEVM(TestCase):
+    _multiprocess_can_split_ = True
+
     def test_codesize_succeed(self):
         instruction_table = instruction_tables["byzantium"]
         evm_code = make_evm_ext_code(

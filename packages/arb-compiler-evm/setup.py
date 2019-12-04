@@ -29,6 +29,7 @@ setup(
     test_suite="nose.collector",
     tests_require=["nose"],
     python_requires=">=3.6",
+    setup_requires=["nose>=1.0"],
     install_requires=[
         "eth-utils<2.0.0,>=1.2.0",
         "eth-abi>=2.0.0",
