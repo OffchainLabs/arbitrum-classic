@@ -145,12 +145,12 @@ def call(vm, call_num, contract_id):
                     vm.swap1(),
                     std.bitwise.shift_right(vm),
                     vm.dup0(),
-                    vm.push(0xDA795EA3),
+                    vm.push(0x8F975A64),
                     vm.eq(),
                     vm.ifelse(
                         lambda vm: [vm.pop(), send_erc20_interupt(vm)],
                         lambda vm: [
-                            vm.push(0x8E725EE1),
+                            vm.push(0xB72AC8EA),
                             vm.eq(),
                             vm.ifelse(send_erc721_interupt, lambda vm: vm.error()),
                         ],

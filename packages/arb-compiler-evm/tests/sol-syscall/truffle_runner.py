@@ -70,6 +70,10 @@ def main():
     print("person_b_int", person_b_int)
     erc20_address = "0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359"
     erc721_address = "0x06012c8cf97BEaD5deAe237070F9587f8E7A266d"
+    erc20_address_int = eth_utils.to_int(hexstr=erc20_address)
+    erc721_address_int = eth_utils.to_int(hexstr=erc721_address)
+    print("erc20_address_int", erc20_address_int)
+    print("erc721_address_int", erc721_address_int)
 
     vm.env.send_message(
         [
@@ -106,6 +110,8 @@ def main():
     logs = run_until_halt(vm)
     for log in logs:
         print(output_handler(log))
+
+    print("Sent messages:", vm.sent_messages)
 
 
 if __name__ == "__main__":
