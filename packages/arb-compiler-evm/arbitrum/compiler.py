@@ -139,9 +139,16 @@ class StaticTracker:
             items.append((counter.push_counts[item], item, item))
         items = sorted(items, key=lambda x: (x[0], x[1]), reverse=True)
 
+        def transform_imm_val(val):
+            if isinstance(val, value.Tuple):
+                for v in val.val:
+                    transform_imm_val(v)
+            else:
+                self.immediate_pushes[val] = val
+
         self.immediate_pushes = {}
         for item in counter.immediate_push_counts:
-            self.immediate_pushes[item] = item
+            transform_imm_val(item)
         self.big_struct = BigStruct(items)
 
     def __getitem__(self, field_name):

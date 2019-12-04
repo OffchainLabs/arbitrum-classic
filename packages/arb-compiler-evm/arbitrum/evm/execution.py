@@ -18,30 +18,16 @@ from . import call_frame
 from . import os
 from .. import ast
 from .. import value
-from .types import local_exec_state
-
-
-@noreturn
-def _get_call_location(vm, dispatch_func):
-    # contract_id
-    dispatch_func(vm)
-    vm.dup0()
-    vm.tnewn(0)
-    vm.eq()
-    vm.ifelse(lambda vm: vm.error())
-    # call_location
+from .types import local_exec_state, contract_state
 
 
 @noreturn
 def _perform_call(vm, call_num):
-    # destCodePoint destId message
-    os.get_chain_state(vm)
-    os.chain_state.set_val("scratch")(vm)
-    os.set_chain_state(vm)
+    # destId message
     vm.push(ast.AVMLabel("evm_call_{}".format(call_num)))
     vm.swap2()
     vm.swap1()
-    # contractID message ret_pc destCodePoint
+    # destId message ret_pc
 
     # setup call frame
     os.get_call_frame(vm)
@@ -66,8 +52,10 @@ def _perform_call(vm, call_num):
     os.set_chain_state(vm)
 
     # Enter call frame
-    os.get_chain_state(vm)
-    os.chain_state.get("scratch")(vm)
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("contract_state")(vm)
+    contract_state.get("code_point")(vm)
+
     vm.jump()
 
     vm.set_label(ast.AVMLabel("evm_call_{}".format(call_num)))
@@ -87,7 +75,7 @@ def _perform_call(vm, call_num):
 
 
 @noreturn
-def setup_initial_call(vm, dispatch_func):
+def setup_initial_call(vm):
     # contractID message
     vm.set_exception_handler(invalid_tx)
     os.get_chain_state(vm)
@@ -96,9 +84,6 @@ def setup_initial_call(vm, dispatch_func):
     os.get_chain_state(vm)
     os.chain_state.set_val("call_frame")(vm)
     os.set_chain_state(vm)
-
-    vm.dup0()
-    _get_call_location(vm, dispatch_func)
 
     _perform_call(vm, "initial")
 
@@ -293,36 +278,25 @@ def _inner_call(vm, dispatch_func, call_num, contract_id):
     # destID msg
     _save_call_frame(vm)
 
-    vm.dup0()
-    _get_call_location(vm, dispatch_func)
-
     _perform_call(vm, call_num)
     _mutable_call_ret(vm)
 
 
 # [gas, dest, value, arg offset, arg length, ret offset, ret length]
 @noreturn
-def callcode(vm, dispatch_func, call_num, contract_id):
+def callcode(vm, call_num, contract_id):
     std.tup.make(7)(vm)
     # calltup
     vm.dup0()
     os.evm_call_to_send(vm)
     # msg calltup
-    vm.dup0()
-    vm.tgetn(1)
-    _get_call_location(vm, dispatch_func)
-    # destCodePoint msg calltup
-    vm.swap1()
+
     vm.push(contract_id)
     vm.swap1()
     vm.tsetn(1)
-    # msg destCodePoint calltup
-
     vm.push(contract_id)
-    vm.swap1()
-    vm.swap2()
 
-    # destCodePoint destId message calltup
+    # destId message calltup
     _save_call_frame(vm)
     _perform_call(vm, call_num)
     _mutable_call_ret(vm)
@@ -341,19 +315,11 @@ def delegatecall(vm, dispatch_func, call_num, contract_id):
     vm.dup0()
     os.evm_call_to_send(vm)
     # msg calltup
-    vm.dup0()
-    vm.tgetn(1)
-    _get_call_location(vm, dispatch_func)
-    # destCodePoint msg calltup
-    vm.swap1()
+
     os.message_caller(vm)
     vm.swap1()
     vm.tsetn(1)
-    # msg destCodePoint calltup
-
     vm.push(contract_id)
-    vm.swap1()
-    vm.swap2()
 
     # destCodePoint destId message calltup
     _save_call_frame(vm)
@@ -387,8 +353,6 @@ def staticcall(vm, dispatch_func, call_num, contract_id):
     _save_call_frame(vm)
 
     # contractId msg calltup
-    vm.dup0()
-    _get_call_location(vm, dispatch_func)
     _perform_call(vm, "static_{}".format(call_num))
     translate_ret_type(vm)
     # ret calltup

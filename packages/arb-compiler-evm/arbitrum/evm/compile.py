@@ -17,6 +17,7 @@ import pyevmasm
 from ..annotation import modifies_stack
 from ..std import stack_manip
 from ..std import byterange, bitwise
+from ..std import bst
 from ..vm import AVMOp
 from ..ast import AVMLabel
 from ..ast import BlockStatement
@@ -76,81 +77,6 @@ def remove_metadata(instrs):
     return instrs
 
 
-def make_bst_lookup(items):
-    return _make_bst_lookup([(x, items[x]) for x in sorted(items)])
-
-
-def _make_bst_lookup(items):
-    def handle_bad_jump(vm):
-        vm.tnewn(0)
-
-    if len(items) >= 3:
-        mid = len(items) // 2
-        left = items[:mid]
-        right = items[mid + 1 :]
-        pivot = items[mid][0]
-
-        def impl_n(vm):
-            # index
-            vm.push(pivot)
-            vm.dup1()
-            vm.lt()
-            # index < pivot, index
-            vm.ifelse(
-                lambda vm: [
-                    # index < pivot
-                    _make_bst_lookup(left)(vm)
-                ],
-                lambda vm: [
-                    vm.push(pivot),
-                    vm.dup1(),
-                    vm.gt(),
-                    vm.ifelse(
-                        lambda vm: [
-                            # index > pivot
-                            _make_bst_lookup(right)(vm)
-                        ],
-                        lambda vm: [
-                            # index == pivot
-                            vm.pop(),
-                            vm.push(items[mid][1]),
-                        ],
-                    ),
-                ],
-            )
-
-        return impl_n
-
-    if len(items) == 2:
-
-        def impl_2(vm):
-            # index
-            vm.dup0()
-            vm.push(items[0][0])
-            vm.eq()
-            vm.ifelse(
-                lambda vm: [vm.pop(), vm.push(items[0][1])],
-                lambda vm: [
-                    vm.push(items[1][0]),
-                    vm.eq(),
-                    vm.ifelse(lambda vm: [vm.push(items[1][1])], handle_bad_jump),
-                ],
-            )
-
-        return impl_2
-
-    if len(items) == 1:
-
-        def impl_1(vm):
-            vm.push(items[0][0])
-            vm.eq()
-            vm.ifelse(lambda vm: [vm.push(items[0][1])], handle_bad_jump)
-
-        return impl_1
-
-    return handle_bad_jump
-
-
 def generate_evm_code(raw_code, storage):
     contracts = {}
     for contract in raw_code:
@@ -161,7 +87,7 @@ def generate_evm_code(raw_code, storage):
         code_tuples_data[contract] = byterange.frombytes(
             bytes.fromhex(raw_code[contract].hex())
         )
-    code_tuples_func = make_bst_lookup(code_tuples_data)
+    code_tuples_func = bst.make_static_lookup(code_tuples_data)
 
     @modifies_stack([value.IntType()], 1)
     def code_tuples(vm):
@@ -172,20 +98,11 @@ def generate_evm_code(raw_code, storage):
         code_hashes_data[contract] = int.from_bytes(
             eth_utils.crypto.keccak(raw_code[contract]), byteorder="big"
         )
-    code_hashes_func = make_bst_lookup(code_hashes_data)
+    code_hashes_func = bst.make_static_lookup(code_hashes_data)
 
     @modifies_stack([value.IntType()], [value.ValueType()])
     def code_hashes(vm):
         code_hashes_func(vm)
-
-    contract_dispatch = {}
-    for contract in contracts:
-        contract_dispatch[contract] = AVMLabel("contract_entry_" + str(contract))
-    contract_dispatch_func = make_bst_lookup(contract_dispatch)
-
-    @modifies_stack([value.IntType()], 1)
-    def dispatch_contract(vm):
-        contract_dispatch_func(vm)
 
     code_sizes = {}
     for contract in contracts:
@@ -195,7 +112,7 @@ def generate_evm_code(raw_code, storage):
 
     # Give the interrupt contract address a nonzero size
     code_sizes[0x01] = 1
-    code_size_func = make_bst_lookup(code_sizes)
+    code_size_func = bst.make_static_lookup(code_sizes)
 
     @modifies_stack([value.IntType()], 1)
     def code_size(vm):
@@ -215,10 +132,15 @@ def generate_evm_code(raw_code, storage):
                 code_size,
                 code_tuples,
                 code_hashes,
-                dispatch_contract,
             )
         )
-        contract_info.append({"contractID": contract, "storage": storage[contract]})
+        contract_info.append(
+            {
+                "code_point": AVMLabel("contract_entry_" + str(contract)),
+                "contractID": contract,
+                "storage": storage[contract],
+            }
+        )
 
     def initialization(vm):
         os.initialize(vm, contract_info)
@@ -227,7 +149,7 @@ def generate_evm_code(raw_code, storage):
     def run_loop_start(vm):
         vm.set_label(AVMLabel("run_loop_start"))
         os.get_next_message(vm)
-        execution.setup_initial_call(vm, dispatch_contract)
+        execution.setup_initial_call(vm)
         vm.push(AVMLabel("run_loop_start"))
         vm.jump()
 
@@ -411,14 +333,7 @@ def get_opcode_name(instr):
 
 
 def generate_contract_code(
-    label,
-    code,
-    code_tuple,
-    contract_id,
-    code_size,
-    code_tuples,
-    code_hashes,
-    dispatch_contract,
+    label, code, code_tuple, contract_id, code_size, code_tuples, code_hashes
 ):
     code = remove_metadata(code)
     code = replace_self_balance(code)
@@ -429,7 +344,7 @@ def generate_contract_code(
             jump_table[insn.pc] = AVMLabel(
                 "jumpdest_{}_{}".format(contract_id, insn.pc)
             )
-    dispatch_func = make_bst_lookup(jump_table)
+    dispatch_func = bst.make_static_lookup(jump_table)
 
     @modifies_stack([value.IntType()], [value.ValueType()], contract_id)
     def dispatch(vm):
@@ -502,18 +417,12 @@ def generate_contract_code(
             "JUMPDEST": lambda vm: vm.set_label(
                 AVMLabel("jumpdest_{}_{}".format(contract_id, instr.pc))
             ),
-            "CALL": lambda vm: execution.call(
-                vm, dispatch_contract, instr.pc, contract_id
-            ),
-            "CALLCODE": lambda vm: execution.call(
-                vm, dispatch_contract, instr.pc, contract_id
-            ),
+            "CALL": lambda vm: execution.call(vm, instr.pc, contract_id),
+            "CALLCODE": lambda vm: execution.call(vm, instr.pc, contract_id),
             "DELEGATECALL": lambda vm: execution.delegatecall(
-                vm, dispatch_contract, instr.pc, contract_id
+                vm, instr.pc, contract_id
             ),
-            "STATICCALL": lambda vm: execution.staticcall(
-                vm, dispatch_contract, instr.pc, contract_id
-            ),
+            "STATICCALL": lambda vm: execution.staticcall(vm, instr.pc, contract_id),
             "INVALID": evm_invalid_op,
         }
 

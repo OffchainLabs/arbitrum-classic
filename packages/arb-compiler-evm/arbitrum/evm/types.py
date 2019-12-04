@@ -17,7 +17,11 @@ from .. import value
 
 contract_state = std.Struct(
     "contract_state",
-    [("storage", std.keyvalue_int_int.typ), ("wallet", std.currency_store.typ)],
+    [
+        ("code_point", value.CodePointType()),
+        ("storage", std.keyvalue_int_int.typ),
+        ("wallet", std.currency_store.typ),
+    ],
 )
 
 message = std.Struct(

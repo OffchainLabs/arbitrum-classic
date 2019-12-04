@@ -210,7 +210,10 @@ def create_initial_evm_state(contracts):
         for storage_item in contract["storage"]:
             std.keyvalue.set_val(vm)
 
+        vm.push(contract["code_point"])
+
         contract_state.new(vm)
+        contract_state.set_val("code_point")(vm)
         contract_state.set_val("storage")(vm)
         contract_state.set_val("wallet")(vm)
         vm.swap2()
