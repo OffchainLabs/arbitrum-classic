@@ -66,7 +66,7 @@ def create_evm_vm(contracts, should_optimize=True, includes_metadata=True):
 
     for contract in contracts:
         if includes_metadata:
-            contract_code = strip_cbor(contract.code)(contract.code)
+            contract_code = strip_cbor(contract.code)
         else:
             contract_code = contract.code
         code[contract.address] = contract_code
