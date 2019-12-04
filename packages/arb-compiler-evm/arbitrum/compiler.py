@@ -257,6 +257,22 @@ class ASTTransformer:
         return op
 
 
+class BlockFlattener(ASTTransformer):
+    def __init__(self):
+        super(BlockFlattener, self).__init__()
+
+    def transform_block(self, op):
+        def flatten(op):
+            if op.asttype == ast.BLOCK_STATEMENT:
+                for op in op.code:
+                    yield op
+            else:
+                yield op
+
+        op.code = [x for nested_op in op.code for x in flatten(nested_op)]
+        return op
+
+
 class FlowControlTransformer(ASTTransformer):
     def __init__(self, label_gen):
         super(FlowControlTransformer, self).__init__()
@@ -621,7 +637,14 @@ def flatten_block(op):
     return ret
 
 
+def flatten_blocks(compiled_funcs):
+    for func in compiled_funcs:
+        compiled_funcs[func] = compiled_funcs[func].modify_ast(BlockFlattener())
+
+
 def optimize_program(compiled_funcs):
+    flatten_blocks(compiled_funcs)
+
     # use cycle checking to figure out which functions are safe to inline
     non_recursive = get_non_recursive(compiled_funcs)
     non_recursive = [x for x in non_recursive if compiled_funcs[x].is_callable]
@@ -646,6 +669,8 @@ def optimize_program(compiled_funcs):
             )
         non_recursive.remove(single_func)
         del compiled_funcs[single_func]
+
+    flatten_blocks(compiled_funcs)
 
     # inline short non-recursive functions
     while True:
