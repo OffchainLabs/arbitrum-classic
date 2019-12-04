@@ -252,7 +252,7 @@ EVM_STATIC_OPS = {
     "TIMESTAMP": os.get_timestamp,
     "NUMBER": os.get_block_number,
     "DIFFICULTY": lambda vm: not_supported_op("DIFFICULTY"),
-    "GASLIMIT": lambda vm: not_supported_op("GASLIMIT"),
+    "GASLIMIT": lambda vm: vm.push(10000000000),
     # 50s: Stack, Memory, Storage and Flow Operations
     "POP": lambda vm: vm.pop(),
     "MLOAD": os.memory_load,
