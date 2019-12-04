@@ -15,6 +15,7 @@
 from .. import std
 from .. import value
 from . import types
+from . import accounts
 from ..vm import VM
 from ..annotation import modifies_stack
 
@@ -25,8 +26,8 @@ call_frame = std.struct.Struct(
     [
         ("contractID", value.IntType()),  # transient
         ("memory", std.sized_byterange.sized_byterange.typ),  # transient
-        ("account_state", types.account_state.typ),  # record
-        ("accounts", types.account_store.typ),  # record
+        ("account_state", accounts.account_state.typ),  # record
+        ("accounts", accounts.account_store.typ),  # record
         ("local_exec_state", types.local_exec_state.typ),  # transient
         ("return_data", std.sized_byterange.sized_byterange.typ),  # transient
         ("sent_queue", sent_queue.typ),  # record
@@ -57,13 +58,13 @@ def make_empty():
     return vm.stack.items[0]
 
 
-@modifies_stack([call_frame.typ], [types.account_state.typ])
+@modifies_stack([call_frame.typ], [accounts.account_state.typ])
 def lookup_current_state(vm):
     vm.dup0()
     call_frame.get("contractID")(vm)
     vm.swap1()
     call_frame.get("accounts")(vm)
-    types.account_store.get(vm)
+    accounts.account_store.get(vm)
 
 
 @modifies_stack([call_frame.typ], [call_frame.typ])
@@ -75,7 +76,7 @@ def save_state(vm):
     call_frame.get("contractID")(vm)
     vm.dup2()
     call_frame.get("accounts")(vm)
-    types.account_store.set_val(vm)
+    accounts.account_store.set_val(vm)
     vm.swap1()
     call_frame.set_val("accounts")(vm)
 
@@ -157,7 +158,7 @@ def spawn(vm):
     call_frame.set_val("memory")(vm)
 
 
-@modifies_stack([types.account_store.typ], [call_frame.typ])
+@modifies_stack([accounts.account_store.typ], [call_frame.typ])
 def new_fresh(vm):
     # chain_state
     vm.push(make_empty())

@@ -18,7 +18,8 @@ from . import call_frame
 from . import os
 from .. import ast
 from .. import value
-from .types import local_exec_state, account_state
+from .types import local_exec_state
+from .accounts import account_state
 
 
 @noreturn

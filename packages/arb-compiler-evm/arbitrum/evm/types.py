@@ -15,15 +15,6 @@
 from .. import std
 from .. import value
 
-account_state = std.Struct(
-    "account_state",
-    [
-        ("code_point", value.CodePointType()),
-        ("storage", std.keyvalue_int_int.typ),
-        ("wallet", std.currency_store.typ),
-    ],
-)
-
 message = std.Struct(
     "message",
     [
@@ -52,8 +43,6 @@ message_data = std.Struct(
         ("sequence_num", value.IntType()),
     ],
 )
-
-account_store = std.make_keyvalue_type(value.IntType(), account_state.typ)
 
 local_exec_state = std.Struct(
     "local_exec_state",
