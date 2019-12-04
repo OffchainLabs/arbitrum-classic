@@ -6,6 +6,7 @@ eth-hash==0.2.0
 eth-typing==2.1.0
 eth-utils==1.6.4
 future==0.17.1
+importlib_resources==1.0.2
 networkx==2.3
 parsimonious==0.8.1
 pycryptodome==3.8.2
