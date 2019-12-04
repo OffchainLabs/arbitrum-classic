@@ -1,4 +1,4 @@
-recursive-include evm *
+include arbitrum/evm/contract-templates.json
 global-exclude *.pyc
 global-exclude ._*
 global-exclude *.mo
