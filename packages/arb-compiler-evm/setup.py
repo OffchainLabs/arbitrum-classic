@@ -23,6 +23,7 @@ setup(
     author_email="harry@offchainlabs.com",
     license="Apache-2.0",
     packages=find_packages(),
+    include_package_data=True,
     zip_safe=False,
     scripts=["bin/arbc-truffle"],
     test_suite="nose.collector",

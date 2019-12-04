@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import eth_utils
+from importlib_resources import read_text
+import json
 
 from .compile import generate_evm_code
 from .. import compile_program
@@ -35,6 +37,20 @@ class Contract:
 
 
 def create_evm_vm(contracts, should_optimize=True):
+    raw_contract_templates_data = read_text("arbitrum.evm", "contract-templates.json")
+    raw_contract_templates = json.loads(raw_contract_templates_data)
+    token_templates = {}
+    for raw_contract in raw_contract_templates:
+        token_templates[raw_contract["name"]] = raw_contract
+
+    token_templates["ArbERC20"][
+        "address"
+    ] = "0xfffffffffffffffffffffffffffffffffffffffe"
+    token_templates["ArbERC721"][
+        "address"
+    ] = "0xfffffffffffffffffffffffffffffffffffffffd"
+    contracts.append(Contract(token_templates["ArbERC20"]))
+    contracts.append(Contract(token_templates["ArbERC721"]))
     code = {}
     storage = {}
     for contract in contracts:
