@@ -169,17 +169,10 @@ class EVMRevert(EVMOutput):
         self.output_bytes = eth_utils.to_bytes(hexstr=sized_byterange.tohex(val[2]))
 
     def __repr__(self):
-        if self.decoded:
-            return "EVMRevert({}, {})".format(self.name, self.output_bytes)
-        return "EVMRevert({}, {})".format(
-            self.orig_message.func_id(), self.output_values
-        )
+        return "EVMRevert({}, {})".format(self.name, self.output_bytes)
 
     def decode(self, functions, events):
         super().decode(functions, events)
-        self.output_values = eth_abi.decode_abi(
-            [out["type"] for out in self.abi["outputs"]], self.output_bytes
-        )
 
 
 class EVMInvalid(EVMOutput):
