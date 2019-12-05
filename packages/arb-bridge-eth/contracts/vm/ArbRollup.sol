@@ -62,6 +62,7 @@ contract ArbBase is IArbBase {
     IGlobalPendingInbox public globalInbox;
 
     struct Staker {
+        address addr;
         bytes32 location;
         uint64 creationTime;
         address challenge;
@@ -69,15 +70,30 @@ contract ArbBase is IArbBase {
 
     uint stakeRequirement;
     bytes32 latestConfirmed;
-    mapping(address => Staker) stakers;
+    mapping(address => uint) stakerIndex;
+    Staker[]  stakers;
     bytes32[] leaves;
+
+    function myStakerIndex() returns(uint) {
+        index = stakerIndex[msg.sender];
+        require(stakers[index].addr == msg.sender, "must be called by a staker");
+        return index;
+    }
+
+    function getStakerIndex(addr address) returns(uint) {
+        index = stakerIndex[addr];
+        require(stakers[index].addr == addr, "not a staker");
+        return index;
+    }
 
     function validChild(bytes32 prevLeaf, bytes32 disputableHash) returns(bytes32) {
         return keccak256(
             abi.encodePacked(
                 prevLeaf,
-                disputableHash,
-                0
+                keccak256(abi.encodePacked(
+                    disputableHash,
+                    0
+                ))
             )
         );
     }
@@ -86,30 +102,48 @@ contract ArbBase is IArbBase {
         return keccak256(
             abi.encodePacked(
                 prevLeaf,
-                disputableHash,
-                1
+                keccak256(abi.encodePacked(
+                    disputableHash,
+                    1
+                ))
             )
         );
     }
 
     function isPath(bytes32 from, bytes32 to, bytes32[] proof) returns(bool) {
-
+        node = from;
+        for (i=0; i<proof.length; i++) {
+            node = keccak256(abi.encodePacked(node, proof[i]));
+        }
+        return (node==to);
     }
 
     function isConflict(
         bytes32 from,
-        bytes32 disputableHash,
-        bytes32 toValid,
-        bytes32 toInvalid,
-        bytes32[] validProof,
-        bytes32[] invalidProof
+        bytes32 to1,
+        bytes32 to2,
+        bytes32[] proof1,
+        bytes32[] proof2
     )
         returns(bool)
     {
-        bytes32 validChild = validChild(from, disputableHash);
-        bytes32 invalidChild = invalidChild(from, disputableHash);
-        return isPath(validChild, toValid, validProof) &&
-            isPath(invalidChild, toInvalid, invalidProof);
+        return (proof1[0] != proof2[0]) &&
+            isPath(from, to1, proof1) &&
+            isPath(from, to2, proof2);
+    }
+
+    function isOrderedConflict(
+        bytes32 from,
+        bytes32 disputableHash,
+        bytes32 validTo,
+        bytes32 invalidTo,
+        bytes32[] validProof,
+        bytes32[] invalidProof,
+    )
+        returns(bool)
+    {
+        return isPath(validChild(from, disputableHash), validTo, validProof) &&
+            isPath(invalidChild(from disputableHash), invalidTo, invalidProof);
     }
 
     function assert(
@@ -126,8 +160,7 @@ contract ArbBase is IArbBase {
     )
         public
     {
-        Staker memory staker = stakers[msg.sender];
-        require(staker.creationTime > 0, "must be called by a staker");
+        Staker memory staker = stakers[myStakerIndex()];
         require(_prevLeafIndex < leaves.length, "invalid leaf index");
         bytes32 prevLeaf = leaves[_prevLeafIndex];
         require(
@@ -171,33 +204,37 @@ contract ArbBase is IArbBase {
         leaves[_prevLeafIndex] = leaves[leaves.length - 1];
         leaves[leaves.length - 1] = validChild;
         leaves.push(invalidChild);
-        staker.location = validChild;
+        stakers[myStakerIndex()].location = validChild;
     }
 
-
-    function pruneLeaf(
-        uint _leafIndex,
-        bytes32 from,
-        bool isValidChild,
-        bytes32 disputableHash,
-        bytes32[] validProof,
-        bytes32[] invalidProof
+    function confirm(
+        bytes32 to,
+        bytes32 _leafIndex,
+        bytes[] proof1,
+        bytes32[][] stakerProofs,
     )
         public
     {
         require(_leafIndex < leaves.length, "invalid leaf index");
         bytes32 leaf = leaves[_leafIndex];
-        if (isValidChild) {
-            require(
-                isConflict(from, disputableHash, leaf, latestConfirmed, validProof, invalidProof),
-                "Invalid conflict proof"
-            );
-        } else {
-            require(
-                isConflict(from, disputableHash, latestConfirmed, leaf, validProof, invalidProof),
-                "Invalid conflict proof"
-            );
-        }
+        require(isPath(to, leaf, proof1));
+        //TODO
+    }
+
+    function pruneLeaf(
+        uint _leafIndex,
+        bytes32 from,
+        bytes32[] leafProof,
+        bytes32[] latestConfirmedProof,
+    )
+        public
+    {
+        require(_leafIndex < leaves.length, "invalid leaf index");
+        bytes32 leaf = leaves[_leafIndex];
+        require(
+            isConflict(from, leaf, latestConfirmed, leafProof, latestConfirmedProof),
+            "Invalid conflict proof"
+        );
         leaves[_leafIndex] = leaves[leaves.length - 1];
         leaves.pop();
     }
@@ -211,10 +248,30 @@ contract ArbBase is IArbBase {
     {
         require(isPath(latestConfirmed, location, proof), "invalid path proof");
         require(msg.amount == stakeRequirement, "must supply stake value");
-        Staker memory staker = stakers[msg.sender];
-        require(staker.creationTime == 0, "cannot be called by a staker");
+        require(stakers[stakerIndex[msg.sender]].address != msg.sender, "cannot be called by a staker");
+        Staker memory staker;
+        staker.addr = msg.sender;
         staker.location = location;
         staker.creationTime = block.number;
+        stakerIndex[msg.sender] = stakers.length;
+        stakers.push(staker);
+    }
+
+    function moveStake(
+        bytes32 newLocation,
+        bytes32 _leafIndex,
+        bytes32 proof1,
+        bytes32 proof2,
+    ) 
+        public
+    {
+        require(_leafIndex < leaves.length, "invalid leaf index");
+        bytes32 leaf = leaves[_leafIndex];
+        Staker memory staker = stakers[myStakerIndex()];
+        require(isPath(staker.location, newLocation, proof1));
+        require(isPath(newLocation, leaf, proof2));
+
+        stakers[myStakerIndex()].location = newLocation;
     }
 
     function recoverStakeA(
@@ -222,36 +279,38 @@ contract ArbBase is IArbBase {
     )
         public
     {
-        Staker memory staker = stakers[msg.sender];
-        require(staker.challenge == address(0), "staker in challenge");
+        index = myStakerIndex()
+        Staker memory staker = stakers[index];
         require(isConflict(staker.location, latestConfirmed, proof), "invalid path proof");
-        delete stakers[msg.sender];
+        delete stakerIndex[msg.sender];
+        if (index < stakers[stackers.length-1]) {
+            stakers[index] = stakers[stakers.length-1];
+            stakerIndex[stakers[index].addr] = index;
+        }
+        stakers.pop()
         msg.sender.transfer(stakeRequirement);
     }
 
     function recoverStakeB(
         bytes32 node,
-        bool isValidChild,
         bytes32 disputableHash,
-        bytes32[] validProof,
-        bytes32[] invalidProof
+        bytes32[] latestConfirmedProof,
+        bytes32[] nodeProof
     )
         public
     {
-        Staker memory staker = stakers[msg.sender];
-        require(staker.challenge == address(0), "staker in challenge");
-        if (isValidChild) {
-            require(
-                isConflict(staker.location, disputableHash, latestConfirmed, node, validProof, invalidProof),
-                "Invalid conflict proof"
-            );
-        } else {
-            require(
-                isConflict(staker.location, disputableHash, node, latestConfirmed, validProof, invalidProof),
-                "Invalid conflict proof"
-            );
+        index = myStakerIndex()
+        Staker memory staker = stakers[index];
+        require(
+            isConflict(staker.location, disputableHash, latestConfirmed, node, latestConfirmedProof, nodeProof),
+            "Invalid conflict proof"
+        );
+        delete stakerIndex[msg.sender];
+        if (index < stakers[stackers.length-1]) {
+            stakers[index] = stakers[stakers.length-1];
+            stakerIndex[stakers[index].addr] = index;
         }
-        delete stakers[msg.sender];
+        stakers.pop()
         msg.sender.transfer(stakeRequirement);
     }
 
@@ -261,8 +320,8 @@ contract ArbBase is IArbBase {
         bytes32 node,
         uint64 disputableDeadline,
         bytes32 disputableHash,
-        bytes32[] validProof,
-        bytes32[] invalidProof,
+        bytes32[] proof1,
+        bytes32[] proof2,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
         uint64[2] memory _timeBounds,
@@ -270,8 +329,8 @@ contract ArbBase is IArbBase {
     )
         public
     {
-        Staker memory staker1 = stakers[staker1Address];
-        Staker memory staker2 = stakers[staker2Address];
+        Staker memory staker1 = stakers[getStakerIndex(staker1Address)];
+        Staker memory staker2 = stakers[getStakerIndex(staker2Address)];
 
         require(keccak256(abi.encodePacked(
             disputableDeadline,
@@ -287,7 +346,7 @@ contract ArbBase is IArbBase {
         require(staker1.challenge == address(0));
         require(staker2.challenge == address(0));
         require(
-            isConflict(node, disputableHash, staker1.location, staker2.location, validProof, invalidProof),
+            isOrderedConflict(node, disputableHash, staker1.location, staker2.location, proof1, proof2),
             "Invalid conflict proof"
         );
         validatorBalances[msg.sender] -= vm.escrowRequired;
