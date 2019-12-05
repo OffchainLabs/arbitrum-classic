@@ -212,13 +212,35 @@ contract ArbBase is IArbBase {
         bytes32 _leafIndex,
         bytes[] proof1,
         bytes32[][] stakerProofs,
+        bytes32 prev,
+        uint    branch,
+        uint    deadline,
+        bytes32 _preconditionHash,
+        bytes32 _assertionHash,
     )
         public
     {
         require(_leafIndex < leaves.length, "invalid leaf index");
         bytes32 leaf = leaves[_leafIndex];
-        require(isPath(to, leaf, proof1));
-        //TODO
+        require(isPath(to, leaf, proof1), "node does not exist");
+        require(keccak256(abi.encodePacked(
+            prev,
+            keccak256(abi.encodePacked(
+                keccak256(abi.encodePacked(
+                    deadline,
+                    _preconditionHash,
+                    _assertionHash
+                )),
+                branch
+            ))
+        )) == to, "invalid parameters for prev node");
+
+        for (i=0; i<stakers.length; i++) {
+            require((stakers[i].creationTime >= deadline) || isPath(to, stakers[i].location, stakerProofs[i],
+                "at least one active staker disagrees");
+        }
+
+        latestConfirmed = to;
     }
 
     function pruneLeaf(
@@ -268,8 +290,8 @@ contract ArbBase is IArbBase {
         require(_leafIndex < leaves.length, "invalid leaf index");
         bytes32 leaf = leaves[_leafIndex];
         Staker memory staker = stakers[myStakerIndex()];
-        require(isPath(staker.location, newLocation, proof1));
-        require(isPath(newLocation, leaf, proof2));
+        require(isPath(staker.location, newLocation, proof1), "stake must move forward");
+        require(isPath(newLocation, leaf, proof2), "node does not exist");
 
         stakers[myStakerIndex()].location = newLocation;
     }
