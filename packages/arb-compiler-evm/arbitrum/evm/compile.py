@@ -15,7 +15,7 @@
 import pyevmasm
 
 from ..annotation import modifies_stack
-from ..std import stack_manip
+from ..std import stack_manip, tup
 from ..std import byterange, bitwise
 from ..std import bst
 from ..vm import AVMOp
@@ -125,12 +125,24 @@ def generate_evm_code(raw_code, storage):
         os.initialize(vm, contract_info)
         vm.jump_direct(AVMLabel("run_loop_start"))
 
+    def process_tx_call_message(vm):
+        vm.cast(message.typ)
+        os.process_tx_message(vm)
+        vm.dup0()
+        vm.push(value.Tuple([]))
+        vm.eq()
+        vm.ifelse(
+            lambda vm: [],
+            lambda vm: [tup.tbreak(2)(vm), execution.setup_initial_call(vm)],
+        )
+
     def run_loop_start(vm):
         vm.set_label(AVMLabel("run_loop_start"))
-        os.get_next_valid_message(vm)
-        vm.cast(message.typ)
-        os.process_message(vm)
-        execution.setup_initial_call(vm)
+        os.get_next_message(vm)
+        tup.tbreak(2)(vm)
+        vm.push(0)
+        vm.eq()
+        vm.ifelse(process_tx_call_message)
         vm.push(AVMLabel("run_loop_start"))
         vm.jump()
 

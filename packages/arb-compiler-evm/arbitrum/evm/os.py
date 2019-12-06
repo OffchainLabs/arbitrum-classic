@@ -673,7 +673,6 @@ def get_next_message(vm):
     get_chain_state(vm)
     chain_state.get("inbox")(vm)
     std.inboxctx.getmsg(vm)
-    vm.cast(message.typ)
     # msg updatedctx
     vm.swap1()
     get_chain_state(vm)
@@ -692,33 +691,26 @@ def update_global_execution_state(vm):
     set_chain_state(vm)
 
 
-@modifies_stack(0, [value.ValueType()])
-def get_next_valid_message(vm):
-    vm.push(value.Tuple([1, value.Tuple([])]))
-    vm.while_loop(
-        lambda vm: [vm.dup0(), vm.tgetn(0)],
-        lambda vm: [
-            vm.pop(),
-            get_next_message(vm),
-            vm.cast(message.typ),
-            # msg
-            vm.dup0(),
-            update_global_execution_state(vm),
-            # msg
-            vm.dup0(),
-            check_message_sequence(vm),
-            vm.iszero(),
-            # valid_seq msg
-            std.tup.make(2)(vm),
-        ],
+@modifies_stack([message.typ], [value.TupleType()])
+def process_tx_message(vm):
+    # msg
+    vm.dup0()
+    update_global_execution_state(vm)
+    # msg
+    vm.dup0()
+    check_message_sequence(vm)
+    # valid_seq msg
+    vm.ifelse(
+        lambda vm: [process_valid_tx_message(vm), std.tup.make(2)(vm)],
+        lambda vm: [vm.pop(), vm.push(value.Tuple([]))],
     )
-    vm.tgetn(1)
+
+    # contractID message
 
 
 @modifies_stack([message.typ], [value.IntType(), local_exec_state.typ])
-def process_message(vm):
+def process_valid_tx_message(vm):
     # msg
-
     vm.dup0()
     message.get("data")(vm)
     vm.cast(message_blockchain_data.typ)

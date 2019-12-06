@@ -134,7 +134,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
@@ -150,7 +152,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
@@ -171,7 +175,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
@@ -186,7 +192,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
@@ -205,7 +213,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
@@ -225,7 +235,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
@@ -242,7 +254,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
@@ -258,7 +272,9 @@ class TestEVM(TestCase):
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
-        vm.env.send_message([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])
+        vm.env.send_message(
+            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])]
+        )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
