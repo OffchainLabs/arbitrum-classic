@@ -23,6 +23,7 @@ from ..ast import AVMLabel
 from ..ast import BlockStatement
 from ..compiler import compile_block
 from .. import value
+from .types import message
 
 from . import os, call_frame
 from . import execution
@@ -126,7 +127,9 @@ def generate_evm_code(raw_code, storage):
 
     def run_loop_start(vm):
         vm.set_label(AVMLabel("run_loop_start"))
-        os.get_next_message(vm)
+        os.get_next_valid_message(vm)
+        vm.cast(message.typ)
+        os.process_message(vm)
         execution.setup_initial_call(vm)
         vm.push(AVMLabel("run_loop_start"))
         vm.jump()
