@@ -92,10 +92,6 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	return m.machine.LastBlockReason()
 }
 
-func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
-	return m.machine.CanSpend(tokenType, currency)
-}
-
 func (m *Machine) InboxHash() value.HashOnlyValue {
 	return m.machine.InboxHash()
 }
@@ -116,7 +112,7 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	m.machine.SendOffchainMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
 	a := &protocol.Assertion{}
 	stepIncrease := int32(1)
 	stepsRan := 0
@@ -150,7 +146,6 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 
 		// only marshall and validate if step is within proofbounds
 		if i >= int32(m.ethConn.proofbounds[0]) && i <= int32(m.ethConn.proofbounds[1]) {
-			spentBalance := protocol.NewTokenTrackerFromMessages(a1.OutMsgs)
 			callOpts := &bind.CallOpts{
 				Pending: true,
 				From:    m.ethConn.fromAddress,
@@ -158,12 +153,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBound
 			}
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
-			precond := &protocol.Precondition{
-				BeforeHash:    beforeHash,
-				TimeBounds:    timeBounds,
-				BeforeBalance: spentBalance,
-				BeforeInbox:   inboxHash,
-			}
+			precond := protocol.NewPrecondition(beforeHash, timeBounds, inboxHash)
 
 			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
 			if err != nil {

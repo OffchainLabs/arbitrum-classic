@@ -66,6 +66,12 @@ type VMConnection interface {
 		precondition *protocol.Precondition,
 		assertion *protocol.AssertionStub,
 	) (*types.Receipt, error)
+}
+
+type ChallengeConnection interface {
+	StartConnection(ctx context.Context) error
+
+	GetChans() (chan Notification, chan error)
 
 	BisectAssertion(
 		auth *bind.TransactOpts,

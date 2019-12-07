@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -39,7 +38,6 @@ func NewChainValidator(
 	b bridge.Bridge,
 	address common.Address,
 	latestHeader *types.Header,
-	balance *protocol.BalanceTracker,
 	config *valmessage.VMConfiguration,
 	machine machine.Machine,
 	challengeEverything bool,
@@ -47,7 +45,6 @@ func NewChainValidator(
 ) *ChainValidator {
 	c := core.NewCore(
 		machine,
-		balance,
 	)
 
 	valConfig := core.NewValidatorConfig(address, config, challengeEverything, maxCallSteps)

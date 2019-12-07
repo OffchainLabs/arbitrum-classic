@@ -127,33 +127,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: true,
-        inputs: [
-            {
-                name: '_owner',
-                type: 'address',
-            },
-            {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_amounts',
-                type: 'uint256[]',
-            },
-        ],
-        name: 'hasFunds',
-        outputs: [
-            {
-                name: '',
-                type: 'bool',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
         constant: false,
         inputs: [
             {
@@ -317,24 +290,8 @@ const _abi = [
         constant: false,
         inputs: [
             {
-                name: '_tokenTypes',
-                type: 'bytes21[]',
-            },
-            {
-                name: '_messageData',
+                name: '_messages',
                 type: 'bytes',
-            },
-            {
-                name: '_tokenTypeNum',
-                type: 'uint16[]',
-            },
-            {
-                name: '_amounts',
-                type: 'uint256[]',
-            },
-            {
-                name: '_destinations',
-                type: 'address[]',
             },
         ],
         name: 'sendMessages',

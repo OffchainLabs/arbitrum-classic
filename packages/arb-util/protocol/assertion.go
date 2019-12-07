@@ -17,10 +17,8 @@
 package protocol
 
 import (
-	"encoding/binary"
 	"io"
 
-	"github.com/golang/protobuf/proto"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -29,7 +27,7 @@ import (
 type Assertion struct {
 	AfterHash [32]byte
 	NumSteps  uint32
-	OutMsgs   []Message
+	OutMsgs   []value.Value
 	Logs      []value.Value
 }
 
@@ -38,41 +36,8 @@ type MultiReader interface {
 	io.ByteReader
 }
 
-func NewAssertion(afterHash [32]byte, numSteps uint32, outMsgs []Message, logs []value.Value) *Assertion {
+func NewAssertion(afterHash [32]byte, numSteps uint32, outMsgs []value.Value, logs []value.Value) *Assertion {
 	return &Assertion{afterHash, numSteps, outMsgs, logs}
-}
-
-func NewAssertionFromReader(rd io.Reader) (*Assertion, error) {
-	length := uint64(0)
-	err := binary.Read(rd, binary.LittleEndian, &length)
-	if err != nil {
-		return nil, err
-	}
-	buf := make([]byte, 0, length)
-	_, err = io.ReadFull(rd, buf)
-	if err != nil {
-		return nil, err
-	}
-	assertion := &AssertionBuf{}
-	err = proto.Unmarshal(buf, assertion)
-	if err != nil {
-		return nil, err
-	}
-	return NewAssertionFromBuf(assertion)
-}
-
-func (a *Assertion) Marshal(wr io.Writer) error {
-	assertionData, err := proto.Marshal(NewAssertionBuf(a))
-	if err != nil {
-		return err
-	}
-	length := uint64(len(assertionData))
-	err = binary.Write(wr, binary.LittleEndian, &length)
-	if err != nil {
-		return err
-	}
-	_, err = wr.Write(assertionData)
-	return err
 }
 
 func (a *Assertion) Equals(b *Assertion) bool {
@@ -80,7 +45,7 @@ func (a *Assertion) Equals(b *Assertion) bool {
 		return false
 	}
 	for i, ao := range a.OutMsgs {
-		if !ao.Equals(b.OutMsgs[i]) {
+		if !value.Eq(ao, b.OutMsgs[i]) {
 			return false
 		}
 	}
@@ -102,21 +67,18 @@ func (a *Assertion) LogsHash() [32]byte {
 }
 
 func (a *Assertion) Stub() *AssertionStub {
-	tracker := NewTokenTrackerFromMessages(a.OutMsgs)
-	_, amounts := tracker.GetTypesAndAmounts()
 	var lastHash [32]byte
 	for _, msg := range a.OutMsgs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.AsValue().Hash()))
+		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
 		copy(lastHash[:], next)
 	}
 
 	return &AssertionStub{
-		a.AfterHash,
-		a.NumSteps,
-		[32]byte{},
-		lastHash,
-		[32]byte{},
-		a.LogsHash(),
-		amounts,
+		AfterHash:        value.NewHashBuf(a.AfterHash),
+		NumSteps:         a.NumSteps,
+		FirstMessageHash: value.NewHashBuf([32]byte{}),
+		LastMessageHash:  value.NewHashBuf(lastHash),
+		FirstLogHash:     value.NewHashBuf([32]byte{}),
+		LastLogHash:      value.NewHashBuf(a.LogsHash()),
 	}
 }

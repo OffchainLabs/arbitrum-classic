@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -15,6 +14,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
 
@@ -86,7 +87,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		200000,
 		common.Address{}, // Address 0 means no owner
 	)
-	ethURL := "ws://127.0.0.1:7545"
+	ethURL := "ws://127.0.0.1:7546"
 	contract := "contract.ao"
 
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
@@ -114,7 +115,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		return err
 	}
 
-	address, err := val1.LaunchChannel(context.Background(), config, mach.Hash())
+	address, err := val1.CreateChannel(context.Background(), config, mach.Hash())
 	if err != nil {
 		t.Error(err)
 		return err
@@ -195,8 +196,8 @@ func _computePubKeyString(privKeyBytes []byte) (string, error) {
 }
 
 func RunValidators(t *testing.T) (*FibonacciSession, error) {
-	coordinatorKey := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	followerKey := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	coordinatorKey := "4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
+	followerKey := "6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1"
 	err := setupValidators(coordinatorKey, followerKey, t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)

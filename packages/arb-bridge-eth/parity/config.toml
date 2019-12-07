@@ -1,0 +1,24 @@
+[rpc]
+port = 7545
+interface = "all"
+cors = ["all"]
+hosts = ["all"]
+apis = ["all"]
+
+[websockets]
+disable = false
+port = 7546
+interface = "all"
+apis = ["all"]
+hosts = ["all"]
+
+[mining]
+engine_signer = "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82"
+force_sealing = true
+min_gas_price = 1
+# Targeting 7500000 gas per block when sealing a new block.
+gas_floor_target = "7500000"
+# Gas limit will be raised at most by 7500000 gas.
+gas_cap = "7500000"
+# Parity will reject transactions above 7500000 gas.
+tx_gas_limit = "7500000"

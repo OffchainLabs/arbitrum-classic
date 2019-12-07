@@ -17,148 +17,73 @@
 package protocol
 
 import (
-	"encoding/binary"
-	"fmt"
-	"io"
-	"math/big"
+	"bytes"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
-
-type AssertionStub struct {
-	AfterHash        [32]byte
-	NumSteps         uint32
-	FirstMessageHash [32]byte
-	LastMessageHash  [32]byte
-	FirstLogHash     [32]byte
-	LastLogHash      [32]byte
-	TotalVals        []*big.Int
-}
-
-func (a *AssertionStub) String() string {
-	return fmt.Sprintf("AssertionStub(%x, %v, %x, %x, %v)", a.AfterHash, a.NumSteps, a.FirstMessageHash, a.LastMessageHash, a.TotalVals)
-}
-
-func NewAssertionStubFromReader(rd io.Reader) (AssertionStub, error) {
-	var afterHash [32]byte
-	_, err := io.ReadFull(rd, afterHash[:])
-	if err != nil {
-		return AssertionStub{}, err
-	}
-	var numSteps uint32
-	err = binary.Read(rd, binary.LittleEndian, &numSteps)
-	if err != nil {
-		return AssertionStub{}, err
-	}
-	var firstMessageHash [32]byte
-	_, err = io.ReadFull(rd, firstMessageHash[:])
-	if err != nil {
-		return AssertionStub{}, err
-	}
-	var lastMessageHash [32]byte
-	_, err = io.ReadFull(rd, lastMessageHash[:])
-	if err != nil {
-		return AssertionStub{}, err
-	}
-
-	var firstLogHash [32]byte
-	_, err = io.ReadFull(rd, firstMessageHash[:])
-	if err != nil {
-		return AssertionStub{}, err
-	}
-	var lastLogHash [32]byte
-	_, err = io.ReadFull(rd, lastMessageHash[:])
-	if err != nil {
-		return AssertionStub{}, err
-	}
-
-	var valCount int32
-	err = binary.Read(rd, binary.LittleEndian, &valCount)
-	if err != nil {
-		return AssertionStub{}, err
-	}
-	totalVals := make([]*big.Int, valCount)
-	for i := range totalVals {
-		intVal, err := value.NewIntValueFromReader(rd)
-		if err != nil {
-			return AssertionStub{}, err
-		}
-		totalVals[i] = intVal.BigInt()
-	}
-	return AssertionStub{afterHash, numSteps, firstMessageHash, lastMessageHash, firstLogHash, lastLogHash, totalVals}, nil
-}
-
-func (a *AssertionStub) Marshal(wr io.Writer) error {
-	if wr == nil {
-		return nil
-	}
-	_, err := wr.Write(a.AfterHash[:])
-	if err != nil {
-		return err
-	}
-	err = binary.Write(wr, binary.LittleEndian, &a.NumSteps)
-	if err != nil {
-		return err
-	}
-	_, err = wr.Write(a.FirstMessageHash[:])
-	if err != nil {
-		return err
-	}
-	_, err = wr.Write(a.LastMessageHash[:])
-	if err != nil {
-		return err
-	}
-	numMsgs := int32(len(a.TotalVals))
-	err = binary.Write(wr, binary.LittleEndian, &numMsgs)
-	if err != nil {
-		return err
-	}
-	for _, val := range a.TotalVals {
-		err := value.NewIntValue(val).Marshal(wr)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 func (a *AssertionStub) Equals(b *AssertionStub) bool {
 	if a.AfterHash != b.AfterHash ||
 		a.NumSteps != b.NumSteps ||
-		a.FirstMessageHash != b.FirstMessageHash ||
-		a.LastMessageHash != b.LastMessageHash ||
-		(len(a.TotalVals) != len(b.TotalVals)) {
+		!bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) ||
+		!bytes.Equal(a.LastMessageHash.Value, b.LastMessageHash.Value) ||
+		!bytes.Equal(a.FirstLogHash.Value, b.FirstLogHash.Value) ||
+		!bytes.Equal(a.LastLogHash.Value, b.LastLogHash.Value) {
 		return false
 	}
-	for i, ao := range a.TotalVals {
-		if ao.Cmp(b.TotalVals[i]) != 0 {
-			return false
-		}
-	}
 	return true
+}
+
+func (a *AssertionStub) AfterHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.AfterHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) FirstMessageHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.FirstMessageHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) LastMessageHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.LastMessageHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) FirstLogHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.FirstLogHash.Value)
+	return ret
+}
+
+func (a *AssertionStub) LastLogHashValue() [32]byte {
+	var ret [32]byte
+	copy(ret[:], a.LastLogHash.Value)
+	return ret
 }
 
 func (a *AssertionStub) Hash() [32]byte {
 	var ret [32]byte
 	hashVal := solsha3.SoliditySHA3(
-		solsha3.Bytes32(a.AfterHash),
+		solsha3.Bytes32(a.AfterHash.Value),
 		solsha3.Uint32(a.NumSteps),
-		solsha3.Bytes32(a.FirstMessageHash),
-		solsha3.Bytes32(a.LastMessageHash),
-		solsha3.Bytes32(a.FirstLogHash),
-		solsha3.Bytes32(a.LastLogHash),
-		solsha3.Uint256Array(a.TotalVals),
+		solsha3.Bytes32(a.FirstMessageHash.Value),
+		solsha3.Bytes32(a.LastMessageHash.Value),
+		solsha3.Bytes32(a.FirstLogHash.Value),
+		solsha3.Bytes32(a.LastLogHash.Value),
 	)
 	copy(ret[:], hashVal)
 	return ret
 }
 
 func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
-	bt := pre.BeforeBalance.Clone()
-	bt.RemoveAssertionValues(a.TotalVals)
-	return NewPrecondition(a.AfterHash, pre.TimeBounds, bt, pre.BeforeInbox)
+	return &Precondition{
+		BeforeHash:  a.AfterHash,
+		TimeBounds:  pre.TimeBounds,
+		BeforeInbox: pre.BeforeInbox,
+	}
 }
 
 func GeneratePreconditions(pre *Precondition, assertions []*AssertionStub) []*Precondition {

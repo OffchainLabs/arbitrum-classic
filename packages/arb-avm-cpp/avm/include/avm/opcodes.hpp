@@ -81,7 +81,6 @@ enum class OpCode : uint8_t {
     LOG,
 
     SEND = 0x70,
-    NBSEND,
     GETTIME,
     INBOX,
     ERROR,
@@ -159,7 +158,6 @@ const std::map<OpCode, std::string> InstructionNames = {
     {OpCode::LOG, "log"},
 
     {OpCode::SEND, "send"},
-    {OpCode::NBSEND, "nbsend"},
     {OpCode::GETTIME, "gettime"},
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
@@ -223,8 +221,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::BREAKPOINT, {}},
     {OpCode::LOG, {false}},
 
-    {OpCode::SEND, {true}},
-    {OpCode::NBSEND, {true}},
+    {OpCode::SEND, {false}},
     {OpCode::GETTIME, {}},
     {OpCode::INBOX, {false}},
     {OpCode::ERROR, {}},
@@ -289,7 +286,6 @@ const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::LOG, {}},
 
     {OpCode::SEND, {}},
-    {OpCode::NBSEND, {}},
     {OpCode::GETTIME, {}},
     {OpCode::INBOX, {}},
     {OpCode::ERROR, {}},

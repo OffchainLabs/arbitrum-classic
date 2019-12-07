@@ -18,26 +18,29 @@ message MessageBuf {
     AddressBuf sender = 4;
 }
 
-message TimeBoundsBuf {
+message TimeBounds {
     uint64 startTime = 1;
     uint64 endTime = 2;
 }
 
-message TokenTrackerBuf {
-    repeated TokenTypeBuf types = 1;
-    repeated value.BigIntegerBuf amounts = 2;
+message Precondition {
+    value.HashBuf beforeHash = 1;
+    TimeBounds timeBounds = 2;
+    value.HashBuf beforeInbox = 3;
 }
 
-message PreconditionBuf {
-    value.HashBuf beforeHash = 1;
-    TimeBoundsBuf timeBounds = 2;
-    TokenTrackerBuf balanceTracker = 3;
-    value.HashBuf beforeInbox = 4;
+message AssertionStub {
+    value.HashBuf afterHash = 1;
+    uint32 numSteps = 2;
+    value.HashBuf firstMessageHash = 3;
+    value.HashBuf lastMessageHash = 4;
+    value.HashBuf firstLogHash = 5;
+    value.HashBuf lastLogHash = 6;
 }
 
 message AssertionBuf {
     value.HashBuf afterHash = 1;
     uint32 numSteps = 2;
-    repeated MessageBuf messages = 3;
+    repeated value.ValueBuf messages = 3;
     repeated value.ValueBuf logs = 4;
 }
