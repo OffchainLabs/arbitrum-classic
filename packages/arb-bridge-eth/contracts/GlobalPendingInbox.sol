@@ -40,195 +40,302 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         return messages;
     }
 
-    function sendMessages(bytes calldata _messages) external {
-        uint offset = 0;
-        bool valid;
-        bytes32 messageHash;
-        uint256 destination;
-        uint256 value;
-        uint256 tokenType;
-        bytes memory messageData;
-        uint totalLength = _messages.length;
-        while (offset < totalLength) {
-            (
-                valid,
-                offset,
-                messageHash,
-                destination,
-                value,
-                tokenType,
-                messageData
-            ) = Value.deserializeMessage(_messages, offset);
-            if (valid) {
-                _sendUnpaidMessage(
-                    address(bytes20(bytes32(destination))),
-                    bytes21(bytes32(tokenType)),
-                    value,
-                    msg.sender,
-                    messageData
-                );
-            }
-        }
-    }
-
     function registerForInbox() external {
         require(pending[msg.sender] == 0, "Pending must be uninitialized");
         pending[msg.sender] = Value.hashEmptyTuple();
     }
 
-    function sendMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
-        bytes calldata _data
-    )
-        external
-    {
-        _sendUnpaidMessage(
-            _destination,
-            _tokenType,
-            _amount,
-            msg.sender,
-            _data
-        );
+    function sendMessages(bytes calldata _messages) external {
+        uint offset = 0;
+        bool valid;
+        uint256 messageType;
+        bytes32 messageHash;
+        uint256 destination;
+        uint256 value;
+        uint256 tokenContract;
+        bytes memory messageData;
+        uint totalLength = _messages.length;
+
+        while (offset < totalLength) {
+
+            uint256 messageType = _messages[offset]; //check
+
+            if(messageType == 0){
+
+            }else if(messageType == 1){
+
+            }else if(messageType == 2){
+
+            }else{
+
+            }
+
+
+            (   valid,
+                offset,
+                messageType,
+                messageHash,
+                destination,
+                value,
+                tokenContract,
+                messageData
+            ) = Value.deserializeMessage(_messages, offset);
+
+            if (valid){
+
+
+            }
+        }
     }
 
     function forwardMessage(
         address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
         bytes calldata _data,
-        bytes calldata _signature
-    )
-        external
+        bytes calldata _signature) external
     {
         address sender = SigUtils.recoverAddress(
             keccak256(
                 abi.encodePacked(
                     _destination,
-                    Value.deserializeHashed(_data),
-                    _amount,
-                    _tokenType
+                    ArbValue.deserializeValueHash(_data)
                 )
             ),
             _signature
         );
 
-        _sendUnpaidMessage(
-            _destination,
-            _tokenType,
-            _amount,
+        _deliverDataMessage(
             sender,
+            _destination,
             _data
         );
     }
 
-    function sendEthMessage(address _destination, bytes calldata _data) external payable {
-        depositEth(_destination);
-        _deliverMessage(
+    function sendMessage(address _destination, bytes calldata _data) external
+    {
+        _deliverDataMessage(
+            msg.sender,
             _destination,
-            bytes21(0),
+            _data
+        );
+    }
+
+    function forwardERC20Message(
+        address _tokenContract,
+        address _sender,
+        address _destination,
+        uint256 _value,
+        bytes calldata _signature) external
+    {
+        address sender = SigUtils.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    _tokenContract,
+                    _sender,
+                    _destination,
+                    _value
+                )
+            ),
+            _signature
+        );
+
+        transferERC20Message(_tokenContract, sender, _destination, _value);
+    }
+
+    function forwardERC721Message(
+        address _tokenContract,
+        address _sender,
+        address _destination,
+        uint256 _value,
+        bytes calldata _signature) external
+    {
+        address sender = SigUtils.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    _tokenContract,
+                    _sender,
+                    _destination,
+                    _value
+                )
+            ),
+            _signature
+        );
+
+        transferERC721Message(_tokenContract, sender, _destination, _value);
+    }
+
+    function transferERC20Message(
+        address _tokenContract,
+        address _sender,
+        address _destination,
+        uint256 _value) external
+    {
+        transferToken(
+            _sender,
+            _destination,
+            _tokenContract),
+            _value
+        );
+
+        _deliverERCTokenMessage(
+            _sender,
+            _destination,
+            2,
+            _tokenContract,
+            _value
+        );
+    }
+
+    function transferERC721Message(
+        address _tokenContract,
+        address _sender,
+        address _destination,
+        uint256 _value) external
+    {
+        transferNFT(
+            _sender,
+            _destination,
+            _tokenContract,
+            _value
+        );
+
+        _deliverERCTokenMessage(
+            _sender,
+            _destination,
+            3,
+            _tokenContract,
+            _value
+        );
+    }  
+
+    function transferEthMessage(address _destination, bytes calldata _data) external payable 
+    {
+        depositEth(_destination);
+        
+        _deliverEthMessage(
+            _destination,
             msg.value,
             msg.sender,
             _data
         );
     }
 
-    function _sendUnpaidMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _value,
+    function _deliverDataMessage(
         address _sender,
-        bytes memory _data
-    )
-        private
+        address _destination,
+        bytes memory _data) private
     {
-        bool sent = false;
-        if (_tokenType[20] == 0x01) {
-            sent = transferNFT(
-                _sender,
-                _destination,
-                address(bytes20(_tokenType)),
-                _value
+        if (pending[_destination] != 0) 
+        {
+            bytes32 dataHash = ArbValue.deserializeValueHash(_data);
+            bytes32 txHash = keccak256(
+                abi.encodePacked(
+                    _sender,
+                    _destination,
+                    dataHash,
+                    pending[_destination]
+                )
             );
-        } else {
-            sent = transferToken(
-                _sender,
-                _destination,
-                address(bytes20(_tokenType)),
-                _value
-            );
+
+            ArbValue.Value[] memory values = new ArbValue.Value[](5);
+            values[0] = ArbValue.newIntValue(0);
+            values[1] = ArbValue.newIntValue(uint256(txHash));
+            values[2] = ArbValue.newIntValue(block.timestamp);
+            values[3] = ArbValue.newIntValue(block.number);
+            values[4] = ArbValue.newIntValue(uint256(_sender));
+
+            bytes32 messageHash =  ArbValue.newTupleValue(values).hash().hash;
+
+            _deliverMessage(_destination, messageHash);
         }
-        if (sent) {
-            _deliverMessage(
-                _destination,
-                _tokenType,
-                _value,
-                _sender,
-                _data
-            );
-        }
+
+        emit IGlobalPendingInbox.DataMessageDelivered(_destination, msg.sender, _data);
     }
 
-    function generateSentMessageHash(
-        address _dest,
-        bytes32 _data,
-        bytes21 _tokenType,
+    function _deliverEthMessage(
+        address _destination,
         uint256 _value,
-        address _sender
-    )
-        public
-        view
-        returns (bytes32)
+        address _sender,
+        bytes memory _data) private
     {
+        if (pending[_destination] != 0) 
+        {
+            bytes32 dataHash = ArbValue.deserializeValueHash(_data);
+            bytes32 txHash = keccak256(
+                abi.encodePacked(
+                    _sender,
+                    _destination,
+                    dataHash,
+                    _value,
+                    pending[_destination]
+                )
+            );
 
+            ArbValue.Value[] memory msgValues = new ArbValue.Value[](1);
+            msgValues[1] = ArbValue.newIntValue(_value);
+
+            ArbValue.Value[] memory values = new ArbValue.Value[](6);
+            values[0] = ArbValue.newIntValue(1);
+            values[1] = ArbValue.newIntValue(uint256(txHash));
+            values[2] = ArbValue.newIntValue(block.timestamp);
+            values[3] = ArbValue.newIntValue(block.number);
+            values[4] = ArbValue.newIntValue(uint256(_sender));
+            values[5] = ArbValue.newTupleValue(msgValues);
+
+            bytes32 messageHash =  ArbValue.newTupleValue(values).hash().hash;
+
+            _deliverMessage(_destination, messageHash);
+        }
+
+        emit IGlobalPendingInbox.EthMessageDelivered(_destination, _sender, _value, _data);
+    }
+
+    function _deliverERCTokenMessage(
+        address _sender,
+        address _destination,
+        uint256 _messageType,
+        address _contractAddress,
+        uint256 _value) private
+    {
+        if (pending[_destination] != 0) 
+        {
+            bytes32 txHash = keccak256(
+                abi.encodePacked(
+                    _sender,
+                    _destination,
+                    _contractAddress,
+                    _value,
+                    pending[_destination]
+                )
+            );
+
+            ArbValue.Value[] memory msgValues = new ArbValue.Value[](2);
+            msgValues[0] = ArbValue.newIntValue(uint256(_contractAddress));
+            msgValues[1] = ArbValue.newIntValue(_value);
+
+            ArbValue.Value[] memory values = new ArbValue.Value[](6);
+            values[0] = ArbValue.newIntValue(_messageType);
+            values[1] = ArbValue.newIntValue(uint256(txHash));
+            values[2] = ArbValue.newIntValue(block.timestamp);
+            values[3] = ArbValue.newIntValue(block.number);
+            values[4] = ArbValue.newIntValue(uint256(_sender));
+            values[5] = ArbValue.newTupleValue(msgValues);
+
+            bytes32 messageHash =  ArbValue.newTupleValue(values).hash().hash;
+
+            _deliverMessage(_destination, messageHash);
+        }
+
+        emit IGlobalPendingInbox.ERCTokenMessageDelivered(_destination, _sender, _messageType, _contractAddress, _value);
     }
 
     function _deliverMessage(
         address _destination,
-        bytes21 _tokenType,
-        uint256 _value,
-        address _sender,
-        bytes memory _data
-    )
-        private
+        bytes32 messageHash) private 
     {
-        if (pending[_destination] != 0) {
-            bytes32 dataHash = Value.deserializeHashed(_data);
-            bytes32 txHash = keccak256(
-                abi.encodePacked(
-                    _destination,
-                    dataHash,
-                    _value,
-                    _tokenType
-                )
-            );
-            Value.Data[] memory dataValues = new Value.Data[](4);
-            dataValues[0] = Value.newHashOnly(dataHash);
-            dataValues[1] = Value.newInt(block.timestamp);
-            dataValues[2] = Value.newInt(block.number);
-            dataValues[3] = Value.newInt(uint(txHash));
-
-            Value.Data[] memory values = new Value.Data[](4);
-            values[0] = Value.newTuple(dataValues);
-            values[1] = Value.newInt(uint256(_sender));
-            values[2] = Value.newInt(_value);
-            values[3] = Value.newInt(uint256(bytes32(_tokenType)));
-            bytes32 messageHash =  Value.newTuple(values).hash().hash;
-
-            pending[_destination] = Value.hashTuple([
-                Value.newInt(0),
-                Value.newHashOnly(pending[_destination]),
-                Value.newHashOnly(messageHash)
-            ]);
-        }
-
-        emit IGlobalPendingInbox.MessageDelivered(
-            _destination,
-            _sender,
-            _tokenType,
-            _value,
-            _data
-        );
+        pending[_destination] = ArbValue.hashTupleValue([
+            ArbValue.newIntValue(0),
+            ArbValue.newHashOnlyValue(pending[_destination]),
+            ArbValue.newHashOnlyValue(messageHash)
+        ]);
     }
 }

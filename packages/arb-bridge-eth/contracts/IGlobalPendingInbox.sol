@@ -18,10 +18,29 @@ pragma solidity ^0.5.3;
 
 interface IGlobalPendingInbox {
 
-    event MessageDelivered(
+    event DataMessageDelivered(
         address indexed vmId,
         address sender,
-        bytes21 tokenType,
+        bytes data
+    );
+
+    event ERC20MessageDelivered(
+        address indexed vmId,
+        address sender,
+        address tokenAddress,
+        uint256 value
+    );
+
+    event ERC721MessageDelivered(
+        address indexed vmId,
+        address sender,
+        address tokenAddress,
+        uint256 value
+    );
+
+    event EthMessageDelivered(
+        address indexed vmId,
+        address sender,
         uint256 value,
         bytes data
     );

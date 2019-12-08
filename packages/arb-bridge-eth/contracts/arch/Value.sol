@@ -396,10 +396,22 @@ library Value {
         return value.hash().hash;
     }
 
+    function deserializeEthMessage(){
+
+    }
+
+    function deserializeERCTokenMessage(){
+
+    }
+
+
+    function DeserializeDataMessage(){
+
+    }
+
     function deserializeMessage(
         bytes memory data,
-        uint startOffset
-    )
+        uint startOffset)
         public
         pure
         returns(
