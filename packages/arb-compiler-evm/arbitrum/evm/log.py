@@ -122,11 +122,7 @@ class EVMOutput:
         self.orig_message = LogMessage(val[0])
         self.decoded = False
         self.abi = {}
-        self.name = "Unknown Function"
-        if self.orig_message.message_type == 0:
-            self.name = self.abi["name"]
-        else:
-            self.name = self.orig_message.raw_func_name()
+        self.name = self.orig_message.raw_func_name()
 
     def decode(self, functions, events):
         if self.orig_message.message_type == 0:

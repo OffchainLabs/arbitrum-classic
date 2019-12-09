@@ -142,10 +142,6 @@ class TestEVM(TestCase):
         contract_a = make_contract(evm_code, "uint256")
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, False, False)
-        with open("debug.txt", "w") as f:
-            for instr in vm.code:
-                f.write("{} {}".format(instr, instr.path))
-                f.write("\n")
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
             make_msg_val(
@@ -296,11 +292,12 @@ class TestEVM(TestCase):
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
-        self.assertEqual(parsed_out.output_values[0], 62244)
+        self.assertEqual(len(vm.logs), 2)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        self.assertIsInstance(parsed_out0, EVMDeposit)
+        self.assertIsInstance(parsed_out1, EVMCall)
+        self.assertEqual(parsed_out1.output_values[0], 62244)
 
     def test_eth(self):
         erc20 = contract_templates.get_erc20_contract()

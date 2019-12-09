@@ -80,6 +80,7 @@ def process_deposit_eth(vm):
 def process_deposit_erc20(vm):
     vm.pop()
     os.process_deposit_erc20_message(vm)
+    vm.swap1()
     execution.initial_call(vm, "deposit_erc20_initial")
     vm.pop()
 
@@ -87,6 +88,7 @@ def process_deposit_erc20(vm):
 def process_deposit_erc721(vm):
     vm.pop()
     os.process_deposit_erc721_message(vm)
+    vm.swap1()
     execution.initial_call(vm, "deposit_erc712_initial")
     vm.pop()
 
@@ -109,6 +111,7 @@ def process_withdraw_erc20(vm):
     vm.pop()
     vm.dup0()
     os.process_withdraw_erc20_message(vm)
+    vm.swap1()
     execution.initial_call(vm, "withdraw_erc20_initial")
     # status message
     vm.ifelse(
@@ -125,6 +128,7 @@ def process_withdraw_erc721(vm):
     vm.pop()
     vm.dup0()
     os.process_withdraw_erc721_message(vm)
+    vm.swap1()
     execution.initial_call(vm, "withdraw_erc721_initial")
     # status message
     vm.ifelse(
