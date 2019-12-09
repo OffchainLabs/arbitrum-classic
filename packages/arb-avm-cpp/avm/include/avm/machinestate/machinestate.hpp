@@ -33,6 +33,7 @@ class CheckpointStorage;
 
 struct AssertionContext {
     uint32_t numSteps;
+    uint64_t numGas;
     TimeBounds timeBounds;
     std::vector<value> outMessage;
     std::vector<value> logs;

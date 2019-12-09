@@ -43,6 +43,7 @@ contract ArbBase is IArbBase {
         address asserter,
         uint64[2] timeBounds,
         uint32 numSteps,
+        uint64 numGas,
         uint64 deadline
     );
 
@@ -144,6 +145,7 @@ contract ArbBase is IArbBase {
         bytes32 _messagesAccHash,
         bytes32 _logsAccHash,
         uint32 _numSteps,
+        uint64 _numGas,
         uint64[2] memory _timeBounds
     )
         public
@@ -162,6 +164,7 @@ contract ArbBase is IArbBase {
             _messagesAccHash,
             _logsAccHash,
             _numSteps,
+            _numGas,
             _timeBounds
         );
     }
@@ -170,6 +173,7 @@ contract ArbBase is IArbBase {
         bytes32 _preconditionHash,
         bytes32 _afterHash,
         uint32 _numSteps,
+        uint64 _numGas,
         bytes memory _messages,
         bytes32 _logsAccHash
     )
@@ -180,6 +184,7 @@ contract ArbBase is IArbBase {
             _preconditionHash,
             _afterHash,
             _numSteps,
+            _numGas,
             _messages,
             _logsAccHash
         );

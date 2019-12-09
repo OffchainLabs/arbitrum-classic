@@ -26,6 +26,7 @@ type MachineAssertionContext struct {
 	machine    *Machine
 	timeBounds *protocol.TimeBounds
 	numSteps   uint32
+	numGas     uint64
 	outMsgs    []value.Value
 	logs       []value.Value
 }
@@ -34,6 +35,7 @@ func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBounds) *Ma
 	ret := &MachineAssertionContext{
 		m,
 		timeBounds,
+		0,
 		0,
 		make([]value.Value, 0),
 		make([]value.Value, 0),
@@ -54,6 +56,10 @@ func (ac *MachineAssertionContext) StepCount() uint32 {
 	return ac.numSteps
 }
 
+func (ac *MachineAssertionContext) GasCount() uint64 {
+	return ac.numGas
+}
+
 func (ac *MachineAssertionContext) OutMessageCount() int {
 	return len(ac.outMsgs)
 }
@@ -62,13 +68,14 @@ func (ac *MachineAssertionContext) GetTimeBounds() value.Value {
 	return ac.timeBounds.AsValue()
 }
 
-func (ac *MachineAssertionContext) NotifyStep() {
+func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {
 	ac.numSteps++
+	ac.numGas = ac.numGas + numGas
 }
 
 func (ac *MachineAssertionContext) Finalize(m *Machine) *protocol.Assertion {
 	ac.machine.SetContext(&machine.NoContext{})
-	return protocol.NewAssertion(ac.machine.Hash(), ac.numSteps, ac.outMsgs, ac.logs)
+	return protocol.NewAssertion(ac.machine.Hash(), ac.numSteps, ac.numGas, ac.outMsgs, ac.logs)
 }
 
 func (ac *MachineAssertionContext) EndContext() {

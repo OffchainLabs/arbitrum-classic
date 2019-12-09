@@ -46,6 +46,7 @@ contract ChannelFactory is CloneFactory {
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
+        uint64 _maxArbGas,
         uint128 _escrowRequired,
         address payable _owner,
         address[] memory _validatorKeys
@@ -57,6 +58,7 @@ contract ChannelFactory is CloneFactory {
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
+            _maxArbGas,
             _escrowRequired,
             _owner,
             challengeFactoryAddress,

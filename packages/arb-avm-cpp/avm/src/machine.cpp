@@ -84,7 +84,7 @@ Assertion Machine::run(uint64_t stepCount,
             break;
         }
     }
-    return {machine_state.context.numSteps,
+    return {machine_state.context.numSteps, machine_state.context.numGas,
             std::move(machine_state.context.outMessage),
             std::move(machine_state.context.logs)};
 }
@@ -132,9 +132,10 @@ void Machine::runOne() {
         } catch (const bad_tuple_index& e) {
             machine_state.state = Status::Error;
         }
-        // if not blocked, increment step count
+        // if not blocked, increment step count and gas count
         if (nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
             machine_state.context.numSteps++;
+            machine_state.context.numGas++;
         }
 
         if (machine_state.state != Status::Error) {

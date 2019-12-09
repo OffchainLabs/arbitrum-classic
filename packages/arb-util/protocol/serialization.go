@@ -105,6 +105,7 @@ func NewAssertionFromBuf(buf *AssertionBuf) (*Assertion, error) {
 	return NewAssertion(
 		value.NewHashFromBuf(buf.AfterHash),
 		buf.NumSteps,
+		buf.NumGas,
 		messages,
 		logs,
 	), nil

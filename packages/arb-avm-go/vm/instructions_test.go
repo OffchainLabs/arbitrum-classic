@@ -49,7 +49,7 @@ func TestMachineAdd(t *testing.T) {
 }
 
 func runInstOpNoFault(m *Machine, oper value.Operation) (bool, string) {
-	if _, blockReason := RunInstruction(m, oper); blockReason != nil {
+	if _, _, blockReason := RunInstruction(m, oper); blockReason != nil {
 		return false, fmt.Sprintf("RunInstruction blocked: %#v", blockReason)
 	}
 
@@ -65,7 +65,7 @@ func runInstNoFault(m *Machine, oper value.Opcode) (bool, string) {
 }
 
 func runInstWithError(m *Machine, oper value.Opcode) (bool, string) {
-	if _, blockReason := RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); blockReason != nil {
+	if _, _, blockReason := RunInstruction(m, value.BasicOperation{Op: value.Opcode(oper)}); blockReason != nil {
 		return false, fmt.Sprintf("RunInstruction blocked: %#v", blockReason)
 	}
 
@@ -1468,7 +1468,7 @@ func TestBreakpoint(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 
-	_, blocked := RunInstruction(m, value.BasicOperation{Op: code.BREAKPOINT})
+	_, _, blocked := RunInstruction(m, value.BasicOperation{Op: code.BREAKPOINT})
 	if _, ok := blocked.(machine.BreakpointBlocked); !ok {
 		t.Error("Failed to produce breakpoint block")
 	}

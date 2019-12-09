@@ -244,7 +244,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 	)
 	m.blockReason = nil
 	for assCtx.StepCount() < uint32(maxSteps) {
-		_, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
+		_, _, blocked := RunInstruction(m, m.pc.GetCurrentInsn())
 		if blocked != nil {
 			m.blockReason = blocked
 			break

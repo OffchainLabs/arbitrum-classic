@@ -42,6 +42,7 @@ contract Challenge is IChallenge {
         bytes32[] messageAccs,
         bytes32[] logAccs,
         uint32 totalSteps,
+        uint64 totalGas,
         uint64 deadline
     );
 
@@ -153,18 +154,25 @@ contract Challenge is IChallenge {
         bytes32[] memory _machineHashes,
         bytes32[] memory _messageAccs,
         bytes32[] memory _logAccs,
-        uint32 _totalSteps
+        uint64[] _gases,
+        uint32 _totalSteps,
+        uint64 _totalGas
     )
         public
     {
         uint bisectionCount = _machineHashes.length - 1;
         require(bisectionCount + 1 == _messageAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _logAccs.length, BIS_INPLEN);
+        require(bisectionCount + 1 == _gases.length, BIS_INPLEN);
         require(State.Challenged == state, BIS_STATE);
         require(block.number <= deadline, BIS_DEADLINE);
         require(msg.sender == players[0], BIS_SENDER);
 
-
+        uint64 sumGases = 0;
+        for (i=0; i<bisectionCount+1; i++) {
+            sumGases = sumGases+_gases[i];
+        }
+        require(sumGases==_totalGas, BIS_SUMGAS);
 
         require(
             keccak256(
@@ -174,6 +182,7 @@ contract Challenge is IChallenge {
                     Protocol.generateAssertionHash(
                         _machineHashes[bisectionCount],
                         _totalSteps,
+                        _totalGas,
                         _messageAccs[0],
                         _messageAccs[bisectionCount],
                         _logAccs[0],
@@ -192,6 +201,7 @@ contract Challenge is IChallenge {
                 Protocol.generateAssertionHash(
                     _machineHashes[1],
                     _totalSteps / uint32(bisectionCount) + _totalSteps%uint32(bisectionCount),
+                    _gases[0],
                     _messageAccs[0],
                     _messageAccs[1],
                     _logAccs[0],
@@ -207,6 +217,7 @@ contract Challenge is IChallenge {
                     Protocol.generateAssertionHash(
                         _machineHashes[i + 1],
                         _totalSteps / uint32(bisectionCount),
+                        _gases[i],
                         _messageAccs[i],
                         _messageAccs[i + 1],
                         _logAccs[i],
@@ -225,6 +236,7 @@ contract Challenge is IChallenge {
             _messageAccs,
             _logAccs,
             _totalSteps,
+            _totalGas,
             newDeadline
         );
     }
@@ -267,6 +279,7 @@ contract Challenge is IChallenge {
         bytes32 _lastMessage,
         bytes32 _firstLog,
         bytes32 _lastLog,
+        uint64  _gas,
         bytes memory _proof
     )
         public
@@ -287,6 +300,7 @@ contract Challenge is IChallenge {
                     Protocol.generateAssertionHash(
                         _afterHash,
                         1,
+                        _gas,
                         _firstMessage,
                         _lastMessage,
                         _firstLog,
@@ -306,6 +320,7 @@ contract Challenge is IChallenge {
             _lastMessage,
             _firstLog,
             _lastLog,
+            _gas,
             _proof
         );
 
