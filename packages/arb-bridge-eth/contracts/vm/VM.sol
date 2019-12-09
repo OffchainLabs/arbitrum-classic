@@ -42,6 +42,7 @@ library VM {
         uint64 sequenceNum;
         uint32 gracePeriod;
         uint32 maxExecutionSteps;
+        uint64 maxArbGas;
         State state;
         address activeChallengeManager;
     }

@@ -154,9 +154,8 @@ contract Challenge is IChallenge {
         bytes32[] memory _machineHashes,
         bytes32[] memory _messageAccs,
         bytes32[] memory _logAccs,
-        uint64[] _gases,
-        uint32 _totalSteps,
-        uint64 _totalGas
+        uint64[] memory _gases,
+        uint32 _totalSteps
     )
         public
     {
@@ -168,11 +167,10 @@ contract Challenge is IChallenge {
         require(block.number <= deadline, BIS_DEADLINE);
         require(msg.sender == players[0], BIS_SENDER);
 
-        uint64 sumGases = 0;
-        for (i=0; i<bisectionCount+1; i++) {
-            sumGases = sumGases+_gases[i];
+        uint64 _totalGas = 0;
+        for (uint i=0; i<bisectionCount+1; i++) {
+            _totalGas = _totalGas+_gases[i];
         }
-        require(sumGases==_totalGas, BIS_SUMGAS);
 
         require(
             keccak256(
