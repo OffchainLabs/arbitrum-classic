@@ -24,16 +24,10 @@ interface IGlobalPendingInbox {
         bytes data
     );
 
-    event ERC20MessageDelivered(
+    event ERCTokenMessageDelivered(
         address indexed vmId,
         address sender,
-        address tokenAddress,
-        uint256 value
-    );
-
-    event ERC721MessageDelivered(
-        address indexed vmId,
-        address sender,
+        uint256 messageType,
         address tokenAddress,
         uint256 value
     );

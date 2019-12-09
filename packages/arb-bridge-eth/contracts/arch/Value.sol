@@ -396,16 +396,50 @@ library Value {
         return value.hash().hash;
     }
 
-    function deserializeEthMessage(){
+    function deserializeEthMessage(
+        bytes memory data,
+        uint startOffset)
+        public
+        pure
+        returns(
+            bool valid,
+            uint offset,
+            bytes32 messageHash,
+            uint256 destination,
+            uint256 value,
+            bytes memory messageData)
+    {
 
     }
 
-    function deserializeERCTokenMessage(){
+    function deserializeERCTokenMessage(
+        bytes memory data,
+        uint startOffset)
+        public
+        pure
+        returns(
+            bool valid,
+            uint offset,
+            bytes32 messageHash,
+            uint256 destination,
+            uint256 value,
+            uint256 tokenAddress)
+    {
 
     }
 
-
-    function DeserializeDataMessage(){
+    function deserializeDataMessage(
+        bytes memory data,
+        uint startOffset)
+        public
+        pure
+        returns(
+            bool valid,
+            uint offset,
+            bytes32 messageHash,
+            uint256 destination,
+            bytes memory messageData)
+    {
 
     }
 

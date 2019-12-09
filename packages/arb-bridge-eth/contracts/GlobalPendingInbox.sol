@@ -27,6 +27,11 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
 contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
+    uint8 internal constant DATA_MSGTYPE = 0;
+    uint8 internal constant ETH_MSGTYPE = 1;
+    uint8 internal constant ERC20_MSGTYPE = 2;
+    uint8 internal constant ERC721_MSGTYPE = 3;
+
     using SafeMath for uint256;
     using Value for Value.Data;
 
@@ -60,30 +65,63 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             uint256 messageType = _messages[offset]; //check
 
-            if(messageType == 0){
+            if(messageType == DATA_MSGTYPE){
 
-            }else if(messageType == 1){
+                (   valid,
+                    offset,
+                    messageHash,
+                    destination,
+                    messageData
+                ) = Value.deserializeDataMessage(_messages, offset);
+            
+                if(valid){
+                    _deliverDataMessage(
+                        msg.sender,
+                        address(bytes20(bytes32(destination))),
+                        messageData
+                    );
+                }
 
-            }else if(messageType == 2){
+            }else if(messageType == ETH_MSGTYPE){
+
+                (   valid,
+                    offset,
+                    messageHash,
+                    destination,
+                    value,
+                    messageData
+                ) = Value.deserializeEthMessage(_messages, offset);
+
+                if(valid){
+                    transferEthMessage(destination, value, messageData);
+                }   
 
             }else{
 
-            }
+                (   valid,
+                    offset,
+                    messageHash,
+                    destination,
+                    value,
+                    tokenAddress
+                ) = Value.deserializeERCTokenMessage(_messages, offset);
 
+                if(valid){
 
-            (   valid,
-                offset,
-                messageType,
-                messageHash,
-                destination,
-                value,
-                tokenContract,
-                messageData
-            ) = Value.deserializeMessage(_messages, offset);
-
-            if (valid){
-
-
+                    if(messageType == ERC20_MSGTYPE){
+                        transferERC20Message(
+                            tokenAddress,
+                            msg.sender, 
+                            destination, 
+                            value);
+                    }else{
+                        ransferERC721Message(
+                            tokenAddress,
+                            msg.sender, 
+                            destination, 
+                            value);
+                    }
+                }
             }
         }
     }
@@ -179,7 +217,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         _deliverERCTokenMessage(
             _sender,
             _destination,
-            2,
+            ERC20_MSGTYPE,
             _tokenContract,
             _value
         );
@@ -201,19 +239,34 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         _deliverERCTokenMessage(
             _sender,
             _destination,
-            3,
+            ERC721_MSGTYPE,
             _tokenContract,
             _value
         );
     }  
 
-    function transferEthMessage(address _destination, bytes calldata _data) external payable 
+    function despositEthMessage(address _destination, bytes calldata _data) external payable 
     {
         depositEth(_destination);
         
         _deliverEthMessage(
             _destination,
             msg.value,
+            msg.sender,
+            _data
+        );
+    }
+
+    function transferEthMessage(
+        address _destination, 
+        uint256 _value, 
+        bytes calldata _data) external
+    {
+        transferEth(_destination, _value);
+
+        _deliverEthMessage(
+            _destination,
+            _value,
             msg.sender,
             _data
         );
@@ -236,8 +289,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 )
             );
 
+            ArbValue.Value[] memory msgValues = new ArbValue.Value[](1);
+            msgValues[0] = ArbValue.newHashOnly(dataHash);
+
             ArbValue.Value[] memory values = new ArbValue.Value[](5);
-            values[0] = ArbValue.newIntValue(0);
+            values[0] = ArbValue.newIntValue(DATA_MSGTYPE);
             values[1] = ArbValue.newIntValue(uint256(txHash));
             values[2] = ArbValue.newIntValue(block.timestamp);
             values[3] = ArbValue.newIntValue(block.number);
@@ -270,11 +326,12 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 )
             );
 
-            ArbValue.Value[] memory msgValues = new ArbValue.Value[](1);
-            msgValues[1] = ArbValue.newIntValue(_value);
+            ArbValue.Value[] memory msgValues = new ArbValue.Value[](2);
+            msgValues[0] = ArbValue.newIntValue(_value);
+            msgValues[1] = ArbValue.newHashOnly(dataHash);
 
             ArbValue.Value[] memory values = new ArbValue.Value[](6);
-            values[0] = ArbValue.newIntValue(1);
+            values[0] = ArbValue.newIntValue(ETH_MSGTYPE);
             values[1] = ArbValue.newIntValue(uint256(txHash));
             values[2] = ArbValue.newIntValue(block.timestamp);
             values[3] = ArbValue.newIntValue(block.number);

@@ -91,6 +91,15 @@ contract GlobalWallet {
         msg.sender.transfer(_value);
     }
 
+    function transferEth(address _destination, uint256 _value) external {
+        require(
+            removeToken(msg.sender, ETH_ADDRESS, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+
+        _destination.transfer(_value);
+    }
+
     function depositERC20(address _tokenContract, uint256 _value) external {
         IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
         addToken(msg.sender, _tokenContract, _value);
