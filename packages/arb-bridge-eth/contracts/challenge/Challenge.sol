@@ -149,6 +149,15 @@ contract Challenge is IChallenge {
         );
     }
 
+    struct BisectAssertionData {
+        bytes32 preData;
+        bytes32[] machineHashes;
+        bytes32[] messageAccs;
+        bytes32[] logAccs;
+        uint64[] gases;
+        uint32 totalSteps;
+    }
+
     function bisectAssertion(
         bytes32 _preData,
         bytes32[] memory _machineHashes,
@@ -159,32 +168,45 @@ contract Challenge is IChallenge {
     )
         public
     {
-        uint bisectionCount = _machineHashes.length - 1;
-        require(bisectionCount + 1 == _messageAccs.length, BIS_INPLEN);
-        require(bisectionCount + 1 == _logAccs.length, BIS_INPLEN);
-        require(bisectionCount + 1 == _gases.length, BIS_INPLEN);
+        _bisectAssertion(
+            BisectAssertionData(
+                _preData,
+                _machineHashes,
+                _messageAccs,
+                _logAccs,
+                _gases,
+                _totalSteps
+            )
+        );
+    }
+
+    function _bisectAssertion(BisectAssertionData memory _data) private {
+        uint bisectionCount = _data.machineHashes.length - 1;
+        require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
+        require(bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
+        require(bisectionCount + 1 == _data.gases.length, BIS_INPLEN);
         require(State.Challenged == state, BIS_STATE);
         require(block.number <= deadline, BIS_DEADLINE);
         require(msg.sender == players[0], BIS_SENDER);
 
-        uint64 _totalGas = 0;
-        for (uint i=0; i<bisectionCount+1; i++) {
-            _totalGas = _totalGas+_gases[i];
+        uint64 totalGas = 0;
+        for (uint i = 0; i < bisectionCount + 1; i++) {
+            totalGas += _data.gases[i];
         }
 
         require(
             keccak256(
                 abi.encodePacked(
-                    _preData,
-                    _machineHashes[0],
+                    _data.preData,
+                    _data.machineHashes[0],
                     Protocol.generateAssertionHash(
-                        _machineHashes[bisectionCount],
-                        _totalSteps,
-                        _totalGas,
-                        _messageAccs[0],
-                        _messageAccs[bisectionCount],
-                        _logAccs[0],
-                        _logAccs[bisectionCount]
+                        _data.machineHashes[bisectionCount],
+                        _data.totalSteps,
+                        totalGas,
+                        _data.messageAccs[0],
+                        _data.messageAccs[bisectionCount],
+                        _data.logAccs[0],
+                        _data.logAccs[bisectionCount]
                     )
                 )
             ) == challengeState,
@@ -194,32 +216,32 @@ contract Challenge is IChallenge {
         bytes32[] memory hashes = new bytes32[](bisectionCount);
         hashes[0] = keccak256(
             abi.encodePacked(
-                _preData,
-                _machineHashes[0],
+                _data.preData,
+                _data.machineHashes[0],
                 Protocol.generateAssertionHash(
-                    _machineHashes[1],
-                    _totalSteps / uint32(bisectionCount) + _totalSteps%uint32(bisectionCount),
-                    _gases[0],
-                    _messageAccs[0],
-                    _messageAccs[1],
-                    _logAccs[0],
-                    _logAccs[1]
+                    _data.machineHashes[1],
+                    _data.totalSteps / uint32(bisectionCount) + _data.totalSteps%uint32(bisectionCount),
+                    _data.gases[0],
+                    _data.messageAccs[0],
+                    _data.messageAccs[1],
+                    _data.logAccs[0],
+                    _data.logAccs[1]
                 )
             )
         );
         for (uint i = 1; i < bisectionCount; i++) {
             hashes[i] = keccak256(
                 abi.encodePacked(
-                    _preData,
-                    _machineHashes[i],
+                    _data.preData,
+                    _data.machineHashes[i],
                     Protocol.generateAssertionHash(
-                        _machineHashes[i + 1],
-                        _totalSteps / uint32(bisectionCount),
-                        _gases[i],
-                        _messageAccs[i],
-                        _messageAccs[i + 1],
-                        _logAccs[i],
-                        _logAccs[i + 1]
+                        _data.machineHashes[i + 1],
+                        _data.totalSteps / uint32(bisectionCount),
+                        _data.gases[i],
+                        _data.messageAccs[i],
+                        _data.messageAccs[i + 1],
+                        _data.logAccs[i],
+                        _data.logAccs[i + 1]
                     )
                 )
             );
@@ -230,11 +252,11 @@ contract Challenge is IChallenge {
         deadline = newDeadline;
 
         emit BisectedAssertion(
-            _machineHashes,
-            _messageAccs,
-            _logAccs,
-            _totalSteps,
-            _totalGas,
+            _data.machineHashes,
+            _data.messageAccs,
+            _data.logAccs,
+            _data.totalSteps,
+            totalGas,
             newDeadline
         );
     }
