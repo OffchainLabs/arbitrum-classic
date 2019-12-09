@@ -43,7 +43,7 @@ library VM {
         uint32 gracePeriod;
         uint32 maxExecutionSteps;
         State state;
-        bool inChallenge;
+        address activeChallengeManager;
     }
 
     struct FullAssertion {

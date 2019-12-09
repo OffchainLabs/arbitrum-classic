@@ -25,7 +25,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 )
 
@@ -41,28 +40,28 @@ func (bot attemptingUnanimousClosing) ChannelUpdateTime(time uint64, bridge brid
 	return bot, nil
 }
 
-func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev.(type) {
 	case ethbridge.PendingUnanimousAssertEvent:
 		// Someone proposed a pending update
 		// Final update has already been sent
-		return bot, nil, nil
+		return bot, nil
 	case ethbridge.PendingDisputableAssertionEvent:
 		// Someone proposed a disputable Assertion
 		// Final update has already been sent
-		return bot, nil, nil
+		return bot, nil
 	case ethbridge.FinalizedUnanimousAssertEvent:
 		bot.Core.DeliverMessagesToVM(bridge)
 		if bot.retChan != nil {
 			bot.retChan <- true
 		}
-		return NewWaiting(bot.Config, bot.Core), nil, nil
+		return NewWaiting(bot.Config, bot.Core), nil
 	default:
 		err := &Error{nil, "ERROR: attemptingUnanimousClosing: VM state got unsynchronized"}
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
-		return nil, nil, err
+		return nil, err
 	}
 }
 
@@ -79,44 +78,44 @@ func (bot attemptingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridg
 	return bot, nil
 }
 
-func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.PendingUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
 			// Someone proposed an old update
 			// Newer update has already been sent
 			fmt.Println("Someone proposed an old update")
-			return bot, nil, nil
+			return bot, nil
 		} else if ev.SequenceNum > bot.sequenceNum {
 			err := errors.New("unanimous Assertion unexpectedly superseded")
 			if bot.errChan != nil {
 				bot.errChan <- err
 			}
-			return nil, nil, err
+			return nil, err
 		} else {
 			return waitingOffchainClosing{
 				Config:    bot.Config,
 				Core:      bot.GetCore(),
 				assertion: bot.assertion,
-				deadline:  time + bot.VMConfig.GracePeriod,
+				deadline:  ev.Deadline,
 				retChan:   bot.retChan,
 				errChan:   bot.errChan,
-			}, nil, nil
+			}, nil
 		}
 	case ethbridge.PendingDisputableAssertionEvent:
 		// Someone proposed a disputable Assertion
 		// Unanimous proposal has already been sent
-		return bot, nil, nil
+		return bot, nil
 	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, errors.New("unanimous Assertion unexpectedly superseded by final assert")
+		return nil, errors.New("unanimous Assertion unexpectedly superseded by final assert")
 	default:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, nil, &Error{nil, "ERROR: attemptingOffchainClosing: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: attemptingOffchainClosing: VM state got unsynchronized"}
 	}
 }
 
@@ -155,26 +154,26 @@ func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.B
 	}, nil
 }
 
-func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev.(type) {
 	case ethbridge.PendingUnanimousAssertEvent:
 		err := errors.New("unanimous Assertion unexpectedly superseded by sequence number")
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
-		return nil, nil, err
+		return nil, err
 	case ethbridge.FinalizedUnanimousAssertEvent:
 		err := errors.New("unanimous Assertion unexpectedly superseded by final assert")
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
-		return nil, nil, err
+		return nil, err
 	default:
 		err := &Error{nil, "ERROR: waitingOffchainClosing: VM state got unsynchronized"}
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
-		return nil, nil, err
+		return nil, err
 	}
 }
 
@@ -188,15 +187,15 @@ func (bot finalizingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridg
 	return bot, nil
 }
 
-func (bot finalizingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, challenge.State, error) {
+func (bot finalizingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev.(type) {
 	case ethbridge.ConfirmedUnanimousAssertEvent:
 		bot.GetCore().DeliverMessagesToVM(bridge)
 		if bot.retChan != nil {
 			bot.retChan <- true
 		}
-		return NewWaiting(bot.Config, bot.Core), nil, nil
+		return NewWaiting(bot.Config, bot.Core), nil
 	default:
-		return nil, nil, &Error{nil, "ERROR: finalizingOffchainClosing: VM state got unsynchronized"}
+		return nil, &Error{nil, "ERROR: finalizingOffchainClosing: VM state got unsynchronized"}
 	}
 }

@@ -111,7 +111,7 @@ func NewValidatorFollower(
 		return nil, errors2.Wrap(err, "Validator couldn't get latest error")
 	}
 
-	c, err := NewValidator(val, vmID, machine, config)
+	c, err := NewValidator(val, vmID, machine, config, challengeEverything)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Error initializing Validator in follower")
 	}
@@ -121,10 +121,9 @@ func NewValidatorFollower(
 		c,
 		val.Address(),
 		header,
-		protocol.NewBalanceTracker(),
 		config,
-		machine,
 		challengeEverything,
+		machine,
 		maxCallSteps,
 	)
 
@@ -197,7 +196,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 				BeforeHash:  value.NewHashFromBuf(request.BeforeHash),
 				BeforeInbox: value.NewHashFromBuf(request.BeforeInbox),
 				SequenceNum: request.SequenceNum,
-				TimeBounds:  protocol.NewTimeBoundsFromBuf(request.TimeBounds),
+				TimeBounds:  request.TimeBounds,
 			},
 			messages,
 			m.maxStepsUnanSteps,

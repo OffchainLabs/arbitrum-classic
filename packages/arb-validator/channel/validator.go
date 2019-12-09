@@ -54,6 +54,7 @@ func NewValidator(
 	vmID common.Address,
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
+	challengeEverything bool,
 ) (*Validator, error) {
 	con, err := ethbridge.NewArbChannel(vmID, val.Client)
 	if err != nil {
@@ -65,6 +66,7 @@ func NewValidator(
 		vmID,
 		machine,
 		config,
+		challengeEverything,
 		con,
 	)
 	if err != nil {

@@ -53,32 +53,19 @@ struct CheckpointSerializer {
 
         return return_value;
     }
-    std::vector<unsigned char> operator()(const SendBlocked& val) const {
-        auto block_type = static_cast<unsigned char>(val.type);
-        std::vector<unsigned char> return_value{block_type};
-
-        std::vector<unsigned char> data_vector;
-        marshal_uint256_t(val.currency, data_vector);
-
-        return_value.insert(return_value.end(), data_vector.begin(),
-                            data_vector.end());
-
-        return_value.insert(return_value.end(), std::begin(val.tokenType),
-                            std::end(val.tokenType));
-
-        return return_value;
-    }
 };
 
-std::unordered_map<BlockType, int> blockreason_type_length = {
-    {Not, 1}, {Halt, 1}, {Error, 1}, {Breakpoint, 1}, {Inbox, 34}, {Send, 55}};
+std::unordered_map<BlockType, int> blockreason_type_length = {{Not, 1},
+                                                              {Halt, 1},
+                                                              {Error, 1},
+                                                              {Breakpoint, 1},
+                                                              {Inbox, 34}};
 
 std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
     return nonstd::visit(CheckpointSerializer{}, val);
 }
 
 constexpr BlockType InboxBlocked::type;
-constexpr BlockType SendBlocked::type;
 
 BlockReason deserializeBlockReason(const std::vector<unsigned char>& data) {
     auto blocktype = static_cast<BlockType>(data[0]);
@@ -87,18 +74,6 @@ BlockReason deserializeBlockReason(const std::vector<unsigned char>& data) {
             auto buff = reinterpret_cast<const char*>(&data[2]);
             auto inbox = deserializeUint256t(buff);
             return InboxBlocked(inbox);
-        }
-        case Send: {
-            auto buff = reinterpret_cast<const char*>(&data[2]);
-            auto currency = deserializeUint256t(buff);
-
-            auto start_it = data.begin() + TOKEN_VAL_LENGTH + 1;
-            auto end_it = start_it + TOKEN_TYPE_LENGTH;
-
-            std::array<unsigned char, TOKEN_TYPE_LENGTH> token_type;
-            std::copy(start_it, end_it, token_type.begin());
-
-            return SendBlocked(currency, token_type);
         }
         case Halt: {
             return HaltBlocked();

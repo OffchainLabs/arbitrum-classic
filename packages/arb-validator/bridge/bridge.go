@@ -19,6 +19,11 @@ package bridge
 import (
 	"context"
 	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -57,7 +62,6 @@ type Bridge interface {
 }
 
 type ArbVMBridge interface {
-	AddedNewMessages(count uint64)
 	SendMonitorMsg(msg BridgeMessage)
 	SendMonitorErr(msg Error)
 
@@ -86,6 +90,33 @@ type ArbVMBridge interface {
 		assertion *protocol.AssertionStub,
 	) (*types.Receipt, error)
 
+	IsPendingUnanimous(
+		ctx context.Context,
+	) (bool, error)
+
+	Challenge(
+		ctx context.Context,
+		address common.Address,
+		precondition *protocol.Precondition,
+		machine machine.Machine,
+	) error
+
+	DefendChallenge(
+		ctx context.Context,
+		address common.Address,
+		assDef machine.AssertionDefender,
+	) error
+
+	ObserveChallenge(
+		ctx context.Context,
+		address common.Address,
+	) error
+}
+
+type Challenge interface {
+	SendMonitorMsg(msg BridgeMessage)
+	SendMonitorErr(msg Error)
+
 	BisectAssertion(
 		ctx context.Context,
 		precondition *protocol.Precondition,
@@ -113,10 +144,6 @@ type ArbVMBridge interface {
 	ChallengerTimedOut(
 		ctx context.Context,
 	) (*types.Receipt, error)
-
-	IsPendingUnanimous(
-		ctx context.Context,
-	) (bool, error)
 }
 
 type Error struct {

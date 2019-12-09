@@ -38,7 +38,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -309,7 +308,6 @@ type EventChainCheckpointer struct {
 	fullKey     []byte
 	machineHash [32]byte
 	timeBounds  [2]uint64
-	balances    *protocol.BalanceTracker
 	nextSeqNo   uint64
 	discarded   bool
 }
@@ -321,7 +319,7 @@ func NewEventChainCheckpointer(
 	keySuffix []byte,
 	machine *vm.Machine,
 	timeBounds [2]uint64,
-	balances *protocol.BalanceTracker) (*EventChainCheckpointer, error) {
+) (*EventChainCheckpointer, error) {
 	var buf bytes.Buffer
 	fullKey := append([]byte(_eventChainCheckpointerPrefix), keySuffix...)
 
@@ -333,9 +331,6 @@ func NewEventChainCheckpointer(
 		if err := binary.Write(&buf, binary.LittleEndian, &timeBounds[i]); err != nil {
 			return nil, err
 		}
-	}
-	if err := balances.Marshal(&buf); err != nil {
-		return nil, err
 	}
 
 	var seqNumBuf bytes.Buffer
@@ -365,7 +360,6 @@ func NewEventChainCheckpointer(
 		fullKey,
 		machineHash,
 		[2]uint64{timeBounds[0], timeBounds[1]},
-		balances.Clone(),
 		uint64(0),
 		false,
 	}, nil
@@ -520,11 +514,6 @@ func RestoreEventChainCheckpointer(cp *Checkpointer, keySuffix []byte) (*EventCh
 		}
 	}
 
-	balanceTracker, err := protocol.NewBalanceTrackerFromReader(rd)
-	if err != nil {
-		return nil, err
-	}
-
 	seqNumKey := append(fullKey, []byte(":nextseqnum:")...)
 	nextSeqNum := uint64(0)
 	if err := cp.db.View(func(txn *badger.Txn) error {
@@ -544,7 +533,6 @@ func RestoreEventChainCheckpointer(cp *Checkpointer, keySuffix []byte) (*EventCh
 		fullKey,
 		machineHash,
 		timeBounds,
-		balanceTracker,
 		nextSeqNum,
 		false,
 	}, nil

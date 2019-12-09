@@ -39,13 +39,7 @@ interface GlobalPendingInboxInterface extends Interface {
         pullPendingMessages: TypedFunctionDescription<{ encode([]: []): string }>;
 
         sendMessages: TypedFunctionDescription<{
-            encode([_tokenTypes, _messageData, _tokenTypeNum, _amounts, _destinations]: [
-                (Arrayish)[],
-                Arrayish,
-                (BigNumberish)[],
-                (BigNumberish)[],
-                (string)[],
-            ]): string;
+            encode([_messages]: [Arrayish]): string;
         }>;
 
         registerForInbox: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -104,8 +98,6 @@ export class GlobalPendingInbox extends Contract {
             1: (BigNumber)[];
         }>;
 
-        hasFunds(_owner: string, _tokenTypes: (Arrayish)[], _amounts: (BigNumberish)[]): Promise<boolean>;
-
         getTokenBalance(_tokenContract: string, _owner: string): Promise<BigNumber>;
 
         hasNFT(_tokenContract: string, _owner: string, _tokenId: BigNumberish): Promise<boolean>;
@@ -156,14 +148,7 @@ export class GlobalPendingInbox extends Contract {
 
         pullPendingMessages(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        sendMessages(
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _tokenTypeNum: (BigNumberish)[],
-            _amounts: (BigNumberish)[],
-            _destinations: (string)[],
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
+        sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
         registerForInbox(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
@@ -212,13 +197,7 @@ export class GlobalPendingInbox extends Contract {
 
         pullPendingMessages(): Promise<BigNumber>;
 
-        sendMessages(
-            _tokenTypes: (Arrayish)[],
-            _messageData: Arrayish,
-            _tokenTypeNum: (BigNumberish)[],
-            _amounts: (BigNumberish)[],
-            _destinations: (string)[],
-        ): Promise<BigNumber>;
+        sendMessages(_messages: Arrayish): Promise<BigNumber>;
 
         registerForInbox(): Promise<BigNumber>;
 

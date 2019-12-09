@@ -189,7 +189,6 @@ ParsedState parseState(const std::vector<unsigned char>& stored_state) {
 
     auto status = extractStatus(current_iter);
     auto blockreason_vector = extractBlockReason(current_iter);
-    auto balance_track_vector = extractBalanceTracker(current_iter);
 
     auto static_val = extractHashKey(current_iter);
     auto register_val = extractHashKey(current_iter);
@@ -202,19 +201,9 @@ ParsedState parseState(const std::vector<unsigned char>& stored_state) {
     auto pc = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
-    return ParsedState{static_val,
-                       register_val,
-                       datastack,
-                       auxstack,
-                       inbox,
-                       inbox_count,
-                       pending,
-                       pending_count,
-                       pc,
-                       err_pc,
-                       status,
-                       blockreason_vector,
-                       balance_track_vector};
+    return ParsedState{static_val, register_val, datastack, auxstack,
+                       inbox,      inbox_count,  pending,   pending_count,
+                       pc,         err_pc,       status,    blockreason_vector};
 }
 
 std::vector<unsigned char> serializeState(const ParsedState& state_data) {
@@ -224,18 +213,6 @@ std::vector<unsigned char> serializeState(const ParsedState& state_data) {
     state_data_vector.insert(state_data_vector.end(),
                              state_data.blockreason_str.begin(),
                              state_data.blockreason_str.end());
-
-    unsigned int tracker_length = state_data.balancetracker_str.size();
-    std::vector<unsigned char> tracker_len_vector(sizeof(tracker_length));
-    memcpy(&tracker_len_vector[0], &tracker_length, sizeof(tracker_length));
-
-    state_data_vector.insert(state_data_vector.end(),
-                             tracker_len_vector.begin(),
-                             tracker_len_vector.end());
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.balancetracker_str.begin(),
-                             state_data.balancetracker_str.end());
 
     state_data_vector.insert(state_data_vector.end(),
                              state_data.static_val_key.begin(),

@@ -160,7 +160,6 @@ uint64_t MachineState::pendingMessageCount() const {
 
 void MachineState::sendOnchainMessage(const Message& msg) {
     pendingInbox.addMessage(msg);
-    balance.add(msg.token, msg.currency);
 }
 
 void MachineState::sendOffchainMessages(const std::vector<Message>& messages) {
@@ -225,7 +224,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     auto status_str = static_cast<unsigned char>(state);
     auto blockreason_str = serializeForCheckpoint(blockReason);
-    auto balancetracker_str = balance.serializeBalanceValues();
 
     auto hash_key = GetHashKey(hash());
 
@@ -236,21 +234,19 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
         pending_results.msg_count_results.status.ok() &&
         static_val_results.status.ok() && register_val_results.status.ok() &&
         pc_results.status.ok() && err_code_point.status.ok()) {
-        auto machine_state_data = ParsedState{
-            static_val_results.storage_key,
-            register_val_results.storage_key,
-            datastack_results.storage_key,
-            auxstack_results.storage_key,
-            inbox_results.msgs_tuple_results.storage_key,
-            inbox_results.msg_count_results.storage_key,
-            pending_results.msgs_tuple_results.storage_key,
-            pending_results.msg_count_results.storage_key,
-            pc_results.storage_key,
-            err_code_point.storage_key,
-            status_str,
-            blockreason_str,
-            balancetracker_str,
-        };
+        auto machine_state_data =
+            ParsedState{static_val_results.storage_key,
+                        register_val_results.storage_key,
+                        datastack_results.storage_key,
+                        auxstack_results.storage_key,
+                        inbox_results.msgs_tuple_results.storage_key,
+                        inbox_results.msg_count_results.storage_key,
+                        pending_results.msgs_tuple_results.storage_key,
+                        pending_results.msg_count_results.storage_key,
+                        pc_results.storage_key,
+                        err_code_point.storage_key,
+                        status_str,
+                        blockreason_str};
 
         auto results =
             stateSaver.saveMachineState(machine_state_data, hash_key);
@@ -307,7 +303,6 @@ bool MachineState::restoreCheckpoint(
 
         state = static_cast<Status>(state_data.status_char);
         blockReason = deserializeBlockReason(state_data.blockreason_str);
-        balance = BalanceTracker(state_data.balancetracker_str);
     }
     return results.status.ok();
 }
@@ -489,9 +484,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
             /**********************/
         case OpCode::SEND:
             return machineoperation::send(*this);
-        case OpCode::NBSEND:
-            machineoperation::nbsend(*this);
-            break;
         case OpCode::GETTIME:
             machineoperation::getTime(*this);
             break;

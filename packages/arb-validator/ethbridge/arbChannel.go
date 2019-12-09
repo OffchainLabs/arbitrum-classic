@@ -17,12 +17,11 @@
 package ethbridge
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/channellauncher"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbchannel"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 
@@ -34,27 +33,26 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 
 type ArbChannel struct {
-	*ArbitrumVM
-	contract *channellauncher.ArbChannel
+	*ArbBase
+	contract *arbchannel.ArbChannel
 }
 
 func NewArbChannel(address common.Address, client *ethclient.Client) (*ArbChannel, error) {
-	arbVM, err := NewArbitrumVM(address, client)
+	arbVM, err := NewArbBase(address, client)
 	if err != nil {
 		return nil, err
 	}
-	channel := &ArbChannel{ArbitrumVM: arbVM}
+	channel := &ArbChannel{ArbBase: arbVM}
 	err = channel.setupContracts()
 	return channel, err
 }
 
 func (vm *ArbChannel) setupContracts() error {
-	trackerContract, err := channellauncher.NewArbChannel(vm.address, vm.Client)
+	trackerContract, err := arbchannel.NewArbChannel(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbChannel")
 	}
@@ -63,7 +61,7 @@ func (vm *ArbChannel) setupContracts() error {
 }
 
 func (vm *ArbChannel) StartConnection(ctx context.Context) error {
-	if err := vm.ArbitrumVM.StartConnection(ctx); err != nil {
+	if err := vm.ArbBase.StartConnection(ctx); err != nil {
 		return err
 	}
 	if err := vm.setupContracts(); err != nil {
@@ -75,19 +73,19 @@ func (vm *ArbChannel) StartConnection(ctx context.Context) error {
 		Start:   &start,
 	}
 
-	unanAssChan := make(chan *channellauncher.ArbChannelFinalizedUnanimousAssertion)
+	unanAssChan := make(chan *arbchannel.ArbChannelFinalizedUnanimousAssertion)
 	unanAssSub, err := vm.contract.WatchFinalizedUnanimousAssertion(watch, unanAssChan)
 	if err != nil {
 		return err
 	}
 
-	unanPropChan := make(chan *channellauncher.ArbChannelPendingUnanimousAssertion)
+	unanPropChan := make(chan *arbchannel.ArbChannelPendingUnanimousAssertion)
 	unanPropSub, err := vm.contract.WatchPendingUnanimousAssertion(watch, unanPropChan)
 	if err != nil {
 		return err
 	}
 
-	unanConfChan := make(chan *channellauncher.ArbChannelConfirmedUnanimousAssertion)
+	unanConfChan := make(chan *arbchannel.ArbChannelConfirmedUnanimousAssertion)
 	unanConfSub, err := vm.contract.WatchConfirmedUnanimousAssertion(watch, unanConfChan)
 	if err != nil {
 		return err
@@ -128,6 +126,7 @@ func (vm *ArbChannel) StartConnection(ctx context.Context) error {
 					Event: PendingUnanimousAssertEvent{
 						UnanHash:    val.UnanHash,
 						SequenceNum: val.SequenceNum,
+						Deadline:    val.Deadline,
 					},
 					TxHash: val.Raw.TxHash,
 				}
@@ -177,7 +176,7 @@ func (vm *ArbChannel) IncreaseDeposit(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "IncreaseDeposit")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "IncreaseDeposit")
 }
 
 func (vm *ArbChannel) FinalizedUnanimousAssert(
@@ -186,32 +185,20 @@ func (vm *ArbChannel) FinalizedUnanimousAssert(
 	assertion *protocol.Assertion,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.FinalizedUnanimousAssert(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
-		tokenTypes,
-		messageData.Bytes(),
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 		assertion.LogsHash(),
 		sigsToBlock(signatures),
 	)
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "FinalizedUnanimousAssert")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "FinalizedUnanimousAssert")
 }
 
 func (vm *ArbChannel) PendingUnanimousAssert(
@@ -221,29 +208,26 @@ func (vm *ArbChannel) PendingUnanimousAssert(
 	sequenceNum uint64,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
 	var unanRest [32]byte
 	copy(unanRest[:], hashing.UnanimousAssertPartialPartialHash(
 		newInboxHash,
 		assertion,
-		destinations,
 	))
+
+	stub := assertion.Stub()
 
 	tx, err := vm.contract.PendingUnanimousAssert(
 		auth,
 		unanRest,
-		tokenTypes,
-		tokenNums,
-		amounts,
 		sequenceNum,
-		assertion.LogsHash(),
+		stub.LastMessageHashValue(),
+		stub.LastLogHashValue(),
 		sigsToBlock(signatures),
 	)
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "PendingUnanimousAssert")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "PendingUnanimousAssert")
 }
 
 func (vm *ArbChannel) ConfirmUnanimousAsserted(
@@ -251,30 +235,18 @@ func (vm *ArbChannel) ConfirmUnanimousAsserted(
 	newInboxHash [32]byte,
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
-	tokenNums, amounts, destinations, tokenTypes := hashing.SplitMessages(assertion.OutMsgs)
-
-	var messageData bytes.Buffer
-	for _, msg := range assertion.OutMsgs {
-		err := value.MarshalValue(msg.Data, &messageData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	messages := hashing.CombineMessages(assertion.OutMsgs)
 
 	tx, err := vm.contract.ConfirmUnanimousAsserted(
 		auth,
 		assertion.AfterHash,
 		newInboxHash,
-		tokenTypes,
-		messageData.Bytes(),
-		tokenNums,
-		amounts,
-		destinations,
+		messages,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, tx.Hash(), "ConfirmUnanimousAsserted")
+	return waitForReceipt(auth.Context, vm.Client, auth, tx, "ConfirmUnanimousAsserted")
 }
 
 func (vm *ArbChannel) VerifyVM(
@@ -282,7 +254,10 @@ func (vm *ArbChannel) VerifyVM(
 	config *valmessage.VMConfiguration,
 	machine [32]byte,
 ) error {
-	err := vm.ArbitrumVM.VerifyVM(auth, config, machine)
+	err := vm.ArbBase.VerifyVM(auth, config, machine)
+	if err != nil {
+		return err
+	}
 	validators := make([]common.Address, 0, len(config.AssertKeys))
 	for _, assertKey := range config.AssertKeys {
 		validators = append(validators, protocol.NewAddressFromBuf(assertKey))

@@ -335,8 +335,9 @@ type ValidatorCoordinator struct {
 
 	actions chan func(*ValidatorCoordinator)
 
-	mpq               *MessageProcessingQueue
-	maxStepsUnanSteps int32
+	mpq                 *MessageProcessingQueue
+	maxStepsUnanSteps   int32
+	unanAssertionTimout time.Duration
 }
 
 func NewCoordinator(
@@ -348,13 +349,14 @@ func NewCoordinator(
 	challengeEverything bool,
 	maxCallSteps int32,
 	maxStepsUnanSteps int32,
+	unanAssertionTimout time.Duration,
 ) (*ValidatorCoordinator, error) {
 	header, err := val.LatestHeader(context.Background())
 	if err != nil {
 		return nil, errors2.Wrap(err, "Validator couldn't get latest error")
 	}
 
-	c, err := NewValidator(val, vmID, machine, config)
+	c, err := NewValidator(val, vmID, machine, config, challengeEverything)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Error initializing Validator in coordinator")
 	}
@@ -364,20 +366,20 @@ func NewCoordinator(
 		c,
 		val.Address(),
 		header,
-		protocol.NewBalanceTracker(),
 		config,
-		machine,
 		challengeEverything,
+		machine,
 		maxCallSteps,
 	)
 
 	return &ValidatorCoordinator{
-		Val:               c,
-		ChannelVal:        channelVal,
-		cm:                NewClientManager(val, vmID, c.Validators),
-		actions:           make(chan func(*ValidatorCoordinator), 10),
-		mpq:               NewMessageProcessingQueue(),
-		maxStepsUnanSteps: maxStepsUnanSteps,
+		Val:                 c,
+		ChannelVal:          channelVal,
+		cm:                  NewClientManager(val, vmID, c.Validators),
+		actions:             make(chan func(*ValidatorCoordinator), 10),
+		mpq:                 NewMessageProcessingQueue(),
+		maxStepsUnanSteps:   maxStepsUnanSteps,
+		unanAssertionTimout: unanAssertionTimout,
 	}, nil
 }
 
@@ -436,7 +438,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 					break
 				}
 
-				assertCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+				assertCtx, cancel := context.WithTimeout(context.Background(), m.unanAssertionTimout)
 				err := m.initiateUnanimousAssertionImpl(assertCtx, forceFinal, m.maxStepsUnanSteps)
 				cancel()
 				if err == nil {
@@ -553,7 +555,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 				BeforeHash:     value.NewHashBuf(unanRequest.BeforeHash),
 				BeforeInbox:    value.NewHashBuf(unanRequest.BeforeInbox),
 				SequenceNum:    unanRequest.SequenceNum,
-				TimeBounds:     protocol.NewTimeBoundsBuf(unanRequest.TimeBounds),
+				TimeBounds:     unanRequest.TimeBounds,
 				SignedMessages: requestMessages,
 			}
 			responsesChan <- m.cm.gatherSignatures(

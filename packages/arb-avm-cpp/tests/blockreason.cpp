@@ -34,17 +34,6 @@ void deserializeInboxBlocked(std::vector<unsigned char> serialized,
     REQUIRE(inbox_block.inbox == expected_inbox);
 }
 
-void deserializeSendBlocked(std::vector<unsigned char> serialized,
-                            uint256_t expected_currency,
-                            TokenType expected_token_type) {
-    auto deserialized = deserializeBlockReason(serialized);
-
-    auto inbox_block = nonstd::get<SendBlocked>(deserialized);
-    REQUIRE(inbox_block.type == Send);
-    REQUIRE(inbox_block.currency == expected_currency);
-    REQUIRE(inbox_block.tokenType == expected_token_type);
-}
-
 TEST_CASE("Serialize blockreason") {
     SECTION("NotBlocked") {
         BlockReason not_blocked = NotBlocked();
@@ -66,10 +55,6 @@ TEST_CASE("Serialize blockreason") {
         BlockReason inbox_blocked = InboxBlocked();
         serializeBlockReason(inbox_blocked, Inbox);
     }
-    SECTION("BreakpointBlocked") {
-        BlockReason send_blocked = SendBlocked();
-        serializeBlockReason(send_blocked, Send);
-    }
 }
 
 TEST_CASE("deserialize inbox blocked") {
@@ -82,20 +67,5 @@ TEST_CASE("deserialize inbox blocked") {
         auto inbox_blocked = InboxBlocked(100);
         auto serialized = serializeForCheckpoint(inbox_blocked);
         deserializeInboxBlocked(serialized, 100);
-    }
-}
-
-TEST_CASE("deserialize send blocked") {
-    SECTION("default") {
-        auto send_blocked = SendBlocked();
-        auto serialized = serializeForCheckpoint(send_blocked);
-
-        deserializeSendBlocked(serialized, 0, std::array<unsigned char, 21>());
-    }
-    SECTION("with values") {
-        std::array<unsigned char, 21> token_type = {10};
-        auto send_blocked = SendBlocked(999, token_type);
-        auto serialized = serializeForCheckpoint(send_blocked);
-        deserializeSendBlocked(serialized, 999, token_type);
     }
 }

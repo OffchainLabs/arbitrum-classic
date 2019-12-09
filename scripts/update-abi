@@ -7,17 +7,25 @@ yarn workspace arb-bridge-eth build
 cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../node_modules/solidity-bytes-utils/ ./solidity-bytes-utils
-abigen --sol=ChainLauncher.sol --pkg=chainlauncher --out=chainlauncher.go
-abigen --sol=ChannelLauncher.sol --pkg=channellauncher --out=channellauncher.go
-abigen --sol=ChallengeManager.sol --pkg=challengemanager --out=challengemanager.go
+
+abigen --sol=vm/ChainFactory.sol --pkg=chainfactory --out=chainfactory.go
+abigen --sol=vm/ChannelFactory.sol --pkg=channelfactory --out=channelfactory.go
+abigen --sol=vm/ArbChain.sol --pkg=arbchain --out=arbchain.go
+abigen --sol=vm/ArbChannel.sol --pkg=arbchannel --out=arbchannel.go
+
+abigen --sol=challenge/Challenge.sol --pkg=challenge --out=challenge.go
+
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
-abigen --sol=challenge/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
-\cp chainlauncher.go ../../arb-validator/ethbridge/chainlauncher/
-\cp channellauncher.go ../../arb-validator/ethbridge/channellauncher/
-\cp challengemanager.go ../../arb-validator/ethbridge/challengemanager/
+abigen --sol=arch/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
+
+\cp chainfactory.go ../../arb-validator/ethbridge/chainfactory/
+\cp channelfactory.go ../../arb-validator/ethbridge/channelfactory/
+\cp arbchain.go ../../arb-validator/ethbridge/arbchain/
+\cp arbchannel.go ../../arb-validator/ethbridge/arbchannel/
+\cp challenge.go ../../arb-validator/ethbridge/challenge/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin solidity-bytes-utils
-rm -f chainlauncher.go channellauncher.go challengemanager.go globalpendinginbox.go onestepproof.go
+rm -f arbchain.go arbchannel.go chainfactory.go channelfactory.go challenge.go globalpendinginbox.go onestepproof.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

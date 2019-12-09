@@ -29,7 +29,6 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 	"runtime"
 	"unsafe"
 
@@ -108,37 +107,9 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 		}
 		C.free(cBlockReason.val1.data)
 		return machine.InboxBlocked{Inbox: value.NewHashOnlyValue(inboxHashInt.ToBytes(), 0)}
-	case C.BLOCK_TYPE_SEND:
-		rawCurrency := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
-		currency, err := value.UnmarshalValue(bytes.NewReader(rawCurrency[:]))
-		if err != nil {
-			panic(err)
-		}
-		currencyInt, ok := currency.(value.IntValue)
-		if !ok {
-			panic("Inbox hash must be an int")
-		}
-		C.free(cBlockReason.val1.data)
-
-		rawTokenType := C.GoBytes(unsafe.Pointer(cBlockReason.val2.data), cBlockReason.val2.length)
-		var tokType protocol.TokenType
-		copy(tokType[:], rawTokenType)
-		C.free(cBlockReason.val2.data)
-		return machine.SendBlocked{
-			Currency:  currencyInt.BigInt(),
-			TokenType: tokType,
-		}
 	default:
 	}
 	return nil
-}
-
-func (m *Machine) CanSpend(tokenType protocol.TokenType, currency *big.Int) bool {
-	var currencyBuf bytes.Buffer
-	_ = value.NewIntValue(currency).Marshal(&currencyBuf)
-	currencyData := currencyBuf.Bytes()
-	canSpend := C.machineCanSpend(m.c, (*C.char)(unsafe.Pointer(&tokenType[0])), (*C.char)(unsafe.Pointer(&currencyData[0])))
-	return int(canSpend) != 0
 }
 
 func (m *Machine) InboxHash() value.HashOnlyValue {
@@ -183,33 +154,23 @@ func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
 	}
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		C.uint64_t(timeBounds[0]),
-		C.uint64_t(timeBounds[1]),
+		C.uint64_t(timeBounds.StartTime),
+		C.uint64_t(timeBounds.EndTime),
 	)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
 	logsRaw := C.GoBytes(unsafe.Pointer(assertion.logData), assertion.logLength)
-
 	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
-	outMessages := make([]protocol.Message, 0, len(outMessageVals))
-	for _, msgVal := range outMessageVals {
-		msg, err := protocol.NewMessageFromValue(msgVal)
-		if err != nil {
-			panic(err)
-		}
-		outMessages = append(outMessages, msg)
-	}
-
 	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
 
 	return protocol.NewAssertion(
 		m.Hash(),
 		uint32(assertion.numSteps),
-		outMessages,
+		outMessageVals,
 		logVals,
 	)
 }

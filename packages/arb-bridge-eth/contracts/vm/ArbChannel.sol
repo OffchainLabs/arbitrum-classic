@@ -17,16 +17,17 @@
 pragma solidity ^0.5.3;
 
 import "./IArbChannel.sol";
-import "./ArbitrumVM.sol";
+import "./ArbBase.sol";
 import "./Unanimous.sol";
 
 
-contract ArbChannel is ArbitrumVM, IArbChannel {
+contract ArbChannel is ArbBase, IArbChannel {
     using SafeMath for uint256;
 
     event PendingUnanimousAssertion (
         bytes32 unanHash,
-        uint64 sequenceNum
+        uint64 sequenceNum,
+        uint64 deadline
     );
 
     event ConfirmedUnanimousAssertion (
@@ -41,27 +42,28 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     uint16 public validatorCount;
     uint16 public activatedValidators;
 
-    constructor(
+    function init(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
         uint128 _escrowRequired,
         address payable _owner,
-        address _challengeManagerAddress,
+        address _challengeLauncherAddress,
         address _globalInboxAddress,
-        address[] memory _validatorKeys
+        address[] calldata _validatorKeys
     )
-        ArbitrumVM(
+        external
+    {
+        ArbBase.initialize(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
             _escrowRequired,
             _owner,
-            _challengeManagerAddress,
+            _challengeLauncherAddress,
             _globalInboxAddress
-        )
-        public
-    {
+        );
+
         activatedValidators = 0;
         validatorCount = uint16(_validatorKeys.length);
         for (uint16 i = 0; i < validatorCount; i++) {
@@ -103,11 +105,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     function finalizedUnanimousAssert(
         bytes32 _afterHash,
         bytes32 _newInbox,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations,
+        bytes memory _messages,
         bytes32 _logsAccHash,
         bytes memory _signatures
     )
@@ -116,12 +114,10 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
         Unanimous.finalizedUnanimousAssert(
             vm,
             this,
-            [_afterHash, _newInbox, _logsAccHash],
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations,
+            _afterHash,
+            _newInbox,
+            _messages,
+            _logsAccHash,
             _signatures
         );
 
@@ -134,48 +130,24 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             _afterHash
         );
 
-        _completeAssertion(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        _completeAssertion(_messages);
     }
 
     function pendingUnanimousAssert(
         bytes32 _unanRest,
-        bytes21[] memory _tokenTypes,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
         uint64 _sequenceNum,
+        bytes32 _messagesAccHash,
         bytes32 _logsAccHash,
         bytes memory _signatures
     )
         public
     {
-        uint256[] memory beforeBalances = ArbProtocol.calculateBeforeValues(
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts
-        );
-        require(ArbProtocol.beforeBalancesValid(_tokenTypes, beforeBalances), "Token types must be valid and sorted");
-        require(
-            globalInbox.hasFunds(
-                address(this),
-                _tokenTypes,
-                beforeBalances
-            ),
-            "VM has insufficient balance"
-        );
         Unanimous.pendingUnanimousAssert(
             vm,
             this,
             _unanRest,
-            _tokenTypes,
-            _messageTokenNums,
-            _messageAmounts,
             _sequenceNum,
+            _messagesAccHash,
             _logsAccHash,
             _signatures
         );
@@ -189,11 +161,7 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
     function confirmUnanimousAsserted(
         bytes32 _afterHash,
         bytes32 _newInbox,
-        bytes21[] memory _tokenTypes,
-        bytes memory _messageData,
-        uint16[] memory _messageTokenNums,
-        uint256[] memory _messageAmounts,
-        address[] memory _messageDestinations
+        bytes memory _messages
     )
         public
     {
@@ -201,19 +169,9 @@ contract ArbChannel is ArbitrumVM, IArbChannel {
             vm,
             _afterHash,
             _newInbox,
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
+            _messages
         );
 
-        _completeAssertion(
-            _tokenTypes,
-            _messageData,
-            _messageTokenNums,
-            _messageAmounts,
-            _messageDestinations
-        );
+        _completeAssertion(_messages);
     }
 }
