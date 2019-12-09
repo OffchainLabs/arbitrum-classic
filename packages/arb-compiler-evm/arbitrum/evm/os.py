@@ -817,6 +817,10 @@ def process_deposit_eth_message(vm):
     chain_state.set_val("accounts")(vm)
     set_chain_state(vm)
 
+    std.sized_byterange.new(vm)
+    vm.push(6)
+    log_func_result(vm)
+
 
 @modifies_stack([message.typ], [value.IntType()])
 def process_withdraw_eth_message(vm):
@@ -854,9 +858,21 @@ def process_withdraw_eth_message(vm):
             get_chain_state(vm),
             chain_state.set_val("accounts")(vm),
             set_chain_state(vm),
+            std.sized_byterange.new(vm),
+            vm.push(7),
+            log_func_result(vm),
             vm.push(1),
         ],
-        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.pop(), vm.push(0)],
+        lambda vm: [
+            vm.pop(),
+            vm.pop(),
+            vm.pop(),
+            vm.pop(),
+            std.sized_byterange.new(vm),
+            vm.push(5),
+            log_func_result(vm),
+            vm.push(0),
+        ],
     )
 
 

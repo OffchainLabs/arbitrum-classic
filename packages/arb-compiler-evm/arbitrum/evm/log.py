@@ -24,6 +24,8 @@ RETURN_CODE = 2
 STOP_CODE = 3
 INVALID_SEQUENCE_CODE = 4
 INSUFFICIENT_BALANCE = 5
+ETH_DEPOSIT = 6
+ETH_WITHDRAWAL = 7
 
 
 class EVMLog:
@@ -238,6 +240,22 @@ class EVMInsufficientBalance(EVMOutput):
         return "EVMInsufficientBalance()"
 
 
+class EVMDeposit(EVMOutput):
+    def __init__(self, val):
+        super().__init__(val)
+
+    def __repr__(self):
+        return "EVMDeposit()"
+
+
+class EVMWithdrawal(EVMOutput):
+    def __init__(self, val):
+        super().__init__(val)
+
+    def __repr__(self):
+        return "EVMDeposit()"
+
+
 class EVMUnknownResponseError(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
@@ -254,6 +272,8 @@ EVM_OUTPUT_TYPES = {
     INVALID_SEQUENCE_CODE: EVMInvalidSequence,
     INSUFFICIENT_BALANCE: EVMInsufficientBalance,
     STOP_CODE: EVMStop,
+    ETH_DEPOSIT: EVMDeposit,
+    ETH_WITHDRAWAL: EVMWithdrawal,
 }
 
 
