@@ -67,6 +67,7 @@ def run_vm_once(vm):
     except Exception as err:
         print("Hit exception {} while running {}".format(err, vm.pc))
         traceback.print_tb(err.__traceback__)
+        exit()
         if isinstance(vm.err_handler, value.CodePointType):
             vm.pc = vm.err_handler
         elif isinstance(vm.err_handler, AVMLabeledCodePoint):

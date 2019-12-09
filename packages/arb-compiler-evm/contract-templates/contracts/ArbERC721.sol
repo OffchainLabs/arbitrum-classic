@@ -27,6 +27,6 @@ contract ArbERC721 is ERC721 {
 
     function withdraw(uint256 tokenId) public {
         _burn(msg.sender, tokenId);
-        ArbSys(address(0x01)).sendERC721(msg.sender, address(this), tokenId);
+        ArbSys(address(0x01)).sendERC721(msg.sender, tokenId);
     }
 }

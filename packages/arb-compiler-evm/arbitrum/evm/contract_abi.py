@@ -22,7 +22,7 @@ from .. import value
 
 
 def generate_func(func_id, func_abi, address):
-    def impl(self, seq, *args):
+    def impl(self, seq, val, *args):
         if len(args) != len(func_abi["inputs"]):
             raise Exception(
                 "Function with abi {} passed not matching {} args".format(
@@ -33,7 +33,7 @@ def generate_func(func_id, func_abi, address):
             [inp["type"] for inp in func_abi["inputs"]], list(args)
         )
         msg_data = sized_byterange.frombytes(encoded_input)
-        return value.Tuple([msg_data, address, seq])
+        return value.Tuple([address, seq, val, msg_data])
 
     return impl
 

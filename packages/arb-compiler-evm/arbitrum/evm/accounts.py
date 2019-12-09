@@ -12,31 +12,104 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import eth_utils
 from .. import std
 from .. import value
 from ..annotation import modifies_stack
+from . import contract_templates
+from ..vm import VM
 
 account_state = std.Struct(
     "account_state",
     [
+        ("nonce", value.IntType()),
+        ("code", std.byterange.typ),
         ("code_point", value.CodePointType()),
+        ("code_size", value.IntType()),
+        ("code_hash", value.IntType()),
         ("storage", std.keyvalue_int_int.typ),
-        ("wallet", std.currency_store.typ),
+        ("balance", value.IntType()),
     ],
 )
 
-account_store = std.make_keyvalue_type(value.IntType(), account_state.typ)
+EMPTY_HASH_STRING = "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
 
 
-@modifies_stack([value.CodePointType()], [account_state.typ])
-def create_account(vm):
-    std.currency_store.new(vm)
-    std.keyvalue.new(vm)
-
+def make_empty_account():
+    vm = VM()
+    vm.push(0)
+    vm.push(eth_utils.to_int(hexstr=EMPTY_HASH_STRING))
+    vm.push(0)
+    std.keyvalue_int_int.new(vm)
+    vm.push(0)
     account_state.new(vm)
+    account_state.set_val("nonce")(vm)
     account_state.set_val("storage")(vm)
-    account_state.set_val("wallet")(vm)
-    account_state.set_val("code_point")(vm)
+    account_state.set_val("balance")(vm)
+    account_state.set_val("code_hash")(vm)
+    account_state.set_val("code_size")(vm)
+
+    return vm.stack[0]
+
+
+@modifies_stack([account_state.typ], [value.IntType()])
+def is_empty(vm):
+    vm.dup0()
+    account_state.get("nonce")(vm)
+    vm.push(0)
+    vm.eq()
+    vm.swap1()
+    vm.dup0()
+    account_state.get("balance")(vm)
+    vm.push(0)
+    vm.eq()
+    vm.swap1()
+    account_state.get("code_size")(vm)
+    vm.push(0)
+    vm.eq()
+    vm.bitwise_and()
+    vm.bitwise_and()
+
+
+account_store = std.make_keyvalue_type(
+    value.IntType(), account_state.typ, make_empty_account()
+)
+
+
+@modifies_stack([account_store.typ, value.IntType()], [account_store.typ])
+def create_erc20(vm):
+    # accounts contract_id
+    vm.dup1()
+    vm.dup1()
+    account_store.get(vm)
+    is_empty(vm)
+    vm.ifelse(
+        lambda vm: [
+            vm.push(contract_templates.ERC20_ADDRESS),
+            vm.swap1(),
+            clone_contract(vm),
+        ],
+        lambda vm: [vm.swap1(), vm.pop()],
+    )
+
+
+@modifies_stack([account_store.typ, value.IntType()], [account_store.typ])
+def create_erc721(vm):
+    # accounts contract_id
+    vm.dup1()
+    vm.dup1()
+    account_store.get(vm)
+    account_state.get("code_point")(vm)
+    vm.push(value.Tuple([]))
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [
+            vm.push(contract_templates.ERC721_ADDRESS),
+            vm.swap1(),
+            clone_contract(vm),
+        ],
+        lambda vm: [vm.swap1(), vm.pop()],
+    )
 
 
 @modifies_stack(
@@ -47,8 +120,15 @@ def clone_contract(vm):
     vm.swap1()
     vm.dup1()
     account_store.get(vm)
-    account_state.get("code_point")(vm)
-    create_account(vm)
+    vm.push(0)
+    vm.swap1()
+    account_state.set_val("balance")(vm)
+    std.keyvalue_int_int.new(vm)
+    vm.swap1()
+    account_state.set_val("storage")(vm)
+    vm.push(1)
+    vm.swap1()
+    account_state.set_val("nonce")(vm)
     # new_account accounts to_id
     vm.swap2()
     vm.swap1()

@@ -22,6 +22,7 @@ INVALID_CODE = 1
 RETURN_CODE = 2
 STOP_CODE = 3
 INVALID_SEQUENCE_CODE = 4
+INSUFFICIENT_BALANCE = 5
 
 
 class EVMLog:
@@ -71,17 +72,17 @@ class EVMLog:
 
 class LogMessage:
     def __init__(self, value):
-        wrapped_data = value[0]
-        calldata = wrapped_data[0]
-
-        self.data = sized_byterange.tohex(calldata[0])
-        self.contract_id = calldata[1]
-        self.sequence_num = calldata[2]
-        self.timestamp = wrapped_data[1]
-        self.tx_hash = wrapped_data[2]
-        self.caller = value[1]
-        self.value = value[2]
-        self.token_type = value[3]
+        self.timestamp = value[0]
+        self.block_number = value[1]
+        self.tx_hash = value[2]
+        wrapped_data = value[3]
+        self.message_type = wrapped_data[0]
+        self.caller = wrapped_data[1]
+        tx_message = wrapped_data[2]
+        self.contract_id = tx_message[0]
+        self.sequence_num = tx_message[1]
+        self.value = tx_message[2]
+        self.data = sized_byterange.tohex(tx_message[3])
 
     def func_id(self):
         return self.data[2:10]
@@ -191,6 +192,14 @@ class EVMInvalidSequence(EVMOutput):
         return "EVMInvalidSequence()"
 
 
+class EVMInsufficientBalance(EVMOutput):
+    def __init__(self, val):
+        super().__init__(val)
+
+    def __repr__(self):
+        return "EVMInsufficientBalance()"
+
+
 class EVMUnknownResponseError(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
@@ -205,6 +214,7 @@ EVM_OUTPUT_TYPES = {
     REVERT_CODE: EVMRevert,
     INVALID_CODE: EVMInvalid,
     INVALID_SEQUENCE_CODE: EVMInvalidSequence,
+    INSUFFICIENT_BALANCE: EVMInsufficientBalance,
     STOP_CODE: EVMStop,
 }
 

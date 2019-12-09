@@ -18,6 +18,7 @@ import json
 
 from .compile import generate_evm_code
 from .. import compile_program
+from . import contract_templates
 
 
 class Contract:
@@ -48,12 +49,8 @@ def create_evm_vm(contracts, should_optimize=True, includes_metadata=True):
     for raw_contract in raw_contract_templates:
         token_templates[raw_contract["name"]] = raw_contract
 
-    token_templates["ArbERC20"][
-        "address"
-    ] = "0xfffffffffffffffffffffffffffffffffffffffe"
-    token_templates["ArbERC721"][
-        "address"
-    ] = "0xfffffffffffffffffffffffffffffffffffffffd"
+    token_templates["ArbERC20"]["address"] = contract_templates.ERC20_ADDRESS_STRING
+    token_templates["ArbERC721"]["address"] = contract_templates.ER721_ADDRESS_STRING
     erc20 = Contract(token_templates["ArbERC20"])
     erc721 = Contract(token_templates["ArbERC721"])
 
