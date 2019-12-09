@@ -20,7 +20,8 @@ from unittest import TestCase
 from arbitrum import run_vm_once, value
 from arbitrum.evm.contract import create_evm_vm
 from arbitrum.evm.contract_abi import ContractABI, create_output_handler
-from arbitrum.evm.log import EVMCall
+from arbitrum.evm.log import EVMCall, EVMStop, EVMRevert
+from arbitrum.evm import contract_templates
 
 
 def make_msg_val(message):
@@ -30,6 +31,7 @@ def make_msg_val(message):
 def run_until_block(vm, test):
     while True:
         try:
+            # print(vm.pc, vm.pc.path)
             run = run_vm_once(vm)
             if not run:
                 break
@@ -292,3 +294,87 @@ class TestEVM(TestCase):
         parsed_out = output_handler(val)
         self.assertIsInstance(parsed_out, EVMCall)
         self.assertEqual(parsed_out.output_values[0], 62244)
+
+    def test_erc20(self):
+        erc20 = contract_templates.get_erc20_contract()
+        erc721 = contract_templates.get_erc721_contract()
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler(
+            [contract_a, ContractABI(erc20), ContractABI(erc721)]
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [2, 2345, value.Tuple([5000, 2345, 100000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [5, 2345, value.Tuple([5000, 2345, 150000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [5, 2345, value.Tuple([5000, 2345, 50000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.deliver_pending()
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 3)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+        self.assertIsInstance(parsed_out0, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMRevert)
+        self.assertIsInstance(parsed_out2, EVMStop)
+
+        self.assertEqual(len(vm.sent_messages), 1)
+        self.assertEqual(vm.sent_messages[0], value.Tuple([5000, 2345, 50000]))
+
+    def test_erc721(self):
+        erc20 = contract_templates.get_erc20_contract()
+        erc721 = contract_templates.get_erc721_contract()
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler(
+            [contract_a, ContractABI(erc20), ContractABI(erc721)]
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [3, 2345, value.Tuple([5000, 2345, 100000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [6, 2345, value.Tuple([5000, 2345, 50000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [6, 2345, value.Tuple([5000, 2345, 100000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.deliver_pending()
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 3)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+        self.assertIsInstance(parsed_out0, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMRevert)
+        self.assertIsInstance(parsed_out2, EVMStop)
+
+        self.assertEqual(len(vm.sent_messages), 1)
+        self.assertEqual(vm.sent_messages[0], value.Tuple([5000, 2345, 100000]))

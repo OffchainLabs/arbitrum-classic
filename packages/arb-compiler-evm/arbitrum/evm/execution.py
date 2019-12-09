@@ -229,6 +229,7 @@ def initial_call(vm, label):
     vm.set_exception_handler(invalid_tx)
     vm.dup0()
     setup_initial_call_frame(vm)
+    vm.swap1()
     os.tx_call_to_local_exec_state(vm)
     _perform_call(vm, label)
     # ret_code

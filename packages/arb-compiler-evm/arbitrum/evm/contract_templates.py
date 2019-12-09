@@ -13,15 +13,38 @@
 # limitations under the License.
 
 import eth_utils
+from importlib_resources import read_text
+import json
 
 from ..annotation import modifies_stack
 from .. import value
 from ..ast import AVMLabel
 
 ERC20_ADDRESS_STRING = "0xfffffffffffffffffffffffffffffffffffffffe"
-ER721_ADDRESS_STRING = "0xfffffffffffffffffffffffffffffffffffffffd"
+ERC721_ADDRESS_STRING = "0xfffffffffffffffffffffffffffffffffffffffd"
 ERC20_ADDRESS = eth_utils.to_int(hexstr=ERC20_ADDRESS_STRING)
-ERC721_ADDRESS = eth_utils.to_int(hexstr=ER721_ADDRESS_STRING)
+ERC721_ADDRESS = eth_utils.to_int(hexstr=ERC721_ADDRESS_STRING)
+
+
+def get_templates():
+    raw_contract_templates_data = read_text("arbitrum.evm", "contract-templates.json")
+    raw_contract_templates = json.loads(raw_contract_templates_data)
+    token_templates = {}
+    for raw_contract in raw_contract_templates:
+        token_templates[raw_contract["name"]] = raw_contract
+    return token_templates
+
+
+def get_erc20_contract():
+    erc20 = get_templates()["ArbERC20"]
+    erc20["address"] = ERC20_ADDRESS_STRING
+    return erc20
+
+
+def get_erc721_contract():
+    erc721 = get_templates()["ArbERC721"]
+    erc721["address"] = ERC721_ADDRESS_STRING
+    return erc721
 
 
 @modifies_stack([], [value.CodePointType()])

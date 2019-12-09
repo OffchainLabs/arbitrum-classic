@@ -13,8 +13,6 @@
 # limitations under the License.
 
 import eth_utils
-from importlib_resources import read_text
-import json
 
 from .compile import generate_evm_code
 from .. import compile_program
@@ -43,16 +41,8 @@ def strip_cbor(code):
 
 
 def create_evm_vm(contracts, should_optimize=True, includes_metadata=True):
-    raw_contract_templates_data = read_text("arbitrum.evm", "contract-templates.json")
-    raw_contract_templates = json.loads(raw_contract_templates_data)
-    token_templates = {}
-    for raw_contract in raw_contract_templates:
-        token_templates[raw_contract["name"]] = raw_contract
-
-    token_templates["ArbERC20"]["address"] = contract_templates.ERC20_ADDRESS_STRING
-    token_templates["ArbERC721"]["address"] = contract_templates.ER721_ADDRESS_STRING
-    erc20 = Contract(token_templates["ArbERC20"])
-    erc721 = Contract(token_templates["ArbERC721"])
+    erc20 = Contract(contract_templates.get_erc20_contract())
+    erc721 = Contract(contract_templates.get_erc721_contract())
 
     code = {}
     storage = {}

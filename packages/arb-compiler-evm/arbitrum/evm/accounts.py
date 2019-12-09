@@ -99,9 +99,7 @@ def create_erc721(vm):
     vm.dup1()
     vm.dup1()
     account_store.get(vm)
-    account_state.get("code_point")(vm)
-    vm.push(value.Tuple([]))
-    vm.eq()
+    is_empty(vm)
     vm.ifelse(
         lambda vm: [
             vm.push(contract_templates.ERC721_ADDRESS),

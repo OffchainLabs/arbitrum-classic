@@ -914,7 +914,7 @@ def process_deposit_token_message(vm, account_create_func):
     # ignore sender and replace with 0 for admin call
     vm.swap1()
     vm.pop()
-    vm.push(0)
+    vm.push(1)
     vm.swap1()
     # tx_call_data sender
 
@@ -968,7 +968,7 @@ def process_withdraw_token_message(vm, account_create_func):
     tx_call_data.set_val("dest")(vm)
     tx_call_data.set_val("data")(vm)
     # tx_call_data
-    vm.push(0)
+    vm.push(1)
     vm.swap1()
     # tx_call_data sender
 

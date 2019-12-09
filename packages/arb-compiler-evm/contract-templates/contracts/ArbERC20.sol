@@ -21,12 +21,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ArbERC20 is ERC20 {
     function adminMint(address account, uint256 amount) public {
-        require(msg.sender == address(0));
+        require(msg.sender == address(1));
         _mint(account, amount);
     }
 
     function adminBurn(address account, uint256 amount) public {
-        require(msg.sender == address(0));
-        _burn(msg.sender, amount);
+        require(msg.sender == address(1));
+        _burn(account, amount);
     }
 }

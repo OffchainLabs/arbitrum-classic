@@ -87,7 +87,10 @@ def create_output_handler(contracts):
     functions = {}
     for contract in contracts:
         for event_id, abi in contract.events.items():
-            events[(contract.address, event_id)] = abi
+            if contract.address not in events:
+                events[contract.address] = {}
+            events[contract.address][event_id] = abi
+            events[event_id] = abi
         for func_id, abi in contract.funcs.items():
             functions[(contract.address, func_id.hex())] = abi
 
