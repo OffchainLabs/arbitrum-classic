@@ -56,46 +56,159 @@ def replace_self_balance(instrs):
     return out
 
 
+def process_tx_call_message(vm):
+    vm.pop()
+    os.process_tx_message(vm)
+    vm.dup0()
+    vm.push(value.Tuple([]))
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [],
+        lambda vm: [
+            tup.tbreak(2)(vm),
+            execution.initial_call(vm, "tx_call_initial"),
+            vm.pop(),
+        ],
+    )
+
+
+def process_deposit_eth(vm):
+    vm.pop()
+    os.process_deposit_eth_message(vm)
+
+
+def process_deposit_erc20(vm):
+    vm.pop()
+    os.process_deposit_erc20_message(vm)
+    vm.swap1()
+    execution.initial_call(vm, "deposit_erc20_initial")
+    vm.pop()
+
+
+def process_deposit_erc721(vm):
+    vm.pop()
+    os.process_deposit_erc721_message(vm)
+    vm.swap1()
+    execution.initial_call(vm, "deposit_erc712_initial")
+    vm.pop()
+
+
+def process_withdraw_eth(vm):
+    vm.pop()
+    vm.dup0()
+    os.process_withdraw_eth_message(vm)
+    vm.ifelse(
+        lambda vm: [
+            # withdraw successful
+            message.get("message")(vm),
+            vm.send(),
+        ],
+        lambda vm: [vm.pop()],
+    )
+
+
+def process_withdraw_erc20(vm):
+    vm.pop()
+    vm.dup0()
+    os.process_withdraw_erc20_message(vm)
+    vm.swap1()
+    execution.initial_call(vm, "withdraw_erc20_initial")
+    # status message
+    vm.ifelse(
+        lambda vm: [
+            # withdraw successful
+            message.get("message")(vm),
+            vm.send(),
+        ],
+        lambda vm: [vm.pop()],
+    )
+
+
+def process_withdraw_erc721(vm):
+    vm.pop()
+    vm.dup0()
+    os.process_withdraw_erc721_message(vm)
+    vm.swap1()
+    execution.initial_call(vm, "withdraw_erc721_initial")
+    # status message
+    vm.ifelse(
+        lambda vm: [
+            # withdraw successful
+            message.get("message")(vm),
+            vm.send(),
+        ],
+        lambda vm: [vm.pop()],
+    )
+
+
+def run_loop_start(vm):
+    vm.set_label(AVMLabel("run_loop_start"))
+    os.get_next_message(vm)
+    # msg
+    vm.dup0()
+    vm.swap1()
+    message.get("type")(vm)
+    # type msg
+    vm.dup0()
+    vm.push(0)
+    vm.eq()
+    vm.ifelse(
+        process_tx_call_message,
+        lambda vm: [
+            vm.dup0(),
+            vm.push(1),
+            vm.eq(),
+            vm.ifelse(
+                process_deposit_eth,
+                lambda vm: [
+                    vm.dup0(),
+                    vm.push(2),
+                    vm.eq(),
+                    vm.ifelse(
+                        process_deposit_erc20,
+                        lambda vm: [
+                            vm.dup0(),
+                            vm.push(3),
+                            vm.eq(),
+                            vm.ifelse(
+                                process_deposit_erc721,
+                                lambda vm: [
+                                    vm.dup0(),
+                                    vm.push(4),
+                                    vm.eq(),
+                                    vm.ifelse(
+                                        process_withdraw_eth,
+                                        lambda vm: [
+                                            vm.dup0(),
+                                            vm.push(5),
+                                            vm.eq(),
+                                            vm.ifelse(
+                                                process_withdraw_erc20,
+                                                lambda vm: [
+                                                    vm.dup0(),
+                                                    vm.push(6),
+                                                    vm.eq(),
+                                                    vm.ifelse(process_withdraw_erc721),
+                                                ],
+                                            ),
+                                        ],
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    vm.push(AVMLabel("run_loop_start"))
+    vm.jump()
+
+
 def generate_evm_code(raw_code, storage):
     contracts = {}
     for contract in raw_code:
         contracts[contract] = list(pyevmasm.disassemble_all(raw_code[contract]))
-
-    code_tuples_data = {}
-    for contract in raw_code:
-        code_tuples_data[contract] = byterange.frombytes(
-            bytes.fromhex(raw_code[contract].hex())
-        )
-    code_tuples_func = bst.make_static_lookup(code_tuples_data)
-
-    @modifies_stack([value.IntType()], 1)
-    def code_tuples(vm):
-        code_tuples_func(vm)
-
-    code_hashes_data = {}
-    for contract in raw_code:
-        code_hashes_data[contract] = int.from_bytes(
-            eth_utils.crypto.keccak(raw_code[contract]), byteorder="big"
-        )
-    code_hashes_func = bst.make_static_lookup(code_hashes_data)
-
-    @modifies_stack([value.IntType()], [value.ValueType()])
-    def code_hashes(vm):
-        code_hashes_func(vm)
-
-    code_sizes = {}
-    for contract in contracts:
-        code_sizes[contract] = len(contracts[contract]) + sum(
-            op.operand_size for op in contracts[contract]
-        )
-
-    # Give the interrupt contract address a nonzero size
-    code_sizes[0x01] = 1
-    code_size_func = bst.make_static_lookup(code_sizes)
-
-    @modifies_stack([value.IntType()], 1)
-    def code_size(vm):
-        code_size_func(vm)
 
     impls = []
     contract_info = []
@@ -106,11 +219,7 @@ def generate_evm_code(raw_code, storage):
             generate_contract_code(
                 AVMLabel("contract_entry_" + str(contract)),
                 contracts[contract],
-                code_tuples_data[contract],
                 contract,
-                code_size,
-                code_tuples,
-                code_hashes,
             )
         )
         contract_info.append(
@@ -118,33 +227,18 @@ def generate_evm_code(raw_code, storage):
                 "code_point": AVMLabel("contract_entry_" + str(contract)),
                 "contractID": contract,
                 "storage": storage[contract],
+                "code_size": len(contracts[contract])
+                + sum(op.operand_size for op in contracts[contract]),
+                "code_hash": int.from_bytes(
+                    eth_utils.crypto.keccak(raw_code[contract]), byteorder="big"
+                ),
+                "code": byterange.frombytes(bytes.fromhex(raw_code[contract].hex())),
             }
         )
 
     def initialization(vm):
         os.initialize(vm, contract_info)
         vm.jump_direct(AVMLabel("run_loop_start"))
-
-    def process_tx_call_message(vm):
-        vm.cast(message.typ)
-        os.process_tx_message(vm)
-        vm.dup0()
-        vm.push(value.Tuple([]))
-        vm.eq()
-        vm.ifelse(
-            lambda vm: [],
-            lambda vm: [tup.tbreak(2)(vm), execution.setup_initial_call(vm)],
-        )
-
-    def run_loop_start(vm):
-        vm.set_label(AVMLabel("run_loop_start"))
-        os.get_next_message(vm)
-        tup.tbreak(2)(vm)
-        vm.push(0)
-        vm.eq()
-        vm.ifelse(process_tx_call_message)
-        vm.push(AVMLabel("run_loop_start"))
-        vm.jump()
 
     main_code = []
     main_code.append(compile_block(run_loop_start))
@@ -193,7 +287,7 @@ def not_supported_op(name):
 
 
 EVM_STATIC_OPS = {
-    "SELF_BALANCE": lambda vm: [vm.push(0), os.balance_get(vm)],
+    "SELF_BALANCE": lambda vm: [os.balance_get(vm)],
     # 0s: Stop and Arithmetic Operations
     "STOP": execution.stop,
     "ADD": lambda vm: vm.add(),
@@ -300,12 +394,12 @@ EVM_STATIC_OPS = {
     "RETURN": execution.ret,
     "REVERT": execution.revert,
     "SELFDESTRUCT": execution.selfdestruct,
-    "BALANCE": lambda vm: [
-        print("Warning: BALANCE was used which may lead to an error"),
-        vm.push(0),
-        vm.swap1(),
-        os.ext_balance(vm),
-    ],
+    "BALANCE": lambda vm: [os.ext_balance(vm)],
+    "CODESIZE": os.codesize_get,
+    "CODECOPY": lambda vm: os.evm_copy_to_memory(vm, os.code_get),
+    "EXTCODESIZE": os.ext_codesize,
+    "EXTCODECOPY": os.ext_codecopy,
+    "EXTCODEHASH": os.ext_codehash,
 }
 
 UNHANDLED_OPCODE = {
@@ -325,9 +419,7 @@ def get_opcode_name(instr):
     return instr.name
 
 
-def generate_contract_code(
-    label, code, code_tuple, contract_id, code_size, code_tuples, code_hashes
-):
+def generate_contract_code(label, code, contract_id):
     code = replace_self_balance(code)
 
     jump_table = {}
@@ -342,37 +434,7 @@ def generate_contract_code(
     def dispatch(vm):
         dispatch_func(vm)
 
-    @modifies_stack(0, 1, contract_id)
-    def get_contract_code(vm):
-        vm.push(code_tuple)
-
-    def evm_extcodesize(vm):
-        print("Warning: EXTCODESIZE was used which may lead to an error")
-        code_size(vm)
-        vm.dup0()
-        vm.tnewn(0)
-        vm.eq()
-        vm.ifelse(lambda vm: [vm.error()])
-
-    def evm_extcodecopy(vm):
-        print("Warning: EXTCODECOPY was used which may lead to an error")
-        code_tuples(vm)
-        vm.dup0()
-        vm.tnewn(0)
-        vm.eq()
-        vm.ifelse(lambda vm: [vm.error()])
-        os.set_scratch(vm)
-        os.evm_copy_to_memory(vm, os.get_scratch)
-
-    def evm_extcodehash(vm):
-        print("Warning: EXTCODEHASH was used which may lead to an error")
-        code_hashes(vm)
-        vm.dup0()
-        vm.tnewn(0)
-        vm.eq()
-        vm.ifelse(lambda vm: [vm.error()])
-
-    EVM_CONTRACT_OPS = {
+    evm_contract_ops = {
         "JUMP": lambda vm: [
             dispatch(vm),
             vm.dup0(),
@@ -387,11 +449,6 @@ def generate_contract_code(
             vm.eq(),
             vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.cjump()]),
         ],
-        "CODESIZE": lambda vm: vm.push(len(code)),
-        "CODECOPY": lambda vm: os.evm_copy_to_memory(vm, get_contract_code),
-        "EXTCODESIZE": evm_extcodesize,
-        "EXTCODECOPY": evm_extcodecopy,
-        "EXTCODEHASH": evm_extcodehash,
     }
 
     def run_op(instr):
@@ -412,7 +469,7 @@ def generate_contract_code(
             ),
             "CALL": lambda vm: execution.call(vm, call_id, contract_id),
             "CALLCODE": lambda vm: execution.call(vm, call_id, contract_id),
-            "DELEGATECALL": lambda vm: execution.delegatecall(vm, call_id, contract_id),
+            "DELEGATECALL": lambda vm: execution.delegatecall(vm, call_id),
             "STATICCALL": lambda vm: execution.staticcall(vm, call_id, contract_id),
             "INVALID": evm_invalid_op,
         }
@@ -422,8 +479,8 @@ def generate_contract_code(
         if instr_name in EVM_STATIC_OPS:
             return EVM_STATIC_OPS[instr_name]
 
-        if instr_name in EVM_CONTRACT_OPS:
-            return EVM_CONTRACT_OPS[instr_name]
+        if instr_name in evm_contract_ops:
+            return evm_contract_ops[instr_name]
 
         if instr_name in evm_instr_ops:
             return evm_instr_ops[instr_name]

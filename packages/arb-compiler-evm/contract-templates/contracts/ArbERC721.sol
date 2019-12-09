@@ -21,12 +21,12 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 contract ArbERC721 is ERC721 {
     function adminMint(address account, uint256 tokenId) public {
-        require(msg.sender == address(0));
+        require(msg.sender == address(1));
         _mint(account, tokenId);
     }
 
-    function withdraw(uint256 tokenId) public {
-        _burn(msg.sender, tokenId);
-        ArbSys(address(0x01)).sendERC721(msg.sender, address(this), tokenId);
+    function adminBurn(address account, uint256 tokenId) public {
+        require(msg.sender == address(1));
+        _burn(account, tokenId);
     }
 }

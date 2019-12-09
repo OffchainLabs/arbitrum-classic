@@ -401,7 +401,7 @@ class SetErrorHandlerFunctionStatement(ASTNode):
         return 1
 
     def stack_mod(self):
-        return {"pop": 0, "push": 0}
+        return {"pop": 0, "push": 0}, []
 
     def typecheck(self, stack):
         pass

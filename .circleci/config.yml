@@ -94,11 +94,11 @@ jobs:
           name: test arb-compiler-evm
           command: |
             python3 setup.py nosetests --processes=2 --process-timeout=60 --with-coverage --cover-package=arbitrum
-            cd tests/sol-syscall
-            truffle migrate --reset --compile-all --network arbitrum
-            coverage run --source=/home/user/project truffle_runner.py compiled.json
-            cd ../..
-            coverage combine .coverage tests/sol-syscall/.coverage
+          # cd tests/sol-syscall
+          # truffle migrate --reset --compile-all --network arbitrum
+          # coverage run --source=/home/user/project truffle_runner.py compiled.json
+          # cd ../..
+          # coverage combine .coverage tests/sol-syscall/.coverage
           working_directory: /home/user/project/packages/arb-compiler-evm
       - run:
           name: test arb-provider-ethers

@@ -20,16 +20,25 @@ from unittest import TestCase
 from arbitrum import run_vm_once, value
 from arbitrum.evm.contract import create_evm_vm
 from arbitrum.evm.contract_abi import ContractABI, create_output_handler
-from arbitrum.evm.log import EVMCall, EVMInvalid
+from arbitrum.evm.log import (
+    EVMCall,
+    EVMStop,
+    EVMRevert,
+    EVMInsufficientBalance,
+    EVMDeposit,
+    EVMWithdrawal,
+)
+from arbitrum.evm import contract_templates
 
 
-def make_msg_val(calldata):
-    return value.Tuple([calldata, 0, 0, 0])
+def make_msg_val(message):
+    return [0, 0, 0, message]
 
 
 def run_until_block(vm, test):
     while True:
         try:
+            # print(vm.pc, vm.pc.path)
             run = run_vm_once(vm)
             if not run:
                 break
@@ -123,7 +132,7 @@ def create_many_contracts(contract_a):
 class TestEVM(TestCase):
     _multiprocess_can_split_ = True
 
-    def test_codesize_succeed(self):
+    def test_codesize_contract(self):
         instruction_table = instruction_tables["byzantium"]
         evm_code = make_evm_ext_code(
             instruction_table["EXTCODESIZE"],
@@ -132,10 +141,12 @@ class TestEVM(TestCase):
         code_size = len(evm_code) + sum(op.operand_size for op in evm_code)
         contract_a = make_contract(evm_code, "uint256")
         contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
+        vm = create_evm_vm(contracts, False, False)
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+            make_msg_val(
+                value.Tuple([0, 2345, contract_a.testMethod(4, 0)])  # type  # sender
+            )
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
@@ -145,7 +156,7 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out, EVMCall)
         self.assertEqual(parsed_out.output_values[0], code_size)
 
-    def test_codesize_fail(self):
+    def test_codesize_empty(self):
         instruction_table = instruction_tables["byzantium"]
         evm_code = make_evm_ext_code(instruction_table["EXTCODESIZE"], "0x9999")
         contract_a = make_contract(evm_code, "uint256")
@@ -153,16 +164,19 @@ class TestEVM(TestCase):
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+            make_msg_val(
+                value.Tuple([0, 2345, contract_a.testMethod(4, 0)])  # type  # sender
+            )
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMInvalid)
+        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertEqual(parsed_out.output_values[0], 0)
 
-    def test_codehash_succeed(self):
+    def test_codehash_contract(self):
         evm_code = make_evm_ext_code(
             disassemble_one(bytes.fromhex("3f")),
             "0x895521964D724c8362A36608AAf09A3D7d0A0445",
@@ -176,7 +190,9 @@ class TestEVM(TestCase):
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+            make_msg_val(
+                value.Tuple([0, 2345, contract_a.testMethod(4, 0)])  # type  # sender
+            )
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
@@ -186,23 +202,26 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out, EVMCall)
         self.assertEqual(parsed_out.output_values[0], code_hash)
 
-    def test_codehash_fail(self):
+    def test_codehash_empty(self):
         evm_code = make_evm_ext_code(disassemble_one(bytes.fromhex("3f")), "0x9999")
         contract_a = make_contract(evm_code, "uint256")
         contracts = create_many_contracts(contract_a)
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+            make_msg_val(
+                value.Tuple([0, 2345, contract_a.testMethod(4, 0)])  # type  # sender
+            )
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMInvalid)
+        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertEqual(parsed_out.output_values[0], 0)
 
-    def test_codecopy_succeed(self):
+    def test_codecopy_contract(self):
         offset = 30
         length = 80
         evm_code = make_evm_codecopy_code(
@@ -214,7 +233,9 @@ class TestEVM(TestCase):
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+            make_msg_val(
+                value.Tuple([0, 2345, contract_a.testMethod(4, 0)])  # type  # sender
+            )
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
@@ -227,7 +248,7 @@ class TestEVM(TestCase):
             hex_code[2 + offset * 2 : 2 + offset * 2 + length * 2],
         )
 
-    def test_codecopy_fail(self):
+    def test_codecopy_empty(self):
         offset = 30
         length = 80
         evm_code = make_evm_codecopy_code(offset, length, "0x9999")
@@ -236,14 +257,17 @@ class TestEVM(TestCase):
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 0, 0])]
+            make_msg_val(
+                value.Tuple([0, 2345, contract_a.testMethod(4, 0)])  # type  # sender
+            )
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 1)
         val = vm.logs[0]
         parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMInvalid)
+        self.assertIsInstance(parsed_out, EVMCall)
+        self.assertEqual(parsed_out.output_values[0].hex(), "0" * (length * 2))
 
     def test_balance_succeed(self):
         instruction_table = instruction_tables["byzantium"]
@@ -255,29 +279,142 @@ class TestEVM(TestCase):
         vm = create_evm_vm(contracts, True, False)
         output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])]
+            make_msg_val(
+                value.Tuple([1, 2345, value.Tuple([2345, 100000])])  # type  # sender
+            )
         )
-        vm.env.deliver_pending()
-        run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMCall)
-        self.assertEqual(parsed_out.output_values[0], 62244)
-
-    def test_balance_fail(self):
-        instruction_table = instruction_tables["byzantium"]
-        evm_code = make_evm_ext_code(instruction_table["BALANCE"], "0x9999")
-        contract_a = make_contract(evm_code, "uint256")
-        contracts = create_many_contracts(contract_a)
-        vm = create_evm_vm(contracts, True, False)
-        output_handler = create_output_handler(contracts)
         vm.env.send_message(
-            [0, value.Tuple([make_msg_val(contract_a.testMethod(4)), 2345, 62244, 0])]
+            make_msg_val(
+                value.Tuple(
+                    [0, 2345, contract_a.testMethod(4, 62244)]  # type  # sender
+                )
+            )
         )
         vm.env.deliver_pending()
         run_until_block(vm, self)
-        self.assertEqual(len(vm.logs), 1)
-        val = vm.logs[0]
-        parsed_out = output_handler(val)
-        self.assertIsInstance(parsed_out, EVMInvalid)
+        self.assertEqual(len(vm.logs), 2)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        self.assertIsInstance(parsed_out0, EVMDeposit)
+        self.assertIsInstance(parsed_out1, EVMCall)
+        self.assertEqual(parsed_out1.output_values[0], 62244)
+
+    def test_eth(self):
+        erc20 = contract_templates.get_erc20_contract()
+        erc721 = contract_templates.get_erc721_contract()
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler(
+            [contract_a, ContractABI(erc20), ContractABI(erc721)]
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple([1, 2345, value.Tuple([2345, 100000])])  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple([4, 2345, value.Tuple([2345, 150000])])  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple([4, 2345, value.Tuple([2345, 50000])])  # type  # sender
+            )
+        )
+        vm.env.deliver_pending()
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 3)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+        self.assertIsInstance(parsed_out0, EVMDeposit)
+        self.assertIsInstance(parsed_out1, EVMInsufficientBalance)
+        self.assertIsInstance(parsed_out2, EVMWithdrawal)
+
+        self.assertEqual(len(vm.sent_messages), 1)
+        self.assertEqual(vm.sent_messages[0], value.Tuple([2345, 50000]))
+
+    def test_erc20(self):
+        erc20 = contract_templates.get_erc20_contract()
+        erc721 = contract_templates.get_erc721_contract()
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler(
+            [contract_a, ContractABI(erc20), ContractABI(erc721)]
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [2, 2345, value.Tuple([5000, 2345, 100000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [5, 2345, value.Tuple([5000, 2345, 150000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [5, 2345, value.Tuple([5000, 2345, 50000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.deliver_pending()
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 3)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+        self.assertIsInstance(parsed_out0, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMRevert)
+        self.assertIsInstance(parsed_out2, EVMStop)
+
+        self.assertEqual(len(vm.sent_messages), 1)
+        self.assertEqual(vm.sent_messages[0], value.Tuple([5000, 2345, 50000]))
+
+    def test_erc721(self):
+        erc20 = contract_templates.get_erc20_contract()
+        erc721 = contract_templates.get_erc721_contract()
+        contract_a = make_contract("", "uint256")
+        vm = create_evm_vm([contract_a], False, False)
+        output_handler = create_output_handler(
+            [contract_a, ContractABI(erc20), ContractABI(erc721)]
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [3, 2345, value.Tuple([5000, 2345, 100000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [6, 2345, value.Tuple([5000, 2345, 50000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.send_message(
+            make_msg_val(
+                value.Tuple(
+                    [6, 2345, value.Tuple([5000, 2345, 100000])]
+                )  # type  # sender
+            )
+        )
+        vm.env.deliver_pending()
+        run_until_block(vm, self)
+        self.assertEqual(len(vm.logs), 3)
+        parsed_out0 = output_handler(vm.logs[0])
+        parsed_out1 = output_handler(vm.logs[1])
+        parsed_out2 = output_handler(vm.logs[2])
+        self.assertIsInstance(parsed_out0, EVMStop)
+        self.assertIsInstance(parsed_out1, EVMRevert)
+        self.assertIsInstance(parsed_out2, EVMStop)
+
+        self.assertEqual(len(vm.sent_messages), 1)
+        self.assertEqual(vm.sent_messages[0], value.Tuple([5000, 2345, 100000]))
