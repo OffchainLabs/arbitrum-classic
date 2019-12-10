@@ -100,17 +100,17 @@ contract GlobalWallet {
         _destination.transfer(_value);
     }
 
-    function depositERC20(address _tokenContract, uint256 _value) external {
+    function depositERC20(address _tokenContract, address _destination, uint256 _value) external {
         IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
-        addToken(msg.sender, _tokenContract, _value);
+        addToken(_destination, _tokenContract, _value);
     }
 
-    function withdrawERC20(address _tokenContract, uint256 _value) external {
+    function withdrawERC20(address _tokenContract, address _destination, uint256 _value) external {
         require(
             removeToken(msg.sender, _tokenContract, _value),
             "Wallet doesn't own sufficient balance of token"
         );
-        IERC20(_tokenContract).transfer(msg.sender, _value);
+        IERC20(_tokenContract).transfer(_destination, _value);
     }
 
     function onERC721Received(
