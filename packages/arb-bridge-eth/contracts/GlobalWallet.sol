@@ -91,7 +91,7 @@ contract GlobalWallet {
         msg.sender.transfer(_value);
     }
 
-    function transferEth(address _destination, uint256 _value) external {
+    function withdrawEth(address _destination, uint256 _value) external {
         require(
             removeToken(msg.sender, ETH_ADDRESS, _value),
             "Wallet doesn't own sufficient balance of token"
@@ -103,6 +103,19 @@ contract GlobalWallet {
     function depositERC20(address _tokenContract, address _destination, uint256 _value) external {
         IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
         addToken(_destination, _tokenContract, _value);
+    }
+
+    function depositERC20(address _tokenContract, address _sender, address _destination, uint256 _value) external {
+        IERC20(_tokenContract).transferFrom(_sender, address(this), _value);
+        addToken(_destination, _tokenContract, _value);
+    }
+
+    function withdrawERC20(address _tokenContract, uint256 _value) external {
+        require(
+            removeToken(msg.sender, _tokenContract, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+        IERC20(_tokenContract).transfer(msg.sender, _value);
     }
 
     function withdrawERC20(address _tokenContract, address _destination, uint256 _value) external {
@@ -126,9 +139,14 @@ contract GlobalWallet {
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 
-    function depositERC721(address _tokenContract, uint256 _tokenId) external {
+    function depositERC721(address _tokenContract, address _destination, uint256 _tokenId) external {
         IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
-        addNFTToken(msg.sender, _tokenContract, _tokenId);
+        addNFTToken(_destination, _tokenContract, _tokenId);
+    }
+
+    function depositERC721(address _tokenContract, address _sender, address _destination, uint256 _tokenId) external {
+        IERC721(_tokenContract).transferFrom(_sender, address(this), _tokenId);
+        addNFTToken(_destination, _tokenContract, _tokenId);
     }
 
     function withdrawERC721(address _tokenContract, uint256 _tokenId) external {
@@ -137,6 +155,14 @@ contract GlobalWallet {
             "Wallet doesn't own token"
         );
         IERC721(_tokenContract).safeTransferFrom(address(this), msg.sender, _tokenId);
+    }
+
+    function withdrawERC721(address _tokenContract, address _destination, uint256 _tokenId) external {
+        require(
+            removeNFTToken(msg.sender, _tokenContract, _tokenId),
+            "Wallet doesn't own token"
+        );
+        IERC721(_tokenContract).safeTransferFrom(address(this), _destination, _tokenId);
     }
 
     function depositEth(address _destination) public payable {

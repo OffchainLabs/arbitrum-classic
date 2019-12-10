@@ -67,10 +67,10 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
         while (offset < totalLength) {
 
-            uint256 messageType = _messages[offset]; //check
+            uint256 messageType = _messages[offset];
 
-            if(messageType == TRANSACTION_MSG){
-
+            if(messageType == TRANSACTION_MSG)
+            {
                 (   valid,
                     offset,
                     messageHash,
@@ -81,29 +81,13 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 ) = Value.deserializeTransactionMessage(_messages, offset);
             
                 if(valid){
-                    _deliverTransactionMessage(
-                        msg.sender,
+                    sendTransactionMessage(
                         address(bytes20(bytes32(destination))),
                         seq_number,
                         value,
                         messageData
                     );
                 }
-
-            // }else if(messageType == ETH_DEPOSIT)
-            // {
-            //     (   valid,
-            //         offset,
-            //         messageHash,
-            //         destination,
-            //         value,
-            //         messageData
-            //     ) = Value.deserializeEthMessage(_messages, offset);
-
-            //     if(valid){
-            //         transferEthMessage(destination, value, messageData);
-            //     }   
-
             }else if(messageType == ETH_WITHDRAWAL)
             {
                 (   valid,
@@ -162,7 +146,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             }else if(messageType == ERC721_WITHDRAWAL)
             {
-
                 (   valid,
                     offset,
                     messageHash,
@@ -178,6 +161,103 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         }
     }
 
+    function forwardTransactionMessage(
+        address _destination,
+        uint256 _seq_number,
+        uint256 _value,
+        bytes calldata _data,
+        bytes calldata _signature) external
+    {
+        address sender = SigUtils.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    _destination,
+                    uint256 _seq_number,
+                    uint256 _value,
+                    ArbValue.deserializeValueHash(_data)
+                )
+            ),
+            _signature
+        );
+
+        _deliverTransactionMessage(
+            sender,
+            _destination,
+            uint256 _seq_number,
+            uint256 _value,
+            _data
+        );
+    }
+
+    function forwardDepositERC20Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value,
+        bytes calldata _signature) external
+    {
+        address sender = SigUtils.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    _tokenContract,
+                    _destination,
+                    _value
+                )
+            ),
+            _signature
+        );
+
+        depositERC20(_tokenContract, sender, _destination, _value);
+
+        _deliverERCTokenMessage(
+            sender,
+            _destination,
+            ERC20_DEPOSIT,
+            _tokenContract,
+            _value);
+    }
+
+    function forwardDepositERC721Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value,
+        bytes calldata _signature) external
+    {
+        address sender = SigUtils.recoverAddress(
+            keccak256(
+                abi.encodePacked(
+                    _tokenContract,
+                    _destination,
+                    _value
+                )
+            ),
+            _signature
+        );
+
+        depositERC721(_tokenContract, sender, _destination, _value);
+
+        _deliverERCTokenMessage(
+            sender,
+            _destination,
+            ERC721_DEPOSIT,
+            _tokenContract,
+            _value);
+    }
+
+    function sendTransactionMessage(
+        address _destination, 
+        uint256 _seq_number,
+        uint256 _value,
+        bytes calldata _data) external
+    {
+        _deliverTransactionMessage(
+            msg.sender,
+            _destination,
+            _seq_number,
+            _value,
+            _data
+        );
+    }
+
     function despositEthMessage(address _destination) external payable 
     {
         depositEth(_destination);
@@ -188,6 +268,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             ETH_DEPOSIT,
             msg.value
         );
+
+        emit IGlobalPendingInbox.EthDepositMessageDelivered(
+            _destination,
+            msg.sender,
+            msg.value);
     }
 
     function withdrawEthMessage(address _destination, uint256 _value) external 
@@ -200,6 +285,11 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             ETH_WITHDRAWAL,
             _value
         );
+
+        emit IGlobalPendingInbox.EthWithdrawMessageDelivered(
+            msg.sender,
+            _destination,
+            msg.value);
     }
 
     function depositERC20Message(
@@ -262,147 +352,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             _value);
     }
 
-    function sendTransactionMessage(
-        address _destination, 
-        uint256 _seq_number,
-        uint256 _value,
-        bytes calldata _data) external
-    {
-
-        _deliverTransactionMessage(
-            msg.sender,
-            _destination,
-            _seq_number,
-            _value,
-            _data
-        );
-    }
-
-    // function forwardMessage(
-    //     address _destination,
-    //     bytes calldata _data,
-    //     bytes calldata _signature) external
-    // {
-    //     address sender = SigUtils.recoverAddress(
-    //         keccak256(
-    //             abi.encodePacked(
-    //                 _destination,
-    //                 ArbValue.deserializeValueHash(_data)
-    //             )
-    //         ),
-    //         _signature
-    //     );
-
-    //     _deliverDataMessage(
-    //         sender,
-    //         _destination,
-    //         _data
-    //     );
-    // }
-
-    // function forwardERC20Message(
-    //     address _tokenContract,
-    //     address _sender,
-    //     address _destination,
-    //     uint256 _value,
-    //     bytes calldata _signature) external
-    // {
-    //     address sender = SigUtils.recoverAddress(
-    //         keccak256(
-    //             abi.encodePacked(
-    //                 _tokenContract,
-    //                 _sender,
-    //                 _destination,
-    //                 _value
-    //             )
-    //         ),
-    //         _signature
-    //     );
-
-    //     transferERC20Message(_tokenContract, sender, _destination, _value);
-    // }
-
-    // function forwardERC721Message(
-    //     address _tokenContract,
-    //     address _sender,
-    //     address _destination,
-    //     uint256 _value,
-    //     bytes calldata _signature) external
-    // {
-    //     address sender = SigUtils.recoverAddress(
-    //         keccak256(
-    //             abi.encodePacked(
-    //                 _tokenContract,
-    //                 _sender,
-    //                 _destination,
-    //                 _value
-    //             )
-    //         ),
-    //         _signature
-    //     );
-
-    //     transferERC721Message(_tokenContract, sender, _destination, _value);
-    // }
-
-    // function transferERC20Message(
-    //     address _tokenContract,
-    //     address _sender,
-    //     address _destination,
-    //     uint256 _value) external
-    // {
-    //     transferToken(
-    //         _sender,
-    //         _destination,
-    //         _tokenContract),
-    //         _value
-    //     );
-
-    //     _deliverERCTokenMessage(
-    //         _sender,
-    //         _destination,
-    //         ERC20_MSGTYPE,
-    //         _tokenContract,
-    //         _value
-    //     );
-    // }
-
-    // function transferERC721Message(
-    //     address _tokenContract,
-    //     address _sender,
-    //     address _destination,
-    //     uint256 _value) external
-    // {
-    //     transferNFT(
-    //         _sender,
-    //         _destination,
-    //         _tokenContract,
-    //         _value
-    //     );
-
-    //     _deliverERCTokenMessage(
-    //         _sender,
-    //         _destination,
-    //         ERC721_MSGTYPE,
-    //         _tokenContract,
-    //         _value
-    //     );
-    // }  
-
-    // function transferEthMessage(
-    //     address _destination, 
-    //     uint256 _value, 
-    //     bytes calldata _data) external
-    // {
-    //     transferEth(_destination, _value);
-
-    //     _deliverEthMessage(
-    //         _destination,
-    //         _value,
-    //         msg.sender,
-    //         _data
-    //     );
-    // }
-
     function _deliverTransactionMessage(
         address _sender,
         address _destination,
@@ -445,7 +394,12 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             _deliverMessage(_destination, messageHash);
         }
 
-        emit IGlobalPendingInbox.DataMessageDelivered(_destination, msg.sender, _data);
+        emit IGlobalPendingInbox.TransactionMessageDelivered(
+            _sender,
+            _destination,
+            _seq_number.
+            _value,
+            _data);
     }
 
     function _deliverEthMessage(
@@ -484,8 +438,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             _deliverMessage(_destination, messageHash);
         }
-
-        emit IGlobalPendingInbox.EthMessageDelivered(_destination, _sender, _value, _data);
     }
 
     function _deliverERCTokenMessage(
@@ -528,7 +480,38 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             _deliverMessage(_destination, messageHash);
         }
 
-        emit IGlobalPendingInbox.ERCTokenMessageDelivered(_destination, _sender, _messageType, _contractAddress, _value);
+        if(_messageType == ERC20_DEPOSIT){
+
+            emit IGlobalPendingInbox.DepositERC20MessageDelivered(
+                _destination,
+                msg.sender,
+                _tokenContract,
+                _value);
+
+        }else if(_messageType == ERC20_WITHDRAWAL){
+
+            emit IGlobalPendingInbox.WithdrawERC20MessageDelivered(
+                msg.sender,
+                _destination,
+                _tokenContract,
+                _value);
+
+        }else if(_messageType == ERC721_DEPOSIT){
+
+            emit IGlobalPendingInbox.DepositERC721MessageDelivered(
+                _destination,
+                msg.sender,
+                _tokenContract,
+                _value);
+
+        }else{
+
+            emit IGlobalPendingInbox.WithdrawERC721MessageDelivered(
+                msg.sender,
+                _destination,
+                _tokenContract,
+                _value);
+        }
     }
 
     function _deliverMessage(

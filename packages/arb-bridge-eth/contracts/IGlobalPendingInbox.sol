@@ -18,25 +18,52 @@ pragma solidity ^0.5.3;
 
 interface IGlobalPendingInbox {
 
-    event DataMessageDelivered(
-        address indexed vmId,
-        address sender,
+    event TransactionMessageDelivered(
+        address indexed vmSenderId,
+        address indexed vmReceiverId,
+        uint256 seq_number,
+        uint256 value,
         bytes data
     );
 
-    event ERCTokenMessageDelivered(
-        address indexed vmId,
+    event EthDepositMessageDelivered(
+        address indexed vmReceiverId,
         address sender,
-        uint256 messageType,
+        uint256 value
+    );
+
+    event EthWithdrawMessageDelivered(
+        address indexed vmSenderId,
+        address receiver,
+        uint256 value
+    );
+
+    event DepositERC20MessageDelivered(
+        address indexed vmReceiverId,
+        address sender,
         address tokenAddress,
         uint256 value
     );
 
-    event EthMessageDelivered(
-        address indexed vmId,
+    event WithdrawERC20MessageDelivered(
+        address indexed vmSenderId,
+        address receiver,
+        address tokenAddress,
+        uint256 value
+    );
+
+    event DepositERC721MessageDelivered(
+        address indexed vmReceiverId,
         address sender,
-        uint256 value,
-        bytes data
+        address tokenAddress,
+        uint256 value
+    );
+
+    event WithdrawERC721MessageDelivered(
+        address indexed vmSenderId,
+        address receiver,
+        address tokenAddress,
+        uint256 value
     );
 
     function pullPendingMessages() external returns(bytes32);
@@ -45,22 +72,52 @@ interface IGlobalPendingInbox {
 
     function registerForInbox() external;
 
-    function sendMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
-        bytes calldata _data
-    )
-        external;
-
-    function forwardMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
-        bytes calldata _data,
-        bytes calldata _signature
-    )
-        external;
-
     function sendEthMessage(address _destination, bytes calldata _data) external payable;
+
+    function withdrawEthMessage(address _destination, uint256 _value) external;
+
+    function sendTransactionMessage(
+        address _destination, 
+        uint256 _seq_number,
+        uint256 _value,
+        bytes calldata _data) external;
+
+    function depositERC20Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value) external;
+
+    function withdrawERC20Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value) external;
+
+    function depositERC721Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value) external;
+
+    function withdrawERC721Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value) external;
+
+    function forwardTransactionMessage(
+        address _destination,
+        uint256 _seq_number,
+        uint256 _value,
+        bytes calldata _data,
+        bytes calldata _signature) external;
+
+    function forwardDepositERC20Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value,
+        bytes calldata _signature) external;
+
+    function forwardDepositERC721Message(
+        address _tokenContract,
+        address _destination,
+        uint256 _value,
+        bytes calldata _signature) external;
 }
