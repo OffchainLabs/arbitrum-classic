@@ -135,7 +135,8 @@ void Machine::runOne() {
         // if not blocked, increment step count and gas count
         if (nonstd::get_if<NotBlocked>(&machine_state.blockReason)) {
             machine_state.context.numSteps++;
-            machine_state.context.numGas++;
+            machine_state.context.numGas +=
+                InstructionArbGasCost.at(instruction.op.opcode);
         }
 
         if (machine_state.state != Status::Error) {

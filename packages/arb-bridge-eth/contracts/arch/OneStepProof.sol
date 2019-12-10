@@ -1123,6 +1123,10 @@ library OneStepProof {
         return popCount;
     }
 
+    function opGasCost(uint8 opCode) internal pure returns(uint64) {
+        return 1;
+    }
+
     function loadMachine(
         ValidateProofData memory _data
     )
@@ -1204,7 +1208,7 @@ library OneStepProof {
         (opCode, stackVals, startMachine, endMachine, offset) = loadMachine(_data);
         bool correct = true;
         bytes32 messageHash;
-        require(_data.gas == 1, "Invalid gas in proof");
+        require(_data.gas == opGasCost(opCode), "Invalid gas in proof");
         if (opCode == OP_ADD) {
             correct = executeAddInsn(endMachine, stackVals[0], stackVals[1]);
         } else if (opCode == OP_MUL) {
