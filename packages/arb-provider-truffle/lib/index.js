@@ -37,7 +37,6 @@ function provider(outputFolder, buildLocation, options, should_compile) {
   if (!buildLocation) {
     buildLocation = path.resolve(rootPath, "build/contracts");
   }
-  options.network_id = 123456789;
   options.allowUnlimitedContractSize = true;
   const arbProvider = ganache.provider(options);
 
