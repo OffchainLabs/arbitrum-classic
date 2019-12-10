@@ -28,15 +28,15 @@ var (
 )
 
 // ChainFactoryABI is the input ABI used to generate the binding from.
-const ChainFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chainTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"ChainCreated\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createChain\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ChainFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chainTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"ChainCreated\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_maxArbGas\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createChain\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ChainFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var ChainFactoryFuncSigs = map[string]string{
-	"b7399786": "createChain(bytes32,uint32,uint32,uint128,address)",
+	"7c07d39f": "createChain(bytes32,uint32,uint32,uint64,uint128,address)",
 }
 
 // ChainFactoryBin is the compiled bytecode used for deploying new contracts.
-var ChainFactoryBin = "0x608060405234801561001057600080fd5b5060405161029a38038061029a8339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b031991821617909155600180549484169482169490941790935560028054929091169190921617905561020b8061008f6000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063b739978614610030575b600080fd5b610082600480360360a081101561004657600080fd5b50803590602081013563ffffffff9081169160408101359091169060608101356001600160801b031690608001356001600160a01b0316610084565b005b6000805461009a906001600160a01b0316610184565b60025460015460408051638364fe4760e01b8152600481018b905263ffffffff808b166024830152891660448201526001600160801b03881660648201526001600160a01b03878116608483015293841660a482015291831660c48301525192935090831691638364fe479160e48082019260009290919082900301818387803b15801561012757600080fd5b505af115801561013b573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517fa8ee415251435dd34f5b8cc67a5659f0a26f5ed9f7a91f59c9016e799580457f9350908190036020019150a1505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a72315820c41413bab1ca7b8938fbb64a379effa3df454dbfcb5305c40b4e3ead2dd3d30164736f6c634300050d0032"
+var ChainFactoryBin = "0x608060405234801561001057600080fd5b506040516102bc3803806102bc8339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b031991821617909155600180549484169482169490941790935560028054929091169190921617905561022d8061008f6000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80637c07d39f14610030575b600080fd5b610092600480360360c081101561004657600080fd5b50803590602081013563ffffffff90811691604081013590911690606081013567ffffffffffffffff169060808101356001600160801b03169060a001356001600160a01b0316610094565b005b600080546100aa906001600160a01b03166101a6565b60025460015460408051630ab9385360e31b8152600481018c905263ffffffff808c1660248301528a16604482015267ffffffffffffffff891660648201526001600160801b03881660848201526001600160a01b0387811660a483015293841660c482015291831660e483015251929350908316916355c9c298916101048082019260009290919082900301818387803b15801561014857600080fd5b505af115801561015c573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517fa8ee415251435dd34f5b8cc67a5659f0a26f5ed9f7a91f59c9016e799580457f9350908190036020019150a150505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a72315820887d572a2c5ab089e1f10a95316f8a7f8e7e4cdc848146de48e5f0c122a226ee64736f6c634300050d0032"
 
 // DeployChainFactory deploys a new Ethereum contract, binding an instance of ChainFactory to it.
 func DeployChainFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _chainTemplate common.Address, _globalInboxAddress common.Address, _challengeFactoryAddress common.Address) (common.Address, *types.Transaction, *ChainFactory, error) {
@@ -194,25 +194,25 @@ func (_ChainFactory *ChainFactoryTransactorRaw) Transact(opts *bind.TransactOpts
 	return _ChainFactory.Contract.contract.Transact(opts, method, params...)
 }
 
-// CreateChain is a paid mutator transaction binding the contract method 0xb7399786.
+// CreateChain is a paid mutator transaction binding the contract method 0x7c07d39f.
 //
-// Solidity: function createChain(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner) returns()
-func (_ChainFactory *ChainFactoryTransactor) CreateChain(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address) (*types.Transaction, error) {
-	return _ChainFactory.contract.Transact(opts, "createChain", _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner)
+// Solidity: function createChain(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner) returns()
+func (_ChainFactory *ChainFactoryTransactor) CreateChain(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address) (*types.Transaction, error) {
+	return _ChainFactory.contract.Transact(opts, "createChain", _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner)
 }
 
-// CreateChain is a paid mutator transaction binding the contract method 0xb7399786.
+// CreateChain is a paid mutator transaction binding the contract method 0x7c07d39f.
 //
-// Solidity: function createChain(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner) returns()
-func (_ChainFactory *ChainFactorySession) CreateChain(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address) (*types.Transaction, error) {
-	return _ChainFactory.Contract.CreateChain(&_ChainFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner)
+// Solidity: function createChain(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner) returns()
+func (_ChainFactory *ChainFactorySession) CreateChain(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address) (*types.Transaction, error) {
+	return _ChainFactory.Contract.CreateChain(&_ChainFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner)
 }
 
-// CreateChain is a paid mutator transaction binding the contract method 0xb7399786.
+// CreateChain is a paid mutator transaction binding the contract method 0x7c07d39f.
 //
-// Solidity: function createChain(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner) returns()
-func (_ChainFactory *ChainFactoryTransactorSession) CreateChain(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address) (*types.Transaction, error) {
-	return _ChainFactory.Contract.CreateChain(&_ChainFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner)
+// Solidity: function createChain(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner) returns()
+func (_ChainFactory *ChainFactoryTransactorSession) CreateChain(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address) (*types.Transaction, error) {
+	return _ChainFactory.Contract.CreateChain(&_ChainFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner)
 }
 
 // ChainFactoryChainCreatedIterator is returned from FilterChainCreated and is used to iterate over the raw logs and unpacked data for ChainCreated events raised by the ChainFactory contract.
@@ -352,7 +352,7 @@ func (_ChainFactory *ChainFactoryFilterer) ParseChainCreated(log types.Log) (*Ch
 const CloneFactoryABI = "[]"
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820bd1c8f807f41279d686b5d8221d8762be4edd48ecacae42fe2120d7e97df0da064736f6c634300050d0032"
+var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820878796a809b90734a93e84a3759d73ac4b0e17a8e5f99d67f46df0f3aad1545a64736f6c634300050d0032"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {
@@ -511,11 +511,11 @@ func (_CloneFactory *CloneFactoryTransactorRaw) Transact(opts *bind.TransactOpts
 }
 
 // IArbChainABI is the input ABI used to generate the binding from.
-const IArbChainABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeLauncherAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IArbChainABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_maxArbGas\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeLauncherAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IArbChainFuncSigs maps the 4-byte function signature to its string representation.
 var IArbChainFuncSigs = map[string]string{
-	"8364fe47": "init(bytes32,uint32,uint32,uint128,address,address,address)",
+	"55c9c298": "init(bytes32,uint32,uint32,uint64,uint128,address,address,address)",
 }
 
 // IArbChain is an auto generated Go binding around an Ethereum contract.
@@ -660,23 +660,23 @@ func (_IArbChain *IArbChainTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _IArbChain.Contract.contract.Transact(opts, method, params...)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x8364fe47.
+// Init is a paid mutator transaction binding the contract method 0x55c9c298.
 //
-// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress) returns()
-func (_IArbChain *IArbChainTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _IArbChain.contract.Transact(opts, "init", _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress)
+// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress) returns()
+func (_IArbChain *IArbChainTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbChain.contract.Transact(opts, "init", _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x8364fe47.
+// Init is a paid mutator transaction binding the contract method 0x55c9c298.
 //
-// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress) returns()
-func (_IArbChain *IArbChainSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _IArbChain.Contract.Init(&_IArbChain.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress)
+// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress) returns()
+func (_IArbChain *IArbChainSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbChain.Contract.Init(&_IArbChain.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x8364fe47.
+// Init is a paid mutator transaction binding the contract method 0x55c9c298.
 //
-// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress) returns()
-func (_IArbChain *IArbChainTransactorSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _IArbChain.Contract.Init(&_IArbChain.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress)
+// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress) returns()
+func (_IArbChain *IArbChainTransactorSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbChain.Contract.Init(&_IArbChain.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress)
 }
