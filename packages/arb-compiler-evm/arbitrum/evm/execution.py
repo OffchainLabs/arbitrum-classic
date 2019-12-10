@@ -259,9 +259,17 @@ def call(vm, call_num, contract_id):
     os.tx_call_to_local_exec_state(vm)
     # dest local_exec_state
 
-    _save_call_frame(vm)
-    _perform_call(vm, call_num)
-    _mutable_call_ret(vm)
+    vm.dup0()
+    vm.push(100)
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [vm.pop(), vm.push(0)],  # insert precompiles here
+        lambda vm: [
+            _save_call_frame(vm),
+            _perform_call(vm, call_num),
+            _mutable_call_ret(vm),
+        ],
+    )
 
 
 # [gas, dest, value, arg offset, arg length, ret offset, ret length]
