@@ -100,8 +100,7 @@ def process_withdraw_eth(vm):
     vm.ifelse(
         lambda vm: [
             # withdraw successful
-            message.get("message")(vm),
-            vm.send(),
+            vm.send()
         ],
         lambda vm: [vm.pop()],
     )
@@ -117,8 +116,7 @@ def process_withdraw_erc20(vm):
     vm.ifelse(
         lambda vm: [
             # withdraw successful
-            message.get("message")(vm),
-            vm.send(),
+            vm.send()
         ],
         lambda vm: [vm.pop()],
     )
@@ -134,8 +132,7 @@ def process_withdraw_erc721(vm):
     vm.ifelse(
         lambda vm: [
             # withdraw successful
-            message.get("message")(vm),
-            vm.send(),
+            vm.send()
         ],
         lambda vm: [vm.pop()],
     )

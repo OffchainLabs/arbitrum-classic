@@ -900,36 +900,28 @@ def process_deposit_token_message(vm, account_create_func):
     set_chain_state(vm)
 
     # message
-    vm.dup0()
-    message.get("sender")(vm)
-    vm.swap1()
     message.get("message")(vm)
     vm.cast(token_transfer_message.typ)
-    # token_transfer_message sender
+    # token_transfer_message
     vm.dup0()
     token_transfer_message.get("amount")(vm)
-    # amount token_transfer_message sender
+    # amount token_transfer_message
     vm.dup1()
     token_transfer_message.get("dest")(vm)
-    # address amount token_transfer_message sender
+    # address amount token_transfer_message
     tokens.make_token_mint_message(vm)
-    # data token_transfer_message sender
-
+    # data token_transfer_message
     vm.swap1()
     token_transfer_message.get("token_address")(vm)
-
-    # token_address data sender
+    # token_address data
     vm.push(0)
     vm.push(tx_call_data.make())
     vm.cast(tx_call_data.typ)
     tx_call_data.set_val("value")(vm)
     tx_call_data.set_val("dest")(vm)
     tx_call_data.set_val("data")(vm)
-    # tx_call_data sender
 
-    # ignore sender and replace with 0 for admin call
-    vm.swap1()
-    vm.pop()
+    # sender is 1 for admin call
     vm.push(1)
     vm.swap1()
     # tx_call_data sender
@@ -1006,33 +998,6 @@ def log_func_result(vm):
     # [msg, logs, data, code]
     std.tup.make(4)(vm)
     vm.log()
-
-
-# [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
-@modifies_stack([value.TupleType([value.IntType()] * 7)], [value.IntType()])
-def is_simple_send(vm):
-    # call_info
-    vm.dup0()
-    vm.tgetn(0)
-    vm.push(2300)
-    vm.lt()
-    vm.iszero()
-    # gas<2300 call_info
-
-    vm.swap1()
-    vm.dup0()
-    vm.tgetn(4)
-    vm.push(0)
-    vm.eq()
-    # arg_size==0 call_info gas<2300
-    vm.swap1()
-
-    vm.tgetn(6)
-    vm.push(0)
-    vm.eq()
-    # return_size==0 arg_size==0 gas<2300
-    vm.bitwise_and()
-    vm.bitwise_and()
 
 
 @modifies_stack([value.TupleType([value.IntType()] * 7)], 0)

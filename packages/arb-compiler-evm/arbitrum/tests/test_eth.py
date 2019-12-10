@@ -333,7 +333,9 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out2, EVMWithdrawal)
 
         self.assertEqual(len(vm.sent_messages), 1)
-        self.assertEqual(vm.sent_messages[0], value.Tuple([2345, 50000]))
+        self.assertEqual(
+            vm.sent_messages[0], value.Tuple([4, 2345, value.Tuple([2345, 50000])])
+        )
 
     def test_erc20(self):
         erc20 = contract_templates.get_erc20_contract()
@@ -375,7 +377,10 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out2, EVMStop)
 
         self.assertEqual(len(vm.sent_messages), 1)
-        self.assertEqual(vm.sent_messages[0], value.Tuple([5000, 2345, 50000]))
+        self.assertEqual(
+            vm.sent_messages[0],
+            value.Tuple([5, 2345, value.Tuple([5000, 2345, 50000])]),
+        )
 
     def test_erc721(self):
         erc20 = contract_templates.get_erc20_contract()
@@ -417,4 +422,7 @@ class TestEVM(TestCase):
         self.assertIsInstance(parsed_out2, EVMStop)
 
         self.assertEqual(len(vm.sent_messages), 1)
-        self.assertEqual(vm.sent_messages[0], value.Tuple([5000, 2345, 100000]))
+        self.assertEqual(
+            vm.sent_messages[0],
+            value.Tuple([6, 2345, value.Tuple([5000, 2345, 100000])]),
+        )
