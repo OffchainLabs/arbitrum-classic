@@ -900,36 +900,28 @@ def process_deposit_token_message(vm, account_create_func):
     set_chain_state(vm)
 
     # message
-    vm.dup0()
-    message.get("sender")(vm)
-    vm.swap1()
     message.get("message")(vm)
     vm.cast(token_transfer_message.typ)
-    # token_transfer_message sender
+    # token_transfer_message
     vm.dup0()
     token_transfer_message.get("amount")(vm)
-    # amount token_transfer_message sender
+    # amount token_transfer_message
     vm.dup1()
     token_transfer_message.get("dest")(vm)
-    # address amount token_transfer_message sender
+    # address amount token_transfer_message
     tokens.make_token_mint_message(vm)
-    # data token_transfer_message sender
-
+    # data token_transfer_message
     vm.swap1()
     token_transfer_message.get("token_address")(vm)
-
-    # token_address data sender
+    # token_address data
     vm.push(0)
     vm.push(tx_call_data.make())
     vm.cast(tx_call_data.typ)
     tx_call_data.set_val("value")(vm)
     tx_call_data.set_val("dest")(vm)
     tx_call_data.set_val("data")(vm)
-    # tx_call_data sender
 
-    # ignore sender and replace with 0 for admin call
-    vm.swap1()
-    vm.pop()
+    # sender is 1 for admin call
     vm.push(1)
     vm.swap1()
     # tx_call_data sender
