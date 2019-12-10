@@ -255,6 +255,7 @@ func (c *Challenge) BisectAssertion(
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
 	logAccs := make([][32]byte, 0, len(assertions)+1)
+	numGases := make([]uint64, 0, len(assertions)+1)
 	totalSteps := uint32(0)
 	machineHashes = append(machineHashes, precondition.BeforeHashValue())
 	messageAccs = append(messageAccs, assertions[0].FirstMessageHashValue())
@@ -263,6 +264,7 @@ func (c *Challenge) BisectAssertion(
 		machineHashes = append(machineHashes, assertion.AfterHashValue())
 		messageAccs = append(messageAccs, assertion.LastMessageHashValue())
 		logAccs = append(logAccs, assertion.LastLogHashValue())
+		numGases = append(numGases, assertion.NumGas)
 		totalSteps += assertion.NumSteps
 	}
 	var preData [32]byte
@@ -277,6 +279,7 @@ func (c *Challenge) BisectAssertion(
 		machineHashes,
 		messageAccs,
 		logAccs,
+		numGases,
 		totalSteps,
 	)
 	if err != nil {
@@ -339,6 +342,7 @@ func (c *Challenge) OneStepProof(
 		assertion.LastMessageHashValue(),
 		assertion.FirstLogHashValue(),
 		assertion.LastLogHashValue(),
+		assertion.NumGas,
 		proof,
 	)
 	if err != nil {

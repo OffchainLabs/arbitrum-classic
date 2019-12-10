@@ -75,12 +75,11 @@ interface ArbChainInterface extends Interface {
                 _vmState,
                 _gracePeriod,
                 _maxExecutionSteps,
-                _maxArbGas,
                 _escrowRequired,
                 _owner,
                 _challengeLauncherAddress,
                 _globalInboxAddress,
-            ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, string, string, string]): string;
+            ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, string, string, string]): string;
         }>;
 
         increaseDeposit: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -206,7 +205,6 @@ export class ArbChain extends Contract {
             _vmState: Arrayish,
             _gracePeriod: BigNumberish,
             _maxExecutionSteps: BigNumberish,
-            _maxArbGas: BigNumberish,
             _escrowRequired: BigNumberish,
             _owner: string,
             _challengeLauncherAddress: string,
@@ -288,7 +286,6 @@ export class ArbChain extends Contract {
             _vmState: Arrayish,
             _gracePeriod: BigNumberish,
             _maxExecutionSteps: BigNumberish,
-            _maxArbGas: BigNumberish,
             _escrowRequired: BigNumberish,
             _owner: string,
             _challengeLauncherAddress: string,

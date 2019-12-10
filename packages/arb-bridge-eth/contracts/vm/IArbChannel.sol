@@ -22,7 +22,6 @@ interface IArbChannel {
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
-        uint64 _maxArbGas,
         uint128 _escrowRequired,
         address payable _owner,
         address _challengeLauncherAddress,

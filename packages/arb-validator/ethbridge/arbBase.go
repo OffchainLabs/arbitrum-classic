@@ -282,6 +282,7 @@ func (vm *ArbBase) PendingDisputableAssert(
 		stub.LastMessageHashValue(),
 		stub.LastLogHashValue(),
 		assertion.NumSteps,
+		assertion.NumGas,
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
 	if err != nil {
@@ -302,6 +303,7 @@ func (vm *ArbBase) ConfirmDisputableAsserted(
 		precondition.Hash(),
 		assertion.AfterHash,
 		assertion.NumSteps,
+		assertion.NumGas,
 		messages,
 		assertion.LogsHash(),
 	)

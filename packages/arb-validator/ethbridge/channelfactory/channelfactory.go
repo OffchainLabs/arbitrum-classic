@@ -28,15 +28,15 @@ var (
 )
 
 // ChannelFactoryABI is the input ABI used to generate the binding from.
-const ChannelFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_channelTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_maxArbGas\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"_validatorKeys\",\"type\":\"address[]\"}],\"name\":\"createChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ChannelFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_channelTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"ChannelCreated\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"_validatorKeys\",\"type\":\"address[]\"}],\"name\":\"createChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ChannelFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var ChannelFactoryFuncSigs = map[string]string{
-	"4e9ab08a": "createChannel(bytes32,uint32,uint32,uint64,uint128,address,address[])",
+	"7d35dde4": "createChannel(bytes32,uint32,uint32,uint128,address,address[])",
 }
 
 // ChannelFactoryBin is the compiled bytecode used for deploying new contracts.
-var ChannelFactoryBin = "0x608060405234801561001057600080fd5b506040516103a73803806103a78339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556103188061008f6000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80634e9ab08a14610030575b600080fd5b61011d600480360360e081101561004657600080fd5b81359163ffffffff602082013581169260408301359091169167ffffffffffffffff606082013516916001600160801b03608083013516916001600160a01b0360a0820135169181019060e0810160c08201356401000000008111156100ab57600080fd5b8201836020820111156100bd57600080fd5b803590602001918460208302840111640100000000831117156100df57600080fd5b91908080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525092955061011f945050505050565b005b60008054610135906001600160a01b0316610291565b60025460015460405162700a2f60e21b8152600481018c815263ffffffff808d1660248401528b16604483015267ffffffffffffffff8a1660648301526001600160801b03891660848301526001600160a01b0388811660a484015293841660c4830181905292841660e48301819052610120610104840190815288516101248501528851969750948716956301c028bc958f958f958f958f958f958f9591938f939291610144909101906020808601910280838360005b838110156102055781810151838201526020016101ed565b505050509050019a5050505050505050505050600060405180830381600087803b15801561023257600080fd5b505af1158015610246573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517fc625d37dd8b556110d70984e62f74ba35c77422c83c5f548fbd21b697a67ef5c9350908190036020019150a15050505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a723158207a99fc01b63b7fe9ccf7554cc74d411c37cf55fdf9595fb70e67a240d8c9bea764736f6c634300050d0032"
+var ChannelFactoryBin = "0x608060405234801561001057600080fd5b506040516103823803806103828339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556102f38061008f6000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80637d35dde414610030575b600080fd5b61010e600480360360c081101561004657600080fd5b81359163ffffffff60208201358116926040830135909116916001600160801b03606082013516916001600160a01b03608083013516919081019060c0810160a082013564010000000081111561009c57600080fd5b8201836020820111156100ae57600080fd5b803590602001918460208302840111640100000000831117156100d057600080fd5b919080806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250929550610110945050505050565b005b60008054610126906001600160a01b031661026c565b600254600154604051637588110b60e01b8152600481018b815263ffffffff808c1660248401528a1660448301526001600160801b03891660648301526001600160a01b03888116608484015293841660a4830181905292841660c4830181905261010060e484019081528851610104850152885196975094871695637588110b958e958e958e958e958e95939490938e9361012401906020808601910280838360005b838110156101e25781810151838201526020016101ca565b505050509050019950505050505050505050600060405180830381600087803b15801561020e57600080fd5b505af1158015610222573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517fc625d37dd8b556110d70984e62f74ba35c77422c83c5f548fbd21b697a67ef5c9350908190036020019150a150505050505050565b6000808260601b9050604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528160148201526e5af43d82803e903d91602b57fd5bf360881b60288201526037816000f094935050505056fea265627a7a723158202732dd7bf4cdaec4766b897d80fd729f224d687ebeb1b056c8d75f03a462536564736f6c634300050d0032"
 
 // DeployChannelFactory deploys a new Ethereum contract, binding an instance of ChannelFactory to it.
 func DeployChannelFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _channelTemplate common.Address, _globalInboxAddress common.Address, _challengeFactoryAddress common.Address) (common.Address, *types.Transaction, *ChannelFactory, error) {
@@ -194,25 +194,25 @@ func (_ChannelFactory *ChannelFactoryTransactorRaw) Transact(opts *bind.Transact
 	return _ChannelFactory.Contract.contract.Transact(opts, method, params...)
 }
 
-// CreateChannel is a paid mutator transaction binding the contract method 0x4e9ab08a.
+// CreateChannel is a paid mutator transaction binding the contract method 0x7d35dde4.
 //
-// Solidity: function createChannel(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address[] _validatorKeys) returns()
-func (_ChannelFactory *ChannelFactoryTransactor) CreateChannel(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
-	return _ChannelFactory.contract.Transact(opts, "createChannel", _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _validatorKeys)
+// Solidity: function createChannel(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address[] _validatorKeys) returns()
+func (_ChannelFactory *ChannelFactoryTransactor) CreateChannel(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
+	return _ChannelFactory.contract.Transact(opts, "createChannel", _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _validatorKeys)
 }
 
-// CreateChannel is a paid mutator transaction binding the contract method 0x4e9ab08a.
+// CreateChannel is a paid mutator transaction binding the contract method 0x7d35dde4.
 //
-// Solidity: function createChannel(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address[] _validatorKeys) returns()
-func (_ChannelFactory *ChannelFactorySession) CreateChannel(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
-	return _ChannelFactory.Contract.CreateChannel(&_ChannelFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _validatorKeys)
+// Solidity: function createChannel(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address[] _validatorKeys) returns()
+func (_ChannelFactory *ChannelFactorySession) CreateChannel(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
+	return _ChannelFactory.Contract.CreateChannel(&_ChannelFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _validatorKeys)
 }
 
-// CreateChannel is a paid mutator transaction binding the contract method 0x4e9ab08a.
+// CreateChannel is a paid mutator transaction binding the contract method 0x7d35dde4.
 //
-// Solidity: function createChannel(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address[] _validatorKeys) returns()
-func (_ChannelFactory *ChannelFactoryTransactorSession) CreateChannel(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
-	return _ChannelFactory.Contract.CreateChannel(&_ChannelFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _validatorKeys)
+// Solidity: function createChannel(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address[] _validatorKeys) returns()
+func (_ChannelFactory *ChannelFactoryTransactorSession) CreateChannel(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
+	return _ChannelFactory.Contract.CreateChannel(&_ChannelFactory.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _validatorKeys)
 }
 
 // ChannelFactoryChannelCreatedIterator is returned from FilterChannelCreated and is used to iterate over the raw logs and unpacked data for ChannelCreated events raised by the ChannelFactory contract.
@@ -511,11 +511,11 @@ func (_CloneFactory *CloneFactoryTransactorRaw) Transact(opts *bind.TransactOpts
 }
 
 // IArbChannelABI is the input ABI used to generate the binding from.
-const IArbChannelABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_maxArbGas\",\"type\":\"uint64\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeLauncherAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"_validatorKeys\",\"type\":\"address[]\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_validators\",\"type\":\"address[]\"}],\"name\":\"isValidatorList\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const IArbChannelABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_escrowRequired\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeLauncherAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"_validatorKeys\",\"type\":\"address[]\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_validators\",\"type\":\"address[]\"}],\"name\":\"isValidatorList\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // IArbChannelFuncSigs maps the 4-byte function signature to its string representation.
 var IArbChannelFuncSigs = map[string]string{
-	"01c028bc": "init(bytes32,uint32,uint32,uint64,uint128,address,address,address,address[])",
+	"7588110b": "init(bytes32,uint32,uint32,uint128,address,address,address,address[])",
 	"513164fe": "isValidatorList(address[])",
 }
 
@@ -687,23 +687,23 @@ func (_IArbChannel *IArbChannelCallerSession) IsValidatorList(_validators []comm
 	return _IArbChannel.Contract.IsValidatorList(&_IArbChannel.CallOpts, _validators)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x01c028bc.
+// Init is a paid mutator transaction binding the contract method 0x7588110b.
 //
-// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress, address[] _validatorKeys) returns()
-func (_IArbChannel *IArbChannelTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
-	return _IArbChannel.contract.Transact(opts, "init", _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress, _validatorKeys)
+// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress, address[] _validatorKeys) returns()
+func (_IArbChannel *IArbChannelTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
+	return _IArbChannel.contract.Transact(opts, "init", _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress, _validatorKeys)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x01c028bc.
+// Init is a paid mutator transaction binding the contract method 0x7588110b.
 //
-// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress, address[] _validatorKeys) returns()
-func (_IArbChannel *IArbChannelSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
-	return _IArbChannel.Contract.Init(&_IArbChannel.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress, _validatorKeys)
+// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress, address[] _validatorKeys) returns()
+func (_IArbChannel *IArbChannelSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
+	return _IArbChannel.Contract.Init(&_IArbChannel.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress, _validatorKeys)
 }
 
-// Init is a paid mutator transaction binding the contract method 0x01c028bc.
+// Init is a paid mutator transaction binding the contract method 0x7588110b.
 //
-// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint64 _maxArbGas, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress, address[] _validatorKeys) returns()
-func (_IArbChannel *IArbChannelTransactorSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _maxArbGas uint64, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
-	return _IArbChannel.Contract.Init(&_IArbChannel.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _maxArbGas, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress, _validatorKeys)
+// Solidity: function init(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _escrowRequired, address _owner, address _challengeLauncherAddress, address _globalInboxAddress, address[] _validatorKeys) returns()
+func (_IArbChannel *IArbChannelTransactorSession) Init(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _escrowRequired *big.Int, _owner common.Address, _challengeLauncherAddress common.Address, _globalInboxAddress common.Address, _validatorKeys []common.Address) (*types.Transaction, error) {
+	return _IArbChannel.Contract.Init(&_IArbChannel.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _escrowRequired, _owner, _challengeLauncherAddress, _globalInboxAddress, _validatorKeys)
 }

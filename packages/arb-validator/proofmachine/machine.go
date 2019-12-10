@@ -132,6 +132,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 		a1 := m.machine.ExecuteAssertion(steps, timeBounds)
 		a.AfterHash = a1.AfterHash
 		a.NumSteps += a1.NumSteps
+		a.NumGas += a1.NumGas
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
 

@@ -39,7 +39,7 @@ struct AssertionContext {
     std::vector<value> logs;
 
     explicit AssertionContext(const TimeBounds& tb)
-        : numSteps{0}, timeBounds(tb) {}
+        : numSteps{0}, numGas{0}, timeBounds(tb) {}
 };
 
 struct MachineState {

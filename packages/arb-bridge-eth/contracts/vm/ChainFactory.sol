@@ -46,7 +46,6 @@ contract ChainFactory is CloneFactory {
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
-        uint64 _maxArbGas,
         uint128 _escrowRequired,
         address payable _owner
     )
@@ -57,7 +56,6 @@ contract ChainFactory is CloneFactory {
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
-            _maxArbGas,
             _escrowRequired,
             _owner,
             challengeFactoryAddress,
