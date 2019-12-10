@@ -1008,33 +1008,6 @@ def log_func_result(vm):
     vm.log()
 
 
-# [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
-@modifies_stack([value.TupleType([value.IntType()] * 7)], [value.IntType()])
-def is_simple_send(vm):
-    # call_info
-    vm.dup0()
-    vm.tgetn(0)
-    vm.push(2300)
-    vm.lt()
-    vm.iszero()
-    # gas<2300 call_info
-
-    vm.swap1()
-    vm.dup0()
-    vm.tgetn(4)
-    vm.push(0)
-    vm.eq()
-    # arg_size==0 call_info gas<2300
-    vm.swap1()
-
-    vm.tgetn(6)
-    vm.push(0)
-    vm.eq()
-    # return_size==0 arg_size==0 gas<2300
-    vm.bitwise_and()
-    vm.bitwise_and()
-
-
 @modifies_stack([value.TupleType([value.IntType()] * 7)], 0)
 def copy_return_data(vm):
     vm.dup0()
