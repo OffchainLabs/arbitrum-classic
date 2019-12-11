@@ -396,53 +396,6 @@ library Value {
         return value.hash().hash;
     }
 
-    function deserializeEthMessage(
-        bytes memory data,
-        uint startOffset)
-        public
-        pure
-        returns(
-            bool valid,
-            uint offset,
-            bytes32 messageHash,
-            uint256 destination,
-            uint256 value,
-            bytes memory messageData)
-    {
-
-    }
-
-    function deserializeERCTokenMessage(
-        bytes memory data,
-        uint startOffset)
-        public
-        pure
-        returns(
-            bool valid,
-            uint offset,
-            bytes32 messageHash,
-            uint256 destination,
-            uint256 value,
-            uint256 tokenAddress)
-    {
-
-    }
-
-    function deserializeDataMessage(
-        bytes memory data,
-        uint startOffset)
-        public
-        pure
-        returns(
-            bool valid,
-            uint offset,
-            bytes32 messageHash,
-            uint256 destination,
-            bytes memory messageData)
-    {
-
-    }
-
     function deserializeMessage(
         bytes memory data,
         uint startOffset)
@@ -452,57 +405,83 @@ library Value {
             bool valid,
             uint offset,
             bytes32 messageHash,
-            uint256 destination,
-            uint256 value,
-            uint256 tokenType,
-            bytes memory messageData
+            uint256 msg_type,
+            uint256 sender,
+            Data[] memory messageData
         )
     {
-        bytes32 messageDataHash;
         offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
-        if (valType != TUPLE_TYPECODE + 4) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+
+        // typle_type + what?
+        if(valType != TUPLE_TYPECODE){ 
+            // return error?
+            return (valid, offset, messageHash, msg_type, sender, messageData); 
         }
 
-        (offset, messageDataHash) = deserializeValidHashed(data, offset);
-        messageData = data.slice(startOffset + 1, offset - startOffset - 1);
-
+        (msg_type, offset) = deserializeInt(data, offset);
         valType = uint8(data[offset]);
         offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
-        }
-        (destination, offset) = deserializeInt(data, offset);
 
+        (sender, offset) = deserializeInt(data, offset);
         valType = uint8(data[offset]);
         offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
-        }
-        (value, offset) = deserializeInt(data, offset);
 
-        valType = uint8(data[offset]);
-        offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
-        }
-        (tokenType, offset) = deserializeInt(data, offset);
+        uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
+        Data[] memory tupleVal;
+        uint tupleValid;
+        (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
 
         valid = true;
 
-        bytes32[] memory hashes = new bytes32[](4);
-        hashes[0] = messageDataHash;
-        hashes[1] = hashInt(destination);
-        hashes[2] = hashInt(value);
-        hashes[3] = hashInt(tokenType);
+        bytes32[] memory hashes = new bytes32[](3);
+        hashes[0] = hashInt(msg_type);
+        hashes[1] = hashInt(sender);
+        hashes[2] = hashTuple(tupleVal);
         messageHash = hashTuple(hashes);
 
-        return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        return (valid, offset, messageHash, msg_type, sender, tupleVal);
+    }
+
+    function getERCTokenMsgData(
+        Data[] memory data)
+        public
+        pure
+        returns(
+            bool valid,
+            uint256 tokenAddress,
+            uint256 destination,
+            uint256 value)
+    {
+        return (tokenAddress, destination, value);
+    }
+
+    function getTransactionMsgData(
+        Data[] memory data)
+        public
+        pure
+        returns(
+            bool valid,
+            uint offset,
+            uint256 destination,
+            uint256 seqNumber,
+            uint256 value,
+            bytes memory messageData
+        )
+    {
+        return (destination, seqNumber, value, messageData);
+    }
+
+    function getEthMsgData(
+        Data[] memory data)
+        public
+        pure
+        returns(
+            bool valid,
+            uint256 destination,
+            uint256 value)
+    {
+        return (destination, value);
     }
 }
