@@ -222,10 +222,6 @@ const _abi = [
                 type: 'uint32',
             },
             {
-                name: 'maxArbGas',
-                type: 'uint64',
-            },
-            {
                 name: 'state',
                 type: 'uint8',
             },

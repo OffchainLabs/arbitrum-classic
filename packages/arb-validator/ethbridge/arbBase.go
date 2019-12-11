@@ -415,6 +415,7 @@ func translateDisputableAssertionEvent(event *arbchain.ArbBasePendingDisputableA
 	assertion := &protocol.AssertionStub{
 		AfterHash:        value.NewHashBuf(event.Fields[2]),
 		NumSteps:         event.NumSteps,
+		NumGas:           event.NumGas,
 		FirstMessageHash: value.NewHashBuf([32]byte{}),
 		LastMessageHash:  value.NewHashBuf(event.Fields[3]),
 		FirstLogHash:     value.NewHashBuf([32]byte{}),

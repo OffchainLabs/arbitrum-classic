@@ -41,8 +41,8 @@ contract Challenge is IChallenge {
         bytes32[] machineHashes,
         bytes32[] messageAccs,
         bytes32[] logAccs,
+        uint64[]  gases,
         uint32 totalSteps,
-        uint64 totalGas,
         uint64 deadline
     );
 
@@ -184,13 +184,13 @@ contract Challenge is IChallenge {
         uint bisectionCount = _data.machineHashes.length - 1;
         require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
-        require(bisectionCount + 1 == _data.gases.length, BIS_INPLEN);
+        require(bisectionCount == _data.gases.length, BIS_INPLEN);
         require(State.Challenged == state, BIS_STATE);
         require(block.number <= deadline, BIS_DEADLINE);
         require(msg.sender == players[0], BIS_SENDER);
 
         uint64 totalGas = 0;
-        for (uint i = 0; i < bisectionCount + 1; i++) {
+        for (uint i = 0; i < bisectionCount; i++) {
             totalGas += _data.gases[i];
         }
 
@@ -255,8 +255,8 @@ contract Challenge is IChallenge {
             _data.machineHashes,
             _data.messageAccs,
             _data.logAccs,
+            _data.gases,
             _data.totalSteps,
-            totalGas,
             newDeadline
         );
     }

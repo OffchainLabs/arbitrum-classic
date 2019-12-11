@@ -133,7 +133,6 @@ export class ArbChain extends Contract {
             sequenceNum: BigNumber;
             gracePeriod: number;
             maxExecutionSteps: number;
-            maxArbGas: BigNumber;
             state: number;
             activeChallengeManager: string;
             0: string;
@@ -145,9 +144,8 @@ export class ArbChain extends Contract {
             6: BigNumber;
             7: number;
             8: number;
-            9: BigNumber;
-            10: number;
-            11: string;
+            9: number;
+            10: string;
         }>;
 
         confirmDisputableAsserted(

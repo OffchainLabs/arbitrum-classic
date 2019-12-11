@@ -67,7 +67,6 @@ library Disputable {
         );
         require(vm.activeChallengeManager == address(0), "Can only disputable assert if not in challenge");
         require(numSteps <= vm.maxExecutionSteps, "Tried to execute too many steps");
-        require(numGas <= vm.maxArbGas, "Tried to use too much ArbGas");
         require(withinTimeBounds(timeBounds), "Precondition: not within time bounds");
         require(beforeHash == vm.machineHash, "Precondition: state hash does not match");
         require(beforeInbox == vm.inbox, "Precondition: inbox does not match");

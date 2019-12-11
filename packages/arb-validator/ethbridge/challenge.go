@@ -388,6 +388,7 @@ func translateBisectionEvent(event *challenge.ChallengeBisectedAssertion) []*pro
 		assertion := &protocol.AssertionStub{
 			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
 			NumSteps:         steps,
+			NumGas:           event.Gases[i],
 			FirstMessageHash: value.NewHashBuf(event.MessageAccs[i]),
 			LastMessageHash:  value.NewHashBuf(event.MessageAccs[i+1]),
 			FirstLogHash:     value.NewHashBuf(event.LogAccs[i]),
