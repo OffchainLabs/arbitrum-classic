@@ -482,7 +482,8 @@ library Value {
                 && data[2].typeCode == INT_TYPECODE
                 && data[3].typeCode == TUPLE_TYPECODE)
             {
-                return (true, data[0].intVal, data[1].intVal, data[2].intVal, data[3].tupleVal);
+                //data[3].tupleVal to bytes?
+                return (true, data[0].intVal, data[1].intVal, data[2].intVal, messageData);
             }
         }
 
