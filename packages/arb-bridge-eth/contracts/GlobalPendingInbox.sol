@@ -25,7 +25,6 @@ import "./libraries/SigUtils.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-
 contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     uint8 internal constant TRANSACTION_MSG = 0;
@@ -59,104 +58,99 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         bool valid;
         uint256 messageType;
         bytes32 messageHash;
-        uint256 destination;
-        uint256 value;
+        uint256 sender;
         uint256 tokenContract;
-        bytes memory messageData;
+        Data[] memory messageData;
         uint totalLength = _messages.length;
 
         while (offset < totalLength) {
 
-            uint256 messageType = _messages[offset];
+            (
+                valid, 
+                offset, 
+                messageHash, 
+                messageType, 
+                sender, 
+                messageData) = Value.deserializeMessage(_messages, offset);
 
-            if(messageType == TRANSACTION_MSG)
-            {
-                (   valid,
-                    offset,
-                    messageHash,
-                    destination,
-                    seq_number,
-                    value,
-                    messageData
-                ) = Value.deserializeTransactionMessage(_messages, offset);
-            
-                if(valid){
-                    sendTransactionMessage(
-                        address(bytes20(bytes32(destination))),
+            if(valid){
+                if(messageType == TRANSACTION_MSG)
+                {
+                    (   valid,
+                        destination,
                         seq_number,
                         value,
                         messageData
-                    );
+                    ) = Value.getTransactionMsgData(messageData);
+                
+                    if(valid){
+                        sendTransactionMessage(
+                            address(bytes20(bytes32(destination))),
+                            seq_number,
+                            value,
+                            messageData
+                        );
+                    }
+                }else if(messageType == ETH_WITHDRAWAL)
+                {
+                    (   valid,
+                        destination,
+                        value
+                    ) = Value.getEthMsgData(messageData);
+
+                    if(valid){
+                        withdrawEthMessage(destination, value);
+                    }   
+
+                }else if(messageType == ERC20_DEPOSIT)
+                {
+                    (   valid,
+                        tokenContract,
+                        destination,
+                        value
+                    ) = Value.getERCTokenMsgData(messageData);
+
+                    if(valid){
+                        depositERC20Message(tokenAddress, destination, value);
+                    }   
+
+                }else if(messageType == ERC20_WITHDRAWAL)
+                {
+                    (   valid,
+                        tokenContract,
+                        destination,
+                        value
+                    ) = Value.getERCTokenMsgData(messageData);
+
+                    if(valid){
+                        withdrawERC20Message(tokenAddress, destination, value);
+                    }   
+
+                }else if(messageType == ERC721_DEPOSIT)
+                {
+                    (   valid,
+                        tokenContract,
+                        destination,
+                        value
+                    ) = Value.getERCTokenMsgData(messageData);
+
+                    if(valid){
+                        depositERC721Message(tokenAddress, destination, value);
+                    }   
+
+                }else if(messageType == ERC721_WITHDRAWAL)
+                {
+                    (   valid,
+                        tokenContract,
+                        destination,
+                        value
+                    ) = Value.getERCTokenMsgData(messageData);
+
+                    if(valid){
+                        withdrawERC721Message(tokenAddress, destination, value);
+                    }
                 }
-            }else if(messageType == ETH_WITHDRAWAL)
-            {
-                (   valid,
-                    offset,
-                    messageHash,
-                    destination,
-                    value,
-                    messageData
-                ) = Value.deserializeEthMessage(_messages, offset);
 
-                if(valid){
-                    withdrawEthMessage(destination, value);
-                }   
-
-            }else if(messageType == ERC20_DEPOSIT)
-            {
-                (   valid,
-                    offset,
-                    messageHash,
-                    destination,
-                    value,
-                    messageData
-                ) = Value.deserializeERCTokenMessage(_messages, offset);
-
-                if(valid){
-                    depositERC20Message(tokenAddress, destination, value);
-                }   
-
-            }else if(messageType == ERC20_WITHDRAWAL)
-            {
-                (   valid,
-                    offset,
-                    messageHash,
-                    destination,
-                    value,
-                    messageData
-                ) = Value.deserializeERCTokenMessage(_messages, offset);
-
-                if(valid){
-                    withdrawERC20Message(tokenAddress, destination, value);
-                }   
-
-            }else if(messageType == ERC721_DEPOSIT)
-            {
-                (   valid,
-                    offset,
-                    messageHash,
-                    destination,
-                    value,
-                    messageData
-                ) = Value.deserializeERCTokenMessage(_messages, offset);
-
-                if(valid){
-                    depositERC721Message(tokenAddress, destination, value);
-                }   
-
-            }else if(messageType == ERC721_WITHDRAWAL)
-            {
-                (   valid,
-                    offset,
-                    messageHash,
-                    destination,
-                    value,
-                    tokenAddress
-                ) = Value.deserializeERCTokenMessage(_messages, offset);
-
-                if(valid){
-                    withdrawERC721Message(tokenAddress, destination, value);
-                }
             }
         }
     }
@@ -277,7 +271,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function withdrawEthMessage(address _destination, uint256 _value) external 
     {
-        transferEth(_destination, _value);
+        withdrawEth(_destination, _value);
 
         _deliverEthMessage(
             msg.sender,
