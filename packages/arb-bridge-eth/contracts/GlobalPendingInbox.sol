@@ -194,8 +194,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             keccak256(
                 abi.encodePacked(
                     _destination,
-                    uint256 _seq_number,
-                    uint256 _value,
+                    _seq_number,
+                    _value,
                     ArbValue.deserializeValueHash(_data)
                 )
             ),
@@ -205,8 +205,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         _deliverTransactionMessage(
             sender,
             _destination,
-            uint256 _seq_number,
-            uint256 _value,
+            _seq_number,
+            _value,
             _data
         );
     }
