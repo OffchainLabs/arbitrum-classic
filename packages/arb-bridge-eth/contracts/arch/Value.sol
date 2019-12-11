@@ -454,7 +454,15 @@ library Value {
             uint256 destination,
             uint256 value)
     {
-        return (tokenAddress, destination, value);
+        if(data.length == 3){
+            if(data[0].typeCode == INT_TYPECODE 
+                && data[1].typeCode == INT_TYPECODE
+                && data[2].typeCode == INT_TYPECODE){
+                return (true, data[0].intVal, data[1].intVal, data[2].intVal);
+            }
+        }
+
+        return (false, tokenAddress, destination, value);
     }
 
     function getTransactionMsgData(
@@ -470,7 +478,17 @@ library Value {
             bytes memory messageData
         )
     {
-        return (destination, seqNumber, value, messageData);
+        if(data.length == 4){
+            if(data[0].typeCode == INT_TYPECODE 
+                && data[1].typeCode == INT_TYPECODE
+                && data[2].typeCode == INT_TYPECODE
+                && data[3].typeCode == TUPLE_TYPECODE)
+            {
+                return (true, data[0].intVal, data[1].intVal, data[2].intVal, data[3].tupleVal);
+            }
+        }
+
+        return (false, destination, seqNumber, value, messageData);
     }
 
     function getEthMsgData(
@@ -482,6 +500,12 @@ library Value {
             uint256 destination,
             uint256 value)
     {
-        return (destination, value);
+        if(data.length == 2){
+            if(data[0].typeCode == INT_TYPECODE && data[1].typeCode == INT_TYPECODE){
+                return (true, data[0].intVal, data[1].intVal);
+            }
+        }
+
+        return (false, destination, value);
     }
 }

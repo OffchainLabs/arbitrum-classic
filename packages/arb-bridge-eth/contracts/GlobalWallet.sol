@@ -91,7 +91,7 @@ contract GlobalWallet {
         msg.sender.transfer(_value);
     }
 
-    function withdrawEth(address _destination, uint256 _value) external {
+    function transferEth(address _destination, uint256 _value) external {
         require(
             removeToken(msg.sender, ETH_ADDRESS, _value),
             "Wallet doesn't own sufficient balance of token"

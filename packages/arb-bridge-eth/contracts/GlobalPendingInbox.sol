@@ -91,6 +91,17 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                             messageData
                         );
                     }
+                }else if(messageType == ETH_DEPOSIT)
+                {
+                    (   valid,
+                        destination,
+                        value
+                    ) = Value.getEthMsgData(messageData);
+
+                    if(valid){
+                        depositEthMessage(destination, value);
+                    }   
+
                 }else if(messageType == ETH_WITHDRAWAL)
                 {
                     (   valid,
@@ -269,9 +280,26 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             msg.value);
     }
 
+    function despositEthMessage(address _destination, uint256 _value) external 
+    {
+        transferEth(_destination, _value);
+        
+        _deliverEthMessage(
+            msg.sender,
+            _destination,
+            ETH_DEPOSIT,
+            msg.value
+        );
+
+        emit IGlobalPendingInbox.EthDepositMessageDelivered(
+            _destination,
+            msg.sender,
+            msg.value);
+    }
+
     function withdrawEthMessage(address _destination, uint256 _value) external 
     {
-        withdrawEth(_destination, _value);
+        transferEth(_destination, _value);
 
         _deliverEthMessage(
             msg.sender,
