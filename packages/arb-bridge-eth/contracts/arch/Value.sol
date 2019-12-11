@@ -405,7 +405,7 @@ library Value {
             bool valid,
             uint offset,
             bytes32 messageHash,
-            uint256 msg_type,
+            uint256 msgType,
             uint256 sender,
             Data[] memory messageData
         )
@@ -416,11 +416,10 @@ library Value {
 
         // typle_type + what?
         if(valType != TUPLE_TYPECODE){ 
-            // return error?
-            return (valid, offset, messageHash, msg_type, sender, messageData); 
+            return (valid, offset, messageHash, msgType, sender, messageData); 
         }
 
-        (msg_type, offset) = deserializeInt(data, offset);
+        (msgType, offset) = deserializeInt(data, offset);
         valType = uint8(data[offset]);
         offset++;
 
@@ -436,12 +435,12 @@ library Value {
         valid = true;
 
         bytes32[] memory hashes = new bytes32[](3);
-        hashes[0] = hashInt(msg_type);
+        hashes[0] = hashInt(msgType);
         hashes[1] = hashInt(sender);
         hashes[2] = hashTuple(tupleVal);
         messageHash = hashTuple(hashes);
 
-        return (valid, offset, messageHash, msg_type, sender, tupleVal);
+        return (valid, offset, messageHash, msgType, sender, tupleVal);
     }
 
     function getERCTokenMsgData(
