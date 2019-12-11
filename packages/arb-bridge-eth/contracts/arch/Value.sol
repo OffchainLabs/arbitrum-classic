@@ -414,8 +414,7 @@ library Value {
         uint8 valType = uint8(data[offset]);
         offset++;
 
-        // typle_type + what?
-        if(valType != TUPLE_TYPECODE){ 
+        if(valType != TUPLE_TYPECODE + 3){ 
             return (valid, offset, messageHash, msgType, sender, messageData); 
         }
 

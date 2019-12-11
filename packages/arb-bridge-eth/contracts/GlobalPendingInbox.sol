@@ -60,18 +60,19 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         bytes32 messageHash;
         uint256 sender;
         uint256 tokenContract;
-        Data[] memory messageData;
+        bytes memory messageData;
+        // must convert Data to bytes for transaction messageData
+        Data[] memory data;
         uint totalLength = _messages.length;
 
         while (offset < totalLength) {
-
             (
                 valid, 
                 offset, 
                 messageHash, 
                 messageType, 
                 sender, 
-                messageData) = Value.deserializeMessage(_messages, offset);
+                data) = Value.deserializeMessage(_messages, offset);
 
             if(valid){
                 if(messageType == TRANSACTION_MSG)
@@ -81,7 +82,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         seq_number,
                         value,
                         messageData
-                    ) = Value.getTransactionMsgData(messageData);
+                    ) = Value.getTransactionMsgData(data);
                 
                     if(valid){
                         sendTransactionMessage(
@@ -96,10 +97,12 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     (   valid,
                         destination,
                         value
-                    ) = Value.getEthMsgData(messageData);
+                    ) = Value.getEthMsgData(data);
 
                     if(valid){
-                        depositEthMessage(address(bytes20(bytes32(destination))), value);
+                        depositEthMessage(
+                            address(bytes20(bytes32(destination))), 
+                            value);
                     }   
 
                 }else if(messageType == ETH_WITHDRAWAL)
@@ -107,10 +110,12 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     (   valid,
                         destination,
                         value
-                    ) = Value.getEthMsgData(messageData);
+                    ) = Value.getEthMsgData(data);
 
                     if(valid){
-                        withdrawEthMessage(address(bytes20(bytes32(destination))), value);
+                        withdrawEthMessage(
+                            address(bytes20(bytes32(destination))), 
+                            value);
                     }   
 
                 }else if(messageType == ERC20_DEPOSIT)
@@ -119,10 +124,13 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(messageData);
+                    ) = Value.getERCTokenMsgData(data);
 
                     if(valid){
-                        depositERC20Message(address(bytes20(bytes32(tokenContract))), address(bytes20(bytes32(destination))), value);
+                        depositERC20Message(
+                            address(bytes20(bytes32(tokenContract))), 
+                            address(bytes20(bytes32(destination))), 
+                            value);
                     }   
 
                 }else if(messageType == ERC20_WITHDRAWAL)
@@ -131,10 +139,13 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(messageData);
+                    ) = Value.getERCTokenMsgData(data);
 
                     if(valid){
-                        withdrawERC20Message(address(bytes20(bytes32(tokenContract))), address(bytes20(bytes32(destination))), value);
+                        withdrawERC20Message(
+                            address(bytes20(bytes32(tokenContract))), 
+                            address(bytes20(bytes32(destination))), 
+                            value);
                     }   
 
                 }else if(messageType == ERC721_DEPOSIT)
@@ -143,10 +154,13 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(messageData);
+                    ) = Value.getERCTokenMsgData(data);
 
                     if(valid){
-                        depositERC721Message(address(bytes20(bytes32(tokenContract))), address(bytes20(bytes32(destination))), value);
+                        depositERC721Message(
+                            address(bytes20(bytes32(tokenContract))), 
+                            address(bytes20(bytes32(destination))), 
+                            value);
                     }   
 
                 }else if(messageType == ERC721_WITHDRAWAL)
@@ -155,10 +169,13 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(messageData);
+                    ) = Value.getERCTokenMsgData(data);
 
                     if(valid){
-                        withdrawERC721Message(address(bytes20(bytes32(tokenContract))), address(bytes20(bytes32(destination))), value);
+                        withdrawERC721Message(
+                            address(bytes20(bytes32(tokenContract))), 
+                            address(bytes20(bytes32(destination))), 
+                            value);
                     }
                 }
 
