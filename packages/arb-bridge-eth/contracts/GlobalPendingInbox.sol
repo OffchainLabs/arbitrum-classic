@@ -60,11 +60,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         uint256 messageType;
         uint256 sender;
         bytes memory messageData;
-
-        uint256 destination;
-        uint256 tokenContract;
-        uint256 seq_number;
-        uint256 value;
         uint totalLength = _messages.length;
 
         while (offset < totalLength) {
@@ -77,114 +72,150 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 messageData) = Value.deserializeMessage(_messages, offset);
 
             if(valid){
-
-                if(messageType == TRANSACTION_MSG)
-                {
-                    (   valid,
-                        destination,
-                        seq_number,
-                        value,
-                        messageData
-                    ) = Value.getTransactionMsgData(messageData);
-                
-                    if(valid){
-                        _deliverTransactionMessage(
-                            msg.sender,
-                            address(bytes20(bytes32(destination))),
-                            seq_number,
-                            value,
-                            messageData
-                        );
-                    }
-                }else if(messageType == ETH_DEPOSIT)
-                {
-                    (   valid,
-                        destination,
-                        value
-                    ) = Value.getEthMsgData(messageData);
-
-                    if(valid){
-                        depositEthMessage(
-                            address(bytes20(bytes32(destination))), 
-                            value);
-                    }   
-
-                }else if(messageType == ETH_WITHDRAWAL)
-                {
-                    (   valid,
-                        destination,
-                        value
-                    ) = Value.getEthMsgData(messageData);
-
-                    if(valid){
-                        withdrawEthMessage(
-                            address(bytes20(bytes32(destination))), 
-                            value);
-                    }   
-
-                }else if(messageType == ERC20_DEPOSIT)
-                {
-                    (   valid,
-                        tokenContract,
-                        destination,
-                        value
-                    ) = Value.getERCTokenMsgData(messageData);
-
-                    if(valid){
-                        depositERC20Message(
-                            address(bytes20(bytes32(tokenContract))), 
-                            address(bytes20(bytes32(destination))), 
-                            value);
-                    }   
-
-                }else if(messageType == ERC20_WITHDRAWAL)
-                {
-                    (   valid,
-                        tokenContract,
-                        destination,
-                        value
-                    ) = Value.getERCTokenMsgData(messageData);
-
-                    if(valid){
-                        withdrawERC20Message(
-                            address(bytes20(bytes32(tokenContract))), 
-                            address(bytes20(bytes32(destination))), 
-                            value);
-                    }   
-
-                }else if(messageType == ERC721_DEPOSIT)
-                {
-                    (   valid,
-                        tokenContract,
-                        destination,
-                        value
-                    ) = Value.getERCTokenMsgData(messageData);
-
-                    if(valid){
-                        depositERC721Message(
-                            address(bytes20(bytes32(tokenContract))), 
-                            address(bytes20(bytes32(destination))), 
-                            value);
-                    }   
-
-                }else if(messageType == ERC721_WITHDRAWAL)
-                {
-                    (   valid,
-                        tokenContract,
-                        destination,
-                        value
-                    ) = Value.getERCTokenMsgData(messageData);
-
-                    if(valid){
-                        withdrawERC721Message(
-                            address(bytes20(bytes32(tokenContract))), 
-                            address(bytes20(bytes32(destination))), 
-                            value);
-                    }
-                }
-
+                sendDeserializedMsgs(messageData, messageType);
             }
         }
+    }
+
+    function sendDeserializedMsgs(bytes memory messageData, uint256 messageType) private {
+        if(messageType == TRANSACTION_MSG)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 seq_number;
+            uint256 value;
+
+            (   valid,
+                destination,
+                seq_number,
+                value,
+                messageData
+            ) = Value.getTransactionMsgData(messageData);
+        
+            if(valid){
+                _deliverTransactionMessage(
+                    msg.sender,
+                    address(bytes20(bytes32(destination))),
+                    seq_number,
+                    value,
+                    messageData
+                );
+            }
+        }else if(messageType == ETH_DEPOSIT)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 value;
+
+            (   valid,
+                destination,
+                value
+            ) = Value.getEthMsgData(messageData);
+
+            if(valid){
+                depositEthMessage(
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }   
+
+        }else if(messageType == ETH_WITHDRAWAL)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 value;
+
+            (   valid,
+                destination,
+                value
+            ) = Value.getEthMsgData(messageData);
+
+            if(valid){
+                withdrawEthMessage(
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }   
+
+        }else if(messageType == ERC20_DEPOSIT)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 tokenContract;
+            uint256 value;
+
+            (   valid,
+                tokenContract,
+                destination,
+                value
+            ) = Value.getERCTokenMsgData(messageData);
+
+            if(valid){
+                depositERC20Message(
+                    address(bytes20(bytes32(tokenContract))), 
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }   
+
+        }else if(messageType == ERC20_WITHDRAWAL)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 tokenContract;
+            uint256 value;
+
+            (   valid,
+                tokenContract,
+                destination,
+                value
+            ) = Value.getERCTokenMsgData(messageData);
+
+            if(valid){
+                withdrawERC20Message(
+                    address(bytes20(bytes32(tokenContract))), 
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }   
+
+        }else if(messageType == ERC721_DEPOSIT)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 tokenContract;
+            uint256 value;
+
+            (   valid,
+                tokenContract,
+                destination,
+                value
+            ) = Value.getERCTokenMsgData(messageData);
+
+            if(valid){
+                depositERC721Message(
+                    address(bytes20(bytes32(tokenContract))), 
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }   
+
+        }else if(messageType == ERC721_WITHDRAWAL)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 tokenContract;
+            uint256 value;
+
+            (   valid,
+                tokenContract,
+                destination,
+                value
+            ) = Value.getERCTokenMsgData(messageData);
+
+            if(valid){
+                withdrawERC721Message(
+                    address(bytes20(bytes32(tokenContract))), 
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }
+        }
+
     }
 
     function forwardTransactionMessage(
