@@ -72,9 +72,11 @@ interface IGlobalPendingInbox {
 
     function registerForInbox() external;
 
-    function sendEthMessage(address _destination, bytes calldata _data) external payable;
+    function sendEthMessage(address _destination) external payable;
 
-    function withdrawEthMessage(address _destination, uint256 _value) external;
+    function depositEthMessage(address payable _destination, uint256 _value) external;
+
+    function withdrawEthMessage(address payable _destination, uint256 _value) external;
 
     function sendTransactionMessage(
         address _destination, 

@@ -54,18 +54,17 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function sendMessages(bytes calldata _messages) external {
-        uint offset = 0;
         bool valid;
-        uint256 messageType;
+        uint offset = 0;
         bytes32 messageHash;
+        uint256 messageType;
         uint256 sender;
+        bytes memory messageData;
+
         uint256 destination;
         uint256 tokenContract;
         uint256 seq_number;
         uint256 value;
-        bytes memory messageData;
-        // must convert Data to bytes for transaction messageData
-        Value.Data[] memory data;
         uint totalLength = _messages.length;
 
         while (offset < totalLength) {
@@ -75,7 +74,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 messageHash, 
                 messageType, 
                 sender, 
-                data) = Value.deserializeMessage(_messages, offset);
+                messageData) = Value.deserializeMessage(_messages, offset);
 
             if(valid){
 
@@ -86,7 +85,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         seq_number,
                         value,
                         messageData
-                    ) = Value.getTransactionMsgData(data);
+                    ) = Value.getTransactionMsgData(messageData);
                 
                     if(valid){
                         _deliverTransactionMessage(
@@ -102,7 +101,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     (   valid,
                         destination,
                         value
-                    ) = Value.getEthMsgData(data);
+                    ) = Value.getEthMsgData(messageData);
 
                     if(valid){
                         depositEthMessage(
@@ -115,7 +114,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     (   valid,
                         destination,
                         value
-                    ) = Value.getEthMsgData(data);
+                    ) = Value.getEthMsgData(messageData);
 
                     if(valid){
                         withdrawEthMessage(
@@ -129,7 +128,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(data);
+                    ) = Value.getERCTokenMsgData(messageData);
 
                     if(valid){
                         depositERC20Message(
@@ -144,7 +143,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(data);
+                    ) = Value.getERCTokenMsgData(messageData);
 
                     if(valid){
                         withdrawERC20Message(
@@ -159,7 +158,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(data);
+                    ) = Value.getERCTokenMsgData(messageData);
 
                     if(valid){
                         depositERC721Message(
@@ -174,7 +173,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                         tokenContract,
                         destination,
                         value
-                    ) = Value.getERCTokenMsgData(data);
+                    ) = Value.getERCTokenMsgData(messageData);
 
                     if(valid){
                         withdrawERC721Message(
@@ -201,7 +200,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     _destination,
                     _seq_number,
                     _value,
-                    Value.deserializeValueHash(_data)
+                    Value.deserializeHashed(_data)
                 )
             ),
             _signature
@@ -302,7 +301,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             msg.value);
     }
 
-    function depositEthMessage(address _destination, uint256 _value) public 
+    function depositEthMessage(address payable _destination, uint256 _value) public
     {
         transferEth(_destination, _value);
         
@@ -310,16 +309,16 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             msg.sender,
             _destination,
             ETH_DEPOSIT,
-            msg.value
+            _value
         );
 
         emit IGlobalPendingInbox.EthDepositMessageDelivered(
             _destination,
             msg.sender,
-            msg.value);
+            _value);
     }
 
-    function withdrawEthMessage(address _destination, uint256 _value) public 
+    function withdrawEthMessage(address payable _destination, uint256 _value) public 
     {
         transferEth(_destination, _value);
 
@@ -333,7 +332,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         emit IGlobalPendingInbox.EthWithdrawMessageDelivered(
             msg.sender,
             _destination,
-            msg.value);
+            _value);
     }
 
     function depositERC20Message(
@@ -399,41 +398,41 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     function _deliverTransactionMessage(
         address _sender,
         address _destination,
-        uint256 _seq_number,
+        uint256 _seqNumber,
         uint256 _value,
         bytes memory _data) private
     {
         if (pending[_destination] != 0) 
         {
-            bytes32 dataHash = Value.deserializeValueHash(_data);
+            bytes32 dataHash = Value.deserializeHashed(_data);
             bytes32 txHash = keccak256(
                 abi.encodePacked(
                     _sender,
                     _destination,
-                    _seq_number,
+                    _seqNumber,
                     dataHash,
                     pending[_destination]
                 )
             );
 
             Value.Data[] memory msgValues = new Value.Data[](4);
-            msgValues[0] = Value.newIntValue(uint256(_destination));
-            msgValues[1] = Value.newIntValue(_seq_number);
-            msgValues[2] = Value.newIntValue(_value);
+            msgValues[0] = Value.newInt(uint256(_destination));
+            msgValues[1] = Value.newInt(_seqNumber);
+            msgValues[2] = Value.newInt(_value);
             msgValues[3] = Value.newHashOnly(dataHash);
 
             Value.Data[] memory msgType = new Value.Data[](3);
-            msgType[0] = Value.newIntValue(TRANSACTION_MSG);
-            msgType[1] = Value.newIntValue(uint256(_sender));
-            msgType[2] = Value.newTupleValue(msgValues);
+            msgType[0] = Value.newInt(TRANSACTION_MSG);
+            msgType[1] = Value.newInt(uint256(_sender));
+            msgType[2] = Value.newTuple(msgValues);
 
             Value.Data[] memory dataMsg = new Value.Data[](4);
-            dataMsg[0] = Value.newIntValue(block.timestamp);
-            dataMsg[1] = Value.newIntValue(block.number);
-            dataMsg[2] = Value.newIntValue(uint256(txHash));
-            dataMsg[3] = Value.newTupleValue(msgType);
+            dataMsg[0] = Value.newInt(block.timestamp);
+            dataMsg[1] = Value.newInt(block.number);
+            dataMsg[2] = Value.newInt(uint256(txHash));
+            dataMsg[3] = Value.newTuple(msgType);
 
-            bytes32 messageHash =  Value.newTupleValue(dataMsg).hash().hash;
+            bytes32 messageHash =  Value.newTuple(dataMsg).hash().hash;
 
             _deliverMessage(_destination, messageHash);
         }
@@ -441,7 +440,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         emit IGlobalPendingInbox.TransactionMessageDelivered(
             _sender,
             _destination,
-            _seq_number.
+            _seqNumber,
             _value,
             _data);
     }
@@ -464,21 +463,21 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             );
 
             Value.Data[] memory msgValues = new Value.Data[](3);
-            msgValues[0] = Value.newIntValue(uint256(_destination));
-            msgValues[1] = Value.newIntValue(_value);
+            msgValues[0] = Value.newInt(uint256(_destination));
+            msgValues[1] = Value.newInt(_value);
 
             Value.Data[] memory msgType = new Value.Data[](3);
-            msgType[0] = Value.newIntValue(_messageType);
-            msgType[1] = Value.newIntValue(uint256(_sender));
-            msgType[2] = Value.newTupleValue(msgValues);
+            msgType[0] = Value.newInt(_messageType);
+            msgType[1] = Value.newInt(uint256(_sender));
+            msgType[2] = Value.newTuple(msgValues);
 
             Value.Data[] memory ethMsg = new Value.Data[](4);
-            ethMsg[0] = Value.newIntValue(block.timestamp);
-            ethMsg[1] = Value.newIntValue(block.number);
-            ethMsg[2] = Value.newIntValue(uint256(txHash));
-            ethMsg[3] = Value.newTupleValue(msgType);
+            ethMsg[0] = Value.newInt(block.timestamp);
+            ethMsg[1] = Value.newInt(block.number);
+            ethMsg[2] = Value.newInt(uint256(txHash));
+            ethMsg[3] = Value.newTuple(msgType);
 
-            bytes32 messageHash =  Value.newTupleValue(ethMsg).hash().hash;
+            bytes32 messageHash =  Value.newTuple(ethMsg).hash().hash;
 
             _deliverMessage(_destination, messageHash);
         }
@@ -504,22 +503,22 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             );
 
             Value.Data[] memory msgValues = new Value.Data[](3);
-            msgValues[0] = Value.newIntValue(uint256(_tokenContract));
-            msgValues[1] = Value.newIntValue(uint256(_destination));
-            msgValues[2] = Value.newIntValue(_value);
+            msgValues[0] = Value.newInt(uint256(_tokenContract));
+            msgValues[1] = Value.newInt(uint256(_destination));
+            msgValues[2] = Value.newInt(_value);
 
             Value.Data[] memory msgType = new Value.Data[](3);
-            msgType[0] = Value.newIntValue(_messageType);
-            msgType[1] = Value.newIntValue(uint256(_sender));
-            msgType[2] = Value.newTupleValue(msgValues);
+            msgType[0] = Value.newInt(_messageType);
+            msgType[1] = Value.newInt(uint256(_sender));
+            msgType[2] = Value.newTuple(msgValues);
 
             Value.Data[] memory ercTokenMsg = new Value.Data[](4);
-            ercTokenMsg[0] = Value.newIntValue(block.timestamp);
-            ercTokenMsg[1] = Value.newIntValue(block.number);
-            ercTokenMsg[2] = Value.newIntValue(uint256(txHash));
-            ercTokenMsg[3] = Value.newTupleValue(msgType);
+            ercTokenMsg[0] = Value.newInt(block.timestamp);
+            ercTokenMsg[1] = Value.newInt(block.number);
+            ercTokenMsg[2] = Value.newInt(uint256(txHash));
+            ercTokenMsg[3] = Value.newTuple(msgType);
 
-            bytes32 messageHash =  Value.newTupleValue(ercTokenMsg).hash().hash;
+            bytes32 messageHash =  Value.newTuple(ercTokenMsg).hash().hash;
 
             _deliverMessage(_destination, messageHash);
         }
@@ -562,10 +561,10 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         address _destination,
         bytes32 messageHash) private 
     {
-        pending[_destination] = Value.hashTupleValue([
-            Value.newIntValue(0),
-            Value.newHashOnlyValue(pending[_destination]),
-            Value.newHashOnlyValue(messageHash)
+        pending[_destination] = Value.hashTuple([
+            Value.newInt(0),
+            Value.newHashOnly(pending[_destination]),
+            Value.newHashOnly(messageHash)
         ]);
     }
 }
