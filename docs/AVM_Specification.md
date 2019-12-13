@@ -144,6 +144,14 @@ Certain conditions are said to “raise an Error”. If an Error is raised when 
 
 Some instructions are said to “block” until some condition is true. This means that if the condition is false, the instruction cannot complete execution and the VM must stay in the state it was in before the instruction. If the condition is true, the VM can execute the instruction. The result is as if the VM stopped and waited until the condition became true.
 
+## ArbGas
+
+Every instruction consumes some amount of Arbitrum Gas, also known as ArbGas. (ArbGas is not the same as Ethereum Gas.)
+
+At present, every instruction consumes one unit of ArbGas. This is expected to change in the future.
+
+There is no charge for ArbGas and there is no limit on the amount of ArbGas that a VM can use. The purpose of ArbGas is to allow clients and validators to monitor and control how much computational work a VM is requiring. For example, it is likely that features will be added to allow validators to limit the amount of ArbGas that any one call to a VM or contract can consume.
+
 ## Instructions
 
 A VM that is in the Halted or ErrorStop state cannot execute instructions.
