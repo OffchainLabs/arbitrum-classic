@@ -123,15 +123,15 @@ func (w BlockedError) Error() string {
 	return "VMBlockederror"
 }
 
-func RunInstruction(m *Machine, op value.Operation) (StackMods, uint64, machine.BlockReason) {
+func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockReason) {
 	if m.IsHalted() {
-		return NewStackMods(0, 0), 0, machine.HaltBlocked{}
+		return NewStackMods(0, 0), machine.HaltBlocked{}
 	}
 	if m.IsErrored() {
-		return NewStackMods(0, 0), 0, machine.ErrorBlocked{}
+		return NewStackMods(0, 0), machine.ErrorBlocked{}
 	}
 	if m.HaveSizeException() {
-		return NewStackMods(0, 0), 0, machine.ErrorBlocked{}
+		return NewStackMods(0, 0), machine.ErrorBlocked{}
 	}
 	mods, gas, err := func() (StackMods, uint64, error) {
 		if _, ok := code.InstructionNames[op.GetOp()]; !ok {
@@ -148,11 +148,11 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, uint64, machine.
 
 	if err == nil {
 		m.context.NotifyStep(gas)
-		return mods, gas, nil
+		return mods, nil
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
-		return mods, gas, blocked.reason
+		return mods, blocked.reason
 	}
 	m.context.NotifyStep(gas)
 
@@ -177,7 +177,7 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, uint64, machine.
 	if err != nil {
 		m.ErrorStop()
 	}
-	return mods, gas, nil
+	return mods, nil
 }
 
 func (insn Instruction) GetName() string {
