@@ -25,7 +25,6 @@ STOP_CODE = 3
 INVALID_SEQUENCE_CODE = 4
 INSUFFICIENT_BALANCE = 5
 ETH_DEPOSIT = 6
-ETH_WITHDRAWAL = 7
 
 
 class EVMLog:
@@ -96,7 +95,11 @@ class LogMessage:
         return self.data[2:10]
 
     def get_abi(self, functions):
-        return functions.get((self.contract_id, self.func_id()), "Unknown Function")
+        funcs = functions.get(self.contract_id, None)
+        if funcs:
+            return funcs.get(self.func_id(), None)
+        else:
+            return None
 
     def raw_func_name(self):
         if self.message_type == 0:
@@ -127,14 +130,21 @@ class EVMOutput:
     def decode(self, functions, events):
         if self.orig_message.message_type == 0:
             self.abi = self.orig_message.get_abi(functions)
-            self.name = self.abi["name"]
+            if self.abi:
+                self.name = self.abi["name"]
 
         if self.orig_message.message_type == 2:
             events[self.orig_message.token_address] = events[
                 contract_templates.ERC20_ADDRESS
             ]
+            functions[self.orig_message.token_address] = functions[
+                contract_templates.ERC20_ADDRESS
+            ]
         elif self.orig_message.message_type == 3:
             events[self.orig_message.token_address] = events[
+                contract_templates.ERC721_ADDRESS
+            ]
+            functions[self.orig_message.token_address] = functions[
                 contract_templates.ERC721_ADDRESS
             ]
 
@@ -244,14 +254,6 @@ class EVMDeposit(EVMOutput):
         return "EVMDeposit()"
 
 
-class EVMWithdrawal(EVMOutput):
-    def __init__(self, val):
-        super().__init__(val)
-
-    def __repr__(self):
-        return "EVMDeposit()"
-
-
 class EVMUnknownResponseError(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
@@ -269,7 +271,6 @@ EVM_OUTPUT_TYPES = {
     INSUFFICIENT_BALANCE: EVMInsufficientBalance,
     STOP_CODE: EVMStop,
     ETH_DEPOSIT: EVMDeposit,
-    ETH_WITHDRAWAL: EVMWithdrawal,
 }
 
 

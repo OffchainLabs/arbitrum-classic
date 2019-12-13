@@ -25,8 +25,8 @@ contract ArbERC20 is ERC20 {
         _mint(account, amount);
     }
 
-    function adminBurn(address account, uint256 amount) public {
-        require(msg.sender == address(1));
-        _burn(account, amount);
+    function withdraw(address account, uint256 amount) public {
+        _burn(msg.sender, amount);
+        ArbSys(100).sendERC20(account, amount);
     }
 }

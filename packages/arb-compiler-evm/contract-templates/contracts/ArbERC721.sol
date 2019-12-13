@@ -25,8 +25,8 @@ contract ArbERC721 is ERC721 {
         _mint(account, tokenId);
     }
 
-    function adminBurn(address account, uint256 tokenId) public {
-        require(msg.sender == address(1));
-        _burn(account, tokenId);
+    function withdraw(address account, uint256 tokenId) public {
+        _burn(msg.sender, tokenId);
+        ArbSys(100).sendERC721(account, tokenId);
     }
 }

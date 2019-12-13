@@ -65,7 +65,7 @@ def run_vm_once(vm):
         vm.pc = vm.code[vm.pc.pc + 1]
         return False
     except Exception as err:
-        print("Hit exception {} while running {}".format(err, vm.pc))
+        print("Hit exception {}({}) while running {}".format(err, type(err), vm.pc))
         traceback.print_tb(err.__traceback__)
         exit()
         if isinstance(vm.err_handler, value.CodePointType):

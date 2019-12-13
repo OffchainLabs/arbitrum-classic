@@ -19,7 +19,16 @@ from . import os
 from .. import ast
 from .. import value
 from .accounts import account_state, account_store
-from .types import local_exec_state
+from .types import (
+    local_exec_state,
+    eth_transfer_message,
+    token_transfer_message,
+    message,
+)
+
+WITHDRAW_ETH_TYPECODE = 1
+WITHDRAW_ERC20_TYPECODE = 2
+WITHDRAW_ERC721_TYPECODE = 3
 
 
 @modifies_stack(0, 0)
@@ -87,7 +96,126 @@ def save_stacks(vm):
 @noreturn
 def _perform_call(vm, call_num):
     # dest local_exec_state
+    vm.dup0()
+    vm.push(100)
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [vm.pop(), _perform_precompile_call(vm)],
+        lambda vm: [_perform_real_call(vm, call_num)],
+    )
 
+
+def _perform_precompile_call(vm):
+    # local_exec_state
+    vm.dup0()
+    local_exec_state.get("data")(vm)
+    vm.push(0)
+    vm.swap1()
+    std.sized_byterange.get(vm)
+    vm.push(224)
+    vm.swap1()
+    std.bitwise.shift_right(vm)
+    vm.dup0()
+    vm.push(0x49DCBC5E)
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [vm.pop(), withdraw_eth_interrupt(vm)],
+        lambda vm: [
+            vm.dup0(),
+            vm.push(0x2DE55221),
+            vm.eq(),
+            vm.ifelse(
+                lambda vm: [vm.pop(), withdraw_erc20_interrupt(vm)],
+                lambda vm: [
+                    vm.dup0(),
+                    vm.push(0x33349079),
+                    vm.eq(),
+                    vm.ifelse(
+                        lambda vm: [vm.pop(), withdraw_erc721_interrupt(vm)],
+                        lambda vm: [vm.pop(), vm.push(0)],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+
+def parse_withdraw_call(vm):
+    # local_exec_state
+    vm.dup0()
+    local_exec_state.get("caller")(vm)
+    vm.swap1()
+    local_exec_state.get("data")(vm)
+    vm.dup0()
+    vm.push(4)
+    vm.swap1()
+    std.sized_byterange.get(vm)
+    # dest data sender
+    vm.swap1()
+    vm.push(36)
+    vm.swap1()
+    std.sized_byterange.get(vm)
+    # amount dest sender
+
+
+def withdraw_eth_interrupt(vm):
+    # local_exec_state
+    parse_withdraw_call(vm)
+    # amount dest sender
+    vm.dup2()
+    vm.dup1()
+    os.process_eth_withdraw(vm)
+    vm.ifelse(
+        lambda vm: [
+            vm.push(eth_transfer_message.make()),
+            vm.cast(eth_transfer_message.typ),
+            eth_transfer_message.set_val("amount")(vm),
+            eth_transfer_message.set_val("dest")(vm),
+            # token_transfer_message sender
+            vm.push(WITHDRAW_ETH_TYPECODE),
+            vm.push(message.make()),
+            vm.cast(message.typ),
+            message.set_val("type")(vm),
+            message.set_val("message")(vm),
+            message.set_val("sender")(vm),
+            vm.send(),
+            vm.push(3),
+        ],
+        lambda vm: [vm.pop(), vm.pop(), vm.pop(), vm.push(5)],
+    )
+
+
+def withdraw_token_interrupt(vm, token_type):
+    # local_exec_state
+    parse_withdraw_call(vm)
+    # amount dest token_address
+    vm.push(token_transfer_message.make())
+    vm.cast(token_transfer_message.typ)
+    token_transfer_message.set_val("amount")(vm)
+    token_transfer_message.set_val("dest")(vm)
+    token_transfer_message.set_val("token_address")(vm)
+    os.message_caller(vm)
+    vm.push(token_type)
+    vm.push(message.make())
+    vm.cast(message.typ)
+    message.set_val("type")(vm)
+    message.set_val("sender")(vm)
+    message.set_val("message")(vm)
+    vm.send()
+    vm.push(3)
+
+
+def withdraw_erc20_interrupt(vm):
+    # local_exec_state
+    withdraw_token_interrupt(vm, WITHDRAW_ERC20_TYPECODE)
+
+
+def withdraw_erc721_interrupt(vm):
+    # local_exec_state
+    withdraw_token_interrupt(vm, WITHDRAW_ERC721_TYPECODE)
+
+
+def _perform_real_call(vm, call_num):
     os.get_call_frame(vm)
     call_frame.call_frame.get("account_state")(vm)
     account_state.get("balance")(vm)
@@ -250,37 +378,32 @@ def initial_call(vm, label):
 
 # [[gas, dest, value, arg offset, arg length, ret offset, ret length]]
 @noreturn
-def call(vm, call_num, contract_id):
+def call(vm, call_num):
     std.tup.make(7)(vm)
     vm.dup0()
     os.evm_call_to_tx_call_data(vm)
-    # tx_call
-    vm.push(contract_id)
+    # tx_call calltup
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
     os.tx_call_to_local_exec_state(vm)
-    # dest local_exec_state
+    # dest local_exec_state calltup
 
-    vm.dup0()
-    vm.push(100)
-    vm.eq()
-    vm.ifelse(
-        lambda vm: [vm.pop(), vm.push(0)],  # insert precompiles here
-        lambda vm: [
-            _save_call_frame(vm),
-            _perform_call(vm, call_num),
-            _mutable_call_ret(vm),
-        ],
-    )
+    _save_call_frame(vm)
+    _perform_call(vm, call_num)
+    # ret calltup
+    _mutable_call_ret(vm)
 
 
 # [gas, dest, value, arg offset, arg length, ret offset, ret length]
 @noreturn
-def callcode(vm, call_num, contract_id):
+def callcode(vm, call_num):
     std.tup.make(7)(vm)
     # calltup
     vm.dup0()
     os.evm_call_to_tx_call_data(vm)
     # msg calltup
-    vm.push(contract_id)
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
     os.tx_call_to_local_exec_state(vm)
     # dest local_exec_state calltup
 
@@ -313,7 +436,7 @@ def delegatecall(vm, call_num):
 
 # [[gas, dest, arg offset, arg length, ret offset, ret length]]
 @noreturn
-def staticcall(vm, call_num, contract_id):
+def staticcall(vm, call_num):
     vm.push(0)
     # value, gas, dest
     vm.swap2()
@@ -324,7 +447,8 @@ def staticcall(vm, call_num, contract_id):
     # calltup
     vm.dup0()
     os.evm_call_to_tx_call_data(vm)
-    vm.push(contract_id)
+    os.get_call_frame(vm)
+    call_frame.call_frame.get("contractID")(vm)
     os.tx_call_to_local_exec_state(vm)
     # dest msg calltup
     _save_call_frame(vm)

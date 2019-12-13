@@ -22,6 +22,7 @@ from ..ast import AVMLabel
 
 ERC20_ADDRESS_STRING = "0xfffffffffffffffffffffffffffffffffffffffe"
 ERC721_ADDRESS_STRING = "0xfffffffffffffffffffffffffffffffffffffffd"
+ARBSYS_ADDRESS_STRING = "0x0000000000000000000000000000000000000064"
 ERC20_ADDRESS = eth_utils.to_int(hexstr=ERC20_ADDRESS_STRING)
 ERC721_ADDRESS = eth_utils.to_int(hexstr=ERC721_ADDRESS_STRING)
 
@@ -33,6 +34,15 @@ def get_templates():
     for raw_contract in raw_contract_templates:
         token_templates[raw_contract["name"]] = raw_contract
     return token_templates
+
+
+def get_arbsys():
+    arbsys_data = read_text("arbitrum.evm", "ArbSys.json")
+    arbsys = json.loads(arbsys_data)
+    arbsys["address"] = ARBSYS_ADDRESS_STRING
+    arbsys["code"] = "0x"
+    arbsys["name"] = "ArbSys"
+    return arbsys
 
 
 def get_erc20_contract():

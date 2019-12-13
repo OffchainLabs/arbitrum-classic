@@ -19,4 +19,5 @@ pragma solidity >=0.4.21 <0.6.0;
 interface ArbSys {
     function sendERC20(address dest, uint256 amount) external;
     function sendERC721(address dest, uint256 id) external;
+    function sendEth(address dest, uint256 amount) external;
 }

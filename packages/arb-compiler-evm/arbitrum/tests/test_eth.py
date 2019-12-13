@@ -26,7 +26,6 @@ from arbitrum.evm.log import (
     EVMRevert,
     EVMInsufficientBalance,
     EVMDeposit,
-    EVMWithdrawal,
 )
 from arbitrum.evm import contract_templates
 
@@ -127,6 +126,13 @@ def create_many_contracts(contract_a):
             )
         )
     return contracts
+
+
+address_string = "0x2c1b4360234d8e65a9e162ef82d70bee71324512"
+address = eth_utils.to_int(hexstr=address_string)
+
+dest_address_string = "0x895521964D724c8362A36608AAf09A3D7d0A0445"
+dest_address = eth_utils.to_int(hexstr=dest_address_string)
 
 
 class TestEVM(TestCase):
@@ -300,28 +306,32 @@ class TestEVM(TestCase):
         self.assertEqual(parsed_out1.output_values[0], 62244)
 
     def test_eth(self):
-        erc20 = contract_templates.get_erc20_contract()
-        erc721 = contract_templates.get_erc721_contract()
         contract_a = make_contract("", "uint256")
         vm = create_evm_vm([contract_a], False, False)
-        output_handler = create_output_handler(
-            [contract_a, ContractABI(erc20), ContractABI(erc721)]
-        )
+        output_handler = create_output_handler([contract_a])
+
+        arbsys = contract_templates.get_arbsys()
+        arbsys_abi = ContractABI(arbsys)
         vm.env.send_message(
             make_msg_val(
-                value.Tuple([1, 2345, value.Tuple([2345, 100000])])  # type  # sender
+                value.Tuple([1, 2345, value.Tuple([address, 100000])])  # type  # sender
             )
         )
         vm.env.send_message(
             make_msg_val(
-                value.Tuple([4, 2345, value.Tuple([2345, 150000])])  # type  # sender
+                value.Tuple(
+                    [0, address, arbsys_abi.sendEth(6, 0, dest_address_string, 150000)]
+                )  # type  # sender
             )
         )
         vm.env.send_message(
             make_msg_val(
-                value.Tuple([4, 2345, value.Tuple([2345, 50000])])  # type  # sender
+                value.Tuple(
+                    [0, address, arbsys_abi.sendEth(8, 0, dest_address_string, 50000)]
+                )  # type  # sender
             )
         )
+
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 3)
@@ -330,39 +340,42 @@ class TestEVM(TestCase):
         parsed_out2 = output_handler(vm.logs[2])
         self.assertIsInstance(parsed_out0, EVMDeposit)
         self.assertIsInstance(parsed_out1, EVMInsufficientBalance)
-        self.assertIsInstance(parsed_out2, EVMWithdrawal)
+        self.assertIsInstance(parsed_out2, EVMStop)
 
         self.assertEqual(len(vm.sent_messages), 1)
         self.assertEqual(
-            vm.sent_messages[0], value.Tuple([4, 2345, value.Tuple([2345, 50000])])
+            vm.sent_messages[0],
+            value.Tuple([1, address, value.Tuple([dest_address, 50000])]),
         )
 
     def test_erc20(self):
-        erc20 = contract_templates.get_erc20_contract()
-        erc721 = contract_templates.get_erc721_contract()
         contract_a = make_contract("", "uint256")
         vm = create_evm_vm([contract_a], False, False)
-        output_handler = create_output_handler(
-            [contract_a, ContractABI(erc20), ContractABI(erc721)]
-        )
+
+        output_handler = create_output_handler([contract_a])
+
+        erc20 = contract_templates.get_erc20_contract()
+        erc20["address"] = "0xfff6baf0b45129dc8d4cd67ddc28a78d8c599faf"
+        erc20_abi = ContractABI(erc20)
+
         vm.env.send_message(
             make_msg_val(
                 value.Tuple(
-                    [2, 2345, value.Tuple([5000, 2345, 100000])]
+                    [2, 2345, value.Tuple([erc20_abi.address, address, 100000])]
                 )  # type  # sender
             )
         )
         vm.env.send_message(
             make_msg_val(
                 value.Tuple(
-                    [5, 2345, value.Tuple([5000, 2345, 150000])]
+                    [0, address, erc20_abi.withdraw(6, 0, dest_address_string, 150000)]
                 )  # type  # sender
             )
         )
         vm.env.send_message(
             make_msg_val(
                 value.Tuple(
-                    [5, 2345, value.Tuple([5000, 2345, 50000])]
+                    [0, address, erc20_abi.withdraw(8, 0, dest_address_string, 50000)]
                 )  # type  # sender
             )
         )
@@ -379,35 +392,37 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.sent_messages), 1)
         self.assertEqual(
             vm.sent_messages[0],
-            value.Tuple([5, 2345, value.Tuple([5000, 2345, 50000])]),
+            value.Tuple(
+                [2, address, value.Tuple([erc20_abi.address, dest_address, 50000])]
+            ),
         )
 
     def test_erc721(self):
-        erc20 = contract_templates.get_erc20_contract()
-        erc721 = contract_templates.get_erc721_contract()
         contract_a = make_contract("", "uint256")
         vm = create_evm_vm([contract_a], False, False)
-        output_handler = create_output_handler(
-            [contract_a, ContractABI(erc20), ContractABI(erc721)]
-        )
+        output_handler = create_output_handler([contract_a])
+
+        erc721 = contract_templates.get_erc721_contract()
+        erc721["address"] = "0xfff6baf0b45129dc8d4cd67ddc28a78d8c599faf"
+        erc721_abi = ContractABI(erc721)
         vm.env.send_message(
             make_msg_val(
                 value.Tuple(
-                    [3, 2345, value.Tuple([5000, 2345, 100000])]
+                    [3, 2345, value.Tuple([erc721_abi.address, address, 100000])]
                 )  # type  # sender
             )
         )
         vm.env.send_message(
             make_msg_val(
                 value.Tuple(
-                    [6, 2345, value.Tuple([5000, 2345, 50000])]
+                    [0, address, erc721_abi.withdraw(6, 0, dest_address_string, 50000)]
                 )  # type  # sender
             )
         )
         vm.env.send_message(
             make_msg_val(
                 value.Tuple(
-                    [6, 2345, value.Tuple([5000, 2345, 100000])]
+                    [0, address, erc721_abi.withdraw(8, 0, dest_address_string, 100000)]
                 )  # type  # sender
             )
         )
@@ -424,5 +439,7 @@ class TestEVM(TestCase):
         self.assertEqual(len(vm.sent_messages), 1)
         self.assertEqual(
             vm.sent_messages[0],
-            value.Tuple([6, 2345, value.Tuple([5000, 2345, 100000])]),
+            value.Tuple(
+                [3, address, value.Tuple([erc721_abi.address, dest_address, 100000])]
+            ),
         )

@@ -93,51 +93,6 @@ def process_deposit_erc721(vm):
     vm.pop()
 
 
-def process_withdraw_eth(vm):
-    vm.pop()
-    vm.dup0()
-    os.process_withdraw_eth_message(vm)
-    vm.ifelse(
-        lambda vm: [
-            # withdraw successful
-            vm.send()
-        ],
-        lambda vm: [vm.pop()],
-    )
-
-
-def process_withdraw_erc20(vm):
-    vm.pop()
-    vm.dup0()
-    os.process_withdraw_erc20_message(vm)
-    vm.swap1()
-    execution.initial_call(vm, "withdraw_erc20_initial")
-    # status message
-    vm.ifelse(
-        lambda vm: [
-            # withdraw successful
-            vm.send()
-        ],
-        lambda vm: [vm.pop()],
-    )
-
-
-def process_withdraw_erc721(vm):
-    vm.pop()
-    vm.dup0()
-    os.process_withdraw_erc721_message(vm)
-    vm.swap1()
-    execution.initial_call(vm, "withdraw_erc721_initial")
-    # status message
-    vm.ifelse(
-        lambda vm: [
-            # withdraw successful
-            vm.send()
-        ],
-        lambda vm: [vm.pop()],
-    )
-
-
 def run_loop_start(vm):
     vm.set_label(AVMLabel("run_loop_start"))
     os.get_next_message(vm)
@@ -167,31 +122,7 @@ def run_loop_start(vm):
                             vm.dup0(),
                             vm.push(3),
                             vm.eq(),
-                            vm.ifelse(
-                                process_deposit_erc721,
-                                lambda vm: [
-                                    vm.dup0(),
-                                    vm.push(4),
-                                    vm.eq(),
-                                    vm.ifelse(
-                                        process_withdraw_eth,
-                                        lambda vm: [
-                                            vm.dup0(),
-                                            vm.push(5),
-                                            vm.eq(),
-                                            vm.ifelse(
-                                                process_withdraw_erc20,
-                                                lambda vm: [
-                                                    vm.dup0(),
-                                                    vm.push(6),
-                                                    vm.eq(),
-                                                    vm.ifelse(process_withdraw_erc721),
-                                                ],
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ),
+                            vm.ifelse(process_deposit_erc721),
                         ],
                     ),
                 ],
@@ -232,6 +163,17 @@ def generate_evm_code(raw_code, storage):
                 "code": byterange.frombytes(bytes.fromhex(raw_code[contract].hex())),
             }
         )
+
+    contract_info.append(
+        {
+            "code_point": value.Tuple([]),
+            "contractID": 100,
+            "storage": {},
+            "code_size": 1,
+            "code_hash": 1,
+            "code": byterange.frombytes(b""),
+        }
+    )
 
     def initialization(vm):
         os.initialize(vm, contract_info)
@@ -440,11 +382,17 @@ def generate_contract_code(label, code, contract_id):
             vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.jump()]),
         ],
         "JUMPI": lambda vm: [
-            dispatch(vm),
-            vm.dup0(),
-            vm.tnewn(0),
-            vm.eq(),
-            vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.cjump()]),
+            vm.swap1(),
+            vm.ifelse(
+                lambda vm: [
+                    dispatch(vm),
+                    vm.dup0(),
+                    vm.tnewn(0),
+                    vm.eq(),
+                    vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.jump()]),
+                ],
+                lambda vm: [vm.pop()],
+            ),
         ],
     }
 
@@ -464,10 +412,10 @@ def generate_contract_code(label, code, contract_id):
             "JUMPDEST": lambda vm: vm.set_label(
                 AVMLabel("jumpdest_{}".format(call_id))
             ),
-            "CALL": lambda vm: execution.call(vm, call_id, contract_id),
-            "CALLCODE": lambda vm: execution.call(vm, call_id, contract_id),
+            "CALL": lambda vm: execution.call(vm, call_id),
+            "CALLCODE": lambda vm: execution.call(vm, call_id),
             "DELEGATECALL": lambda vm: execution.delegatecall(vm, call_id),
-            "STATICCALL": lambda vm: execution.staticcall(vm, call_id, contract_id),
+            "STATICCALL": lambda vm: execution.staticcall(vm, call_id),
             "INVALID": evm_invalid_op,
         }
 
