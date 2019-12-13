@@ -451,6 +451,7 @@ library Value {
         pure
         returns(
             bool valid,
+            uint256 vmAddress,
             uint256 destination,
             uint256 seqNumber,
             uint256 value,
@@ -462,21 +463,6 @@ library Value {
         offset++;
 
         if(valType == TUPLE_TYPECODE + 4){
-
-            // uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
-            // Data[] memory tupleVal;
-            // uint tupleValid;
-            // (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
-
-            // if( tupleValid &&
-            //     data[0].typeCode == INT_TYPECODE &&
-            //     data[1].typeCode == INT_TYPECODE &&
-            //     data[2].typeCode == INT_TYPECODE &&
-            //     data[3].typeCode == TUPLE_TYPECODE)
-            // {
-            //     //data[3].tupleVal to bytes?
-            //     return (true, data[0].intVal, data[1].intVal, data[2].intVal, messageData);
-            // }
 
             valType = uint8(data[offset]);
             offset++;
@@ -499,7 +485,7 @@ library Value {
             valid = true;
         }
 
-        return (valid, destination, seqNumber, value, messageData);
+        return (valid,vmAddress,destination, seqNumber, value, messageData);
     }
 
     function getEthMsgData(

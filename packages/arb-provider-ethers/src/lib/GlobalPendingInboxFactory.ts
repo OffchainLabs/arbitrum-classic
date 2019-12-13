@@ -45,6 +45,94 @@ const _abi = [
         type: 'function',
     },
     {
+        constant: false,
+        inputs: [
+            {
+                name: '_tokenContract',
+                type: 'address',
+            },
+            {
+                name: '_destination',
+                type: 'address',
+            },
+            {
+                name: '_value',
+                type: 'uint256',
+            },
+        ],
+        name: 'depositERC20',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_tokenContract',
+                type: 'address',
+            },
+            {
+                name: '_destination',
+                type: 'address',
+            },
+            {
+                name: '_tokenId',
+                type: 'uint256',
+            },
+        ],
+        name: 'depositERC721',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_tokenContract',
+                type: 'address',
+            },
+            {
+                name: '_destination',
+                type: 'address',
+            },
+            {
+                name: '_tokenId',
+                type: 'uint256',
+            },
+        ],
+        name: 'withdrawERC721',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_tokenContract',
+                type: 'address',
+            },
+            {
+                name: '_destination',
+                type: 'address',
+            },
+            {
+                name: '_value',
+                type: 'uint256',
+            },
+        ],
+        name: 'withdrawERC20',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
         constant: true,
         inputs: [
             {
@@ -88,42 +176,6 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
-                name: '_value',
-                type: 'uint256',
-            },
-        ],
-        name: 'depositERC20',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
-                name: '_value',
-                type: 'uint256',
-            },
-        ],
-        name: 'withdrawERC20',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
         type: 'function',
     },
     {
@@ -178,24 +230,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: false,
-        inputs: [
-            {
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
-                name: '_tokenId',
-                type: 'uint256',
-            },
-        ],
-        name: 'depositERC721',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
         constant: true,
         inputs: [
             {
@@ -226,15 +260,15 @@ const _abi = [
         constant: false,
         inputs: [
             {
-                name: '_tokenContract',
+                name: '_destination',
                 type: 'address',
             },
             {
-                name: '_tokenId',
+                name: '_value',
                 type: 'uint256',
             },
         ],
-        name: 'withdrawERC721',
+        name: 'transferEth',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
@@ -245,18 +279,23 @@ const _abi = [
         inputs: [
             {
                 indexed: true,
-                name: 'vmId',
+                name: 'vmSenderId',
+                type: 'address',
+            },
+            {
+                indexed: true,
+                name: 'vmReceiverId',
                 type: 'address',
             },
             {
                 indexed: false,
-                name: 'sender',
+                name: 'contractAddress',
                 type: 'address',
             },
             {
                 indexed: false,
-                name: 'tokenType',
-                type: 'bytes21',
+                name: 'seqNumber',
+                type: 'uint256',
             },
             {
                 indexed: false,
@@ -269,7 +308,83 @@ const _abi = [
                 type: 'bytes',
             },
         ],
-        name: 'MessageDelivered',
+        name: 'TransactionMessageDelivered',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                name: 'vmReceiverId',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'sender',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'value',
+                type: 'uint256',
+            },
+        ],
+        name: 'EthDepositMessageDelivered',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                name: 'vmReceiverId',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'sender',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'tokenAddress',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'value',
+                type: 'uint256',
+            },
+        ],
+        name: 'DepositERC20MessageDelivered',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                name: 'vmReceiverId',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'sender',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'tokenAddress',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                name: 'value',
+                type: 'uint256',
+            },
+        ],
+        name: 'DepositERC721MessageDelivered',
         type: 'event',
     },
     {
@@ -282,6 +397,15 @@ const _abi = [
                 type: 'bytes32',
             },
         ],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [],
+        name: 'registerForInbox',
+        outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
         type: 'function',
@@ -302,52 +426,21 @@ const _abi = [
     },
     {
         constant: false,
-        inputs: [],
-        name: 'registerForInbox',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
         inputs: [
             {
-                name: '_destination',
+                name: '_vmAddress',
                 type: 'address',
             },
             {
-                name: '_tokenType',
-                type: 'bytes21',
+                name: '_contractAddress',
+                type: 'address',
             },
             {
-                name: '_amount',
+                name: '_seqNumber',
                 type: 'uint256',
             },
             {
-                name: '_data',
-                type: 'bytes',
-            },
-        ],
-        name: 'sendMessage',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_destination',
-                type: 'address',
-            },
-            {
-                name: '_tokenType',
-                type: 'bytes21',
-            },
-            {
-                name: '_amount',
+                name: '_value',
                 type: 'uint256',
             },
             {
@@ -359,7 +452,37 @@ const _abi = [
                 type: 'bytes',
             },
         ],
-        name: 'forwardMessage',
+        name: 'forwardTransactionMessage',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_vmAddress',
+                type: 'address',
+            },
+            {
+                name: '_contractAddress',
+                type: 'address',
+            },
+            {
+                name: '_seqNumber',
+                type: 'uint256',
+            },
+            {
+                name: '_value',
+                type: 'uint256',
+            },
+            {
+                name: '_data',
+                type: 'bytes',
+            },
+        ],
+        name: 'sendTransactionMessage',
         outputs: [],
         payable: false,
         stateMutability: 'nonpayable',
@@ -373,49 +496,72 @@ const _abi = [
                 type: 'address',
             },
             {
-                name: '_data',
-                type: 'bytes',
+                name: '_value',
+                type: 'uint256',
             },
         ],
-        name: 'sendEthMessage',
+        name: 'depositEthMessage',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_destination',
+                type: 'address',
+            },
+        ],
+        name: 'depositEthMessage',
         outputs: [],
         payable: true,
         stateMutability: 'payable',
         type: 'function',
     },
     {
-        constant: true,
+        constant: false,
         inputs: [
             {
-                name: '_dest',
+                name: '_tokenContract',
                 type: 'address',
             },
             {
-                name: '_data',
-                type: 'bytes32',
-            },
-            {
-                name: '_tokenType',
-                type: 'bytes21',
+                name: '_destination',
+                type: 'address',
             },
             {
                 name: '_value',
                 type: 'uint256',
             },
+        ],
+        name: 'depositERC20Message',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
             {
-                name: '_sender',
+                name: '_tokenContract',
                 type: 'address',
             },
-        ],
-        name: 'generateSentMessageHash',
-        outputs: [
             {
-                name: '',
-                type: 'bytes32',
+                name: '_destination',
+                type: 'address',
+            },
+            {
+                name: '_value',
+                type: 'uint256',
             },
         ],
+        name: 'depositERC721Message',
+        outputs: [],
         payable: false,
-        stateMutability: 'view',
+        stateMutability: 'nonpayable',
         type: 'function',
     },
 ];

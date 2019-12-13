@@ -83,39 +83,21 @@ contract GlobalWallet {
         return (addresses, tokens);
     }
 
-    function withdrawEth(uint256 _value) external {
-        require(
-            removeToken(msg.sender, ETH_ADDRESS, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-        msg.sender.transfer(_value);
-    }
-
-    function transferEth(address payable _destination, uint256 _value) public {
-        require(
-            removeToken(msg.sender, ETH_ADDRESS, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-
-        _destination.transfer(_value);
-    }
-
     function depositERC20(address _tokenContract, address _destination, uint256 _value) public {
-        IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
-        addToken(_destination, _tokenContract, _value);
-    }
+        uint256 currentBalance = getTokenBalance(msg.sender, _tokenContract);
 
-    function depositERC20(address _tokenContract, address _sender, address _destination, uint256 _value) public {
-        IERC20(_tokenContract).transferFrom(_sender, address(this), _value);
-        addToken(_destination, _tokenContract, _value);
-    }
+        if (currentBalance >= _value) {
+            require(transferToken(msg.sender, _destination, _tokenContract, _value));
+        } else if (currentBalance == 0){
+            IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
+            addToken(_destination, _tokenContract, _value);
+        }else{
+            require(transferToken(msg.sender, _destination, _tokenContract, currentBalance));
+            uint remaining = _value - currentBalance;
 
-    function withdrawERC20(address _tokenContract, uint256 _value) public {
-        require(
-            removeToken(msg.sender, _tokenContract, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-        IERC20(_tokenContract).transfer(msg.sender, _value);
+            IERC20(_tokenContract).transferFrom(msg.sender, address(this), remaining);
+            addToken(_destination, _tokenContract, remaining);
+        }
     }
 
     function withdrawERC20(address _tokenContract, address _destination, uint256 _value) public {
@@ -140,21 +122,14 @@ contract GlobalWallet {
     }
 
     function depositERC721(address _tokenContract, address _destination, uint256 _tokenId) public {
-        IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
-        addNFTToken(_destination, _tokenContract, _tokenId);
-    }
+        bool hasToken = hasNFT(_tokenContract, msg.sender, _tokenId);
 
-    function depositERC721(address _tokenContract, address _sender, address _destination, uint256 _tokenId) public {
-        IERC721(_tokenContract).transferFrom(_sender, address(this), _tokenId);
-        addNFTToken(_destination, _tokenContract, _tokenId);
-    }
-
-    function withdrawERC721(address _tokenContract, uint256 _tokenId) public {
-        require(
-            removeNFTToken(msg.sender, _tokenContract, _tokenId),
-            "Wallet doesn't own token"
-        );
-        IERC721(_tokenContract).safeTransferFrom(address(this), msg.sender, _tokenId);
+        if(hasToken){
+            require(transferNFT(msg.sender, _destination, _tokenContract, _tokenId));
+        }else{
+            IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
+            addNFTToken(_destination, _tokenContract, _tokenId);
+        }
     }
 
     function withdrawERC721(address _tokenContract, address _destination, uint256 _tokenId) public {
@@ -167,6 +142,23 @@ contract GlobalWallet {
 
     function depositEth(address _destination) public payable {
         addToken(_destination, ETH_ADDRESS, msg.value);
+    }
+
+    function withdrawEth(uint256 _value) external {
+        require(
+            removeToken(msg.sender, ETH_ADDRESS, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+        msg.sender.transfer(_value);
+    }
+
+    function transferEth(address payable _destination, uint256 _value) public {
+        require(
+            removeToken(msg.sender, ETH_ADDRESS, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+
+        _destination.transfer(_value);
     }
 
     function getTokenBalance(address _tokenContract, address _owner) public view returns (uint256) {

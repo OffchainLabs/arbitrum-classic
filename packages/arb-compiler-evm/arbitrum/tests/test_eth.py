@@ -379,6 +379,7 @@ class TestEVM(TestCase):
                 )  # type  # sender
             )
         )
+
         vm.env.deliver_pending()
         run_until_block(vm, self)
         self.assertEqual(len(vm.logs), 3)
