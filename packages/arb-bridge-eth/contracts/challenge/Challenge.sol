@@ -174,6 +174,7 @@ contract Challenge is IChallenge {
                     Protocol.generateAssertionHash(
                         _machineHashes[bisectionCount],
                         _totalSteps,
+                        0,  //TODO: fill in total gas amount
                         _messageAccs[0],
                         _messageAccs[bisectionCount],
                         _logAccs[0],
@@ -192,6 +193,7 @@ contract Challenge is IChallenge {
                 Protocol.generateAssertionHash(
                     _machineHashes[1],
                     _totalSteps / uint32(bisectionCount) + _totalSteps%uint32(bisectionCount),
+                    0, //TODO: fill in gas amount
                     _messageAccs[0],
                     _messageAccs[1],
                     _logAccs[0],
@@ -207,6 +209,7 @@ contract Challenge is IChallenge {
                     Protocol.generateAssertionHash(
                         _machineHashes[i + 1],
                         _totalSteps / uint32(bisectionCount),
+                        0, //TODO: fill in gas amount
                         _messageAccs[i],
                         _messageAccs[i + 1],
                         _logAccs[i],
@@ -287,6 +290,7 @@ contract Challenge is IChallenge {
                     Protocol.generateAssertionHash(
                         _afterHash,
                         1,
+                        0, //TODO: fill in gas amount
                         _firstMessage,
                         _lastMessage,
                         _firstLog,

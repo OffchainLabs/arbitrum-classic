@@ -25,25 +25,16 @@ library VM {
     bytes32 private constant MACHINE_HALT_HASH = bytes32(0);
     bytes32 private constant MACHINE_ERROR_HASH = bytes32(uint(1));
 
-    enum State {
-        Uninitialized,
-        Waiting,
-        PendingDisputable,
-        PendingUnanimous
+    struct Params {  // these are defined just once for each vM
+        uint128 stakeRequirement;
+        uint32  gracePeriod;
+        uint32  maxExecutionSteps;
+        bytes32 pendingHash;
     }
 
-    struct Data {
+    struct ProtocolState {
         bytes32 machineHash;
-        bytes32 pendingHash; // Lock pending and confirm asserts together
-        bytes32 inbox;
-        address asserter;
-        uint128 escrowRequired;
-        uint64 deadline;
-        uint64 sequenceNum;
-        uint32 gracePeriod;
-        uint32 maxExecutionSteps;
-        State state;
-        address activeChallengeManager;
+        bytes32 inboxHash;
     }
 
     struct FullAssertion {
@@ -54,24 +45,18 @@ library VM {
         bytes32 logsAccHash;
     }
 
-    function acceptAssertion(Data storage _vm, bytes32 _afterHash) external {
-        _vm.machineHash = _afterHash;
-        _vm.state = VM.State.Waiting;
+    function protoStateHash(bytes32 machineHash, bytes32 inboxHash) external pure returns(bytes32) {
+        return keccak256(abi.encodePacked(
+            machineHash,
+            inboxHash
+        ));
     }
 
-    function withinDeadline(Data storage _vm) external view returns(bool) {
-        return block.number <= _vm.deadline;
+    function isErrored(bytes32 vmStateHash) external pure returns(bool) {
+        return vmStateHash == MACHINE_ERROR_HASH;
     }
 
-    function resetDeadline(Data storage _vm) external {
-        _vm.deadline = uint64(block.number) + _vm.gracePeriod;
-    }
-
-    function isErrored(Data storage _vm) external view returns(bool) {
-        return _vm.machineHash == MACHINE_ERROR_HASH;
-    }
-
-    function isHalted(Data storage _vm) external view returns(bool) {
-        return _vm.machineHash == MACHINE_HALT_HASH;
+    function isHalted(bytes32 vmStateHash) external pure returns(bool) {
+        return vmStateHash == MACHINE_HALT_HASH;
     }
 }

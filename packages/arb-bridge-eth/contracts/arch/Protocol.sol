@@ -61,7 +61,8 @@ library Protocol {
 
     function generateAssertionHash(
         bytes32 _afterHash,
-        uint32 _numSteps,
+        uint32  _numSteps,
+        uint64  _numGas,
         bytes32 _firstMessageHash,
         bytes32 _lastMessageHash,
         bytes32 _firstLogHash,
@@ -75,6 +76,7 @@ library Protocol {
             abi.encodePacked(
                 _afterHash,
                 _numSteps,
+                _numGas,
                 _firstMessageHash,
                 _lastMessageHash,
                 _firstLogHash,

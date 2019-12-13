@@ -61,7 +61,7 @@ contract ArbBase is IArbBase {
     IChallengeFactory public challengeFactory;
     IGlobalPendingInbox public globalInbox;
 
-    VM.Data public vm;
+    VM.Params public vmParams;
     mapping(address => uint256) validatorBalances;
 
     address payable public exitAddress;
