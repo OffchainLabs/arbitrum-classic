@@ -20,8 +20,8 @@
 #define CURRENT_AO_VERSION 1
 
 #include <cstdint>
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 enum class OpCode : uint8_t {
@@ -100,7 +100,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::SEND && op <= OpCode::HALT);
 }
 
-const std::map<OpCode, std::string> InstructionNames = {
+const std::unordered_map<OpCode, std::string> InstructionNames = {
     {static_cast<OpCode>(0), "unhandled opcode"},
     {OpCode::ADD, "add"},
     {OpCode::MUL, "mul"},
@@ -164,7 +164,7 @@ const std::map<OpCode, std::string> InstructionNames = {
     {OpCode::HALT, "halt"},
     {OpCode::DEBUG, "debug"}};
 
-const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
+const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {static_cast<OpCode>(0), {}},
     {OpCode::ADD, {true, true}},
     {OpCode::MUL, {true, true}},
@@ -228,7 +228,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}}};
 
-const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
+const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {static_cast<OpCode>(0), {}},
     {OpCode::ADD, {}},
     {OpCode::MUL, {}},
@@ -292,7 +292,7 @@ const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}}};
 
-const std::map<OpCode, uint64_t> InstructionArbGasCost = {
+const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADD, 1},
     {OpCode::MUL, 1},
     {OpCode::SUB, 1},
