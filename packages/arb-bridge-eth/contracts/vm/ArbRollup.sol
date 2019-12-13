@@ -22,7 +22,7 @@ import "./IArbBase.sol";
 
 import "../IGlobalPendingInbox.sol";
 
-import "../challenge/IChallengeFactory.sol";
+import "../challenge/ChallengeLauncher.sol";
 
 import "../arch/Protocol.sol";
 import "../arch/Value.sol";
@@ -60,7 +60,6 @@ contract ArbRollup is IArbBase {
 
     address internal constant ETH_ADDRESS = address(0);
 
-    IChallengeFactory public challengeFactory;
     IGlobalPendingInbox public globalInbox;
 
     struct Staker {
@@ -76,6 +75,7 @@ contract ArbRollup is IArbBase {
     mapping(address => uint) stakerIndex;
     Staker[]  stakers;
     bytes32[] leaves;
+    address[] activeChallenges;
 
     function myStakerIndex() internal view returns(uint) {
         uint index = stakerIndex[msg.sender];
@@ -87,6 +87,15 @@ contract ArbRollup is IArbBase {
         uint index = stakerIndex[addr];
         require(stakers[index].addr == addr, "not a staker");
         return index;
+    }
+
+    function deleteStaker(uint index) internal {
+        delete stakerIndex[stakers[index].addr];
+        if (index < stakers.length-1) {
+            stakers[index] = stakers[stakers.length-1];
+            stakerIndex[stakers[index].addr] = index;
+        }
+        stakers.pop();
     }
 
     uint constant ValidChildType = 0;
@@ -192,6 +201,10 @@ contract ArbRollup is IArbBase {
     function makeAssertion(
         bytes32 beforeVMHash,
         bytes32 beforeInboxHash,
+        bytes32 _prevPrevLeafHash,
+        bytes32 _prevDisputableHash,
+        uint    _prevChildType,
+        bytes32 _prevVMprotoHash,
         uint _prevLeafIndex,
         bytes32[] memory _prevLeafProof,
         bytes32[] memory _stakerProof,
@@ -208,7 +221,15 @@ contract ArbRollup is IArbBase {
         Staker memory staker = stakers[myStakerIndex()];
         require(_prevLeafIndex < leaves.length, "invalid leaf index");
         bytes32 prevLeaf = leaves[_prevLeafIndex];
-        //TODO: require that beforeVMHash etc are consistent with prevLeaf
+        require(
+            childNodeHash(
+                _prevPrevLeafHash, 
+                _prevDisputableHash,
+                _prevChildType,
+                _prevVMprotoHash
+            ) == VM.protoStateHash(beforeVMHash, beforeInboxHash),
+            "Precondition does not match prior state"
+        );
         require(
             !VM.isErrored(beforeVMHash) && !VM.isHalted(beforeVMHash),
             "Can only disputable assert if machine is not errored or halted"
@@ -422,15 +443,38 @@ contract ArbRollup is IArbBase {
             "Invalid conflict proof"
         );
    
+        address newChallengeAddr;
         if (staker2position==InvalidPendingTopChildType) {
-            //TODO: initiate PendingTop challenge
+            newChallengeAddr = ChallengeLauncher.startInvalidPendingTopChallenge(
+                staker1Address, 
+                staker2Address,
+                disputableHash
+            );
         } else if (staker2position==InvalidMessagesChildType) {
-            //TODO: initiate InvalidMessages challenge
+            newChallengeAddr = ChallengeLauncher.startInvalidMessagesChallenge(
+                staker1Address,
+                staker2Address,
+                disputableHash
+            );
         } else {
-            //TODO: initiate Execution challenge
+            newChallengeAddr = ChallengeLauncher.startExecutionChallenge(
+                staker1Address,
+                staker2Address,
+                disputableHash
+            );
         }
+        staker1.challenge = newChallengeAddr;
+        staker2.challenge = newChallengeAddr;
+    }
 
-        //TODO: emit ChallengeLaunched(...);
+    function resolveChallenge(address winner, address loser) public {
+        uint winnerIndex = getStakerIndex(winner);
+        uint loserIndex = getStakerIndex(loser);
+        require(stakers[winnerIndex].challenge==msg.sender, "verdict can only be declared by challenge");
+        require(stakers[loserIndex].challenge==msg.sender, "verdict can only be declared by challenge");
+        //TODO: slash the loser, deliver half to the winner
+        stakers[winnerIndex].challenge = address(0);
+        deleteStaker(loserIndex);
     }
 
     modifier onlyOwner() {
@@ -444,16 +488,13 @@ contract ArbRollup is IArbBase {
         uint32 _maxExecutionSteps,
         uint128 _stakeRequirement,
         address payable _owner,
-        address _challengeFactoryAddress,
         address _globalInboxAddress
     )
         public
     {
-        require(address(challengeFactory) == address(0), "VM already initialized");
-        require(_challengeFactoryAddress != address(0), "Challenge factory address not set");
+        require(latestConfirmed == bytes32(0), "VM already initialized");
 
         globalInbox = IGlobalPendingInbox(_globalInboxAddress);
-        challengeFactory = IChallengeFactory(_challengeFactoryAddress);
 
         globalInbox.registerForInbox();
         owner = _owner;
