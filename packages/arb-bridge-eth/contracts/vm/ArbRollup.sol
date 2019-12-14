@@ -40,24 +40,6 @@ contract ArbRollup is IArbBase {
         // messagesAccHash
         // logsAccHash
 
-    event PendingDisputableAssertion (
-        bytes32[5] fields,
-        address asserter,
-        uint64[2] timeBounds,
-        uint32 numSteps,
-        uint64 deadline
-    );
-
-    event ConfirmedDisputableAssertion(
-        bytes32 newState,
-        bytes32 logsAccHash
-    );
-
-    event ChallengeLaunched(
-        address challengeContract,
-        address challenger
-    );
-
     address internal constant ETH_ADDRESS = address(0);
 
     IGlobalPendingInbox public globalInbox;
@@ -76,6 +58,48 @@ contract ArbRollup is IArbBase {
     Staker[]  stakers;
     bytes32[] leaves;
     address[] activeChallenges;
+
+    event rollupAsserted(
+        bytes32 prevLeafHash, 
+        bytes32 beforeVMHash,
+        uint64[2] _timeBounds, 
+        bytes32 beforeInboxHash,
+        bytes32 _afterVMHash, 
+        uint32 _numSteps, 
+        uint64 _numArbGas, 
+        bytes32 _messagesAccHash, 
+        bytes32 _logsAccHash
+    );
+
+    event rollupConfirmed(bytes32 nodeHash);
+
+    event rollupPruned(bytes32 nodeHash);
+
+    event rollupStakeCreated(
+        address staker,
+        bytes32 nodeHash,
+        uint    blockNumber
+    );
+
+    event rollupStakeMoved(
+        address staker,
+        bytes32 toNodeHash
+    );
+
+    event rollupStakeRefunded(address staker);
+
+    event rollupChallengeStarted(
+        address asserter,
+        address challenger,
+        uint    challengeType,
+        address challengeContract
+    );
+
+    event rollupChallengeCompleted(
+        address challengeContract,
+        address winner,
+        address loser
+    );
 
     function myStakerIndex() internal view returns(uint) {
         uint index = stakerIndex[msg.sender];
@@ -267,6 +291,12 @@ contract ArbRollup is IArbBase {
             leaves.push(childNodeHash(prevLeaf, disputableHash, i, vmProtoHashBefore));
         }
         stakers[myStakerIndex()].location = validKid;
+
+        emit rollupAsserted(
+            prevLeaf, 
+            beforeVMHash, _timeBounds, beforeInboxHash,
+            _afterVMHash, _numSteps, _numArbGas, _messagesAccHash, _logsAccHash
+        );
     }
 
     function confirm(
@@ -305,6 +335,8 @@ contract ArbRollup is IArbBase {
 
         latestConfirmed = to;
         //TODO: execute actions from the confirmed assertion (to)
+
+        emit rollupConfirmed(latestConfirmed);
     }
 
     function pruneLeaf(
@@ -323,6 +355,8 @@ contract ArbRollup is IArbBase {
         );
         leaves[_leafIndex] = leaves[leaves.length - 1];
         leaves.pop();
+
+        emit rollupPruned(leaf);
     }
 
     function createStake(
@@ -341,6 +375,8 @@ contract ArbRollup is IArbBase {
         staker.creationTime = block.number;
         stakerIndex[msg.sender] = stakers.length;
         stakers.push(staker);
+
+        emit rollupStakeCreated(msg.sender, location, block.number);
     }
 
     function moveStake(
@@ -358,6 +394,8 @@ contract ArbRollup is IArbBase {
         require(isPath(newLocation, leaf, proof2), "node does not exist");
 
         stakers[myStakerIndex()].location = newLocation;
+
+        emit rollupStakeMoved(msg.sender, newLocation);
     }
 
     function recoverStakeConfirmed(
@@ -375,6 +413,8 @@ contract ArbRollup is IArbBase {
         }
         stakers.pop();
         msg.sender.transfer(vmParams.stakeRequirement);
+
+        emit rollupStakeRefunded(msg.sender);
     }
 
     function recoverStakeMooted(
@@ -397,6 +437,8 @@ contract ArbRollup is IArbBase {
         }
         stakers.pop();
         msg.sender.transfer(vmParams.stakeRequirement);
+
+        emit rollupStakeRefunded(msg.sender);
     }
 
     function startChallenge(
@@ -465,16 +507,20 @@ contract ArbRollup is IArbBase {
         }
         staker1.challenge = newChallengeAddr;
         staker2.challenge = newChallengeAddr;
+
+        emit rollupChallengeStarted(staker1.addr, staker2.addr, staker2position, newChallengeAddr);
     }
 
     function resolveChallenge(address winner, address loser) public {
         uint winnerIndex = getStakerIndex(winner);
         uint loserIndex = getStakerIndex(loser);
-        require(stakers[winnerIndex].challenge==msg.sender, "verdict can only be declared by challenge");
-        require(stakers[loserIndex].challenge==msg.sender, "verdict can only be declared by challenge");
+        require(stakers[winnerIndex].challenge==msg.sender, "verdict can only be declared by challenge contract");
+        require(stakers[loserIndex].challenge==msg.sender, "verdict can only be declared by challenge contract");
         //TODO: slash the loser, deliver half to the winner
         stakers[winnerIndex].challenge = address(0);
         deleteStaker(loserIndex);
+
+        emit rollupChallengeCompleted(msg.sender, winner, loser);
     }
 
     modifier onlyOwner() {
