@@ -275,6 +275,40 @@ func (chain *Chain) RemoveStake(stakerAddr common.Address) {
 	chain.stakerList.Delete(chain.stakerList.Get(stakerAddr))
 }
 
+func (staker *Staker) MarshalToBuf() *StakerBuf {
+	challengeStr := ""
+	if staker.challenge != nil {
+		challengeStr = string(staker.challenge.contract.Bytes())
+	}
+	return &StakerBuf{
+		Address:       string(staker.address.Bytes()),
+		Location:      string(string(staker.location.hash[:])),
+		CreationTime:  string(staker.creationTime.Bytes()),
+		ChallengeAddr: challengeStr,
+	}
+}
+
+func (buf *StakerBuf) Unmarshal(chain *Chain) *Staker {
+	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
+	var locArr [32]byte
+	copy(locArr[:], []byte(buf.Location))
+	if buf.ChallengeAddr == "" {
+		return &Staker{
+			address:      common.BytesToAddress([]byte(buf.Address)),
+			location:     chain.nodeFromHash[locArr],
+			creationTime: new(big.Int).SetBytes([]byte(buf.CreationTime)),
+			challenge:    nil,
+		}
+	} else {
+		return &Staker{
+			address:      common.BytesToAddress([]byte(buf.Address)),
+			location:     chain.nodeFromHash[locArr],
+			creationTime: new(big.Int).SetBytes([]byte(buf.CreationTime)),
+			challenge:    chain.challenges[common.BytesToAddress([]byte(buf.ChallengeAddr))],
+		}
+	}
+}
+
 type Challenge struct {
 	contract   common.Address
 	asserter   common.Address
@@ -293,10 +327,30 @@ const (
 func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address, kind ChallengeType) *Challenge {
 	ret := &Challenge{contract, asserter, challenger, kind}
 	chain.challenges[contract] = ret
+	chain.stakerList.Get(asserter).challenge = ret
+	chain.stakerList.Get(challenger).challenge = ret
 	return ret
 }
 
 func (chain *Chain) ChallengeResolved(contract, winner, loser common.Address) {
 	chain.RemoveStake(loser)
 	delete(chain.challenges, contract)
+}
+
+func (chal *Challenge) MarshalToBuf() *ChallengeBuf {
+	return &ChallengeBuf{
+		Contract:   string(chal.contract.Bytes()),
+		Asserter:   string(chal.asserter.Bytes()),
+		Challenger: string(chal.challenger.Bytes()),
+		Kind:       uint32(chal.kind),
+	}
+}
+
+func (buf *ChallengeBuf) Unmarshal() *Challenge {
+	return &Challenge{
+		common.BytesToAddress([]byte(buf.Contract)),
+		common.BytesToAddress([]byte(buf.Asserter)),
+		common.BytesToAddress([]byte(buf.Challenger)),
+		ChallengeType(buf.Kind),
+	}
 }
