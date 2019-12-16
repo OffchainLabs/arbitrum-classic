@@ -1,0 +1,65 @@
+/*
+ * Copyright 2019, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+package rollup;
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
+
+message ChainBuf {
+    string contractAddress = 1;
+    VMParamsBuf vmParams = 2;
+    repeated NodeBuf nodes = 3;
+    string latestConfirmedHash = 4;
+    repeated StakerBuf stakers = 5;
+    repeated ChallengeBuf challenges = 6;
+}
+
+message VMParamsBuf {
+    string stakeRequirement = 1;
+    uint32 gracePeriod = 2;
+    uint32 maxExecutionSteps = 3;
+    PendingInboxBuf pendingInbox = 4;
+}
+
+message NodeBuf {
+    DisputableNodeBuf disputableNode = 1;
+    string machineHash = 2;
+    string inboxHash = 3;
+    uint32 linkType = 4;
+    string prevHash = 5;
+}
+
+message StakerBuf {
+    string address = 1;
+    string location = 2;
+    string creationTime = 3;
+    string challengeAddr = 4;
+}
+
+message ChallengeBuf {
+    string contract = 1;
+    string asserter = 2;
+    string challenger = 3;
+    uint32 kind = 4;
+}
+
+message DisputableNodeBuf {
+
+}
+
+message PendingInboxBuf {
+
+}
