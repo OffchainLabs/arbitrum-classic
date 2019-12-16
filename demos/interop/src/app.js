@@ -185,9 +185,11 @@ class App {
   async deposit() {
     let val = parseInt($("#depositAmount").val());
     let dest = parseInt($("#destination").val());
-    const vmAddress = await this.arbProvider.getVmID();
-    console.log("vm add " + vmAddress);
-    const tx1 = await this.contracts.EthTestToken.approve(vmAddress, val);
+    const inboxManager = await this.arbProvider.globalInboxConn();
+    const tx1 = await this.contracts.EthTestToken.approve(
+      inboxManager.address,
+      val
+    );
     // $("#depositForm").hide();
     // $("#depositMessage").html("Approving transfer for deposit");
     // $("#depositMessage").show();
