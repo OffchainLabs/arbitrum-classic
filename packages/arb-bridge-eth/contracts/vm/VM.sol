@@ -29,7 +29,7 @@ library VM {
         uint128 stakeRequirement;
         uint32  gracePeriod;
         uint32  maxExecutionSteps;
-        bytes32 pendingHash;
+        bytes32 pendingInboxHash;
     }
 
     struct ProtocolState {

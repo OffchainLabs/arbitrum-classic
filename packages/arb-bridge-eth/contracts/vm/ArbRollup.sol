@@ -28,8 +28,6 @@ import "../arch/Protocol.sol";
 import "../arch/Value.sol";
 
 
-//TODO: emit events to announce everything interesting that happens
-
 contract ArbRollup is IArbBase {
     using SafeMath for uint256;
 
@@ -334,7 +332,9 @@ contract ArbRollup is IArbBase {
         }
 
         latestConfirmed = to;
-        //TODO: execute actions from the confirmed assertion (to)
+        if (branch == 0) {
+            //TODO: execute actions from the DA before the confirmed assertion (to)
+        }
 
         emit rollupConfirmed(latestConfirmed);
     }
@@ -549,7 +549,7 @@ contract ArbRollup is IArbBase {
         vmParams.stakeRequirement = _stakeRequirement;
         vmParams.gracePeriod = _gracePeriod;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
-        vmParams.pendingHash = Value.hashEmptyTuple();
+        vmParams.pendingInboxHash = Value.hashEmptyTuple();
 
         // VM protocol state
         bytes32 vmProtoStateHash = VM.protoStateHash(_vmState, Value.hashEmptyTuple());
