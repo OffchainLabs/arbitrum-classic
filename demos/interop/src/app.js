@@ -17,30 +17,30 @@ class App {
 
   async initWeb3() {
     // Modern dapp browsers...
-    let web3Provider = null;
-    // if (window.ethereum) {
-    //   console.log("Using metamask")
-    //   web3Provider = new ethers.providers.Web3Provider(window.ethereum);
-    //   try {
-    //     // Request account access
-    //     await window.ethereum.enable();
-    //   } catch (error) {
-    //     // User denied account access...
-    //     console.error("User denied account access");
-    //   }
-    // }
-    // // Legacy dapp browsers...
-    // else if (window.web3) {
-    //   web3Provider = new ethers.providers.Web3Provider(window.web3.currentProvider);
-    // }
-    // // If no injected web3 instance is detected, fall back to Ganache
-    // else {
-    //   web3Provider = new ethers.providers.JsonRpcProvider(
-    //     "http://localhost:7545"
-    //   );
-    // }
+    let web3ProviderArb = null;
 
-    web3Provider = new ethers.providers.JsonRpcProvider(
+    if (window.ethereum) {
+      web3ProviderArb = window.ethereum;
+      try {
+        // Request account access
+        await window.ethereum.enable();
+      } catch (error) {
+        // User denied account access...
+        console.error("User denied account access");
+      }
+    }
+    // Legacy dapp browsers...
+    else if (window.web3) {
+      web3ProviderArb = window.web3.currentProvider;
+    }
+    // If no injected web3 instance is detected, fall back to Ganache
+    else {
+      web3ProviderArb = new ethers.providers.JsonRpcProvider(
+        "http://localhost:7545"
+      );
+    }
+
+    let web3Provider = new ethers.providers.JsonRpcProvider(
       "http://localhost:7545"
     );
 
@@ -49,7 +49,7 @@ class App {
     this.arbProvider = new ArbProvider(
       "http://localhost:1235",
       contracts,
-      new ethers.providers.Web3Provider(web3Provider)
+      new ethers.providers.Web3Provider(web3ProviderArb)
     );
     return this.initContracts();
   }
@@ -70,10 +70,12 @@ class App {
       testToken.abi,
       this.ethProvider
     );
-    let ethWallet = this.ethProvider.getSigner(0);
+
+    let ethWallet = await this.ethProvider.getSigner(0);
     this.contracts.EthTestToken = ethTestTokenContractRaw.connect(ethWallet);
 
     let arbWallet = await this.arbProvider.getSigner(0);
+
     let arbTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
       testToken.abi,
@@ -105,7 +107,7 @@ class App {
   // Listen for events emitted from the contract
   listenForEvents() {
     var accountInterval = setInterval(async () => {
-      // console.log(this.ethProvider.getSigner(0).getAddress())
+      //console.log(this.ethProvider.getSigner(0).getAddress())
       let signer = this.ethProvider.getSigner(0);
       let address = await signer.getAddress();
       if (address != this.account) {
@@ -116,19 +118,25 @@ class App {
   }
 
   async render() {
+    var content = $("#content");
     if (this.account) {
       $("#accountAddress").html(this.account);
+      console.log(this.account);
       const ethBalance = await this.contracts.EthTestToken.balanceOf(
         this.account
       );
       $("#ethBalance").html(ethBalance.toString());
+      console.log(ethBalance);
       const arbBalance = await this.contracts.ArbTestToken.balanceOf(
         this.account
       );
       $("#arbBalance").html(arbBalance.toString());
+      console.log(arbBalance);
     } else {
       $("#accountAddress").html("Loading");
     }
+
+    content.show();
   }
 
   async mint() {
