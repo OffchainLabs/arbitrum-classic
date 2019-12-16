@@ -11,6 +11,7 @@ class App {
   constructor() {
     this.ethProvider = null;
     this.arbProvider = null;
+    this.arbWallet = null;
     this.contracts = {};
     return this.initWeb3();
   }
@@ -55,15 +56,19 @@ class App {
   }
 
   async initContracts() {
-    console.log("here init");
-
     var network = await this.ethProvider.getNetwork();
-    console.log(network);
+    var network2 = await this.arbProvider.getNetwork();
+
+    console.log("eth networkId: " + network.chainId);
+    console.log("arb networkId: " + network2.chainId);
+
     const testToken = require("../build/contracts/TestToken.json");
 
-    let testTokenAddress = testToken.networks[17].address;
+    let testTokenAddress =
+      testToken.networks[network.chainId.toString()].address;
+    this.testTokenAddres = testTokenAddress;
 
-    console.log(testTokenAddress);
+    console.log("eth tooken addresss: " + testTokenAddress);
 
     let ethTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
@@ -75,6 +80,13 @@ class App {
     this.contracts.EthTestToken = ethTestTokenContractRaw.connect(ethWallet);
 
     let arbWallet = await this.arbProvider.getSigner(0);
+    this.arbWallet = arbWallet;
+
+    let ethAddress = await ethWallet.getAddress();
+    this.walletAddress = await arbWallet.getAddress();
+
+    console.log("eth address " + ethAddress);
+    console.log("arb address " + this.walletAddress);
 
     let arbTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
@@ -114,24 +126,41 @@ class App {
         this.account = address;
         this.render();
       }
+
+      const arbsigner = await this.arbProvider.getSigner();
+      const inboxManager = await arbsigner.globalInboxConn();
+      inboxManager.on(
+        "DepositERC20MessageDelivered",
+        (dest, sender, contract, value) => {
+          console.log(
+            "deposit ERC20 triggered",
+            dest,
+            sender,
+            contract,
+            value,
+            event
+          );
+          this.render();
+        }
+      );
     }, 200);
   }
 
   async render() {
     var content = $("#content");
-    if (this.account) {
-      $("#accountAddress").html(this.account);
+    if (this.walletAddress) {
+      $("#accountAddress").html(this.walletAddress);
       console.log(this.account);
       const ethBalance = await this.contracts.EthTestToken.balanceOf(
-        this.account
+        this.walletAddress
       );
-      $("#ethBalance").html(ethBalance.toString());
+      $("#ethBalance").html("eth balance: " + ethBalance.toString());
       console.log(ethBalance);
-      const arbBalance = await this.contracts.ArbTestToken.balanceOf(
-        this.account
-      );
-      $("#arbBalance").html(arbBalance.toString());
-      console.log(arbBalance);
+      // const arbBalance = await this.contracts.ArbTestToken.balanceOf(
+      //   this.walletAddress
+      // );
+      // $("#arbBalance").html("arb balance: "+arbBalance.toString());
+      //console.log(arbBalance);
     } else {
       $("#accountAddress").html("Loading");
     }
@@ -141,11 +170,13 @@ class App {
 
   async mint() {
     let val = parseInt($("#mintAmount").val());
-    const tx = await this.contracts.EthTestToken.mint(this.account, val);
+    console.log("mint to " + this.walletAddress);
+    const tx = await this.contracts.EthTestToken.mint(this.walletAddress, val);
     $("#mintForm").hide();
     $("#mintMessage").html("Tokens are minting...");
     $("#mintMessage").show();
     await tx.wait();
+    console.log("minted");
     $("#mintMessage").hide();
     $("#mintForm").show();
     this.render();
@@ -153,15 +184,22 @@ class App {
 
   async deposit() {
     let val = parseInt($("#depositAmount").val());
+    let dest = parseInt($("#destination").val());
     const vmAddress = await this.arbProvider.getVmID();
-    const tx1 = this.contracts.EthTestToken.approve(vmAddress, val);
-    $("#depositForm").hide();
-    $("#depositMessage").html("Approving transfer for deposit");
-    $("#depositMessage").show();
-    await tx1.wait();
+    console.log("vm add " + vmAddress);
+    const tx1 = await this.contracts.EthTestToken.approve(vmAddress, val);
+    // $("#depositForm").hide();
+    // $("#depositMessage").html("Approving transfer for deposit");
+    // $("#depositMessage").show();
+    // await tx1.wait();
     const signer = await this.arbProvider.getSigner();
+    console.log();
     // Not yet implemented
-    const tx2 = signer.depositERC20(this.contracts.EthTestToken.address, val);
+    const tx2 = await signer.depositERC20(
+      this.contracts.EthTestToken.address,
+      dest,
+      val
+    );
     $("#depositMessage").html("Depositing into EthBridge");
     await tx2.wait();
     $("#depositMessage").hide();

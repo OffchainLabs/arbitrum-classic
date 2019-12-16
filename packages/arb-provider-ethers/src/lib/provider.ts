@@ -315,27 +315,19 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
         const dest = await transaction.to;
         const contractData = this.contracts.get(dest.toLowerCase());
-        if (contractData) {
-            let maxSeq = ethers.utils.bigNumberify(2);
-            for (let i = 0; i < 255; i++) {
-                maxSeq = maxSeq.mul(2);
-            }
-            maxSeq = maxSeq.sub(2);
-            let txData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
-            if (transaction.data) {
-                txData = ArbValue.hexToSizedByteRange(await transaction.data);
-            }
-            const arbMsg = new ArbValue.TupleValue([
-                txData,
-                new ArbValue.IntValue(dest),
-                new ArbValue.IntValue(maxSeq),
-            ]);
-            const sender = await this.provider.getSigner(0).getAddress();
-            const resultData = await this.client.call(arbMsg, sender);
-            return ethers.utils.hexlify(resultData);
-        } else {
-            return this.provider.call(transaction);
+        let maxSeq = ethers.utils.bigNumberify(2);
+        for (let i = 0; i < 255; i++) {
+            maxSeq = maxSeq.mul(2);
         }
+        maxSeq = maxSeq.sub(2);
+        let txData = new ArbValue.TupleValue([new ArbValue.TupleValue([]), new ArbValue.IntValue(0)]);
+        if (transaction.data) {
+            txData = ArbValue.hexToSizedByteRange(await transaction.data);
+        }
+        const arbMsg = new ArbValue.TupleValue([txData, new ArbValue.IntValue(dest), new ArbValue.IntValue(maxSeq)]);
+        const sender = await this.provider.getSigner(0).getAddress();
+        const resultData = await this.client.call(arbMsg, sender);
+        return ethers.utils.hexlify(resultData);
     }
 
     // value: *Value
