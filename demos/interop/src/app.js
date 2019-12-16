@@ -156,11 +156,11 @@ class App {
       );
       $("#ethBalance").html("eth balance: " + ethBalance.toString());
       console.log(ethBalance);
-      // const arbBalance = await this.contracts.ArbTestToken.balanceOf(
-      //   this.walletAddress
-      // );
-      // $("#arbBalance").html("arb balance: "+arbBalance.toString());
-      //console.log(arbBalance);
+      const arbBalance = await this.contracts.ArbTestToken.balanceOf(
+        this.walletAddress
+      );
+      $("#arbBalance").html("arb balance: " + arbBalance.toString());
+      console.log(arbBalance);
     } else {
       $("#accountAddress").html("Loading");
     }
@@ -197,7 +197,7 @@ class App {
     // Not yet implemented
     const tx2 = await signer.depositERC20(
       this.contracts.EthTestToken.address,
-      dest,
+      this.walletAddress,
       val
     );
     $("#depositMessage").html("Depositing into EthBridge");

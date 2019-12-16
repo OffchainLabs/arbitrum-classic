@@ -87,7 +87,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public async globalInboxConn(): Promise<GlobalPendingInbox> {
         if (!this.inboxManagerCache) {
             const arbChannel = await this.arbChannelConn();
-            const globalInboxAddress = arbChannel.globalInbox();
+            const globalInboxAddress = await arbChannel.globalInbox();
             const inboxManager = GlobalPendingInboxFactory.connect(globalInboxAddress, this.provider);
             this.inboxManagerCache = inboxManager;
             return inboxManager;
