@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+        <title>Token Interoperability Demo</title>
+
+        <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+            <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <body>
+        <div class="container" style="width: 750px;">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="text-center">Token Interop Demo</h1>
+                    <hr />
+                    <br />
+                    <h3>Info</h3>
+                    <p>Your address: <span id="accountAddress"></span></p>
+                    <p>
+                        Ethereum ERC-20 Balance: <span id="ethBalance">0</span>
+                    </p>
+                    <p>
+                        Arbitrum ERC-20 Balance: <span id="arbBalance">0</span>
+                    </p>
+                    <hr />
+                    <div>
+                        <h3>Mint ERC-20</h3>
+                        <form id="mintForm" class="form-inline">
+                            <div class="form-group mx-sm-2">
+                                <label for="mintAmount" class="sr-only">
+                                    Amount
+                                </label>
+                                <input
+                                    class="form-control"
+                                    id="mintAmount"
+                                    placeholder="Amount"
+                                />
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Mint
+                            </button>
+                            <hr />
+                        </form>
+                        <p id="mintMessage" style="display:none"></p>
+                    </div>
+                    <div>
+                        <h3>Deposit ERC-20</h3>
+                        <form id="depositForm" class="form-inline">
+                            <div class="form-group mx-sm-2">
+                                <label for="depositAmount" class="sr-only">
+                                    Amount
+                                </label>
+                                <input
+                                    class="form-control"
+                                    id="depositAmount"
+                                    placeholder="Amount"
+                                />
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Deposit
+                            </button>
+                            <hr />
+                        </form>
+                        <p id="depositMessage" style="display:none"></p>
+                    </div>
+                    <div>
+                        <h3>Withdraw ERC-20</h3>
+                        <form id="withdrawForm" class="form-inline">
+                            <div class="form-group mx-sm-2">
+                                <label for="withdrawAmount" class="sr-only">
+                                    Amount
+                                </label>
+                                <input
+                                    class="form-control"
+                                    id="withdrawAmount"
+                                    placeholder="Amount"
+                                />
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Withdraw
+                            </button>
+                            <hr />
+                        </form>
+                        <p id="withdrawMessage" style="display:none"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="main.js"></script>
+    </body>
+</html>
