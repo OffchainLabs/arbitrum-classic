@@ -170,6 +170,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 	return protocol.NewAssertion(
 		m.Hash(),
 		uint32(assertion.numSteps),
+		uint64(assertion.numGas),
 		outMessageVals,
 		logVals,
 	)

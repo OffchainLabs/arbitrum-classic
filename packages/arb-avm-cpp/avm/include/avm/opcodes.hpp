@@ -20,8 +20,8 @@
 #define CURRENT_AO_VERSION 1
 
 #include <cstdint>
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 enum class OpCode : uint8_t {
@@ -100,7 +100,7 @@ inline bool isValidOpcode(OpCode op) {
            (op >= OpCode::SEND && op <= OpCode::HALT);
 }
 
-const std::map<OpCode, std::string> InstructionNames = {
+const std::unordered_map<OpCode, std::string> InstructionNames = {
     {static_cast<OpCode>(0), "unhandled opcode"},
     {OpCode::ADD, "add"},
     {OpCode::MUL, "mul"},
@@ -164,7 +164,7 @@ const std::map<OpCode, std::string> InstructionNames = {
     {OpCode::HALT, "halt"},
     {OpCode::DEBUG, "debug"}};
 
-const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
+const std::unordered_map<OpCode, std::vector<bool>> InstructionStackPops = {
     {static_cast<OpCode>(0), {}},
     {OpCode::ADD, {true, true}},
     {OpCode::MUL, {true, true}},
@@ -228,7 +228,7 @@ const std::map<OpCode, std::vector<bool>> InstructionStackPops = {
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}}};
 
-const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
+const std::unordered_map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {static_cast<OpCode>(0), {}},
     {OpCode::ADD, {}},
     {OpCode::MUL, {}},
@@ -291,5 +291,68 @@ const std::map<OpCode, std::vector<bool>> InstructionAuxStackPops = {
     {OpCode::ERROR, {}},
     {OpCode::HALT, {}},
     {OpCode::DEBUG, {}}};
+
+const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
+    {OpCode::ADD, 1},
+    {OpCode::MUL, 1},
+    {OpCode::SUB, 1},
+    {OpCode::DIV, 1},
+    {OpCode::SDIV, 1},
+    {OpCode::MOD, 1},
+    {OpCode::SMOD, 1},
+    {OpCode::ADDMOD, 1},
+    {OpCode::MULMOD, 1},
+    {OpCode::EXP, 1},
+
+    {OpCode::LT, 1},
+    {OpCode::GT, 1},
+    {OpCode::SLT, 1},
+    {OpCode::SGT, 1},
+    {OpCode::EQ, 1},
+    {OpCode::ISZERO, 1},
+    {OpCode::BITWISE_AND, 1},
+    {OpCode::BITWISE_OR, 1},
+    {OpCode::BITWISE_XOR, 1},
+    {OpCode::BITWISE_NOT, 1},
+    {OpCode::BYTE, 1},
+    {OpCode::SIGNEXTEND, 1},
+
+    {OpCode::HASH, 1},
+    {OpCode::TYPE, 1},
+
+    {OpCode::POP, 1},
+    {OpCode::SPUSH, 1},
+    {OpCode::RPUSH, 1},
+    {OpCode::RSET, 1},
+    {OpCode::JUMP, 1},
+    {OpCode::CJUMP, 1},
+    {OpCode::STACKEMPTY, 1},
+    {OpCode::PCPUSH, 1},
+    {OpCode::AUXPUSH, 1},
+    {OpCode::AUXPOP, 1},
+    {OpCode::AUXSTACKEMPTY, 1},
+    {OpCode::NOP, 1},
+    {OpCode::ERRPUSH, 1},
+    {OpCode::ERRSET, 1},
+
+    {OpCode::DUP0, 1},
+    {OpCode::DUP1, 1},
+    {OpCode::DUP2, 1},
+    {OpCode::SWAP1, 1},
+    {OpCode::SWAP2, 1},
+
+    {OpCode::TGET, 1},
+    {OpCode::TSET, 1},
+    {OpCode::TLEN, 1},
+
+    {OpCode::BREAKPOINT, 1},
+    {OpCode::LOG, 1},
+
+    {OpCode::SEND, 1},
+    {OpCode::GETTIME, 1},
+    {OpCode::INBOX, 1},
+    {OpCode::ERROR, 1},
+    {OpCode::HALT, 1},
+    {OpCode::DEBUG, 1}};
 
 #endif /* opcodes_hpp */

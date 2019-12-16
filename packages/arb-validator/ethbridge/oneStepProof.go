@@ -42,6 +42,7 @@ func (con *OneStepProof) ValidateProof(
 		assertion.LastMessageHashValue(),
 		assertion.FirstLogHashValue(),
 		assertion.LastLogHashValue(),
+		assertion.NumGas,
 		proof,
 	)
 }
