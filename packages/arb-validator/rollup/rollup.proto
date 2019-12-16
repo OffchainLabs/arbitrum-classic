@@ -20,14 +20,15 @@ option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rol
 
 message ChainBuf {
     string contractAddress = 1;
-    VMParamsBuf vmParams = 2;
+    ChainParamsBuf vmParams = 2;
     repeated NodeBuf nodes = 3;
     string latestConfirmedHash = 4;
-    repeated StakerBuf stakers = 5;
-    repeated ChallengeBuf challenges = 6;
+    repeated string    leafHashes = 5;
+    repeated StakerBuf stakers = 6;
+    repeated ChallengeBuf challenges = 7;
 }
 
-message VMParamsBuf {
+message ChainParamsBuf {
     string stakeRequirement = 1;
     uint32 gracePeriod = 2;
     uint32 maxExecutionSteps = 3;
@@ -35,11 +36,12 @@ message VMParamsBuf {
 }
 
 message NodeBuf {
-    DisputableNodeBuf disputableNode = 1;
-    string machineHash = 2;
-    string inboxHash = 3;
-    uint32 linkType = 4;
-    string prevHash = 5;
+    string hash = 1;
+    DisputableNodeBuf disputableNode = 2;
+    string machineHash = 3;
+    string inboxHash = 4;
+    uint32 linkType = 5;
+    string prevHash = 6;
 }
 
 message StakerBuf {
@@ -57,7 +59,8 @@ message ChallengeBuf {
 }
 
 message DisputableNodeBuf {
-
+    string hash = 1;
+    string deadline = 2;
 }
 
 message PendingInboxBuf {

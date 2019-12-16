@@ -45,6 +45,84 @@ func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams Ch
 	return ret
 }
 
+func (chain *Chain) MarshalToBuf() *ChainBuf {
+	var allNodes []*NodeBuf
+	for _, v := range chain.nodeFromHash {
+		allNodes = append(allNodes, v.MarshalToBuf())
+	}
+	var allStakers []*StakerBuf
+	chain.stakerList.forall(func(staker *Staker) {
+		allStakers = append(allStakers, staker.MarshalToBuf())
+	})
+	var leafHashes []string
+	chain.leaves.forall(func(node *Node) {
+		leafHashes = append(leafHashes, string(node.hash[:]))
+	})
+	var allChallenges []*ChallengeBuf
+	for _, v := range chain.challenges {
+		allChallenges = append(allChallenges, v.MarshalToBuf())
+	}
+	return &ChainBuf{
+		ContractAddress:     string(chain.rollupAddr.Bytes()),
+		VmParams:            chain.vmParams.MarshalToBuf(),
+		Nodes:               allNodes,
+		LatestConfirmedHash: string(chain.latestConfirmed.hash[:]),
+		LeafHashes:          leafHashes,
+		Stakers:             allStakers,
+		Challenges:          allChallenges,
+	}
+}
+
+func (buf *ChainBuf) Unmarshal() *Chain {
+	chain := &Chain{
+		rollupAddr: common.BytesToAddress([]byte(buf.ContractAddress)),
+		vmParams:   buf.VmParams.Unmarshal(),
+	}
+	for _, chalBuf := range buf.Challenges {
+		chal := &Challenge{
+			common.BytesToAddress([]byte(chalBuf.Contract)),
+			common.BytesToAddress([]byte(chalBuf.Asserter)),
+			common.BytesToAddress([]byte(chalBuf.Challenger)),
+			ChallengeType(chalBuf.Kind),
+		}
+		chain.challenges[chal.contract] = chal
+	}
+	for _, nodeBuf := range buf.Nodes {
+		var nodeHash [32]byte
+		copy(nodeHash[:], []byte(nodeBuf.Hash))
+		node := chain.nodeFromHash[nodeHash]
+		var prevHash [32]byte
+		copy(prevHash[:], []byte(nodeBuf.PrevHash))
+		if prevHash != zeroBytes32 {
+			prev := chain.nodeFromHash[prevHash]
+			node.prev = prev
+			prev.successorHashes[node.linkType] = nodeHash
+		}
+	}
+	chain.leaves = NewLeafList()
+	for _, leafHashStr := range buf.LeafHashes {
+		var leafHash [32]byte
+		copy(leafHash[:], []byte(leafHashStr))
+		chain.leaves.Add(chain.nodeFromHash[leafHash])
+	}
+	chain.stakerList = NewStakerList()
+	for _, stakerBuf := range buf.Stakers {
+		var locationHash [32]byte
+		copy(locationHash[:], []byte(stakerBuf.Location))
+		chain.stakerList.Add(&Staker{
+			common.BytesToAddress([]byte(stakerBuf.Address)),
+			chain.nodeFromHash[locationHash],
+			new(big.Int).SetBytes([]byte(stakerBuf.CreationTime)),
+			chain.challenges[common.BytesToAddress([]byte(stakerBuf.ChallengeAddr))],
+		})
+	}
+	var lcHash [32]byte
+	copy(lcHash[:], []byte(buf.LatestConfirmedHash))
+	chain.latestConfirmed = chain.nodeFromHash[lcHash]
+
+	return chain
+}
+
 type LeafList struct {
 	arr []*Node
 	idx map[[32]byte]uint
@@ -77,6 +155,12 @@ func (ll *LeafList) Delete(node *Node) {
 		ll.idx[ll.arr[slot].hash] = slot
 	}
 	ll.arr = ll.arr[:len(ll.arr)-1]
+}
+
+func (ll *LeafList) forall(f func(*Node)) {
+	for _, v := range ll.arr {
+		f(v)
+	}
 }
 
 type Staker struct {
@@ -119,6 +203,12 @@ func (sl *StakerList) Get(addr common.Address) *Staker {
 	return sl.arr[sl.idx[addr]]
 }
 
+func (sl *StakerList) forall(f func(*Staker)) {
+	for _, v := range sl.arr {
+		f(v)
+	}
+}
+
 type ChainParams struct {
 	stakeRequirement  *big.Int
 	gracePeriod       uint32
@@ -126,13 +216,59 @@ type ChainParams struct {
 	pendingInbox      *PendingInbox
 }
 
+func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
+	return &ChainParamsBuf{
+		StakeRequirement:  string(params.stakeRequirement.Bytes()),
+		GracePeriod:       params.gracePeriod,
+		MaxExecutionSteps: params.maxExecutionSteps,
+		PendingInbox:      params.pendingInbox.MarshalToBuf(),
+	}
+}
+
+func (buf *ChainParamsBuf) Unmarshal() ChainParams {
+	return ChainParams{
+		new(big.Int).SetBytes([]byte(buf.StakeRequirement)),
+		buf.GracePeriod,
+		buf.MaxExecutionSteps,
+		buf.PendingInbox.Unmarshal(),
+	}
+}
+
 type PendingInbox struct {
 	//TODO
+}
+
+func (pi *PendingInbox) MarshalToBuf() *PendingInboxBuf {
+	return &PendingInboxBuf{
+		//TODO
+	}
+}
+
+func (buf *PendingInboxBuf) Unmarshal() *PendingInbox {
+	return &PendingInbox{
+		//TODO
+	}
 }
 
 type DisputableNode struct {
 	hash     [32]byte
 	deadline *big.Int
+}
+
+func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
+	return &DisputableNodeBuf{
+		Hash:     string(dn.hash[:]),
+		Deadline: string(dn.deadline.Bytes()),
+	}
+}
+
+func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
+	var hashBuf [32]byte
+	copy(hashBuf[:], []byte(buf.Hash))
+	return &DisputableNode{
+		hash:     hashBuf,
+		deadline: new(big.Int).SetBytes([]byte(buf.Deadline)),
+	}
 }
 
 type Node struct {
@@ -285,6 +421,44 @@ func (chain *Chain) PruneNode(nodeHash [32]byte) {
 	node.removePrev()
 }
 
+func (node *Node) MarshalToBuf() *NodeBuf {
+	if node.machine != nil {
+		//TODO: marshal node.machine
+	}
+	if node.inbox != nil {
+		//TODO: marshal node.inbox
+	}
+	return &NodeBuf{
+		DisputableNode: node.disputable.MarshalToBuf(),
+		MachineHash:    string(node.machineHash[:]),
+		InboxHash:      string(node.inboxHash[:]),
+		LinkType:       uint32(node.linkType),
+		PrevHash:       string(node.prev.hash[:]),
+	}
+}
+
+func (buf *NodeBuf) Unmarshal(chain *Chain) (*Node, [32]byte) {
+	var machineHashArr [32]byte
+	copy(machineHashArr[:], []byte(buf.MachineHash))
+	var inboxHashArr [32]byte
+	copy(inboxHashArr[:], []byte(buf.InboxHash))
+	var prevHashArr [32]byte
+	copy(prevHashArr[:], []byte(buf.PrevHash))
+	node := &Node{
+		disputable:  buf.DisputableNode.Unmarshal(),
+		machineHash: machineHashArr,
+		inboxHash:   inboxHashArr,
+		linkType:    ChildType(buf.LinkType),
+	}
+	//TODO: try to retrieve machine from checkpoint DB; might fail
+	//TODO: try to retrieve inbox from checkpoint DB; might fail
+	node.setHash()
+	chain.nodeFromHash[node.hash] = node
+
+	// can't set up prev and successorHash fields yet; return prevHashArr so caller can do this later
+	return node, prevHashArr
+}
+
 func (chain *Chain) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime *big.Int) {
 	staker := &Staker{
 		stakerAddr,
@@ -374,11 +548,13 @@ func (chal *Challenge) MarshalToBuf() *ChallengeBuf {
 	}
 }
 
-func (buf *ChallengeBuf) Unmarshal() *Challenge {
-	return &Challenge{
+func (buf *ChallengeBuf) Unmarshal(chain *Chain) *Challenge {
+	ret := &Challenge{
 		common.BytesToAddress([]byte(buf.Contract)),
 		common.BytesToAddress([]byte(buf.Asserter)),
 		common.BytesToAddress([]byte(buf.Challenger)),
 		ChallengeType(buf.Kind),
 	}
+	chain.challenges[ret.contract] = ret
+	return ret
 }
