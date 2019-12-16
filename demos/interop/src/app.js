@@ -36,9 +36,10 @@ class App {
     // // If no injected web3 instance is detected, fall back to Ganache
     // else {
     //   web3Provider = new ethers.providers.JsonRpcProvider(
-    //     "http://localhost:7546"
+    //     "http://localhost:7545"
     //   );
     // }
+
     web3Provider = new ethers.providers.JsonRpcProvider(
       "http://localhost:7545"
     );
@@ -54,10 +55,15 @@ class App {
   }
 
   async initContracts() {
+    console.log("here init");
+
     var network = await this.ethProvider.getNetwork();
+    console.log(network);
     const testToken = require("../build/contracts/TestToken.json");
-    let testTokenAddress =
-      testToken.networks[network.chainId.toString()].address;
+
+    let testTokenAddress = testToken.networks[17].address;
+
+    console.log(testTokenAddress);
 
     let ethTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
@@ -67,12 +73,13 @@ class App {
     let ethWallet = this.ethProvider.getSigner(0);
     this.contracts.EthTestToken = ethTestTokenContractRaw.connect(ethWallet);
 
-    let arbWallet = this.arbProvider.getSigner(0);
+    let arbWallet = await this.arbProvider.getSigner(0);
     let arbTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
       testToken.abi,
       this.arbProvider
     );
+
     this.contracts.ArbTestToken = arbTestTokenContractRaw.connect(arbWallet);
 
     this.listenForEvents();
