@@ -148,12 +148,13 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 			pcEnd := m.gomachine.GetPC()
 			m.cppmachine.PrintState()
 			m.gomachine.PrintState()
-			log.Println("cpp num steps", a1.NumSteps)
-			log.Println("go num steps", a2.NumSteps)
+			log.Println("cpp num steps, num gas", a1.NumSteps, a1.NumGas)
+			log.Println("go num steps, num gas", a2.NumSteps, a2.NumGas)
 			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
 		}
 		a.AfterHash = a1.AfterHash
 		a.NumSteps += a1.NumSteps
+		a.NumGas += a1.NumGas
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
 		if a1.NumSteps < uint32(steps) {

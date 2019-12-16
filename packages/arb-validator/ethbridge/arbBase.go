@@ -282,6 +282,7 @@ func (vm *ArbBase) PendingDisputableAssert(
 		stub.LastMessageHashValue(),
 		stub.LastLogHashValue(),
 		assertion.NumSteps,
+		assertion.NumGas,
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 	)
 	if err != nil {
@@ -302,6 +303,7 @@ func (vm *ArbBase) ConfirmDisputableAsserted(
 		precondition.Hash(),
 		assertion.AfterHash,
 		assertion.NumSteps,
+		assertion.NumGas,
 		messages,
 		assertion.LogsHash(),
 	)
@@ -413,6 +415,7 @@ func translateDisputableAssertionEvent(event *arbchain.ArbBasePendingDisputableA
 	assertion := &protocol.AssertionStub{
 		AfterHash:        value.NewHashBuf(event.Fields[2]),
 		NumSteps:         event.NumSteps,
+		NumGas:           event.NumGas,
 		FirstMessageHash: value.NewHashBuf([32]byte{}),
 		LastMessageHash:  value.NewHashBuf(event.Fields[3]),
 		FirstLogHash:     value.NewHashBuf([32]byte{}),

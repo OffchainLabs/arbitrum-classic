@@ -32,15 +32,17 @@ message Precondition {
 message AssertionStub {
     value.HashBuf afterHash = 1;
     uint32 numSteps = 2;
-    value.HashBuf firstMessageHash = 3;
-    value.HashBuf lastMessageHash = 4;
-    value.HashBuf firstLogHash = 5;
-    value.HashBuf lastLogHash = 6;
+    uint64 numGas = 3;
+    value.HashBuf firstMessageHash = 4;
+    value.HashBuf lastMessageHash = 5;
+    value.HashBuf firstLogHash = 6;
+    value.HashBuf lastLogHash = 7;
 }
 
 message AssertionBuf {
     value.HashBuf afterHash = 1;
     uint32 numSteps = 2;
-    repeated value.ValueBuf messages = 3;
-    repeated value.ValueBuf logs = 4;
+    uint64 numGas = 3;
+    repeated value.ValueBuf messages = 4;
+    repeated value.ValueBuf logs = 5;
 }

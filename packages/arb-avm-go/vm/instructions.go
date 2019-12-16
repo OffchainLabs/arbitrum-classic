@@ -32,70 +32,71 @@ import (
 type Instruction struct {
 	code value.Opcode
 	impl func(*Machine) (StackMods, error)
+	gas  uint64
 }
 
 var allInsns = []Instruction{ // code, not necessarily in order
-	{code.ADD, insnAdd},
-	{code.MUL, insnMul},
-	{code.SUB, insnSub},
-	{code.DIV, insnDiv},
-	{code.SDIV, insnSdiv},
-	{code.MOD, insnMod},
-	{code.SMOD, insnSmod},
-	{code.ADDMOD, insnAddmod},
-	{code.MULMOD, insnMulmod},
-	{code.EXP, insnExp},
+	{code.ADD, insnAdd, 1},
+	{code.MUL, insnMul, 1},
+	{code.SUB, insnSub, 1},
+	{code.DIV, insnDiv, 1},
+	{code.SDIV, insnSdiv, 1},
+	{code.MOD, insnMod, 1},
+	{code.SMOD, insnSmod, 1},
+	{code.ADDMOD, insnAddmod, 1},
+	{code.MULMOD, insnMulmod, 1},
+	{code.EXP, insnExp, 1},
 
-	{code.LT, insnLt},
-	{code.GT, insnGt},
-	{code.SLT, insnSlt},
-	{code.SGT, insnSgt},
-	{code.EQ, insnEq},
-	{code.ISZERO, insnIszero},
-	{code.AND, insnAnd},
-	{code.OR, insnOr},
-	{code.XOR, insnXor},
-	{code.NOT, insnNot},
-	{code.BYTE, insnByte},
-	{code.SIGNEXTEND, insnSignextend},
+	{code.LT, insnLt, 1},
+	{code.GT, insnGt, 1},
+	{code.SLT, insnSlt, 1},
+	{code.SGT, insnSgt, 1},
+	{code.EQ, insnEq, 1},
+	{code.ISZERO, insnIszero, 1},
+	{code.AND, insnAnd, 1},
+	{code.OR, insnOr, 1},
+	{code.XOR, insnXor, 1},
+	{code.NOT, insnNot, 1},
+	{code.BYTE, insnByte, 1},
+	{code.SIGNEXTEND, insnSignextend, 1},
 
-	{code.SHA3, insnHash},
-	{code.TYPE, insnType},
+	{code.SHA3, insnHash, 1},
+	{code.TYPE, insnType, 1},
 
-	{code.POP, insnPop},
-	{code.SPUSH, insnSpush},
-	{code.RPUSH, insnRpush},
-	{code.RSET, insnRset},
-	{code.JUMP, insnJump},
-	{code.CJUMP, insnCjump},
-	{code.STACKEMPTY, insnStackempty},
-	{code.PCPUSH, insnPcpush},
-	{code.AUXPUSH, insnAuxpush},
-	{code.AUXPOP, insnAuxpop},
-	{code.AUXSTACKEMPTY, insnAuxStackempty},
-	{code.NOP, insnNop},
-	{code.ERRPUSH, insnErrPush},
-	{code.ERRSET, insnErrSet},
+	{code.POP, insnPop, 1},
+	{code.SPUSH, insnSpush, 1},
+	{code.RPUSH, insnRpush, 1},
+	{code.RSET, insnRset, 1},
+	{code.JUMP, insnJump, 1},
+	{code.CJUMP, insnCjump, 1},
+	{code.STACKEMPTY, insnStackempty, 1},
+	{code.PCPUSH, insnPcpush, 1},
+	{code.AUXPUSH, insnAuxpush, 1},
+	{code.AUXPOP, insnAuxpop, 1},
+	{code.AUXSTACKEMPTY, insnAuxStackempty, 1},
+	{code.NOP, insnNop, 1},
+	{code.ERRPUSH, insnErrPush, 1},
+	{code.ERRSET, insnErrSet, 1},
 
-	{code.DUP0, insnDup0},
-	{code.DUP1, insnDup1},
-	{code.DUP2, insnDup2},
-	{code.SWAP1, insnSwap1},
-	{code.SWAP2, insnSwap2},
+	{code.DUP0, insnDup0, 1},
+	{code.DUP1, insnDup1, 1},
+	{code.DUP2, insnDup2, 1},
+	{code.SWAP1, insnSwap1, 1},
+	{code.SWAP2, insnSwap2, 1},
 
-	{code.TGET, insnTget},
-	{code.TSET, insnTset},
-	{code.TLEN, insnTlen},
+	{code.TGET, insnTget, 1},
+	{code.TSET, insnTset, 1},
+	{code.TLEN, insnTlen, 1},
 
-	{code.BREAKPOINT, insnBreakpoint},
-	{code.LOG, insnLog},
+	{code.BREAKPOINT, insnBreakpoint, 1},
+	{code.LOG, insnLog, 1},
 
-	{code.SEND, insnSend},
-	{code.GETTIME, insnGettime},
-	{code.INBOX, insnInbox},
-	{code.ERROR, insnError},
-	{code.HALT, insnHalt},
-	{code.DEBUG, insnDebug},
+	{code.SEND, insnSend, 1},
+	{code.GETTIME, insnGettime, 1},
+	{code.INBOX, insnInbox, 1},
+	{code.ERROR, insnError, 1},
+	{code.HALT, insnHalt, 1},
+	{code.DEBUG, insnDebug, 1},
 }
 
 var (
@@ -132,27 +133,28 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	if m.HaveSizeException() {
 		return NewStackMods(0, 0), machine.ErrorBlocked{}
 	}
-	mods, err := func() (StackMods, error) {
+	mods, gas, err := func() (StackMods, uint64, error) {
 		if _, ok := code.InstructionNames[op.GetOp()]; !ok {
-			return StackMods{}, errors.New("invalid opcode")
+			return StackMods{}, 0, errors.New("invalid opcode")
 		}
 
 		if immediate, ok := op.(value.ImmediateOperation); ok {
 			m.stack.Push(immediate.Val)
 		}
 
-		return Instructions[op.GetOp()].impl(m)
+		mods, err := Instructions[op.GetOp()].impl(m)
+		return mods, Instructions[op.GetOp()].gas, err
 	}()
 
 	if err == nil {
-		m.context.NotifyStep()
+		m.context.NotifyStep(gas)
 		return mods, nil
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
 		return mods, blocked.reason
 	}
-	m.context.NotifyStep()
+	m.context.NotifyStep(gas)
 
 	//fmt.Printf("error running instruction %v: %v\n", code.InstructionNames[op.GetOp()], err)
 
