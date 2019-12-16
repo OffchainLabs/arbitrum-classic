@@ -139,9 +139,9 @@ type Node struct {
 	hash            [32]byte
 	disputable      *DisputableNode
 	machineHash     [32]byte
-	machine         machine.Machine   // nil if unknown
+	machine         machine.Machine // nil if unknown
 	inboxHash       [32]byte
-	inbox           value.Value       // nil if unknown
+	inbox           value.Value // nil if unknown
 	prev            *Node
 	linkType        ChildType
 	hasSuccessors   bool
@@ -156,9 +156,9 @@ const (
 	InvalidMessagesChildType  ChildType = 2
 	InvalidExecutionChildType ChildType = 3
 
-	MinChildType              ChildType = 0
-	MinInvalidChildType       ChildType = 1
-	MaxChildType              ChildType = 3
+	MinChildType        ChildType = 0
+	MinInvalidChildType ChildType = 1
+	MaxChildType        ChildType = 3
 )
 
 var zeroBytes32 [32]byte // deliberately zeroed
@@ -180,9 +180,9 @@ func (chain *Chain) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *DisputableNode,
 	afterMachineHash [32]byte,
-	afterMachine      machine.Machine,  // if known
-	afterInboxHash    [32]byte,
-	afterInbox        value.Value,      // if known
+	afterMachine machine.Machine, // if known
+	afterInboxHash [32]byte,
+	afterInbox value.Value, // if known
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
@@ -210,12 +210,12 @@ func (chain *Chain) CreateNodesOnAssert(
 	// create nodes for invalid branches
 	for kind := MinInvalidChildType; kind <= MaxChildType; kind++ {
 		newNode := &Node{
-			disputable: dispNode,
-			prev:       prevNode,
-			linkType:   kind,
+			disputable:  dispNode,
+			prev:        prevNode,
+			linkType:    kind,
 			machineHash: prevNode.machineHash,
 			machine:     prevNode.machine,
-			inboxHash:   prevNode.inboxHash
+			inboxHash:   prevNode.inboxHash,
 			inbox:       prevNode.inbox,
 		}
 		newNode.setHash()
@@ -247,8 +247,8 @@ func (node *Node) setHash() {
 
 func (node *Node) protoStateHash() [32]byte {
 	retSlice := solsha3.SoliditySHA3(
-		node.machineHash(),
-		node.inboxHash(),
+		node.machineHash,
+		node.inboxHash,
 	)
 	var ret [32]byte
 	copy(ret[:], retSlice)
