@@ -138,8 +138,10 @@ type DisputableNode struct {
 type Node struct {
 	hash            [32]byte
 	disputable      *DisputableNode
-	machine         machine.Machine
-	inbox           value.Value
+	machineHash     [32]byte
+	machine         machine.Machine   // nil if unknown
+	inboxHash       [32]byte
+	inbox           value.Value       // nil if unknown
 	prev            *Node
 	linkType        ChildType
 	hasSuccessors   bool
@@ -154,17 +156,20 @@ const (
 	InvalidMessagesChildType  ChildType = 2
 	InvalidExecutionChildType ChildType = 3
 
-	MinChildType ChildType = 0
-	MaxChildType ChildType = 3
+	MinChildType              ChildType = 0
+	MinInvalidChildType       ChildType = 1
+	MaxChildType              ChildType = 3
 )
 
 var zeroBytes32 [32]byte // deliberately zeroed
 
 func (chain *Chain) CreateInitialNode(machine machine.Machine) {
 	newNode := &Node{
-		machine:  machine.Clone(),
-		inbox:    value.NewEmptyTuple(),
-		linkType: ValidChildType,
+		machineHash: machine.Hash(),
+		machine:     machine.Clone(),
+		inboxHash:   value.NewEmptyTuple().Hash(),
+		inbox:       value.NewEmptyTuple(),
+		linkType:    ValidChildType,
 	}
 	newNode.setHash()
 	chain.leaves.Add(newNode)
@@ -174,21 +179,44 @@ func (chain *Chain) CreateInitialNode(machine machine.Machine) {
 func (chain *Chain) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *DisputableNode,
-	afterMachine machine.Machine,
-	afterInbox value.Value,
+	afterMachineHash [32]byte,
+	afterMachine      machine.Machine,  // if known
+	afterInboxHash    [32]byte,
+	afterInbox        value.Value,      // if known
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
 	}
 	chain.leaves.Delete(prevNode)
 	prevNode.hasSuccessors = true
-	for kind := MinChildType; kind <= MaxChildType; kind++ {
+
+	// create node for valid branch
+	if afterMachine != nil {
+		afterMachine = afterMachine.Clone()
+	}
+	newNode := &Node{
+		disputable:  dispNode,
+		prev:        prevNode,
+		linkType:    ValidChildType,
+		machineHash: afterMachineHash,
+		machine:     afterMachine,
+		inboxHash:   afterInboxHash,
+		inbox:       afterInbox,
+	}
+	newNode.setHash()
+	prevNode.successorHashes[ValidChildType] = newNode.hash
+	chain.leaves.Add(newNode)
+
+	// create nodes for invalid branches
+	for kind := MinInvalidChildType; kind <= MaxChildType; kind++ {
 		newNode := &Node{
 			disputable: dispNode,
 			prev:       prevNode,
 			linkType:   kind,
-			machine:    afterMachine.Clone(),
-			inbox:      afterInbox,
+			machineHash: prevNode.machineHash,
+			machine:     prevNode.machine,
+			inboxHash:   prevNode.inboxHash
+			inbox:       prevNode.inbox,
 		}
 		newNode.setHash()
 		prevNode.successorHashes[kind] = newNode.hash
@@ -219,8 +247,8 @@ func (node *Node) setHash() {
 
 func (node *Node) protoStateHash() [32]byte {
 	retSlice := solsha3.SoliditySHA3(
-		node.machine.Hash(),
-		node.inbox.Hash(),
+		node.machineHash(),
+		node.inboxHash(),
 	)
 	var ret [32]byte
 	copy(ret[:], retSlice)
