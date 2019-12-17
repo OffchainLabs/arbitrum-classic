@@ -61,8 +61,8 @@ services:
             dockerfile: %s
         environment:
             - ID=0
-            - WAIT_FOR=dockerhost:7546
-            - ETH_URL=ws://dockerhost:7546
+            - WAIT_FOR=dockerhost:7545
+            - ETH_URL=ws://dockerhost:%s
             - AVM=%s
         ports:
             - '1235:1235'
@@ -70,12 +70,15 @@ services:
 """
 
 
-def compose_header(state_abspath, contract_abspath, cvalidator, dockerfile, avm):
+def compose_header(
+    state_abspath, contract_abspath, cvalidator, dockerfile, ws_port, avm
+):
     return COMPOSE_HEADER % (
         state_abspath,
         contract_abspath,
         cvalidator,
         dockerfile,
+        ws_port,
         avm,
     )
 
@@ -93,19 +96,20 @@ COMPOSE_VALIDATOR = """
         environment:
             - ID=%d
             - WAIT_FOR=arb-validator-coordinator:1236
-            - ETH_URL=ws://dockerhost:7546
+            - ETH_URL=ws://dockerhost:%s
             - COORDINATOR_URL=wss://arb-validator-coordinator:1236/ws
             - AVM=%s
 """
 
 
 # Returns one arb-validator declaration for a docker compose file
-def compose_validator(validator_id, state_abspath, contract_abspath, avm):
+def compose_validator(validator_id, state_abspath, contract_abspath, ws_port, avm):
     return COMPOSE_VALIDATOR % (
         validator_id,
         state_abspath,
         contract_abspath,
         validator_id,
+        ws_port,
         avm,
     )
 
@@ -123,7 +127,9 @@ COPY --from=0 /build /build"""
 
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
-def deploy(contract_name, n_validators, sudo_flag, build_flag, up_flag, avm):
+def deploy(
+    contract_name, n_validators, sudo_flag, build_flag, up_flag, ws_port, avm, node_type
+):
     # Bootstrap the build cache if it does not exist
     def bootstrap_build_cache(name):
         if (
@@ -157,10 +163,11 @@ def deploy(contract_name, n_validators, sudo_flag, build_flag, up_flag, avm):
         contract,
         os.path.abspath(os.path.join(ROOT_DIR, "packages")),
         "arb-validator.Dockerfile",
+        ws_port,
         avm,
     ) + "".join(
         [
-            compose_validator(i, states_path % i, contract, avm)
+            compose_validator(i, states_path % i, contract, ws_port, avm)
             for i in range(1, n_validators)
         ]
     )
@@ -178,7 +185,7 @@ def deploy(contract_name, n_validators, sudo_flag, build_flag, up_flag, avm):
 
     # Setup validator states
     setup_states.setup_validator_states_docker(
-        os.path.abspath(contract_name), n_validators, sudo_flag
+        os.path.abspath(contract_name), n_validators, node_type, sudo_flag
     )
 
     # if not os.path.isdir(setup_states.VALIDATOR_STATES):
@@ -236,6 +243,16 @@ def main():
         "n_validators", type=int, help="The number of validators to deploy."
     )
     # Optional
+    node_group = parser.add_mutually_exclusive_group()
+    node_group.add_argument(
+        "--parity",
+        action="store_true",
+        help="Run against a parity local node (default)",
+    )
+    node_group.add_argument(
+        "--ganache", action="store_true", help="Run against a ganache local node"
+    )
+
     parser.add_argument(
         "-s",
         "--sudo",
@@ -265,8 +282,24 @@ def main():
 
     args = parser.parse_args()
 
+    ws_port = "7546"
+    if args.ganache:
+        ws_port = "7545"
+        node_type = "ganache"
+    else:
+        node_type = "parity"
+
     # Deploy
-    deploy(args.contract, args.n_validators, args.sudo, args.build, args.up, args.avm)
+    deploy(
+        args.contract,
+        args.n_validators,
+        args.sudo,
+        args.build,
+        args.up,
+        ws_port,
+        args.avm,
+        node_type,
+    )
 
 
 if __name__ == "__main__":
