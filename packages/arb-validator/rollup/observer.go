@@ -116,11 +116,17 @@ func NewObserver(chain *Chain, clnt *ethclient.Client, rawUrl string) (*Observer
 
 	go func() {
 		defer sub.Unsubscribe()
+		lastBlockNumberSeen := uint64(0)
 		for {
 			select {
 			case err := <-sub.Err():
 				log.Fatal(err)
 			case vLog := <-logs:
+				if vLog.BlockNumber > lastBlockNumberSeen {
+					lastBlockNumberSeen = vLog.BlockNumber
+					chain.notifyNewBlockNumber(lastBlockNumberSeen)
+
+				}
 				switch vLog.Topics[0] {
 				case rollupAssertedSigHash:
 					var event RollupAssertedEvent

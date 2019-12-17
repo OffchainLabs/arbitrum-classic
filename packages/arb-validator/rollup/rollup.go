@@ -308,6 +308,10 @@ func (chain *Chain) CreateInitialNode(machine machine.Machine) {
 	chain.latestConfirmed = newNode
 }
 
+func (chain *Chain) notifyNewBlockNumber(blockNum uint64) {
+	//TODO: checkpoint, and take other appropriate actions for new block
+}
+
 func (chain *Chain) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *DisputableNode,
