@@ -130,11 +130,11 @@ Each VM has an Inbox, which is supplied by the Runtime Environment. At any time 
 -   a 3-tuple [0, b, v], where b is an Inbox and v is a value, indicating that the inbox contains the sequence of messages in b followed by the message v; or
 -   a 3-tuple [1, b, c], where b and c are Inboxes, indicating that the Inbox contains the sequence of messages in b followed by the sequence of messages in c.
 
-A VM can receive from its Inbox by using the inbox instruction (described below), which pushes the current Inbox contents onto the Data Stack.
+A VM can receive from its Inbox by using the inbox instruction (described below), which pushes the current Inbox contents onto the Data Stack and empties the Inbox.
 
 Note that different values of the Inbox can denote the same sequence of messages.
 
-Note that a VM’s Inbox will contain the full sequence of messages received by the Inbox over all time, since the VM’s creation. Messages are never removed from the Inbox. The Inbox structure is designed in a way that allows a VM to determine efficiently which messages have arrived since a previous point in time. This allows an AVM program to process each incoming message once.
+Messages may arrive in the inbox at any time (but not during the execution of an inbox instruction).
 
 ## Errors
 
@@ -229,6 +229,6 @@ The instructions are as follows:
 | 70s: System operations                          |               | &nbsp;                                                                                                                                                                                                                                                                                                         |
 | 0x70                                            | send          | Pop a Value (A) off the Data Stack. Tell the Runtime Environment to publish A as an outgoing message of this VM.                                                                                                                                                                                               |
 | 0x71                                            | gettime       | Push a 2-tuple [mintime, maxtime] onto the Data Stack, where mintime and maxtime are (Integer) lower and upper bounds on the current time, as supplied by the Runtime Environment.                                                                                                                             |
-| 0x72                                            | inbox         | Pop a Value (A) off of the Data Stack. Block until this VM’s inbox, as provided by the Runtime Environment, is not equal to A. Then push the Inbox contents, as supplied by the Runtime Environment, onto the Data Stack.                                                                                      |
+| 0x72                                            | inbox         | Pop a Value (A) off of the Data Stack. Block until either (a) the VM's inbox is non-empty, or (b) the lower bound on current time (as would be returned by the gettime instruction) is greater than or equal to A. Then push the Inbox contents, as supplied by the Runtime Environment, onto the Data Stack, and set the inbox to None.                                                                                   |
 | 0x73                                            | error         | Raise an Error.                                                                                                                                                                                                                                                                                                |
 | 0x74                                            | halt          | Enter the Halted state.                                                                                                                                                                                                                                                                                        |
