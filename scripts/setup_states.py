@@ -32,14 +32,22 @@ ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 # Retrieve bridge_eth_addresses.json
 # arb-bridge-eth must be have been built first
-def setup_validator_states_docker(contract, n_validators, sudo=False):
+def setup_validator_states_docker(contract, n_validators, node_type, sudo=False):
     ethaddrs = "bridge_eth_addresses.json"
 
+    if node_type == "parity":
+        image_name = "arb-bridge-eth"
+    elif node_type == "ganache":
+        image_name = "arb-bridge-eth-ganache"
+    else:
+        print(node_type, "is bad")
+        raise Exception("Unknown node type " + node_type)
+
     layer = run(
-        "docker create arb-bridge-eth", capture_stdout=True, quiet=True, sudo=sudo
+        "docker create %s" % image_name, capture_stdout=True, quiet=True, sudo=sudo
     ).strip()
     if layer == "":
-        print("Docker image arb-bridge-eth does not exist")
+        print("Docker image %s does not exist" % image_name)
         return
     run(
         "docker cp %s:/home/user/bridge_eth_addresses.json %s" % (layer, ethaddrs),
@@ -51,7 +59,7 @@ def setup_validator_states_docker(contract, n_validators, sudo=False):
         contract,
         n_validators,
         ethaddrs,
-        "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82",
+        "0x81183C9C61bdf79DB7330BBcda47Be30c0a85064",
         "7545",
     )
 

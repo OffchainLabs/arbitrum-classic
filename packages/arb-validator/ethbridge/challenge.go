@@ -76,7 +76,7 @@ func NewChallenge(address common.Address, client *ethclient.Client) (*Challenge,
 func (c *Challenge) setupContracts() error {
 	challengeManagerContract, err := challenge.NewChallenge(c.address, c.Client)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return errors2.Wrap(err, "Failed to connect to Challenge")
 	}
 
 	c.Challenge = challengeManagerContract
