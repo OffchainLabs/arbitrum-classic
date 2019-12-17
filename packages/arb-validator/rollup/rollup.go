@@ -234,22 +234,6 @@ func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 	}
 }
 
-type PendingInbox struct {
-	//TODO
-}
-
-func (pi *PendingInbox) MarshalToBuf() *PendingInboxBuf {
-	return &PendingInboxBuf{
-		//TODO
-	}
-}
-
-func (buf *PendingInboxBuf) Unmarshal() *PendingInbox {
-	return &PendingInbox{
-		//TODO
-	}
-}
-
 type DisputableNode struct {
 	hash     [32]byte
 	deadline *big.Int

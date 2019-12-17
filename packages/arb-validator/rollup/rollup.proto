@@ -63,5 +63,7 @@ message DisputableNodeBuf {
 }
 
 message PendingInboxBuf {
-
+    repeated string items = 1;
+    string hashOfRest = 2;
 }
+
