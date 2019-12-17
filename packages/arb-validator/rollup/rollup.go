@@ -28,6 +28,7 @@ import (
 type Chain struct {
 	rollupAddr      common.Address
 	vmParams        ChainParams
+	pendingInbox    *PendingInbox
 	latestConfirmed *Node
 	leaves          *LeafList
 	nodeFromHash    map[[32]byte]*Node
@@ -37,9 +38,10 @@ type Chain struct {
 
 func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams ChainParams) *Chain {
 	ret := &Chain{
-		rollupAddr: _rollupAddr,
-		vmParams:   _vmParams,
-		leaves:     NewLeafList(),
+		rollupAddr:   _rollupAddr,
+		vmParams:     _vmParams,
+		pendingInbox: NewPendingInbox(),
+		leaves:       NewLeafList(),
 	}
 	ret.CreateInitialNode(_machine)
 	return ret
@@ -65,6 +67,7 @@ func (chain *Chain) MarshalToBuf() *ChainBuf {
 	return &ChainBuf{
 		ContractAddress:     string(chain.rollupAddr.Bytes()),
 		VmParams:            chain.vmParams.MarshalToBuf(),
+		PendingInbox:        chain.pendingInbox.MarshalToBuf(),
 		Nodes:               allNodes,
 		LatestConfirmedHash: string(chain.latestConfirmed.hash[:]),
 		LeafHashes:          leafHashes,
@@ -75,8 +78,9 @@ func (chain *Chain) MarshalToBuf() *ChainBuf {
 
 func (buf *ChainBuf) Unmarshal() *Chain {
 	chain := &Chain{
-		rollupAddr: common.BytesToAddress([]byte(buf.ContractAddress)),
-		vmParams:   buf.VmParams.Unmarshal(),
+		rollupAddr:   common.BytesToAddress([]byte(buf.ContractAddress)),
+		vmParams:     buf.VmParams.Unmarshal(),
+		pendingInbox: buf.PendingInbox.Unmarshal(),
 	}
 	for _, chalBuf := range buf.Challenges {
 		chal := &Challenge{
@@ -213,7 +217,6 @@ type ChainParams struct {
 	stakeRequirement  *big.Int
 	gracePeriod       uint32
 	maxExecutionSteps uint32
-	pendingInbox      *PendingInbox
 }
 
 func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
@@ -221,7 +224,6 @@ func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
 		StakeRequirement:  string(params.stakeRequirement.Bytes()),
 		GracePeriod:       params.gracePeriod,
 		MaxExecutionSteps: params.maxExecutionSteps,
-		PendingInbox:      params.pendingInbox.MarshalToBuf(),
 	}
 }
 
@@ -230,7 +232,6 @@ func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 		new(big.Int).SetBytes([]byte(buf.StakeRequirement)),
 		buf.GracePeriod,
 		buf.MaxExecutionSteps,
-		buf.PendingInbox.Unmarshal(),
 	}
 }
 
