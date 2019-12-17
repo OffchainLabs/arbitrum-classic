@@ -39,8 +39,9 @@ message NodeBuf {
     string hash = 1;
     DisputableNodeBuf disputableNode = 2;
     string machineHash = 3;
-    uint32 linkType = 4;
-    string prevHash = 5;
+    string pendingTopHash = 4;
+    uint32 linkType = 5;
+    string prevHash = 6;
 }
 
 message StakerBuf {
@@ -60,6 +61,7 @@ message ChallengeBuf {
 message DisputableNodeBuf {
     string hash = 1;
     string deadline = 2;
+    string pendingTop = 3;
 }
 
 message PendingInboxBuf {

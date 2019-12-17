@@ -243,23 +243,28 @@ func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 }
 
 type DisputableNode struct {
-	hash     [32]byte
-	deadline *big.Int
+	hash           [32]byte
+	pendingTopHash [32]byte
+	deadline       *big.Int
 }
 
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
-		Hash:     string(dn.hash[:]),
-		Deadline: string(dn.deadline.Bytes()),
+		Hash:       string(dn.hash[:]),
+		PendingTop: string(dn.pendingTopHash[:]),
+		Deadline:   string(dn.deadline.Bytes()),
 	}
 }
 
 func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	var hashBuf [32]byte
 	copy(hashBuf[:], []byte(buf.Hash))
+	var pthBuf [32]byte
+	copy(pthBuf[:], []byte(buf.PendingTop))
 	return &DisputableNode{
-		hash:     hashBuf,
-		deadline: new(big.Int).SetBytes([]byte(buf.Deadline)),
+		hash:           hashBuf,
+		pendingTopHash: pthBuf,
+		deadline:       new(big.Int).SetBytes([]byte(buf.Deadline)),
 	}
 }
 
@@ -268,6 +273,7 @@ type Node struct {
 	disputable      *DisputableNode
 	machineHash     [32]byte
 	machine         machine.Machine // nil if unknown
+	pendingTopHash  [32]byte
 	prev            *Node
 	linkType        ChildType
 	hasSuccessors   bool
@@ -291,9 +297,10 @@ var zeroBytes32 [32]byte // deliberately zeroed
 
 func (chain *Chain) CreateInitialNode(machine machine.Machine) {
 	newNode := &Node{
-		machineHash: machine.Hash(),
-		machine:     machine.Clone(),
-		linkType:    ValidChildType,
+		machineHash:    machine.Hash(),
+		machine:        machine.Clone(),
+		pendingTopHash: value.NewEmptyTuple().Hash(),
+		linkType:       ValidChildType,
 	}
 	newNode.setHash()
 	chain.leaves.Add(newNode)
@@ -323,11 +330,12 @@ func (chain *Chain) CreateNodesOnAssert(
 		afterMachine = afterMachine.Clone()
 	}
 	newNode := &Node{
-		disputable:  dispNode,
-		prev:        prevNode,
-		linkType:    ValidChildType,
-		machineHash: afterMachineHash,
-		machine:     afterMachine,
+		disputable:     dispNode,
+		prev:           prevNode,
+		linkType:       ValidChildType,
+		machineHash:    afterMachineHash,
+		pendingTopHash: dispNode.pendingTopHash,
+		machine:        afterMachine,
 	}
 	newNode.setHash()
 	prevNode.successorHashes[ValidChildType] = newNode.hash
@@ -336,11 +344,12 @@ func (chain *Chain) CreateNodesOnAssert(
 	// create nodes for invalid branches
 	for kind := MinInvalidChildType; kind <= MaxChildType; kind++ {
 		newNode := &Node{
-			disputable:  dispNode,
-			prev:        prevNode,
-			linkType:    kind,
-			machineHash: prevNode.machineHash,
-			machine:     prevNode.machine,
+			disputable:     dispNode,
+			prev:           prevNode,
+			linkType:       kind,
+			machineHash:    prevNode.machineHash,
+			machine:        prevNode.machine,
+			pendingTopHash: prevNode.pendingTopHash,
 		}
 		newNode.setHash()
 		prevNode.successorHashes[kind] = newNode.hash
@@ -415,6 +424,7 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 	return &NodeBuf{
 		DisputableNode: node.disputable.MarshalToBuf(),
 		MachineHash:    string(node.machineHash[:]),
+		PendingTopHash: string(node.pendingTopHash[:]),
 		LinkType:       uint32(node.linkType),
 		PrevHash:       string(node.prev.hash[:]),
 	}
@@ -425,10 +435,13 @@ func (buf *NodeBuf) Unmarshal(chain *Chain) (*Node, [32]byte) {
 	copy(machineHashArr[:], []byte(buf.MachineHash))
 	var prevHashArr [32]byte
 	copy(prevHashArr[:], []byte(buf.PrevHash))
+	var pthArr [32]byte
+	copy(pthArr[:], []byte(buf.PendingTopHash))
 	node := &Node{
-		disputable:  buf.DisputableNode.Unmarshal(),
-		machineHash: machineHashArr,
-		linkType:    ChildType(buf.LinkType),
+		disputable:     buf.DisputableNode.Unmarshal(),
+		machineHash:    machineHashArr,
+		pendingTopHash: pthArr,
+		linkType:       ChildType(buf.LinkType),
 	}
 	//TODO: try to retrieve machine from checkpoint DB; might fail
 	node.setHash()
