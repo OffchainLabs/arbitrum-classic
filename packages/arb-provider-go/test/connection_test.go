@@ -194,8 +194,8 @@ func _computePubKeyString(privKeyBytes []byte) (string, error) {
 }
 
 func RunValidators(t *testing.T) (*FibonacciSession, error) {
-	coordinatorKey := "4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
-	followerKey := "6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1"
+	coordinatorKey := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
+	followerKey := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
 	err := setupValidators(coordinatorKey, followerKey, t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
