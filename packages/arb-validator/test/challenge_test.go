@@ -46,7 +46,7 @@ import (
 func TestChallenge(t *testing.T) {
 	bridge_eth_addresses := "bridge_eth_addresses.json"
 	contract := "contract.ao"
-	ethURL := getEthUrl()
+	ethURL := GetEthUrl()
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)

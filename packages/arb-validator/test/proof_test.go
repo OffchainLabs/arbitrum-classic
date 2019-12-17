@@ -39,7 +39,7 @@ func setupTestValidateProof(t *testing.T) (*proofmachine.Connection, error) {
 	var connectionInfo ethbridge.ArbAddresses
 
 	bridge_eth_addresses := "bridge_eth_addresses.json"
-	ethURL := getEthUrl()
+	ethURL := GetEthUrl()
 
 	seed := time.Now().UnixNano()
 	//seed := int64(1571337692091150000)
