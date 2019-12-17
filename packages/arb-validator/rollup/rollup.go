@@ -276,8 +276,6 @@ type Node struct {
 	disputable      *DisputableNode
 	machineHash     [32]byte
 	machine         machine.Machine // nil if unknown
-	inboxHash       [32]byte
-	inbox           value.Value // nil if unknown
 	prev            *Node
 	linkType        ChildType
 	hasSuccessors   bool
@@ -303,8 +301,6 @@ func (chain *Chain) CreateInitialNode(machine machine.Machine) {
 	newNode := &Node{
 		machineHash: machine.Hash(),
 		machine:     machine.Clone(),
-		inboxHash:   value.NewEmptyTuple().Hash(),
-		inbox:       value.NewEmptyTuple(),
 		linkType:    ValidChildType,
 	}
 	newNode.setHash()
@@ -336,8 +332,6 @@ func (chain *Chain) CreateNodesOnAssert(
 		linkType:    ValidChildType,
 		machineHash: afterMachineHash,
 		machine:     afterMachine,
-		inboxHash:   afterInboxHash,
-		inbox:       afterInbox,
 	}
 	newNode.setHash()
 	prevNode.successorHashes[ValidChildType] = newNode.hash
@@ -351,8 +345,6 @@ func (chain *Chain) CreateNodesOnAssert(
 			linkType:    kind,
 			machineHash: prevNode.machineHash,
 			machine:     prevNode.machine,
-			inboxHash:   prevNode.inboxHash,
-			inbox:       prevNode.inbox,
 		}
 		newNode.setHash()
 		prevNode.successorHashes[kind] = newNode.hash
@@ -384,7 +376,6 @@ func (node *Node) setHash() {
 func (node *Node) protoStateHash() [32]byte {
 	retSlice := solsha3.SoliditySHA3(
 		node.machineHash,
-		node.inboxHash,
 	)
 	var ret [32]byte
 	copy(ret[:], retSlice)
@@ -425,13 +416,9 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 	if node.machine != nil {
 		//TODO: marshal node.machine
 	}
-	if node.inbox != nil {
-		//TODO: marshal node.inbox
-	}
 	return &NodeBuf{
 		DisputableNode: node.disputable.MarshalToBuf(),
 		MachineHash:    string(node.machineHash[:]),
-		InboxHash:      string(node.inboxHash[:]),
 		LinkType:       uint32(node.linkType),
 		PrevHash:       string(node.prev.hash[:]),
 	}
@@ -440,18 +427,14 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 func (buf *NodeBuf) Unmarshal(chain *Chain) (*Node, [32]byte) {
 	var machineHashArr [32]byte
 	copy(machineHashArr[:], []byte(buf.MachineHash))
-	var inboxHashArr [32]byte
-	copy(inboxHashArr[:], []byte(buf.InboxHash))
 	var prevHashArr [32]byte
 	copy(prevHashArr[:], []byte(buf.PrevHash))
 	node := &Node{
 		disputable:  buf.DisputableNode.Unmarshal(),
 		machineHash: machineHashArr,
-		inboxHash:   inboxHashArr,
 		linkType:    ChildType(buf.LinkType),
 	}
 	//TODO: try to retrieve machine from checkpoint DB; might fail
-	//TODO: try to retrieve inbox from checkpoint DB; might fail
 	node.setHash()
 	chain.nodeFromHash[node.hash] = node
 
