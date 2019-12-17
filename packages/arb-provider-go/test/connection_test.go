@@ -9,33 +9,31 @@ import (
 	"io/ioutil"
 	"math"
 	"math/big"
-	brand "math/rand"
+	"math/rand"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 /********************************************/
@@ -44,7 +42,7 @@ import (
 func setupValidators(coordinatorKey string, followerKey string, t *testing.T) error {
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
-	brand.Seed(seed)
+	rand.Seed(seed)
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 	if err != nil {
@@ -87,7 +85,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		200000,
 		common.Address{}, // Address 0 means no owner
 	)
-	ethURL := "ws://127.0.0.1:7546"
+	ethURL := test.GetEthUrl()
 	contract := "contract.ao"
 
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")

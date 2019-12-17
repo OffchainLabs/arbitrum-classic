@@ -13,7 +13,7 @@ apis = ["all"]
 hosts = ["all"]
 
 [mining]
-engine_signer = "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82"
+engine_signer = "0x81183c9c61bdf79db7330bbcda47be30c0a85064"
 force_sealing = true
 min_gas_price = 1
 # Targeting 7500000 gas per block when sealing a new block.

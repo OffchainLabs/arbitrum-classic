@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package test
 
 import (
 	"context"
@@ -44,11 +44,9 @@ import (
 )
 
 func TestChallenge(t *testing.T) {
-
 	bridge_eth_addresses := "bridge_eth_addresses.json"
 	contract := "contract.ao"
-	ethURL := "ws://127.0.0.1:7546"
-
+	ethURL := getEthUrl()
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	fmt.Println("seed", seed)
@@ -67,11 +65,11 @@ func TestChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	key1, err := crypto.HexToECDSA("4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d")
+	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		t.Fatal(err)
 	}
-	key2, err := crypto.HexToECDSA("6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1")
+	key2, err := crypto.HexToECDSA("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
 	if err != nil {
 		t.Fatal(err)
 	}
