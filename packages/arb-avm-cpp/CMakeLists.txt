@@ -44,6 +44,7 @@ file(GLOB_RECURSE ALL_CODE_FILES
     ${PROJECT_SOURCE_DIR}/app/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/tests/*.[h]pp
     ${PROJECT_SOURCE_DIR}/utils/*.[ch]pp
+    ${PROJECT_SOURCE_DIR}/dbStorage/*.[ch]pp
 )
 
 clang_format(TARGET_NAME ${ALL_CODE_FILES})
@@ -59,6 +60,7 @@ add_subdirectory(utils)
 add_subdirectory(avm)
 add_subdirectory(cavm)
 add_subdirectory(app)
+add_subdirectory(dbStorage)
 
 add_subdirectory(tests)
 
