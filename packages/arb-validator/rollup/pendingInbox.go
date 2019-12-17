@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"log"
 )
 
 type pendingInboxItem struct {
@@ -36,6 +37,8 @@ type PendingInbox struct {
 
 func NewPendingInbox() *PendingInbox {
 	return &PendingInbox{
+		head:       nil,
+		index:      make(map[[32]byte]*pendingInboxItem),
 		hashOfRest: value.NewEmptyTuple().Hash(),
 	}
 }
@@ -116,8 +119,11 @@ func hash2(h1, h2 [32]byte) [32]byte {
 func (pi *PendingInbox) MarshalToBuf() *PendingInboxBuf {
 	var msgs []string
 	for item := pi.head; item != nil; item = item.prev {
-		var bb bytes.Buffer
-		_ = item.message.Marshal(&bb) // ignore error
+		bb := bytes.NewBuffer(nil)
+		err := value.MarshalValue(item.message, bb)
+		if err != nil {
+			log.Fatal(err)
+		}
 		msgs = append(msgs, string(bb.Bytes()))
 	}
 	return &PendingInboxBuf{
@@ -127,13 +133,13 @@ func (pi *PendingInbox) MarshalToBuf() *PendingInboxBuf {
 }
 
 func (buf *PendingInboxBuf) Unmarshal() *PendingInbox {
-	var horBuf [32]byte
-	copy(horBuf[:], []byte(buf.HashOfRest))
-	ret := &PendingInbox{
-		hashOfRest: horBuf,
-	}
+	ret := NewPendingInbox()
+	copy(ret.hashOfRest[:], []byte(buf.HashOfRest))
 	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
-		val, _ := value.UnmarshalValue(bytes.NewBuffer([]byte(buf.Items[i]))) // ignore errors
+		val, err := value.UnmarshalValue(bytes.NewBuffer([]byte(buf.Items[i])))
+		if err != nil {
+			log.Fatal(err)
+		}
 		ret.DeliverMessage(val)
 	}
 	return ret

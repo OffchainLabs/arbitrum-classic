@@ -38,10 +38,14 @@ type Chain struct {
 
 func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams ChainParams) *Chain {
 	ret := &Chain{
-		rollupAddr:   _rollupAddr,
-		vmParams:     _vmParams,
-		pendingInbox: NewPendingInbox(),
-		leaves:       NewLeafList(),
+		_rollupAddr,
+		_vmParams,
+		NewPendingInbox(),
+		nil,
+		NewLeafList(),
+		make(map[[32]byte]*Node),
+		NewStakerList(),
+		make(map[common.Address]*Challenge),
 	}
 	ret.CreateInitialNode(_machine)
 	return ret
@@ -78,9 +82,14 @@ func (chain *Chain) MarshalToBuf() *ChainBuf {
 
 func (buf *ChainBuf) Unmarshal() *Chain {
 	chain := &Chain{
-		rollupAddr:   common.BytesToAddress([]byte(buf.ContractAddress)),
-		vmParams:     buf.VmParams.Unmarshal(),
-		pendingInbox: buf.PendingInbox.Unmarshal(),
+		common.BytesToAddress([]byte(buf.ContractAddress)),
+		buf.VmParams.Unmarshal(),
+		buf.PendingInbox.Unmarshal(),
+		nil,
+		NewLeafList(),
+		make(map[[32]byte]*Node),
+		NewStakerList(),
+		make(map[common.Address]*Challenge),
 	}
 	for _, chalBuf := range buf.Challenges {
 		chal := &Challenge{
@@ -103,13 +112,11 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 			prev.successorHashes[node.linkType] = nodeHash
 		}
 	}
-	chain.leaves = NewLeafList()
 	for _, leafHashStr := range buf.LeafHashes {
 		var leafHash [32]byte
 		copy(leafHash[:], []byte(leafHashStr))
 		chain.leaves.Add(chain.nodeFromHash[leafHash])
 	}
-	chain.stakerList = NewStakerList()
 	for _, stakerBuf := range buf.Stakers {
 		var locationHash [32]byte
 		copy(locationHash[:], []byte(stakerBuf.Location))
