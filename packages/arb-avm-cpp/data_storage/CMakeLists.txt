@@ -17,7 +17,7 @@ cmake_minimum_required (VERSION 3.5)
 
 set (CMAKE_CXX_STANDARD 14)
 
-project (dbStorage LANGUAGES CXX)
+project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
   include/checkpointstorage.hpp
@@ -34,35 +34,31 @@ set(LIB_SOURCES
   src/transaction.cpp
 )
 
-add_library(dbStorage STATIC ${LIB_HEADERS} ${LIB_SOURCES})
+add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 
 set_target_properties(
-    dbStorage
+    data_storage
     PROPERTIES
     VERSION ${AVM_VERSION_STRING}
     SOVERSION ${AVM_VERSION_MAJOR}
 )
 
-target_compile_options(dbStorage PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(data_storage PRIVATE -Wall -Wextra -Wpedantic)
 
-target_include_directories(dbStorage PUBLIC
+target_include_directories(data_storage PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   PRIVATE src
 )
 
-target_include_directories(dbStorage PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../external
-)
+target_link_libraries(data_storage PUBLIC avm_values CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
 
-target_link_libraries(dbStorage PUBLIC Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
-
-target_code_coverage(dbStorage AUTO ALL)
+target_code_coverage(data_storage AUTO ALL)
 
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
-    source_group(dbStorage FILES ${LIB_HEADERS} ${LIB_SOURCES})
+    source_group(data_storage FILES ${LIB_HEADERS} ${LIB_SOURCES})
 else()
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${LIB_HEADERS})
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${LIB_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include" FILES ${LIB_HEADERS})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES})
 endif()
 

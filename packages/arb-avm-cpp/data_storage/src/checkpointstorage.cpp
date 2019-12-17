@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointstorage.hpp>
+#include "../include/checkpointstorage.hpp"
 
-#include <avm/checkpoint/checkpointresult.hpp>
-#include <avm/checkpoint/checkpointutils.hpp>
-#include <avm/checkpoint/transaction.hpp>
+#include "../include/checkpointresult.hpp"
+#include "../include/checkpointutils.hpp"
+#include "../include/transaction.hpp"
 
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>

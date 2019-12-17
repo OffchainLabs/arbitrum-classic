@@ -40,11 +40,12 @@ include(CodeCoverage)
 include(Formatting)
 
 file(GLOB_RECURSE ALL_CODE_FILES
+	${PROJECT_SOURCE_DIR}/avm_values/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/avm/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/app/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/tests/*.[h]pp
     ${PROJECT_SOURCE_DIR}/utils/*.[ch]pp
-    ${PROJECT_SOURCE_DIR}/dbStorage/*.[ch]pp
+    ${PROJECT_SOURCE_DIR}/data_storage/*.[ch]pp
 )
 
 clang_format(TARGET_NAME ${ALL_CODE_FILES})
@@ -57,10 +58,11 @@ file(GLOB KECCAK_SOURCES
 )
 
 add_subdirectory(utils)
+add_subdirectory(avm_values)
 add_subdirectory(avm)
 add_subdirectory(cavm)
 add_subdirectory(app)
-add_subdirectory(dbStorage)
+add_subdirectory(data_storage)
 
 add_subdirectory(tests)
 
