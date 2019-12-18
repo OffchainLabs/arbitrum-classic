@@ -17,9 +17,9 @@
 #ifndef messagestack_hpp
 #define messagestack_hpp
 
-#include <avm/checkpoint/checkpointresult.hpp>
-#include <avm/checkpoint/transaction.hpp>
-#include <avm/value/tuple.hpp>
+#include <avm_values/tuple.hpp>
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/transaction.hpp>
 
 struct Message;
 class MachineStateSaver;

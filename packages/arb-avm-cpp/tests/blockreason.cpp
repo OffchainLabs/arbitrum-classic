@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm/machinestate/blockreason.hpp>
+#include <avm_values/blockreason.hpp>
 
 #include <catch2/catch.hpp>
 

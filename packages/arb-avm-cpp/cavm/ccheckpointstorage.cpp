@@ -16,9 +16,9 @@
 
 #include "ccheckpointstorage.h"
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
-#include <avm/checkpoint/checkpointresult.hpp>
-#include <avm/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpointdeleter.hpp>
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointstorage.hpp>
 
 #include <string>
 

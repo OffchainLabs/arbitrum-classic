@@ -16,12 +16,12 @@
 
 #include <avm/checkpoint/machinestatesaver.hpp>
 
-#include <avm/checkpoint/checkpointresult.hpp>
-#include <avm/checkpoint/checkpointutils.hpp>
-#include <avm/checkpoint/transaction.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
-#include <avm/value/codepoint.hpp>
-#include <avm/value/tuple.hpp>
+#include <avm_values/codepoint.hpp>
+#include <avm_values/tokenTracker.hpp>
+#include <avm_values/tuple.hpp>
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointutils.hpp>
+#include <data_storage/transaction.hpp>
 
 #include <variant>
 

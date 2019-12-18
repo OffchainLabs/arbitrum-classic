@@ -17,11 +17,8 @@
 #ifndef tokenTracker_hpp
 #define tokenTracker_hpp
 
-#include <avm/value/tuple.hpp>
-#include <avm/value/value.hpp>
-
-#include <unordered_map>
-#include <unordered_set>
+#include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #define TOKEN_TYPE_LENGTH 21
 #define TOKEN_VAL_LENGTH 33

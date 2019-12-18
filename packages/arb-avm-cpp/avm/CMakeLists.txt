@@ -23,9 +23,7 @@ set(LIB_HEADERS
 
   include/avm/machine.hpp
   include/avm/machinestate/machinestate.hpp
-  include/avm/machinestate/tokenTracker.hpp
   include/avm/machinestate/datastack.hpp
-  include/avm/machinestate/blockreason.hpp
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/messagestack.hpp
   include/avm/checkpoint/machinestatesaver.hpp
@@ -34,12 +32,10 @@ set(LIB_HEADERS
 
 set(LIB_SOURCES 
   src/machine.cpp
-  src/machinestate/tokenTracker.cpp
   src/machinestate/machinestate.cpp
   src/machinestate/machineoperation.cpp
   src/machinestate/messagestack.cpp
   src/machinestate/datastack.cpp
-  src/machinestate/blockreason.cpp
   src/checkpoint/machinestatesaver.cpp
   src/checkpoint/machinestatefetcher.cpp
 )

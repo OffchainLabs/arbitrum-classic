@@ -18,7 +18,7 @@
 
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
+#include <avm_values/tokenTracker.hpp>
 
 void MessageStack::addMessage(const Message& msg) {
     messages =

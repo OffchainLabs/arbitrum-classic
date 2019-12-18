@@ -17,7 +17,7 @@
 #ifndef machineoperation_hpp
 #define machineoperation_hpp
 
-#include <avm/machinestate/blockreason.hpp>
+#include <avm_values/blockreason.hpp>
 
 struct MachineState;
 

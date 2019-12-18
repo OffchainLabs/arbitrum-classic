@@ -16,14 +16,14 @@
 
 #include <avm/machinestate/machinestate.hpp>
 
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
-#include <avm/exceptions.hpp>
 #include <avm/machinestate/machineoperation.hpp>
+#include <avm_values/exceptions.hpp>
+#include <data_storage/checkpointstorage.hpp>
 
+#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <util.hpp>
 
 namespace {
 std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {

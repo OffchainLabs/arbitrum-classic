@@ -34,7 +34,7 @@ set(LIB_SOURCES
   src/transaction.cpp
 )
 
-add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_SOURCES})
+add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
 
 set_target_properties(
     data_storage
@@ -49,6 +49,10 @@ target_include_directories(data_storage PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   PRIVATE src
+)
+
+target_include_directories(data_storage PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
 target_link_libraries(data_storage PUBLIC avm_values CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)

@@ -18,7 +18,7 @@
 #define machine_hpp
 
 #include <avm/machinestate/machinestate.hpp>
-#include <avm/value/value.hpp>
+#include <avm_values/value.hpp>
 
 #include <memory>
 #include <vector>

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/machinestate.hpp>
+#include <data_storage/checkpointdeleter.hpp>
+#include <data_storage/checkpointstorage.hpp>
 
 #include <catch2/catch.hpp>
 

@@ -17,10 +17,10 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
-#include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/messagestack.hpp>
-#include <avm/value/value.hpp>
+#include <avm_values/blockreason.hpp>
+#include <avm_values/value.hpp>
 
 #include <memory>
 #include <vector>

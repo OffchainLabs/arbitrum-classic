@@ -16,6 +16,7 @@
 
 #include <iterator>
 
+#include <avm_values/blockreason.hpp>
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/util.hpp>

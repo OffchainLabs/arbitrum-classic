@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointresult.hpp>
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
-#include <avm/checkpoint/transaction.hpp>
 #include <avm/machinestate/datastack.hpp>
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/transaction.hpp>
 
 #include <rocksdb/status.h>
 

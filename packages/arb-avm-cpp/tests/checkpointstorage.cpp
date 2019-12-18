@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointresult.hpp>
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/transaction.hpp>
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/transaction.hpp>
 
 #include <rocksdb/db.h>
 

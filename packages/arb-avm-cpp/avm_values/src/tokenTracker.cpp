@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointutils.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
+#include <avm_values/tokenTracker.hpp>
 #include <bigint_utils.hpp>
 
 #include <boost/algorithm/hex.hpp>

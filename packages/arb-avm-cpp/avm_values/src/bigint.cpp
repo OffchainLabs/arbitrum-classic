@@ -15,9 +15,9 @@
  */
 
 #include <avm_values/bigint.hpp>
-
 #include <avm_values/util.hpp>
-#include "bigint_utils.hpp"
+
+#include <bigint_utils.hpp>
 
 #include <sstream>
 

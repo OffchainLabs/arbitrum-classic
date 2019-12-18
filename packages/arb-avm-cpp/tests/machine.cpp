@@ -16,8 +16,8 @@
 
 #include "config.hpp"
 
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/machine.hpp>
+#include <data_storage/checkpointstorage.hpp>
 
 #include <catch2/catch.hpp>
 
