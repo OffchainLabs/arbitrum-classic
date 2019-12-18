@@ -96,4 +96,12 @@ library Protocol {
         }
         return hashVal;
     }
+
+    function addMessageToPending(bytes32 pending, bytes32 message) public pure returns (bytes32) {
+        return Value.hashTuple([
+            Value.newInt(0),
+            Value.newHashOnly(pending),
+            Value.newHashOnly(message)
+        ]);
+    }
 }

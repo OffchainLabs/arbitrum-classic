@@ -18,50 +18,50 @@ pragma solidity ^0.5.3;
 
 import "../libraries/CloneFactory.sol";
 
-import "./IArbChain.sol";
+import "./IArbRollup.sol";
 
 
-contract ChainFactory is CloneFactory {
-    event ChainCreated(
+contract ArbFactory is CloneFactory {
+    event RollupCreated(
         address vmAddress
     );
 
-    address chainTemplate;
+    address rollupTemplate;
     address globalInboxAddress;
     address challengeFactoryAddress;
 
     constructor(
-        address _chainTemplate,
+        address _rollupTemplate,
         address _globalInboxAddress,
         address _challengeFactoryAddress
     )
         public
     {
-        chainTemplate = _chainTemplate;
+        rollupTemplate = _rollupTemplate;
         globalInboxAddress = _globalInboxAddress;
         challengeFactoryAddress = _challengeFactoryAddress;
     }
 
-    function createChain(
+    function createRollup(
         bytes32 _vmState,
         uint32 _gracePeriod,
         uint32 _maxExecutionSteps,
-        uint128 _escrowRequired,
+        uint128 _stakeRequirement,
         address payable _owner
     )
         public
     {
-        address clone = createClone(chainTemplate);
-        IArbChain(clone).init(
+        address clone = createClone(rollupTemplate);
+        IArbRollup(clone).init(
             _vmState,
             _gracePeriod,
             _maxExecutionSteps,
-            _escrowRequired,
+            _stakeRequirement,
             _owner,
             challengeFactoryAddress,
             globalInboxAddress
         );
-        emit ChainCreated(
+        emit RollupCreated(
             clone
         );
     }

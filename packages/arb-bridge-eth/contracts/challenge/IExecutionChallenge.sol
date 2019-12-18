@@ -16,11 +16,13 @@
 
 pragma solidity ^0.5.3;
 
-interface IChallenge {
+
+interface IExecutionChallenge {
+
     function init(
         address vmAddress,
-        address[2] calldata _players,
-        uint128[2] calldata _escrows,
+        address _asserter,
+        address _challenger,
         uint32 _challengePeriod,
         bytes32 beforeHash,
         bytes32 beforeInbox,

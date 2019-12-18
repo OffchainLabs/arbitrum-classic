@@ -19,9 +19,32 @@ pragma solidity ^0.5.3;
 
 interface IChallengeFactory {
 
-    function createChallenge(
-        address[2] calldata _players,
-        uint128[2] calldata _escrows,
+    function createMessagesChallenge(
+        address _asserter,
+        address _challenger,
+        uint32 _challengePeriod,
+        bytes32 _bottomHash,
+        bytes32 _topHash,
+        bytes32 _segmentHash,
+        uint32 _chainLength
+    )
+        external
+        returns(address);
+
+    function createPendingTopChallenge(
+        address _asserter,
+        address _challenger,
+        uint32 _challengePeriod,
+        bytes32 _topHash,
+        bytes32 _lowerHash,
+        uint32 _chainLength
+    )
+        external
+        returns(address);
+
+    function createExecutionChallenge(
+        address _asserter,
+        address _challenger,
         uint32 _challengePeriod,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,

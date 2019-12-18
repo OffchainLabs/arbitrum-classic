@@ -17,15 +17,16 @@
 pragma solidity ^0.5.3;
 
 
-interface IArbChain {
+interface IPendingTopChallenge {
+
     function init(
-        bytes32 _vmState,
-        uint32 _gracePeriod,
-        uint32 _maxExecutionSteps,
-        uint128 _escrowRequired,
-        address payable _owner,
-        address _challengeLauncherAddress,
-        address _globalInboxAddress
+        address _vmAddress,
+        address _asserter,
+        address _challenger,
+        uint32 _challengePeriod,
+        bytes32 _topHash,
+        bytes32 _lowerHash,
+        uint32 _chainLength
     )
         external;
 }

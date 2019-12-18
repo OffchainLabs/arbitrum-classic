@@ -15,3 +15,19 @@
  */
 
 pragma solidity ^0.5.3;
+
+
+interface IMessagesChallenge {
+
+    function init(
+        address _vmAddress,
+        address _asserter,
+        address _challenger,
+        uint32 _challengePeriod,
+        bytes32 _bottomHash,
+        bytes32 _topHash,
+        bytes32 _segmentHash,
+        uint32 _chainLength
+    )
+        external;
+}

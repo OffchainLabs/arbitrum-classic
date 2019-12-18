@@ -19,20 +19,80 @@ pragma solidity ^0.5.3;
 import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
-import "./IChallenge.sol";
+import "./IMessagesChallenge.sol";
+import "./IPendingTopChallenge.sol";
+import "./IExecutionChallenge.sol";
 
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
-    address public challengeTemplate;
+    address public messagesChallengeTemplate;
+    address public pendingTopChallengeTemplate;
+    address public executionChallengeTemplate;
 
-    constructor(address _challengeTemplate) public {
-        challengeTemplate = _challengeTemplate;
+    constructor(
+        address _messagesChallengeTemplate,
+        address _pendingTopChallengeTemplate,
+        address _executionChallengeTemplate
+    ) public {
+        messagesChallengeTemplate = _messagesChallengeTemplate;
+        pendingTopChallengeTemplate = _pendingTopChallengeTemplate;
+        executionChallengeTemplate = _executionChallengeTemplate;
     }
 
-    function createChallenge(
-        address[2] calldata _players,
-        uint128[2] calldata _escrows,
+    function createMessagesChallenge(
+        address _asserter,
+        address _challenger,
+        uint32 _challengePeriod,
+        bytes32 _bottomHash,
+        bytes32 _topHash,
+        bytes32 _segmentHash,
+        uint32 _chainLength
+    )
+        external
+        returns(address)
+    {
+        address clone = createClone(messagesChallengeTemplate);
+        IMessagesChallenge(clone).init(
+            msg.sender,
+            _asserter,
+            _challenger,
+            _challengePeriod,
+            _bottomHash,
+            _topHash,
+            _segmentHash,
+            _chainLength
+        );
+        return address(clone);
+    }
+
+    function createPendingTopChallenge(
+        address _asserter,
+        address _challenger,
+        uint32 _challengePeriod,
+        bytes32 _topHash,
+        bytes32 _lowerHash,
+        uint32 _chainLength
+    )
+        external
+        returns(address)
+    {
+        address clone = createClone(pendingTopChallengeTemplate);
+        IPendingTopChallenge(clone).init(
+            msg.sender,
+            _asserter,
+            _challenger,
+            _challengePeriod,
+            _topHash,
+            _lowerHash,
+            _chainLength
+        );
+        return address(clone);
+    }
+
+    function createExecutionChallenge(
+        address _asserter,
+        address _challenger,
         uint32 _challengePeriod,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
@@ -42,11 +102,11 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         external
         returns(address)
     {
-        address clone = createClone(challengeTemplate);
-        IChallenge(clone).init(
+        address clone = createClone(executionChallengeTemplate);
+        IExecutionChallenge(clone).init(
             msg.sender,
-            _players,
-            _escrows,
+            _asserter,
+            _challenger,
             _challengePeriod,
             _beforeHash,
             _beforeInbox,
@@ -56,4 +116,3 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         return address(clone);
     }
 }
-

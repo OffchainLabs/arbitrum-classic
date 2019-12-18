@@ -1123,7 +1123,7 @@ library OneStepProof {
         return popCount;
     }
 
-    function opGasCost(uint8 opCode) internal pure returns(uint64) {
+    function opGasCost(uint8) internal pure returns(uint64) {
         return 1;
     }
 
