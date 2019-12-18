@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "../include/checkpointdeleter.hpp"
+#include <data_storage/checkpointdeleter.hpp>
 
-#include "../include/checkpointresult.hpp"
-#include "../include/checkpointstorage.hpp"
-#include "../include/checkpointutils.hpp"
-#include "../include/transaction.hpp"
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/checkpointutils.hpp>
+#include <data_storage/transaction.hpp>
 
 DeleteResults deleteTuple(Transaction& transaction,
                           const std::vector<unsigned char>& hash_key);

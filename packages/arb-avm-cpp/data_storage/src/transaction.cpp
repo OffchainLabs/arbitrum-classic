@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "../include/transaction.hpp"
+#include <data_storage/transaction.hpp>
 
-#include "../include/checkpointresult.hpp"
-#include "../include/checkpointutils.hpp"
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointutils.hpp>
 
 #include <rocksdb/utilities/transaction_db.h>
 

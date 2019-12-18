@@ -22,7 +22,6 @@ project (avm LANGUAGES CXX)
 set(LIB_HEADERS
 
   include/avm/machine.hpp
-  include/avm/exceptions.hpp
   include/avm/machinestate/machinestate.hpp
   include/avm/machinestate/tokenTracker.hpp
   include/avm/machinestate/datastack.hpp
@@ -66,7 +65,7 @@ target_include_directories(avm PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm PUBLIC Boost::boost Boost::filesystem CONAN_PKG::variant-lite RocksDB::RocksDB Threads::Threads PRIVATE avm_utils)
+target_link_libraries(avm PUBLIC data_storage Boost::boost Boost::filesystem RocksDB::RocksDB CONAN_PKG::variant-lite Threads::Threads PRIVATE avm_utils)
 
 target_code_coverage(avm AUTO ALL)
 

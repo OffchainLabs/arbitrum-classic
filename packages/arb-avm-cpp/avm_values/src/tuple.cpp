@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "../include/tuple.hpp"
+#include <avm_values/tuple.hpp>
 
+#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <util.hpp>
 
 Tuple::Tuple(value val, TuplePool* pool)
     : tuplePool(pool), tpl(pool->getResource(1)) {

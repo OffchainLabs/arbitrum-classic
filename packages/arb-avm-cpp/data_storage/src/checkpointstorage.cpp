@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "../include/checkpointstorage.hpp"
+#include <data_storage/checkpointstorage.hpp>
 
-#include "../include/checkpointresult.hpp"
-#include "../include/checkpointutils.hpp"
-#include "../include/transaction.hpp"
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointutils.hpp>
+#include <data_storage/transaction.hpp>
 
-#include <avm/value/codepoint.hpp>
-#include <avm/value/tuple.hpp>
+#include <avm_values/codepoint.hpp>
+#include <avm_values/tuple.hpp>
 
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>

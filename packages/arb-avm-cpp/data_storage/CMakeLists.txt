@@ -20,11 +20,11 @@ set (CMAKE_CXX_STANDARD 14)
 project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
-  include/checkpointstorage.hpp
-  include/checkpointdeleter.hpp
-  include/checkpointutils.hpp
-  include/checkpointresult.hpp
-  include/transaction.hpp
+  include/data_storage/checkpointstorage.hpp
+  include/data_storage/checkpointdeleter.hpp
+  include/data_storage/checkpointutils.hpp
+  include/data_storage/checkpointresult.hpp
+  include/data_storage/transaction.hpp
 )
 
 set(LIB_SOURCES
@@ -58,7 +58,7 @@ target_code_coverage(data_storage AUTO ALL)
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
     source_group(data_storage FILES ${LIB_HEADERS} ${LIB_SOURCES})
 else()
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include" FILES ${LIB_HEADERS})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/data_storage" FILES ${LIB_HEADERS})
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES})
 endif()
 

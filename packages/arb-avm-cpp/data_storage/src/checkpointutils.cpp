@@ -16,13 +16,11 @@
 
 #include <iterator>
 
-#include <avm/machinestate/blockreason.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
-#include <avm/value/codepoint.hpp>
-#include <avm/value/tuple.hpp>
+#include <avm_values/codepoint.hpp>
+#include <avm_values/tuple.hpp>
+#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <util.hpp>
-#include "../include/checkpointutils.hpp"
+#include <data_storage/checkpointutils.hpp>
 
 constexpr int UINT64_SIZE = 8;
 constexpr int HASH_KEY_LENGTH = 33;

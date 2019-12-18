@@ -17,7 +17,7 @@
 #ifndef statesaverutils_hpp
 #define statesaverutils_hpp
 
-#include "../../avm_values/include/value.hpp"
+#include <avm_values/value.hpp>
 
 struct ParsedState {
     std::vector<unsigned char> static_val_key;

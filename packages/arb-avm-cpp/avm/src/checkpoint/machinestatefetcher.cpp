@@ -16,11 +16,11 @@
 
 #include <avm/checkpoint/machinestatefetcher.hpp>
 
-#include <avm/checkpoint/checkpointresult.hpp>
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/transaction.hpp>
-#include <avm/value/codepoint.hpp>
-#include <avm/value/tuple.hpp>
+#include <avm_values/codepoint.hpp>
+#include <avm_values/tuple.hpp>
+#include <data_storage/checkpointresult.hpp>
+#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/transaction.hpp>
 
 MachineStateFetcher::MachineStateFetcher(const CheckpointStorage& storage,
                                          TuplePool* pool_,

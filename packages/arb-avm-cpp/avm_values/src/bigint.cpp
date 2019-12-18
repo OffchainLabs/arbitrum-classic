@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "../include/bigint.hpp"
+#include <avm_values/bigint.hpp>
 
+#include <avm_values/util.hpp>
 #include "bigint_utils.hpp"
-#include "util.hpp"
 
 #include <sstream>
 

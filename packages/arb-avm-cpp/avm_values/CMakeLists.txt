@@ -20,16 +20,17 @@ set (CMAKE_CXX_STANDARD 14)
 project (avm_values LANGUAGES CXX)
 
 set(LIB_HEADERS
-  include/tuple.hpp
-  include/value.hpp
-  include/bigint.hpp
-  include/codepoint.hpp
-  include/pool.hpp
-  include/opcodes.hpp
+  include/avm_values/exceptions.hpp
+  include/avm_values/tuple.hpp
+  include/avm_values/value.hpp
+  include/avm_values/bigint.hpp
+  include/avm_values/codepoint.hpp
+  include/avm_values/pool.hpp
+  include/avm_values/opcodes.hpp
+  include/avm_values/util.hpp
 )
 
 set(LIB_SOURCES
-  src/util.hpp
   src/bigint.cpp
   src/codepoint.cpp
   src/pool.cpp
@@ -65,7 +66,7 @@ target_code_coverage(avm_values AUTO ALL)
 if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
     source_group(avm_values FILES ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES})
 else()
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include" FILES ${LIB_HEADERS})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include/avm_values" FILES ${LIB_HEADERS})
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${LIB_SOURCES})
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../external" FILES ${KECCAK_SOURCES})
 endif()
