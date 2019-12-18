@@ -96,17 +96,17 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	case C.BLOCK_TYPE_BREAKPOINT:
 		return machine.BreakpointBlocked{}
 	case C.BLOCK_TYPE_INBOX:
-		rawInboxHash := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
-		inboxHash, err := value.UnmarshalValue(bytes.NewReader(rawInboxHash[:]))
+		rawTimeoutBytes := C.GoBytes(unsafe.Pointer(cBlockReason.val1.data), cBlockReason.val1.length)
+		timeout, err := value.UnmarshalValue(bytes.NewReader(rawTimeoutBytes[:]))
 		if err != nil {
 			panic(err)
 		}
-		inboxHashInt, ok := inboxHash.(value.IntValue)
+		timeoutInt, ok := timeout.(value.IntValue)
 		if !ok {
 			panic("Inbox hash must be an int")
 		}
 		C.free(cBlockReason.val1.data)
-		return machine.InboxBlocked{Inbox: value.NewHashOnlyValue(inboxHashInt.ToBytes(), 0)}
+		return machine.InboxBlocked{Timeout: timeoutInt}
 	default:
 	}
 	return nil

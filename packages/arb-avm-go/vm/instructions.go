@@ -19,6 +19,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -679,17 +680,21 @@ func insnRset(state *Machine) (StackMods, error) {
 
 func insnInbox(state *Machine) (StackMods, error) {
 	mods := NewStackMods(1, 1)
-	x, mods, err := PopStackBox(state, mods)
+	timeout, mods, err := PopStackInt(state, mods)
 	if err != nil {
 		return mods, err
 	}
-	inboxVal := state.ReadInbox()
-	mods = PushStackBox(state, mods, inboxVal)
-	if value.Eq(x, inboxVal) {
-		return mods, BlockedError{machine.InboxBlocked{
-			Inbox: value.NewHashOnlyValueFromValue(inboxVal),
-		}}
+	biTimeout := timeout.BigInt()
+	lowerTimeBound, err := state.GetTimeBounds().(value.TupleValue).GetByInt64(0)
+	if err != nil {
+		log.Fatal(err)
 	}
+	inboxVal := state.ReadInbox()
+	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && inboxVal == value.NewEmptyTuple() {
+		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
+	}
+	state.inbox.EmptyAccepted()
+	mods = PushStackBox(state, mods, inboxVal)
 	state.IncrPC()
 	return mods, nil
 }

@@ -143,3 +143,6 @@ func (in *Inbox) ReceivePending() value.TupleValue {
 func (in *Inbox) Pending() value.TupleValue {
 	return in.PendingQueue.msg
 }
+func (in *Inbox) EmptyAccepted() {
+	in.Accepted = NewMessageQueues()
+}
