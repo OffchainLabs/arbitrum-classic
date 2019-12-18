@@ -37,6 +37,7 @@ library Disputable {
         bytes32[5] fields,
         address asserter,
         uint64[2] timeBounds,
+        bool   didInboxInsn,
         uint32 numSteps,
         uint64 numGas,
         uint64 deadline
@@ -52,6 +53,7 @@ library Disputable {
         bytes32 beforeHash,
         bytes32 beforeInbox,
         bytes32 afterHash,
+        bool    didInboxInsn,
         bytes32 messagesAccHash,
         bytes32 logsAccHash,
         uint32 numSteps,
@@ -82,6 +84,7 @@ library Disputable {
                 ),
                 Protocol.generateAssertionHash(
                     afterHash,
+                    didInboxInsn,
                     numSteps,
                     numGas,
                     0x00,
@@ -94,10 +97,31 @@ library Disputable {
         vm.asserter = msg.sender;
         vm.state = VM.State.PendingDisputable;
 
-        emit PendingDisputableAssertion(
+        emitPda(
             [beforeHash, beforeInbox, afterHash, messagesAccHash, logsAccHash],
+            timeBounds,
+            didInboxInsn,
+            numSteps,
+            numGas, 
+            vm
+        );
+    }
+
+    function emitPda(
+        bytes32[5] memory fields,
+        uint64[2] memory timeBounds,
+        bool    didInboxInsn,
+        uint32  numSteps,
+        uint64  numGas,
+        VM.Data storage vm
+    ) 
+        private
+    {
+        emit PendingDisputableAssertion(
+            fields,
             msg.sender,
             timeBounds,
+            didInboxInsn,
             numSteps,
             numGas,
             vm.deadline
@@ -108,6 +132,7 @@ library Disputable {
         VM.Data storage vm,
         bytes32 preconditionHash,
         bytes32 afterHash,
+        bool   didInboxInsn,
         uint32 numSteps,
         uint64 numGas,
         bytes memory messages,
@@ -123,6 +148,7 @@ library Disputable {
                     preconditionHash,
                     Protocol.generateAssertionHash(
                         afterHash,
+                        didInboxInsn,
                         numSteps,
                         numGas,
                         0x00,

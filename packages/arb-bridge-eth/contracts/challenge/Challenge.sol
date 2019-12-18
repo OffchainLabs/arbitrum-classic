@@ -39,6 +39,7 @@ contract Challenge is IChallenge {
 
     event BisectedAssertion(
         bytes32[] machineHashes,
+        bool[]    didInboxInsns,
         bytes32[] messageAccs,
         bytes32[] logAccs,
         uint64[]  gases,
@@ -151,16 +152,21 @@ contract Challenge is IChallenge {
 
     struct BisectAssertionData {
         bytes32 preData;
+        uint64[2] timeBounds;
         bytes32[] machineHashes;
+        bool[]    didInboxInsns;
         bytes32[] messageAccs;
         bytes32[] logAccs;
         uint64[] gases;
         uint32 totalSteps;
+        uint   bisectionCount;
     }
 
     function bisectAssertion(
         bytes32 _preData,
+        uint64[2] memory _timeBounds,
         bytes32[] memory _machineHashes,
+        bool[]    memory _didInboxInsns,
         bytes32[] memory _messageAccs,
         bytes32[] memory _logAccs,
         uint64[] memory _gases,
@@ -171,27 +177,32 @@ contract Challenge is IChallenge {
         _bisectAssertion(
             BisectAssertionData(
                 _preData,
+                _timeBounds,
                 _machineHashes,
+                _didInboxInsns,
                 _messageAccs,
                 _logAccs,
                 _gases,
-                _totalSteps
+                _totalSteps,
+                _machineHashes.length-1
             )
         );
     }
 
     function _bisectAssertion(BisectAssertionData memory _data) private {
-        uint bisectionCount = _data.machineHashes.length - 1;
-        require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
-        require(bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
-        require(bisectionCount == _data.gases.length, BIS_INPLEN);
+        require(_data.bisectionCount == _data.didInboxInsns.length, BIS_INPLEN);
+        require(_data.bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
+        require(_data.bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
+        require(_data.bisectionCount == _data.gases.length, BIS_INPLEN);
         require(State.Challenged == state, BIS_STATE);
         require(block.number <= deadline, BIS_DEADLINE);
         require(msg.sender == players[0], BIS_SENDER);
 
         uint64 totalGas = 0;
-        for (uint i = 0; i < bisectionCount; i++) {
+        bool everDidInboxInsn = false;
+        for (uint i = 0; i < _data.bisectionCount; i++) {
             totalGas += _data.gases[i];
+            everDidInboxInsn = everDidInboxInsn || _data.didInboxInsns[i];
         }
 
         require(
@@ -200,27 +211,29 @@ contract Challenge is IChallenge {
                     _data.preData,
                     _data.machineHashes[0],
                     Protocol.generateAssertionHash(
-                        _data.machineHashes[bisectionCount],
+                        _data.machineHashes[_data.bisectionCount],
+                        everDidInboxInsn,
                         _data.totalSteps,
                         totalGas,
                         _data.messageAccs[0],
-                        _data.messageAccs[bisectionCount],
+                        _data.messageAccs[_data.bisectionCount],
                         _data.logAccs[0],
-                        _data.logAccs[bisectionCount]
+                        _data.logAccs[_data.bisectionCount]
                     )
                 )
             ) == challengeState,
             BIS_PREV
         );
 
-        bytes32[] memory hashes = new bytes32[](bisectionCount);
+        bytes32[] memory hashes = new bytes32[](_data.bisectionCount);
         hashes[0] = keccak256(
             abi.encodePacked(
                 _data.preData,
                 _data.machineHashes[0],
                 Protocol.generateAssertionHash(
                     _data.machineHashes[1],
-                    _data.totalSteps / uint32(bisectionCount) + _data.totalSteps%uint32(bisectionCount),
+                    _data.didInboxInsns[0],
+                    _data.totalSteps / uint32(_data.bisectionCount) + _data.totalSteps%uint32(_data.bisectionCount),
                     _data.gases[0],
                     _data.messageAccs[0],
                     _data.messageAccs[1],
@@ -229,14 +242,22 @@ contract Challenge is IChallenge {
                 )
             )
         );
-        for (uint i = 1; i < bisectionCount; i++) {
+        for (uint i = 1; i < _data.bisectionCount; i++) {
+            if (_data.didInboxInsns[i-1]) {
+                _data.preData = keccak256(abi.encodePacked(
+                    _data.timeBounds[0],
+                    _data.timeBounds[1],
+                    Value.hashEmptyTuple()
+                ));
+            }
             hashes[i] = keccak256(
                 abi.encodePacked(
                     _data.preData,
                     _data.machineHashes[i],
                     Protocol.generateAssertionHash(
                         _data.machineHashes[i + 1],
-                        _data.totalSteps / uint32(bisectionCount),
+                        _data.didInboxInsns[i],
+                        _data.totalSteps / uint32(_data.bisectionCount),
                         _data.gases[i],
                         _data.messageAccs[i],
                         _data.messageAccs[i + 1],
@@ -253,6 +274,7 @@ contract Challenge is IChallenge {
 
         emit BisectedAssertion(
             _data.machineHashes,
+            _data.didInboxInsns,
             _data.messageAccs,
             _data.logAccs,
             _data.gases,
@@ -295,6 +317,7 @@ contract Challenge is IChallenge {
         bytes32 _beforeInbox,
         uint64[2] memory _timeBounds,
         bytes32 _afterHash,
+        bool    _didInboxInsns,
         bytes32 _firstMessage,
         bytes32 _lastMessage,
         bytes32 _firstLog,
@@ -319,6 +342,7 @@ contract Challenge is IChallenge {
                     _beforeHash,
                     Protocol.generateAssertionHash(
                         _afterHash,
+                        _didInboxInsns,
                         1,
                         _gas,
                         _firstMessage,
@@ -336,6 +360,7 @@ contract Challenge is IChallenge {
             _timeBounds,
             _beforeInbox,
             _afterHash,
+            _didInboxInsns,
             _firstMessage,
             _lastMessage,
             _firstLog,
