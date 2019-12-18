@@ -18,7 +18,6 @@
 
 #include <data_storage/checkpointresult.hpp>
 #include <data_storage/checkpointutils.hpp>
-#include <data_storage/transaction.hpp>
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>

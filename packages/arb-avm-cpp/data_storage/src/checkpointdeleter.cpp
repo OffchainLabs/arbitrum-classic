@@ -15,7 +15,6 @@
  */
 
 #include <data_storage/checkpointdeleter.hpp>
-
 #include <data_storage/checkpointresult.hpp>
 #include <data_storage/checkpointstorage.hpp>
 #include <data_storage/checkpointutils.hpp>

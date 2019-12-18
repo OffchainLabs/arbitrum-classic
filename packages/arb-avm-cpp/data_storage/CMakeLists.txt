@@ -25,9 +25,13 @@ set(LIB_HEADERS
   include/data_storage/checkpointutils.hpp
   include/data_storage/checkpointresult.hpp
   include/data_storage/transaction.hpp
+  include/data_storage/machinestatesaver.hpp
+  include/data_storage/machinestatefetcher.hpp
 )
 
 set(LIB_SOURCES
+  src/machinestatesaver.cpp
+  src/machinestatefetcher.cpp
   src/checkpointstorage.cpp
   src/checkpointdeleter.cpp
   src/checkpointutils.cpp

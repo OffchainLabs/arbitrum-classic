@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/machinestatefetcher.hpp>
+#include <data_storage/machinestatefetcher.hpp>
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>

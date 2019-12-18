@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/machinestatesaver.hpp>
+#include <data_storage/machinestatesaver.hpp>
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tokenTracker.hpp>

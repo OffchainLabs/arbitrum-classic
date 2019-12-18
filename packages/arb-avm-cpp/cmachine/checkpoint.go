@@ -25,7 +25,9 @@ package cmachine
 */
 import "C"
 import (
+	"bytes"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"runtime"
 	"unsafe"
 )
@@ -56,6 +58,20 @@ func cDestroyCheckpointStorage(cCheckpointStorage *CheckpointStorage) {
 func (checkpoint *CheckpointStorage) DeleteCheckpoint(checkpointName string) bool {
 	cCheckpointName := C.CString(checkpointName)
 	success := C.deleteCheckpoint(checkpoint.c, cCheckpointName)
+
+	return success == 1
+}
+
+func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
+	var buf bytes.Buffer
+
+	err := value.MarshalValue(val, &buf)
+	if err != nil {
+		panic(err)
+	}
+
+	valData := buf.Bytes()
+	success := C.saveValue(checkpoint.c, unsafe.Pointer(&valData[0]))
 
 	return success == 1
 }

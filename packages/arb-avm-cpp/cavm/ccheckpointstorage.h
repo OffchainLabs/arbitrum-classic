@@ -28,6 +28,12 @@ CCheckpointStorage* createCheckpointStorage(const char* filename);
 void destroyCheckpointStorage(CCheckpointStorage* storage);
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const char* checkpoint_name);
+int saveValue(CCheckpointStorage* storage_ptr, void* value_data);
+int saveData(CCheckpointStorage* storage_ptr,
+             const char* key,
+             const char* value);
+int deleteValue(CCheckpointStorage* storage_ptr, const char* value_hash);
+int getValue(CCheckpointStorage* storage_ptr, const char* value_hash);
 
 #ifdef __cplusplus
 }

@@ -21,7 +21,8 @@
 #include <string>
 #include <vector>
 
-class Transaction;
+#include <data_storage/transaction.hpp>
+
 struct GetResults;
 
 namespace rocksdb {

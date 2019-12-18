@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/machinestatefetcher.hpp>
-#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/messagestack.hpp>
 #include <avm_values/tokenTracker.hpp>
 #include <data_storage/checkpointstorage.hpp>
+#include <data_storage/machinestatefetcher.hpp>
+#include <data_storage/machinestatesaver.hpp>
 
 #include <catch2/catch.hpp>
 

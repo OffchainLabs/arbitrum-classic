@@ -26,8 +26,6 @@ set(LIB_HEADERS
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/messagestack.hpp
-  include/avm/checkpoint/machinestatesaver.hpp
-  include/avm/checkpoint/machinestatefetcher.hpp
 )
 
 set(LIB_SOURCES 
@@ -36,8 +34,6 @@ set(LIB_SOURCES
   src/machinestate/machineoperation.cpp
   src/machinestate/messagestack.cpp
   src/machinestate/datastack.cpp
-  src/checkpoint/machinestatesaver.cpp
-  src/checkpoint/machinestatefetcher.cpp
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )

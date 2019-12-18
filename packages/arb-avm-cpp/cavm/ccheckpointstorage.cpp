@@ -19,6 +19,9 @@
 #include <data_storage/checkpointdeleter.hpp>
 #include <data_storage/checkpointresult.hpp>
 #include <data_storage/checkpointstorage.hpp>
+#include <data_storage/machinestatesaver.hpp>
+
+#include <avm_values/value.hpp>
 
 #include <string>
 
@@ -45,4 +48,35 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     auto result = deleteCheckpoint(*storage, name_vector);
 
     return result.status.ok();
+}
+
+int saveValue(CCheckpointStorage* storage_ptr, void* value_data) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto valueSaver = MachineStateSaver(storage->makeTransaction());
+
+    auto data_ptr = reinterpret_cast<const char*>(value_data);
+
+    TuplePool pool;
+    auto val = deserialize_value(data_ptr, pool);
+    auto results = valueSaver.saveValue(val);
+
+    return results.status.ok();
+}
+
+int saveData(CCheckpointStorage* storage_ptr,
+             const char* key,
+             const char* value) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto transaction = storage->makeTransaction();
+
+    auto key_str = std::string(key);
+    auto key_vector =
+        std::vector<unsigned char>(key_str.begin(), key_str.end());
+
+    auto value_str = std::string(value);
+    auto value_vector =
+        std::vector<unsigned char>(value_str.begin(), value_str.end());
+
+    auto results = transaction->saveValue(key_vector, value_vector);
+    return results.status.ok();
 }
