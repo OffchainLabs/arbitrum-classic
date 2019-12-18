@@ -104,4 +104,12 @@ library Protocol {
             Value.newHashOnly(message)
         ]);
     }
+
+    function addMessagesToInbox(bytes32 inbox, bytes32 messages) public pure returns (bytes32) {
+        return Value.hashTuple([
+            Value.newInt(1),
+            Value.newHashOnly(inbox),
+            Value.newHashOnly(messages)
+        ]);
+    }
 }

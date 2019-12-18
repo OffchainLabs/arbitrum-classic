@@ -30,13 +30,6 @@ import "../arch/Value.sol";
 contract ArbRollup is IArbRollup {
     using SafeMath for uint256;
 
-    // fields:
-        // beforeHash
-        // beforeInbox
-        // afterHash
-        // messagesAccHash
-        // logsAccHash
-
     address internal constant ETH_ADDRESS = address(0);
 
     IGlobalPendingInbox public globalInbox;
@@ -57,16 +50,21 @@ contract ArbRollup is IArbRollup {
     bytes32[] leaves;
     address[] activeChallenges;
 
+
+    // Fields
+    //   prevLeafHash
+    //   afterPendingTop
+    //   importedMesssagesSlice
+    //   afterVMHash
+    //   messagesAccHash
+    //   logsAccHash
+
     event rollupAsserted(
-        bytes32 prevLeafHash,
-        bytes32 beforeVMHash,
+        bytes32[6] fields,
+        uint _importedMessageCount,
         uint64[2] _timeBounds,
-        bytes32 beforeInboxHash,
-        bytes32 _afterVMHash,
         uint32 _numSteps,
-        uint64 _numArbGas,
-        bytes32 _messagesAccHash,
-        bytes32 _logsAccHash
+        uint64 _numArbGas
     );
 
     event rollupConfirmed(bytes32 nodeHash);
@@ -201,6 +199,8 @@ contract ArbRollup is IArbRollup {
     function disputableNodeHash(
         uint deadline,
         bytes32 preconditionHash,
+        bytes32 afterPendingTop,
+        bytes32 importedAssertionHash,
         bytes32 assertionHash
     )
         internal
@@ -210,6 +210,8 @@ contract ArbRollup is IArbRollup {
         return keccak256(abi.encodePacked(
             deadline,
             preconditionHash,
+            afterPendingTop,
+            importedAssertionHash,
             assertionHash
         ));
     }
@@ -221,13 +223,16 @@ contract ArbRollup is IArbRollup {
     struct MakeAssertionData {
         bytes32 beforeVMHash;
         bytes32 beforeInboxHash;
+        bytes32 beforePendingTop;
         bytes32 prevPrevLeafHash;
         bytes32 prevDisputableHash;
         uint prevChildType;
-        bytes32 prevVMprotoHash;
         uint prevLeafIndex;
         bytes32[] prevLeafProof;
         bytes32[] stakerProof;
+        bytes32 afterPendingTop;
+        bytes32 importedMessagesSlice;
+        uint importedMessageCount;
         bytes32 afterVMHash;
         bytes32 afterInboxHash;
         bytes32 messagesAccHash;
@@ -240,16 +245,19 @@ contract ArbRollup is IArbRollup {
     // fields
     //  beforeVMHash
     //  beforeInboxHash
+    //  beforePendingTop
     //  prevPrevLeafHash
     //  prevDisputableHash
-    //  prevVMprotoHash
+    //  afterPendingTop
+    //  importedMessagesSlice
 
     function makeAssertion(
-        bytes32[5] memory _fields,
+        bytes32[7] memory _fields,
         uint    _prevChildType,
         uint _prevLeafIndex,
         bytes32[] memory _prevLeafProof,
         bytes32[] memory _stakerProof,
+        uint _importedMessageCount,
         bytes32 _afterVMHash,
         bytes32 _afterInboxHash,
         bytes32 _messagesAccHash,
@@ -265,11 +273,14 @@ contract ArbRollup is IArbRollup {
             _fields[1],
             _fields[2],
             _fields[3],
-            _prevChildType,
             _fields[4],
+            _prevChildType,
             _prevLeafIndex,
             _prevLeafProof,
             _stakerProof,
+            _fields[5],
+            _fields[6],
+            _importedMessageCount,
             _afterVMHash,
             _afterInboxHash,
             _messagesAccHash,
@@ -281,18 +292,20 @@ contract ArbRollup is IArbRollup {
     }
 
     function _makeAssertion(MakeAssertionData memory data) private {
-        Staker memory staker = stakers[myStakerIndex()];
+        Staker storage staker = stakers[myStakerIndex()];
         require(data.prevLeafIndex < leaves.length, "invalid leaf index");
         bytes32 prevLeaf = leaves[data.prevLeafIndex];
+        bytes32 vmProtoHashBefore = VM.protoStateHash(data.beforeVMHash, data.beforeInboxHash, data.beforePendingTop);
         require(
             childNodeHash(
                 data.prevPrevLeafHash,
                 data.prevDisputableHash,
                 data.prevChildType,
-                data.prevVMprotoHash
-            ) == VM.protoStateHash(data.beforeVMHash, data.beforeInboxHash),
-            "Precondition does not match prior state"
+                vmProtoHashBefore
+            ) == prevLeaf,
+            "Previous leaf incorrectly unwrapped"
         );
+
         require(
             !VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash),
             "Can only disputable assert if machine is not errored or halted"
@@ -303,6 +316,15 @@ contract ArbRollup is IArbRollup {
         require(isPath(staker.location, prevLeaf, data.stakerProof), "invalid staker location proof");
 
         uint deadline = block.number + vmParams.gracePeriod; //TODO: [Ed] compute this properly
+        bytes32 assertionHash = Protocol.generateAssertionHash(
+            data.afterVMHash,
+            data.numSteps,
+            data.numArbGas,
+            0x00,
+            data.messagesAccHash,
+            0x00,
+            data.logsAccHash
+        );
         bytes32 disputableHash = disputableNodeHash(
             deadline,
             Protocol.generatePreconditionHash(
@@ -310,24 +332,25 @@ contract ArbRollup is IArbRollup {
                 data.timeBounds,
                 data.beforeInboxHash
             ),
-            Protocol.generateAssertionHash(
-                data.afterVMHash,
-                data.numSteps,
-                data.numArbGas,
-                0x00,
-                data.messagesAccHash,
-                0x00,
-                data.logsAccHash
-            )
+            data.afterPendingTop,
+            keccak256(abi.encodePacked(
+                data.importedMessageCount,
+                data.importedMessagesSlice
+            )),
+            assertionHash
         );
 
         bytes32 validKid = childNodeHash(
             prevLeaf,
             disputableHash,
             ValidChildType,
-            VM.protoStateHash(data.afterVMHash, data.afterInboxHash)
+            VM.protoStateHash(
+                data.afterVMHash,
+                data.afterInboxHash,
+                data.afterPendingTop
+            )
         );
-        bytes32 vmProtoHashBefore = VM.protoStateHash(data.beforeVMHash, data.beforeInboxHash);
+
         leaves[data.prevLeafIndex] = leaves[leaves.length - 1];
         leaves[leaves.length - 1] = validKid;
         for (uint i=1; i<=MaxChildType; i++) {
@@ -336,14 +359,22 @@ contract ArbRollup is IArbRollup {
         staker.location = validKid;
 
         emit rollupAsserted(
-            prevLeaf,
-            data.beforeVMHash, data.timeBounds, data.beforeInboxHash,
-            data.afterVMHash, data.numSteps, data.numArbGas, data.messagesAccHash, data.logsAccHash
+            [
+                prevLeaf,
+                data.afterPendingTop,
+                data.importedMessagesSlice,
+                data.afterVMHash,
+                data.messagesAccHash,
+                data.logsAccHash
+            ],
+            data.importedMessageCount,
+            data.timeBounds,
+            data.numSteps,
+            data.numArbGas
         );
     }
 
     function confirm(
-        bytes32 to,
         uint    _leafIndex,
         bytes32[] memory proof1,
         bytes32[] memory stakerProofs,
@@ -352,25 +383,27 @@ contract ArbRollup is IArbRollup {
         uint    branch,
         uint    deadline,
         bytes32 _preconditionHash,
-        bytes32 _assertionHash
+        bytes32 _afterPendingTop,
+        bytes32 _importedAssertionHash,
+        bytes32 _executionAssertionHash,
+        bytes32 _vmProtoStateHash
     )
         public
     {
         require(_leafIndex < leaves.length, "invalid leaf index");
-        bytes32 leaf = leaves[_leafIndex];
-        require(isPath(to, leaf, proof1), "node does not exist");
-        require(keccak256(abi.encodePacked(
+        bytes32 to = childNodeHash(
             prev,
-            keccak256(abi.encodePacked(
-                keccak256(abi.encodePacked(
-                    deadline,
-                    _preconditionHash,
-                    _assertionHash
-                )),
-                branch
-            ))
-        )) == to, "invalid parameters for prev node");
-
+            disputableNodeHash(
+                deadline,
+                _preconditionHash,
+                _afterPendingTop,
+                _importedAssertionHash,
+                _executionAssertionHash
+            ),
+            branch,
+            _vmProtoStateHash
+        );
+        require(isPath(to, leaves[_leafIndex], proof1), "node does not exist");
         for (uint i=0; i<stakers.length; i++) {
             require((stakers[i].creationTime >= deadline) || isPath_offset(to, stakers[i].location, stakerProofs, stakerProofOffsets[i], stakerProofOffsets[i+1]),
                 "at least one active staker disagrees");
@@ -490,9 +523,8 @@ contract ArbRollup is IArbRollup {
         Staker storage staker1,
         Staker storage staker2,
         bytes32 node,
-        bytes32 preconditionHash,
-        bytes32 assertionHash,
         uint64 disputableDeadline,
+        bytes32 disputableNodeHashVal,
         uint[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
@@ -509,11 +541,7 @@ contract ArbRollup is IArbRollup {
         require(
             isSpecifiedConflict(
                 node,
-                keccak256(abi.encodePacked(
-                    disputableDeadline,
-                    preconditionHash,
-                    assertionHash
-                )),
+                disputableNodeHashVal,
                 stakerPositions, vmProtoHashes,
                 staker1.location, proof1,
                 staker2.location, proof2
@@ -533,54 +561,75 @@ contract ArbRollup is IArbRollup {
         bytes32 beforeHash;
         bytes32 beforeInbox;
         uint64[2] timeBounds;
+        bytes32 afterPendingTop;
+        bytes32 importedMessageSlice;
+        uint importedMessageCount;
         bytes32 assertionHash;
     }
 
+    // fields
+    //  node
+    //  beforeHash
+    //  beforeInbox
+    //  afterPendingTop
+    //  importedMessageSlice
+    //  assertionHash
+
     function startExecutionChallenge(
+        bytes32[6] memory _fields,
         address[2] memory stakerAddresses,
-        bytes32 node,
         uint64 disputableDeadline,
         uint[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
         bytes32[] memory proof2,
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
         uint64[2] memory _timeBounds,
-        bytes32 _assertionHash
+        uint _importedMessageCount
     )
         public
     {
         return _startExecutionChallenge(StartExecutionChallengeData(
             stakerAddresses,
-            node,
+            _fields[0],
             disputableDeadline,
             stakerPositions,
             vmProtoHashes,
             proof1,
             proof2,
-            _beforeHash,
-            _beforeInbox,
+            _fields[1],
+            _fields[2],
             _timeBounds,
-            _assertionHash
+            _fields[3],
+            _fields[4],
+            _importedMessageCount,
+            _fields[5]
         ));
     }
 
     function _startExecutionChallenge(StartExecutionChallengeData memory data) private {
         Staker storage staker1 = stakers[getStakerIndex(data.stakerAddresses[0])];
         Staker storage staker2 = stakers[getStakerIndex(data.stakerAddresses[1])];
+        require(data.stakerPositions[1] == InvalidExecutionChildType, "Stakers must have a conflict over execution");
 
         verifyConflict(
             staker1,
             staker2,
             data.node,
-            Protocol.generatePreconditionHash(
-                data.beforeHash,
-                data.timeBounds,
-                data.beforeInbox
-            ),
-            data.assertionHash,
             data.disputableDeadline,
+            disputableNodeHash(
+                data.disputableDeadline,
+                Protocol.generatePreconditionHash(
+                    data.beforeHash,
+                    data.timeBounds,
+                    data.beforeInbox
+                ),
+                data.afterPendingTop,
+                keccak256(abi.encodePacked(
+                    data.importedMessageSlice,
+                    data.importedMessageCount
+                )),
+                data.assertionHash
+            ),
             data.stakerPositions,
             data.vmProtoHashes,
             data.proof1,
@@ -592,7 +641,7 @@ contract ArbRollup is IArbRollup {
             data.stakerAddresses[1],
             0, // Challenge period
             data.beforeHash,
-            data.beforeInbox,
+            Protocol.addMessagesToInbox(data.beforeInbox, data.importedMessageSlice),
             data.timeBounds,
             data.assertionHash
         );
@@ -715,7 +764,7 @@ contract ArbRollup is IArbRollup {
         vmParams.pendingInboxHash = Value.hashEmptyTuple();
 
         // VM protocol state
-        bytes32 vmProtoStateHash = VM.protoStateHash(_vmState, Value.hashEmptyTuple());
+        bytes32 vmProtoStateHash = VM.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
         latestConfirmed = childNodeHash(0, 0, 0, vmProtoStateHash);
         leaves.push(latestConfirmed);
     }

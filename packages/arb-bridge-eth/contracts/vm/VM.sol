@@ -45,10 +45,11 @@ library VM {
         bytes32 logsAccHash;
     }
 
-    function protoStateHash(bytes32 machineHash, bytes32 inboxHash) external pure returns(bytes32) {
+    function protoStateHash(bytes32 machineHash, bytes32 inboxHash, bytes32 pendingTop) external pure returns(bytes32) {
         return keccak256(abi.encodePacked(
             machineHash,
-            inboxHash
+            inboxHash,
+            pendingTop
         ));
     }
 
