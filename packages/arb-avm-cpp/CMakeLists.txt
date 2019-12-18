@@ -59,10 +59,10 @@ file(GLOB KECCAK_SOURCES
 
 add_subdirectory(utils)
 add_subdirectory(avm_values)
+add_subdirectory(data_storage)
 add_subdirectory(avm)
 add_subdirectory(cavm)
 add_subdirectory(app)
-add_subdirectory(data_storage)
 
 add_subdirectory(tests)
 
