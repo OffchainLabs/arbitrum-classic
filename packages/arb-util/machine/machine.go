@@ -51,10 +51,7 @@ type Machine interface {
 	CurrentStatus() Status
 	LastBlockReason() BlockReason
 	InboxHash() value.HashOnlyValue
-	PendingMessageCount() uint64
-	SendOnchainMessage(protocol.Message)
-	DeliverOnchainMessage()
-	SendOffchainMessages([]protocol.Message)
+	DeliverMessages(messages value.TupleValue)
 
 	ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion
 	MarshalForProof() ([]byte, error)

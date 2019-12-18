@@ -19,7 +19,6 @@
 #include <avm/checkpoint/checkpointresult.hpp>
 #include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/checkpoint/transaction.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>
 

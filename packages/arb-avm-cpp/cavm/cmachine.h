@@ -74,10 +74,7 @@ CMachine* machineClone(CMachine* m);
 void machineInboxHash(CMachine* m, void* ret);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineLastBlockReason(CMachine* m);
-uint64_t machinePendingMessageCount(CMachine* m);
-void machineSendOnchainMessage(CMachine* m, void* data);
-void machineDeliverOnchainMessages(CMachine* m);
-void machineSendOffchainMessages(CMachine* m, void* data, int messageCount);
+void machineDeliverMessages(CMachine* m, void* data);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,

@@ -16,6 +16,8 @@
 
 #include <avm/machinestate/blockreason.hpp>
 
+#include <avm/value/value.hpp>
+
 struct CheckpointSerializer {
     std::vector<unsigned char> operator()(const NotBlocked& val) const {
         auto block_type = static_cast<unsigned char>(val.type);

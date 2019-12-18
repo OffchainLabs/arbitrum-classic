@@ -107,28 +107,9 @@ func (m *Machine) InboxHash() value.HashOnlyValue {
 	return h1
 }
 
-func (m *Machine) PendingMessageCount() uint64 {
-	h1 := m.cppmachine.PendingMessageCount()
-	h2 := m.gomachine.PendingMessageCount()
-	if h1 != h2 {
-		log.Fatalln("PendingMessageCount error", h1, h2, "at pc", m.gomachine.GetPC())
-	}
-	return h1
-}
-
-func (m *Machine) SendOnchainMessage(msg protocol.Message) {
-	m.cppmachine.SendOnchainMessage(msg)
-	m.gomachine.SendOnchainMessage(msg)
-}
-
-func (m *Machine) DeliverOnchainMessage() {
-	m.cppmachine.DeliverOnchainMessage()
-	m.gomachine.DeliverOnchainMessage()
-}
-
-func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
-	m.cppmachine.SendOffchainMessages(msgs)
-	m.gomachine.SendOffchainMessages(msgs)
+func (m *Machine) DeliverMessages(msgs value.TupleValue) {
+	m.cppmachine.DeliverMessages(msgs)
+	m.gomachine.DeliverMessages(msgs)
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {

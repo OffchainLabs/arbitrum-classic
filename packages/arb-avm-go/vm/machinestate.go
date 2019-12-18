@@ -94,7 +94,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	register := NewMachineValue(value.NewEmptyTuple())
 	static := NewMachineValue(staticVal)
 	errHandler := value.ErrorCodePoint
-	inbox := protocol.NewEmptyInbox()
+	inbox := protocol.NewInbox()
 	var wh WarningHandler
 	if warn {
 		wh = NewVerboseWarningHandler(nil)
@@ -253,24 +253,12 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 	return assCtx.Finalize(m)
 }
 
-func (m *Machine) SendOnchainMessage(msg protocol.Message) {
-	m.inbox.SendMessage(msg.Clone())
-}
-
-func (m *Machine) DeliverOnchainMessage() {
-	m.inbox.DeliverMessages()
-}
-
-func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
-	m.inbox.InsertMessageGroup(msgs)
+func (m *Machine) DeliverMessages(messages value.TupleValue) {
+	m.inbox = m.inbox.WithAddedMessages(messages)
 }
 
 func (m *Machine) InboxHash() value.HashOnlyValue {
 	return value.NewHashOnlyValueFromValue(m.inbox.Receive())
-}
-
-func (m *Machine) PendingMessageCount() uint64 {
-	return m.inbox.PendingQueue.MessageCount()
 }
 
 func (m *Machine) Send(message value.Value) {

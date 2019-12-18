@@ -152,31 +152,6 @@ CBlockReason machineLastBlockReason(CMachine* m) {
     return nonstd::visit(ReasonConverter{}, mach->lastBlockReason());
 }
 
-uint64_t machinePendingMessageCount(CMachine* m) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    return mach->pendingMessageCount();
-}
-
-void machineSendOnchainMessage(CMachine* m, void* data) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    auto dataPtr = reinterpret_cast<const char*>(data);
-    auto val = deserialize_value(dataPtr, mach->getPool());
-    Message msg;
-    auto success = msg.deserialize(val);
-    if (!success) {
-        throw std::runtime_error("Machine recieved invalid message");
-    }
-    mach->sendOnchainMessage(msg);
-}
-
-void machineDeliverOnchainMessages(CMachine* m) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    mach->deliverOnchainMessages();
-}
-
 ByteSlice machineMarshallForProof(CMachine* m) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
@@ -188,20 +163,12 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return {voidData, static_cast<int>(proof.size())};
 }
 
-void machineSendOffchainMessages(CMachine* m, void* rawData, int messageCount) {
+void machineDeliverMessages(CMachine* m, void* messagesData) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
-    std::vector<Message> messages;
-    auto data = reinterpret_cast<const char*>(rawData);
-    for (int i = 0; i < messageCount; i++) {
-        auto val = deserialize_value(data, mach->getPool());
-        messages.emplace_back();
-        auto success = messages.back().deserialize(val);
-        if (!success) {
-            throw std::runtime_error("Machine recieved invalid message");
-        }
-    }
-    mach->sendOffchainMessages(messages);
+    auto data = reinterpret_cast<const char*>(messagesData);
+    auto messages = deserialize_value(data, mach->getPool());
+    mach->deliverMessages(nonstd::get<Tuple>(std::move(messages)));
 }
 
 RawAssertion machineExecuteAssertion(CMachine* m,

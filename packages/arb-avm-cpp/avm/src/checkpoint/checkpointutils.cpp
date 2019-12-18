@@ -18,7 +18,6 @@
 
 #include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/machinestate/blockreason.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
 #include <avm/value/codepoint.hpp>
 #include <avm/value/tuple.hpp>
 #include <bigint_utils.hpp>
@@ -201,9 +200,9 @@ ParsedState parseState(const std::vector<unsigned char>& stored_state) {
     auto pc = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
-    return ParsedState{static_val, register_val, datastack, auxstack,
-                       inbox,      inbox_count,  pending,   pending_count,
-                       pc,         err_pc,       status,    blockreason_vector};
+    return ParsedState{static_val, register_val, datastack,
+                       auxstack,   inbox,        pc,
+                       err_pc,     status,       blockreason_vector};
 }
 
 std::vector<unsigned char> serializeState(const ParsedState& state_data) {
@@ -233,18 +232,6 @@ std::vector<unsigned char> serializeState(const ParsedState& state_data) {
     state_data_vector.insert(state_data_vector.end(),
                              state_data.inbox_key.begin(),
                              state_data.inbox_key.end());
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.inbox_count_key.begin(),
-                             state_data.inbox_count_key.end());
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.pending_key.begin(),
-                             state_data.pending_key.end());
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.pending_count_key.begin(),
-                             state_data.pending_count_key.end());
 
     state_data_vector.insert(state_data_vector.end(), state_data.pc_key.begin(),
                              state_data.pc_key.end());

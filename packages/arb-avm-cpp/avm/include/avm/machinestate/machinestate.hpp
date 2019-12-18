@@ -52,7 +52,6 @@ struct MachineState {
     Status state = Status::Extensive;
     uint64_t pc = 0;
     CodePoint errpc;
-    MessageStack pendingInbox;
     AssertionContext context;
     MessageStack inbox;
     BlockReason blockReason;
@@ -62,14 +61,10 @@ struct MachineState {
     bool deserialize(const char* data);
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
-    uint64_t pendingMessageCount() const;
-    void sendOnchainMessage(const Message& msg);
-    void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message>& messages);
+    void deliverMessages(Tuple&& messages);
     BlockReason runOp(OpCode opcode);
     uint256_t hash() const;
     void setInbox(MessageStack ms);
-    void setPendingInbox(MessageStack ms);
     SaveResults checkpointState(CheckpointStorage& storage);
     bool restoreCheckpoint(const CheckpointStorage& storage,
                            const std::vector<unsigned char>& checkpoint_key);

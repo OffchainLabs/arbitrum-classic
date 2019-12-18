@@ -118,40 +118,18 @@ func (m *Machine) InboxHash() value.HashOnlyValue {
 	return value.NewHashOnlyValue(hash, 0)
 }
 
-func (m *Machine) PendingMessageCount() uint64 {
-	return uint64(C.machinePendingMessageCount(m.c))
-}
-
 func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
-func (m *Machine) SendOnchainMessage(msg protocol.Message) {
+func (m *Machine) DeliverMessages(messages value.TupleValue) {
 	var buf bytes.Buffer
-	err := value.MarshalValue(msg.AsValue(), &buf)
+	err := value.MarshalValue(messages, &buf)
 	if err != nil {
 		panic(err)
 	}
 	msgData := buf.Bytes()
-	C.machineSendOnchainMessage(m.c, unsafe.Pointer(&msgData[0]))
-}
-
-func (m *Machine) DeliverOnchainMessage() {
-	C.machineDeliverOnchainMessages(m.c)
-}
-
-func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
-	var buf bytes.Buffer
-	for _, msg := range msgs {
-		err := value.MarshalValue(msg.AsValue(), &buf)
-		if err != nil {
-			panic(err)
-		}
-	}
-	msgsData := buf.Bytes()
-	if len(msgsData) > 0 {
-		C.machineSendOffchainMessages(m.c, unsafe.Pointer(&msgsData[0]), C.int(len(msgs)))
-	}
+	C.machineDeliverMessages(m.c, unsafe.Pointer(&msgData[0]))
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {

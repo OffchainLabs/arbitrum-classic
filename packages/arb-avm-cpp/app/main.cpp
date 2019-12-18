@@ -102,14 +102,18 @@ int main(int argc, char* argv[]) {
     auto msg2Data = deserialize_value(msg2DataRawPtr, mach.getPool());
     auto msg3Data = deserialize_value(msg3DataRawPtr, mach.getPool());
 
-    mach.sendOnchainMessage(Message{msg1Data, 0, 0, {}});
-    mach.deliverOnchainMessages();
+    auto msg1 = Tuple{msg1Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
+                      &mach.getPool()};
+    auto msg2 = Tuple{msg2Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
+                      &mach.getPool()};
+    auto msg3 = Tuple{msg3Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
+                      &mach.getPool()};
+
+    mach.deliverMessages(Tuple{uint256_t{0}, Tuple{}, msg1, &mach.getPool()});
     Assertion assertion1 = mach.run(stepCount, 0, 0);
-    mach.sendOnchainMessage(Message{msg2Data, 0, 0, {}});
-    mach.deliverOnchainMessages();
+    mach.deliverMessages(Tuple{uint256_t{0}, Tuple{}, msg2, &mach.getPool()});
     Assertion assertion2 = mach.run(stepCount, 0, 0);
-    mach.sendOnchainMessage(Message{msg3Data, 0, 0, {}});
-    mach.deliverOnchainMessages();
+    mach.deliverMessages(Tuple{uint256_t{0}, Tuple{}, msg3, &mach.getPool()});
     Assertion assertion3 = mach.run(stepCount, 0, 0);
 
     auto finish = std::chrono::high_resolution_clock::now();

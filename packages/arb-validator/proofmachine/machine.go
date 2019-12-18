@@ -96,20 +96,8 @@ func (m *Machine) InboxHash() value.HashOnlyValue {
 	return m.machine.InboxHash()
 }
 
-func (m *Machine) PendingMessageCount() uint64 {
-	return m.machine.PendingMessageCount()
-}
-
-func (m *Machine) SendOnchainMessage(msg protocol.Message) {
-	m.machine.SendOnchainMessage(msg)
-}
-
-func (m *Machine) DeliverOnchainMessage() {
-	m.machine.DeliverOnchainMessage()
-}
-
-func (m *Machine) SendOffchainMessages(msgs []protocol.Message) {
-	m.machine.SendOffchainMessages(msgs)
+func (m *Machine) DeliverMessages(msgs value.TupleValue) {
+	m.machine.DeliverMessages(msgs)
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {

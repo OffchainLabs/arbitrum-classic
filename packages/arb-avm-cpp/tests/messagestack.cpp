@@ -18,7 +18,6 @@
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/messagestack.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
 
 #include <catch2/catch.hpp>
 
@@ -34,26 +33,20 @@ void saveMessageStack(MachineStateSaver& saver,
     auto results = stack.checkpointState(saver);
     saver.commitTransaction();
     REQUIRE(results.msgs_tuple_results.status.ok());
-    REQUIRE(results.msg_count_results.status.ok());
     REQUIRE(results.msgs_tuple_results.reference_count ==
             expected_tuple_ref_count);
-    REQUIRE(results.msg_count_results.reference_count ==
-            expected_num_ref_count);
 }
 
 void getSavedMessageStack(MachineStateFetcher& fetcher,
                           std::vector<unsigned char> msgs_key,
-                          std::vector<unsigned char> count_key,
                           uint256_t expected_tuple_hash,
                           uint64_t expected_count) {
     TuplePool pool;
     MessageStack new_stack(&pool);
-    auto success =
-        new_stack.initializeMessageStack(fetcher, msgs_key, count_key);
+    auto success = new_stack.initializeMessageStack(fetcher, msgs_key);
 
     REQUIRE(success == true);
     REQUIRE(new_stack.messages.calculateHash() == expected_tuple_hash);
-    REQUIRE(new_stack.messageCount == expected_count);
 }
 
 TEST_CASE("save messagestack") {
@@ -88,11 +81,10 @@ TEST_CASE("save messagestack") {
         uint256_t val_data = 111;
         uint256_t destination = 2;
         uint256_t currency = 3;
-        auto token_type = std::array<unsigned char, 21>();
-        token_type[0] = 'a';
-        auto msg = Message{val_data, destination, currency, token_type};
-
-        stack.addMessage(msg);
+        uint256_t token_type = 1;
+        auto msg = Tuple{val_data, destination, currency, token_type, &pool};
+        auto msgs = Tuple{uint256_t{0}, Tuple(), msg, &pool};
+        stack.addMessages(std::move(msgs));
         saveMessageStack(saver, stack, 1, 1);
     }
     boost::filesystem::remove_all(current_path);
@@ -106,11 +98,10 @@ TEST_CASE("save messagestack") {
         uint256_t val_data = 111;
         uint256_t destination = 2;
         uint256_t currency = 3;
-        auto token_type = std::array<unsigned char, 21>();
-        token_type[0] = 'a';
-        auto msg = Message{val_data, destination, currency, token_type};
-
-        stack.addMessage(msg);
+        uint256_t token_type = 1;
+        auto msg = Tuple{val_data, destination, currency, token_type, &pool};
+        auto msgs = Tuple{uint256_t{0}, Tuple(), msg, &pool};
+        stack.addMessages(std::move(msgs));
         stack.checkpointState(saver);
 
         saveMessageStack(saver, stack, 2, 2);
@@ -131,7 +122,6 @@ TEST_CASE("Get saved messagestack") {
         saver.commitTransaction();
 
         getSavedMessageStack(fetcher, results.msgs_tuple_results.storage_key,
-                             results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 0);
     }
     boost::filesystem::remove_all(current_path);
@@ -147,16 +137,14 @@ TEST_CASE("Get saved messagestack") {
         uint256_t val_data = 111;
         uint256_t destination = 2;
         uint256_t currency = 3;
-        auto token_type = std::array<unsigned char, 21>();
-        token_type[0] = 'a';
-        auto msg = Message{val_data, destination, currency, token_type};
-
-        stack.addMessage(msg);
+        uint256_t token_type = 1;
+        auto msg = Tuple{val_data, destination, currency, token_type, &pool};
+        auto msgs = Tuple{uint256_t{0}, Tuple(), msg, &pool};
+        stack.addMessages(std::move(msgs));
         auto results = stack.checkpointState(saver);
         saver.commitTransaction();
 
         getSavedMessageStack(fetcher, results.msgs_tuple_results.storage_key,
-                             results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 1);
     }
     boost::filesystem::remove_all(current_path);
@@ -172,17 +160,15 @@ TEST_CASE("Get saved messagestack") {
         uint256_t val_data = 111;
         uint256_t destination = 2;
         uint256_t currency = 3;
-        auto token_type = std::array<unsigned char, 21>();
-        token_type[0] = 'a';
-        auto msg = Message{val_data, destination, currency, token_type};
-
-        stack.addMessage(msg);
+        uint256_t token_type = 1;
+        auto msg = Tuple{val_data, destination, currency, token_type, &pool};
+        auto msgs = Tuple{uint256_t{0}, Tuple(), msg, &pool};
+        stack.addMessages(std::move(msgs));
         auto results = stack.checkpointState(saver);
         auto results2 = stack.checkpointState(saver);
         saver.commitTransaction();
 
         getSavedMessageStack(fetcher, results.msgs_tuple_results.storage_key,
-                             results.msg_count_results.storage_key,
                              stack.messages.calculateHash(), 1);
     }
     boost::filesystem::remove_all(current_path);

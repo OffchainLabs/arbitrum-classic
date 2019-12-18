@@ -30,7 +30,6 @@ set(LIB_HEADERS
   include/avm/value/codepoint.hpp
   include/avm/value/pool.hpp
   include/avm/machinestate/machinestate.hpp
-  include/avm/machinestate/tokenTracker.hpp
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/blockreason.hpp
   include/avm/machinestate/machineoperation.hpp
@@ -52,7 +51,6 @@ set(LIB_SOURCES
   src/value/pool.cpp
   src/value/tuple.cpp
   src/value/value.cpp
-  src/machinestate/tokenTracker.cpp
   src/machinestate/machinestate.cpp
   src/machinestate/machineoperation.cpp
   src/machinestate/messagestack.cpp

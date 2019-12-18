@@ -60,16 +60,8 @@ bool Machine::initializeMachine(const std::string& filename) {
     }
 }
 
-void Machine::sendOnchainMessage(const Message& msg) {
-    machine_state.sendOnchainMessage(msg);
-}
-
-void Machine::deliverOnchainMessages() {
-    machine_state.deliverOnchainMessages();
-}
-
-void Machine::sendOffchainMessages(const std::vector<Message>& messages) {
-    machine_state.sendOffchainMessages(messages);
+void Machine::deliverMessages(Tuple messages) {
+    machine_state.deliverMessages(std::move(messages));
 }
 
 Assertion Machine::run(uint64_t stepCount,

@@ -99,21 +99,12 @@ DeleteResults deleteCheckpoint(
                 deleteTuple(*transaction, parsed_state.auxstack_key);
             auto delete_inbox_res =
                 deleteTuple(*transaction, parsed_state.inbox_key);
-            auto delete_inbox_count =
-                deleteValue(*transaction, parsed_state.inbox_count_key);
-            auto delete_pendinginbox_res =
-                deleteTuple(*transaction, parsed_state.pending_key);
-            auto delete_pending_count =
-                deleteValue(*transaction, parsed_state.pending_count_key);
 
             if (delete_static_res.status.ok() &&
                 delete_register_res.status.ok() && delete_cp_key.status.ok() &&
                 delete_datastack_res.status.ok() &&
                 delete_auxstack_res.status.ok() &&
-                delete_inbox_res.status.ok() &&
-                delete_pendinginbox_res.status.ok() &&
-                delete_inbox_count.status.ok() &&
-                delete_pending_count.status.ok() && delete_err_pc.status.ok()) {
+                delete_inbox_res.status.ok() && delete_err_pc.status.ok()) {
                 auto status = transaction->commit();
                 delete_results.status = status;
                 return delete_results;

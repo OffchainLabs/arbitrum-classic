@@ -50,15 +50,10 @@ class Machine {
     std::vector<unsigned char> marshalForProof() {
         return machine_state.marshalForProof();
     }
-    uint64_t pendingMessageCount() const {
-        return machine_state.pendingMessageCount();
-    }
 
     uint256_t inboxHash() const { return ::hash(machine_state.inbox.messages); }
 
-    void sendOnchainMessage(const Message& msg);
-    void deliverOnchainMessages();
-    void sendOffchainMessages(const std::vector<Message>& messages);
+    void deliverMessages(Tuple messages);
 
     TuplePool& getPool() { return *machine_state.pool; }
 

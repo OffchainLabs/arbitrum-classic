@@ -48,10 +48,7 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 }
 
 MachineState::MachineState()
-    : pool(std::make_unique<TuplePool>()),
-      pendingInbox(pool.get()),
-      context({0, 0}),
-      inbox(pool.get()) {}
+    : pool(std::make_unique<TuplePool>()), context({0, 0}), inbox(pool.get()) {}
 
 uint256_t MachineState::hash() const {
     if (state == Status::Halted)
@@ -154,33 +151,12 @@ bool MachineState::deserialize(const char* bufptr) {
     return true;
 }
 
-uint64_t MachineState::pendingMessageCount() const {
-    return pendingInbox.messageCount;
-}
-
-void MachineState::sendOnchainMessage(const Message& msg) {
-    pendingInbox.addMessage(msg);
-}
-
-void MachineState::sendOffchainMessages(const std::vector<Message>& messages) {
-    MessageStack messageStack(pool.get());
-    for (const auto& message : messages) {
-        messageStack.addMessage(message);
-    }
-    inbox.addMessageStack(std::move(messageStack));
-}
-
-void MachineState::deliverOnchainMessages() {
-    inbox.addMessageStack(std::move(pendingInbox));
-    pendingInbox.clear();
+void MachineState::deliverMessages(Tuple&& messages) {
+    inbox.addMessages(std::move(messages));
 }
 
 void MachineState::setInbox(MessageStack ms) {
     inbox = ms;
-}
-
-void MachineState::setPendingInbox(MessageStack ms) {
-    pendingInbox = ms;
 }
 
 std::vector<unsigned char> MachineState::marshalForProof() {
@@ -215,7 +191,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
     auto datastack_results = stack.checkpointState(stateSaver, pool.get());
     auto auxstack_results = auxstack.checkpointState(stateSaver, pool.get());
     auto inbox_results = inbox.checkpointState(stateSaver);
-    auto pending_results = pendingInbox.checkpointState(stateSaver);
 
     auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
@@ -229,9 +204,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 
     if (datastack_results.status.ok() && auxstack_results.status.ok() &&
         inbox_results.msgs_tuple_results.status.ok() &&
-        inbox_results.msg_count_results.status.ok() &&
-        pending_results.msgs_tuple_results.status.ok() &&
-        pending_results.msg_count_results.status.ok() &&
         static_val_results.status.ok() && register_val_results.status.ok() &&
         pc_results.status.ok() && err_code_point.status.ok()) {
         auto machine_state_data =
@@ -240,9 +212,6 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
                         datastack_results.storage_key,
                         auxstack_results.storage_key,
                         inbox_results.msgs_tuple_results.storage_key,
-                        inbox_results.msg_count_results.storage_key,
-                        pending_results.msgs_tuple_results.storage_key,
-                        pending_results.msg_count_results.storage_key,
                         pc_results.storage_key,
                         err_code_point.storage_key,
                         status_str,
@@ -290,14 +259,7 @@ bool MachineState::restoreCheckpoint(
             return false;
         }
 
-        if (!inbox.initializeMessageStack(stateFetcher, state_data.inbox_key,
-                                          state_data.inbox_count_key)) {
-            return false;
-        }
-
-        if (!pendingInbox.initializeMessageStack(
-                stateFetcher, state_data.pending_key,
-                state_data.pending_count_key)) {
+        if (!inbox.initializeMessageStack(stateFetcher, state_data.inbox_key)) {
             return false;
         }
 

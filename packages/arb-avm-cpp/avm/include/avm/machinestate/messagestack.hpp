@@ -21,44 +21,32 @@
 #include <avm/checkpoint/transaction.hpp>
 #include <avm/value/tuple.hpp>
 
-struct Message;
 class MachineStateSaver;
 class MachineStateFetcher;
 
 struct MessageStackSaveResults {
     SaveResults msgs_tuple_results;
-    SaveResults msg_count_results;
 };
 
 struct MessageStack {
     Tuple messages;
-    uint64_t messageCount;
     TuplePool* pool;
 
-    MessageStack(TuplePool* pool_) : pool(pool_) { messageCount = 0; }
+    MessageStack(TuplePool* pool_) : pool(pool_) {}
 
-    bool isEmpty() const { return messageCount == 0; }
-
-    void addMessage(const Message& msg);
-
-    void addMessageStack(MessageStack&& stack) {
-        if (!stack.isEmpty()) {
+    void addMessages(Tuple&& new_messages) {
+        if (new_messages != Tuple()) {
             messages = Tuple(uint256_t(1), std::move(messages),
-                             std::move(stack.messages), pool);
-            messageCount += stack.messageCount;
+                             std::move(new_messages), pool);
         }
     }
 
-    void clear() {
-        messages = Tuple{};
-        messageCount = 0;
-    }
+    void clear() { messages = Tuple{}; }
 
     MessageStackSaveResults checkpointState(MachineStateSaver& msSaver);
 
     bool initializeMessageStack(const MachineStateFetcher& fetcher,
-                                const std::vector<unsigned char>& msgs_key,
-                                const std::vector<unsigned char>& count_key);
+                                const std::vector<unsigned char>& msgs_key);
 };
 
 #endif /* messagestack_hpp */

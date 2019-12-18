@@ -18,33 +18,21 @@
 
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
-#include <avm/machinestate/tokenTracker.hpp>
-
-void MessageStack::addMessage(const Message& msg) {
-    messages =
-        Tuple{uint256_t{0}, std::move(messages), msg.toValue(*pool), pool};
-    messageCount++;
-}
 
 MessageStackSaveResults MessageStack::checkpointState(
     MachineStateSaver& msSaver) {
     auto saved_msgs = msSaver.saveTuple(messages);
-    auto converted_num = static_cast<uint256_t>(messageCount);
-    auto saved_msg_count = msSaver.saveValue(converted_num);
 
-    return MessageStackSaveResults{saved_msgs, saved_msg_count};
+    return MessageStackSaveResults{saved_msgs};
 }
 
 bool MessageStack::initializeMessageStack(
     const MachineStateFetcher& fetcher,
-    const std::vector<unsigned char>& msgs_key,
-    const std::vector<unsigned char>& count_key) {
+    const std::vector<unsigned char>& msgs_key) {
     auto msgs_res = fetcher.getTuple(msgs_key);
-    auto count_res = fetcher.getUint256_t(count_key);
 
-    if (msgs_res.status.ok() && count_res.status.ok()) {
+    if (msgs_res.status.ok()) {
         messages = msgs_res.data;
-        messageCount = static_cast<uint64_t>(count_res.data);
         return true;
     } else {
         return false;
