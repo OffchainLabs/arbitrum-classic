@@ -84,7 +84,7 @@ DeleteResults deleteCheckpoint(
 
         if (delete_results.reference_count < 1) {
             auto parsed_state =
-                checkpoint::utils::parseState(results.stored_value);
+                checkpoint::utils::extractStateKeys(results.stored_value);
 
             auto delete_static_res =
                 deleteValue(*transaction, parsed_state.static_val_key);

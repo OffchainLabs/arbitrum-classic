@@ -183,7 +183,8 @@ std::vector<unsigned char> serializeValue(const value& val) {
     return nonstd::visit(ValueSerializer{}, val);
 }
 
-ParsedState parseState(const std::vector<unsigned char>& stored_state) {
+MachineStateKeys extractStateKeys(
+    const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 
     auto status = extractStatus(current_iter);
@@ -200,12 +201,14 @@ ParsedState parseState(const std::vector<unsigned char>& stored_state) {
     auto pc = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
-    return ParsedState{static_val, register_val, datastack, auxstack,
-                       inbox,      inbox_count,  pending,   pending_count,
-                       pc,         err_pc,       status,    blockreason_vector};
+    return MachineStateKeys{static_val, register_val,  datastack,
+                            auxstack,   inbox,         inbox_count,
+                            pending,    pending_count, pc,
+                            err_pc,     status,        blockreason_vector};
 }
 
-std::vector<unsigned char> serializeState(const ParsedState& state_data) {
+std::vector<unsigned char> serializeStateKeys(
+    const MachineStateKeys& state_data) {
     std::vector<unsigned char> state_data_vector;
     state_data_vector.push_back(state_data.status_char);
 

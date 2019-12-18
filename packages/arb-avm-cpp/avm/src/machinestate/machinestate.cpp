@@ -235,18 +235,18 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
         static_val_results.status.ok() && register_val_results.status.ok() &&
         pc_results.status.ok() && err_code_point.status.ok()) {
         auto machine_state_data =
-            ParsedState{static_val_results.storage_key,
-                        register_val_results.storage_key,
-                        datastack_results.storage_key,
-                        auxstack_results.storage_key,
-                        inbox_results.msgs_tuple_results.storage_key,
-                        inbox_results.msg_count_results.storage_key,
-                        pending_results.msgs_tuple_results.storage_key,
-                        pending_results.msg_count_results.storage_key,
-                        pc_results.storage_key,
-                        err_code_point.storage_key,
-                        status_str,
-                        blockreason_str};
+            MachineStateKeys{static_val_results.storage_key,
+                             register_val_results.storage_key,
+                             datastack_results.storage_key,
+                             auxstack_results.storage_key,
+                             inbox_results.msgs_tuple_results.storage_key,
+                             inbox_results.msg_count_results.storage_key,
+                             pending_results.msgs_tuple_results.storage_key,
+                             pending_results.msg_count_results.storage_key,
+                             pc_results.storage_key,
+                             err_code_point.storage_key,
+                             status_str,
+                             blockreason_str};
 
         auto results =
             stateSaver.saveMachineState(machine_state_data, hash_key);

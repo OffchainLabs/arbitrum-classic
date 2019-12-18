@@ -476,7 +476,7 @@ TEST_CASE("Save And Get Tuple") {
 }
 
 void saveState(MachineStateSaver& saver,
-               ParsedState storage_data,
+               MachineStateKeys storage_data,
                std::vector<unsigned char> checkpoint_name) {
     auto results = saver.saveMachineState(storage_data, checkpoint_name);
     auto status = saver.commitTransaction();
@@ -487,7 +487,7 @@ void saveState(MachineStateSaver& saver,
 
 void getSavedState(MachineStateFetcher& fetcher,
                    std::vector<unsigned char> checkpoint_name,
-                   ParsedState expected_data,
+                   MachineStateKeys expected_data,
                    int expected_ref_count,
                    std::vector<std::vector<unsigned char>> keys) {
     auto results = fetcher.getMachineState(checkpoint_name);
@@ -576,17 +576,17 @@ void deleteCheckpointSavedTwiceReordered(
     }
 }
 
-ParsedState makeStorageData(MachineStateSaver& stateSaver,
-                            value staticVal,
-                            value registerVal,
-                            Datastack stack,
-                            Datastack auxstack,
-                            Status state,
-                            CodePoint pc,
-                            CodePoint err_pc,
-                            MessageStack inbox,
-                            MessageStack pendingInbox,
-                            BlockReason blockReason) {
+MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
+                                 value staticVal,
+                                 value registerVal,
+                                 Datastack stack,
+                                 Datastack auxstack,
+                                 Status state,
+                                 CodePoint pc,
+                                 CodePoint err_pc,
+                                 MessageStack inbox,
+                                 MessageStack pendingInbox,
+                                 BlockReason blockReason) {
     TuplePool pool;
 
     auto datastack_results = stack.checkpointState(stateSaver, &pool);
@@ -602,18 +602,18 @@ ParsedState makeStorageData(MachineStateSaver& stateSaver,
     auto status_str = (unsigned char)state;
     auto blockreason_str = serializeForCheckpoint(blockReason);
 
-    return ParsedState{static_val_results.storage_key,
-                       register_val_results.storage_key,
-                       datastack_results.storage_key,
-                       auxstack_results.storage_key,
-                       inbox_results.msgs_tuple_results.storage_key,
-                       inbox_results.msg_count_results.storage_key,
-                       pending_results.msgs_tuple_results.storage_key,
-                       pending_results.msg_count_results.storage_key,
-                       pc_results.storage_key,
-                       err_pc_results.storage_key,
-                       status_str,
-                       blockreason_str};
+    return MachineStateKeys{static_val_results.storage_key,
+                            register_val_results.storage_key,
+                            datastack_results.storage_key,
+                            auxstack_results.storage_key,
+                            inbox_results.msgs_tuple_results.storage_key,
+                            inbox_results.msg_count_results.storage_key,
+                            pending_results.msgs_tuple_results.storage_key,
+                            pending_results.msg_count_results.storage_key,
+                            pc_results.storage_key,
+                            err_pc_results.storage_key,
+                            status_str,
+                            blockreason_str};
 }
 
 MessageStack getMsgStack1() {
@@ -647,7 +647,7 @@ MessageStack getMsgStack2() {
     return pending_stack;
 }
 
-ParsedState getStateValues(MachineStateSaver& saver) {
+MachineStateKeys getStateValues(MachineStateSaver& saver) {
     TuplePool pool;
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple(), &pool);
@@ -679,7 +679,7 @@ ParsedState getStateValues(MachineStateSaver& saver) {
     return saved_data;
 }
 
-ParsedState getDefaultValues(MachineStateSaver& saver) {
+MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
     TuplePool pool;
     uint256_t static_val = 0;
     auto register_val = Tuple();
@@ -698,7 +698,7 @@ ParsedState getDefaultValues(MachineStateSaver& saver) {
     return data;
 }
 
-std::vector<std::vector<unsigned char>> getHashKeys(ParsedState data) {
+std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
     std::vector<std::vector<unsigned char>> hash_keys;
 
     hash_keys.push_back(data.auxstack_key);

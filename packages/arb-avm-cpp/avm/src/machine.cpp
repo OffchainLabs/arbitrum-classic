@@ -19,7 +19,7 @@
 #include <iostream>
 
 #include <avm/machine.hpp>
-#include <avm/opcodes.hpp>
+#include <avm_values/opcodes.hpp>
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 #include <data_storage/checkpointdeleter.hpp>

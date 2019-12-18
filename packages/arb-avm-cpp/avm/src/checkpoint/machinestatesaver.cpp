@@ -74,9 +74,9 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
 }
 
 SaveResults MachineStateSaver::saveMachineState(
-    const ParsedState& state_data,
+    const MachineStateKeys& state_data,
     const std::vector<unsigned char>& checkpoint_name) {
-    auto serialized_state = checkpoint::utils::serializeState(state_data);
+    auto serialized_state = checkpoint::utils::serializeStateKeys(state_data);
 
     return transaction->saveValue(checkpoint_name, serialized_state);
 }

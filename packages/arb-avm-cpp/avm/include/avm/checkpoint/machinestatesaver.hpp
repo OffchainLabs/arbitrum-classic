@@ -20,7 +20,7 @@
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
-struct ParsedState;
+struct MachineStateKeys;
 
 class Transaction;
 struct SaveResults;
@@ -38,7 +38,7 @@ class MachineStateSaver {
     SaveResults saveTuple(const Tuple& val);
     SaveResults saveValue(const value& val);
     SaveResults saveMachineState(
-        const ParsedState& state_data,
+        const MachineStateKeys& state_data,
         const std::vector<unsigned char>& checkpoint_name);
     rocksdb::Status commitTransaction();
     rocksdb::Status rollBackTransaction();

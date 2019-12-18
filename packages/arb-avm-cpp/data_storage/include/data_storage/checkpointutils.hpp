@@ -19,7 +19,7 @@
 
 #include <avm_values/value.hpp>
 
-struct ParsedState {
+struct MachineStateKeys {
     std::vector<unsigned char> static_val_key;
     std::vector<unsigned char> register_val_key;
     std::vector<unsigned char> datastack_key;
@@ -42,8 +42,10 @@ CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,
 uint256_t deserializeUint256_t(const std::vector<unsigned char>& val);
 std::vector<std::vector<unsigned char>> parseTuple(
     const std::vector<unsigned char>& data);
-ParsedState parseState(const std::vector<unsigned char>& stored_state);
-std::vector<unsigned char> serializeState(const ParsedState& state_data);
+MachineStateKeys extractStateKeys(
+    const std::vector<unsigned char>& stored_state);
+std::vector<unsigned char> serializeStateKeys(
+    const MachineStateKeys& state_data);
 }  // namespace utils
 namespace storage {
 std::vector<unsigned char> serializeCountAndValue(

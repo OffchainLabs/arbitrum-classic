@@ -41,7 +41,7 @@ class MachineStateFetcher {
         const std::vector<unsigned char>& hash_key) const;
     DbResult<value> getValue(const std::vector<unsigned char>& hash_key) const;
     DbResult<Tuple> getTuple(const std::vector<unsigned char>& hash_key) const;
-    DbResult<ParsedState> getMachineState(
+    DbResult<MachineStateKeys> getMachineState(
         const std::vector<unsigned char>& checkpoint_name) const;
 };
 

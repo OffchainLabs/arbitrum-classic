@@ -27,18 +27,19 @@ MachineStateFetcher::MachineStateFetcher(const CheckpointStorage& storage,
                                          const std::vector<CodePoint> code_)
     : checkpoint_storage(storage), pool(pool_), code(std::move(code_)) {}
 
-DbResult<ParsedState> MachineStateFetcher::getMachineState(
+DbResult<MachineStateKeys> MachineStateFetcher::getMachineState(
     const std::vector<unsigned char>& checkpoint_name) const {
     auto results = checkpoint_storage.getValue(checkpoint_name);
 
     if (results.status.ok()) {
-        auto parsed_state = checkpoint::utils::parseState(results.stored_value);
+        auto parsed_state =
+            checkpoint::utils::extractStateKeys(results.stored_value);
 
-        return DbResult<ParsedState>{results.status, results.reference_count,
-                                     parsed_state};
+        return DbResult<MachineStateKeys>{
+            results.status, results.reference_count, parsed_state};
     } else {
-        return DbResult<ParsedState>{results.status, results.reference_count,
-                                     ParsedState()};
+        return DbResult<MachineStateKeys>{
+            results.status, results.reference_count, MachineStateKeys()};
     }
 }
 
