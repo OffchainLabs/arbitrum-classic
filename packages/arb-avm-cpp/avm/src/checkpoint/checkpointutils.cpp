@@ -194,9 +194,6 @@ ParsedState parseState(const std::vector<unsigned char>& stored_state) {
     auto datastack = extractHashKey(current_iter);
     auto auxstack = extractHashKey(current_iter);
     auto inbox = extractHashKey(current_iter);
-    auto inbox_count = extractHashKey(current_iter);
-    auto pending = extractHashKey(current_iter);
-    auto pending_count = extractHashKey(current_iter);
     auto pc = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
