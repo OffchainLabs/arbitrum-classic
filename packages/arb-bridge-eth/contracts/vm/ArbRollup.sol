@@ -60,7 +60,7 @@ contract ArbRollup is IArbRollup {
 
     event RollupAsserted(
         bytes32[6] fields,
-        uint _importedMessageCount,
+        uint32 _importedMessageCount,
         uint64[2] _timeBounds,
         uint32 _numSteps,
         uint64 _numArbGas
@@ -119,7 +119,7 @@ contract ArbRollup is IArbRollup {
         bytes32[] stakerProof;
         bytes32 afterPendingTop;
         bytes32 importedMessagesSlice;
-        uint importedMessageCount;
+        uint32 importedMessageCount;
         bytes32 afterVMHash;
         bytes32 afterInboxHash;
         bytes32 messagesAccHash;
@@ -129,7 +129,7 @@ contract ArbRollup is IArbRollup {
         uint64[2] timeBounds;
     }
 
-    struct StartExecutionChallengeData {
+    struct ChallengeData {
         address[2] stakerAddresses;
         bytes32 node;
         uint64 disputableDeadline;
@@ -137,12 +137,34 @@ contract ArbRollup is IArbRollup {
         bytes32[2] vmProtoHashes;
         bytes32[] proof1;
         bytes32[] proof2;
+    }
+
+    struct StartExecutionChallengeData {
         bytes32 beforeHash;
         bytes32 beforeInbox;
         uint64[2] timeBounds;
-        bytes32 afterPendingTop;
+        bytes32 pendingAssertion;
+        bytes32 beforePendingTop;
         bytes32 importedMessageSlice;
-        uint importedMessageCount;
+        uint32 importedMessageCount;
+        bytes32 assertionHash;
+    }
+
+    struct StartPendingTopChallengeData {
+        bytes32 preconditionHash;
+        bytes32 afterPendingTop;
+        bytes32 currentPending;
+        bytes32 importedAssertion;
+        bytes32 assertionHash;
+    }
+
+    struct StartMessagesChallengeData {
+        bytes32 preconditionHash;
+        bytes32 afterPendingTop;
+        bytes32 currentPending;
+        bytes32 beforePendingTop;
+        bytes32 importedMessageSlice;
+        uint32 importedMessageCount;
         bytes32 assertionHash;
     }
 
@@ -209,7 +231,7 @@ contract ArbRollup is IArbRollup {
         uint _prevLeafIndex,
         bytes32[] memory _prevLeafProof,
         bytes32[] memory _stakerProof,
-        uint _importedMessageCount,
+        uint32 _importedMessageCount,
         bytes32 _afterVMHash,
         bytes32 _afterInboxHash,
         bytes32 _messagesAccHash,
@@ -254,9 +276,9 @@ contract ArbRollup is IArbRollup {
         uint    branch,
         uint    deadline,
         bytes32 _preconditionHash,
-        bytes32 _afterPendingTop,
-        bytes32 _importedAssertionHash,
-        bytes32 _executionAssertionHash,
+        bytes32 _pendingAssertion,
+        bytes32 _importedAssertion,
+        bytes32 _executionAssertion,
         bytes32 _vmProtoStateHash
     )
         public
@@ -267,9 +289,9 @@ contract ArbRollup is IArbRollup {
             disputableNodeHash(
                 deadline,
                 _preconditionHash,
-                _afterPendingTop,
-                _importedAssertionHash,
-                _executionAssertionHash
+                _pendingAssertion,
+                _importedAssertion,
+                _executionAssertion
             ),
             branch,
             _vmProtoStateHash
@@ -402,12 +424,13 @@ contract ArbRollup is IArbRollup {
     //  node
     //  beforeHash
     //  beforeInbox
-    //  afterPendingTop
+    //  pendingAssertionHash
+    //  beforePendingTop
     //  importedMessageSlice
     //  assertionHash
 
     function startExecutionChallenge(
-        bytes32[6] memory _fields,
+        bytes32[7] memory _fields,
         address[2] memory stakerAddresses,
         uint64 disputableDeadline,
         uint[2] memory stakerPositions,
@@ -415,99 +438,114 @@ contract ArbRollup is IArbRollup {
         bytes32[] memory proof1,
         bytes32[] memory proof2,
         uint64[2] memory _timeBounds,
-        uint _importedMessageCount
+        uint32 _importedMessageCount
     )
         public
     {
         return _startExecutionChallenge(
-            StartExecutionChallengeData(
+            ChallengeData(
                 stakerAddresses,
                 _fields[0],
                 disputableDeadline,
                 stakerPositions,
                 vmProtoHashes,
                 proof1,
-                proof2,
+                proof2
+            ),
+            StartExecutionChallengeData(
                 _fields[1],
                 _fields[2],
                 _timeBounds,
                 _fields[3],
                 _fields[4],
+                _fields[5],
                 _importedMessageCount,
+                _fields[6]
+            )
+        );
+    }
+
+    // fields
+    //  node
+    //  preconditionHash
+    //  afterPendingTop
+    //  currentPending
+    //  importedAssertion
+    //  assertionHash
+
+    function startPendingTopChallenge(
+        bytes32[6] memory _fields,
+        address[2] memory stakerAddresses,
+        uint64 disputableDeadline,
+        uint[2] memory stakerPositions,
+        bytes32[2] memory vmProtoHashes,
+        bytes32[] memory proof1,
+        bytes32[] memory proof2
+    )
+        public
+    {
+        return _startPendingTopChallenge(
+            ChallengeData(
+                stakerAddresses,
+                _fields[0],
+                disputableDeadline,
+                stakerPositions,
+                vmProtoHashes,
+                proof1,
+                proof2
+            ),
+            StartPendingTopChallengeData(
+                _fields[1],
+                _fields[2],
+                _fields[3],
+                _fields[4],
                 _fields[5]
             )
         );
     }
 
-    // function startChallenge(
-    //     address staker1Address,
-    //     address staker2Address,
-    //     bytes32 node,
-    //     uint64 disputableDeadline,
-    //     bytes32 disputableHash,
-    //     uint    staker1position,
-    //     uint    staker2position,
-    //     bytes32 vmProtoHash1,
-    //     bytes32 vmProtoHash2,
-    //     bytes32[] memory proof1,
-    //     bytes32[] memory proof2,
-    //     bytes32 _beforeHash,
-    //     bytes32 _beforeInbox,
-    //     uint64[2] memory _timeBounds,
-    //     bytes32 _assertionHash
-    // )
-    //     public
-    // {
-    //     Staker memory staker1 = stakers[getStakerIndex(staker1Address)];
-    //     Staker memory staker2 = stakers[getStakerIndex(staker2Address)];
+    // fields
+    //  node
+    //  preconditionHash
+    //  afterPendingTop
+    //  currentPending
+    //  beforePendingTop
+    //  importedMessageSlice
+    //  assertionHash
 
-    //     require(keccak256(abi.encodePacked(
-    //         disputableDeadline,
-    //         Protocol.generatePreconditionHash(
-    //             _beforeHash,
-    //             _timeBounds,
-    //             _beforeInbox
-    //         ),
-    //         _assertionHash
-    //     )) == disputableHash);
-    //     require(staker1.creationTime < disputableDeadline, "staker1 staked after deadline");
-    //     require(staker2.creationTime < disputableDeadline, "staker2 staked after deadline");
-    //     require(staker1.challenge == address(0), "staker1 already in a challenge");
-    //     require(staker2.challenge == address(0), "staker2 already in a challenge");
-    //     require(
-    //         isSpecifiedConflict(
-    //             node, disputableHash,
-    //             staker1position, vmProtoHash1, staker1.location, proof1,
-    //             staker2position, vmProtoHash2, staker2.location, proof2
-    //         ),
-    //         "Invalid conflict proof"
-    //     );
-
-    //     address newChallengeAddr;
-    //     if (staker2position==INVALID_PENDING_TOP_CHILD_TYPE) {
-    //         newChallengeAddr = challengeFactory.createPendingTopChallenge(
-    //             staker1Address,
-    //             staker2Address,
-    //             disputableHash
-    //         );
-    //     } else if (staker2position==INVALID_MESSAGES_CHILD_TYPE) {
-    //         newChallengeAddr = challengeFactory.createMessagesChallenge(
-    //             staker1Address,
-    //             staker2Address,
-    //             disputableHash
-    //         );
-    //     } else {
-    //         newChallengeAddr = challengeFactory.createExecutionChallenge(
-    //             staker1Address,
-    //             staker2Address,
-    //             disputableHash
-    //         );
-    //     }
-    //     staker1.challenge = newChallengeAddr;
-    //     staker2.challenge = newChallengeAddr;
-
-    //     emit rollupChallengeStarted(staker1.addr, staker2.addr, staker2position, newChallengeAddr);
-    // }
+    function startMessagesChallenge(
+        bytes32[7] memory _fields,
+        address[2] memory stakerAddresses,
+        uint64 disputableDeadline,
+        uint[2] memory stakerPositions,
+        bytes32[2] memory vmProtoHashes,
+        bytes32[] memory proof1,
+        bytes32[] memory proof2,
+        uint32 _importedMessageCount
+    )
+        public
+    {
+        return _startMessagesChallenge(
+            ChallengeData(
+                stakerAddresses,
+                _fields[0],
+                disputableDeadline,
+                stakerPositions,
+                vmProtoHashes,
+                proof1,
+                proof2
+            ),
+            StartMessagesChallengeData(
+                _fields[1],
+                _fields[2],
+                _fields[3],
+                _fields[4],
+                _fields[5],
+                _importedMessageCount,
+                _fields[6]
+            )
+        );
+    }
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only callable by owner");
@@ -566,8 +604,12 @@ contract ArbRollup is IArbRollup {
                 data.timeBounds,
                 data.beforeInboxHash
             ),
-            data.afterPendingTop,
+            pendingAssertionHash(
+                data.afterPendingTop,
+                vmParams.pendingInboxHash
+            ),
             importedAssertionHash(
+                data.beforePendingTop,
                 data.importedMessageCount,
                 data.importedMessagesSlice
             ),
@@ -613,39 +655,149 @@ contract ArbRollup is IArbRollup {
         );
     }
 
-    function _startExecutionChallenge(StartExecutionChallengeData memory data) internal {
-        Staker storage staker1 = getStaker(data.stakerAddresses[0]);
-        Staker storage staker2 = getStaker(data.stakerAddresses[1]);
-        require(data.stakerPositions[1] == INVALID_EXECUTION_CHILD_TYPE, "Stakers must have a conflict over execution");
+    function _startPendingTopChallenge(
+        ChallengeData memory _challenge,
+        StartPendingTopChallengeData memory data
+    )
+        internal
+    {
+        Staker storage staker1 = getStaker(_challenge.stakerAddresses[0]);
+        Staker storage staker2 = getStaker(_challenge.stakerAddresses[1]);
+        require(_challenge.stakerPositions[1] == INVALID_PENDING_TOP_CHILD_TYPE, "Stakers must have a conflict over pending top");
 
         verifyConflict(
             staker1,
             staker2,
-            data.node,
-            data.disputableDeadline,
+            _challenge.node,
+            _challenge.disputableDeadline,
             disputableNodeHash(
-                data.disputableDeadline,
-                Protocol.generatePreconditionHash(
-                    data.beforeHash,
-                    data.timeBounds,
-                    data.beforeInbox
+                _challenge.disputableDeadline,
+                data.preconditionHash,
+                pendingAssertionHash(
+                    data.afterPendingTop,
+                    data.currentPending
                 ),
-                data.afterPendingTop,
+                data.importedAssertion,
+                data.assertionHash
+            ),
+            _challenge.stakerPositions,
+            _challenge.vmProtoHashes,
+            _challenge.proof1,
+            _challenge.proof2
+        );
+
+        address newChallengeAddr = challengeFactory.createPendingTopChallenge(
+            _challenge.stakerAddresses[0],
+            _challenge.stakerAddresses[1],
+            0, // Challenge period
+            data.currentPending,
+            data.afterPendingTop
+        );
+        staker1.challenge = newChallengeAddr;
+        staker2.challenge = newChallengeAddr;
+
+        emit RollupChallengeStarted(
+            _challenge.stakerAddresses[0],
+            _challenge.stakerAddresses[1],
+            _challenge.stakerPositions[1],
+            newChallengeAddr
+        );
+    }
+
+    function _startMessagesChallenge(
+        ChallengeData memory _challenge,
+        StartMessagesChallengeData memory data
+    )
+        internal
+    {
+        Staker storage staker1 = getStaker(_challenge.stakerAddresses[0]);
+        Staker storage staker2 = getStaker(_challenge.stakerAddresses[1]);
+        require(_challenge.stakerPositions[1] == INVALID_MESSAGES_CHILD_TYPE, "Stakers must have a conflict over pending top");
+
+        verifyConflict(
+            staker1,
+            staker2,
+            _challenge.node,
+            _challenge.disputableDeadline,
+            disputableNodeHash(
+                _challenge.disputableDeadline,
+                data.preconditionHash,
+                pendingAssertionHash(
+                    data.afterPendingTop,
+                    data.currentPending
+                ),
                 importedAssertionHash(
+                    data.beforePendingTop,
                     data.importedMessageCount,
                     data.importedMessageSlice
                 ),
                 data.assertionHash
             ),
-            data.stakerPositions,
-            data.vmProtoHashes,
-            data.proof1,
-            data.proof2
+            _challenge.stakerPositions,
+            _challenge.vmProtoHashes,
+            _challenge.proof1,
+            _challenge.proof2
+        );
+
+        address newChallengeAddr = challengeFactory.createMessagesChallenge(
+            _challenge.stakerAddresses[0],
+            _challenge.stakerAddresses[1],
+            0, // Challenge period
+            data.beforePendingTop,
+            data.afterPendingTop,
+            data.importedMessageSlice,
+            data.importedMessageCount
+        );
+        staker1.challenge = newChallengeAddr;
+        staker2.challenge = newChallengeAddr;
+
+        emit RollupChallengeStarted(
+            _challenge.stakerAddresses[0],
+            _challenge.stakerAddresses[1],
+            _challenge.stakerPositions[1],
+            newChallengeAddr
+        );
+    }
+
+    function _startExecutionChallenge(
+        ChallengeData memory _challenge,
+        StartExecutionChallengeData memory data
+    )
+        internal
+    {
+        Staker storage staker1 = getStaker(_challenge.stakerAddresses[0]);
+        Staker storage staker2 = getStaker(_challenge.stakerAddresses[1]);
+        require(_challenge.stakerPositions[1] == INVALID_EXECUTION_CHILD_TYPE, "Stakers must have a conflict over execution");
+
+        verifyConflict(
+            staker1,
+            staker2,
+            _challenge.node,
+            _challenge.disputableDeadline,
+            disputableNodeHash(
+                _challenge.disputableDeadline,
+                Protocol.generatePreconditionHash(
+                    data.beforeHash,
+                    data.timeBounds,
+                    data.beforeInbox
+                ),
+                data.pendingAssertion,
+                importedAssertionHash(
+                    data.beforePendingTop,
+                    data.importedMessageCount,
+                    data.importedMessageSlice
+                ),
+                data.assertionHash
+            ),
+            _challenge.stakerPositions,
+            _challenge.vmProtoHashes,
+            _challenge.proof1,
+            _challenge.proof2
         );
 
         address newChallengeAddr = challengeFactory.createExecutionChallenge(
-            data.stakerAddresses[0],
-            data.stakerAddresses[1],
+            _challenge.stakerAddresses[0],
+            _challenge.stakerAddresses[1],
             0, // Challenge period
             data.beforeHash,
             Protocol.addMessagesToInbox(data.beforeInbox, data.importedMessageSlice),
@@ -656,62 +808,12 @@ contract ArbRollup is IArbRollup {
         staker2.challenge = newChallengeAddr;
 
         emit RollupChallengeStarted(
-            data.stakerAddresses[0],
-            data.stakerAddresses[1],
-            data.stakerPositions[1],
+            _challenge.stakerAddresses[0],
+            _challenge.stakerAddresses[1],
+            _challenge.stakerPositions[1],
             newChallengeAddr
         );
     }
-
-    // function _startPendingTopChallenge(StartExecutionChallengeData memory data) internal {
-    //     Staker storage staker1 = getStaker(data.stakerAddresses[0]);
-    //     Staker storage staker2 = getStaker(data.stakerAddresses[1]);
-    //     require(data.stakerPositions[1] == INVALID_PENDING_TOP_CHILD_TYPE, "Stakers must have a conflict over pending top");
-
-    //     verifyConflict(
-    //         staker1,
-    //         staker2,
-    //         data.node,
-    //         data.disputableDeadline,
-    //         disputableNodeHash(
-    //             data.disputableDeadline,
-    //             Protocol.generatePreconditionHash(
-    //                 data.beforeHash,
-    //                 data.timeBounds,
-    //                 data.beforeInbox
-    //             ),
-    //             data.afterPendingTop,
-    //             importedAssertionHash(
-    //                 data.importedMessageCount,
-    //                 data.importedMessageSlice
-    //             ),
-    //             data.assertionHash
-    //         ),
-    //         data.stakerPositions,
-    //         data.vmProtoHashes,
-    //         data.proof1,
-    //         data.proof2
-    //     );
-
-    //     address newChallengeAddr = challengeFactory.createPendingChallenge(
-    //         data.stakerAddresses[0],
-    //         data.stakerAddresses[1],
-    //         0, // Challenge period
-    //         data.beforeHash,
-    //         Protocol.addMessagesToInbox(data.beforeInbox, data.importedMessageSlice),
-    //         data.timeBounds,
-    //         data.assertionHash
-    //     );
-    //     staker1.challenge = newChallengeAddr;
-    //     staker2.challenge = newChallengeAddr;
-
-    //     emit RollupChallengeStarted(
-    //         data.stakerAddresses[0],
-    //         data.stakerAddresses[1],
-    //         data.stakerPositions[1],
-    //         newChallengeAddr
-    //     );
-    // }
 
     function verifyConflict(
         Staker storage staker1,
@@ -785,11 +887,21 @@ contract ArbRollup is IArbRollup {
         );
     }
 
-    function importedAssertionHash(uint messageCount, bytes32 messagesSlice) internal pure returns(bytes32) {
+    function importedAssertionHash(bytes32 beforePendingTop, uint32 messageCount, bytes32 messagesSlice) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
+                beforePendingTop,
                 messageCount,
                 messagesSlice
+            )
+        );
+    }
+
+    function pendingAssertionHash(bytes32 afterPendingTop, bytes32 currentPending) internal pure returns(bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                afterPendingTop,
+                currentPending
             )
         );
     }
@@ -797,8 +909,8 @@ contract ArbRollup is IArbRollup {
     function disputableNodeHash(
         uint deadline,
         bytes32 preconditionHash,
-        bytes32 afterPendingTop,
-        bytes32 importedHash,
+        bytes32 pendingAssertion,
+        bytes32 importedAssertion,
         bytes32 assertionHash
     )
         internal
@@ -809,8 +921,8 @@ contract ArbRollup is IArbRollup {
             abi.encodePacked(
                 deadline,
                 preconditionHash,
-                afterPendingTop,
-                importedHash,
+                pendingAssertion,
+                importedAssertion,
                 assertionHash
             )
         );
