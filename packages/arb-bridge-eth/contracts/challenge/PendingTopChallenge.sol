@@ -40,8 +40,7 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
         address _challenger,
         uint32 _challengePeriod,
         bytes32 _topHash,
-        bytes32 _lowerHash,
-        uint32 _chainLength
+        bytes32 _lowerHash
     )
         external
     {
@@ -50,8 +49,28 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
             _asserter,
             _challenger,
             _challengePeriod,
-            encodeSegment(_topHash, _lowerHash, _chainLength)
+            encodeSegment(_topHash, _lowerHash, 0)
         );
+    }
+
+    function bisectFirst(
+        bytes32[] memory _chainHashes,
+        uint32 _chainLength
+    )
+        public
+        asserterAction
+    {
+        uint bisectionCount = _chainHashes.length - 1;
+
+        requireMatchesPrevState(
+            encodeSegment(
+                _chainHashes[0],
+                _chainHashes[bisectionCount],
+                0
+            )
+        );
+
+        _bisect(_chainHashes, _chainLength);
     }
 
     function bisect(
@@ -71,6 +90,17 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
             )
         );
 
+        _bisect(_chainHashes, _chainLength);
+    }
+
+    function _bisect(
+        bytes32[] memory _chainHashes,
+        uint32 _chainLength
+    )
+        internal
+    {
+        require(_chainLength > 1, "Can't bisect chain of less than 2");
+        uint bisectionCount = _chainHashes.length - 1;
         bytes32[] memory hashes = new bytes32[](bisectionCount);
         hashes[0] = encodeSegment(
             _chainHashes[0],

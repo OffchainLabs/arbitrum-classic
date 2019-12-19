@@ -663,6 +663,56 @@ contract ArbRollup is IArbRollup {
         );
     }
 
+    // function _startPendingTopChallenge(StartExecutionChallengeData memory data) internal {
+    //     Staker storage staker1 = getStaker(data.stakerAddresses[0]);
+    //     Staker storage staker2 = getStaker(data.stakerAddresses[1]);
+    //     require(data.stakerPositions[1] == INVALID_PENDING_TOP_CHILD_TYPE, "Stakers must have a conflict over pending top");
+
+    //     verifyConflict(
+    //         staker1,
+    //         staker2,
+    //         data.node,
+    //         data.disputableDeadline,
+    //         disputableNodeHash(
+    //             data.disputableDeadline,
+    //             Protocol.generatePreconditionHash(
+    //                 data.beforeHash,
+    //                 data.timeBounds,
+    //                 data.beforeInbox
+    //             ),
+    //             data.afterPendingTop,
+    //             importedAssertionHash(
+    //                 data.importedMessageCount,
+    //                 data.importedMessageSlice
+    //             ),
+    //             data.assertionHash
+    //         ),
+    //         data.stakerPositions,
+    //         data.vmProtoHashes,
+    //         data.proof1,
+    //         data.proof2
+    //     );
+
+    //     address newChallengeAddr = challengeFactory.createPendingChallenge(
+    //         data.stakerAddresses[0],
+    //         data.stakerAddresses[1],
+    //         0, // Challenge period
+    //         data.beforeHash,
+    //         Protocol.addMessagesToInbox(data.beforeInbox, data.importedMessageSlice),
+    //         data.timeBounds,
+    //         data.assertionHash
+    //     );
+    //     staker1.challenge = newChallengeAddr;
+    //     staker2.challenge = newChallengeAddr;
+
+    //     emit RollupChallengeStarted(
+    //         data.stakerAddresses[0],
+    //         data.stakerAddresses[1],
+    //         data.stakerPositions[1],
+    //         newChallengeAddr
+    //     );
+    // }
+
     function verifyConflict(
         Staker storage staker1,
         Staker storage staker2,
@@ -735,7 +785,7 @@ contract ArbRollup is IArbRollup {
         );
     }
 
-    function importedAssertionHash(uint messageCount, bytes32 messagesSlice) internal returns(bytes32) {
+    function importedAssertionHash(uint messageCount, bytes32 messagesSlice) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
                 messageCount,
@@ -748,7 +798,7 @@ contract ArbRollup is IArbRollup {
         uint deadline,
         bytes32 preconditionHash,
         bytes32 afterPendingTop,
-        bytes32 importedAssertionHash,
+        bytes32 importedHash,
         bytes32 assertionHash
     )
         internal
@@ -760,18 +810,20 @@ contract ArbRollup is IArbRollup {
                 deadline,
                 preconditionHash,
                 afterPendingTop,
-                importedAssertionHash,
+                importedHash,
                 assertionHash
             )
         );
     }
 
     function isPath(bytes32 from, bytes32 to, bytes32[] memory proof) internal pure returns(bool) {
-        bytes32 node = from;
-        for (uint i = 0; i<proof.length; i++) {
-            node = keccak256(abi.encodePacked(node, proof[i]));
-        }
-        return (node==to);
+        return isPathOffset(
+            from,
+            to,
+            proof,
+            0,
+            proof.length
+        );
     }
 
     function isPathOffset(
@@ -810,7 +862,7 @@ contract ArbRollup is IArbRollup {
 
     function isSpecifiedConflict(
         bytes32 from,
-        bytes32 disputableNodeHash,
+        bytes32 disputableNode,
         uint[2] memory childTypes,
         bytes32[2] memory vmProtoHashes,
         bytes32 to1,
@@ -826,7 +878,7 @@ contract ArbRollup is IArbRollup {
         return isPath(
             childNodeHash(
                 from,
-                disputableNodeHash,
+                disputableNode,
                 childTypes[0],
                 vmProtoHashes[0]
             ),
@@ -835,7 +887,7 @@ contract ArbRollup is IArbRollup {
         ) && isPath(
             childNodeHash(
                 from,
-                disputableNodeHash,
+                disputableNode,
                 childTypes[1],
                 vmProtoHashes[1]
             ),

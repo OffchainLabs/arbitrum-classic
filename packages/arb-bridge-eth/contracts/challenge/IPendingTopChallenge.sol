@@ -25,8 +25,7 @@ interface IPendingTopChallenge {
         address _challenger,
         uint32 _challengePeriod,
         bytes32 _topHash,
-        bytes32 _lowerHash,
-        uint32 _chainLength
+        bytes32 _lowerHash
     )
         external;
 }
