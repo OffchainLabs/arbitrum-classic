@@ -38,6 +38,7 @@ library Disputable {
         address asserter,
         uint64[2] timeBounds,
         uint32 numSteps,
+        uint64 numGas,
         uint64 deadline
     );
 
@@ -54,6 +55,7 @@ library Disputable {
         bytes32 messagesAccHash,
         bytes32 logsAccHash,
         uint32 numSteps,
+        uint64 numGas,
         uint64[2] memory timeBounds
     )
         public
@@ -81,6 +83,7 @@ library Disputable {
                 Protocol.generateAssertionHash(
                     afterHash,
                     numSteps,
+                    numGas,
                     0x00,
                     messagesAccHash,
                     0x00,
@@ -96,6 +99,7 @@ library Disputable {
             msg.sender,
             timeBounds,
             numSteps,
+            numGas,
             vm.deadline
         );
     }
@@ -105,6 +109,7 @@ library Disputable {
         bytes32 preconditionHash,
         bytes32 afterHash,
         uint32 numSteps,
+        uint64 numGas,
         bytes memory messages,
         bytes32 logsAccHash
     )
@@ -119,6 +124,7 @@ library Disputable {
                     Protocol.generateAssertionHash(
                         afterHash,
                         numSteps,
+                        numGas,
                         0x00,
                         Protocol.generateLastMessageHash(messages),
                         0x00,

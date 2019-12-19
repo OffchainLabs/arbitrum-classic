@@ -156,6 +156,7 @@ def test_arithmetic(vm):
     testTertiaryOp(vm, 8, 5, 3, 1, vm.addmod)
     testTertiaryOp(vm, 2 ** 256 - 1, 1, 7, 2, vm.addmod)
     testTertiaryOp(vm, 0, 0, 7, 0, vm.addmod)
+    testTertiaryOp(vm, 3, 3, 2 ** 256 - 4, 6, vm.addmod)
     # addmod by 0
     vm.push(arb.ast.AVMLabel("ADDMOD_by_0_expected"))
     vm.errset()
