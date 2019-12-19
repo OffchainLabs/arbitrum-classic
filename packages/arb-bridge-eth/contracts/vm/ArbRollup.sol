@@ -48,7 +48,6 @@ contract ArbRollup is IArbRollup {
     mapping(address => uint) stakerIndex;
     Staker[]  stakers;
     bytes32[] leaves;
-    address[] activeChallenges;
 
 
     // Fields
@@ -59,7 +58,7 @@ contract ArbRollup is IArbRollup {
     //   messagesAccHash
     //   logsAccHash
 
-    event rollupAsserted(
+    event RollupAsserted(
         bytes32[6] fields,
         uint _importedMessageCount,
         uint64[2] _timeBounds,
@@ -67,31 +66,31 @@ contract ArbRollup is IArbRollup {
         uint64 _numArbGas
     );
 
-    event rollupConfirmed(bytes32 nodeHash);
+    event RollupConfirmed(bytes32 nodeHash);
 
-    event rollupPruned(bytes32 nodeHash);
+    event RollupPruned(bytes32 nodeHash);
 
-    event rollupStakeCreated(
+    event RollupStakeCreated(
         address staker,
         bytes32 nodeHash,
         uint    blockNumber
     );
 
-    event rollupStakeMoved(
+    event RollupStakeMoved(
         address staker,
         bytes32 toNodeHash
     );
 
-    event rollupStakeRefunded(address staker);
+    event RollupStakeRefunded(address staker);
 
-    event rollupChallengeStarted(
+    event RollupChallengeStarted(
         address asserter,
         address challenger,
         uint    challengeType,
         address challengeContract
     );
 
-    event rollupChallengeCompleted(
+    event RollupChallengeCompleted(
         address challengeContract,
         address winner,
         address loser
@@ -102,123 +101,11 @@ contract ArbRollup is IArbRollup {
         _;
     }
 
-    function getStaker(address addr) internal view returns(Staker storage) {
-        uint index = stakerIndex[addr];
-        require(index != 0, "not a staker");
-        return stakers[index - 1];
-    }
-
-    function deleteStaker(address staker) internal {
-        uint index = stakerIndex[staker];
-        delete stakerIndex[staker];
-        if (index < stakers.length-1) {
-            stakers[index] = stakers[stakers.length-1];
-            stakerIndex[stakers[index].addr] = index + 1;
-        }
-        stakers.pop();
-    }
-
-    uint constant ValidChildType = 0;
-    uint constant InvalidPendingTopChildType = 1;
-    uint constant InvalidMessagesChildType = 2;
-    uint constant InvalidExecutionChildType = 3;
-    uint constant MaxChildType = 3;
-
-    function childNodeHash(
-        bytes32 prevNodeHash,
-        bytes32 disputableNodeHash,
-        uint    childType,
-        bytes32 vmProtoStateHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        require((childType>=ValidChildType) && (childType<=MaxChildType), "Invalid child type");
-        return keccak256(abi.encodePacked(
-            prevNodeHash,
-            keccak256(abi.encodePacked(
-                disputableNodeHash,
-                childType,
-                vmProtoStateHash
-            ))
-        ));
-    }
-
-    function isPath(bytes32 from, bytes32 to, bytes32[] memory proof) internal pure returns(bool) {
-        bytes32 node = from;
-        for (uint i=0; i<proof.length; i++) {
-            node = keccak256(abi.encodePacked(node, proof[i]));
-        }
-        return (node==to);
-    }
-
-    function isPath_offset(bytes32 from, bytes32 to, bytes32[] memory proof, uint start, uint end) internal pure returns(bool) {
-        bytes32 node = from;
-        for (uint i=start; i<end; i++) {
-            node = keccak256(abi.encodePacked(node, proof[i]));
-        }
-        return (node==to);
-    }
-
-    function isConflict(
-        bytes32 from,
-        bytes32 to1,
-        bytes32 to2,
-        bytes32[] memory proof1,
-        bytes32[] memory proof2
-    )
-        internal
-        pure
-        returns(bool)
-    {
-        return (proof1[0] != proof2[0]) &&
-            isPath(from, to1, proof1) &&
-            isPath(from, to2, proof2);
-    }
-
-    function isSpecifiedConflict(
-        bytes32 from,
-        bytes32 disputableNodeHash,
-        uint[2] memory childTypes,
-        bytes32[2] memory vmProtoHashes,
-        bytes32 to1,
-        bytes32[] memory proof1,
-        bytes32 to2,
-        bytes32[] memory proof2
-    )
-        internal
-        pure
-        returns(bool)
-    {
-        require(childTypes[0] < childTypes[1]);
-        return isPath(childNodeHash(from, disputableNodeHash, childTypes[0], vmProtoHashes[0]), to1, proof1) &&
-            isPath(childNodeHash(from, disputableNodeHash, childTypes[1], vmProtoHashes[1]), to2, proof2);
-    }
-
-    function disputableNodeHash(
-        uint deadline,
-        bytes32 preconditionHash,
-        bytes32 afterPendingTop,
-        bytes32 importedAssertionHash,
-        bytes32 assertionHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
-        return keccak256(abi.encodePacked(
-            deadline,
-            preconditionHash,
-            afterPendingTop,
-            importedAssertionHash,
-            assertionHash
-        ));
-    }
-
-    function withinTimeBounds(uint64[2] memory _timeBounds) public view returns (bool) {
-        return block.number >= _timeBounds[0] && block.number <= _timeBounds[1];
-    }
+    uint constant VALID_CHILD_TYPE = 0;
+    uint constant INVALID_PENDING_TOP_CHILD_TYPE = 1;
+    uint constant INVALID_MESSAGES_CHILD_TYPE = 2;
+    uint constant INVALID_EXECUTION_CHILD_TYPE = 3;
+    uint constant MAX_CHILD_TYPE = 3;
 
     struct MakeAssertionData {
         bytes32 beforeVMHash;
@@ -240,6 +127,71 @@ contract ArbRollup is IArbRollup {
         uint32 numSteps;
         uint64 numArbGas;
         uint64[2] timeBounds;
+    }
+
+    struct StartExecutionChallengeData {
+        address[2] stakerAddresses;
+        bytes32 node;
+        uint64 disputableDeadline;
+        uint[2] stakerPositions;
+        bytes32[2] vmProtoHashes;
+        bytes32[] proof1;
+        bytes32[] proof2;
+        bytes32 beforeHash;
+        bytes32 beforeInbox;
+        uint64[2] timeBounds;
+        bytes32 afterPendingTop;
+        bytes32 importedMessageSlice;
+        uint importedMessageCount;
+        bytes32 assertionHash;
+    }
+
+    function init(
+        bytes32 _vmState,
+        uint32 _gracePeriod,
+        uint32 _maxExecutionSteps,
+        uint128 _stakeRequirement,
+        address payable _owner,
+        address _challengeFactoryAddress,
+        address _globalInboxAddress
+    )
+        external
+    {
+        require(latestConfirmed == bytes32(0), "VM already initialized");
+
+        challengeFactory = IChallengeFactory(_challengeFactoryAddress);
+        globalInbox = IGlobalPendingInbox(_globalInboxAddress);
+
+        globalInbox.registerForInbox();
+        owner = _owner;
+
+        // VM parameters
+        vmParams.stakeRequirement = _stakeRequirement;
+        vmParams.gracePeriod = _gracePeriod;
+        vmParams.maxExecutionSteps = _maxExecutionSteps;
+        vmParams.pendingInboxHash = Value.hashEmptyTuple();
+
+        // VM protocol state
+        bytes32 vmProtoStateHash = VM.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
+        latestConfirmed = childNodeHash(
+            0,
+            0,
+            0,
+            vmProtoStateHash
+        );
+        leaves.push(latestConfirmed);
+    }
+
+    function resolveChallenge(address winner, address loser) external {
+        Staker storage winningStaker = getStaker(winner);
+        Staker storage loserStaker = getStaker(loser);
+        require(winningStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
+        require(loserStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
+        //TODO: slash the loser, deliver half to the winner
+        winningStaker.challenge = address(0);
+        deleteStaker(loser);
+
+        emit RollupChallengeCompleted(msg.sender, winner, loser);
     }
 
     // fields
@@ -268,109 +220,28 @@ contract ArbRollup is IArbRollup {
     )
         public
     {
-        return _makeAssertion(MakeAssertionData(
-            _fields[0],
-            _fields[1],
-            _fields[2],
-            _fields[3],
-            _fields[4],
-            _prevChildType,
-            _prevLeafIndex,
-            _prevLeafProof,
-            _stakerProof,
-            _fields[5],
-            _fields[6],
-            _importedMessageCount,
-            _afterVMHash,
-            _afterInboxHash,
-            _messagesAccHash,
-            _logsAccHash,
-            _numSteps,
-            _numArbGas,
-            _timeBounds
-        ));
-    }
-
-    function _makeAssertion(MakeAssertionData memory data) private {
-        Staker storage staker = getStaker(msg.sender);
-        require(data.prevLeafIndex < leaves.length, "invalid leaf index");
-        bytes32 prevLeaf = leaves[data.prevLeafIndex];
-        bytes32 vmProtoHashBefore = VM.protoStateHash(data.beforeVMHash, data.beforeInboxHash, data.beforePendingTop);
-        require(
-            childNodeHash(
-                data.prevPrevLeafHash,
-                data.prevDisputableHash,
-                data.prevChildType,
-                vmProtoHashBefore
-            ) == prevLeaf,
-            "Previous leaf incorrectly unwrapped"
-        );
-
-        require(
-            !VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash),
-            "Can only disputable assert if machine is not errored or halted"
-        );
-        require(data.numSteps <= vmParams.maxExecutionSteps, "Tried to execute too many steps");
-        require(withinTimeBounds(data.timeBounds), "Precondition: not within time bounds");
-        require(isPath(latestConfirmed, prevLeaf, data.prevLeafProof), "invalid prev leaf proof");
-        require(isPath(staker.location, prevLeaf, data.stakerProof), "invalid staker location proof");
-
-        uint deadline = block.number + vmParams.gracePeriod; //TODO: [Ed] compute this properly
-        bytes32 assertionHash = Protocol.generateAssertionHash(
-            data.afterVMHash,
-            data.numSteps,
-            data.numArbGas,
-            0x00,
-            data.messagesAccHash,
-            0x00,
-            data.logsAccHash
-        );
-        bytes32 disputableHash = disputableNodeHash(
-            deadline,
-            Protocol.generatePreconditionHash(
-                data.beforeVMHash,
-                data.timeBounds,
-                data.beforeInboxHash
-            ),
-            data.afterPendingTop,
-            keccak256(abi.encodePacked(
-                data.importedMessageCount,
-                data.importedMessagesSlice
-            )),
-            assertionHash
-        );
-
-        bytes32 validKid = childNodeHash(
-            prevLeaf,
-            disputableHash,
-            ValidChildType,
-            VM.protoStateHash(
-                data.afterVMHash,
-                data.afterInboxHash,
-                data.afterPendingTop
+        return _makeAssertion(
+            MakeAssertionData(
+                _fields[0],
+                _fields[1],
+                _fields[2],
+                _fields[3],
+                _fields[4],
+                _prevChildType,
+                _prevLeafIndex,
+                _prevLeafProof,
+                _stakerProof,
+                _fields[5],
+                _fields[6],
+                _importedMessageCount,
+                _afterVMHash,
+                _afterInboxHash,
+                _messagesAccHash,
+                _logsAccHash,
+                _numSteps,
+                _numArbGas,
+                _timeBounds
             )
-        );
-
-        leaves[data.prevLeafIndex] = leaves[leaves.length - 1];
-        leaves[leaves.length - 1] = validKid;
-        for (uint i=1; i<=MaxChildType; i++) {
-            leaves.push(childNodeHash(prevLeaf, disputableHash, i, vmProtoHashBefore));
-        }
-        staker.location = validKid;
-
-        emit rollupAsserted(
-            [
-                prevLeaf,
-                data.afterPendingTop,
-                data.importedMessagesSlice,
-                data.afterVMHash,
-                data.messagesAccHash,
-                data.logsAccHash
-            ],
-            data.importedMessageCount,
-            data.timeBounds,
-            data.numSteps,
-            data.numArbGas
         );
     }
 
@@ -404,8 +275,16 @@ contract ArbRollup is IArbRollup {
             _vmProtoStateHash
         );
         require(isPath(to, leaves[_leafIndex], proof1), "node does not exist");
-        for (uint i=0; i<stakers.length; i++) {
-            require((stakers[i].creationTime >= deadline) || isPath_offset(to, stakers[i].location, stakerProofs, stakerProofOffsets[i], stakerProofOffsets[i+1]),
+        for (uint i = 0; i<stakers.length; i++) {
+            require(
+                (stakers[i].creationTime >= deadline) ||
+                isPathOffset(
+                    to,
+                    stakers[i].location,
+                    stakerProofs,
+                    stakerProofOffsets[i],
+                    stakerProofOffsets[i+1]
+                ),
                 "at least one active staker disagrees");
         }
 
@@ -414,7 +293,7 @@ contract ArbRollup is IArbRollup {
             //TODO: execute actions from the DA before the confirmed assertion (to)
         }
 
-        emit rollupConfirmed(latestConfirmed);
+        emit RollupConfirmed(latestConfirmed);
     }
 
     function pruneLeaf(
@@ -428,13 +307,19 @@ contract ArbRollup is IArbRollup {
         require(_leafIndex < leaves.length, "invalid leaf index");
         bytes32 leaf = leaves[_leafIndex];
         require(
-            isConflict(from, leaf, latestConfirmed, leafProof, latestConfirmedProof),
+            isConflict(
+                from,
+                leaf,
+                latestConfirmed,
+                leafProof,
+                latestConfirmedProof
+            ),
             "Invalid conflict proof"
         );
         leaves[_leafIndex] = leaves[leaves.length - 1];
         leaves.pop();
 
-        emit rollupPruned(leaf);
+        emit RollupPruned(leaf);
     }
 
     function createStake(
@@ -454,7 +339,7 @@ contract ArbRollup is IArbRollup {
         stakerIndex[msg.sender] = stakers.length + 1;
         stakers.push(staker);
 
-        emit rollupStakeCreated(msg.sender, location, block.number);
+        emit RollupStakeCreated(msg.sender, location, block.number);
     }
 
     function moveStake(
@@ -473,7 +358,7 @@ contract ArbRollup is IArbRollup {
 
         staker.location = newLocation;
 
-        emit rollupStakeMoved(msg.sender, newLocation);
+        emit RollupStakeMoved(msg.sender, newLocation);
     }
 
     function recoverStakeConfirmed(
@@ -486,7 +371,7 @@ contract ArbRollup is IArbRollup {
         deleteStaker(msg.sender);
         msg.sender.transfer(vmParams.stakeRequirement);
 
-        emit rollupStakeRefunded(msg.sender);
+        emit RollupStakeRefunded(msg.sender);
     }
 
     function recoverStakeMooted(
@@ -498,61 +383,19 @@ contract ArbRollup is IArbRollup {
     {
         Staker storage staker = getStaker(msg.sender);
         require(
-            isConflict(staker.location, disputableHash, latestConfirmed, latestConfirmedProof, nodeProof),
+            isConflict(
+                staker.location,
+                disputableHash,
+                latestConfirmed,
+                latestConfirmedProof,
+                nodeProof
+            ),
             "Invalid conflict proof"
         );
         deleteStaker(msg.sender);
         msg.sender.transfer(vmParams.stakeRequirement);
 
-        emit rollupStakeRefunded(msg.sender);
-    }
-
-    function verifyConflict(
-        Staker storage staker1,
-        Staker storage staker2,
-        bytes32 node,
-        uint64 disputableDeadline,
-        bytes32 disputableNodeHashVal,
-        uint[2] memory stakerPositions,
-        bytes32[2] memory vmProtoHashes,
-        bytes32[] memory proof1,
-        bytes32[] memory proof2
-
-    )
-        private
-        view
-    {
-        require(staker1.creationTime < disputableDeadline, "staker1 staked after deadline");
-        require(staker2.creationTime < disputableDeadline, "staker2 staked after deadline");
-        require(staker1.challenge == address(0), "staker1 already in a challenge");
-        require(staker2.challenge == address(0), "staker2 already in a challenge");
-        require(
-            isSpecifiedConflict(
-                node,
-                disputableNodeHashVal,
-                stakerPositions, vmProtoHashes,
-                staker1.location, proof1,
-                staker2.location, proof2
-            ),
-            "Invalid conflict proof"
-        );
-    }
-
-    struct StartExecutionChallengeData {
-        address[2] stakerAddresses;
-        bytes32 node;
-        uint64 disputableDeadline;
-        uint[2] stakerPositions;
-        bytes32[2] vmProtoHashes;
-        bytes32[] proof1;
-        bytes32[] proof2;
-        bytes32 beforeHash;
-        bytes32 beforeInbox;
-        uint64[2] timeBounds;
-        bytes32 afterPendingTop;
-        bytes32 importedMessageSlice;
-        uint importedMessageCount;
-        bytes32 assertionHash;
+        emit RollupStakeRefunded(msg.sender);
     }
 
     // fields
@@ -576,67 +419,24 @@ contract ArbRollup is IArbRollup {
     )
         public
     {
-        return _startExecutionChallenge(StartExecutionChallengeData(
-            stakerAddresses,
-            _fields[0],
-            disputableDeadline,
-            stakerPositions,
-            vmProtoHashes,
-            proof1,
-            proof2,
-            _fields[1],
-            _fields[2],
-            _timeBounds,
-            _fields[3],
-            _fields[4],
-            _importedMessageCount,
-            _fields[5]
-        ));
-    }
-
-    function _startExecutionChallenge(StartExecutionChallengeData memory data) private {
-        Staker storage staker1 = getStaker(data.stakerAddresses[0]);
-        Staker storage staker2 = getStaker(data.stakerAddresses[1]);
-        require(data.stakerPositions[1] == InvalidExecutionChildType, "Stakers must have a conflict over execution");
-
-        verifyConflict(
-            staker1,
-            staker2,
-            data.node,
-            data.disputableDeadline,
-            disputableNodeHash(
-                data.disputableDeadline,
-                Protocol.generatePreconditionHash(
-                    data.beforeHash,
-                    data.timeBounds,
-                    data.beforeInbox
-                ),
-                data.afterPendingTop,
-                keccak256(abi.encodePacked(
-                    data.importedMessageSlice,
-                    data.importedMessageCount
-                )),
-                data.assertionHash
-            ),
-            data.stakerPositions,
-            data.vmProtoHashes,
-            data.proof1,
-            data.proof2
+        return _startExecutionChallenge(
+            StartExecutionChallengeData(
+                stakerAddresses,
+                _fields[0],
+                disputableDeadline,
+                stakerPositions,
+                vmProtoHashes,
+                proof1,
+                proof2,
+                _fields[1],
+                _fields[2],
+                _timeBounds,
+                _fields[3],
+                _fields[4],
+                _importedMessageCount,
+                _fields[5]
+            )
         );
-
-        address newChallengeAddr = challengeFactory.createExecutionChallenge(
-            data.stakerAddresses[0],
-            data.stakerAddresses[1],
-            0, // Challenge period
-            data.beforeHash,
-            Protocol.addMessagesToInbox(data.beforeInbox, data.importedMessageSlice),
-            data.timeBounds,
-            data.assertionHash
-        );
-        staker1.challenge = newChallengeAddr;
-        staker2.challenge = newChallengeAddr;
-
-        emit rollupChallengeStarted(data.stakerAddresses[0], data.stakerAddresses[1], data.stakerPositions[1], newChallengeAddr);
     }
 
     // function startChallenge(
@@ -684,13 +484,13 @@ contract ArbRollup is IArbRollup {
     //     );
 
     //     address newChallengeAddr;
-    //     if (staker2position==InvalidPendingTopChildType) {
+    //     if (staker2position==INVALID_PENDING_TOP_CHILD_TYPE) {
     //         newChallengeAddr = challengeFactory.createPendingTopChallenge(
     //             staker1Address,
     //             staker2Address,
     //             disputableHash
     //         );
-    //     } else if (staker2position==InvalidMessagesChildType) {
+    //     } else if (staker2position==INVALID_MESSAGES_CHILD_TYPE) {
     //         newChallengeAddr = challengeFactory.createMessagesChallenge(
     //             staker1Address,
     //             staker2Address,
@@ -709,52 +509,9 @@ contract ArbRollup is IArbRollup {
     //     emit rollupChallengeStarted(staker1.addr, staker2.addr, staker2position, newChallengeAddr);
     // }
 
-    function resolveChallenge(address winner, address loser) external {
-        Staker storage winningStaker = getStaker(winner);
-        Staker storage loserStaker = getStaker(loser);
-        require(winningStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
-        require(loserStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
-        //TODO: slash the loser, deliver half to the winner
-        winningStaker.challenge = address(0);
-        deleteStaker(loser);
-
-        emit rollupChallengeCompleted(msg.sender, winner, loser);
-    }
-
     modifier onlyOwner() {
         require(msg.sender == owner, "Only callable by owner");
         _;
-    }
-
-    function init(
-        bytes32 _vmState,
-        uint32 _gracePeriod,
-        uint32 _maxExecutionSteps,
-        uint128 _stakeRequirement,
-        address payable _owner,
-        address _challengeFactoryAddress,
-        address _globalInboxAddress
-    )
-        external
-    {
-        require(latestConfirmed == bytes32(0), "VM already initialized");
-
-        challengeFactory = IChallengeFactory(_challengeFactoryAddress);
-        globalInbox = IGlobalPendingInbox(_globalInboxAddress);
-
-        globalInbox.registerForInbox();
-        owner = _owner;
-
-        // VM parameters
-        vmParams.stakeRequirement = _stakeRequirement;
-        vmParams.gracePeriod = _gracePeriod;
-        vmParams.maxExecutionSteps = _maxExecutionSteps;
-        vmParams.pendingInboxHash = Value.hashEmptyTuple();
-
-        // VM protocol state
-        bytes32 vmProtoStateHash = VM.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
-        latestConfirmed = childNodeHash(0, 0, 0, vmProtoStateHash);
-        leaves.push(latestConfirmed);
     }
 
 /*    function activateVM() external onlyOwner {
@@ -767,4 +524,327 @@ contract ArbRollup is IArbRollup {
         _shutdown();
     }
     */
+
+    function _makeAssertion(MakeAssertionData memory data) internal {
+        Staker storage staker = getStaker(msg.sender);
+        require(data.prevLeafIndex < leaves.length, "invalid leaf index");
+        bytes32 prevLeaf = leaves[data.prevLeafIndex];
+        bytes32 vmProtoHashBefore = VM.protoStateHash(data.beforeVMHash, data.beforeInboxHash, data.beforePendingTop);
+        require(
+            childNodeHash(
+                data.prevPrevLeafHash,
+                data.prevDisputableHash,
+                data.prevChildType,
+                vmProtoHashBefore
+            ) == prevLeaf,
+            "Previous leaf incorrectly unwrapped"
+        );
+
+        require(
+            !VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash),
+            "Can only disputable assert if machine is not errored or halted"
+        );
+        require(data.numSteps <= vmParams.maxExecutionSteps, "Tried to execute too many steps");
+        require(withinTimeBounds(data.timeBounds), "Precondition: not within time bounds");
+        require(isPath(latestConfirmed, prevLeaf, data.prevLeafProof), "invalid prev leaf proof");
+        require(isPath(staker.location, prevLeaf, data.stakerProof), "invalid staker location proof");
+
+        uint deadline = block.number + vmParams.gracePeriod; //TODO: [Ed] compute this properly
+        bytes32 assertionHash = Protocol.generateAssertionHash(
+            data.afterVMHash,
+            data.numSteps,
+            data.numArbGas,
+            0x00,
+            data.messagesAccHash,
+            0x00,
+            data.logsAccHash
+        );
+        bytes32 disputableHash = disputableNodeHash(
+            deadline,
+            Protocol.generatePreconditionHash(
+                data.beforeVMHash,
+                data.timeBounds,
+                data.beforeInboxHash
+            ),
+            data.afterPendingTop,
+            importedAssertionHash(
+                data.importedMessageCount,
+                data.importedMessagesSlice
+            ),
+            assertionHash
+        );
+
+        bytes32 validKid = childNodeHash(
+            prevLeaf,
+            disputableHash,
+            VALID_CHILD_TYPE,
+            VM.protoStateHash(
+                data.afterVMHash,
+                data.afterInboxHash,
+                data.afterPendingTop
+            )
+        );
+
+        leaves[data.prevLeafIndex] = leaves[leaves.length - 1];
+        leaves[leaves.length - 1] = validKid;
+        for (uint i = 1; i<=MAX_CHILD_TYPE; i++) {
+            leaves.push(childNodeHash(
+                prevLeaf,
+                disputableHash,
+                i,
+                vmProtoHashBefore
+            ));
+        }
+        staker.location = validKid;
+
+        emit RollupAsserted(
+            [
+                prevLeaf,
+                data.afterPendingTop,
+                data.importedMessagesSlice,
+                data.afterVMHash,
+                data.messagesAccHash,
+                data.logsAccHash
+            ],
+            data.importedMessageCount,
+            data.timeBounds,
+            data.numSteps,
+            data.numArbGas
+        );
+    }
+
+    function _startExecutionChallenge(StartExecutionChallengeData memory data) internal {
+        Staker storage staker1 = getStaker(data.stakerAddresses[0]);
+        Staker storage staker2 = getStaker(data.stakerAddresses[1]);
+        require(data.stakerPositions[1] == INVALID_EXECUTION_CHILD_TYPE, "Stakers must have a conflict over execution");
+
+        verifyConflict(
+            staker1,
+            staker2,
+            data.node,
+            data.disputableDeadline,
+            disputableNodeHash(
+                data.disputableDeadline,
+                Protocol.generatePreconditionHash(
+                    data.beforeHash,
+                    data.timeBounds,
+                    data.beforeInbox
+                ),
+                data.afterPendingTop,
+                importedAssertionHash(
+                    data.importedMessageCount,
+                    data.importedMessageSlice
+                ),
+                data.assertionHash
+            ),
+            data.stakerPositions,
+            data.vmProtoHashes,
+            data.proof1,
+            data.proof2
+        );
+
+        address newChallengeAddr = challengeFactory.createExecutionChallenge(
+            data.stakerAddresses[0],
+            data.stakerAddresses[1],
+            0, // Challenge period
+            data.beforeHash,
+            Protocol.addMessagesToInbox(data.beforeInbox, data.importedMessageSlice),
+            data.timeBounds,
+            data.assertionHash
+        );
+        staker1.challenge = newChallengeAddr;
+        staker2.challenge = newChallengeAddr;
+
+        emit RollupChallengeStarted(
+            data.stakerAddresses[0],
+            data.stakerAddresses[1],
+            data.stakerPositions[1],
+            newChallengeAddr
+        );
+    }
+
+    function verifyConflict(
+        Staker storage staker1,
+        Staker storage staker2,
+        bytes32 node,
+        uint64 disputableDeadline,
+        bytes32 disputableNodeHashVal,
+        uint[2] memory stakerPositions,
+        bytes32[2] memory vmProtoHashes,
+        bytes32[] memory proof1,
+        bytes32[] memory proof2
+
+    )
+        internal
+        view
+    {
+        require(staker1.creationTime < disputableDeadline, "staker1 staked after deadline");
+        require(staker2.creationTime < disputableDeadline, "staker2 staked after deadline");
+        require(staker1.challenge == address(0), "staker1 already in a challenge");
+        require(staker2.challenge == address(0), "staker2 already in a challenge");
+        require(
+            isSpecifiedConflict(
+                node,
+                disputableNodeHashVal,
+                stakerPositions, vmProtoHashes,
+                staker1.location, proof1,
+                staker2.location, proof2
+            ),
+            "Invalid conflict proof"
+        );
+    }
+
+    function getStaker(address addr) internal view returns(Staker storage) {
+        uint index = stakerIndex[addr];
+        require(index != 0, "not a staker");
+        return stakers[index - 1];
+    }
+
+    function deleteStaker(address staker) internal {
+        uint index = stakerIndex[staker];
+        delete stakerIndex[staker];
+        if (index < stakers.length-1) {
+            stakers[index] = stakers[stakers.length-1];
+            stakerIndex[stakers[index].addr] = index + 1;
+        }
+        stakers.pop();
+    }
+
+    function childNodeHash(
+        bytes32 prevNodeHash,
+        bytes32 disputableNodeHash,
+        uint    childType,
+        bytes32 vmProtoStateHash
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        require((childType>=VALID_CHILD_TYPE) && (childType<=MAX_CHILD_TYPE), "Invalid child type");
+        return keccak256(
+            abi.encodePacked(
+                prevNodeHash,
+                keccak256(
+                    abi.encodePacked(
+                        disputableNodeHash,
+                        childType,
+                        vmProtoStateHash
+                    )
+                )
+            )
+        );
+    }
+
+    function importedAssertionHash(uint messageCount, bytes32 messagesSlice) internal returns(bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                messageCount,
+                messagesSlice
+            )
+        );
+    }
+
+    function disputableNodeHash(
+        uint deadline,
+        bytes32 preconditionHash,
+        bytes32 afterPendingTop,
+        bytes32 importedAssertionHash,
+        bytes32 assertionHash
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                deadline,
+                preconditionHash,
+                afterPendingTop,
+                importedAssertionHash,
+                assertionHash
+            )
+        );
+    }
+
+    function isPath(bytes32 from, bytes32 to, bytes32[] memory proof) internal pure returns(bool) {
+        bytes32 node = from;
+        for (uint i = 0; i<proof.length; i++) {
+            node = keccak256(abi.encodePacked(node, proof[i]));
+        }
+        return (node==to);
+    }
+
+    function isPathOffset(
+        bytes32 from,
+        bytes32 to,
+        bytes32[] memory proof,
+        uint start,
+        uint end
+    )
+        internal
+        pure
+        returns(bool)
+    {
+        bytes32 node = from;
+        for (uint i = start; i<end; i++) {
+            node = keccak256(abi.encodePacked(node, proof[i]));
+        }
+        return (node==to);
+    }
+
+    function isConflict(
+        bytes32 from,
+        bytes32 to1,
+        bytes32 to2,
+        bytes32[] memory proof1,
+        bytes32[] memory proof2
+    )
+        internal
+        pure
+        returns(bool)
+    {
+        return (proof1[0] != proof2[0]) &&
+            isPath(from, to1, proof1) &&
+            isPath(from, to2, proof2);
+    }
+
+    function isSpecifiedConflict(
+        bytes32 from,
+        bytes32 disputableNodeHash,
+        uint[2] memory childTypes,
+        bytes32[2] memory vmProtoHashes,
+        bytes32 to1,
+        bytes32[] memory proof1,
+        bytes32 to2,
+        bytes32[] memory proof2
+    )
+        internal
+        pure
+        returns(bool)
+    {
+        require(childTypes[0] < childTypes[1], "Child types must be ordered");
+        return isPath(
+            childNodeHash(
+                from,
+                disputableNodeHash,
+                childTypes[0],
+                vmProtoHashes[0]
+            ),
+            to1,
+            proof1
+        ) && isPath(
+            childNodeHash(
+                from,
+                disputableNodeHash,
+                childTypes[1],
+                vmProtoHashes[1]
+            ),
+            to2,
+            proof2
+        );
+    }
+
+    function withinTimeBounds(uint64[2] memory _timeBounds) internal view returns (bool) {
+        return block.number >= _timeBounds[0] && block.number <= _timeBounds[1];
+    }
 }
