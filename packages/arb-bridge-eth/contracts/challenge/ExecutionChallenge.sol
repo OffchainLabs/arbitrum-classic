@@ -47,7 +47,9 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
     function init(
         address _vmAddress,
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
@@ -59,7 +61,9 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
         BisectionChallenge.initializeBisection(
             _vmAddress,
             _asserter,
+            _asserterIndex,
             _challenger,
+            _challengerIndex,
             _challengePeriod,
             encodeSegment(
                 keccak256(

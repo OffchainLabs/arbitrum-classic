@@ -22,7 +22,9 @@ interface IPendingTopChallenge {
     function init(
         address _vmAddress,
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _topHash,
         bytes32 _lowerHash

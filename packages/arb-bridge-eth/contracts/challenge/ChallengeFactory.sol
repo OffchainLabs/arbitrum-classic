@@ -42,7 +42,9 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
     function createMessagesChallenge(
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _bottomHash,
         bytes32 _topHash,
@@ -56,7 +58,9 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         IMessagesChallenge(clone).init(
             msg.sender,
             _asserter,
+            _asserterIndex,
             _challenger,
+            _challengerIndex,
             _challengePeriod,
             _bottomHash,
             _topHash,
@@ -68,7 +72,9 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
     function createPendingTopChallenge(
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _topHash,
         bytes32 _lowerHash
@@ -80,7 +86,9 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         IPendingTopChallenge(clone).init(
             msg.sender,
             _asserter,
+            _asserterIndex,
             _challenger,
+            _challengerIndex,
             _challengePeriod,
             _topHash,
             _lowerHash
@@ -90,7 +98,9 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
 
     function createExecutionChallenge(
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
@@ -104,7 +114,9 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         IExecutionChallenge(clone).init(
             msg.sender,
             _asserter,
+            _asserterIndex,
             _challenger,
+            _challengerIndex,
             _challengePeriod,
             _beforeHash,
             _beforeInbox,

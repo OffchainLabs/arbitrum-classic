@@ -21,7 +21,9 @@ interface IChallengeFactory {
 
     function createMessagesChallenge(
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _bottomHash,
         bytes32 _topHash,
@@ -33,7 +35,9 @@ interface IChallengeFactory {
 
     function createPendingTopChallenge(
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _topHash,
         bytes32 _lowerHash
@@ -43,7 +47,9 @@ interface IChallengeFactory {
 
     function createExecutionChallenge(
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,

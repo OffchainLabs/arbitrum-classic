@@ -39,7 +39,9 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
     function init(
         address _vmAddress,
         address _asserter,
+        uint _asserterIndex,
         address _challenger,
+        uint _challengerIndex,
         uint32 _challengePeriod,
         bytes32 _bottomHash,
         bytes32 _topHash,
@@ -51,7 +53,9 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
         BisectionChallenge.initializeBisection(
             _vmAddress,
             _asserter,
+            _asserterIndex,
             _challenger,
+            _challengerIndex,
             _challengePeriod,
             encodeSegment(
                 _bottomHash,
