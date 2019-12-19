@@ -76,11 +76,11 @@ contract ArbRollup is IArbRollup {
     );
 
     event RollupStakeMoved(
-        address staker,
+        uint stakerIndex,
         bytes32 toNodeHash
     );
 
-    event RollupStakeRefunded(address staker);
+    event RollupStakeRefunded(uint stakerIndex);
 
     event RollupChallengeStarted(
         uint asserterIndex,
@@ -377,7 +377,7 @@ contract ArbRollup is IArbRollup {
 
         staker.location = newLocation;
 
-        emit RollupStakeMoved(msg.sender, newLocation);
+        emit RollupStakeMoved(_stakerIndex, newLocation);
     }
 
     function recoverStakeConfirmed(
@@ -392,7 +392,7 @@ contract ArbRollup is IArbRollup {
         delete stakers[_stakerIndex];
         msg.sender.transfer(vmParams.stakeRequirement);
 
-        emit RollupStakeRefunded(msg.sender);
+        emit RollupStakeRefunded(_stakerIndex);
     }
 
     function recoverStakeMooted(
@@ -418,7 +418,7 @@ contract ArbRollup is IArbRollup {
         delete stakers[_stakerIndex];
         msg.sender.transfer(vmParams.stakeRequirement);
 
-        emit RollupStakeRefunded(msg.sender);
+        emit RollupStakeRefunded(_stakerIndex);
     }
 
     // fields
