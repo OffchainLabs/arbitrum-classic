@@ -169,6 +169,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 
 	return protocol.NewAssertion(
 		m.Hash(),
+		int(assertion.didInboxInsn) != 0,
 		uint32(assertion.numSteps),
 		uint64(assertion.numGas),
 		outMessageVals,

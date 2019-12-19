@@ -38,6 +38,7 @@ func (con *OneStepProof) ValidateProof(
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		precondition.BeforeInboxValue(),
 		assertion.AfterHashValue(),
+		assertion.DidInboxInsn,
 		assertion.FirstMessageHashValue(),
 		assertion.LastMessageHashValue(),
 		assertion.FirstLogHashValue(),

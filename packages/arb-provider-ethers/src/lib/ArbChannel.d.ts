@@ -8,17 +8,6 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 
 interface ArbChannelInterface extends Interface {
     functions: {
-        confirmDisputableAsserted: TypedFunctionDescription<{
-            encode([_preconditionHash, _afterHash, _numSteps, _numGas, _messages, _logsAccHash]: [
-                Arrayish,
-                Arrayish,
-                BigNumberish,
-                BigNumberish,
-                Arrayish,
-                Arrayish,
-            ]): string;
-        }>;
-
         initiateChallenge: TypedFunctionDescription<{
             encode([_beforeHash, _beforeInbox, _timeBounds, _assertionHash]: [
                 Arrayish,
@@ -28,30 +17,20 @@ interface ArbChannelInterface extends Interface {
             ]): string;
         }>;
 
-        pendingDisputableAssert: TypedFunctionDescription<{
-            encode([
-                _beforeHash,
-                _beforeInbox,
-                _afterHash,
-                _messagesAccHash,
-                _logsAccHash,
-                _numSteps,
-                _numGas,
-                _timeBounds,
-            ]: [
-                Arrayish,
-                Arrayish,
-                Arrayish,
-                Arrayish,
-                Arrayish,
-                BigNumberish,
-                BigNumberish,
-                (BigNumberish)[],
-            ]): string;
-        }>;
-
         completeChallenge: TypedFunctionDescription<{
             encode([_players, _rewards]: [(string)[], (BigNumberish)[]]): string;
+        }>;
+
+        confirmDisputableAsserted: TypedFunctionDescription<{
+            encode([_preconditionHash, _afterHash, _didInboxInsn, _numSteps, _numGas, _messages, _logsAccHash]: [
+                Arrayish,
+                Arrayish,
+                boolean,
+                BigNumberish,
+                BigNumberish,
+                Arrayish,
+                Arrayish,
+            ]): string;
         }>;
 
         initialize: TypedFunctionDescription<{
@@ -64,6 +43,30 @@ interface ArbChannelInterface extends Interface {
                 _challengeFactoryAddress,
                 _globalInboxAddress,
             ]: [Arrayish, BigNumberish, BigNumberish, BigNumberish, string, string, string]): string;
+        }>;
+
+        pendingDisputableAssert: TypedFunctionDescription<{
+            encode([
+                _beforeHash,
+                _beforeInbox,
+                _afterHash,
+                _didInboxInsn,
+                _messagesAccHash,
+                _logsAccHash,
+                _numSteps,
+                _numGas,
+                _timeBounds,
+            ]: [
+                Arrayish,
+                Arrayish,
+                Arrayish,
+                boolean,
+                Arrayish,
+                Arrayish,
+                BigNumberish,
+                BigNumberish,
+                (BigNumberish)[],
+            ]): string;
         }>;
 
         activateVM: TypedFunctionDescription<{ encode([]: []): string }>;
@@ -189,16 +192,6 @@ export class ArbChannel extends Contract {
 
         isValidatorList(_validators: (string)[]): Promise<boolean>;
 
-        confirmDisputableAsserted(
-            _preconditionHash: Arrayish,
-            _afterHash: Arrayish,
-            _numSteps: BigNumberish,
-            _numGas: BigNumberish,
-            _messages: Arrayish,
-            _logsAccHash: Arrayish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
         initiateChallenge(
             _beforeHash: Arrayish,
             _beforeInbox: Arrayish,
@@ -207,21 +200,20 @@ export class ArbChannel extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        pendingDisputableAssert(
-            _beforeHash: Arrayish,
-            _beforeInbox: Arrayish,
-            _afterHash: Arrayish,
-            _messagesAccHash: Arrayish,
-            _logsAccHash: Arrayish,
-            _numSteps: BigNumberish,
-            _numGas: BigNumberish,
-            _timeBounds: (BigNumberish)[],
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
-
         completeChallenge(
             _players: (string)[],
             _rewards: (BigNumberish)[],
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        confirmDisputableAsserted(
+            _preconditionHash: Arrayish,
+            _afterHash: Arrayish,
+            _didInboxInsn: boolean,
+            _numSteps: BigNumberish,
+            _numGas: BigNumberish,
+            _messages: Arrayish,
+            _logsAccHash: Arrayish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -233,6 +225,19 @@ export class ArbChannel extends Contract {
             _owner: string,
             _challengeFactoryAddress: string,
             _globalInboxAddress: string,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        pendingDisputableAssert(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _afterHash: Arrayish,
+            _didInboxInsn: boolean,
+            _messagesAccHash: Arrayish,
+            _logsAccHash: Arrayish,
+            _numSteps: BigNumberish,
+            _numGas: BigNumberish,
+            _timeBounds: (BigNumberish)[],
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -312,15 +317,6 @@ export class ArbChannel extends Contract {
     };
 
     estimate: {
-        confirmDisputableAsserted(
-            _preconditionHash: Arrayish,
-            _afterHash: Arrayish,
-            _numSteps: BigNumberish,
-            _numGas: BigNumberish,
-            _messages: Arrayish,
-            _logsAccHash: Arrayish,
-        ): Promise<BigNumber>;
-
         initiateChallenge(
             _beforeHash: Arrayish,
             _beforeInbox: Arrayish,
@@ -328,18 +324,17 @@ export class ArbChannel extends Contract {
             _assertionHash: Arrayish,
         ): Promise<BigNumber>;
 
-        pendingDisputableAssert(
-            _beforeHash: Arrayish,
-            _beforeInbox: Arrayish,
+        completeChallenge(_players: (string)[], _rewards: (BigNumberish)[]): Promise<BigNumber>;
+
+        confirmDisputableAsserted(
+            _preconditionHash: Arrayish,
             _afterHash: Arrayish,
-            _messagesAccHash: Arrayish,
-            _logsAccHash: Arrayish,
+            _didInboxInsn: boolean,
             _numSteps: BigNumberish,
             _numGas: BigNumberish,
-            _timeBounds: (BigNumberish)[],
+            _messages: Arrayish,
+            _logsAccHash: Arrayish,
         ): Promise<BigNumber>;
-
-        completeChallenge(_players: (string)[], _rewards: (BigNumberish)[]): Promise<BigNumber>;
 
         initialize(
             _vmState: Arrayish,
@@ -349,6 +344,18 @@ export class ArbChannel extends Contract {
             _owner: string,
             _challengeFactoryAddress: string,
             _globalInboxAddress: string,
+        ): Promise<BigNumber>;
+
+        pendingDisputableAssert(
+            _beforeHash: Arrayish,
+            _beforeInbox: Arrayish,
+            _afterHash: Arrayish,
+            _didInboxInsn: boolean,
+            _messagesAccHash: Arrayish,
+            _logsAccHash: Arrayish,
+            _numSteps: BigNumberish,
+            _numGas: BigNumberish,
+            _timeBounds: (BigNumberish)[],
         ): Promise<BigNumber>;
 
         activateVM(): Promise<BigNumber>;

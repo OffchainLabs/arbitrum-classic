@@ -14,40 +14,6 @@ export class ArbChannelFactory {
 
 const _abi = [
     {
-        constant: false,
-        inputs: [
-            {
-                name: '_preconditionHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_afterHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_numGas',
-                type: 'uint64',
-            },
-            {
-                name: '_messages',
-                type: 'bytes',
-            },
-            {
-                name: '_logsAccHash',
-                type: 'bytes32',
-            },
-        ],
-        name: 'confirmDisputableAsserted',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
         constant: true,
         inputs: [
             {
@@ -124,48 +90,6 @@ const _abi = [
         constant: false,
         inputs: [
             {
-                name: '_beforeHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_beforeInbox',
-                type: 'bytes32',
-            },
-            {
-                name: '_afterHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_messagesAccHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_logsAccHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_numGas',
-                type: 'uint64',
-            },
-            {
-                name: '_timeBounds',
-                type: 'uint64[2]',
-            },
-        ],
-        name: 'pendingDisputableAssert',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
                 name: '_players',
                 type: 'address[2]',
             },
@@ -232,6 +156,44 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_preconditionHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_didInboxInsn',
+                type: 'bool',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_numGas',
+                type: 'uint64',
+            },
+            {
+                name: '_messages',
+                type: 'bytes',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
+            },
+        ],
+        name: 'confirmDisputableAsserted',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
         type: 'function',
     },
     {
@@ -312,6 +274,52 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_didInboxInsn',
+                type: 'bool',
+            },
+            {
+                name: '_messagesAccHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_numGas',
+                type: 'uint64',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+        ],
+        name: 'pendingDisputableAssert',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
         type: 'function',
     },
     {

@@ -86,7 +86,8 @@ Assertion Machine::run(uint64_t stepCount,
     }
     return {machine_state.context.numSteps, machine_state.context.numGas,
             std::move(machine_state.context.outMessage),
-            std::move(machine_state.context.logs)};
+            std::move(machine_state.context.logs),
+            machine_state.context.didInboxInsn};
 }
 
 bool isErrorCodePoint(const CodePoint& cp) {

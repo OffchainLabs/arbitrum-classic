@@ -233,5 +233,6 @@ RawAssertion machineExecuteAssertion(CMachine* m,
             static_cast<int>(logData.size()),
             static_cast<int>(assertion.logs.size()),
             assertion.stepCount,
-            assertion.gasCount};
+            assertion.gasCount,
+            assertion.didInboxInsn};
 }

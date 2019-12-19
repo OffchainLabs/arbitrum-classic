@@ -148,14 +148,14 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	}()
 
 	if err == nil {
-		m.context.NotifyStep(gas)
+		m.context.NotifyStep(gas, op.GetOp() == code.INBOX)
 		return mods, nil
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
 		return mods, blocked.reason
 	}
-	m.context.NotifyStep(gas)
+	m.context.NotifyStep(gas, op.GetOp() == code.INBOX)
 
 	//fmt.Printf("error running instruction %v: %v\n", code.InstructionNames[op.GetOp()], err)
 
