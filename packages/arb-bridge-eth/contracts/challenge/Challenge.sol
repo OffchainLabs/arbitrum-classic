@@ -22,6 +22,7 @@ import "../vm/IArbBase.sol";
 
 import "../arch/OneStepProof.sol";
 import "../arch/Protocol.sol";
+import "../arch/Value.sol";
 
 import "../libraries/MerkleLib.sol";
 

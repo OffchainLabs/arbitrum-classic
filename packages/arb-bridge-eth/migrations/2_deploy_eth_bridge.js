@@ -55,6 +55,7 @@ module.exports = async function(deployer, network, accounts) {
   deployer.link(Value, [
     ArbChain,
     ArbChannel,
+    Challenge,
     Protocol,
     GlobalPendingInbox,
     OneStepProof
