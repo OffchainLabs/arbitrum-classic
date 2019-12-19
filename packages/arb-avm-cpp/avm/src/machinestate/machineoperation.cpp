@@ -568,7 +568,7 @@ void getTime(MachineState& m) {
 BlockReason inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
-    if (aNum < m.context.timeBounds[0] && m.inbox.isEmpty()) {
+    if (aNum > m.context.timeBounds[0] && m.inbox.isEmpty()) {
         m.stack.popClear();
         return InboxBlocked(aNum);
     } else {

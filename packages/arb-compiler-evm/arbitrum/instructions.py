@@ -83,7 +83,7 @@ OP_CODES = [
     # System operations
     ("send", 0x70, [TupleType()], []),
     ("gettime", 0x71, [], [TupleType()]),
-    ("inbox", 0x72, [TupleType()], [TupleType()]),
+    ("inbox", 0x72, [IntType()], [TupleType()]),
     ("error", 0x73, [], []),
     ("halt", 0x74, [], []),
     ("debug", 0x75, [], []),
