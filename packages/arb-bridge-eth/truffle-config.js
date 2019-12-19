@@ -9,8 +9,7 @@ module.exports = {
     parity: {
       host: "127.0.0.1",
       port: 7545,
-      network_id: "*",
-      from: "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82"
+      network_id: "*"
     }
   },
   plugins: ["truffle-security"],

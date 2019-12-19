@@ -48,7 +48,7 @@ COPY parity ./parity
 COPY --chown=user parity/config.toml /home/user/.local/share/io.parity.ethereum/config.toml
 RUN echo arbitrum > password.txt && \
     parity --chain=parity/$NETWORK account import parity/keystore/ && \
-    parity --chain parity/$NETWORK --unlock 0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82 --password ~/password.txt & \
+    parity --chain parity/$NETWORK --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt & \
     while ! nc -z localhost 7545; do sleep 2; done; \
     echo "Finished waiting for parity on localhost:8545..." && \
     truffle migrate --network parity -q && [ -f bridge_eth_addresses.json ]
@@ -66,4 +66,4 @@ COPY --from=0 --chown=user /usr/bin/parity /usr/bin/parity
 COPY --from=0 --chown=user /home/user/.local/share/io.parity.ethereum/ /home/user/.local/share/io.parity.ethereum/
 COPY --from=0 --chown=user /home/user/bridge_eth_addresses.json ./
 RUN echo arbitrum > password.txt
-ENTRYPOINT ["/usr/bin/parity", "--unlock", "0xe83f8ae25F873b1e17e05bda065ABEAc2FbD2E82", "--password", "/home/user/password.txt"]
+ENTRYPOINT ["/usr/bin/parity", "--unlock", "0x81183c9c61bdf79db7330bbcda47be30c0a85064", "--password", "/home/user/password.txt"]

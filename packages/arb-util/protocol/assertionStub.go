@@ -25,6 +25,7 @@ import (
 func (a *AssertionStub) Equals(b *AssertionStub) bool {
 	if a.AfterHash != b.AfterHash ||
 		a.NumSteps != b.NumSteps ||
+		a.NumGas != b.NumGas ||
 		!bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) ||
 		!bytes.Equal(a.LastMessageHash.Value, b.LastMessageHash.Value) ||
 		!bytes.Equal(a.FirstLogHash.Value, b.FirstLogHash.Value) ||
@@ -69,6 +70,7 @@ func (a *AssertionStub) Hash() [32]byte {
 	hashVal := solsha3.SoliditySHA3(
 		solsha3.Bytes32(a.AfterHash.Value),
 		solsha3.Uint32(a.NumSteps),
+		solsha3.Uint64(a.NumGas),
 		solsha3.Bytes32(a.FirstMessageHash.Value),
 		solsha3.Bytes32(a.LastMessageHash.Value),
 		solsha3.Bytes32(a.FirstLogHash.Value),

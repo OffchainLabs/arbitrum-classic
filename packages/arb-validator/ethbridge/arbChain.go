@@ -46,7 +46,7 @@ func (vm *ArbChain) StartConnection(ctx context.Context) error {
 	}
 	trackerContract, err := arbchain.NewArbChain(vm.address, vm.Client)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ArbChannel")
+		return errors2.Wrap(err, "Failed to connect to ArbChain")
 	}
 	vm.contract = trackerContract
 	return nil

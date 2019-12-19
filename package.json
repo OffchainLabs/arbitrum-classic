@@ -18,8 +18,10 @@
     "install:validator": "./scripts/install-validator",
     "update-abi": "./scripts/update-abi",
     "build": "yarn workspace arb-provider-ethers build",
-    "docker:build:parity": "yarn workspace arb-bridge-eth docker:build",
-    "docker:parity": "yarn workspace arb-bridge-eth docker:parity"
+    "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
+    "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
+    "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
+    "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache"
   },
   "engines": {
     "node": ">= 8.0.0 < 12.0.0",

@@ -9,33 +9,31 @@ import (
 	"io/ioutil"
 	"math"
 	"math/big"
-	brand "math/rand"
+	"math/rand"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 /********************************************/
@@ -44,7 +42,7 @@ import (
 func setupValidators(coordinatorKey string, followerKey string, t *testing.T) error {
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
-	brand.Seed(seed)
+	rand.Seed(seed)
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 	if err != nil {
@@ -87,7 +85,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		200000,
 		common.Address{}, // Address 0 means no owner
 	)
-	ethURL := "ws://127.0.0.1:7546"
+	ethURL := test.GetEthUrl()
 	contract := "contract.ao"
 
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
@@ -196,8 +194,8 @@ func _computePubKeyString(privKeyBytes []byte) (string, error) {
 }
 
 func RunValidators(t *testing.T) (*FibonacciSession, error) {
-	coordinatorKey := "4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
-	followerKey := "6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1"
+	coordinatorKey := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
+	followerKey := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
 	err := setupValidators(coordinatorKey, followerKey, t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
