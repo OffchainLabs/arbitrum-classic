@@ -16,14 +16,17 @@
 
 #include <avm/machinestate/machinestate.hpp>
 
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/machineoperation.hpp>
 #include <avm_values/exceptions.hpp>
-#include <data_storage/checkpointstorage.hpp>
-#include <data_storage/machinestatefetcher.hpp>
-#include <data_storage/machinestatesaver.hpp>
 
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
+
+#include <sys/stat.h>
+#include <fstream>
 
 namespace {
 std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
@@ -52,6 +55,32 @@ MachineState::MachineState()
       pendingInbox(pool.get()),
       context({0, 0}),
       inbox(pool.get()) {}
+
+char* getContractData(const std::string contract_filename) {
+    std::ifstream myfile;
+
+    struct stat filestatus;
+    stat(contract_filename.c_str(), &filestatus);
+
+    char* buf = (char*)malloc(filestatus.st_size);
+
+    myfile.open(contract_filename, std::ios::in);
+
+    if (myfile.is_open()) {
+        myfile.read((char*)buf, filestatus.st_size);
+        myfile.close();
+    }
+
+    return buf;
+}
+
+MachineState::MachineState(const std::string contract_filename)
+    : pool(std::make_unique<TuplePool>()),
+      pendingInbox(pool.get()),
+      context({0, 0}),
+      inbox(pool.get()) {
+    initialize_machinestate(getContractData(contract_filename));
+}
 
 uint256_t MachineState::hash() const {
     if (state == Status::Halted)
@@ -115,7 +144,7 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-bool MachineState::deserialize(const char* bufptr) {
+bool MachineState::initialize_machinestate(const char* bufptr) {
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
     version = __builtin_bswap32(version);
@@ -260,7 +289,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 bool MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
-    auto stateFetcher = MachineStateFetcher(storage, pool.get(), code);
+    auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
     if (results.status.ok()) {

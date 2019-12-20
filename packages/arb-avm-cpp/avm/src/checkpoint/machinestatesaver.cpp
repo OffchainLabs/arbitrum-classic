@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include <data_storage/machinestatesaver.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tokenTracker.hpp>
 #include <avm_values/tuple.hpp>
-#include <data_storage/checkpointresult.hpp>
 #include <data_storage/checkpointutils.hpp>
+#include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
 #include <variant>

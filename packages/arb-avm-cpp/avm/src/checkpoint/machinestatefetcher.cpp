@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-#include <data_storage/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatefetcher.hpp>
 
+#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
-#include <data_storage/checkpointresult.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
-MachineStateFetcher::MachineStateFetcher(const CheckpointStorage& storage,
-                                         TuplePool* pool_,
-                                         const std::vector<CodePoint> code_)
-    : checkpoint_storage(storage), pool(pool_), code(std::move(code_)) {}
+MachineStateFetcher::MachineStateFetcher(const CheckpointStorage& storage)
+    : checkpoint_storage(storage) {}
 
 DbResult<MachineStateKeys> MachineStateFetcher::getMachineState(
     const std::vector<unsigned char>& checkpoint_name) const {
@@ -48,8 +46,8 @@ DbResult<CodePoint> MachineStateFetcher::getCodePoint(
     auto results = checkpoint_storage.getValue(hash_key);
 
     if (results.status.ok()) {
-        auto code_point =
-            checkpoint::utils::deserializeCodepoint(results.stored_value, code);
+        auto code_point = checkpoint::utils::deserializeCodepoint(
+            results.stored_value, checkpoint_storage.getMachineCode());
         return DbResult<CodePoint>{results.status, results.reference_count,
                                    code_point};
     } else {
@@ -104,7 +102,8 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                     case CODEPT: {
                         auto code_point =
                             checkpoint::utils::deserializeCodepoint(
-                                current_vector, code);
+                                current_vector,
+                                checkpoint_storage.getMachineCode());
                         values.push_back(code_point);
                         break;
                     }
@@ -113,7 +112,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                     }
                 }
             }
-            auto tuple = Tuple(values, pool);
+            auto tuple = Tuple(values, checkpoint_storage.getPool());
             return DbResult<Tuple>{results.status, results.reference_count,
                                    tuple};
         }
@@ -145,7 +144,7 @@ DbResult<value> MachineStateFetcher::getValue(
             }
             case CODEPT: {
                 auto code_point = checkpoint::utils::deserializeCodepoint(
-                    results.stored_value, code);
+                    results.stored_value, checkpoint_storage.getMachineCode());
                 return DbResult<value>{results.status, results.reference_count,
                                        code_point};
             }

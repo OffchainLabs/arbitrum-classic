@@ -58,8 +58,9 @@ struct MachineState {
     BlockReason blockReason;
 
     MachineState();
+    MachineState(const std::string contract_filename);
 
-    bool deserialize(const char* data);
+    bool initialize_machinestate(const char* data);
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
     uint64_t pendingMessageCount() const;

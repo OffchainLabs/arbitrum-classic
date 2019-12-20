@@ -28,13 +28,9 @@ struct DbResult;
 class MachineStateFetcher {
    private:
     const CheckpointStorage& checkpoint_storage;
-    TuplePool* pool;
-    std::vector<CodePoint> code;
 
    public:
-    MachineStateFetcher(const CheckpointStorage& checkpoint_storage,
-                        TuplePool* pool,
-                        const std::vector<CodePoint> code);
+    MachineStateFetcher(const CheckpointStorage& checkpoint_storage);
     DbResult<CodePoint> getCodePoint(
         const std::vector<unsigned char>& hash_key) const;
     DbResult<uint256_t> getUint256_t(

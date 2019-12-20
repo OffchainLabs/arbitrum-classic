@@ -20,20 +20,14 @@ set (CMAKE_CXX_STANDARD 14)
 project (data_storage LANGUAGES CXX)
 
 set(LIB_HEADERS
-  include/data_storage/checkpointstorage.hpp
-  include/data_storage/checkpointdeleter.hpp
+  include/data_storage/datastorage.hpp
   include/data_storage/checkpointutils.hpp
-  include/data_storage/checkpointresult.hpp
+  include/data_storage/storageresult.hpp
   include/data_storage/transaction.hpp
-  include/data_storage/machinestatesaver.hpp
-  include/data_storage/machinestatefetcher.hpp
 )
 
 set(LIB_SOURCES
-  src/machinestatesaver.cpp
-  src/machinestatefetcher.cpp
-  src/checkpointstorage.cpp
-  src/checkpointdeleter.cpp
+  src/datastorage.cpp
   src/checkpointutils.cpp
   src/transaction.cpp
 )

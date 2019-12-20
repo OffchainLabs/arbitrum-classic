@@ -16,8 +16,8 @@
 
 #include <data_storage/transaction.hpp>
 
-#include <data_storage/checkpointresult.hpp>
 #include <data_storage/checkpointutils.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <rocksdb/utilities/transaction_db.h>
 

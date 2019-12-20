@@ -18,7 +18,7 @@
 #define messagestack_hpp
 
 #include <avm_values/tuple.hpp>
-#include <data_storage/checkpointresult.hpp>
+#include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
 struct Message;

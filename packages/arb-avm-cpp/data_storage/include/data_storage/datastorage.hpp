@@ -14,16 +14,30 @@
  * limitations under the License.
  */
 
-#ifndef checkpointdeleter_hpp
-#define checkpointdeleter_hpp
+#ifndef datastorage_hpp
+#define datastorage_hpp
 
+#include <memory>
+#include <string>
 #include <vector>
 
-struct DeleteResults;
-class CheckpointStorage;
+#include <data_storage/transaction.hpp>
 
-DeleteResults deleteCheckpoint(
-    CheckpointStorage& checkpoint_storage,
-    const std::vector<unsigned char>& checkpoint_name);
+#include <rocksdb/utilities/transaction.h>
+#include <rocksdb/utilities/transaction_db.h>
 
-#endif /* checkpointdeleter_h */
+struct GetResults;
+
+class DataStorage {
+   private:
+    std::string txn_db_path;
+    std::unique_ptr<rocksdb::TransactionDB> txn_db;
+
+   public:
+    DataStorage(const std::string db_path);
+    DataStorage();
+    GetResults getValue(const std::vector<unsigned char>& hash_key) const;
+    std::unique_ptr<Transaction> makeTransaction();
+};
+
+#endif /* datastorage_hpp */

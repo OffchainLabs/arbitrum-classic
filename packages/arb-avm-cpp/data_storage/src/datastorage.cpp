@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/datastorage.hpp>
 
-#include <data_storage/checkpointresult.hpp>
 #include <data_storage/checkpointutils.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
@@ -26,7 +26,7 @@
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
-CheckpointStorage::CheckpointStorage(std::string db_path) {
+DataStorage::DataStorage(const std::string db_path) {
     rocksdb::TransactionDBOptions txn_options;
     rocksdb::Options options;
     options.create_if_missing = true;
@@ -42,11 +42,11 @@ CheckpointStorage::CheckpointStorage(std::string db_path) {
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
 }
 
-CheckpointStorage::~CheckpointStorage() {
+DataStorage::DataStorage() {
     txn_db->Close();
 }
 
-GetResults CheckpointStorage::getValue(
+GetResults DataStorage::getValue(
     const std::vector<unsigned char>& hash_key) const {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
@@ -65,7 +65,7 @@ GetResults CheckpointStorage::getValue(
     }
 }
 
-std::unique_ptr<Transaction> CheckpointStorage::makeTransaction() {
+std::unique_ptr<Transaction> DataStorage::makeTransaction() {
     rocksdb::WriteOptions writeOptions;
     rocksdb::Transaction* transaction = txn_db->BeginTransaction(writeOptions);
     return std::make_unique<Transaction>(transaction);

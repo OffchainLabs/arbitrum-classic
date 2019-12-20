@@ -16,9 +16,9 @@
 
 #include <avm/machinestate/datastack.hpp>
 
-#include <data_storage/checkpointresult.hpp>
-#include <data_storage/machinestatefetcher.hpp>
-#include <data_storage/machinestatesaver.hpp>
+#include <avm/checkpoint/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
+#include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
 #include <avm_values/util.hpp>

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef checkpointresult_hpp
-#define checkpointresult_hpp
+#ifndef storageresult_hpp
+#define storageresult_hpp
 
 #include <rocksdb/status.h>
 

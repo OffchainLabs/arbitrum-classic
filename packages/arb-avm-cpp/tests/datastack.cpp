@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
+#include "config.hpp"
+
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/machinestatefetcher.hpp>
+#include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/datastack.hpp>
-#include <data_storage/checkpointresult.hpp>
-#include <data_storage/checkpointstorage.hpp>
-#include <data_storage/machinestatefetcher.hpp>
-#include <data_storage/machinestatesaver.hpp>
+#include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
 #include <rocksdb/status.h>
@@ -45,7 +47,8 @@ void initializeDatastack(MachineStateSaver& msSaver,
 void saveDataStack(Datastack data_stack,
                    std::vector<unsigned char> expected_hash_key) {
     TuplePool pool;
-    CheckpointStorage storage(dbpath);
+    MachineState state(test_contract_path);
+    CheckpointStorage storage(dbpath, state);
     std::vector<CodePoint> code;
     auto saver = MachineStateSaver(storage.makeTransaction());
 
@@ -60,7 +63,8 @@ void saveDataStack(Datastack data_stack,
 void saveDataStackTwice(Datastack data_stack,
                         std::vector<unsigned char> expected_hash_key) {
     TuplePool pool;
-    CheckpointStorage storage(dbpath);
+    MachineState state(test_contract_path);
+    CheckpointStorage storage(dbpath, state);
     std::vector<CodePoint> code;
     auto saver = MachineStateSaver(storage.makeTransaction());
 
@@ -111,10 +115,11 @@ void saveTwiceAndGetDataStack(MachineStateSaver& saver,
 TEST_CASE("Initialize datastack") {
     SECTION("default") {
         TuplePool pool;
-        CheckpointStorage storage(dbpath);
+        MachineState state(test_contract_path);
+        CheckpointStorage storage(dbpath, state);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
 
@@ -128,10 +133,11 @@ TEST_CASE("Initialize datastack") {
 
     SECTION("push empty tuple") {
         TuplePool pool;
-        CheckpointStorage storage(dbpath);
+        MachineState state(test_contract_path);
+        CheckpointStorage storage(dbpath, state);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
         Tuple tuple;
@@ -147,7 +153,8 @@ TEST_CASE("Initialize datastack") {
 
     SECTION("push num, tuple") {
         TuplePool pool;
-        CheckpointStorage storage(dbpath);
+        MachineState state(test_contract_path);
+        CheckpointStorage storage(dbpath, state);
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         auto code_point2 = CodePoint(1, Operation(), 0);
@@ -155,7 +162,7 @@ TEST_CASE("Initialize datastack") {
         code.push_back(code_point2);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
         uint256_t num = 1;
@@ -173,14 +180,15 @@ TEST_CASE("Initialize datastack") {
     boost::filesystem::remove_all(dbpath);
     SECTION("push codepoint, tuple") {
         TuplePool pool;
-        CheckpointStorage storage(dbpath);
+        MachineState state(test_contract_path);
+        CheckpointStorage storage(dbpath, state);
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         auto code_point2 = CodePoint(1, Operation(), 0);
         code.push_back(code_point);
         code.push_back(code_point2);
         auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto fetcher = MachineStateFetcher(storage);
 
         Datastack data_stack;
 
@@ -261,12 +269,13 @@ TEST_CASE("Save datastack") {
 TEST_CASE("Save and get datastack") {
     SECTION("save datastack and get") {
         TuplePool pool;
-        CheckpointStorage storage(dbpath);
+        MachineState state(test_contract_path);
+        CheckpointStorage storage(dbpath, state);
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         code.push_back(code_point);
         auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto fetcher = MachineStateFetcher(storage);
 
         uint256_t num = 1;
         auto tuple = Tuple(code_point, &pool);
@@ -287,12 +296,13 @@ TEST_CASE("Save and get datastack") {
     boost::filesystem::remove_all(dbpath);
     SECTION("save datastack twice and get") {
         TuplePool pool;
-        CheckpointStorage storage(dbpath);
+        MachineState state(test_contract_path);
+        CheckpointStorage storage(dbpath, state);
         std::vector<CodePoint> code;
         auto code_point = CodePoint(0, Operation(), 0);
         code.push_back(code_point);
         auto saver = MachineStateSaver(storage.makeTransaction());
-        auto fetcher = MachineStateFetcher(storage, &pool, code);
+        auto fetcher = MachineStateFetcher(storage);
 
         uint256_t num = 1;
         auto tuple = Tuple(code_point, &pool);
