@@ -162,6 +162,18 @@ const _abi = [
         constant: false,
         inputs: [
             {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
                 name: '_preconditionHash',
                 type: 'bytes32',
             },

@@ -22,7 +22,21 @@ interface ArbChannelInterface extends Interface {
         }>;
 
         confirmDisputableAsserted: TypedFunctionDescription<{
-            encode([_preconditionHash, _afterHash, _didInboxInsn, _numSteps, _numGas, _messages, _logsAccHash]: [
+            encode([
+                _beforeHash,
+                _timeBounds,
+                _beforeInbox,
+                _preconditionHash,
+                _afterHash,
+                _didInboxInsn,
+                _numSteps,
+                _numGas,
+                _messages,
+                _logsAccHash,
+            ]: [
+                Arrayish,
+                (BigNumberish)[],
+                Arrayish,
                 Arrayish,
                 Arrayish,
                 boolean,
@@ -207,6 +221,9 @@ export class ArbChannel extends Contract {
         ): Promise<ContractTransaction>;
 
         confirmDisputableAsserted(
+            _beforeHash: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _beforeInbox: Arrayish,
             _preconditionHash: Arrayish,
             _afterHash: Arrayish,
             _didInboxInsn: boolean,
@@ -327,6 +344,9 @@ export class ArbChannel extends Contract {
         completeChallenge(_players: (string)[], _rewards: (BigNumberish)[]): Promise<BigNumber>;
 
         confirmDisputableAsserted(
+            _beforeHash: Arrayish,
+            _timeBounds: (BigNumberish)[],
+            _beforeInbox: Arrayish,
             _preconditionHash: Arrayish,
             _afterHash: Arrayish,
             _didInboxInsn: boolean,

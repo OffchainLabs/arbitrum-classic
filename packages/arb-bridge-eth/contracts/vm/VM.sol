@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
+import "../arch/Value.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 
@@ -54,9 +55,10 @@ library VM {
         bytes32 logsAccHash;
     }
 
-    function acceptAssertion(Data storage _vm, bytes32 _afterHash) external {
+    function acceptAssertion(Data storage _vm, bytes32 _afterHash, bytes32 _afterInbox) external {
         _vm.machineHash = _afterHash;
         _vm.state = VM.State.Waiting;
+        _vm.inbox = _afterInbox;
     }
 
     function withinDeadline(Data storage _vm) external view returns(bool) {

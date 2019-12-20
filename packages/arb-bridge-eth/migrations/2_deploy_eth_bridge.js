@@ -56,6 +56,7 @@ module.exports = async function(deployer, network, accounts) {
     ArbChain,
     ArbChannel,
     Challenge,
+    Disputable,
     Protocol,
     GlobalPendingInbox,
     OneStepProof

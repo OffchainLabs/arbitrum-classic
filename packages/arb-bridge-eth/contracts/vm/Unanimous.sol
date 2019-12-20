@@ -174,7 +174,8 @@ library Unanimous {
         _vm.inbox = _newInbox;
         VM.acceptAssertion(
             _vm,
-            _afterHash
+            _afterHash,
+            _newInbox
         );
 
         emit ConfirmedUnanimousAssertion(

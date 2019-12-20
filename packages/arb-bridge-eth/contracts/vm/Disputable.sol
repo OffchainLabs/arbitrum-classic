@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "./VM.sol";
 
 import "../arch/Protocol.sol";
+import "../arch/Value.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -45,6 +46,7 @@ library Disputable {
 
     event ConfirmedDisputableAssertion(
         bytes32 newState,
+        bool    didInboxInsn,
         bytes32 logsAccHash
     );
 
@@ -130,7 +132,9 @@ library Disputable {
 
     function confirmDisputableAsserted(
         VM.Data storage vm,
-        bytes32 preconditionHash,
+        bytes32 beforeHash,
+        uint64[2] memory timeBounds,
+        bytes32 beforeInbox,
         bytes32 afterHash,
         bool   didInboxInsn,
         uint32 numSteps,
@@ -145,7 +149,11 @@ library Disputable {
         require(
             keccak256(
                 abi.encodePacked(
-                    preconditionHash,
+                    Protocol.generatePreconditionHash(
+                        beforeHash,
+                        timeBounds,
+                        beforeInbox
+                    ),
                     Protocol.generateAssertionHash(
                         afterHash,
                         didInboxInsn,
@@ -160,13 +168,19 @@ library Disputable {
             ) == vm.pendingHash,
             "Confirm Disputable: Precondition and assertion do not match pending assertion"
         );
+        bytes32 afterInbox = beforeInbox;
+        if (didInboxInsn) {
+            afterInbox = Value.hashEmptyTuple();
+        }
         VM.acceptAssertion(
             vm,
-            afterHash
+            afterHash,
+            afterInbox
         );
 
         emit ConfirmedDisputableAssertion(
             afterHash,
+            didInboxInsn,
             logsAccHash
         );
     }

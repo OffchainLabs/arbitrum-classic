@@ -172,6 +172,9 @@ contract ArbBase is IArbBase {
     }
 
     function confirmDisputableAsserted(
+        bytes32 _beforeHash,
+        uint64[2] memory _timeBounds,
+        bytes32 _beforeInbox,
         bytes32 _preconditionHash,
         bytes32 _afterHash,
         bool    _didInboxInsn,
@@ -184,7 +187,9 @@ contract ArbBase is IArbBase {
     {
         Disputable.confirmDisputableAsserted(
             vm,
-            _preconditionHash,
+            _beforeHash,
+            _timeBounds,
+            _beforeInbox,
             _afterHash,
             _didInboxInsn,
             _numSteps,
