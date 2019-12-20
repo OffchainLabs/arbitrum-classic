@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
-#include <data_storage/checkpointutils.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
+#include <avm/checkpoint/machinestatedeleter.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
-CheckpointDeleter::CheckpointDeleter(
+MachineStateDeleter::MachineStateDeleter(
     std::unique_ptr<Transaction> transaction_) {
     transaction = std::move(transaction_);
 }
 
-DeleteResults CheckpointDeleter::deleteTuple(
+DeleteResults MachineStateDeleter::deleteTuple(
     const std::vector<unsigned char>& hash_key,
     GetResults results) {
     if (results.status.ok()) {
@@ -45,13 +45,13 @@ DeleteResults CheckpointDeleter::deleteTuple(
     }
 }
 
-DeleteResults CheckpointDeleter::deleteTuple(
+DeleteResults MachineStateDeleter::deleteTuple(
     const std::vector<unsigned char>& hash_key) {
     auto results = transaction->getValue(hash_key);
     return deleteTuple(hash_key, results);
 }
 
-DeleteResults CheckpointDeleter::deleteValue(
+DeleteResults MachineStateDeleter::deleteValue(
     const std::vector<unsigned char>& hash_key) {
     auto results = transaction->getValue(hash_key);
 
@@ -68,7 +68,7 @@ DeleteResults CheckpointDeleter::deleteValue(
     }
 }
 
-DeleteResults CheckpointDeleter::deleteCheckpoint(
+DeleteResults MachineStateDeleter::deleteCheckpoint(
     const std::vector<unsigned char>& checkpoint_name) {
     auto results = transaction->getValue(checkpoint_name);
 
@@ -117,10 +117,10 @@ DeleteResults CheckpointDeleter::deleteCheckpoint(
     }
 }
 
-rocksdb::Status CheckpointDeleter::commitTransaction() {
+rocksdb::Status MachineStateDeleter::commitTransaction() {
     return transaction->commit();
 }
 
-rocksdb::Status CheckpointDeleter::rollBackTransaction() {
+rocksdb::Status MachineStateDeleter::rollBackTransaction() {
     return transaction->rollBack();
 }

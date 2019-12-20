@@ -29,6 +29,12 @@ class Transaction;
 class Status;
 }  // namespace rocksdb
 
+std::vector<unsigned char> serializeCountAndValue(
+    uint32_t count,
+    const std::vector<unsigned char>& value);
+std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
+    const std::string& string_value);
+
 class Transaction {
    private:
     std::unique_ptr<rocksdb::Transaction> transaction;

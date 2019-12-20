@@ -18,8 +18,8 @@
 #include <fstream>
 #include <iostream>
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
 #include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/machinestatedeleter.hpp>
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
 #include <avm_values/util.hpp>
@@ -42,23 +42,7 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
 }
 
 bool Machine::initializeMachine(const std::string& filename) {
-    std::ifstream myfile;
-
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(filename, std::ios::in);
-
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
-
-        return deserialize(buf);
-    } else {
-        return false;
-    }
+    return machine_state.initialize_machinestate(filename);
 }
 
 void Machine::sendOnchainMessage(const Message& msg) {
@@ -173,6 +157,6 @@ bool Machine::restoreCheckpoint(
 DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
     auto checkpoint_key = GetHashKey(hash());
 
-    auto checkpoint_deleter = CheckpointDeleter(storage.makeTransaction());
+    auto checkpoint_deleter = MachineStateDeleter(storage.makeTransaction());
     return checkpoint_deleter.deleteCheckpoint(checkpoint_key);
 }

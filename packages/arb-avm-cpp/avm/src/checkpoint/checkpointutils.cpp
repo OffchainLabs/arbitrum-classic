@@ -16,12 +16,13 @@
 
 #include <iterator>
 
+#include <avm/checkpoint/checkpointutils.hpp>
+
 #include <avm_values/blockreason.hpp>
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <data_storage/checkpointutils.hpp>
 
 constexpr int UINT64_SIZE = 8;
 constexpr int HASH_KEY_LENGTH = 33;
@@ -257,31 +258,4 @@ std::vector<unsigned char> serializeStateKeys(
     return state_data_vector;
 }
 }  // namespace utils
-namespace storage {
-
-std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
-    const std::string& string_value) {
-    if (string_value.empty()) {
-        return std::make_tuple(0, std::vector<unsigned char>());
-    } else {
-        const char* c_string = string_value.c_str();
-        uint32_t ref_count;
-        memcpy(&ref_count, c_string, sizeof(ref_count));
-        std::vector<unsigned char> saved_value(
-            string_value.begin() + sizeof(ref_count), string_value.end());
-
-        return std::make_tuple(ref_count, saved_value);
-    }
-}
-
-std::vector<unsigned char> serializeCountAndValue(
-    uint32_t count,
-    const std::vector<unsigned char>& value) {
-    std::vector<unsigned char> output_vector(sizeof(count));
-    memcpy(&output_vector[0], &count, sizeof(count));
-    output_vector.insert(output_vector.end(), value.begin(), value.end());
-
-    return output_vector;
-}
-}  // namespace storage
 }  // namespace checkpoint

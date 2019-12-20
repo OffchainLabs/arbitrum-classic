@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-#include <data_storage/transaction.hpp>
-
-#include <data_storage/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/transaction.hpp>
 
 #include <rocksdb/utilities/transaction_db.h>
 
@@ -93,7 +91,7 @@ GetResults Transaction::getValue(
     auto get_status = transaction->Get(read_options, key_str, &return_value);
 
     if (get_status.ok()) {
-        auto tuple = checkpoint::storage::parseCountAndValue(return_value);
+        auto tuple = parseCountAndValue(return_value);
         auto stored_val = std::get<1>(tuple);
         auto ref_count = std::get<0>(tuple);
 
@@ -109,8 +107,7 @@ SaveResults Transaction::saveValueWithRefCount(
     uint32_t updated_ref_count,
     const std::vector<unsigned char>& hash_key,
     const std::vector<unsigned char>& value) {
-    auto updated_entry =
-        checkpoint::storage::serializeCountAndValue(updated_ref_count, value);
+    auto updated_entry = serializeCountAndValue(updated_ref_count, value);
 
     auto status = saveKeyValuePair(hash_key, updated_entry);
 
@@ -133,4 +130,29 @@ rocksdb::Status Transaction::deleteKeyValuePair(
     const std::vector<unsigned char>& key) {
     std::string key_str(key.begin(), key.end());
     return transaction->Delete(key_str);
+}
+
+std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
+    const std::string& string_value) {
+    if (string_value.empty()) {
+        return std::make_tuple(0, std::vector<unsigned char>());
+    } else {
+        const char* c_string = string_value.c_str();
+        uint32_t ref_count;
+        memcpy(&ref_count, c_string, sizeof(ref_count));
+        std::vector<unsigned char> saved_value(
+            string_value.begin() + sizeof(ref_count), string_value.end());
+
+        return std::make_tuple(ref_count, saved_value);
+    }
+}
+
+std::vector<unsigned char> serializeCountAndValue(
+    uint32_t count,
+    const std::vector<unsigned char>& value) {
+    std::vector<unsigned char> output_vector(sizeof(count));
+    memcpy(&output_vector[0], &count, sizeof(count));
+    output_vector.insert(output_vector.end(), value.begin(), value.end());
+
+    return output_vector;
 }

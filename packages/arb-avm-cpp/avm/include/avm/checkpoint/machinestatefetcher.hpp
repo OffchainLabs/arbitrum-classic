@@ -17,8 +17,8 @@
 #ifndef machinestatefetcher_hpp
 #define machinestatefetcher_hpp
 
+#include <avm/checkpoint/checkpointutils.hpp>
 #include <avm_values/value.hpp>
-#include <data_storage/checkpointutils.hpp>
 
 class CheckpointStorage;
 

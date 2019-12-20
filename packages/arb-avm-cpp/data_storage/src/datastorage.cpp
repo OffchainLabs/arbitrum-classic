@@ -15,8 +15,6 @@
  */
 
 #include <data_storage/datastorage.hpp>
-
-#include <data_storage/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm_values/codepoint.hpp>
@@ -54,7 +52,7 @@ GetResults DataStorage::getValue(
     auto get_status = txn_db->Get(read_options, key_str, &return_value);
 
     if (get_status.ok()) {
-        auto tuple = checkpoint::storage::parseCountAndValue(return_value);
+        auto tuple = parseCountAndValue(return_value);
         auto stored_val = std::get<1>(tuple);
         auto ref_count = std::get<0>(tuple);
 

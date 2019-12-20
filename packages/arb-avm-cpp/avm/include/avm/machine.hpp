@@ -38,9 +38,6 @@ class Machine {
 
    public:
     bool initializeMachine(const std::string& filename);
-    bool deserialize(char* data) {
-        return machine_state.initialize_machinestate(data);
-    }
 
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,

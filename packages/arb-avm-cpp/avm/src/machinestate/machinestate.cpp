@@ -56,7 +56,7 @@ MachineState::MachineState()
       context({0, 0}),
       inbox(pool.get()) {}
 
-char* getContractData(const std::string contract_filename) {
+const char* getContractData(const std::string& contract_filename) {
     std::ifstream myfile;
 
     struct stat filestatus;
@@ -74,12 +74,53 @@ char* getContractData(const std::string contract_filename) {
     return buf;
 }
 
-MachineState::MachineState(const std::string contract_filename)
+MachineState::MachineState(const std::string& contract_filename)
     : pool(std::make_unique<TuplePool>()),
       pendingInbox(pool.get()),
       context({0, 0}),
       inbox(pool.get()) {
-    initialize_machinestate(getContractData(contract_filename));
+    initialize_machinestate(contract_filename);
+}
+
+bool MachineState::initialize_machinestate(
+    const std::string& contract_filename) {
+    auto bufptr = getContractData(contract_filename);
+    uint32_t version;
+    memcpy(&version, bufptr, sizeof(version));
+    version = __builtin_bswap32(version);
+    bufptr += sizeof(version);
+
+    if (version != CURRENT_AO_VERSION) {
+        std::cerr << "incorrect version of .ao file" << std::endl;
+        std::cerr << "expected version " << CURRENT_AO_VERSION
+                  << " found version " << version << std::endl;
+        return false;
+    }
+
+    uint32_t extentionId = 1;
+    while (extentionId != 0) {
+        memcpy(&extentionId, bufptr, sizeof(extentionId));
+        extentionId = __builtin_bswap32(extentionId);
+        bufptr += sizeof(extentionId);
+        if (extentionId > 0) {
+            //            std::cout << "found extention" << std::endl;
+        }
+    }
+    uint64_t codeCount;
+    memcpy(&codeCount, bufptr, sizeof(codeCount));
+    bufptr += sizeof(codeCount);
+    codeCount = boost::endian::big_to_native(codeCount);
+    code.reserve(codeCount);
+
+    std::vector<Operation> ops;
+    for (uint64_t i = 0; i < codeCount; i++) {
+        ops.emplace_back(deserializeOperation(bufptr, *pool));
+    }
+    code = opsToCodePoints(ops);
+    errpc = getErrCodePoint();
+    staticVal = deserialize_value(bufptr, *pool);
+    pc = 0;
+    return true;
 }
 
 uint256_t MachineState::hash() const {
@@ -142,45 +183,6 @@ uint256_t MachineState::hash() const {
     std::array<unsigned char, 32> hashData;
     evm::Keccak_256(data.data(), 32 * 6, hashData.data());
     return from_big_endian(hashData.begin(), hashData.end());
-}
-
-bool MachineState::initialize_machinestate(const char* bufptr) {
-    uint32_t version;
-    memcpy(&version, bufptr, sizeof(version));
-    version = __builtin_bswap32(version);
-    bufptr += sizeof(version);
-
-    if (version != CURRENT_AO_VERSION) {
-        std::cerr << "incorrect version of .ao file" << std::endl;
-        std::cerr << "expected version " << CURRENT_AO_VERSION
-                  << " found version " << version << std::endl;
-        return false;
-    }
-
-    uint32_t extentionId = 1;
-    while (extentionId != 0) {
-        memcpy(&extentionId, bufptr, sizeof(extentionId));
-        extentionId = __builtin_bswap32(extentionId);
-        bufptr += sizeof(extentionId);
-        if (extentionId > 0) {
-            //            std::cout << "found extention" << std::endl;
-        }
-    }
-    uint64_t codeCount;
-    memcpy(&codeCount, bufptr, sizeof(codeCount));
-    bufptr += sizeof(codeCount);
-    codeCount = boost::endian::big_to_native(codeCount);
-    code.reserve(codeCount);
-
-    std::vector<Operation> ops;
-    for (uint64_t i = 0; i < codeCount; i++) {
-        ops.emplace_back(deserializeOperation(bufptr, *pool));
-    }
-    code = opsToCodePoints(ops);
-    errpc = getErrCodePoint();
-    staticVal = deserialize_value(bufptr, *pool);
-    pc = 0;
-    return true;
 }
 
 uint64_t MachineState::pendingMessageCount() const {

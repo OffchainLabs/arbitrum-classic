@@ -16,8 +16,9 @@
 
 #include "ccheckpointstorage.h"
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
 #include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/machinestatedeleter.hpp>
+#include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
 #include <data_storage/storageresult.hpp>
 
@@ -28,9 +29,11 @@
 CCheckpointStorage* createCheckpointStorage(const char* db_path,
                                             const char* contract_path) {
     auto string_filename = std::string(db_path);
-    auto string_contract = std::string(contract_path);
+    auto string_contract_path = std::string(contract_path);
 
-    auto storage = new CheckpointStorage(string_filename, string_contract);
+    // correct state
+    auto initial_state = new MachineState(string_contract_path);
+    auto storage = new CheckpointStorage(string_filename, *initial_state);
     return static_cast<void*>(storage);
 }
 
@@ -48,7 +51,7 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     auto name_vector =
         std::vector<unsigned char>(name_str.begin(), name_str.end());
 
-    auto deleter = CheckpointDeleter(storage->makeTransaction());
+    auto deleter = MachineStateDeleter(storage->makeTransaction());
     auto result = deleter.deleteCheckpoint(name_vector);
 
     return result.status.ok();
@@ -63,6 +66,38 @@ int saveValue(CCheckpointStorage* storage_ptr, void* value_data) {
     TuplePool pool;
     auto val = deserialize_value(data_ptr, pool);
     auto results = valueSaver.saveValue(val);
+
+    return results.status.ok();
+}
+
+char* getValue(CCheckpointStorage* storage_ptr, const char* key) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto fetcher = MachineStateFetcher(*storage);
+
+    auto key_str = std::string(key);
+    auto key_vector =
+        std::vector<unsigned char>(key_str.begin(), key_str.end());
+
+    auto results = fetcher.getValue(key_vector);
+
+    std::vector<unsigned char> value_data;
+    marshal_value(results.data, value_data);
+
+    char* c_value_data = (char*)malloc(value_data.size());
+    std::copy(value_data.begin(), value_data.end(), c_value_data);
+
+    return c_value_data;
+}
+
+int deleteValue(CCheckpointStorage* storage_ptr, const char* key) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto deleter = MachineStateDeleter(storage->makeTransaction());
+
+    auto key_str = std::string(key);
+    auto key_vector =
+        std::vector<unsigned char>(key_str.begin(), key_str.end());
+
+    auto results = deleter.deleteValue(key_vector);
 
     return results.status.ok();
 }
@@ -85,8 +120,30 @@ int saveData(CCheckpointStorage* storage_ptr,
     return results.status.ok();
 }
 
-int deleteValue(CCheckpointStorage* storage_ptr, const char* key) {}
-
-int getValue(CCheckpointStorage* storage_ptr, const char* key) {
+char* getData(CCheckpointStorage* storage_ptr, const char* key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto transaction = storage->makeTransaction();
+
+    auto key_str = std::string(key);
+    auto key_vector =
+        std::vector<unsigned char>(key_str.begin(), key_str.end());
+
+    auto results = transaction->getValue(key_vector);
+
+    char* c_data = (char*)malloc(results.stored_value.size());
+    std::copy(results.stored_value.begin(), results.stored_value.end(), c_data);
+
+    return c_data;
+}
+
+int deleteData(CCheckpointStorage* storage_ptr, const char* key) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto transaction = storage->makeTransaction();
+
+    auto key_str = std::string(key);
+    auto key_vector =
+        std::vector<unsigned char>(key_str.begin(), key_str.end());
+
+    auto results = transaction->deleteValue(key_vector);
+    return results.status.ok();
 }

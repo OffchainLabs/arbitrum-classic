@@ -16,8 +16,8 @@
 
 #include "config.hpp"
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
 #include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/machinestatedeleter.hpp>
 #include <avm/checkpoint/machinestatefetcher.hpp>
 #include <avm/checkpoint/machinestatesaver.hpp>
 #include <avm/machinestate/machinestate.hpp>
@@ -542,7 +542,7 @@ void deleteCheckpoint(CheckpointStorage& storage,
                       MachineStateFetcher& fetcher,
                       std::vector<unsigned char> checkpoint_name,
                       std::vector<std::vector<unsigned char>> deleted_values) {
-    auto deleter = CheckpointDeleter(storage.makeTransaction());
+    auto deleter = MachineStateDeleter(storage.makeTransaction());
     deleter.deleteCheckpoint(checkpoint_name);
     auto results = fetcher.getMachineState(checkpoint_name);
     REQUIRE(results.status.ok() == false);
@@ -558,9 +558,9 @@ void deleteCheckpointSavedTwice(
     MachineStateFetcher& fetcher,
     std::vector<unsigned char> checkpoint_name,
     std::vector<std::vector<unsigned char>> deleted_values) {
-    auto deleter = CheckpointDeleter(storage.makeTransaction());
+    auto deleter = MachineStateDeleter(storage.makeTransaction());
     deleter.deleteCheckpoint(checkpoint_name);
-    auto deleter2 = CheckpointDeleter(storage.makeTransaction());
+    auto deleter2 = MachineStateDeleter(storage.makeTransaction());
     deleter2.deleteCheckpoint(checkpoint_name);
     auto results = fetcher.getMachineState(checkpoint_name);
 
@@ -582,7 +582,7 @@ void deleteCheckpointSavedTwiceReordered(
         auto res = fetcher.getValue(hash_key);
         REQUIRE(res.status.ok());
     }
-    auto deleter = CheckpointDeleter(storage.makeTransaction());
+    auto deleter = MachineStateDeleter(storage.makeTransaction());
     deleter.deleteCheckpoint(checkpoint_name);
     auto results = fetcher.getMachineState(checkpoint_name);
     REQUIRE(results.status.ok() == true);
@@ -591,7 +591,7 @@ void deleteCheckpointSavedTwiceReordered(
         auto res = fetcher.getValue(hash_key);
         REQUIRE(res.status.ok());
     }
-    auto deleter2 = CheckpointDeleter(storage.makeTransaction());
+    auto deleter2 = MachineStateDeleter(storage.makeTransaction());
     deleter2.deleteCheckpoint(checkpoint_name);
     auto results2 = fetcher.getMachineState(checkpoint_name);
     REQUIRE(results2.status.ok() == false);

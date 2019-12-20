@@ -33,12 +33,12 @@ class Status;
 DeleteResults deleteCheckpoint(
     const std::vector<unsigned char>& checkpoint_name);
 
-class CheckpointDeleter {
+class MachineStateDeleter {
    private:
     std::unique_ptr<Transaction> transaction;
 
    public:
-    CheckpointDeleter(std::unique_ptr<Transaction> transaction_);
+    MachineStateDeleter(std::unique_ptr<Transaction> transaction_);
     DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key);
     DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
                               GetResults results);

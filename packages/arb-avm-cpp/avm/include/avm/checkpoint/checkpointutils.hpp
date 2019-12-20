@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef statesaverutils_hpp
-#define statesaverutils_hpp
+#ifndef checkpointutils_hpp
+#define checkpointutils_hpp
 
 #include <avm_values/value.hpp>
 
@@ -47,13 +47,6 @@ MachineStateKeys extractStateKeys(
 std::vector<unsigned char> serializeStateKeys(
     const MachineStateKeys& state_data);
 }  // namespace utils
-namespace storage {
-std::vector<unsigned char> serializeCountAndValue(
-    uint32_t count,
-    const std::vector<unsigned char>& value);
-std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
-    const std::string& string_value);
-}  // namespace storage
 }  // namespace checkpoint
 
-#endif /* statesaverutils_hpp */
+#endif /* checkpointutils_hpp */

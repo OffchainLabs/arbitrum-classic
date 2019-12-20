@@ -16,7 +16,7 @@
 
 #include <avm/checkpoint/checkpointstorage.hpp>
 
-#include <data_storage/checkpointutils.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm_values/codepoint.hpp>
