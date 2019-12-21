@@ -70,34 +70,40 @@ int saveValue(CCheckpointStorage* storage_ptr, void* value_data) {
     return results.status.ok();
 }
 
-char* getValue(CCheckpointStorage* storage_ptr, const char* key) {
+ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto fetcher = MachineStateFetcher(*storage);
 
-    auto key_str = std::string(key);
-    auto key_vector =
-        std::vector<unsigned char>(key_str.begin(), key_str.end());
+    auto key_ptr = reinterpret_cast<const char*>(key);
+    auto hash = deserializeUint256t(key_ptr);
 
-    auto results = fetcher.getValue(key_vector);
+    std::vector<unsigned char> hash_key_vector;
+    marshal_value(hash, hash_key_vector);
 
-    std::vector<unsigned char> value_data;
-    marshal_value(results.data, value_data);
+    auto results = fetcher.getValue(hash_key_vector);
 
-    char* c_value_data = (char*)malloc(value_data.size());
-    std::copy(value_data.begin(), value_data.end(), c_value_data);
+    // correct marshal?
+    std::vector<unsigned char> value;
+    marshal_value(results.data, value);
 
-    return c_value_data;
+    auto value_data = (unsigned char*)malloc(value.size());
+    std::copy(value.begin(), value.end(), value_data);
+
+    auto void_data = reinterpret_cast<void*>(value_data);
+    return {void_data, static_cast<int>(value.size())};
 }
 
-int deleteValue(CCheckpointStorage* storage_ptr, const char* key) {
+int deleteValue(CCheckpointStorage* storage_ptr, void* key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto deleter = MachineStateDeleter(storage->makeTransaction());
 
-    auto key_str = std::string(key);
-    auto key_vector =
-        std::vector<unsigned char>(key_str.begin(), key_str.end());
+    auto key_ptr = reinterpret_cast<const char*>(key);
+    auto hash = deserializeUint256t(key_ptr);
 
-    auto results = deleter.deleteValue(key_vector);
+    std::vector<unsigned char> hash_key_vector;
+    marshal_value(hash, hash_key_vector);
+
+    auto results = deleter.deleteValue(hash_key_vector);
 
     return results.status.ok();
 }

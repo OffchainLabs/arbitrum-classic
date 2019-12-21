@@ -22,15 +22,21 @@
 extern "C" {
 #endif
 
+typedef struct {
+    void* data;
+    int length;
+} ByteSlice;
+
 typedef void CCheckpointStorage;
 
-CCheckpointStorage* createCheckpointStorage(const char* filename);
+CCheckpointStorage* createCheckpointStorage(const char* filename,
+                                            const char* contract_path);
 void destroyCheckpointStorage(CCheckpointStorage* storage);
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const char* checkpoint_name);
 int saveValue(CCheckpointStorage* storage_ptr, void* value_data);
-char* getValue(CCheckpointStorage* storage_ptr, const char* key);
-int deleteValue(CCheckpointStorage* storage_ptr, const char* key);
+ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key);
+int deleteValue(CCheckpointStorage* storage_ptr, void* key);
 int saveData(CCheckpointStorage* storage_ptr,
              const char* key,
              const char* value);
