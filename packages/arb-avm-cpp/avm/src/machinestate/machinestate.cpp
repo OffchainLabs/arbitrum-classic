@@ -85,6 +85,7 @@ MachineState::MachineState(const std::string& contract_filename)
 bool MachineState::initialize_machinestate(
     const std::string& contract_filename) {
     auto bufptr = getContractData(contract_filename);
+
     uint32_t version;
     memcpy(&version, bufptr, sizeof(version));
     version = __builtin_bswap32(version);

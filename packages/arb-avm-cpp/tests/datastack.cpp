@@ -117,7 +117,7 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         MachineState state(test_contract_path);
         CheckpointStorage storage(dbpath, state);
-        std::vector<CodePoint> code;
+
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -135,7 +135,7 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         MachineState state(test_contract_path);
         CheckpointStorage storage(dbpath, state);
-        std::vector<CodePoint> code;
+
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -155,11 +155,9 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         MachineState state(test_contract_path);
         CheckpointStorage storage(dbpath, state);
-        std::vector<CodePoint> code;
-        auto code_point = CodePoint(0, Operation(), 0);
-        auto code_point2 = CodePoint(1, Operation(), 0);
-        code.push_back(code_point);
-        code.push_back(code_point2);
+
+        CodePoint code_point = state.code[0];
+        CodePoint code_point2 = state.code[1];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -182,11 +180,10 @@ TEST_CASE("Initialize datastack") {
         TuplePool pool;
         MachineState state(test_contract_path);
         CheckpointStorage storage(dbpath, state);
-        std::vector<CodePoint> code;
-        auto code_point = CodePoint(0, Operation(), 0);
-        auto code_point2 = CodePoint(1, Operation(), 0);
-        code.push_back(code_point);
-        code.push_back(code_point2);
+
+        CodePoint code_point = state.code[0];
+        CodePoint code_point2 = state.code[1];
+
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -271,9 +268,9 @@ TEST_CASE("Save and get datastack") {
         TuplePool pool;
         MachineState state(test_contract_path);
         CheckpointStorage storage(dbpath, state);
-        std::vector<CodePoint> code;
-        auto code_point = CodePoint(0, Operation(), 0);
-        code.push_back(code_point);
+
+        auto code_point = state.code[0];
+
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
@@ -298,9 +295,9 @@ TEST_CASE("Save and get datastack") {
         TuplePool pool;
         MachineState state(test_contract_path);
         CheckpointStorage storage(dbpath, state);
-        std::vector<CodePoint> code;
-        auto code_point = CodePoint(0, Operation(), 0);
-        code.push_back(code_point);
+
+        auto code_point = state.code[0];
+
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
 
