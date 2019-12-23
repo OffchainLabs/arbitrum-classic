@@ -58,7 +58,9 @@ struct MachineState {
     BlockReason blockReason;
 
     MachineState();
-    MachineState(const std::string& contract_filename);
+    MachineState(std::vector<CodePoint> code_,
+                 CodePoint errpc_,
+                 value static_val_);
     bool initialize_machinestate(const std::string& contract_filename);
 
     void readInbox(char* newInbox);

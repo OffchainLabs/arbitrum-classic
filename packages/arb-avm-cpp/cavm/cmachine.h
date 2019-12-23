@@ -59,6 +59,7 @@ typedef struct {
 typedef void CMachine;
 
 CMachine* machineCreate(const char* filename);
+CMachine* getInitialMachine(CCheckpointStorage* storage_ptr);
 void machineDestroy(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash

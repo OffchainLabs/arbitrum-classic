@@ -17,7 +17,15 @@
 #ifndef checkpointutils_hpp
 #define checkpointutils_hpp
 
-#include <avm_values/value.hpp>
+#include <avm_values/codepoint.hpp>
+#include <avm_values/tuple.hpp>
+
+struct InitialVmState {
+    bool valid_state;
+    std::vector<CodePoint> code;
+    CodePoint errpc;
+    value staticVal;
+};
 
 struct MachineStateKeys {
     std::vector<unsigned char> static_val_key;
@@ -35,6 +43,7 @@ struct MachineStateKeys {
 };
 
 namespace checkpoint {
+InitialVmState getInitialVmState(const std::string& contract_filename);
 namespace utils {
 std::vector<unsigned char> serializeValue(const value& val);
 CodePoint deserializeCodepoint(const std::vector<unsigned char>& val,

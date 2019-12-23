@@ -38,6 +38,7 @@ class Machine {
 
    public:
     bool initializeMachine(const std::string& filename);
+    void initializeMachine(MachineState initial_state);
 
     Assertion run(uint64_t stepCount,
                   uint64_t timeBoundStart,

@@ -18,6 +18,7 @@
 #include "bigint_utils.hpp"
 
 #include <avm/machine.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
 
 #include <sys/stat.h>
 #include <fstream>
@@ -42,6 +43,16 @@ Machine* read_files(std::string filename) {
 CMachine* machineCreate(const char* filename) {
     Machine* mach = read_files(filename);
     return static_cast<void*>(mach);
+}
+
+CMachine* getInitialMachine(CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    auto state = storage->getInitialVmState();
+    MachineState machine_state(state.code, state.errpc, state.staticVal);
+
+    auto machine = new Machine();
+    machine->initializeMachine(machine_state);
+    return static_cast<void*>(machine);
 }
 
 void machineDestroy(CMachine* m) {

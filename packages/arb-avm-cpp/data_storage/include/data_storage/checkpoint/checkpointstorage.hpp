@@ -21,11 +21,10 @@
 #include <string>
 #include <vector>
 
-#include <avm/machinestate/machinestate.hpp>
+#include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/datastorage.hpp>
 
 struct GetResults;
-struct MachineState;
 
 namespace rocksdb {
 class TransactionDB;
@@ -34,14 +33,12 @@ class TransactionDB;
 class CheckpointStorage {
    private:
     std::unique_ptr<DataStorage> datastorage;
-    const MachineState& initial_state;
+    const InitialVmState& initial_state;
 
    public:
     CheckpointStorage(const std::string db_path,
-                      const MachineState& initial_state_);
-    MachineState getInitialMachineState() const;
-    const std::vector<CodePoint>& getMachineCode() const;
-    TuplePool* getPool() const;
+                      const InitialVmState& initial_state_);
+    InitialVmState getInitialVmState() const;
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
 };

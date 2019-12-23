@@ -13,10 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include <avm/checkpoint/checkpointstorage.hpp>
-
-#include <avm/checkpoint/checkpointutils.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm_values/codepoint.hpp>
@@ -27,22 +24,14 @@
 #include <rocksdb/utilities/transaction_db.h>
 
 CheckpointStorage::CheckpointStorage(const std::string db_path,
-                                     const MachineState& initial_state_)
+                                     const InitialVmState& initial_state_)
     : initial_state(initial_state_) {
     auto db = new DataStorage(db_path);
     datastorage = std::unique_ptr<DataStorage>(db);
 }
 
-MachineState CheckpointStorage::getInitialMachineState() const {
+InitialVmState CheckpointStorage::getInitialVmState() const {
     return initial_state;
-}
-
-const std::vector<CodePoint>& CheckpointStorage::getMachineCode() const {
-    return initial_state.code;
-}
-
-TuplePool* CheckpointStorage::getPool() const {
-    return initial_state.pool.get();
 }
 
 GetResults CheckpointStorage::getValue(

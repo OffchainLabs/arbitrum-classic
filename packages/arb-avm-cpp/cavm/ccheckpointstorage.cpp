@@ -16,10 +16,10 @@
 
 #include "ccheckpointstorage.h"
 
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/machinestatedeleter.hpp>
-#include <avm/checkpoint/machinestatefetcher.hpp>
-#include <avm/checkpoint/machinestatesaver.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machinestatedeleter.hpp>
+#include <data_storage/checkpoint/machinestatefetcher.hpp>
+#include <data_storage/checkpoint/machinestatesaver.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm_values/value.hpp>
@@ -31,8 +31,8 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
     auto string_filename = std::string(db_path);
     auto string_contract_path = std::string(contract_path);
 
-    auto initial_state = new MachineState(string_contract_path);
-    auto storage = new CheckpointStorage(string_filename, *initial_state);
+    auto state = checkpoint::getInitialVmState(string_contract_path);
+    auto storage = new CheckpointStorage(string_filename, state);
     return static_cast<void*>(storage);
 }
 
@@ -85,7 +85,6 @@ ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key) {
 
     auto results = fetcher.getValue(hash_key_vector);
 
-    // correct marshal?
     std::vector<unsigned char> value;
     marshal_value(results.data, value);
 

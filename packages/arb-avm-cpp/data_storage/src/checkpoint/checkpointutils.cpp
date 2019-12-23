@@ -16,13 +16,17 @@
 
 #include <iterator>
 
-#include <avm/checkpoint/checkpointutils.hpp>
+#include <data_storage/checkpoint/checkpointutils.hpp>
 
 #include <avm_values/blockreason.hpp>
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/util.hpp>
+
 #include <bigint_utils.hpp>
+
+#include <sys/stat.h>
+#include <fstream>
 
 constexpr int UINT64_SIZE = 8;
 constexpr int HASH_KEY_LENGTH = 33;
@@ -30,7 +34,88 @@ constexpr int TUP_TUPLE_LENGTH = 34;
 constexpr int TUP_NUM_LENGTH = 34;
 constexpr int TUP_CODEPT_LENGTH = 9;
 
+namespace {
+std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
+    std::vector<CodePoint> cps;
+    cps.reserve(ops.size());
+    uint64_t pc = 0;
+    for (auto& op : ops) {
+        cps.emplace_back(pc, std::move(op), 0);
+        pc++;
+    }
+    for (uint64_t i = 0; i < cps.size() - 1; i++) {
+        cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
+    }
+    return cps;
+}
+}  // namespace
+
+const char* getContractData(const std::string& contract_filename) {
+    std::ifstream myfile;
+
+    struct stat filestatus;
+    stat(contract_filename.c_str(), &filestatus);
+
+    char* buf = (char*)malloc(filestatus.st_size);
+
+    myfile.open(contract_filename, std::ios::in);
+
+    if (myfile.is_open()) {
+        myfile.read((char*)buf, filestatus.st_size);
+        myfile.close();
+    }
+
+    return buf;
+}
+
 namespace checkpoint {
+InitialVmState getInitialVmState(const std::string& contract_filename) {
+    InitialVmState initial_state;
+    auto pool = new TuplePool();
+
+    auto bufptr = getContractData(contract_filename);
+
+    uint32_t version;
+    memcpy(&version, bufptr, sizeof(version));
+    version = __builtin_bswap32(version);
+    bufptr += sizeof(version);
+
+    if (version != CURRENT_AO_VERSION) {
+        std::cerr << "incorrect version of .ao file" << std::endl;
+        std::cerr << "expected version " << CURRENT_AO_VERSION
+                  << " found version " << version << std::endl;
+
+        initial_state.valid_state = false;
+        return initial_state;
+    } else {
+        uint32_t extentionId = 1;
+        while (extentionId != 0) {
+            memcpy(&extentionId, bufptr, sizeof(extentionId));
+            extentionId = __builtin_bswap32(extentionId);
+            bufptr += sizeof(extentionId);
+            if (extentionId > 0) {
+                //            std::cout << "found extention" << std::endl;
+            }
+        }
+        uint64_t codeCount;
+        memcpy(&codeCount, bufptr, sizeof(codeCount));
+        bufptr += sizeof(codeCount);
+        codeCount = boost::endian::big_to_native(codeCount);
+
+        initial_state.code.reserve(codeCount);
+
+        std::vector<Operation> ops;
+        for (uint64_t i = 0; i < codeCount; i++) {
+            ops.emplace_back(deserializeOperation(bufptr, *pool));
+        }
+        initial_state.code = opsToCodePoints(ops);
+        initial_state.errpc = getErrCodePoint();
+        initial_state.staticVal = deserialize_value(bufptr, *pool);
+        initial_state.valid_state = true;
+
+        return initial_state;
+    }
+}
 
 uint64_t deserialize_int64(const char*& bufptr) {
     uint64_t ret_value;

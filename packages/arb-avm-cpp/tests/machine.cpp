@@ -16,8 +16,8 @@
 
 #include "config.hpp"
 
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm/machine.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
 
 #include <catch2/catch.hpp>
 
@@ -64,7 +64,7 @@ void restoreCheckpoint(CheckpointStorage& storage,
 
 TEST_CASE("Checkpoint State") {
     SECTION("default") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
 
@@ -75,7 +75,7 @@ TEST_CASE("Checkpoint State") {
     }
     boost::filesystem::remove_all(save_path);
     SECTION("save twice") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
         machine.initializeMachine(test_contract_path);
@@ -87,7 +87,7 @@ TEST_CASE("Checkpoint State") {
 
 TEST_CASE("Delete machine checkpoint") {
     SECTION("default") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
         machine.initializeMachine(test_contract_path);
@@ -101,7 +101,7 @@ TEST_CASE("Delete machine checkpoint") {
 TEST_CASE("Restore checkpoint") {
     SECTION("default") {
         TuplePool pool;
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
         machine.initializeMachine(test_contract_path);

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include <avm/checkpoint/machinestatefetcher.hpp>
+#include <data_storage/checkpoint/machinestatefetcher.hpp>
 
-#include <avm/checkpoint/checkpointstorage.hpp>
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
@@ -47,7 +47,7 @@ DbResult<CodePoint> MachineStateFetcher::getCodePoint(
 
     if (results.status.ok()) {
         auto code_point = checkpoint::utils::deserializeCodepoint(
-            results.stored_value, checkpoint_storage.getMachineCode());
+            results.stored_value, checkpoint_storage.getInitialVmState().code);
         return DbResult<CodePoint>{results.status, results.reference_count,
                                    code_point};
     } else {
@@ -103,7 +103,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                         auto code_point =
                             checkpoint::utils::deserializeCodepoint(
                                 current_vector,
-                                checkpoint_storage.getMachineCode());
+                                checkpoint_storage.getInitialVmState().code);
                         values.push_back(code_point);
                         break;
                     }
@@ -112,7 +112,8 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                     }
                 }
             }
-            auto tuple = Tuple(values, checkpoint_storage.getPool());
+            TuplePool pool;
+            auto tuple = Tuple(values, &pool);
             return DbResult<Tuple>{results.status, results.reference_count,
                                    tuple};
         }
@@ -144,7 +145,8 @@ DbResult<value> MachineStateFetcher::getValue(
             }
             case CODEPT: {
                 auto code_point = checkpoint::utils::deserializeCodepoint(
-                    results.stored_value, checkpoint_storage.getMachineCode());
+                    results.stored_value,
+                    checkpoint_storage.getInitialVmState().code);
                 return DbResult<value>{results.status, results.reference_count,
                                        code_point};
             }

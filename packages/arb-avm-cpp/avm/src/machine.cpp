@@ -18,12 +18,12 @@
 #include <fstream>
 #include <iostream>
 
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/machinestatedeleter.hpp>
 #include <avm/machine.hpp>
 #include <avm_values/opcodes.hpp>
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machinestatedeleter.hpp>
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
@@ -43,6 +43,10 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
 
 bool Machine::initializeMachine(const std::string& filename) {
     return machine_state.initialize_machinestate(filename);
+}
+
+void Machine::initializeMachine(MachineState initial_state) {
+    machine_state = initial_state;
 }
 
 void Machine::sendOnchainMessage(const Message& msg) {

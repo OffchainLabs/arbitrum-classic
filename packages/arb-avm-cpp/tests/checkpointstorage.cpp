@@ -16,7 +16,7 @@
 
 #include "config.hpp"
 
-#include <avm/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
@@ -91,7 +91,7 @@ void deleteVal(CheckpointStorage& storage,
 }
 
 TEST_CASE("Checkpointstorage initialize") {
-    MachineState state(test_contract_path);
+    auto state = checkpoint::getInitialVmState(test_contract_path);
     CheckpointStorage storage(dbPath, state);
     SECTION("get") {
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
@@ -107,20 +107,20 @@ TEST_CASE("Checkpointstorage initialize") {
 
 TEST_CASE("Save and get values") {
     SECTION("save and get") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         saveVal(storage, value1, hash_key1, 1, true);
         getVal(storage, hash_key1, 1, true, value1);
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("db cleared") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, get") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         saveVal(storage, value1, hash_key1, 1, true);
         incrementRef(storage, hash_key1, 2, true);
@@ -128,7 +128,7 @@ TEST_CASE("Save and get values") {
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("save, delete, get") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
@@ -140,7 +140,7 @@ TEST_CASE("Save and get values") {
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, delete, get") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
@@ -153,7 +153,7 @@ TEST_CASE("Save and get values") {
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, delete, get") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
@@ -167,7 +167,7 @@ TEST_CASE("Save and get values") {
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, get") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         saveVal(storage, value1, hash_key1, 1, true);
         incrementRef(storage, hash_key1, 2, true);
@@ -178,7 +178,7 @@ TEST_CASE("Save and get values") {
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("save, delete, increment, get") {
-        MachineState state(test_contract_path);
+        auto state = checkpoint::getInitialVmState(test_contract_path);
         CheckpointStorage storage(dbPath, state);
         saveVal(storage, value1, hash_key1, 1, true);
         deleteVal(storage, hash_key1, 0, true);

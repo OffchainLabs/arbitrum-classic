@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <avm/checkpoint/machinestatedeleter.hpp>
+#include <data_storage/checkpoint/machinestatedeleter.hpp>
 
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/checkpointutils.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
