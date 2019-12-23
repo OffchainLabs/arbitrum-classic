@@ -119,7 +119,6 @@ DeleteResults deleteCheckpoint(
                     delete_pending_count.status.ok() &&
                     delete_err_pc.status.ok())) {
                 std::cout << "error deleting checkpoint" << std::endl;
-                ;
             }
         }
         auto status = deleter.commitTransaction();

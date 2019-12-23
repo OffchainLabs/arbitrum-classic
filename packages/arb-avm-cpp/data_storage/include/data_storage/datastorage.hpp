@@ -34,7 +34,7 @@ class DataStorage {
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
 
    public:
-    DataStorage(const std::string db_path);
+    DataStorage(const std::string& db_path);
     DataStorage();
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
