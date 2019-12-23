@@ -74,7 +74,7 @@ COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/b
 COPY --chown=user arb-validator/server.crt arb-validator/server.key ./
 
 ENV ID=0 \
-    WAIT_FOR="host.docker.internal:7546" \
+    WAIT_FOR="host.docker.internal:7545" \
     ETH_URL="ws://host.docker.internal:7546" \
     COORDINATOR_URL="" \
     AVM="cpp" \

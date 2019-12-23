@@ -21,7 +21,7 @@ type ChainFactory struct {
 func NewChainFactory(address common.Address, client *ethclient.Client) (*ChainFactory, error) {
 	vmCreatorContract, err := chainfactory.NewChainFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbLauncher")
+		return nil, errors2.Wrap(err, "Failed to connect to ChainFactory")
 	}
 	return &ChainFactory{vmCreatorContract, client}, nil
 }
@@ -52,7 +52,7 @@ func (con *ChainFactory) CreateChain(
 		owner,
 	)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
 	}
 	receipt, err := waitForReceipt(auth.Context, con.client, auth, tx, "CreateChain")
 	if err != nil {
