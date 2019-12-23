@@ -177,6 +177,8 @@ TEST_CASE("ADDMOD opcode is correct") {
 
     SECTION("(0+0)%7") { testTertiaryOp(0, 0, 7, 0, OpCode::ADDMOD); }
 
+    SECTION("(3+3)%-4") { testTertiaryOp(3, 3, -4, 6, OpCode::ADDMOD); }
+
     SECTION("Mod by zero") {
         MachineState m = runTertiaryOp(8, 3, 0, OpCode::ADDMOD);
         REQUIRE(m.state == Status::Error);

@@ -20,7 +20,7 @@ type OneStepProof struct {
 func NewOneStepProof(address common.Address, client *ethclient.Client) (*OneStepProof, error) {
 	contract, err := onestepproof.NewOneStepProof(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbLauncher")
+		return nil, errors2.Wrap(err, "Failed to connect to OneStepProof")
 	}
 
 	return &OneStepProof{contract, client}, nil

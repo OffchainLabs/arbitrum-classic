@@ -22,7 +22,7 @@ type ChannelFactory struct {
 func NewChannelFactory(address common.Address, client *ethclient.Client) (*ChannelFactory, error) {
 	vmCreatorContract, err := channelfactory.NewChannelFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbLauncher")
+		return nil, errors2.Wrap(err, "Failed to connect to ChannelFactory")
 	}
 	return &ChannelFactory{vmCreatorContract, client}, nil
 }
@@ -58,7 +58,7 @@ func (con *ChannelFactory) CreateChannel(
 		validatorKeys,
 	)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, errors2.Wrap(err, "Failed to call to ChannelFactory.CreateChannel")
 	}
 	receipt, err := waitForReceipt(auth.Context, con.client, auth, tx, "CreateChannel")
 	if err != nil {

@@ -78,7 +78,7 @@ func NewArbBase(address common.Address, client *ethclient.Client) (*ArbBase, err
 func (vm *ArbBase) setupContracts() error {
 	arbitrumVMContract, err := arbchain.NewArbBase(vm.address, vm.Client)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ArbChannel")
+		return errors2.Wrap(err, "Failed to connect to ArbBase")
 	}
 
 	globalPendingInboxAddress, err := arbitrumVMContract.GlobalInbox(&bind.CallOpts{
