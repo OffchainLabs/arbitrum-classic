@@ -38,12 +38,12 @@ DeleteResults deleteCheckpoint(
 class MachineStateDeleter {
    private:
     std::unique_ptr<Transaction> transaction;
+    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
+                              GetResults results);
 
    public:
     MachineStateDeleter(std::unique_ptr<Transaction> transaction_);
     DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key);
-    DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
-                              GetResults results);
     DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
     rocksdb::Status commitTransaction();
     rocksdb::Status rollBackTransaction();
