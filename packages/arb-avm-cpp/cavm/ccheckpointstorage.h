@@ -34,9 +34,9 @@ CCheckpointStorage* createCheckpointStorage(const char* filename,
 void destroyCheckpointStorage(CCheckpointStorage* storage);
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const char* checkpoint_name);
-int saveValue(CCheckpointStorage* storage_ptr, void* value_data);
-ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key);
-int deleteValue(CCheckpointStorage* storage_ptr, void* key);
+int saveValue(CCheckpointStorage* storage_ptr, void* value_ptr);
+ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key_ptr);
+int deleteValue(CCheckpointStorage* storage_ptr, void* key_ptr);
 int saveData(CCheckpointStorage* storage_ptr,
              const char* key,
              const char* value);
