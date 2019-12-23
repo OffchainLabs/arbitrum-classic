@@ -45,7 +45,7 @@ bool Machine::initializeMachine(const std::string& filename) {
     return machine_state.initialize_machinestate(filename);
 }
 
-void Machine::initializeMachine(MachineState initial_state) {
+void Machine::initializeMachine(const MachineState& initial_state) {
     machine_state = initial_state;
 }
 

@@ -178,3 +178,17 @@ std::ostream& operator<<(std::ostream& os, const Operation& val) {
 CodePoint getErrCodePoint() {
     return CodePoint(pc_default, Operation(static_cast<OpCode>(0)), 0);
 }
+
+std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
+    std::vector<CodePoint> cps;
+    cps.reserve(ops.size());
+    uint64_t pc = 0;
+    for (auto& op : ops) {
+        cps.emplace_back(pc, std::move(op), 0);
+        pc++;
+    }
+    for (uint64_t i = 0; i < cps.size() - 1; i++) {
+        cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
+    }
+    return cps;
+}

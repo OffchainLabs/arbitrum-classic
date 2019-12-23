@@ -69,4 +69,6 @@ uint256_t hash(const CodePoint& cp);
 bool operator==(const CodePoint& val1, const CodePoint& val2);
 std::ostream& operator<<(std::ostream& os, const Operation& val);
 
+std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops);
+
 #endif /* codepoint_hpp */

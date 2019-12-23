@@ -25,9 +25,6 @@
 #include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
 
-#include <sys/stat.h>
-#include <fstream>
-
 void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     std::array<unsigned char, 32> tmpbuf;
     to_big_endian(val, tmpbuf.begin());
@@ -40,9 +37,9 @@ MachineState::MachineState()
       context({0, 0}),
       inbox(pool.get()) {}
 
-MachineState::MachineState(std::vector<CodePoint> code_,
-                           CodePoint errpc_,
-                           value static_val_)
+MachineState::MachineState(const std::vector<CodePoint>& code_,
+                           const CodePoint& errpc_,
+                           const value& static_val_)
     : pool(std::make_unique<TuplePool>()),
       pendingInbox(pool.get()),
       context({0, 0}),

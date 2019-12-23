@@ -36,11 +36,12 @@ class CheckpointStorage {
     const InitialVmState& initial_state;
 
    public:
-    CheckpointStorage(const std::string db_path,
+    CheckpointStorage(const std::string& db_path,
                       const InitialVmState& initial_state_);
     InitialVmState getInitialVmState() const;
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
+    std::unique_ptr<const Transaction> makeConstTransaction() const;
 };
 
 #endif /* checkpointstorage_hpp */

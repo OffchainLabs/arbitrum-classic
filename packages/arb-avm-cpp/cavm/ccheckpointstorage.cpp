@@ -73,8 +73,8 @@ int saveValue(CCheckpointStorage* storage_ptr, void* value_data) {
     }
 }
 
-ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+ByteSlice getValue(const CCheckpointStorage* storage_ptr, void* key) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto fetcher = MachineStateFetcher(*storage);
 
     auto key_ptr = reinterpret_cast<const char*>(key);
@@ -139,9 +139,9 @@ int saveData(CCheckpointStorage* storage_ptr,
     }
 }
 
-char* getData(CCheckpointStorage* storage_ptr, const char* key) {
-    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
-    auto transaction = storage->makeTransaction();
+char* getData(const CCheckpointStorage* storage_ptr, const char* key) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto transaction = storage->makeConstTransaction();
 
     auto key_str = std::string(key);
     auto key_vector =

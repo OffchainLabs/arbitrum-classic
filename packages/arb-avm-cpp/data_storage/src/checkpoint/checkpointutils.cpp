@@ -34,22 +34,6 @@ constexpr int TUP_TUPLE_LENGTH = 34;
 constexpr int TUP_NUM_LENGTH = 34;
 constexpr int TUP_CODEPT_LENGTH = 9;
 
-namespace {
-std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
-    std::vector<CodePoint> cps;
-    cps.reserve(ops.size());
-    uint64_t pc = 0;
-    for (auto& op : ops) {
-        cps.emplace_back(pc, std::move(op), 0);
-        pc++;
-    }
-    for (uint64_t i = 0; i < cps.size() - 1; i++) {
-        cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
-    }
-    return cps;
-}
-}  // namespace
-
 const char* getContractData(const std::string& contract_filename) {
     std::ifstream myfile;
 
