@@ -57,11 +57,11 @@ int deleteCheckpoint(CCheckpointStorage* storage_ptr,
     return result.status.ok();
 }
 
-int saveValue(CCheckpointStorage* storage_ptr, void* value_ptr) {
+int saveValue(CCheckpointStorage* storage_ptr, void* value_data) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto valueSaver = MachineStateSaver(storage->makeTransaction());
 
-    auto data_ptr = reinterpret_cast<const char*>(value_ptr);
+    auto data_ptr = reinterpret_cast<const char*>(value_data);
 
     TuplePool pool;
     auto val = deserialize_value(data_ptr, pool);
@@ -70,7 +70,7 @@ int saveValue(CCheckpointStorage* storage_ptr, void* value_ptr) {
     return results.status.ok();
 }
 
-ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key_ptr) {
+ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto fetcher = MachineStateFetcher(*storage);
 
@@ -93,7 +93,7 @@ ByteSlice getValue(CCheckpointStorage* storage_ptr, void* key_ptr) {
     return {void_data, static_cast<int>(value.size())};
 }
 
-int deleteValue(CCheckpointStorage* storage_ptr, void* key_ptr) {
+int deleteValue(CCheckpointStorage* storage_ptr, void* key) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto deleter = MachineStateDeleter(storage->makeTransaction());
 
