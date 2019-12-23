@@ -23,6 +23,7 @@
 #include <avm_values/value.hpp>
 
 struct DeleteResults;
+class CheckpointStorage;
 struct GetResults;
 class Transaction;
 
@@ -31,6 +32,7 @@ class Status;
 }
 
 DeleteResults deleteCheckpoint(
+    CheckpointStorage& checkpoint_storage,
     const std::vector<unsigned char>& checkpoint_name);
 
 class MachineStateDeleter {
@@ -43,8 +45,6 @@ class MachineStateDeleter {
     DeleteResults deleteTuple(const std::vector<unsigned char>& hash_key,
                               GetResults results);
     DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
-    DeleteResults deleteCheckpoint(
-        const std::vector<unsigned char>& checkpoint_name);
     rocksdb::Status commitTransaction();
     rocksdb::Status rollBackTransaction();
 };

@@ -157,6 +157,5 @@ bool Machine::restoreCheckpoint(
 DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
     auto checkpoint_key = GetHashKey(hash());
 
-    auto checkpoint_deleter = MachineStateDeleter(storage.makeTransaction());
-    return checkpoint_deleter.deleteCheckpoint(checkpoint_key);
+    return ::deleteCheckpoint(storage, checkpoint_key);
 }

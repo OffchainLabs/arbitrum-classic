@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include <avm/checkpoint/checkpointutils.hpp>
 #include <avm/checkpoint/machinestatedeleter.hpp>
+
+#include <avm/checkpoint/checkpointstorage.hpp>
+#include <avm/checkpoint/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/transaction.hpp>
 
@@ -68,59 +69,63 @@ DeleteResults MachineStateDeleter::deleteValue(
     }
 }
 
-DeleteResults MachineStateDeleter::deleteCheckpoint(
-    const std::vector<unsigned char>& checkpoint_name) {
-    auto results = transaction->getValue(checkpoint_name);
-
-    if (results.status.ok()) {
-        auto delete_results = transaction->deleteValue(checkpoint_name);
-
-        if (delete_results.reference_count < 1) {
-            auto parsed_state =
-                checkpoint::utils::extractStateKeys(results.stored_value);
-
-            auto delete_static_res = deleteValue(parsed_state.static_val_key);
-            auto delete_register_res =
-                deleteValue(parsed_state.register_val_key);
-            auto delete_cp_key = deleteValue(parsed_state.pc_key);
-            auto delete_err_pc = deleteValue(parsed_state.err_pc_key);
-            auto delete_datastack_res = deleteTuple(parsed_state.datastack_key);
-            auto delete_auxstack_res = deleteTuple(parsed_state.auxstack_key);
-            auto delete_inbox_res = deleteTuple(parsed_state.inbox_key);
-            auto delete_inbox_count = deleteValue(parsed_state.inbox_count_key);
-            auto delete_pendinginbox_res =
-                deleteTuple(parsed_state.pending_key);
-            auto delete_pending_count =
-                deleteValue(parsed_state.pending_count_key);
-
-            if (delete_static_res.status.ok() &&
-                delete_register_res.status.ok() && delete_cp_key.status.ok() &&
-                delete_datastack_res.status.ok() &&
-                delete_auxstack_res.status.ok() &&
-                delete_inbox_res.status.ok() &&
-                delete_pendinginbox_res.status.ok() &&
-                delete_inbox_count.status.ok() &&
-                delete_pending_count.status.ok() && delete_err_pc.status.ok()) {
-                auto status = transaction->commit();
-                delete_results.status = status;
-                return delete_results;
-            } else {
-                return DeleteResults{0, rocksdb::Status().Aborted()};
-            }
-        } else {
-            auto status = transaction->commit();
-            delete_results.status = status;
-            return delete_results;
-        }
-    } else {
-        return DeleteResults{0, results.status};
-    }
-}
-
 rocksdb::Status MachineStateDeleter::commitTransaction() {
     return transaction->commit();
 }
 
 rocksdb::Status MachineStateDeleter::rollBackTransaction() {
     return transaction->rollBack();
+}
+
+DeleteResults deleteCheckpoint(
+    CheckpointStorage& checkpoint_storage,
+    const std::vector<unsigned char>& checkpoint_name) {
+    auto results = checkpoint_storage.getValue(checkpoint_name);
+    auto deleter = MachineStateDeleter(checkpoint_storage.makeTransaction());
+
+    if (results.status.ok()) {
+        auto delete_results = deleter.deleteValue(checkpoint_name);
+
+        if (delete_results.reference_count < 1) {
+            auto parsed_state =
+                checkpoint::utils::extractStateKeys(results.stored_value);
+
+            auto delete_static_res =
+                deleter.deleteValue(parsed_state.static_val_key);
+            auto delete_register_res =
+                deleter.deleteValue(parsed_state.register_val_key);
+            auto delete_cp_key = deleter.deleteValue(parsed_state.pc_key);
+            auto delete_err_pc = deleter.deleteValue(parsed_state.err_pc_key);
+            auto delete_datastack_res =
+                deleter.deleteTuple(parsed_state.datastack_key);
+            auto delete_auxstack_res =
+                deleter.deleteTuple(parsed_state.auxstack_key);
+            auto delete_inbox_res = deleter.deleteTuple(parsed_state.inbox_key);
+            auto delete_inbox_count =
+                deleter.deleteValue(parsed_state.inbox_count_key);
+            auto delete_pendinginbox_res =
+                deleter.deleteTuple(parsed_state.pending_key);
+            auto delete_pending_count =
+                deleter.deleteValue(parsed_state.pending_count_key);
+
+            if (not(delete_static_res.status.ok() &&
+                    delete_register_res.status.ok() &&
+                    delete_cp_key.status.ok() &&
+                    delete_datastack_res.status.ok() &&
+                    delete_auxstack_res.status.ok() &&
+                    delete_inbox_res.status.ok() &&
+                    delete_pendinginbox_res.status.ok() &&
+                    delete_inbox_count.status.ok() &&
+                    delete_pending_count.status.ok() &&
+                    delete_err_pc.status.ok())) {
+                std::cout << "error deleting checkpoint" << std::endl;
+                ;
+            }
+        }
+        auto status = deleter.commitTransaction();
+        delete_results.status = status;
+        return delete_results;
+    } else {
+        return DeleteResults{0, results.status};
+    }
 }
