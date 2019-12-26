@@ -45,7 +45,9 @@ contract ArbRollup is IArbRollup {
     address   owner;
     VM.Params vmParams;
     bytes32   latestConfirmed;
-    Staker[]  stakers;
+    mapping(uint => Staker) stakers;
+    uint nextStaker;
+    uint stakerCount;
     bytes32[] leaves;
 
 
@@ -188,6 +190,8 @@ contract ArbRollup is IArbRollup {
         vmParams.maxExecutionSteps = _maxExecutionSteps;
         vmParams.pendingInboxHash = Value.hashEmptyTuple();
 
+        nextStaker = 1;
+
         // VM protocol state
         bytes32 vmProtoStateHash = VM.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
         latestConfirmed = childNodeHash(
@@ -199,14 +203,25 @@ contract ArbRollup is IArbRollup {
         leaves.push(latestConfirmed);
     }
 
+    function getValidStaker(uint _stakerNum) internal view returns (Staker storage) {
+        Staker storage staker = stakers[_stakerNum];
+        require(staker.addr != address(0), "Invalid staker");
+        return staker;
+    }
+
+    function deleteStaker(uint stakerIndex) internal {
+        delete stakers[stakerIndex];
+        stakerCount--;
+    }
+
     function resolveChallenge(uint winnerIndex, uint loserIndex) external {
-        Staker storage winningStaker = stakers[winnerIndex];
-        Staker storage loserStaker = stakers[loserIndex];
+        Staker storage winningStaker = getValidStaker(winnerIndex);
+        Staker storage loserStaker = getValidStaker(loserIndex);
         require(winningStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
         require(loserStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
         //TODO: slash the loser, deliver half to the winner
         winningStaker.challenge = address(0);
-        delete stakers[loserIndex];
+        deleteStaker(loserIndex);
 
         emit RollupChallengeCompleted(msg.sender, winnerIndex, loserIndex);
     }
@@ -264,8 +279,25 @@ contract ArbRollup is IArbRollup {
         );
     }
 
+    struct ConfirmData {
+        uint leafIndex;
+        uint[] stakeNums;
+        bytes32[] proof1;
+        bytes32[] stakerProofs;
+        uint[] stakerProofOffsets;
+        bytes32 prev;
+        uint branch;
+        uint deadline;
+        bytes32 preconditionHash;
+        bytes32 pendingAssertion;
+        bytes32 importedAssertion;
+        bytes32 executionAssertion;
+        bytes32 vmProtoStateHash;
+    }
+
     function confirm(
         uint    _leafIndex,
+        uint[] memory stakeNums,
         bytes32[] memory proof1,
         bytes32[] memory stakerProofs,
         uint[]  memory stakerProofOffsets,
@@ -280,39 +312,66 @@ contract ArbRollup is IArbRollup {
     )
         public
     {
-        require(_leafIndex < leaves.length, "invalid leaf index");
-        bytes32 to = childNodeHash(
+        return _confirm(ConfirmData(
+            _leafIndex,
+            stakeNums,
+            proof1,
+            stakerProofs,
+            stakerProofOffsets,
             prev,
-            disputableNodeHash(
-                deadline,
-                _preconditionHash,
-                _pendingAssertion,
-                _importedAssertion,
-                _executionAssertion
-            ),
             branch,
+            deadline,
+            _preconditionHash,
+            _pendingAssertion,
+            _importedAssertion,
+            _executionAssertion,
             _vmProtoStateHash
+        ));
+    }
+
+    function _confirm(ConfirmData memory data) internal {
+        require(data.leafIndex < leaves.length, "invalid leaf index");
+        uint _stakerCount = data.stakeNums.length;
+        require(_stakerCount == stakerCount, "must include proof for all stakers");
+        bytes32 to = childNodeHash(
+            data.prev,
+            disputableNodeHash(
+                data.deadline,
+                data.preconditionHash,
+                data.pendingAssertion,
+                data.importedAssertion,
+                data.executionAssertion
+            ),
+            data.branch,
+            data.vmProtoStateHash
         );
-        require(isPath(to, leaves[_leafIndex], proof1), "node does not exist");
-        for (uint i = 0; i<stakers.length; i++) {
-            require(
-                (stakers[i].creationTime >= deadline) ||
-                isPathOffset(
-                    to,
-                    stakers[i].location,
-                    stakerProofs,
-                    stakerProofOffsets[i],
-                    stakerProofOffsets[i+1]
-                ),
-                "at least one active staker disagrees");
+        require(isPath(to, leaves[data.leafIndex], data.proof1), "node does not exist");
+        uint prevStaker = 0;
+        for (uint i = 0; i < _stakerCount; i++) {
+            uint stakeNum = data.stakeNums[i];
+            require(stakeNum > prevStaker, "Stakers must be ordered");
+            Staker storage staker = getValidStaker(stakeNum);
+            if (staker.creationTime >= data.deadline) {
+                require(
+                    isPathOffset(
+                        to,
+                        staker.location,
+                        data.stakerProofs,
+                        data.stakerProofOffsets[i],
+                        data.stakerProofOffsets[i+1]
+                    ),
+                    "at least one active staker disagrees"
+                );
+            }
+            prevStaker = stakeNum;
         }
 
         latestConfirmed = to;
-        if (branch == 0) {
+        if (data.branch == 0) {
             //TODO: execute actions from the DA before the confirmed assertion (to)
         }
 
-        emit RollupConfirmed(latestConfirmed);
+        emit RollupConfirmed(to);
     }
 
     function pruneLeaf(
@@ -350,11 +409,14 @@ contract ArbRollup is IArbRollup {
     {
         require(isPath(latestConfirmed, location, proof), "invalid path proof");
         require(msg.value == vmParams.stakeRequirement, "must supply stake value");
-        Staker memory staker;
-        staker.addr = msg.sender;
-        staker.location = location;
-        staker.creationTime = block.number;
-        stakers.push(staker);
+        stakers[nextStaker] = Staker(
+            msg.sender,
+            location,
+            block.number,
+            address(0)
+        );
+        nextStaker++;
+        stakerCount++;
 
         emit RollupStakeCreated(msg.sender, location, block.number);
     }
@@ -368,7 +430,7 @@ contract ArbRollup is IArbRollup {
     )
         public
     {
-        Staker storage staker = stakers[_stakerIndex];
+        Staker storage staker = getValidStaker(_stakerIndex);
         require(staker.addr == msg.sender, "Must specify stake owned by sender");
         require(_leafIndex < leaves.length, "invalid leaf index");
         bytes32 leaf = leaves[_leafIndex];
@@ -386,10 +448,10 @@ contract ArbRollup is IArbRollup {
     )
         public
     {
-        Staker storage staker = stakers[_stakerIndex];
+        Staker storage staker = getValidStaker(_stakerIndex);
         require(staker.addr == msg.sender, "Must specify stake owned by sender");
         require(isPath(staker.location, latestConfirmed, proof), "invalid path proof");
-        delete stakers[_stakerIndex];
+        deleteStaker(_stakerIndex);
         msg.sender.transfer(vmParams.stakeRequirement);
 
         emit RollupStakeRefunded(_stakerIndex);
@@ -403,7 +465,7 @@ contract ArbRollup is IArbRollup {
     )
         public
     {
-        Staker storage staker = stakers[_stakerIndex];
+        Staker storage staker = getValidStaker(_stakerIndex);
         require(staker.addr == msg.sender, "Must specify stake owned by sender");
         require(
             isConflict(
@@ -415,7 +477,7 @@ contract ArbRollup is IArbRollup {
             ),
             "Invalid conflict proof"
         );
-        delete stakers[_stakerIndex];
+        deleteStaker(_stakerIndex);
         msg.sender.transfer(vmParams.stakeRequirement);
 
         emit RollupStakeRefunded(_stakerIndex);
@@ -565,7 +627,7 @@ contract ArbRollup is IArbRollup {
     */
 
     function _makeAssertion(MakeAssertionData memory data) internal {
-        Staker storage staker = stakers[data.stakerIndex];
+        Staker storage staker = getValidStaker(data.stakerIndex);
         require(staker.addr == msg.sender, "Must specify stake owned by sender");
         require(data.prevLeafIndex < leaves.length, "invalid leaf index");
         bytes32 prevLeaf = leaves[data.prevLeafIndex];
@@ -663,8 +725,8 @@ contract ArbRollup is IArbRollup {
     )
         internal
     {
-        Staker storage staker1 = stakers[_challenge.stakerIndexes[0]];
-        Staker storage staker2 = stakers[_challenge.stakerIndexes[1]];
+        Staker storage staker1 = getValidStaker(_challenge.stakerIndexes[0]);
+        Staker storage staker2 = getValidStaker(_challenge.stakerIndexes[1]);
         require(_challenge.stakerPositions[1] == INVALID_PENDING_TOP_CHILD_TYPE, "Stakers must have a conflict over pending top");
 
         verifyConflict(
@@ -714,8 +776,8 @@ contract ArbRollup is IArbRollup {
     )
         internal
     {
-        Staker storage staker1 = stakers[_challenge.stakerIndexes[0]];
-        Staker storage staker2 = stakers[_challenge.stakerIndexes[1]];
+        Staker storage staker1 = getValidStaker(_challenge.stakerIndexes[0]);
+        Staker storage staker2 = getValidStaker(_challenge.stakerIndexes[1]);
         require(_challenge.stakerPositions[1] == INVALID_MESSAGES_CHILD_TYPE, "Stakers must have a conflict over pending top");
 
         verifyConflict(
@@ -771,8 +833,8 @@ contract ArbRollup is IArbRollup {
     )
         internal
     {
-        Staker storage staker1 = stakers[_challenge.stakerIndexes[0]];
-        Staker storage staker2 = stakers[_challenge.stakerIndexes[1]];
+        Staker storage staker1 = getValidStaker(_challenge.stakerIndexes[0]);
+        Staker storage staker2 = getValidStaker(_challenge.stakerIndexes[1]);
         require(_challenge.stakerPositions[1] == INVALID_EXECUTION_CHILD_TYPE, "Stakers must have a conflict over execution");
 
         verifyConflict(
