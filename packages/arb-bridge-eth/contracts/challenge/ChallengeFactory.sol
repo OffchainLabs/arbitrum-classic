@@ -40,6 +40,31 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         executionChallengeTemplate = _executionChallengeTemplate;
     }
 
+    function generateNonce(uint asserterIndex, uint challengerIndex) public view returns(uint) {
+        return uint(keccak256(abi.encodePacked(
+            asserterIndex,
+            challengerIndex,
+            msg.sender
+        )));
+    }
+
+    function generateCloneAddress(
+        uint asserterIndex,
+        uint challengerIndex,
+        bytes32 codeHash
+    )
+        external
+        view
+        returns(address)
+    {
+        return address(bytes20(keccak256(abi.encodePacked(
+            byte(0xff),
+            address(this),
+            generateNonce(asserterIndex, challengerIndex),
+            codeHash
+        ))));
+    }
+
     function createMessagesChallenge(
         address _asserter,
         uint _asserterIndex,
@@ -54,7 +79,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         external
         returns(address)
     {
-        address clone = createClone(messagesChallengeTemplate);
+        address clone = create2Clone(
+            messagesChallengeTemplate,
+            generateNonce(_asserterIndex, _challengerIndex)
+        );
         IMessagesChallenge(clone).init(
             msg.sender,
             _asserter,
@@ -82,7 +110,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         external
         returns(address)
     {
-        address clone = createClone(pendingTopChallengeTemplate);
+        address clone = create2Clone(
+            pendingTopChallengeTemplate,
+            generateNonce(_asserterIndex, _challengerIndex)
+        );
         IPendingTopChallenge(clone).init(
             msg.sender,
             _asserter,
@@ -110,7 +141,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         external
         returns(address)
     {
-        address clone = createClone(executionChallengeTemplate);
+        address clone = create2Clone(
+            executionChallengeTemplate,
+            generateNonce(_asserterIndex, _challengerIndex)
+        );
         IExecutionChallenge(clone).init(
             msg.sender,
             _asserter,

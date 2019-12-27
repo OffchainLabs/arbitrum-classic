@@ -36,10 +36,10 @@ contract ArbRollup is IArbRollup {
     IChallengeFactory public challengeFactory;
 
     struct Staker {
-        address addr;
         bytes32 location;
         uint    creationTime;
-        address challenge;
+        address payable addr;
+        bool    inChallenge;
     }
 
     address   owner;
@@ -215,12 +215,14 @@ contract ArbRollup is IArbRollup {
     }
 
     function resolveChallenge(uint winnerIndex, uint loserIndex) external {
+        address sender = msg.sender;
+        bytes32 codehash;
+        assembly { codehash := extcodehash(sender) }
+        address challengeContract = challengeFactory.generateCloneAddress(winnerIndex, loserIndex, codehash);
+        require(challengeContract == msg.sender, "Challenge can only be resolved by spawned contract");
         Staker storage winningStaker = getValidStaker(winnerIndex);
-        Staker storage loserStaker = getValidStaker(loserIndex);
-        require(winningStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
-        require(loserStaker.challenge==msg.sender, "verdict can only be declared by challenge contract");
-        //TODO: slash the loser, deliver half to the winner
-        winningStaker.challenge = address(0);
+        winningStaker.addr.transfer(vmParams.stakeRequirement / 2);
+        winningStaker.inChallenge = false;
         deleteStaker(loserIndex);
 
         emit RollupChallengeCompleted(msg.sender, winnerIndex, loserIndex);
@@ -410,10 +412,10 @@ contract ArbRollup is IArbRollup {
         require(isPath(latestConfirmed, location, proof), "invalid path proof");
         require(msg.value == vmParams.stakeRequirement, "must supply stake value");
         stakers[nextStaker] = Staker(
-            msg.sender,
             location,
             block.number,
-            address(0)
+            msg.sender,
+            false
         );
         nextStaker++;
         stakerCount++;
@@ -759,8 +761,8 @@ contract ArbRollup is IArbRollup {
             data.currentPending,
             data.afterPendingTop
         );
-        staker1.challenge = newChallengeAddr;
-        staker2.challenge = newChallengeAddr;
+        staker1.inChallenge = true;
+        staker2.inChallenge = true;
 
         emit RollupChallengeStarted(
             _challenge.stakerIndexes[0],
@@ -816,8 +818,8 @@ contract ArbRollup is IArbRollup {
             data.importedMessageSlice,
             data.importedMessageCount
         );
-        staker1.challenge = newChallengeAddr;
-        staker2.challenge = newChallengeAddr;
+        staker1.inChallenge = true;
+        staker2.inChallenge = true;
 
         emit RollupChallengeStarted(
             _challenge.stakerIndexes[0],
@@ -874,8 +876,8 @@ contract ArbRollup is IArbRollup {
             data.timeBounds,
             data.assertionHash
         );
-        staker1.challenge = newChallengeAddr;
-        staker2.challenge = newChallengeAddr;
+        staker1.inChallenge = true;
+        staker2.inChallenge = true;
 
         emit RollupChallengeStarted(
             _challenge.stakerIndexes[0],
@@ -902,8 +904,8 @@ contract ArbRollup is IArbRollup {
     {
         require(staker1.creationTime < disputableDeadline, "staker1 staked after deadline");
         require(staker2.creationTime < disputableDeadline, "staker2 staked after deadline");
-        require(staker1.challenge == address(0), "staker1 already in a challenge");
-        require(staker2.challenge == address(0), "staker2 already in a challenge");
+        require(!staker1.inChallenge, "staker1 already in a challenge");
+        require(!staker2.inChallenge, "staker2 already in a challenge");
         require(
             isSpecifiedConflict(
                 node,

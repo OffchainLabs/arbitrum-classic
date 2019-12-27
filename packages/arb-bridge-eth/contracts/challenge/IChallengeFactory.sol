@@ -58,4 +58,13 @@ interface IChallengeFactory {
     )
         external
         returns(address);
+
+    function generateCloneAddress(
+        uint asserterIndex,
+        uint challengerIndex,
+        bytes32 codeHash
+    )
+        external
+        view
+        returns(address);
 }

@@ -20,6 +20,33 @@ pragma solidity ^0.5.10;
 
 contract CloneFactory {
     function createClone(address target) internal returns (address result) {
+        _createClone(target);
+        assembly {
+            // create the actual delegate contract reference and return its address
+            let clone := mload(0x40)
+            result := create(0, clone, 0x37)
+        }
+    }
+
+    function create2Clone(address target, uint256 nonce) internal returns (address result) {
+        _createClone(target);
+        assembly {
+            // create the actual delegate contract reference and return its address
+            let clone := mload(0x40)
+            result := create2(0, clone, 0x37, nonce)
+        }
+    }
+
+    function cloneCodeHash(address target) internal pure returns (uint256 result) {
+        _createClone(target);
+        assembly {
+            // create the hash of the delegate contract reference and return it
+            let clone := mload(0x40)
+            result := keccak256(clone, 0x37)
+        }
+    }
+
+    function _createClone(address target) private pure {
         // convert address to bytes20 for assembly use
         bytes20 targetBytes = bytes20(target);
         assembly {
@@ -31,8 +58,6 @@ contract CloneFactory {
             mstore(add(clone, 0x14), targetBytes)
             // store the remaining delegation contract code
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            // create the actual delegate contract reference and return its address
-            result := create(0, clone, 0x37)
         }
     }
 }
