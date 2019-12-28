@@ -109,12 +109,9 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     struct ConfirmData {
-        bytes32 leaf;
         address[] stakerAddresses;
-        bytes32[] proof1;
         bytes32[] stakerProofs;
         uint[] stakerProofOffsets;
-        bytes32 prev;
         uint branch;
         uint deadline;
         bytes32 preconditionHash;
@@ -202,8 +199,6 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     // fields
-    //   leaf
-    //   prev
     //   preconditionHash
     //   pendingAssertion
     //   importedAssertion
@@ -211,9 +206,8 @@ contract ArbRollup is Leaves, IArbRollup {
     //   vmProtoStateHash
 
     function confirm(
-        bytes32[7] calldata fields,
+        bytes32[5] calldata fields,
         address[] calldata stakerAddresses,
-        bytes32[] calldata proof1,
         bytes32[] calldata stakerProofs,
         uint[]  calldata stakerProofOffsets,
         uint    branch,
@@ -222,19 +216,16 @@ contract ArbRollup is Leaves, IArbRollup {
         external
     {
         return _confirm(ConfirmData(
-            fields[0],
             stakerAddresses,
-            proof1,
             stakerProofs,
             stakerProofOffsets,
-            fields[1],
             branch,
             deadline,
+            fields[0],
+            fields[1],
             fields[2],
             fields[3],
-            fields[4],
-            fields[5],
-            fields[6]
+            fields[4]
         ));
     }
 
@@ -350,12 +341,10 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function _confirm(ConfirmData memory data) private {
-        require(isValidLeaf(data.leaf), CONF_LEAF);
-        require(data.branch <= MAX_CHILD_TYPE, CONF_TYPE);
         uint _stakerCount = data.stakerAddresses.length;
         require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(
-            data.prev,
+            latestConfirmed(),
             data.deadline,
             RollupUtils.disputableNodeHash(
                 data.preconditionHash,
@@ -366,7 +355,6 @@ contract ArbRollup is Leaves, IArbRollup {
             data.branch,
             data.vmProtoStateHash
         );
-        require(RollupUtils.isPath(to, data.leaf, data.proof1), CONF_LEAF_PROOF);
         bytes20 prevStaker = 0x00;
         for (uint i = 0; i < _stakerCount; i++) {
             address stakerAddress = data.stakerAddresses[i];
