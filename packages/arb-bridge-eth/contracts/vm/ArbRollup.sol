@@ -37,8 +37,8 @@ contract ArbRollup is IArbRollup {
 
     struct Staker {
         bytes32 location;
-        uint    creationTime;
-        bool    inChallenge;
+        uint128 creationTime;
+        bool inChallenge;
     }
 
     address   owner;
@@ -126,7 +126,7 @@ contract ArbRollup is IArbRollup {
     struct ChallengeData {
         address payable[2] stakerAddresses;
         bytes32 node;
-        uint64 disputableDeadline;
+        uint disputableDeadline;
         uint[2] stakerPositions;
         bytes32[2] vmProtoHashes;
         bytes32[] proof1;
@@ -405,7 +405,7 @@ contract ArbRollup is IArbRollup {
         require(stakers[msg.sender].location != 0x00, "Staker already exists");
         stakers[msg.sender] = Staker(
             location,
-            block.number,
+            uint128(block.number),
             false
         );
         stakerCount++;
@@ -480,7 +480,7 @@ contract ArbRollup is IArbRollup {
     function startExecutionChallenge(
         bytes32[7] memory _fields,
         address payable[2] memory stakerAddresses,
-        uint64 disputableDeadline,
+        uint disputableDeadline,
         uint[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
@@ -524,7 +524,7 @@ contract ArbRollup is IArbRollup {
     function startPendingTopChallenge(
         bytes32[6] memory _fields,
         address payable[2] memory stakerAddresses,
-        uint64 disputableDeadline,
+        uint disputableDeadline,
         uint[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
@@ -564,7 +564,7 @@ contract ArbRollup is IArbRollup {
     function startMessagesChallenge(
         bytes32[7] memory _fields,
         address payable[2] memory stakerAddresses,
-        uint64 disputableDeadline,
+        uint disputableDeadline,
         uint[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
@@ -866,7 +866,7 @@ contract ArbRollup is IArbRollup {
         Staker storage staker1,
         Staker storage staker2,
         bytes32 node,
-        uint64 disputableDeadline,
+        uint disputableDeadline,
         bytes32 disputableNodeHashVal,
         uint[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
