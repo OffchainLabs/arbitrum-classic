@@ -26,7 +26,6 @@ library VM {
     bytes32 private constant MACHINE_ERROR_HASH = bytes32(uint(1));
 
     struct Params {  // these are defined just once for each vM
-        uint128 stakeRequirement;
         uint32  gracePeriod;
         uint32  maxExecutionSteps;
         bytes32 pendingInboxHash;
@@ -43,14 +42,6 @@ library VM {
         uint256[] messageAmounts;
         address[] messageDestinations;
         bytes32 logsAccHash;
-    }
-
-    function protoStateHash(bytes32 machineHash, bytes32 inboxHash, bytes32 pendingTop) external pure returns(bytes32) {
-        return keccak256(abi.encodePacked(
-            machineHash,
-            inboxHash,
-            pendingTop
-        ));
     }
 
     function isErrored(bytes32 vmStateHash) external pure returns(bool) {

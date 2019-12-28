@@ -16,7 +16,7 @@
 
 pragma solidity ^0.5.3;
 
-import "../vm/IArbRollup.sol";
+import "../vm/IStaking.sol";
 
 
 contract Challenge {
@@ -129,12 +129,12 @@ contract Challenge {
     }
 
     function _asserterWin() internal {
-        IArbRollup(vmAddress).resolveChallenge(asserter, challenger);
+        IStaking(vmAddress).resolveChallenge(asserter, challenger);
         selfdestruct(msg.sender);
     }
 
     function _challengerWin() internal {
-        IArbRollup(vmAddress).resolveChallenge(challenger, asserter);
+        IStaking(vmAddress).resolveChallenge(challenger, asserter);
         selfdestruct(msg.sender);
     }
 }

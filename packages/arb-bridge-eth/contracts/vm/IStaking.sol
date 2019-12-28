@@ -17,15 +17,6 @@
 pragma solidity ^0.5.3;
 
 
-interface IArbRollup {
-    function init(
-        bytes32 _vmState,
-        uint32 _gracePeriod,
-        uint32 _maxExecutionSteps,
-        uint128 _stakeRequirement,
-        address payable _owner,
-        address _challengeFactoryAddress,
-        address _globalInboxAddress
-    )
-        external;
+interface IStaking {
+    function resolveChallenge(address payable winner, address loser) external;
 }
