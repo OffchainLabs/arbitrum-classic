@@ -20,10 +20,8 @@ pragma solidity ^0.5.3;
 interface IChallengeFactory {
 
     function createMessagesChallenge(
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _bottomHash,
         bytes32 _topHash,
@@ -34,10 +32,8 @@ interface IChallengeFactory {
         returns(address);
 
     function createPendingTopChallenge(
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _topHash,
         bytes32 _lowerHash
@@ -46,10 +42,8 @@ interface IChallengeFactory {
         returns(address);
 
     function createExecutionChallenge(
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
@@ -60,8 +54,8 @@ interface IChallengeFactory {
         returns(address);
 
     function generateCloneAddress(
-        uint asserterIndex,
-        uint challengerIndex,
+        address asserter,
+        address challenger,
         bytes32 codeHash
     )
         external

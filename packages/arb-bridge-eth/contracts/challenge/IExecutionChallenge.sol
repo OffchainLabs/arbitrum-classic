@@ -21,10 +21,8 @@ interface IExecutionChallenge {
 
     function init(
         address vmAddress,
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 beforeHash,
         bytes32 beforeInbox,

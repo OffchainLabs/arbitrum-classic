@@ -36,10 +36,8 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
 
     function init(
         address _vmAddress,
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _topHash,
         bytes32 _lowerHash
@@ -49,9 +47,7 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
         BisectionChallenge.initializeBisection(
             _vmAddress,
             _asserter,
-            _asserterIndex,
             _challenger,
-            _challengerIndex,
             _challengePeriod,
             encodeSegment(_topHash, _lowerHash, 0)
         );

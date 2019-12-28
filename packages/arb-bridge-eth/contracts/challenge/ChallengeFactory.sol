@@ -40,17 +40,17 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         executionChallengeTemplate = _executionChallengeTemplate;
     }
 
-    function generateNonce(uint asserterIndex, uint challengerIndex) public view returns(uint) {
+    function generateNonce(address asserter, address challenger) public view returns(uint) {
         return uint(keccak256(abi.encodePacked(
-            asserterIndex,
-            challengerIndex,
+            asserter,
+            challenger,
             msg.sender
         )));
     }
 
     function generateCloneAddress(
-        uint asserterIndex,
-        uint challengerIndex,
+        address asserter,
+        address challenger,
         bytes32 codeHash
     )
         external
@@ -60,16 +60,14 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         return address(bytes20(keccak256(abi.encodePacked(
             byte(0xff),
             address(this),
-            generateNonce(asserterIndex, challengerIndex),
+            generateNonce(asserter, challenger),
             codeHash
         ))));
     }
 
     function createMessagesChallenge(
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _bottomHash,
         bytes32 _topHash,
@@ -81,14 +79,12 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     {
         address clone = create2Clone(
             messagesChallengeTemplate,
-            generateNonce(_asserterIndex, _challengerIndex)
+            generateNonce(address(_asserter), address(_challenger))
         );
         IMessagesChallenge(clone).init(
             msg.sender,
             _asserter,
-            _asserterIndex,
             _challenger,
-            _challengerIndex,
             _challengePeriod,
             _bottomHash,
             _topHash,
@@ -99,10 +95,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     }
 
     function createPendingTopChallenge(
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _topHash,
         bytes32 _lowerHash
@@ -112,14 +106,12 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     {
         address clone = create2Clone(
             pendingTopChallengeTemplate,
-            generateNonce(_asserterIndex, _challengerIndex)
+            generateNonce(address(_asserter), address(_challenger))
         );
         IPendingTopChallenge(clone).init(
             msg.sender,
             _asserter,
-            _asserterIndex,
             _challenger,
-            _challengerIndex,
             _challengePeriod,
             _topHash,
             _lowerHash
@@ -128,10 +120,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     }
 
     function createExecutionChallenge(
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
@@ -143,14 +133,12 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
     {
         address clone = create2Clone(
             executionChallengeTemplate,
-            generateNonce(_asserterIndex, _challengerIndex)
+            generateNonce(address(_asserter), address(_challenger))
         );
         IExecutionChallenge(clone).init(
             msg.sender,
             _asserter,
-            _asserterIndex,
             _challenger,
-            _challengerIndex,
             _challengePeriod,
             _beforeHash,
             _beforeInbox,

@@ -54,10 +54,8 @@ contract Challenge {
 
 
     address vmAddress;
-    address asserter;
-    uint asserterIndex;
-    address challenger;
-    uint challengerIndex;
+    address payable asserter;
+    address payable challenger;
 
     uint64 deadline;
 
@@ -70,10 +68,8 @@ contract Challenge {
 
     function initializeChallenge(
         address _vmAddress,
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod
     )
         internal
@@ -82,9 +78,7 @@ contract Challenge {
 
         vmAddress = _vmAddress;
         asserter = _asserter;
-        asserterIndex = _asserterIndex;
         challenger = _challenger;
-        challengerIndex = _challengerIndex;
         challengePeriod = _challengePeriod;
         state = State.AsserterTurn;
         updateDeadline();
@@ -135,12 +129,12 @@ contract Challenge {
     }
 
     function _asserterWin() internal {
-        IArbRollup(vmAddress).resolveChallenge(asserterIndex, challengerIndex);
+        IArbRollup(vmAddress).resolveChallenge(asserter, challenger);
         selfdestruct(msg.sender);
     }
 
     function _challengerWin() internal {
-        IArbRollup(vmAddress).resolveChallenge(challengerIndex, asserterIndex);
+        IArbRollup(vmAddress).resolveChallenge(challenger, asserter);
         selfdestruct(msg.sender);
     }
 }

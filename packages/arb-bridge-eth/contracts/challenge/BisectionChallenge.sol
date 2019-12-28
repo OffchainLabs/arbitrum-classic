@@ -43,10 +43,8 @@ contract BisectionChallenge is Challenge {
 
     function initializeBisection(
         address _vmAddress,
-        address _asserter,
-        uint _asserterIndex,
-        address _challenger,
-        uint _challengerIndex,
+        address payable _asserter,
+        address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _challengeState
     )
@@ -55,9 +53,7 @@ contract BisectionChallenge is Challenge {
         Challenge.initializeChallenge(
             _vmAddress,
             _asserter,
-            _asserterIndex,
             _challenger,
-            _challengerIndex,
             _challengePeriod
         );
         challengeState = _challengeState;

@@ -29,5 +29,5 @@ interface IArbRollup {
     )
         external;
 
-    function resolveChallenge(uint winnerIndex, uint loserIndex) external;
+    function resolveChallenge(address payable winner, address loser) external;
 }
