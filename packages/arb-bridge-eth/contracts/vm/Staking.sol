@@ -329,7 +329,6 @@ contract Staking {
         verifyConflict(
             _challenge,
             RollupUtils.disputableNodeHash(
-                _challenge.disputableDeadline,
                 _preconditionHash,
                 RollupUtils.pendingAssertionHash(
                     _afterPendingTop,
@@ -373,7 +372,6 @@ contract Staking {
         verifyConflict(
             _challenge,
             RollupUtils.disputableNodeHash(
-                _challenge.disputableDeadline,
                 _preconditionHash,
                 RollupUtils.pendingAssertionHash(
                     _afterPendingTop,
@@ -418,7 +416,6 @@ contract Staking {
         verifyConflict(
             _challenge,
             RollupUtils.disputableNodeHash(
-                _challenge.disputableDeadline,
                 Protocol.generatePreconditionHash(
                     data.beforeHash,
                     data.timeBounds,
@@ -471,6 +468,7 @@ contract Staking {
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     _challenge.node,
+                    _challenge.disputableDeadline,
                     disputableNodeHash,
                     _challenge.stakerPositions[0],
                     _challenge.vmProtoHashes[0]
@@ -484,6 +482,7 @@ contract Staking {
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     _challenge.node,
+                    _challenge.disputableDeadline,
                     disputableNodeHash,
                     _challenge.stakerPositions[1],
                     _challenge.vmProtoHashes[1]

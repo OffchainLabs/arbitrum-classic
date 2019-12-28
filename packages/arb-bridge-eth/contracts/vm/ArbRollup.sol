@@ -90,6 +90,7 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 beforeInboxHash;
         bytes32 beforePendingTop;
         bytes32 prevPrevLeafHash;
+        uint prevDeadline;
         bytes32 prevDisputableHash;
         uint prevChildType;
         bytes32 prevLeaf;
@@ -162,6 +163,7 @@ contract ArbRollup is Leaves, IArbRollup {
 
     function makeAssertion(
         bytes32[11] calldata _fields,
+        uint _prevDeadline,
         uint    _prevChildType,
         bytes32 _prevLeaf,
         bytes32[] calldata _prevLeafProof,
@@ -179,6 +181,7 @@ contract ArbRollup is Leaves, IArbRollup {
                 _fields[1],
                 _fields[2],
                 _fields[3],
+                _prevDeadline,
                 _fields[4],
                 _prevChildType,
                 _prevLeaf,
@@ -262,6 +265,7 @@ contract ArbRollup is Leaves, IArbRollup {
         require(
             RollupUtils.childNodeHash(
                 data.prevPrevLeafHash,
+                data.prevDeadline,
                 data.prevDisputableHash,
                 data.prevChildType,
                 vmProtoHashBefore
@@ -286,7 +290,6 @@ contract ArbRollup is Leaves, IArbRollup {
             data.logsAccHash
         );
         bytes32 disputableHash = RollupUtils.disputableNodeHash(
-            deadline,
             Protocol.generatePreconditionHash(
                 data.beforeVMHash,
                 data.timeBounds,
@@ -306,6 +309,7 @@ contract ArbRollup is Leaves, IArbRollup {
 
         bytes32 validKid = RollupUtils.childNodeHash(
             data.prevLeaf,
+            deadline,
             disputableHash,
             VALID_CHILD_TYPE,
             RollupUtils.protoStateHash(
@@ -320,6 +324,7 @@ contract ArbRollup is Leaves, IArbRollup {
         for (uint i = 1; i<=MAX_CHILD_TYPE; i++) {
             leaves[i] = RollupUtils.childNodeHash(
                 data.prevLeaf,
+                deadline,
                 disputableHash,
                 i,
                 vmProtoHashBefore
@@ -351,8 +356,8 @@ contract ArbRollup is Leaves, IArbRollup {
         require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(
             data.prev,
+            data.deadline,
             RollupUtils.disputableNodeHash(
-                data.deadline,
                 data.preconditionHash,
                 data.pendingAssertion,
                 data.importedAssertion,

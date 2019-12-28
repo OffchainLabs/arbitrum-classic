@@ -34,7 +34,6 @@ library RollupUtils {
     }
 
     function disputableNodeHash(
-        uint deadline,
         bytes32 preconditionHash,
         bytes32 pendingAssertion,
         bytes32 importedAssertion,
@@ -46,7 +45,6 @@ library RollupUtils {
     {
         return keccak256(
             abi.encodePacked(
-                deadline,
                 preconditionHash,
                 pendingAssertion,
                 importedAssertion,
@@ -57,6 +55,7 @@ library RollupUtils {
 
     function childNodeHash(
         bytes32 prevNodeHash,
+        uint deadline,
         bytes32 disputableNodeHashVal,
         uint    childType,
         bytes32 vmProtoStateHash
@@ -70,6 +69,7 @@ library RollupUtils {
                 prevNodeHash,
                 keccak256(
                     abi.encodePacked(
+                        deadline,
                         disputableNodeHashVal,
                         childType,
                         vmProtoStateHash

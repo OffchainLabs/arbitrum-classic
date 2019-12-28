@@ -47,6 +47,7 @@ contract Confirming is Staking {
             0,
             0,
             0,
+            0,
             vmProtoStateHash
         ));
     }
