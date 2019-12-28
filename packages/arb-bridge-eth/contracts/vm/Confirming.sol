@@ -20,6 +20,14 @@ import "./Staking.sol";
 
 
 contract Confirming is Staking {
+    // invalid path proof
+    string constant PLACE_PATH_PROOF = "PLACE_PATH_PROOF";
+    // invalid path proof
+    string constant RECOV_PATH_PROOF = "RECOV_PATH_PROOF";
+    // Invalid conflict proof
+    string constant RECOV_CONFLICT_PROOF = "RECOV_CONFLICT_PROOF";
+
+
     bytes32 private latestConfirmedPriv;
 
     event RollupStakeRefunded(address staker);
@@ -50,7 +58,7 @@ contract Confirming is Staking {
         external
         payable
     {
-        require(RollupUtils.isPath(latestConfirmed(), location, proof), "invalid path proof");
+        require(RollupUtils.isPath(latestConfirmed(), location, proof), PLACE_PATH_PROOF);
         // TODO: Also check if location is on path to leaf?
         createStake(location);
     }
@@ -61,7 +69,7 @@ contract Confirming is Staking {
         external
     {
         Staker storage staker = getValidStaker(msg.sender);
-        require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), "invalid path proof");
+        require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), RECOV_PATH_PROOF);
         deleteStakerWithPayout(msg.sender);
 
         emit RollupStakeRefunded(msg.sender);
@@ -83,7 +91,7 @@ contract Confirming is Staking {
                 latestConfirmedProof,
                 nodeProof
             ),
-            "Invalid conflict proof"
+            RECOV_CONFLICT_PROOF
         );
         deleteStakerWithPayout(msg.sender);
 

@@ -25,6 +25,48 @@ import "../arch/Protocol.sol";
 
 contract Staking {
 
+    // VM already initialized"
+    string constant INIT_TWICE = "INIT_TWICE";
+    // Challenge factory must be nonzero
+    string constant INIT_NONZERO = "INIT_NONZERO";
+
+    // Invalid staker
+    string constant INV_STAKER = "INV_STAKER";
+
+    // must supply stake value
+    string constant STK_AMT = "STK_AMT";
+    // Staker already exists
+    string constant ALRDY_STAKED = "ALRDY_STAKED";
+
+    // Challenge can only be resolved by spawned contract
+    string constant RES_CHAL_SENDER = "RES_CHAL_SENDER";
+
+    // Stakers must have a conflict over pending top
+    string constant PND_CHAL_TYPE = "PND_CHAL_TYPE";
+
+    // Stakers must have a conflict over messages
+    string constant MSGS_CHAL_TYPE = "MSGS_CHAL_TYPE";
+
+    // Stakers must have a conflict over execution
+    string constant EXEC_CHAL_TYPE = "EXEC_CHAL_TYPE";
+
+    // staker1 staked after deadline
+    string constant STK1_DEADLINE = "STK1_DEADLINE";
+    // staker2 staked after deadline
+    string constant STK2_DEADLINE = "STK2_DEADLINE";
+    // staker1 already in a challenge
+    string constant STK1_IN_CHAL = "STK1_IN_CHAL";
+    // staker2 already in a challenge
+    string constant STK2_IN_CHAL = "STK1_IN_CHAL";
+    // Child types must be ordered
+    string constant TYPE_ORDER = "TYPE_ORDER";
+    // Invalid child type
+    string constant INVLD_CHLD_TYPE = "INVLD_CHLD_TYPE";
+    // Invalid staker1 proof
+    string constant STK1_PROOF = "STK1_PROOF";
+    // Invalid staker2 proof
+    string constant STK2_PROOF = "STK2_PROOF";
+
     uint internal constant VALID_CHILD_TYPE = 0;
     uint internal constant INVALID_PENDING_TOP_CHILD_TYPE = 1;
     uint internal constant INVALID_MESSAGES_CHILD_TYPE = 2;
@@ -211,7 +253,7 @@ contract Staking {
         bytes32 codehash;
         assembly { codehash := extcodehash(sender) }
         address challengeContract = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
-        require(challengeContract == msg.sender, "Challenge can only be resolved by spawned contract");
+        require(challengeContract == msg.sender, RES_CHAL_SENDER);
         Staker storage winningStaker = getValidStaker(address(winner));
         winner.transfer(stakeRequirement / 2);
         winningStaker.inChallenge = false;
@@ -226,8 +268,8 @@ contract Staking {
     )
         internal
     {
-        require(address(challengeFactory) == address(0), "VM already initialized");
-        require(_challengeFactoryAddress != address(0), "Challenge factory must be nonzero");
+        require(address(challengeFactory) == address(0), INIT_TWICE);
+        require(_challengeFactoryAddress != address(0), INIT_NONZERO);
 
         challengeFactory = IChallengeFactory(_challengeFactoryAddress);
 
@@ -237,7 +279,7 @@ contract Staking {
 
     function getValidStaker(address _stakerAddress) internal view returns (Staker storage) {
         Staker storage staker = stakers[_stakerAddress];
-        require(staker.location != 0x00, "Invalid staker");
+        require(staker.location != 0x00, INV_STAKER);
         return staker;
     }
 
@@ -246,8 +288,8 @@ contract Staking {
     )
         internal
     {
-        require(msg.value == stakeRequirement, "must supply stake value");
-        require(stakers[msg.sender].location != 0x00, "Staker already exists");
+        require(msg.value == stakeRequirement, STK_AMT);
+        require(stakers[msg.sender].location != 0x00, ALRDY_STAKED);
         stakers[msg.sender] = Staker(
             location,
             uint128(block.number),
@@ -282,7 +324,7 @@ contract Staking {
     )
         private
     {
-        require(_challenge.stakerPositions[1] == INVALID_PENDING_TOP_CHILD_TYPE, "Stakers must have a conflict over pending top");
+        require(_challenge.stakerPositions[1] == INVALID_PENDING_TOP_CHILD_TYPE, PND_CHAL_TYPE);
 
         verifyConflict(
             _challenge,
@@ -326,7 +368,7 @@ contract Staking {
     )
         private
     {
-        require(_challenge.stakerPositions[1] == INVALID_MESSAGES_CHILD_TYPE, "Stakers must have a conflict over pending top");
+        require(_challenge.stakerPositions[1] == INVALID_MESSAGES_CHILD_TYPE, MSGS_CHAL_TYPE);
 
         verifyConflict(
             _challenge,
@@ -371,7 +413,7 @@ contract Staking {
     )
         private
     {
-        require(_challenge.stakerPositions[1] == INVALID_EXECUTION_CHILD_TYPE, "Stakers must have a conflict over execution");
+        require(_challenge.stakerPositions[1] == INVALID_EXECUTION_CHILD_TYPE, EXEC_CHAL_TYPE);
 
         verifyConflict(
             _challenge,
@@ -419,12 +461,12 @@ contract Staking {
         Staker storage staker1 = getValidStaker(_challenge.stakerAddresses[0]);
         Staker storage staker2 = getValidStaker(_challenge.stakerAddresses[1]);
 
-        require(staker1.creationTime < _challenge.disputableDeadline, "staker1 staked after deadline");
-        require(staker2.creationTime < _challenge.disputableDeadline, "staker2 staked after deadline");
-        require(!staker1.inChallenge, "staker1 already in a challenge");
-        require(!staker2.inChallenge, "staker2 already in a challenge");
-        require(_challenge.stakerPositions[0] < _challenge.stakerPositions[1], "Child types must be ordered");
-        require(_challenge.stakerPositions[1]<=MAX_CHILD_TYPE, "Invalid child type");
+        require(staker1.creationTime < _challenge.disputableDeadline, STK1_DEADLINE);
+        require(staker2.creationTime < _challenge.disputableDeadline, STK2_DEADLINE);
+        require(!staker1.inChallenge, STK1_IN_CHAL);
+        require(!staker2.inChallenge, STK2_IN_CHAL);
+        require(_challenge.stakerPositions[0] < _challenge.stakerPositions[1], TYPE_ORDER);
+        require(_challenge.stakerPositions[1] <= MAX_CHILD_TYPE, INVLD_CHLD_TYPE);
         require(
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
@@ -435,7 +477,11 @@ contract Staking {
                 ),
                 staker1.location,
                 _challenge.proof1
-            ) && RollupUtils.isPath(
+            ),
+            STK1_PROOF
+        );
+        require(
+            RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     _challenge.node,
                     disputableNodeHash,
@@ -445,7 +491,7 @@ contract Staking {
                 staker2.location,
                 _challenge.proof2
             ),
-            "Invalid conflict proof"
+            STK2_PROOF
         );
 
         staker1.inChallenge = true;

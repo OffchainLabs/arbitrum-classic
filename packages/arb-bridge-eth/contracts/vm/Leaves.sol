@@ -20,6 +20,11 @@ import "./Confirming.sol";
 
 
 contract Leaves is Confirming {
+    // invalid leaf
+    string constant MOVE_LEAF = "MOVE_LEAF";
+    // new stake location is not in path
+    string constant MOVE_LOC = "MOVE_LOC";
+
     mapping (bytes32 => bool) private leaves;
 
     event RollupPruned(bytes32 nodeHash);
@@ -73,7 +78,7 @@ contract Leaves is Confirming {
         external
     {
         Staker storage staker = getValidStaker(msg.sender);
-        require(isValidLeaf(_leaf), "invalid leaf");
+        require(isValidLeaf(_leaf), MOVE_LEAF);
         require(
             RollupUtils.isInPath(
                 staker.location,
@@ -82,7 +87,7 @@ contract Leaves is Confirming {
                 proof1,
                 proof2
             ),
-            "new stake location is not in path"
+            MOVE_LOC
         );
 
         staker.location = newLocation;
