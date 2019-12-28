@@ -68,9 +68,13 @@ library RollupUtils {
         return keccak256(
             abi.encodePacked(
                 prevNodeHash,
-                disputableNodeHashVal,
-                childType,
-                vmProtoStateHash
+                keccak256(
+                    abi.encodePacked(
+                        disputableNodeHashVal,
+                        childType,
+                        vmProtoStateHash
+                    )
+                )
             )
         );
     }
