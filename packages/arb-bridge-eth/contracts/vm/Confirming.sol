@@ -51,6 +51,7 @@ contract Confirming is Staking {
         payable
     {
         require(RollupUtils.isPath(latestConfirmed(), location, proof), "invalid path proof");
+        // TODO: Also check if location is on path to leaf?
         createStake(location);
     }
 
