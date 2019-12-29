@@ -36,8 +36,6 @@ contract ArbRollup is Leaves, IArbRollup {
     string constant MAKE_STEP = "MAKE_STEP";
     // Precondition: not within time bounds
     string constant MAKE_TIME = "MAKE_TIME";
-    // invalid prev leaf proof
-    string constant MAKE_PREV_PROOF = "MAKE_PREV_PROOF";
     // invalid staker location proof
     string constant MAKE_STAKER_PROOF = "MAKE_STAKER_PROOF";
 
@@ -264,7 +262,7 @@ contract ArbRollup is Leaves, IArbRollup {
         uint deadline = block.number + vmParams.gracePeriod; //TODO: [Ed] compute this properly
         bytes32 afterInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
         bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
-        leaves[INVALID_PENDING_TOP_CHILD_TYPE] = RollupUtils.childNodeHash(
+        leaves[INVALID_PENDING_TOP_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
             deadline,
             ChallengeUtils.pendingTopHash(
@@ -272,10 +270,10 @@ contract ArbRollup is Leaves, IArbRollup {
                 data.afterPendingTop,
                 data.importedMessageCount
             ),
-            INVALID_PENDING_TOP_CHILD_TYPE,
+            INVALID_PENDING_TOP_TYPE,
             vmProtoHashBefore
         );
-        leaves[INVALID_MESSAGES_CHILD_TYPE] = RollupUtils.childNodeHash(
+        leaves[INVALID_MESSAGES_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
             deadline,
             ChallengeUtils.messagesHash(
@@ -285,7 +283,7 @@ contract ArbRollup is Leaves, IArbRollup {
                 data.importedMessagesSlice,
                 data.importedMessageCount
             ),
-            INVALID_MESSAGES_CHILD_TYPE,
+            INVALID_MESSAGES_TYPE,
             vmProtoHashBefore
         );
         bytes32 assertionHash = Protocol.generateAssertionHash(
@@ -297,7 +295,7 @@ contract ArbRollup is Leaves, IArbRollup {
             0x00,
             data.logsAccHash
         );
-        leaves[INVALID_EXECUTION_CHILD_TYPE] = RollupUtils.childNodeHash(
+        leaves[INVALID_EXECUTION_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
             deadline,
             ChallengeUtils.executionHash(
@@ -311,7 +309,7 @@ contract ArbRollup is Leaves, IArbRollup {
                 data.beforeVMHash,
                 assertionHash
             ),
-            INVALID_EXECUTION_CHILD_TYPE,
+            INVALID_EXECUTION_TYPE,
             vmProtoHashBefore
         );
         leaves[VALID_CHILD_TYPE] = RollupUtils.childNodeHash(

@@ -16,25 +16,8 @@
 
 pragma solidity ^0.5.3;
 
-
-interface IChallengeFactory {
-
-    function createChallenge(
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod,
-        bytes32 _challengeHash,
-        uint challengeType
-    )
-        external
-        returns(address);
-
-    function generateCloneAddress(
-        address asserter,
-        address challenger,
-        bytes32 codeHash
-    )
-        external
-        view
-        returns(address);
+contract ChallengeType {
+    uint internal constant INVALID_PENDING_TOP_TYPE = 0;
+    uint internal constant INVALID_MESSAGES_TYPE = 1;
+    uint internal constant INVALID_EXECUTION_TYPE = 2;
 }

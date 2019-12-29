@@ -20,9 +20,13 @@ import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
 import "./IBisectionChallenge.sol";
+import "./ChallengeType.sol";
 
 
-contract ChallengeFactory is CloneFactory, IChallengeFactory {
+contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
+
+    // Invalid challenge type
+    string constant INVALID_TYPE = "INVALID_TYPE";
 
     address public messagesChallengeTemplate;
     address public pendingTopChallengeTemplate;
@@ -63,70 +67,26 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         ))));
     }
 
-    function createMessagesChallenge(
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod,
-        bytes32 _messagesHash
-    )
-        external
-        returns(address)
-    {
-        return _createChallenge(
-            _asserter,
-            _challenger,
-            _challengePeriod,
-            _messagesHash,
-            messagesChallengeTemplate
-        );
-    }
-
-    function createPendingTopChallenge(
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod,
-        bytes32 _pendingTopHash
-    )
-        external
-        returns(address)
-    {
-        return _createChallenge(
-            _asserter,
-            _challenger,
-            _challengePeriod,
-            _pendingTopHash,
-            pendingTopChallengeTemplate
-        );
-    }
-
-    function createExecutionChallenge(
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod,
-        bytes32 _executionHash
-    )
-        external
-        returns(address)
-    {
-        return _createChallenge(
-            _asserter,
-            _challenger,
-            _challengePeriod,
-            _executionHash,
-            executionChallengeTemplate
-        );
-    }
-
-    function _createChallenge(
+    function createChallenge(
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
         bytes32 _challengeHash,
-        address challengeTemplate
+        uint challengeType
     )
-        private
+        external
         returns(address)
     {
+        address challengeTemplate;
+        if (challengeType == INVALID_PENDING_TOP_TYPE) {
+            challengeTemplate = pendingTopChallengeTemplate;
+        } else if (challengeType == INVALID_MESSAGES_TYPE) {
+            challengeTemplate = messagesChallengeTemplate;
+        } else if (challengeType == INVALID_EXECUTION_TYPE) {
+            challengeTemplate = executionChallengeTemplate;
+        } else {
+            require(false, INVALID_TYPE);
+        }
         address clone = create2Clone(
             challengeTemplate,
             generateNonce(address(_asserter), address(_challenger))
