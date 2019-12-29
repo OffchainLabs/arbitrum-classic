@@ -108,14 +108,6 @@ contract ArbRollup is Leaves, IArbRollup {
         uint64[2] timeBounds;
     }
 
-    struct ConfirmData {
-        address[] stakerAddresses;
-        bytes32[] stakerProofs;
-        uint[] stakerProofOffsets;
-        uint deadline;
-        bytes32 vmProtoStateHash;
-    }
-
     function init(
         bytes32 _vmState,
         uint32 _gracePeriod,
@@ -194,29 +186,27 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function confirmValid(
+        uint deadline,
+        bytes calldata _messages,
+        bytes32 logsAcc,
         bytes32 vmProtoStateHash,
         address[] calldata stakerAddresses,
         bytes32[] calldata stakerProofs,
-        uint[]  calldata stakerProofOffsets,
-        uint    deadline,
-        bytes calldata _messages,
-        bytes32 logsAcc
+        uint[]  calldata stakerProofOffsets
     )
         external
     {
         _confirmNode(
-            ConfirmData(
-                stakerAddresses,
-                stakerProofs,
-                stakerProofOffsets,
-                deadline,
-                vmProtoStateHash
-            ),
-            VALID_CHILD_TYPE,
+            deadline,
             RollupUtils.validNodeHash(
                 Protocol.generateLastMessageHash(_messages),
                 logsAcc
-            )
+            ),
+            VALID_CHILD_TYPE,
+            vmProtoStateHash,
+            stakerAddresses,
+            stakerProofs,
+            stakerProofOffsets
         );
 
         globalInbox.sendMessages(_messages);
@@ -227,27 +217,25 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function confirmInvalid(
+        uint    deadline,
+        bytes32 challengeNodeData,
+        uint    branch,
         bytes32 vmProtoStateHash,
         address[] calldata stakerAddresses,
         bytes32[] calldata stakerProofs,
-        uint[]  calldata stakerProofOffsets,
-        uint    branch,
-        uint    deadline,
-        bytes32 challengeNodeData
+        uint[]  calldata stakerProofOffsets
     )
         external
     {
         require(branch < VALID_CHILD_TYPE, CONF_INV_TYPE);
         _confirmNode(
-            ConfirmData(
-                stakerAddresses,
-                stakerProofs,
-                stakerProofOffsets,
-                deadline,
-                vmProtoStateHash
-            ),
+            deadline,
+            challengeNodeData,
             branch,
-            challengeNodeData
+            vmProtoStateHash,
+            stakerAddresses,
+            stakerProofs,
+            stakerProofOffsets
         );
     }
 
@@ -378,29 +366,37 @@ contract ArbRollup is Leaves, IArbRollup {
         );
     }
 
-    function _confirmNode(ConfirmData memory data, uint branch, bytes32 nodeDataHash) private {
-        uint _stakerCount = data.stakerAddresses.length;
+    function _confirmNode(
+        uint deadline,
+        bytes32 nodeDataHash,
+        uint branch,
+        bytes32 vmProtoStateHash,
+        address[] memory stakerAddresses,
+        bytes32[] memory stakerProofs,
+        uint[]  memory stakerProofOffsets
+    ) private {
+        uint _stakerCount = stakerAddresses.length;
         require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(
             latestConfirmed(),
-            data.deadline,
+            deadline,
             nodeDataHash,
             branch,
-            data.vmProtoStateHash
+            vmProtoStateHash
         );
         bytes20 prevStaker = 0x00;
         for (uint i = 0; i < _stakerCount; i++) {
-            address stakerAddress = data.stakerAddresses[i];
+            address stakerAddress = stakerAddresses[i];
             require(bytes20(stakerAddress) > prevStaker, CONF_ORDER);
             Staker storage staker = getValidStaker(stakerAddress);
-            if (staker.creationTime >= data.deadline) {
+            if (staker.creationTime >= deadline) {
                 require(
                     RollupUtils.isPathOffset(
                         to,
                         staker.location,
-                        data.stakerProofs,
-                        data.stakerProofOffsets[i],
-                        data.stakerProofOffsets[i+1]
+                        stakerProofs,
+                        stakerProofOffsets[i],
+                        stakerProofOffsets[i+1]
                     ),
                     CONF_STAKER_PROOF
                 );
