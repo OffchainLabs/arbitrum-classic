@@ -17,11 +17,11 @@
 pragma solidity ^0.5.3;
 
 import "./BisectionChallenge.sol";
-import "./IPendingTopChallenge.sol";
+import "./ChallengeUtils.sol";
 
 import "../arch/Protocol.sol";
 
-contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
+contract PendingTopChallenge is BisectionChallenge {
 
     event Bisected(
         bytes32[] chainHashes,
@@ -34,45 +34,6 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
     // Proof was incorrect
     string constant HC_OSP_PROOF = "HC_OSP_PROOF";
 
-    function init(
-        address _vmAddress,
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod,
-        bytes32 _topHash,
-        bytes32 _lowerHash
-    )
-        external
-    {
-        BisectionChallenge.initializeBisection(
-            _vmAddress,
-            _asserter,
-            _challenger,
-            _challengePeriod,
-            encodeSegment(_topHash, _lowerHash, 0)
-        );
-    }
-
-    function bisectFirst(
-        bytes32[] memory _chainHashes,
-        uint32 _chainLength
-    )
-        public
-        asserterAction
-    {
-        uint bisectionCount = _chainHashes.length - 1;
-
-        requireMatchesPrevState(
-            encodeSegment(
-                _chainHashes[0],
-                _chainHashes[bisectionCount],
-                0
-            )
-        );
-
-        _bisect(_chainHashes, _chainLength);
-    }
-
     function bisect(
         bytes32[] memory _chainHashes,
         uint32 _chainLength
@@ -83,32 +44,22 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
         uint bisectionCount = _chainHashes.length - 1;
 
         requireMatchesPrevState(
-            encodeSegment(
+            ChallengeUtils.pendingTopHash(
                 _chainHashes[0],
                 _chainHashes[bisectionCount],
                 _chainLength
             )
         );
 
-        _bisect(_chainHashes, _chainLength);
-    }
-
-    function _bisect(
-        bytes32[] memory _chainHashes,
-        uint32 _chainLength
-    )
-        internal
-    {
         require(_chainLength > 1, "Can't bisect chain of less than 2");
-        uint bisectionCount = _chainHashes.length - 1;
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        hashes[0] = encodeSegment(
+        hashes[0] = ChallengeUtils.pendingTopHash(
             _chainHashes[0],
             _chainHashes[1],
             firstSegmentSize(_chainLength, bisectionCount)
         );
         for (uint i = 1; i < bisectionCount; i++) {
-            hashes[i] = encodeSegment(
+            hashes[i] = ChallengeUtils.pendingTopHash(
                 _chainHashes[i],
                 _chainHashes[i + 1],
                 otherSegmentSize(_chainLength, bisectionCount)
@@ -133,7 +84,7 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
         asserterAction
     {
         requireMatchesPrevState(
-            encodeSegment(
+            ChallengeUtils.pendingTopHash(
                 _topHash,
                 _lowerHash,
                 uint32(1)
@@ -144,23 +95,5 @@ contract PendingTopChallenge is BisectionChallenge, IPendingTopChallenge {
 
         emit OneStepProofCompleted();
         _asserterWin();
-    }
-
-    function encodeSegment(
-        bytes32 _topHash,
-        bytes32 _lowerHash,
-        uint32 _chainLength
-    )
-        private
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _topHash,
-                _lowerHash,
-                _chainLength
-            )
-        );
     }
 }

@@ -17,7 +17,7 @@
 pragma solidity ^0.5.3;
 
 import "./BisectionChallenge.sol";
-import "./IExecutionChallenge.sol";
+import "./ChallengeUtils.sol";
 
 import "../arch/OneStepProof.sol";
 import "../arch/Protocol.sol";
@@ -25,7 +25,7 @@ import "../arch/Protocol.sol";
 import "../libraries/MerkleLib.sol";
 
 
-contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
+contract ExecutionChallenge is BisectionChallenge {
 
     event BisectedAssertion(
         bytes32[] machineHashes,
@@ -42,38 +42,6 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
     string constant BIS_INPLEN = "BIS_INPLEN";
     // Proof was incorrect
     string constant OSP_PROOF = "OSP_PROOF";
-
-
-    function init(
-        address _vmAddress,
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod,
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
-        uint64[2] calldata _timeBounds,
-        bytes32 _assertionHash
-    )
-        external
-    {
-        BisectionChallenge.initializeBisection(
-            _vmAddress,
-            _asserter,
-            _challenger,
-            _challengePeriod,
-            encodeSegment(
-                keccak256(
-                    abi.encodePacked(
-                        _timeBounds[0],
-                        _timeBounds[1],
-                        _beforeInbox
-                    )
-                ),
-                _beforeHash,
-                _assertionHash
-            )
-        );
-    }
 
     struct BisectAssertionData {
         bytes32 preData;
@@ -119,7 +87,7 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
         }
 
         requireMatchesPrevState(
-            encodeSegment(
+            ChallengeUtils.executionHash(
                 _data.preData,
                 _data.machineHashes[0],
                 Protocol.generateAssertionHash(
@@ -135,7 +103,7 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
         );
 
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        hashes[0] = encodeSegment(
+        hashes[0] = ChallengeUtils.executionHash(
             _data.preData,
             _data.machineHashes[0],
             Protocol.generateAssertionHash(
@@ -149,7 +117,7 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
             )
         );
         for (uint i = 1; i < bisectionCount; i++) {
-            hashes[i] = encodeSegment(
+            hashes[i] = ChallengeUtils.executionHash(
                 _data.preData,
                 _data.machineHashes[i],
                 Protocol.generateAssertionHash(
@@ -193,7 +161,7 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
         asserterAction
     {
         requireMatchesPrevState(
-            encodeSegment(
+            ChallengeUtils.executionHash(
                 keccak256(
                     abi.encodePacked(
                         _timeBounds[0],
@@ -230,24 +198,5 @@ contract ExecutionChallenge is BisectionChallenge, IExecutionChallenge {
         require(correctProof == 0, OSP_PROOF);
         emit OneStepProofCompleted();
         _asserterWin();
-    }
-
-    function encodeSegment(
-        bytes32 _preData,
-        bytes32 _beforeHash,
-        bytes32 _assertionHash
-
-    )
-        private
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _preData,
-                _beforeHash,
-                _assertionHash
-            )
-        );
     }
 }

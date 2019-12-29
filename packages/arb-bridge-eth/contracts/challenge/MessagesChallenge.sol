@@ -17,11 +17,11 @@
 pragma solidity ^0.5.3;
 
 import "./BisectionChallenge.sol";
-import "./IMessagesChallenge.sol";
+import "./ChallengeUtils.sol";
 
 import "../arch/Protocol.sol";
 
-contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
+contract MessagesChallenge is BisectionChallenge {
 
     event Bisected(
         bytes32[] chainHashes,
@@ -36,33 +36,6 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
     // Proof was incorrect
     string constant HS_OSP_PROOF = "HS_OSP_PROOF";
 
-    function init(
-        address _vmAddress,
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod,
-        bytes32 _bottomHash,
-        bytes32 _topHash,
-        bytes32 _segmentHash,
-        uint32 _chainLength
-    )
-        external
-    {
-        BisectionChallenge.initializeBisection(
-            _vmAddress,
-            _asserter,
-            _challenger,
-            _challengePeriod,
-            encodeSegment(
-                _bottomHash,
-                _topHash,
-                bytes32(0),
-                _segmentHash,
-                _chainLength
-            )
-        );
-    }
-
     function bisect(
         bytes32[] memory _chainHashes,
         bytes32[] memory _segmentHashes,
@@ -75,7 +48,7 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
         require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
 
         requireMatchesPrevState(
-            encodeSegment(
+            ChallengeUtils.messagesHash(
                 _chainHashes[0],
                 _chainHashes[bisectionCount],
                 _segmentHashes[0],
@@ -85,7 +58,7 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
         );
 
         bytes32[] memory hashes = new bytes32[](bisectionCount);
-        hashes[0] = encodeSegment(
+        hashes[0] = ChallengeUtils.messagesHash(
             _chainHashes[0],
             _chainHashes[1],
             _segmentHashes[0],
@@ -93,7 +66,7 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
             firstSegmentSize(_chainLength, bisectionCount)
         );
         for (uint i = 1; i < bisectionCount; i++) {
-            hashes[i] = encodeSegment(
+            hashes[i] = ChallengeUtils.messagesHash(
                 _chainHashes[i],
                 _chainHashes[i + 1],
                 _segmentHashes[i],
@@ -122,7 +95,7 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
         asserterAction
     {
         requireMatchesPrevState(
-            encodeSegment(
+            ChallengeUtils.messagesHash(
                 _lowerHashA,
                 _topHashA,
                 _lowerHashB,
@@ -136,27 +109,5 @@ contract MessagesChallenge is BisectionChallenge, IMessagesChallenge {
 
         emit OneStepProofCompleted();
         _asserterWin();
-    }
-
-    function encodeSegment(
-        bytes32 _lowerHashA,
-        bytes32 _topHashA,
-        bytes32 _lowerHashB,
-        bytes32 _topHashB,
-        uint32 _chainLength
-    )
-        private
-        pure
-        returns(bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                _lowerHashA,
-                _topHashA,
-                _lowerHashB,
-                _topHashB,
-                _chainLength
-            )
-        );
     }
 }

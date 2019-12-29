@@ -23,10 +23,7 @@ interface IChallengeFactory {
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
-        bytes32 _bottomHash,
-        bytes32 _topHash,
-        bytes32 _segmentHash,
-        uint32 _chainLength
+        bytes32 _messagesHash
     )
         external
         returns(address);
@@ -35,8 +32,7 @@ interface IChallengeFactory {
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
-        bytes32 _topHash,
-        bytes32 _lowerHash
+        bytes32 _pendingTopHash
     )
         external
         returns(address);
@@ -45,10 +41,7 @@ interface IChallengeFactory {
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
-        uint64[2] calldata _timeBounds,
-        bytes32 _assertionHash
+        bytes32 _executionHash
     )
         external
         returns(address);

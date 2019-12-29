@@ -17,11 +17,12 @@
 pragma solidity ^0.5.3;
 
 import "./Challenge.sol";
+import "./IBisectionChallenge.sol";
 
 import "../libraries/MerkleLib.sol";
 
 
-contract BisectionChallenge is Challenge {
+contract BisectionChallenge is Challenge, IBisectionChallenge {
 
     event Continued (
         uint segmentIndex,
@@ -48,7 +49,7 @@ contract BisectionChallenge is Challenge {
         uint32 _challengePeriod,
         bytes32 _challengeState
     )
-        internal
+        external
     {
         Challenge.initializeChallenge(
             _vmAddress,

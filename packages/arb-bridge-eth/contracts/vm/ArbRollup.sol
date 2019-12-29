@@ -43,18 +43,14 @@ contract ArbRollup is Leaves, IArbRollup {
     // invalid staker location proof
     string constant MAKE_STAKER_PROOF = "MAKE_STAKER_PROOF";
 
-    // invalid leaf
-    string constant CONF_LEAF = "CONF_LEAF";
-    // Invalid child type
-    string constant CONF_TYPE = "CONF_TYPE";
     // must include proof for all stakers
     string constant CONF_COUNT = "CONF_COUNT";
-    // node does not exist
-    string constant CONF_LEAF_PROOF = "CONF_LEAF_PROOF";
     // Stakers must be ordered
     string constant CONF_ORDER = "CONF_ORDER";
     // at least one active staker disagrees
     string constant CONF_STAKER_PROOF = "CONF_STAKER_PROOF";
+    // Type is not invalid
+    string constant CONF_INV_TYPE = "CONF_INV_TYPE";
 
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
@@ -85,6 +81,10 @@ contract ArbRollup is Leaves, IArbRollup {
 
     event RollupConfirmed(bytes32 nodeHash);
 
+    event ConfirmedAssertion(
+        bytes32 logsAccHash
+    );
+
     struct MakeAssertionData {
         bytes32 beforeVMHash;
         bytes32 beforeInboxHash;
@@ -112,12 +112,7 @@ contract ArbRollup is Leaves, IArbRollup {
         address[] stakerAddresses;
         bytes32[] stakerProofs;
         uint[] stakerProofOffsets;
-        uint branch;
         uint deadline;
-        bytes32 preconditionHash;
-        bytes32 pendingAssertion;
-        bytes32 importedAssertion;
-        bytes32 executionAssertion;
         bytes32 vmProtoStateHash;
     }
 
@@ -198,35 +193,62 @@ contract ArbRollup is Leaves, IArbRollup {
         );
     }
 
-    // fields
-    //   preconditionHash
-    //   pendingAssertion
-    //   importedAssertion
-    //   executionAssertion
-    //   vmProtoStateHash
+    function confirmValid(
+        bytes32 vmProtoStateHash,
+        address[] calldata stakerAddresses,
+        bytes32[] calldata stakerProofs,
+        uint[]  calldata stakerProofOffsets,
+        uint    deadline,
+        bytes calldata _messages,
+        bytes32 logsAcc
+    )
+        external
+    {
+        _confirmNode(
+            ConfirmData(
+                stakerAddresses,
+                stakerProofs,
+                stakerProofOffsets,
+                deadline,
+                vmProtoStateHash
+            ),
+            VALID_CHILD_TYPE,
+            RollupUtils.validNodeHash(
+                Protocol.generateLastMessageHash(_messages),
+                logsAcc
+            )
+        );
 
-    function confirm(
-        bytes32[5] calldata fields,
+        globalInbox.sendMessages(_messages);
+
+        emit ConfirmedAssertion(
+            logsAcc
+        );
+    }
+
+    function confirmInvalid(
+        bytes32 vmProtoStateHash,
         address[] calldata stakerAddresses,
         bytes32[] calldata stakerProofs,
         uint[]  calldata stakerProofOffsets,
         uint    branch,
-        uint    deadline
+        uint    deadline,
+        bytes32 challengeNodeData
     )
         external
     {
-        return _confirm(ConfirmData(
-            stakerAddresses,
-            stakerProofs,
-            stakerProofOffsets,
+        require(branch < VALID_CHILD_TYPE, CONF_INV_TYPE);
+        _confirmNode(
+            ConfirmData(
+                stakerAddresses,
+                stakerProofs,
+                stakerProofOffsets,
+                deadline,
+                vmProtoStateHash
+            ),
             branch,
-            deadline,
-            fields[0],
-            fields[1],
-            fields[2],
-            fields[3],
-            fields[4]
-        ));
+            challengeNodeData
+        );
     }
 
     modifier onlyOwner() {
@@ -280,49 +302,65 @@ contract ArbRollup is Leaves, IArbRollup {
             0x00,
             data.logsAccHash
         );
-        bytes32 disputableHash = RollupUtils.disputableNodeHash(
-            Protocol.generatePreconditionHash(
-                data.beforeVMHash,
-                data.timeBounds,
-                data.beforeInboxHash
-            ),
-            RollupUtils.pendingAssertionHash(
-                data.afterPendingTop,
-                vmParams.pendingInboxHash
-            ),
-            RollupUtils.importedAssertionHash(
-                data.beforePendingTop,
-                data.importedMessageCount,
-                data.importedMessagesSlice
-            ),
-            assertionHash
-        );
-
-        bytes32 validKid = RollupUtils.childNodeHash(
+        bytes32 afterInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
+        bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
+        leaves[INVALID_PENDING_TOP_CHILD_TYPE] = RollupUtils.childNodeHash(
             data.prevLeaf,
             deadline,
-            disputableHash,
+            ChallengeUtils.pendingTopHash(
+                globalInbox.getPendingMessages(),
+                data.afterPendingTop,
+                data.importedMessageCount
+            ),
+            INVALID_PENDING_TOP_CHILD_TYPE,
+            vmProtoHashBefore
+        );
+        leaves[INVALID_MESSAGES_CHILD_TYPE] = RollupUtils.childNodeHash(
+            data.prevLeaf,
+            deadline,
+            ChallengeUtils.messagesHash(
+                data.beforePendingTop,
+                data.afterPendingTop,
+                0x00,
+                data.importedMessagesSlice,
+                data.importedMessageCount
+            ),
+            INVALID_MESSAGES_CHILD_TYPE,
+            vmProtoHashBefore
+        );
+        leaves[INVALID_EXECUTION_CHILD_TYPE] = RollupUtils.childNodeHash(
+            data.prevLeaf,
+            deadline,
+            ChallengeUtils.executionHash(
+                keccak256(
+                    abi.encodePacked(
+                        data.timeBounds[0],
+                        data.timeBounds[1],
+                        afterInboxHash
+                    )
+                ),
+                data.beforeVMHash,
+                assertionHash
+            ),
+            INVALID_EXECUTION_CHILD_TYPE,
+            vmProtoHashBefore
+        );
+        leaves[VALID_CHILD_TYPE] = RollupUtils.childNodeHash(
+            data.prevLeaf,
+            deadline,
+            RollupUtils.validNodeHash(
+                data.messagesAccHash,
+                data.logsAccHash
+            ),
             VALID_CHILD_TYPE,
             RollupUtils.protoStateHash(
                 data.afterVMHash,
-                data.afterInboxHash,
+                afterInboxHash,
                 data.afterPendingTop
             )
         );
-
-        bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
-        leaves[0] = validKid;
-        for (uint i = 1; i<=MAX_CHILD_TYPE; i++) {
-            leaves[i] = RollupUtils.childNodeHash(
-                data.prevLeaf,
-                deadline,
-                disputableHash,
-                i,
-                vmProtoHashBefore
-            );
-        }
         splitLeaf(data.prevLeaf, leaves);
-        staker.location = validKid;
+        staker.location = leaves[VALID_CHILD_TYPE];
 
         emit RollupAsserted(
             [
@@ -340,19 +378,14 @@ contract ArbRollup is Leaves, IArbRollup {
         );
     }
 
-    function _confirm(ConfirmData memory data) private {
+    function _confirmNode(ConfirmData memory data, uint branch, bytes32 nodeDataHash) private {
         uint _stakerCount = data.stakerAddresses.length;
         require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(
             latestConfirmed(),
             data.deadline,
-            RollupUtils.disputableNodeHash(
-                data.preconditionHash,
-                data.pendingAssertion,
-                data.importedAssertion,
-                data.executionAssertion
-            ),
-            data.branch,
+            nodeDataHash,
+            branch,
             data.vmProtoStateHash
         );
         bytes20 prevStaker = 0x00;
@@ -376,9 +409,6 @@ contract ArbRollup is Leaves, IArbRollup {
         }
 
         updateLatestConfirmed(to);
-        if (data.branch == 0) {
-            //TODO: execute actions from the DA before the confirmed assertion (to)
-        }
 
         emit RollupConfirmed(to);
     }

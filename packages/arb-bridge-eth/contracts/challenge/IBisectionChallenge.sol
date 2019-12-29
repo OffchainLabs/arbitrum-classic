@@ -17,15 +17,14 @@
 pragma solidity ^0.5.3;
 
 
-interface IPendingTopChallenge {
+interface IBisectionChallenge {
 
-    function init(
+    function initializeBisection(
         address _vmAddress,
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
-        bytes32 _topHash,
-        bytes32 _lowerHash
+        bytes32 _challengeState
     )
         external;
 }

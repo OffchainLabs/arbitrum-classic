@@ -19,9 +19,7 @@ pragma solidity ^0.5.3;
 import "../libraries/CloneFactory.sol";
 
 import "./IChallengeFactory.sol";
-import "./IMessagesChallenge.sol";
-import "./IPendingTopChallenge.sol";
-import "./IExecutionChallenge.sol";
+import "./IBisectionChallenge.sol";
 
 
 contract ChallengeFactory is CloneFactory, IChallengeFactory {
@@ -69,81 +67,76 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
-        bytes32 _bottomHash,
-        bytes32 _topHash,
-        bytes32 _segmentHash,
-        uint32 _chainLength
+        bytes32 _messagesHash
     )
         external
         returns(address)
     {
-        address clone = create2Clone(
-            messagesChallengeTemplate,
-            generateNonce(address(_asserter), address(_challenger))
-        );
-        IMessagesChallenge(clone).init(
-            msg.sender,
+        return _createChallenge(
             _asserter,
             _challenger,
             _challengePeriod,
-            _bottomHash,
-            _topHash,
-            _segmentHash,
-            _chainLength
+            _messagesHash,
+            messagesChallengeTemplate
         );
-        return address(clone);
     }
 
     function createPendingTopChallenge(
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
-        bytes32 _topHash,
-        bytes32 _lowerHash
+        bytes32 _pendingTopHash
     )
         external
         returns(address)
     {
-        address clone = create2Clone(
-            pendingTopChallengeTemplate,
-            generateNonce(address(_asserter), address(_challenger))
-        );
-        IPendingTopChallenge(clone).init(
-            msg.sender,
+        return _createChallenge(
             _asserter,
             _challenger,
             _challengePeriod,
-            _topHash,
-            _lowerHash
+            _pendingTopHash,
+            pendingTopChallengeTemplate
         );
-        return address(clone);
     }
 
     function createExecutionChallenge(
         address payable _asserter,
         address payable _challenger,
         uint32 _challengePeriod,
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
-        uint64[2] calldata _timeBounds,
-        bytes32 _assertionHash
+        bytes32 _executionHash
     )
         external
         returns(address)
     {
+        return _createChallenge(
+            _asserter,
+            _challenger,
+            _challengePeriod,
+            _executionHash,
+            executionChallengeTemplate
+        );
+    }
+
+    function _createChallenge(
+        address payable _asserter,
+        address payable _challenger,
+        uint32 _challengePeriod,
+        bytes32 _challengeHash,
+        address challengeTemplate
+    )
+        private
+        returns(address)
+    {
         address clone = create2Clone(
-            executionChallengeTemplate,
+            challengeTemplate,
             generateNonce(address(_asserter), address(_challenger))
         );
-        IExecutionChallenge(clone).init(
+        IBisectionChallenge(clone).initializeBisection(
             msg.sender,
             _asserter,
             _challenger,
             _challengePeriod,
-            _beforeHash,
-            _beforeInbox,
-            _timeBounds,
-            _assertionHash
+            _challengeHash
         );
         return address(clone);
     }

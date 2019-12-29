@@ -18,6 +18,7 @@ pragma solidity ^0.5.3;
 
 import "./RollupUtils.sol";
 
+import "../challenge/ChallengeUtils.sol";
 import "../challenge/IChallengeFactory.sol";
 
 import "../arch/Protocol.sol";
@@ -67,10 +68,10 @@ contract Staking {
     // Invalid staker2 proof
     string constant STK2_PROOF = "STK2_PROOF";
 
-    uint internal constant VALID_CHILD_TYPE = 0;
-    uint internal constant INVALID_PENDING_TOP_CHILD_TYPE = 1;
-    uint internal constant INVALID_MESSAGES_CHILD_TYPE = 2;
-    uint internal constant INVALID_EXECUTION_CHILD_TYPE = 3;
+    uint internal constant INVALID_PENDING_TOP_CHILD_TYPE = 0;
+    uint internal constant INVALID_MESSAGES_CHILD_TYPE = 1;
+    uint internal constant INVALID_EXECUTION_CHILD_TYPE = 2;
+    uint internal constant VALID_CHILD_TYPE = 3;
     uint internal constant MAX_CHILD_TYPE = 3;
 
     IChallengeFactory public challengeFactory;
@@ -112,139 +113,92 @@ contract Staking {
         bytes32[2] vmProtoHashes;
         bytes32[] proof1;
         bytes32[] proof2;
+        bytes32 challengeDataHash;
     }
 
     struct StartExecutionChallengeData {
         bytes32 beforeHash;
         bytes32 beforeInbox;
         uint64[2] timeBounds;
-        bytes32 pendingAssertion;
-        bytes32 beforePendingTop;
         bytes32 importedMessageSlice;
-        uint32 importedMessageCount;
         bytes32 assertionHash;
     }
 
-    // fields
-    //  node
-    //  beforeHash
-    //  beforeInbox
-    //  pendingAssertionHash
-    //  beforePendingTop
-    //  importedMessageSlice
-    //  assertionHash
-
     function startExecutionChallenge(
-        bytes32[7] calldata _fields,
+        bytes32 node,
         address payable[2] calldata stakerAddresses,
         uint disputableDeadline,
         uint[2] calldata stakerPositions,
         bytes32[2] calldata vmProtoHashes,
         bytes32[] calldata proof1,
         bytes32[] calldata proof2,
-        uint64[2] calldata _timeBounds,
-        uint32 _importedMessageCount
+        bytes32 challengeDataHash
     )
         external
     {
         return _startExecutionChallenge(
             ChallengeData(
                 stakerAddresses,
-                _fields[0],
+                node,
                 disputableDeadline,
                 stakerPositions,
                 vmProtoHashes,
                 proof1,
-                proof2
-            ),
-            StartExecutionChallengeData(
-                _fields[1],
-                _fields[2],
-                _timeBounds,
-                _fields[3],
-                _fields[4],
-                _fields[5],
-                _importedMessageCount,
-                _fields[6]
+                proof2,
+                challengeDataHash
             )
         );
     }
 
-    // fields
-    //  node
-    //  preconditionHash
-    //  afterPendingTop
-    //  currentPending
-    //  importedAssertion
-    //  assertionHash
-
     function startPendingTopChallenge(
-        bytes32[6] calldata _fields,
+        bytes32 node,
         address payable[2] calldata stakerAddresses,
         uint disputableDeadline,
         uint[2] calldata stakerPositions,
         bytes32[2] calldata vmProtoHashes,
         bytes32[] calldata proof1,
-        bytes32[] calldata proof2
+        bytes32[] calldata proof2,
+        bytes32 challengeDataHash
     )
         external
     {
         return _startPendingTopChallenge(
             ChallengeData(
                 stakerAddresses,
-                _fields[0],
+                node,
                 disputableDeadline,
                 stakerPositions,
                 vmProtoHashes,
                 proof1,
-                proof2
-            ),
-            _fields[1],
-            _fields[2],
-            _fields[3],
-            _fields[4],
-            _fields[5]
+                proof2,
+                challengeDataHash
+            )
         );
     }
 
-    // fields
-    //  node
-    //  preconditionHash
-    //  afterPendingTop
-    //  currentPending
-    //  beforePendingTop
-    //  importedMessageSlice
-    //  assertionHash
-
     function startMessagesChallenge(
-        bytes32[7] memory _fields,
-        address payable[2] memory stakerAddresses,
+        bytes32 node,
+        address payable[2] calldata stakerAddresses,
         uint disputableDeadline,
-        uint[2] memory stakerPositions,
-        bytes32[2] memory vmProtoHashes,
-        bytes32[] memory proof1,
-        bytes32[] memory proof2,
-        uint32 _importedMessageCount
+        uint[2] calldata stakerPositions,
+        bytes32[2] calldata vmProtoHashes,
+        bytes32[] calldata proof1,
+        bytes32[] calldata proof2,
+        bytes32 challengeDataHash
     )
-        public
+        external
     {
         return _startMessagesChallenge(
             ChallengeData(
                 stakerAddresses,
-                _fields[0],
+                node,
                 disputableDeadline,
                 stakerPositions,
                 vmProtoHashes,
                 proof1,
-                proof2
-            ),
-            _fields[1],
-            _fields[2],
-            _fields[3],
-            _fields[4],
-            _fields[5],
-            _importedMessageCount,
-            _fields[6]
+                proof2,
+                challengeDataHash
+            )
         );
     }
 
@@ -314,37 +268,16 @@ contract Staking {
         return stakerCount;
     }
 
-    function _startPendingTopChallenge(
-        ChallengeData memory _challenge,
-        bytes32 _preconditionHash,
-        bytes32 _afterPendingTop,
-        bytes32 _currentPending,
-        bytes32 _importedAssertion,
-        bytes32 _assertionHash
-    )
-        private
-    {
-        require(_challenge.stakerPositions[1] == INVALID_PENDING_TOP_CHILD_TYPE, PND_CHAL_TYPE);
+    function _startPendingTopChallenge(ChallengeData memory _challenge ) private {
+        require(_challenge.stakerPositions[0] == INVALID_PENDING_TOP_CHILD_TYPE, PND_CHAL_TYPE);
 
-        verifyConflict(
-            _challenge,
-            RollupUtils.disputableNodeHash(
-                _preconditionHash,
-                RollupUtils.pendingAssertionHash(
-                    _afterPendingTop,
-                    _currentPending
-                ),
-                _importedAssertion,
-                _assertionHash
-            )
-        );
+        verifyConflict(_challenge);
 
         address newChallengeAddr = challengeFactory.createPendingTopChallenge(
             _challenge.stakerAddresses[0],
             _challenge.stakerAddresses[1],
             0, // Challenge period
-            _currentPending,
-            _afterPendingTop
+            _challenge.challengeDataHash
         );
 
         emit RollupChallengeStarted(
@@ -355,45 +288,16 @@ contract Staking {
         );
     }
 
-    function _startMessagesChallenge(
-        ChallengeData memory _challenge,
-        bytes32 _preconditionHash,
-        bytes32 _afterPendingTop,
-        bytes32 _currentPending,
-        bytes32 _beforePendingTop,
-        bytes32 _importedMessageSlice,
-        uint32 _importedMessageCount,
-        bytes32 _assertionHash
-    )
-        private
-    {
-        require(_challenge.stakerPositions[1] == INVALID_MESSAGES_CHILD_TYPE, MSGS_CHAL_TYPE);
+    function _startMessagesChallenge(ChallengeData memory _challenge) private {
+        require(_challenge.stakerPositions[0] == INVALID_MESSAGES_CHILD_TYPE, MSGS_CHAL_TYPE);
 
-        verifyConflict(
-            _challenge,
-            RollupUtils.disputableNodeHash(
-                _preconditionHash,
-                RollupUtils.pendingAssertionHash(
-                    _afterPendingTop,
-                    _currentPending
-                ),
-                RollupUtils.importedAssertionHash(
-                    _beforePendingTop,
-                    _importedMessageCount,
-                    _importedMessageSlice
-                ),
-                _assertionHash
-            )
-        );
+        verifyConflict(_challenge);
 
         address newChallengeAddr = challengeFactory.createMessagesChallenge(
             _challenge.stakerAddresses[0],
             _challenge.stakerAddresses[1],
             0, // Challenge period
-            _beforePendingTop,
-            _afterPendingTop,
-            _importedMessageSlice,
-            _importedMessageCount
+            _challenge.challengeDataHash
         );
 
 
@@ -405,40 +309,16 @@ contract Staking {
         );
     }
 
-    function _startExecutionChallenge(
-        ChallengeData memory _challenge,
-        StartExecutionChallengeData memory data
-    )
-        private
-    {
-        require(_challenge.stakerPositions[1] == INVALID_EXECUTION_CHILD_TYPE, EXEC_CHAL_TYPE);
+    function _startExecutionChallenge(ChallengeData memory _challenge) private {
+        require(_challenge.stakerPositions[0] == INVALID_EXECUTION_CHILD_TYPE, EXEC_CHAL_TYPE);
 
-        verifyConflict(
-            _challenge,
-            RollupUtils.disputableNodeHash(
-                Protocol.generatePreconditionHash(
-                    data.beforeHash,
-                    data.timeBounds,
-                    data.beforeInbox
-                ),
-                data.pendingAssertion,
-                RollupUtils.importedAssertionHash(
-                    data.beforePendingTop,
-                    data.importedMessageCount,
-                    data.importedMessageSlice
-                ),
-                data.assertionHash
-            )
-        );
+        verifyConflict(_challenge);
 
         address newChallengeAddr = challengeFactory.createExecutionChallenge(
             _challenge.stakerAddresses[0],
             _challenge.stakerAddresses[1],
             0, // Challenge period
-            data.beforeHash,
-            Protocol.addMessagesToInbox(data.beforeInbox, data.importedMessageSlice),
-            data.timeBounds,
-            data.assertionHash
+            _challenge.challengeDataHash
         );
 
         emit RollupChallengeStarted(
@@ -449,12 +329,7 @@ contract Staking {
         );
     }
 
-    function verifyConflict(
-        ChallengeData memory _challenge,
-        bytes32 disputableNodeHash
-    )
-        private
-    {
+    function verifyConflict(ChallengeData memory _challenge) private {
         Staker storage staker1 = getValidStaker(_challenge.stakerAddresses[0]);
         Staker storage staker2 = getValidStaker(_challenge.stakerAddresses[1]);
 
@@ -463,13 +338,12 @@ contract Staking {
         require(!staker1.inChallenge, STK1_IN_CHAL);
         require(!staker2.inChallenge, STK2_IN_CHAL);
         require(_challenge.stakerPositions[0] < _challenge.stakerPositions[1], TYPE_ORDER);
-        require(_challenge.stakerPositions[1] <= MAX_CHILD_TYPE, INVLD_CHLD_TYPE);
         require(
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     _challenge.node,
                     _challenge.disputableDeadline,
-                    disputableNodeHash,
+                    _challenge.challengeDataHash,
                     _challenge.stakerPositions[0],
                     _challenge.vmProtoHashes[0]
                 ),
@@ -483,7 +357,7 @@ contract Staking {
                 RollupUtils.childNodeHash(
                     _challenge.node,
                     _challenge.disputableDeadline,
-                    disputableNodeHash,
+                    _challenge.challengeDataHash,
                     _challenge.stakerPositions[1],
                     _challenge.vmProtoHashes[1]
                 ),

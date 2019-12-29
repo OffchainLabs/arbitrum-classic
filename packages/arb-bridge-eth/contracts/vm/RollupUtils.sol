@@ -33,11 +33,9 @@ library RollupUtils {
         ));
     }
 
-    function disputableNodeHash(
-        bytes32 preconditionHash,
-        bytes32 pendingAssertion,
-        bytes32 importedAssertion,
-        bytes32 assertionHash
+    function validNodeHash(
+        bytes32 messagesAcc,
+        bytes32 logsAcc
     )
         internal
         pure
@@ -45,10 +43,8 @@ library RollupUtils {
     {
         return keccak256(
             abi.encodePacked(
-                preconditionHash,
-                pendingAssertion,
-                importedAssertion,
-                assertionHash
+                messagesAcc,
+                logsAcc
             )
         );
     }
@@ -75,25 +71,6 @@ library RollupUtils {
                         vmProtoStateHash
                     )
                 )
-            )
-        );
-    }
-
-    function importedAssertionHash(bytes32 beforePendingTop, uint32 messageCount, bytes32 messagesSlice) internal pure returns(bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                beforePendingTop,
-                messageCount,
-                messagesSlice
-            )
-        );
-    }
-
-    function pendingAssertionHash(bytes32 afterPendingTop, bytes32 currentPending) internal pure returns(bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                afterPendingTop,
-                currentPending
             )
         );
     }
