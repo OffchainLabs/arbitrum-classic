@@ -30,8 +30,6 @@ contract ArbRollup is Leaves, IArbRollup {
 
     // invalid leaf
     string constant MAKE_LEAF = "MAKE_LEAF";
-    // Previous leaf incorrectly unwrapped
-    string constant MAKE_PREV = "MAKE_PREV";
     // Can only disputable assert if machine is not errored or halted
     string constant MAKE_RUN = "MAKE_RUN";
     // Tried to execute too many steps
@@ -91,10 +89,8 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 beforePendingTop;
         bytes32 prevPrevLeafHash;
         uint prevDeadline;
-        bytes32 prevDisputableHash;
+        bytes32 prevNodeDataHash;
         uint prevChildType;
-        bytes32 prevLeaf;
-        bytes32[] prevLeafProof;
         bytes32[] stakerProof;
         bytes32 afterPendingTop;
         bytes32 importedMessagesSlice;
@@ -137,7 +133,7 @@ contract ArbRollup is Leaves, IArbRollup {
     //  beforeInboxHash
     //  beforePendingTop
     //  prevPrevLeafHash
-    //  prevDisputableHash
+    //  prevNodeDataHash
     //  afterPendingTop
     //  importedMessagesSlice
     //  afterVMHash
@@ -149,8 +145,6 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32[11] calldata _fields,
         uint _prevDeadline,
         uint    _prevChildType,
-        bytes32 _prevLeaf,
-        bytes32[] calldata _prevLeafProof,
         bytes32[] calldata _stakerProof,
         uint32 _importedMessageCount,
         uint32 _numSteps,
@@ -168,8 +162,6 @@ contract ArbRollup is Leaves, IArbRollup {
                 _prevDeadline,
                 _fields[4],
                 _prevChildType,
-                _prevLeaf,
-                _prevLeafProof,
                 _stakerProof,
                 _fields[5],
                 _fields[6],
@@ -256,44 +248,31 @@ contract ArbRollup is Leaves, IArbRollup {
     */
 
     function _makeAssertion(MakeAssertionData memory data) private {
-        Staker storage staker = getValidStaker(msg.sender);
-        require(isValidLeaf(data.prevLeaf), MAKE_LEAF);
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
             data.beforeVMHash,
             data.beforeInboxHash,
             data.beforePendingTop
         );
-        require(
-            RollupUtils.childNodeHash(
-                data.prevPrevLeafHash,
-                data.prevDeadline,
-                data.prevDisputableHash,
-                data.prevChildType,
-                vmProtoHashBefore
-            ) == data.prevLeaf,
-            MAKE_PREV
+        bytes32 prevLeaf = RollupUtils.childNodeHash(
+            data.prevPrevLeafHash,
+            data.prevDeadline,
+            data.prevNodeDataHash,
+            data.prevChildType,
+            vmProtoHashBefore
         );
-
+        require(isValidLeaf(prevLeaf), MAKE_LEAF);
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
         require(withinTimeBounds(data.timeBounds), MAKE_TIME);
-        require(RollupUtils.isPath(latestConfirmed(), data.prevLeaf, data.prevLeafProof), MAKE_PREV_PROOF);
-        require(RollupUtils.isPath(staker.location, data.prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
+
+        Staker storage staker = getValidStaker(msg.sender);
+        require(RollupUtils.isPath(staker.location, prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
 
         uint deadline = block.number + vmParams.gracePeriod; //TODO: [Ed] compute this properly
-        bytes32 assertionHash = Protocol.generateAssertionHash(
-            data.afterVMHash,
-            data.numSteps,
-            data.numArbGas,
-            0x00,
-            data.messagesAccHash,
-            0x00,
-            data.logsAccHash
-        );
         bytes32 afterInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
         bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
         leaves[INVALID_PENDING_TOP_CHILD_TYPE] = RollupUtils.childNodeHash(
-            data.prevLeaf,
+            prevLeaf,
             deadline,
             ChallengeUtils.pendingTopHash(
                 globalInbox.getPendingMessages(),
@@ -304,7 +283,7 @@ contract ArbRollup is Leaves, IArbRollup {
             vmProtoHashBefore
         );
         leaves[INVALID_MESSAGES_CHILD_TYPE] = RollupUtils.childNodeHash(
-            data.prevLeaf,
+            prevLeaf,
             deadline,
             ChallengeUtils.messagesHash(
                 data.beforePendingTop,
@@ -316,8 +295,17 @@ contract ArbRollup is Leaves, IArbRollup {
             INVALID_MESSAGES_CHILD_TYPE,
             vmProtoHashBefore
         );
+        bytes32 assertionHash = Protocol.generateAssertionHash(
+            data.afterVMHash,
+            data.numSteps,
+            data.numArbGas,
+            0x00,
+            data.messagesAccHash,
+            0x00,
+            data.logsAccHash
+        );
         leaves[INVALID_EXECUTION_CHILD_TYPE] = RollupUtils.childNodeHash(
-            data.prevLeaf,
+            prevLeaf,
             deadline,
             ChallengeUtils.executionHash(
                 keccak256(
@@ -334,7 +322,7 @@ contract ArbRollup is Leaves, IArbRollup {
             vmProtoHashBefore
         );
         leaves[VALID_CHILD_TYPE] = RollupUtils.childNodeHash(
-            data.prevLeaf,
+            prevLeaf,
             deadline,
             RollupUtils.validNodeHash(
                 data.messagesAccHash,
@@ -347,12 +335,12 @@ contract ArbRollup is Leaves, IArbRollup {
                 data.afterPendingTop
             )
         );
-        splitLeaf(data.prevLeaf, leaves);
+        splitLeaf(prevLeaf, leaves);
         staker.location = leaves[VALID_CHILD_TYPE];
 
         emit RollupAsserted(
             [
-                data.prevLeaf,
+                prevLeaf,
                 data.afterPendingTop,
                 data.importedMessagesSlice,
                 data.afterVMHash,
