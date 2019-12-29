@@ -34,17 +34,6 @@ contract Leaves is Confirming {
         bytes32 toNodeHash
     );
 
-    function init(
-        bytes32 _vmState,
-        uint128 _stakeRequirement,
-        address _challengeFactoryAddress
-    )
-        internal
-    {
-        Confirming.init(_vmState, _stakeRequirement, _challengeFactoryAddress);
-        leaves[latestConfirmed()] = true;
-    }
-
     function pruneLeaf(
         bytes32 _leaf,
         bytes32 from,
@@ -93,6 +82,17 @@ contract Leaves is Confirming {
         staker.location = newLocation;
 
         emit RollupStakeMoved(msg.sender, newLocation);
+    }
+
+    function init(
+        bytes32 _vmState,
+        uint128 _stakeRequirement,
+        address _challengeFactoryAddress
+    )
+        internal
+    {
+        Confirming.init(_vmState, _stakeRequirement, _challengeFactoryAddress);
+        leaves[latestConfirmed()] = true;
     }
 
     function isValidLeaf(bytes32 leaf) internal view returns(bool) {

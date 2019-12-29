@@ -31,19 +31,6 @@ library VM {
         bytes32 pendingInboxHash;
     }
 
-    struct ProtocolState {
-        bytes32 machineHash;
-        bytes32 inboxHash;
-    }
-
-    struct FullAssertion {
-        bytes messageData;
-        uint16[] messageTokenNums;
-        uint256[] messageAmounts;
-        address[] messageDestinations;
-        bytes32 logsAccHash;
-    }
-
     function isErrored(bytes32 vmStateHash) external pure returns(bool) {
         return vmStateHash == MACHINE_ERROR_HASH;
     }

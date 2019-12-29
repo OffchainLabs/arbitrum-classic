@@ -85,7 +85,7 @@ library Protocol {
         );
     }
 
-    function generateLastMessageHash(bytes memory _messages) public pure returns (bytes32){
+    function generateLastMessageHash(bytes memory _messages) public pure returns (bytes32) {
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;

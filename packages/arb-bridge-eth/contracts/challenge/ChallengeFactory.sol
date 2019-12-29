@@ -42,14 +42,6 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
         executionChallengeTemplate = _executionChallengeTemplate;
     }
 
-    function generateNonce(address asserter, address challenger) public view returns(uint) {
-        return uint(keccak256(abi.encodePacked(
-            asserter,
-            challenger,
-            msg.sender
-        )));
-    }
-
     function generateCloneAddress(
         address asserter,
         address challenger,
@@ -59,12 +51,18 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
         view
         returns(address)
     {
-        return address(bytes20(keccak256(abi.encodePacked(
-            byte(0xff),
-            address(this),
-            generateNonce(asserter, challenger),
-            codeHash
-        ))));
+        return address(
+            bytes20(
+                keccak256(
+                    abi.encodePacked(
+                        byte(0xff),
+                        address(this),
+                        generateNonce(asserter, challenger),
+                        codeHash
+                    )
+                )
+            )
+        );
     }
 
     function createChallenge(
@@ -99,5 +97,17 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
             _challengeHash
         );
         return address(clone);
+    }
+
+    function generateNonce(address asserter, address challenger) public view returns(uint) {
+        return uint(
+            keccak256(
+                abi.encodePacked(
+                    asserter,
+                    challenger,
+                    msg.sender
+                )
+            )
+        );
     }
 }

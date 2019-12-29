@@ -75,6 +75,61 @@ contract ExecutionChallenge is BisectionChallenge {
         );
     }
 
+    function oneStepProof(
+        bytes32 _beforeHash,
+        bytes32 _beforeInbox,
+        uint64[2] memory _timeBounds,
+        bytes32 _afterHash,
+        bytes32 _firstMessage,
+        bytes32 _lastMessage,
+        bytes32 _firstLog,
+        bytes32 _lastLog,
+        uint64  _gas,
+        bytes memory _proof
+    )
+        public
+        asserterAction
+    {
+        requireMatchesPrevState(
+            ChallengeUtils.executionHash(
+                keccak256(
+                    abi.encodePacked(
+                        _timeBounds[0],
+                        _timeBounds[1],
+                        _beforeInbox
+                    )
+                ),
+                _beforeHash,
+                Protocol.generateAssertionHash(
+                    _afterHash,
+                    1,
+                    _gas,
+                    _firstMessage,
+                    _lastMessage,
+                    _firstLog,
+                    _lastLog
+                )
+            )
+        );
+
+        uint correctProof = OneStepProof.validateProof(
+            _beforeHash,
+            _timeBounds,
+            _beforeInbox,
+            _afterHash,
+            _firstMessage,
+            _lastMessage,
+            _firstLog,
+            _lastLog,
+            _gas,
+            _proof
+        );
+
+        require(correctProof == 0, OSP_PROOF);
+        emit OneStepProofCompleted();
+        _asserterWin();
+    }
+
     function _bisectAssertion(BisectAssertionData memory _data) private {
         uint bisectionCount = _data.machineHashes.length - 1;
         require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
@@ -143,60 +198,5 @@ contract ExecutionChallenge is BisectionChallenge {
             _data.totalSteps,
             deadline
         );
-    }
-
-    function oneStepProof(
-        bytes32 _beforeHash,
-        bytes32 _beforeInbox,
-        uint64[2] memory _timeBounds,
-        bytes32 _afterHash,
-        bytes32 _firstMessage,
-        bytes32 _lastMessage,
-        bytes32 _firstLog,
-        bytes32 _lastLog,
-        uint64  _gas,
-        bytes memory _proof
-    )
-        public
-        asserterAction
-    {
-        requireMatchesPrevState(
-            ChallengeUtils.executionHash(
-                keccak256(
-                    abi.encodePacked(
-                        _timeBounds[0],
-                        _timeBounds[1],
-                        _beforeInbox
-                    )
-                ),
-                _beforeHash,
-                Protocol.generateAssertionHash(
-                    _afterHash,
-                    1,
-                    _gas,
-                    _firstMessage,
-                    _lastMessage,
-                    _firstLog,
-                    _lastLog
-                )
-            )
-        );
-
-        uint correctProof = OneStepProof.validateProof(
-            _beforeHash,
-            _timeBounds,
-            _beforeInbox,
-            _afterHash,
-            _firstMessage,
-            _lastMessage,
-            _firstLog,
-            _lastLog,
-            _gas,
-            _proof
-        );
-
-        require(correctProof == 0, OSP_PROOF);
-        emit OneStepProofCompleted();
-        _asserterWin();
     }
 }

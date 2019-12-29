@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
+
 library ChallengeUtils {
 
     function pendingTopHash(

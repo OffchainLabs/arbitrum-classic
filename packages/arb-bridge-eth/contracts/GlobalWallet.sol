@@ -177,7 +177,7 @@ contract GlobalWallet {
         internal
         returns (bool)
     {
-        if(!removeNFTToken(_from, _tokenContract, _tokenId)) {
+        if (!removeNFTToken(_from, _tokenContract, _tokenId)) {
             return false;
         }
         addNFTToken(_to, _tokenContract, _tokenId);

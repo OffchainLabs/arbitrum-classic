@@ -21,6 +21,7 @@ import "./ChallengeUtils.sol";
 
 import "../arch/Protocol.sol";
 
+
 contract MessagesChallenge is BisectionChallenge {
 
     event Bisected(

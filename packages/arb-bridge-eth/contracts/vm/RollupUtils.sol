@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
+
 library RollupUtils {
     function protoStateHash(
         bytes32 machineHash,
@@ -26,11 +27,13 @@ library RollupUtils {
         pure
         returns(bytes32)
     {
-        return keccak256(abi.encodePacked(
-            machineHash,
-            inboxHash,
-            pendingTop
-        ));
+        return keccak256(
+            abi.encodePacked(
+                machineHash,
+                inboxHash,
+                pendingTop
+            )
+        );
     }
 
     function validNodeHash(
@@ -143,7 +146,7 @@ library RollupUtils {
         returns(bool)
     {
         return isPath(from, middle, proof1) &&
-               isPath(middle, to, proof2);
+            isPath(middle, to, proof2);
     }
 
     function isConflict(
@@ -157,7 +160,7 @@ library RollupUtils {
         pure
         returns(bool)
     {
-        return (proof1[0] != proof2[0]) &&
+        return proof1[0] != proof2[0] &&
             isPath(from, to1, proof1) &&
             isPath(from, to2, proof2);
     }

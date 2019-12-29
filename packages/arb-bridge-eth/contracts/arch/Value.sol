@@ -64,10 +64,10 @@ library Value {
     }
 
     function hashCodePoint(
-            uint8 opcode,
-            bool immediate,
-            bytes32 immediateVal,
-            bytes32 nextCodePoint
+        uint8 opcode,
+        bool immediate,
+        bytes32 immediateVal,
+        bytes32 nextCodePoint
     ) public pure returns (bytes32) {
         if (immediate) {
             return keccak256(

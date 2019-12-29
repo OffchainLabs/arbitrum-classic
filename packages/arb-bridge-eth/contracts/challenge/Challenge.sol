@@ -65,29 +65,6 @@ contract Challenge {
 
     State state;
 
-
-    function initializeChallenge(
-        address _vmAddress,
-        address payable _asserter,
-        address payable _challenger,
-        uint32 _challengePeriod
-    )
-        internal
-    {
-        require(state == State.NoChallenge, CHAL_INIT_STATE);
-
-        vmAddress = _vmAddress;
-        asserter = _asserter;
-        challenger = _challenger;
-        challengePeriod = _challengePeriod;
-        state = State.AsserterTurn;
-        updateDeadline();
-
-        emit InitiatedChallenge(
-            deadline
-        );
-    }
-
     modifier asserterAction {
         require(State.AsserterTurn == state, BIS_STATE);
         require(block.number <= deadline, BIS_DEADLINE);
@@ -112,6 +89,28 @@ contract Challenge {
             emit TimedOutChallenge(false);
             _asserterWin();
         }
+    }
+
+    function initializeChallenge(
+        address _vmAddress,
+        address payable _asserter,
+        address payable _challenger,
+        uint32 _challengePeriod
+    )
+        internal
+    {
+        require(state == State.NoChallenge, CHAL_INIT_STATE);
+
+        vmAddress = _vmAddress;
+        asserter = _asserter;
+        challenger = _challenger;
+        challengePeriod = _challengePeriod;
+        state = State.AsserterTurn;
+        updateDeadline();
+
+        emit InitiatedChallenge(
+            deadline
+        );
     }
 
     function updateDeadline() internal {

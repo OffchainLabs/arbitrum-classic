@@ -353,7 +353,9 @@ contract ArbRollup is Leaves, IArbRollup {
         address[] memory stakerAddresses,
         bytes32[] memory stakerProofs,
         uint[]  memory stakerProofOffsets
-    ) private {
+    )
+        private
+    {
         uint _stakerCount = stakerAddresses.length;
         require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(

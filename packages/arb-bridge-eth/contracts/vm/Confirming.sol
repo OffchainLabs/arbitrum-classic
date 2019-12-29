@@ -32,26 +32,6 @@ contract Confirming is Staking {
 
     event RollupStakeRefunded(address staker);
 
-    function init(
-        bytes32 _vmState,
-        uint128 _stakeRequirement,
-        address _challengeFactoryAddress
-    )
-        internal
-    {
-        Staking.init(_stakeRequirement, _challengeFactoryAddress);
-
-        // VM protocol state
-        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
-        updateLatestConfirmed(RollupUtils.childNodeHash(
-            0,
-            0,
-            0,
-            0,
-            vmProtoStateHash
-        ));
-    }
-
     function placeStake(
         bytes32 location,
         bytes32[] calldata proof
@@ -97,6 +77,28 @@ contract Confirming is Staking {
         deleteStakerWithPayout(msg.sender);
 
         emit RollupStakeRefunded(msg.sender);
+    }
+
+    function init(
+        bytes32 _vmState,
+        uint128 _stakeRequirement,
+        address _challengeFactoryAddress
+    )
+        internal
+    {
+        Staking.init(_stakeRequirement, _challengeFactoryAddress);
+
+        // VM protocol state
+        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
+        updateLatestConfirmed(
+            RollupUtils.childNodeHash(
+                0,
+                0,
+                0,
+                0,
+                vmProtoStateHash
+            )
+        );
     }
 
     function latestConfirmed() internal view returns (bytes32) {
