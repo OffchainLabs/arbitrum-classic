@@ -88,9 +88,7 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 beforeInboxHash;
         bytes32 beforePendingTop;
         bytes32 prevPrevLeafHash;
-        uint prevDeadline;
-        bytes32 prevNodeDataHash;
-        uint prevChildType;
+        bytes32 prevExtraDataHash;
         bytes32[] stakerProof;
         bytes32 afterPendingTop;
         bytes32 importedMessagesSlice;
@@ -133,7 +131,7 @@ contract ArbRollup is Leaves, IArbRollup {
     //  beforeInboxHash
     //  beforePendingTop
     //  prevPrevLeafHash
-    //  prevNodeDataHash
+    //  prevExtraDataHash
     //  afterPendingTop
     //  importedMessagesSlice
     //  afterVMHash
@@ -143,8 +141,6 @@ contract ArbRollup is Leaves, IArbRollup {
 
     function makeAssertion(
         bytes32[11] calldata _fields,
-        uint _prevDeadline,
-        uint    _prevChildType,
         bytes32[] calldata _stakerProof,
         uint32 _importedMessageCount,
         uint32 _numSteps,
@@ -159,9 +155,7 @@ contract ArbRollup is Leaves, IArbRollup {
                 _fields[1],
                 _fields[2],
                 _fields[3],
-                _prevDeadline,
                 _fields[4],
-                _prevChildType,
                 _stakerProof,
                 _fields[5],
                 _fields[6],
@@ -255,10 +249,9 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         bytes32 prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
-            data.prevDeadline,
-            data.prevNodeDataHash,
-            data.prevChildType,
-            vmProtoHashBefore
+            vmProtoHashBefore,
+            data.prevExtraDataHash
+
         );
         require(isValidLeaf(prevLeaf), MAKE_LEAF);
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
