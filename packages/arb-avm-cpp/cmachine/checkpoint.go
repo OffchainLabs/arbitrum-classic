@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,9 @@ func NewCheckpoint(dbPath string, contractPath string) (*CheckpointStorage, erro
 
 	returnVal := &CheckpointStorage{cCheckpointStorage}
 	runtime.SetFinalizer(returnVal, cDestroyCheckpointStorage)
+
 	C.free(unsafe.Pointer(cDbPath))
+	C.free(unsafe.Pointer(cContractPath))
 
 	return returnVal, nil
 }
@@ -72,6 +74,8 @@ func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error
 func (checkpoint *CheckpointStorage) DeleteCheckpoint(checkpointName string) bool {
 	cCheckpointName := C.CString(checkpointName)
 	success := C.deleteCheckpoint(checkpoint.c, cCheckpointName)
+
+	C.free(unsafe.Pointer(cCheckpointName))
 
 	return success == 1
 }
@@ -103,6 +107,8 @@ func (checkpoint *CheckpointStorage) GetValue(hashValue value.Value) value.Value
 	cData := C.getValue(checkpoint.c, unsafe.Pointer(&valData[0]))
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
+	C.free(unsafe.Pointer(cData.data))
+
 	val, err := value.UnmarshalValue(bytes.NewReader(dataBuff[:]))
 	if err != nil {
 		panic(err)
@@ -131,6 +137,9 @@ func (checkpoint *CheckpointStorage) SaveData(key string, serializedValue string
 
 	success := C.saveData(checkpoint.c, cKey, cValue)
 
+	C.free(unsafe.Pointer(cKey))
+	C.free(unsafe.Pointer(cValue))
+
 	return success == 1
 }
 
@@ -140,12 +149,16 @@ func (checkpoint *CheckpointStorage) GetData(key string) string {
 
 	dataString := C.GoString(cData)
 
+	C.free(unsafe.Pointer(cKey))
+
 	return dataString
 }
 
 func (checkpoint *CheckpointStorage) DeleteData(key string) bool {
 	cKey := C.CString(key)
 	success := C.deleteData(checkpoint.c, cKey)
+
+	C.free(unsafe.Pointer(cKey))
 
 	return success == 1
 }
