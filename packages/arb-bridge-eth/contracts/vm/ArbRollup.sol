@@ -264,6 +264,19 @@ contract ArbRollup is Leaves, IArbRollup {
         uint pendingCount;
     }
 
+    function _computeDeadline(
+        uint256 checkTimeTicks,
+        uint256 gracePeriodTicks,
+        uint256 prevDeadlineTicks
+    ) internal view returns(uint256) {
+        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks ;
+        if (deadlineTicks >= prevDeadlineTicks) {
+            return deadlineTicks + checkTimeTicks;
+        } else {
+            return prevDeadlineTicks + checkTimeTicks;
+        }
+    }
+
     function _makeAssertion(MakeAssertionData memory data) private {
         MakeAssertionFrame memory frame;
         frame.vmProtoHashBefore = RollupUtils.protoStateHash(
@@ -287,7 +300,11 @@ contract ArbRollup is Leaves, IArbRollup {
         Staker storage staker = getValidStaker(msg.sender);
         require(RollupUtils.isPath(staker.location, frame.prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
 
-        uint deadlineTicks = RollupTime.blocksToTicks(uint128(block.number)) + vmParams.gracePeriodTicks + data.numArbGas/vmParams.arbGasSpeedLimitPerTick;
+        uint256 deadlineTicks = _computeDeadline(
+            data.numArbGas / vmParams.arbGasSpeedLimitPerTick,
+            vmParams.gracePeriodTicks,
+            data.prevDeadlineTicks
+        );
         (frame.pendingValue, frame.pendingCount) = globalInbox.getPending();
         bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
         leaves[INVALID_PENDING_TOP_TYPE] = RollupUtils.childNodeHash(
