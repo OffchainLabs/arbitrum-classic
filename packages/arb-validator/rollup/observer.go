@@ -34,15 +34,12 @@ type Observer struct {
 }
 
 type RollupAssertedEvent struct {
-	PrevLeafHash    [32]byte
-	BeforeVMHash    [32]byte
-	TimeBounds      [2]uint64
-	BeforeInboxHash [32]byte
-	AfterVMHash     [32]byte
-	NumSteps        uint32
-	NumArbGas       uint64
-	MessagesAccHash [32]byte
-	LogsAccHash     [32]byte
+	Fields               [6][32]byte
+	ImportedMessageCount *big.Int
+	TimeBoundsBlocks     [2]*big.Int
+	DidInboxInsn         bool
+	NumSteps             uint32
+	NumArbGas            uint64
 }
 
 type RollupConfirmedEvent struct {
@@ -60,7 +57,7 @@ type RollupStakeCreatedEvent struct {
 }
 
 type RollupStakeMovedEvent struct {
-	Staker     common.Address
+	Address    common.Address
 	ToNodeHash [32]byte
 }
 
@@ -105,7 +102,7 @@ func NewObserver(chain *Chain, clnt *ethclient.Client, rawUrl string) (*Observer
 		return nil, err
 	}
 
-	rollupAssertedSigHash := calcSigHash("RollupAsserted(bytes32,bytes32,uint64[2],bytes32,bytes32,uint32,uint64,bytes32,bytes32")
+	rollupAssertedSigHash := calcSigHash("RollupAsserted(bytes32[6],uint,uint128[2],bool,uint32,uint64)")
 	rollupConfirmedSigHash := calcSigHash("RollupConfirmed(bytes32)")
 	rollupPrunedSigHash := calcSigHash("RollupPruned(bytes32)")
 	rollupStakeCreatedSigHash := calcSigHash("RollupStakeCreated(address,bytes32,uint)")
