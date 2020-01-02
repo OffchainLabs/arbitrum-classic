@@ -390,20 +390,21 @@ func (f *Flat) tryPop(tipe byte) error {
 	}
 	valType := f.itemTypes[len(f.itemTypes)-1]
 	if valType != tipe {
+		var v value.Value
 		switch valType {
 		case value.TypeCodeInt:
-			f.popIntUnchecked()
+			v = f.popIntUnchecked()
 		case value.TypeCodeTuple:
-			f.popTupleUnchecked()
+			v = f.popTupleUnchecked()
 		case value.TypeCodeCodePoint:
-			f.popCodePointUnchecked()
+			v = f.popCodePointUnchecked()
 		case value.TypeCodeHashOnly:
-			f.popHashOnlyUnchecked()
+			v = f.popHashOnlyUnchecked()
 		default:
 			panic("PopValue: Unhandled type")
 		}
 		f.verifyHeight()
-		return TypeError{}
+		return TypeError{value.TypeCodeName(tipe), v}
 	}
 	f.verifyHeight()
 	return nil

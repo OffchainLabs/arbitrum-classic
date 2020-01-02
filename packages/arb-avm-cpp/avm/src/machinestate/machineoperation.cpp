@@ -567,12 +567,14 @@ void getTime(MachineState& m) {
 
 BlockReason inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
-    auto stackTop = nonstd::get_if<Tuple>(&m.stack[0]);
-    if (stackTop && m.inbox.messages == *stackTop) {
-        return InboxBlocked(hash(m.inbox.messages));
+    auto& aNum = assumeInt(m.stack[0]);
+    if (aNum > m.context.timeBounds[0] && m.inbox.isEmpty()) {
+        m.stack.popClear();
+        return InboxBlocked(aNum);
     } else {
         value inboxCopy = m.inbox.messages;
         m.stack[0] = std::move(inboxCopy);
+        m.inbox.clear();
         ++m.pc;
         return NotBlocked{};
     }

@@ -62,11 +62,12 @@ func (b BreakpointBlocked) Equals(a BlockReason) bool {
 }
 
 type InboxBlocked struct {
-	Inbox value.HashOnlyValue
+	Timeout value.IntValue
 }
 
 func (b InboxBlocked) IsBlocked(m Machine, currentTime uint64) bool {
-	return value.Eq(m.InboxHash(), b.Inbox)
+	biTimeout := b.Timeout.BigInt()
+	return m.InboxHash().Hash() == value.NewEmptyTuple().Hash() && (!biTimeout.IsUint64() || biTimeout.Uint64() > currentTime)
 }
 
 func (b InboxBlocked) Equals(a BlockReason) bool {
@@ -74,5 +75,5 @@ func (b InboxBlocked) Equals(a BlockReason) bool {
 	if !ok {
 		return false
 	}
-	return value.Eq(aBlock.Inbox, b.Inbox)
+	return value.Eq(aBlock.Timeout, b.Timeout)
 }

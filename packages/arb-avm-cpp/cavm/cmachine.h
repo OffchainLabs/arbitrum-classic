@@ -59,6 +59,7 @@ typedef struct {
     int logCount;
     uint64_t numSteps;
     uint64_t numGas;
+    int didInboxInsn;
 } RawAssertion;
 
 typedef void CMachine;

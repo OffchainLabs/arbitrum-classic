@@ -253,6 +253,7 @@ func (c *Challenge) BisectAssertion(
 	assertions []*protocol.AssertionStub,
 ) (*types.Receipt, error) {
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
+	didInboxInsns := make([]bool, 0, len(assertions))
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
 	logAccs := make([][32]byte, 0, len(assertions)+1)
 	numGases := make([]uint64, 0, len(assertions)+1)
@@ -262,6 +263,7 @@ func (c *Challenge) BisectAssertion(
 	logAccs = append(logAccs, assertions[0].FirstLogHashValue())
 	for _, assertion := range assertions {
 		machineHashes = append(machineHashes, assertion.AfterHashValue())
+		didInboxInsns = append(didInboxInsns, assertion.DidInboxInsn)
 		messageAccs = append(messageAccs, assertion.LastMessageHashValue())
 		logAccs = append(logAccs, assertion.LastLogHashValue())
 		numGases = append(numGases, assertion.NumGas)
@@ -276,7 +278,9 @@ func (c *Challenge) BisectAssertion(
 	tx, err := c.Challenge.BisectAssertion(
 		auth,
 		preData,
+		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		machineHashes,
+		didInboxInsns,
 		messageAccs,
 		logAccs,
 		numGases,
@@ -338,6 +342,7 @@ func (c *Challenge) OneStepProof(
 		precondition.BeforeInboxValue(),
 		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
 		assertion.AfterHashValue(),
+		assertion.DidInboxInsn,
 		assertion.FirstMessageHashValue(),
 		assertion.LastMessageHashValue(),
 		assertion.FirstLogHashValue(),

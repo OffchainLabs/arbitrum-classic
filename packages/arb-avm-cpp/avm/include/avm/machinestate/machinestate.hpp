@@ -37,9 +37,10 @@ struct AssertionContext {
     TimeBounds timeBounds;
     std::vector<value> outMessage;
     std::vector<value> logs;
+    bool didInboxInsn;
 
     explicit AssertionContext(const TimeBounds& tb)
-        : numSteps{0}, numGas{0}, timeBounds(tb) {}
+        : numSteps{0}, numGas{0}, timeBounds(tb), didInboxInsn(false) {}
 };
 
 struct MachineState {

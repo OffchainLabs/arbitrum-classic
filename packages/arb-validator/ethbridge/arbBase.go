@@ -279,6 +279,7 @@ func (vm *ArbBase) PendingDisputableAssert(
 		precondition.BeforeHashValue(),
 		precondition.BeforeInboxValue(),
 		stub.AfterHashValue(),
+		assertion.DidInboxInsn,
 		stub.LastMessageHashValue(),
 		stub.LastLogHashValue(),
 		assertion.NumSteps,
@@ -297,11 +298,19 @@ func (vm *ArbBase) ConfirmDisputableAsserted(
 	assertion *protocol.Assertion,
 ) (*types.Receipt, error) {
 	messages := hashing.CombineMessages(assertion.OutMsgs)
-
+	var beforeHash [32]byte
+	copy(beforeHash[:], precondition.BeforeHash.Value)
+	timeBounds := [2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime}
+	var beforeInbox [32]byte
+	copy(beforeInbox[:], precondition.BeforeInbox.Value)
 	tx, err := vm.ArbitrumVM.ConfirmDisputableAsserted(
 		auth,
+		beforeHash,
+		timeBounds,
+		beforeInbox,
 		precondition.Hash(),
 		assertion.AfterHash,
+		assertion.DidInboxInsn,
 		assertion.NumSteps,
 		assertion.NumGas,
 		messages,

@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "./VM.sol";
 
 import "../arch/Protocol.sol";
+import "../arch/Value.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -37,12 +38,14 @@ library Disputable {
         bytes32[5] fields,
         address asserter,
         uint64[2] timeBounds,
+        bool   didInboxInsn,
         uint32 numSteps,
         uint64 deadline
     );
 
     event ConfirmedDisputableAssertion(
         bytes32 newState,
+        bool    didInboxInsn,
         bytes32 logsAccHash
     );
 
@@ -53,6 +56,7 @@ library Disputable {
         bytes32 beforeHash,
         bytes32 beforeInbox,
         bytes32 afterHash,
+        bool    didInboxInsn,
         bytes32 messagesAccHash,
         bytes32 logsAccHash,
         uint32 numSteps,
@@ -87,10 +91,31 @@ library Disputable {
             ))
         );
 
-        emit PendingDisputableAssertion(
+        emitPda(
             [beforeHash, beforeInbox, afterHash, messagesAccHash, logsAccHash],
+            timeBounds,
+            didInboxInsn,
+            numSteps,
+            numGas,
+            vm
+        );
+    }
+
+    function emitPda(
+        bytes32[5] memory fields,
+        uint64[2] memory timeBounds,
+        bool    didInboxInsn,
+        uint32  numSteps,
+        uint64  numGas,
+        VM.Data storage vm
+    )
+        private
+    {
+        emit PendingDisputableAssertion(
+            fields,
             msg.sender,
             timeBounds,
+            didInboxInsn,
             numSteps,
             uint64(block.number) + _vm.gracePeriod
         );
@@ -98,8 +123,11 @@ library Disputable {
 
     function confirmDisputableAsserted(
         VM.Data storage vm,
-        bytes32 preconditionHash,
+        bytes32 beforeHash,
+        uint64[2] memory timeBounds,
+        bytes32 beforeInbox,
         bytes32 afterHash,
+        bool   didInboxInsn,
         uint32 numSteps,
         bytes memory messages,
         bytes32 logsAccHash
@@ -111,9 +139,14 @@ library Disputable {
         require(
             keccak256(
                 abi.encodePacked(
-                    preconditionHash,
+                    Protocol.generatePreconditionHash(
+                        beforeHash,
+                        timeBounds,
+                        beforeInbox
+                    ),
                     Protocol.generateAssertionHash(
                         afterHash,
+                        didInboxInsn,
                         numSteps,
                         0x00,
                         Protocol.generateLastMessageHash(messages),
@@ -124,13 +157,19 @@ library Disputable {
             ) == vm.pendingHash,
             "Confirm Disputable: Precondition and assertion do not match pending assertion"
         );
+        bytes32 afterInbox = beforeInbox;
+        if (didInboxInsn) {
+            afterInbox = Value.hashEmptyTuple();
+        }
         VM.acceptAssertion(
             vm,
-            afterHash
+            afterHash,
+            afterInbox
         );
 
         emit ConfirmedDisputableAssertion(
             afterHash,
+            didInboxInsn,
             logsAccHash
         );
     }

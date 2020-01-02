@@ -110,11 +110,11 @@ contract Staking is ChallengeType {
         uint disputableDeadline,
         uint staker1Position,
         uint staker2Position,
-        bytes32 vmProtoHash1,
-        bytes32 vmProtoHash2,
+        bytes32[2] calldata vmProtoHashes,
         bytes32[] calldata proof1,
         bytes32[] calldata proof2,
-        bytes32 challengeDataHash
+        bytes32 challengeDataHash1,
+        bytes32 challengeDataHash2
     )
         external
     {
@@ -127,11 +127,11 @@ contract Staking is ChallengeType {
             disputableDeadline,
             staker1Position,
             staker2Position,
-            vmProtoHash1,
-            vmProtoHash2,
+            vmProtoHashes,
             proof1,
             proof2,
-            challengeDataHash
+            challengeDataHash1,
+            challengeDataHash2
         );
     }
 
@@ -142,11 +142,11 @@ contract Staking is ChallengeType {
         uint disputableDeadline,
         uint staker1Position,
         uint staker2Position,
-        bytes32 vmProtoHash1,
-        bytes32 vmProtoHash2,
+        bytes32[2] calldata vmProtoHashes,
         bytes32[] calldata proof1,
         bytes32[] calldata proof2,
-        bytes32 challengeDataHash
+        bytes32 challengeDataHash1,
+        bytes32 challengeDataHash2
     )
         external
     {
@@ -159,11 +159,11 @@ contract Staking is ChallengeType {
             disputableDeadline,
             staker1Position,
             staker2Position,
-            vmProtoHash1,
-            vmProtoHash2,
+            vmProtoHashes,
             proof1,
             proof2,
-            challengeDataHash
+            challengeDataHash1,
+            challengeDataHash2
         );
     }
 
@@ -174,11 +174,11 @@ contract Staking is ChallengeType {
         uint disputableDeadline,
         uint staker1Position,
         uint staker2Position,
-        bytes32 vmProtoHash1,
-        bytes32 vmProtoHash2,
+        bytes32[2] calldata vmProtoHashes,
         bytes32[] calldata proof1,
         bytes32[] calldata proof2,
-        bytes32 challengeDataHash
+        bytes32 challengeDataHash1,
+        bytes32 challengeDataHash2
     )
         external
     {
@@ -191,11 +191,11 @@ contract Staking is ChallengeType {
             disputableDeadline,
             staker1Position,
             staker2Position,
-            vmProtoHash1,
-            vmProtoHash2,
+            vmProtoHashes,
             proof1,
             proof2,
-            challengeDataHash
+            challengeDataHash1,
+            challengeDataHash2
         );
     }
 
@@ -203,8 +203,9 @@ contract Staking is ChallengeType {
         address sender = msg.sender;
         bytes32 codehash;
         assembly { codehash := extcodehash(sender) }
-        address challengeContract = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
-        require(challengeContract == msg.sender, RES_CHAL_SENDER);
+        address challengeContract1 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
+        address challengeContract2 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
+        require(challengeContract1 == msg.sender || challengeContract2 == msg.sender, RES_CHAL_SENDER);
         Staker storage winningStaker = getValidStaker(address(winner));
         winner.transfer(stakeRequirement / 2);
         winningStaker.inChallenge = false;
@@ -266,38 +267,38 @@ contract Staking is ChallengeType {
     }
 
     function _startChallenge(
-        address payable staker1Address,
-        address payable staker2Address,
+        address payable asserterAddress,
+        address payable challengerAddress,
         bytes32 node,
         uint disputableDeadline,
         uint staker1Position,
         uint staker2Position,
-        bytes32 vmProtoHash1,
-        bytes32 vmProtoHash2,
+        bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
         bytes32[] memory proof2,
-        bytes32 challengeDataHash
+        bytes32 challengeDataHash1,
+        bytes32 challengeDataHash2
     )
         private
     {
-        Staker storage staker1 = getValidStaker(staker1Address);
-        Staker storage staker2 = getValidStaker(staker2Address);
+        Staker storage asserter = getValidStaker(asserterAddress);
+        Staker storage challenger = getValidStaker(challengerAddress);
 
-        require(staker1.creationTime < disputableDeadline, STK1_DEADLINE);
-        require(staker2.creationTime < disputableDeadline, STK2_DEADLINE);
-        require(!staker1.inChallenge, STK1_IN_CHAL);
-        require(!staker2.inChallenge, STK2_IN_CHAL);
+        require(asserter.creationTime < disputableDeadline, STK1_DEADLINE);
+        require(challenger.creationTime < disputableDeadline, STK2_DEADLINE);
+        require(!asserter.inChallenge, STK1_IN_CHAL);
+        require(!challenger.inChallenge, STK2_IN_CHAL);
         require(staker1Position < staker2Position, TYPE_ORDER);
         require(
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     node,
                     disputableDeadline,
-                    challengeDataHash,
+                    challengeDataHash1,
                     staker1Position,
-                    vmProtoHash1
+                    vmProtoHashes[0]
                 ),
-                staker1.location,
+                asserter.location,
                 proof1
             ),
             STK1_PROOF
@@ -307,30 +308,30 @@ contract Staking is ChallengeType {
                 RollupUtils.childNodeHash(
                     node,
                     disputableDeadline,
-                    challengeDataHash,
+                    challengeDataHash2,
                     staker2Position,
-                    vmProtoHash2
+                    vmProtoHashes[1]
                 ),
-                staker2.location,
+                challenger.location,
                 proof2
             ),
             STK2_PROOF
         );
 
-        staker1.inChallenge = true;
-        staker2.inChallenge = true;
+        asserter.inChallenge = true;
+        challenger.inChallenge = true;
 
         address newChallengeAddr = challengeFactory.createChallenge(
-            staker1Address,
-            staker2Address,
+            asserterAddress,
+            challengerAddress,
             0, // Challenge period
-            challengeDataHash,
+            challengeDataHash1,
             staker1Position
         );
 
         emit RollupChallengeStarted(
-            staker1Address,
-            staker2Address,
+            asserterAddress,
+            challengerAddress,
             staker1Position,
             newChallengeAddr
         );

@@ -60,8 +60,7 @@ library ChallengeUtils {
     }
 
     function executionHash(
-        bytes32 _preData,
-        bytes32 _beforeHash,
+        bytes32 _preconditionHash,
         bytes32 _assertionHash
     )
         internal
@@ -70,8 +69,7 @@ library ChallengeUtils {
     {
         return keccak256(
             abi.encodePacked(
-                _preData,
-                _beforeHash,
+                _preconditionHash,
                 _assertionHash
             )
         );

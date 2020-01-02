@@ -47,6 +47,9 @@ contract ArbRollup is Leaves, IArbRollup {
     string constant CONF_STAKER_PROOF = "CONF_STAKER_PROOF";
     // Type is not invalid
     string constant CONF_INV_TYPE = "CONF_INV_TYPE";
+    // There must be at least one staker
+    string constant CONF_HAS_STAKER = "CONF_HAS_STAKER";
+
 
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
@@ -69,10 +72,11 @@ contract ArbRollup is Leaves, IArbRollup {
 
     event RollupAsserted(
         bytes32[6] fields,
-        uint32 _importedMessageCount,
-        uint64[2] _timeBoundsBlocks,
-        uint32 _numSteps,
-        uint64 _numArbGas
+        uint32 importedMessageCount,
+        uint128[2] timeBoundsBlocks,
+        bool didInboxInsn,
+        uint32 numSteps,
+        uint64 numArbGas
     );
 
     event RollupConfirmed(bytes32 nodeHash);
@@ -92,6 +96,7 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 importedMessagesSlice;
         uint32 importedMessageCount;
         bytes32 afterVMHash;
+        bool didInboxInsn;
         bytes32 afterInboxHash;
         bytes32 messagesAccHash;
         bytes32 logsAccHash;
@@ -142,6 +147,7 @@ contract ArbRollup is Leaves, IArbRollup {
     function makeAssertion(
         bytes32[11] calldata _fields,
         bytes32[] calldata _stakerProof,
+        bool _didInboxInsn,
         uint32 _importedMessageCount,
         uint32 _numSteps,
         uint64 _numArbGas,
@@ -161,6 +167,7 @@ contract ArbRollup is Leaves, IArbRollup {
                 _fields[6],
                 _importedMessageCount,
                 _fields[7],
+                _didInboxInsn,
                 _fields[8],
                 _fields[9],
                 _fields[10],
@@ -262,7 +269,7 @@ contract ArbRollup is Leaves, IArbRollup {
         require(RollupUtils.isPath(staker.location, prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
 
         uint deadlineTicks = RollupTime.blocksToTicks(uint128(block.number)) + vmParams.gracePeriodTicks + data.numArbGas/vmParams.arbGasSpeedLimitPerTick;
-        bytes32 afterInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
+
         bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
         leaves[INVALID_PENDING_TOP_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
@@ -270,7 +277,7 @@ contract ArbRollup is Leaves, IArbRollup {
             ChallengeUtils.pendingTopHash(
                 globalInbox.getPendingMessages(),
                 data.afterPendingTop,
-                data.importedMessageCount
+                0
             ),
             INVALID_PENDING_TOP_TYPE,
             vmProtoHashBefore
@@ -290,6 +297,7 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
+            data.didInboxInsn,
             data.numSteps,
             data.numArbGas,
             0x00,
@@ -297,23 +305,24 @@ contract ArbRollup is Leaves, IArbRollup {
             0x00,
             data.logsAccHash
         );
+        bytes32 execBeforeInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
         leaves[INVALID_EXECUTION_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
             ChallengeUtils.executionHash(
-                keccak256(
-                    abi.encodePacked(
-                        data.timeBoundsBlocks[0],
-                        data.timeBoundsBlocks[1],
-                        afterInboxHash
-                    )
+                Protocol.generatePreconditionHash(
+                     data.beforeVMHash,
+                     data.timeBounds,
+                     execBeforeInboxHash
                 ),
-                data.beforeVMHash,
                 assertionHash
             ),
             INVALID_EXECUTION_TYPE,
             vmProtoHashBefore
         );
+        if (data.didInboxInsn) {
+            execBeforeInboxHash = Value.hashEmptyTuple();
+        }
         leaves[VALID_CHILD_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
@@ -324,7 +333,7 @@ contract ArbRollup is Leaves, IArbRollup {
             VALID_CHILD_TYPE,
             RollupUtils.protoStateHash(
                 data.afterVMHash,
-                afterInboxHash,
+                execBeforeInboxHash,
                 data.afterPendingTop
             )
         );
@@ -342,6 +351,7 @@ contract ArbRollup is Leaves, IArbRollup {
             ],
             data.importedMessageCount,
             data.timeBoundsBlocks,
+            data.didInboxInsn,
             data.numSteps,
             data.numArbGas
         );
@@ -368,6 +378,7 @@ contract ArbRollup is Leaves, IArbRollup {
             vmProtoStateHash
         );
         bytes20 prevStaker = 0x00;
+        bool hasStaker = false;
         for (uint i = 0; i < _stakerCount; i++) {
             address stakerAddress = stakerAddresses[i];
             require(bytes20(stakerAddress) > prevStaker, CONF_ORDER);
@@ -383,9 +394,11 @@ contract ArbRollup is Leaves, IArbRollup {
                     ),
                     CONF_STAKER_PROOF
                 );
+                hasStaker = true;
             }
             prevStaker = bytes20(stakerAddress);
         }
+        require(hasStaker, CONF_HAS_STAKER);
 
         updateLatestConfirmed(to);
 

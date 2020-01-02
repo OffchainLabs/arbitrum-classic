@@ -103,3 +103,6 @@ func (in *Inbox) WithAddedMessages(messages value.TupleValue) *Inbox {
 func (in *Inbox) Receive() value.TupleValue {
 	return in.messages
 }
+func (in *Inbox) EmptyAccepted() {
+	in.Accepted = NewMessageQueues()
+}

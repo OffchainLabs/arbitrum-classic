@@ -450,6 +450,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
             machineoperation::getTime(*this);
             break;
         case OpCode::INBOX:
+            context.didInboxInsn = true;
             return machineoperation::inboxOp(*this);
         case OpCode::ERROR:
             state = Status::Error;

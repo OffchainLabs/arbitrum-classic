@@ -16,89 +16,39 @@ from ..annotation import modifies_stack
 from . import tup
 from . import queue_tup
 from .. import value
-from .types import inbox_ctx
 
-# inboxctx = [queue nodeAlreadySeen]
-
-typ = inbox_ctx.typ
+typ = queue_tup.typ
 
 
 @modifies_stack(0, [typ])
 def new(vm):
-    # -> ctx
-    vm.tnewn(0)
+    # -> q
     queue_tup.new(vm)
-    inbox_ctx.new(vm)
-    inbox_ctx.set_val("queue")(vm)
-    inbox_ctx.set_val("nodeAlreadySeen")(vm)
 
 
 @modifies_stack([typ], [value.IntType()])
 def isempty(vm):
-    # ctx -> isempty
-    vm.dup0()
-    inbox_ctx.get("queue")(vm)
+    # q -> isempty
     queue_tup.isempty(vm)
-    vm.ifelse(
-        lambda vm: [
-            # ctx
-            inbox_ctx.get("nodeAlreadySeen")(vm),
-            vm.tnewn(8),
-            vm.inbox(),
-            vm.eq(),
-        ],
-        lambda vm: [
-            # ctx
-            vm.pop(),
-            vm.push(0),
-        ],
-    )
 
 
 @modifies_stack([typ], [value.ValueType(), typ])
 def getmsg(vm):
-    # ctx -> msg updatedctx
+    # q -> msg updatedq
     vm.dup0()
-    inbox_ctx.get("queue")(vm)
     queue_tup.isempty(vm)
     vm.ifelse(
         lambda vm: [
-            vm.dup0(),
-            inbox_ctx.get("queue")(vm),
-            vm.swap1(),
-            inbox_ctx.get("nodeAlreadySeen")(vm),
-            vm.dup0(),
+            # q
+            vm.push((1 << 256) - 1),
             vm.inbox(),
-            vm.swap2(),
-            vm.swap1(),
-            vm.dup2(),
-            # inbox nodeAlreadySeen queue inbox
+            # inbox q
             _inhale2(vm),
-            # nodeAlreadySeen updatedq inbox
-            vm.pop(),
-            # updatedq inbox
-            queue_tup.get(vm),
-            # msg updatedq inbox
-            vm.swap2(),
-            inbox_ctx.new(vm),
-            inbox_ctx.set_val("nodeAlreadySeen")(vm),
-            inbox_ctx.set_val("queue")(vm)
-            # ctx msg
-        ],
-        lambda vm: [
-            # ctx
-            vm.dup0(),
-            inbox_ctx.get("queue")(vm),
-            # queue ctx
-            queue_tup.get(vm),
-            # msg updatedq ctx
-            vm.swap2(),
-            # ctx updatedq msg
-            inbox_ctx.set_val("queue")(vm),
-        ],
+            # updatedq
+        ]
     )
-    # updatedctx msg
-    vm.swap1()
+    # nonemptyq
+    queue_tup.get(vm)
 
 
 # @modifies_stack([typ], [value.ValueType(), typ])
@@ -119,48 +69,40 @@ def getmsg(vm):
 #     vm.swap1()
 
 
-@modifies_stack([typ], [typ])
-def inhale(vm):
-    # ctx -> updatedctx
-    vm.dup0()
-    inbox_ctx.get("queue")(vm)
-    vm.swap1()
-    inbox_ctx.get("nodeAlreadySeen")(vm)
-    vm.tnewn(8)
-    vm.inbox()
-    vm.swap2()
-    vm.swap1()
-    vm.dup2()
-    # inbox nodeAlreadySeen queue inbox
-    _inhale2(vm)
-    # nodeAlreadySeen updatedq inbox
-    vm.pop()
-    inbox_ctx.new(vm)
-    inbox_ctx.set_val("queue")(vm)
-    inbox_ctx.set_val("nodeAlreadySeen")(vm)
+# @modifies_stack([typ], [typ])
+# def inhale(vm):
+# q -> updatedq
+#   vm.dup0()
+#   inbox_ctx.get("queue")(vm)
+#   vm.swap1()
+#   inbox_ctx.get("nodeAlreadySeen")(vm)
+#   vm.tnewn(8)
+#   vm.inbox()
+#   vm.swap2()
+#    vm.swap1()
+#   vm.dup2()
+# inbox nodeAlreadySeen queue inbox
+#    _inhale2(vm)
+# nodeAlreadySeen updatedq inbox
+#    vm.pop()
+#    inbox_ctx.new(vm)
+#    inbox_ctx.set_val("queue")(vm)
+#   inbox_ctx.set_val("nodeAlreadySeen")(vm)
 
 
-@modifies_stack(
-    [value.TupleType(), value.TupleType(), queue_tup.typ],
-    [value.TupleType(), queue_tup.typ],
-)
+@modifies_stack([value.TupleType(), typ], [typ])
 def _inhale2(vm):
-    # inbox nodeAlreadySeen queue -> nodeAlreadySeen updatedq
-    vm.dup1()
-    vm.dup1()
-    vm.eq()
-    vm.dup1()
+    # inbox q -> updatedq
+    vm.dup0()
     vm.tnewn(0)
     vm.eq()
-    vm.bitwise_or()
-    # inbox==nodeAlreadySeen inbox nodeAlreadySeen queue
     vm.ifelse(
         lambda vm: [vm.pop()],
         lambda vm: [
             vm.cast(
                 value.TupleType([value.IntType(), value.TupleType(), value.TupleType()])
             ),
-            # inbox nodeAlreadySeen queue
+            # inbox q
             tup.tbreak(3)(vm),
             vm.push(0),
             vm.eq(),
@@ -169,35 +111,27 @@ def _inhale2(vm):
     )
 
 
-@modifies_stack(
-    [value.TupleType(), value.TupleType(), value.TupleType(), queue_tup.typ],
-    [value.TupleType(), queue_tup.typ],
-)
+@modifies_stack([value.TupleType(), value.TupleType(), typ], [typ])
 def _inhale_message(vm):
-    # inbox msg nodeAlreadySeen queue
+    # inbox msg q
     vm.swap1()
     vm.auxpush()
-    # inbox nodeAlreadySeen queue
+    # inbox q
     _inhale2(vm)
-    # nodeAlreadySeen queue
-    vm.swap1()
+    # q
     vm.auxpop()
     vm.swap1()
-    # queue msg nodeAlreadySeen
+    # q msg
     queue_tup.put(vm)
-    vm.swap1()
 
 
-@modifies_stack(
-    [value.TupleType(), value.TupleType(), value.TupleType(), queue_tup.typ],
-    [value.TupleType(), queue_tup.typ],
-)
+@modifies_stack([value.TupleType(), value.TupleType(), typ], [typ])
 def _inhale_messages(vm):
-    # inboxA inboxB nodeAlreadySeen queue
+    # inboxA inboxB q
     vm.swap1()
     vm.auxpush()
-    # inboxA nodeAlreadySeen queue
+    # inboxA q
     _inhale2(vm)
-    # nodeAlreadySeen queue
+    # q
     vm.auxpop()
     _inhale2(vm)

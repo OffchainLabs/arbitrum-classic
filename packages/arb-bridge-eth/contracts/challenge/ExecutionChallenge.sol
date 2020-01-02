@@ -29,9 +29,10 @@ contract ExecutionChallenge is BisectionChallenge {
 
     event BisectedAssertion(
         bytes32[] machineHashes,
+        bool[] didInboxInsns,
         bytes32[] messageAccs,
         bytes32[] logAccs,
-        uint64[]  gases,
+        uint64[] gases,
         uint32 totalSteps,
         uint256 deadlineTicks
     );
@@ -44,8 +45,10 @@ contract ExecutionChallenge is BisectionChallenge {
     string constant OSP_PROOF = "OSP_PROOF";
 
     struct BisectAssertionData {
-        bytes32 preData;
+        bytes32 beforeInbox;
+        uint64[2] timeBounds;
         bytes32[] machineHashes;
+        bool[] didInboxInsns;
         bytes32[] messageAccs;
         bytes32[] logAccs;
         uint64[] gases;
@@ -53,8 +56,10 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function bisectAssertion(
-        bytes32 _preData,
+        bytes32 _beforeInbox,
+        uint64[2] memory _timeBounds,
         bytes32[] memory _machineHashes,
+        bool[] memory _didInboxInsns,
         bytes32[] memory _messageAccs,
         bytes32[] memory _logAccs,
         uint64[] memory _gases,
@@ -65,8 +70,10 @@ contract ExecutionChallenge is BisectionChallenge {
     {
         _bisectAssertion(
             BisectAssertionData(
-                _preData,
+                _beforeInbox,
+                _timeBounds,
                 _machineHashes,
+                _didInboxInsns,
                 _messageAccs,
                 _logAccs,
                 _gases,
@@ -80,6 +87,7 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32 _beforeInbox,
         uint64[2] memory _timeBounds,
         bytes32 _afterHash,
+        bool _didInboxInsns,
         bytes32 _firstMessage,
         bytes32 _lastMessage,
         bytes32 _firstLog,
@@ -92,16 +100,14 @@ contract ExecutionChallenge is BisectionChallenge {
     {
         requireMatchesPrevState(
             ChallengeUtils.executionHash(
-                keccak256(
-                    abi.encodePacked(
-                        _timeBounds[0],
-                        _timeBounds[1],
-                        _beforeInbox
-                    )
+                Protocol.generatePreconditionHash(
+                     _beforeHash,
+                     _timeBounds,
+                     _beforeInbox
                 ),
-                _beforeHash,
                 Protocol.generateAssertionHash(
                     _afterHash,
+                    _didInboxInsns,
                     1,
                     _gas,
                     _firstMessage,
@@ -117,6 +123,7 @@ contract ExecutionChallenge is BisectionChallenge {
             _timeBounds,
             _beforeInbox,
             _afterHash,
+            _didInboxInsns,
             _firstMessage,
             _lastMessage,
             _firstLog,
@@ -132,21 +139,28 @@ contract ExecutionChallenge is BisectionChallenge {
 
     function _bisectAssertion(BisectAssertionData memory _data) private {
         uint bisectionCount = _data.machineHashes.length - 1;
+        require(bisectionCount == _data.didInboxInsns.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
         require(bisectionCount == _data.gases.length, BIS_INPLEN);
 
         uint64 totalGas = 0;
+        bool everDidInboxInsn = false;
         for (uint i = 0; i < bisectionCount; i++) {
             totalGas += _data.gases[i];
+            everDidInboxInsn = everDidInboxInsn || _data.didInboxInsns[i];
         }
 
         requireMatchesPrevState(
             ChallengeUtils.executionHash(
-                _data.preData,
-                _data.machineHashes[0],
+                Protocol.generatePreconditionHash(
+                     _data.machineHashes[0],
+                     _data.timeBounds,
+                     _data.beforeInbox
+                ),
                 Protocol.generateAssertionHash(
                     _data.machineHashes[bisectionCount],
+                    everDidInboxInsn,
                     _data.totalSteps,
                     totalGas,
                     _data.messageAccs[0],
@@ -159,10 +173,14 @@ contract ExecutionChallenge is BisectionChallenge {
 
         bytes32[] memory hashes = new bytes32[](bisectionCount);
         hashes[0] = ChallengeUtils.executionHash(
-            _data.preData,
-            _data.machineHashes[0],
+            Protocol.generatePreconditionHash(
+                 _data.machineHashes[0],
+                 _data.timeBounds,
+                 _data.beforeInbox
+            ),
             Protocol.generateAssertionHash(
                 _data.machineHashes[1],
+                _data.didInboxInsns[0],
                 firstSegmentSize(_data.totalSteps, bisectionCount),
                 _data.gases[0],
                 _data.messageAccs[0],
@@ -171,19 +189,28 @@ contract ExecutionChallenge is BisectionChallenge {
                 _data.logAccs[1]
             )
         );
+        bytes32 assertionHash;
         for (uint i = 1; i < bisectionCount; i++) {
+            if (_data.didInboxInsns[i-1]) {
+                _data.beforeInbox = Value.hashEmptyTuple();
+            }
+            assertionHash = Protocol.generateAssertionHash(
+                _data.machineHashes[i + 1],
+                _data.didInboxInsns[i],
+                otherSegmentSize(_data.totalSteps, bisectionCount),
+                _data.gases[i],
+                _data.messageAccs[i],
+                _data.messageAccs[i + 1],
+                _data.logAccs[i],
+                _data.logAccs[i + 1]
+            );
             hashes[i] = ChallengeUtils.executionHash(
-                _data.preData,
-                _data.machineHashes[i],
-                Protocol.generateAssertionHash(
-                    _data.machineHashes[i + 1],
-                    otherSegmentSize(_data.totalSteps, bisectionCount),
-                    _data.gases[i],
-                    _data.messageAccs[i],
-                    _data.messageAccs[i + 1],
-                    _data.logAccs[i],
-                    _data.logAccs[i + 1]
-                )
+                Protocol.generatePreconditionHash(
+                     _data.machineHashes[i],
+                     _data.timeBounds,
+                     _data.beforeInbox
+                ),
+                assertionHash
             );
         }
 
@@ -192,6 +219,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
         emit BisectedAssertion(
             _data.machineHashes,
+            _data.didInboxInsns,
             _data.messageAccs,
             _data.logAccs,
             _data.gases,

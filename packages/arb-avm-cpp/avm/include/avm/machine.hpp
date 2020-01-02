@@ -28,6 +28,7 @@ struct Assertion {
     uint64_t gasCount;
     std::vector<value> outMessages;
     std::vector<value> logs;
+    bool didInboxInsn;
 };
 
 class Machine {
