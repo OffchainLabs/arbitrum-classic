@@ -54,7 +54,7 @@ library RollupUtils {
 
     function childNodeHash(
         bytes32 prevNodeHash,
-        uint deadline,
+        uint deadlineTicks,
         bytes32 disputableNodeHashVal,
         uint    childType,
         bytes32 vmProtoStateHash
@@ -68,7 +68,7 @@ library RollupUtils {
             vmProtoStateHash,
             keccak256(
                 abi.encodePacked(
-                    deadline,
+                    deadlineTicks,
                     disputableNodeHashVal,
                     childType
                 )
