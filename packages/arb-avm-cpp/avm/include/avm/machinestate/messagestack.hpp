@@ -34,6 +34,8 @@ struct MessageStack {
 
     MessageStack(TuplePool* pool_) : pool(pool_) {}
 
+    bool isEmpty() const { return messages == Tuple{}; }
+
     void addMessages(Tuple&& new_messages) {
         if (new_messages != Tuple()) {
             messages = Tuple(uint256_t(1), std::move(messages),
