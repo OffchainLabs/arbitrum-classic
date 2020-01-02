@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,14 @@
 
 pragma solidity ^0.5.3;
 
+library RollupTime {
+	uint256 constant ticksPerBlock = 13000;  // 1 tick ~= 1 millisecond
 
-interface IArbRollup {
-    function init(
-        bytes32 _vmState,
-        uint128 _gracePeriodTicks,
-        uint128 _arbGasSpeedLimitPerTick,
-        uint32 _maxExecutionSteps,
-        uint128 _stakeRequirement,
-        address payable _owner,
-        address _challengeFactoryAddress,
-        address _globalInboxAddress
-    )
-        external;
+	function ticksToBlocks(uint256 ticks) public pure returns (uint128) {
+		return uint128(ticks/ticksPerBlock);
+	}
+
+	function blocksToTicks(uint256 blockNum) public pure returns (uint256) {
+		return uint256(blockNum)*ticksPerBlock;
+	}
 }

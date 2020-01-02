@@ -19,6 +19,7 @@ var BytesLib = artifacts.require("bytes/BytesLib.sol");
 var DebugPrint = artifacts.require("./libraries/DebugPrint.sol");
 var SigUtils = artifacts.require("./libraries/SigUtils.sol");
 var MerkleLib = artifacts.require("./libraries/MerkleLib.sol");
+var RollupTime = artifacts.require("./libraries/RollupTime.sol");
 
 var Machine = artifacts.require("./arch/Machine.sol");
 var OneStepProof = artifacts.require("./arch/OneStepProof.sol");
@@ -76,6 +77,14 @@ module.exports = async function(deployer, network, accounts) {
 
   deployer.deploy(VM);
   deployer.link(VM, [ArbRollup]);
+
+  deployer.deploy(RollupTime);
+  deployer.link(RollupTime, [
+    ArbRollup,
+    MessagesChallenge,
+    PendingTopChallenge,
+    ExecutionChallenge
+  ]);
 
   await deployer.deploy(GlobalPendingInbox);
 

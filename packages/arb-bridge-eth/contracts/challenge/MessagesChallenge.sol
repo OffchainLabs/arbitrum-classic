@@ -27,7 +27,7 @@ contract MessagesChallenge is BisectionChallenge {
     event Bisected(
         bytes32[] chainHashes,
         uint32 totalLength,
-        uint64 deadline
+        uint256 deadlineTicks
     );
 
     event OneStepProofCompleted();
@@ -81,7 +81,7 @@ contract MessagesChallenge is BisectionChallenge {
         emit Bisected(
             _chainHashes,
             _chainLength,
-            deadline
+            deadlineTicks
         );
     }
 

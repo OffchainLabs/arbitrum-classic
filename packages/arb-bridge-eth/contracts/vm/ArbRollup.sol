@@ -20,6 +20,7 @@ import "./Leaves.sol";
 
 import "./VM.sol";
 import "./IArbRollup.sol";
+import "../libraries/RollupTime.sol";
 
 import "../IGlobalPendingInbox.sol";
 
@@ -27,7 +28,6 @@ import "../arch/Value.sol";
 
 
 contract ArbRollup is Leaves, IArbRollup {
-
     // invalid leaf
     string constant MAKE_LEAF = "MAKE_LEAF";
     // Can only disputable assert if machine is not errored or halted
@@ -70,7 +70,7 @@ contract ArbRollup is Leaves, IArbRollup {
     event RollupAsserted(
         bytes32[6] fields,
         uint32 _importedMessageCount,
-        uint64[2] _timeBounds,
+        uint64[2] _timeBoundsBlocks,
         uint32 _numSteps,
         uint64 _numArbGas
     );
@@ -97,12 +97,13 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 logsAccHash;
         uint32 numSteps;
         uint64 numArbGas;
-        uint64[2] timeBounds;
+        uint64[2] timeBoundsBlocks;
     }
 
     function init(
         bytes32 _vmState,
-        uint32 _gracePeriod,
+        uint128 _gracePeriodTicks,
+        uint128 _arbGasSpeedLimitPerTick,
         uint32 _maxExecutionSteps,
         uint128 _stakeRequirement,
         address payable _owner,
@@ -119,7 +120,8 @@ contract ArbRollup is Leaves, IArbRollup {
         owner = _owner;
 
         // VM parameters
-        vmParams.gracePeriod = _gracePeriod;
+        vmParams.gracePeriodTicks = _gracePeriodTicks;
+        vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
         vmParams.pendingInboxHash = Value.hashEmptyTuple();
     }
@@ -143,7 +145,7 @@ contract ArbRollup is Leaves, IArbRollup {
         uint32 _importedMessageCount,
         uint32 _numSteps,
         uint64 _numArbGas,
-        uint64[2] calldata _timeBounds
+        uint64[2] calldata _timeBoundsTicks
     )
         external
     {
@@ -164,13 +166,13 @@ contract ArbRollup is Leaves, IArbRollup {
                 _fields[10],
                 _numSteps,
                 _numArbGas,
-                _timeBounds
+                _timeBoundsTicks
             )
         );
     }
 
     function confirmValid(
-        uint deadline,
+        uint deadlineTicks,
         bytes calldata _messages,
         bytes32 logsAcc,
         bytes32 vmProtoStateHash,
@@ -181,7 +183,7 @@ contract ArbRollup is Leaves, IArbRollup {
         external
     {
         _confirmNode(
-            deadline,
+            deadlineTicks,
             RollupUtils.validNodeHash(
                 Protocol.generateLastMessageHash(_messages),
                 logsAcc
@@ -201,7 +203,7 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function confirmInvalid(
-        uint    deadline,
+        uint    deadlineTicks,
         bytes32 challengeNodeData,
         uint    branch,
         bytes32 vmProtoStateHash,
@@ -213,7 +215,7 @@ contract ArbRollup is Leaves, IArbRollup {
     {
         require(branch < VALID_CHILD_TYPE, CONF_INV_TYPE);
         _confirmNode(
-            deadline,
+            deadlineTicks,
             challengeNodeData,
             branch,
             vmProtoStateHash,
@@ -254,17 +256,17 @@ contract ArbRollup is Leaves, IArbRollup {
         require(isValidLeaf(prevLeaf), MAKE_LEAF);
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
-        require(withinTimeBounds(data.timeBounds), MAKE_TIME);
+        require(withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
 
         Staker storage staker = getValidStaker(msg.sender);
         require(RollupUtils.isPath(staker.location, prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
 
-        uint deadline = block.number + vmParams.gracePeriod; //TODO: [Ed] compute this properly
+        uint deadlineTicks = RollupTime.blocksToTicks(uint128(block.number)) + vmParams.gracePeriodTicks + data.numArbGas/vmParams.arbGasSpeedLimitPerTick;
         bytes32 afterInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
         bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
         leaves[INVALID_PENDING_TOP_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
-            deadline,
+            deadlineTicks,
             ChallengeUtils.pendingTopHash(
                 globalInbox.getPendingMessages(),
                 data.afterPendingTop,
@@ -275,7 +277,7 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         leaves[INVALID_MESSAGES_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
-            deadline,
+            deadlineTicks,
             ChallengeUtils.messagesHash(
                 data.beforePendingTop,
                 data.afterPendingTop,
@@ -297,12 +299,12 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         leaves[INVALID_EXECUTION_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
-            deadline,
+            deadlineTicks,
             ChallengeUtils.executionHash(
                 keccak256(
                     abi.encodePacked(
-                        data.timeBounds[0],
-                        data.timeBounds[1],
+                        data.timeBoundsBlocks[0],
+                        data.timeBoundsBlocks[1],
                         afterInboxHash
                     )
                 ),
@@ -314,7 +316,7 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         leaves[VALID_CHILD_TYPE] = RollupUtils.childNodeHash(
             prevLeaf,
-            deadline,
+            deadlineTicks,
             RollupUtils.validNodeHash(
                 data.messagesAccHash,
                 data.logsAccHash
@@ -339,7 +341,7 @@ contract ArbRollup is Leaves, IArbRollup {
                 data.logsAccHash
             ],
             data.importedMessageCount,
-            data.timeBounds,
+            data.timeBoundsBlocks,
             data.numSteps,
             data.numArbGas
         );
@@ -390,7 +392,7 @@ contract ArbRollup is Leaves, IArbRollup {
         emit RollupConfirmed(to);
     }
 
-    function withinTimeBounds(uint64[2] memory _timeBounds) private view returns (bool) {
-        return block.number >= _timeBounds[0] && block.number <= _timeBounds[1];
+    function withinTimeBounds(uint64[2] memory _timeBoundsBlocks) private view returns (bool) {
+        return block.number >= _timeBoundsBlocks[0] && block.number <= _timeBoundsBlocks[1];
     }
 }

@@ -44,7 +44,8 @@ contract ArbFactory is CloneFactory {
 
     function createRollup(
         bytes32 _vmState,
-        uint32 _gracePeriod,
+        uint128 _gracePeriodTicks,
+        uint128 _arbGasSpeedLimitPerTick,
         uint32 _maxExecutionSteps,
         uint128 _stakeRequirement,
         address payable _owner
@@ -54,7 +55,8 @@ contract ArbFactory is CloneFactory {
         address clone = createClone(rollupTemplate);
         IArbRollup(clone).init(
             _vmState,
-            _gracePeriod,
+            _gracePeriodTicks,
+            _arbGasSpeedLimitPerTick,
             _maxExecutionSteps,
             _stakeRequirement,
             _owner,

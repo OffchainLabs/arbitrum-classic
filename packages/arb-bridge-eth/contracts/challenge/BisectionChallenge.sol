@@ -26,7 +26,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
 
     event Continued (
         uint segmentIndex,
-        uint64 deadline
+        uint256 deadlineTicks
     );
 
     // Incorrect previous state
@@ -83,7 +83,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
         challengeState = _bisectionHash;
 
         challengerResponded();
-        emit Continued(_segmentToChallenge, deadline);
+        emit Continued(_segmentToChallenge, deadlineTicks);
     }
 
     function commitToSegment(bytes32[] memory hashes) internal {

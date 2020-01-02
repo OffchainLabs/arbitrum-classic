@@ -17,6 +17,7 @@
 pragma solidity ^0.5.3;
 
 import "../vm/IStaking.sol";
+import "../libraries/RollupTime.sol";
 
 
 contract Challenge {
@@ -28,7 +29,7 @@ contract Challenge {
     }
 
     event InitiatedChallenge(
-        uint64 deadline
+        uint256 deadlineTicks
     );
 
     event TimedOutChallenge (
@@ -57,30 +58,30 @@ contract Challenge {
     address payable asserter;
     address payable challenger;
 
-    uint64 deadline;
+    uint256 deadlineTicks;
 
     // The current deadline at which the challenge timeouts and a winner is
     // declared. This deadline resets at each step in the challenge
-    uint32 challengePeriod;
+    uint256 challengePeriodTicks;
 
     State state;
 
     modifier asserterAction {
         require(State.AsserterTurn == state, BIS_STATE);
-        require(block.number <= deadline, BIS_DEADLINE);
+        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, BIS_DEADLINE);
         require(msg.sender == asserter, BIS_SENDER);
         _;
     }
 
     modifier challengerAction {
         require(State.ChallengerTurn == state , CON_STATE);
-        require(block.number <= deadline, CON_DEADLINE);
+        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, CON_DEADLINE);
         require(msg.sender == challenger, CON_SENDER);
         _;
     }
 
     function timeoutChallenge() public {
-        require(block.number > deadline, "Deadline hasn't expired");
+        require(RollupTime.ticksToBlocks(block.number) > deadlineTicks, "Deadline hasn't expired");
 
         if (state == State.AsserterTurn) {
             emit TimedOutChallenge(true);
@@ -95,7 +96,7 @@ contract Challenge {
         address _vmAddress,
         address payable _asserter,
         address payable _challenger,
-        uint32 _challengePeriod
+        uint256 _challengePeriodTicks
     )
         internal
     {
@@ -104,17 +105,17 @@ contract Challenge {
         vmAddress = _vmAddress;
         asserter = _asserter;
         challenger = _challenger;
-        challengePeriod = _challengePeriod;
+        challengePeriodTicks = _challengePeriodTicks;
         state = State.AsserterTurn;
         updateDeadline();
 
         emit InitiatedChallenge(
-            deadline
+            deadlineTicks
         );
     }
 
     function updateDeadline() internal {
-        deadline = uint64(block.number) + uint64(challengePeriod);
+        deadlineTicks = RollupTime.blocksToTicks(block.number) + challengePeriodTicks;
     }
 
     function asserterResponded() internal {

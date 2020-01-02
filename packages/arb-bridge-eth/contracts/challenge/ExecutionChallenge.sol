@@ -33,7 +33,7 @@ contract ExecutionChallenge is BisectionChallenge {
         bytes32[] logAccs,
         uint64[]  gases,
         uint32 totalSteps,
-        uint64 deadline
+        uint256 deadlineTicks
     );
 
     event OneStepProofCompleted();
@@ -196,7 +196,7 @@ contract ExecutionChallenge is BisectionChallenge {
             _data.logAccs,
             _data.gases,
             _data.totalSteps,
-            deadline
+            deadlineTicks
         );
     }
 }
