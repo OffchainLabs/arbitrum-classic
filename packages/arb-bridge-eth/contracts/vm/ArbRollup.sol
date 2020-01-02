@@ -72,8 +72,8 @@ contract ArbRollup is Leaves, IArbRollup {
 
     event RollupAsserted(
         bytes32[6] fields,
-        uint32 importedMessageCount,
-        uint128[2] timeBoundsBlocks,
+        uint importedMessageCount,
+        uint64[2] timeBoundsBlocks,
         bool didInboxInsn,
         uint32 numSteps,
         uint64 numArbGas
@@ -89,12 +89,13 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 beforeVMHash;
         bytes32 beforeInboxHash;
         bytes32 beforePendingTop;
+        uint beforePendingCount;
         bytes32 prevPrevLeafHash;
         bytes32 prevDisputableNodeHash;
         bytes32[] stakerProof;
         bytes32 afterPendingTop;
+        uint afterPendingCount;
         bytes32 importedMessagesSlice;
-        uint32 importedMessageCount;
         bytes32 afterVMHash;
         bool didInboxInsn;
         bytes32 afterInboxHash;
@@ -149,8 +150,9 @@ contract ArbRollup is Leaves, IArbRollup {
     function makeAssertion(
         bytes32[11] calldata _fields,
         bytes32[] calldata _stakerProof,
+        uint _beforePendingCount,
+        uint _afterPendingCount,
         bool _didInboxInsn,
-        uint32 _importedMessageCount,
         uint32 _numSteps,
         uint64 _numArbGas,
         uint128[2] calldata _timeBoundsBlocks,
@@ -164,12 +166,13 @@ contract ArbRollup is Leaves, IArbRollup {
                 _fields[0],
                 _fields[1],
                 _fields[2],
+                _beforePendingCount,
                 _fields[3],
                 _fields[4],
                 _stakerProof,
                 _fields[5],
+                _afterPendingCount,
                 _fields[6],
-                _importedMessageCount,
                 _fields[7],
                 _didInboxInsn,
                 _fields[8],
@@ -254,53 +257,62 @@ contract ArbRollup is Leaves, IArbRollup {
     }
     */
 
+    struct MakeAssertionFrame {
+        bytes32 vmProtoHashBefore;
+        bytes32 prevLeaf;
+        bytes32 pendingValue;
+        uint pendingCount;
+    }
+
     function _makeAssertion(MakeAssertionData memory data) private {
-        bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
+        MakeAssertionFrame memory frame;
+        frame.vmProtoHashBefore = RollupUtils.protoStateHash(
             data.beforeVMHash,
             data.beforeInboxHash,
-            data.beforePendingTop
+            data.beforePendingTop,
+            data.beforePendingCount
         );
-        bytes32 prevLeaf = RollupUtils.childNodeHash(
+        frame.prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
             data.prevDeadlineTicks,
             data.prevDisputableNodeHash,
             data.prevChildType,
-            vmProtoHashBefore
+            frame.vmProtoHashBefore
         );
-        require(isValidLeaf(prevLeaf), MAKE_LEAF);
+        require(isValidLeaf(frame.prevLeaf), MAKE_LEAF);
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
         require(withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
 
         Staker storage staker = getValidStaker(msg.sender);
-        require(RollupUtils.isPath(staker.location, prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
+        require(RollupUtils.isPath(staker.location, frame.prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
 
         uint deadlineTicks = RollupTime.blocksToTicks(uint128(block.number)) + vmParams.gracePeriodTicks + data.numArbGas/vmParams.arbGasSpeedLimitPerTick;
-
+        (frame.pendingValue, frame.pendingCount) = globalInbox.getPending();
         bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
         leaves[INVALID_PENDING_TOP_TYPE] = RollupUtils.childNodeHash(
-            prevLeaf,
+            frame.prevLeaf,
             deadlineTicks,
             ChallengeUtils.pendingTopHash(
-                globalInbox.getPendingMessages(),
+                frame.pendingValue,
                 data.afterPendingTop,
-                0
+                frame.pendingCount.sub(data.afterPendingCount)
             ),
             INVALID_PENDING_TOP_TYPE,
-            vmProtoHashBefore
+            frame.vmProtoHashBefore
         );
         leaves[INVALID_MESSAGES_TYPE] = RollupUtils.childNodeHash(
-            prevLeaf,
+            frame.prevLeaf,
             deadlineTicks,
             ChallengeUtils.messagesHash(
                 data.beforePendingTop,
                 data.afterPendingTop,
                 0x00,
                 data.importedMessagesSlice,
-                data.importedMessageCount
+                data.afterPendingCount.sub(data.beforePendingCount)
             ),
             INVALID_MESSAGES_TYPE,
-            vmProtoHashBefore
+            frame.vmProtoHashBefore
         );
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
@@ -314,7 +326,7 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         bytes32 execBeforeInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
         leaves[INVALID_EXECUTION_TYPE] = RollupUtils.childNodeHash(
-            prevLeaf,
+            frame.prevLeaf,
             deadlineTicks,
             ChallengeUtils.executionHash(
                 Protocol.generatePreconditionHash(
@@ -325,13 +337,13 @@ contract ArbRollup is Leaves, IArbRollup {
                 assertionHash
             ),
             INVALID_EXECUTION_TYPE,
-            vmProtoHashBefore
+            frame.vmProtoHashBefore
         );
         if (data.didInboxInsn) {
             execBeforeInboxHash = Value.hashEmptyTuple();
         }
         leaves[VALID_CHILD_TYPE] = RollupUtils.childNodeHash(
-            prevLeaf,
+            frame.prevLeaf,
             deadlineTicks,
             RollupUtils.validNodeHash(
                 data.messagesAccHash,
@@ -341,22 +353,23 @@ contract ArbRollup is Leaves, IArbRollup {
             RollupUtils.protoStateHash(
                 data.afterVMHash,
                 execBeforeInboxHash,
-                data.afterPendingTop
+                data.afterPendingTop,
+                data.afterPendingCount
             )
         );
-        splitLeaf(prevLeaf, leaves);
+        splitLeaf(frame.prevLeaf, leaves);
         staker.location = leaves[VALID_CHILD_TYPE];
 
         emit RollupAsserted(
             [
-                prevLeaf,
+                frame.prevLeaf,
                 data.afterPendingTop,
                 data.importedMessagesSlice,
                 data.afterVMHash,
                 data.messagesAccHash,
                 data.logsAccHash
             ],
-            data.importedMessageCount,
+            data.afterPendingCount.sub(data.beforePendingCount),
             data.timeBoundsBlocks,
             data.didInboxInsn,
             data.numSteps,

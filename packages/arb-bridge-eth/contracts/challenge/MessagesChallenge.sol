@@ -26,7 +26,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     event Bisected(
         bytes32[] chainHashes,
-        uint32 totalLength,
+        uint totalLength,
         uint256 deadlineTicks
     );
 
@@ -40,7 +40,7 @@ contract MessagesChallenge is BisectionChallenge {
     function bisect(
         bytes32[] memory _chainHashes,
         bytes32[] memory _segmentHashes,
-        uint32 _chainLength
+        uint _chainLength
     )
         public
         asserterAction
@@ -101,7 +101,7 @@ contract MessagesChallenge is BisectionChallenge {
                 _topHashA,
                 _lowerHashB,
                 _topHashB,
-                uint32(1)
+                1
             )
         );
 

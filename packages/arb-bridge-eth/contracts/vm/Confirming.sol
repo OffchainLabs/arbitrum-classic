@@ -32,18 +32,6 @@ contract Confirming is Staking {
 
     event RollupStakeRefunded(address staker);
 
-    function placeStake(
-        bytes32 location,
-        bytes32[] calldata proof
-    )
-        external
-        payable
-    {
-        require(RollupUtils.isPath(latestConfirmed(), location, proof), PLACE_PATH_PROOF);
-        // TODO: Also check if location is on path to leaf?
-        createStake(location);
-    }
-
     function recoverStakeConfirmed(
         bytes32[] calldata proof
     )
@@ -89,7 +77,7 @@ contract Confirming is Staking {
         Staking.init(_stakeRequirement, _challengeFactoryAddress);
 
         // VM protocol state
-        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
+        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple(), 0);
         updateLatestConfirmed(
             RollupUtils.childNodeHash(
                 0,

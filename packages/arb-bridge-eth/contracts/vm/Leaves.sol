@@ -34,28 +34,27 @@ contract Leaves is Confirming {
         bytes32 toNodeHash
     );
 
-    function pruneLeaf(
+    function placeStake(
         bytes32 _leaf,
-        bytes32 from,
-        bytes32[] calldata leafProof,
-        bytes32[] calldata latestConfirmedProof
+        bytes32 location,
+        bytes32[] calldata proof1,
+        bytes32[] calldata proof2
     )
         external
+        payable
     {
         require(isValidLeaf(_leaf), "invalid leaf");
         require(
-            RollupUtils.isConflict(
-                from,
-                _leaf,
+            RollupUtils.isInPath(
                 latestConfirmed(),
-                leafProof,
-                latestConfirmedProof
+                location,
+                _leaf,
+                proof1,
+                proof2
             ),
-            "Invalid conflict proof"
+            PLACE_PATH_PROOF
         );
-        delete leaves[_leaf];
-
-        emit RollupPruned(_leaf);
+        createStake(location);
     }
 
     function moveStake(
@@ -82,6 +81,30 @@ contract Leaves is Confirming {
         staker.location = newLocation;
 
         emit RollupStakeMoved(msg.sender, newLocation);
+    }
+
+    function pruneLeaf(
+        bytes32 _leaf,
+        bytes32 from,
+        bytes32[] calldata leafProof,
+        bytes32[] calldata latestConfirmedProof
+    )
+        external
+    {
+        require(isValidLeaf(_leaf), "invalid leaf");
+        require(
+            RollupUtils.isConflict(
+                from,
+                _leaf,
+                latestConfirmed(),
+                leafProof,
+                latestConfirmedProof
+            ),
+            "Invalid conflict proof"
+        );
+        delete leaves[_leaf];
+
+        emit RollupPruned(_leaf);
     }
 
     function init(
