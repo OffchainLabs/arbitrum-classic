@@ -142,6 +142,7 @@ contract ArbBase is IArbBase {
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
         bytes32 _afterHash,
+        bool    _didInboxInsn,
         bytes32 _messagesAccHash,
         bytes32 _logsAccHash,
         uint32 _numSteps,
@@ -161,6 +162,7 @@ contract ArbBase is IArbBase {
             _beforeHash,
             _beforeInbox,
             _afterHash,
+            _didInboxInsn,
             _messagesAccHash,
             _logsAccHash,
             _numSteps,
@@ -170,8 +172,12 @@ contract ArbBase is IArbBase {
     }
 
     function confirmDisputableAsserted(
+        bytes32 _beforeHash,
+        uint64[2] memory _timeBounds,
+        bytes32 _beforeInbox,
         bytes32 _preconditionHash,
         bytes32 _afterHash,
+        bool    _didInboxInsn,
         uint32 _numSteps,
         uint64 _numGas,
         bytes memory _messages,
@@ -181,8 +187,11 @@ contract ArbBase is IArbBase {
     {
         Disputable.confirmDisputableAsserted(
             vm,
-            _preconditionHash,
+            _beforeHash,
+            _timeBounds,
+            _beforeInbox,
             _afterHash,
+            _didInboxInsn,
             _numSteps,
             _numGas,
             _messages,

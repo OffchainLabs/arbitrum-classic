@@ -61,6 +61,7 @@ library Protocol {
 
     function generateAssertionHash(
         bytes32 _afterHash,
+        bool    _didInboxInsn,
         uint32  _numSteps,
         uint64  _numGas,
         bytes32 _firstMessageHash,
@@ -75,6 +76,7 @@ library Protocol {
         return keccak256(
             abi.encodePacked(
                 _afterHash,
+                _didInboxInsn,
                 _numSteps,
                 _numGas,
                 _firstMessageHash,

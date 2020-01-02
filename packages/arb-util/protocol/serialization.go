@@ -77,10 +77,11 @@ func NewAssertionBuf(a *Assertion) *AssertionBuf {
 		logs = append(logs, value.NewValueBuf(msg))
 	}
 	return &AssertionBuf{
-		AfterHash: value.NewHashBuf(a.AfterHash),
-		NumSteps:  a.NumSteps,
-		Messages:  messages,
-		Logs:      logs,
+		AfterHash:    value.NewHashBuf(a.AfterHash),
+		DidInboxInsn: a.DidInboxInsn,
+		NumSteps:     a.NumSteps,
+		Messages:     messages,
+		Logs:         logs,
 	}
 }
 
@@ -104,6 +105,7 @@ func NewAssertionFromBuf(buf *AssertionBuf) (*Assertion, error) {
 	}
 	return NewAssertion(
 		value.NewHashFromBuf(buf.AfterHash),
+		buf.DidInboxInsn,
 		buf.NumSteps,
 		buf.NumGas,
 		messages,

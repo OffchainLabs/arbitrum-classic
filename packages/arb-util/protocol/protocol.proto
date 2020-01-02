@@ -31,18 +31,20 @@ message Precondition {
 
 message AssertionStub {
     value.HashBuf afterHash = 1;
-    uint32 numSteps = 2;
-    uint64 numGas = 3;
-    value.HashBuf firstMessageHash = 4;
-    value.HashBuf lastMessageHash = 5;
-    value.HashBuf firstLogHash = 6;
-    value.HashBuf lastLogHash = 7;
+    bool   didInboxInsn = 2;
+    uint32 numSteps = 3;
+    uint64 numGas = 4;
+    value.HashBuf firstMessageHash = 5;
+    value.HashBuf lastMessageHash = 6;
+    value.HashBuf firstLogHash = 7;
+    value.HashBuf lastLogHash = 8;
 }
 
 message AssertionBuf {
     value.HashBuf afterHash = 1;
-    uint32 numSteps = 2;
-    uint64 numGas = 3;
-    repeated value.ValueBuf messages = 4;
-    repeated value.ValueBuf logs = 5;
+    bool   didInboxInsn = 2;
+    uint32 numSteps = 3;
+    uint64 numGas = 4;
+    repeated value.ValueBuf messages = 5;
+    repeated value.ValueBuf logs = 6;
 }

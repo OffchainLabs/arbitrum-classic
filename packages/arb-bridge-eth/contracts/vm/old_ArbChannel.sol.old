@@ -127,7 +127,8 @@ contract ArbChannel is ArbBase, IArbChannel {
 
         VM.acceptAssertion(
             vm,
-            _afterHash
+            _afterHash,
+            _newInbox
         );
 
         _completeAssertion(_messages);

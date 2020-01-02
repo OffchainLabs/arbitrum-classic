@@ -8,7 +8,7 @@ import (
 type Context interface {
 	Send(message value.Value)
 	GetTimeBounds() value.Value
-	NotifyStep(uint64)
+	NotifyStep(uint64, bool)
 	LoggedValue(value.Value)
 
 	OutMessageCount() int
@@ -32,7 +32,7 @@ func (m *NoContext) GetTimeBounds() value.Value {
 	return value.NewEmptyTuple()
 }
 
-func (m *NoContext) NotifyStep(_ uint64) {
+func (m *NoContext) NotifyStep(_ uint64, _ bool) {
 }
 
 type Status int

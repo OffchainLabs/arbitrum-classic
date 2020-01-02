@@ -16,6 +16,7 @@
 
 pragma solidity ^0.5.3;
 
+import "../arch/Value.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 
