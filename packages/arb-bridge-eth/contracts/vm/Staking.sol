@@ -17,7 +17,7 @@
 pragma solidity ^0.5.3;
 
 import "./RollupUtils.sol";
-import "./RollupTime.sol";
+import "../libraries/RollupTime.sol";
 
 import "../challenge/ChallengeUtils.sol";
 import "../challenge/ChallengeType.sol";
