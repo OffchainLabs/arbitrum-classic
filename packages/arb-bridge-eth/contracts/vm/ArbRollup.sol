@@ -394,7 +394,7 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function _confirmNode(
-        uint deadline,
+        uint deadlineTicks,
         bytes32 nodeDataHash,
         uint branch,
         bytes32 vmProtoStateHash,
@@ -408,7 +408,7 @@ contract ArbRollup is Leaves, IArbRollup {
         require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(
             latestConfirmed(),
-            deadline,
+            deadlineTicks,
             nodeDataHash,
             branch,
             vmProtoStateHash
@@ -419,7 +419,7 @@ contract ArbRollup is Leaves, IArbRollup {
             address stakerAddress = stakerAddresses[i];
             require(bytes20(stakerAddress) > prevStaker, CONF_ORDER);
             Staker storage staker = getValidStaker(stakerAddress);
-            if (staker.creationTime >= deadline) {
+            if (RollupTime.blocksToTicks(staker.creationTimeBlocks) >= deadlineTicks) {
                 require(
                     RollupUtils.isPathOffset(
                         to,

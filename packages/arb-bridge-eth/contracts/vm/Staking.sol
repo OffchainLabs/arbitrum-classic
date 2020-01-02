@@ -77,7 +77,7 @@ contract Staking is ChallengeType {
 
     struct Staker {
         bytes32 location;
-        uint128 creationTime;
+        uint128 creationTimeBlocks;
         bool inChallenge;
     }
 
@@ -271,7 +271,7 @@ contract Staking is ChallengeType {
         address payable asserterAddress,
         address payable challengerAddress,
         bytes32 node,
-        uint disputableDeadline,
+        uint disputableDeadlineTicks,
         uint staker1Position,
         uint staker2Position,
         bytes32[2] memory vmProtoHashes,
@@ -285,8 +285,8 @@ contract Staking is ChallengeType {
         Staker storage asserter = getValidStaker(asserterAddress);
         Staker storage challenger = getValidStaker(challengerAddress);
 
-        require(asserter.creationTime < disputableDeadline, STK1_DEADLINE);
-        require(challenger.creationTime < disputableDeadline, STK2_DEADLINE);
+        require(RollupTime.blocksToTicks(asserter.creationTimeBlocks) < disputableDeadlineTicks, STK1_DEADLINE);
+        require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < disputableDeadlineTicks, STK2_DEADLINE);
         require(!asserter.inChallenge, STK1_IN_CHAL);
         require(!challenger.inChallenge, STK2_IN_CHAL);
         require(staker1Position < staker2Position, TYPE_ORDER);
@@ -294,7 +294,7 @@ contract Staking is ChallengeType {
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     node,
-                    disputableDeadline,
+                    disputableDeadlineTicks,
                     challengeDataHash1,
                     staker1Position,
                     vmProtoHashes[0]
@@ -308,7 +308,7 @@ contract Staking is ChallengeType {
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     node,
-                    disputableDeadline,
+                    disputableDeadlineTicks,
                     challengeDataHash2,
                     staker2Position,
                     vmProtoHashes[1]
