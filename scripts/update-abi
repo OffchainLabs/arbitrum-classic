@@ -8,19 +8,15 @@ cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../installed_contracts/bytes/ ./bytes
 
-abigen --sol=vm/ChainFactory.sol --pkg=chainfactory --out=chainfactory.go
-abigen --sol=vm/ChannelFactory.sol --pkg=channelfactory --out=channelfactory.go
 abigen --sol=vm/ArbRollup.sol --pkg=arbrollup --out=arbrollup.go
 
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
 abigen --sol=arch/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
 
-\cp chainfactory.go ../../arb-validator/ethbridge/chainfactory/
-\cp channelfactory.go ../../arb-validator/ethbridge/channelfactory/
 \cp arbrollup.go ../../arb-validator/ethbridge/rollup/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin bytes
-rm -f arbrollup.go chainfactory.go channelfactory.go globalpendinginbox.go onestepproof.go
+rm -f arbrollup.go globalpendinginbox.go onestepproof.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

@@ -28,23 +28,53 @@ var (
 )
 
 // ArbRollupABI is the input ABI used to generate the binding from.
-const ArbRollupABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"prevLeafHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"beforeVMHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint64[2]\",\"name\":\"_timeBounds\",\"type\":\"uint64[2]\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"beforeInboxHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"_afterVMHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"_numSteps\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"_numArbGas\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"_messagesAccHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"_logsAccHash\",\"type\":\"bytes32\"}],\"name\":\"rollupAsserted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"rollupChallengeCompleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"}],\"name\":\"rollupChallengeStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"rollupConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"rollupPruned\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"name\":\"rollupStakeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"toNodeHash\",\"type\":\"bytes32\"}],\"name\":\"rollupStakeMoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"}],\"name\":\"rollupStakeRefunded\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"_players\",\"type\":\"address[2]\"},{\"internalType\":\"uint128[2]\",\"name\":\"_rewards\",\"type\":\"uint128[2]\"}],\"name\":\"completeChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"to\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_leafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"stakerProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"stakerProofOffsets\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32\",\"name\":\"prev\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"branch\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_preconditionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_assertionHash\",\"type\":\"bytes32\"}],\"name\":\"confirm\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"location\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"createStake\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInbox\",\"outputs\":[{\"internalType\":\"contractIGlobalPendingInbox\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_gracePeriod\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"beforeVMHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"beforeInboxHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_prevPrevLeafHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_prevDisputableHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_prevChildType\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_prevVMprotoHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_prevLeafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"_prevLeafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_stakerProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"_afterVMHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_afterInboxHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_messagesAccHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_logsAccHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_numSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_numArbGas\",\"type\":\"uint64\"},{\"internalType\":\"uint64[2]\",\"name\":\"_timeBounds\",\"type\":\"uint64[2]\"}],\"name\":\"makeAssertion\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"newLocation\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_leafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"moveStake\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_leafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"from\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"}],\"name\":\"pruneLeaf\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeConfirmed\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"disputableHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"nodeProof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeMooted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"disputableDeadline\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"disputableHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"staker1position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoHash2\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeInbox\",\"type\":\"bytes32\"},{\"internalType\":\"uint64[2]\",\"name\":\"_timeBounds\",\"type\":\"uint64[2]\"},{\"internalType\":\"bytes32\",\"name\":\"_assertionHash\",\"type\":\"bytes32\"}],\"name\":\"startChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint64[2]\",\"name\":\"_timeBounds\",\"type\":\"uint64[2]\"}],\"name\":\"withinTimeBounds\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ArbRollupABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"logsAccHash\",\"type\":\"bytes32\"}],\"name\":\"ConfirmedAssertion\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32[6]\",\"name\":\"fields\",\"type\":\"bytes32[6]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"importedMessageCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint128[2]\",\"name\":\"timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"didInboxInsn\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"numSteps\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"numArbGas\",\"type\":\"uint64\"}],\"name\":\"RollupAsserted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"RollupChallengeCompleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"}],\"name\":\"RollupChallengeStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupPruned\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"name\":\"RollupStakeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"toNodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupStakeMoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"}],\"name\":\"RollupStakeRefunded\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactory\",\"outputs\":[{\"internalType\":\"contractIChallengeFactory\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"challengeNodeData\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"branch\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"stakerAddresses\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"stakerProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"stakerProofOffsets\",\"type\":\"uint256[]\"}],\"name\":\"confirmInvalid\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"logsAcc\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"stakerAddresses\",\"type\":\"address[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"stakerProofs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"stakerProofOffsets\",\"type\":\"uint256[]\"}],\"name\":\"confirmValid\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInbox\",\"outputs\":[{\"internalType\":\"contractIGlobalPendingInbox\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[11]\",\"name\":\"_fields\",\"type\":\"bytes32[11]\"},{\"internalType\":\"bytes32[]\",\"name\":\"_stakerProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"_beforePendingCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_afterPendingCount\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsn\",\"type\":\"bool\"},{\"internalType\":\"uint32\",\"name\":\"_numSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_numArbGas\",\"type\":\"uint64\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBoundsBlocks\",\"type\":\"uint128[2]\"},{\"internalType\":\"uint256\",\"name\":\"_prevDeadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"_prevChildType\",\"type\":\"uint32\"}],\"name\":\"makeAssertion\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"newLocation\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"moveStake\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"location\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"placeStake\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"from\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"}],\"name\":\"pruneLeaf\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeConfirmed\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"disputableHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"nodeProof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeMooted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeOld\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"disputableNodeHashVal\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"childType\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakePassedDeadline\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startExecutionChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startMessagesChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startPendingTopChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbRollupFuncSigs maps the 4-byte function signature to its string representation.
 var ArbRollupFuncSigs = map[string]string{
-	"22c091bc": "completeChallenge(address[2],uint128[2])",
-	"f6a7a291": "confirm(bytes32,uint256,bytes32[],bytes32[],uint256[],bytes32,uint256,uint256,bytes32,bytes32)",
-	"d6903fdd": "createStake(bytes32,bytes32[])",
+	"5dbaf68b": "challengeFactory()",
+	"d6e51259": "confirmInvalid(uint256,bytes32,uint256,bytes32,address[],bytes32[],uint256[])",
+	"ce2dbd38": "confirmValid(uint256,bytes,bytes32,bytes32,address[],bytes32[],uint256[])",
 	"d489113a": "globalInbox()",
-	"703320a5": "initialize(bytes32,uint32,uint32,uint128,address,address)",
-	"367e96ca": "makeAssertion(bytes32,bytes32,bytes32,bytes32,uint256,bytes32,uint256,bytes32[],bytes32[],bytes32,bytes32,bytes32,bytes32,uint32,uint64,uint64[2])",
-	"2d0bdcb4": "moveStake(bytes32,uint256,bytes32[],bytes32[])",
-	"75702b8b": "pruneLeaf(uint256,bytes32,bytes32[],bytes32[])",
+	"22aeea8d": "init(bytes32,uint128,uint128,uint32,uint128,address,address,address)",
+	"31f1de11": "makeAssertion(bytes32[11],bytes32[],uint256,uint256,bool,uint32,uint64,uint128[2],uint256,uint32)",
+	"5f59b64b": "moveStake(bytes32,bytes32,bytes32[],bytes32[])",
+	"800360dc": "placeStake(bytes32,bytes32,bytes32[],bytes32[])",
+	"ff797273": "pruneLeaf(bytes32,bytes32,bytes32[],bytes32[])",
 	"7cfaaf67": "recoverStakeConfirmed(bytes32[])",
 	"8d28cd81": "recoverStakeMooted(bytes32,bytes32[],bytes32[])",
+	"113ec9d8": "recoverStakeOld(address,bytes32[])",
+	"6e8da939": "recoverStakePassedDeadline(address,uint256,bytes32,uint256,bytes32,bytes32,bytes32[])",
 	"396f51cf": "resolveChallenge(address,address)",
-	"e3c6fbbe": "startChallenge(address,address,bytes32,uint64,bytes32,uint256,uint256,bytes32,bytes32,bytes32[],bytes32[],bytes32,bytes32,uint64[2],bytes32)",
-	"42c0787e": "withinTimeBounds(uint64[2])",
+	"2d4dce60": "startExecutionChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"9cb292b6": "startMessagesChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"863e78d5": "startPendingTopChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+}
+
+// ArbRollupBin is the compiled bytecode used for deploying new contracts.
+var ArbRollupBin = "0x608060405234801561001057600080fd5b50613df6806100206000396000f3fe6080604052600436106100fe5760003560e01c80637cfaaf67116100955780639cb292b6116100645780639cb292b6146108e2578063ce2dbd38146109ed578063d489113a14610b6b578063d6e5125914610b80578063ff79727314610cb3576100fe565b80637cfaaf67146105c0578063800360dc1461063b578063863e78d5146107055780638d28cd8114610810576100fe565b8063396f51cf116100d1578063396f51cf146103d55780635dbaf68b146104105780635f59b64b146104415780636e8da93914610518576100fe565b8063113ec9d81461010357806322aeea8d146101905780632d4dce601461020957806331f1de1114610314575b600080fd5b34801561010f57600080fd5b5061018e6004803603604081101561012657600080fd5b6001600160a01b038235169190810190604081016020820135600160201b81111561015057600080fd5b82018360208201111561016257600080fd5b803590602001918460208302840111600160201b8311171561018357600080fd5b509092509050610d8a565b005b34801561019c57600080fd5b5061018e60048036036101008110156101b457600080fd5b508035906001600160801b036020820135811691604081013582169163ffffffff606083013516916080810135909116906001600160a01b0360a082013581169160c081013582169160e09091013516610dd6565b34801561021557600080fd5b5061018e600480360361018081101561022d57600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b81111561028057600080fd5b82018360208201111561029257600080fd5b803590602001918460208302840111600160201b831117156102b357600080fd5b919390929091602081019035600160201b8111156102d057600080fd5b8201836020820111156102e257600080fd5b803590602001918460208302840111600160201b8311171561030357600080fd5b919350915080359060200135610f38565b34801561032057600080fd5b5061018e60048036036102a081101561033857600080fd5b8101816101808101610160820135600160201b81111561035757600080fd5b82018360208201111561036957600080fd5b803590602001918460208302840111600160201b8311171561038a57600080fd5b9193509150803590602081013590604081013515159063ffffffff606082013581169167ffffffffffffffff6080820135169160a082019160e08101359161010090910135166110b9565b3480156103e157600080fd5b5061018e600480360360408110156103f857600080fd5b506001600160a01b038135811691602001351661125c565b34801561041c57600080fd5b506104256114cf565b604080516001600160a01b039092168252519081900360200190f35b34801561044d57600080fd5b5061018e6004803603608081101561046457600080fd5b813591602081013591810190606081016040820135600160201b81111561048a57600080fd5b82018360208201111561049c57600080fd5b803590602001918460208302840111600160201b831117156104bd57600080fd5b919390929091602081019035600160201b8111156104da57600080fd5b8201836020820111156104ec57600080fd5b803590602001918460208302840111600160201b8311171561050d57600080fd5b5090925090506114de565b34801561052457600080fd5b5061018e600480360360e081101561053b57600080fd5b6001600160a01b038235169160208101359160408201359160608101359160808201359160a08101359181019060e0810160c0820135600160201b81111561058257600080fd5b82018360208201111561059457600080fd5b803590602001918460208302840111600160201b831117156105b557600080fd5b50909250905061168c565b3480156105cc57600080fd5b5061018e600480360360208110156105e357600080fd5b810190602081018135600160201b8111156105fd57600080fd5b82018360208201111561060f57600080fd5b803590602001918460208302840111600160201b8311171561063057600080fd5b50909250905061183c565b61018e6004803603608081101561065157600080fd5b813591602081013591810190606081016040820135600160201b81111561067757600080fd5b82018360208201111561068957600080fd5b803590602001918460208302840111600160201b831117156106aa57600080fd5b919390929091602081019035600160201b8111156106c757600080fd5b8201836020820111156106d957600080fd5b803590602001918460208302840111600160201b831117156106fa57600080fd5b50909250905061187d565b34801561071157600080fd5b5061018e600480360361018081101561072957600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b81111561077c57600080fd5b82018360208201111561078e57600080fd5b803590602001918460208302840111600160201b831117156107af57600080fd5b919390929091602081019035600160201b8111156107cc57600080fd5b8201836020820111156107de57600080fd5b803590602001918460208302840111600160201b831117156107ff57600080fd5b9193509150803590602001356119c4565b34801561081c57600080fd5b5061018e6004803603606081101561083357600080fd5b81359190810190604081016020820135600160201b81111561085457600080fd5b82018360208201111561086657600080fd5b803590602001918460208302840111600160201b8311171561088757600080fd5b919390929091602081019035600160201b8111156108a457600080fd5b8201836020820111156108b657600080fd5b803590602001918460208302840111600160201b831117156108d757600080fd5b509092509050611a35565b3480156108ee57600080fd5b5061018e600480360361018081101561090657600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b81111561095957600080fd5b82018360208201111561096b57600080fd5b803590602001918460208302840111600160201b8311171561098c57600080fd5b919390929091602081019035600160201b8111156109a957600080fd5b8201836020820111156109bb57600080fd5b803590602001918460208302840111600160201b831117156109dc57600080fd5b919350915080359060200135611b7b565b3480156109f957600080fd5b5061018e600480360360e0811015610a1057600080fd5b81359190810190604081016020820135600160201b811115610a3157600080fd5b820183602082011115610a4357600080fd5b803590602001918460018302840111600160201b83111715610a6457600080fd5b919390928235926020810135929190606081019060400135600160201b811115610a8d57600080fd5b820183602082011115610a9f57600080fd5b803590602001918460208302840111600160201b83111715610ac057600080fd5b919390929091602081019035600160201b811115610add57600080fd5b820183602082011115610aef57600080fd5b803590602001918460208302840111600160201b83111715610b1057600080fd5b919390929091602081019035600160201b811115610b2d57600080fd5b820183602082011115610b3f57600080fd5b803590602001918460208302840111600160201b83111715610b6057600080fd5b509092509050611bef565b348015610b7757600080fd5b50610425611e10565b348015610b8c57600080fd5b5061018e600480360360e0811015610ba357600080fd5b81359160208101359160408201359160608101359181019060a081016080820135600160201b811115610bd557600080fd5b820183602082011115610be757600080fd5b803590602001918460208302840111600160201b83111715610c0857600080fd5b919390929091602081019035600160201b811115610c2557600080fd5b820183602082011115610c3757600080fd5b803590602001918460208302840111600160201b83111715610c5857600080fd5b919390929091602081019035600160201b811115610c7557600080fd5b820183602082011115610c8757600080fd5b803590602001918460208302840111600160201b83111715610ca857600080fd5b509092509050611e1f565b348015610cbf57600080fd5b5061018e60048036036080811015610cd657600080fd5b813591602081013591810190606081016040820135600160201b811115610cfc57600080fd5b820183602082011115610d0e57600080fd5b803590602001918460208302840111600160201b83111715610d2f57600080fd5b919390929091602081019035600160201b811115610d4c57600080fd5b820183602082011115610d5e57600080fd5b803590602001918460208302840111600160201b83111715610d7f57600080fd5b509092509050611f41565b80610d9457600080fd5b610dd18383838080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525061209e92505050565b505050565b610de1888584612181565b600680546001600160a01b0319166001600160a01b0383811691909117918290556040805163f397238360e01b81529051929091169163f39723839160048082019260009290919082900301818387803b158015610e3e57600080fd5b505af1158015610e52573d6000803e3d6000fd5b5050600780546001600160a01b0319166001600160a01b0387161790555050600880546001600160801b0319166001600160801b03898116919091178116600160801b918916919091021790556009805463ffffffff191663ffffffff87161790556040805163364df27760e01b8152905173__$6f0fba43b1e3ecb6a82953dea0ca767fbf$__9163364df277916004808301926020929190829003018186803b158015610eff57600080fd5b505af4158015610f13573d6000803e3d6000fd5b505050506040513d6020811015610f2957600080fd5b5051600a555050505050505050565b60408051808201909152600e81526d455845435f4348414c5f5459504560901b602082015260028a14610fe95760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610fae578181015183820152602001610f96565b50505050905090810190601f168015610fdb5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b506110aa8d8d8d8d8d8d8d6002806020026040519081016040528092919082600260200280828437600081840152601f19601f8201169050808301925050505050508d8d80806020026020016040519081016040528093929190818152602001838360200280828437600081840152601f19601f820116905080830192505050505050508c8c808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152508e92508d91506121be9050565b50505050505050505050505050565b61124f6040518061028001604052808d6000600b81106110d557fe5b602002013581526020018d6001600b81106110ec57fe5b602002013581526020018d6002600b811061110357fe5b602002013581526020018a81526020018d6003600b811061112057fe5b602002013581526020018d6004600b811061113757fe5b602002013581526020018c8c8080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050509082525060a08e01356020820152604081018a905260c08e013560608201526080018d60076020020135815260200188151581526020018d6008600b81106111b757fe5b602002013581526020018d6009600b81106111ce57fe5b602002013581526020018d600a600b81106111e557fe5b602002013581526020018763ffffffff1681526020018667ffffffffffffffff168152602001856002806020026040519081016040528092919082600260200280828437600092019190915250505081526020810185905263ffffffff8416604090910152612730565b5050505050505050505050565b600080546040805163c778f3f160e01b81526001600160a01b038681166004830152858116602483015233803f60448401819052935190959394919091169163c778f3f1916064808301926020929190829003018186803b1580156112c057600080fd5b505afa1580156112d4573d6000803e3d6000fd5b505050506040513d60208110156112ea57600080fd5b5051600080546040805163c778f3f160e01b81526001600160a01b038a811660048301528981166024830152604482018890529151949550929391169163c778f3f1916064808301926020929190829003018186803b15801561134c57600080fd5b505afa158015611360573d6000803e3d6000fd5b505050506040513d602081101561137657600080fd5b505190506001600160a01b03821633148061139957506001600160a01b03811633145b6040518060400160405280600f81526020016e2922a9afa1a420a62fa9a2a72222a960891b8152509061140d5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5060006114198761317b565b6001546040519192506001600160a01b0389169160026001600160801b039283160490911680156108fc02916000818181858888f19350505050158015611464573d6000803e3d6000fd5b5060018101805460ff60801b1916905561147d8661320c565b604080513381526001600160a01b03808a16602083015288168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050505050565b6000546001600160a01b031681565b60006114e93361317b565b90506114f48661324d565b6040518060400160405280600981526020016826a7ab22afa622a0a360b91b815250906115625760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b506115d78160000154888888888080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808c0282810182019093528b82529093508b92508a91829185019084908082843760009201919091525061326292505050565b604051806040016040528060088152602001674d4f56455f4c4f4360c01b815250906116445760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50868155604080513381526020810189905281517fbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4929181900390910190a150505050505050565b60006116978961317b565b905060006116ac82600001548a8a8a8a61328b565b90506116b7896132ce565b431015604051806040016040528060138152602001725245434f565f444541444c494e455f54494d4560681b815250906117325760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5061177181868686808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152506132d592505050565b604051806040016040528060148152602001732922a1a7ab2fa222a0a22624a722afa82927a7a360611b815250906117ea5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b506117f48a6132f0565b604080516001600160a01b038c16815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a150505050505050505050565b6118793383838080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525061209e92505050565b5050565b6118868661324d565b6118c6576040805162461bcd60e51b815260206004820152600c60248201526b34b73b30b634b2103632b0b360a11b604482015290519081900360640190fd5b61193d6118d1613339565b868887878080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808b0282810182019093528a82529093508a92508991829185019084908082843760009201919091525061326292505050565b6040518060400160405280601081526020016f282620a1a2afa820aa242fa82927a7a360811b815250906119b25760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b506119bc8561333f565b505050505050565b60408051808201909152600d81526c504e445f4348414c5f5459504560981b60208201528915610fe95760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b6000611a403361317b565b9050611abd816000015487611a53613339565b88888080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808c0282810182019093528b82529093508b92508a9182918501908490808284376000920191909152506134f392505050565b604051806040016040528060148152602001732922a1a7ab2fa1a7a7232624a1aa2fa82927a7a360611b81525090611b365760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50611b40336132f0565b6040805133815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a1505050505050565b60408051808201909152600e81526d4d5347535f4348414c5f5459504560901b602082015260018a14610fe95760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b611d408b611ca273__$2556963077056ca10a6804584182250fbf$__63e83f4bfe8e8e6040518363ffffffff1660e01b815260040180806020018281038252848482818152602001925080828437600083820152604051601f909101601f191690920195506020945090925050508083038186803b158015611c7057600080fd5b505af4158015611c84573d6000803e3d6000fd5b505050506040513d6020811015611c9a57600080fd5b50518b613545565b60038a8a8a8080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808e0282810182019093528d82529093508d92508c91829185019084908082843760009201919091525050604080516020808d0282810182019093528c82529093508c92508b91829185019084908082843760009201919091525061357192505050565b60065460405163e4eb8c6360e01b8152602060048201908152602482018c90526001600160a01b039092169163e4eb8c63918d918d918190604401848480828437600081840152601f19601f8201169050808301925050509350505050600060405180830381600087803b158015611db757600080fd5b505af1158015611dcb573d6000803e3d6000fd5b5050604080518b815290517f7c4ea4965dec519bdc58e57940c14ed469185c38f401798f2f38ed6d0afb1fd39350908190036020019150a15050505050505050505050565b6006546001600160a01b031681565b60408051808201909152600d81526c434f4e465f494e565f5459504560981b602082015260038910611e925760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50611f358a8a8a8a8a8a8080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808e0282810182019093528d82529093508d92508c91829185019084908082843760009201919091525050604080516020808d0282810182019093528c82529093508c92508b91829185019084908082843760009201919091525061357192505050565b50505050505050505050565b611f4a8661324d565b611f8a576040805162461bcd60e51b815260206004820152600c60248201526b34b73b30b634b2103632b0b360a11b604482015290519081900360640190fd5b6120018587611f97613339565b87878080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808b0282810182019093528a82529093508a9250899182918501908490808284376000920191909152506134f392505050565b61204b576040805162461bcd60e51b815260206004820152601660248201527524b73b30b634b21031b7b7333634b1ba10383937b7b360511b604482015290519081900360640190fd5b600086815260056020908152604091829020805460ff19169055815188815291517f3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f44909509281900390910190a1505050505050565b60006120a98361317b565b90506120c181600001546120bb613339565b846132d5565b6040518060400160405280601081526020016f2922a1a7ab2fa820aa242fa82927a7a360811b815250906121365760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50612140836132f0565b604080516001600160a01b038516815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a1505050565b61218c83838361386b565b60016005600061219a613339565b81526020810191909152604001600020805460ff1916911515919091179055505050565b60006121c98c61317b565b905060006121d68c61317b565b60018301549091508a906121f2906001600160801b03166132ce565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b815250906122655760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5060018101548a9061227f906001600160801b03166132ce565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b815250906122f25760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156123725760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156123f25760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5060408051808201909152600a8152692a2ca822afa7a92222a960b11b6020820152888a106124625760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5061248361247b8c8c878d8c60005b602002015161328b565b8354886132d5565b6040518060400160405280600a81526020016929aa2598afa82927a7a360b11b815250906124f25760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5061250d6125058c8c868c8c6001612471565b8254876132d5565b6040518060400160405280600a81526020016929aa25992fa82927a7a360b11b8152509061257c5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff02191690831515021790555060008060009054906101000a90046001600160a01b03166001600160a01b031663b1b126888f8f6000898f6040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b031681526020018463ffffffff16815260200183815260200182815260200195505050505050602060405180830381600087803b15801561265e57600080fd5b505af1158015612672573d6000803e3d6000fd5b505050506040513d602081101561268857600080fd5b810190808051906020019092919050505090507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f8e8e8c8460405180856001600160a01b03166001600160a01b03168152602001846001600160a01b03166001600160a01b03168152602001838152602001826001600160a01b03166001600160a01b0316815260200194505050505060405180910390a15050505050505050505050505050565b612738613d9a565b6127548260000151836020015184604001518560600151613987565b808252608083015161024084015160a085015161026086015161277f9463ffffffff9091169061328b565b6020820181905261278f9061324d565b6040518060400160405280600981526020016826a0a5a2afa622a0a360b91b815250906127fd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5073__$8e266570c8a7fb2aaac83b3e040afaf9e1$__636aee3ecc83600001516040518263ffffffff1660e01b81526004018082815260200191505060206040518083038186803b15801561285157600080fd5b505af4158015612865573d6000803e3d6000fd5b505050506040513d602081101561287b57600080fd5b5051158015612906575073__$8e266570c8a7fb2aaac83b3e040afaf9e1$__63f9e2b91283600001516040518263ffffffff1660e01b81526004018082815260200191505060206040518083038186803b1580156128d857600080fd5b505af41580156128ec573d6000803e3d6000fd5b505050506040513d602081101561290257600080fd5b5051155b6040518060400160405280600881526020016726a0a5a2afa92aa760c11b815250906129735760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50600980546101e0840151604080518082019091529283526804d414b455f535445560bc1b602084015263ffffffff918216911611156129f45760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50612a038261022001516139c5565b604051806040016040528060098152602001684d414b455f54494d4560b81b81525090612a715760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b506000612a7d3361317b565b9050612a96816000015483602001518560c001516132d5565b6040518060400160405280601181526020017026a0a5a2afa9aa20a5a2a92fa82927a7a360791b81525090612b0c5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50600854610200840151600091612b5f91600160801b9091046001600160801b03169067ffffffffffffffff1681612b4057fe5b6008546102408801516001600160801b039390920483169216906139f5565b600654604080516308d74f6960e11b815281519394506001600160a01b03909216926311ae9ed29260048082019392918290030181600087803b158015612ba557600080fd5b505af1158015612bb9573d6000803e3d6000fd5b505050506040513d6040811015612bcf57600080fd5b50805160209091015160608086019190915260408581019290925281516003808252608082019093529091816020016020820280388339019050509050612c4d846020015183612c4387604001518960e00151612c3e8b61010001518b60600151613a1f90919063ffffffff16565b613a61565b875160009061328b565b81600081518110612c5a57fe5b602002602001018181525050612cb1846020015183612ca788604001518960e001516000801b8b6101200151612ca28d606001518e6101000151613a1f90919063ffffffff16565b613a98565b875160019061328b565b81600181518110612cbe57fe5b6020908102919091018101919091526101408601516101608701516101e08801516102008901516101a08a01516101c08b015160408051631b0aa96b60e01b81526004810197909752941515602487015263ffffffff909316604486015267ffffffffffffffff909116606485015260006084850181905260a485019190915260c4840181905260e48401919091529051909273__$2556963077056ca10a6804584182250fbf$__92631b0aa96b926101048083019392829003018186803b158015612d8957600080fd5b505af4158015612d9d573d6000803e3d6000fd5b505050506040513d6020811015612db357600080fd5b505160208781015161012089015160408051630aab3fa760e31b8152600481019390935260248301919091525192935060009273__$2556963077056ca10a6804584182250fbf$__92635559fd389260448082019391829003018186803b158015612e1d57600080fd5b505af4158015612e31573d6000803e3d6000fd5b505050506040513d6020811015612e4757600080fd5b5051602087015188516102208a015160408051630351b52360e11b815260048101848152959650612f27958a94612f1d9473__$2556963077056ca10a6804584182250fbf$__946306a36a4694929391928b9291602490910190849080838360005b83811015612ec1578181015183820152602001612ea9565b50505050905001828152602001935050505060206040518083038186803b158015612eeb57600080fd5b505af4158015612eff573d6000803e3d6000fd5b505050506040513d6020811015612f1557600080fd5b505186613545565b895160029061328b565b83600281518110612f3457fe5b60200260200101818152505086610160015115612fbe5773__$6f0fba43b1e3ecb6a82953dea0ca767fbf$__63364df2776040518163ffffffff1660e01b815260040160206040518083038186803b158015612f8f57600080fd5b505af4158015612fa3573d6000803e3d6000fd5b505050506040513d6020811015612fb957600080fd5b505190505b612ffc866020015185612fdb8a6101a001518b6101c00151613545565b6003612ff78c6101400151878e60e001518f6101000151613987565b61328b565b8360038151811061300957fe5b602002602001018181525050613023866020015184613ade565b8260038151811061303057fe5b602002602001015185600001819055507fbd238480fb8ab11cc2e9fad863ba3441652a8390646394aae6d2c6cefc27f27a6040518060c00160405280886020015181526020018960e00151815260200189610120015181526020018961014001518152602001896101a001518152602001896101c001518152506130c689606001518a6101000151613a1f90919063ffffffff16565b6102208a01516101608b01516101e08c01516102008d0151604051808760c080838360005b838110156131035781810151838201526020016130eb565b5050505090500186815260200185600260200280838360005b8381101561313457818101518382015260200161311c565b505050509515159190950190815263ffffffff90931660208401525067ffffffffffffffff166040808301919091525190819003606001945092505050a150505050505050565b6001600160a01b038116600090815260026020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b93830193909352916132055760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5092915050565b6001600160a01b03166000908152600260205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560038054600019019055565b60009081526005602052604090205460ff1690565b600061326f8686856132d5565b801561328157506132818585846132d5565b9695505050505050565b6000613281868387878760405160200180848152602001838152602001828152602001935050505060405160208183030381529060405280519060200120613b41565b6132c80290565b60006132e684848460008651613b94565b90505b9392505050565b6132f98161320c565b6001546040516001600160a01b038316916001600160801b031680156108fc02916000818181858888f19350505050158015611879573d6000803e3d6000fd5b60045490565b60015460408051808201909152600781526614d512d7d0535560ca1b6020820152906001600160801b031634146133b75760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5033600090815260026020908152604091829020548251808401909352600c83526b105314911657d4d51052d15160a21b9183019190915261343a5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b506040805160608082018352838252436001600160801b03818116602080860191825260008688018181523380835260028452918990209751885592516001978801805494516001600160801b0319909516919095161760ff60801b1916600160801b931515939093029290921790925560038054909501909455845193845283018590528284015291517f85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba929181900390910190a150565b60008160008151811061350257fe5b60200260200101518360008151811061351757fe5b60200260200101511415801561353357506135338686856132d5565b801561328157506132818685846132d5565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b825161357b613bff565b81146040518060400160405280600a81526020016910d3d39197d0d3d5539560b21b815250906135ec5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5060006136036135fa613339565b8a8a8a8a61328b565b9050600080805b848110156137ae57600088828151811061362057fe5b60200260200101519050836bffffffffffffffffffffffff19168160601b6bffffffffffffffffffffffff1916116040518060400160405280600a81526020016921a7a7232fa7a92222a960b11b815250906136bd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5060006136c98261317b565b60018101549091508e906136e5906001600160801b03166132ce565b106137a0576137248682600001548b8b878151811061370057fe5b60200260200101518c886001018151811061371757fe5b6020026020010151613b94565b6040518060400160405280601181526020017021a7a7232fa9aa20a5a2a92fa82927a7a360791b8152509061379a5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50600193505b5060601b925060010161360a565b5060408051808201909152600f81526e21a7a7232fa420a9afa9aa20a5a2a960891b6020820152816138215760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5061382b83613c05565b6040805184815290517f9d13d0ad532ca8e545a3b66828cb99a18c3bc98e2a50b4db1990a033fdba6f639181900360200190a15050505050505050505050565b6138758282613c0a565b60006139698473__$6f0fba43b1e3ecb6a82953dea0ca767fbf$__63364df2776040518163ffffffff1660e01b815260040160206040518083038186803b1580156138bf57600080fd5b505af41580156138d3573d6000803e3d6000fd5b505050506040513d60208110156138e957600080fd5b50516040805163364df27760e01b8152905173__$6f0fba43b1e3ecb6a82953dea0ca767fbf$__9163364df277916004808301926020929190829003018186803b15801561393657600080fd5b505af415801561394a573d6000803e3d6000fd5b505050506040513d602081101561396057600080fd5b50516000613987565b905061398161397c60008080808661328b565b613c05565b50505050565b604080516020808201969096528082019490945260608401929092526080808401919091528151808403909101815260a09092019052805191012090565b80516000906001600160801b031643108015906139ef575060208201516001600160801b03164311155b92915050565b60008083613a02436132ce565b019050828110613a1557840190506132e9565b50508083016132e9565b60006132e983836040518060400160405280601e81526020017f536166654d6174683a207375627472616374696f6e206f766572666c6f770000815250613d40565b6040805160208082019590955280820193909352606080840192909252805180840390920182526080909201909152805191012090565b60408051602080820197909752808201959095526060850193909352608084019190915260a0808401919091528151808403909101815260c09092019052805191012090565b6000828152600560205260408120805460ff191690555b6003811015610dd157600160056000848481518110613b1057fe5b6020908102919091018101518252810191909152604001600020805460ff1916911515919091179055600101613af5565b6040805160208082019490945280820192909252805180830382018152606083018252805190840120608083019490945260a0808301949094528051808303909401845260c09091019052815191012090565b600085835b83811015613bf25781868281518110613bae57fe5b602002602001015160405160200180838152602001828152602001925050506040516020818303038152906040528051906020012091508080600101915050613b99565b5090941495945050505050565b60035490565b600455565b60005460408051808201909152600a815269494e49545f545749434560b01b6020820152906001600160a01b031615613c845760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b5060408051808201909152600c81526b494e49545f4e4f4e5a45524f60a01b60208201526001600160a01b038216613cfd5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b50600080546001600160a01b0319166001600160a01b0392909216919091179055600180546001600160801b0319166001600160801b0392909216919091179055565b60008184841115613d925760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610fae578181015183820152602001610f96565b505050900390565b6040805160808101825260008082526020820181905291810182905260608101919091529056fea265627a7a723158204a0f4dc50a1b6e918bc4435898eca97a7373cdbb8ff57777310c98fa68d588a464736f6c634300050f0032"
+
+// DeployArbRollup deploys a new Ethereum contract, binding an instance of ArbRollup to it.
+func DeployArbRollup(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ArbRollup, error) {
+	parsed, err := abi.JSON(strings.NewReader(ArbRollupABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	protocolAddr, _, _, _ := DeployProtocol(auth, backend)
+	ArbRollupBin = strings.Replace(ArbRollupBin, "__$2556963077056ca10a6804584182250fbf$__", protocolAddr.String()[2:], -1)
+
+	valueAddr, _, _, _ := DeployValue(auth, backend)
+	ArbRollupBin = strings.Replace(ArbRollupBin, "__$6f0fba43b1e3ecb6a82953dea0ca767fbf$__", valueAddr.String()[2:], -1)
+
+	vMAddr, _, _, _ := DeployVM(auth, backend)
+	ArbRollupBin = strings.Replace(ArbRollupBin, "__$8e266570c8a7fb2aaac83b3e040afaf9e1$__", vMAddr.String()[2:], -1)
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ArbRollupBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ArbRollup{ArbRollupCaller: ArbRollupCaller{contract: contract}, ArbRollupTransactor: ArbRollupTransactor{contract: contract}, ArbRollupFilterer: ArbRollupFilterer{contract: contract}}, nil
 }
 
 // ArbRollup is an auto generated Go binding around an Ethereum contract.
@@ -189,6 +219,32 @@ func (_ArbRollup *ArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _ArbRollup.Contract.contract.Transact(opts, method, params...)
 }
 
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_ArbRollup *ArbRollupCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ArbRollup.contract.Call(opts, out, "challengeFactory")
+	return *ret0, err
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_ArbRollup *ArbRollupSession) ChallengeFactory() (common.Address, error) {
+	return _ArbRollup.Contract.ChallengeFactory(&_ArbRollup.CallOpts)
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_ArbRollup *ArbRollupCallerSession) ChallengeFactory() (common.Address, error) {
+	return _ArbRollup.Contract.ChallengeFactory(&_ArbRollup.CallOpts)
+}
+
 // GlobalInbox is a free data retrieval call binding the contract method 0xd489113a.
 //
 // Solidity: function globalInbox() constant returns(address)
@@ -215,177 +271,151 @@ func (_ArbRollup *ArbRollupCallerSession) GlobalInbox() (common.Address, error) 
 	return _ArbRollup.Contract.GlobalInbox(&_ArbRollup.CallOpts)
 }
 
-// WithinTimeBounds is a free data retrieval call binding the contract method 0x42c0787e.
+// ConfirmInvalid is a paid mutator transaction binding the contract method 0xd6e51259.
 //
-// Solidity: function withinTimeBounds(uint64[2] _timeBounds) constant returns(bool)
-func (_ArbRollup *ArbRollupCaller) WithinTimeBounds(opts *bind.CallOpts, _timeBounds [2]uint64) (bool, error) {
-	var (
-		ret0 = new(bool)
-	)
-	out := ret0
-	err := _ArbRollup.contract.Call(opts, out, "withinTimeBounds", _timeBounds)
-	return *ret0, err
+// Solidity: function confirmInvalid(uint256 deadlineTicks, bytes32 challengeNodeData, uint256 branch, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
+func (_ArbRollup *ArbRollupTransactor) ConfirmInvalid(opts *bind.TransactOpts, deadlineTicks *big.Int, challengeNodeData [32]byte, branch *big.Int, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "confirmInvalid", deadlineTicks, challengeNodeData, branch, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-// WithinTimeBounds is a free data retrieval call binding the contract method 0x42c0787e.
+// ConfirmInvalid is a paid mutator transaction binding the contract method 0xd6e51259.
 //
-// Solidity: function withinTimeBounds(uint64[2] _timeBounds) constant returns(bool)
-func (_ArbRollup *ArbRollupSession) WithinTimeBounds(_timeBounds [2]uint64) (bool, error) {
-	return _ArbRollup.Contract.WithinTimeBounds(&_ArbRollup.CallOpts, _timeBounds)
+// Solidity: function confirmInvalid(uint256 deadlineTicks, bytes32 challengeNodeData, uint256 branch, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
+func (_ArbRollup *ArbRollupSession) ConfirmInvalid(deadlineTicks *big.Int, challengeNodeData [32]byte, branch *big.Int, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) (*types.Transaction, error) {
+	return _ArbRollup.Contract.ConfirmInvalid(&_ArbRollup.TransactOpts, deadlineTicks, challengeNodeData, branch, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-// WithinTimeBounds is a free data retrieval call binding the contract method 0x42c0787e.
+// ConfirmInvalid is a paid mutator transaction binding the contract method 0xd6e51259.
 //
-// Solidity: function withinTimeBounds(uint64[2] _timeBounds) constant returns(bool)
-func (_ArbRollup *ArbRollupCallerSession) WithinTimeBounds(_timeBounds [2]uint64) (bool, error) {
-	return _ArbRollup.Contract.WithinTimeBounds(&_ArbRollup.CallOpts, _timeBounds)
+// Solidity: function confirmInvalid(uint256 deadlineTicks, bytes32 challengeNodeData, uint256 branch, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
+func (_ArbRollup *ArbRollupTransactorSession) ConfirmInvalid(deadlineTicks *big.Int, challengeNodeData [32]byte, branch *big.Int, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) (*types.Transaction, error) {
+	return _ArbRollup.Contract.ConfirmInvalid(&_ArbRollup.TransactOpts, deadlineTicks, challengeNodeData, branch, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-// CompleteChallenge is a paid mutator transaction binding the contract method 0x22c091bc.
+// ConfirmValid is a paid mutator transaction binding the contract method 0xce2dbd38.
 //
-// Solidity: function completeChallenge(address[2] _players, uint128[2] _rewards) returns()
-func (_ArbRollup *ArbRollupTransactor) CompleteChallenge(opts *bind.TransactOpts, _players [2]common.Address, _rewards [2]*big.Int) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "completeChallenge", _players, _rewards)
+// Solidity: function confirmValid(uint256 deadlineTicks, bytes _messages, bytes32 logsAcc, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
+func (_ArbRollup *ArbRollupTransactor) ConfirmValid(opts *bind.TransactOpts, deadlineTicks *big.Int, _messages []byte, logsAcc [32]byte, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "confirmValid", deadlineTicks, _messages, logsAcc, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-// CompleteChallenge is a paid mutator transaction binding the contract method 0x22c091bc.
+// ConfirmValid is a paid mutator transaction binding the contract method 0xce2dbd38.
 //
-// Solidity: function completeChallenge(address[2] _players, uint128[2] _rewards) returns()
-func (_ArbRollup *ArbRollupSession) CompleteChallenge(_players [2]common.Address, _rewards [2]*big.Int) (*types.Transaction, error) {
-	return _ArbRollup.Contract.CompleteChallenge(&_ArbRollup.TransactOpts, _players, _rewards)
+// Solidity: function confirmValid(uint256 deadlineTicks, bytes _messages, bytes32 logsAcc, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
+func (_ArbRollup *ArbRollupSession) ConfirmValid(deadlineTicks *big.Int, _messages []byte, logsAcc [32]byte, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) (*types.Transaction, error) {
+	return _ArbRollup.Contract.ConfirmValid(&_ArbRollup.TransactOpts, deadlineTicks, _messages, logsAcc, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-// CompleteChallenge is a paid mutator transaction binding the contract method 0x22c091bc.
+// ConfirmValid is a paid mutator transaction binding the contract method 0xce2dbd38.
 //
-// Solidity: function completeChallenge(address[2] _players, uint128[2] _rewards) returns()
-func (_ArbRollup *ArbRollupTransactorSession) CompleteChallenge(_players [2]common.Address, _rewards [2]*big.Int) (*types.Transaction, error) {
-	return _ArbRollup.Contract.CompleteChallenge(&_ArbRollup.TransactOpts, _players, _rewards)
+// Solidity: function confirmValid(uint256 deadlineTicks, bytes _messages, bytes32 logsAcc, bytes32 vmProtoStateHash, address[] stakerAddresses, bytes32[] stakerProofs, uint256[] stakerProofOffsets) returns()
+func (_ArbRollup *ArbRollupTransactorSession) ConfirmValid(deadlineTicks *big.Int, _messages []byte, logsAcc [32]byte, vmProtoStateHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) (*types.Transaction, error) {
+	return _ArbRollup.Contract.ConfirmValid(&_ArbRollup.TransactOpts, deadlineTicks, _messages, logsAcc, vmProtoStateHash, stakerAddresses, stakerProofs, stakerProofOffsets)
 }
 
-// Confirm is a paid mutator transaction binding the contract method 0xf6a7a291.
+// Init is a paid mutator transaction binding the contract method 0x22aeea8d.
 //
-// Solidity: function confirm(bytes32 to, uint256 _leafIndex, bytes32[] proof1, bytes32[] stakerProofs, uint256[] stakerProofOffsets, bytes32 prev, uint256 branch, uint256 deadline, bytes32 _preconditionHash, bytes32 _assertionHash) returns()
-func (_ArbRollup *ArbRollupTransactor) Confirm(opts *bind.TransactOpts, to [32]byte, _leafIndex *big.Int, proof1 [][32]byte, stakerProofs [][32]byte, stakerProofOffsets []*big.Int, prev [32]byte, branch *big.Int, deadline *big.Int, _preconditionHash [32]byte, _assertionHash [32]byte) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "confirm", to, _leafIndex, proof1, stakerProofs, stakerProofOffsets, prev, branch, deadline, _preconditionHash, _assertionHash)
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_ArbRollup *ArbRollupTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "init", _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
 }
 
-// Confirm is a paid mutator transaction binding the contract method 0xf6a7a291.
+// Init is a paid mutator transaction binding the contract method 0x22aeea8d.
 //
-// Solidity: function confirm(bytes32 to, uint256 _leafIndex, bytes32[] proof1, bytes32[] stakerProofs, uint256[] stakerProofOffsets, bytes32 prev, uint256 branch, uint256 deadline, bytes32 _preconditionHash, bytes32 _assertionHash) returns()
-func (_ArbRollup *ArbRollupSession) Confirm(to [32]byte, _leafIndex *big.Int, proof1 [][32]byte, stakerProofs [][32]byte, stakerProofOffsets []*big.Int, prev [32]byte, branch *big.Int, deadline *big.Int, _preconditionHash [32]byte, _assertionHash [32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.Confirm(&_ArbRollup.TransactOpts, to, _leafIndex, proof1, stakerProofs, stakerProofOffsets, prev, branch, deadline, _preconditionHash, _assertionHash)
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_ArbRollup *ArbRollupSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _ArbRollup.Contract.Init(&_ArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
 }
 
-// Confirm is a paid mutator transaction binding the contract method 0xf6a7a291.
+// Init is a paid mutator transaction binding the contract method 0x22aeea8d.
 //
-// Solidity: function confirm(bytes32 to, uint256 _leafIndex, bytes32[] proof1, bytes32[] stakerProofs, uint256[] stakerProofOffsets, bytes32 prev, uint256 branch, uint256 deadline, bytes32 _preconditionHash, bytes32 _assertionHash) returns()
-func (_ArbRollup *ArbRollupTransactorSession) Confirm(to [32]byte, _leafIndex *big.Int, proof1 [][32]byte, stakerProofs [][32]byte, stakerProofOffsets []*big.Int, prev [32]byte, branch *big.Int, deadline *big.Int, _preconditionHash [32]byte, _assertionHash [32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.Confirm(&_ArbRollup.TransactOpts, to, _leafIndex, proof1, stakerProofs, stakerProofOffsets, prev, branch, deadline, _preconditionHash, _assertionHash)
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_ArbRollup *ArbRollupTransactorSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _ArbRollup.Contract.Init(&_ArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
 }
 
-// CreateStake is a paid mutator transaction binding the contract method 0xd6903fdd.
+// MakeAssertion is a paid mutator transaction binding the contract method 0x31f1de11.
 //
-// Solidity: function createStake(bytes32 location, bytes32[] proof) returns()
-func (_ArbRollup *ArbRollupTransactor) CreateStake(opts *bind.TransactOpts, location [32]byte, proof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "createStake", location, proof)
+// Solidity: function makeAssertion(bytes32[11] _fields, bytes32[] _stakerProof, uint256 _beforePendingCount, uint256 _afterPendingCount, bool _didInboxInsn, uint32 _numSteps, uint64 _numArbGas, uint128[2] _timeBoundsBlocks, uint256 _prevDeadlineTicks, uint32 _prevChildType) returns()
+func (_ArbRollup *ArbRollupTransactor) MakeAssertion(opts *bind.TransactOpts, _fields [11][32]byte, _stakerProof [][32]byte, _beforePendingCount *big.Int, _afterPendingCount *big.Int, _didInboxInsn bool, _numSteps uint32, _numArbGas uint64, _timeBoundsBlocks [2]*big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "makeAssertion", _fields, _stakerProof, _beforePendingCount, _afterPendingCount, _didInboxInsn, _numSteps, _numArbGas, _timeBoundsBlocks, _prevDeadlineTicks, _prevChildType)
 }
 
-// CreateStake is a paid mutator transaction binding the contract method 0xd6903fdd.
+// MakeAssertion is a paid mutator transaction binding the contract method 0x31f1de11.
 //
-// Solidity: function createStake(bytes32 location, bytes32[] proof) returns()
-func (_ArbRollup *ArbRollupSession) CreateStake(location [32]byte, proof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.CreateStake(&_ArbRollup.TransactOpts, location, proof)
+// Solidity: function makeAssertion(bytes32[11] _fields, bytes32[] _stakerProof, uint256 _beforePendingCount, uint256 _afterPendingCount, bool _didInboxInsn, uint32 _numSteps, uint64 _numArbGas, uint128[2] _timeBoundsBlocks, uint256 _prevDeadlineTicks, uint32 _prevChildType) returns()
+func (_ArbRollup *ArbRollupSession) MakeAssertion(_fields [11][32]byte, _stakerProof [][32]byte, _beforePendingCount *big.Int, _afterPendingCount *big.Int, _didInboxInsn bool, _numSteps uint32, _numArbGas uint64, _timeBoundsBlocks [2]*big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32) (*types.Transaction, error) {
+	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, _fields, _stakerProof, _beforePendingCount, _afterPendingCount, _didInboxInsn, _numSteps, _numArbGas, _timeBoundsBlocks, _prevDeadlineTicks, _prevChildType)
 }
 
-// CreateStake is a paid mutator transaction binding the contract method 0xd6903fdd.
+// MakeAssertion is a paid mutator transaction binding the contract method 0x31f1de11.
 //
-// Solidity: function createStake(bytes32 location, bytes32[] proof) returns()
-func (_ArbRollup *ArbRollupTransactorSession) CreateStake(location [32]byte, proof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.CreateStake(&_ArbRollup.TransactOpts, location, proof)
+// Solidity: function makeAssertion(bytes32[11] _fields, bytes32[] _stakerProof, uint256 _beforePendingCount, uint256 _afterPendingCount, bool _didInboxInsn, uint32 _numSteps, uint64 _numArbGas, uint128[2] _timeBoundsBlocks, uint256 _prevDeadlineTicks, uint32 _prevChildType) returns()
+func (_ArbRollup *ArbRollupTransactorSession) MakeAssertion(_fields [11][32]byte, _stakerProof [][32]byte, _beforePendingCount *big.Int, _afterPendingCount *big.Int, _didInboxInsn bool, _numSteps uint32, _numArbGas uint64, _timeBoundsBlocks [2]*big.Int, _prevDeadlineTicks *big.Int, _prevChildType uint32) (*types.Transaction, error) {
+	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, _fields, _stakerProof, _beforePendingCount, _afterPendingCount, _didInboxInsn, _numSteps, _numArbGas, _timeBoundsBlocks, _prevDeadlineTicks, _prevChildType)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x703320a5.
+// MoveStake is a paid mutator transaction binding the contract method 0x5f59b64b.
 //
-// Solidity: function initialize(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _globalInboxAddress) returns()
-func (_ArbRollup *ArbRollupTransactor) Initialize(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "initialize", _vmState, _gracePeriod, _maxExecutionSteps, _stakeRequirement, _owner, _globalInboxAddress)
+// Solidity: function moveStake(bytes32 newLocation, bytes32 _leaf, bytes32[] proof1, bytes32[] proof2) returns()
+func (_ArbRollup *ArbRollupTransactor) MoveStake(opts *bind.TransactOpts, newLocation [32]byte, _leaf [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "moveStake", newLocation, _leaf, proof1, proof2)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x703320a5.
+// MoveStake is a paid mutator transaction binding the contract method 0x5f59b64b.
 //
-// Solidity: function initialize(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _globalInboxAddress) returns()
-func (_ArbRollup *ArbRollupSession) Initialize(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _ArbRollup.Contract.Initialize(&_ArbRollup.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _stakeRequirement, _owner, _globalInboxAddress)
+// Solidity: function moveStake(bytes32 newLocation, bytes32 _leaf, bytes32[] proof1, bytes32[] proof2) returns()
+func (_ArbRollup *ArbRollupSession) MoveStake(newLocation [32]byte, _leaf [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.MoveStake(&_ArbRollup.TransactOpts, newLocation, _leaf, proof1, proof2)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x703320a5.
+// MoveStake is a paid mutator transaction binding the contract method 0x5f59b64b.
 //
-// Solidity: function initialize(bytes32 _vmState, uint32 _gracePeriod, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _globalInboxAddress) returns()
-func (_ArbRollup *ArbRollupTransactorSession) Initialize(_vmState [32]byte, _gracePeriod uint32, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
-	return _ArbRollup.Contract.Initialize(&_ArbRollup.TransactOpts, _vmState, _gracePeriod, _maxExecutionSteps, _stakeRequirement, _owner, _globalInboxAddress)
+// Solidity: function moveStake(bytes32 newLocation, bytes32 _leaf, bytes32[] proof1, bytes32[] proof2) returns()
+func (_ArbRollup *ArbRollupTransactorSession) MoveStake(newLocation [32]byte, _leaf [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.MoveStake(&_ArbRollup.TransactOpts, newLocation, _leaf, proof1, proof2)
 }
 
-// MakeAssertion is a paid mutator transaction binding the contract method 0x367e96ca.
+// PlaceStake is a paid mutator transaction binding the contract method 0x800360dc.
 //
-// Solidity: function makeAssertion(bytes32 beforeVMHash, bytes32 beforeInboxHash, bytes32 _prevPrevLeafHash, bytes32 _prevDisputableHash, uint256 _prevChildType, bytes32 _prevVMprotoHash, uint256 _prevLeafIndex, bytes32[] _prevLeafProof, bytes32[] _stakerProof, bytes32 _afterVMHash, bytes32 _afterInboxHash, bytes32 _messagesAccHash, bytes32 _logsAccHash, uint32 _numSteps, uint64 _numArbGas, uint64[2] _timeBounds) returns()
-func (_ArbRollup *ArbRollupTransactor) MakeAssertion(opts *bind.TransactOpts, beforeVMHash [32]byte, beforeInboxHash [32]byte, _prevPrevLeafHash [32]byte, _prevDisputableHash [32]byte, _prevChildType *big.Int, _prevVMprotoHash [32]byte, _prevLeafIndex *big.Int, _prevLeafProof [][32]byte, _stakerProof [][32]byte, _afterVMHash [32]byte, _afterInboxHash [32]byte, _messagesAccHash [32]byte, _logsAccHash [32]byte, _numSteps uint32, _numArbGas uint64, _timeBounds [2]uint64) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "makeAssertion", beforeVMHash, beforeInboxHash, _prevPrevLeafHash, _prevDisputableHash, _prevChildType, _prevVMprotoHash, _prevLeafIndex, _prevLeafProof, _stakerProof, _afterVMHash, _afterInboxHash, _messagesAccHash, _logsAccHash, _numSteps, _numArbGas, _timeBounds)
+// Solidity: function placeStake(bytes32 _leaf, bytes32 location, bytes32[] proof1, bytes32[] proof2) returns()
+func (_ArbRollup *ArbRollupTransactor) PlaceStake(opts *bind.TransactOpts, _leaf [32]byte, location [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "placeStake", _leaf, location, proof1, proof2)
 }
 
-// MakeAssertion is a paid mutator transaction binding the contract method 0x367e96ca.
+// PlaceStake is a paid mutator transaction binding the contract method 0x800360dc.
 //
-// Solidity: function makeAssertion(bytes32 beforeVMHash, bytes32 beforeInboxHash, bytes32 _prevPrevLeafHash, bytes32 _prevDisputableHash, uint256 _prevChildType, bytes32 _prevVMprotoHash, uint256 _prevLeafIndex, bytes32[] _prevLeafProof, bytes32[] _stakerProof, bytes32 _afterVMHash, bytes32 _afterInboxHash, bytes32 _messagesAccHash, bytes32 _logsAccHash, uint32 _numSteps, uint64 _numArbGas, uint64[2] _timeBounds) returns()
-func (_ArbRollup *ArbRollupSession) MakeAssertion(beforeVMHash [32]byte, beforeInboxHash [32]byte, _prevPrevLeafHash [32]byte, _prevDisputableHash [32]byte, _prevChildType *big.Int, _prevVMprotoHash [32]byte, _prevLeafIndex *big.Int, _prevLeafProof [][32]byte, _stakerProof [][32]byte, _afterVMHash [32]byte, _afterInboxHash [32]byte, _messagesAccHash [32]byte, _logsAccHash [32]byte, _numSteps uint32, _numArbGas uint64, _timeBounds [2]uint64) (*types.Transaction, error) {
-	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, beforeVMHash, beforeInboxHash, _prevPrevLeafHash, _prevDisputableHash, _prevChildType, _prevVMprotoHash, _prevLeafIndex, _prevLeafProof, _stakerProof, _afterVMHash, _afterInboxHash, _messagesAccHash, _logsAccHash, _numSteps, _numArbGas, _timeBounds)
+// Solidity: function placeStake(bytes32 _leaf, bytes32 location, bytes32[] proof1, bytes32[] proof2) returns()
+func (_ArbRollup *ArbRollupSession) PlaceStake(_leaf [32]byte, location [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.PlaceStake(&_ArbRollup.TransactOpts, _leaf, location, proof1, proof2)
 }
 
-// MakeAssertion is a paid mutator transaction binding the contract method 0x367e96ca.
+// PlaceStake is a paid mutator transaction binding the contract method 0x800360dc.
 //
-// Solidity: function makeAssertion(bytes32 beforeVMHash, bytes32 beforeInboxHash, bytes32 _prevPrevLeafHash, bytes32 _prevDisputableHash, uint256 _prevChildType, bytes32 _prevVMprotoHash, uint256 _prevLeafIndex, bytes32[] _prevLeafProof, bytes32[] _stakerProof, bytes32 _afterVMHash, bytes32 _afterInboxHash, bytes32 _messagesAccHash, bytes32 _logsAccHash, uint32 _numSteps, uint64 _numArbGas, uint64[2] _timeBounds) returns()
-func (_ArbRollup *ArbRollupTransactorSession) MakeAssertion(beforeVMHash [32]byte, beforeInboxHash [32]byte, _prevPrevLeafHash [32]byte, _prevDisputableHash [32]byte, _prevChildType *big.Int, _prevVMprotoHash [32]byte, _prevLeafIndex *big.Int, _prevLeafProof [][32]byte, _stakerProof [][32]byte, _afterVMHash [32]byte, _afterInboxHash [32]byte, _messagesAccHash [32]byte, _logsAccHash [32]byte, _numSteps uint32, _numArbGas uint64, _timeBounds [2]uint64) (*types.Transaction, error) {
-	return _ArbRollup.Contract.MakeAssertion(&_ArbRollup.TransactOpts, beforeVMHash, beforeInboxHash, _prevPrevLeafHash, _prevDisputableHash, _prevChildType, _prevVMprotoHash, _prevLeafIndex, _prevLeafProof, _stakerProof, _afterVMHash, _afterInboxHash, _messagesAccHash, _logsAccHash, _numSteps, _numArbGas, _timeBounds)
+// Solidity: function placeStake(bytes32 _leaf, bytes32 location, bytes32[] proof1, bytes32[] proof2) returns()
+func (_ArbRollup *ArbRollupTransactorSession) PlaceStake(_leaf [32]byte, location [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.PlaceStake(&_ArbRollup.TransactOpts, _leaf, location, proof1, proof2)
 }
 
-// MoveStake is a paid mutator transaction binding the contract method 0x2d0bdcb4.
+// PruneLeaf is a paid mutator transaction binding the contract method 0xff797273.
 //
-// Solidity: function moveStake(bytes32 newLocation, uint256 _leafIndex, bytes32[] proof1, bytes32[] proof2) returns()
-func (_ArbRollup *ArbRollupTransactor) MoveStake(opts *bind.TransactOpts, newLocation [32]byte, _leafIndex *big.Int, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "moveStake", newLocation, _leafIndex, proof1, proof2)
+// Solidity: function pruneLeaf(bytes32 _leaf, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
+func (_ArbRollup *ArbRollupTransactor) PruneLeaf(opts *bind.TransactOpts, _leaf [32]byte, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "pruneLeaf", _leaf, from, leafProof, latestConfirmedProof)
 }
 
-// MoveStake is a paid mutator transaction binding the contract method 0x2d0bdcb4.
+// PruneLeaf is a paid mutator transaction binding the contract method 0xff797273.
 //
-// Solidity: function moveStake(bytes32 newLocation, uint256 _leafIndex, bytes32[] proof1, bytes32[] proof2) returns()
-func (_ArbRollup *ArbRollupSession) MoveStake(newLocation [32]byte, _leafIndex *big.Int, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.MoveStake(&_ArbRollup.TransactOpts, newLocation, _leafIndex, proof1, proof2)
+// Solidity: function pruneLeaf(bytes32 _leaf, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
+func (_ArbRollup *ArbRollupSession) PruneLeaf(_leaf [32]byte, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.PruneLeaf(&_ArbRollup.TransactOpts, _leaf, from, leafProof, latestConfirmedProof)
 }
 
-// MoveStake is a paid mutator transaction binding the contract method 0x2d0bdcb4.
+// PruneLeaf is a paid mutator transaction binding the contract method 0xff797273.
 //
-// Solidity: function moveStake(bytes32 newLocation, uint256 _leafIndex, bytes32[] proof1, bytes32[] proof2) returns()
-func (_ArbRollup *ArbRollupTransactorSession) MoveStake(newLocation [32]byte, _leafIndex *big.Int, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.MoveStake(&_ArbRollup.TransactOpts, newLocation, _leafIndex, proof1, proof2)
-}
-
-// PruneLeaf is a paid mutator transaction binding the contract method 0x75702b8b.
-//
-// Solidity: function pruneLeaf(uint256 _leafIndex, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
-func (_ArbRollup *ArbRollupTransactor) PruneLeaf(opts *bind.TransactOpts, _leafIndex *big.Int, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "pruneLeaf", _leafIndex, from, leafProof, latestConfirmedProof)
-}
-
-// PruneLeaf is a paid mutator transaction binding the contract method 0x75702b8b.
-//
-// Solidity: function pruneLeaf(uint256 _leafIndex, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
-func (_ArbRollup *ArbRollupSession) PruneLeaf(_leafIndex *big.Int, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.PruneLeaf(&_ArbRollup.TransactOpts, _leafIndex, from, leafProof, latestConfirmedProof)
-}
-
-// PruneLeaf is a paid mutator transaction binding the contract method 0x75702b8b.
-//
-// Solidity: function pruneLeaf(uint256 _leafIndex, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
-func (_ArbRollup *ArbRollupTransactorSession) PruneLeaf(_leafIndex *big.Int, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.PruneLeaf(&_ArbRollup.TransactOpts, _leafIndex, from, leafProof, latestConfirmedProof)
+// Solidity: function pruneLeaf(bytes32 _leaf, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
+func (_ArbRollup *ArbRollupTransactorSession) PruneLeaf(_leaf [32]byte, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.PruneLeaf(&_ArbRollup.TransactOpts, _leaf, from, leafProof, latestConfirmedProof)
 }
 
 // RecoverStakeConfirmed is a paid mutator transaction binding the contract method 0x7cfaaf67.
@@ -430,6 +460,48 @@ func (_ArbRollup *ArbRollupTransactorSession) RecoverStakeMooted(disputableHash 
 	return _ArbRollup.Contract.RecoverStakeMooted(&_ArbRollup.TransactOpts, disputableHash, latestConfirmedProof, nodeProof)
 }
 
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_ArbRollup *ArbRollupTransactor) RecoverStakeOld(opts *bind.TransactOpts, stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "recoverStakeOld", stakerAddress, proof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_ArbRollup *ArbRollupSession) RecoverStakeOld(stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.RecoverStakeOld(&_ArbRollup.TransactOpts, stakerAddress, proof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_ArbRollup *ArbRollupTransactorSession) RecoverStakeOld(stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.RecoverStakeOld(&_ArbRollup.TransactOpts, stakerAddress, proof)
+}
+
+// RecoverStakePassedDeadline is a paid mutator transaction binding the contract method 0x6e8da939.
+//
+// Solidity: function recoverStakePassedDeadline(address stakerAddress, uint256 deadlineTicks, bytes32 disputableNodeHashVal, uint256 childType, bytes32 vmProtoStateHash, bytes32 leaf, bytes32[] proof) returns()
+func (_ArbRollup *ArbRollupTransactor) RecoverStakePassedDeadline(opts *bind.TransactOpts, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType *big.Int, vmProtoStateHash [32]byte, leaf [32]byte, proof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "recoverStakePassedDeadline", stakerAddress, deadlineTicks, disputableNodeHashVal, childType, vmProtoStateHash, leaf, proof)
+}
+
+// RecoverStakePassedDeadline is a paid mutator transaction binding the contract method 0x6e8da939.
+//
+// Solidity: function recoverStakePassedDeadline(address stakerAddress, uint256 deadlineTicks, bytes32 disputableNodeHashVal, uint256 childType, bytes32 vmProtoStateHash, bytes32 leaf, bytes32[] proof) returns()
+func (_ArbRollup *ArbRollupSession) RecoverStakePassedDeadline(stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType *big.Int, vmProtoStateHash [32]byte, leaf [32]byte, proof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.RecoverStakePassedDeadline(&_ArbRollup.TransactOpts, stakerAddress, deadlineTicks, disputableNodeHashVal, childType, vmProtoStateHash, leaf, proof)
+}
+
+// RecoverStakePassedDeadline is a paid mutator transaction binding the contract method 0x6e8da939.
+//
+// Solidity: function recoverStakePassedDeadline(address stakerAddress, uint256 deadlineTicks, bytes32 disputableNodeHashVal, uint256 childType, bytes32 vmProtoStateHash, bytes32 leaf, bytes32[] proof) returns()
+func (_ArbRollup *ArbRollupTransactorSession) RecoverStakePassedDeadline(stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType *big.Int, vmProtoStateHash [32]byte, leaf [32]byte, proof [][32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.RecoverStakePassedDeadline(&_ArbRollup.TransactOpts, stakerAddress, deadlineTicks, disputableNodeHashVal, childType, vmProtoStateHash, leaf, proof)
+}
+
 // ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
 //
 // Solidity: function resolveChallenge(address winner, address loser) returns()
@@ -451,25 +523,200 @@ func (_ArbRollup *ArbRollupTransactorSession) ResolveChallenge(winner common.Add
 	return _ArbRollup.Contract.ResolveChallenge(&_ArbRollup.TransactOpts, winner, loser)
 }
 
-// StartChallenge is a paid mutator transaction binding the contract method 0xe3c6fbbe.
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
 //
-// Solidity: function startChallenge(address staker1Address, address staker2Address, bytes32 node, uint64 disputableDeadline, bytes32 disputableHash, uint256 staker1position, uint256 staker2position, bytes32 vmProtoHash1, bytes32 vmProtoHash2, bytes32[] proof1, bytes32[] proof2, bytes32 _beforeHash, bytes32 _beforeInbox, uint64[2] _timeBounds, bytes32 _assertionHash) returns()
-func (_ArbRollup *ArbRollupTransactor) StartChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline uint64, disputableHash [32]byte, staker1position *big.Int, staker2position *big.Int, vmProtoHash1 [32]byte, vmProtoHash2 [32]byte, proof1 [][32]byte, proof2 [][32]byte, _beforeHash [32]byte, _beforeInbox [32]byte, _timeBounds [2]uint64, _assertionHash [32]byte) (*types.Transaction, error) {
-	return _ArbRollup.contract.Transact(opts, "startChallenge", staker1Address, staker2Address, node, disputableDeadline, disputableHash, staker1position, staker2position, vmProtoHash1, vmProtoHash2, proof1, proof2, _beforeHash, _beforeInbox, _timeBounds, _assertionHash)
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupTransactor) StartExecutionChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "startExecutionChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
 }
 
-// StartChallenge is a paid mutator transaction binding the contract method 0xe3c6fbbe.
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
 //
-// Solidity: function startChallenge(address staker1Address, address staker2Address, bytes32 node, uint64 disputableDeadline, bytes32 disputableHash, uint256 staker1position, uint256 staker2position, bytes32 vmProtoHash1, bytes32 vmProtoHash2, bytes32[] proof1, bytes32[] proof2, bytes32 _beforeHash, bytes32 _beforeInbox, uint64[2] _timeBounds, bytes32 _assertionHash) returns()
-func (_ArbRollup *ArbRollupSession) StartChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline uint64, disputableHash [32]byte, staker1position *big.Int, staker2position *big.Int, vmProtoHash1 [32]byte, vmProtoHash2 [32]byte, proof1 [][32]byte, proof2 [][32]byte, _beforeHash [32]byte, _beforeInbox [32]byte, _timeBounds [2]uint64, _assertionHash [32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.StartChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, disputableHash, staker1position, staker2position, vmProtoHash1, vmProtoHash2, proof1, proof2, _beforeHash, _beforeInbox, _timeBounds, _assertionHash)
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.StartExecutionChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
 }
 
-// StartChallenge is a paid mutator transaction binding the contract method 0xe3c6fbbe.
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
 //
-// Solidity: function startChallenge(address staker1Address, address staker2Address, bytes32 node, uint64 disputableDeadline, bytes32 disputableHash, uint256 staker1position, uint256 staker2position, bytes32 vmProtoHash1, bytes32 vmProtoHash2, bytes32[] proof1, bytes32[] proof2, bytes32 _beforeHash, bytes32 _beforeInbox, uint64[2] _timeBounds, bytes32 _assertionHash) returns()
-func (_ArbRollup *ArbRollupTransactorSession) StartChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline uint64, disputableHash [32]byte, staker1position *big.Int, staker2position *big.Int, vmProtoHash1 [32]byte, vmProtoHash2 [32]byte, proof1 [][32]byte, proof2 [][32]byte, _beforeHash [32]byte, _beforeInbox [32]byte, _timeBounds [2]uint64, _assertionHash [32]byte) (*types.Transaction, error) {
-	return _ArbRollup.Contract.StartChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, disputableHash, staker1position, staker2position, vmProtoHash1, vmProtoHash2, proof1, proof2, _beforeHash, _beforeInbox, _timeBounds, _assertionHash)
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupTransactorSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.StartExecutionChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupTransactor) StartMessagesChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "startMessagesChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.StartMessagesChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupTransactorSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.StartMessagesChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupTransactor) StartPendingTopChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.contract.Transact(opts, "startPendingTopChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.StartPendingTopChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_ArbRollup *ArbRollupTransactorSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _ArbRollup.Contract.StartPendingTopChallenge(&_ArbRollup.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// ArbRollupConfirmedAssertionIterator is returned from FilterConfirmedAssertion and is used to iterate over the raw logs and unpacked data for ConfirmedAssertion events raised by the ArbRollup contract.
+type ArbRollupConfirmedAssertionIterator struct {
+	Event *ArbRollupConfirmedAssertion // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ArbRollupConfirmedAssertionIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ArbRollupConfirmedAssertion)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ArbRollupConfirmedAssertion)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ArbRollupConfirmedAssertionIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ArbRollupConfirmedAssertionIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ArbRollupConfirmedAssertion represents a ConfirmedAssertion event raised by the ArbRollup contract.
+type ArbRollupConfirmedAssertion struct {
+	LogsAccHash [32]byte
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterConfirmedAssertion is a free log retrieval operation binding the contract event 0x7c4ea4965dec519bdc58e57940c14ed469185c38f401798f2f38ed6d0afb1fd3.
+//
+// Solidity: event ConfirmedAssertion(bytes32 logsAccHash)
+func (_ArbRollup *ArbRollupFilterer) FilterConfirmedAssertion(opts *bind.FilterOpts) (*ArbRollupConfirmedAssertionIterator, error) {
+
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "ConfirmedAssertion")
+	if err != nil {
+		return nil, err
+	}
+	return &ArbRollupConfirmedAssertionIterator{contract: _ArbRollup.contract, event: "ConfirmedAssertion", logs: logs, sub: sub}, nil
+}
+
+// WatchConfirmedAssertion is a free log subscription operation binding the contract event 0x7c4ea4965dec519bdc58e57940c14ed469185c38f401798f2f38ed6d0afb1fd3.
+//
+// Solidity: event ConfirmedAssertion(bytes32 logsAccHash)
+func (_ArbRollup *ArbRollupFilterer) WatchConfirmedAssertion(opts *bind.WatchOpts, sink chan<- *ArbRollupConfirmedAssertion) (event.Subscription, error) {
+
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "ConfirmedAssertion")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ArbRollupConfirmedAssertion)
+				if err := _ArbRollup.contract.UnpackLog(event, "ConfirmedAssertion", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseConfirmedAssertion is a log parse operation binding the contract event 0x7c4ea4965dec519bdc58e57940c14ed469185c38f401798f2f38ed6d0afb1fd3.
+//
+// Solidity: event ConfirmedAssertion(bytes32 logsAccHash)
+func (_ArbRollup *ArbRollupFilterer) ParseConfirmedAssertion(log types.Log) (*ArbRollupConfirmedAssertion, error) {
+	event := new(ArbRollupConfirmedAssertion)
+	if err := _ArbRollup.contract.UnpackLog(event, "ConfirmedAssertion", log); err != nil {
+		return nil, err
+	}
+	return event, nil
 }
 
 // ArbRollupRollupAssertedIterator is returned from FilterRollupAsserted and is used to iterate over the raw logs and unpacked data for RollupAsserted events raised by the ArbRollup contract.
@@ -541,36 +788,33 @@ func (it *ArbRollupRollupAssertedIterator) Close() error {
 
 // ArbRollupRollupAsserted represents a RollupAsserted event raised by the ArbRollup contract.
 type ArbRollupRollupAsserted struct {
-	PrevLeafHash    [32]byte
-	BeforeVMHash    [32]byte
-	TimeBounds      [2]uint64
-	BeforeInboxHash [32]byte
-	AfterVMHash     [32]byte
-	NumSteps        uint32
-	NumArbGas       uint64
-	MessagesAccHash [32]byte
-	LogsAccHash     [32]byte
-	Raw             types.Log // Blockchain specific contextual infos
+	Fields               [6][32]byte
+	ImportedMessageCount *big.Int
+	TimeBoundsBlocks     [2]*big.Int
+	DidInboxInsn         bool
+	NumSteps             uint32
+	NumArbGas            uint64
+	Raw                  types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupAsserted is a free log retrieval operation binding the contract event 0x7d534d82e41d1e3e4e8346219de6c8b579b8d348396f7de001d0e442fa3eccea.
+// FilterRollupAsserted is a free log retrieval operation binding the contract event 0xbd238480fb8ab11cc2e9fad863ba3441652a8390646394aae6d2c6cefc27f27a.
 //
-// Solidity: event rollupAsserted(bytes32 prevLeafHash, bytes32 beforeVMHash, uint64[2] _timeBounds, bytes32 beforeInboxHash, bytes32 _afterVMHash, uint32 _numSteps, uint64 _numArbGas, bytes32 _messagesAccHash, bytes32 _logsAccHash)
+// Solidity: event RollupAsserted(bytes32[6] fields, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, bool didInboxInsn, uint32 numSteps, uint64 numArbGas)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupAsserted(opts *bind.FilterOpts) (*ArbRollupRollupAssertedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupAsserted")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupAsserted")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupAssertedIterator{contract: _ArbRollup.contract, event: "rollupAsserted", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupAssertedIterator{contract: _ArbRollup.contract, event: "RollupAsserted", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupAsserted is a free log subscription operation binding the contract event 0x7d534d82e41d1e3e4e8346219de6c8b579b8d348396f7de001d0e442fa3eccea.
+// WatchRollupAsserted is a free log subscription operation binding the contract event 0xbd238480fb8ab11cc2e9fad863ba3441652a8390646394aae6d2c6cefc27f27a.
 //
-// Solidity: event rollupAsserted(bytes32 prevLeafHash, bytes32 beforeVMHash, uint64[2] _timeBounds, bytes32 beforeInboxHash, bytes32 _afterVMHash, uint32 _numSteps, uint64 _numArbGas, bytes32 _messagesAccHash, bytes32 _logsAccHash)
+// Solidity: event RollupAsserted(bytes32[6] fields, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, bool didInboxInsn, uint32 numSteps, uint64 numArbGas)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupAsserted(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupAsserted) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupAsserted")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupAsserted")
 	if err != nil {
 		return nil, err
 	}
@@ -581,7 +825,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupAsserted(opts *bind.WatchOpts, s
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupAsserted)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupAsserted", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupAsserted", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -602,12 +846,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupAsserted(opts *bind.WatchOpts, s
 	}), nil
 }
 
-// ParseRollupAsserted is a log parse operation binding the contract event 0x7d534d82e41d1e3e4e8346219de6c8b579b8d348396f7de001d0e442fa3eccea.
+// ParseRollupAsserted is a log parse operation binding the contract event 0xbd238480fb8ab11cc2e9fad863ba3441652a8390646394aae6d2c6cefc27f27a.
 //
-// Solidity: event rollupAsserted(bytes32 prevLeafHash, bytes32 beforeVMHash, uint64[2] _timeBounds, bytes32 beforeInboxHash, bytes32 _afterVMHash, uint32 _numSteps, uint64 _numArbGas, bytes32 _messagesAccHash, bytes32 _logsAccHash)
+// Solidity: event RollupAsserted(bytes32[6] fields, uint256 importedMessageCount, uint128[2] timeBoundsBlocks, bool didInboxInsn, uint32 numSteps, uint64 numArbGas)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupAsserted(log types.Log) (*ArbRollupRollupAsserted, error) {
 	event := new(ArbRollupRollupAsserted)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupAsserted", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupAsserted", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -688,24 +932,24 @@ type ArbRollupRollupChallengeCompleted struct {
 	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupChallengeCompleted is a free log retrieval operation binding the contract event 0xcf28c40762468afb8d98ba08e82252198424a5b4db2ee0434a85016027faa60b.
+// FilterRollupChallengeCompleted is a free log retrieval operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
 //
-// Solidity: event rollupChallengeCompleted(address challengeContract, address winner, address loser)
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupChallengeCompleted(opts *bind.FilterOpts) (*ArbRollupRollupChallengeCompletedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupChallengeCompleted")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupChallengeCompleted")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupChallengeCompletedIterator{contract: _ArbRollup.contract, event: "rollupChallengeCompleted", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupChallengeCompletedIterator{contract: _ArbRollup.contract, event: "RollupChallengeCompleted", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupChallengeCompleted is a free log subscription operation binding the contract event 0xcf28c40762468afb8d98ba08e82252198424a5b4db2ee0434a85016027faa60b.
+// WatchRollupChallengeCompleted is a free log subscription operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
 //
-// Solidity: event rollupChallengeCompleted(address challengeContract, address winner, address loser)
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupChallengeCompleted(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupChallengeCompleted) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupChallengeCompleted")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupChallengeCompleted")
 	if err != nil {
 		return nil, err
 	}
@@ -716,7 +960,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupChallengeCompleted(opts *bind.Wa
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupChallengeCompleted)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupChallengeCompleted", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -737,12 +981,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupChallengeCompleted(opts *bind.Wa
 	}), nil
 }
 
-// ParseRollupChallengeCompleted is a log parse operation binding the contract event 0xcf28c40762468afb8d98ba08e82252198424a5b4db2ee0434a85016027faa60b.
+// ParseRollupChallengeCompleted is a log parse operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
 //
-// Solidity: event rollupChallengeCompleted(address challengeContract, address winner, address loser)
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupChallengeCompleted(log types.Log) (*ArbRollupRollupChallengeCompleted, error) {
 	event := new(ArbRollupRollupChallengeCompleted)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupChallengeCompleted", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -824,24 +1068,24 @@ type ArbRollupRollupChallengeStarted struct {
 	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupChallengeStarted is a free log retrieval operation binding the contract event 0xf5f442014ccab1bef67bc52b11a6e9e4ee5b1c70a0d306ee795420b1d599a0c4.
+// FilterRollupChallengeStarted is a free log retrieval operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
 //
-// Solidity: event rollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupChallengeStarted(opts *bind.FilterOpts) (*ArbRollupRollupChallengeStartedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupChallengeStarted")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupChallengeStarted")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupChallengeStartedIterator{contract: _ArbRollup.contract, event: "rollupChallengeStarted", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupChallengeStartedIterator{contract: _ArbRollup.contract, event: "RollupChallengeStarted", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupChallengeStarted is a free log subscription operation binding the contract event 0xf5f442014ccab1bef67bc52b11a6e9e4ee5b1c70a0d306ee795420b1d599a0c4.
+// WatchRollupChallengeStarted is a free log subscription operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
 //
-// Solidity: event rollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupChallengeStarted(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupChallengeStarted) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupChallengeStarted")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupChallengeStarted")
 	if err != nil {
 		return nil, err
 	}
@@ -852,7 +1096,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupChallengeStarted(opts *bind.Watc
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupChallengeStarted)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupChallengeStarted", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -873,12 +1117,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupChallengeStarted(opts *bind.Watc
 	}), nil
 }
 
-// ParseRollupChallengeStarted is a log parse operation binding the contract event 0xf5f442014ccab1bef67bc52b11a6e9e4ee5b1c70a0d306ee795420b1d599a0c4.
+// ParseRollupChallengeStarted is a log parse operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
 //
-// Solidity: event rollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupChallengeStarted(log types.Log) (*ArbRollupRollupChallengeStarted, error) {
 	event := new(ArbRollupRollupChallengeStarted)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupChallengeStarted", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -957,24 +1201,24 @@ type ArbRollupRollupConfirmed struct {
 	Raw      types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupConfirmed is a free log retrieval operation binding the contract event 0xde207829ddeaef46a01a54fab518baafbacdcf7720d040a6586f40d7831b6d90.
+// FilterRollupConfirmed is a free log retrieval operation binding the contract event 0x9d13d0ad532ca8e545a3b66828cb99a18c3bc98e2a50b4db1990a033fdba6f63.
 //
-// Solidity: event rollupConfirmed(bytes32 nodeHash)
+// Solidity: event RollupConfirmed(bytes32 nodeHash)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupConfirmed(opts *bind.FilterOpts) (*ArbRollupRollupConfirmedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupConfirmed")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupConfirmed")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupConfirmedIterator{contract: _ArbRollup.contract, event: "rollupConfirmed", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupConfirmedIterator{contract: _ArbRollup.contract, event: "RollupConfirmed", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupConfirmed is a free log subscription operation binding the contract event 0xde207829ddeaef46a01a54fab518baafbacdcf7720d040a6586f40d7831b6d90.
+// WatchRollupConfirmed is a free log subscription operation binding the contract event 0x9d13d0ad532ca8e545a3b66828cb99a18c3bc98e2a50b4db1990a033fdba6f63.
 //
-// Solidity: event rollupConfirmed(bytes32 nodeHash)
+// Solidity: event RollupConfirmed(bytes32 nodeHash)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupConfirmed(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupConfirmed) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupConfirmed")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupConfirmed")
 	if err != nil {
 		return nil, err
 	}
@@ -985,7 +1229,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupConfirmed(opts *bind.WatchOpts, 
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupConfirmed)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupConfirmed", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupConfirmed", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1006,12 +1250,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupConfirmed(opts *bind.WatchOpts, 
 	}), nil
 }
 
-// ParseRollupConfirmed is a log parse operation binding the contract event 0xde207829ddeaef46a01a54fab518baafbacdcf7720d040a6586f40d7831b6d90.
+// ParseRollupConfirmed is a log parse operation binding the contract event 0x9d13d0ad532ca8e545a3b66828cb99a18c3bc98e2a50b4db1990a033fdba6f63.
 //
-// Solidity: event rollupConfirmed(bytes32 nodeHash)
+// Solidity: event RollupConfirmed(bytes32 nodeHash)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupConfirmed(log types.Log) (*ArbRollupRollupConfirmed, error) {
 	event := new(ArbRollupRollupConfirmed)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupConfirmed", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupConfirmed", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1090,24 +1334,24 @@ type ArbRollupRollupPruned struct {
 	Raw      types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupPruned is a free log retrieval operation binding the contract event 0xdecdc5d807444a59805ca7f59f6deff8010a82b725e43d8e5f437f51f0150930.
+// FilterRollupPruned is a free log retrieval operation binding the contract event 0x3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f4490950.
 //
-// Solidity: event rollupPruned(bytes32 nodeHash)
+// Solidity: event RollupPruned(bytes32 nodeHash)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupPruned(opts *bind.FilterOpts) (*ArbRollupRollupPrunedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupPruned")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupPruned")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupPrunedIterator{contract: _ArbRollup.contract, event: "rollupPruned", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupPrunedIterator{contract: _ArbRollup.contract, event: "RollupPruned", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupPruned is a free log subscription operation binding the contract event 0xdecdc5d807444a59805ca7f59f6deff8010a82b725e43d8e5f437f51f0150930.
+// WatchRollupPruned is a free log subscription operation binding the contract event 0x3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f4490950.
 //
-// Solidity: event rollupPruned(bytes32 nodeHash)
+// Solidity: event RollupPruned(bytes32 nodeHash)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupPruned(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupPruned) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupPruned")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupPruned")
 	if err != nil {
 		return nil, err
 	}
@@ -1118,7 +1362,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupPruned(opts *bind.WatchOpts, sin
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupPruned)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupPruned", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupPruned", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1139,12 +1383,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupPruned(opts *bind.WatchOpts, sin
 	}), nil
 }
 
-// ParseRollupPruned is a log parse operation binding the contract event 0xdecdc5d807444a59805ca7f59f6deff8010a82b725e43d8e5f437f51f0150930.
+// ParseRollupPruned is a log parse operation binding the contract event 0x3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f4490950.
 //
-// Solidity: event rollupPruned(bytes32 nodeHash)
+// Solidity: event RollupPruned(bytes32 nodeHash)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupPruned(log types.Log) (*ArbRollupRollupPruned, error) {
 	event := new(ArbRollupRollupPruned)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupPruned", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupPruned", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1225,24 +1469,24 @@ type ArbRollupRollupStakeCreated struct {
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupStakeCreated is a free log retrieval operation binding the contract event 0x7b3632958ee552a498e60e560ce8ba7141711bc878664ebb8035b9b443d1afe0.
+// FilterRollupStakeCreated is a free log retrieval operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
 //
-// Solidity: event rollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupStakeCreated(opts *bind.FilterOpts) (*ArbRollupRollupStakeCreatedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupStakeCreated")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupStakeCreated")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupStakeCreatedIterator{contract: _ArbRollup.contract, event: "rollupStakeCreated", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupStakeCreatedIterator{contract: _ArbRollup.contract, event: "RollupStakeCreated", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupStakeCreated is a free log subscription operation binding the contract event 0x7b3632958ee552a498e60e560ce8ba7141711bc878664ebb8035b9b443d1afe0.
+// WatchRollupStakeCreated is a free log subscription operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
 //
-// Solidity: event rollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeCreated(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupStakeCreated) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupStakeCreated")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupStakeCreated")
 	if err != nil {
 		return nil, err
 	}
@@ -1253,7 +1497,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeCreated(opts *bind.WatchOpt
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupStakeCreated)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupStakeCreated", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1274,12 +1518,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeCreated(opts *bind.WatchOpt
 	}), nil
 }
 
-// ParseRollupStakeCreated is a log parse operation binding the contract event 0x7b3632958ee552a498e60e560ce8ba7141711bc878664ebb8035b9b443d1afe0.
+// ParseRollupStakeCreated is a log parse operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
 //
-// Solidity: event rollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupStakeCreated(log types.Log) (*ArbRollupRollupStakeCreated, error) {
 	event := new(ArbRollupRollupStakeCreated)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupStakeCreated", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1359,24 +1603,24 @@ type ArbRollupRollupStakeMoved struct {
 	Raw        types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupStakeMoved is a free log retrieval operation binding the contract event 0xe470c1e2f2bfb6e768c29c891291b7ee035ef0fd2105a7c41d5449a11cc98721.
+// FilterRollupStakeMoved is a free log retrieval operation binding the contract event 0xbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4.
 //
-// Solidity: event rollupStakeMoved(address staker, bytes32 toNodeHash)
+// Solidity: event RollupStakeMoved(address staker, bytes32 toNodeHash)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupStakeMoved(opts *bind.FilterOpts) (*ArbRollupRollupStakeMovedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupStakeMoved")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupStakeMoved")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupStakeMovedIterator{contract: _ArbRollup.contract, event: "rollupStakeMoved", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupStakeMovedIterator{contract: _ArbRollup.contract, event: "RollupStakeMoved", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupStakeMoved is a free log subscription operation binding the contract event 0xe470c1e2f2bfb6e768c29c891291b7ee035ef0fd2105a7c41d5449a11cc98721.
+// WatchRollupStakeMoved is a free log subscription operation binding the contract event 0xbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4.
 //
-// Solidity: event rollupStakeMoved(address staker, bytes32 toNodeHash)
+// Solidity: event RollupStakeMoved(address staker, bytes32 toNodeHash)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeMoved(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupStakeMoved) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupStakeMoved")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupStakeMoved")
 	if err != nil {
 		return nil, err
 	}
@@ -1387,7 +1631,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeMoved(opts *bind.WatchOpts,
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupStakeMoved)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupStakeMoved", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeMoved", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1408,12 +1652,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeMoved(opts *bind.WatchOpts,
 	}), nil
 }
 
-// ParseRollupStakeMoved is a log parse operation binding the contract event 0xe470c1e2f2bfb6e768c29c891291b7ee035ef0fd2105a7c41d5449a11cc98721.
+// ParseRollupStakeMoved is a log parse operation binding the contract event 0xbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4.
 //
-// Solidity: event rollupStakeMoved(address staker, bytes32 toNodeHash)
+// Solidity: event RollupStakeMoved(address staker, bytes32 toNodeHash)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupStakeMoved(log types.Log) (*ArbRollupRollupStakeMoved, error) {
 	event := new(ArbRollupRollupStakeMoved)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupStakeMoved", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeMoved", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1492,24 +1736,24 @@ type ArbRollupRollupStakeRefunded struct {
 	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterRollupStakeRefunded is a free log retrieval operation binding the contract event 0x2a0295967334441364f99dcd4fe5939bc2d0c940802569bc452435d5660956c1.
+// FilterRollupStakeRefunded is a free log retrieval operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
 //
-// Solidity: event rollupStakeRefunded(address staker)
+// Solidity: event RollupStakeRefunded(address staker)
 func (_ArbRollup *ArbRollupFilterer) FilterRollupStakeRefunded(opts *bind.FilterOpts) (*ArbRollupRollupStakeRefundedIterator, error) {
 
-	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "rollupStakeRefunded")
+	logs, sub, err := _ArbRollup.contract.FilterLogs(opts, "RollupStakeRefunded")
 	if err != nil {
 		return nil, err
 	}
-	return &ArbRollupRollupStakeRefundedIterator{contract: _ArbRollup.contract, event: "rollupStakeRefunded", logs: logs, sub: sub}, nil
+	return &ArbRollupRollupStakeRefundedIterator{contract: _ArbRollup.contract, event: "RollupStakeRefunded", logs: logs, sub: sub}, nil
 }
 
-// WatchRollupStakeRefunded is a free log subscription operation binding the contract event 0x2a0295967334441364f99dcd4fe5939bc2d0c940802569bc452435d5660956c1.
+// WatchRollupStakeRefunded is a free log subscription operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
 //
-// Solidity: event rollupStakeRefunded(address staker)
+// Solidity: event RollupStakeRefunded(address staker)
 func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeRefunded(opts *bind.WatchOpts, sink chan<- *ArbRollupRollupStakeRefunded) (event.Subscription, error) {
 
-	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "rollupStakeRefunded")
+	logs, sub, err := _ArbRollup.contract.WatchLogs(opts, "RollupStakeRefunded")
 	if err != nil {
 		return nil, err
 	}
@@ -1520,7 +1764,7 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeRefunded(opts *bind.WatchOp
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(ArbRollupRollupStakeRefunded)
-				if err := _ArbRollup.contract.UnpackLog(event, "rollupStakeRefunded", log); err != nil {
+				if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1541,12 +1785,12 @@ func (_ArbRollup *ArbRollupFilterer) WatchRollupStakeRefunded(opts *bind.WatchOp
 	}), nil
 }
 
-// ParseRollupStakeRefunded is a log parse operation binding the contract event 0x2a0295967334441364f99dcd4fe5939bc2d0c940802569bc452435d5660956c1.
+// ParseRollupStakeRefunded is a log parse operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
 //
-// Solidity: event rollupStakeRefunded(address staker)
+// Solidity: event RollupStakeRefunded(address staker)
 func (_ArbRollup *ArbRollupFilterer) ParseRollupStakeRefunded(log types.Log) (*ArbRollupRollupStakeRefunded, error) {
 	event := new(ArbRollupRollupStakeRefunded)
-	if err := _ArbRollup.contract.UnpackLog(event, "rollupStakeRefunded", log); err != nil {
+	if err := _ArbRollup.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1556,7 +1800,7 @@ func (_ArbRollup *ArbRollupFilterer) ParseRollupStakeRefunded(log types.Log) (*A
 const BytesLibABI = "[]"
 
 // BytesLibBin is the compiled bytecode used for deploying new contracts.
-var BytesLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158209209a93bce785e91cc5cbff2f58b8586736753177e41f1b5a490a5098a55b3ae64736f6c634300050e0032"
+var BytesLibBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158204a4406891b86a3dacfb6ea735b92a605972908aec5c506cc187bb6f01ef6a24064736f6c634300050f0032"
 
 // DeployBytesLib deploys a new Ethereum contract, binding an instance of BytesLib to it.
 func DeployBytesLib(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BytesLib, error) {
@@ -1714,281 +1958,124 @@ func (_BytesLib *BytesLibTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _BytesLib.Contract.contract.Transact(opts, method, params...)
 }
 
-// ChallengeLauncherABI is the input ABI used to generate the binding from.
-const ChallengeLauncherABI = "[]"
+// ChallengeTypeABI is the input ABI used to generate the binding from.
+const ChallengeTypeABI = "[]"
 
-// ChallengeLauncherFuncSigs maps the 4-byte function signature to its string representation.
-var ChallengeLauncherFuncSigs = map[string]string{
-	"eda77a6f": "startExecutionChallenge(address,address,bytes32)",
-	"b69a1367": "startInvalidMessagesChallenge(address,address,bytes32)",
-	"e1e73f8a": "startInvalidPendingTopChallenge(address,address,bytes32)",
-}
+// ChallengeTypeBin is the compiled bytecode used for deploying new contracts.
+var ChallengeTypeBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820d4e6913f8708575141739e8b141ea67f42bcbf837ff5b9d3d079e24ac4ebb4d664736f6c634300050f0032"
 
-// ChallengeLauncherBin is the compiled bytecode used for deploying new contracts.
-var ChallengeLauncherBin = "0x60e5610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060475760003560e01c8063b69a136714604c578063e1e73f8a14604c578063eda77a6f14604c575b600080fd5b818015605757600080fd5b50608b60048036036060811015606c57600080fd5b506001600160a01b0381358116916020810135909116906040013560a7565b604080516001600160a01b039092168252519081900360200190f35b6000939250505056fea265627a7a723158201130380ca466c14def00a0522472b14dcb06e4792ac2bb5607c7380db0f17b9864736f6c634300050e0032"
-
-// DeployChallengeLauncher deploys a new Ethereum contract, binding an instance of ChallengeLauncher to it.
-func DeployChallengeLauncher(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeLauncher, error) {
-	parsed, err := abi.JSON(strings.NewReader(ChallengeLauncherABI))
+// DeployChallengeType deploys a new Ethereum contract, binding an instance of ChallengeType to it.
+func DeployChallengeType(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeType, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeTypeABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeLauncherBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeTypeBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	return address, tx, &ChallengeLauncher{ChallengeLauncherCaller: ChallengeLauncherCaller{contract: contract}, ChallengeLauncherTransactor: ChallengeLauncherTransactor{contract: contract}, ChallengeLauncherFilterer: ChallengeLauncherFilterer{contract: contract}}, nil
+	return address, tx, &ChallengeType{ChallengeTypeCaller: ChallengeTypeCaller{contract: contract}, ChallengeTypeTransactor: ChallengeTypeTransactor{contract: contract}, ChallengeTypeFilterer: ChallengeTypeFilterer{contract: contract}}, nil
 }
 
-// ChallengeLauncher is an auto generated Go binding around an Ethereum contract.
-type ChallengeLauncher struct {
-	ChallengeLauncherCaller     // Read-only binding to the contract
-	ChallengeLauncherTransactor // Write-only binding to the contract
-	ChallengeLauncherFilterer   // Log filterer for contract events
+// ChallengeType is an auto generated Go binding around an Ethereum contract.
+type ChallengeType struct {
+	ChallengeTypeCaller     // Read-only binding to the contract
+	ChallengeTypeTransactor // Write-only binding to the contract
+	ChallengeTypeFilterer   // Log filterer for contract events
 }
 
-// ChallengeLauncherCaller is an auto generated read-only Go binding around an Ethereum contract.
-type ChallengeLauncherCaller struct {
+// ChallengeTypeCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ChallengeTypeCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ChallengeLauncherTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type ChallengeLauncherTransactor struct {
+// ChallengeTypeTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ChallengeTypeTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ChallengeLauncherFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type ChallengeLauncherFilterer struct {
+// ChallengeTypeFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ChallengeTypeFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ChallengeLauncherSession is an auto generated Go binding around an Ethereum contract,
+// ChallengeTypeSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type ChallengeLauncherSession struct {
-	Contract     *ChallengeLauncher // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts      // Call options to use throughout this session
-	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
-}
-
-// ChallengeLauncherCallerSession is an auto generated read-only Go binding around an Ethereum contract,
-// with pre-set call options.
-type ChallengeLauncherCallerSession struct {
-	Contract *ChallengeLauncherCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts            // Call options to use throughout this session
-}
-
-// ChallengeLauncherTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
-// with pre-set transact options.
-type ChallengeLauncherTransactorSession struct {
-	Contract     *ChallengeLauncherTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
-}
-
-// ChallengeLauncherRaw is an auto generated low-level Go binding around an Ethereum contract.
-type ChallengeLauncherRaw struct {
-	Contract *ChallengeLauncher // Generic contract binding to access the raw methods on
-}
-
-// ChallengeLauncherCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type ChallengeLauncherCallerRaw struct {
-	Contract *ChallengeLauncherCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// ChallengeLauncherTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type ChallengeLauncherTransactorRaw struct {
-	Contract *ChallengeLauncherTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewChallengeLauncher creates a new instance of ChallengeLauncher, bound to a specific deployed contract.
-func NewChallengeLauncher(address common.Address, backend bind.ContractBackend) (*ChallengeLauncher, error) {
-	contract, err := bindChallengeLauncher(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &ChallengeLauncher{ChallengeLauncherCaller: ChallengeLauncherCaller{contract: contract}, ChallengeLauncherTransactor: ChallengeLauncherTransactor{contract: contract}, ChallengeLauncherFilterer: ChallengeLauncherFilterer{contract: contract}}, nil
-}
-
-// NewChallengeLauncherCaller creates a new read-only instance of ChallengeLauncher, bound to a specific deployed contract.
-func NewChallengeLauncherCaller(address common.Address, caller bind.ContractCaller) (*ChallengeLauncherCaller, error) {
-	contract, err := bindChallengeLauncher(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ChallengeLauncherCaller{contract: contract}, nil
-}
-
-// NewChallengeLauncherTransactor creates a new write-only instance of ChallengeLauncher, bound to a specific deployed contract.
-func NewChallengeLauncherTransactor(address common.Address, transactor bind.ContractTransactor) (*ChallengeLauncherTransactor, error) {
-	contract, err := bindChallengeLauncher(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &ChallengeLauncherTransactor{contract: contract}, nil
-}
-
-// NewChallengeLauncherFilterer creates a new log filterer instance of ChallengeLauncher, bound to a specific deployed contract.
-func NewChallengeLauncherFilterer(address common.Address, filterer bind.ContractFilterer) (*ChallengeLauncherFilterer, error) {
-	contract, err := bindChallengeLauncher(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &ChallengeLauncherFilterer{contract: contract}, nil
-}
-
-// bindChallengeLauncher binds a generic wrapper to an already deployed contract.
-func bindChallengeLauncher(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ChallengeLauncherABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ChallengeLauncher *ChallengeLauncherRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ChallengeLauncher.Contract.ChallengeLauncherCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ChallengeLauncher *ChallengeLauncherRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ChallengeLauncher.Contract.ChallengeLauncherTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ChallengeLauncher *ChallengeLauncherRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ChallengeLauncher.Contract.ChallengeLauncherTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_ChallengeLauncher *ChallengeLauncherCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _ChallengeLauncher.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_ChallengeLauncher *ChallengeLauncherTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ChallengeLauncher.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_ChallengeLauncher *ChallengeLauncherTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ChallengeLauncher.Contract.contract.Transact(opts, method, params...)
-}
-
-// IArbBaseABI is the input ABI used to generate the binding from.
-const IArbBaseABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"_players\",\"type\":\"address[2]\"},{\"internalType\":\"uint128[2]\",\"name\":\"_rewards\",\"type\":\"uint128[2]\"}],\"name\":\"completeChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
-
-// IArbBaseFuncSigs maps the 4-byte function signature to its string representation.
-var IArbBaseFuncSigs = map[string]string{
-	"22c091bc": "completeChallenge(address[2],uint128[2])",
-}
-
-// IArbBase is an auto generated Go binding around an Ethereum contract.
-type IArbBase struct {
-	IArbBaseCaller     // Read-only binding to the contract
-	IArbBaseTransactor // Write-only binding to the contract
-	IArbBaseFilterer   // Log filterer for contract events
-}
-
-// IArbBaseCaller is an auto generated read-only Go binding around an Ethereum contract.
-type IArbBaseCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IArbBaseTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type IArbBaseTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IArbBaseFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type IArbBaseFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IArbBaseSession is an auto generated Go binding around an Ethereum contract,
-// with pre-set call and transact options.
-type IArbBaseSession struct {
-	Contract     *IArbBase         // Generic contract binding to set the session for
+type ChallengeTypeSession struct {
+	Contract     *ChallengeType    // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IArbBaseCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// ChallengeTypeCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type IArbBaseCallerSession struct {
-	Contract *IArbBaseCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts   // Call options to use throughout this session
+type ChallengeTypeCallerSession struct {
+	Contract *ChallengeTypeCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts        // Call options to use throughout this session
 }
 
-// IArbBaseTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// ChallengeTypeTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type IArbBaseTransactorSession struct {
-	Contract     *IArbBaseTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
+type ChallengeTypeTransactorSession struct {
+	Contract     *ChallengeTypeTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
 }
 
-// IArbBaseRaw is an auto generated low-level Go binding around an Ethereum contract.
-type IArbBaseRaw struct {
-	Contract *IArbBase // Generic contract binding to access the raw methods on
+// ChallengeTypeRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ChallengeTypeRaw struct {
+	Contract *ChallengeType // Generic contract binding to access the raw methods on
 }
 
-// IArbBaseCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type IArbBaseCallerRaw struct {
-	Contract *IArbBaseCaller // Generic read-only contract binding to access the raw methods on
+// ChallengeTypeCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ChallengeTypeCallerRaw struct {
+	Contract *ChallengeTypeCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IArbBaseTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type IArbBaseTransactorRaw struct {
-	Contract *IArbBaseTransactor // Generic write-only contract binding to access the raw methods on
+// ChallengeTypeTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ChallengeTypeTransactorRaw struct {
+	Contract *ChallengeTypeTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewIArbBase creates a new instance of IArbBase, bound to a specific deployed contract.
-func NewIArbBase(address common.Address, backend bind.ContractBackend) (*IArbBase, error) {
-	contract, err := bindIArbBase(address, backend, backend, backend)
+// NewChallengeType creates a new instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeType(address common.Address, backend bind.ContractBackend) (*ChallengeType, error) {
+	contract, err := bindChallengeType(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &IArbBase{IArbBaseCaller: IArbBaseCaller{contract: contract}, IArbBaseTransactor: IArbBaseTransactor{contract: contract}, IArbBaseFilterer: IArbBaseFilterer{contract: contract}}, nil
+	return &ChallengeType{ChallengeTypeCaller: ChallengeTypeCaller{contract: contract}, ChallengeTypeTransactor: ChallengeTypeTransactor{contract: contract}, ChallengeTypeFilterer: ChallengeTypeFilterer{contract: contract}}, nil
 }
 
-// NewIArbBaseCaller creates a new read-only instance of IArbBase, bound to a specific deployed contract.
-func NewIArbBaseCaller(address common.Address, caller bind.ContractCaller) (*IArbBaseCaller, error) {
-	contract, err := bindIArbBase(address, caller, nil, nil)
+// NewChallengeTypeCaller creates a new read-only instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeTypeCaller(address common.Address, caller bind.ContractCaller) (*ChallengeTypeCaller, error) {
+	contract, err := bindChallengeType(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IArbBaseCaller{contract: contract}, nil
+	return &ChallengeTypeCaller{contract: contract}, nil
 }
 
-// NewIArbBaseTransactor creates a new write-only instance of IArbBase, bound to a specific deployed contract.
-func NewIArbBaseTransactor(address common.Address, transactor bind.ContractTransactor) (*IArbBaseTransactor, error) {
-	contract, err := bindIArbBase(address, nil, transactor, nil)
+// NewChallengeTypeTransactor creates a new write-only instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeTypeTransactor(address common.Address, transactor bind.ContractTransactor) (*ChallengeTypeTransactor, error) {
+	contract, err := bindChallengeType(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IArbBaseTransactor{contract: contract}, nil
+	return &ChallengeTypeTransactor{contract: contract}, nil
 }
 
-// NewIArbBaseFilterer creates a new log filterer instance of IArbBase, bound to a specific deployed contract.
-func NewIArbBaseFilterer(address common.Address, filterer bind.ContractFilterer) (*IArbBaseFilterer, error) {
-	contract, err := bindIArbBase(address, nil, nil, filterer)
+// NewChallengeTypeFilterer creates a new log filterer instance of ChallengeType, bound to a specific deployed contract.
+func NewChallengeTypeFilterer(address common.Address, filterer bind.ContractFilterer) (*ChallengeTypeFilterer, error) {
+	contract, err := bindChallengeType(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &IArbBaseFilterer{contract: contract}, nil
+	return &ChallengeTypeFilterer{contract: contract}, nil
 }
 
-// bindIArbBase binds a generic wrapper to an already deployed contract.
-func bindIArbBase(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(IArbBaseABI))
+// bindChallengeType binds a generic wrapper to an already deployed contract.
+func bindChallengeType(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeTypeABI))
 	if err != nil {
 		return nil, err
 	}
@@ -1999,68 +2086,1464 @@ func bindIArbBase(address common.Address, caller bind.ContractCaller, transactor
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IArbBase *IArbBaseRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IArbBase.Contract.IArbBaseCaller.contract.Call(opts, result, method, params...)
+func (_ChallengeType *ChallengeTypeRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeType.Contract.ChallengeTypeCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IArbBase *IArbBaseRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IArbBase.Contract.IArbBaseTransactor.contract.Transfer(opts)
+func (_ChallengeType *ChallengeTypeRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeType.Contract.ChallengeTypeTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IArbBase *IArbBaseRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IArbBase.Contract.IArbBaseTransactor.contract.Transact(opts, method, params...)
+func (_ChallengeType *ChallengeTypeRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeType.Contract.ChallengeTypeTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IArbBase *IArbBaseCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _IArbBase.Contract.contract.Call(opts, result, method, params...)
+func (_ChallengeType *ChallengeTypeCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeType.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IArbBase *IArbBaseTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IArbBase.Contract.contract.Transfer(opts)
+func (_ChallengeType *ChallengeTypeTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeType.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IArbBase *IArbBaseTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IArbBase.Contract.contract.Transact(opts, method, params...)
+func (_ChallengeType *ChallengeTypeTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeType.Contract.contract.Transact(opts, method, params...)
 }
 
-// CompleteChallenge is a paid mutator transaction binding the contract method 0x22c091bc.
-//
-// Solidity: function completeChallenge(address[2] _players, uint128[2] _rewards) returns()
-func (_IArbBase *IArbBaseTransactor) CompleteChallenge(opts *bind.TransactOpts, _players [2]common.Address, _rewards [2]*big.Int) (*types.Transaction, error) {
-	return _IArbBase.contract.Transact(opts, "completeChallenge", _players, _rewards)
+// ChallengeUtilsABI is the input ABI used to generate the binding from.
+const ChallengeUtilsABI = "[]"
+
+// ChallengeUtilsBin is the compiled bytecode used for deploying new contracts.
+var ChallengeUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820ff127ed3efe80da4722bfc049867c33d916fa4184e7a96ac31418919d180b7af64736f6c634300050f0032"
+
+// DeployChallengeUtils deploys a new Ethereum contract, binding an instance of ChallengeUtils to it.
+func DeployChallengeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ChallengeUtils, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeUtilsABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ChallengeUtilsBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ChallengeUtils{ChallengeUtilsCaller: ChallengeUtilsCaller{contract: contract}, ChallengeUtilsTransactor: ChallengeUtilsTransactor{contract: contract}, ChallengeUtilsFilterer: ChallengeUtilsFilterer{contract: contract}}, nil
 }
 
-// CompleteChallenge is a paid mutator transaction binding the contract method 0x22c091bc.
-//
-// Solidity: function completeChallenge(address[2] _players, uint128[2] _rewards) returns()
-func (_IArbBase *IArbBaseSession) CompleteChallenge(_players [2]common.Address, _rewards [2]*big.Int) (*types.Transaction, error) {
-	return _IArbBase.Contract.CompleteChallenge(&_IArbBase.TransactOpts, _players, _rewards)
+// ChallengeUtils is an auto generated Go binding around an Ethereum contract.
+type ChallengeUtils struct {
+	ChallengeUtilsCaller     // Read-only binding to the contract
+	ChallengeUtilsTransactor // Write-only binding to the contract
+	ChallengeUtilsFilterer   // Log filterer for contract events
 }
 
-// CompleteChallenge is a paid mutator transaction binding the contract method 0x22c091bc.
+// ChallengeUtilsCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ChallengeUtilsCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ChallengeUtilsTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ChallengeUtilsTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ChallengeUtilsFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ChallengeUtilsFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ChallengeUtilsSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ChallengeUtilsSession struct {
+	Contract     *ChallengeUtils   // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ChallengeUtilsCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ChallengeUtilsCallerSession struct {
+	Contract *ChallengeUtilsCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts         // Call options to use throughout this session
+}
+
+// ChallengeUtilsTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ChallengeUtilsTransactorSession struct {
+	Contract     *ChallengeUtilsTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
+}
+
+// ChallengeUtilsRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ChallengeUtilsRaw struct {
+	Contract *ChallengeUtils // Generic contract binding to access the raw methods on
+}
+
+// ChallengeUtilsCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ChallengeUtilsCallerRaw struct {
+	Contract *ChallengeUtilsCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ChallengeUtilsTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ChallengeUtilsTransactorRaw struct {
+	Contract *ChallengeUtilsTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewChallengeUtils creates a new instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtils(address common.Address, backend bind.ContractBackend) (*ChallengeUtils, error) {
+	contract, err := bindChallengeUtils(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeUtils{ChallengeUtilsCaller: ChallengeUtilsCaller{contract: contract}, ChallengeUtilsTransactor: ChallengeUtilsTransactor{contract: contract}, ChallengeUtilsFilterer: ChallengeUtilsFilterer{contract: contract}}, nil
+}
+
+// NewChallengeUtilsCaller creates a new read-only instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtilsCaller(address common.Address, caller bind.ContractCaller) (*ChallengeUtilsCaller, error) {
+	contract, err := bindChallengeUtils(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeUtilsCaller{contract: contract}, nil
+}
+
+// NewChallengeUtilsTransactor creates a new write-only instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtilsTransactor(address common.Address, transactor bind.ContractTransactor) (*ChallengeUtilsTransactor, error) {
+	contract, err := bindChallengeUtils(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeUtilsTransactor{contract: contract}, nil
+}
+
+// NewChallengeUtilsFilterer creates a new log filterer instance of ChallengeUtils, bound to a specific deployed contract.
+func NewChallengeUtilsFilterer(address common.Address, filterer bind.ContractFilterer) (*ChallengeUtilsFilterer, error) {
+	contract, err := bindChallengeUtils(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ChallengeUtilsFilterer{contract: contract}, nil
+}
+
+// bindChallengeUtils binds a generic wrapper to an already deployed contract.
+func bindChallengeUtils(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ChallengeUtilsABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ChallengeUtils *ChallengeUtilsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeUtils.Contract.ChallengeUtilsCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ChallengeUtils *ChallengeUtilsRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.ChallengeUtilsTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ChallengeUtils *ChallengeUtilsRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.ChallengeUtilsTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ChallengeUtils *ChallengeUtilsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ChallengeUtils.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ChallengeUtils *ChallengeUtilsTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ChallengeUtils *ChallengeUtilsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ChallengeUtils.Contract.contract.Transact(opts, method, params...)
+}
+
+// ConfirmingABI is the input ABI used to generate the binding from.
+const ConfirmingABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"RollupChallengeCompleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"}],\"name\":\"RollupChallengeStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"name\":\"RollupStakeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"}],\"name\":\"RollupStakeRefunded\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactory\",\"outputs\":[{\"internalType\":\"contractIChallengeFactory\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeConfirmed\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"disputableHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"nodeProof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeMooted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeOld\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startExecutionChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startMessagesChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startPendingTopChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// ConfirmingFuncSigs maps the 4-byte function signature to its string representation.
+var ConfirmingFuncSigs = map[string]string{
+	"5dbaf68b": "challengeFactory()",
+	"7cfaaf67": "recoverStakeConfirmed(bytes32[])",
+	"8d28cd81": "recoverStakeMooted(bytes32,bytes32[],bytes32[])",
+	"113ec9d8": "recoverStakeOld(address,bytes32[])",
+	"396f51cf": "resolveChallenge(address,address)",
+	"2d4dce60": "startExecutionChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"9cb292b6": "startMessagesChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"863e78d5": "startPendingTopChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+}
+
+// ConfirmingBin is the compiled bytecode used for deploying new contracts.
+var ConfirmingBin = "0x608060405234801561001057600080fd5b5061156f806100206000396000f3fe608060405234801561001057600080fd5b50600436106100885760003560e01c80637cfaaf671161005b5780637cfaaf671461025d578063863e78d5146102cb5780638d28cd81146103c95780639cb292b61461048e57610088565b8063113ec9d81461008d5780632d4dce601461010d578063396f51cf1461020b5780635dbaf68b14610239575b600080fd5b61010b600480360360408110156100a357600080fd5b6001600160a01b038235169190810190604081016020820135600160201b8111156100cd57600080fd5b8201836020820111156100df57600080fd5b803590602001918460208302840111600160201b8311171561010057600080fd5b50909250905061058c565b005b61010b600480360361018081101561012457600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b81111561017757600080fd5b82018360208201111561018957600080fd5b803590602001918460208302840111600160201b831117156101aa57600080fd5b919390929091602081019035600160201b8111156101c757600080fd5b8201836020820111156101d957600080fd5b803590602001918460208302840111600160201b831117156101fa57600080fd5b9193509150803590602001356105d8565b61010b6004803603604081101561022157600080fd5b506001600160a01b0381358116916020013516610759565b6102416109cc565b604080516001600160a01b039092168252519081900360200190f35b61010b6004803603602081101561027357600080fd5b810190602081018135600160201b81111561028d57600080fd5b82018360208201111561029f57600080fd5b803590602001918460208302840111600160201b831117156102c057600080fd5b5090925090506109db565b61010b60048036036101808110156102e257600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b81111561033557600080fd5b82018360208201111561034757600080fd5b803590602001918460208302840111600160201b8311171561036857600080fd5b919390929091602081019035600160201b81111561038557600080fd5b82018360208201111561039757600080fd5b803590602001918460208302840111600160201b831117156103b857600080fd5b919350915080359060200135610a1c565b61010b600480360360608110156103df57600080fd5b81359190810190604081016020820135600160201b81111561040057600080fd5b82018360208201111561041257600080fd5b803590602001918460208302840111600160201b8311171561043357600080fd5b919390929091602081019035600160201b81111561045057600080fd5b82018360208201111561046257600080fd5b803590602001918460208302840111600160201b8311171561048357600080fd5b509092509050610a8d565b61010b60048036036101808110156104a557600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b8111156104f857600080fd5b82018360208201111561050a57600080fd5b803590602001918460208302840111600160201b8311171561052b57600080fd5b919390929091602081019035600160201b81111561054857600080fd5b82018360208201111561055a57600080fd5b803590602001918460208302840111600160201b8311171561057b57600080fd5b919350915080359060200135610bd3565b8061059657600080fd5b6105d383838380806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250610c4792505050565b505050565b60408051808201909152600e81526d455845435f4348414c5f5459504560901b602082015260028a146106895760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b8381101561064e578181015183820152602001610636565b50505050905090810190601f16801561067b5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b5061074a8d8d8d8d8d8d8d6002806020026040519081016040528092919082600260200280828437600081840152601f19601f8201169050808301925050505050508d8d80806020026020016040519081016040528093929190818152602001838360200280828437600081840152601f19601f820116905080830192505050505050508c8c808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152508e92508d9150610d2a9050565b50505050505050505050505050565b600080546040805163c778f3f160e01b81526001600160a01b038681166004830152858116602483015233803f60448401819052935190959394919091169163c778f3f1916064808301926020929190829003018186803b1580156107bd57600080fd5b505afa1580156107d1573d6000803e3d6000fd5b505050506040513d60208110156107e757600080fd5b5051600080546040805163c778f3f160e01b81526001600160a01b038a811660048301528981166024830152604482018890529151949550929391169163c778f3f1916064808301926020929190829003018186803b15801561084957600080fd5b505afa15801561085d573d6000803e3d6000fd5b505050506040513d602081101561087357600080fd5b505190506001600160a01b03821633148061089657506001600160a01b03811633145b6040518060400160405280600f81526020016e2922a9afa1a420a62fa9a2a72222a960891b8152509061090a5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b5060006109168761129c565b6001546040519192506001600160a01b0389169160026001600160801b039283160490911680156108fc02916000818181858888f19350505050158015610961573d6000803e3d6000fd5b5060018101805460ff60801b1916905561097a8661132d565b604080513381526001600160a01b03808a16602083015288168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050505050565b6000546001600160a01b031681565b610a1833838380806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250610c4792505050565b5050565b60408051808201909152600d81526c504e445f4348414c5f5459504560981b602082015289156106895760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b6000610a983361129c565b9050610b15816000015487610aab61136e565b88888080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808c0282810182019093528b82529093508b92508a91829185019084908082843760009201919091525061137492505050565b604051806040016040528060148152602001732922a1a7ab2fa1a7a7232624a1aa2fa82927a7a360611b81525090610b8e5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b50610b98336113d0565b6040805133815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a1505050505050565b60408051808201909152600e81526d4d5347535f4348414c5f5459504560901b602082015260018a146106895760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b6000610c528361129c565b9050610c6a8160000154610c6461136e565b84611419565b6040518060400160405280601081526020016f2922a1a7ab2fa820aa242fa82927a7a360811b81525090610cdf5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b50610ce9836113d0565b604080516001600160a01b038516815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a1505050565b6000610d358c61129c565b90506000610d428c61129c565b60018301549091508a90610d5e906001600160801b0316611432565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b81525090610dd15760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b5060018101548a90610deb906001600160801b0316611432565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b81525090610e5e5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff1615610ede5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff1615610f5e5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b5060408051808201909152600a8152692a2ca822afa7a92222a960b11b6020820152888a10610fce5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b50610fef610fe78c8c878d8c60005b6020020151611439565b835488611419565b6040518060400160405280600a81526020016929aa2598afa82927a7a360b11b8152509061105e5760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b506110796110718c8c868c8c6001610fdd565b825487611419565b6040518060400160405280600a81526020016929aa25992fa82927a7a360b11b815250906110e85760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff02191690831515021790555060008060009054906101000a90046001600160a01b03166001600160a01b031663b1b126888f8f6000898f6040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b031681526020018463ffffffff16815260200183815260200182815260200195505050505050602060405180830381600087803b1580156111ca57600080fd5b505af11580156111de573d6000803e3d6000fd5b505050506040513d60208110156111f457600080fd5b810190808051906020019092919050505090507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f8e8e8c8460405180856001600160a01b03166001600160a01b03168152602001846001600160a01b03166001600160a01b03168152602001838152602001826001600160a01b03166001600160a01b0316815260200194505050505060405180910390a15050505050505050505050505050565b6001600160a01b038116600090815260026020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b93830193909352916113265760405162461bcd60e51b815260206004820181815283516024840152835190928392604490910191908501908083836000831561064e578181015183820152602001610636565b5092915050565b6001600160a01b03166000908152600260205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560038054600019019055565b60045490565b60008160008151811061138357fe5b60200260200101518360008151811061139857fe5b6020026020010151141580156113b457506113b4868685611419565b80156113c657506113c6868584611419565b9695505050505050565b6113d98161132d565b6001546040516001600160a01b038316916001600160801b031680156108fc02916000818181858888f19350505050158015610a18573d6000803e3d6000fd5b600061142a8484846000865161147c565b949350505050565b6132c80290565b60006113c68683878787604051602001808481526020018381526020018281526020019350505050604051602081830303815290604052805190602001206114e7565b600085835b838110156114da578186828151811061149657fe5b602002602001015160405160200180838152602001828152602001925050506040516020818303038152906040528051906020012091508080600101915050611481565b5090941495945050505050565b6040805160208082019490945280820192909252805180830382018152606083018252805190840120608083019490945260a0808301949094528051808303909401845260c0909101905281519101209056fea265627a7a72315820bbec6ea467f36b70ba10518d052c2f2e9a501bad1cee4d8bcb4cf5ac24b25a1e64736f6c634300050f0032"
+
+// DeployConfirming deploys a new Ethereum contract, binding an instance of Confirming to it.
+func DeployConfirming(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Confirming, error) {
+	parsed, err := abi.JSON(strings.NewReader(ConfirmingABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ConfirmingBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Confirming{ConfirmingCaller: ConfirmingCaller{contract: contract}, ConfirmingTransactor: ConfirmingTransactor{contract: contract}, ConfirmingFilterer: ConfirmingFilterer{contract: contract}}, nil
+}
+
+// Confirming is an auto generated Go binding around an Ethereum contract.
+type Confirming struct {
+	ConfirmingCaller     // Read-only binding to the contract
+	ConfirmingTransactor // Write-only binding to the contract
+	ConfirmingFilterer   // Log filterer for contract events
+}
+
+// ConfirmingCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ConfirmingCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ConfirmingTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ConfirmingTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ConfirmingFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ConfirmingFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ConfirmingSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ConfirmingSession struct {
+	Contract     *Confirming       // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ConfirmingCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ConfirmingCallerSession struct {
+	Contract *ConfirmingCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts     // Call options to use throughout this session
+}
+
+// ConfirmingTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ConfirmingTransactorSession struct {
+	Contract     *ConfirmingTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// ConfirmingRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ConfirmingRaw struct {
+	Contract *Confirming // Generic contract binding to access the raw methods on
+}
+
+// ConfirmingCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ConfirmingCallerRaw struct {
+	Contract *ConfirmingCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ConfirmingTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ConfirmingTransactorRaw struct {
+	Contract *ConfirmingTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewConfirming creates a new instance of Confirming, bound to a specific deployed contract.
+func NewConfirming(address common.Address, backend bind.ContractBackend) (*Confirming, error) {
+	contract, err := bindConfirming(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Confirming{ConfirmingCaller: ConfirmingCaller{contract: contract}, ConfirmingTransactor: ConfirmingTransactor{contract: contract}, ConfirmingFilterer: ConfirmingFilterer{contract: contract}}, nil
+}
+
+// NewConfirmingCaller creates a new read-only instance of Confirming, bound to a specific deployed contract.
+func NewConfirmingCaller(address common.Address, caller bind.ContractCaller) (*ConfirmingCaller, error) {
+	contract, err := bindConfirming(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ConfirmingCaller{contract: contract}, nil
+}
+
+// NewConfirmingTransactor creates a new write-only instance of Confirming, bound to a specific deployed contract.
+func NewConfirmingTransactor(address common.Address, transactor bind.ContractTransactor) (*ConfirmingTransactor, error) {
+	contract, err := bindConfirming(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ConfirmingTransactor{contract: contract}, nil
+}
+
+// NewConfirmingFilterer creates a new log filterer instance of Confirming, bound to a specific deployed contract.
+func NewConfirmingFilterer(address common.Address, filterer bind.ContractFilterer) (*ConfirmingFilterer, error) {
+	contract, err := bindConfirming(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ConfirmingFilterer{contract: contract}, nil
+}
+
+// bindConfirming binds a generic wrapper to an already deployed contract.
+func bindConfirming(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ConfirmingABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Confirming *ConfirmingRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Confirming.Contract.ConfirmingCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Confirming *ConfirmingRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Confirming.Contract.ConfirmingTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Confirming *ConfirmingRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Confirming.Contract.ConfirmingTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Confirming *ConfirmingCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Confirming.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Confirming *ConfirmingTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Confirming.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Confirming *ConfirmingTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Confirming.Contract.contract.Transact(opts, method, params...)
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
 //
-// Solidity: function completeChallenge(address[2] _players, uint128[2] _rewards) returns()
-func (_IArbBase *IArbBaseTransactorSession) CompleteChallenge(_players [2]common.Address, _rewards [2]*big.Int) (*types.Transaction, error) {
-	return _IArbBase.Contract.CompleteChallenge(&_IArbBase.TransactOpts, _players, _rewards)
+// Solidity: function challengeFactory() constant returns(address)
+func (_Confirming *ConfirmingCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Confirming.contract.Call(opts, out, "challengeFactory")
+	return *ret0, err
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Confirming *ConfirmingSession) ChallengeFactory() (common.Address, error) {
+	return _Confirming.Contract.ChallengeFactory(&_Confirming.CallOpts)
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Confirming *ConfirmingCallerSession) ChallengeFactory() (common.Address, error) {
+	return _Confirming.Contract.ChallengeFactory(&_Confirming.CallOpts)
+}
+
+// RecoverStakeConfirmed is a paid mutator transaction binding the contract method 0x7cfaaf67.
+//
+// Solidity: function recoverStakeConfirmed(bytes32[] proof) returns()
+func (_Confirming *ConfirmingTransactor) RecoverStakeConfirmed(opts *bind.TransactOpts, proof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.contract.Transact(opts, "recoverStakeConfirmed", proof)
+}
+
+// RecoverStakeConfirmed is a paid mutator transaction binding the contract method 0x7cfaaf67.
+//
+// Solidity: function recoverStakeConfirmed(bytes32[] proof) returns()
+func (_Confirming *ConfirmingSession) RecoverStakeConfirmed(proof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.RecoverStakeConfirmed(&_Confirming.TransactOpts, proof)
+}
+
+// RecoverStakeConfirmed is a paid mutator transaction binding the contract method 0x7cfaaf67.
+//
+// Solidity: function recoverStakeConfirmed(bytes32[] proof) returns()
+func (_Confirming *ConfirmingTransactorSession) RecoverStakeConfirmed(proof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.RecoverStakeConfirmed(&_Confirming.TransactOpts, proof)
+}
+
+// RecoverStakeMooted is a paid mutator transaction binding the contract method 0x8d28cd81.
+//
+// Solidity: function recoverStakeMooted(bytes32 disputableHash, bytes32[] latestConfirmedProof, bytes32[] nodeProof) returns()
+func (_Confirming *ConfirmingTransactor) RecoverStakeMooted(opts *bind.TransactOpts, disputableHash [32]byte, latestConfirmedProof [][32]byte, nodeProof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.contract.Transact(opts, "recoverStakeMooted", disputableHash, latestConfirmedProof, nodeProof)
+}
+
+// RecoverStakeMooted is a paid mutator transaction binding the contract method 0x8d28cd81.
+//
+// Solidity: function recoverStakeMooted(bytes32 disputableHash, bytes32[] latestConfirmedProof, bytes32[] nodeProof) returns()
+func (_Confirming *ConfirmingSession) RecoverStakeMooted(disputableHash [32]byte, latestConfirmedProof [][32]byte, nodeProof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.RecoverStakeMooted(&_Confirming.TransactOpts, disputableHash, latestConfirmedProof, nodeProof)
+}
+
+// RecoverStakeMooted is a paid mutator transaction binding the contract method 0x8d28cd81.
+//
+// Solidity: function recoverStakeMooted(bytes32 disputableHash, bytes32[] latestConfirmedProof, bytes32[] nodeProof) returns()
+func (_Confirming *ConfirmingTransactorSession) RecoverStakeMooted(disputableHash [32]byte, latestConfirmedProof [][32]byte, nodeProof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.RecoverStakeMooted(&_Confirming.TransactOpts, disputableHash, latestConfirmedProof, nodeProof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_Confirming *ConfirmingTransactor) RecoverStakeOld(opts *bind.TransactOpts, stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.contract.Transact(opts, "recoverStakeOld", stakerAddress, proof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_Confirming *ConfirmingSession) RecoverStakeOld(stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.RecoverStakeOld(&_Confirming.TransactOpts, stakerAddress, proof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_Confirming *ConfirmingTransactorSession) RecoverStakeOld(stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.RecoverStakeOld(&_Confirming.TransactOpts, stakerAddress, proof)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Confirming *ConfirmingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Confirming.contract.Transact(opts, "resolveChallenge", winner, loser)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Confirming *ConfirmingSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Confirming.Contract.ResolveChallenge(&_Confirming.TransactOpts, winner, loser)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Confirming *ConfirmingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Confirming.Contract.ResolveChallenge(&_Confirming.TransactOpts, winner, loser)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingTransactor) StartExecutionChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.contract.Transact(opts, "startExecutionChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.StartExecutionChallenge(&_Confirming.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingTransactorSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.StartExecutionChallenge(&_Confirming.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingTransactor) StartMessagesChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.contract.Transact(opts, "startMessagesChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.StartMessagesChallenge(&_Confirming.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingTransactorSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.StartMessagesChallenge(&_Confirming.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingTransactor) StartPendingTopChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.contract.Transact(opts, "startPendingTopChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.StartPendingTopChallenge(&_Confirming.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Confirming *ConfirmingTransactorSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Confirming.Contract.StartPendingTopChallenge(&_Confirming.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// ConfirmingRollupChallengeCompletedIterator is returned from FilterRollupChallengeCompleted and is used to iterate over the raw logs and unpacked data for RollupChallengeCompleted events raised by the Confirming contract.
+type ConfirmingRollupChallengeCompletedIterator struct {
+	Event *ConfirmingRollupChallengeCompleted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ConfirmingRollupChallengeCompletedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ConfirmingRollupChallengeCompleted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ConfirmingRollupChallengeCompleted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ConfirmingRollupChallengeCompletedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ConfirmingRollupChallengeCompletedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ConfirmingRollupChallengeCompleted represents a RollupChallengeCompleted event raised by the Confirming contract.
+type ConfirmingRollupChallengeCompleted struct {
+	ChallengeContract common.Address
+	Winner            common.Address
+	Loser             common.Address
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupChallengeCompleted is a free log retrieval operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Confirming *ConfirmingFilterer) FilterRollupChallengeCompleted(opts *bind.FilterOpts) (*ConfirmingRollupChallengeCompletedIterator, error) {
+
+	logs, sub, err := _Confirming.contract.FilterLogs(opts, "RollupChallengeCompleted")
+	if err != nil {
+		return nil, err
+	}
+	return &ConfirmingRollupChallengeCompletedIterator{contract: _Confirming.contract, event: "RollupChallengeCompleted", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupChallengeCompleted is a free log subscription operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Confirming *ConfirmingFilterer) WatchRollupChallengeCompleted(opts *bind.WatchOpts, sink chan<- *ConfirmingRollupChallengeCompleted) (event.Subscription, error) {
+
+	logs, sub, err := _Confirming.contract.WatchLogs(opts, "RollupChallengeCompleted")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ConfirmingRollupChallengeCompleted)
+				if err := _Confirming.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupChallengeCompleted is a log parse operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Confirming *ConfirmingFilterer) ParseRollupChallengeCompleted(log types.Log) (*ConfirmingRollupChallengeCompleted, error) {
+	event := new(ConfirmingRollupChallengeCompleted)
+	if err := _Confirming.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ConfirmingRollupChallengeStartedIterator is returned from FilterRollupChallengeStarted and is used to iterate over the raw logs and unpacked data for RollupChallengeStarted events raised by the Confirming contract.
+type ConfirmingRollupChallengeStartedIterator struct {
+	Event *ConfirmingRollupChallengeStarted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ConfirmingRollupChallengeStartedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ConfirmingRollupChallengeStarted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ConfirmingRollupChallengeStarted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ConfirmingRollupChallengeStartedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ConfirmingRollupChallengeStartedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ConfirmingRollupChallengeStarted represents a RollupChallengeStarted event raised by the Confirming contract.
+type ConfirmingRollupChallengeStarted struct {
+	Asserter          common.Address
+	Challenger        common.Address
+	ChallengeType     *big.Int
+	ChallengeContract common.Address
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupChallengeStarted is a free log retrieval operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Confirming *ConfirmingFilterer) FilterRollupChallengeStarted(opts *bind.FilterOpts) (*ConfirmingRollupChallengeStartedIterator, error) {
+
+	logs, sub, err := _Confirming.contract.FilterLogs(opts, "RollupChallengeStarted")
+	if err != nil {
+		return nil, err
+	}
+	return &ConfirmingRollupChallengeStartedIterator{contract: _Confirming.contract, event: "RollupChallengeStarted", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupChallengeStarted is a free log subscription operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Confirming *ConfirmingFilterer) WatchRollupChallengeStarted(opts *bind.WatchOpts, sink chan<- *ConfirmingRollupChallengeStarted) (event.Subscription, error) {
+
+	logs, sub, err := _Confirming.contract.WatchLogs(opts, "RollupChallengeStarted")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ConfirmingRollupChallengeStarted)
+				if err := _Confirming.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupChallengeStarted is a log parse operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Confirming *ConfirmingFilterer) ParseRollupChallengeStarted(log types.Log) (*ConfirmingRollupChallengeStarted, error) {
+	event := new(ConfirmingRollupChallengeStarted)
+	if err := _Confirming.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ConfirmingRollupStakeCreatedIterator is returned from FilterRollupStakeCreated and is used to iterate over the raw logs and unpacked data for RollupStakeCreated events raised by the Confirming contract.
+type ConfirmingRollupStakeCreatedIterator struct {
+	Event *ConfirmingRollupStakeCreated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ConfirmingRollupStakeCreatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ConfirmingRollupStakeCreated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ConfirmingRollupStakeCreated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ConfirmingRollupStakeCreatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ConfirmingRollupStakeCreatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ConfirmingRollupStakeCreated represents a RollupStakeCreated event raised by the Confirming contract.
+type ConfirmingRollupStakeCreated struct {
+	Staker      common.Address
+	NodeHash    [32]byte
+	BlockNumber *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupStakeCreated is a free log retrieval operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Confirming *ConfirmingFilterer) FilterRollupStakeCreated(opts *bind.FilterOpts) (*ConfirmingRollupStakeCreatedIterator, error) {
+
+	logs, sub, err := _Confirming.contract.FilterLogs(opts, "RollupStakeCreated")
+	if err != nil {
+		return nil, err
+	}
+	return &ConfirmingRollupStakeCreatedIterator{contract: _Confirming.contract, event: "RollupStakeCreated", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupStakeCreated is a free log subscription operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Confirming *ConfirmingFilterer) WatchRollupStakeCreated(opts *bind.WatchOpts, sink chan<- *ConfirmingRollupStakeCreated) (event.Subscription, error) {
+
+	logs, sub, err := _Confirming.contract.WatchLogs(opts, "RollupStakeCreated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ConfirmingRollupStakeCreated)
+				if err := _Confirming.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupStakeCreated is a log parse operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Confirming *ConfirmingFilterer) ParseRollupStakeCreated(log types.Log) (*ConfirmingRollupStakeCreated, error) {
+	event := new(ConfirmingRollupStakeCreated)
+	if err := _Confirming.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// ConfirmingRollupStakeRefundedIterator is returned from FilterRollupStakeRefunded and is used to iterate over the raw logs and unpacked data for RollupStakeRefunded events raised by the Confirming contract.
+type ConfirmingRollupStakeRefundedIterator struct {
+	Event *ConfirmingRollupStakeRefunded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ConfirmingRollupStakeRefundedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ConfirmingRollupStakeRefunded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ConfirmingRollupStakeRefunded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ConfirmingRollupStakeRefundedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ConfirmingRollupStakeRefundedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ConfirmingRollupStakeRefunded represents a RollupStakeRefunded event raised by the Confirming contract.
+type ConfirmingRollupStakeRefunded struct {
+	Staker common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupStakeRefunded is a free log retrieval operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
+//
+// Solidity: event RollupStakeRefunded(address staker)
+func (_Confirming *ConfirmingFilterer) FilterRollupStakeRefunded(opts *bind.FilterOpts) (*ConfirmingRollupStakeRefundedIterator, error) {
+
+	logs, sub, err := _Confirming.contract.FilterLogs(opts, "RollupStakeRefunded")
+	if err != nil {
+		return nil, err
+	}
+	return &ConfirmingRollupStakeRefundedIterator{contract: _Confirming.contract, event: "RollupStakeRefunded", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupStakeRefunded is a free log subscription operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
+//
+// Solidity: event RollupStakeRefunded(address staker)
+func (_Confirming *ConfirmingFilterer) WatchRollupStakeRefunded(opts *bind.WatchOpts, sink chan<- *ConfirmingRollupStakeRefunded) (event.Subscription, error) {
+
+	logs, sub, err := _Confirming.contract.WatchLogs(opts, "RollupStakeRefunded")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ConfirmingRollupStakeRefunded)
+				if err := _Confirming.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupStakeRefunded is a log parse operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
+//
+// Solidity: event RollupStakeRefunded(address staker)
+func (_Confirming *ConfirmingFilterer) ParseRollupStakeRefunded(log types.Log) (*ConfirmingRollupStakeRefunded, error) {
+	event := new(ConfirmingRollupStakeRefunded)
+	if err := _Confirming.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// IArbRollupABI is the input ABI used to generate the binding from.
+const IArbRollupABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"}],\"name\":\"init\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// IArbRollupFuncSigs maps the 4-byte function signature to its string representation.
+var IArbRollupFuncSigs = map[string]string{
+	"22aeea8d": "init(bytes32,uint128,uint128,uint32,uint128,address,address,address)",
+}
+
+// IArbRollup is an auto generated Go binding around an Ethereum contract.
+type IArbRollup struct {
+	IArbRollupCaller     // Read-only binding to the contract
+	IArbRollupTransactor // Write-only binding to the contract
+	IArbRollupFilterer   // Log filterer for contract events
+}
+
+// IArbRollupCaller is an auto generated read-only Go binding around an Ethereum contract.
+type IArbRollupCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IArbRollupTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type IArbRollupTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IArbRollupFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type IArbRollupFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IArbRollupSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type IArbRollupSession struct {
+	Contract     *IArbRollup       // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// IArbRollupCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type IArbRollupCallerSession struct {
+	Contract *IArbRollupCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts     // Call options to use throughout this session
+}
+
+// IArbRollupTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type IArbRollupTransactorSession struct {
+	Contract     *IArbRollupTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// IArbRollupRaw is an auto generated low-level Go binding around an Ethereum contract.
+type IArbRollupRaw struct {
+	Contract *IArbRollup // Generic contract binding to access the raw methods on
+}
+
+// IArbRollupCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type IArbRollupCallerRaw struct {
+	Contract *IArbRollupCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IArbRollupTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type IArbRollupTransactorRaw struct {
+	Contract *IArbRollupTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIArbRollup creates a new instance of IArbRollup, bound to a specific deployed contract.
+func NewIArbRollup(address common.Address, backend bind.ContractBackend) (*IArbRollup, error) {
+	contract, err := bindIArbRollup(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IArbRollup{IArbRollupCaller: IArbRollupCaller{contract: contract}, IArbRollupTransactor: IArbRollupTransactor{contract: contract}, IArbRollupFilterer: IArbRollupFilterer{contract: contract}}, nil
+}
+
+// NewIArbRollupCaller creates a new read-only instance of IArbRollup, bound to a specific deployed contract.
+func NewIArbRollupCaller(address common.Address, caller bind.ContractCaller) (*IArbRollupCaller, error) {
+	contract, err := bindIArbRollup(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IArbRollupCaller{contract: contract}, nil
+}
+
+// NewIArbRollupTransactor creates a new write-only instance of IArbRollup, bound to a specific deployed contract.
+func NewIArbRollupTransactor(address common.Address, transactor bind.ContractTransactor) (*IArbRollupTransactor, error) {
+	contract, err := bindIArbRollup(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IArbRollupTransactor{contract: contract}, nil
+}
+
+// NewIArbRollupFilterer creates a new log filterer instance of IArbRollup, bound to a specific deployed contract.
+func NewIArbRollupFilterer(address common.Address, filterer bind.ContractFilterer) (*IArbRollupFilterer, error) {
+	contract, err := bindIArbRollup(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IArbRollupFilterer{contract: contract}, nil
+}
+
+// bindIArbRollup binds a generic wrapper to an already deployed contract.
+func bindIArbRollup(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IArbRollupABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IArbRollup *IArbRollupRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IArbRollup.Contract.IArbRollupCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IArbRollup *IArbRollupRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IArbRollup.Contract.IArbRollupTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IArbRollup *IArbRollupRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IArbRollup.Contract.IArbRollupTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IArbRollup *IArbRollupCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IArbRollup.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IArbRollup *IArbRollupTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IArbRollup.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IArbRollup *IArbRollupTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IArbRollup.Contract.contract.Transact(opts, method, params...)
+}
+
+// Init is a paid mutator transaction binding the contract method 0x22aeea8d.
+//
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_IArbRollup *IArbRollupTransactor) Init(opts *bind.TransactOpts, _vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbRollup.contract.Transact(opts, "init", _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
+}
+
+// Init is a paid mutator transaction binding the contract method 0x22aeea8d.
+//
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_IArbRollup *IArbRollupSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbRollup.Contract.Init(&_IArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
+}
+
+// Init is a paid mutator transaction binding the contract method 0x22aeea8d.
+//
+// Solidity: function init(bytes32 _vmState, uint128 _gracePeriodTicks, uint128 _arbGasSpeedLimitPerTick, uint32 _maxExecutionSteps, uint128 _stakeRequirement, address _owner, address _challengeFactoryAddress, address _globalInboxAddress) returns()
+func (_IArbRollup *IArbRollupTransactorSession) Init(_vmState [32]byte, _gracePeriodTicks *big.Int, _arbGasSpeedLimitPerTick *big.Int, _maxExecutionSteps uint32, _stakeRequirement *big.Int, _owner common.Address, _challengeFactoryAddress common.Address, _globalInboxAddress common.Address) (*types.Transaction, error) {
+	return _IArbRollup.Contract.Init(&_IArbRollup.TransactOpts, _vmState, _gracePeriodTicks, _arbGasSpeedLimitPerTick, _maxExecutionSteps, _stakeRequirement, _owner, _challengeFactoryAddress, _globalInboxAddress)
+}
+
+// IChallengeFactoryABI is the input ABI used to generate the binding from.
+const IChallengeFactoryABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"_asserter\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"_challenger\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"_challengePeriod\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"_challengeHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"}],\"name\":\"createChallenge\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"codeHash\",\"type\":\"bytes32\"}],\"name\":\"generateCloneAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+// IChallengeFactoryFuncSigs maps the 4-byte function signature to its string representation.
+var IChallengeFactoryFuncSigs = map[string]string{
+	"b1b12688": "createChallenge(address,address,uint32,bytes32,uint256)",
+	"c778f3f1": "generateCloneAddress(address,address,bytes32)",
+}
+
+// IChallengeFactory is an auto generated Go binding around an Ethereum contract.
+type IChallengeFactory struct {
+	IChallengeFactoryCaller     // Read-only binding to the contract
+	IChallengeFactoryTransactor // Write-only binding to the contract
+	IChallengeFactoryFilterer   // Log filterer for contract events
+}
+
+// IChallengeFactoryCaller is an auto generated read-only Go binding around an Ethereum contract.
+type IChallengeFactoryCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IChallengeFactoryTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type IChallengeFactoryTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IChallengeFactoryFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type IChallengeFactoryFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IChallengeFactorySession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type IChallengeFactorySession struct {
+	Contract     *IChallengeFactory // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts      // Call options to use throughout this session
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
+}
+
+// IChallengeFactoryCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type IChallengeFactoryCallerSession struct {
+	Contract *IChallengeFactoryCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts            // Call options to use throughout this session
+}
+
+// IChallengeFactoryTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type IChallengeFactoryTransactorSession struct {
+	Contract     *IChallengeFactoryTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
+}
+
+// IChallengeFactoryRaw is an auto generated low-level Go binding around an Ethereum contract.
+type IChallengeFactoryRaw struct {
+	Contract *IChallengeFactory // Generic contract binding to access the raw methods on
+}
+
+// IChallengeFactoryCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type IChallengeFactoryCallerRaw struct {
+	Contract *IChallengeFactoryCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IChallengeFactoryTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type IChallengeFactoryTransactorRaw struct {
+	Contract *IChallengeFactoryTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIChallengeFactory creates a new instance of IChallengeFactory, bound to a specific deployed contract.
+func NewIChallengeFactory(address common.Address, backend bind.ContractBackend) (*IChallengeFactory, error) {
+	contract, err := bindIChallengeFactory(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IChallengeFactory{IChallengeFactoryCaller: IChallengeFactoryCaller{contract: contract}, IChallengeFactoryTransactor: IChallengeFactoryTransactor{contract: contract}, IChallengeFactoryFilterer: IChallengeFactoryFilterer{contract: contract}}, nil
+}
+
+// NewIChallengeFactoryCaller creates a new read-only instance of IChallengeFactory, bound to a specific deployed contract.
+func NewIChallengeFactoryCaller(address common.Address, caller bind.ContractCaller) (*IChallengeFactoryCaller, error) {
+	contract, err := bindIChallengeFactory(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IChallengeFactoryCaller{contract: contract}, nil
+}
+
+// NewIChallengeFactoryTransactor creates a new write-only instance of IChallengeFactory, bound to a specific deployed contract.
+func NewIChallengeFactoryTransactor(address common.Address, transactor bind.ContractTransactor) (*IChallengeFactoryTransactor, error) {
+	contract, err := bindIChallengeFactory(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IChallengeFactoryTransactor{contract: contract}, nil
+}
+
+// NewIChallengeFactoryFilterer creates a new log filterer instance of IChallengeFactory, bound to a specific deployed contract.
+func NewIChallengeFactoryFilterer(address common.Address, filterer bind.ContractFilterer) (*IChallengeFactoryFilterer, error) {
+	contract, err := bindIChallengeFactory(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IChallengeFactoryFilterer{contract: contract}, nil
+}
+
+// bindIChallengeFactory binds a generic wrapper to an already deployed contract.
+func bindIChallengeFactory(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IChallengeFactoryABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IChallengeFactory *IChallengeFactoryRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IChallengeFactory.Contract.IChallengeFactoryCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IChallengeFactory *IChallengeFactoryRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IChallengeFactory.Contract.IChallengeFactoryTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IChallengeFactory *IChallengeFactoryRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IChallengeFactory.Contract.IChallengeFactoryTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IChallengeFactory *IChallengeFactoryCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IChallengeFactory.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IChallengeFactory *IChallengeFactoryTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IChallengeFactory.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IChallengeFactory *IChallengeFactoryTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IChallengeFactory.Contract.contract.Transact(opts, method, params...)
+}
+
+// GenerateCloneAddress is a free data retrieval call binding the contract method 0xc778f3f1.
+//
+// Solidity: function generateCloneAddress(address asserter, address challenger, bytes32 codeHash) constant returns(address)
+func (_IChallengeFactory *IChallengeFactoryCaller) GenerateCloneAddress(opts *bind.CallOpts, asserter common.Address, challenger common.Address, codeHash [32]byte) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _IChallengeFactory.contract.Call(opts, out, "generateCloneAddress", asserter, challenger, codeHash)
+	return *ret0, err
+}
+
+// GenerateCloneAddress is a free data retrieval call binding the contract method 0xc778f3f1.
+//
+// Solidity: function generateCloneAddress(address asserter, address challenger, bytes32 codeHash) constant returns(address)
+func (_IChallengeFactory *IChallengeFactorySession) GenerateCloneAddress(asserter common.Address, challenger common.Address, codeHash [32]byte) (common.Address, error) {
+	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, codeHash)
+}
+
+// GenerateCloneAddress is a free data retrieval call binding the contract method 0xc778f3f1.
+//
+// Solidity: function generateCloneAddress(address asserter, address challenger, bytes32 codeHash) constant returns(address)
+func (_IChallengeFactory *IChallengeFactoryCallerSession) GenerateCloneAddress(asserter common.Address, challenger common.Address, codeHash [32]byte) (common.Address, error) {
+	return _IChallengeFactory.Contract.GenerateCloneAddress(&_IChallengeFactory.CallOpts, asserter, challenger, codeHash)
+}
+
+// CreateChallenge is a paid mutator transaction binding the contract method 0xb1b12688.
+//
+// Solidity: function createChallenge(address _asserter, address _challenger, uint32 _challengePeriod, bytes32 _challengeHash, uint256 challengeType) returns(address)
+func (_IChallengeFactory *IChallengeFactoryTransactor) CreateChallenge(opts *bind.TransactOpts, _asserter common.Address, _challenger common.Address, _challengePeriod uint32, _challengeHash [32]byte, challengeType *big.Int) (*types.Transaction, error) {
+	return _IChallengeFactory.contract.Transact(opts, "createChallenge", _asserter, _challenger, _challengePeriod, _challengeHash, challengeType)
+}
+
+// CreateChallenge is a paid mutator transaction binding the contract method 0xb1b12688.
+//
+// Solidity: function createChallenge(address _asserter, address _challenger, uint32 _challengePeriod, bytes32 _challengeHash, uint256 challengeType) returns(address)
+func (_IChallengeFactory *IChallengeFactorySession) CreateChallenge(_asserter common.Address, _challenger common.Address, _challengePeriod uint32, _challengeHash [32]byte, challengeType *big.Int) (*types.Transaction, error) {
+	return _IChallengeFactory.Contract.CreateChallenge(&_IChallengeFactory.TransactOpts, _asserter, _challenger, _challengePeriod, _challengeHash, challengeType)
+}
+
+// CreateChallenge is a paid mutator transaction binding the contract method 0xb1b12688.
+//
+// Solidity: function createChallenge(address _asserter, address _challenger, uint32 _challengePeriod, bytes32 _challengeHash, uint256 challengeType) returns(address)
+func (_IChallengeFactory *IChallengeFactoryTransactorSession) CreateChallenge(_asserter common.Address, _challenger common.Address, _challengePeriod uint32, _challengeHash [32]byte, challengeType *big.Int) (*types.Transaction, error) {
+	return _IChallengeFactory.Contract.CreateChallenge(&_IChallengeFactory.TransactOpts, _asserter, _challenger, _challengePeriod, _challengeHash, challengeType)
 }
 
 // IGlobalPendingInboxABI is the input ABI used to generate the binding from.
-const IGlobalPendingInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vmId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes21\",\"name\":\"tokenType\",\"type\":\"bytes21\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"MessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"},{\"internalType\":\"bytes21\",\"name\":\"_tokenType\",\"type\":\"bytes21\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"pullPendingMessages\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerForInbox\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"},{\"internalType\":\"bytes21\",\"name\":\"_tokenType\",\"type\":\"bytes21\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IGlobalPendingInboxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vmId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes21\",\"name\":\"tokenType\",\"type\":\"bytes21\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"MessageDelivered\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"},{\"internalType\":\"bytes21\",\"name\":\"_tokenType\",\"type\":\"bytes21\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"}],\"name\":\"forwardMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"getPending\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerForInbox\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendEthMessage\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"},{\"internalType\":\"bytes21\",\"name\":\"_tokenType\",\"type\":\"bytes21\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"sendMessage\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"sendMessages\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IGlobalPendingInboxFuncSigs maps the 4-byte function signature to its string representation.
 var IGlobalPendingInboxFuncSigs = map[string]string{
 	"3bbc3c32": "forwardMessage(address,bytes21,uint256,bytes,bytes)",
-	"d106ec19": "pullPendingMessages()",
+	"11ae9ed2": "getPending()",
 	"f3972383": "registerForInbox()",
 	"3fc6eb80": "sendEthMessage(address,bytes)",
 	"626cef85": "sendMessage(address,bytes21,uint256,bytes)",
@@ -2230,25 +3713,25 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) ForwardMessage
 	return _IGlobalPendingInbox.Contract.ForwardMessage(&_IGlobalPendingInbox.TransactOpts, _destination, _tokenType, _amount, _data, _signature)
 }
 
-// PullPendingMessages is a paid mutator transaction binding the contract method 0xd106ec19.
+// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
 //
-// Solidity: function pullPendingMessages() returns(bytes32)
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) PullPendingMessages(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IGlobalPendingInbox.contract.Transact(opts, "pullPendingMessages")
+// Solidity: function getPending() returns(bytes32, uint256)
+func (_IGlobalPendingInbox *IGlobalPendingInboxTransactor) GetPending(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IGlobalPendingInbox.contract.Transact(opts, "getPending")
 }
 
-// PullPendingMessages is a paid mutator transaction binding the contract method 0xd106ec19.
+// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
 //
-// Solidity: function pullPendingMessages() returns(bytes32)
-func (_IGlobalPendingInbox *IGlobalPendingInboxSession) PullPendingMessages() (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.PullPendingMessages(&_IGlobalPendingInbox.TransactOpts)
+// Solidity: function getPending() returns(bytes32, uint256)
+func (_IGlobalPendingInbox *IGlobalPendingInboxSession) GetPending() (*types.Transaction, error) {
+	return _IGlobalPendingInbox.Contract.GetPending(&_IGlobalPendingInbox.TransactOpts)
 }
 
-// PullPendingMessages is a paid mutator transaction binding the contract method 0xd106ec19.
+// GetPending is a paid mutator transaction binding the contract method 0x11ae9ed2.
 //
-// Solidity: function pullPendingMessages() returns(bytes32)
-func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) PullPendingMessages() (*types.Transaction, error) {
-	return _IGlobalPendingInbox.Contract.PullPendingMessages(&_IGlobalPendingInbox.TransactOpts)
+// Solidity: function getPending() returns(bytes32, uint256)
+func (_IGlobalPendingInbox *IGlobalPendingInboxTransactorSession) GetPending() (*types.Transaction, error) {
+	return _IGlobalPendingInbox.Contract.GetPending(&_IGlobalPendingInbox.TransactOpts)
 }
 
 // RegisterForInbox is a paid mutator transaction binding the contract method 0xf3972383.
@@ -2482,19 +3965,1262 @@ func (_IGlobalPendingInbox *IGlobalPendingInboxFilterer) ParseMessageDelivered(l
 	return event, nil
 }
 
+// LeavesABI is the input ABI used to generate the binding from.
+const LeavesABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"RollupChallengeCompleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"}],\"name\":\"RollupChallengeStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupPruned\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"name\":\"RollupStakeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"toNodeHash\",\"type\":\"bytes32\"}],\"name\":\"RollupStakeMoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"}],\"name\":\"RollupStakeRefunded\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactory\",\"outputs\":[{\"internalType\":\"contractIChallengeFactory\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"newLocation\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"moveStake\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"location\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"}],\"name\":\"placeStake\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"from\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"leafProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"}],\"name\":\"pruneLeaf\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeConfirmed\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"disputableHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"latestConfirmedProof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"nodeProof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeMooted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakeOld\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"stakerAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadlineTicks\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"disputableNodeHashVal\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"childType\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"vmProtoStateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"leaf\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"recoverStakePassedDeadline\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startExecutionChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startMessagesChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startPendingTopChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// LeavesFuncSigs maps the 4-byte function signature to its string representation.
+var LeavesFuncSigs = map[string]string{
+	"5dbaf68b": "challengeFactory()",
+	"5f59b64b": "moveStake(bytes32,bytes32,bytes32[],bytes32[])",
+	"800360dc": "placeStake(bytes32,bytes32,bytes32[],bytes32[])",
+	"ff797273": "pruneLeaf(bytes32,bytes32,bytes32[],bytes32[])",
+	"7cfaaf67": "recoverStakeConfirmed(bytes32[])",
+	"8d28cd81": "recoverStakeMooted(bytes32,bytes32[],bytes32[])",
+	"113ec9d8": "recoverStakeOld(address,bytes32[])",
+	"6e8da939": "recoverStakePassedDeadline(address,uint256,bytes32,uint256,bytes32,bytes32,bytes32[])",
+	"396f51cf": "resolveChallenge(address,address)",
+	"2d4dce60": "startExecutionChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"9cb292b6": "startMessagesChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"863e78d5": "startPendingTopChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+}
+
+// LeavesBin is the compiled bytecode used for deploying new contracts.
+var LeavesBin = "0x608060405234801561001057600080fd5b50612109806100206000396000f3fe6080604052600436106100a75760003560e01c80637cfaaf67116100645780637cfaaf671461042f578063800360dc146104aa578063863e78d5146105745780638d28cd811461067f5780639cb292b614610751578063ff7972731461085c576100a7565b8063113ec9d8146100ac5780632d4dce6014610139578063396f51cf146102445780635dbaf68b1461027f5780635f59b64b146102b05780636e8da93914610387575b600080fd5b3480156100b857600080fd5b50610137600480360360408110156100cf57600080fd5b6001600160a01b038235169190810190604081016020820135600160201b8111156100f957600080fd5b82018360208201111561010b57600080fd5b803590602001918460208302840111600160201b8311171561012c57600080fd5b509092509050610933565b005b34801561014557600080fd5b50610137600480360361018081101561015d57600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b8111156101b057600080fd5b8201836020820111156101c257600080fd5b803590602001918460208302840111600160201b831117156101e357600080fd5b919390929091602081019035600160201b81111561020057600080fd5b82018360208201111561021257600080fd5b803590602001918460208302840111600160201b8311171561023357600080fd5b91935091508035906020013561097f565b34801561025057600080fd5b506101376004803603604081101561026757600080fd5b506001600160a01b0381358116916020013516610b00565b34801561028b57600080fd5b50610294610d73565b604080516001600160a01b039092168252519081900360200190f35b3480156102bc57600080fd5b50610137600480360360808110156102d357600080fd5b813591602081013591810190606081016040820135600160201b8111156102f957600080fd5b82018360208201111561030b57600080fd5b803590602001918460208302840111600160201b8311171561032c57600080fd5b919390929091602081019035600160201b81111561034957600080fd5b82018360208201111561035b57600080fd5b803590602001918460208302840111600160201b8311171561037c57600080fd5b509092509050610d82565b34801561039357600080fd5b50610137600480360360e08110156103aa57600080fd5b6001600160a01b038235169160208101359160408201359160608101359160808201359160a08101359181019060e0810160c0820135600160201b8111156103f157600080fd5b82018360208201111561040357600080fd5b803590602001918460208302840111600160201b8311171561042457600080fd5b509092509050610f30565b34801561043b57600080fd5b506101376004803603602081101561045257600080fd5b810190602081018135600160201b81111561046c57600080fd5b82018360208201111561047e57600080fd5b803590602001918460208302840111600160201b8311171561049f57600080fd5b5090925090506110e0565b610137600480360360808110156104c057600080fd5b813591602081013591810190606081016040820135600160201b8111156104e657600080fd5b8201836020820111156104f857600080fd5b803590602001918460208302840111600160201b8311171561051957600080fd5b919390929091602081019035600160201b81111561053657600080fd5b82018360208201111561054857600080fd5b803590602001918460208302840111600160201b8311171561056957600080fd5b509092509050611121565b34801561058057600080fd5b50610137600480360361018081101561059857600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b8111156105eb57600080fd5b8201836020820111156105fd57600080fd5b803590602001918460208302840111600160201b8311171561061e57600080fd5b919390929091602081019035600160201b81111561063b57600080fd5b82018360208201111561064d57600080fd5b803590602001918460208302840111600160201b8311171561066e57600080fd5b919350915080359060200135611268565b34801561068b57600080fd5b50610137600480360360608110156106a257600080fd5b81359190810190604081016020820135600160201b8111156106c357600080fd5b8201836020820111156106d557600080fd5b803590602001918460208302840111600160201b831117156106f657600080fd5b919390929091602081019035600160201b81111561071357600080fd5b82018360208201111561072557600080fd5b803590602001918460208302840111600160201b8311171561074657600080fd5b5090925090506112d9565b34801561075d57600080fd5b50610137600480360361018081101561077557600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b8111156107c857600080fd5b8201836020820111156107da57600080fd5b803590602001918460208302840111600160201b831117156107fb57600080fd5b919390929091602081019035600160201b81111561081857600080fd5b82018360208201111561082a57600080fd5b803590602001918460208302840111600160201b8311171561084b57600080fd5b91935091508035906020013561141f565b34801561086857600080fd5b506101376004803603608081101561087f57600080fd5b813591602081013591810190606081016040820135600160201b8111156108a557600080fd5b8201836020820111156108b757600080fd5b803590602001918460208302840111600160201b831117156108d857600080fd5b919390929091602081019035600160201b8111156108f557600080fd5b82018360208201111561090757600080fd5b803590602001918460208302840111600160201b8311171561092857600080fd5b509092509050611493565b8061093d57600080fd5b61097a838383808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152506115f092505050565b505050565b60408051808201909152600e81526d455845435f4348414c5f5459504560901b602082015260028a14610a305760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b838110156109f55781810151838201526020016109dd565b50505050905090810190601f168015610a225780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b50610af18d8d8d8d8d8d8d6002806020026040519081016040528092919082600260200280828437600081840152601f19601f8201169050808301925050505050508d8d80806020026020016040519081016040528093929190818152602001838360200280828437600081840152601f19601f820116905080830192505050505050508c8c808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152508e92508d91506116d39050565b50505050505050505050505050565b600080546040805163c778f3f160e01b81526001600160a01b038681166004830152858116602483015233803f60448401819052935190959394919091169163c778f3f1916064808301926020929190829003018186803b158015610b6457600080fd5b505afa158015610b78573d6000803e3d6000fd5b505050506040513d6020811015610b8e57600080fd5b5051600080546040805163c778f3f160e01b81526001600160a01b038a811660048301528981166024830152604482018890529151949550929391169163c778f3f1916064808301926020929190829003018186803b158015610bf057600080fd5b505afa158015610c04573d6000803e3d6000fd5b505050506040513d6020811015610c1a57600080fd5b505190506001600160a01b038216331480610c3d57506001600160a01b03811633145b6040518060400160405280600f81526020016e2922a9afa1a420a62fa9a2a72222a960891b81525090610cb15760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b506000610cbd87611c45565b6001546040519192506001600160a01b0389169160026001600160801b039283160490911680156108fc02916000818181858888f19350505050158015610d08573d6000803e3d6000fd5b5060018101805460ff60801b19169055610d2186611cd6565b604080513381526001600160a01b03808a16602083015288168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050505050565b6000546001600160a01b031681565b6000610d8d33611c45565b9050610d9886611d17565b6040518060400160405280600981526020016826a7ab22afa622a0a360b91b81525090610e065760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b50610e7b8160000154888888888080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808c0282810182019093528b82529093508b92508a918291850190849080828437600092019190915250611d2c92505050565b604051806040016040528060088152602001674d4f56455f4c4f4360c01b81525090610ee85760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b50868155604080513381526020810189905281517fbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4929181900390910190a150505050505050565b6000610f3b89611c45565b90506000610f5082600001548a8a8a8a611d55565b9050610f5b89611d98565b431015604051806040016040528060138152602001725245434f565f444541444c494e455f54494d4560681b81525090610fd65760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b506110158186868680806020026020016040519081016040528093929190818152602001838360200280828437600092019190915250611d9f92505050565b604051806040016040528060148152602001732922a1a7ab2fa222a0a22624a722afa82927a7a360611b8152509061108e5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b506110988a611db8565b604080516001600160a01b038c16815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a150505050505050505050565b61111d338383808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152506115f092505050565b5050565b61112a86611d17565b61116a576040805162461bcd60e51b815260206004820152600c60248201526b34b73b30b634b2103632b0b360a11b604482015290519081900360640190fd5b6111e1611175611e01565b868887878080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808b0282810182019093528a82529093508a925089918291850190849080828437600092019190915250611d2c92505050565b6040518060400160405280601081526020016f282620a1a2afa820aa242fa82927a7a360811b815250906112565760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b5061126085611e07565b505050505050565b60408051808201909152600d81526c504e445f4348414c5f5459504560981b60208201528915610a305760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b60006112e433611c45565b90506113618160000154876112f7611e01565b88888080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808c0282810182019093528b82529093508b92508a918291850190849080828437600092019190915250611fc492505050565b604051806040016040528060148152602001732922a1a7ab2fa1a7a7232624a1aa2fa82927a7a360611b815250906113da5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b506113e433611db8565b6040805133815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a1505050505050565b60408051808201909152600e81526d4d5347535f4348414c5f5459504560901b602082015260018a14610a305760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b61149c86611d17565b6114dc576040805162461bcd60e51b815260206004820152600c60248201526b34b73b30b634b2103632b0b360a11b604482015290519081900360640190fd5b61155385876114e9611e01565b87878080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525050604080516020808b0282810182019093528a82529093508a925089918291850190849080828437600092019190915250611fc492505050565b61159d576040805162461bcd60e51b815260206004820152601660248201527524b73b30b634b21031b7b7333634b1ba10383937b7b360511b604482015290519081900360640190fd5b600086815260056020908152604091829020805460ff19169055815188815291517f3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f44909509281900390910190a1505050505050565b60006115fb83611c45565b9050611613816000015461160d611e01565b84611d9f565b6040518060400160405280601081526020016f2922a1a7ab2fa820aa242fa82927a7a360811b815250906116885760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b5061169283611db8565b604080516001600160a01b038516815290517f953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c9181900360200190a1505050565b60006116de8c611c45565b905060006116eb8c611c45565b60018301549091508a90611707906001600160801b0316611d98565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b8152509061177a5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b5060018101548a90611794906001600160801b0316611d98565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b815250906118075760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156118875760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff16156119075760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b5060408051808201909152600a8152692a2ca822afa7a92222a960b11b6020820152888a106119775760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b506119986119908c8c878d8c60005b6020020151611d55565b835488611d9f565b6040518060400160405280600a81526020016929aa2598afa82927a7a360b11b81525090611a075760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b50611a22611a1a8c8c868c8c6001611986565b825487611d9f565b6040518060400160405280600a81526020016929aa25992fa82927a7a360b11b81525090611a915760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff02191690831515021790555060008060009054906101000a90046001600160a01b03166001600160a01b031663b1b126888f8f6000898f6040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b031681526020018463ffffffff16815260200183815260200182815260200195505050505050602060405180830381600087803b158015611b7357600080fd5b505af1158015611b87573d6000803e3d6000fd5b505050506040513d6020811015611b9d57600080fd5b810190808051906020019092919050505090507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f8e8e8c8460405180856001600160a01b03166001600160a01b03168152602001846001600160a01b03166001600160a01b03168152602001838152602001826001600160a01b03166001600160a01b0316815260200194505050505060405180910390a15050505050505050505050505050565b6001600160a01b038116600090815260026020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b9383019390935291611ccf5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b5092915050565b6001600160a01b03166000908152600260205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560038054600019019055565b60009081526005602052604090205460ff1690565b6000611d39868685611d9f565b8015611d4b5750611d4b858584611d9f565b9695505050505050565b6000611d4b868387878760405160200180848152602001838152602001828152602001935050505060405160208183030381529060405280519060200120612016565b6132c80290565b6000611db084848460008651612069565b949350505050565b611dc181611cd6565b6001546040516001600160a01b038316916001600160801b031680156108fc02916000818181858888f1935050505015801561111d573d6000803e3d6000fd5b60045490565b60015460408051808201909152600781526614d512d7d0535560ca1b6020820152906001600160801b03163414611e7f5760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b5033600090815260026020908152604091829020548251808401909352600c83526b105314911657d4d51052d15160a21b91830191909152611f025760405162461bcd60e51b81526020600482018181528351602484015283519092839260449091019190850190808383600083156109f55781810151838201526020016109dd565b506040805160608082018352838252436001600160801b03818116602080860191825260008688018181523380835260028452918990209751885592516001978801805494516fffffffffffffffffffffffffffffffff19909516919095161760ff60801b1916600160801b931515939093029290921790925560038054909501909455845193845283018590528284015291517f85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba929181900390910190a150565b600081600081518110611fd357fe5b602002602001015183600081518110611fe857fe5b6020026020010151141580156120045750612004868685611d9f565b8015611d4b5750611d4b868584611d9f565b6040805160208082019490945280820192909252805180830382018152606083018252805190840120608083019490945260a0808301949094528051808303909401845260c09091019052815191012090565b600085835b838110156120c7578186828151811061208357fe5b60200260200101516040516020018083815260200182815260200192505050604051602081830303815290604052805190602001209150808060010191505061206e565b509094149594505050505056fea265627a7a72315820bed796b9517e55dcbc6ac555fa1ac4e9f38fa33748c0366463aa3300dadec3b664736f6c634300050f0032"
+
+// DeployLeaves deploys a new Ethereum contract, binding an instance of Leaves to it.
+func DeployLeaves(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Leaves, error) {
+	parsed, err := abi.JSON(strings.NewReader(LeavesABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(LeavesBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Leaves{LeavesCaller: LeavesCaller{contract: contract}, LeavesTransactor: LeavesTransactor{contract: contract}, LeavesFilterer: LeavesFilterer{contract: contract}}, nil
+}
+
+// Leaves is an auto generated Go binding around an Ethereum contract.
+type Leaves struct {
+	LeavesCaller     // Read-only binding to the contract
+	LeavesTransactor // Write-only binding to the contract
+	LeavesFilterer   // Log filterer for contract events
+}
+
+// LeavesCaller is an auto generated read-only Go binding around an Ethereum contract.
+type LeavesCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// LeavesTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type LeavesTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// LeavesFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type LeavesFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// LeavesSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type LeavesSession struct {
+	Contract     *Leaves           // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// LeavesCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type LeavesCallerSession struct {
+	Contract *LeavesCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts // Call options to use throughout this session
+}
+
+// LeavesTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type LeavesTransactorSession struct {
+	Contract     *LeavesTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// LeavesRaw is an auto generated low-level Go binding around an Ethereum contract.
+type LeavesRaw struct {
+	Contract *Leaves // Generic contract binding to access the raw methods on
+}
+
+// LeavesCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type LeavesCallerRaw struct {
+	Contract *LeavesCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// LeavesTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type LeavesTransactorRaw struct {
+	Contract *LeavesTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewLeaves creates a new instance of Leaves, bound to a specific deployed contract.
+func NewLeaves(address common.Address, backend bind.ContractBackend) (*Leaves, error) {
+	contract, err := bindLeaves(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Leaves{LeavesCaller: LeavesCaller{contract: contract}, LeavesTransactor: LeavesTransactor{contract: contract}, LeavesFilterer: LeavesFilterer{contract: contract}}, nil
+}
+
+// NewLeavesCaller creates a new read-only instance of Leaves, bound to a specific deployed contract.
+func NewLeavesCaller(address common.Address, caller bind.ContractCaller) (*LeavesCaller, error) {
+	contract, err := bindLeaves(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesCaller{contract: contract}, nil
+}
+
+// NewLeavesTransactor creates a new write-only instance of Leaves, bound to a specific deployed contract.
+func NewLeavesTransactor(address common.Address, transactor bind.ContractTransactor) (*LeavesTransactor, error) {
+	contract, err := bindLeaves(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesTransactor{contract: contract}, nil
+}
+
+// NewLeavesFilterer creates a new log filterer instance of Leaves, bound to a specific deployed contract.
+func NewLeavesFilterer(address common.Address, filterer bind.ContractFilterer) (*LeavesFilterer, error) {
+	contract, err := bindLeaves(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesFilterer{contract: contract}, nil
+}
+
+// bindLeaves binds a generic wrapper to an already deployed contract.
+func bindLeaves(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(LeavesABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Leaves *LeavesRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Leaves.Contract.LeavesCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Leaves *LeavesRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Leaves.Contract.LeavesTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Leaves *LeavesRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Leaves.Contract.LeavesTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Leaves *LeavesCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Leaves.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Leaves *LeavesTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Leaves.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Leaves *LeavesTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Leaves.Contract.contract.Transact(opts, method, params...)
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Leaves *LeavesCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Leaves.contract.Call(opts, out, "challengeFactory")
+	return *ret0, err
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Leaves *LeavesSession) ChallengeFactory() (common.Address, error) {
+	return _Leaves.Contract.ChallengeFactory(&_Leaves.CallOpts)
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Leaves *LeavesCallerSession) ChallengeFactory() (common.Address, error) {
+	return _Leaves.Contract.ChallengeFactory(&_Leaves.CallOpts)
+}
+
+// MoveStake is a paid mutator transaction binding the contract method 0x5f59b64b.
+//
+// Solidity: function moveStake(bytes32 newLocation, bytes32 _leaf, bytes32[] proof1, bytes32[] proof2) returns()
+func (_Leaves *LeavesTransactor) MoveStake(opts *bind.TransactOpts, newLocation [32]byte, _leaf [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "moveStake", newLocation, _leaf, proof1, proof2)
+}
+
+// MoveStake is a paid mutator transaction binding the contract method 0x5f59b64b.
+//
+// Solidity: function moveStake(bytes32 newLocation, bytes32 _leaf, bytes32[] proof1, bytes32[] proof2) returns()
+func (_Leaves *LeavesSession) MoveStake(newLocation [32]byte, _leaf [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.MoveStake(&_Leaves.TransactOpts, newLocation, _leaf, proof1, proof2)
+}
+
+// MoveStake is a paid mutator transaction binding the contract method 0x5f59b64b.
+//
+// Solidity: function moveStake(bytes32 newLocation, bytes32 _leaf, bytes32[] proof1, bytes32[] proof2) returns()
+func (_Leaves *LeavesTransactorSession) MoveStake(newLocation [32]byte, _leaf [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.MoveStake(&_Leaves.TransactOpts, newLocation, _leaf, proof1, proof2)
+}
+
+// PlaceStake is a paid mutator transaction binding the contract method 0x800360dc.
+//
+// Solidity: function placeStake(bytes32 _leaf, bytes32 location, bytes32[] proof1, bytes32[] proof2) returns()
+func (_Leaves *LeavesTransactor) PlaceStake(opts *bind.TransactOpts, _leaf [32]byte, location [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "placeStake", _leaf, location, proof1, proof2)
+}
+
+// PlaceStake is a paid mutator transaction binding the contract method 0x800360dc.
+//
+// Solidity: function placeStake(bytes32 _leaf, bytes32 location, bytes32[] proof1, bytes32[] proof2) returns()
+func (_Leaves *LeavesSession) PlaceStake(_leaf [32]byte, location [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.PlaceStake(&_Leaves.TransactOpts, _leaf, location, proof1, proof2)
+}
+
+// PlaceStake is a paid mutator transaction binding the contract method 0x800360dc.
+//
+// Solidity: function placeStake(bytes32 _leaf, bytes32 location, bytes32[] proof1, bytes32[] proof2) returns()
+func (_Leaves *LeavesTransactorSession) PlaceStake(_leaf [32]byte, location [32]byte, proof1 [][32]byte, proof2 [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.PlaceStake(&_Leaves.TransactOpts, _leaf, location, proof1, proof2)
+}
+
+// PruneLeaf is a paid mutator transaction binding the contract method 0xff797273.
+//
+// Solidity: function pruneLeaf(bytes32 _leaf, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
+func (_Leaves *LeavesTransactor) PruneLeaf(opts *bind.TransactOpts, _leaf [32]byte, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "pruneLeaf", _leaf, from, leafProof, latestConfirmedProof)
+}
+
+// PruneLeaf is a paid mutator transaction binding the contract method 0xff797273.
+//
+// Solidity: function pruneLeaf(bytes32 _leaf, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
+func (_Leaves *LeavesSession) PruneLeaf(_leaf [32]byte, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.PruneLeaf(&_Leaves.TransactOpts, _leaf, from, leafProof, latestConfirmedProof)
+}
+
+// PruneLeaf is a paid mutator transaction binding the contract method 0xff797273.
+//
+// Solidity: function pruneLeaf(bytes32 _leaf, bytes32 from, bytes32[] leafProof, bytes32[] latestConfirmedProof) returns()
+func (_Leaves *LeavesTransactorSession) PruneLeaf(_leaf [32]byte, from [32]byte, leafProof [][32]byte, latestConfirmedProof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.PruneLeaf(&_Leaves.TransactOpts, _leaf, from, leafProof, latestConfirmedProof)
+}
+
+// RecoverStakeConfirmed is a paid mutator transaction binding the contract method 0x7cfaaf67.
+//
+// Solidity: function recoverStakeConfirmed(bytes32[] proof) returns()
+func (_Leaves *LeavesTransactor) RecoverStakeConfirmed(opts *bind.TransactOpts, proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "recoverStakeConfirmed", proof)
+}
+
+// RecoverStakeConfirmed is a paid mutator transaction binding the contract method 0x7cfaaf67.
+//
+// Solidity: function recoverStakeConfirmed(bytes32[] proof) returns()
+func (_Leaves *LeavesSession) RecoverStakeConfirmed(proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakeConfirmed(&_Leaves.TransactOpts, proof)
+}
+
+// RecoverStakeConfirmed is a paid mutator transaction binding the contract method 0x7cfaaf67.
+//
+// Solidity: function recoverStakeConfirmed(bytes32[] proof) returns()
+func (_Leaves *LeavesTransactorSession) RecoverStakeConfirmed(proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakeConfirmed(&_Leaves.TransactOpts, proof)
+}
+
+// RecoverStakeMooted is a paid mutator transaction binding the contract method 0x8d28cd81.
+//
+// Solidity: function recoverStakeMooted(bytes32 disputableHash, bytes32[] latestConfirmedProof, bytes32[] nodeProof) returns()
+func (_Leaves *LeavesTransactor) RecoverStakeMooted(opts *bind.TransactOpts, disputableHash [32]byte, latestConfirmedProof [][32]byte, nodeProof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "recoverStakeMooted", disputableHash, latestConfirmedProof, nodeProof)
+}
+
+// RecoverStakeMooted is a paid mutator transaction binding the contract method 0x8d28cd81.
+//
+// Solidity: function recoverStakeMooted(bytes32 disputableHash, bytes32[] latestConfirmedProof, bytes32[] nodeProof) returns()
+func (_Leaves *LeavesSession) RecoverStakeMooted(disputableHash [32]byte, latestConfirmedProof [][32]byte, nodeProof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakeMooted(&_Leaves.TransactOpts, disputableHash, latestConfirmedProof, nodeProof)
+}
+
+// RecoverStakeMooted is a paid mutator transaction binding the contract method 0x8d28cd81.
+//
+// Solidity: function recoverStakeMooted(bytes32 disputableHash, bytes32[] latestConfirmedProof, bytes32[] nodeProof) returns()
+func (_Leaves *LeavesTransactorSession) RecoverStakeMooted(disputableHash [32]byte, latestConfirmedProof [][32]byte, nodeProof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakeMooted(&_Leaves.TransactOpts, disputableHash, latestConfirmedProof, nodeProof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_Leaves *LeavesTransactor) RecoverStakeOld(opts *bind.TransactOpts, stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "recoverStakeOld", stakerAddress, proof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_Leaves *LeavesSession) RecoverStakeOld(stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakeOld(&_Leaves.TransactOpts, stakerAddress, proof)
+}
+
+// RecoverStakeOld is a paid mutator transaction binding the contract method 0x113ec9d8.
+//
+// Solidity: function recoverStakeOld(address stakerAddress, bytes32[] proof) returns()
+func (_Leaves *LeavesTransactorSession) RecoverStakeOld(stakerAddress common.Address, proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakeOld(&_Leaves.TransactOpts, stakerAddress, proof)
+}
+
+// RecoverStakePassedDeadline is a paid mutator transaction binding the contract method 0x6e8da939.
+//
+// Solidity: function recoverStakePassedDeadline(address stakerAddress, uint256 deadlineTicks, bytes32 disputableNodeHashVal, uint256 childType, bytes32 vmProtoStateHash, bytes32 leaf, bytes32[] proof) returns()
+func (_Leaves *LeavesTransactor) RecoverStakePassedDeadline(opts *bind.TransactOpts, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType *big.Int, vmProtoStateHash [32]byte, leaf [32]byte, proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "recoverStakePassedDeadline", stakerAddress, deadlineTicks, disputableNodeHashVal, childType, vmProtoStateHash, leaf, proof)
+}
+
+// RecoverStakePassedDeadline is a paid mutator transaction binding the contract method 0x6e8da939.
+//
+// Solidity: function recoverStakePassedDeadline(address stakerAddress, uint256 deadlineTicks, bytes32 disputableNodeHashVal, uint256 childType, bytes32 vmProtoStateHash, bytes32 leaf, bytes32[] proof) returns()
+func (_Leaves *LeavesSession) RecoverStakePassedDeadline(stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType *big.Int, vmProtoStateHash [32]byte, leaf [32]byte, proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakePassedDeadline(&_Leaves.TransactOpts, stakerAddress, deadlineTicks, disputableNodeHashVal, childType, vmProtoStateHash, leaf, proof)
+}
+
+// RecoverStakePassedDeadline is a paid mutator transaction binding the contract method 0x6e8da939.
+//
+// Solidity: function recoverStakePassedDeadline(address stakerAddress, uint256 deadlineTicks, bytes32 disputableNodeHashVal, uint256 childType, bytes32 vmProtoStateHash, bytes32 leaf, bytes32[] proof) returns()
+func (_Leaves *LeavesTransactorSession) RecoverStakePassedDeadline(stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType *big.Int, vmProtoStateHash [32]byte, leaf [32]byte, proof [][32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.RecoverStakePassedDeadline(&_Leaves.TransactOpts, stakerAddress, deadlineTicks, disputableNodeHashVal, childType, vmProtoStateHash, leaf, proof)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Leaves *LeavesTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "resolveChallenge", winner, loser)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Leaves *LeavesSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Leaves.Contract.ResolveChallenge(&_Leaves.TransactOpts, winner, loser)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Leaves *LeavesTransactorSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Leaves.Contract.ResolveChallenge(&_Leaves.TransactOpts, winner, loser)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesTransactor) StartExecutionChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "startExecutionChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.StartExecutionChallenge(&_Leaves.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesTransactorSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.StartExecutionChallenge(&_Leaves.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesTransactor) StartMessagesChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "startMessagesChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.StartMessagesChallenge(&_Leaves.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesTransactorSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.StartMessagesChallenge(&_Leaves.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesTransactor) StartPendingTopChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.contract.Transact(opts, "startPendingTopChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.StartPendingTopChallenge(&_Leaves.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Leaves *LeavesTransactorSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Leaves.Contract.StartPendingTopChallenge(&_Leaves.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// LeavesRollupChallengeCompletedIterator is returned from FilterRollupChallengeCompleted and is used to iterate over the raw logs and unpacked data for RollupChallengeCompleted events raised by the Leaves contract.
+type LeavesRollupChallengeCompletedIterator struct {
+	Event *LeavesRollupChallengeCompleted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LeavesRollupChallengeCompletedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LeavesRollupChallengeCompleted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LeavesRollupChallengeCompleted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LeavesRollupChallengeCompletedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LeavesRollupChallengeCompletedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LeavesRollupChallengeCompleted represents a RollupChallengeCompleted event raised by the Leaves contract.
+type LeavesRollupChallengeCompleted struct {
+	ChallengeContract common.Address
+	Winner            common.Address
+	Loser             common.Address
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupChallengeCompleted is a free log retrieval operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Leaves *LeavesFilterer) FilterRollupChallengeCompleted(opts *bind.FilterOpts) (*LeavesRollupChallengeCompletedIterator, error) {
+
+	logs, sub, err := _Leaves.contract.FilterLogs(opts, "RollupChallengeCompleted")
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesRollupChallengeCompletedIterator{contract: _Leaves.contract, event: "RollupChallengeCompleted", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupChallengeCompleted is a free log subscription operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Leaves *LeavesFilterer) WatchRollupChallengeCompleted(opts *bind.WatchOpts, sink chan<- *LeavesRollupChallengeCompleted) (event.Subscription, error) {
+
+	logs, sub, err := _Leaves.contract.WatchLogs(opts, "RollupChallengeCompleted")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LeavesRollupChallengeCompleted)
+				if err := _Leaves.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupChallengeCompleted is a log parse operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Leaves *LeavesFilterer) ParseRollupChallengeCompleted(log types.Log) (*LeavesRollupChallengeCompleted, error) {
+	event := new(LeavesRollupChallengeCompleted)
+	if err := _Leaves.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// LeavesRollupChallengeStartedIterator is returned from FilterRollupChallengeStarted and is used to iterate over the raw logs and unpacked data for RollupChallengeStarted events raised by the Leaves contract.
+type LeavesRollupChallengeStartedIterator struct {
+	Event *LeavesRollupChallengeStarted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LeavesRollupChallengeStartedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LeavesRollupChallengeStarted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LeavesRollupChallengeStarted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LeavesRollupChallengeStartedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LeavesRollupChallengeStartedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LeavesRollupChallengeStarted represents a RollupChallengeStarted event raised by the Leaves contract.
+type LeavesRollupChallengeStarted struct {
+	Asserter          common.Address
+	Challenger        common.Address
+	ChallengeType     *big.Int
+	ChallengeContract common.Address
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupChallengeStarted is a free log retrieval operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Leaves *LeavesFilterer) FilterRollupChallengeStarted(opts *bind.FilterOpts) (*LeavesRollupChallengeStartedIterator, error) {
+
+	logs, sub, err := _Leaves.contract.FilterLogs(opts, "RollupChallengeStarted")
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesRollupChallengeStartedIterator{contract: _Leaves.contract, event: "RollupChallengeStarted", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupChallengeStarted is a free log subscription operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Leaves *LeavesFilterer) WatchRollupChallengeStarted(opts *bind.WatchOpts, sink chan<- *LeavesRollupChallengeStarted) (event.Subscription, error) {
+
+	logs, sub, err := _Leaves.contract.WatchLogs(opts, "RollupChallengeStarted")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LeavesRollupChallengeStarted)
+				if err := _Leaves.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupChallengeStarted is a log parse operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Leaves *LeavesFilterer) ParseRollupChallengeStarted(log types.Log) (*LeavesRollupChallengeStarted, error) {
+	event := new(LeavesRollupChallengeStarted)
+	if err := _Leaves.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// LeavesRollupPrunedIterator is returned from FilterRollupPruned and is used to iterate over the raw logs and unpacked data for RollupPruned events raised by the Leaves contract.
+type LeavesRollupPrunedIterator struct {
+	Event *LeavesRollupPruned // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LeavesRollupPrunedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LeavesRollupPruned)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LeavesRollupPruned)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LeavesRollupPrunedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LeavesRollupPrunedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LeavesRollupPruned represents a RollupPruned event raised by the Leaves contract.
+type LeavesRollupPruned struct {
+	NodeHash [32]byte
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupPruned is a free log retrieval operation binding the contract event 0x3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f4490950.
+//
+// Solidity: event RollupPruned(bytes32 nodeHash)
+func (_Leaves *LeavesFilterer) FilterRollupPruned(opts *bind.FilterOpts) (*LeavesRollupPrunedIterator, error) {
+
+	logs, sub, err := _Leaves.contract.FilterLogs(opts, "RollupPruned")
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesRollupPrunedIterator{contract: _Leaves.contract, event: "RollupPruned", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupPruned is a free log subscription operation binding the contract event 0x3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f4490950.
+//
+// Solidity: event RollupPruned(bytes32 nodeHash)
+func (_Leaves *LeavesFilterer) WatchRollupPruned(opts *bind.WatchOpts, sink chan<- *LeavesRollupPruned) (event.Subscription, error) {
+
+	logs, sub, err := _Leaves.contract.WatchLogs(opts, "RollupPruned")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LeavesRollupPruned)
+				if err := _Leaves.contract.UnpackLog(event, "RollupPruned", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupPruned is a log parse operation binding the contract event 0x3d3e2ada9638548d1bb115fd766ef675213d953efe8d433bbd8d6718f4490950.
+//
+// Solidity: event RollupPruned(bytes32 nodeHash)
+func (_Leaves *LeavesFilterer) ParseRollupPruned(log types.Log) (*LeavesRollupPruned, error) {
+	event := new(LeavesRollupPruned)
+	if err := _Leaves.contract.UnpackLog(event, "RollupPruned", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// LeavesRollupStakeCreatedIterator is returned from FilterRollupStakeCreated and is used to iterate over the raw logs and unpacked data for RollupStakeCreated events raised by the Leaves contract.
+type LeavesRollupStakeCreatedIterator struct {
+	Event *LeavesRollupStakeCreated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LeavesRollupStakeCreatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LeavesRollupStakeCreated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LeavesRollupStakeCreated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LeavesRollupStakeCreatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LeavesRollupStakeCreatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LeavesRollupStakeCreated represents a RollupStakeCreated event raised by the Leaves contract.
+type LeavesRollupStakeCreated struct {
+	Staker      common.Address
+	NodeHash    [32]byte
+	BlockNumber *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupStakeCreated is a free log retrieval operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Leaves *LeavesFilterer) FilterRollupStakeCreated(opts *bind.FilterOpts) (*LeavesRollupStakeCreatedIterator, error) {
+
+	logs, sub, err := _Leaves.contract.FilterLogs(opts, "RollupStakeCreated")
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesRollupStakeCreatedIterator{contract: _Leaves.contract, event: "RollupStakeCreated", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupStakeCreated is a free log subscription operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Leaves *LeavesFilterer) WatchRollupStakeCreated(opts *bind.WatchOpts, sink chan<- *LeavesRollupStakeCreated) (event.Subscription, error) {
+
+	logs, sub, err := _Leaves.contract.WatchLogs(opts, "RollupStakeCreated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LeavesRollupStakeCreated)
+				if err := _Leaves.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupStakeCreated is a log parse operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Leaves *LeavesFilterer) ParseRollupStakeCreated(log types.Log) (*LeavesRollupStakeCreated, error) {
+	event := new(LeavesRollupStakeCreated)
+	if err := _Leaves.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// LeavesRollupStakeMovedIterator is returned from FilterRollupStakeMoved and is used to iterate over the raw logs and unpacked data for RollupStakeMoved events raised by the Leaves contract.
+type LeavesRollupStakeMovedIterator struct {
+	Event *LeavesRollupStakeMoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LeavesRollupStakeMovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LeavesRollupStakeMoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LeavesRollupStakeMoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LeavesRollupStakeMovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LeavesRollupStakeMovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LeavesRollupStakeMoved represents a RollupStakeMoved event raised by the Leaves contract.
+type LeavesRollupStakeMoved struct {
+	Staker     common.Address
+	ToNodeHash [32]byte
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupStakeMoved is a free log retrieval operation binding the contract event 0xbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4.
+//
+// Solidity: event RollupStakeMoved(address staker, bytes32 toNodeHash)
+func (_Leaves *LeavesFilterer) FilterRollupStakeMoved(opts *bind.FilterOpts) (*LeavesRollupStakeMovedIterator, error) {
+
+	logs, sub, err := _Leaves.contract.FilterLogs(opts, "RollupStakeMoved")
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesRollupStakeMovedIterator{contract: _Leaves.contract, event: "RollupStakeMoved", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupStakeMoved is a free log subscription operation binding the contract event 0xbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4.
+//
+// Solidity: event RollupStakeMoved(address staker, bytes32 toNodeHash)
+func (_Leaves *LeavesFilterer) WatchRollupStakeMoved(opts *bind.WatchOpts, sink chan<- *LeavesRollupStakeMoved) (event.Subscription, error) {
+
+	logs, sub, err := _Leaves.contract.WatchLogs(opts, "RollupStakeMoved")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LeavesRollupStakeMoved)
+				if err := _Leaves.contract.UnpackLog(event, "RollupStakeMoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupStakeMoved is a log parse operation binding the contract event 0xbe690ac5fe353c094bcc6f187eeb841c0ca61b6edf32c142eadad655b7d173f4.
+//
+// Solidity: event RollupStakeMoved(address staker, bytes32 toNodeHash)
+func (_Leaves *LeavesFilterer) ParseRollupStakeMoved(log types.Log) (*LeavesRollupStakeMoved, error) {
+	event := new(LeavesRollupStakeMoved)
+	if err := _Leaves.contract.UnpackLog(event, "RollupStakeMoved", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// LeavesRollupStakeRefundedIterator is returned from FilterRollupStakeRefunded and is used to iterate over the raw logs and unpacked data for RollupStakeRefunded events raised by the Leaves contract.
+type LeavesRollupStakeRefundedIterator struct {
+	Event *LeavesRollupStakeRefunded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LeavesRollupStakeRefundedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LeavesRollupStakeRefunded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LeavesRollupStakeRefunded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LeavesRollupStakeRefundedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LeavesRollupStakeRefundedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LeavesRollupStakeRefunded represents a RollupStakeRefunded event raised by the Leaves contract.
+type LeavesRollupStakeRefunded struct {
+	Staker common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupStakeRefunded is a free log retrieval operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
+//
+// Solidity: event RollupStakeRefunded(address staker)
+func (_Leaves *LeavesFilterer) FilterRollupStakeRefunded(opts *bind.FilterOpts) (*LeavesRollupStakeRefundedIterator, error) {
+
+	logs, sub, err := _Leaves.contract.FilterLogs(opts, "RollupStakeRefunded")
+	if err != nil {
+		return nil, err
+	}
+	return &LeavesRollupStakeRefundedIterator{contract: _Leaves.contract, event: "RollupStakeRefunded", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupStakeRefunded is a free log subscription operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
+//
+// Solidity: event RollupStakeRefunded(address staker)
+func (_Leaves *LeavesFilterer) WatchRollupStakeRefunded(opts *bind.WatchOpts, sink chan<- *LeavesRollupStakeRefunded) (event.Subscription, error) {
+
+	logs, sub, err := _Leaves.contract.WatchLogs(opts, "RollupStakeRefunded")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LeavesRollupStakeRefunded)
+				if err := _Leaves.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupStakeRefunded is a log parse operation binding the contract event 0x953ab9eece73c907353307064109cf873462177a0e358e463fd89f5b206daa6c.
+//
+// Solidity: event RollupStakeRefunded(address staker)
+func (_Leaves *LeavesFilterer) ParseRollupStakeRefunded(log types.Log) (*LeavesRollupStakeRefunded, error) {
+	event := new(LeavesRollupStakeRefunded)
+	if err := _Leaves.contract.UnpackLog(event, "RollupStakeRefunded", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 // ProtocolABI is the input ABI used to generate the binding from.
-const ProtocolABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_afterHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"_numSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_numGas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"_firstMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_firstLogHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastLogHash\",\"type\":\"bytes32\"}],\"name\":\"generateAssertionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"generateLastMessageHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_data\",\"type\":\"bytes32\"},{\"internalType\":\"bytes21\",\"name\":\"_tokenType\",\"type\":\"bytes21\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"}],\"name\":\"generateMessageStubHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint64[2]\",\"name\":\"_timeBounds\",\"type\":\"uint64[2]\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeInbox\",\"type\":\"bytes32\"}],\"name\":\"generatePreconditionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const ProtocolABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"pending\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"message\",\"type\":\"bytes32\"}],\"name\":\"addMessageToPending\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"inbox\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"messages\",\"type\":\"bytes32\"}],\"name\":\"addMessagesToInbox\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_afterHash\",\"type\":\"bytes32\"},{\"internalType\":\"bool\",\"name\":\"_didInboxInsn\",\"type\":\"bool\"},{\"internalType\":\"uint32\",\"name\":\"_numSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint64\",\"name\":\"_numGas\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"_firstMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastMessageHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_firstLogHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_lastLogHash\",\"type\":\"bytes32\"}],\"name\":\"generateAssertionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_messages\",\"type\":\"bytes\"}],\"name\":\"generateLastMessageHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_data\",\"type\":\"bytes32\"},{\"internalType\":\"bytes21\",\"name\":\"_tokenType\",\"type\":\"bytes21\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"}],\"name\":\"generateMessageStubHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_beforeHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint128[2]\",\"name\":\"_timeBounds\",\"type\":\"uint128[2]\"},{\"internalType\":\"bytes32\",\"name\":\"_beforeInbox\",\"type\":\"bytes32\"}],\"name\":\"generatePreconditionHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // ProtocolFuncSigs maps the 4-byte function signature to its string representation.
 var ProtocolFuncSigs = map[string]string{
-	"1cd765fa": "generateAssertionHash(bytes32,uint32,uint64,bytes32,bytes32,bytes32,bytes32)",
+	"78655081": "addMessageToPending(bytes32,bytes32)",
+	"5559fd38": "addMessagesToInbox(bytes32,bytes32)",
+	"1b0aa96b": "generateAssertionHash(bytes32,bool,uint32,uint64,bytes32,bytes32,bytes32,bytes32)",
 	"e83f4bfe": "generateLastMessageHash(bytes)",
 	"004c28f6": "generateMessageStubHash(bytes32,bytes21,uint256,address)",
-	"85ecb92a": "generatePreconditionHash(bytes32,uint64[2],bytes32)",
+	"06a36a46": "generatePreconditionHash(bytes32,uint128[2],bytes32)",
 }
 
 // ProtocolBin is the compiled bytecode used for deploying new contracts.
-var ProtocolBin = "0x610a93610026600b82828239805160001a60731461001957fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106100555760003560e01c80624c28f61461005a5780631cd765fa146100b257806385ecb92a14610103578063e83f4bfe14610158575b600080fd5b6100a06004803603608081101561007057600080fd5b5080359060208101356affffffffffffffffffffff191690604081013590606001356001600160a01b03166101fe565b60408051918252519081900360200190f35b6100a0600480360360e08110156100c857600080fd5b5080359063ffffffff6020820135169067ffffffffffffffff6040820135169060608101359060808101359060a08101359060c001356102f0565b6100a06004803603608081101561011957600080fd5b604080518082018252833593928301929160608301919060208401906002908390839080828437600092019190915250919450509035915061035d9050565b6100a06004803603602081101561016e57600080fd5b81019060208101813564010000000081111561018957600080fd5b82018360208201111561019b57600080fd5b803590602001918460018302840111640100000000831117156101bd57600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295506103b1945050505050565b60408051600480825260a0820190925260009160609190816020015b6102226109f7565b81526020019060019003908161021a579050509050610240866104f6565b8160008151811061024d57fe5b602002602001018190525061026a836001600160a01b0316610574565b8160018151811061027757fe5b602002602001018190525061028b84610574565b8160028151811061029857fe5b60209081029190910101526102ba6affffffffffffffffffffff198616610574565b816003815181106102c757fe5b60200260200101819052506102e36102de826105f2565b6106a2565b519150505b949350505050565b6040805160208082019990995260e09790971b6001600160e01b0319168782015260c09590951b6001600160c01b0319166044870152604c860193909352606c850191909152608c84015260ac808401919091528151808403909101815260cc9092019052805191012090565b815160209283015160408051808601969096526001600160c01b031960c093841b8116878301529190921b166048850152605080850192909252805180850390920182526070909301909252815191012090565b8051600090819081908190815b818110156104e95773__$6f0fba43b1e3ecb6a82953dea0ca767fbf$__63d36cfac288866040518363ffffffff1660e01b81526004018080602001838152602001828103825284818151815260200191508051906020019080838360005b8381101561043457818101518382015260200161041c565b50505050905090810190601f1680156104615780820380516001836020036101000a031916815260200191505b509350505050604080518083038186803b15801561047e57600080fd5b505af4158015610492573d6000803e3d6000fd5b505050506040513d60408110156104a857600080fd5b50805160209182015160408051808501999099528881018290528051808a0382018152606090990190528751979092019690962095945092506001016103be565b509293505050505b919050565b6104fe6109f7565b604080516080808201835284825282519081018352600080825260208281018290528285018290526060830182905280840192909252835181815291820184529192830191610563565b6105506109f7565b8152602001906001900390816105485790505b508152600260209091015292915050565b61057c6109f7565b6040805160808082018352848252825190810183526000808252602082810182905282850182905260608301829052808401929092528351818152918201845291928301916105e1565b6105ce6109f7565b8152602001906001900390816105c65790505b508152600060209091015292915050565b6105fa6109f7565b61060482516107d8565b610655576040805162461bcd60e51b815260206004820152601a60248201527f5475706c65206d75737420686176652076616c69642073697a65000000000000604482015290519081900360640190fd5b5060408051608080820183526000808352835191820184528082526020828101829052828501829052606080840192909252830191909152918101839052915160030160ff169082015290565b6106aa610a25565b6060820151600c60ff909116106106fc576040805162461bcd60e51b8152602060048201526011602482015270496e76616c6964207479706520636f646560781b604482015290519081900360640190fd5b606082015160ff1661072957604051806020016040528061072084600001516107df565b905290506104f1565b606082015160ff1660011415610770576040518060200160405280610720846020015160000151856020015160400151866020015160600151876020015160200151610803565b606082015160ff166002141561079557506040805160208101909152815181526104f1565b600360ff16826060015160ff16101580156107b957506060820151600c60ff909116105b156107d657604051806020016040528061072084604001516108ab565bfe5b6008101590565b60408051602080820193909352815180820384018152908201909152805191012090565b6000831561085d575060408051600160f81b6020808301919091526001600160f81b031960f888901b16602183015260228201859052604280830185905283518084039091018152606290920190925280519101206102e8565b5060408051600160f81b6020808301919091526001600160f81b031960f888901b16602183015260228083018590528351808403909101815260429092019092528051910120949350505050565b60006008825111156108fb576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b60608251604051908082528060200260200182016040528015610928578160200160208202803883390190505b50805190915060005b8181101561098457610941610a25565b61095d86838151811061095057fe5b60200260200101516106a2565b9050806000015184838151811061097057fe5b602090810291909101015250600101610931565b508351600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b838110156109cd5781810151838201526020016109b5565b50505050905001925050506040516020818303038152906040528051906020012092505050919050565b604051806080016040528060008152602001610a11610a37565b815260606020820152600060409091015290565b60408051602081019091526000815290565b6040805160808101825260008082526020820181905291810182905260608101919091529056fea265627a7a7231582055bab63760b108ada8f06a691f624211fa2775d8f302f8f5ee3e6c4924b153d664736f6c634300050e0032"
+var ProtocolBin = "0x610be5610026600b82828239805160001a60731461001957fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361061006b5760003560e01c80624c28f61461007057806306a36a46146100c85780631b0aa96b1461011d5780635559fd3814610177578063786550811461019a578063e83f4bfe146101bd575b600080fd5b6100b66004803603608081101561008657600080fd5b5080359060208101356affffffffffffffffffffff191690604081013590606001356001600160a01b0316610263565b60408051918252519081900360200190f35b6100b6600480360360808110156100de57600080fd5b60408051808201825283359392830192916060830191906020840190600290839083908082843760009201919091525091945050903591506103559050565b6100b6600480360361010081101561013457600080fd5b50803590602081013515159063ffffffff6040820135169067ffffffffffffffff6060820135169060808101359060a08101359060c08101359060e001356103b0565b6100b66004803603604081101561018d57600080fd5b5080359060200135610425565b6100b6600480360360408110156101b057600080fd5b5080359060200135610469565b6100b6600480360360208110156101d357600080fd5b8101906020810181356401000000008111156101ee57600080fd5b82018360208201111561020057600080fd5b8035906020019184600183028401116401000000008311171561022257600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610483945050505050565b60408051600480825260a0820190925260009160609190816020015b610287610b49565b81526020019060019003908161027f5790505090506102a5866105c8565b816000815181106102b257fe5b60200260200101819052506102cf836001600160a01b0316610646565b816001815181106102dc57fe5b60200260200101819052506102f084610646565b816002815181106102fd57fe5b602090810291909101015261031f6affffffffffffffffffffff198616610646565b8160038151811061032c57fe5b6020026020010181905250610348610343826106c4565b610774565b519150505b949350505050565b815160209283015160408051808601969096526fffffffffffffffffffffffffffffffff19608093841b81168783015291831b9091166050860152606080860193909352805180860390930183529301909252815191012090565b6040805160208082019a909a5297151560f81b8882015260e09690961b6001600160e01b031916604188015260c09490941b6001600160c01b0319166045870152604d860192909252606d850152608d84015260ad808401919091528151808403909101815260cd9092019052805191012090565b6000610462604051806060016040528061043f6001610646565b815260200161044d866105c8565b815260200161045b856105c8565b90526108aa565b9392505050565b6000610462604051806060016040528061043f6000610646565b8051600090819081908190815b818110156105bb5773__$6f0fba43b1e3ecb6a82953dea0ca767fbf$__63d36cfac288866040518363ffffffff1660e01b81526004018080602001838152602001828103825284818151815260200191508051906020019080838360005b838110156105065781810151838201526020016104ee565b50505050905090810190601f1680156105335780820380516001836020036101000a031916815260200191505b509350505050604080518083038186803b15801561055057600080fd5b505af4158015610564573d6000803e3d6000fd5b505050506040513d604081101561057a57600080fd5b50805160209182015160408051808501999099528881018290528051808a038201815260609099019052875197909201969096209594509250600101610490565b509293505050505b919050565b6105d0610b49565b604080516080808201835284825282519081018352600080825260208281018290528285018290526060830182905280840192909252835181815291820184529192830191610635565b610622610b49565b81526020019060019003908161061a5790505b508152600260209091015292915050565b61064e610b49565b6040805160808082018352848252825190810183526000808252602082810182905282850182905260608301829052808401929092528351818152918201845291928301916106b3565b6106a0610b49565b8152602001906001900390816106985790505b508152600060209091015292915050565b6106cc610b49565b6106d6825161092a565b610727576040805162461bcd60e51b815260206004820152601a60248201527f5475706c65206d75737420686176652076616c69642073697a65000000000000604482015290519081900360640190fd5b5060408051608080820183526000808352835191820184528082526020828101829052828501829052606080840192909252830191909152918101839052915160030160ff169082015290565b61077c610b77565b6060820151600c60ff909116106107ce576040805162461bcd60e51b8152602060048201526011602482015270496e76616c6964207479706520636f646560781b604482015290519081900360640190fd5b606082015160ff166107fb5760405180602001604052806107f28460000151610931565b905290506105c3565b606082015160ff16600114156108425760405180602001604052806107f2846020015160000151856020015160400151866020015160600151876020015160200151610955565b606082015160ff166002141561086757506040805160208101909152815181526105c3565b600360ff16826060015160ff161015801561088b57506060820151600c60ff909116105b156108a85760405180602001604052806107f284604001516109fd565bfe5b6040805160038082526080820190925260009160609190816020015b6108ce610b49565b8152602001906001900390816108c6575050805190915060005b81811015610920578481600381106108fc57fe5b602002015183828151811061090d57fe5b60209081029190910101526001016108e8565b5061034d826109fd565b6008101590565b60408051602080820193909352815180820384018152908201909152805191012090565b600083156109af575060408051600160f81b6020808301919091526001600160f81b031960f888901b166021830152602282018590526042808301859052835180840390910181526062909201909252805191012061034d565b5060408051600160f81b6020808301919091526001600160f81b031960f888901b16602183015260228083018590528351808403909101815260429092019092528051910120949350505050565b6000600882511115610a4d576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b60608251604051908082528060200260200182016040528015610a7a578160200160208202803883390190505b50805190915060005b81811015610ad657610a93610b77565b610aaf868381518110610aa257fe5b6020026020010151610774565b90508060000151848381518110610ac257fe5b602090810291909101015250600101610a83565b508351600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b83811015610b1f578181015183820152602001610b07565b50505050905001925050506040516020818303038152906040528051906020012092505050919050565b604051806080016040528060008152602001610b63610b89565b815260606020820152600060409091015290565b60408051602081019091526000815290565b6040805160808101825260008082526020820181905291810182905260608101919091529056fea265627a7a72315820638912f528fe66b8f870d947fe68e8b8e7c94d594e56dce171ce47e4a840a65064736f6c634300050f0032"
 
 // DeployProtocol deploys a new Ethereum contract, binding an instance of Protocol to it.
 func DeployProtocol(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Protocol, error) {
@@ -2655,30 +5381,82 @@ func (_Protocol *ProtocolTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Protocol.Contract.contract.Transact(opts, method, params...)
 }
 
-// GenerateAssertionHash is a free data retrieval call binding the contract method 0x1cd765fa.
+// AddMessageToPending is a free data retrieval call binding the contract method 0x78655081.
 //
-// Solidity: function generateAssertionHash(bytes32 _afterHash, uint32 _numSteps, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
-func (_Protocol *ProtocolCaller) GenerateAssertionHash(opts *bind.CallOpts, _afterHash [32]byte, _numSteps uint32, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
+// Solidity: function addMessageToPending(bytes32 pending, bytes32 message) constant returns(bytes32)
+func (_Protocol *ProtocolCaller) AddMessageToPending(opts *bind.CallOpts, pending [32]byte, message [32]byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
 	)
 	out := ret0
-	err := _Protocol.contract.Call(opts, out, "generateAssertionHash", _afterHash, _numSteps, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
+	err := _Protocol.contract.Call(opts, out, "addMessageToPending", pending, message)
 	return *ret0, err
 }
 
-// GenerateAssertionHash is a free data retrieval call binding the contract method 0x1cd765fa.
+// AddMessageToPending is a free data retrieval call binding the contract method 0x78655081.
 //
-// Solidity: function generateAssertionHash(bytes32 _afterHash, uint32 _numSteps, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
-func (_Protocol *ProtocolSession) GenerateAssertionHash(_afterHash [32]byte, _numSteps uint32, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
-	return _Protocol.Contract.GenerateAssertionHash(&_Protocol.CallOpts, _afterHash, _numSteps, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
+// Solidity: function addMessageToPending(bytes32 pending, bytes32 message) constant returns(bytes32)
+func (_Protocol *ProtocolSession) AddMessageToPending(pending [32]byte, message [32]byte) ([32]byte, error) {
+	return _Protocol.Contract.AddMessageToPending(&_Protocol.CallOpts, pending, message)
 }
 
-// GenerateAssertionHash is a free data retrieval call binding the contract method 0x1cd765fa.
+// AddMessageToPending is a free data retrieval call binding the contract method 0x78655081.
 //
-// Solidity: function generateAssertionHash(bytes32 _afterHash, uint32 _numSteps, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
-func (_Protocol *ProtocolCallerSession) GenerateAssertionHash(_afterHash [32]byte, _numSteps uint32, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
-	return _Protocol.Contract.GenerateAssertionHash(&_Protocol.CallOpts, _afterHash, _numSteps, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
+// Solidity: function addMessageToPending(bytes32 pending, bytes32 message) constant returns(bytes32)
+func (_Protocol *ProtocolCallerSession) AddMessageToPending(pending [32]byte, message [32]byte) ([32]byte, error) {
+	return _Protocol.Contract.AddMessageToPending(&_Protocol.CallOpts, pending, message)
+}
+
+// AddMessagesToInbox is a free data retrieval call binding the contract method 0x5559fd38.
+//
+// Solidity: function addMessagesToInbox(bytes32 inbox, bytes32 messages) constant returns(bytes32)
+func (_Protocol *ProtocolCaller) AddMessagesToInbox(opts *bind.CallOpts, inbox [32]byte, messages [32]byte) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _Protocol.contract.Call(opts, out, "addMessagesToInbox", inbox, messages)
+	return *ret0, err
+}
+
+// AddMessagesToInbox is a free data retrieval call binding the contract method 0x5559fd38.
+//
+// Solidity: function addMessagesToInbox(bytes32 inbox, bytes32 messages) constant returns(bytes32)
+func (_Protocol *ProtocolSession) AddMessagesToInbox(inbox [32]byte, messages [32]byte) ([32]byte, error) {
+	return _Protocol.Contract.AddMessagesToInbox(&_Protocol.CallOpts, inbox, messages)
+}
+
+// AddMessagesToInbox is a free data retrieval call binding the contract method 0x5559fd38.
+//
+// Solidity: function addMessagesToInbox(bytes32 inbox, bytes32 messages) constant returns(bytes32)
+func (_Protocol *ProtocolCallerSession) AddMessagesToInbox(inbox [32]byte, messages [32]byte) ([32]byte, error) {
+	return _Protocol.Contract.AddMessagesToInbox(&_Protocol.CallOpts, inbox, messages)
+}
+
+// GenerateAssertionHash is a free data retrieval call binding the contract method 0x1b0aa96b.
+//
+// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint32 _numSteps, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
+func (_Protocol *ProtocolCaller) GenerateAssertionHash(opts *bind.CallOpts, _afterHash [32]byte, _didInboxInsn bool, _numSteps uint32, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _Protocol.contract.Call(opts, out, "generateAssertionHash", _afterHash, _didInboxInsn, _numSteps, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
+	return *ret0, err
+}
+
+// GenerateAssertionHash is a free data retrieval call binding the contract method 0x1b0aa96b.
+//
+// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint32 _numSteps, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
+func (_Protocol *ProtocolSession) GenerateAssertionHash(_afterHash [32]byte, _didInboxInsn bool, _numSteps uint32, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
+	return _Protocol.Contract.GenerateAssertionHash(&_Protocol.CallOpts, _afterHash, _didInboxInsn, _numSteps, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
+}
+
+// GenerateAssertionHash is a free data retrieval call binding the contract method 0x1b0aa96b.
+//
+// Solidity: function generateAssertionHash(bytes32 _afterHash, bool _didInboxInsn, uint32 _numSteps, uint64 _numGas, bytes32 _firstMessageHash, bytes32 _lastMessageHash, bytes32 _firstLogHash, bytes32 _lastLogHash) constant returns(bytes32)
+func (_Protocol *ProtocolCallerSession) GenerateAssertionHash(_afterHash [32]byte, _didInboxInsn bool, _numSteps uint32, _numGas uint64, _firstMessageHash [32]byte, _lastMessageHash [32]byte, _firstLogHash [32]byte, _lastLogHash [32]byte) ([32]byte, error) {
+	return _Protocol.Contract.GenerateAssertionHash(&_Protocol.CallOpts, _afterHash, _didInboxInsn, _numSteps, _numGas, _firstMessageHash, _lastMessageHash, _firstLogHash, _lastLogHash)
 }
 
 // GenerateLastMessageHash is a free data retrieval call binding the contract method 0xe83f4bfe.
@@ -2733,10 +5511,10 @@ func (_Protocol *ProtocolCallerSession) GenerateMessageStubHash(_data [32]byte, 
 	return _Protocol.Contract.GenerateMessageStubHash(&_Protocol.CallOpts, _data, _tokenType, _value, _destination)
 }
 
-// GeneratePreconditionHash is a free data retrieval call binding the contract method 0x85ecb92a.
+// GeneratePreconditionHash is a free data retrieval call binding the contract method 0x06a36a46.
 //
-// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint64[2] _timeBounds, bytes32 _beforeInbox) constant returns(bytes32)
-func (_Protocol *ProtocolCaller) GeneratePreconditionHash(opts *bind.CallOpts, _beforeHash [32]byte, _timeBounds [2]uint64, _beforeInbox [32]byte) ([32]byte, error) {
+// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[2] _timeBounds, bytes32 _beforeInbox) constant returns(bytes32)
+func (_Protocol *ProtocolCaller) GeneratePreconditionHash(opts *bind.CallOpts, _beforeHash [32]byte, _timeBounds [2]*big.Int, _beforeInbox [32]byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
 	)
@@ -2745,25 +5523,349 @@ func (_Protocol *ProtocolCaller) GeneratePreconditionHash(opts *bind.CallOpts, _
 	return *ret0, err
 }
 
-// GeneratePreconditionHash is a free data retrieval call binding the contract method 0x85ecb92a.
+// GeneratePreconditionHash is a free data retrieval call binding the contract method 0x06a36a46.
 //
-// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint64[2] _timeBounds, bytes32 _beforeInbox) constant returns(bytes32)
-func (_Protocol *ProtocolSession) GeneratePreconditionHash(_beforeHash [32]byte, _timeBounds [2]uint64, _beforeInbox [32]byte) ([32]byte, error) {
+// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[2] _timeBounds, bytes32 _beforeInbox) constant returns(bytes32)
+func (_Protocol *ProtocolSession) GeneratePreconditionHash(_beforeHash [32]byte, _timeBounds [2]*big.Int, _beforeInbox [32]byte) ([32]byte, error) {
 	return _Protocol.Contract.GeneratePreconditionHash(&_Protocol.CallOpts, _beforeHash, _timeBounds, _beforeInbox)
 }
 
-// GeneratePreconditionHash is a free data retrieval call binding the contract method 0x85ecb92a.
+// GeneratePreconditionHash is a free data retrieval call binding the contract method 0x06a36a46.
 //
-// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint64[2] _timeBounds, bytes32 _beforeInbox) constant returns(bytes32)
-func (_Protocol *ProtocolCallerSession) GeneratePreconditionHash(_beforeHash [32]byte, _timeBounds [2]uint64, _beforeInbox [32]byte) ([32]byte, error) {
+// Solidity: function generatePreconditionHash(bytes32 _beforeHash, uint128[2] _timeBounds, bytes32 _beforeInbox) constant returns(bytes32)
+func (_Protocol *ProtocolCallerSession) GeneratePreconditionHash(_beforeHash [32]byte, _timeBounds [2]*big.Int, _beforeInbox [32]byte) ([32]byte, error) {
 	return _Protocol.Contract.GeneratePreconditionHash(&_Protocol.CallOpts, _beforeHash, _timeBounds, _beforeInbox)
+}
+
+// RollupTimeABI is the input ABI used to generate the binding from.
+const RollupTimeABI = "[]"
+
+// RollupTimeBin is the compiled bytecode used for deploying new contracts.
+var RollupTimeBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a72315820ce753322c9aadc432291a9f73e1465ac1e9d9d153f7d4fb378b5e638e49934c064736f6c634300050f0032"
+
+// DeployRollupTime deploys a new Ethereum contract, binding an instance of RollupTime to it.
+func DeployRollupTime(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RollupTime, error) {
+	parsed, err := abi.JSON(strings.NewReader(RollupTimeABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(RollupTimeBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &RollupTime{RollupTimeCaller: RollupTimeCaller{contract: contract}, RollupTimeTransactor: RollupTimeTransactor{contract: contract}, RollupTimeFilterer: RollupTimeFilterer{contract: contract}}, nil
+}
+
+// RollupTime is an auto generated Go binding around an Ethereum contract.
+type RollupTime struct {
+	RollupTimeCaller     // Read-only binding to the contract
+	RollupTimeTransactor // Write-only binding to the contract
+	RollupTimeFilterer   // Log filterer for contract events
+}
+
+// RollupTimeCaller is an auto generated read-only Go binding around an Ethereum contract.
+type RollupTimeCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RollupTimeTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type RollupTimeTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RollupTimeFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type RollupTimeFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RollupTimeSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type RollupTimeSession struct {
+	Contract     *RollupTime       // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// RollupTimeCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type RollupTimeCallerSession struct {
+	Contract *RollupTimeCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts     // Call options to use throughout this session
+}
+
+// RollupTimeTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type RollupTimeTransactorSession struct {
+	Contract     *RollupTimeTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// RollupTimeRaw is an auto generated low-level Go binding around an Ethereum contract.
+type RollupTimeRaw struct {
+	Contract *RollupTime // Generic contract binding to access the raw methods on
+}
+
+// RollupTimeCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type RollupTimeCallerRaw struct {
+	Contract *RollupTimeCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// RollupTimeTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type RollupTimeTransactorRaw struct {
+	Contract *RollupTimeTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewRollupTime creates a new instance of RollupTime, bound to a specific deployed contract.
+func NewRollupTime(address common.Address, backend bind.ContractBackend) (*RollupTime, error) {
+	contract, err := bindRollupTime(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupTime{RollupTimeCaller: RollupTimeCaller{contract: contract}, RollupTimeTransactor: RollupTimeTransactor{contract: contract}, RollupTimeFilterer: RollupTimeFilterer{contract: contract}}, nil
+}
+
+// NewRollupTimeCaller creates a new read-only instance of RollupTime, bound to a specific deployed contract.
+func NewRollupTimeCaller(address common.Address, caller bind.ContractCaller) (*RollupTimeCaller, error) {
+	contract, err := bindRollupTime(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupTimeCaller{contract: contract}, nil
+}
+
+// NewRollupTimeTransactor creates a new write-only instance of RollupTime, bound to a specific deployed contract.
+func NewRollupTimeTransactor(address common.Address, transactor bind.ContractTransactor) (*RollupTimeTransactor, error) {
+	contract, err := bindRollupTime(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupTimeTransactor{contract: contract}, nil
+}
+
+// NewRollupTimeFilterer creates a new log filterer instance of RollupTime, bound to a specific deployed contract.
+func NewRollupTimeFilterer(address common.Address, filterer bind.ContractFilterer) (*RollupTimeFilterer, error) {
+	contract, err := bindRollupTime(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupTimeFilterer{contract: contract}, nil
+}
+
+// bindRollupTime binds a generic wrapper to an already deployed contract.
+func bindRollupTime(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(RollupTimeABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_RollupTime *RollupTimeRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _RollupTime.Contract.RollupTimeCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_RollupTime *RollupTimeRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _RollupTime.Contract.RollupTimeTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_RollupTime *RollupTimeRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _RollupTime.Contract.RollupTimeTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_RollupTime *RollupTimeCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _RollupTime.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_RollupTime *RollupTimeTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _RollupTime.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_RollupTime *RollupTimeTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _RollupTime.Contract.contract.Transact(opts, method, params...)
+}
+
+// RollupUtilsABI is the input ABI used to generate the binding from.
+const RollupUtilsABI = "[]"
+
+// RollupUtilsBin is the compiled bytecode used for deploying new contracts.
+var RollupUtilsBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a7231582038713d24fbdb80f6fb991d207cb18986b1f9b306b935e387f7da3ebb72ff810064736f6c634300050f0032"
+
+// DeployRollupUtils deploys a new Ethereum contract, binding an instance of RollupUtils to it.
+func DeployRollupUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RollupUtils, error) {
+	parsed, err := abi.JSON(strings.NewReader(RollupUtilsABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(RollupUtilsBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &RollupUtils{RollupUtilsCaller: RollupUtilsCaller{contract: contract}, RollupUtilsTransactor: RollupUtilsTransactor{contract: contract}, RollupUtilsFilterer: RollupUtilsFilterer{contract: contract}}, nil
+}
+
+// RollupUtils is an auto generated Go binding around an Ethereum contract.
+type RollupUtils struct {
+	RollupUtilsCaller     // Read-only binding to the contract
+	RollupUtilsTransactor // Write-only binding to the contract
+	RollupUtilsFilterer   // Log filterer for contract events
+}
+
+// RollupUtilsCaller is an auto generated read-only Go binding around an Ethereum contract.
+type RollupUtilsCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RollupUtilsTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type RollupUtilsTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RollupUtilsFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type RollupUtilsFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RollupUtilsSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type RollupUtilsSession struct {
+	Contract     *RollupUtils      // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// RollupUtilsCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type RollupUtilsCallerSession struct {
+	Contract *RollupUtilsCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts      // Call options to use throughout this session
+}
+
+// RollupUtilsTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type RollupUtilsTransactorSession struct {
+	Contract     *RollupUtilsTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+}
+
+// RollupUtilsRaw is an auto generated low-level Go binding around an Ethereum contract.
+type RollupUtilsRaw struct {
+	Contract *RollupUtils // Generic contract binding to access the raw methods on
+}
+
+// RollupUtilsCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type RollupUtilsCallerRaw struct {
+	Contract *RollupUtilsCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// RollupUtilsTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type RollupUtilsTransactorRaw struct {
+	Contract *RollupUtilsTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewRollupUtils creates a new instance of RollupUtils, bound to a specific deployed contract.
+func NewRollupUtils(address common.Address, backend bind.ContractBackend) (*RollupUtils, error) {
+	contract, err := bindRollupUtils(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupUtils{RollupUtilsCaller: RollupUtilsCaller{contract: contract}, RollupUtilsTransactor: RollupUtilsTransactor{contract: contract}, RollupUtilsFilterer: RollupUtilsFilterer{contract: contract}}, nil
+}
+
+// NewRollupUtilsCaller creates a new read-only instance of RollupUtils, bound to a specific deployed contract.
+func NewRollupUtilsCaller(address common.Address, caller bind.ContractCaller) (*RollupUtilsCaller, error) {
+	contract, err := bindRollupUtils(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupUtilsCaller{contract: contract}, nil
+}
+
+// NewRollupUtilsTransactor creates a new write-only instance of RollupUtils, bound to a specific deployed contract.
+func NewRollupUtilsTransactor(address common.Address, transactor bind.ContractTransactor) (*RollupUtilsTransactor, error) {
+	contract, err := bindRollupUtils(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupUtilsTransactor{contract: contract}, nil
+}
+
+// NewRollupUtilsFilterer creates a new log filterer instance of RollupUtils, bound to a specific deployed contract.
+func NewRollupUtilsFilterer(address common.Address, filterer bind.ContractFilterer) (*RollupUtilsFilterer, error) {
+	contract, err := bindRollupUtils(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &RollupUtilsFilterer{contract: contract}, nil
+}
+
+// bindRollupUtils binds a generic wrapper to an already deployed contract.
+func bindRollupUtils(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(RollupUtilsABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_RollupUtils *RollupUtilsRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _RollupUtils.Contract.RollupUtilsCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_RollupUtils *RollupUtilsRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _RollupUtils.Contract.RollupUtilsTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_RollupUtils *RollupUtilsRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _RollupUtils.Contract.RollupUtilsTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_RollupUtils *RollupUtilsCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _RollupUtils.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_RollupUtils *RollupUtilsTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _RollupUtils.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_RollupUtils *RollupUtilsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _RollupUtils.Contract.contract.Transact(opts, method, params...)
 }
 
 // SafeMathABI is the input ABI used to generate the binding from.
 const SafeMathABI = "[]"
 
 // SafeMathBin is the compiled bytecode used for deploying new contracts.
-var SafeMathBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158206e634b19b85c6f44f6988b30e2f365b9cee8b2cacb101081a262451b4b05483764736f6c634300050e0032"
+var SafeMathBin = "0x60556023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea265627a7a723158201ca52c8cfd94848edb89c2f757752003702d51eace6d9e6123cdcc328cbf2aca64736f6c634300050f0032"
 
 // DeploySafeMath deploys a new Ethereum contract, binding an instance of SafeMath to it.
 func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SafeMath, error) {
@@ -2921,18 +6023,704 @@ func (_SafeMath *SafeMathTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _SafeMath.Contract.contract.Transact(opts, method, params...)
 }
 
+// StakingABI is the input ABI used to generate the binding from.
+const StakingABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"winner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"RollupChallengeCompleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asserter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"challengeType\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"challengeContract\",\"type\":\"address\"}],\"name\":\"RollupChallengeStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"staker\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nodeHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"name\":\"RollupStakeCreated\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactory\",\"outputs\":[{\"internalType\":\"contractIChallengeFactory\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"winner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"loser\",\"type\":\"address\"}],\"name\":\"resolveChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startExecutionChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startMessagesChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"staker1Address\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"staker2Address\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"node\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"disputableDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker1Position\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"staker2Position\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"vmProtoHashes\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof1\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof2\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash1\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"challengeDataHash2\",\"type\":\"bytes32\"}],\"name\":\"startPendingTopChallenge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// StakingFuncSigs maps the 4-byte function signature to its string representation.
+var StakingFuncSigs = map[string]string{
+	"5dbaf68b": "challengeFactory()",
+	"396f51cf": "resolveChallenge(address,address)",
+	"2d4dce60": "startExecutionChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"9cb292b6": "startMessagesChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+	"863e78d5": "startPendingTopChallenge(address,address,bytes32,uint256,uint256,uint256,bytes32[2],bytes32[],bytes32[],bytes32,bytes32)",
+}
+
+// StakingBin is the compiled bytecode used for deploying new contracts.
+var StakingBin = "0x608060405234801561001057600080fd5b50611036806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80632d4dce601461005c578063396f51cf1461015c5780635dbaf68b1461018a578063863e78d5146101ae5780639cb292b6146102ac575b600080fd5b61015a600480360361018081101561007357600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b8111156100c657600080fd5b8201836020820111156100d857600080fd5b803590602001918460208302840111600160201b831117156100f957600080fd5b919390929091602081019035600160201b81111561011657600080fd5b82018360208201111561012857600080fd5b803590602001918460208302840111600160201b8311171561014957600080fd5b9193509150803590602001356103aa565b005b61015a6004803603604081101561017257600080fd5b506001600160a01b038135811691602001351661052b565b61019261079e565b604080516001600160a01b039092168252519081900360200190f35b61015a60048036036101808110156101c557600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b81111561021857600080fd5b82018360208201111561022a57600080fd5b803590602001918460208302840111600160201b8311171561024b57600080fd5b919390929091602081019035600160201b81111561026857600080fd5b82018360208201111561027a57600080fd5b803590602001918460208302840111600160201b8311171561029b57600080fd5b9193509150803590602001356107ad565b61015a60048036036101808110156102c357600080fd5b6001600160a01b03823581169260208101359091169160408201359160608101359160808201359160a08101359160c0820191908101906101208101610100820135600160201b81111561031657600080fd5b82018360208201111561032857600080fd5b803590602001918460208302840111600160201b8311171561034957600080fd5b919390929091602081019035600160201b81111561036657600080fd5b82018360208201111561037857600080fd5b803590602001918460208302840111600160201b8311171561039957600080fd5b91935091508035906020013561081e565b60408051808201909152600e81526d455845435f4348414c5f5459504560901b602082015260028a1461045b5760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610420578181015183820152602001610408565b50505050905090810190601f16801561044d5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b5061051c8d8d8d8d8d8d8d6002806020026040519081016040528092919082600260200280828437600081840152601f19601f8201169050808301925050505050508d8d80806020026020016040519081016040528093929190818152602001838360200280828437600081840152601f19601f820116905080830192505050505050508c8c808060200260200160405190810160405280939291908181526020018383602002808284376000920191909152508e92508d91506108929050565b50505050505050505050505050565b600080546040805163c778f3f160e01b81526001600160a01b038681166004830152858116602483015233803f60448401819052935190959394919091169163c778f3f1916064808301926020929190829003018186803b15801561058f57600080fd5b505afa1580156105a3573d6000803e3d6000fd5b505050506040513d60208110156105b957600080fd5b5051600080546040805163c778f3f160e01b81526001600160a01b038a811660048301528981166024830152604482018890529151949550929391169163c778f3f1916064808301926020929190829003018186803b15801561061b57600080fd5b505afa15801561062f573d6000803e3d6000fd5b505050506040513d602081101561064557600080fd5b505190506001600160a01b03821633148061066857506001600160a01b03811633145b6040518060400160405280600f81526020016e2922a9afa1a420a62fa9a2a72222a960891b815250906106dc5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b5060006106e887610e04565b6001546040519192506001600160a01b0389169160026001600160801b039283160490911680156108fc02916000818181858888f19350505050158015610733573d6000803e3d6000fd5b5060018101805460ff60801b1916905561074c86610e95565b604080513381526001600160a01b03808a16602083015288168183015290517f468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f299181900360600190a150505050505050565b6000546001600160a01b031681565b60408051808201909152600d81526c504e445f4348414c5f5459504560981b6020820152891561045b5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b60408051808201909152600e81526d4d5347535f4348414c5f5459504560901b602082015260018a1461045b5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b600061089d8c610e04565b905060006108aa8c610e04565b60018301549091508a906108c6906001600160801b0316610ed6565b106040518060400160405280600d81526020016c53544b315f444541444c494e4560981b815250906109395760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b5060018101548a90610953906001600160801b0316610ed6565b106040518060400160405280600d81526020016c53544b325f444541444c494e4560981b815250906109c65760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b50600182015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff1615610a465760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b50600181015460408051808201909152600c81526b14d512cc57d25397d0d2105360a21b602082015290600160801b900460ff1615610ac65760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b5060408051808201909152600a8152692a2ca822afa7a92222a960b11b6020820152888a10610b365760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b50610b57610b4f8c8c878d8c60005b6020020151610edd565b835488610f2a565b6040518060400160405280600a81526020016929aa2598afa82927a7a360b11b81525090610bc65760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b50610be1610bd98c8c868c8c6001610b45565b825487610f2a565b6040518060400160405280600a81526020016929aa25992fa82927a7a360b11b81525090610c505760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b5060018260010160106101000a81548160ff02191690831515021790555060018160010160106101000a81548160ff02191690831515021790555060008060009054906101000a90046001600160a01b03166001600160a01b031663b1b126888f8f6000898f6040518663ffffffff1660e01b815260040180866001600160a01b03166001600160a01b03168152602001856001600160a01b03166001600160a01b031681526020018463ffffffff16815260200183815260200182815260200195505050505050602060405180830381600087803b158015610d3257600080fd5b505af1158015610d46573d6000803e3d6000fd5b505050506040513d6020811015610d5c57600080fd5b810190808051906020019092919050505090507f6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f8e8e8c8460405180856001600160a01b03166001600160a01b03168152602001846001600160a01b03166001600160a01b03168152602001838152602001826001600160a01b03166001600160a01b0316815260200194505050505060405180910390a15050505050505050505050505050565b6001600160a01b038116600090815260026020908152604080832080548251808401909352600a83526924a72b2fa9aa20a5a2a960b11b9383019390935291610e8e5760405162461bcd60e51b8152602060048201818152835160248401528351909283926044909101919085019080838360008315610420578181015183820152602001610408565b5092915050565b6001600160a01b03166000908152600260205260408120908155600101805470ffffffffffffffffffffffffffffffffff1916905560038054600019019055565b6132c80290565b6000610f20868387878760405160200180848152602001838152602001828152602001935050505060405160208183030381529060405280519060200120610f43565b9695505050505050565b6000610f3b84848460008651610f96565b949350505050565b6040805160208082019490945280820192909252805180830382018152606083018252805190840120608083019490945260a0808301949094528051808303909401845260c09091019052815191012090565b600085835b83811015610ff45781868281518110610fb057fe5b602002602001015160405160200180838152602001828152602001925050506040516020818303038152906040528051906020012091508080600101915050610f9b565b509094149594505050505056fea265627a7a7231582055033593096f8b9a46fc00222e51e0459554a947e64ca671b149d686194b713364736f6c634300050f0032"
+
+// DeployStaking deploys a new Ethereum contract, binding an instance of Staking to it.
+func DeployStaking(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Staking, error) {
+	parsed, err := abi.JSON(strings.NewReader(StakingABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(StakingBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Staking{StakingCaller: StakingCaller{contract: contract}, StakingTransactor: StakingTransactor{contract: contract}, StakingFilterer: StakingFilterer{contract: contract}}, nil
+}
+
+// Staking is an auto generated Go binding around an Ethereum contract.
+type Staking struct {
+	StakingCaller     // Read-only binding to the contract
+	StakingTransactor // Write-only binding to the contract
+	StakingFilterer   // Log filterer for contract events
+}
+
+// StakingCaller is an auto generated read-only Go binding around an Ethereum contract.
+type StakingCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StakingTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type StakingTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StakingFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type StakingFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// StakingSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type StakingSession struct {
+	Contract     *Staking          // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// StakingCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type StakingCallerSession struct {
+	Contract *StakingCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts  // Call options to use throughout this session
+}
+
+// StakingTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type StakingTransactorSession struct {
+	Contract     *StakingTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
+}
+
+// StakingRaw is an auto generated low-level Go binding around an Ethereum contract.
+type StakingRaw struct {
+	Contract *Staking // Generic contract binding to access the raw methods on
+}
+
+// StakingCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type StakingCallerRaw struct {
+	Contract *StakingCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// StakingTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type StakingTransactorRaw struct {
+	Contract *StakingTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewStaking creates a new instance of Staking, bound to a specific deployed contract.
+func NewStaking(address common.Address, backend bind.ContractBackend) (*Staking, error) {
+	contract, err := bindStaking(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Staking{StakingCaller: StakingCaller{contract: contract}, StakingTransactor: StakingTransactor{contract: contract}, StakingFilterer: StakingFilterer{contract: contract}}, nil
+}
+
+// NewStakingCaller creates a new read-only instance of Staking, bound to a specific deployed contract.
+func NewStakingCaller(address common.Address, caller bind.ContractCaller) (*StakingCaller, error) {
+	contract, err := bindStaking(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StakingCaller{contract: contract}, nil
+}
+
+// NewStakingTransactor creates a new write-only instance of Staking, bound to a specific deployed contract.
+func NewStakingTransactor(address common.Address, transactor bind.ContractTransactor) (*StakingTransactor, error) {
+	contract, err := bindStaking(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &StakingTransactor{contract: contract}, nil
+}
+
+// NewStakingFilterer creates a new log filterer instance of Staking, bound to a specific deployed contract.
+func NewStakingFilterer(address common.Address, filterer bind.ContractFilterer) (*StakingFilterer, error) {
+	contract, err := bindStaking(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &StakingFilterer{contract: contract}, nil
+}
+
+// bindStaking binds a generic wrapper to an already deployed contract.
+func bindStaking(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(StakingABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Staking *StakingRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Staking.Contract.StakingCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Staking *StakingRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Staking.Contract.StakingTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Staking *StakingRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Staking.Contract.StakingTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Staking *StakingCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Staking.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Staking *StakingTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Staking.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Staking *StakingTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Staking.Contract.contract.Transact(opts, method, params...)
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Staking *StakingCaller) ChallengeFactory(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Staking.contract.Call(opts, out, "challengeFactory")
+	return *ret0, err
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Staking *StakingSession) ChallengeFactory() (common.Address, error) {
+	return _Staking.Contract.ChallengeFactory(&_Staking.CallOpts)
+}
+
+// ChallengeFactory is a free data retrieval call binding the contract method 0x5dbaf68b.
+//
+// Solidity: function challengeFactory() constant returns(address)
+func (_Staking *StakingCallerSession) ChallengeFactory() (common.Address, error) {
+	return _Staking.Contract.ChallengeFactory(&_Staking.CallOpts)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Staking *StakingTransactor) ResolveChallenge(opts *bind.TransactOpts, winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Staking.contract.Transact(opts, "resolveChallenge", winner, loser)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Staking *StakingSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Staking.Contract.ResolveChallenge(&_Staking.TransactOpts, winner, loser)
+}
+
+// ResolveChallenge is a paid mutator transaction binding the contract method 0x396f51cf.
+//
+// Solidity: function resolveChallenge(address winner, address loser) returns()
+func (_Staking *StakingTransactorSession) ResolveChallenge(winner common.Address, loser common.Address) (*types.Transaction, error) {
+	return _Staking.Contract.ResolveChallenge(&_Staking.TransactOpts, winner, loser)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingTransactor) StartExecutionChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.contract.Transact(opts, "startExecutionChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.Contract.StartExecutionChallenge(&_Staking.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartExecutionChallenge is a paid mutator transaction binding the contract method 0x2d4dce60.
+//
+// Solidity: function startExecutionChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingTransactorSession) StartExecutionChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.Contract.StartExecutionChallenge(&_Staking.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingTransactor) StartMessagesChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.contract.Transact(opts, "startMessagesChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.Contract.StartMessagesChallenge(&_Staking.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartMessagesChallenge is a paid mutator transaction binding the contract method 0x9cb292b6.
+//
+// Solidity: function startMessagesChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingTransactorSession) StartMessagesChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.Contract.StartMessagesChallenge(&_Staking.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingTransactor) StartPendingTopChallenge(opts *bind.TransactOpts, staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.contract.Transact(opts, "startPendingTopChallenge", staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.Contract.StartPendingTopChallenge(&_Staking.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StartPendingTopChallenge is a paid mutator transaction binding the contract method 0x863e78d5.
+//
+// Solidity: function startPendingTopChallenge(address staker1Address, address staker2Address, bytes32 node, uint256 disputableDeadline, uint256 staker1Position, uint256 staker2Position, bytes32[2] vmProtoHashes, bytes32[] proof1, bytes32[] proof2, bytes32 challengeDataHash1, bytes32 challengeDataHash2) returns()
+func (_Staking *StakingTransactorSession) StartPendingTopChallenge(staker1Address common.Address, staker2Address common.Address, node [32]byte, disputableDeadline *big.Int, staker1Position *big.Int, staker2Position *big.Int, vmProtoHashes [2][32]byte, proof1 [][32]byte, proof2 [][32]byte, challengeDataHash1 [32]byte, challengeDataHash2 [32]byte) (*types.Transaction, error) {
+	return _Staking.Contract.StartPendingTopChallenge(&_Staking.TransactOpts, staker1Address, staker2Address, node, disputableDeadline, staker1Position, staker2Position, vmProtoHashes, proof1, proof2, challengeDataHash1, challengeDataHash2)
+}
+
+// StakingRollupChallengeCompletedIterator is returned from FilterRollupChallengeCompleted and is used to iterate over the raw logs and unpacked data for RollupChallengeCompleted events raised by the Staking contract.
+type StakingRollupChallengeCompletedIterator struct {
+	Event *StakingRollupChallengeCompleted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *StakingRollupChallengeCompletedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(StakingRollupChallengeCompleted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(StakingRollupChallengeCompleted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *StakingRollupChallengeCompletedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *StakingRollupChallengeCompletedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// StakingRollupChallengeCompleted represents a RollupChallengeCompleted event raised by the Staking contract.
+type StakingRollupChallengeCompleted struct {
+	ChallengeContract common.Address
+	Winner            common.Address
+	Loser             common.Address
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupChallengeCompleted is a free log retrieval operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Staking *StakingFilterer) FilterRollupChallengeCompleted(opts *bind.FilterOpts) (*StakingRollupChallengeCompletedIterator, error) {
+
+	logs, sub, err := _Staking.contract.FilterLogs(opts, "RollupChallengeCompleted")
+	if err != nil {
+		return nil, err
+	}
+	return &StakingRollupChallengeCompletedIterator{contract: _Staking.contract, event: "RollupChallengeCompleted", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupChallengeCompleted is a free log subscription operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Staking *StakingFilterer) WatchRollupChallengeCompleted(opts *bind.WatchOpts, sink chan<- *StakingRollupChallengeCompleted) (event.Subscription, error) {
+
+	logs, sub, err := _Staking.contract.WatchLogs(opts, "RollupChallengeCompleted")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(StakingRollupChallengeCompleted)
+				if err := _Staking.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupChallengeCompleted is a log parse operation binding the contract event 0x468aa7d460319b17466ca163bca353a0c62fff0d7d0fa287f634ef305d946f29.
+//
+// Solidity: event RollupChallengeCompleted(address challengeContract, address winner, address loser)
+func (_Staking *StakingFilterer) ParseRollupChallengeCompleted(log types.Log) (*StakingRollupChallengeCompleted, error) {
+	event := new(StakingRollupChallengeCompleted)
+	if err := _Staking.contract.UnpackLog(event, "RollupChallengeCompleted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// StakingRollupChallengeStartedIterator is returned from FilterRollupChallengeStarted and is used to iterate over the raw logs and unpacked data for RollupChallengeStarted events raised by the Staking contract.
+type StakingRollupChallengeStartedIterator struct {
+	Event *StakingRollupChallengeStarted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *StakingRollupChallengeStartedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(StakingRollupChallengeStarted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(StakingRollupChallengeStarted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *StakingRollupChallengeStartedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *StakingRollupChallengeStartedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// StakingRollupChallengeStarted represents a RollupChallengeStarted event raised by the Staking contract.
+type StakingRollupChallengeStarted struct {
+	Asserter          common.Address
+	Challenger        common.Address
+	ChallengeType     *big.Int
+	ChallengeContract common.Address
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupChallengeStarted is a free log retrieval operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Staking *StakingFilterer) FilterRollupChallengeStarted(opts *bind.FilterOpts) (*StakingRollupChallengeStartedIterator, error) {
+
+	logs, sub, err := _Staking.contract.FilterLogs(opts, "RollupChallengeStarted")
+	if err != nil {
+		return nil, err
+	}
+	return &StakingRollupChallengeStartedIterator{contract: _Staking.contract, event: "RollupChallengeStarted", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupChallengeStarted is a free log subscription operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Staking *StakingFilterer) WatchRollupChallengeStarted(opts *bind.WatchOpts, sink chan<- *StakingRollupChallengeStarted) (event.Subscription, error) {
+
+	logs, sub, err := _Staking.contract.WatchLogs(opts, "RollupChallengeStarted")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(StakingRollupChallengeStarted)
+				if err := _Staking.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupChallengeStarted is a log parse operation binding the contract event 0x6c69257ddf620994c6fb9e5304db0e5563db3765bee033ddd61b6a1caa7d043f.
+//
+// Solidity: event RollupChallengeStarted(address asserter, address challenger, uint256 challengeType, address challengeContract)
+func (_Staking *StakingFilterer) ParseRollupChallengeStarted(log types.Log) (*StakingRollupChallengeStarted, error) {
+	event := new(StakingRollupChallengeStarted)
+	if err := _Staking.contract.UnpackLog(event, "RollupChallengeStarted", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+// StakingRollupStakeCreatedIterator is returned from FilterRollupStakeCreated and is used to iterate over the raw logs and unpacked data for RollupStakeCreated events raised by the Staking contract.
+type StakingRollupStakeCreatedIterator struct {
+	Event *StakingRollupStakeCreated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *StakingRollupStakeCreatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(StakingRollupStakeCreated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(StakingRollupStakeCreated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *StakingRollupStakeCreatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *StakingRollupStakeCreatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// StakingRollupStakeCreated represents a RollupStakeCreated event raised by the Staking contract.
+type StakingRollupStakeCreated struct {
+	Staker      common.Address
+	NodeHash    [32]byte
+	BlockNumber *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterRollupStakeCreated is a free log retrieval operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Staking *StakingFilterer) FilterRollupStakeCreated(opts *bind.FilterOpts) (*StakingRollupStakeCreatedIterator, error) {
+
+	logs, sub, err := _Staking.contract.FilterLogs(opts, "RollupStakeCreated")
+	if err != nil {
+		return nil, err
+	}
+	return &StakingRollupStakeCreatedIterator{contract: _Staking.contract, event: "RollupStakeCreated", logs: logs, sub: sub}, nil
+}
+
+// WatchRollupStakeCreated is a free log subscription operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Staking *StakingFilterer) WatchRollupStakeCreated(opts *bind.WatchOpts, sink chan<- *StakingRollupStakeCreated) (event.Subscription, error) {
+
+	logs, sub, err := _Staking.contract.WatchLogs(opts, "RollupStakeCreated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(StakingRollupStakeCreated)
+				if err := _Staking.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRollupStakeCreated is a log parse operation binding the contract event 0x85614c3e1211525665899b8d46562feb2d8fd21077698eeac88719d37b187fba.
+//
+// Solidity: event RollupStakeCreated(address staker, bytes32 nodeHash, uint256 blockNumber)
+func (_Staking *StakingFilterer) ParseRollupStakeCreated(log types.Log) (*StakingRollupStakeCreated, error) {
+	event := new(StakingRollupStakeCreated)
+	if err := _Staking.contract.UnpackLog(event, "RollupStakeCreated", log); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 // VMABI is the input ABI used to generate the binding from.
-const VMABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"vmStateHash\",\"type\":\"bytes32\"}],\"name\":\"isErrored\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"vmStateHash\",\"type\":\"bytes32\"}],\"name\":\"isHalted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"machineHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"inboxHash\",\"type\":\"bytes32\"}],\"name\":\"protoStateHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const VMABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"vmStateHash\",\"type\":\"bytes32\"}],\"name\":\"isErrored\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"vmStateHash\",\"type\":\"bytes32\"}],\"name\":\"isHalted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // VMFuncSigs maps the 4-byte function signature to its string representation.
 var VMFuncSigs = map[string]string{
 	"6aee3ecc": "isErrored(bytes32)",
 	"f9e2b912": "isHalted(bytes32)",
-	"8348abc9": "protoStateHash(bytes32,bytes32)",
 }
 
 // VMBin is the compiled bytecode used for deploying new contracts.
-var VMBin = "0x610131610026600b82828239805160001a60731461001957fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060475760003560e01c80636aee3ecc14604c5780638348abc914607a578063f9e2b9121460ac575b600080fd5b606660048036036020811015606057600080fd5b503560c6565b604080519115158252519081900360200190f35b609a60048036036040811015608e57600080fd5b508035906020013560cc565b60408051918252519081900360200190f35b60666004803603602081101560c057600080fd5b503560f8565b60011490565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b159056fea265627a7a723158208a05ec03547d1432c13322ac70d4b0b2b854126d0065eceac23cbb199d42e35164736f6c634300050e0032"
+var VMBin = "0x60c9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c80636aee3ecc146042578063f9e2b912146070575b600080fd5b605c60048036036020811015605657600080fd5b5035608a565b604080519115158252519081900360200190f35b605c60048036036020811015608457600080fd5b50356090565b60011490565b159056fea265627a7a72315820a4afb465ec33dc4f68cf8d63cc3af48a7c535f099d11ed2954913e7463f48c5664736f6c634300050f0032"
 
 // DeployVM deploys a new Ethereum contract, binding an instance of VM to it.
 func DeployVM(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *VM, error) {
@@ -3142,32 +6930,6 @@ func (_VM *VMCallerSession) IsHalted(vmStateHash [32]byte) (bool, error) {
 	return _VM.Contract.IsHalted(&_VM.CallOpts, vmStateHash)
 }
 
-// ProtoStateHash is a free data retrieval call binding the contract method 0x8348abc9.
-//
-// Solidity: function protoStateHash(bytes32 machineHash, bytes32 inboxHash) constant returns(bytes32)
-func (_VM *VMCaller) ProtoStateHash(opts *bind.CallOpts, machineHash [32]byte, inboxHash [32]byte) ([32]byte, error) {
-	var (
-		ret0 = new([32]byte)
-	)
-	out := ret0
-	err := _VM.contract.Call(opts, out, "protoStateHash", machineHash, inboxHash)
-	return *ret0, err
-}
-
-// ProtoStateHash is a free data retrieval call binding the contract method 0x8348abc9.
-//
-// Solidity: function protoStateHash(bytes32 machineHash, bytes32 inboxHash) constant returns(bytes32)
-func (_VM *VMSession) ProtoStateHash(machineHash [32]byte, inboxHash [32]byte) ([32]byte, error) {
-	return _VM.Contract.ProtoStateHash(&_VM.CallOpts, machineHash, inboxHash)
-}
-
-// ProtoStateHash is a free data retrieval call binding the contract method 0x8348abc9.
-//
-// Solidity: function protoStateHash(bytes32 machineHash, bytes32 inboxHash) constant returns(bytes32)
-func (_VM *VMCallerSession) ProtoStateHash(machineHash [32]byte, inboxHash [32]byte) ([32]byte, error) {
-	return _VM.Contract.ProtoStateHash(&_VM.CallOpts, machineHash, inboxHash)
-}
-
 // ValueABI is the input ABI used to generate the binding from.
 const ValueABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"deserializeHashed\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"startOffset\",\"type\":\"uint256\"}],\"name\":\"deserializeMessage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"valid\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"offset\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"messageHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"destination\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"tokenType\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"messageData\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"offset\",\"type\":\"uint256\"}],\"name\":\"deserializeValidHashed\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"offset\",\"type\":\"uint256\"}],\"name\":\"getNextValid\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"opcode\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"immediate\",\"type\":\"bool\"},{\"internalType\":\"bytes32\",\"name\":\"immediateVal\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"nextCodePoint\",\"type\":\"bytes32\"}],\"name\":\"hashCodePoint\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"opcode\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"nextCodePoint\",\"type\":\"bytes32\"}],\"name\":\"hashCodePointBasic\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"opcode\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"immediateVal\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"nextCodePoint\",\"type\":\"bytes32\"}],\"name\":\"hashCodePointImmediate\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"hashEmptyTuple\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"val\",\"type\":\"uint256\"}],\"name\":\"hashInt\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"size\",\"type\":\"uint256\"}],\"name\":\"isValidTupleSize\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
@@ -3186,7 +6948,7 @@ var ValueFuncSigs = map[string]string{
 }
 
 // ValueBin is the compiled bytecode used for deploying new contracts.
-var ValueBin = "0x61152b610026600b82828239805160001a60731461001957fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106100a85760003560e01c806372403aa01161007057806372403aa014610300578063826513e014610425578063b2b9dc6214610459578063b697e0851461048a578063d36cfac2146104b0576100a8565b806332e6cc21146100ad578063364df277146101f95780633c786053146102135780633d730ed21461023f5780635043dff1146102e3575b600080fd5b610153600480360360408110156100c357600080fd5b810190602081018135600160201b8111156100dd57600080fd5b8201836020820111156100ef57600080fd5b803590602001918460018302840111600160201b8311171561011057600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550509135925061056f915050565b604051808815151515815260200187815260200186815260200185815260200184815260200183815260200180602001828103825283818151815260200191508051906020019080838360005b838110156101b85781810151838201526020016101a0565b50505050905090810190601f1680156101e55780820380516001836020036101000a031916815260200191505b509850505050505050505060405180910390f35b61020161076d565b60408051918252519081900360200190f35b6102016004803603606081101561022957600080fd5b5060ff81351690602081013590604001356107e0565b6102016004803603602081101561025557600080fd5b810190602081018135600160201b81111561026f57600080fd5b82018360208201111561028157600080fd5b803590602001918460018302840111600160201b831117156102a257600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610832945050505050565b610201600480360360208110156102f957600080fd5b50356108a6565b6103a66004803603604081101561031657600080fd5b810190602081018135600160201b81111561033057600080fd5b82018360208201111561034257600080fd5b803590602001918460018302840111600160201b8311171561036357600080fd5b91908080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525092955050913592506108ca915050565b6040518083815260200180602001828103825283818151815260200191508051906020019080838360005b838110156103e95781810151838201526020016103d1565b50505050905090810190601f1680156104165780820380516001836020036101000a031916815260200191505b50935050505060405180910390f35b6102016004803603608081101561043b57600080fd5b5060ff8135169060208101351515906040810135906060013561094e565b6104766004803603602081101561046f57600080fd5b50356109f7565b604080519115158252519081900360200190f35b610201600480360360408110156104a057600080fd5b5060ff81351690602001356109fe565b610556600480360360408110156104c657600080fd5b810190602081018135600160201b8111156104e057600080fd5b8201836020820111156104f257600080fd5b803590602001918460018302840111600160201b8311171561051357600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295505091359250610a45915050565b6040805192835260208301919091528051918290030190f35b6000806000806000806060600088965060008a888151811061058d57fe5b016020015160019098019760f81c9050600781146105bf576105b28b60018a03610a45565b9098509650610761915050565b6105c98b89610a45565b90985091506105e88b60018c016000198d8c030163ffffffff610abe16565b92508a88815181106105f657fe5b016020015160019098019760f81c90508015610619576105b28b60018a03610a45565b6106238b89610b3e565b80995081975050508a888151811061063757fe5b016020015160019098019760f81c9050801561065a576105b28b60018a03610a45565b6106648b89610b3e565b80995081965050508a888151811061067857fe5b016020015160019098019760f81c9050801561069b576105b28b60018a03610a45565b6106a58b89610b3e565b60408051600480825260a0820190925260019c50919a509195506060916020820160808038833901905050905082816000815181106106e057fe5b6020026020010181815250506106f5876108a6565b8160018151811061070257fe5b602002602001018181525050610717866108a6565b8160028151811061072457fe5b602002602001018181525050610739856108a6565b8160038151811061074657fe5b60200260200101818152505061075b81610b65565b97505050505b92959891949750929550565b6040805160008082526020808301808552600360f81b948401948552835192946003938593919260418501929091028083838a5b838110156107b95781810151838201526020016107a1565b50505050905001925050506040516020818303038152906040528051906020012091505090565b60408051600160f81b60208083019190915260f89590951b6001600160f81b03191660218201526022810193909352604280840192909252805180840390920182526062909201909152805191012090565b6000808061083e61146f565b610849856000610c25565b919450925090508215610891576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b61089a81610daf565b5193505050505b919050565b60408051602080820193909352815180820384018152908201909152805191012090565b600060606000806108d961146f565b6108e38787610c25565b91945092509050821561092b576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b8161093f888880840363ffffffff610abe16565b945094505050505b9250929050565b600083156109a8575060408051600160f81b6020808301919091526001600160f81b031960f888901b16602183015260228201859052604280830185905283518084039091018152606290920190925280519101206109ef565b5060408051600160f81b6020808301919091526001600160f81b031960f888901b166021830152602280830185905283518084039091018152604290920190925280519101205b949350505050565b6008101590565b60408051600160f81b60208083019190915260f89490941b6001600160f81b0319166021820152602280820193909352815180820390930183526042019052805191012090565b600080600080610a5361146f565b610a5d8787610c25565b919450925090508215610aa5576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b81610aaf82610daf565b51909890975095505050505050565b606081830184511015610ad057600080fd5b606082158015610aeb57604051915060208201604052610b35565b6040519150601f8416801560200281840101858101878315602002848b0101015b81831015610b24578051835260209283019201610b0c565b5050858452601f01601f1916604052505b50949350505050565b6000808281610b53868363ffffffff610ee516565b60209290920196919550909350505050565b6000600882511115610bb5576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b8151600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b83811015610bfd578181015183820152602001610be5565b5050505090500192505050604051602081830303815290604052805190602001209050919050565b600080610c3061146f565b84518410610c85576040805162461bcd60e51b815260206004820152601960248201527f44617461206f6666736574206f7574206f6620626f756e647300000000000000604482015290519081900360640190fd5b60008490506000868281518110610c9857fe5b016020015160019092019160f81c90506000610cb261149d565b60ff8316610ce657610cc48985610b3e565b9094509150600084610cd584610f01565b91985096509450610da89350505050565b60ff831660011415610d0d57610cfc8985610f7f565b9094509050600084610cd5836110da565b60ff831660021415610d3457610d238985610b3e565b9094509150600084610cd58461113a565b600360ff841610801590610d4b5750600c60ff8416105b15610d8857600219830160606000610d64838d896111b8565b909850925090508087610d7684611273565b99509950995050505050505050610da8565b8260ff16612710016000610d9c6000610f01565b91985096509450505050505b9250925092565b610db76114c4565b6060820151600c60ff90911610610e09576040805162461bcd60e51b8152602060048201526011602482015270496e76616c6964207479706520636f646560781b604482015290519081900360640190fd5b606082015160ff16610e36576040518060200160405280610e2d84600001516108a6565b905290506108a1565b606082015160ff1660011415610e7d576040518060200160405280610e2d84602001516000015185602001516040015186602001516060015187602001516020015161094e565b606082015160ff1660021415610ea257506040805160208101909152815181526108a1565b600360ff16826060015160ff1610158015610ec657506060820151600c60ff909116105b15610ee3576040518060200160405280610e2d8460400151611323565bfe5b60008160200183511015610ef857600080fd5b50016020015190565b610f0961146f565b604080516080808201835284825282519081018352600080825260208281018290528285018290526060830182905280840192909252835181815291820184529192830191610f6e565b610f5b61146f565b815260200190600190039081610f535790505b508152600060209091015292915050565b6000610f8961149d565b60008390506000858281518110610f9c57fe5b602001015160f81c60f81b60f81c905081806001019250506000868381518110610fc257fe5b016020015160019384019360f89190911c915060009060ff8416141561104e576000610fec61146f565b610ff68a87610c25565b9097509092509050811561103f576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b61104881610daf565b51925050505b6000611060898663ffffffff610ee516565b90506020850194508360ff16600114156110a5576040805160808101825260ff9094168452602084019190915260019083015260608201529193509091506109479050565b6040805160808101825260ff909416845260208401919091526000908301819052606083015250919350909150509250929050565b6110e261146f565b604080516080810182526000808252602080830186905283518281529081018452919283019190611129565b61111661146f565b81526020019060019003908161110e5790505b508152600160209091015292915050565b61114261146f565b6040805160808082018352848252825190810183526000808252602082810182905282850182905260608301829052808401929092528351818152918201845291928301916111a7565b61119461146f565b81526020019060019003908161118c5790505b508152600260209091015292915050565b60008060606000849050600060608860ff1660405190808252806020026020018201604052801561120357816020015b6111f061146f565b8152602001906001900390816111e85790505b50905060005b8960ff168160ff16101561125d576112218985610c25565b8451859060ff861690811061123257fe5b60209081029190910101529450925082156112555750909450909250905061126a565b600101611209565b5060009550919350909150505b93509350939050565b61127b61146f565b61128582516109f7565b6112d6576040805162461bcd60e51b815260206004820152601a60248201527f5475706c65206d75737420686176652076616c69642073697a65000000000000604482015290519081900360640190fd5b5060408051608080820183526000808352835191820184528082526020828101829052828501829052606080840192909252830191909152918101839052915160030160ff169082015290565b6000600882511115611373576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b606082516040519080825280602002602001820160405280156113a0578160200160208202803883390190505b50805190915060005b818110156113fc576113b96114c4565b6113d58683815181106113c857fe5b6020026020010151610daf565b905080600001518483815181106113e857fe5b6020908102919091010152506001016113a9565b508351600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b8381101561144557818101518382015260200161142d565b50505050905001925050506040516020818303038152906040528051906020012092505050919050565b60405180608001604052806000815260200161148961149d565b815260606020820152600060409091015290565b60408051608081018252600080825260208201819052918101829052606081019190915290565b6040805160208101909152600081529056fe4d61727368616c6c65642076616c7565206d7573742062652076616c69640000a265627a7a7231582002c6ecc6d323338594373e09189f176b7c79457073cee7bd7cd2ed946f380fa664736f6c634300050e0032"
+var ValueBin = "0x61152b610026600b82828239805160001a60731461001957fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106100a85760003560e01c806372403aa01161007057806372403aa014610300578063826513e014610425578063b2b9dc6214610459578063b697e0851461048a578063d36cfac2146104b0576100a8565b806332e6cc21146100ad578063364df277146101f95780633c786053146102135780633d730ed21461023f5780635043dff1146102e3575b600080fd5b610153600480360360408110156100c357600080fd5b810190602081018135600160201b8111156100dd57600080fd5b8201836020820111156100ef57600080fd5b803590602001918460018302840111600160201b8311171561011057600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550509135925061056f915050565b604051808815151515815260200187815260200186815260200185815260200184815260200183815260200180602001828103825283818151815260200191508051906020019080838360005b838110156101b85781810151838201526020016101a0565b50505050905090810190601f1680156101e55780820380516001836020036101000a031916815260200191505b509850505050505050505060405180910390f35b61020161076d565b60408051918252519081900360200190f35b6102016004803603606081101561022957600080fd5b5060ff81351690602081013590604001356107e0565b6102016004803603602081101561025557600080fd5b810190602081018135600160201b81111561026f57600080fd5b82018360208201111561028157600080fd5b803590602001918460018302840111600160201b831117156102a257600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550610832945050505050565b610201600480360360208110156102f957600080fd5b50356108a6565b6103a66004803603604081101561031657600080fd5b810190602081018135600160201b81111561033057600080fd5b82018360208201111561034257600080fd5b803590602001918460018302840111600160201b8311171561036357600080fd5b91908080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525092955050913592506108ca915050565b6040518083815260200180602001828103825283818151815260200191508051906020019080838360005b838110156103e95781810151838201526020016103d1565b50505050905090810190601f1680156104165780820380516001836020036101000a031916815260200191505b50935050505060405180910390f35b6102016004803603608081101561043b57600080fd5b5060ff8135169060208101351515906040810135906060013561094e565b6104766004803603602081101561046f57600080fd5b50356109f7565b604080519115158252519081900360200190f35b610201600480360360408110156104a057600080fd5b5060ff81351690602001356109fe565b610556600480360360408110156104c657600080fd5b810190602081018135600160201b8111156104e057600080fd5b8201836020820111156104f257600080fd5b803590602001918460018302840111600160201b8311171561051357600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295505091359250610a45915050565b6040805192835260208301919091528051918290030190f35b6000806000806000806060600088965060008a888151811061058d57fe5b016020015160019098019760f81c9050600781146105bf576105b28b60018a03610a45565b9098509650610761915050565b6105c98b89610a45565b90985091506105e88b60018c016000198d8c030163ffffffff610abe16565b92508a88815181106105f657fe5b016020015160019098019760f81c90508015610619576105b28b60018a03610a45565b6106238b89610b3e565b80995081975050508a888151811061063757fe5b016020015160019098019760f81c9050801561065a576105b28b60018a03610a45565b6106648b89610b3e565b80995081965050508a888151811061067857fe5b016020015160019098019760f81c9050801561069b576105b28b60018a03610a45565b6106a58b89610b3e565b60408051600480825260a0820190925260019c50919a509195506060916020820160808038833901905050905082816000815181106106e057fe5b6020026020010181815250506106f5876108a6565b8160018151811061070257fe5b602002602001018181525050610717866108a6565b8160028151811061072457fe5b602002602001018181525050610739856108a6565b8160038151811061074657fe5b60200260200101818152505061075b81610b65565b97505050505b92959891949750929550565b6040805160008082526020808301808552600360f81b948401948552835192946003938593919260418501929091028083838a5b838110156107b95781810151838201526020016107a1565b50505050905001925050506040516020818303038152906040528051906020012091505090565b60408051600160f81b60208083019190915260f89590951b6001600160f81b03191660218201526022810193909352604280840192909252805180840390920182526062909201909152805191012090565b6000808061083e61146f565b610849856000610c25565b919450925090508215610891576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b61089a81610daf565b5193505050505b919050565b60408051602080820193909352815180820384018152908201909152805191012090565b600060606000806108d961146f565b6108e38787610c25565b91945092509050821561092b576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b8161093f888880840363ffffffff610abe16565b945094505050505b9250929050565b600083156109a8575060408051600160f81b6020808301919091526001600160f81b031960f888901b16602183015260228201859052604280830185905283518084039091018152606290920190925280519101206109ef565b5060408051600160f81b6020808301919091526001600160f81b031960f888901b166021830152602280830185905283518084039091018152604290920190925280519101205b949350505050565b6008101590565b60408051600160f81b60208083019190915260f89490941b6001600160f81b0319166021820152602280820193909352815180820390930183526042019052805191012090565b600080600080610a5361146f565b610a5d8787610c25565b919450925090508215610aa5576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b81610aaf82610daf565b51909890975095505050505050565b606081830184511015610ad057600080fd5b606082158015610aeb57604051915060208201604052610b35565b6040519150601f8416801560200281840101858101878315602002848b0101015b81831015610b24578051835260209283019201610b0c565b5050858452601f01601f1916604052505b50949350505050565b6000808281610b53868363ffffffff610ee516565b60209290920196919550909350505050565b6000600882511115610bb5576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b8151600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b83811015610bfd578181015183820152602001610be5565b5050505090500192505050604051602081830303815290604052805190602001209050919050565b600080610c3061146f565b84518410610c85576040805162461bcd60e51b815260206004820152601960248201527f44617461206f6666736574206f7574206f6620626f756e647300000000000000604482015290519081900360640190fd5b60008490506000868281518110610c9857fe5b016020015160019092019160f81c90506000610cb261149d565b60ff8316610ce657610cc48985610b3e565b9094509150600084610cd584610f01565b91985096509450610da89350505050565b60ff831660011415610d0d57610cfc8985610f7f565b9094509050600084610cd5836110da565b60ff831660021415610d3457610d238985610b3e565b9094509150600084610cd58461113a565b600360ff841610801590610d4b5750600c60ff8416105b15610d8857600219830160606000610d64838d896111b8565b909850925090508087610d7684611273565b99509950995050505050505050610da8565b8260ff16612710016000610d9c6000610f01565b91985096509450505050505b9250925092565b610db76114c4565b6060820151600c60ff90911610610e09576040805162461bcd60e51b8152602060048201526011602482015270496e76616c6964207479706520636f646560781b604482015290519081900360640190fd5b606082015160ff16610e36576040518060200160405280610e2d84600001516108a6565b905290506108a1565b606082015160ff1660011415610e7d576040518060200160405280610e2d84602001516000015185602001516040015186602001516060015187602001516020015161094e565b606082015160ff1660021415610ea257506040805160208101909152815181526108a1565b600360ff16826060015160ff1610158015610ec657506060820151600c60ff909116105b15610ee3576040518060200160405280610e2d8460400151611323565bfe5b60008160200183511015610ef857600080fd5b50016020015190565b610f0961146f565b604080516080808201835284825282519081018352600080825260208281018290528285018290526060830182905280840192909252835181815291820184529192830191610f6e565b610f5b61146f565b815260200190600190039081610f535790505b508152600060209091015292915050565b6000610f8961149d565b60008390506000858281518110610f9c57fe5b602001015160f81c60f81b60f81c905081806001019250506000868381518110610fc257fe5b016020015160019384019360f89190911c915060009060ff8416141561104e576000610fec61146f565b610ff68a87610c25565b9097509092509050811561103f576040805162461bcd60e51b815260206004820152601e60248201526000805160206114d7833981519152604482015290519081900360640190fd5b61104881610daf565b51925050505b6000611060898663ffffffff610ee516565b90506020850194508360ff16600114156110a5576040805160808101825260ff9094168452602084019190915260019083015260608201529193509091506109479050565b6040805160808101825260ff909416845260208401919091526000908301819052606083015250919350909150509250929050565b6110e261146f565b604080516080810182526000808252602080830186905283518281529081018452919283019190611129565b61111661146f565b81526020019060019003908161110e5790505b508152600160209091015292915050565b61114261146f565b6040805160808082018352848252825190810183526000808252602082810182905282850182905260608301829052808401929092528351818152918201845291928301916111a7565b61119461146f565b81526020019060019003908161118c5790505b508152600260209091015292915050565b60008060606000849050600060608860ff1660405190808252806020026020018201604052801561120357816020015b6111f061146f565b8152602001906001900390816111e85790505b50905060005b8960ff168160ff16101561125d576112218985610c25565b8451859060ff861690811061123257fe5b60209081029190910101529450925082156112555750909450909250905061126a565b600101611209565b5060009550919350909150505b93509350939050565b61127b61146f565b61128582516109f7565b6112d6576040805162461bcd60e51b815260206004820152601a60248201527f5475706c65206d75737420686176652076616c69642073697a65000000000000604482015290519081900360640190fd5b5060408051608080820183526000808352835191820184528082526020828101829052828501829052606080840192909252830191909152918101839052915160030160ff169082015290565b6000600882511115611373576040805162461bcd60e51b8152602060048201526014602482015273092dcecc2d8d2c840e8eae0d8ca40d8cadccee8d60631b604482015290519081900360640190fd5b606082516040519080825280602002602001820160405280156113a0578160200160208202803883390190505b50805190915060005b818110156113fc576113b96114c4565b6113d58683815181106113c857fe5b6020026020010151610daf565b905080600001518483815181106113e857fe5b6020908102919091010152506001016113a9565b508351600360ff160182604051602001808360ff1660ff1660f81b8152600101828051906020019060200280838360005b8381101561144557818101518382015260200161142d565b50505050905001925050506040516020818303038152906040528051906020012092505050919050565b60405180608001604052806000815260200161148961149d565b815260606020820152600060409091015290565b60408051608081018252600080825260208201819052918101829052606081019190915290565b6040805160208101909152600081529056fe4d61727368616c6c65642076616c7565206d7573742062652076616c69640000a265627a7a72315820fb651353b6c421528fe5a53e4161590f961142645f3f326c242a73f546aa0b2864736f6c634300050f0032"
 
 // DeployValue deploys a new Ethereum contract, binding an instance of Value to it.
 func DeployValue(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Value, error) {

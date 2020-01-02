@@ -14,90 +14,52 @@ export class GlobalPendingInboxFactory {
 
 const _abi = [
     {
-        constant: false,
+        anonymous: false,
         inputs: [
             {
-                name: '',
+                indexed: true,
+                internalType: 'address',
+                name: 'vmId',
                 type: 'address',
             },
             {
-                name: '_from',
+                indexed: false,
+                internalType: 'address',
+                name: 'sender',
                 type: 'address',
             },
             {
-                name: '_tokenId',
+                indexed: false,
+                internalType: 'bytes21',
+                name: 'tokenType',
+                type: 'bytes21',
+            },
+            {
+                indexed: false,
+                internalType: 'uint256',
+                name: 'value',
                 type: 'uint256',
             },
             {
-                name: '',
+                indexed: false,
+                internalType: 'bytes',
+                name: 'data',
                 type: 'bytes',
             },
         ],
-        name: 'onERC721Received',
-        outputs: [
-            {
-                name: '',
-                type: 'bytes4',
-            },
-        ],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: true,
-        inputs: [
-            {
-                name: '_owner',
-                type: 'address',
-            },
-        ],
-        name: 'getNFTTokens',
-        outputs: [
-            {
-                name: '',
-                type: 'address[]',
-            },
-            {
-                name: '',
-                type: 'uint256[]',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        constant: true,
-        inputs: [
-            {
-                name: '_owner',
-                type: 'address',
-            },
-        ],
-        name: 'getTokenBalances',
-        outputs: [
-            {
-                name: '',
-                type: 'address[]',
-            },
-            {
-                name: '',
-                type: 'uint256[]',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
+        name: 'MessageDelivered',
+        type: 'event',
     },
     {
         constant: false,
         inputs: [
             {
+                internalType: 'address',
                 name: '_tokenContract',
                 type: 'address',
             },
             {
+                internalType: 'uint256',
                 name: '_value',
                 type: 'uint256',
             },
@@ -112,10 +74,192 @@ const _abi = [
         constant: false,
         inputs: [
             {
+                internalType: 'address',
                 name: '_tokenContract',
                 type: 'address',
             },
             {
+                internalType: 'uint256',
+                name: '_tokenId',
+                type: 'uint256',
+            },
+        ],
+        name: 'depositERC721',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '_destination',
+                type: 'address',
+            },
+        ],
+        name: 'depositEth',
+        outputs: [],
+        payable: true,
+        stateMutability: 'payable',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '_owner',
+                type: 'address',
+            },
+        ],
+        name: 'getNFTTokens',
+        outputs: [
+            {
+                internalType: 'address[]',
+                name: '',
+                type: 'address[]',
+            },
+            {
+                internalType: 'uint256[]',
+                name: '',
+                type: 'uint256[]',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '_tokenContract',
+                type: 'address',
+            },
+            {
+                internalType: 'address',
+                name: '_owner',
+                type: 'address',
+            },
+        ],
+        name: 'getTokenBalance',
+        outputs: [
+            {
+                internalType: 'uint256',
+                name: '',
+                type: 'uint256',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '_owner',
+                type: 'address',
+            },
+        ],
+        name: 'getTokenBalances',
+        outputs: [
+            {
+                internalType: 'address[]',
+                name: '',
+                type: 'address[]',
+            },
+            {
+                internalType: 'uint256[]',
+                name: '',
+                type: 'uint256[]',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '_tokenContract',
+                type: 'address',
+            },
+            {
+                internalType: 'address',
+                name: '_owner',
+                type: 'address',
+            },
+            {
+                internalType: 'uint256',
+                name: '_tokenId',
+                type: 'uint256',
+            },
+        ],
+        name: 'hasNFT',
+        outputs: [
+            {
+                internalType: 'bool',
+                name: '',
+                type: 'bool',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '',
+                type: 'address',
+            },
+            {
+                internalType: 'address',
+                name: '_from',
+                type: 'address',
+            },
+            {
+                internalType: 'uint256',
+                name: '_tokenId',
+                type: 'uint256',
+            },
+            {
+                internalType: 'bytes',
+                name: '',
+                type: 'bytes',
+            },
+        ],
+        name: 'onERC721Received',
+        outputs: [
+            {
+                internalType: 'bytes4',
+                name: '',
+                type: 'bytes4',
+            },
+        ],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                internalType: 'address',
+                name: '_tokenContract',
+                type: 'address',
+            },
+            {
+                internalType: 'uint256',
                 name: '_value',
                 type: 'uint256',
             },
@@ -130,106 +274,12 @@ const _abi = [
         constant: false,
         inputs: [
             {
-                name: '_destination',
-                type: 'address',
-            },
-        ],
-        name: 'depositEth',
-        outputs: [],
-        payable: true,
-        stateMutability: 'payable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_value',
-                type: 'uint256',
-            },
-        ],
-        name: 'withdrawEth',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: true,
-        inputs: [
-            {
+                internalType: 'address',
                 name: '_tokenContract',
                 type: 'address',
             },
             {
-                name: '_owner',
-                type: 'address',
-            },
-        ],
-        name: 'getTokenBalance',
-        outputs: [
-            {
-                name: '',
-                type: 'uint256',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
-                name: '_tokenId',
-                type: 'uint256',
-            },
-        ],
-        name: 'depositERC721',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: true,
-        inputs: [
-            {
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
-                name: '_owner',
-                type: 'address',
-            },
-            {
-                name: '_tokenId',
-                type: 'uint256',
-            },
-        ],
-        name: 'hasNFT',
-        outputs: [
-            {
-                name: '',
-                type: 'bool',
-            },
-        ],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_tokenContract',
-                type: 'address',
-            },
-            {
+                internalType: 'uint256',
                 name: '_tokenId',
                 type: 'uint256',
             },
@@ -241,45 +291,34 @@ const _abi = [
         type: 'function',
     },
     {
-        anonymous: false,
+        constant: false,
         inputs: [
             {
-                indexed: true,
-                name: 'vmId',
-                type: 'address',
-            },
-            {
-                indexed: false,
-                name: 'sender',
-                type: 'address',
-            },
-            {
-                indexed: false,
-                name: 'tokenType',
-                type: 'bytes21',
-            },
-            {
-                indexed: false,
-                name: 'value',
+                internalType: 'uint256',
+                name: '_value',
                 type: 'uint256',
             },
-            {
-                indexed: false,
-                name: 'data',
-                type: 'bytes',
-            },
         ],
-        name: 'MessageDelivered',
-        type: 'event',
+        name: 'withdrawEth',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
     },
     {
         constant: false,
         inputs: [],
-        name: 'pullPendingMessages',
+        name: 'getPending',
         outputs: [
             {
+                internalType: 'bytes32',
                 name: '',
                 type: 'bytes32',
+            },
+            {
+                internalType: 'uint256',
+                name: '',
+                type: 'uint256',
             },
         ],
         payable: false,
@@ -290,6 +329,7 @@ const _abi = [
         constant: false,
         inputs: [
             {
+                internalType: 'bytes',
                 name: '_messages',
                 type: 'bytes',
             },
@@ -313,18 +353,22 @@ const _abi = [
         constant: false,
         inputs: [
             {
+                internalType: 'address',
                 name: '_destination',
                 type: 'address',
             },
             {
+                internalType: 'bytes21',
                 name: '_tokenType',
                 type: 'bytes21',
             },
             {
+                internalType: 'uint256',
                 name: '_amount',
                 type: 'uint256',
             },
             {
+                internalType: 'bytes',
                 name: '_data',
                 type: 'bytes',
             },
@@ -339,22 +383,27 @@ const _abi = [
         constant: false,
         inputs: [
             {
+                internalType: 'address',
                 name: '_destination',
                 type: 'address',
             },
             {
+                internalType: 'bytes21',
                 name: '_tokenType',
                 type: 'bytes21',
             },
             {
+                internalType: 'uint256',
                 name: '_amount',
                 type: 'uint256',
             },
             {
+                internalType: 'bytes',
                 name: '_data',
                 type: 'bytes',
             },
             {
+                internalType: 'bytes',
                 name: '_signature',
                 type: 'bytes',
             },
@@ -369,10 +418,12 @@ const _abi = [
         constant: false,
         inputs: [
             {
+                internalType: 'address',
                 name: '_destination',
                 type: 'address',
             },
             {
+                internalType: 'bytes',
                 name: '_data',
                 type: 'bytes',
             },
@@ -387,22 +438,27 @@ const _abi = [
         constant: true,
         inputs: [
             {
+                internalType: 'address',
                 name: '_dest',
                 type: 'address',
             },
             {
+                internalType: 'bytes32',
                 name: '_data',
                 type: 'bytes32',
             },
             {
+                internalType: 'bytes21',
                 name: '_tokenType',
                 type: 'bytes21',
             },
             {
+                internalType: 'uint256',
                 name: '_value',
                 type: 'uint256',
             },
             {
+                internalType: 'address',
                 name: '_sender',
                 type: 'address',
             },
@@ -410,6 +466,7 @@ const _abi = [
         name: 'generateSentMessageHash',
         outputs: [
             {
+                internalType: 'bytes32',
                 name: '',
                 type: 'bytes32',
             },
