@@ -19,7 +19,6 @@ package protocol
 import (
 	"bytes"
 	"errors"
-	"math/big"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
@@ -27,7 +26,7 @@ import (
 )
 
 func NewTimeBounds(startTime, endTime uint64) *TimeBounds {
-	return &TimeBounds{StartTime: startTime, EndTime: endTime}
+	return &TimeBounds{StartTime: value.NewBigIntBufFromUint64(startTime), EndTime: value.NewBigIntBufFromUint64(endTime)}
 }
 
 func (tb *TimeBounds) Equals(other TimeBounds) bool {
@@ -35,10 +34,12 @@ func (tb *TimeBounds) Equals(other TimeBounds) bool {
 }
 
 func (tb *TimeBounds) IsValidTime(time uint64) error {
-	if time < tb.StartTime {
+	startTime := value.NewBigIntFromBuf(tb.StartTime)
+	if startTime.IsUint64() || time < startTime.Uint64() {
 		return errors.New("TimeBounds minimum time must less than the time")
 	}
-	if time > tb.EndTime {
+	endTime := value.NewBigIntFromBuf(tb.EndTime)
+	if endTime.IsUint64() && time > endTime.Uint64() {
 		return errors.New("TimeBounds maximum time must greater than the time")
 	}
 	return nil
@@ -46,8 +47,8 @@ func (tb *TimeBounds) IsValidTime(time uint64) error {
 
 func (tb *TimeBounds) AsValue() value.Value {
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(new(big.Int).SetUint64(tb.StartTime)),
-		value.NewIntValue(new(big.Int).SetUint64(tb.EndTime)),
+		value.NewIntValue(value.NewBigIntFromBuf(tb.StartTime)),
+		value.NewIntValue(value.NewBigIntFromBuf(tb.EndTime)),
 	})
 	return newTup
 }

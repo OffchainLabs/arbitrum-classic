@@ -28,9 +28,20 @@ func NewBigIntBuf(buf *big.Int) *BigIntegerBuf {
 		Value: buf.Bytes(),
 	}
 }
+func NewBigIntBufFromUint64(val uint64) *BigIntegerBuf {
+	return NewBigIntBuf(big.NewInt(int64(val)))
+}
 
 func NewBigIntFromBuf(buf *BigIntegerBuf) *big.Int {
 	return new(big.Int).SetBytes(buf.Value)
+}
+
+func Uint64FromBuf(buf *BigIntegerBuf) (uint64, error) {
+	bi := NewBigIntFromBuf(buf)
+	if !bi.IsUint64() {
+		return 0, errors.New("block number does not fit in uint64")
+	}
+	return bi.Uint64(), nil
 }
 
 func NewHashBuf(h [32]byte) *HashBuf {

@@ -19,8 +19,8 @@ message MessageBuf {
 }
 
 message TimeBounds {
-    uint64 startTime = 1;
-    uint64 endTime = 2;
+    value.BigIntegerBuf startTime = 1;
+    value.BigIntegerBuf endTime = 2;
 }
 
 message Precondition {

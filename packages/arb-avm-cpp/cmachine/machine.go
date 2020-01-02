@@ -29,6 +29,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"runtime"
 	"unsafe"
 
@@ -133,11 +134,19 @@ func (m *Machine) DeliverMessages(messages value.TupleValue) {
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
+	startTime, err := value.Uint64FromBuf(timeBounds.StartTime)
+	if err != nil {
+		log.Fatal(err)
+	}
+	endTime, err := value.Uint64FromBuf(timeBounds.EndTime)
+	if err != nil {
+		log.Fatal(err)
+	}
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		C.uint64_t(timeBounds.StartTime),
-		C.uint64_t(timeBounds.EndTime),
+		C.uint64_t(startTime),
+		C.uint64_t(endTime),
 	)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
