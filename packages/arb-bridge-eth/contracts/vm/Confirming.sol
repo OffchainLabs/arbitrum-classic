@@ -89,7 +89,7 @@ contract Confirming is Staking {
         Staking.init(_stakeRequirement, _challengeFactoryAddress);
 
         // VM protocol state
-        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple());
+        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple(), 0);
         updateLatestConfirmed(
             RollupUtils.childNodeHash(
                 0,

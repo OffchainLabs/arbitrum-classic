@@ -21,7 +21,8 @@ library RollupUtils {
     function protoStateHash(
         bytes32 machineHash,
         bytes32 inboxHash,
-        bytes32 pendingTop
+        bytes32 pendingTop,
+        uint pendingCountCount
     )
         internal
         pure
@@ -31,7 +32,8 @@ library RollupUtils {
             abi.encodePacked(
                 machineHash,
                 inboxHash,
-                pendingTop
+                pendingTop,
+                pendingCountCount
             )
         );
     }

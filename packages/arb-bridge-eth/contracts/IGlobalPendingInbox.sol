@@ -26,7 +26,7 @@ interface IGlobalPendingInbox {
         bytes data
     );
 
-    function getPendingMessages() external returns(bytes32);
+    function getPending() external returns(bytes32, uint);
 
     function sendMessages(bytes calldata _messages) external;
 

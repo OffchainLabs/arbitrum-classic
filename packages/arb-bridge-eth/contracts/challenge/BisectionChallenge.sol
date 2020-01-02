@@ -94,11 +94,11 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
         require(_challengeState == challengeState, BIS_PREV);
     }
 
-    function firstSegmentSize(uint32 totalCount, uint bisectionCount) internal pure returns(uint32) {
-        return totalCount / uint32(bisectionCount) + totalCount%uint32(bisectionCount);
+    function firstSegmentSize(uint totalCount, uint bisectionCount) internal pure returns(uint) {
+        return totalCount / bisectionCount + totalCount%bisectionCount;
     }
 
-    function otherSegmentSize(uint32 totalCount, uint bisectionCount) internal pure returns(uint32) {
-        return totalCount / uint32(bisectionCount);
+    function otherSegmentSize(uint totalCount, uint bisectionCount) internal pure returns(uint) {
+        return totalCount / bisectionCount;
     }
 }

@@ -181,7 +181,7 @@ contract ExecutionChallenge is BisectionChallenge {
             Protocol.generateAssertionHash(
                 _data.machineHashes[1],
                 _data.didInboxInsns[0],
-                firstSegmentSize(_data.totalSteps, bisectionCount),
+                uint32(firstSegmentSize(uint(_data.totalSteps), bisectionCount)),
                 _data.gases[0],
                 _data.messageAccs[0],
                 _data.messageAccs[1],
@@ -197,7 +197,7 @@ contract ExecutionChallenge is BisectionChallenge {
             assertionHash = Protocol.generateAssertionHash(
                 _data.machineHashes[i + 1],
                 _data.didInboxInsns[i],
-                otherSegmentSize(_data.totalSteps, bisectionCount),
+                uint32(otherSegmentSize(uint(_data.totalSteps), bisectionCount)),
                 _data.gases[i],
                 _data.messageAccs[i],
                 _data.messageAccs[i + 1],
