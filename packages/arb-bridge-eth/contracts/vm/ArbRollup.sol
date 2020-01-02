@@ -73,7 +73,7 @@ contract ArbRollup is Leaves, IArbRollup {
     event RollupAsserted(
         bytes32[6] fields,
         uint importedMessageCount,
-        uint64[2] timeBoundsBlocks,
+        uint128[2] timeBoundsBlocks,
         bool didInboxInsn,
         uint32 numSteps,
         uint64 numArbGas
