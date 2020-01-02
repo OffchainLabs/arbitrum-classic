@@ -30,9 +30,9 @@ type Chain struct {
 	vmParams        ChainParams
 	pendingInbox    *PendingInbox
 	latestConfirmed *Node
-	leaves          *LeafList
+	leaves          *LeafSet
 	nodeFromHash    map[[32]byte]*Node
-	stakerList      *StakerList
+	stakers         *StakerSet
 	challenges      map[common.Address]*Challenge
 }
 
@@ -42,7 +42,7 @@ func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams Ch
 		_vmParams,
 		NewPendingInbox(),
 		nil,
-		NewLeafList(),
+		NewLeafSet(),
 		make(map[[32]byte]*Node),
 		NewStakerList(),
 		make(map[common.Address]*Challenge),
@@ -57,7 +57,7 @@ func (chain *Chain) MarshalToBuf() *ChainBuf {
 		allNodes = append(allNodes, v.MarshalToBuf())
 	}
 	var allStakers []*StakerBuf
-	chain.stakerList.forall(func(staker *Staker) {
+	chain.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
 	})
 	var leafHashes []string
@@ -86,7 +86,7 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 		buf.VmParams.Unmarshal(),
 		buf.PendingInbox.Unmarshal(),
 		nil,
-		NewLeafList(),
+		NewLeafSet(),
 		make(map[[32]byte]*Node),
 		NewStakerList(),
 		make(map[common.Address]*Challenge),
@@ -120,7 +120,7 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 	for _, stakerBuf := range buf.Stakers {
 		var locationHash [32]byte
 		copy(locationHash[:], []byte(stakerBuf.Location))
-		chain.stakerList.Add(&Staker{
+		chain.stakers.Add(&Staker{
 			common.BytesToAddress([]byte(stakerBuf.Address)),
 			chain.nodeFromHash[locationHash],
 			new(big.Int).SetBytes([]byte(stakerBuf.CreationTime)),
@@ -134,42 +134,34 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 	return chain
 }
 
-type LeafList struct {
-	arr []*Node
-	idx map[[32]byte]uint
+type LeafSet struct {
+	idx map[[32]byte]*Node
 }
 
-func NewLeafList() *LeafList {
-	return &LeafList{}
+func NewLeafSet() *LeafSet {
+	return &LeafSet{
+		make(map[[32]byte]*Node),
+	}
 }
 
-func (ll *LeafList) IsLeaf(node *Node) bool {
+func (ll *LeafSet) IsLeaf(node *Node) bool {
 	_, ok := ll.idx[node.hash]
 	return ok
 }
 
-func (ll *LeafList) Add(node *Node) {
-	if _, ok := ll.idx[node.hash]; ok {
+func (ll *LeafSet) Add(node *Node) {
+	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
 	}
-	ll.idx[node.hash] = uint(len(ll.arr))
-	ll.arr = append(ll.arr, node)
+	ll.idx[node.hash] = node
 }
 
-func (ll *LeafList) Delete(node *Node) {
-	slot, ok := ll.idx[node.hash]
-	if !ok {
-		log.Fatal("tried to remove nonexistent leaf")
-	}
-	if int(slot) < len(ll.arr)-1 {
-		ll.arr[slot] = ll.arr[len(ll.arr)-1]
-		ll.idx[ll.arr[slot].hash] = slot
-	}
-	ll.arr = ll.arr[:len(ll.arr)-1]
+func (ll *LeafSet) Delete(node *Node) {
+	delete(ll.idx, node.hash)
 }
 
-func (ll *LeafList) forall(f func(*Node)) {
-	for _, v := range ll.arr {
+func (ll *LeafSet) forall(f func(*Node)) {
+	for _, v := range ll.idx {
 		f(v)
 	}
 }
@@ -181,41 +173,31 @@ type Staker struct {
 	challenge    *Challenge
 }
 
-type StakerList struct {
-	arr []*Staker
-	idx map[common.Address]uint
+type StakerSet struct {
+	idx map[common.Address]*Staker
 }
 
-func NewStakerList() *StakerList {
-	return &StakerList{}
+func NewStakerList() *StakerSet {
+	return &StakerSet{make(map[common.Address]*Staker)}
 }
 
-func (sl *StakerList) Add(newStaker *Staker) {
+func (sl *StakerSet) Add(newStaker *Staker) {
 	if _, ok := sl.idx[newStaker.address]; ok {
 		log.Fatal("tried to insert staker twice")
 	}
-	sl.idx[newStaker.address] = uint(len(sl.arr))
-	sl.arr = append(sl.arr, newStaker)
+	sl.idx[newStaker.address] = newStaker
 }
 
-func (sl *StakerList) Delete(staker *Staker) {
-	slot, ok := sl.idx[staker.address]
-	if !ok {
-		log.Fatal("tried to remove nonexistent staker")
-	}
-	if int(slot) < len(sl.arr)-1 {
-		sl.arr[slot] = sl.arr[len(sl.arr)-1]
-		sl.idx[sl.arr[slot].address] = slot
-	}
-	sl.arr = sl.arr[:len(sl.arr)-1]
+func (sl *StakerSet) Delete(staker *Staker) {
+	delete(sl.idx, staker.address)
 }
 
-func (sl *StakerList) Get(addr common.Address) *Staker {
-	return sl.arr[sl.idx[addr]]
+func (sl *StakerSet) Get(addr common.Address) *Staker {
+	return sl.idx[addr]
 }
 
-func (sl *StakerList) forall(f func(*Staker)) {
-	for _, v := range sl.arr {
+func (sl *StakerSet) forall(f func(*Staker)) {
+	for _, v := range sl.idx {
 		f(v)
 	}
 }
@@ -458,15 +440,15 @@ func (chain *Chain) CreateStake(stakerAddr common.Address, nodeHash [32]byte, cr
 		creationTime,
 		nil,
 	}
-	chain.stakerList.Add(staker)
+	chain.stakers.Add(staker)
 }
 
 func (chain *Chain) MoveStake(stakerAddr common.Address, nodeHash [32]byte) {
-	chain.stakerList.Get(stakerAddr).location = chain.nodeFromHash[nodeHash]
+	chain.stakers.Get(stakerAddr).location = chain.nodeFromHash[nodeHash]
 }
 
 func (chain *Chain) RemoveStake(stakerAddr common.Address) {
-	chain.stakerList.Delete(chain.stakerList.Get(stakerAddr))
+	chain.stakers.Delete(chain.stakers.Get(stakerAddr))
 }
 
 func (staker *Staker) MarshalToBuf() *StakerBuf {
@@ -521,8 +503,8 @@ const (
 func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address, kind ChallengeType) *Challenge {
 	ret := &Challenge{contract, asserter, challenger, kind}
 	chain.challenges[contract] = ret
-	chain.stakerList.Get(asserter).challenge = ret
-	chain.stakerList.Get(challenger).challenge = ret
+	chain.stakers.Get(asserter).challenge = ret
+	chain.stakers.Get(challenger).challenge = ret
 	return ret
 }
 
