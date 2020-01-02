@@ -103,7 +103,3 @@ func (in *Inbox) WithAddedMessages(messages value.TupleValue) *Inbox {
 func (in *Inbox) Receive() value.TupleValue {
 	return in.messages
 }
-
-func (in *Inbox) MakeEmpty() {
-	in.messages = value.NewEmptyTuple()
-}

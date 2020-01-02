@@ -22,11 +22,11 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -693,7 +693,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && inboxVal == value.NewEmptyTuple() {
 		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
-	state.inbox.MakeEmpty()
+	state.inbox = protocol.NewInbox()
 	mods = PushStackBox(state, mods, inboxVal)
 	state.IncrPC()
 	return mods, nil
