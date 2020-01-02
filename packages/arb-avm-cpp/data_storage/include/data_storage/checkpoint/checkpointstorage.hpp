@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include <data_storage/checkpoint/checkpointutils.hpp>
+#include <avm_values/vmValueParser.hpp>
 #include <data_storage/datastorage.hpp>
 
 struct GetResults;
@@ -33,12 +33,12 @@ class TransactionDB;
 class CheckpointStorage {
    private:
     std::unique_ptr<DataStorage> datastorage;
-    const InitialVmState& initial_state;
+    const InitialVmValues& initial_state;
 
    public:
     CheckpointStorage(const std::string& db_path,
-                      const InitialVmState& initial_state_);
-    InitialVmState getInitialVmState() const;
+                      const InitialVmValues& initial_state_);
+    InitialVmValues getInitialVmValues() const;
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();
     std::unique_ptr<const Transaction> makeConstTransaction() const;

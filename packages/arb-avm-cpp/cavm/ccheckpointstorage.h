@@ -27,11 +27,13 @@ typedef struct {
     int length;
 } ByteSlice;
 
+typedef void CMachine;
 typedef void CCheckpointStorage;
 
 CCheckpointStorage* createCheckpointStorage(const char* filename,
                                             const char* contract_path);
 void destroyCheckpointStorage(CCheckpointStorage* storage);
+CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr);
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const char* checkpoint_name);
 int saveValue(CCheckpointStorage* storage_ptr, void* value_data);

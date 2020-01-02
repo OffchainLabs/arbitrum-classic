@@ -48,7 +48,7 @@ void initializeDatastack(MachineStateSaver& msSaver,
 void saveDataStack(Datastack data_stack,
                    std::vector<unsigned char> expected_hash_key) {
     TuplePool pool;
-    auto state = checkpoint::getInitialVmState(test_contract_path);
+    auto state = getInitialVmValues(test_contract_path);
     CheckpointStorage storage(dbpath, state);
     std::vector<CodePoint> code;
     auto saver = MachineStateSaver(storage.makeTransaction());
@@ -64,7 +64,7 @@ void saveDataStack(Datastack data_stack,
 void saveDataStackTwice(Datastack data_stack,
                         std::vector<unsigned char> expected_hash_key) {
     TuplePool pool;
-    auto state = checkpoint::getInitialVmState(test_contract_path);
+    auto state = getInitialVmValues(test_contract_path);
     CheckpointStorage storage(dbpath, state);
     std::vector<CodePoint> code;
     auto saver = MachineStateSaver(storage.makeTransaction());
@@ -116,7 +116,7 @@ void saveTwiceAndGetDataStack(MachineStateSaver& saver,
 TEST_CASE("Initialize datastack") {
     SECTION("default") {
         TuplePool pool;
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(dbpath, state);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
@@ -134,7 +134,7 @@ TEST_CASE("Initialize datastack") {
 
     SECTION("push empty tuple") {
         TuplePool pool;
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(dbpath, state);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
@@ -154,7 +154,7 @@ TEST_CASE("Initialize datastack") {
 
     SECTION("push num, tuple") {
         TuplePool pool;
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(dbpath, state);
 
         CodePoint code_point = state.code[0];
@@ -179,7 +179,7 @@ TEST_CASE("Initialize datastack") {
     boost::filesystem::remove_all(dbpath);
     SECTION("push codepoint, tuple") {
         TuplePool pool;
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(dbpath, state);
 
         CodePoint code_point = state.code[0];
@@ -267,7 +267,7 @@ TEST_CASE("Save datastack") {
 TEST_CASE("Save and get datastack") {
     SECTION("save datastack and get") {
         TuplePool pool;
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(dbpath, state);
 
         auto code_point = state.code[0];
@@ -294,7 +294,7 @@ TEST_CASE("Save and get datastack") {
     boost::filesystem::remove_all(dbpath);
     SECTION("save datastack twice and get") {
         TuplePool pool;
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(dbpath, state);
 
         auto code_point = state.code[0];

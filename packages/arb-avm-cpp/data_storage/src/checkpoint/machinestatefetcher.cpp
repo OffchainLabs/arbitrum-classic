@@ -47,7 +47,7 @@ DbResult<CodePoint> MachineStateFetcher::getCodePoint(
 
     if (results.status.ok()) {
         auto code_point = checkpoint::utils::deserializeCodepoint(
-            results.stored_value, checkpoint_storage.getInitialVmState().code);
+            results.stored_value, checkpoint_storage.getInitialVmValues().code);
         return DbResult<CodePoint>{results.status, results.reference_count,
                                    code_point};
     } else {
@@ -103,7 +103,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                         auto code_point =
                             checkpoint::utils::deserializeCodepoint(
                                 current_vector,
-                                checkpoint_storage.getInitialVmState().code);
+                                checkpoint_storage.getInitialVmValues().code);
                         values.push_back(code_point);
                         break;
                     }
@@ -146,7 +146,7 @@ DbResult<value> MachineStateFetcher::getValue(
             case CODEPT: {
                 auto code_point = checkpoint::utils::deserializeCodepoint(
                     results.stored_value,
-                    checkpoint_storage.getInitialVmState().code);
+                    checkpoint_storage.getInitialVmValues().code);
                 return DbResult<value>{results.status, results.reference_count,
                                        code_point};
             }

@@ -64,7 +64,7 @@ void restoreCheckpoint(CheckpointStorage& storage,
 
 TEST_CASE("Checkpoint State") {
     SECTION("default") {
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
 
@@ -75,7 +75,7 @@ TEST_CASE("Checkpoint State") {
     }
     boost::filesystem::remove_all(save_path);
     SECTION("save twice") {
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
         machine.initializeMachine(test_contract_path);
@@ -87,7 +87,7 @@ TEST_CASE("Checkpoint State") {
 
 TEST_CASE("Delete machine checkpoint") {
     SECTION("default") {
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
         machine.initializeMachine(test_contract_path);
@@ -101,7 +101,7 @@ TEST_CASE("Delete machine checkpoint") {
 TEST_CASE("Restore checkpoint") {
     SECTION("default") {
         TuplePool pool;
-        auto state = checkpoint::getInitialVmState(test_contract_path);
+        auto state = getInitialVmValues(test_contract_path);
         CheckpointStorage storage(save_path, state);
         Machine machine;
         machine.initializeMachine(test_contract_path);

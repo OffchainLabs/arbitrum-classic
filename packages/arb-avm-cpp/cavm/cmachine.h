@@ -56,10 +56,7 @@ typedef struct {
     uint64_t numGas;
 } RawAssertion;
 
-typedef void CMachine;
-
 CMachine* machineCreate(const char* filename);
-CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr);
 void machineDestroy(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash

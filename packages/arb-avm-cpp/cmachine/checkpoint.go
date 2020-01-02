@@ -27,6 +27,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"runtime"
 	"unsafe"
@@ -54,6 +55,18 @@ func NewCheckpoint(dbPath string, contractPath string) (*CheckpointStorage, erro
 
 func cDestroyCheckpointStorage(cCheckpointStorage *CheckpointStorage) {
 	C.destroyCheckpointStorage(cCheckpointStorage.c)
+}
+
+func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error) {
+	cMachine := C.getInitialMachine(checkpoint.c)
+
+	if cMachine == nil {
+		return nil, fmt.Errorf("error getting machine from checkpointstorage")
+	}
+
+	ret := &Machine{cMachine}
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret, nil
 }
 
 func (checkpoint *CheckpointStorage) DeleteCheckpoint(checkpointName string) bool {

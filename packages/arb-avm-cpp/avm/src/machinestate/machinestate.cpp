@@ -52,7 +52,7 @@ MachineState::MachineState(const std::vector<CodePoint>& code_,
 
 bool MachineState::initialize_machinestate(
     const std::string& contract_filename) {
-    auto initial_state = checkpoint::getInitialVmState(contract_filename);
+    auto initial_state = getInitialVmValues(contract_filename);
 
     if (initial_state.valid_state) {
         code = initial_state.code;

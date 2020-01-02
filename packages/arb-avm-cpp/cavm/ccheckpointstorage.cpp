@@ -22,6 +22,7 @@
 #include <data_storage/checkpoint/machinestatesaver.hpp>
 #include <data_storage/storageresult.hpp>
 
+#include <avm/machine.hpp>
 #include <avm_values/value.hpp>
 
 #include <string>
@@ -31,15 +32,35 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
     auto string_filename = std::string(db_path);
     auto string_contract_path = std::string(contract_path);
 
-    auto state = checkpoint::getInitialVmState(string_contract_path);
-    auto storage = new CheckpointStorage(string_filename, state);
-    return static_cast<void*>(storage);
+    auto state = getInitialVmValues(string_contract_path);
+
+    if (state.valid_state) {
+        auto storage = new CheckpointStorage(string_filename, state);
+        return static_cast<void*>(storage);
+    } else {
+        return nullptr;
+    }
 }
 
 void destroyCheckpointStorage(CCheckpointStorage* storage) {
     if (storage == NULL)
         return;
     delete static_cast<CheckpointStorage*>(storage);
+}
+
+CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
+    auto state = storage->getInitialVmValues();
+
+    if (state.valid_state) {
+        MachineState machine_state(state.code, state.errpc, state.staticVal);
+        auto machine = new Machine();
+        machine->initializeMachine(machine_state);
+
+        return static_cast<void*>(machine);
+    } else {
+        return nullptr;
+    }
 }
 
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,

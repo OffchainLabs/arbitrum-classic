@@ -24,13 +24,13 @@
 #include <rocksdb/utilities/transaction_db.h>
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path,
-                                     const InitialVmState& initial_state_)
+                                     const InitialVmValues& initial_state_)
     : initial_state(initial_state_) {
     auto db = new DataStorage(db_path);
     datastorage = std::unique_ptr<DataStorage>(db);
 }
 
-InitialVmState CheckpointStorage::getInitialVmState() const {
+InitialVmValues CheckpointStorage::getInitialVmValues() const {
     return initial_state;
 }
 

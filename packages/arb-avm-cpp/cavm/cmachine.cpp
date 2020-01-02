@@ -45,21 +45,6 @@ CMachine* machineCreate(const char* filename) {
     return static_cast<void*>(mach);
 }
 
-CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
-    auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
-    auto state = storage->getInitialVmState();
-
-    if (state.valid_state) {
-        MachineState machine_state(state.code, state.errpc, state.staticVal);
-        auto machine = new Machine();
-        machine->initializeMachine(machine_state);
-
-        return static_cast<void*>(machine);
-    } else {
-        return nullptr;
-    }
-}
-
 void machineDestroy(CMachine* m) {
     if (m == NULL)
         return;
