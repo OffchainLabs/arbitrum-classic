@@ -693,7 +693,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && inboxVal == value.NewEmptyTuple() {
 		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
-	state.inbox.EmptyAccepted()
+	state.inbox.MakeEmpty()
 	mods = PushStackBox(state, mods, inboxVal)
 	state.IncrPC()
 	return mods, nil
