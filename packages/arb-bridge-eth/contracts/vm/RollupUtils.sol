@@ -65,35 +65,15 @@ library RollupUtils {
         pure
         returns(bytes32)
     {
-        return childNodeHash(
-            prevNodeHash,
-            vmProtoStateHash,
-            keccak256(
-                abi.encodePacked(
-                    deadlineTicks,
-                    disputableNodeHashVal,
-                    childType
-                )
-            )
-        );
-    }
-
-    function childNodeHash(
-        bytes32 prevNodeHash,
-        bytes32 vmProtoStateHash,
-        bytes32 extraNodeDataHash
-    )
-        internal
-        pure
-        returns(bytes32)
-    {
         return keccak256(
             abi.encodePacked(
                 prevNodeHash,
                 keccak256(
                     abi.encodePacked(
                         vmProtoStateHash,
-                        extraNodeDataHash
+                        deadlineTicks,
+                        disputableNodeHashVal,
+                        childType
                     )
                 )
             )
