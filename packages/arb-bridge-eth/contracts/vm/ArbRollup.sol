@@ -47,6 +47,9 @@ contract ArbRollup is Leaves, IArbRollup {
     string constant CONF_STAKER_PROOF = "CONF_STAKER_PROOF";
     // Type is not invalid
     string constant CONF_INV_TYPE = "CONF_INV_TYPE";
+    // There must be at least one staker
+    string constant CONF_HAS_STAKER = "CONF_HAS_STAKER";
+
 
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
@@ -268,7 +271,7 @@ contract ArbRollup is Leaves, IArbRollup {
             ChallengeUtils.pendingTopHash(
                 globalInbox.getPendingMessages(),
                 data.afterPendingTop,
-                data.importedMessageCount
+                0
             ),
             INVALID_PENDING_TOP_TYPE,
             vmProtoHashBefore
@@ -366,6 +369,7 @@ contract ArbRollup is Leaves, IArbRollup {
             vmProtoStateHash
         );
         bytes20 prevStaker = 0x00;
+        bool hasStaker = false;
         for (uint i = 0; i < _stakerCount; i++) {
             address stakerAddress = stakerAddresses[i];
             require(bytes20(stakerAddress) > prevStaker, CONF_ORDER);
@@ -381,9 +385,11 @@ contract ArbRollup is Leaves, IArbRollup {
                     ),
                     CONF_STAKER_PROOF
                 );
+                hasStaker = true;
             }
             prevStaker = bytes20(stakerAddress);
         }
+        require(hasStaker, CONF_HAS_STAKER);
 
         updateLatestConfirmed(to);
 
