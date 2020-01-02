@@ -32,10 +32,15 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     address internal constant ETH_ADDRESS = address(0);
 
-    mapping(address => bytes32) pending;
+    struct PendingInbox {
+        bytes32 value;
+        uint count;
+    }
+
+    mapping(address => PendingInbox) pending;
 
     function getPendingMessages() external returns(bytes32) {
-        return pending[msg.sender];
+        return pending[msg.sender].value;
     }
 
     function sendMessages(bytes calldata _messages) external {
@@ -70,8 +75,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function registerForInbox() external {
-        require(pending[msg.sender] == 0, "Pending must be uninitialized");
-        pending[msg.sender] = Value.hashEmptyTuple();
+        require(pending[msg.sender].value == 0, "Pending must be uninitialized");
+        pending[msg.sender].value = Value.hashEmptyTuple();
     }
 
     function sendMessage(
@@ -191,7 +196,8 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     )
         private
     {
-        if (pending[_destination] != 0) {
+        PendingInbox storage pendingInbox = pending[_destination];
+        if (pendingInbox.value != 0) {
             bytes32 dataHash = Value.deserializeHashed(_data);
             bytes32 txHash = keccak256(
                 abi.encodePacked(
@@ -214,11 +220,12 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             values[3] = Value.newInt(uint256(bytes32(_tokenType)));
             bytes32 messageHash =  Value.newTuple(values).hash().hash;
 
-            pending[_destination] = Value.hashTuple([
+            pendingInbox.value = Value.hashTuple([
                 Value.newInt(0),
-                Value.newHashOnly(pending[_destination]),
+                Value.newHashOnly(pendingInbox.value),
                 Value.newHashOnly(messageHash)
             ]);
+            pendingInbox.count++;
         }
 
         emit IGlobalPendingInbox.MessageDelivered(
