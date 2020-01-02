@@ -42,7 +42,7 @@ library Protocol {
 
     function generatePreconditionHash(
         bytes32 _beforeHash,
-        uint64[2] memory _timeBounds,
+        uint128[2] memory _timeBounds,
         bytes32 _beforeInbox
     )
         public

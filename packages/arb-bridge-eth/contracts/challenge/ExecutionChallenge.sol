@@ -46,7 +46,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
     struct BisectAssertionData {
         bytes32 beforeInbox;
-        uint64[2] timeBounds;
+        uint128[2] timeBoundsBlocks;
         bytes32[] machineHashes;
         bool[] didInboxInsns;
         bytes32[] messageAccs;
@@ -57,7 +57,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
     function bisectAssertion(
         bytes32 _beforeInbox,
-        uint64[2] memory _timeBounds,
+        uint128[2] memory _timeBoundsBlocks,
         bytes32[] memory _machineHashes,
         bool[] memory _didInboxInsns,
         bytes32[] memory _messageAccs,
@@ -71,7 +71,7 @@ contract ExecutionChallenge is BisectionChallenge {
         _bisectAssertion(
             BisectAssertionData(
                 _beforeInbox,
-                _timeBounds,
+                _timeBoundsBlocks,
                 _machineHashes,
                 _didInboxInsns,
                 _messageAccs,
@@ -85,7 +85,7 @@ contract ExecutionChallenge is BisectionChallenge {
     function oneStepProof(
         bytes32 _beforeHash,
         bytes32 _beforeInbox,
-        uint64[2] memory _timeBounds,
+        uint128[2] memory _timeBoundsBlocks,
         bytes32 _afterHash,
         bool _didInboxInsns,
         bytes32 _firstMessage,
@@ -102,7 +102,7 @@ contract ExecutionChallenge is BisectionChallenge {
             ChallengeUtils.executionHash(
                 Protocol.generatePreconditionHash(
                      _beforeHash,
-                     _timeBounds,
+                     _timeBoundsBlocks,
                      _beforeInbox
                 ),
                 Protocol.generateAssertionHash(
@@ -120,7 +120,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
         uint correctProof = OneStepProof.validateProof(
             _beforeHash,
-            _timeBounds,
+            _timeBoundsBlocks,
             _beforeInbox,
             _afterHash,
             _didInboxInsns,
@@ -155,7 +155,7 @@ contract ExecutionChallenge is BisectionChallenge {
             ChallengeUtils.executionHash(
                 Protocol.generatePreconditionHash(
                      _data.machineHashes[0],
-                     _data.timeBounds,
+                     _data.timeBoundsBlocks,
                      _data.beforeInbox
                 ),
                 Protocol.generateAssertionHash(
@@ -175,7 +175,7 @@ contract ExecutionChallenge is BisectionChallenge {
         hashes[0] = ChallengeUtils.executionHash(
             Protocol.generatePreconditionHash(
                  _data.machineHashes[0],
-                 _data.timeBounds,
+                 _data.timeBoundsBlocks,
                  _data.beforeInbox
             ),
             Protocol.generateAssertionHash(
@@ -207,7 +207,7 @@ contract ExecutionChallenge is BisectionChallenge {
             hashes[i] = ChallengeUtils.executionHash(
                 Protocol.generatePreconditionHash(
                      _data.machineHashes[i],
-                     _data.timeBounds,
+                     _data.timeBoundsBlocks,
                      _data.beforeInbox
                 ),
                 assertionHash

@@ -28,7 +28,7 @@ library OneStepProof {
 
     struct ValidateProofData {
         bytes32 beforeHash;
-        uint64[2] timeBounds;
+        uint128[2] timeBoundsBlocks;
         bytes32 beforeInbox;
         bytes32 afterHash;
         bool    didInboxInsn;
@@ -42,7 +42,7 @@ library OneStepProof {
 
     function validateProof(
         bytes32 beforeHash,
-        uint64[2] memory timeBounds,
+        uint128[2] memory timeBoundsBlocks,
         bytes32 beforeInbox,
         bytes32 afterHash,
         bool    didInboxInsn,
@@ -60,7 +60,7 @@ library OneStepProof {
         return checkProof(
             ValidateProofData(
                 beforeHash,
-                timeBounds,
+                timeBoundsBlocks,
                 beforeInbox,
                 afterHash,
                 didInboxInsn,
@@ -1377,11 +1377,11 @@ library OneStepProof {
             }
         } else if (opCode == OP_GETTIME) {
             Value.Data[] memory contents = new Value.Data[](2);
-            contents[0] = Value.newInt(_data.timeBounds[0]);
-            contents[1] = Value.newInt(_data.timeBounds[1]);
+            contents[0] = Value.newInt(_data.timeBoundsBlocks[0]);
+            contents[1] = Value.newInt(_data.timeBoundsBlocks[1]);
             endMachine.addDataStackValue(Value.newTuple(contents));
         } else if (opCode == OP_INBOX) {
-            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBounds[0]);
+            correct = executeInboxInsn(endMachine, stackVals[0], Value.HashOnly(_data.beforeInbox), _data.timeBoundsBlocks[0]);
         } else if (opCode == OP_ERROR) {
             correct = false;
         } else if (opCode == OP_STOP) {

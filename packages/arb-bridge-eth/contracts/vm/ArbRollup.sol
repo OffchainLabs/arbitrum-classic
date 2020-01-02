@@ -90,7 +90,7 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 beforeInboxHash;
         bytes32 beforePendingTop;
         bytes32 prevPrevLeafHash;
-        bytes32 prevExtraDataHash;
+        bytes32 prevDisputableNodeHash;
         bytes32[] stakerProof;
         bytes32 afterPendingTop;
         bytes32 importedMessagesSlice;
@@ -102,7 +102,9 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 logsAccHash;
         uint32 numSteps;
         uint64 numArbGas;
-        uint64[2] timeBoundsBlocks;
+        uint128[2] timeBoundsBlocks;
+        uint256 prevDeadlineTicks;
+        uint32  prevChildType;
     }
 
     function init(
@@ -136,7 +138,7 @@ contract ArbRollup is Leaves, IArbRollup {
     //  beforeInboxHash
     //  beforePendingTop
     //  prevPrevLeafHash
-    //  prevExtraDataHash
+    //  prevDisputableNodeHash
     //  afterPendingTop
     //  importedMessagesSlice
     //  afterVMHash
@@ -151,7 +153,9 @@ contract ArbRollup is Leaves, IArbRollup {
         uint32 _importedMessageCount,
         uint32 _numSteps,
         uint64 _numArbGas,
-        uint64[2] calldata _timeBoundsTicks
+        uint128[2] calldata _timeBoundsBlocks,
+        uint256 _prevDeadlineTicks,
+        uint32 _prevChildType
     )
         external
     {
@@ -173,7 +177,9 @@ contract ArbRollup is Leaves, IArbRollup {
                 _fields[10],
                 _numSteps,
                 _numArbGas,
-                _timeBoundsTicks
+                _timeBoundsBlocks,
+                _prevDeadlineTicks,
+                _prevChildType
             )
         );
     }
@@ -256,9 +262,10 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         bytes32 prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
-            vmProtoHashBefore,
-            data.prevExtraDataHash
-
+            data.prevDeadlineTicks,
+            data.prevDisputableNodeHash,
+            data.prevChildType,
+            vmProtoHashBefore
         );
         require(isValidLeaf(prevLeaf), MAKE_LEAF);
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
@@ -312,7 +319,7 @@ contract ArbRollup is Leaves, IArbRollup {
             ChallengeUtils.executionHash(
                 Protocol.generatePreconditionHash(
                      data.beforeVMHash,
-                     data.timeBounds,
+                     data.timeBoundsBlocks,
                      execBeforeInboxHash
                 ),
                 assertionHash
@@ -405,7 +412,7 @@ contract ArbRollup is Leaves, IArbRollup {
         emit RollupConfirmed(to);
     }
 
-    function withinTimeBounds(uint64[2] memory _timeBoundsBlocks) private view returns (bool) {
+    function withinTimeBounds(uint128[2] memory _timeBoundsBlocks) private view returns (bool) {
         return block.number >= _timeBoundsBlocks[0] && block.number <= _timeBoundsBlocks[1];
     }
 }
