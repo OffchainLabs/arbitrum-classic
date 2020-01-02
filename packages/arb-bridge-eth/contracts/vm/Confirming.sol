@@ -32,16 +32,13 @@ contract Confirming is Staking {
 
     event RollupStakeRefunded(address staker);
 
-    function recoverStakeConfirmed(
-        bytes32[] calldata proof
-    )
-        external
-    {
-        Staker storage staker = getValidStaker(msg.sender);
-        require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), RECOV_PATH_PROOF);
-        deleteStakerWithPayout(msg.sender);
+    function recoverStakeConfirmed(bytes32[] calldata proof) external {
+        _recoverStakeConfirmed(msg.sender, proof);
+    }
 
-        emit RollupStakeRefunded(msg.sender);
+    function recoverStakeOld(address payable stakerAddress, bytes32[] calldata proof) external {
+        require(proof.length > 0);
+        _recoverStakeConfirmed(stakerAddress, proof);
     }
 
     function recoverStakeMooted(
@@ -95,5 +92,13 @@ contract Confirming is Staking {
 
     function updateLatestConfirmed(bytes32 node) internal {
         latestConfirmedPriv = node;
+    }
+
+    function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
+        Staker storage staker = getValidStaker(stakerAddress);
+        require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), RECOV_PATH_PROOF);
+        deleteStakerWithPayout(stakerAddress);
+
+        emit RollupStakeRefunded(stakerAddress);
     }
 }

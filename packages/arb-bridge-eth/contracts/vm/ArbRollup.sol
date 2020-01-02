@@ -20,7 +20,6 @@ import "./Leaves.sol";
 
 import "./VM.sol";
 import "./IArbRollup.sol";
-import "../libraries/RollupTime.sol";
 
 import "../IGlobalPendingInbox.sol";
 

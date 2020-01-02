@@ -25,6 +25,11 @@ contract Leaves is Confirming {
     // new stake location is not in path
     string constant MOVE_LOC = "MOVE_LOC";
 
+    // Node is not passed deadline
+    string constant RECOV_DEADLINE_TIME = "RECOV_DEADLINE_TIME";
+    // Node proof invalid
+    string constant RECOV_DEADLINE_PROOF = "RECOV_DEADLINE_PROOF";
+
     mapping (bytes32 => bool) private leaves;
 
     event RollupPruned(bytes32 nodeHash);
@@ -105,6 +110,34 @@ contract Leaves is Confirming {
         delete leaves[_leaf];
 
         emit RollupPruned(_leaf);
+    }
+
+    // Kick off if successor node whose deadline has passed
+    function recoverStakePassedDeadline(
+        address payable stakerAddress,
+        uint deadlineTicks,
+        bytes32 disputableNodeHashVal,
+        uint    childType,
+        bytes32 vmProtoStateHash,
+        bytes32 leaf,
+        bytes32[] calldata proof
+    )
+        external
+    {
+        Staker storage staker = getValidStaker(stakerAddress);
+        bytes32 nextNode = RollupUtils.childNodeHash(
+            staker.location,
+            deadlineTicks,
+            disputableNodeHashVal,
+            childType,
+            vmProtoStateHash
+        );
+        require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
+
+        require(RollupUtils.isPath(nextNode, leaf, proof), RECOV_DEADLINE_PROOF);
+        deleteStakerWithPayout(stakerAddress);
+
+        emit RollupStakeRefunded(stakerAddress);
     }
 
     function init(
