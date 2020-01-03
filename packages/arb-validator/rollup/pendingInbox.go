@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"log"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -29,6 +30,7 @@ type pendingInboxItem struct {
 	prev    *pendingInboxItem
 	next    *pendingInboxItem
 	hash    [32]byte
+	count   *big.Int
 }
 
 func (pii *pendingInboxItem) skipNext(n uint64) *pendingInboxItem {
@@ -53,16 +55,39 @@ func NewPendingInbox() *PendingInbox {
 	}
 }
 
-func (pi *PendingInbox) GenerateBisection(startItemHash [32]byte, count uint64, segments uint64) ([][32]byte, error) {
-	cuts := make([][32]byte, 0, segments+1)
-	item, ok := pi.index[startItemHash]
+func (pi *PendingInbox) SegmentSize(olderAcc [32]byte, newerAcc [32]byte) (uint64, error) {
+	oldItem, ok := pi.index[olderAcc]
+	if !ok {
+		return 0, errors.New("olderAcc not found")
+	}
+	newItem, ok := pi.index[newerAcc]
+	if !ok {
+		return 0, errors.New("newerAcc not found")
+	}
+	return new(big.Int).Sub(newItem.count, oldItem.count).Uint64(), nil
+}
+
+func (pi *PendingInbox) GenerateBisection(startItemHash [32]byte, endItemHash [32]byte, segments uint64) ([][32]byte, error) {
+	startItem, ok := pi.index[startItemHash]
 	if !ok {
 		return nil, errors.New("startItemHash not found")
 	}
-	cuts = append(cuts, item.hash)
+
+	endItem, ok := pi.index[endItemHash]
+	if !ok {
+		return nil, errors.New("endItemHash not found")
+	}
+
+	count := new(big.Int).Sub(pi.head.count, endItem.count).Uint64()
+	if count < segments {
+		segments = count
+	}
+
+	cuts := make([][32]byte, 0, segments+1)
+	cuts = append(cuts, startItemHash)
 	firstSegmentSize := count/segments + count%segments
 	otherSegmentSize := count / segments
-	item = item.skipNext(firstSegmentSize)
+	item := startItem.skipNext(firstSegmentSize)
 	if item == nil {
 		return nil, errors.New("pending inbox too short")
 	}
@@ -96,6 +121,7 @@ func (pi *PendingInbox) DeliverMessage(msg value.Value) {
 			prev:    nil,
 			next:    nil,
 			hash:    hash2(pi.hashOfRest, msg.Hash()),
+			count:   big.NewInt(1),
 		}
 		pi.head = item
 		pi.index[item.hash] = item
@@ -105,6 +131,7 @@ func (pi *PendingInbox) DeliverMessage(msg value.Value) {
 			prev:    pi.head,
 			next:    nil,
 			hash:    hash2(pi.head.hash, msg.Hash()),
+			count:   new(big.Int).Add(pi.head.count, big.NewInt(1)),
 		}
 		pi.head = item
 		item.prev.next = item
