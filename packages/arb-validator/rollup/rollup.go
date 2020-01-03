@@ -287,6 +287,7 @@ func (dn *DisputableNode) _hash() [32]byte {
 }
 
 type Node struct {
+	depth           uint64
 	hash            [32]byte
 	disputable      *DisputableNode
 	machineHash     [32]byte
@@ -315,6 +316,7 @@ var zeroBytes32 [32]byte // deliberately zeroed
 
 func (chain *ChainObserver) CreateInitialNode(machine machine.Machine) {
 	newNode := &Node{
+		depth:          0,
 		machineHash:    machine.Hash(),
 		machine:        machine.Clone(),
 		pendingTopHash: value.NewEmptyTuple().Hash(),
@@ -326,13 +328,17 @@ func (chain *ChainObserver) CreateInitialNode(machine machine.Machine) {
 }
 
 func (chain *ChainObserver) GeneratePathProof(from, to *Node) [][32]byte {
+	// returns nil if no proof exists
 	if to == nil {
-		return nil // no proof exists
+		return nil
 	}
 	if from == to {
 		return [][32]byte{}
 	} else {
 		sub := chain.GeneratePathProof(from, to.prev)
+		if sub == nil {
+			return nil
+		}
 		var inner32 [32]byte
 		innerHash := solsha3.SoliditySHA3(
 			solsha3.Bytes32(to.disputable.hash),
@@ -345,7 +351,37 @@ func (chain *ChainObserver) GeneratePathProof(from, to *Node) [][32]byte {
 }
 
 func (chain *ChainObserver) GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
-	return chain.GeneratePathProof(from, to1), chain.GeneratePathProof(from, to2)
+	// returns nil, nil if no proof exists
+	proof1 := chain.GeneratePathProof(from, to1)
+	proof2 := chain.GeneratePathProof(from, to2)
+	if proof1 == nil || proof2 == nil || len(proof1) == 0 || len(proof2) == 0 || proof1[0] == proof2[0] {
+		return nil, nil
+	} else {
+		return proof1, proof2
+	}
+}
+
+func (chain *ChainObserver) CommonAncestor(n1, n2 *Node) *Node {
+	for n1.depth > n2.depth {
+		n1 = n1.prev
+	}
+	for n2.depth > n1.depth {
+		n2 = n2.prev
+	}
+	for n1 != n2 {
+		n1 = n1.prev
+		n2 = n2.prev
+	}
+	return n1
+}
+
+func (chain *ChainObserver) CommonAncestorIfConflict(n1, n2 *Node) *Node { // return common ancestor, or nil if not conflicting
+	ret := chain.CommonAncestor(n1, n2)
+	if ret == n1 || ret == n2 {
+		return nil
+	} else {
+		return ret
+	}
 }
 
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
@@ -389,6 +425,7 @@ func (chain *ChainObserver) CreateNodesOnAssert(
 		afterMachine = afterMachine.Clone()
 	}
 	newNode := &Node{
+		depth:          1 + prevNode.depth,
 		disputable:     dispNode,
 		prev:           prevNode,
 		linkType:       ValidChildType,
@@ -403,6 +440,7 @@ func (chain *ChainObserver) CreateNodesOnAssert(
 	// create nodes for invalid branches
 	for kind := MinInvalidChildType; kind <= MaxChildType; kind++ {
 		newNode := &Node{
+			depth:          1 + prevNode.depth,
 			disputable:     dispNode,
 			prev:           prevNode,
 			linkType:       kind,
@@ -481,6 +519,7 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 		//TODO: marshal node.machine
 	}
 	return &NodeBuf{
+		Depth:          node.depth,
 		DisputableNode: node.disputable.MarshalToBuf(),
 		MachineHash:    marshalHash(node.machineHash),
 		PendingTopHash: marshalHash(node.pendingTopHash),
@@ -494,6 +533,7 @@ func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 	prevHashArr := unmarshalHash(buf.PrevHash)
 	pthArr := unmarshalHash(buf.PendingTopHash)
 	node := &Node{
+		depth:          buf.Depth,
 		disputable:     buf.DisputableNode.Unmarshal(),
 		machineHash:    machineHashArr,
 		pendingTopHash: pthArr,
