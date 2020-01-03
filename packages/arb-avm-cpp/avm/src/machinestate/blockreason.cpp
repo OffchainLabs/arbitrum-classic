@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm_values/blockreason.hpp>
+#include <avm/machinestate/blockreason.hpp>
 
 struct CheckpointSerializer {
     std::vector<unsigned char> operator()(const NotBlocked& val) const {
@@ -54,12 +54,6 @@ struct CheckpointSerializer {
         return return_value;
     }
 };
-
-std::unordered_map<BlockType, int> blockreason_type_length = {{Not, 1},
-                                                              {Halt, 1},
-                                                              {Error, 1},
-                                                              {Breakpoint, 1},
-                                                              {Inbox, 34}};
 
 std::vector<unsigned char> serializeForCheckpoint(const BlockReason& val) {
     return nonstd::visit(CheckpointSerializer{}, val);

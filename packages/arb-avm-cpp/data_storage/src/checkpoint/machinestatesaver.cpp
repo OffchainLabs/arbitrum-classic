@@ -17,7 +17,6 @@
 #include <data_storage/checkpoint/machinestatesaver.hpp>
 
 #include <avm_values/codepoint.hpp>
-#include <avm_values/tokenTracker.hpp>
 #include <avm_values/tuple.hpp>
 #include <data_storage/checkpoint/checkpointutils.hpp>
 #include <data_storage/storageresult.hpp>
@@ -39,13 +38,13 @@ SaveResults MachineStateSaver::saveValue(const value& val) {
         return saveTuple(tuple);
     } else {
         auto hash_key = GetHashKey(val);
-        return transaction->saveValue(hash_key, serialized_value);
+        return transaction->saveData(hash_key, serialized_value);
     }
 }
 
 SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
     auto hash_key = GetHashKey(val);
-    auto results = transaction->getValue(hash_key);
+    auto results = transaction->getData(hash_key);
 
     auto incr_ref_count = results.status.ok() && results.reference_count > 0;
 
@@ -69,7 +68,7 @@ SaveResults MachineStateSaver::saveTuple(const Tuple& val) {
                 auto tuple_save_results = saveTuple(tup_val);
             }
         }
-        return transaction->saveValue(hash_key, value_vector);
+        return transaction->saveData(hash_key, value_vector);
     }
 }
 
@@ -78,7 +77,7 @@ SaveResults MachineStateSaver::saveMachineState(
     const std::vector<unsigned char>& checkpoint_name) {
     auto serialized_state = checkpoint::utils::serializeStateKeys(state_data);
 
-    return transaction->saveValue(checkpoint_name, serialized_state);
+    return transaction->saveData(checkpoint_name, serialized_state);
 }
 
 rocksdb::Status MachineStateSaver::commitTransaction() {

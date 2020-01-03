@@ -25,9 +25,9 @@
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path,
                                      const InitialVmValues& initial_state_)
-    : initial_state(initial_state_) {
-    auto db = new DataStorage(db_path);
-    datastorage = std::unique_ptr<DataStorage>(db);
+    : datastorage(std::make_unique<DataStorage>(db_path)),
+      initial_state(initial_state_) {
+    pool = new TuplePool();
 }
 
 InitialVmValues CheckpointStorage::getInitialVmValues() const {

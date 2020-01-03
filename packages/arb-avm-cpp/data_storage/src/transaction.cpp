@@ -19,6 +19,31 @@
 
 #include <rocksdb/utilities/transaction_db.h>
 
+std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
+    const std::string& string_value) {
+    if (string_value.empty()) {
+        return std::make_tuple(0, std::vector<unsigned char>());
+    } else {
+        const char* c_string = string_value.c_str();
+        uint32_t ref_count;
+        memcpy(&ref_count, c_string, sizeof(ref_count));
+        std::vector<unsigned char> saved_value(
+            string_value.begin() + sizeof(ref_count), string_value.end());
+
+        return std::make_tuple(ref_count, saved_value);
+    }
+}
+
+std::vector<unsigned char> serializeCountAndValue(
+    int32_t count,
+    const std::vector<unsigned char>& value) {
+    std::vector<unsigned char> output_vector(sizeof(count));
+    memcpy(&output_vector[0], &count, sizeof(count));
+    output_vector.insert(output_vector.end(), value.begin(), value.end());
+
+    return output_vector;
+}
+
 Transaction::Transaction(rocksdb::Transaction* transaction_) {
     transaction = std::unique_ptr<rocksdb::Transaction>(transaction_);
 }
@@ -38,7 +63,7 @@ rocksdb::Status Transaction::rollBack() {
 
 SaveResults Transaction::incrementReference(
     const std::vector<unsigned char>& hash_key) {
-    auto results = getValue(hash_key);
+    auto results = getData(hash_key);
 
     if (results.status.ok()) {
         auto updated_count = results.reference_count + 1;
@@ -49,9 +74,9 @@ SaveResults Transaction::incrementReference(
     }
 }
 
-SaveResults Transaction::saveValue(const std::vector<unsigned char>& hash_key,
-                                   const std::vector<unsigned char>& value) {
-    auto results = getValue(hash_key);
+SaveResults Transaction::saveData(const std::vector<unsigned char>& hash_key,
+                                  const std::vector<unsigned char>& value) {
+    auto results = getData(hash_key);
     int ref_count;
 
     if (results.status.ok()) {
@@ -63,9 +88,9 @@ SaveResults Transaction::saveValue(const std::vector<unsigned char>& hash_key,
     return saveValueWithRefCount(ref_count, hash_key, value);
 }
 
-DeleteResults Transaction::deleteValue(
+DeleteResults Transaction::deleteData(
     const std::vector<unsigned char>& hash_key) {
-    auto results = getValue(hash_key);
+    auto results = getData(hash_key);
 
     if (results.status.ok()) {
         if (results.reference_count < 2) {
@@ -83,7 +108,7 @@ DeleteResults Transaction::deleteValue(
     }
 }
 
-GetResults Transaction::getValue(
+GetResults Transaction::getData(
     const std::vector<unsigned char>& hash_key) const {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;
@@ -130,29 +155,4 @@ rocksdb::Status Transaction::deleteKeyValuePair(
     const std::vector<unsigned char>& key) {
     std::string key_str(key.begin(), key.end());
     return transaction->Delete(key_str);
-}
-
-std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
-    const std::string& string_value) {
-    if (string_value.empty()) {
-        return std::make_tuple(0, std::vector<unsigned char>());
-    } else {
-        const char* c_string = string_value.c_str();
-        uint32_t ref_count;
-        memcpy(&ref_count, c_string, sizeof(ref_count));
-        std::vector<unsigned char> saved_value(
-            string_value.begin() + sizeof(ref_count), string_value.end());
-
-        return std::make_tuple(ref_count, saved_value);
-    }
-}
-
-std::vector<unsigned char> serializeCountAndValue(
-    uint32_t count,
-    const std::vector<unsigned char>& value) {
-    std::vector<unsigned char> output_vector(sizeof(count));
-    memcpy(&output_vector[0], &count, sizeof(count));
-    output_vector.insert(output_vector.end(), value.begin(), value.end());
-
-    return output_vector;
 }

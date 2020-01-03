@@ -38,27 +38,29 @@ MachineState::MachineState()
       inbox(pool.get()) {}
 
 MachineState::MachineState(const std::vector<CodePoint>& code_,
-                           const CodePoint& errpc_,
                            const value& static_val_)
     : pool(std::make_unique<TuplePool>()),
       pendingInbox(pool.get()),
       context({0, 0}),
       inbox(pool.get()) {
     code = code_;
-    errpc = errpc_;
     staticVal = static_val_;
+
+    errpc = getErrCodePoint();
     pc = 0;
 }
 
 bool MachineState::initialize_machinestate(
     const std::string& contract_filename) {
-    auto initial_state = getInitialVmValues(contract_filename);
+    auto initial_state = getInitialVmValues(contract_filename, pool.get());
 
     if (initial_state.valid_state) {
         code = initial_state.code;
-        errpc = initial_state.errpc;
         staticVal = initial_state.staticVal;
+
+        errpc = getErrCodePoint();
         pc = 0;
+
         return true;
     } else {
         return false;

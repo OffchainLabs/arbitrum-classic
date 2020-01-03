@@ -17,9 +17,7 @@
 #ifndef blockreason_hpp
 #define blockreason_hpp
 
-#include <avm_values/tokenTracker.hpp>
-
-#include <unordered_map>
+#include <avm/machinestate/tokenTracker.hpp>
 
 enum BlockType { Not, Halt, Error, Breakpoint, Inbox };
 
@@ -46,8 +44,6 @@ struct InboxBlocked {
 
     InboxBlocked(uint256_t inbox_) { inbox = inbox_; }
 };
-
-extern std::unordered_map<BlockType, int> blockreason_type_length;
 
 using BlockReason = nonstd::variant<NotBlocked,
                                     HaltBlocked,

@@ -23,10 +23,10 @@
 struct InitialVmValues {
     bool valid_state;
     std::vector<CodePoint> code;
-    CodePoint errpc;
     value staticVal;
 };
 
-InitialVmValues getInitialVmValues(const std::string& contract_filename);
+InitialVmValues getInitialVmValues(const std::string& contract_filename,
+                                   TuplePool* pool);
 
 #endif /* vmValueParser_hpp */

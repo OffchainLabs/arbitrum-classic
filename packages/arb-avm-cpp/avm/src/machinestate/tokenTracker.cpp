@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <avm_values/tokenTracker.hpp>
+#include <avm/machinestate/tokenTracker.hpp>
 #include <bigint_utils.hpp>
 
 #include <boost/algorithm/hex.hpp>

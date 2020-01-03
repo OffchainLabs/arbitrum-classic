@@ -29,9 +29,6 @@ class Transaction;
 class Status;
 }  // namespace rocksdb
 
-std::vector<unsigned char> serializeCountAndValue(
-    uint32_t count,
-    const std::vector<unsigned char>& value);
 std::tuple<uint32_t, std::vector<unsigned char>> parseCountAndValue(
     const std::string& string_value);
 
@@ -51,10 +48,10 @@ class Transaction {
     Transaction(rocksdb::Transaction* transaction_);
     ~Transaction();
     SaveResults incrementReference(const std::vector<unsigned char>& hash_key);
-    SaveResults saveValue(const std::vector<unsigned char>& hash_key,
-                          const std::vector<unsigned char>& value);
-    GetResults getValue(const std::vector<unsigned char>& hash_key) const;
-    DeleteResults deleteValue(const std::vector<unsigned char>& hash_key);
+    SaveResults saveData(const std::vector<unsigned char>& hash_key,
+                         const std::vector<unsigned char>& value);
+    GetResults getData(const std::vector<unsigned char>& hash_key) const;
+    DeleteResults deleteData(const std::vector<unsigned char>& hash_key);
     rocksdb::Status commit();
     rocksdb::Status rollBack();
 };

@@ -35,6 +35,8 @@ struct MachineStateKeys {
     std::vector<unsigned char> blockreason_str;
 };
 
+extern std::unordered_map<int, int> blockreason_type_length;
+
 namespace checkpoint {
 namespace utils {
 std::vector<unsigned char> serializeValue(const value& val);

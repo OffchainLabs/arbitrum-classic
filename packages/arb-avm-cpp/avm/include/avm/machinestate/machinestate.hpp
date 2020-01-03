@@ -17,9 +17,9 @@
 #ifndef machinestate_hpp
 #define machinestate_hpp
 
+#include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/messagestack.hpp>
-#include <avm_values/blockreason.hpp>
 #include <avm_values/value.hpp>
 
 #include <memory>
@@ -58,9 +58,7 @@ struct MachineState {
     BlockReason blockReason;
 
     MachineState();
-    MachineState(const std::vector<CodePoint>& code_,
-                 const CodePoint& errpc_,
-                 const value& static_val_);
+    MachineState(const std::vector<CodePoint>& code_, const value& static_val_);
     bool initialize_machinestate(const std::string& contract_filename);
 
     void readInbox(char* newInbox);

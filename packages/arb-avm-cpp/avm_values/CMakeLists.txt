@@ -28,8 +28,6 @@ set(LIB_HEADERS
   include/avm_values/pool.hpp
   include/avm_values/opcodes.hpp
   include/avm_values/util.hpp
-  include/avm_values/blockreason.hpp
-  include/avm_values/tokenTracker.hpp
   include/avm_values/vmValueParser.hpp
 )
 
@@ -39,8 +37,6 @@ set(LIB_SOURCES
   src/pool.cpp
   src/tuple.cpp
   src/value.cpp
-  src/blockreason.cpp
-  src/tokenTracker.cpp
   src/vmValueParser.cpp
 )
 

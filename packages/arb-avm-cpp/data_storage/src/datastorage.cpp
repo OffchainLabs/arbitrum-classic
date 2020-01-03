@@ -40,7 +40,7 @@ DataStorage::DataStorage(const std::string& db_path) {
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
 }
 
-DataStorage::DataStorage() {
+DataStorage::~DataStorage() {
     txn_db->Close();
 }
 

@@ -40,7 +40,7 @@ DeleteResults MachineStateDeleter::deleteTuple(
                 }
             }
         }
-        return transaction->deleteValue(hash_key);
+        return transaction->deleteData(hash_key);
     } else {
         return DeleteResults{0, results.status};
     }
@@ -48,13 +48,13 @@ DeleteResults MachineStateDeleter::deleteTuple(
 
 DeleteResults MachineStateDeleter::deleteTuple(
     const std::vector<unsigned char>& hash_key) {
-    auto results = transaction->getValue(hash_key);
+    auto results = transaction->getData(hash_key);
     return deleteTuple(hash_key, results);
 }
 
 DeleteResults MachineStateDeleter::deleteValue(
     const std::vector<unsigned char>& hash_key) {
-    auto results = transaction->getValue(hash_key);
+    auto results = transaction->getData(hash_key);
 
     if (results.status.ok()) {
         auto type = static_cast<ValueTypes>(results.stored_value[0]);
@@ -62,7 +62,7 @@ DeleteResults MachineStateDeleter::deleteValue(
         if (type == TUPLE) {
             return deleteTuple(hash_key, results);
         } else {
-            return transaction->deleteValue(hash_key);
+            return transaction->deleteData(hash_key);
         }
     } else {
         return DeleteResults{0, results.status};

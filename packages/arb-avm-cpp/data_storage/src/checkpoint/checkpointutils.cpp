@@ -18,7 +18,6 @@
 
 #include <data_storage/checkpoint/checkpointutils.hpp>
 
-#include <avm_values/blockreason.hpp>
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/util.hpp>
@@ -30,6 +29,12 @@ constexpr int HASH_KEY_LENGTH = 33;
 constexpr int TUP_TUPLE_LENGTH = 34;
 constexpr int TUP_NUM_LENGTH = 34;
 constexpr int TUP_CODEPT_LENGTH = 9;
+
+std::unordered_map<int, int> blockreason_type_length = {{0, 1},
+                                                        {1, 1},
+                                                        {2, 1},
+                                                        {3, 1},
+                                                        {4, 34}};
 
 namespace checkpoint {
 
@@ -95,7 +100,7 @@ unsigned char extractStatus(iterator& iter) {
 }
 
 std::vector<unsigned char> extractBlockReason(iterator& iter) {
-    auto block_type = (BlockType)*iter;
+    auto block_type = *iter;
     auto length_of_block_reason = blockreason_type_length[block_type];
 
     auto end_iter = iter + length_of_block_reason;
