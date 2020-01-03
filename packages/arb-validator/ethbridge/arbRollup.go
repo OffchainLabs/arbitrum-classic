@@ -509,49 +509,72 @@ func (vm *ArbRollup) PruneLeaf(
 	return waitForReceipt(auth.Context, vm.Client, auth, tx, "PruneLeaf")
 }
 
+type VMProtoState struct {
+	VMHash       [32]byte
+	InboxHash    [32]byte
+	PendingTop   [32]byte
+	PendingCount *big.Int
+}
+
+type AssertionParams struct {
+	timeBoundsBlocks  [2]*big.Int
+	afterPendingCount *big.Int
+	numSteps          uint32
+}
+
+type PendingTopOutput struct {
+	AfterPendingTop [32]byte
+}
+
+type MessagesOutput struct {
+	importedMessagesSlice [32]byte
+}
+
+type ExecutionOutput struct {
+	vmHash          [32]byte
+	didInboxInsn    bool
+	numArbGas       uint64
+	messagesAccHash [32]byte
+	logsAccHash     [32]byte
+}
+
 func (vm *ArbRollup) MakeAssertion(
 	auth *bind.TransactOpts,
-	beforeVMHash [32]byte,
-	beforeInboxHash [32]byte,
-	beforePendingTop [32]byte,
+
 	prevPrevLeafHash [32]byte,
 	prevDisputableNodeHash [32]byte,
-	afterPendingTop [32]byte,
-	importedMessagesSlice [32]byte,
-	afterVMHash [32]byte,
-	messagesAccHash [32]byte,
-	logsAccHash [32]byte,
-	stakerProof [][32]byte,
-	beforePendingCount *big.Int,
-	afterPendingCount *big.Int,
-	didInboxInsn bool,
-	numSteps uint32,
-	numArbGas uint64,
-	timeBoundsBlocks [2]*big.Int,
 	prevDeadlineTicks *big.Int,
 	prevChildType uint32,
+
+	beforeState VMProtoState,
+	assertionParams AssertionParams,
+	pendingTopOutput PendingTopOutput,
+	messagesOutput MessagesOutput,
+	executionOutput ExecutionOutput,
+	stakerProof [][32]byte,
+
 ) (*types.Receipt, error) {
 	tx, err := vm.ArbRollup.MakeAssertion(
 		auth,
 		[10][32]byte{
-			beforeVMHash,
-			beforeInboxHash,
-			beforePendingTop,
+			beforeState.VMHash,
+			beforeState.InboxHash,
+			beforeState.PendingTop,
 			prevPrevLeafHash,
 			prevDisputableNodeHash,
-			afterPendingTop,
-			importedMessagesSlice,
-			afterVMHash,
-			messagesAccHash,
-			logsAccHash,
+			pendingTopOutput.AfterPendingTop,
+			messagesOutput.importedMessagesSlice,
+			executionOutput.vmHash,
+			executionOutput.messagesAccHash,
+			executionOutput.logsAccHash,
 		},
 		stakerProof,
-		beforePendingCount,
-		afterPendingCount,
-		didInboxInsn,
-		numSteps,
-		numArbGas,
-		timeBoundsBlocks,
+		beforeState.PendingCount,
+		assertionParams.afterPendingCount,
+		executionOutput.didInboxInsn,
+		assertionParams.numSteps,
+		executionOutput.numArbGas,
+		assertionParams.timeBoundsBlocks,
 		prevDeadlineTicks,
 		prevChildType,
 	)
