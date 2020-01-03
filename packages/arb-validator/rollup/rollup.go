@@ -47,7 +47,7 @@ func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams Ch
 		nil,
 		NewLeafSet(),
 		make(map[[32]byte]*Node),
-		NewStakerList(),
+		NewStakerSet(),
 		make(map[common.Address]*Challenge),
 	}
 	ret.CreateInitialNode(_machine)
@@ -91,7 +91,7 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 		nil,
 		NewLeafSet(),
 		make(map[[32]byte]*Node),
-		NewStakerList(),
+		NewStakerSet(),
 		make(map[common.Address]*Challenge),
 	}
 	for _, chalBuf := range buf.Challenges {
@@ -179,7 +179,7 @@ type StakerSet struct {
 	idx map[common.Address]*Staker
 }
 
-func NewStakerList() *StakerSet {
+func NewStakerSet() *StakerSet {
 	return &StakerSet{make(map[common.Address]*Staker)}
 }
 
