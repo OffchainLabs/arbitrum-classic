@@ -77,8 +77,8 @@ contract PendingTopChallenge is BisectionChallenge {
     }
 
     function oneStepProof(
-        bytes32 _topHash,
         bytes32 _lowerHash,
+        bytes32 _topHash,
         bytes32 _value
     )
         public
@@ -86,8 +86,8 @@ contract PendingTopChallenge is BisectionChallenge {
     {
         requireMatchesPrevState(
             ChallengeUtils.pendingTopHash(
-                _topHash,
                 _lowerHash,
+                _topHash,
                 1
             )
         );

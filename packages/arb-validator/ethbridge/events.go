@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package ethbridge
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -44,103 +46,85 @@ type Notification struct {
 	TxHash [32]byte
 }
 
-type FinalizedUnanimousAssertEvent struct {
-	UnanHash [32]byte
+type StakeCreatedEvent struct {
+	Staker   common.Address
+	NodeHash [32]byte
 }
 
-func (FinalizedUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
+type ChallengeStartedEvent struct {
+	Asserter          common.Address
+	Challenger        common.Address
+	ChallengeType     uint64
+	ChallengeContract common.Address
 }
 
-type PendingUnanimousAssertEvent struct {
-	UnanHash    [32]byte
-	SequenceNum uint64
-	Deadline    uint64
+type ChallengeCompletedEvent struct {
+	Winner            common.Address
+	Loser             common.Address
+	ChallengeContract common.Address
 }
 
-func (PendingUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
+type StakeRefundedEvent struct {
+	Staker common.Address
 }
 
-type ConfirmedUnanimousAssertEvent struct {
-	SequenceNum uint64
+type PrunedEvent struct {
+	Leaf [32]byte
 }
 
-func (ConfirmedUnanimousAssertEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
+type StakeMovedEvent struct {
+	Staker   common.Address
+	Location [32]byte
 }
 
-type PendingDisputableAssertionEvent struct {
-	Precondition *protocol.Precondition
-	Assertion    *protocol.AssertionStub
-	Asserter     common.Address
-	Deadline     uint64
+type AssertedEvent struct {
+	PrevLeafHash          [32]byte
+	TimeBoundsBlocks      [2]*big.Int
+	AfterPendingTop       [32]byte
+	ImportedMessagesSlice [32]byte
+	ImportedMessageCount  *big.Int
+	Assertion             *protocol.AssertionStub
 }
 
-func (PendingDisputableAssertionEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
+type ConfirmedEvent struct {
+	NodeHash [32]byte
 }
 
-type ConfirmedDisputableAssertEvent struct {
-	TxHash   [32]byte
-	LogsHash [32]byte
-}
-
-func (ConfirmedDisputableAssertEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
-}
-
-type ChallengeLaunchedEvent struct {
-	ChallengeAddress common.Address
-	Challenger       common.Address
-}
-
-func (ChallengeLaunchedEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
+type ConfirmedAssertionEvent struct {
+	LogsAccHash [32]byte
 }
 
 type InitiateChallengeEvent struct {
-	Deadline uint64
-}
-
-func (InitiateChallengeEvent) GetIncomingMessageType() IncomingMessageType {
-	return CommonMessage
-}
-
-type BisectionEvent struct {
-	Assertions []*protocol.AssertionStub
-	Deadline   uint64
-}
-
-func (BisectionEvent) GetIncomingMessageType() IncomingMessageType {
-	return ChallengeMessage
-}
-
-type ContinueChallengeEvent struct {
-	ChallengedAssertion uint16
-	Deadline            uint64
-}
-
-func (ContinueChallengeEvent) GetIncomingMessageType() IncomingMessageType {
-	return ChallengeMessage
-}
-
-type ChallengerTimeoutEvent struct{}
-
-func (ChallengerTimeoutEvent) GetIncomingMessageType() IncomingMessageType {
-	return ChallengeMessage
+	DeadlineTicks *big.Int
 }
 
 type AsserterTimeoutEvent struct{}
 
-func (AsserterTimeoutEvent) GetIncomingMessageType() IncomingMessageType {
-	return ChallengeMessage
+type ChallengerTimeoutEvent struct{}
+
+type ContinueChallengeEvent struct {
+	SegmentIndex  *big.Int
+	DeadlineTicks *big.Int
 }
 
 type OneStepProofEvent struct{}
 
-func (OneStepProofEvent) GetIncomingMessageType() IncomingMessageType {
-	return ChallengeMessage
+type PendingTopBisectionEvent struct {
+	ChainHashes   [][32]byte
+	TotalLength   *big.Int
+	DeadlineTicks *big.Int
+}
+
+type MessagesBisectionEvent struct {
+	ChainHashes   [][32]byte
+	SegmentHashes [][32]byte
+	TotalLength   *big.Int
+	DeadlineTicks *big.Int
+}
+
+type BisectionEvent struct {
+	Assertions    []*protocol.AssertionStub
+	DeadlineTicks *big.Int
 }
 
 type MessageDeliveredEvent struct {

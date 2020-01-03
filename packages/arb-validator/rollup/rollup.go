@@ -1,5 +1,5 @@
 /*
-* Copyright 2019, Offchain Labs, Inc.
+* Copyright 2019-2020, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@
 package rollup
 
 import (
+	"log"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"log"
-	"math/big"
 )
 
 type Chain struct {
@@ -289,7 +290,7 @@ func (chain *Chain) CreateInitialNode(machine machine.Machine) {
 	chain.latestConfirmed = newNode
 }
 
-func (chain *Chain) notifyNewBlockNumber(blockNum uint64) {
+func (chain *Chain) notifyNewBlockNumber(blockNum *big.Int) {
 	//TODO: checkpoint, and take other appropriate actions for new block
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package protocol
 import (
 	"bytes"
 	"errors"
+	"math/big"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
@@ -27,6 +28,10 @@ import (
 
 func NewTimeBounds(startTime, endTime uint64) *TimeBounds {
 	return &TimeBounds{StartTime: value.NewBigIntBufFromUint64(startTime), EndTime: value.NewBigIntBufFromUint64(endTime)}
+}
+
+func (tb *TimeBounds) AsIntArray() [2]*big.Int {
+	return [2]*big.Int{value.NewBigIntFromBuf(tb.StartTime), value.NewBigIntFromBuf(tb.EndTime)}
 }
 
 func (tb *TimeBounds) Equals(other TimeBounds) bool {

@@ -32,9 +32,8 @@ contract Challenge {
         uint256 deadlineTicks
     );
 
-    event TimedOutChallenge (
-        bool challengerWrong
-    );
+    event AsserterTimedOut();
+    event ChallengerTimedOut();
 
     // Can online initialize once
     string constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
@@ -84,10 +83,10 @@ contract Challenge {
         require(RollupTime.ticksToBlocks(block.number) > deadlineTicks, "Deadline hasn't expired");
 
         if (state == State.AsserterTurn) {
-            emit TimedOutChallenge(true);
+            emit AsserterTimedOut();
             _challengerWin();
         } else {
-            emit TimedOutChallenge(false);
+            emit ChallengerTimedOut();
             _asserterWin();
         }
     }

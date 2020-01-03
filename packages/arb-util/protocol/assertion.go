@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,14 +75,12 @@ func (a *Assertion) Stub() *AssertionStub {
 		copy(lastHash[:], next)
 	}
 
-	return &AssertionStub{
-		AfterHash:        value.NewHashBuf(a.AfterHash),
-		DidInboxInsn:     a.DidInboxInsn,
-		NumSteps:         a.NumSteps,
-		NumGas:           a.NumGas,
-		FirstMessageHash: value.NewHashBuf([32]byte{}),
-		LastMessageHash:  value.NewHashBuf(lastHash),
-		FirstLogHash:     value.NewHashBuf([32]byte{}),
-		LastLogHash:      value.NewHashBuf(a.LogsHash()),
-	}
+	return NewAssertionStub(
+		a.AfterHash,
+		a.DidInboxInsn,
+		a.NumSteps,
+		a.NumGas,
+		lastHash,
+		a.LogsHash(),
+	)
 }

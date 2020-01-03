@@ -35,7 +35,7 @@ func (con *OneStepProof) ValidateProof(
 	return con.contract.ValidateProof(
 		auth,
 		precondition.BeforeHashValue(),
-		[2]uint64{precondition.TimeBounds.StartTime, precondition.TimeBounds.EndTime},
+		precondition.TimeBounds.AsIntArray(),
 		precondition.BeforeInboxValue(),
 		assertion.AfterHashValue(),
 		assertion.DidInboxInsn,

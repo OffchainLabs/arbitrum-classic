@@ -42,13 +42,14 @@ contract Confirming is Staking {
     }
 
     function recoverStakeMooted(
+        address payable stakerAddress,
         bytes32 disputableHash,
         bytes32[] calldata latestConfirmedProof,
         bytes32[] calldata nodeProof
     )
         external
     {
-        Staker storage staker = getValidStaker(msg.sender);
+        Staker storage staker = getValidStaker(stakerAddress);
         require(
             RollupUtils.isConflict(
                 staker.location,
@@ -59,9 +60,9 @@ contract Confirming is Staking {
             ),
             RECOV_CONFLICT_PROOF
         );
-        deleteStakerWithPayout(msg.sender);
+        deleteStakerWithPayout(stakerAddress);
 
-        emit RollupStakeRefunded(msg.sender);
+        emit RollupStakeRefunded(stakerAddress);
     }
 
     function init(

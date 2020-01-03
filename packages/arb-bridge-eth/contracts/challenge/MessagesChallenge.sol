@@ -26,6 +26,7 @@ contract MessagesChallenge is BisectionChallenge {
 
     event Bisected(
         bytes32[] chainHashes,
+        bytes32[] segmentHashes,
         uint totalLength,
         uint256 deadlineTicks
     );
@@ -80,6 +81,7 @@ contract MessagesChallenge is BisectionChallenge {
         asserterResponded();
         emit Bisected(
             _chainHashes,
+            _segmentHashes,
             _chainLength,
             deadlineTicks
         );

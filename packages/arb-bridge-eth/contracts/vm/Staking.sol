@@ -87,8 +87,7 @@ contract Staking is ChallengeType {
 
     event RollupStakeCreated(
         address staker,
-        bytes32 nodeHash,
-        uint    blockNumber
+        bytes32 nodeHash
     );
 
     event RollupChallengeStarted(
@@ -250,7 +249,7 @@ contract Staking is ChallengeType {
         );
         stakerCount++;
 
-        emit RollupStakeCreated(msg.sender, location, block.number);
+        emit RollupStakeCreated(msg.sender, location);
     }
 
     function deleteStakerWithPayout(address payable _stakerAddress) internal {
