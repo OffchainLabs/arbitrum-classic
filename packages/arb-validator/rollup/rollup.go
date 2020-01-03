@@ -26,6 +26,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+//go:generate protoc -I.. -I. --go_out=paths=source_relative:. rollup.proto
+
 type Chain struct {
 	rollupAddr      common.Address
 	vmParams        ChainParams
@@ -97,7 +99,6 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 			common.BytesToAddress([]byte(chalBuf.Contract)),
 			common.BytesToAddress([]byte(chalBuf.Asserter)),
 			common.BytesToAddress([]byte(chalBuf.Challenger)),
-			ChallengeType(chalBuf.Kind),
 		}
 		chain.challenges[chal.contract] = chal
 	}
@@ -124,7 +125,7 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 		chain.stakers.Add(&Staker{
 			common.BytesToAddress([]byte(stakerBuf.Address)),
 			chain.nodeFromHash[locationHash],
-			new(big.Int).SetBytes([]byte(stakerBuf.CreationTime)),
+			stakerBuf.CreationTime.Unmarshal(),
 			chain.challenges[common.BytesToAddress([]byte(stakerBuf.ChallengeAddr))],
 		})
 	}
@@ -205,14 +206,14 @@ func (sl *StakerSet) forall(f func(*Staker)) {
 
 type ChainParams struct {
 	stakeRequirement  *big.Int
-	gracePeriod       uint32
+	gracePeriod       RollupTime
 	maxExecutionSteps uint32
 }
 
 func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
 	return &ChainParamsBuf{
 		StakeRequirement:  string(params.stakeRequirement.Bytes()),
-		GracePeriod:       params.gracePeriod,
+		GracePeriod:       params.gracePeriod.MarshalToBuf(),
 		MaxExecutionSteps: params.maxExecutionSteps,
 	}
 }
@@ -220,7 +221,7 @@ func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
 func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 	return ChainParams{
 		new(big.Int).SetBytes([]byte(buf.StakeRequirement)),
-		buf.GracePeriod,
+		buf.GracePeriod.Unmarshal(),
 		buf.MaxExecutionSteps,
 	}
 }
@@ -228,14 +229,14 @@ func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 type DisputableNode struct {
 	hash           [32]byte
 	pendingTopHash [32]byte
-	deadline       *big.Int
+	deadline       RollupTime
 }
 
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
 		Hash:       string(dn.hash[:]),
 		PendingTop: string(dn.pendingTopHash[:]),
-		Deadline:   string(dn.deadline.Bytes()),
+		Deadline:   dn.deadline.MarshalToBuf(),
 	}
 }
 
@@ -247,7 +248,7 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	return &DisputableNode{
 		hash:           hashBuf,
 		pendingTopHash: pthBuf,
-		deadline:       new(big.Int).SetBytes([]byte(buf.Deadline)),
+		deadline:       buf.Deadline.Unmarshal(),
 	}
 }
 
@@ -460,7 +461,7 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	return &StakerBuf{
 		Address:       string(staker.address.Bytes()),
 		Location:      string(string(staker.location.hash[:])),
-		CreationTime:  string(staker.creationTime.Bytes()),
+		CreationTime:  staker.creationTime.MarshalToBuf(),
 		ChallengeAddr: challengeStr,
 	}
 }
@@ -473,14 +474,14 @@ func (buf *StakerBuf) Unmarshal(chain *Chain) *Staker {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),
 			location:     chain.nodeFromHash[locArr],
-			creationTime: new(big.Int).SetBytes([]byte(buf.CreationTime)),
+			creationTime: buf.CreationTime.Unmarshal(),
 			challenge:    nil,
 		}
 	} else {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),
 			location:     chain.nodeFromHash[locArr],
-			creationTime: new(big.Int).SetBytes([]byte(buf.CreationTime)),
+			creationTime: buf.CreationTime.Unmarshal(),
 			challenge:    chain.challenges[common.BytesToAddress([]byte(buf.ChallengeAddr))],
 		}
 	}

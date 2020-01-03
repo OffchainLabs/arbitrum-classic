@@ -31,7 +31,7 @@ message ChainBuf {
 
 message ChainParamsBuf {
     string stakeRequirement = 1;
-    uint32 gracePeriod = 2;
+    RollupTimeBuf gracePeriod = 2;
     uint32 maxExecutionSteps = 3;
 }
 
@@ -47,7 +47,7 @@ message NodeBuf {
 message StakerBuf {
     string address = 1;
     string location = 2;
-    string creationTime = 3;
+    RollupTimeBuf creationTime = 3;
     string challengeAddr = 4;
 }
 
@@ -59,12 +59,16 @@ message ChallengeBuf {
 
 message DisputableNodeBuf {
     string hash = 1;
-    string deadline = 2;
+    RollupTimeBuf deadline = 2;
     string pendingTop = 3;
 }
 
 message PendingInboxBuf {
     repeated string items = 1;
     string hashOfRest = 2;
+}
+
+message RollupTimeBuf {
+    string val = 1;
 }
 

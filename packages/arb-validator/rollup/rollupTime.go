@@ -39,3 +39,13 @@ func (rt RollupTime) Add(rt2 RollupTime) RollupTime {
 func (rt RollupTime) Cmp(rt2 RollupTime) int {
 	return rt.val.Cmp(rt2.val)
 }
+
+func (rt RollupTime) MarshalToBuf() *RollupTimeBuf {
+	return &RollupTimeBuf{
+		Val: string(rt.val.Bytes()),
+	}
+}
+
+func (rtb *RollupTimeBuf) Unmarshal() RollupTime {
+	return RollupTime{new(big.Int).SetBytes([]byte(rtb.Val))}
+}
