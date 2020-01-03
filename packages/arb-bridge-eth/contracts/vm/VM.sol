@@ -27,8 +27,8 @@ library VM {
     bytes32 private constant MACHINE_ERROR_HASH = bytes32(uint(1));
 
     struct Params {  // these are defined just once for each vM
-        uint128 gracePeriodTicks;
-        uint128 arbGasSpeedLimitPerTick;
+        uint256 gracePeriodTicks;
+        uint256 arbGasSpeedLimitPerTick;
         uint32  maxExecutionSteps;
         bytes32 pendingInboxHash;
     }

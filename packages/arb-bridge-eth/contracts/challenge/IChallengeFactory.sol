@@ -22,7 +22,7 @@ interface IChallengeFactory {
     function createChallenge(
         address payable _asserter,
         address payable _challenger,
-        uint32 _challengePeriod,
+        uint256 _challengePeriodTicks,
         bytes32 _challengeHash,
         uint challengeType
     )

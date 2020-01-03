@@ -103,99 +103,79 @@ contract Staking is ChallengeType {
         address loser
     );
 
-    function startExecutionChallenge(
-        address payable staker1Address,
-        address payable staker2Address,
+    function startChallenge(
+        address payable asserterAddress,
+        address payable challengerAddress,
         bytes32 node,
-        uint disputableDeadline,
-        uint staker1Position,
-        uint staker2Position,
-        bytes32[2] calldata vmProtoHashes,
-        bytes32[] calldata proof1,
-        bytes32[] calldata proof2,
-        bytes32 challengeDataHash1,
-        bytes32 challengeDataHash2
+        uint disputableDeadlineTicks,
+        uint[2] memory stakerPositions,
+        bytes32[2] memory vmProtoHashes,
+        bytes32[] memory proof1,
+        bytes32[] memory proof2,
+        bytes32 challenge1DataHash,
+        uint128 challenge1PeriodTicks,
+        bytes32 challenge2NodeHash
     )
-        external
+        public
     {
-        require(staker1Position == INVALID_EXECUTION_TYPE, EXEC_CHAL_TYPE);
+        Staker storage asserter = getValidStaker(asserterAddress);
+        Staker storage challenger = getValidStaker(challengerAddress);
 
-        _startChallenge(
-            staker1Address,
-            staker2Address,
-            node,
-            disputableDeadline,
-            staker1Position,
-            staker2Position,
-            vmProtoHashes,
-            proof1,
-            proof2,
-            challengeDataHash1,
-            challengeDataHash2
+        require(RollupTime.blocksToTicks(asserter.creationTimeBlocks) < disputableDeadlineTicks, STK1_DEADLINE);
+        require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < disputableDeadlineTicks, STK2_DEADLINE);
+        require(!asserter.inChallenge, STK1_IN_CHAL);
+        require(!challenger.inChallenge, STK2_IN_CHAL);
+        require(stakerPositions[0] < stakerPositions[1], TYPE_ORDER);
+        require(
+            RollupUtils.isPath(
+                RollupUtils.childNodeHash(
+                    node,
+                    disputableDeadlineTicks,
+                    keccak256(
+                        abi.encodePacked(
+                            challenge1DataHash,
+                            challenge1PeriodTicks
+                        )
+                    ),
+                    stakerPositions[0],
+                    vmProtoHashes[0]
+                ),
+                asserter.location,
+                proof1
+            ),
+            STK1_PROOF
         );
-    }
-
-    function startPendingTopChallenge(
-        address payable staker1Address,
-        address payable staker2Address,
-        bytes32 node,
-        uint disputableDeadline,
-        uint staker1Position,
-        uint staker2Position,
-        bytes32[2] calldata vmProtoHashes,
-        bytes32[] calldata proof1,
-        bytes32[] calldata proof2,
-        bytes32 challengeDataHash1,
-        bytes32 challengeDataHash2
-    )
-        external
-    {
-        require(staker1Position == INVALID_PENDING_TOP_TYPE, PND_CHAL_TYPE);
-
-        _startChallenge(
-            staker1Address,
-            staker2Address,
-            node,
-            disputableDeadline,
-            staker1Position,
-            staker2Position,
-            vmProtoHashes,
-            proof1,
-            proof2,
-            challengeDataHash1,
-            challengeDataHash2
+        require(
+            RollupUtils.isPath(
+                RollupUtils.childNodeHash(
+                    node,
+                    disputableDeadlineTicks,
+                    challenge2NodeHash,
+                    stakerPositions[1],
+                    vmProtoHashes[1]
+                ),
+                challenger.location,
+                proof2
+            ),
+            STK2_PROOF
         );
-    }
 
-    function startMessagesChallenge(
-        address payable staker1Address,
-        address payable staker2Address,
-        bytes32 node,
-        uint disputableDeadline,
-        uint staker1Position,
-        uint staker2Position,
-        bytes32[2] calldata vmProtoHashes,
-        bytes32[] calldata proof1,
-        bytes32[] calldata proof2,
-        bytes32 challengeDataHash1,
-        bytes32 challengeDataHash2
-    )
-        external
-    {
-        require(staker1Position == INVALID_MESSAGES_TYPE, MSGS_CHAL_TYPE);
+        asserter.inChallenge = true;
+        challenger.inChallenge = true;
 
-        _startChallenge(
-            staker1Address,
-            staker2Address,
-            node,
-            disputableDeadline,
-            staker1Position,
-            staker2Position,
-            vmProtoHashes,
-            proof1,
-            proof2,
-            challengeDataHash1,
-            challengeDataHash2
+        address newChallengeAddr = challengeFactory.createChallenge(
+            asserterAddress,
+            challengerAddress,
+            challenge1PeriodTicks,
+            challenge1DataHash,
+            stakerPositions[0]
+        );
+
+        emit RollupChallengeStarted(
+            asserterAddress,
+            challengerAddress,
+            stakerPositions[0],
+            newChallengeAddr
         );
     }
 
@@ -264,76 +244,5 @@ contract Staking is ChallengeType {
     function deleteStaker(address _stakerAddress) private {
         delete stakers[_stakerAddress];
         stakerCount--;
-    }
-
-    function _startChallenge(
-        address payable asserterAddress,
-        address payable challengerAddress,
-        bytes32 node,
-        uint disputableDeadlineTicks,
-        uint staker1Position,
-        uint staker2Position,
-        bytes32[2] memory vmProtoHashes,
-        bytes32[] memory proof1,
-        bytes32[] memory proof2,
-        bytes32 challengeDataHash1,
-        bytes32 challengeDataHash2
-    )
-        private
-    {
-        Staker storage asserter = getValidStaker(asserterAddress);
-        Staker storage challenger = getValidStaker(challengerAddress);
-
-        require(RollupTime.blocksToTicks(asserter.creationTimeBlocks) < disputableDeadlineTicks, STK1_DEADLINE);
-        require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < disputableDeadlineTicks, STK2_DEADLINE);
-        require(!asserter.inChallenge, STK1_IN_CHAL);
-        require(!challenger.inChallenge, STK2_IN_CHAL);
-        require(staker1Position < staker2Position, TYPE_ORDER);
-        require(
-            RollupUtils.isPath(
-                RollupUtils.childNodeHash(
-                    node,
-                    disputableDeadlineTicks,
-                    challengeDataHash1,
-                    staker1Position,
-                    vmProtoHashes[0]
-                ),
-                asserter.location,
-                proof1
-            ),
-            STK1_PROOF
-        );
-        require(
-            RollupUtils.isPath(
-                RollupUtils.childNodeHash(
-                    node,
-                    disputableDeadlineTicks,
-                    challengeDataHash2,
-                    staker2Position,
-                    vmProtoHashes[1]
-                ),
-                challenger.location,
-                proof2
-            ),
-            STK2_PROOF
-        );
-
-        asserter.inChallenge = true;
-        challenger.inChallenge = true;
-
-        address newChallengeAddr = challengeFactory.createChallenge(
-            asserterAddress,
-            challengerAddress,
-            0, // Challenge period
-            challengeDataHash1,
-            staker1Position
-        );
-
-        emit RollupChallengeStarted(
-            asserterAddress,
-            challengerAddress,
-            staker1Position,
-            newChallengeAddr
-        );
     }
 }

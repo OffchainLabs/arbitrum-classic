@@ -306,10 +306,15 @@ contract ArbRollup is Leaves, IArbRollup {
         leaves[INVALID_PENDING_TOP_TYPE] = RollupUtils.childNodeHash(
             frame.prevLeaf,
             deadlineTicks,
-            ChallengeUtils.pendingTopHash(
-                data.afterPendingTop,
-                frame.pendingValue,
-                frame.pendingCount.sub(data.afterPendingCount)
+            keccak256(
+                abi.encodePacked(
+                    ChallengeUtils.pendingTopHash(
+                        data.afterPendingTop,
+                        frame.pendingValue,
+                        frame.pendingCount.sub(data.afterPendingCount)
+                    ),
+                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
+                )
             ),
             INVALID_PENDING_TOP_TYPE,
             frame.vmProtoHashBefore
@@ -317,12 +322,17 @@ contract ArbRollup is Leaves, IArbRollup {
         leaves[INVALID_MESSAGES_TYPE] = RollupUtils.childNodeHash(
             frame.prevLeaf,
             deadlineTicks,
-            ChallengeUtils.messagesHash(
-                data.beforePendingTop,
-                data.afterPendingTop,
-                0x00,
-                data.importedMessagesSlice,
-                data.afterPendingCount.sub(data.beforePendingCount)
+            keccak256(
+                abi.encodePacked(
+                    ChallengeUtils.messagesHash(
+                        data.beforePendingTop,
+                        data.afterPendingTop,
+                        0x00,
+                        data.importedMessagesSlice,
+                        data.afterPendingCount.sub(data.beforePendingCount)
+                    ),
+                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
+                )
             ),
             INVALID_MESSAGES_TYPE,
             frame.vmProtoHashBefore
@@ -341,13 +351,18 @@ contract ArbRollup is Leaves, IArbRollup {
         leaves[INVALID_EXECUTION_TYPE] = RollupUtils.childNodeHash(
             frame.prevLeaf,
             deadlineTicks,
-            ChallengeUtils.executionHash(
-                Protocol.generatePreconditionHash(
-                     data.beforeVMHash,
-                     data.timeBoundsBlocks,
-                     execBeforeInboxHash
-                ),
-                assertionHash
+            keccak256(
+                abi.encodePacked(
+                    ChallengeUtils.executionHash(
+                        Protocol.generatePreconditionHash(
+                             data.beforeVMHash,
+                             data.timeBoundsBlocks,
+                             execBeforeInboxHash
+                        ),
+                        assertionHash
+                    ),
+                    vmParams.gracePeriodTicks + data.numArbGas / vmParams.arbGasSpeedLimitPerTick
+                )
             ),
             INVALID_EXECUTION_TYPE,
             frame.vmProtoHashBefore

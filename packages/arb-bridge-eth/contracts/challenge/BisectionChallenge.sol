@@ -46,7 +46,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
         address _vmAddress,
         address payable _asserter,
         address payable _challenger,
-        uint32 _challengePeriod,
+        uint256 _challengePeriodTicks,
         bytes32 _challengeState
     )
         external
@@ -55,7 +55,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
             _vmAddress,
             _asserter,
             _challenger,
-            _challengePeriod
+            _challengePeriodTicks
         );
         challengeState = _challengeState;
     }
