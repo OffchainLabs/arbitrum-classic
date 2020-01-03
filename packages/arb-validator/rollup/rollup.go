@@ -36,6 +36,7 @@ type ChainObserver struct {
 	latestConfirmed  *Node
 	leaves           *LeafSet
 	nodeFromHash     map[[32]byte]*Node
+	oldestNode       *Node
 	stakers          *StakerSet
 	challenges       map[common.Address]*Challenge
 	listenForAddress common.Address
@@ -56,6 +57,7 @@ func NewChain(
 		nil,
 		NewLeafSet(),
 		make(map[[32]byte]*Node),
+		nil,
 		NewStakerSet(),
 		make(map[common.Address]*Challenge),
 		_listenForAddress,
@@ -87,6 +89,7 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 		VmParams:            chain.vmParams.MarshalToBuf(),
 		PendingInbox:        chain.pendingInbox.MarshalToBuf(),
 		Nodes:               allNodes,
+		OldestNodeHash:      marshalHash(chain.oldestNode.hash),
 		LatestConfirmedHash: marshalHash(chain.latestConfirmed.hash),
 		LeafHashes:          marshalSliceOfHashes(leafHashes),
 		Stakers:             allStakers,
@@ -102,6 +105,7 @@ func (buf *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listen
 		nil,
 		NewLeafSet(),
 		make(map[[32]byte]*Node),
+		nil,
 		NewStakerSet(),
 		make(map[common.Address]*Challenge),
 		_listenForAddress,
@@ -126,6 +130,7 @@ func (buf *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listen
 			prev.successorHashes[node.linkType] = nodeHash
 		}
 	}
+	chain.oldestNode = chain.nodeFromHash[unmarshalHash(buf.OldestNodeHash)]
 	for _, leafHashStr := range buf.LeafHashes {
 		leafHash := unmarshalHash(leafHashStr)
 		chain.leaves.Add(chain.nodeFromHash[leafHash])
@@ -516,6 +521,23 @@ func (chain *ChainObserver) ConfirmNode(nodeHash [32]byte) {
 	node := chain.nodeFromHash[nodeHash]
 	chain.latestConfirmed = node
 	chain.considerPruningNode(node.prev)
+	for chain.oldestNode != chain.latestConfirmed {
+		if chain.oldestNode.numStakers > 0 {
+			break
+		}
+		numSuccessors := 0
+		for kind := MinChildType; kind <= MaxChildType; kind++ {
+			if node.successorHashes[kind] != zeroBytes32 {
+				numSuccessors++
+			}
+		}
+		if numSuccessors > 1 {
+			break
+		}
+		newOldestNode := chain.nodeFromHash[chain.oldestNode]
+		chain.pruneNode(chain.oldestNode)
+		chain.oldestNode = newOldestNode
+	}
 }
 
 func (chain *ChainObserver) PruneNodeByHash(nodeHash [32]byte) {

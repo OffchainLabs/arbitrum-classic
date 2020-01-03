@@ -25,10 +25,11 @@ message ChainObserverBuf {
     ChainParamsBuf vmParams = 2;
     PendingInboxBuf pendingInbox = 3;
     repeated NodeBuf nodes = 4;
-    value.HashBuf latestConfirmedHash = 5;
-    repeated value.HashBuf    leafHashes = 6;
-    repeated StakerBuf stakers = 7;
-    repeated ChallengeBuf challenges = 8;
+    value.HashBuf oldestNodeHash = 5;
+    value.HashBuf latestConfirmedHash = 6;
+    repeated value.HashBuf    leafHashes = 7;
+    repeated StakerBuf stakers = 8;
+    repeated ChallengeBuf challenges = 9;
 }
 
 message ChainParamsBuf {
