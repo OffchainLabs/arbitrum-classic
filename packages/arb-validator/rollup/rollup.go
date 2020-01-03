@@ -26,7 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-//go:generate protoc -I.. -I. --go_out=paths=source_relative:. rollup.proto
+//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
 
 type Chain struct {
 	rollupAddr      common.Address
@@ -63,21 +63,21 @@ func (chain *Chain) MarshalToBuf() *ChainBuf {
 	chain.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
 	})
-	var leafHashes []string
+	var leafHashes [][32]byte
 	chain.leaves.forall(func(node *Node) {
-		leafHashes = append(leafHashes, string(node.hash[:]))
+		leafHashes = append(leafHashes, node.hash)
 	})
 	var allChallenges []*ChallengeBuf
 	for _, v := range chain.challenges {
 		allChallenges = append(allChallenges, v.MarshalToBuf())
 	}
 	return &ChainBuf{
-		ContractAddress:     string(chain.rollupAddr.Bytes()),
+		ContractAddress:     chain.rollupAddr.Bytes(),
 		VmParams:            chain.vmParams.MarshalToBuf(),
 		PendingInbox:        chain.pendingInbox.MarshalToBuf(),
 		Nodes:               allNodes,
-		LatestConfirmedHash: string(chain.latestConfirmed.hash[:]),
-		LeafHashes:          leafHashes,
+		LatestConfirmedHash: marshalHash(chain.latestConfirmed.hash),
+		LeafHashes:          marshalSliceOfHashes(leafHashes),
 		Stakers:             allStakers,
 		Challenges:          allChallenges,
 	}
@@ -104,11 +104,9 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 		chain.challenges[chal.contract] = chal
 	}
 	for _, nodeBuf := range buf.Nodes {
-		var nodeHash [32]byte
-		copy(nodeHash[:], []byte(nodeBuf.Hash))
+		nodeHash := unmarshalHash(nodeBuf.Hash)
 		node := chain.nodeFromHash[nodeHash]
-		var prevHash [32]byte
-		copy(prevHash[:], []byte(nodeBuf.PrevHash))
+		prevHash := unmarshalHash(nodeBuf.PrevHash)
 		if prevHash != zeroBytes32 {
 			prev := chain.nodeFromHash[prevHash]
 			node.prev = prev
@@ -116,22 +114,19 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 		}
 	}
 	for _, leafHashStr := range buf.LeafHashes {
-		var leafHash [32]byte
-		copy(leafHash[:], []byte(leafHashStr))
+		leafHash := unmarshalHash(leafHashStr)
 		chain.leaves.Add(chain.nodeFromHash[leafHash])
 	}
 	for _, stakerBuf := range buf.Stakers {
-		var locationHash [32]byte
-		copy(locationHash[:], []byte(stakerBuf.Location))
+		locationHash := unmarshalHash(stakerBuf.Location)
 		chain.stakers.Add(&Staker{
-			common.BytesToAddress([]byte(stakerBuf.Address)),
+			common.BytesToAddress(stakerBuf.Address),
 			chain.nodeFromHash[locationHash],
 			stakerBuf.CreationTime.Unmarshal(),
-			chain.challenges[common.BytesToAddress([]byte(stakerBuf.ChallengeAddr))],
+			chain.challenges[common.BytesToAddress(stakerBuf.ChallengeAddr)],
 		})
 	}
-	var lcHash [32]byte
-	copy(lcHash[:], []byte(buf.LatestConfirmedHash))
+	lcHash := unmarshalHash(buf.LatestConfirmedHash)
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
 	return chain
@@ -213,7 +208,7 @@ type ChainParams struct {
 
 func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
 	return &ChainParamsBuf{
-		StakeRequirement:  string(params.stakeRequirement.Bytes()),
+		StakeRequirement:  marshalBigInt(params.stakeRequirement),
 		GracePeriod:       params.gracePeriod.MarshalToBuf(),
 		MaxExecutionSteps: params.maxExecutionSteps,
 	}
@@ -221,7 +216,7 @@ func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
 
 func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 	return ChainParams{
-		new(big.Int).SetBytes([]byte(buf.StakeRequirement)),
+		unmarshalBigInt(buf.StakeRequirement),
 		buf.GracePeriod.Unmarshal(),
 		buf.MaxExecutionSteps,
 	}
@@ -235,17 +230,15 @@ type DisputableNode struct {
 
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
-		Hash:       string(dn.hash[:]),
-		PendingTop: string(dn.pendingTopHash[:]),
+		Hash:       marshalHash(dn.hash),
+		PendingTop: marshalHash(dn.pendingTopHash),
 		Deadline:   dn.deadline.MarshalToBuf(),
 	}
 }
 
 func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
-	var hashBuf [32]byte
-	copy(hashBuf[:], []byte(buf.Hash))
-	var pthBuf [32]byte
-	copy(pthBuf[:], []byte(buf.PendingTop))
+	hashBuf := unmarshalHash(buf.Hash)
+	pthBuf := unmarshalHash(buf.PendingTop)
 	return &DisputableNode{
 		hash:           hashBuf,
 		pendingTopHash: pthBuf,
@@ -408,20 +401,17 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 	}
 	return &NodeBuf{
 		DisputableNode: node.disputable.MarshalToBuf(),
-		MachineHash:    string(node.machineHash[:]),
-		PendingTopHash: string(node.pendingTopHash[:]),
+		MachineHash:    marshalHash(node.machineHash),
+		PendingTopHash: marshalHash(node.pendingTopHash),
 		LinkType:       uint32(node.linkType),
-		PrevHash:       string(node.prev.hash[:]),
+		PrevHash:       marshalHash(node.prev.hash),
 	}
 }
 
 func (buf *NodeBuf) Unmarshal(chain *Chain) (*Node, [32]byte) {
-	var machineHashArr [32]byte
-	copy(machineHashArr[:], []byte(buf.MachineHash))
-	var prevHashArr [32]byte
-	copy(prevHashArr[:], []byte(buf.PrevHash))
-	var pthArr [32]byte
-	copy(pthArr[:], []byte(buf.PendingTopHash))
+	machineHashArr := unmarshalHash(buf.MachineHash)
+	prevHashArr := unmarshalHash(buf.PrevHash)
+	pthArr := unmarshalHash(buf.PendingTopHash)
 	node := &Node{
 		disputable:     buf.DisputableNode.Unmarshal(),
 		machineHash:    machineHashArr,
@@ -455,35 +445,40 @@ func (chain *Chain) RemoveStake(stakerAddr common.Address) {
 }
 
 func (staker *Staker) MarshalToBuf() *StakerBuf {
-	challengeStr := ""
-	if staker.challenge != nil {
-		challengeStr = string(staker.challenge.contract.Bytes())
-	}
-	return &StakerBuf{
-		Address:       string(staker.address.Bytes()),
-		Location:      string(string(staker.location.hash[:])),
-		CreationTime:  staker.creationTime.MarshalToBuf(),
-		ChallengeAddr: challengeStr,
+	if staker.challenge == nil {
+		return &StakerBuf{
+			Address:      staker.address.Bytes(),
+			Location:     marshalHash(staker.location.hash),
+			CreationTime: staker.creationTime.MarshalToBuf(),
+			InChallenge:  false,
+		}
+	} else {
+		return &StakerBuf{
+			Address:       staker.address.Bytes(),
+			Location:      marshalHash(staker.location.hash),
+			CreationTime:  staker.creationTime.MarshalToBuf(),
+			InChallenge:   true,
+			ChallengeAddr: staker.challenge.contract.Bytes(),
+		}
 	}
 }
 
 func (buf *StakerBuf) Unmarshal(chain *Chain) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	var locArr [32]byte
-	copy(locArr[:], []byte(buf.Location))
-	if buf.ChallengeAddr == "" {
+	locArr := unmarshalHash(buf.Location)
+	if buf.InChallenge {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    nil,
+			challenge:    chain.challenges[common.BytesToAddress(buf.ChallengeAddr)],
 		}
 	} else {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    chain.challenges[common.BytesToAddress([]byte(buf.ChallengeAddr))],
+			challenge:    nil,
 		}
 	}
 }
@@ -518,17 +513,17 @@ func (chain *Chain) ChallengeResolved(contract, winner, loser common.Address) {
 
 func (chal *Challenge) MarshalToBuf() *ChallengeBuf {
 	return &ChallengeBuf{
-		Contract:   string(chal.contract.Bytes()),
-		Asserter:   string(chal.asserter.Bytes()),
-		Challenger: string(chal.challenger.Bytes()),
+		Contract:   chal.contract.Bytes(),
+		Asserter:   chal.asserter.Bytes(),
+		Challenger: chal.challenger.Bytes(),
 	}
 }
 
 func (buf *ChallengeBuf) Unmarshal(chain *Chain) *Challenge {
 	ret := &Challenge{
-		common.BytesToAddress([]byte(buf.Contract)),
-		common.BytesToAddress([]byte(buf.Asserter)),
-		common.BytesToAddress([]byte(buf.Challenger)),
+		common.BytesToAddress(buf.Contract),
+		common.BytesToAddress(buf.Asserter),
+		common.BytesToAddress(buf.Challenger),
 		ChallengeType(buf.Kind),
 	}
 	chain.challenges[ret.contract] = ret

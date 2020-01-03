@@ -42,10 +42,10 @@ func (rt RollupTime) Cmp(rt2 RollupTime) int {
 
 func (rt RollupTime) MarshalToBuf() *RollupTimeBuf {
 	return &RollupTimeBuf{
-		Val: string(rt.val.Bytes()),
+		Val: marshalBigInt(rt.val),
 	}
 }
 
 func (rtb *RollupTimeBuf) Unmarshal() RollupTime {
-	return RollupTime{new(big.Int).SetBytes([]byte(rtb.Val))}
+	return RollupTime{unmarshalBigInt(rtb.Val)}
 }

@@ -117,24 +117,24 @@ func hash2(h1, h2 [32]byte) [32]byte {
 }
 
 func (pi *PendingInbox) MarshalToBuf() *PendingInboxBuf {
-	var msgs []string
+	var msgs [][]byte
 	for item := pi.head; item != nil; item = item.prev {
 		bb := bytes.NewBuffer(nil)
 		err := value.MarshalValue(item.message, bb)
 		if err != nil {
 			log.Fatal(err)
 		}
-		msgs = append(msgs, string(bb.Bytes()))
+		msgs = append(msgs, bb.Bytes())
 	}
 	return &PendingInboxBuf{
 		Items:      msgs,
-		HashOfRest: string(pi.hashOfRest[:]),
+		HashOfRest: marshalHash(pi.hashOfRest),
 	}
 }
 
 func (buf *PendingInboxBuf) Unmarshal() *PendingInbox {
 	ret := NewPendingInbox()
-	copy(ret.hashOfRest[:], []byte(buf.HashOfRest))
+	ret.hashOfRest = unmarshalHash(buf.HashOfRest)
 	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
 		val, err := value.UnmarshalValue(bytes.NewBuffer([]byte(buf.Items[i])))
 		if err != nil {

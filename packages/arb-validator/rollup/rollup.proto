@@ -16,60 +16,63 @@
 
 syntax = "proto3";
 package rollup;
+import "value/value.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
 message ChainBuf {
-    string contractAddress = 1;
+    bytes contractAddress = 1;
     ChainParamsBuf vmParams = 2;
     PendingInboxBuf pendingInbox = 3;
     repeated NodeBuf nodes = 4;
-    string latestConfirmedHash = 5;
-    repeated string    leafHashes = 6;
+    value.HashBuf latestConfirmedHash = 5;
+    repeated value.HashBuf    leafHashes = 6;
     repeated StakerBuf stakers = 7;
     repeated ChallengeBuf challenges = 8;
 }
 
 message ChainParamsBuf {
-    string stakeRequirement = 1;
+    value.BigIntegerBuf stakeRequirement = 1;
     RollupTimeBuf gracePeriod = 2;
     uint32 maxExecutionSteps = 3;
 }
 
 message NodeBuf {
-    string hash = 1;
+    value.HashBuf hash = 1;
     DisputableNodeBuf disputableNode = 2;
-    string machineHash = 3;
-    string pendingTopHash = 4;
+    value.HashBuf machineHash = 3;
+    value.HashBuf pendingTopHash = 4;
     uint32 linkType = 5;
-    string prevHash = 6;
+    value.HashBuf prevHash = 6;
 }
 
 message StakerBuf {
-    string address = 1;
-    string location = 2;
+    bytes address = 1;
+    value.HashBuf location = 2;
     RollupTimeBuf creationTime = 3;
-    string challengeAddr = 4;
+    bool inChallenge = 4;
+    bytes challengeAddr = 5;
 }
 
 message ChallengeBuf {
-    string contract = 1;
-    string asserter = 2;
-    string challenger = 3;
+    bytes contract = 1;
+    bytes asserter = 2;
+    bytes challenger = 3;
     uint32 kind = 4;
 }
 
 message DisputableNodeBuf {
-    string hash = 1;
+    value.HashBuf hash = 1;
     RollupTimeBuf deadline = 2;
-    string pendingTop = 3;
+    value.HashBuf pendingTop = 3;
 }
 
 message PendingInboxBuf {
-    repeated string items = 1;
-    string hashOfRest = 2;
+    repeated bytes items = 1;
+    value.HashBuf hashOfRest = 2;
 }
 
 message RollupTimeBuf {
-    string val = 1;
+    value.BigIntegerBuf val = 1;
 }
+
 
