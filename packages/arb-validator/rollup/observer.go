@@ -31,7 +31,7 @@ import (
 type Observer struct {
 }
 
-func NewObserver(chain *Chain, clnt *ethclient.Client) (*Observer, error) {
+func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error) {
 	rollup, err := ethbridge.NewRollup(chain.rollupAddr, clnt)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func NewObserver(chain *Chain, clnt *ethclient.Client) (*Observer, error) {
 	return &Observer{}, nil
 }
 
-func handleNotification(notification ethbridge.Notification, chain *Chain) {
+func handleNotification(notification ethbridge.Notification, chain *ChainObserver) {
 	switch ev := notification.Event.(type) {
 	case ethbridge.StakeCreatedEvent:
 		chain.CreateStake(ev.Staker, ev.NodeHash, RollupTimeFromBlockNum(notification.Header.Number))

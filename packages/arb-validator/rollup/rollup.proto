@@ -20,7 +20,7 @@ import "value/value.proto";
 import "protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
-message ChainBuf {
+message ChainObserverBuf {
     bytes contractAddress = 1;
     ChainParamsBuf vmParams = 2;
     PendingInboxBuf pendingInbox = 3;

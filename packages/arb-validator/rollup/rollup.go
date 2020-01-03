@@ -29,7 +29,7 @@ import (
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
 
-type Chain struct {
+type ChainObserver struct {
 	rollupAddr      common.Address
 	vmParams        ChainParams
 	pendingInbox    *PendingInbox
@@ -40,8 +40,8 @@ type Chain struct {
 	challenges      map[common.Address]*Challenge
 }
 
-func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams ChainParams) *Chain {
-	ret := &Chain{
+func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams ChainParams) *ChainObserver {
+	ret := &ChainObserver{
 		_rollupAddr,
 		_vmParams,
 		NewPendingInbox(),
@@ -55,7 +55,7 @@ func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams Ch
 	return ret
 }
 
-func (chain *Chain) MarshalToBuf() *ChainBuf {
+func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 	var allNodes []*NodeBuf
 	for _, v := range chain.nodeFromHash {
 		allNodes = append(allNodes, v.MarshalToBuf())
@@ -72,7 +72,7 @@ func (chain *Chain) MarshalToBuf() *ChainBuf {
 	for _, v := range chain.challenges {
 		allChallenges = append(allChallenges, v.MarshalToBuf())
 	}
-	return &ChainBuf{
+	return &ChainObserverBuf{
 		ContractAddress:     chain.rollupAddr.Bytes(),
 		VmParams:            chain.vmParams.MarshalToBuf(),
 		PendingInbox:        chain.pendingInbox.MarshalToBuf(),
@@ -84,8 +84,8 @@ func (chain *Chain) MarshalToBuf() *ChainBuf {
 	}
 }
 
-func (buf *ChainBuf) Unmarshal() *Chain {
-	chain := &Chain{
+func (buf *ChainObserverBuf) Unmarshal() *ChainObserver {
+	chain := &ChainObserver{
 		common.BytesToAddress([]byte(buf.ContractAddress)),
 		buf.VmParams.Unmarshal(),
 		buf.PendingInbox.Unmarshal(),
@@ -301,7 +301,7 @@ const (
 
 var zeroBytes32 [32]byte // deliberately zeroed
 
-func (chain *Chain) CreateInitialNode(machine machine.Machine) {
+func (chain *ChainObserver) CreateInitialNode(machine machine.Machine) {
 	newNode := &Node{
 		machineHash:    machine.Hash(),
 		machine:        machine.Clone(),
@@ -313,11 +313,11 @@ func (chain *Chain) CreateInitialNode(machine machine.Machine) {
 	chain.latestConfirmed = newNode
 }
 
-func (chain *Chain) notifyNewBlockNumber(blockNum *big.Int) {
+func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	//TODO: checkpoint, and take other appropriate actions for new block
 }
 
-func (chain *Chain) notifyAssert(
+func (chain *ChainObserver) notifyAssert(
 	prevLeafHash [32]byte,
 	timeBounds [2]RollupTime,
 	afterPendingTop [32]byte,
@@ -337,7 +337,7 @@ func (chain *Chain) notifyAssert(
 	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, unmarshalHash(disputableNode.assertionStub.AfterHash), nil)
 }
 
-func (chain *Chain) CreateNodesOnAssert(
+func (chain *ChainObserver) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *DisputableNode,
 	afterMachineHash [32]byte,
@@ -429,13 +429,13 @@ func (node *Node) considerRemoving() {
 	node.removePrev()
 }
 
-func (chain *Chain) ConfirmNode(nodeHash [32]byte) {
+func (chain *ChainObserver) ConfirmNode(nodeHash [32]byte) {
 	node := chain.nodeFromHash[nodeHash]
 	chain.latestConfirmed = node
 	node.removePrev()
 }
 
-func (chain *Chain) PruneNode(nodeHash [32]byte) {
+func (chain *ChainObserver) PruneNode(nodeHash [32]byte) {
 	node := chain.nodeFromHash[nodeHash]
 	delete(chain.nodeFromHash, nodeHash)
 	node.removePrev()
@@ -454,7 +454,7 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 	}
 }
 
-func (buf *NodeBuf) Unmarshal(chain *Chain) (*Node, [32]byte) {
+func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 	machineHashArr := unmarshalHash(buf.MachineHash)
 	prevHashArr := unmarshalHash(buf.PrevHash)
 	pthArr := unmarshalHash(buf.PendingTopHash)
@@ -472,7 +472,7 @@ func (buf *NodeBuf) Unmarshal(chain *Chain) (*Node, [32]byte) {
 	return node, prevHashArr
 }
 
-func (chain *Chain) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime RollupTime) {
+func (chain *ChainObserver) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime RollupTime) {
 	staker := &Staker{
 		stakerAddr,
 		chain.nodeFromHash[nodeHash],
@@ -482,11 +482,11 @@ func (chain *Chain) CreateStake(stakerAddr common.Address, nodeHash [32]byte, cr
 	chain.stakers.Add(staker)
 }
 
-func (chain *Chain) MoveStake(stakerAddr common.Address, nodeHash [32]byte) {
+func (chain *ChainObserver) MoveStake(stakerAddr common.Address, nodeHash [32]byte) {
 	chain.stakers.Get(stakerAddr).location = chain.nodeFromHash[nodeHash]
 }
 
-func (chain *Chain) RemoveStake(stakerAddr common.Address) {
+func (chain *ChainObserver) RemoveStake(stakerAddr common.Address) {
 	chain.stakers.Delete(chain.stakers.Get(stakerAddr))
 }
 
@@ -509,7 +509,7 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	}
 }
 
-func (buf *StakerBuf) Unmarshal(chain *Chain) *Staker {
+func (buf *StakerBuf) Unmarshal(chain *ChainObserver) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
 	locArr := unmarshalHash(buf.Location)
 	if buf.InChallenge {
@@ -544,7 +544,7 @@ const (
 	InvalidExecutionChallenge  ChallengeType = 2
 )
 
-func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address, kind ChallengeType) *Challenge {
+func (chain *ChainObserver) NewChallenge(contract, asserter, challenger common.Address, kind ChallengeType) *Challenge {
 	ret := &Challenge{contract, asserter, challenger, kind}
 	chain.challenges[contract] = ret
 	chain.stakers.Get(asserter).challenge = ret
@@ -552,7 +552,7 @@ func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address, 
 	return ret
 }
 
-func (chain *Chain) ChallengeResolved(contract, winner, loser common.Address) {
+func (chain *ChainObserver) ChallengeResolved(contract, winner, loser common.Address) {
 	chain.RemoveStake(loser)
 	delete(chain.challenges, contract)
 }
@@ -565,7 +565,7 @@ func (chal *Challenge) MarshalToBuf() *ChallengeBuf {
 	}
 }
 
-func (buf *ChallengeBuf) Unmarshal(chain *Chain) *Challenge {
+func (buf *ChallengeBuf) Unmarshal(chain *ChainObserver) *Challenge {
 	ret := &Challenge{
 		common.BytesToAddress(buf.Contract),
 		common.BytesToAddress(buf.Asserter),
