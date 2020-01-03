@@ -523,20 +523,19 @@ func (chain *ChainObserver) ConfirmNode(nodeHash [32]byte) {
 	chain.considerPruningNode(node.prev)
 	for chain.oldestNode != chain.latestConfirmed {
 		if chain.oldestNode.numStakers > 0 {
-			break
+			return
 		}
-		numSuccessors := 0
+		var successor *Node
 		for kind := MinChildType; kind <= MaxChildType; kind++ {
 			if node.successorHashes[kind] != zeroBytes32 {
-				numSuccessors++
+				if successor != nil {
+					return
+				}
+				successor = chain.nodeFromHash[node.successorHashes[kind]]
 			}
 		}
-		if numSuccessors > 1 {
-			break
-		}
-		newOldestNode := chain.nodeFromHash[chain.oldestNode]
 		chain.pruneNode(chain.oldestNode)
-		chain.oldestNode = newOldestNode
+		chain.oldestNode = successor
 	}
 }
 
