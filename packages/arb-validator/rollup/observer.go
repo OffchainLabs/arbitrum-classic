@@ -88,7 +88,7 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 				&StakeCreatedChainEvent{
 					ev.Staker,
 					ev.NodeHash,
-					RollupTimeFromBlockNum(notification.Header.Number)
+					RollupTimeFromBlockNum(notification.Header.Number),
 				},
 			)
 		}
@@ -104,7 +104,7 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 				},
 			)
 		}
- 	case ethbridge.ChallengeCompletedEvent:
+	case ethbridge.ChallengeCompletedEvent:
 		chain.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
 		if chain.listener != nil && (chain.listenForAddress == ev.Winner || chain.listenForAddress == ev.Loser) {
 			chain.listener.Notify(
@@ -118,14 +118,14 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 	case ethbridge.StakeRefundedEvent:
 		chain.RemoveStake(ev.Staker)
 		if chain.listener != nil && chain.listenForAddress == ev.Staker {
-			chain.listener.Notify(&StakeRefundedChainEvent{ ev.Staker })
+			chain.listener.Notify(&StakeRefundedChainEvent{ev.Staker})
 		}
 	case ethbridge.PrunedEvent:
 		chain.PruneNode(ev.Leaf)
 	case ethbridge.StakeMovedEvent:
 		chain.MoveStake(ev.Staker, ev.Location)
 		if chain.listener != nil && chain.listenForAddress == ev.Staker {
-			chain.listener.Notify(&StakeMovedChainEvent{ ev.Staker, ev.Location })
+			chain.listener.Notify(&StakeMovedChainEvent{ev.Staker, ev.Location})
 		}
 	case ethbridge.AssertedEvent:
 		chain.notifyAssert(

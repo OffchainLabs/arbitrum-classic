@@ -52,9 +52,8 @@ type StakeCreatedChainEvent struct {
 }
 
 type StakeMovedChainEvent struct {
-	staker       common.Address
-	fromNodeHash [32]byte
-	toNodeHash   [32]byte
+	staker     common.Address
+	toNodeHash [32]byte
 }
 
 type StakeRefundedChainEvent struct {
@@ -96,6 +95,7 @@ func templateRunLoop(lis *ChanCEListener) {
 		case ChallengeStartedChainEvent:
 		case ChallengeCompletedChainEvent:
 		default:
+			_ = ev //suppress compiler warning
 			log.Fatal("unrecognized event type in rollup chain listener")
 		}
 	}
