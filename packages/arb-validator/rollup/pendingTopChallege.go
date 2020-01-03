@@ -91,7 +91,34 @@ func DefendPendingTopClaim(
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go handleBlockchainNotifications(ctx, noteChan, contract)
-	return defendChallenge(
+	return defendPendingTop(
+		auth,
+		client,
+		contract,
+		pendingInbox,
+		noteChan,
+		pendingTopClaim,
+		topPending,
+	)
+}
+
+func ChallengePendingTopClaim(
+	auth *bind.TransactOpts,
+	client *ethclient.Client,
+	address common.Address,
+	pendingInbox *PendingInbox,
+	pendingTopClaim ethbridge.PendingTopOutput,
+	topPending [32]byte,
+) (PendingTopState, error) {
+	contract, err := ethbridge.NewPendingTopChallenge(address, client)
+	if err != nil {
+		return PendingTopContinuing, err
+	}
+	ctx := context.TODO()
+	noteChan := make(chan ethbridge.Notification, 1024)
+
+	go handleBlockchainNotifications(ctx, noteChan, contract)
+	return challengePendingTop(
 		auth,
 		client,
 		contract,
@@ -153,7 +180,7 @@ func getNextEventWithTimeout(
 	}
 }
 
-func defendChallenge(
+func defendPendingTop(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	contract *ethbridge.PendingTopChallenge,
@@ -234,5 +261,64 @@ func defendChallenge(
 		}
 		startState = chainHashes[contEv.SegmentIndex.Uint64()]
 		endState = chainHashes[contEv.SegmentIndex.Uint64()+1]
+	}
+}
+
+func challengePendingTop(
+	auth *bind.TransactOpts,
+	client *ethclient.Client,
+	contract *ethbridge.PendingTopChallenge,
+	pendingInbox *PendingInbox,
+	outChan chan ethbridge.Notification,
+	pendingTopClaim ethbridge.PendingTopOutput,
+	topPending [32]byte,
+) (PendingTopState, error) {
+	note, ok := <-outChan
+	if !ok {
+		return PendingTopContinuing, pendingTopNoEvents
+	}
+	ev, ok := note.Event.(ethbridge.InitiateChallengeEvent)
+	if !ok {
+		return PendingTopContinuing, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
+	}
+
+	deadline := ev.DeadlineTicks
+	for {
+		note, state, err := getNextEventWithTimeout(
+			auth,
+			outChan,
+			deadline,
+			contract,
+			client,
+		)
+		if err != nil || state != PendingTopContinuing {
+			return state, err
+		}
+
+		if _, ok := note.Event.(ethbridge.OneStepProof); ok {
+			return PendingTopAsserterWon, nil
+		}
+
+		ev, ok := note.Event.(ethbridge.PendingTopBisectionEvent)
+		if !ok {
+			return PendingTopContinuing, errors.New("PendingTopChallenge expected PendingTopBisectionEvent")
+		}
+		challengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
+		if err != nil {
+			return PendingTopContinuing, err
+		}
+		_, err = contract.ChooseSegment(auth, uint16(challengedSegment), ev.ChainHashes)
+		if err != nil {
+			return PendingTopContinuing, err
+		}
+		note, state, err = getNextEvent(outChan)
+		if err != nil || state != PendingTopContinuing {
+			return state, err
+		}
+		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
+		if !ok {
+			return PendingTopContinuing, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
+		}
+		deadline = contEv.DeadlineTicks
 	}
 }

@@ -102,6 +102,27 @@ func (pi *PendingInbox) GenerateBisection(startItemHash [32]byte, endItemHash [3
 	return cuts, nil
 }
 
+func (pi *PendingInbox) CheckBisection(segments [][32]byte) (uint64, error) {
+	segmentCount := uint64(len(segments))
+	totalLength, err := pi.SegmentSize(segments[0], segments[segmentCount-1])
+	if err != nil {
+		return 0, errors.New("first and last segment must exist")
+	}
+	for i := uint64(1); i < segmentCount; i++ {
+		targetLength := uint64(0)
+		if i == segmentCount-1 {
+			targetLength = totalLength/segmentCount + totalLength%segmentCount
+		} else {
+			targetLength = totalLength / segmentCount
+		}
+		length, err := pi.SegmentSize(segments[segmentCount-i-1], segments[segmentCount-i])
+		if err != nil || length != targetLength {
+			return uint64(segmentCount - i - 1), nil
+		}
+	}
+	return 0, errors.New("all segments were correct")
+}
+
 func (pi *PendingInbox) GenerateOneStepProof(startItemHash [32]byte) ([32]byte, [32]byte, error) {
 	item, ok := pi.index[startItemHash]
 	if !ok {
