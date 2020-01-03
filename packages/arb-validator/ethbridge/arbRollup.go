@@ -527,7 +527,7 @@ type PendingTopOutput struct {
 }
 
 type MessagesOutput struct {
-	importedMessagesSlice [32]byte
+	ImportedMessagesSlice [32]byte
 }
 
 type ExecutionOutput struct {
@@ -563,7 +563,7 @@ func (vm *ArbRollup) MakeAssertion(
 			prevPrevLeafHash,
 			prevDisputableNodeHash,
 			pendingTopOutput.AfterPendingTop,
-			messagesOutput.importedMessagesSlice,
+			messagesOutput.ImportedMessagesSlice,
 			executionOutput.vmHash,
 			executionOutput.messagesAccHash,
 			executionOutput.logsAccHash,

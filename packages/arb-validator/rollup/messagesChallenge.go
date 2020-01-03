@@ -28,40 +28,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
-func DefendPendingTopClaim(
+func DefendMessagesClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
 	pendingInbox *PendingInbox,
-	pendingTopClaim ethbridge.PendingTopOutput,
-	topPending [32]byte,
+	beforePending [32]byte,
+	afterPending [32]byte,
+	messagesOutput ethbridge.MessagesOutput,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewPendingTopChallenge(address, client)
-	if err != nil {
-		return ChallengeContinuing, err
-	}
-	ctx := context.TODO()
-	noteChan := make(chan ethbridge.Notification, 1024)
-
-	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
-	return defendPendingTop(
-		auth,
-		client,
-		contract,
-		pendingInbox,
-		noteChan,
-		pendingTopClaim,
-		topPending,
-	)
-}
-
-func ChallengePendingTopClaim(
-	auth *bind.TransactOpts,
-	client *ethclient.Client,
-	address common.Address,
-	pendingInbox *PendingInbox,
-) (ChallengeState, error) {
-	contract, err := ethbridge.NewPendingTopChallenge(address, client)
+	contract, err := ethbridge.NewMessagesChallenge(address, client)
 	if err != nil {
 		return 0, err
 	}
@@ -69,23 +45,54 @@ func ChallengePendingTopClaim(
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
-	return challengePendingTop(
+	return defendMessages(
 		auth,
 		client,
 		contract,
 		pendingInbox,
 		noteChan,
+		beforePending,
+		afterPending,
+		messagesOutput,
 	)
 }
 
-func defendPendingTop(
+func ChallengeMessagesClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
-	contract *ethbridge.PendingTopChallenge,
+	address common.Address,
+	pendingInbox *PendingInbox,
+	beforePending [32]byte,
+	afterPending [32]byte,
+) (ChallengeState, error) {
+	contract, err := ethbridge.NewMessagesChallenge(address, client)
+	if err != nil {
+		return 0, err
+	}
+	ctx := context.TODO()
+	noteChan := make(chan ethbridge.Notification, 1024)
+
+	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	return challengeMessages(
+		auth,
+		client,
+		contract,
+		pendingInbox,
+		noteChan,
+		beforePending,
+		afterPending,
+	)
+}
+
+func defendMessages(
+	auth *bind.TransactOpts,
+	client *ethclient.Client,
+	contract *ethbridge.MessagesChallenge,
 	pendingInbox *PendingInbox,
 	outChan chan ethbridge.Notification,
-	pendingTopClaim ethbridge.PendingTopOutput,
-	topPending [32]byte,
+	beforePending [32]byte,
+	afterPending [32]byte,
+	messagesOutput ethbridge.MessagesOutput,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -93,24 +100,35 @@ func defendPendingTop(
 	}
 	_, ok = note.Event.(ethbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
+		return 0, errors.New("MessagesChallenge expected InitiateChallengeEvent")
 	}
 
-	startState := pendingTopClaim.AfterPendingTop
-	endState := topPending
+	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
+	if err != nil {
+		return 0, err
+	}
+
+	startPending := beforePending
+	endPending := afterPending
+	startMessages := messagesStack.hashOfRest
+	endMessages := messagesOutput.ImportedMessagesSlice
 
 	for {
-		messageCount, err := pendingInbox.SegmentSize(startState, endState)
+		messageCount, err := pendingInbox.SegmentSize(startPending, endPending)
 		if err != nil {
 			return 0, err
 		}
 
 		if messageCount == 1 {
-			nextHash, valueHash, err := pendingInbox.GenerateOneStepProof(startState)
+			pendingNextHash, pendingValueHash, err := pendingInbox.GenerateOneStepProof(startPending)
 			if err != nil {
 				return 0, err
 			}
-			_, err = contract.OneStepProof(auth, startState, nextHash, valueHash)
+			messagesNextHash, _, err := pendingInbox.GenerateOneStepProof(startMessages)
+			if err != nil {
+				return 0, err
+			}
+			_, err = contract.OneStepProof(auth, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
 			if err != nil {
 				return 0, err
 			}
@@ -120,16 +138,20 @@ func defendPendingTop(
 			}
 			_, ok = note.Event.(ethbridge.OneStepProof)
 			if !ok {
-				return 0, errors.New("PendingTopChallenge expected OneStepProof")
+				return 0, errors.New("MessagesChallenge expected OneStepProof")
 			}
 			return ChallengeAsserterWon, nil
 		}
 
-		chainHashes, err := pendingInbox.GenerateBisection(startState, endState, 100)
+		chainHashes, err := pendingInbox.GenerateBisection(startPending, endPending, 100)
 		if err != nil {
 			return 0, err
 		}
-		_, err = contract.Bisect(auth, chainHashes, new(big.Int).SetUint64(messageCount))
+		stackHashes, err := messagesStack.GenerateBisection(startMessages, endMessages, 100)
+		if err != nil {
+			return 0, err
+		}
+		_, err = contract.Bisect(auth, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
 			return 0, err
 		}
@@ -138,9 +160,9 @@ func defendPendingTop(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		ev, ok := note.Event.(ethbridge.PendingTopBisectionEvent)
+		ev, ok := note.Event.(ethbridge.MessagesBisectionEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected PendingTopBisectionEvent")
+			return 0, errors.New("MessagesChallenge expected MessagesBisectionEvent")
 		}
 
 		note, state, err = getNextEventWithTimeout(
@@ -155,19 +177,23 @@ func defendPendingTop(
 		}
 		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
+			return 0, errors.New("MessagesChallenge expected ContinueChallengeEvent")
 		}
-		startState = chainHashes[contEv.SegmentIndex.Uint64()]
-		endState = chainHashes[contEv.SegmentIndex.Uint64()+1]
+		startPending = chainHashes[contEv.SegmentIndex.Uint64()]
+		endPending = chainHashes[contEv.SegmentIndex.Uint64()+1]
+		startMessages = stackHashes[contEv.SegmentIndex.Uint64()]
+		endMessages = stackHashes[contEv.SegmentIndex.Uint64()+1]
 	}
 }
 
-func challengePendingTop(
+func challengeMessages(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
-	contract *ethbridge.PendingTopChallenge,
+	contract *ethbridge.MessagesChallenge,
 	pendingInbox *PendingInbox,
 	outChan chan ethbridge.Notification,
+	beforePending [32]byte,
+	afterPending [32]byte,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -175,7 +201,12 @@ func challengePendingTop(
 	}
 	ev, ok := note.Event.(ethbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
+		return 0, errors.New("MessagesChallenge expected InitiateChallengeEvent")
+	}
+
+	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
+	if err != nil {
+		return 0, err
 	}
 
 	deadline := ev.DeadlineTicks
@@ -195,15 +226,24 @@ func challengePendingTop(
 			return ChallengeAsserterWon, nil
 		}
 
-		ev, ok := note.Event.(ethbridge.PendingTopBisectionEvent)
+		ev, ok := note.Event.(ethbridge.MessagesBisectionEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected PendingTopBisectionEvent")
+			return 0, errors.New("MessagesChallenge expected MessagesBisectionEvent")
 		}
-		challengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
+		pendingChallengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
 		if err != nil {
 			return 0, err
 		}
-		_, err = contract.ChooseSegment(auth, uint16(challengedSegment), ev.ChainHashes)
+		messagesChallengedSegment, err := messagesStack.CheckBisection(ev.SegmentHashes)
+		if err != nil {
+			return 0, err
+		}
+		maxSegment := pendingChallengedSegment
+		if messagesChallengedSegment > maxSegment {
+			maxSegment = messagesChallengedSegment
+		}
+
+		_, err = contract.ChooseSegment(auth, uint16(maxSegment), ev.ChainHashes)
 		if err != nil {
 			return 0, err
 		}
@@ -213,7 +253,7 @@ func challengePendingTop(
 		}
 		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
+			return 0, errors.New("MessagesChallenge expected ContinueChallengeEvent")
 		}
 		deadline = contEv.DeadlineTicks
 	}
