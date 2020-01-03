@@ -20,8 +20,8 @@ pragma solidity ^0.5.3;
 library ChallengeUtils {
 
     function pendingTopHash(
-        bytes32 _topHash,
         bytes32 _lowerHash,
+        bytes32 _topHash,
         uint _chainLength
     )
         internal

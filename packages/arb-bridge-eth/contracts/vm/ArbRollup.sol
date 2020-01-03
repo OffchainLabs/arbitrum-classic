@@ -64,7 +64,7 @@ contract ArbRollup is Leaves, IArbRollup {
     // Fields
     //   prevLeafHash
     //   afterPendingTop
-    //   importedMesssagesSlice
+    //   importedMessagesSlice
     //   afterVMHash
     //   messagesAccHash
     //   logsAccHash
@@ -97,7 +97,6 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 importedMessagesSlice;
         bytes32 afterVMHash;
         bool didInboxInsn;
-        bytes32 afterInboxHash;
         bytes32 messagesAccHash;
         bytes32 logsAccHash;
         uint32 numSteps;
@@ -134,20 +133,19 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     // fields
-    //  beforeVMHash
-    //  beforeInboxHash
-    //  beforePendingTop
-    //  prevPrevLeafHash
-    //  prevDisputableNodeHash
-    //  afterPendingTop
-    //  importedMessagesSlice
-    //  afterVMHash
-    //  afterInboxHash
-    //  messagesAccHash
-    //  logsAccHash
+     // beforeVMHash
+     // beforeInboxHash
+     // beforePendingTop
+     // prevPrevLeafHash
+     // prevDisputableNodeHash
+     // afterPendingTop
+     // importedMessagesSlice
+     // afterVMHash
+     // messagesAccHash
+     // logsAccHash
 
     function makeAssertion(
-        bytes32[11] calldata _fields,
+        bytes32[10] calldata _fields,
         bytes32[] calldata _stakerProof,
         uint _beforePendingCount,
         uint _afterPendingCount,
@@ -176,7 +174,6 @@ contract ArbRollup is Leaves, IArbRollup {
                 _didInboxInsn,
                 _fields[8],
                 _fields[9],
-                _fields[10],
                 _numSteps,
                 _numArbGas,
                 _timeBoundsBlocks,
@@ -310,8 +307,8 @@ contract ArbRollup is Leaves, IArbRollup {
             frame.prevLeaf,
             deadlineTicks,
             ChallengeUtils.pendingTopHash(
-                frame.pendingValue,
                 data.afterPendingTop,
+                frame.pendingValue,
                 frame.pendingCount.sub(data.afterPendingCount)
             ),
             INVALID_PENDING_TOP_TYPE,

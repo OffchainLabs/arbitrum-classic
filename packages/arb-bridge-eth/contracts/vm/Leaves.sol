@@ -32,7 +32,7 @@ contract Leaves is Confirming {
 
     mapping (bytes32 => bool) private leaves;
 
-    event RollupPruned(bytes32 nodeHash);
+    event RollupPruned(bytes32 leaf);
 
     event RollupStakeMoved(
         address staker,
@@ -40,8 +40,8 @@ contract Leaves is Confirming {
     );
 
     function placeStake(
-        bytes32 _leaf,
         bytes32 location,
+        bytes32 _leaf,
         bytes32[] calldata proof1,
         bytes32[] calldata proof2
     )
