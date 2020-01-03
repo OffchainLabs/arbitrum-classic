@@ -325,6 +325,29 @@ func (chain *ChainObserver) CreateInitialNode(machine machine.Machine) {
 	chain.latestConfirmed = newNode
 }
 
+func (chain *ChainObserver) GeneratePathProof(from, to *Node) [][32]byte {
+	if to == nil {
+		return nil // no proof exists
+	}
+	if from == to {
+		return [][32]byte{}
+	} else {
+		sub := chain.GeneratePathProof(from, to.prev)
+		var inner32 [32]byte
+		innerHash := solsha3.SoliditySHA3(
+			solsha3.Bytes32(to.disputable.hash),
+			solsha3.Int256(to.linkType),
+			solsha3.Bytes32(to.protoStateHash()),
+		)
+		copy(inner32[:], innerHash)
+		return append(sub, inner32)
+	}
+}
+
+func (chain *ChainObserver) GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
+	return chain.GeneratePathProof(from, to1), chain.GeneratePathProof(from, to2)
+}
+
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	//TODO: checkpoint, and take other appropriate actions for new block
 }
