@@ -1,54 +1,45 @@
 package ethbridge
 
 import (
+	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/chainfactory"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type ChainFactory struct {
-	contract *chainfactory.ChainFactory
+type ArbFactory struct {
+	contract *arbfactory.ArbFactory
 	client   *ethclient.Client
 }
 
-func NewChainFactory(address common.Address, client *ethclient.Client) (*ChainFactory, error) {
-	vmCreatorContract, err := chainfactory.NewChainFactory(address, client)
+func NewArbFactory(address common.Address, client *ethclient.Client) (*ArbFactory, error) {
+	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ChainFactory")
+		return nil, errors2.Wrap(err, "Failed to connect to ArbFactory")
 	}
-	return &ChainFactory{vmCreatorContract, client}, nil
+	return &ArbFactory{vmCreatorContract, client}, nil
 }
 
-func (con *ChainFactory) ParseChainCreated(log *types.Log) (common.Address, error) {
-	event, err := con.contract.ParseChainCreated(*log)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return event.VmAddress, nil
-}
-
-func (con *ChainFactory) CreateChain(
+func (con *ArbFactory) CreateRollup(
 	auth *bind.TransactOpts,
-	config *valmessage.VMConfiguration,
 	vmState [32]byte,
+	gracePeriodTicks *big.Int,
+	arbGasSpeedLimitPerTick *big.Int,
+	maxExecutionSteps uint32,
+	stakeRequirement *big.Int,
+	owner common.Address,
 ) (common.Address, error) {
-	var owner common.Address
-	copy(owner[:], config.Owner.Value)
-	var escrowCurrency common.Address
-	copy(escrowCurrency[:], config.EscrowCurrency.Value)
-	tx, err := con.contract.CreateChain(
+	tx, err := con.contract.CreateRollup(
 		auth,
 		vmState,
-		uint32(config.GracePeriod),
-		config.MaxExecutionStepCount,
-		value.NewBigIntFromBuf(config.EscrowRequired),
+		gracePeriodTicks,
+		arbGasSpeedLimitPerTick,
+		maxExecutionSteps,
+		stakeRequirement,
 		owner,
 	)
 	if err != nil {
@@ -61,7 +52,7 @@ func (con *ChainFactory) CreateChain(
 	if len(receipt.Logs) != 1 {
 		return common.Address{}, errors2.New("Wrong receipt count")
 	}
-	event, err := con.contract.ParseChainCreated(*receipt.Logs[0])
+	event, err := con.contract.ParseRollupCreated(*receipt.Logs[0])
 	if err != nil {
 		return common.Address{}, err
 	}

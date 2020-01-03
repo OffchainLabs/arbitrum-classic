@@ -1,5 +1,5 @@
 /*
-* Copyright 2019, Offchain Labs, Inc.
+* Copyright 2020, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,176 +18,86 @@ package rollup
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-	arbrollup "github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 	"log"
 	"math/big"
-	"strings"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type Observer struct {
 }
 
-type RollupAssertedEvent struct {
-	Fields               [6][32]byte
-	ImportedMessageCount *big.Int
-	TimeBoundsBlocks     [2]*big.Int
-	DidInboxInsn         bool
-	NumSteps             uint32
-	NumArbGas            uint64
-}
-
-type RollupConfirmedEvent struct {
-	NodeHash [32]byte
-}
-
-type RollupPrunedEvent struct {
-	NodeHash [32]byte
-}
-
-type RollupStakeCreatedEvent struct {
-	Staker      common.Address
-	NodeHash    [32]byte
-	BlockNumber *big.Int
-}
-
-type RollupStakeMovedEvent struct {
-	Address    common.Address
-	ToNodeHash [32]byte
-}
-
-type RollupStakeRefundedEvent struct {
-	Staker common.Address
-}
-
-type RollupChallengeStartedEvent struct {
-	Asserter          common.Address
-	Challenger        common.Address
-	ChallengeType     *big.Int
-	ChallengeContract common.Address
-}
-
-type RollupChallengeCompletedEvent struct {
-	ChallengeContract common.Address
-	Winner            common.Address
-	Loser             common.Address
-}
-
-func NewObserver(chain *Chain, clnt *ethclient.Client, rawUrl string) (*Observer, error) {
-	pClient, err := ethclient.Dial(rawUrl)
+func NewObserver(chain *Chain, clnt *ethclient.Client) (*Observer, error) {
+	rollup, err := ethbridge.NewRollup(chain.rollupAddr, clnt)
 	if err != nil {
 		return nil, err
 	}
-
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{chain.rollupAddr},
-	}
-	logs := make(chan types.Log)
-	sub, err := pClient.SubscribeFilterLogs(
-		context.Background(),
-		query,
-		logs,
-	)
-	if err != nil {
+	ctx := context.TODO()
+	if err := rollup.StartConnection(ctx); err != nil {
 		return nil, err
 	}
 
-	rollupAbi, err := abi.JSON(strings.NewReader(string(arbrollup.ArbRollupABI)))
-	if err != nil {
-		return nil, err
-	}
-
-	rollupAssertedSigHash := calcSigHash("RollupAsserted(bytes32[6],uint,uint128[2],bool,uint32,uint64)")
-	rollupConfirmedSigHash := calcSigHash("RollupConfirmed(bytes32)")
-	rollupPrunedSigHash := calcSigHash("RollupPruned(bytes32)")
-	rollupStakeCreatedSigHash := calcSigHash("RollupStakeCreated(address,bytes32,uint)")
-	rollupStakeMovedSigHash := calcSigHash("RollupStakeMoved(address,bytes32)")
-	rollupStakeRefundedSigHash := calcSigHash("RollupStakeRefunded(address)")
-	rollupChallengeStartedSigHash := calcSigHash("RollupChallengeStarted(address,address,uint,address)")
-	rollupChallengeCompletedSigHash := calcSigHash("RollupChallengeCompleted(address,address,address)")
-
+	outChan, errChan := rollup.GetChans()
 	go func() {
-		defer sub.Unsubscribe()
-		lastBlockNumberSeen := uint64(0)
+		lastBlockNumberSeen := big.NewInt(0)
 		for {
+			hitError := false
 			select {
-			case err := <-sub.Err():
-				log.Fatal(err)
-			case vLog := <-logs:
-				if vLog.BlockNumber > lastBlockNumberSeen {
-					lastBlockNumberSeen = vLog.BlockNumber
+			case <-ctx.Done():
+				break
+			case notification, ok := <-outChan:
+				if !ok {
+					hitError = true
+					break
+				}
+				if notification.Header.Number.Cmp(lastBlockNumberSeen) > 0 {
+					lastBlockNumberSeen = notification.Header.Number
 					chain.notifyNewBlockNumber(lastBlockNumberSeen)
 
 				}
-				switch vLog.Topics[0] {
-				case rollupAssertedSigHash:
-					var event RollupAssertedEvent
-					err := rollupAbi.Unpack(&event, "RollupAsserted", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
+				handleNotification(notification, chain)
+			case <-errChan:
+				hitError = true
+			}
+
+			if hitError {
+				// Ignore error and try to reset connection
+				for {
+					if err := rollup.StartConnection(ctx); err == nil {
+						break
 					}
-					// do operation for event
-				case rollupConfirmedSigHash:
-					var event RollupConfirmedEvent
-					err := rollupAbi.Unpack(&event, "RollupConfirmed", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
-					}
-					// do operation for event
-				case rollupPrunedSigHash:
-					var event RollupPrunedEvent
-					err := rollupAbi.Unpack(&event, "RollupPruned", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
-					}
-					// do operation for event
-				case rollupStakeCreatedSigHash:
-					var event RollupStakeCreatedEvent
-					err := rollupAbi.Unpack(&event, "RollupStakeCreated", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
-					}
-					// do operation for event
-				case rollupStakeMovedSigHash:
-					var event RollupStakeMovedEvent
-					err := rollupAbi.Unpack(&event, "RollupStakeMoved", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
-					}
-					// do operation for event
-				case rollupStakeRefundedSigHash:
-					var event RollupStakeRefundedEvent
-					err := rollupAbi.Unpack(&event, "RollupStakeRefunded", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
-					}
-					// do operation for event
-				case rollupChallengeStartedSigHash:
-					var event RollupChallengeStartedEvent
-					err := rollupAbi.Unpack(&event, "RollupChallengeStarted", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
-					}
-					// do operation for event
-				case rollupChallengeCompletedSigHash:
-					var event RollupChallengeCompletedEvent
-					err := rollupAbi.Unpack(&event, "RollupChallengeCompleted", vLog.Data)
-					if err != nil {
-						log.Fatal(err)
-					}
-					// do operation for event
-				default:
-					log.Fatal("unknown log event type")
+					log.Println("Error: Can't connect to blockchain")
+					time.Sleep(5 * time.Second)
 				}
 			}
 		}
 	}()
 	return &Observer{}, nil
+}
+
+func handleNotification(notification ethbridge.Notification, chain *Chain) {
+	switch ev := notification.Event.(type) {
+	case ethbridge.StakeCreatedEvent:
+		chain.CreateStake(ev.Staker, ev.NodeHash, notification.Header.Number)
+	case ethbridge.ChallengeStartedEvent:
+		challenge := chain.NewChallenge(ev.ChallengeContract, ev.Asserter, ev.Challenger, ChallengeType(ev.ChallengeType))
+	case ethbridge.ChallengeCompletedEvent:
+		chain.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
+	case ethbridge.StakeRefundedEvent:
+		chain.RemoveStake(ev.Staker)
+	case ethbridge.PrunedEvent:
+		chain.PruneNode(ev.Leaf)
+	case ethbridge.StakeMovedEvent:
+		chain.MoveStake(ev.Staker, ev.Location)
+	case ethbridge.AssertedEvent:
+	// do operation for event
+	case ethbridge.ConfirmedEvent:
+		chain.ConfirmNode(ev.NodeHash)
+	}
 }
 
 func calcSigHash(sig string) common.Hash {

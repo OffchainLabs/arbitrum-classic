@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,30 @@ package protocol
 import (
 	"bytes"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
+
+func NewAssertionStub(
+	afterHash [32]byte,
+	didInboxInsn bool,
+	numSteps uint32,
+	numGas uint64,
+	messagesAcc [32]byte,
+	logsAcc [32]byte,
+) *AssertionStub {
+	return &AssertionStub{
+		AfterHash:        value.NewHashBuf(afterHash),
+		DidInboxInsn:     didInboxInsn,
+		NumSteps:         numSteps,
+		NumGas:           numGas,
+		FirstMessageHash: value.NewHashBuf([32]byte{}),
+		LastMessageHash:  value.NewHashBuf(messagesAcc),
+		FirstLogHash:     value.NewHashBuf([32]byte{}),
+		LastLogHash:      value.NewHashBuf(logsAcc),
+	}
+}
 
 func (a *AssertionStub) Equals(b *AssertionStub) bool {
 	if a.AfterHash != b.AfterHash ||

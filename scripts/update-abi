@@ -8,15 +8,26 @@ cd packages/arb-bridge-eth/contracts
 cp -r ../node_modules/@openzeppelin/ ./@openzeppelin
 cp -r ../installed_contracts/bytes/ ./bytes
 
-abigen --sol=vm/ArbRollup.sol --pkg=arbrollup --out=arbrollup.go
+abigen --sol=vm/ArbFactory.sol --pkg=arbfactory --out=arbfactory.go
+abigen --sol=vm/ArbRollup.sol --pkg=rollup --out=arbrollup.go
+
+abigen --sol=challenge/PendingTopChallenge.sol --pkg=pendingtopchallenge --out=pendingtopchallenge.go
+abigen --sol=challenge/MessagesChallenge.sol --pkg=messageschallenge --out=messageschallenge.go
+abigen --sol=challenge/ExecutionChallenge.sol --pkg=executionchallenge --out=executionchallenge.go
 
 abigen --sol=GlobalPendingInbox.sol --pkg=globalpendinginbox --out=globalpendinginbox.go
 abigen --sol=arch/OneStepProof.sol --pkg=onestepproof --out=onestepproof.go
 
+\cp arbfactory.go ../../arb-validator/ethbridge/arbfactory/
 \cp arbrollup.go ../../arb-validator/ethbridge/rollup/
+\cp pendingtopchallenge.go ../../arb-validator/ethbridge/pendingtopchallenge/
+\cp messageschallenge.go ../../arb-validator/ethbridge/messageschallenge/
+\cp executionchallenge.go ../../arb-validator/ethbridge/executionchallenge/
 \cp globalpendinginbox.go ../../arb-validator/ethbridge/globalpendinginbox/
 \cp onestepproof.go ../../arb-validator/ethbridge/onestepproof/
 rm -rf @openzeppelin bytes
-rm -f arbrollup.go globalpendinginbox.go onestepproof.go
+rm -f arbfactory.go arbrollup.go
+rm -f pendingtopchallenge.go messageschallenge.go executionchallenge.go
+rm -f globalpendinginbox.go onestepproof.go
 cd ../../..
 yarn workspace arb-provider-ethers update-abi

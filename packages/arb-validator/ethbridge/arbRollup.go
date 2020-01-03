@@ -22,10 +22,6 @@ import (
 	"math/big"
 	"strings"
 
-	arbrollup "github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbchain"
-
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -39,6 +35,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 
@@ -53,7 +50,7 @@ var rollupConfirmedID common.Hash
 var confirmedAssertionID common.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(arbchain.ArbBaseABI))
+	parsed, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
 	if err != nil {
 		panic(err)
 	}
@@ -72,8 +69,8 @@ type ArbRollup struct {
 	OutChan            chan Notification
 	ErrChan            chan error
 	Client             *ethclient.Client
-	ArbRollup          *arbrollup.ArbRollup
-	GlobalPendingInbox *arbchain.IGlobalPendingInbox
+	ArbRollup          *rollup.ArbRollup
+	GlobalPendingInbox *rollup.IGlobalPendingInbox
 
 	address common.Address
 	client  *ethclient.Client
@@ -88,7 +85,7 @@ func NewRollup(address common.Address, client *ethclient.Client) (*ArbRollup, er
 }
 
 func (vm *ArbRollup) setupContracts() error {
-	arbitrumRollupContract, err := arbrollup.NewArbRollup(vm.address, vm.Client)
+	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbRollup")
 	}
@@ -100,7 +97,7 @@ func (vm *ArbRollup) setupContracts() error {
 	if err != nil {
 		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
 	}
-	globalPendingContract, err := arbchain.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
+	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
@@ -159,7 +156,7 @@ func (vm *ArbRollup) StartConnection(ctx context.Context) error {
 		return err
 	}
 
-	messageDeliveredChan := make(chan *arbchain.IGlobalPendingInboxMessageDelivered)
+	messageDeliveredChan := make(chan *rollup.IGlobalPendingInboxMessageDelivered)
 	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
 	if err != nil {
 		return err
@@ -756,21 +753,3 @@ func (vm *ArbRollup) StartMessagesChallenge(
 //	}
 //	return nil
 //}
-
-func translateDisputableAssertionEvent(event *arbchain.ArbBasePendingDisputableAssertion) (*protocol.Precondition, *protocol.AssertionStub) {
-	precondition := protocol.NewPrecondition(
-		event.Fields[0],
-		protocol.NewTimeBounds(event.TimeBounds[0], event.TimeBounds[1]),
-		value.NewHashOnlyValue(event.Fields[1], 1),
-	)
-	assertion := &protocol.AssertionStub{
-		AfterHash:        value.NewHashBuf(event.Fields[2]),
-		NumSteps:         event.NumSteps,
-		NumGas:           event.NumGas,
-		FirstMessageHash: value.NewHashBuf([32]byte{}),
-		LastMessageHash:  value.NewHashBuf(event.Fields[3]),
-		FirstLogHash:     value.NewHashBuf([32]byte{}),
-		LastLogHash:      value.NewHashBuf(event.Fields[4]),
-	}
-	return precondition, assertion
-}
