@@ -132,12 +132,14 @@ func (buf *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listen
 	}
 	for _, stakerBuf := range buf.Stakers {
 		locationHash := unmarshalHash(stakerBuf.Location)
-		chain.stakers.Add(&Staker{
+		newStaker := &Staker{
 			common.BytesToAddress(stakerBuf.Address),
 			chain.nodeFromHash[locationHash],
 			stakerBuf.CreationTime.Unmarshal(),
 			chain.challenges[common.BytesToAddress(stakerBuf.ChallengeAddr)],
-		})
+		}
+		newStaker.location.numStakers++
+		chain.stakers.Add(newStaker)
 	}
 	lcHash := unmarshalHash(buf.LatestConfirmedHash)
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
@@ -297,6 +299,7 @@ type Node struct {
 	linkType        ChildType
 	hasSuccessors   bool
 	successorHashes [MaxChildType + 1][32]byte
+	numStakers      uint64
 }
 
 type ChildType uint
@@ -321,6 +324,7 @@ func (chain *ChainObserver) CreateInitialNode(machine machine.Machine) {
 		machine:        machine.Clone(),
 		pendingTopHash: value.NewEmptyTuple().Hash(),
 		linkType:       ValidChildType,
+		numStakers:     0,
 	}
 	newNode.setHash()
 	chain.leaves.Add(newNode)
@@ -432,6 +436,7 @@ func (chain *ChainObserver) CreateNodesOnAssert(
 		machineHash:    afterMachineHash,
 		pendingTopHash: dispNode.afterPendingTop,
 		machine:        afterMachine,
+		numStakers:     0,
 	}
 	newNode.setHash()
 	prevNode.successorHashes[ValidChildType] = newNode.hash
@@ -447,6 +452,7 @@ func (chain *ChainObserver) CreateNodesOnAssert(
 			machineHash:    prevNode.machineHash,
 			machine:        prevNode.machine,
 			pendingTopHash: prevNode.pendingTopHash,
+			numStakers:     0,
 		}
 		newNode.setHash()
 		prevNode.successorHashes[kind] = newNode.hash
@@ -484,34 +490,36 @@ func (node *Node) protoStateHash() [32]byte {
 	return ret
 }
 
-func (node *Node) removePrev() {
+func (chain *ChainObserver) pruneNode(node *Node) {
 	oldNode := node.prev
 	node.prev = nil // so garbage collector doesn't preserve prev anymore
 	if oldNode != nil {
 		oldNode.successorHashes[node.linkType] = zeroBytes32
-		oldNode.considerRemoving()
+		chain.considerPruningNode(oldNode)
 	}
+	delete(chain.nodeFromHash, node.hash)
 }
 
-func (node *Node) considerRemoving() {
+func (chain *ChainObserver) considerPruningNode(node *Node) {
+	if node.numStakers > 0 {
+		return
+	}
 	for kind := MinChildType; kind <= MaxChildType; kind++ {
 		if node.successorHashes[kind] != zeroBytes32 {
 			return
 		}
 	}
-	node.removePrev()
+	chain.pruneNode(node)
 }
 
 func (chain *ChainObserver) ConfirmNode(nodeHash [32]byte) {
 	node := chain.nodeFromHash[nodeHash]
 	chain.latestConfirmed = node
-	node.removePrev()
+	chain.considerPruningNode(node.prev)
 }
 
-func (chain *ChainObserver) PruneNode(nodeHash [32]byte) {
-	node := chain.nodeFromHash[nodeHash]
-	delete(chain.nodeFromHash, nodeHash)
-	node.removePrev()
+func (chain *ChainObserver) PruneNodeByHash(nodeHash [32]byte) {
+	chain.pruneNode(chain.nodeFromHash[nodeHash])
 }
 
 func (node *Node) MarshalToBuf() *NodeBuf {
@@ -538,6 +546,7 @@ func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 		machineHash:    machineHashArr,
 		pendingTopHash: pthArr,
 		linkType:       ChildType(buf.LinkType),
+		numStakers:     0,
 	}
 	//TODO: try to retrieve machine from checkpoint DB; might fail
 	node.setHash()
@@ -554,15 +563,23 @@ func (chain *ChainObserver) CreateStake(stakerAddr common.Address, nodeHash [32]
 		creationTime,
 		nil,
 	}
+	staker.location.numStakers++
 	chain.stakers.Add(staker)
 }
 
 func (chain *ChainObserver) MoveStake(stakerAddr common.Address, nodeHash [32]byte) {
-	chain.stakers.Get(stakerAddr).location = chain.nodeFromHash[nodeHash]
+	staker := chain.stakers.Get(stakerAddr)
+	staker.location.numStakers--
+	// no need to consider pruning staker.location, because a successor of it is getting a stake
+	staker.location = chain.nodeFromHash[nodeHash]
+	staker.location.numStakers++
 }
 
 func (chain *ChainObserver) RemoveStake(stakerAddr common.Address) {
-	chain.stakers.Delete(chain.stakers.Get(stakerAddr))
+	staker := chain.stakers.Get(stakerAddr)
+	staker.location.numStakers--
+	chain.considerPruningNode(staker.location)
+	chain.stakers.Delete(staker)
 }
 
 func (staker *Staker) MarshalToBuf() *StakerBuf {

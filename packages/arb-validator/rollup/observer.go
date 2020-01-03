@@ -121,7 +121,7 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 			chain.listener.Notify(&StakeRefundedChainEvent{ev.Staker})
 		}
 	case ethbridge.PrunedEvent:
-		chain.PruneNode(ev.Leaf)
+		chain.PruneNodeByHash(ev.Leaf)
 	case ethbridge.StakeMovedEvent:
 		chain.MoveStake(ev.Staker, ev.Location)
 		if chain.listener != nil && chain.listenForAddress == ev.Staker {
