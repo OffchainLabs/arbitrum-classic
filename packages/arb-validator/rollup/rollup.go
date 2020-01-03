@@ -169,7 +169,7 @@ func (ll *LeafSet) forall(f func(*Node)) {
 type Staker struct {
 	address      common.Address
 	location     *Node
-	creationTime *big.Int
+	creationTime RollupTime
 	challenge    *Challenge
 }
 
@@ -433,7 +433,7 @@ func (buf *NodeBuf) Unmarshal(chain *Chain) (*Node, [32]byte) {
 	return node, prevHashArr
 }
 
-func (chain *Chain) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime *big.Int) {
+func (chain *Chain) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime RollupTime) {
 	staker := &Staker{
 		stakerAddr,
 		chain.nodeFromHash[nodeHash],
@@ -489,7 +489,6 @@ type Challenge struct {
 	contract   common.Address
 	asserter   common.Address
 	challenger common.Address
-	kind       ChallengeType
 }
 
 type ChallengeType uint
@@ -500,8 +499,8 @@ const (
 	InvalidExecutionChallenge  ChallengeType = 3
 )
 
-func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address, kind ChallengeType) *Challenge {
-	ret := &Challenge{contract, asserter, challenger, kind}
+func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address) *Challenge {
+	ret := &Challenge{contract, asserter, challenger}
 	chain.challenges[contract] = ret
 	chain.stakers.Get(asserter).challenge = ret
 	chain.stakers.Get(challenger).challenge = ret
@@ -518,7 +517,6 @@ func (chal *Challenge) MarshalToBuf() *ChallengeBuf {
 		Contract:   string(chal.contract.Bytes()),
 		Asserter:   string(chal.asserter.Bytes()),
 		Challenger: string(chal.challenger.Bytes()),
-		Kind:       uint32(chal.kind),
 	}
 }
 
@@ -527,7 +525,6 @@ func (buf *ChallengeBuf) Unmarshal(chain *Chain) *Challenge {
 		common.BytesToAddress([]byte(buf.Contract)),
 		common.BytesToAddress([]byte(buf.Asserter)),
 		common.BytesToAddress([]byte(buf.Challenger)),
-		ChallengeType(buf.Kind),
 	}
 	chain.challenges[ret.contract] = ret
 	return ret

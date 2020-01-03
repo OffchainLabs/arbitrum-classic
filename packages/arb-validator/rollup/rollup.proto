@@ -55,7 +55,6 @@ message ChallengeBuf {
     string contract = 1;
     string asserter = 2;
     string challenger = 3;
-    uint32 kind = 4;
 }
 
 message DisputableNodeBuf {
