@@ -99,6 +99,7 @@ func (buf *ChainBuf) Unmarshal() *Chain {
 			common.BytesToAddress([]byte(chalBuf.Contract)),
 			common.BytesToAddress([]byte(chalBuf.Asserter)),
 			common.BytesToAddress([]byte(chalBuf.Challenger)),
+			ChallengeType(chalBuf.Kind),
 		}
 		chain.challenges[chal.contract] = chal
 	}
@@ -491,18 +492,19 @@ type Challenge struct {
 	contract   common.Address
 	asserter   common.Address
 	challenger common.Address
+	kind       ChallengeType
 }
 
-type ChallengeType uint
+type ChallengeType uint32
 
 const (
-	InvalidPendingTopChallenge ChallengeType = 1
-	InvalidMessagesChallenge   ChallengeType = 2
-	InvalidExecutionChallenge  ChallengeType = 3
+	InvalidPendingTopChallenge ChallengeType = 0
+	InvalidMessagesChallenge   ChallengeType = 1
+	InvalidExecutionChallenge  ChallengeType = 2
 )
 
-func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address) *Challenge {
-	ret := &Challenge{contract, asserter, challenger}
+func (chain *Chain) NewChallenge(contract, asserter, challenger common.Address, kind ChallengeType) *Challenge {
+	ret := &Challenge{contract, asserter, challenger, kind}
 	chain.challenges[contract] = ret
 	chain.stakers.Get(asserter).challenge = ret
 	chain.stakers.Get(challenger).challenge = ret
@@ -527,6 +529,7 @@ func (buf *ChallengeBuf) Unmarshal(chain *Chain) *Challenge {
 		common.BytesToAddress([]byte(buf.Contract)),
 		common.BytesToAddress([]byte(buf.Asserter)),
 		common.BytesToAddress([]byte(buf.Challenger)),
+		ChallengeType(buf.Kind),
 	}
 	chain.challenges[ret.contract] = ret
 	return ret
