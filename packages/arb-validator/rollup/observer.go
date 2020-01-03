@@ -83,17 +83,50 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 	switch ev := notification.Event.(type) {
 	case ethbridge.StakeCreatedEvent:
 		chain.CreateStake(ev.Staker, ev.NodeHash, RollupTimeFromBlockNum(notification.Header.Number))
+		if chain.listener != nil && chain.listenForAddress == ev.Staker {
+			chain.listener.Notify(
+				&StakeCreatedChainEvent{
+					ev.Staker,
+					ev.NodeHash,
+					RollupTimeFromBlockNum(notification.Header.Number)
+				},
+			)
+		}
 	case ethbridge.ChallengeStartedEvent:
-		challenge := chain.NewChallenge(ev.ChallengeContract, ev.Asserter, ev.Challenger, ChallengeType(ev.ChallengeType))
-		_ = challenge
-	case ethbridge.ChallengeCompletedEvent:
+		_ = chain.NewChallenge(ev.ChallengeContract, ev.Asserter, ev.Challenger, ChallengeType(ev.ChallengeType))
+		if chain.listener != nil && (chain.listenForAddress == ev.Asserter || chain.listenForAddress == ev.Challenger) {
+			chain.listener.Notify(
+				&ChallengeStartedChainEvent{
+					ev.ChallengeContract,
+					ev.Asserter,
+					ev.Challenger,
+					ChallengeType(ev.ChallengeType),
+				},
+			)
+		}
+ 	case ethbridge.ChallengeCompletedEvent:
 		chain.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
+		if chain.listener != nil && (chain.listenForAddress == ev.Winner || chain.listenForAddress == ev.Loser) {
+			chain.listener.Notify(
+				&ChallengeCompletedChainEvent{
+					ev.ChallengeContract,
+					ev.Winner,
+					ev.Loser,
+				},
+			)
+		}
 	case ethbridge.StakeRefundedEvent:
 		chain.RemoveStake(ev.Staker)
+		if chain.listener != nil && chain.listenForAddress == ev.Staker {
+			chain.listener.Notify(&StakeRefundedChainEvent{ ev.Staker })
+		}
 	case ethbridge.PrunedEvent:
 		chain.PruneNode(ev.Leaf)
 	case ethbridge.StakeMovedEvent:
 		chain.MoveStake(ev.Staker, ev.Location)
+		if chain.listener != nil && chain.listenForAddress == ev.Staker {
+			chain.listener.Notify(&StakeMovedChainEvent{ ev.Staker, ev.Location })
+		}
 	case ethbridge.AssertedEvent:
 		chain.notifyAssert(
 			ev.PrevLeafHash,

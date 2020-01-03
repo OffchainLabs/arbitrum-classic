@@ -30,17 +30,25 @@ import (
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
 
 type ChainObserver struct {
-	rollupAddr      common.Address
-	vmParams        ChainParams
-	pendingInbox    *PendingInbox
-	latestConfirmed *Node
-	leaves          *LeafSet
-	nodeFromHash    map[[32]byte]*Node
-	stakers         *StakerSet
-	challenges      map[common.Address]*Challenge
+	rollupAddr       common.Address
+	vmParams         ChainParams
+	pendingInbox     *PendingInbox
+	latestConfirmed  *Node
+	leaves           *LeafSet
+	nodeFromHash     map[[32]byte]*Node
+	stakers          *StakerSet
+	challenges       map[common.Address]*Challenge
+	listenForAddress common.Address
+	listener         ChainEventListener
 }
 
-func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams ChainParams) *ChainObserver {
+func NewChain(
+	_rollupAddr common.Address,
+	_machine machine.Machine,
+	_vmParams ChainParams,
+	_listenForAddress common.Address,
+	_listener ChainEventListener,
+) *ChainObserver {
 	ret := &ChainObserver{
 		_rollupAddr,
 		_vmParams,
@@ -50,6 +58,8 @@ func NewChain(_rollupAddr common.Address, _machine machine.Machine, _vmParams Ch
 		make(map[[32]byte]*Node),
 		NewStakerSet(),
 		make(map[common.Address]*Challenge),
+		_listenForAddress,
+		_listener,
 	}
 	ret.CreateInitialNode(_machine)
 	return ret
@@ -84,7 +94,7 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 	}
 }
 
-func (buf *ChainObserverBuf) Unmarshal() *ChainObserver {
+func (buf *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listener ChainEventListener) *ChainObserver {
 	chain := &ChainObserver{
 		common.BytesToAddress([]byte(buf.ContractAddress)),
 		buf.VmParams.Unmarshal(),
@@ -94,6 +104,8 @@ func (buf *ChainObserverBuf) Unmarshal() *ChainObserver {
 		make(map[[32]byte]*Node),
 		NewStakerSet(),
 		make(map[common.Address]*Challenge),
+		_listenForAddress,
+		_listener,
 	}
 	for _, chalBuf := range buf.Challenges {
 		chal := &Challenge{
