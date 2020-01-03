@@ -51,7 +51,7 @@ type PendingTopChallenge struct {
 	Challenge *pendingtopchallenge.PendingTopChallenge
 }
 
-func NewPendingTopsChallenge(address common.Address, client *ethclient.Client) (*PendingTopChallenge, error) {
+func NewPendingTopChallenge(address common.Address, client *ethclient.Client) (*PendingTopChallenge, error) {
 	bisectionChallenge, err := NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err

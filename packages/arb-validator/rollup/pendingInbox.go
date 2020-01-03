@@ -18,8 +18,10 @@ package rollup
 
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"errors"
 	"log"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type pendingInboxItem struct {
@@ -27,6 +29,14 @@ type pendingInboxItem struct {
 	prev    *pendingInboxItem
 	next    *pendingInboxItem
 	hash    [32]byte
+}
+
+func (pii *pendingInboxItem) skipNext(n uint64) *pendingInboxItem {
+	ret := pii
+	for i := uint64(0); i < n && ret != nil; i++ {
+		ret = ret.next
+	}
+	return ret
 }
 
 type PendingInbox struct {
@@ -41,6 +51,42 @@ func NewPendingInbox() *PendingInbox {
 		index:      make(map[[32]byte]*pendingInboxItem),
 		hashOfRest: value.NewEmptyTuple().Hash(),
 	}
+}
+
+func (pi *PendingInbox) GenerateBisection(startItemHash [32]byte, count uint64, segments uint64) ([][32]byte, error) {
+	cuts := make([][32]byte, 0, segments+1)
+	item, ok := pi.index[startItemHash]
+	if !ok {
+		return nil, errors.New("startItemHash not found")
+	}
+	cuts = append(cuts, item.hash)
+	firstSegmentSize := count/segments + count%segments
+	otherSegmentSize := count / segments
+	item = item.skipNext(firstSegmentSize)
+	if item == nil {
+		return nil, errors.New("pending inbox too short")
+	}
+	cuts = append(cuts, item.hash)
+	for i := uint64(0); i < segments; i++ {
+		item = item.skipNext(otherSegmentSize)
+		if item == nil {
+			return nil, errors.New("pending inbox too short")
+		}
+		cuts = append(cuts, item.hash)
+	}
+	return cuts, nil
+}
+
+func (pi *PendingInbox) GenerateOneStepProof(startItemHash [32]byte) ([32]byte, [32]byte, error) {
+	item, ok := pi.index[startItemHash]
+	if !ok {
+		return [32]byte{}, [32]byte{}, errors.New("startItemHash not found")
+	}
+	next := item.next
+	if next == nil {
+		return [32]byte{}, [32]byte{}, errors.New("startItemHash is last item")
+	}
+	return next.hash, next.message.Hash(), nil
 }
 
 func (pi *PendingInbox) DeliverMessage(msg value.Value) {
