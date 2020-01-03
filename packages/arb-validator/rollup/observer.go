@@ -82,9 +82,10 @@ func NewObserver(chain *Chain, clnt *ethclient.Client) (*Observer, error) {
 func handleNotification(notification ethbridge.Notification, chain *Chain) {
 	switch ev := notification.Event.(type) {
 	case ethbridge.StakeCreatedEvent:
-		chain.CreateStake(ev.Staker, ev.NodeHash, notification.Header.Number)
+		chain.CreateStake(ev.Staker, ev.NodeHash, RollupTimeFromBlockNum(notification.Header.Number))
 	case ethbridge.ChallengeStartedEvent:
 		challenge := chain.NewChallenge(ev.ChallengeContract, ev.Asserter, ev.Challenger, ChallengeType(ev.ChallengeType))
+		_ = challenge
 	case ethbridge.ChallengeCompletedEvent:
 		chain.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
 	case ethbridge.StakeRefundedEvent:
@@ -94,7 +95,17 @@ func handleNotification(notification ethbridge.Notification, chain *Chain) {
 	case ethbridge.StakeMovedEvent:
 		chain.MoveStake(ev.Staker, ev.Location)
 	case ethbridge.AssertedEvent:
-	// do operation for event
+		chain.notifyAssert(
+			ev.PrevLeafHash,
+			[2]RollupTime{
+				RollupTimeFromBlockNum(ev.TimeBoundsBlocks[0]),
+				RollupTimeFromBlockNum(ev.TimeBoundsBlocks[1]),
+			},
+			ev.AfterPendingTop,
+			ev.ImportedMessagesSlice,
+			ev.ImportedMessageCount,
+			ev.Assertion,
+		)
 	case ethbridge.ConfirmedEvent:
 		chain.ConfirmNode(ev.NodeHash)
 	}

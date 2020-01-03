@@ -17,6 +17,7 @@
 syntax = "proto3";
 package rollup;
 import "value/value.proto";
+import "protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
 message ChainBuf {
@@ -61,9 +62,13 @@ message ChallengeBuf {
 }
 
 message DisputableNodeBuf {
-    value.HashBuf hash = 1;
-    RollupTimeBuf deadline = 2;
-    value.HashBuf pendingTop = 3;
+    value.HashBuf prevNodeHash = 1;
+    RollupTimeBuf timeLowerBound = 2;
+    RollupTimeBuf timeUpperBound = 3;
+    value.HashBuf afterPendingTop = 4;
+    value.HashBuf importedMessagesSlice = 5;
+    value.BigIntegerBuf importedMessageCount = 6;
+    protocol.AssertionStub assertionStub = 7;
 }
 
 message PendingInboxBuf {
@@ -74,5 +79,6 @@ message PendingInboxBuf {
 message RollupTimeBuf {
     value.BigIntegerBuf val = 1;
 }
+
 
 

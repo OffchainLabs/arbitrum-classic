@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"log"
 	"math/big"
 
@@ -223,27 +224,54 @@ func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 }
 
 type DisputableNode struct {
-	hash           [32]byte
-	pendingTopHash [32]byte
-	deadline       RollupTime
+	prevNodeHash          [32]byte
+	timeBounds            [2]RollupTime
+	afterPendingTop       [32]byte
+	importedMessagesSlice [32]byte
+	importedMessageCount  *big.Int
+	assertionStub         *protocol.AssertionStub
+	hash                  [32]byte
 }
 
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
-		Hash:       marshalHash(dn.hash),
-		PendingTop: marshalHash(dn.pendingTopHash),
-		Deadline:   dn.deadline.MarshalToBuf(),
+		PrevNodeHash:          marshalHash(dn.prevNodeHash),
+		TimeLowerBound:        dn.timeBounds[0].MarshalToBuf(),
+		TimeUpperBound:        dn.timeBounds[1].MarshalToBuf(),
+		AfterPendingTop:       marshalHash(dn.afterPendingTop),
+		ImportedMessagesSlice: marshalHash(dn.importedMessagesSlice),
+		ImportedMessageCount:  marshalBigInt(dn.importedMessageCount),
+		AssertionStub:         dn.assertionStub,
 	}
 }
 
 func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
-	hashBuf := unmarshalHash(buf.Hash)
-	pthBuf := unmarshalHash(buf.PendingTop)
-	return &DisputableNode{
-		hash:           hashBuf,
-		pendingTopHash: pthBuf,
-		deadline:       buf.Deadline.Unmarshal(),
+	ret := &DisputableNode{
+		prevNodeHash:          unmarshalHash(buf.PrevNodeHash),
+		timeBounds:            [2]RollupTime{buf.TimeLowerBound.Unmarshal(), buf.TimeUpperBound.Unmarshal()},
+		afterPendingTop:       unmarshalHash(buf.AfterPendingTop),
+		importedMessagesSlice: unmarshalHash(buf.ImportedMessagesSlice),
+		importedMessageCount:  unmarshalBigInt(buf.ImportedMessageCount),
+		assertionStub:         buf.AssertionStub,
 	}
+	ret.hash = ret._hash()
+	return ret
+}
+
+func (dn *DisputableNode) _hash() [32]byte {
+	var ret [32]byte
+	retSlice := solsha3.SoliditySHA3(
+		solsha3.Bytes32(unmarshalHash(dn.assertionStub.AfterHash)),
+		solsha3.Bool(dn.assertionStub.DidInboxInsn),
+		solsha3.Uint32(dn.assertionStub.NumSteps),
+		solsha3.Uint64(dn.assertionStub.NumGas),
+		solsha3.Bytes32(unmarshalHash(dn.assertionStub.FirstMessageHash)),
+		solsha3.Bytes32(unmarshalHash(dn.assertionStub.LastMessageHash)),
+		solsha3.Bytes32(unmarshalHash(dn.assertionStub.FirstLogHash)),
+		solsha3.Bytes32(unmarshalHash(dn.assertionStub.LastLogHash)),
+	)
+	copy(ret[:], retSlice)
+	return ret
 }
 
 type Node struct {
@@ -289,6 +317,26 @@ func (chain *Chain) notifyNewBlockNumber(blockNum *big.Int) {
 	//TODO: checkpoint, and take other appropriate actions for new block
 }
 
+func (chain *Chain) notifyAssert(
+	prevLeafHash [32]byte,
+	timeBounds [2]RollupTime,
+	afterPendingTop [32]byte,
+	importedMessagesSlice [32]byte,
+	importedMessageCount *big.Int,
+	assertionStub *protocol.AssertionStub,
+) {
+	disputableNode := &DisputableNode{
+		prevNodeHash:          prevLeafHash,
+		timeBounds:            timeBounds,
+		afterPendingTop:       afterPendingTop,
+		importedMessagesSlice: importedMessagesSlice,
+		importedMessageCount:  importedMessageCount,
+		assertionStub:         assertionStub,
+	}
+	disputableNode.hash = disputableNode._hash()
+	//TODO
+}
+
 func (chain *Chain) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *DisputableNode,
@@ -312,7 +360,7 @@ func (chain *Chain) CreateNodesOnAssert(
 		prev:           prevNode,
 		linkType:       ValidChildType,
 		machineHash:    afterMachineHash,
-		pendingTopHash: dispNode.pendingTopHash,
+		pendingTopHash: dispNode.afterPendingTop,
 		machine:        afterMachine,
 	}
 	newNode.setHash()
