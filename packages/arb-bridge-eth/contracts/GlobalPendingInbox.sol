@@ -34,7 +34,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     struct PendingInbox {
         bytes32 value;
-        uint count;
+        uint256 count;
     }
 
     mapping(address => PendingInbox) pending;
@@ -45,14 +45,14 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function sendMessages(bytes calldata _messages) external {
-        uint offset = 0;
+        uint256 offset = 0;
         bool valid;
         bytes32 messageHash;
         uint256 destination;
         uint256 value;
         uint256 tokenType;
         bytes memory messageData;
-        uint totalLength = _messages.length;
+        uint256 totalLength = _messages.length;
         while (offset < totalLength) {
             (
                 valid,

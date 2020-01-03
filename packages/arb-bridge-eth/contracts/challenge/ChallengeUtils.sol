@@ -22,7 +22,7 @@ library ChallengeUtils {
     function pendingTopHash(
         bytes32 _lowerHash,
         bytes32 _topHash,
-        uint _chainLength
+        uint256 _chainLength
     )
         internal
         pure
@@ -42,7 +42,7 @@ library ChallengeUtils {
         bytes32 _topHashA,
         bytes32 _lowerHashB,
         bytes32 _topHashB,
-        uint _chainLength
+        uint256 _chainLength
     )
         internal
         pure

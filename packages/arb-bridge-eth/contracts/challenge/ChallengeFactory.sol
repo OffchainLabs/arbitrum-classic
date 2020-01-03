@@ -70,7 +70,7 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
         address payable _challenger,
         uint256 _challengePeriodTicks,
         bytes32 _challengeHash,
-        uint challengeType
+        uint256 challengeType
     )
         external
         returns(address)

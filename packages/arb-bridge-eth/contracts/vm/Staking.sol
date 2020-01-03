@@ -70,8 +70,8 @@ contract Staking is ChallengeType {
     // Invalid staker2 proof
     string constant STK2_PROOF = "STK2_PROOF";
 
-    uint internal constant VALID_CHILD_TYPE = 3;
-    uint internal constant MAX_CHILD_TYPE = 3;
+    uint256 internal constant VALID_CHILD_TYPE = 3;
+    uint256 internal constant MAX_CHILD_TYPE = 3;
 
     IChallengeFactory public challengeFactory;
 
@@ -83,7 +83,7 @@ contract Staking is ChallengeType {
 
     uint128 private stakeRequirement;
     mapping(address => Staker) private stakers;
-    uint private stakerCount;
+    uint256 private stakerCount;
 
     event RollupStakeCreated(
         address staker,
@@ -93,7 +93,7 @@ contract Staking is ChallengeType {
     event RollupChallengeStarted(
         address asserter,
         address challenger,
-        uint    challengeType,
+        uint256    challengeType,
         address challengeContract
     );
 
@@ -107,8 +107,8 @@ contract Staking is ChallengeType {
         address payable asserterAddress,
         address payable challengerAddress,
         bytes32 node,
-        uint disputableDeadlineTicks,
-        uint[2] memory stakerPositions,
+        uint256 disputableDeadlineTicks,
+        uint256[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
         bytes32[] memory proof2,

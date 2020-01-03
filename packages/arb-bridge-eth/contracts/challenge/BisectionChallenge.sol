@@ -25,7 +25,7 @@ import "../libraries/MerkleLib.sol";
 contract BisectionChallenge is Challenge, IBisectionChallenge {
 
     event Continued (
-        uint segmentIndex,
+        uint256 segmentIndex,
         uint256 deadlineTicks
     );
 
@@ -61,7 +61,7 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
     }
 
     function chooseSegment(
-        uint _segmentToChallenge,
+        uint256 _segmentToChallenge,
         bytes memory _proof,
         bytes32 _bisectionRoot,
         bytes32 _bisectionHash
@@ -94,11 +94,11 @@ contract BisectionChallenge is Challenge, IBisectionChallenge {
         require(_challengeState == challengeState, BIS_PREV);
     }
 
-    function firstSegmentSize(uint totalCount, uint bisectionCount) internal pure returns(uint) {
+    function firstSegmentSize(uint256 totalCount, uint256 bisectionCount) internal pure returns(uint) {
         return totalCount / bisectionCount + totalCount%bisectionCount;
     }
 
-    function otherSegmentSize(uint totalCount, uint bisectionCount) internal pure returns(uint) {
+    function otherSegmentSize(uint256 totalCount, uint256 bisectionCount) internal pure returns(uint) {
         return totalCount / bisectionCount;
     }
 }

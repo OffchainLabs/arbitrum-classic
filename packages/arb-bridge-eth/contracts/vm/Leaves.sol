@@ -115,9 +115,9 @@ contract Leaves is Confirming {
     // Kick off if successor node whose deadline has passed
     function recoverStakePassedDeadline(
         address payable stakerAddress,
-        uint deadlineTicks,
+        uint256 deadlineTicks,
         bytes32 disputableNodeHashVal,
-        uint    childType,
+        uint256 childType,
         bytes32 vmProtoStateHash,
         bytes32 leaf,
         bytes32[] calldata proof

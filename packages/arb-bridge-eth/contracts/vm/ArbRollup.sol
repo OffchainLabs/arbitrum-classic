@@ -71,7 +71,7 @@ contract ArbRollup is Leaves, IArbRollup {
 
     event RollupAsserted(
         bytes32[6] fields,
-        uint importedMessageCount,
+        uint256 importedMessageCount,
         uint128[2] timeBoundsBlocks,
         bool didInboxInsn,
         uint32 numSteps,
@@ -88,12 +88,12 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 beforeVMHash;
         bytes32 beforeInboxHash;
         bytes32 beforePendingTop;
-        uint beforePendingCount;
+        uint256 beforePendingCount;
         bytes32 prevPrevLeafHash;
         bytes32 prevDisputableNodeHash;
         bytes32[] stakerProof;
         bytes32 afterPendingTop;
-        uint afterPendingCount;
+        uint256 afterPendingCount;
         bytes32 importedMessagesSlice;
         bytes32 afterVMHash;
         bool didInboxInsn;
@@ -147,8 +147,8 @@ contract ArbRollup is Leaves, IArbRollup {
     function makeAssertion(
         bytes32[10] calldata _fields,
         bytes32[] calldata _stakerProof,
-        uint _beforePendingCount,
-        uint _afterPendingCount,
+        uint256 _beforePendingCount,
+        uint256 _afterPendingCount,
         bool _didInboxInsn,
         uint32 _numSteps,
         uint64 _numArbGas,
@@ -184,13 +184,13 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function confirmValid(
-        uint deadlineTicks,
+        uint256 deadlineTicks,
         bytes calldata _messages,
         bytes32 logsAcc,
         bytes32 vmProtoStateHash,
         address[] calldata stakerAddresses,
         bytes32[] calldata stakerProofs,
-        uint[]  calldata stakerProofOffsets
+        uint256[] calldata stakerProofOffsets
     )
         external
     {
@@ -215,13 +215,13 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function confirmInvalid(
-        uint    deadlineTicks,
+        uint256 deadlineTicks,
         bytes32 challengeNodeData,
-        uint    branch,
+        uint256 branch,
         bytes32 vmProtoStateHash,
         address[] calldata stakerAddresses,
         bytes32[] calldata stakerProofs,
-        uint[]  calldata stakerProofOffsets
+        uint256[] calldata stakerProofOffsets
     )
         external
     {
@@ -257,7 +257,7 @@ contract ArbRollup is Leaves, IArbRollup {
         bytes32 vmProtoHashBefore;
         bytes32 prevLeaf;
         bytes32 pendingValue;
-        uint pendingCount;
+        uint256 pendingCount;
     }
 
     function _computeDeadline(
@@ -406,17 +406,17 @@ contract ArbRollup is Leaves, IArbRollup {
     }
 
     function _confirmNode(
-        uint deadlineTicks,
+        uint256 deadlineTicks,
         bytes32 nodeDataHash,
-        uint branch,
+        uint256 branch,
         bytes32 vmProtoStateHash,
         address[] memory stakerAddresses,
         bytes32[] memory stakerProofs,
-        uint[]  memory stakerProofOffsets
+        uint256[] memory stakerProofOffsets
     )
         private
     {
-        uint _stakerCount = stakerAddresses.length;
+        uint256 _stakerCount = stakerAddresses.length;
         require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(
             latestConfirmed(),
@@ -427,7 +427,7 @@ contract ArbRollup is Leaves, IArbRollup {
         );
         bytes20 prevStaker = 0x00;
         bool hasStaker = false;
-        for (uint i = 0; i < _stakerCount; i++) {
+        for (uint256 i = 0; i < _stakerCount; i++) {
             address stakerAddress = stakerAddresses[i];
             require(bytes20(stakerAddress) > prevStaker, CONF_ORDER);
             Staker storage staker = getValidStaker(stakerAddress);

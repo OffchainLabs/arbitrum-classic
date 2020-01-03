@@ -91,8 +91,8 @@ library Protocol {
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;
-        uint amountCount = _messages.length;
-        for (uint i = 0; i < amountCount; i++) {
+        uint256 amountCount = _messages.length;
+        for (uint256 i = 0; i < amountCount; i++) {
             (offset, msgHash) = Value.deserializeValidHashed(_messages, offset);
             hashVal = keccak256(abi.encodePacked(hashVal, msgHash));
         }

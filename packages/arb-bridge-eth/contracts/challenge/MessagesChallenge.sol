@@ -27,7 +27,7 @@ contract MessagesChallenge is BisectionChallenge {
     event Bisected(
         bytes32[] chainHashes,
         bytes32[] segmentHashes,
-        uint totalLength,
+        uint256 totalLength,
         uint256 deadlineTicks
     );
 
@@ -41,12 +41,12 @@ contract MessagesChallenge is BisectionChallenge {
     function bisect(
         bytes32[] memory _chainHashes,
         bytes32[] memory _segmentHashes,
-        uint _chainLength
+        uint256 _chainLength
     )
         public
         asserterAction
     {
-        uint bisectionCount = _chainHashes.length - 1;
+        uint256 bisectionCount = _chainHashes.length - 1;
         require(bisectionCount + 1 == _segmentHashes.length, HS_BIS_INPLEN);
 
         requireMatchesPrevState(
@@ -67,7 +67,7 @@ contract MessagesChallenge is BisectionChallenge {
             _segmentHashes[1],
             firstSegmentSize(_chainLength, bisectionCount)
         );
-        for (uint i = 1; i < bisectionCount; i++) {
+        for (uint256 i = 1; i < bisectionCount; i++) {
             hashes[i] = ChallengeUtils.messagesHash(
                 _chainHashes[i],
                 _chainHashes[i + 1],

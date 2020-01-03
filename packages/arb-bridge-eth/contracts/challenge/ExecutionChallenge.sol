@@ -118,7 +118,7 @@ contract ExecutionChallenge is BisectionChallenge {
             )
         );
 
-        uint correctProof = OneStepProof.validateProof(
+        uint256 correctProof = OneStepProof.validateProof(
             _beforeHash,
             _timeBoundsBlocks,
             _beforeInbox,
@@ -138,7 +138,7 @@ contract ExecutionChallenge is BisectionChallenge {
     }
 
     function _bisectAssertion(BisectAssertionData memory _data) private {
-        uint bisectionCount = _data.machineHashes.length - 1;
+        uint256 bisectionCount = _data.machineHashes.length - 1;
         require(bisectionCount == _data.didInboxInsns.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.messageAccs.length, BIS_INPLEN);
         require(bisectionCount + 1 == _data.logAccs.length, BIS_INPLEN);
@@ -146,7 +146,7 @@ contract ExecutionChallenge is BisectionChallenge {
 
         uint64 totalGas = 0;
         bool everDidInboxInsn = false;
-        for (uint i = 0; i < bisectionCount; i++) {
+        for (uint256 i = 0; i < bisectionCount; i++) {
             totalGas += _data.gases[i];
             everDidInboxInsn = everDidInboxInsn || _data.didInboxInsns[i];
         }
@@ -190,7 +190,7 @@ contract ExecutionChallenge is BisectionChallenge {
             )
         );
         bytes32 assertionHash;
-        for (uint i = 1; i < bisectionCount; i++) {
+        for (uint256 i = 1; i < bisectionCount; i++) {
             if (_data.didInboxInsns[i-1]) {
                 _data.beforeInbox = Value.hashEmptyTuple();
             }

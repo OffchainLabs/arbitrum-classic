@@ -26,7 +26,7 @@ contract PendingTopChallenge is BisectionChallenge {
 
     event Bisected(
         bytes32[] chainHashes,
-        uint totalLength,
+        uint256 totalLength,
         uint256 deadlineTicks
     );
 
@@ -37,12 +37,12 @@ contract PendingTopChallenge is BisectionChallenge {
 
     function bisect(
         bytes32[] memory _chainHashes,
-        uint _chainLength
+        uint256 _chainLength
     )
         public
         asserterAction
     {
-        uint bisectionCount = _chainHashes.length - 1;
+        uint256 bisectionCount = _chainHashes.length - 1;
 
         requireMatchesPrevState(
             ChallengeUtils.pendingTopHash(
@@ -59,7 +59,7 @@ contract PendingTopChallenge is BisectionChallenge {
             _chainHashes[1],
             firstSegmentSize(_chainLength, bisectionCount)
         );
-        for (uint i = 1; i < bisectionCount; i++) {
+        for (uint256 i = 1; i < bisectionCount; i++) {
             hashes[i] = ChallengeUtils.pendingTopHash(
                 _chainHashes[i],
                 _chainHashes[i + 1],

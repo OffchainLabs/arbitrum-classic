@@ -22,7 +22,7 @@ library RollupUtils {
         bytes32 machineHash,
         bytes32 inboxHash,
         bytes32 pendingTop,
-        uint pendingCountCount
+        uint256 pendingCountCount
     )
         internal
         pure
@@ -56,9 +56,9 @@ library RollupUtils {
 
     function childNodeHash(
         bytes32 prevNodeHash,
-        uint deadlineTicks,
+        uint256 deadlineTicks,
         bytes32 disputableNodeHashVal,
-        uint    childType,
+        uint256 childType,
         bytes32 vmProtoStateHash
     )
         internal
@@ -102,15 +102,15 @@ library RollupUtils {
         bytes32 from,
         bytes32 to,
         bytes32[] memory proof,
-        uint start,
-        uint end
+        uint256 start,
+        uint256 end
     )
         internal
         pure
         returns(bool)
     {
         bytes32 node = from;
-        for (uint i = start; i<end; i++) {
+        for (uint256 i = start; i<end; i++) {
             node = keccak256(abi.encodePacked(node, proof[i]));
         }
         return (node==to);

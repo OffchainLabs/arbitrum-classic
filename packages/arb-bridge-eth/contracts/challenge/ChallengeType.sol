@@ -18,7 +18,7 @@ pragma solidity ^0.5.3;
 
 
 contract ChallengeType {
-    uint internal constant INVALID_PENDING_TOP_TYPE = 0;
-    uint internal constant INVALID_MESSAGES_TYPE = 1;
-    uint internal constant INVALID_EXECUTION_TYPE = 2;
+    uint256 internal constant INVALID_PENDING_TOP_TYPE = 0;
+    uint256 internal constant INVALID_MESSAGES_TYPE = 1;
+    uint256 internal constant INVALID_EXECUTION_TYPE = 2;
 }

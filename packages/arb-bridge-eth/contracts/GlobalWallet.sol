@@ -52,8 +52,8 @@ contract GlobalWallet {
         Wallet storage wallet = wallets[_owner];
         address[] memory addresses = new address[](wallet.tokenList.length);
         uint256[] memory values = new uint256[](addresses.length);
-        uint addressCount = addresses.length;
-        for (uint i = 0; i < addressCount; i++) {
+        uint256 addressCount = addresses.length;
+        for (uint256 i = 0; i < addressCount; i++) {
             addresses[i] = wallet.tokenList[i].contractAddress;
             values[i] = wallet.tokenList[i].balance;
         }
@@ -62,19 +62,19 @@ contract GlobalWallet {
 
     function getNFTTokens(address _owner) external view returns (address[] memory, uint256[] memory) {
         Wallet storage wallet = wallets[_owner];
-        uint totalLength = 0;
-        uint i;
+        uint256 totalLength = 0;
+        uint256 i;
         for (i = 0; i < wallet.nftWalletList.length; i++) {
             totalLength += wallet.nftWalletList[i].tokenList.length;
         }
         address[] memory addresses = new address[](totalLength);
         uint256[] memory tokens = new uint256[](totalLength);
-        uint count = 0;
-        uint nftCount = wallet.nftWalletList.length;
+        uint256 count = 0;
+        uint256 nftCount = wallet.nftWalletList.length;
         for (i = 0; i < nftCount; i++) {
             NFTWallet storage nftWallet = wallet.nftWalletList[i];
-            uint tokenCount = nftWallet.tokenList.length;
-            for (uint j = 0; j < tokenCount; j++) {
+            uint256 tokenCount = nftWallet.tokenList.length;
+            for (uint256 j = 0; j < tokenCount; j++) {
                 addresses[count] = nftWallet.contractAddress;
                 tokens[count] = nftWallet.tokenList[j];
                 count++;
@@ -136,7 +136,7 @@ contract GlobalWallet {
 
     function getTokenBalance(address _tokenContract, address _owner) public view returns (uint256) {
         Wallet storage wallet = wallets[_owner];
-        uint index = wallet.tokenIndex[_tokenContract];
+        uint256 index = wallet.tokenIndex[_tokenContract];
         if (index == 0) {
             return 0;
         }
@@ -145,7 +145,7 @@ contract GlobalWallet {
 
     function hasNFT(address _tokenContract, address _owner, uint256 _tokenId) public view returns (bool) {
         Wallet storage wallet = wallets[_owner];
-        uint index = wallet.nftWalletIndex[_tokenContract];
+        uint256 index = wallet.nftWalletIndex[_tokenContract];
         if (index == 0) {
             return false;
         }
@@ -186,7 +186,7 @@ contract GlobalWallet {
 
     function addNFTToken(address _user, address _tokenContract, uint256 _tokenId) private {
         Wallet storage wallet = wallets[_user];
-        uint index = wallet.nftWalletIndex[_tokenContract];
+        uint256 index = wallet.nftWalletIndex[_tokenContract];
         if (index == 0) {
             index = wallet.nftWalletList.push(NFTWallet(_tokenContract, new uint256[](0)));
             wallet.nftWalletIndex[_tokenContract] = index;
@@ -202,7 +202,7 @@ contract GlobalWallet {
             return;
         }
         Wallet storage wallet = wallets[_user];
-        uint index = wallet.tokenIndex[_tokenContract];
+        uint256 index = wallet.tokenIndex[_tokenContract];
         if (index == 0) {
             index = wallet.tokenList.push(TokenWallet(_tokenContract, 0));
             wallet.tokenIndex[_tokenContract] = index;
@@ -213,13 +213,13 @@ contract GlobalWallet {
 
     function removeNFTToken(address _user, address _tokenContract, uint256 _tokenId) private returns (bool) {
         Wallet storage wallet = wallets[_user];
-        uint walletIndex = wallet.nftWalletIndex[_tokenContract];
+        uint256 walletIndex = wallet.nftWalletIndex[_tokenContract];
         if (walletIndex == 0) {
             // Wallet has no coins from given NFT contract
             return false;
         }
         NFTWallet storage nftWallet = wallet.nftWalletList[walletIndex - 1];
-        uint tokenIndex = nftWallet.tokenIndex[_tokenId];
+        uint256 tokenIndex = nftWallet.tokenIndex[_tokenId];
         if (tokenIndex == 0) {
             // Wallet does not own specific NFT
             return false;
@@ -242,7 +242,7 @@ contract GlobalWallet {
             return true;
         }
         Wallet storage wallet = wallets[_user];
-        uint walletIndex = wallet.tokenIndex[_tokenContract];
+        uint256 walletIndex = wallet.tokenIndex[_tokenContract];
         if (walletIndex == 0) {
             // Wallet has no coins from given ERC20 contract
             return false;
