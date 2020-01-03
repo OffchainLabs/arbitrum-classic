@@ -334,16 +334,14 @@ func (chain *Chain) notifyAssert(
 		assertionStub:         assertionStub,
 	}
 	disputableNode.hash = disputableNode._hash()
-	//TODO
+	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, unmarshalHash(disputableNode.assertionStub.AfterHash), nil)
 }
 
 func (chain *Chain) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *DisputableNode,
 	afterMachineHash [32]byte,
-	afterMachine machine.Machine, // if known
-	afterInboxHash [32]byte,
-	afterInbox value.Value, // if known
+	afterMachine machine.Machine,
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
