@@ -77,13 +77,12 @@ message ChallengeBuf {
 }
 
 message DisputableNodeBuf {
-    value.HashBuf prevNodeHash = 1;
-    RollupTimeBuf timeLowerBound = 2;
-    RollupTimeBuf timeUpperBound = 3;
-    value.HashBuf afterPendingTop = 4;
-    value.HashBuf importedMessagesSlice = 5;
-    value.BigIntegerBuf importedMessageCount = 6;
-    protocol.AssertionStub assertionStub = 7;
+    RollupTimeBuf timeLowerBound = 1;
+    RollupTimeBuf timeUpperBound = 2;
+    value.HashBuf afterPendingTop = 3;
+    value.HashBuf importedMessagesSlice = 4;
+    value.BigIntegerBuf importedMessageCount = 5;
+    protocol.AssertionStub assertionStub = 6;
 }
 
 message PendingInboxBuf {

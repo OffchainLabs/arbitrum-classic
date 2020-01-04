@@ -123,7 +123,7 @@ func defendExecution(
 		for _, defender := range defenders {
 			assertions = append(assertions, defender.GetAssertion().Stub())
 		}
-		_, err := contract.BisectAssertion(auth, defender.GetPrecondition(), assertions)
+		_, err := contract.BisectAssertion(auth, defender.GetPrecondition(), assertions, defender.NumSteps())
 
 		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
@@ -192,7 +192,7 @@ func challengeExecution(
 		if !ok {
 			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
 		}
-		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach, ev.Assertions, startPrecondition.TimeBounds)
+		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach, ev.Assertions, startPrecondition.TimeBounds, ev.TotalSteps)
 		if err != nil {
 			return 0, err
 		}

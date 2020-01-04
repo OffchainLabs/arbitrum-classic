@@ -103,10 +103,11 @@ func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
 
 type AssertedEvent struct {
 	PrevLeafHash          [32]byte
+	NumSteps              uint32
 	TimeBoundsBlocks      [2]*big.Int
+	ImportedMessageCount  *big.Int
 	AfterPendingTop       [32]byte
 	ImportedMessagesSlice [32]byte
-	ImportedMessageCount  *big.Int
 	Assertion             *protocol.AssertionStub
 }
 
@@ -156,6 +157,7 @@ type MessagesBisectionEvent struct {
 
 type ExecutionBisectionEvent struct {
 	Assertions    []*protocol.AssertionStub
+	TotalSteps    uint32
 	DeadlineTicks *big.Int
 }
 

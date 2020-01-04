@@ -32,12 +32,11 @@ message Precondition {
 message AssertionStub {
     value.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;
-    uint32 numSteps = 3;
-    uint64 numGas = 4;
-    value.HashBuf firstMessageHash = 5;
-    value.HashBuf lastMessageHash = 6;
-    value.HashBuf firstLogHash = 7;
-    value.HashBuf lastLogHash = 8;
+    uint64 numGas = 3;
+    value.HashBuf firstMessageHash = 4;
+    value.HashBuf lastMessageHash = 5;
+    value.HashBuf firstLogHash = 6;
+    value.HashBuf lastLogHash = 7;
 }
 
 message AssertionBuf {

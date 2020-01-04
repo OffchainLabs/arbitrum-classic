@@ -140,6 +140,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 			}
 			return ExecutionBisectionEvent{
 				Assertions:    translateBisectionEvent(bisectChal),
+				TotalSteps:    bisectChal.TotalSteps,
 				DeadlineTicks: bisectChal.DeadlineTicks,
 			}, nil
 		} else if log.Topics[0] == oneStepProofCompletedID {
@@ -173,13 +174,13 @@ func (c *ExecutionChallenge) BisectAssertion(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
 	assertions []*protocol.AssertionStub,
+	totalSteps uint32,
 ) (*types.Receipt, error) {
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
 	didInboxInsns := make([]bool, 0, len(assertions))
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
 	logAccs := make([][32]byte, 0, len(assertions)+1)
 	gasses := make([]uint64, 0, len(assertions))
-	totalSteps := uint32(0)
 	machineHashes = append(machineHashes, precondition.BeforeHashValue())
 	messageAccs = append(messageAccs, assertions[0].FirstMessageHashValue())
 	logAccs = append(logAccs, assertions[0].FirstLogHashValue())
@@ -189,7 +190,6 @@ func (c *ExecutionChallenge) BisectAssertion(
 		messageAccs = append(messageAccs, assertion.LastMessageHashValue())
 		logAccs = append(logAccs, assertion.LastLogHashValue())
 		gasses = append(gasses, assertion.NumGas)
-		totalSteps += assertion.NumSteps
 	}
 	tx, err := c.Challenge.BisectAssertion(
 		auth,
@@ -260,16 +260,9 @@ func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisecte
 	bisectionCount := len(event.MachineHashes) - 1
 	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
 	for i := 0; i < bisectionCount; i++ {
-		steps := uint32(0)
-		if i == 0 {
-			steps = event.TotalSteps/uint32(bisectionCount) + event.TotalSteps%uint32(bisectionCount)
-		} else {
-			steps = event.TotalSteps / uint32(bisectionCount)
-		}
 		assertion := &protocol.AssertionStub{
 			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
 			DidInboxInsn:     event.DidInboxInsns[i],
-			NumSteps:         steps,
 			NumGas:           event.Gases[i],
 			FirstMessageHash: value.NewHashBuf(event.MessageAccs[i]),
 			LastMessageHash:  value.NewHashBuf(event.MessageAccs[i+1]),

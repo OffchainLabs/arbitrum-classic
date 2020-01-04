@@ -24,18 +24,16 @@ import (
 )
 
 type DisputableNode struct {
-	prevNodeHash          [32]byte
 	timeBounds            [2]RollupTime
+	importedMessageCount  *big.Int
 	afterPendingTop       [32]byte
 	importedMessagesSlice [32]byte
-	importedMessageCount  *big.Int
 	assertionStub         *protocol.AssertionStub
 	hash                  [32]byte
 }
 
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
-		PrevNodeHash:          marshalHash(dn.prevNodeHash),
 		TimeLowerBound:        dn.timeBounds[0].MarshalToBuf(),
 		TimeUpperBound:        dn.timeBounds[1].MarshalToBuf(),
 		AfterPendingTop:       marshalHash(dn.afterPendingTop),
@@ -47,7 +45,6 @@ func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 
 func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	ret := &DisputableNode{
-		prevNodeHash:          unmarshalHash(buf.PrevNodeHash),
 		timeBounds:            [2]RollupTime{buf.TimeLowerBound.Unmarshal(), buf.TimeUpperBound.Unmarshal()},
 		afterPendingTop:       unmarshalHash(buf.AfterPendingTop),
 		importedMessagesSlice: unmarshalHash(buf.ImportedMessagesSlice),

@@ -72,15 +72,20 @@ func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	}
 }
 
-type Node struct {
-	depth       uint64
-	hash        [32]byte
-	disputable  *DisputableNode
-	vmProtoData *VMProtoData
-	machine     machine.Machine // nil if unknown
+type ExecutionNodeData struct {
+}
 
-	prev            *Node
-	linkType        ChildType
+type Node struct {
+	prev          *Node
+	deadlineTicks RollupTime
+	disputable    *DisputableNode
+	linkType      ChildType
+	vmProtoData   *VMProtoData
+
+	machine machine.Machine // nil if unknown
+	depth   uint64
+	hash    [32]byte
+
 	hasSuccessors   bool
 	successorHashes [MaxChildType + 1][32]byte
 	numStakers      uint64

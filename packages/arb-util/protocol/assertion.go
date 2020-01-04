@@ -78,7 +78,6 @@ func (a *Assertion) Stub() *AssertionStub {
 	return NewAssertionStub(
 		a.AfterHash,
 		a.DidInboxInsn,
-		a.NumSteps,
 		a.NumGas,
 		lastHash,
 		a.LogsHash(),

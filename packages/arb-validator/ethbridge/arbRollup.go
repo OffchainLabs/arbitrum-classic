@@ -222,9 +222,9 @@ type VMProtoState struct {
 }
 
 type AssertionParams struct {
-	timeBoundsBlocks  [2]*big.Int
-	afterPendingCount *big.Int
-	numSteps          uint32
+	timeBoundsBlocks     [2]*big.Int
+	importedMessageCount *big.Int
+	numSteps             uint32
 }
 
 type PendingTopOutput struct {
@@ -280,7 +280,7 @@ func (vm *ArbRollup) MakeAssertion(
 		prevChildType,
 		assertionParams.numSteps,
 		assertionParams.timeBoundsBlocks,
-		assertionParams.afterPendingCount,
+		assertionParams.importedMessageCount,
 		executionOutput.didInboxInsn,
 		executionOutput.numArbGas,
 		stakerProof,

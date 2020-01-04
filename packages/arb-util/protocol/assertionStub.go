@@ -27,7 +27,6 @@ import (
 func NewAssertionStub(
 	afterHash [32]byte,
 	didInboxInsn bool,
-	numSteps uint32,
 	numGas uint64,
 	messagesAcc [32]byte,
 	logsAcc [32]byte,
@@ -35,7 +34,6 @@ func NewAssertionStub(
 	return &AssertionStub{
 		AfterHash:        value.NewHashBuf(afterHash),
 		DidInboxInsn:     didInboxInsn,
-		NumSteps:         numSteps,
 		NumGas:           numGas,
 		FirstMessageHash: value.NewHashBuf([32]byte{}),
 		LastMessageHash:  value.NewHashBuf(messagesAcc),
@@ -46,7 +44,6 @@ func NewAssertionStub(
 
 func (a *AssertionStub) Equals(b *AssertionStub) bool {
 	if a.AfterHash != b.AfterHash ||
-		a.NumSteps != b.NumSteps ||
 		a.NumGas != b.NumGas ||
 		!bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) ||
 		!bytes.Equal(a.LastMessageHash.Value, b.LastMessageHash.Value) ||
@@ -91,7 +88,6 @@ func (a *AssertionStub) Hash() [32]byte {
 	var ret [32]byte
 	hashVal := solsha3.SoliditySHA3(
 		solsha3.Bytes32(a.AfterHash.Value),
-		solsha3.Uint32(a.NumSteps),
 		solsha3.Uint64(a.NumGas),
 		solsha3.Bytes32(a.FirstMessageHash.Value),
 		solsha3.Bytes32(a.LastMessageHash.Value),

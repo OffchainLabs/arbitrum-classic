@@ -212,7 +212,7 @@ contract ArbRollup is NodeGraph, Staking {
         uint32 _prevChildType,
         uint32 _numSteps,
         uint128[2] calldata _timeBoundsBlocks,
-        uint256 _afterPendingCount,
+        uint256 _importedMessageCount,
         bool _didInboxInsn,
         uint64 _numArbGas,
         bytes32[] calldata _stakerProof
@@ -233,7 +233,7 @@ contract ArbRollup is NodeGraph, Staking {
 
                 _numSteps,
                 _timeBoundsBlocks,
-                _afterPendingCount,
+                _importedMessageCount,
 
                 _fields[5],
 

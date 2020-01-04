@@ -81,11 +81,19 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 	return ad.initState.MarshalForProof()
 }
 
-func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, timeBounds *protocol.TimeBounds) (uint16, Machine, error) {
+func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, timeBounds *protocol.TimeBounds, totalSteps uint32) (uint16, Machine, error) {
+	assertionCount := uint32(len(assertions))
 	for i := range assertions {
+		steps := uint32(0)
+		if i == 0 {
+			steps = totalSteps/assertionCount + totalSteps%assertionCount
+		} else {
+			steps = totalSteps / assertionCount
+		}
+
 		initState := m.Clone()
 		generatedAssertion := m.ExecuteAssertion(
-			int32(assertions[i].NumSteps),
+			int32(steps),
 			timeBounds,
 		)
 		if !generatedAssertion.Stub().Equals(assertions[i]) {

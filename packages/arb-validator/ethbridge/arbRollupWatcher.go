@@ -283,14 +283,14 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			}
 			return AssertedEvent{
 				PrevLeafHash:          eventVal.Fields[0],
+				NumSteps:              eventVal.NumSteps,
 				TimeBoundsBlocks:      eventVal.TimeBoundsBlocks,
+				ImportedMessageCount:  eventVal.ImportedMessageCount,
 				AfterPendingTop:       eventVal.Fields[1],
 				ImportedMessagesSlice: eventVal.Fields[2],
-				ImportedMessageCount:  eventVal.ImportedMessageCount,
 				Assertion: protocol.NewAssertionStub(
 					eventVal.Fields[3],
 					eventVal.DidInboxInsn,
-					eventVal.NumSteps,
 					eventVal.NumArbGas,
 					eventVal.Fields[4],
 					eventVal.Fields[5],

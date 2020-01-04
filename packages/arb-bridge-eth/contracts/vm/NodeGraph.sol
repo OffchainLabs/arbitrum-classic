@@ -55,10 +55,10 @@ contract NodeGraph is ChallengeType {
 
     event RollupAsserted(
         bytes32[6] fields,
-        uint256 importedMessageCount,
-        uint128[2] timeBoundsBlocks,
-        bool didInboxInsn,
         uint32 numSteps,
+        uint128[2] timeBoundsBlocks,
+        uint256 importedMessageCount,
+        bool didInboxInsn,
         uint64 numArbGas
     );
 
@@ -84,7 +84,7 @@ contract NodeGraph is ChallengeType {
 
         uint32 numSteps;
         uint128[2] timeBoundsBlocks;
-        uint256 afterPendingCount;
+        uint256 importedMessageCount;
 
         bytes32 afterPendingTop;
 
@@ -226,10 +226,10 @@ contract NodeGraph is ChallengeType {
                 data.messagesAccHash,
                 data.logsAccHash
             ],
-            data.afterPendingCount.sub(data.beforePendingCount),
-            data.timeBoundsBlocks,
-            data.didInboxInsn,
             data.numSteps,
+            data.timeBoundsBlocks,
+            data.importedMessageCount,
+            data.didInboxInsn,
             data.numArbGas
         );
         return (prevLeaf, validHash);
@@ -285,7 +285,7 @@ contract NodeGraph is ChallengeType {
                     ChallengeUtils.pendingTopHash(
                         data.afterPendingTop,
                         pendingValue,
-                        pendingCount.sub(data.afterPendingCount)
+                        pendingCount.sub(data.beforePendingCount + data.importedMessageCount)
                     ),
                     vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
                 )
@@ -315,7 +315,7 @@ contract NodeGraph is ChallengeType {
                         data.afterPendingTop,
                         0x00,
                         data.importedMessagesSlice,
-                        data.afterPendingCount.sub(data.beforePendingCount)
+                        data.importedMessageCount
                     ),
                     vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
                 )
@@ -339,7 +339,6 @@ contract NodeGraph is ChallengeType {
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
             data.didInboxInsn,
-            data.numSteps,
             data.numArbGas,
             0x00,
             data.messagesAccHash,
@@ -352,6 +351,7 @@ contract NodeGraph is ChallengeType {
             keccak256(
                 abi.encodePacked(
                     ChallengeUtils.executionHash(
+                        data.numSteps,
                         Protocol.generatePreconditionHash(
                              data.beforeVMHash,
                              data.timeBoundsBlocks,
@@ -389,7 +389,7 @@ contract NodeGraph is ChallengeType {
                 data.afterVMHash,
                 execBeforeInboxHash,
                 data.afterPendingTop,
-                data.afterPendingCount
+                data.beforePendingCount + data.importedMessageCount
             )
         );
     }

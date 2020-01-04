@@ -111,12 +111,16 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 
 func (chain *NodeGraph) CreateInitialNode(machine machine.Machine) {
 	newNode := &Node{
-		depth:          0,
-		machineHash:    machine.Hash(),
-		machine:        machine.Clone(),
-		pendingTopHash: value.NewEmptyTuple().Hash(),
-		linkType:       ValidChildType,
-		numStakers:     0,
+		depth: 0,
+		vmProtoData: &VMProtoData{
+			machineHash:  machine.Hash(),
+			inboxHash:    value.NewEmptyTuple().Hash(),
+			pendingTop:   value.NewEmptyTuple().Hash(),
+			pendingCount: big.NewInt(0),
+		},
+		machine:    machine.Clone(),
+		linkType:   ValidChildType,
+		numStakers: 0,
 	}
 	newNode.setHash()
 	chain.leaves.Add(newNode)
@@ -162,14 +166,18 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		afterMachine = afterMachine.Clone()
 	}
 	newNode := &Node{
-		depth:          1 + prevNode.depth,
-		disputable:     dispNode,
-		prev:           prevNode,
-		linkType:       ValidChildType,
-		machineHash:    afterMachineHash,
-		pendingTopHash: dispNode.afterPendingTop,
-		machine:        afterMachine,
-		numStakers:     0,
+		depth:      1 + prevNode.depth,
+		disputable: dispNode,
+		prev:       prevNode,
+		linkType:   ValidChildType,
+		vmProtoData: &VMProtoData{
+			machineHash:  afterMachineHash,
+			inboxHash:    [32]byte{},
+			pendingTop:   dispNode.afterPendingTop,
+			pendingCount: nil,
+		},
+		machine:    afterMachine,
+		numStakers: 0,
 	}
 	newNode.setHash()
 	prevNode.successorHashes[ValidChildType] = newNode.hash

@@ -60,6 +60,7 @@ library ChallengeUtils {
     }
 
     function executionHash(
+        uint32 _numGas,
         bytes32 _preconditionHash,
         bytes32 _assertionHash
     )
@@ -69,6 +70,7 @@ library ChallengeUtils {
     {
         return keccak256(
             abi.encodePacked(
+                _numGas,
                 _preconditionHash,
                 _assertionHash
             )
