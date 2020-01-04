@@ -45,7 +45,7 @@ func (con *ArbFactory) CreateRollup(
 	if err != nil {
 		return common.Address{}, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
 	}
-	receipt, err := waitForReceipt(auth.Context, con.client, auth, tx, "CreateChain")
+	receipt, err := waitForReceipt(auth.Context, con.client, auth.From, tx, "CreateChain")
 	if err != nil {
 		return common.Address{}, err
 	}

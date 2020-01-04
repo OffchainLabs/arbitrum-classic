@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/pkg/errors"
 
@@ -37,7 +37,7 @@ type ArbAddresses struct {
 	OneStepProof       string `json:"OneStepProof"`
 }
 
-func waitForReceipt(ctx context.Context, client *ethclient.Client, auth *bind.TransactOpts, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func waitForReceipt(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):
@@ -54,7 +54,7 @@ func waitForReceipt(ctx context.Context, client *ethclient.Client, auth *bind.Tr
 					return nil, errors.New("Failed unmarshalling receipt")
 				}
 				callMsg := ethereum.CallMsg{
-					From:     auth.From,
+					From:     from,
 					To:       tx.To(),
 					Gas:      tx.Gas(),
 					GasPrice: tx.GasPrice(),

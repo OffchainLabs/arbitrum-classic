@@ -183,7 +183,7 @@ func (c *MessagesChallenge) Bisect(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "Bisect")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "Bisect")
 }
 
 func (c *MessagesChallenge) OneStepProof(
@@ -205,5 +205,5 @@ func (c *MessagesChallenge) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "OneStepProof")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "OneStepProof")
 }

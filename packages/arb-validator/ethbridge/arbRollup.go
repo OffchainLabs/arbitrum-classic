@@ -17,334 +17,36 @@
 package ethbridge
 
 import (
-	"bytes"
 	"context"
 	"math/big"
-	"strings"
 
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 )
 
-var rollupStakeCreatedID common.Hash
-var rollupChallengeStartedID common.Hash
-var rollupChallengeCompletedID common.Hash
-var rollupRefundedID common.Hash
-var rollupPrunedID common.Hash
-var rollupStakeMovedID common.Hash
-var rollupAssertedID common.Hash
-var rollupConfirmedID common.Hash
-var confirmedAssertionID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
-	if err != nil {
-		panic(err)
-	}
-	rollupStakeCreatedID = parsed.Events["RollupStakeCreated"].ID()
-	rollupChallengeStartedID = parsed.Events["RollupChallengeStarted"].ID()
-	rollupChallengeCompletedID = parsed.Events["RollupChallengeCompleted"].ID()
-	rollupRefundedID = parsed.Events["RollupStakeRefunded"].ID()
-	rollupPrunedID = parsed.Events["RollupPruned"].ID()
-	rollupStakeMovedID = parsed.Events["RollupStakeMoved"].ID()
-	rollupAssertedID = parsed.Events["RollupAsserted"].ID()
-	rollupConfirmedID = parsed.Events["RollupConfirmed"].ID()
-	confirmedAssertionID = parsed.Events["ConfirmedAssertion"].ID()
-}
-
 type ArbRollup struct {
-	OutChan            chan Notification
-	ErrChan            chan error
-	Client             *ethclient.Client
-	ArbRollup          *rollup.ArbRollup
-	GlobalPendingInbox *rollup.IGlobalPendingInbox
-
-	address common.Address
-	client  *ethclient.Client
+	Client    *ethclient.Client
+	ArbRollup *rollup.ArbRollup
+	auth      *bind.TransactOpts
 }
 
-func NewRollup(address common.Address, client *ethclient.Client) (*ArbRollup, error) {
-	outChan := make(chan Notification, 1024)
-	errChan := make(chan error, 1024)
-	vm := &ArbRollup{OutChan: outChan, ErrChan: errChan, Client: client, address: address}
-	err := vm.setupContracts()
+func NewRollup(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ArbRollup, error) {
+	arbitrumRollupContract, err := rollup.NewArbRollup(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")
+	}
+	vm := &ArbRollup{Client: client, ArbRollup: arbitrumRollupContract, auth: auth}
 	return vm, err
-}
-
-func (vm *ArbRollup) setupContracts() error {
-	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ArbRollup")
-	}
-
-	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
-		Pending: false,
-		Context: context.Background(),
-	})
-	if err != nil {
-		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
-	}
-	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
-	}
-
-	vm.ArbRollup = arbitrumRollupContract
-	vm.GlobalPendingInbox = globalPendingContract
-	return nil
-}
-
-func (vm *ArbRollup) GetChans() (chan Notification, chan error) {
-	return vm.OutChan, vm.ErrChan
-}
-
-func (vm *ArbRollup) Close() {
-	close(vm.OutChan)
-	close(vm.ErrChan)
-}
-
-func (vm *ArbRollup) StartConnection(ctx context.Context) error {
-	if err := vm.setupContracts(); err != nil {
-		return err
-	}
-
-	start := uint64(0)
-	watch := &bind.WatchOpts{
-		Context: ctx,
-		Start:   &start,
-	}
-
-	headers := make(chan *types.Header)
-	headersSub, err := vm.Client.SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return err
-	}
-
-	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{vm.address},
-		Topics: [][]common.Hash{
-			{
-				rollupStakeCreatedID,
-				rollupChallengeStartedID,
-				rollupChallengeCompletedID,
-				rollupRefundedID,
-				rollupPrunedID,
-				rollupStakeMovedID,
-				rollupAssertedID,
-				rollupConfirmedID,
-				confirmedAssertionID,
-			},
-		},
-	}
-
-	logChan := make(chan types.Log)
-	logSub, err := vm.Client.SubscribeFilterLogs(ctx, filter, logChan)
-	if err != nil {
-		return err
-	}
-
-	messageDeliveredChan := make(chan *rollup.IGlobalPendingInboxMessageDelivered)
-	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer headersSub.Unsubscribe()
-		defer messageDeliveredSub.Unsubscribe()
-		defer logSub.Unsubscribe()
-
-		for {
-			select {
-			case <-ctx.Done():
-				break
-			case header := <-headers:
-				vm.OutChan <- Notification{
-					Header: header,
-					Event:  NewTimeEvent{},
-				}
-			case val := <-messageDeliveredChan:
-				header, err := vm.Client.HeaderByHash(context.Background(), val.Raw.BlockHash)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-				rd := bytes.NewReader(val.Data)
-				msgData, err := value.UnmarshalValue(rd)
-				if err != nil {
-					vm.ErrChan <- err
-					return
-				}
-
-				messageHash := solsha3.SoliditySHA3(
-					solsha3.Address(val.VmId),
-					solsha3.Bytes32(msgData.Hash()),
-					solsha3.Uint256(val.Value),
-					val.TokenType[:],
-				)
-				msgHashInt := new(big.Int).SetBytes(messageHash[:])
-
-				msgVal, _ := value.NewTupleFromSlice([]value.Value{
-					msgData,
-					value.NewIntValue(new(big.Int).SetUint64(header.Time)),
-					value.NewIntValue(header.Number),
-					value.NewIntValue(msgHashInt),
-				})
-
-				msg := protocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
-				vm.OutChan <- Notification{
-					Header: header,
-					VMID:   val.VmId,
-					Event: MessageDeliveredEvent{
-						Msg: msg,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case log := <-logChan:
-				if err := vm.processEvents(ctx, log); err != nil {
-					vm.ErrChan <- err
-					return
-				}
-			case err := <-headersSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-messageDeliveredSub.Err():
-				vm.ErrChan <- err
-				return
-			case err := <-logSub.Err():
-				vm.ErrChan <- err
-				return
-			}
-		}
-	}()
-	return nil
-}
-
-func (vm *ArbRollup) processEvents(ctx context.Context, log types.Log) error {
-	event, err := func() (Event, error) {
-		if log.Topics[0] == rollupStakeCreatedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(log)
-			if err != nil {
-				return nil, err
-			}
-			return StakeCreatedEvent{
-				Staker:   eventVal.Staker,
-				NodeHash: eventVal.NodeHash,
-			}, nil
-		} else if log.Topics[0] == rollupChallengeStartedID {
-			eventVal, err := vm.ArbRollup.ParseRollupChallengeStarted(log)
-			if err != nil {
-				return nil, err
-			}
-			return ChallengeStartedEvent{
-				Asserter:          eventVal.Asserter,
-				Challenger:        eventVal.Challenger,
-				ChallengeType:     eventVal.ChallengeType.Uint64(),
-				ChallengeContract: eventVal.ChallengeContract,
-			}, nil
-		} else if log.Topics[0] == rollupChallengeCompletedID {
-			eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(log)
-			if err != nil {
-				return nil, err
-			}
-			return ChallengeCompletedEvent{
-				Winner:            eventVal.Winner,
-				Loser:             eventVal.Loser,
-				ChallengeContract: eventVal.ChallengeContract,
-			}, nil
-		} else if log.Topics[0] == rollupRefundedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(log)
-			if err != nil {
-				return nil, err
-			}
-			return StakeRefundedEvent{
-				Staker: eventVal.Staker,
-			}, nil
-		} else if log.Topics[0] == rollupPrunedID {
-			eventVal, err := vm.ArbRollup.ParseRollupPruned(log)
-			if err != nil {
-				return nil, err
-			}
-			return PrunedEvent{
-				Leaf: eventVal.Leaf,
-			}, nil
-		} else if log.Topics[0] == rollupStakeMovedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(log)
-			if err != nil {
-				return nil, err
-			}
-			return StakeMovedEvent{
-				Staker:   eventVal.Staker,
-				Location: eventVal.ToNodeHash,
-			}, nil
-		} else if log.Topics[0] == rollupAssertedID {
-			eventVal, err := vm.ArbRollup.ParseRollupAsserted(log)
-			if err != nil {
-				return nil, err
-			}
-			return AssertedEvent{
-				PrevLeafHash:          eventVal.Fields[0],
-				TimeBoundsBlocks:      eventVal.TimeBoundsBlocks,
-				AfterPendingTop:       eventVal.Fields[1],
-				ImportedMessagesSlice: eventVal.Fields[2],
-				ImportedMessageCount:  eventVal.ImportedMessageCount,
-				Assertion: protocol.NewAssertionStub(
-					eventVal.Fields[3],
-					eventVal.DidInboxInsn,
-					eventVal.NumSteps,
-					eventVal.NumArbGas,
-					eventVal.Fields[4],
-					eventVal.Fields[5],
-				),
-			}, nil
-		} else if log.Topics[0] == rollupConfirmedID {
-			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(log)
-			if err != nil {
-				return nil, err
-			}
-			return ConfirmedEvent{
-				NodeHash: eventVal.NodeHash,
-			}, nil
-		} else if log.Topics[0] == confirmedAssertionID {
-			eventVal, err := vm.ArbRollup.ParseConfirmedAssertion(log)
-			if err != nil {
-				return nil, err
-			}
-			return ConfirmedAssertionEvent{
-				LogsAccHash: eventVal.LogsAccHash,
-			}, nil
-		}
-		return nil, errors2.New("unknown arbitrum event type")
-	}()
-
-	if err != nil {
-		return err
-	}
-	header, err := vm.Client.HeaderByHash(ctx, log.BlockHash)
-	if err != nil {
-		return err
-	}
-	vm.OutChan <- Notification{
-		Header: header,
-		VMID:   vm.address,
-		Event:  event,
-		TxHash: log.TxHash,
-	}
-
-	return nil
 }
 
 func protoStateHash(
@@ -364,7 +66,7 @@ func protoStateHash(
 }
 
 func (vm *ArbRollup) PlaceStake(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	stakeAmount *big.Int,
 	location [32]byte,
 	leaf [32]byte,
@@ -372,13 +74,10 @@ func (vm *ArbRollup) PlaceStake(
 	proof2 [][32]byte,
 ) (*types.Receipt, error) {
 	call := &bind.TransactOpts{
-		From:     auth.From,
-		Nonce:    auth.Nonce,
-		Signer:   auth.Signer,
-		Value:    stakeAmount,
-		GasPrice: auth.GasPrice,
-		GasLimit: 100000,
-		Context:  auth.Context,
+		From:    vm.auth.From,
+		Signer:  vm.auth.Signer,
+		Value:   stakeAmount,
+		Context: ctx,
 	}
 	tx, err := vm.ArbRollup.PlaceStake(
 		call,
@@ -390,48 +89,51 @@ func (vm *ArbRollup) PlaceStake(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "PlaceStake")
+	return waitForReceipt(ctx, vm.Client, vm.auth.From, tx, "PlaceStake")
 }
 
 func (vm *ArbRollup) RecoverStakeConfirmed(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	proof [][32]byte,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakeConfirmed(
-		auth,
+		vm.auth,
 		proof,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "RecoverStakeConfirmed")
+	return waitForReceipt(ctx, vm.Client, vm.auth.From, tx, "RecoverStakeConfirmed")
 }
 
 func (vm *ArbRollup) RecoverStakeOld(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	staker common.Address,
 	proof [][32]byte,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakeOld(
-		auth,
+		vm.auth,
 		staker,
 		proof,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "RecoverStakeOld")
+	return vm.waitForReceipt(ctx, tx, "RecoverStakeOld")
 }
 
 func (vm *ArbRollup) RecoverStakeMooted(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	disputableHash [32]byte,
 	staker common.Address,
 	latestConfirmedProof [][32]byte,
 	nodeProof [][32]byte,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakeMooted(
-		auth,
+		vm.auth,
 		staker,
 		disputableHash,
 		latestConfirmedProof,
@@ -440,11 +142,11 @@ func (vm *ArbRollup) RecoverStakeMooted(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "RecoverStakeMooted")
+	return vm.waitForReceipt(ctx, tx, "RecoverStakeMooted")
 }
 
 func (vm *ArbRollup) RecoverStakePassedDeadline(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	stakerAddress common.Address,
 	deadlineTicks *big.Int,
 	disputableNodeHashVal [32]byte,
@@ -453,8 +155,9 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 	leaf [32]byte,
 	proof [][32]byte,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakePassedDeadline(
-		auth,
+		vm.auth,
 		stakerAddress,
 		deadlineTicks,
 		disputableNodeHashVal,
@@ -466,18 +169,19 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "RecoverStakePassedDeadline")
+	return vm.waitForReceipt(ctx, tx, "RecoverStakePassedDeadline")
 }
 
 func (vm *ArbRollup) MoveStake(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	newLocation [32]byte,
 	leaf [32]byte,
 	proof1 [][32]byte,
 	proof2 [][32]byte,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MoveStake(
-		auth,
+		vm.auth,
 		newLocation,
 		leaf,
 		proof1,
@@ -486,18 +190,19 @@ func (vm *ArbRollup) MoveStake(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "MoveStake")
+	return vm.waitForReceipt(ctx, tx, "MoveStake")
 }
 
 func (vm *ArbRollup) PruneLeaf(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	leaf [32]byte,
 	from [32]byte,
 	proof1 [][32]byte,
 	proof2 [][32]byte,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.PruneLeaf(
-		auth,
+		vm.auth,
 		leaf,
 		from,
 		proof1,
@@ -506,7 +211,7 @@ func (vm *ArbRollup) PruneLeaf(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "PruneLeaf")
+	return vm.waitForReceipt(ctx, tx, "PruneLeaf")
 }
 
 type VMProtoState struct {
@@ -539,7 +244,7 @@ type ExecutionOutput struct {
 }
 
 func (vm *ArbRollup) MakeAssertion(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 
 	prevPrevLeafHash [32]byte,
 	prevDisputableNodeHash [32]byte,
@@ -554,8 +259,9 @@ func (vm *ArbRollup) MakeAssertion(
 	stakerProof [][32]byte,
 
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MakeAssertion(
-		auth,
+		vm.auth,
 		[10][32]byte{
 			beforeState.VMHash,
 			beforeState.InboxHash,
@@ -582,11 +288,11 @@ func (vm *ArbRollup) MakeAssertion(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "MakeAssertion")
+	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
 
 func (vm *ArbRollup) ConfirmValid(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	deadlineTics *big.Int,
 	outMsgs []value.Value,
 	logsAccHash [32]byte,
@@ -595,9 +301,10 @@ func (vm *ArbRollup) ConfirmValid(
 	stakerProofs [][32]byte,
 	stakerProofOffsets []*big.Int,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	messages := hashing.CombineMessages(outMsgs)
 	tx, err := vm.ArbRollup.ConfirmValid(
-		auth,
+		vm.auth,
 		deadlineTics,
 		messages,
 		logsAccHash,
@@ -609,11 +316,11 @@ func (vm *ArbRollup) ConfirmValid(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "ConfirmValid")
+	return vm.waitForReceipt(ctx, tx, "ConfirmValid")
 }
 
 func (vm *ArbRollup) ConfirmInvalid(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	deadlineTics *big.Int,
 	challengeNodeData [32]byte,
 	branch uint64,
@@ -622,8 +329,9 @@ func (vm *ArbRollup) ConfirmInvalid(
 	stakerProofs [][32]byte,
 	stakerProofOffsets []*big.Int,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.ConfirmInvalid(
-		auth,
+		vm.auth,
 		deadlineTics,
 		challengeNodeData,
 		new(big.Int).SetUint64(branch),
@@ -635,11 +343,11 @@ func (vm *ArbRollup) ConfirmInvalid(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "ConfirmInvalid")
+	return vm.waitForReceipt(ctx, tx, "ConfirmInvalid")
 }
 
 func (vm *ArbRollup) StartChallenge(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	asserterAddress common.Address,
 	challengerAddress common.Address,
 	node [32]byte,
@@ -654,8 +362,9 @@ func (vm *ArbRollup) StartChallenge(
 	challenge1PeriodTicks *big.Int,
 	challenge2NodeHash [32]byte,
 ) (*types.Receipt, error) {
+	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.StartChallenge(
-		auth,
+		vm.auth,
 		asserterAddress,
 		challengerAddress,
 		node,
@@ -677,7 +386,7 @@ func (vm *ArbRollup) StartChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "StartExecutionChallenge")
+	return vm.waitForReceipt(ctx, tx, "StartExecutionChallenge")
 }
 
 //func (vm *ArbRollup) VerifyVM(
@@ -717,3 +426,7 @@ func (vm *ArbRollup) StartChallenge(
 //	}
 //	return nil
 //}
+
+func (vm *ArbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+	return waitForReceipt(ctx, vm.Client, vm.auth.From, tx, methodName)
+}

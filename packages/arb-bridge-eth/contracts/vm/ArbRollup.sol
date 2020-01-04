@@ -155,9 +155,9 @@ contract ArbRollup is NodeGraph, Staking {
         Staker storage staker = getValidStaker(stakerAddress);
         require(
             RollupUtils.isConflict(
+                node,
                 latestConfirmed(),
                 staker.location,
-                node,
                 latestConfirmedProof,
                 stakerProof
             ),

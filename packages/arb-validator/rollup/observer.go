@@ -32,16 +32,17 @@ type Observer struct {
 }
 
 func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error) {
-	rollup, err := ethbridge.NewRollup(chain.rollupAddr, clnt)
+	rollup, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return nil, err
 	}
 	ctx := context.TODO()
-	if err := rollup.StartConnection(ctx); err != nil {
+	outChan := make(chan ethbridge.Notification, 1024)
+	errChan := make(chan error, 1024)
+	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
 		return nil, err
 	}
 
-	outChan, errChan := rollup.GetChans()
 	go func() {
 		lastBlockNumberSeen := big.NewInt(0)
 		for {
@@ -67,7 +68,7 @@ func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error
 			if hitError {
 				// Ignore error and try to reset connection
 				for {
-					if err := rollup.StartConnection(ctx); err == nil {
+					if err := rollup.StartConnection(ctx, outChan, errChan); err == nil {
 						break
 					}
 					log.Println("Error: Can't connect to blockchain")

@@ -182,7 +182,7 @@ func (c *PendingTopChallenge) Bisect(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "Bisect")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "Bisect")
 }
 
 func (c *PendingTopChallenge) OneStepProof(
@@ -200,5 +200,5 @@ func (c *PendingTopChallenge) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "OneStepProof")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "OneStepProof")
 }

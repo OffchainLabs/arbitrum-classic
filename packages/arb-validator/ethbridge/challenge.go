@@ -194,5 +194,5 @@ func (c *Challenge) TimeoutChallenge(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "TimeoutChallenge")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "TimeoutChallenge")
 }

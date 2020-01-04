@@ -205,7 +205,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "BisectAssertion")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "BisectAssertion")
 }
 
 func (c *ExecutionChallenge) OneStepProof(
@@ -231,7 +231,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "OneStepProof")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "OneStepProof")
 }
 
 func (c *ExecutionChallenge) ChooseSegment(

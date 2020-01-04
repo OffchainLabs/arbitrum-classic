@@ -169,5 +169,5 @@ func (c *BisectionChallenge) ChooseSegment(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth, tx, "ChooseSegment")
+	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "ChooseSegment")
 }
