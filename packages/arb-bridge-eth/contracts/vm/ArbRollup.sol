@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,95 +16,51 @@
 
 pragma solidity ^0.5.3;
 
-import "./Leaves.sol";
+import "./NodeGraph.sol";
+import "./Staking.sol";
 
-import "./VM.sol";
-import "./IArbRollup.sol";
+contract ArbRollup is NodeGraph, Staking {
 
-import "../IGlobalPendingInbox.sol";
+    // invalid path proof
+    string constant PLACE_PATH_PROOF = "PLACE_PATH_PROOF";
 
-import "../arch/Value.sol";
-
-
-contract ArbRollup is Leaves, IArbRollup {
     // invalid leaf
-    string constant MAKE_LEAF = "MAKE_LEAF";
-    // Can only disputable assert if machine is not errored or halted
-    string constant MAKE_RUN = "MAKE_RUN";
-    // Tried to execute too many steps
-    string constant MAKE_STEP = "MAKE_STEP";
-    // Precondition: not within time bounds
-    string constant MAKE_TIME = "MAKE_TIME";
+    string constant MOVE_LEAF = "MOVE_LEAF";
+    // new stake location is not in path
+    string constant MOVE_LOC = "MOVE_LOC";
+
+    // invalid path proof
+    string constant RECOV_PATH_PROOF = "RECOV_PATH_PROOF";
+    // Invalid conflict proof
+    string constant RECOV_CONFLICT_PROOF = "RECOV_CONFLICT_PROOF";
+    // Node is not passed deadline
+    string constant RECOV_DEADLINE_TIME = "RECOV_DEADLINE_TIME";
+    // Node proof invalid
+    string constant RECOV_DEADLINE_PROOF = "RECOV_DEADLINE_PROOF";
+
     // invalid staker location proof
     string constant MAKE_STAKER_PROOF = "MAKE_STAKER_PROOF";
 
-    // must include proof for all stakers
-    string constant CONF_COUNT = "CONF_COUNT";
-    // Stakers must be ordered
-    string constant CONF_ORDER = "CONF_ORDER";
-    // at least one active staker disagrees
-    string constant CONF_STAKER_PROOF = "CONF_STAKER_PROOF";
     // Type is not invalid
     string constant CONF_INV_TYPE = "CONF_INV_TYPE";
     // There must be at least one staker
     string constant CONF_HAS_STAKER = "CONF_HAS_STAKER";
 
-
     // Only callable by owner
     string constant ONLY_OWNER = "ONLY_OWNER";
 
-    using SafeMath for uint256;
+    address owner;
 
-    IGlobalPendingInbox public globalInbox;
-
-    address   owner;
-    VM.Params vmParams;
-
-
-    // Fields
-    //   prevLeafHash
-    //   afterPendingTop
-    //   importedMessagesSlice
-    //   afterVMHash
-    //   messagesAccHash
-    //   logsAccHash
-
-    event RollupAsserted(
-        bytes32[6] fields,
-        uint256 importedMessageCount,
-        uint128[2] timeBoundsBlocks,
-        bool didInboxInsn,
-        uint32 numSteps,
-        uint64 numArbGas
+    event RollupStakeMoved(
+        address staker,
+        bytes32 toNodeHash
     );
 
-    event RollupConfirmed(bytes32 nodeHash);
+    event RollupStakeRefunded(address staker);
 
     event ConfirmedAssertion(
         bytes32 logsAccHash
     );
-
-    struct MakeAssertionData {
-        bytes32 beforeVMHash;
-        bytes32 beforeInboxHash;
-        bytes32 beforePendingTop;
-        uint256 beforePendingCount;
-        bytes32 prevPrevLeafHash;
-        bytes32 prevDisputableNodeHash;
-        bytes32[] stakerProof;
-        bytes32 afterPendingTop;
-        uint256 afterPendingCount;
-        bytes32 importedMessagesSlice;
-        bytes32 afterVMHash;
-        bool didInboxInsn;
-        bytes32 messagesAccHash;
-        bytes32 logsAccHash;
-        uint32 numSteps;
-        uint64 numArbGas;
-        uint128[2] timeBoundsBlocks;
-        uint256 prevDeadlineTicks;
-        uint32  prevChildType;
-    }
 
     function init(
         bytes32 _vmState,
@@ -116,20 +72,130 @@ contract ArbRollup is Leaves, IArbRollup {
         address _challengeFactoryAddress,
         address _globalInboxAddress
     )
+        internal
+    {
+        NodeGraph.init(
+            _vmState,
+            _gracePeriodTicks,
+            _arbGasSpeedLimitPerTick,
+            _maxExecutionSteps,
+            _globalInboxAddress
+        );
+        Staking.init(
+            _stakeRequirement,
+            _challengeFactoryAddress
+        );
+        owner = _owner;
+    }
+
+    function placeStake(
+        bytes32 location,
+        bytes32 _leaf,
+        bytes32[] calldata proof1,
+        bytes32[] calldata proof2
+    )
+        external
+        payable
+    {
+        require(isValidLeaf(_leaf), "invalid leaf");
+        require(
+            RollupUtils.isInPath(
+                latestConfirmed(),
+                location,
+                _leaf,
+                proof1,
+                proof2
+            ),
+            PLACE_PATH_PROOF
+        );
+        createStake(location);
+    }
+
+    function moveStake(
+        bytes32 newLocation,
+        bytes32    _leaf,
+        bytes32[] calldata proof1,
+        bytes32[] calldata proof2
+    )
         external
     {
-        Leaves.init(_vmState, _stakeRequirement, _challengeFactoryAddress);
+        Staker storage staker = getValidStaker(msg.sender);
+        require(isValidLeaf(_leaf), MOVE_LEAF);
+        require(
+            RollupUtils.isInPath(
+                staker.location,
+                newLocation,
+                _leaf,
+                proof1,
+                proof2
+            ),
+            MOVE_LOC
+        );
 
-        globalInbox = IGlobalPendingInbox(_globalInboxAddress);
+        staker.location = newLocation;
 
-        globalInbox.registerForInbox();
-        owner = _owner;
+        emit RollupStakeMoved(msg.sender, newLocation);
+    }
 
-        // VM parameters
-        vmParams.gracePeriodTicks = _gracePeriodTicks;
-        vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
-        vmParams.maxExecutionSteps = _maxExecutionSteps;
-        vmParams.pendingInboxHash = Value.hashEmptyTuple();
+    function recoverStakeConfirmed(bytes32[] calldata proof) external {
+        _recoverStakeConfirmed(msg.sender, proof);
+    }
+
+    function recoverStakeOld(address payable stakerAddress, bytes32[] calldata proof) external {
+        require(proof.length > 0);
+        _recoverStakeConfirmed(stakerAddress, proof);
+    }
+
+    function recoverStakeMooted(
+        address payable stakerAddress,
+        bytes32 disputableHash,
+        bytes32[] calldata latestConfirmedProof,
+        bytes32[] calldata nodeProof
+    )
+        external
+    {
+        Staker storage staker = getValidStaker(stakerAddress);
+        require(
+            RollupUtils.isConflict(
+                staker.location,
+                disputableHash,
+                latestConfirmed(),
+                latestConfirmedProof,
+                nodeProof
+            ),
+            RECOV_CONFLICT_PROOF
+        );
+        deleteStakerWithPayout(stakerAddress);
+
+        emit RollupStakeRefunded(stakerAddress);
+    }
+
+    // Kick off if successor node whose deadline has passed
+    function recoverStakePassedDeadline(
+        address payable stakerAddress,
+        uint256 deadlineTicks,
+        bytes32 disputableNodeHashVal,
+        uint256 childType,
+        bytes32 vmProtoStateHash,
+        bytes32 leaf,
+        bytes32[] calldata proof
+    )
+        external
+    {
+        Staker storage staker = getValidStaker(stakerAddress);
+        bytes32 nextNode = RollupUtils.childNodeHash(
+            staker.location,
+            deadlineTicks,
+            disputableNodeHashVal,
+            childType,
+            vmProtoStateHash
+        );
+        require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
+
+        require(RollupUtils.isPath(nextNode, leaf, proof), RECOV_DEADLINE_PROOF);
+        deleteStakerWithPayout(stakerAddress);
+
+        emit RollupStakeRefunded(stakerAddress);
     }
 
     // fields
@@ -146,41 +212,49 @@ contract ArbRollup is Leaves, IArbRollup {
 
     function makeAssertion(
         bytes32[10] calldata _fields,
-        bytes32[] calldata _stakerProof,
         uint256 _beforePendingCount,
+        uint256 _prevDeadlineTicks,
+        uint32 _prevChildType,
+        uint32 _numSteps,
+        uint128[2] calldata _timeBoundsBlocks,
         uint256 _afterPendingCount,
         bool _didInboxInsn,
-        uint32 _numSteps,
         uint64 _numArbGas,
-        uint128[2] calldata _timeBoundsBlocks,
-        uint256 _prevDeadlineTicks,
-        uint32 _prevChildType
+        bytes32[] calldata _stakerProof
     )
         external
     {
-        return _makeAssertion(
+        (bytes32 prevLeaf, bytes32 newValid) = makeAssertion(
             MakeAssertionData(
                 _fields[0],
                 _fields[1],
                 _fields[2],
                 _beforePendingCount,
+
                 _fields[3],
+                _prevDeadlineTicks,
                 _fields[4],
-                _stakerProof,
-                _fields[5],
+                _prevChildType,
+
+                _numSteps,
+                _timeBoundsBlocks,
                 _afterPendingCount,
+
+                _fields[5],
+
                 _fields[6],
+
                 _fields[7],
                 _didInboxInsn,
-                _fields[8],
-                _fields[9],
-                _numSteps,
                 _numArbGas,
-                _timeBoundsBlocks,
-                _prevDeadlineTicks,
-                _prevChildType
+                _fields[8],
+                _fields[9]
             )
         );
+        Staker storage staker = getValidStaker(msg.sender);
+        require(RollupUtils.isPath(staker.location, prevLeaf, _stakerProof), MAKE_STAKER_PROOF);
+        staker.location = newValid;
+        emit RollupStakeMoved(msg.sender, newValid);
     }
 
     function confirmValid(
@@ -253,156 +327,12 @@ contract ArbRollup is Leaves, IArbRollup {
     }
     */
 
-    struct MakeAssertionFrame {
-        bytes32 vmProtoHashBefore;
-        bytes32 prevLeaf;
-        bytes32 pendingValue;
-        uint256 pendingCount;
-    }
+    function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
+        Staker storage staker = getValidStaker(stakerAddress);
+        require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), RECOV_PATH_PROOF);
+        deleteStakerWithPayout(stakerAddress);
 
-    function _computeDeadline(
-        uint256 checkTimeTicks,
-        uint256 gracePeriodTicks,
-        uint256 prevDeadlineTicks
-    ) internal view returns(uint256) {
-        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks ;
-        if (deadlineTicks >= prevDeadlineTicks) {
-            return deadlineTicks + checkTimeTicks;
-        } else {
-            return prevDeadlineTicks + checkTimeTicks;
-        }
-    }
-
-    function _makeAssertion(MakeAssertionData memory data) private {
-        MakeAssertionFrame memory frame;
-        frame.vmProtoHashBefore = RollupUtils.protoStateHash(
-            data.beforeVMHash,
-            data.beforeInboxHash,
-            data.beforePendingTop,
-            data.beforePendingCount
-        );
-        frame.prevLeaf = RollupUtils.childNodeHash(
-            data.prevPrevLeafHash,
-            data.prevDeadlineTicks,
-            data.prevDisputableNodeHash,
-            data.prevChildType,
-            frame.vmProtoHashBefore
-        );
-        require(isValidLeaf(frame.prevLeaf), MAKE_LEAF);
-        require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
-        require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
-        require(withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
-
-        Staker storage staker = getValidStaker(msg.sender);
-        require(RollupUtils.isPath(staker.location, frame.prevLeaf, data.stakerProof), MAKE_STAKER_PROOF);
-
-        uint256 deadlineTicks = _computeDeadline(
-            data.numArbGas / vmParams.arbGasSpeedLimitPerTick,
-            vmParams.gracePeriodTicks,
-            data.prevDeadlineTicks
-        );
-        (frame.pendingValue, frame.pendingCount) = globalInbox.getPending();
-        bytes32[] memory leaves = new bytes32[](MAX_CHILD_TYPE);
-        leaves[INVALID_PENDING_TOP_TYPE] = RollupUtils.childNodeHash(
-            frame.prevLeaf,
-            deadlineTicks,
-            keccak256(
-                abi.encodePacked(
-                    ChallengeUtils.pendingTopHash(
-                        data.afterPendingTop,
-                        frame.pendingValue,
-                        frame.pendingCount.sub(data.afterPendingCount)
-                    ),
-                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
-                )
-            ),
-            INVALID_PENDING_TOP_TYPE,
-            frame.vmProtoHashBefore
-        );
-        leaves[INVALID_MESSAGES_TYPE] = RollupUtils.childNodeHash(
-            frame.prevLeaf,
-            deadlineTicks,
-            keccak256(
-                abi.encodePacked(
-                    ChallengeUtils.messagesHash(
-                        data.beforePendingTop,
-                        data.afterPendingTop,
-                        0x00,
-                        data.importedMessagesSlice,
-                        data.afterPendingCount.sub(data.beforePendingCount)
-                    ),
-                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
-                )
-            ),
-            INVALID_MESSAGES_TYPE,
-            frame.vmProtoHashBefore
-        );
-        bytes32 assertionHash = Protocol.generateAssertionHash(
-            data.afterVMHash,
-            data.didInboxInsn,
-            data.numSteps,
-            data.numArbGas,
-            0x00,
-            data.messagesAccHash,
-            0x00,
-            data.logsAccHash
-        );
-        bytes32 execBeforeInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
-        leaves[INVALID_EXECUTION_TYPE] = RollupUtils.childNodeHash(
-            frame.prevLeaf,
-            deadlineTicks,
-            keccak256(
-                abi.encodePacked(
-                    ChallengeUtils.executionHash(
-                        Protocol.generatePreconditionHash(
-                             data.beforeVMHash,
-                             data.timeBoundsBlocks,
-                             execBeforeInboxHash
-                        ),
-                        assertionHash
-                    ),
-                    vmParams.gracePeriodTicks + data.numArbGas / vmParams.arbGasSpeedLimitPerTick
-                )
-            ),
-            INVALID_EXECUTION_TYPE,
-            frame.vmProtoHashBefore
-        );
-        if (data.didInboxInsn) {
-            execBeforeInboxHash = Value.hashEmptyTuple();
-        }
-        leaves[VALID_CHILD_TYPE] = RollupUtils.childNodeHash(
-            frame.prevLeaf,
-            deadlineTicks,
-            RollupUtils.validNodeHash(
-                data.messagesAccHash,
-                data.logsAccHash
-            ),
-            VALID_CHILD_TYPE,
-            RollupUtils.protoStateHash(
-                data.afterVMHash,
-                execBeforeInboxHash,
-                data.afterPendingTop,
-                data.afterPendingCount
-            )
-        );
-        splitLeaf(frame.prevLeaf, leaves);
-        staker.location = leaves[VALID_CHILD_TYPE];
-
-        emit RollupAsserted(
-            [
-                frame.prevLeaf,
-                data.afterPendingTop,
-                data.importedMessagesSlice,
-                data.afterVMHash,
-                data.messagesAccHash,
-                data.logsAccHash
-            ],
-            data.afterPendingCount.sub(data.beforePendingCount),
-            data.timeBoundsBlocks,
-            data.didInboxInsn,
-            data.numSteps,
-            data.numArbGas
-        );
+        emit RollupStakeRefunded(stakerAddress);
     }
 
     function _confirmNode(
@@ -416,8 +346,6 @@ contract ArbRollup is Leaves, IArbRollup {
     )
         private
     {
-        uint256 _stakerCount = stakerAddresses.length;
-        require(_stakerCount == getStakerCount(), CONF_COUNT);
         bytes32 to = RollupUtils.childNodeHash(
             latestConfirmed(),
             deadlineTicks,
@@ -425,35 +353,16 @@ contract ArbRollup is Leaves, IArbRollup {
             branch,
             vmProtoStateHash
         );
-        bytes20 prevStaker = 0x00;
-        bool hasStaker = false;
-        for (uint256 i = 0; i < _stakerCount; i++) {
-            address stakerAddress = stakerAddresses[i];
-            require(bytes20(stakerAddress) > prevStaker, CONF_ORDER);
-            Staker storage staker = getValidStaker(stakerAddress);
-            if (RollupTime.blocksToTicks(staker.creationTimeBlocks) >= deadlineTicks) {
-                require(
-                    RollupUtils.isPathOffset(
-                        to,
-                        staker.location,
-                        stakerProofs,
-                        stakerProofOffsets[i],
-                        stakerProofOffsets[i+1]
-                    ),
-                    CONF_STAKER_PROOF
-                );
-                hasStaker = true;
-            }
-            prevStaker = bytes20(stakerAddress);
-        }
-        require(hasStaker, CONF_HAS_STAKER);
+        uint activeCount = checkAlignedStakers(
+            to,
+            deadlineTicks,
+            stakerAddresses,
+            stakerProofs,
+            stakerProofOffsets
+        );
+        require(activeCount > 0, CONF_HAS_STAKER);
 
-        updateLatestConfirmed(to);
-
-        emit RollupConfirmed(to);
+        confirmNode(to);
     }
 
-    function withinTimeBounds(uint128[2] memory _timeBoundsBlocks) private view returns (bool) {
-        return block.number >= _timeBoundsBlocks[0] && block.number <= _timeBoundsBlocks[1];
-    }
 }

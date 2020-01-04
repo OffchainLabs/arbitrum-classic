@@ -44,15 +44,6 @@ contract Staking is ChallengeType {
     // Challenge can only be resolved by spawned contract
     string constant RES_CHAL_SENDER = "RES_CHAL_SENDER";
 
-    // Stakers must have a conflict over pending top
-    string constant PND_CHAL_TYPE = "PND_CHAL_TYPE";
-
-    // Stakers must have a conflict over messages
-    string constant MSGS_CHAL_TYPE = "MSGS_CHAL_TYPE";
-
-    // Stakers must have a conflict over execution
-    string constant EXEC_CHAL_TYPE = "EXEC_CHAL_TYPE";
-
     // staker1 staked after deadline
     string constant STK1_DEADLINE = "STK1_DEADLINE";
     // staker2 staked after deadline
@@ -69,6 +60,14 @@ contract Staking is ChallengeType {
     string constant STK1_PROOF = "STK1_PROOF";
     // Invalid staker2 proof
     string constant STK2_PROOF = "STK2_PROOF";
+
+    // must include proof for all stakers
+    string constant CHCK_COUNT = "CHCK_COUNT";
+    // Stakers must be ordered
+    string constant CHCK_ORDER = "CHCK_ORDER";
+    // at least one active staker disagrees
+    string constant CHCK_STAKER_PROOF = "CHCK_STAKER_PROOF";
+
 
     uint256 internal constant VALID_CHILD_TYPE = 3;
     uint256 internal constant MAX_CHILD_TYPE = 3;
@@ -237,8 +236,41 @@ contract Staking is ChallengeType {
         _stakerAddress.transfer(stakeRequirement);
     }
 
-    function getStakerCount() internal view returns(uint) {
-        return stakerCount;
+    function checkAlignedStakers(
+        bytes32 node,
+        uint256 deadlineTicks,
+        address[] memory stakerAddresses,
+        bytes32[] memory stakerProofs,
+        uint256[] memory stakerProofOffsets
+    )
+        internal
+        view
+        returns(uint)
+    {
+        uint256 _stakerCount = stakerAddresses.length;
+        require(_stakerCount == stakerCount, CHCK_COUNT);
+        bytes20 prevStaker = 0x00;
+        uint activeCount = 0;
+        for (uint256 i = 0; i < _stakerCount; i++) {
+            address stakerAddress = stakerAddresses[i];
+            require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
+            Staker storage staker = getValidStaker(stakerAddress);
+            if (RollupTime.blocksToTicks(staker.creationTimeBlocks) >= deadlineTicks) {
+                require(
+                    RollupUtils.isPathOffset(
+                        node,
+                        staker.location,
+                        stakerProofs,
+                        stakerProofOffsets[i],
+                        stakerProofOffsets[i+1]
+                    ),
+                    CHCK_STAKER_PROOF
+                );
+                activeCount++;
+            }
+            prevStaker = bytes20(stakerAddress);
+        }
+        return activeCount;
     }
 
     function deleteStaker(address _stakerAddress) private {

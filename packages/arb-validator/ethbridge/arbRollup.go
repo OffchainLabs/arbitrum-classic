@@ -568,15 +568,16 @@ func (vm *ArbRollup) MakeAssertion(
 			executionOutput.messagesAccHash,
 			executionOutput.logsAccHash,
 		},
-		stakerProof,
+
 		beforeState.PendingCount,
-		assertionParams.afterPendingCount,
-		executionOutput.didInboxInsn,
-		assertionParams.numSteps,
-		executionOutput.numArbGas,
-		assertionParams.timeBoundsBlocks,
 		prevDeadlineTicks,
 		prevChildType,
+		assertionParams.numSteps,
+		assertionParams.timeBoundsBlocks,
+		assertionParams.afterPendingCount,
+		executionOutput.didInboxInsn,
+		executionOutput.numArbGas,
+		stakerProof,
 	)
 	if err != nil {
 		return nil, err
@@ -637,106 +638,46 @@ func (vm *ArbRollup) ConfirmInvalid(
 	return waitForReceipt(auth.Context, vm.Client, auth, tx, "ConfirmInvalid")
 }
 
-func (vm *ArbRollup) StartExecutionChallenge(
+func (vm *ArbRollup) StartChallenge(
 	auth *bind.TransactOpts,
-	staker1Address common.Address,
-	staker2Address common.Address,
+	asserterAddress common.Address,
+	challengerAddress common.Address,
 	node [32]byte,
 	disputableDeadline *big.Int,
 	staker1Position uint64,
 	staker2Position uint64,
-	vmProtoHashes [2][32]byte,
+	vmProtoHash1 [32]byte,
+	vmProtoHash2 [32]byte,
 	proof1 [][32]byte,
 	proof2 [][32]byte,
-	challengeDataHash1 [32]byte,
-	challengeDataHash2 [32]byte,
+	challenge1DataHash [32]byte,
+	challenge1PeriodTicks *big.Int,
+	challenge2NodeHash [32]byte,
 ) (*types.Receipt, error) {
-	tx, err := vm.ArbRollup.StartExecutionChallenge(
+	tx, err := vm.ArbRollup.StartChallenge(
 		auth,
-		staker1Address,
-		staker2Address,
+		asserterAddress,
+		challengerAddress,
 		node,
 		disputableDeadline,
-		new(big.Int).SetUint64(staker1Position),
-		new(big.Int).SetUint64(staker2Position),
-		vmProtoHashes,
+		[2]*big.Int{
+			new(big.Int).SetUint64(staker1Position),
+			new(big.Int).SetUint64(staker2Position),
+		},
+		[2][32]byte{
+			vmProtoHash1,
+			vmProtoHash2,
+		},
 		proof1,
 		proof2,
-		challengeDataHash1,
-		challengeDataHash2,
+		challenge1DataHash,
+		challenge1PeriodTicks,
+		challenge2NodeHash,
 	)
 	if err != nil {
 		return nil, err
 	}
 	return waitForReceipt(auth.Context, vm.Client, auth, tx, "StartExecutionChallenge")
-}
-
-func (vm *ArbRollup) StartPendingTopChallenge(
-	auth *bind.TransactOpts,
-	staker1Address common.Address,
-	staker2Address common.Address,
-	node [32]byte,
-	disputableDeadline *big.Int,
-	staker1Position uint64,
-	staker2Position uint64,
-	vmProtoHashes [2][32]byte,
-	proof1 [][32]byte,
-	proof2 [][32]byte,
-	challengeDataHash1 [32]byte,
-	challengeDataHash2 [32]byte,
-) (*types.Receipt, error) {
-	tx, err := vm.ArbRollup.StartPendingTopChallenge(
-		auth,
-		staker1Address,
-		staker2Address,
-		node,
-		disputableDeadline,
-		new(big.Int).SetUint64(staker1Position),
-		new(big.Int).SetUint64(staker2Position),
-		vmProtoHashes,
-		proof1,
-		proof2,
-		challengeDataHash1,
-		challengeDataHash2,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "StartPendingTopChallenge")
-}
-
-func (vm *ArbRollup) StartMessagesChallenge(
-	auth *bind.TransactOpts,
-	staker1Address common.Address,
-	staker2Address common.Address,
-	node [32]byte,
-	disputableDeadline *big.Int,
-	staker1Position uint64,
-	staker2Position uint64,
-	vmProtoHashes [2][32]byte,
-	proof1 [][32]byte,
-	proof2 [][32]byte,
-	challengeDataHash1 [32]byte,
-	challengeDataHash2 [32]byte,
-) (*types.Receipt, error) {
-	tx, err := vm.ArbRollup.StartMessagesChallenge(
-		auth,
-		staker1Address,
-		staker2Address,
-		node,
-		disputableDeadline,
-		new(big.Int).SetUint64(staker1Position),
-		new(big.Int).SetUint64(staker2Position),
-		vmProtoHashes,
-		proof1,
-		proof2,
-		challengeDataHash1,
-		challengeDataHash2,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return waitForReceipt(auth.Context, vm.Client, auth, tx, "StartMessagesChallenge")
 }
 
 //func (vm *ArbRollup) VerifyVM(
