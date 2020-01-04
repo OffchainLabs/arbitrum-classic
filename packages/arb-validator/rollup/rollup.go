@@ -103,7 +103,7 @@ func (buf *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listen
 	chain := &ChainObserver{
 		common.BytesToAddress([]byte(buf.ContractAddress)),
 		buf.VmParams.Unmarshal(),
-		buf.PendingInbox.Unmarshal(),
+		&PendingInbox{buf.PendingInbox.Unmarshal()},
 		nil,
 		NewLeafSet(),
 		make(map[[32]byte]*Node),
@@ -154,74 +154,6 @@ func (buf *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listen
 	return chain
 }
 
-type LeafSet struct {
-	idx map[[32]byte]*Node
-}
-
-func NewLeafSet() *LeafSet {
-	return &LeafSet{
-		make(map[[32]byte]*Node),
-	}
-}
-
-func (ll *LeafSet) IsLeaf(node *Node) bool {
-	_, ok := ll.idx[node.hash]
-	return ok
-}
-
-func (ll *LeafSet) Add(node *Node) {
-	if ll.IsLeaf(node) {
-		log.Fatal("tried to insert leaf twice")
-	}
-	ll.idx[node.hash] = node
-}
-
-func (ll *LeafSet) Delete(node *Node) {
-	delete(ll.idx, node.hash)
-}
-
-func (ll *LeafSet) forall(f func(*Node)) {
-	for _, v := range ll.idx {
-		f(v)
-	}
-}
-
-type Staker struct {
-	address      common.Address
-	location     *Node
-	creationTime RollupTime
-	challenge    *Challenge
-}
-
-type StakerSet struct {
-	idx map[common.Address]*Staker
-}
-
-func NewStakerSet() *StakerSet {
-	return &StakerSet{make(map[common.Address]*Staker)}
-}
-
-func (sl *StakerSet) Add(newStaker *Staker) {
-	if _, ok := sl.idx[newStaker.address]; ok {
-		log.Fatal("tried to insert staker twice")
-	}
-	sl.idx[newStaker.address] = newStaker
-}
-
-func (sl *StakerSet) Delete(staker *Staker) {
-	delete(sl.idx, staker.address)
-}
-
-func (sl *StakerSet) Get(addr common.Address) *Staker {
-	return sl.idx[addr]
-}
-
-func (sl *StakerSet) forall(f func(*Staker)) {
-	for _, v := range sl.idx {
-		f(v)
-	}
-}
-
 type ChainParams struct {
 	stakeRequirement  *big.Int
 	gracePeriod       RollupTime
@@ -242,71 +174,6 @@ func (buf *ChainParamsBuf) Unmarshal() ChainParams {
 		buf.GracePeriod.Unmarshal(),
 		buf.MaxExecutionSteps,
 	}
-}
-
-type DisputableNode struct {
-	prevNodeHash          [32]byte
-	timeBounds            [2]RollupTime
-	afterPendingTop       [32]byte
-	importedMessagesSlice [32]byte
-	importedMessageCount  *big.Int
-	assertionStub         *protocol.AssertionStub
-	hash                  [32]byte
-}
-
-func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
-	return &DisputableNodeBuf{
-		PrevNodeHash:          marshalHash(dn.prevNodeHash),
-		TimeLowerBound:        dn.timeBounds[0].MarshalToBuf(),
-		TimeUpperBound:        dn.timeBounds[1].MarshalToBuf(),
-		AfterPendingTop:       marshalHash(dn.afterPendingTop),
-		ImportedMessagesSlice: marshalHash(dn.importedMessagesSlice),
-		ImportedMessageCount:  marshalBigInt(dn.importedMessageCount),
-		AssertionStub:         dn.assertionStub,
-	}
-}
-
-func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
-	ret := &DisputableNode{
-		prevNodeHash:          unmarshalHash(buf.PrevNodeHash),
-		timeBounds:            [2]RollupTime{buf.TimeLowerBound.Unmarshal(), buf.TimeUpperBound.Unmarshal()},
-		afterPendingTop:       unmarshalHash(buf.AfterPendingTop),
-		importedMessagesSlice: unmarshalHash(buf.ImportedMessagesSlice),
-		importedMessageCount:  unmarshalBigInt(buf.ImportedMessageCount),
-		assertionStub:         buf.AssertionStub,
-	}
-	ret.hash = ret._hash()
-	return ret
-}
-
-func (dn *DisputableNode) _hash() [32]byte {
-	var ret [32]byte
-	retSlice := solsha3.SoliditySHA3(
-		solsha3.Bytes32(unmarshalHash(dn.assertionStub.AfterHash)),
-		solsha3.Bool(dn.assertionStub.DidInboxInsn),
-		solsha3.Uint32(dn.assertionStub.NumSteps),
-		solsha3.Uint64(dn.assertionStub.NumGas),
-		solsha3.Bytes32(unmarshalHash(dn.assertionStub.FirstMessageHash)),
-		solsha3.Bytes32(unmarshalHash(dn.assertionStub.LastMessageHash)),
-		solsha3.Bytes32(unmarshalHash(dn.assertionStub.FirstLogHash)),
-		solsha3.Bytes32(unmarshalHash(dn.assertionStub.LastLogHash)),
-	)
-	copy(ret[:], retSlice)
-	return ret
-}
-
-type Node struct {
-	depth           uint64
-	hash            [32]byte
-	disputable      *DisputableNode
-	machineHash     [32]byte
-	machine         machine.Machine // nil if unknown
-	pendingTopHash  [32]byte
-	prev            *Node
-	linkType        ChildType
-	hasSuccessors   bool
-	successorHashes [MaxChildType + 1][32]byte
-	numStakers      uint64
 }
 
 type ChildType uint
@@ -481,36 +348,6 @@ func (chain *ChainObserver) CreateNodesOnAssert(
 	}
 }
 
-func (node1 *Node) Equals(node2 *Node) bool {
-	return node1.hash == node2.hash
-}
-
-func (node *Node) setHash() {
-	var prevHashArr [32]byte
-	if node.prev != nil {
-		prevHashArr = node.prev.hash
-	}
-	innerHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(node.disputable.hash),
-		solsha3.Int256(node.linkType),
-		solsha3.Bytes32(node.protoStateHash()),
-	)
-	hashSlice := solsha3.SoliditySHA3(
-		solsha3.Bytes32(prevHashArr),
-		solsha3.Bytes32(innerHash),
-	)
-	copy(node.hash[:], hashSlice)
-}
-
-func (node *Node) protoStateHash() [32]byte {
-	retSlice := solsha3.SoliditySHA3(
-		node.machineHash,
-	)
-	var ret [32]byte
-	copy(ret[:], retSlice)
-	return ret
-}
-
 func (chain *ChainObserver) pruneNode(node *Node) {
 	oldNode := node.prev
 	node.prev = nil // so garbage collector doesn't preserve prev anymore
@@ -559,40 +396,6 @@ func (chain *ChainObserver) PruneNodeByHash(nodeHash [32]byte) {
 	chain.pruneNode(chain.nodeFromHash[nodeHash])
 }
 
-func (node *Node) MarshalToBuf() *NodeBuf {
-	if node.machine != nil {
-		//TODO: marshal node.machine
-	}
-	return &NodeBuf{
-		Depth:          node.depth,
-		DisputableNode: node.disputable.MarshalToBuf(),
-		MachineHash:    marshalHash(node.machineHash),
-		PendingTopHash: marshalHash(node.pendingTopHash),
-		LinkType:       uint32(node.linkType),
-		PrevHash:       marshalHash(node.prev.hash),
-	}
-}
-
-func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
-	machineHashArr := unmarshalHash(buf.MachineHash)
-	prevHashArr := unmarshalHash(buf.PrevHash)
-	pthArr := unmarshalHash(buf.PendingTopHash)
-	node := &Node{
-		depth:          buf.Depth,
-		disputable:     buf.DisputableNode.Unmarshal(),
-		machineHash:    machineHashArr,
-		pendingTopHash: pthArr,
-		linkType:       ChildType(buf.LinkType),
-		numStakers:     0,
-	}
-	//TODO: try to retrieve machine from checkpoint DB; might fail
-	node.setHash()
-	chain.nodeFromHash[node.hash] = node
-
-	// can't set up prev and successorHash fields yet; return prevHashArr so caller can do this later
-	return node, prevHashArr
-}
-
 func (chain *ChainObserver) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime RollupTime) {
 	staker := &Staker{
 		stakerAddr,
@@ -617,45 +420,6 @@ func (chain *ChainObserver) RemoveStake(stakerAddr common.Address) {
 	staker.location.numStakers--
 	chain.considerPruningNode(staker.location)
 	chain.stakers.Delete(staker)
-}
-
-func (staker *Staker) MarshalToBuf() *StakerBuf {
-	if staker.challenge == nil {
-		return &StakerBuf{
-			Address:      staker.address.Bytes(),
-			Location:     marshalHash(staker.location.hash),
-			CreationTime: staker.creationTime.MarshalToBuf(),
-			InChallenge:  false,
-		}
-	} else {
-		return &StakerBuf{
-			Address:       staker.address.Bytes(),
-			Location:      marshalHash(staker.location.hash),
-			CreationTime:  staker.creationTime.MarshalToBuf(),
-			InChallenge:   true,
-			ChallengeAddr: staker.challenge.contract.Bytes(),
-		}
-	}
-}
-
-func (buf *StakerBuf) Unmarshal(chain *ChainObserver) *Staker {
-	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	locArr := unmarshalHash(buf.Location)
-	if buf.InChallenge {
-		return &Staker{
-			address:      common.BytesToAddress([]byte(buf.Address)),
-			location:     chain.nodeFromHash[locArr],
-			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    chain.challenges[common.BytesToAddress(buf.ChallengeAddr)],
-		}
-	} else {
-		return &Staker{
-			address:      common.BytesToAddress([]byte(buf.Address)),
-			location:     chain.nodeFromHash[locArr],
-			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    nil,
-		}
-	}
 }
 
 type Challenge struct {
