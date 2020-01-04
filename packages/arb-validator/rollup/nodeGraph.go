@@ -20,6 +20,7 @@ import (
 	"errors"
 	"log"
 	"math/big"
+	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -28,6 +29,7 @@ import (
 )
 
 type NodeGraph struct {
+	*sync.RWMutex
 	latestConfirmed *Node
 	leaves          *LeafSet
 	nodeFromHash    map[[32]byte]*Node

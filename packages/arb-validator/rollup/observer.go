@@ -80,6 +80,8 @@ func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error
 }
 
 func handleNotification(notification ethbridge.Notification, chain *ChainObserver) {
+	chain.Lock()
+	defer chain.Unlock()
 	switch ev := notification.Event.(type) {
 	case ethbridge.StakeCreatedEvent:
 		chain.CreateStake(ev.Staker, ev.NodeHash, RollupTimeFromBlockNum(notification.Header.Number))

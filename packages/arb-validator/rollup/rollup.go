@@ -96,5 +96,7 @@ func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listener
 }
 
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
+	chain.Lock()
+	defer chain.Unlock()
 	//TODO: checkpoint, and take other appropriate actions for new block
 }
