@@ -71,6 +71,7 @@ func NewStakedNodeGraph(machine machine.Machine) *StakedNodeGraph {
 		stakers:    NewStakerSet(),
 		challenges: make(map[common.Address]*Challenge),
 	}
+	ret.startCleanupThread(nil)
 	return ret
 }
 
@@ -103,6 +104,7 @@ func (m *StakedNodeGraphBuf) Unmarshal() *StakedNodeGraph {
 	for _, stakerBuf := range m.Stakers {
 		chain.stakers.Add(stakerBuf.Unmarshal(chain))
 	}
+	chain.startCleanupThread(nil)
 
 	return chain
 }
