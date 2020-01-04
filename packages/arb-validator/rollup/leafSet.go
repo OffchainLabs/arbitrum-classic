@@ -49,3 +49,15 @@ func (ll *LeafSet) forall(f func(*Node)) {
 		f(v)
 	}
 }
+
+func (ll *LeafSet) Equals(ll2 *LeafSet) bool {
+	if len(ll.idx) != len(ll2.idx) {
+		return false
+	}
+	for h, n := range ll.idx {
+		if ll2.idx[h] == nil || !n.Equals(ll2.idx[h]) {
+			return false
+		}
+	}
+	return true
+}

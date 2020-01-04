@@ -41,6 +41,14 @@ func (pii *messageStackItem) skipNext(n uint64) *messageStackItem {
 	return ret
 }
 
+func (msi *messageStackItem) Equals(msi2 *messageStackItem) bool {
+	return msi.hash == msi2.hash &&
+		msi.count.Cmp(msi2.count) == 0 &&
+		value.Eq(msi.message, msi2.message) &&
+		(msi.prev == nil) == (msi2.prev == nil) &&
+		(msi.next == nil) == (msi2.next == nil)
+}
+
 type MessageStack struct {
 	head       *messageStackItem
 	index      map[[32]byte]*messageStackItem
@@ -126,6 +134,19 @@ func (buf *PendingInboxBuf) Unmarshal() *MessageStack {
 		ret.DeliverMessage(val)
 	}
 	return ret
+}
+
+func (ms *MessageStack) Equals(ms2 *MessageStack) bool {
+	if ms.hashOfRest != ms2.hashOfRest || len(ms.index) != len(ms2.index) {
+		return false
+	}
+	for h, m := range ms.index {
+		m2 := ms2.index[h]
+		if m2 == nil || !m.Equals(m2) {
+			return false
+		}
+	}
+	return true
 }
 
 func (pi *MessageStack) GenerateBisection(startItemHash [32]byte, endItemHash [32]byte, segments uint64) ([][32]byte, error) {
@@ -268,4 +289,8 @@ func (pi *PendingInbox) discardItems(item *messageStackItem) {
 		delete(pi.index, item.hash)
 		item = item.prev
 	}
+}
+
+func (pi *PendingInbox) Equals(pi2 *PendingInbox) bool {
+	return pi.MessageStack.Equals(pi2.MessageStack)
 }

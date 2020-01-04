@@ -145,3 +145,13 @@ func GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
 		return proof1, proof2
 	}
 }
+
+func (n *Node) EqualsFull(n2 *Node) bool {
+	return n.Equals(n2) &&
+		n.depth == n2.depth &&
+		n.machineHash == n2.machineHash &&
+		n.linkType == n2.linkType &&
+		n.hasSuccessors == n2.hasSuccessors &&
+		n.successorHashes == n2.successorHashes &&
+		n.numStakers == n2.numStakers
+}

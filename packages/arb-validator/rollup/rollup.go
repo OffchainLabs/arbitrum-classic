@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"bytes"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -45,6 +46,12 @@ func (m *ChainParamsBuf) Unmarshal() ChainParams {
 		gracePeriod:       m.GracePeriod.Unmarshal(),
 		maxExecutionSteps: m.MaxExecutionSteps,
 	}
+}
+
+func (cp ChainParams) Equals(cp2 ChainParams) bool {
+	return cp.stakeRequirement.Cmp(cp2.stakeRequirement) == 0 &&
+		cp.gracePeriod == cp2.gracePeriod &&
+		cp.maxExecutionSteps == cp2.maxExecutionSteps
 }
 
 type ChainObserver struct {
@@ -99,4 +106,12 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	chain.Lock()
 	defer chain.Unlock()
 	//TODO: checkpoint, and take other appropriate actions for new block
+}
+
+func (co *ChainObserver) Equals(co2 *ChainObserver) bool {
+	return co.StakedNodeGraph.Equals(co2.StakedNodeGraph) &&
+		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
+		co.vmParams.Equals(co2.vmParams) &&
+		co.pendingInbox.Equals(co2.pendingInbox) &&
+		bytes.Compare(co.listenForAddress[:], co2.listenForAddress[:]) == 0
 }

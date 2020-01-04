@@ -49,3 +49,7 @@ func (rt RollupTime) MarshalToBuf() *RollupTimeBuf {
 func (rtb *RollupTimeBuf) Unmarshal() RollupTime {
 	return RollupTime{unmarshalBigInt(rtb.Val)}
 }
+
+func (rt RollupTime) Equals(rt2 RollupTime) bool {
+	return rt.val.Cmp(rt2.val) == 0
+}

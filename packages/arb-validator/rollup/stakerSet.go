@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"bytes"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -93,6 +94,43 @@ func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
 			challenge:    nil,
+		}
+	}
+}
+
+func (ss *StakerSet) Equals(ss2 *StakerSet) bool {
+	if len(ss.idx) != len(ss2.idx) {
+		return false
+	}
+	for addr, staker := range ss.idx {
+		staker2 := ss2.idx[addr]
+		if staker2 == nil {
+			return false
+		}
+		if !staker.Equals(staker2) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Staker) Equals(s2 *Staker) bool {
+	if bytes.Compare(s.address[:], s2.address[:]) != 0 {
+		return false
+	}
+	if s.location.hash != s2.location.hash {
+		return false
+	}
+	if s.creationTime.val.Cmp(s2.creationTime.val) != 0 {
+		return false
+	}
+	if s.challenge == nil {
+		return s2.challenge == nil
+	} else {
+		if s2.challenge == nil {
+			return false
+		} else {
+			return bytes.Compare(s.challenge.contract[:], s2.challenge.contract[:]) == 0
 		}
 	}
 }

@@ -59,6 +59,25 @@ func (m *ChallengeBuf) Unmarshal() *Challenge {
 	}
 }
 
+func (chal *Challenge) Equals(chal2 *Challenge) bool {
+	return addressesEqual(chal.contract, chal2.contract) &&
+		addressesEqual(chal.asserter, chal2.asserter) &&
+		addressesEqual(chal.challenger, chal2.challenger) &&
+		chal.kind == chal2.kind
+}
+
+func challengeSetsEqual(s1, s2 map[common.Address]*Challenge) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for addr, chal := range s1 {
+		if s2[addr] == nil || !chal.Equals(s2[addr]) {
+			return false
+		}
+	}
+	return true
+}
+
 type StakedNodeGraph struct {
 	*NodeGraph
 	stakers    *StakerSet
@@ -107,6 +126,12 @@ func (m *StakedNodeGraphBuf) Unmarshal() *StakedNodeGraph {
 	chain.startCleanupThread(nil)
 
 	return chain
+}
+
+func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
+	return s.NodeGraph.Equals(s2.NodeGraph) &&
+		s.stakers.Equals(s2.stakers) &&
+		challengeSetsEqual(s.challenges, s2.challenges)
 }
 
 func (chain *StakedNodeGraph) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime RollupTime) {

@@ -17,6 +17,8 @@
 package rollup
 
 import (
+	"bytes"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 )
@@ -49,4 +51,8 @@ func marshalBigInt(bi *big.Int) *value.BigIntegerBuf {
 
 func unmarshalBigInt(buf *value.BigIntegerBuf) *big.Int {
 	return new(big.Int).SetBytes(buf.Value)
+}
+
+func addressesEqual(a1, a2 common.Address) bool {
+	return bytes.Compare(a1[:], a2[:]) == 0
 }

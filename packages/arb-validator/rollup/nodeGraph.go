@@ -94,6 +94,21 @@ func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
 	return chain
 }
 
+func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
+	if !ng.latestConfirmed.Equals(ng2.latestConfirmed) ||
+		!ng.oldestNode.Equals(ng2.oldestNode) ||
+		!ng.leaves.Equals(ng2.leaves) ||
+		len(ng.nodeFromHash) != len(ng2.nodeFromHash) {
+		return false
+	}
+	for h, n := range ng.nodeFromHash {
+		if ng2.nodeFromHash[h] == nil || !n.Equals(ng2.nodeFromHash[h]) {
+			return false
+		}
+	}
+	return true
+}
+
 func (chain *NodeGraph) CreateInitialNode(machine machine.Machine) {
 	newNode := &Node{
 		depth:          0,
