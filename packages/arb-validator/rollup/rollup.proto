@@ -20,16 +20,20 @@ import "value/value.proto";
 import "protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
+message NodeGraphBuf {
+    repeated NodeBuf nodes = 1;
+    value.HashBuf oldestNodeHash = 2;
+    value.HashBuf latestConfirmedHash = 3;
+    repeated value.HashBuf    leafHashes = 4;
+}
+
 message ChainObserverBuf {
     bytes contractAddress = 1;
     ChainParamsBuf vmParams = 2;
     PendingInboxBuf pendingInbox = 3;
-    repeated NodeBuf nodes = 4;
-    value.HashBuf oldestNodeHash = 5;
-    value.HashBuf latestConfirmedHash = 6;
-    repeated value.HashBuf    leafHashes = 7;
-    repeated StakerBuf stakers = 8;
-    repeated ChallengeBuf challenges = 9;
+    NodeGraphBuf nodeGraph = 4;
+    repeated StakerBuf stakers = 5;
+    repeated ChallengeBuf challenges = 6;
 }
 
 message ChainParamsBuf {
