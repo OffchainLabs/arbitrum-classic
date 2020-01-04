@@ -73,7 +73,7 @@ contract Challenge {
     }
 
     modifier challengerAction {
-        require(State.ChallengerTurn == state , CON_STATE);
+        require(State.ChallengerTurn == state, CON_STATE);
         require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, CON_DEADLINE);
         require(msg.sender == challenger, CON_SENDER);
         _;

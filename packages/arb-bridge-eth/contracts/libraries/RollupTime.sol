@@ -16,14 +16,15 @@
 
 pragma solidity ^0.5.3;
 
+
 library RollupTime {
-	uint256 constant ticksPerBlock = 13000;  // 1 tick ~= 1 millisecond
+    uint256 constant TICKS_PER_BLOCK = 13000;  // 1 tick ~= 1 millisecond
 
-	function ticksToBlocks(uint256 ticks) internal pure returns (uint128) {
-		return uint128(ticks/ticksPerBlock);
-	}
+    function ticksToBlocks(uint256 ticks) internal pure returns (uint128) {
+        return uint128(ticks / TICKS_PER_BLOCK);
+    }
 
-	function blocksToTicks(uint256 blockNum) internal pure returns (uint256) {
-		return uint256(blockNum)*ticksPerBlock;
-	}
+    function blocksToTicks(uint256 blockNum) internal pure returns (uint256) {
+        return uint256(blockNum) * TICKS_PER_BLOCK;
+    }
 }

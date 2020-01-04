@@ -89,6 +89,13 @@ contract Staking is ChallengeType {
         bytes32 nodeHash
     );
 
+    event RollupStakeRefunded(address staker);
+
+    event RollupStakeMoved(
+        address staker,
+        bytes32 toNodeHash
+    );
+
     event RollupChallengeStarted(
         address asserter,
         address challenger,
@@ -101,6 +108,21 @@ contract Staking is ChallengeType {
         address winner,
         address loser
     );
+
+    function resolveChallenge(address payable winner, address loser) external {
+        address sender = msg.sender;
+        bytes32 codehash;
+        assembly { codehash := extcodehash(sender) }
+        address challengeContract1 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
+        address challengeContract2 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
+        require(challengeContract1 == msg.sender || challengeContract2 == msg.sender, RES_CHAL_SENDER);
+        Staker storage winningStaker = getValidStaker(address(winner));
+        winner.transfer(stakeRequirement / 2);
+        winningStaker.inChallenge = false;
+        deleteStaker(loser);
+
+        emit RollupChallengeCompleted(msg.sender, address(winner), loser);
+    }
 
     function startChallenge(
         address payable asserterAddress,
@@ -178,21 +200,6 @@ contract Staking is ChallengeType {
         );
     }
 
-    function resolveChallenge(address payable winner, address loser) external {
-        address sender = msg.sender;
-        bytes32 codehash;
-        assembly { codehash := extcodehash(sender) }
-        address challengeContract1 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
-        address challengeContract2 = challengeFactory.generateCloneAddress(address(winner), loser, codehash);
-        require(challengeContract1 == msg.sender || challengeContract2 == msg.sender, RES_CHAL_SENDER);
-        Staker storage winningStaker = getValidStaker(address(winner));
-        winner.transfer(stakeRequirement / 2);
-        winningStaker.inChallenge = false;
-        deleteStaker(loser);
-
-        emit RollupChallengeCompleted(msg.sender, address(winner), loser);
-    }
-
     function init(
         uint128 _stakeRequirement,
         address _challengeFactoryAddress
@@ -231,9 +238,17 @@ contract Staking is ChallengeType {
         emit RollupStakeCreated(msg.sender, location);
     }
 
-    function deleteStakerWithPayout(address payable _stakerAddress) internal {
+    function updateStakerLocation(address _stakerAddress, bytes32 _location) internal {
+        Staker storage staker = getValidStaker(_stakerAddress);
+        staker.location = _location;
+        emit RollupStakeMoved(_stakerAddress, _location);
+    }
+
+    function refundStaker(address payable _stakerAddress) internal {
         deleteStaker(_stakerAddress);
         _stakerAddress.transfer(stakeRequirement);
+
+        emit RollupStakeRefunded(address(_stakerAddress));
     }
 
     function checkAlignedStakers(

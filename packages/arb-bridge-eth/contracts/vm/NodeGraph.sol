@@ -64,12 +64,12 @@ contract NodeGraph is ChallengeType {
 
     event RollupConfirmed(bytes32 nodeHash);
 
+    event RollupPruned(bytes32 leaf);
+
     IGlobalPendingInbox public globalInbox;
     VM.Params vmParams;
     mapping (bytes32 => bool) private leaves;
     bytes32 private latestConfirmedPriv;
-
-    event RollupPruned(bytes32 leaf);
 
     struct MakeAssertionData {
         bytes32 beforeVMHash;
@@ -121,7 +121,6 @@ contract NodeGraph is ChallengeType {
         emit RollupPruned(_leaf);
     }
 
-
     function init(
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
@@ -136,7 +135,12 @@ contract NodeGraph is ChallengeType {
         globalInbox.registerForInbox();
 
         // VM protocol state
-        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(_vmState, Value.hashEmptyTuple(), Value.hashEmptyTuple(), 0);
+        bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
+            _vmState,
+            Value.hashEmptyTuple(),
+            Value.hashEmptyTuple(),
+            0
+        );
         bytes32 initialNode = RollupUtils.childNodeHash(
             0,
             0,
@@ -151,19 +155,6 @@ contract NodeGraph is ChallengeType {
         vmParams.gracePeriodTicks = _gracePeriodTicks;
         vmParams.arbGasSpeedLimitPerTick = _arbGasSpeedLimitPerTick;
         vmParams.maxExecutionSteps = _maxExecutionSteps;
-    }
-
-    function _computeDeadline(
-        uint256 checkTimeTicks,
-        uint256 gracePeriodTicks,
-        uint256 prevDeadlineTicks
-    ) private view returns(uint256) {
-        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks ;
-        if (deadlineTicks >= prevDeadlineTicks) {
-            return deadlineTicks + checkTimeTicks;
-        } else {
-            return prevDeadlineTicks + checkTimeTicks;
-        }
     }
 
     function makeAssertion(MakeAssertionData memory data) internal returns(bytes32, bytes32) {
@@ -255,6 +246,23 @@ contract NodeGraph is ChallengeType {
 
     function isValidLeaf(bytes32 leaf) internal view returns(bool) {
         return leaves[leaf];
+    }
+
+    function _computeDeadline(
+        uint256 checkTimeTicks,
+        uint256 gracePeriodTicks,
+        uint256 prevDeadlineTicks
+    )
+        private
+        view
+        returns(uint256)
+    {
+        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks;
+        if (deadlineTicks >= prevDeadlineTicks) {
+            return deadlineTicks + checkTimeTicks;
+        } else {
+            return prevDeadlineTicks + checkTimeTicks;
+        }
     }
 
     function generateInvalidPendingTopLeaf(

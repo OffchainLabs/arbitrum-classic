@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "./NodeGraph.sol";
 import "./Staking.sol";
 
+
 contract ArbRollup is NodeGraph, Staking {
 
     // invalid path proof
@@ -33,6 +34,10 @@ contract ArbRollup is NodeGraph, Staking {
     string constant RECOV_PATH_PROOF = "RECOV_PATH_PROOF";
     // Invalid conflict proof
     string constant RECOV_CONFLICT_PROOF = "RECOV_CONFLICT_PROOF";
+    // Proof must be of nonzero length
+    string constant RECVOLD_LENGTH = "RECVOLD_LENGTH";
+    // invalid leaf
+    string constant RECOV_DEADLINE_LEAF = "RECOV_DEADLINE_LEAF";
     // Node is not passed deadline
     string constant RECOV_DEADLINE_TIME = "RECOV_DEADLINE_TIME";
     // Node proof invalid
@@ -43,6 +48,8 @@ contract ArbRollup is NodeGraph, Staking {
 
     // Type is not invalid
     string constant CONF_INV_TYPE = "CONF_INV_TYPE";
+    // Node is not passed deadline
+    string constant CONF_TIME = "CONF_TIME";
     // There must be at least one staker
     string constant CONF_HAS_STAKER = "CONF_HAS_STAKER";
 
@@ -50,13 +57,6 @@ contract ArbRollup is NodeGraph, Staking {
     string constant ONLY_OWNER = "ONLY_OWNER";
 
     address owner;
-
-    event RollupStakeMoved(
-        address staker,
-        bytes32 toNodeHash
-    );
-
-    event RollupStakeRefunded(address staker);
 
     event ConfirmedAssertion(
         bytes32 logsAccHash
@@ -72,7 +72,7 @@ contract ArbRollup is NodeGraph, Staking {
         address _challengeFactoryAddress,
         address _globalInboxAddress
     )
-        internal
+        external
     {
         NodeGraph.init(
             _vmState,
@@ -132,9 +132,7 @@ contract ArbRollup is NodeGraph, Staking {
             MOVE_LOC
         );
 
-        staker.location = newLocation;
-
-        emit RollupStakeMoved(msg.sender, newLocation);
+        updateStakerLocation(msg.sender, newLocation);
     }
 
     function recoverStakeConfirmed(bytes32[] calldata proof) external {
@@ -142,32 +140,30 @@ contract ArbRollup is NodeGraph, Staking {
     }
 
     function recoverStakeOld(address payable stakerAddress, bytes32[] calldata proof) external {
-        require(proof.length > 0);
+        require(proof.length > 0, RECVOLD_LENGTH);
         _recoverStakeConfirmed(stakerAddress, proof);
     }
 
     function recoverStakeMooted(
         address payable stakerAddress,
-        bytes32 disputableHash,
+        bytes32 node,
         bytes32[] calldata latestConfirmedProof,
-        bytes32[] calldata nodeProof
+        bytes32[] calldata stakerProof
     )
         external
     {
         Staker storage staker = getValidStaker(stakerAddress);
         require(
             RollupUtils.isConflict(
-                staker.location,
-                disputableHash,
                 latestConfirmed(),
+                staker.location,
+                node,
                 latestConfirmedProof,
-                nodeProof
+                stakerProof
             ),
             RECOV_CONFLICT_PROOF
         );
-        deleteStakerWithPayout(stakerAddress);
-
-        emit RollupStakeRefunded(stakerAddress);
+        refundStaker(stakerAddress);
     }
 
     // Kick off if successor node whose deadline has passed
@@ -190,12 +186,11 @@ contract ArbRollup is NodeGraph, Staking {
             childType,
             vmProtoStateHash
         );
+        require(isValidLeaf(leaf), RECOV_DEADLINE_LEAF);
         require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
-
         require(RollupUtils.isPath(nextNode, leaf, proof), RECOV_DEADLINE_PROOF);
-        deleteStakerWithPayout(stakerAddress);
 
-        emit RollupStakeRefunded(stakerAddress);
+        refundStaker(stakerAddress);
     }
 
     // fields
@@ -253,8 +248,7 @@ contract ArbRollup is NodeGraph, Staking {
         );
         Staker storage staker = getValidStaker(msg.sender);
         require(RollupUtils.isPath(staker.location, prevLeaf, _stakerProof), MAKE_STAKER_PROOF);
-        staker.location = newValid;
-        emit RollupStakeMoved(msg.sender, newValid);
+        updateStakerLocation(msg.sender, newValid);
     }
 
     function confirmValid(
@@ -330,9 +324,9 @@ contract ArbRollup is NodeGraph, Staking {
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
         Staker storage staker = getValidStaker(stakerAddress);
         require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), RECOV_PATH_PROOF);
-        deleteStakerWithPayout(stakerAddress);
+        refundStaker(stakerAddress);
 
-        emit RollupStakeRefunded(stakerAddress);
+
     }
 
     function _confirmNode(
@@ -353,6 +347,7 @@ contract ArbRollup is NodeGraph, Staking {
             branch,
             vmProtoStateHash
         );
+        require(block.number >= RollupTime.blocksToTicks(deadlineTicks), CONF_TIME);
         uint activeCount = checkAlignedStakers(
             to,
             deadlineTicks,
