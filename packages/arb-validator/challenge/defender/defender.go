@@ -91,7 +91,7 @@ func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.Challenge) (chal
 
 func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.BisectionEvent:
+	case ethbridge.ExecutionBisectionEvent:
 		return waitingBisected{
 			bot.splitDefenders,
 			ev.Deadline,

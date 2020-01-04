@@ -48,9 +48,9 @@ func DefendMessagesClaim(
 	return defendMessages(
 		auth,
 		client,
+		noteChan,
 		contract,
 		pendingInbox,
-		noteChan,
 		beforePending,
 		afterPending,
 		messagesOutput,
@@ -76,9 +76,9 @@ func ChallengeMessagesClaim(
 	return challengeMessages(
 		auth,
 		client,
+		noteChan,
 		contract,
 		pendingInbox,
-		noteChan,
 		beforePending,
 		afterPending,
 	)
@@ -87,9 +87,9 @@ func ChallengeMessagesClaim(
 func defendMessages(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
+	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
 	pendingInbox *PendingInbox,
-	outChan chan ethbridge.Notification,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	messagesOutput ethbridge.MessagesOutput,
@@ -189,9 +189,9 @@ func defendMessages(
 func challengeMessages(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
+	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
 	pendingInbox *PendingInbox,
-	outChan chan ethbridge.Notification,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {

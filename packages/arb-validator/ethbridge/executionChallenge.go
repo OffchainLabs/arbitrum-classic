@@ -20,6 +20,8 @@ import (
 	"context"
 	"strings"
 
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -136,7 +138,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 			if err != nil {
 				return nil, err
 			}
-			return BisectionEvent{
+			return ExecutionBisectionEvent{
 				Assertions:    translateBisectionEvent(bisectChal),
 				DeadlineTicks: bisectChal.DeadlineTicks,
 			}, nil
@@ -230,6 +232,28 @@ func (c *ExecutionChallenge) OneStepProof(
 		return nil, err
 	}
 	return waitForReceipt(auth.Context, c.Client, auth, tx, "OneStepProof")
+}
+
+func (c *ExecutionChallenge) ChooseSegment(
+	auth *bind.TransactOpts,
+	assertionToChallenge uint16,
+	preconditions []*protocol.Precondition,
+	assertions []*protocol.AssertionStub,
+) (*types.Receipt, error) {
+	bisectionHashes := make([][32]byte, 0, len(assertions))
+	for i := range assertions {
+		bisectionHash := [32]byte{}
+		copy(bisectionHash[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(preconditions[i].Hash()),
+			solsha3.Bytes32(assertions[i].Hash()),
+		))
+		bisectionHashes = append(bisectionHashes, bisectionHash)
+	}
+	return c.BisectionChallenge.ChooseSegment(
+		auth,
+		assertionToChallenge,
+		bisectionHashes,
+	)
 }
 
 func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisectedAssertion) []*protocol.AssertionStub {

@@ -122,7 +122,7 @@ type MessagesBisectionEvent struct {
 	DeadlineTicks *big.Int
 }
 
-type BisectionEvent struct {
+type ExecutionBisectionEvent struct {
 	Assertions    []*protocol.AssertionStub
 	DeadlineTicks *big.Int
 }

@@ -103,10 +103,14 @@ func (a *AssertionStub) Hash() [32]byte {
 }
 
 func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
+	nextBeforeInbox := pre.BeforeInbox
+	if a.DidInboxInsn {
+		nextBeforeInbox = value.NewHashBuf(value.NewEmptyTuple().Hash())
+	}
 	return &Precondition{
 		BeforeHash:  a.AfterHash,
 		TimeBounds:  pre.TimeBounds,
-		BeforeInbox: pre.BeforeInbox,
+		BeforeInbox: nextBeforeInbox,
 	}
 }
 

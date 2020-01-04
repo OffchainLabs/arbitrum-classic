@@ -49,7 +49,7 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.Challenge) (ch
 
 func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.BisectionEvent:
+	case ethbridge.ExecutionBisectionEvent:
 		return waitingBisected{ev.Deadline}, nil
 	default:
 		return nil, &bridge.Error{Message: "ERROR: waitingChallenge: VM state got unsynchronized"}

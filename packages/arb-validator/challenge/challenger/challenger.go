@@ -61,7 +61,7 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Challenge) (c
 
 func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.BisectionEvent:
+	case ethbridge.ExecutionBisectionEvent:
 		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
 		if err != nil && bot.challengeEverything {
 			assertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
