@@ -43,8 +43,6 @@ InitialVmValues parseInitialVmValues(const std::string& contract_filename,
                                      std::shared_ptr<TuplePool>& pool) {
     InitialVmValues initial_state;
 
-    initial_state.pool = pool;
-
     auto bufptr = getContractData(contract_filename);
 
     uint32_t version;

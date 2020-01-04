@@ -51,7 +51,7 @@ CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto state = storage->getInitialVmValues();
 
     if (state.valid_state) {
-        MachineState machine_state(state.code, state.staticVal, state.pool);
+        MachineState machine_state(state.code, state.staticVal, storage->pool);
         auto machine = new Machine();
         machine->initializeMachine(machine_state);
 

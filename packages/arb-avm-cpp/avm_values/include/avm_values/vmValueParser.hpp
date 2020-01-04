@@ -24,7 +24,6 @@ struct InitialVmValues {
     bool valid_state;
     std::vector<CodePoint> code;
     value staticVal;
-    std::shared_ptr<TuplePool> pool;
 };
 
 InitialVmValues parseInitialVmValues(const std::string& contract_filename,
