@@ -17,9 +17,11 @@
 package rollup
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"errors"
 	"log"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/common"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -371,26 +373,40 @@ func (chain *ChainObserver) GenerateConflictProof(from, to1, to2 *Node) ([][32]b
 }
 
 func (chain *ChainObserver) CommonAncestor(n1, n2 *Node) *Node {
-	for n1.depth > n2.depth {
-		n1 = n1.prev
-	}
-	for n2.depth > n1.depth {
-		n2 = n2.prev
-	}
-	for n1 != n2 {
-		n1 = n1.prev
-		n2 = n2.prev
-	}
+	n1, _, _ = chain.GetConflictAncestor(n1, n2)
 	return n1
 }
 
-func (chain *ChainObserver) CommonAncestorIfConflict(n1, n2 *Node) *Node { // return common ancestor, or nil if not conflicting
-	ret := chain.CommonAncestor(n1, n2)
-	if ret == n1 || ret == n2 {
-		return nil
-	} else {
-		return ret
+func (chain *ChainObserver) GetConflictAncestor(n1, n2 *Node) (*Node, ChildType, error) {
+	n1Orig := n1
+	n2Orig := n2
+	prevN1 := n1
+	prevN2 := n1
+	for n1.depth > n2.depth {
+		prevN1 = n1
+		n1 = n1.prev
 	}
+	for n2.depth > n1.depth {
+		prevN2 = n2
+		n2 = n2.prev
+	}
+
+	for n1 != n2 {
+		prevN1 = n1
+		prevN2 = n2
+		n1 = n1.prev
+		n2 = n2.prev
+	}
+
+	if n1 == n1Orig || n1 == n2Orig {
+		return n1, 0, errors.New("no conflict")
+	}
+	linkType := prevN1.linkType
+	if prevN2.linkType < linkType {
+		linkType = prevN2.linkType
+	}
+
+	return n1, linkType, nil
 }
 
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
