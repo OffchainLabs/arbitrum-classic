@@ -159,7 +159,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	chain.leaves.Add(newNode)
 
 	// create nodes for invalid branches
-	for kind := MinInvalidChildType; kind <= MaxChildType; kind++ {
+	for kind := ChildType(0); kind <= MaxInvalidChildType; kind++ {
 		newNode := &Node{
 			depth:          1 + prevNode.depth,
 			disputable:     dispNode,

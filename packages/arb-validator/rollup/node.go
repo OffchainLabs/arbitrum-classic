@@ -21,6 +21,19 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
+type ChildType uint
+
+const (
+	InvalidPendingChildType   ChildType = 0
+	InvalidMessagesChildType  ChildType = 1
+	InvalidExecutionChildType ChildType = 2
+	ValidChildType            ChildType = 3
+
+	MinChildType        ChildType = 0
+	MaxInvalidChildType ChildType = 2
+	MaxChildType        ChildType = 3
+)
+
 type Node struct {
 	depth           uint64
 	hash            [32]byte
