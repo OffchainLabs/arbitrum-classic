@@ -16,13 +16,28 @@
 
 package rollup
 
-import "time"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"time"
+)
 
 type pruneParams struct {
 	leaf      *Node
 	ancestor  *Node
 	leafProof [][32]byte
 	ancProof  [][32]byte
+}
+
+type recoverStakeOldParams struct {
+	addr  common.Address
+	proof [][32]byte
+}
+
+type recoverStakeMootedParams struct {
+	addr     common.Address
+	ancestor *Node
+	lcProof  [][32]byte
+	stProof  [][32]byte
 }
 
 func (chain *StakedNodeGraph) startCleanupThread(doneChan chan interface{}) {
@@ -38,10 +53,12 @@ func (chain *StakedNodeGraph) startCleanupThread(doneChan chan interface{}) {
 				return
 			case <-ticker.C:
 				prunesToDo := []pruneParams{}
+				mootedToDo := []recoverStakeMootedParams{}
+				oldToDo := []recoverStakeOldParams{}
 				chain.RLock()
 				chain.leaves.forall(func(leaf *Node) {
 					ancestor, _, err := chain.GetConflictAncestor(leaf, chain.latestConfirmed)
-					if err == nil && ancestor != nil {
+					if err == nil {
 						prunesToDo = append(prunesToDo, pruneParams{
 							leaf,
 							ancestor,
@@ -50,10 +67,34 @@ func (chain *StakedNodeGraph) startCleanupThread(doneChan chan interface{}) {
 						})
 					}
 				})
+				chain.stakers.forall(func(staker *Staker) {
+					ancestor, _, err := chain.GetConflictAncestor(staker, chain.latestConfirmed)
+					if err == nil {
+						mootedToDo = append(mootedToDo, recoverStakeMootedParams{
+							addr:     staker.address,
+							ancestor: ancestor,
+							lcProof:  GeneratePathProof(ancestor, chain.latestConfirmed),
+							stProof:  GeneratePathProof(ancestor, staker.location),
+						})
+					} else if staker.location.depth < chain.latestConfirmed.depth {
+						oldToDo = append(oldToDo, recoverStakeOldParams{
+							addr:  staker.address,
+							proof: GeneratePathProof(staker.location, chain.latestConfirmed),
+						})
+					}
+				})
 				chain.Unlock()
 				for _, prune := range prunesToDo {
 					_ = prune
 					//TODO: call contract's PruneLeaf method with params from prune
+				}
+				for _, moot := range mootedToDo {
+					_ = moot
+					//TODO: call contract's RecoverStakeMooted method with params from moot
+				}
+				for _, old := range oldToDo {
+					_ = old
+					//TODO: call contract's RecoverStakeOld method with params from old
 				}
 			}
 		}
