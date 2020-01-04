@@ -6,9 +6,9 @@ type CheckpointStorage interface {
 	DeleteCheckpoint(checkpointName string) bool
 	GetInitialMachine() (Machine, error)
 	SaveValue(val value.Value) bool
-	GetValue(hashValue value.Value) value.Value
-	DeleteValue(hashValue value.Value) bool
-	SaveData(key string, serializedValue string) bool
-	GetData(key string) string
-	DeleteData(key string) bool
+	GetValue(hashValue [32]byte) value.Value
+	DeleteValue(hashValue [32]byte) bool
+	SaveData(key []byte, serializedValue []byte) bool
+	GetData(key []byte) []byte
+	DeleteData(key []byte) bool
 }

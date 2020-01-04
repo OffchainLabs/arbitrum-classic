@@ -36,14 +36,14 @@ void destroyCheckpointStorage(CCheckpointStorage* storage);
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr);
 int deleteCheckpoint(CCheckpointStorage* storage_ptr,
                      const char* checkpoint_name);
-int saveValue(CCheckpointStorage* storage_ptr, void* value_data);
-ByteSlice getValue(const CCheckpointStorage* storage_ptr, void* hash_key);
-int deleteValue(CCheckpointStorage* storage_ptr, void* hash_key);
+int saveValue(CCheckpointStorage* storage_ptr, const void* value_data);
+ByteSlice getValue(const CCheckpointStorage* storage_ptr, const void* hash_key);
+int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key);
 int saveData(CCheckpointStorage* storage_ptr,
-             const char* key,
-             const char* value);
-char* getData(const CCheckpointStorage* storage_ptr, const char* key);
-int deleteData(CCheckpointStorage* storage_ptr, const char* key);
+             const void* key,
+             const void* data);
+ByteSlice getData(const CCheckpointStorage* storage_ptr, const void* key);
+int deleteData(CCheckpointStorage* storage_ptr, const void* key);
 
 #ifdef __cplusplus
 }

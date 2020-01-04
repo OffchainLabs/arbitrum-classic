@@ -17,6 +17,7 @@
 #include "config.hpp"
 
 #include <avm/machinestate/machinestate.hpp>
+#include <avm_values/vmValueParser.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/machinestatedeleter.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>

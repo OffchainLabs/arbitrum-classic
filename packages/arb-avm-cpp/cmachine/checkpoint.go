@@ -94,17 +94,8 @@ func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetValue(hashValue value.Value) value.Value {
-	var buf bytes.Buffer
-
-	err := value.MarshalValue(hashValue, &buf)
-	if err != nil {
-		panic(err)
-	}
-
-	valData := buf.Bytes()
-
-	cData := C.getValue(checkpoint.c, unsafe.Pointer(&valData[0]))
+func (checkpoint *CheckpointStorage) GetValue(hashValue [32]byte) value.Value {
+	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
 	C.free(unsafe.Pointer(cData.data))
@@ -117,48 +108,29 @@ func (checkpoint *CheckpointStorage) GetValue(hashValue value.Value) value.Value
 	return val
 }
 
-func (checkpoint *CheckpointStorage) DeleteValue(hashValue value.Value) bool {
-	var buf bytes.Buffer
-
-	err := value.MarshalValue(hashValue, &buf)
-	if err != nil {
-		panic(err)
-	}
-
-	valData := buf.Bytes()
-	success := C.deleteValue(checkpoint.c, unsafe.Pointer(&valData[0]))
+func (checkpoint *CheckpointStorage) DeleteValue(hashValue [32]byte) bool {
+	success := C.deleteValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
 
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) SaveData(key string, serializedValue string) bool {
-	cKey := C.CString(key)
-	cValue := C.CString(serializedValue)
-
-	success := C.saveData(checkpoint.c, cKey, cValue)
-
-	C.free(unsafe.Pointer(cKey))
-	C.free(unsafe.Pointer(cValue))
+func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
+	success := C.saveData(checkpoint.c, unsafe.Pointer(&key[0]), unsafe.Pointer(&data[0]))
 
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetData(key string) string {
-	cKey := C.CString(key)
-	cData := C.getData(checkpoint.c, cKey)
+func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
+	cData := C.getData(checkpoint.c, unsafe.Pointer(&key[0]))
+	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
-	dataString := C.GoString(cData)
+	C.free(unsafe.Pointer(cData.data))
 
-	C.free(unsafe.Pointer(cKey))
-
-	return dataString
+	return dataBuff
 }
 
-func (checkpoint *CheckpointStorage) DeleteData(key string) bool {
-	cKey := C.CString(key)
-	success := C.deleteData(checkpoint.c, cKey)
-
-	C.free(unsafe.Pointer(cKey))
+func (checkpoint *CheckpointStorage) DeleteData(key []byte) bool {
+	success := C.deleteData(checkpoint.c, unsafe.Pointer(&key[0]))
 
 	return success == 1
 }
