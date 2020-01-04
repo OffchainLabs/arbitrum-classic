@@ -17,35 +17,27 @@
 package rollup
 
 import (
+	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-)
-
-type ChildType uint
-
-const (
-	InvalidPendingChildType   ChildType = 0
-	InvalidMessagesChildType  ChildType = 1
-	InvalidExecutionChildType ChildType = 2
-	ValidChildType            ChildType = 3
-
-	MinChildType        ChildType = 0
-	MaxInvalidChildType ChildType = 2
-	MaxChildType        ChildType = 3
 )
 
 type ExecutionNodeData struct {
 }
 
 type Node struct {
-	prev          *Node
-	deadlineTicks structures.RollupTime
-	disputable    *structures.DisputableNode
-	linkType      ChildType
-	vmProtoData   *structures.VMProtoData
+	prev        *Node
+	deadline    structures.TimeTicks
+	disputable  *structures.DisputableNode
+	linkType    structures.ChildType
+	vmProtoData *structures.VMProtoData
 
 	machine   machine.Machine // nil if unknown
 	depth     uint64
@@ -53,30 +45,28 @@ type Node struct {
 	hash      [32]byte
 
 	hasSuccessors   bool
-	successorHashes [MaxChildType + 1][32]byte
+	successorHashes [structures.MaxChildType + 1][32]byte
 	numStakers      uint64
 }
 
-func NewNode(
-	disputable *structures.DisputableNode,
-	linkType ChildType,
-	vmProtoData *structures.VMProtoData,
+func NewInitialNode(
 	machine machine.Machine,
-	depth uint64,
 ) *Node {
 	ret := &Node{
-		prev:            nil,
-		deadlineTicks:   structures.RollupTime{},
-		disputable:      disputable,
-		linkType:        linkType,
-		vmProtoData:     vmProtoData,
-		machine:         machine,
-		depth:           depth,
-		hasSuccessors:   false,
-		successorHashes: [4][32]byte{},
-		numStakers:      0,
+		prev:       nil,
+		deadline:   structures.TimeTicks{big.NewInt(0)},
+		disputable: nil,
+		linkType:   0,
+		vmProtoData: structures.NewVMProtoData(
+			machine.Hash(),
+			value.NewEmptyTuple().Hash(),
+			value.NewEmptyTuple().Hash(),
+			big.NewInt(0),
+		),
+		machine: machine,
+		depth:   0,
 	}
-	ret.setHash()
+	ret.setHash([32]byte{})
 	return ret
 }
 
@@ -84,36 +74,63 @@ func NewNodeFromValidPrev(
 	prev *Node,
 	disputable *structures.DisputableNode,
 	machine machine.Machine,
+	params structures.ChainParams,
+	currentTime *protocol.TimeBlocks,
 ) *Node {
-	ret := &Node{
-		prev:          prev,
-		deadlineTicks: structures.RollupTime{},
-		disputable:    disputable,
-		linkType:      ValidChildType,
-		vmProtoData:   disputable.ValidAfterVMProtoData(prev.vmProtoData),
-		machine:       machine,
-		depth:         prev.depth + 1,
-	}
-	ret.setHash()
-	prev.successorHashes[ValidChildType] = ret.hash
-	return ret
+	return NewNodeFromPrev(
+		prev,
+		disputable,
+		structures.ValidChildType,
+		params,
+		currentTime,
+		disputable.ValidAfterVMProtoData(prev.vmProtoData),
+		machine,
+	)
 }
 
 func NewNodeFromInvalidPrev(
 	prev *Node,
 	disputable *structures.DisputableNode,
-	kind ChildType,
+	kind structures.ChildType,
+	params structures.ChainParams,
+	currentTime *protocol.TimeBlocks,
+) *Node {
+	return NewNodeFromPrev(
+		prev,
+		disputable,
+		kind,
+		params,
+		currentTime,
+		prev.vmProtoData,
+		prev.machine,
+	)
+}
+
+func NewNodeFromPrev(
+	prev *Node,
+	disputable *structures.DisputableNode,
+	kind structures.ChildType,
+	params structures.ChainParams,
+	currentTime *protocol.TimeBlocks,
+	vmProtoData *structures.VMProtoData,
+	machine machine.Machine,
 ) *Node {
 	ret := &Node{
-		prev:          prev,
-		deadlineTicks: structures.RollupTime{},
-		disputable:    disputable,
-		linkType:      kind,
-		vmProtoData:   prev.vmProtoData,
-		machine:       prev.machine,
-		depth:         prev.depth + 1,
+		prev:        prev,
+		deadline:    structures.TimeTicks{},
+		disputable:  disputable,
+		linkType:    kind,
+		vmProtoData: vmProtoData,
+		machine:     machine,
+		depth:       prev.depth + 1,
 	}
-	ret.setHash()
+	ret.setHash(disputable.NodeDataHash(
+		params,
+		vmProtoData,
+		prev.deadline,
+		kind,
+		currentTime,
+	))
 	prev.successorHashes[kind] = ret.hash
 	return ret
 }
@@ -122,15 +139,17 @@ func (node1 *Node) Equals(node2 *Node) bool {
 	return node1.hash == node2.hash
 }
 
-func (node *Node) setHash() {
+func (node *Node) setHash(
+	nodeDataHash [32]byte,
+) {
 	var prevHashArr [32]byte
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
 	innerHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(node.vmProtoData.Hash()),
-		solsha3.Int256(node.deadlineTicks),
-		solsha3.Bytes32(node.disputable.Hash()),
+		solsha3.Int256(node.deadline),
+		solsha3.Bytes32(nodeDataHash),
 		solsha3.Int256(node.linkType),
 	)
 	hashSlice := solsha3.SoliditySHA3(
@@ -151,18 +170,25 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 		VmProtoData:    node.vmProtoData.MarshalToBuf(),
 		LinkType:       uint32(node.linkType),
 		PrevHash:       utils.MarshalHash(node.prev.hash),
+		InnerHash:      utils.MarshalHash(node.innerHash),
+		Hash:           utils.MarshalHash(node.hash),
 	}
 }
 
 func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 	prevHashArr := utils.UnmarshalHash(buf.PrevHash)
-	node := NewNode(
-		buf.DisputableNode.Unmarshal(),
-		ChildType(buf.LinkType),
-		buf.VmProtoData.Unmarshal(),
-		nil,
-		buf.Depth,
-	)
+	node := &Node{
+		prev:        nil,
+		deadline:    structures.TimeTicks{big.NewInt(0)},
+		disputable:  buf.DisputableNode.Unmarshal(),
+		linkType:    structures.ChildType(buf.LinkType),
+		vmProtoData: buf.VmProtoData.Unmarshal(),
+		machine:     nil,
+		depth:       buf.Depth,
+		innerHash:   utils.UnmarshalHash(buf.InnerHash),
+		hash:        utils.UnmarshalHash(buf.Hash),
+	}
+
 	//TODO: try to retrieve machine from checkpoint DB; might fail
 	chain.nodeFromHash[node.hash] = node
 

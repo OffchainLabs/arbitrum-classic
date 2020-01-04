@@ -79,8 +79,8 @@ void machineDeliverMessages(CMachine* m, void* data);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     uint64_t timeboundStart,
-                                     uint64_t timeboundEnd);
+                                     void* timeboundStart,
+                                     void* timeboundEnd);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 

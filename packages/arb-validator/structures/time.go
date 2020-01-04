@@ -19,10 +19,12 @@ package structures
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 )
 
-type RollupTime struct {
+type TimeTicks struct {
 	Val *big.Int
 }
 
@@ -32,28 +34,28 @@ func init() {
 	_timeConversionFactor = big.NewInt(13000)
 }
 
-func RollupTimeFromBlockNum(blockNum *big.Int) RollupTime {
-	return RollupTime{new(big.Int).Mul(_timeConversionFactor, blockNum)}
+func TimeFromBlockNum(blockNum *protocol.TimeBlocks) TimeTicks {
+	return TimeTicks{new(big.Int).Mul(_timeConversionFactor, blockNum.AsInt())}
 }
 
-func (rt RollupTime) Add(rt2 RollupTime) RollupTime {
-	return RollupTime{new(big.Int).Add(rt.Val, rt2.Val)}
+func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
+	return TimeTicks{new(big.Int).Add(rt.Val, rt2.Val)}
 }
 
-func (rt RollupTime) Cmp(rt2 RollupTime) int {
+func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 	return rt.Val.Cmp(rt2.Val)
 }
 
-func (rt RollupTime) MarshalToBuf() *RollupTimeBuf {
-	return &RollupTimeBuf{
+func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
+	return &TimeTicksBuf{
 		Val: utils.MarshalBigInt(rt.Val),
 	}
 }
 
-func (rtb *RollupTimeBuf) Unmarshal() RollupTime {
-	return RollupTime{utils.UnmarshalBigInt(rtb.Val)}
+func (rtb *TimeTicksBuf) Unmarshal() TimeTicks {
+	return TimeTicks{utils.UnmarshalBigInt(rtb.Val)}
 }
 
-func (rt RollupTime) Equals(rt2 RollupTime) bool {
+func (rt TimeTicks) Equals(rt2 TimeTicks) bool {
 	return rt.Val.Cmp(rt2.Val) == 0
 }

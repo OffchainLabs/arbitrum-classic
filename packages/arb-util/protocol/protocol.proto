@@ -18,14 +18,18 @@ message MessageBuf {
     AddressBuf sender = 4;
 }
 
-message TimeBounds {
-    value.BigIntegerBuf startTime = 1;
-    value.BigIntegerBuf endTime = 2;
+message TimeBlocksBuf {
+    value.BigIntegerBuf val = 1;
+}
+
+message TimeBoundsBlocks {
+    TimeBlocksBuf start = 1;
+    TimeBlocksBuf end = 2;
 }
 
 message Precondition {
     value.HashBuf beforeHash = 1;
-    TimeBounds timeBounds = 2;
+    TimeBoundsBlocks timeBounds = 2;
     value.HashBuf beforeInbox = 3;
 }
 

@@ -83,7 +83,12 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 	return ad.initState.MarshalForProof()
 }
 
-func ChooseAssertionToChallenge(m Machine, assertions []*protocol.ExecutionAssertionStub, timeBounds *protocol.TimeBounds, totalSteps uint32) (uint16, Machine, error) {
+func ChooseAssertionToChallenge(
+	m Machine,
+	assertions []*protocol.ExecutionAssertionStub,
+	timeBounds *protocol.TimeBoundsBlocks,
+	totalSteps uint32,
+) (uint16, Machine, error) {
 	assertionCount := uint32(len(assertions))
 	for i := range assertions {
 		steps := uint32(0)

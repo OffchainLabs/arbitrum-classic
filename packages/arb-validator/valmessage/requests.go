@@ -26,7 +26,7 @@ type UnanimousRequestData struct {
 	BeforeHash  [32]byte
 	BeforeInbox [32]byte
 	SequenceNum uint64
-	TimeBounds  *protocol.TimeBounds
+	TimeBounds  *protocol.TimeBoundsBlocks
 }
 
 func (r UnanimousRequestData) Hash() [32]byte {
@@ -35,8 +35,8 @@ func (r UnanimousRequestData) Hash() [32]byte {
 		solsha3.Bytes32(r.BeforeHash),
 		solsha3.Bytes32(r.BeforeInbox),
 		solsha3.Uint64(r.SequenceNum),
-		solsha3.Uint64(r.TimeBounds.StartTime),
-		solsha3.Uint64(r.TimeBounds.EndTime),
+		solsha3.Uint128(r.TimeBounds.Start.Unmarshal().AsInt()),
+		solsha3.Uint128(r.TimeBounds.End.Unmarshal().AsInt()),
 	))
 	return ret
 }

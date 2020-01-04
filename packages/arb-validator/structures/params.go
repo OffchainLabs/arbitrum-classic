@@ -19,13 +19,14 @@ package structures
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 )
 
 type ChainParams struct {
-	stakeRequirement  *big.Int
-	gracePeriod       RollupTime
-	maxExecutionSteps uint32
+	stakeRequirement        *big.Int
+	gracePeriod             TimeTicks
+	maxExecutionSteps       uint32
+	arbGasSpeedLimitPerTick uint64
 }
 
 func (params ChainParams) MarshalToBuf() *ChainParamsBuf {

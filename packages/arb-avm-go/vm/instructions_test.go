@@ -45,7 +45,7 @@ func TestMachineAdd(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	m.ExecuteAssertion(80000, protocol.NewTimeBounds(0, 100000))
+	m.ExecuteAssertion(80000, protocol.NewTimeBoundsBlocks(0, 100000))
 }
 
 func runInstOpNoFault(m *Machine, oper value.Operation) (bool, string) {
@@ -767,7 +767,7 @@ func TestInbox(t *testing.T) {
 	knowninbox.SendMessage(msg)
 	knowninbox.DeliverMessages()
 
-	NewMachineAssertionContext(m, protocol.NewTimeBounds(0, 100000))
+	NewMachineAssertionContext(m, protocol.NewTimeBoundsBlocks(0, 100000))
 
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
@@ -1493,7 +1493,7 @@ func TestLog(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 	m.Stack().Push(value.NewInt64Value(5))
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(0, 1000))
 	// verify known and unknown match
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
@@ -1531,7 +1531,7 @@ func TestSendFungible(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// send token 15 value=7 to dest 4
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBounds(0, 1000))
+	ad := m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(0, 1000))
 	// verify known and unknown match
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
@@ -1559,7 +1559,7 @@ func TestGettime(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 
-	m.ExecuteAssertion(10, protocol.NewTimeBounds(5, 10))
+	m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(5, 10))
 
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))

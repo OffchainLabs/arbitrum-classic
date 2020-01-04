@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -30,7 +30,7 @@ import (
 type Staker struct {
 	address      common.Address
 	location     *Node
-	creationTime structures.RollupTime
+	creationTime structures.TimeTicks
 	challenge    *Challenge
 }
 

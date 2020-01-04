@@ -42,8 +42,8 @@ class Machine {
     bool deserialize(char* data) { return machine_state.deserialize(data); }
 
     Assertion run(uint64_t stepCount,
-                  uint64_t timeBoundStart,
-                  uint64_t timeBoundEnd);
+                  uint256_t timeBoundStart,
+                  uint256_t timeBoundEnd);
 
     Status currentStatus() { return machine_state.state; }
     BlockReason lastBlockReason() { return machine_state.blockReason; }

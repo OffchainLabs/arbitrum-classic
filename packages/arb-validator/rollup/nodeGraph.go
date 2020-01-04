@@ -19,15 +19,15 @@ package rollup
 import (
 	"errors"
 	"log"
-	"math/big"
 	"sync"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type NodeGraph struct {
@@ -36,20 +36,23 @@ type NodeGraph struct {
 	leaves          *LeafSet
 	nodeFromHash    map[[32]byte]*Node
 	oldestNode      *Node
+	params          structures.ChainParams
 }
 
-func NewNodeGraph(machine machine.Machine) *NodeGraph {
+func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeGraph {
 	ret := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
 		nodeFromHash:    make(map[[32]byte]*Node),
 		oldestNode:      nil,
+		params:          params,
 	}
 	ret.CreateInitialNode(machine)
 	return ret
 }
 
 func (chain *NodeGraph) MarshalToBuf() *NodeGraphBuf {
+	// TODO: Without topographic ordering, deserialization is difficult
 	var allNodes []*NodeBuf
 	for _, v := range chain.nodeFromHash {
 		allNodes = append(allNodes, v.MarshalToBuf())
@@ -63,6 +66,7 @@ func (chain *NodeGraph) MarshalToBuf() *NodeGraphBuf {
 		OldestNodeHash:      utils.MarshalHash(chain.oldestNode.hash),
 		LatestConfirmedHash: utils.MarshalHash(chain.latestConfirmed.hash),
 		LeafHashes:          utils.MarshalSliceOfHashes(leafHashes),
+		Params:              chain.params.MarshalToBuf(),
 	}
 }
 
@@ -72,6 +76,7 @@ func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
 		leaves:          NewLeafSet(),
 		nodeFromHash:    make(map[[32]byte]*Node),
 		oldestNode:      nil,
+		params:          buf.Params.Unmarshal(),
 	}
 
 	for _, nodeBuf := range buf.Nodes {
@@ -79,6 +84,7 @@ func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
 		node := chain.nodeFromHash[nodeHash]
 		prevHash := utils.UnmarshalHash(nodeBuf.PrevHash)
 		if prevHash != zeroBytes32 {
+			// TODO: This assumes that prev node has already be loaded
 			prev := chain.nodeFromHash[prevHash]
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
@@ -100,7 +106,8 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 	if !ng.latestConfirmed.Equals(ng2.latestConfirmed) ||
 		!ng.oldestNode.Equals(ng2.oldestNode) ||
 		!ng.leaves.Equals(ng2.leaves) ||
-		len(ng.nodeFromHash) != len(ng2.nodeFromHash) {
+		len(ng.nodeFromHash) != len(ng2.nodeFromHash) ||
+		!ng.params.Equals(ng.params) {
 		return false
 	}
 	for h, n := range ng.nodeFromHash {
@@ -112,18 +119,7 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 }
 
 func (chain *NodeGraph) CreateInitialNode(machine machine.Machine) {
-	newNode := NewNode(
-		nil,
-		ValidChildType,
-		structures.NewVMProtoData(
-			machine.Hash(),
-			value.NewEmptyTuple().Hash(),
-			value.NewEmptyTuple().Hash(),
-			big.NewInt(0),
-		),
-		machine,
-		0,
-	)
+	newNode := NewInitialNode(machine)
 	chain.leaves.Add(newNode)
 	chain.latestConfirmed = newNode
 }
@@ -142,7 +138,7 @@ func (chain *NodeGraph) considerPruningNode(node *Node) {
 	if node.numStakers > 0 {
 		return
 	}
-	for kind := MinChildType; kind <= MaxChildType; kind++ {
+	for kind := structures.MinChildType; kind <= structures.MaxChildType; kind++ {
 		if node.successorHashes[kind] != zeroBytes32 {
 			return
 		}
@@ -154,6 +150,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *structures.DisputableNode,
 	afterMachine machine.Machine,
+	currentTime *protocol.TimeBlocks,
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
@@ -166,24 +163,12 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		afterMachine = afterMachine.Clone()
 	}
 
-	chain.leaves.Add(NewNodeFromValidPrev(prevNode, dispNode, afterMachine))
+	chain.leaves.Add(NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime))
 
 	// create nodes for invalid branches
-	for kind := ChildType(0); kind <= MaxInvalidChildType; kind++ {
-		chain.leaves.Add(NewNodeFromInvalidPrev(prevNode, dispNode, kind))
+	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
+		chain.leaves.Add(NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime))
 	}
-}
-
-func (chain *NodeGraph) notifyAssert(
-	prevLeafHash [32]byte,
-	params *structures.AssertionParams,
-	claim *structures.AssertionClaim,
-) {
-	disputableNode := structures.NewDisputableNode(
-		params,
-		claim,
-	)
-	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, nil)
 }
 
 func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {
@@ -195,7 +180,7 @@ func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {
 			return
 		}
 		var successor *Node
-		for kind := MinChildType; kind <= MaxChildType; kind++ {
+		for kind := structures.MinChildType; kind <= structures.MaxChildType; kind++ {
 			if node.successorHashes[kind] != zeroBytes32 {
 				if successor != nil {
 					return
@@ -217,7 +202,7 @@ func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 	return n1
 }
 
-func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, ChildType, error) {
+func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, structures.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1

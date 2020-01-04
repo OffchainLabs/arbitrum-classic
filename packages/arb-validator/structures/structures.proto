@@ -20,9 +20,13 @@ import "value/value.proto";
 import "protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
 
+message TimeTicksBuf {
+    value.BigIntegerBuf val = 1;
+}
+
 message ChainParamsBuf {
     value.BigIntegerBuf stakeRequirement = 1;
-    RollupTimeBuf gracePeriod = 2;
+    TimeTicksBuf gracePeriod = 2;
     uint32 maxExecutionSteps = 3;
 }
 
@@ -35,9 +39,8 @@ message VMProtoDataBuf {
 
 message AssertionParamsBuf {
     uint32 numSteps = 1;
-    RollupTimeBuf timeLowerBound = 2;
-    RollupTimeBuf timeUpperBound = 3;
-    value.BigIntegerBuf importedMessageCount = 4;
+    protocol.TimeBoundsBlocks timeBounds = 2;
+    value.BigIntegerBuf importedMessageCount = 3;
 }
 
 message AssertionClaimBuf {
@@ -49,11 +52,6 @@ message AssertionClaimBuf {
 message DisputableNodeBuf {
     AssertionParamsBuf assertionParams = 1;
     AssertionClaimBuf assertionClaim = 2;
+    value.HashBuf maxPendingTop = 3;
+    value.BigIntegerBuf maxPendingCount = 4;
 }
-
-message RollupTimeBuf {
-    value.BigIntegerBuf val = 1;
-}
-
-
-

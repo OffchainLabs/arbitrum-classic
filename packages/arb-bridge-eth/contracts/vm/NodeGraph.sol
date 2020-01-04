@@ -52,9 +52,10 @@ contract NodeGraph is ChallengeType {
     //   afterVMHash
     //   messagesAccHash
     //   logsAccHash
+    //   maxPendingTop
 
     event RollupAsserted(
-        bytes32[6] fields,
+        bytes32[7] fields,
         uint32 numSteps,
         uint128[2] timeBoundsBlocks,
         uint256 importedMessageCount,
@@ -224,7 +225,8 @@ contract NodeGraph is ChallengeType {
                 data.importedMessagesSlice,
                 data.afterVMHash,
                 data.messagesAccHash,
-                data.logsAccHash
+                data.logsAccHash,
+                pendingValue
             ],
             data.numSteps,
             data.timeBoundsBlocks,

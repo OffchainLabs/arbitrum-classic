@@ -19,8 +19,9 @@ package rollup
 import (
 	"log"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type ChainEventListener interface {
@@ -49,7 +50,7 @@ func (lis *ChanCEListener) Notify(ev interface{}) {
 type StakeCreatedChainEvent struct {
 	staker       common.Address
 	nodeHash     [32]byte
-	creationTime structures.RollupTime
+	creationTime structures.TimeTicks
 }
 
 type StakeMovedChainEvent struct {

@@ -33,6 +33,8 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -133,20 +135,29 @@ func (m *Machine) DeliverMessages(messages value.TupleValue) {
 	C.machineDeliverMessages(m.c, unsafe.Pointer(&msgData[0]))
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) (*protocol.ExecutionAssertion, uint32) {
-	startTime, err := value.Uint64FromBuf(timeBounds.StartTime)
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+	startTime := utils.UnmarshalBigInt(timeBounds.Start.Val)
+	endTime := utils.UnmarshalBigInt(timeBounds.End.Val)
+
+	var startTimeBuf bytes.Buffer
+	err := value.NewIntValue(startTime).Marshal(&startTimeBuf)
 	if err != nil {
 		log.Fatal(err)
 	}
-	endTime, err := value.Uint64FromBuf(timeBounds.EndTime)
+
+	var endTimeBuf bytes.Buffer
+	err = value.NewIntValue(endTime).Marshal(&endTimeBuf)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	startTimeData := startTimeBuf.Bytes()
+	endTimeData := endTimeBuf.Bytes()
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
-		C.uint64_t(startTime),
-		C.uint64_t(endTime),
+		unsafe.Pointer(&startTimeData[0]),
+		unsafe.Pointer(&endTimeData[0]),
 	)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)

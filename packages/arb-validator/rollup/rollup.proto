@@ -22,11 +22,12 @@ option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rol
 
 message NodeBuf {
     uint64 depth = 1;
-    value.HashBuf hash = 2;
-    structures.DisputableNodeBuf disputableNode = 3;
-    structures.VMProtoDataBuf vmProtoData = 4;
-    uint32 linkType = 5;
-    value.HashBuf prevHash = 6;
+    structures.DisputableNodeBuf disputableNode = 2;
+    structures.VMProtoDataBuf vmProtoData = 3;
+    uint32 linkType = 4;
+    value.HashBuf prevHash = 5;
+    value.HashBuf innerHash = 6;
+    value.HashBuf hash = 7;
 }
 
 message NodeGraphBuf {
@@ -34,6 +35,7 @@ message NodeGraphBuf {
     value.HashBuf oldestNodeHash = 2;
     value.HashBuf latestConfirmedHash = 3;
     repeated value.HashBuf    leafHashes = 4;
+    structures.ChainParamsBuf params = 5;
 }
 
 message StakedNodeGraphBuf {
@@ -45,14 +47,13 @@ message StakedNodeGraphBuf {
 message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
     bytes contractAddress = 2;
-    structures.ChainParamsBuf vmParams = 3;
-    PendingInboxBuf pendingInbox = 4;
+    PendingInboxBuf pendingInbox = 3;
 }
 
 message StakerBuf {
     bytes address = 1;
     value.HashBuf location = 2;
-    structures.RollupTimeBuf creationTime = 3;
+    structures.TimeTicksBuf creationTime = 3;
     bytes challengeAddr = 4;
 }
 

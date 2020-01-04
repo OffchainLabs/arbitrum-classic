@@ -20,10 +20,11 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
@@ -87,9 +88,9 @@ type StakedNodeGraph struct {
 	challenges map[common.Address]*Challenge
 }
 
-func NewStakedNodeGraph(machine machine.Machine) *StakedNodeGraph {
+func NewStakedNodeGraph(machine machine.Machine, params structures.ChainParams) *StakedNodeGraph {
 	ret := &StakedNodeGraph{
-		NodeGraph:  NewNodeGraph(machine),
+		NodeGraph:  NewNodeGraph(machine, params),
 		stakers:    NewStakerSet(),
 		challenges: make(map[common.Address]*Challenge),
 	}
@@ -137,7 +138,7 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 		challengeSetsEqual(s.challenges, s2.challenges)
 }
 
-func (chain *StakedNodeGraph) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime structures.RollupTime) {
+func (chain *StakedNodeGraph) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime structures.TimeTicks) {
 	chain.stakers.Add(&Staker{
 		stakerAddr,
 		chain.nodeFromHash[nodeHash],
@@ -190,7 +191,7 @@ func (sa SortableAddressList) Swap(i, j int) {
 
 func (sng *StakedNodeGraph) generateAlignedStakersProof(
 	confirmingNode *Node,
-	deadline structures.RollupTime,
+	deadline structures.TimeTicks,
 ) (stakerAddrs []common.Address, proof [][32]byte, offsets []uint64) {
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)

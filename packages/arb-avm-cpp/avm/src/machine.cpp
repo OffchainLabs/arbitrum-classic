@@ -65,8 +65,8 @@ void Machine::deliverMessages(Tuple messages) {
 }
 
 Assertion Machine::run(uint64_t stepCount,
-                       uint64_t timeBoundStart,
-                       uint64_t timeBoundEnd) {
+                       uint256_t timeBoundStart,
+                       uint256_t timeBoundEnd) {
     machine_state.context =
         AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
     machine_state.blockReason = NotBlocked{};

@@ -22,7 +22,7 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )

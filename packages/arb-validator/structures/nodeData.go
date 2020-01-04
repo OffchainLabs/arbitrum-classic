@@ -19,7 +19,7 @@ package structures
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -28,6 +28,19 @@ import (
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
+
+type ChildType uint
+
+const (
+	InvalidPendingChildType   ChildType = 0
+	InvalidMessagesChildType  ChildType = 1
+	InvalidExecutionChildType ChildType = 2
+	ValidChildType            ChildType = 3
+
+	MinChildType        ChildType = 0
+	MaxInvalidChildType ChildType = 2
+	MaxChildType        ChildType = 3
+)
 
 type VMProtoData struct {
 	MachineHash  [32]byte
@@ -88,15 +101,14 @@ func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 
 type AssertionParams struct {
 	NumSteps             uint32
-	TimeBoundsBlocks     [2]RollupTime
+	TimeBounds           *protocol.TimeBoundsBlocks
 	ImportedMessageCount *big.Int
 }
 
 func (dn *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 	return &AssertionParamsBuf{
 		NumSteps:             dn.NumSteps,
-		TimeLowerBound:       dn.TimeBoundsBlocks[0].MarshalToBuf(),
-		TimeUpperBound:       dn.TimeBoundsBlocks[1].MarshalToBuf(),
+		TimeBoundsBlocks:     dn.TimeBounds,
 		ImportedMessageCount: utils.MarshalBigInt(dn.ImportedMessageCount),
 	}
 }
@@ -104,7 +116,7 @@ func (dn *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             m.NumSteps,
-		TimeBoundsBlocks:     [2]RollupTime{m.TimeLowerBound.Unmarshal(), m.TimeUpperBound.Unmarshal()},
+		TimeBounds:           m.TimeBoundsBlocks,
 		ImportedMessageCount: utils.UnmarshalBigInt(m.ImportedMessageCount),
 	}
 }
@@ -134,16 +146,22 @@ func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 type DisputableNode struct {
 	assertionParams *AssertionParams
 	assertionClaim  *AssertionClaim
+	maxPendingTop   [32]byte
+	maxPendingCount *big.Int
 	hash            [32]byte
 }
 
 func NewDisputableNode(
 	assertionParams *AssertionParams,
 	assertionClaim *AssertionClaim,
+	maxPendingTop [32]byte,
+	maxPendingCount *big.Int,
 ) *DisputableNode {
 	ret := &DisputableNode{
 		assertionParams: assertionParams,
 		assertionClaim:  assertionClaim,
+		maxPendingTop:   maxPendingTop,
+		maxPendingCount: maxPendingCount,
 	}
 	ret.hash = ret._hash()
 	return ret
@@ -152,6 +170,9 @@ func NewDisputableNode(
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
 		AssertionParams: dn.assertionParams.MarshalToBuf(),
+		AssertionClaim:  dn.assertionClaim.MarshalToBuf(),
+		MaxPendingTop:   utils.MarshalHash(dn.maxPendingTop),
+		MaxPendingCount: utils.MarshalBigInt(dn.maxPendingCount),
 	}
 }
 
@@ -159,11 +180,84 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	return NewDisputableNode(
 		buf.AssertionParams.Unmarshal(),
 		buf.AssertionClaim.Unmarshal(),
+		utils.UnmarshalHash(buf.MaxPendingTop),
+		utils.UnmarshalBigInt(buf.MaxPendingCount),
 	)
 }
 
+func (dn *DisputableNode) NodeDataHash(
+	params ChainParams,
+	vmProtoData *VMProtoData,
+	prevDeadline TimeTicks,
+	childType ChildType,
+	currentTime *protocol.TimeBlocks,
+) [32]byte {
+	ret := [32]byte{}
+	if dn == nil {
+		return ret
+	}
+	switch childType {
+	case InvalidPendingChildType:
+		pendingLeft := new(big.Int).Add(vmProtoData.PendingCount, dn.assertionParams.ImportedMessageCount)
+		pendingLeft = pendingLeft.Sub(dn.maxPendingCount, pendingLeft)
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(solsha3.SoliditySHA3(
+				solsha3.Bytes32(dn.assertionClaim.AfterPendingTop),
+				solsha3.Bytes32(dn.maxPendingTop),
+				solsha3.Uint256(pendingLeft),
+			)),
+			solsha3.Uint256(params.gracePeriod.Add(TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
+		))
+	case InvalidMessagesChildType:
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(solsha3.SoliditySHA3(
+				solsha3.Bytes32(vmProtoData.PendingTop),
+				solsha3.Bytes32(dn.assertionClaim.AfterPendingTop),
+				solsha3.Bytes32([32]byte{}),
+				solsha3.Bytes32(dn.assertionClaim.ImportedMessagesSlice),
+				solsha3.Uint256(dn.assertionParams.ImportedMessageCount),
+			)),
+			solsha3.Uint256(params.gracePeriod.Add(TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
+		))
+	case InvalidExecutionChildType:
+		beforeInbox := protocol.AddMessagesHashToInboxHash(vmProtoData.InboxHash, dn.assertionClaim.ImportedMessagesSlice)
+		checkTimeRaw := dn.assertionClaim.AssertionStub.NumGas / params.arbGasSpeedLimitPerTick
+		checkTime := TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
+		deadlineTicks := TimeFromBlockNum(currentTime).Add(params.gracePeriod)
+		if deadlineTicks.Cmp(prevDeadline) >= 0 {
+			deadlineTicks = deadlineTicks.Add(checkTime)
+		} else {
+			deadlineTicks = prevDeadline.Add(checkTime)
+		}
+		copy(ret[:], solsha3.SoliditySHA3(
+
+			//if (deadlineTicks >= prevDeadlineTicks) {
+			//	return deadlineTicks + checkTimeTicks;
+			//} else {
+			//	return prevDeadlineTicks + checkTimeTicks;
+			//}
+			solsha3.Bytes32(solsha3.SoliditySHA3(
+				solsha3.Uint32(dn.assertionParams.NumSteps),
+				solsha3.Bytes32(protocol.Precondition{
+					BeforeHash:  utils.MarshalHash(vmProtoData.MachineHash),
+					TimeBounds:  dn.assertionParams.TimeBounds,
+					BeforeInbox: utils.MarshalHash(beforeInbox),
+				}),
+				solsha3.Bytes32(dn.assertionClaim.AssertionStub.Hash()),
+			)),
+			solsha3.Uint256(params.gracePeriod.Add(deadlineTicks).Val),
+		))
+	case ValidChildType:
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(dn.assertionClaim.AssertionStub.LastMessageHashValue()),
+			solsha3.Bytes32(dn.assertionClaim.AssertionStub.LastLogHashValue()),
+		))
+	}
+	return ret
+}
+
 func (dn *DisputableNode) Hash() [32]byte {
-	return dn.Hash()
+	return dn.hash
 }
 
 func (dn *DisputableNode) _hash() [32]byte {

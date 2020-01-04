@@ -18,7 +18,10 @@ package rollup
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -31,7 +34,6 @@ import (
 type ChainObserver struct {
 	*StakedNodeGraph
 	rollupAddr       common.Address
-	vmParams         structures.ChainParams
 	pendingInbox     *PendingInbox
 	listenForAddress common.Address
 	listener         ChainEventListener
@@ -45,9 +47,8 @@ func NewChain(
 	_listener ChainEventListener,
 ) *ChainObserver {
 	ret := &ChainObserver{
-		StakedNodeGraph:  NewStakedNodeGraph(_machine),
+		StakedNodeGraph:  NewStakedNodeGraph(_machine, _vmParams),
 		rollupAddr:       _rollupAddr,
-		vmParams:         _vmParams,
 		pendingInbox:     NewPendingInbox(),
 		listenForAddress: _listenForAddress,
 		listener:         _listener,
@@ -59,7 +60,6 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph: chain.StakedNodeGraph.MarshalToBuf(),
 		ContractAddress: chain.rollupAddr.Bytes(),
-		VmParams:        chain.vmParams.MarshalToBuf(),
 		PendingInbox:    chain.pendingInbox.MarshalToBuf(),
 	}
 }
@@ -68,12 +68,32 @@ func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listener
 	chain := &ChainObserver{
 		StakedNodeGraph:  m.StakedNodeGraph.Unmarshal(),
 		rollupAddr:       common.BytesToAddress(m.ContractAddress),
-		vmParams:         m.VmParams.Unmarshal(),
 		pendingInbox:     &PendingInbox{m.PendingInbox.Unmarshal()},
 		listenForAddress: _listenForAddress,
 		listener:         _listener,
 	}
 	return chain
+}
+
+func (chain *ChainObserver) notifyAssert(
+	prevLeafHash [32]byte,
+	params *structures.AssertionParams,
+	claim *structures.AssertionClaim,
+	maxPendingTop [32]byte,
+	currentTime *protocol.TimeBlocks,
+) error {
+	topPending, ok := chain.pendingInbox.index[maxPendingTop]
+	if !ok {
+		return errors.New("Couldn't find top message in inbox")
+	}
+	disputableNode := structures.NewDisputableNode(
+		params,
+		claim,
+		maxPendingTop,
+		topPending.count,
+	)
+	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, nil, currentTime)
+	return nil
 }
 
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
@@ -85,7 +105,6 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 func (co *ChainObserver) Equals(co2 *ChainObserver) bool {
 	return co.StakedNodeGraph.Equals(co2.StakedNodeGraph) &&
 		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
-		co.vmParams.Equals(co2.vmParams) &&
 		co.pendingInbox.Equals(co2.pendingInbox) &&
 		bytes.Compare(co.listenForAddress[:], co2.listenForAddress[:]) == 0
 }

@@ -173,10 +173,14 @@ void machineDeliverMessages(CMachine* m, void* messagesData) {
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
-                                     uint64_t timeboundStart,
-                                     uint64_t timeboundEnd) {
+                                     void* timeboundStartData,
+                                     void* timeboundEndData) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
+    auto timeboundStartPtr = reinterpret_cast<const char*>(timeboundStartData);
+    auto timeboundStart = deserializeUint256t(timeboundStartPtr);
+    auto timeboundEndPtr = reinterpret_cast<const char*>(timeboundEndData);
+    auto timeboundEnd = deserializeUint256t(timeboundEndPtr);
     Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd);
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {

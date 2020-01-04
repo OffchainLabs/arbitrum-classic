@@ -100,7 +100,7 @@ func (m *Machine) DeliverMessages(msgs value.TupleValue) {
 	m.machine.DeliverMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
 	a := &protocol.ExecutionAssertion{}
 	totalSteps := uint32(0)
 	stepIncrease := int32(1)

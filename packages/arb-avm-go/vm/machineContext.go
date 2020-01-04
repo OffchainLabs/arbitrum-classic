@@ -25,14 +25,14 @@ import (
 type MachineAssertionContext struct {
 	machine      *Machine
 	didInboxInsn bool
-	timeBounds   *protocol.TimeBounds
+	timeBounds   *protocol.TimeBoundsBlocks
 	numSteps     uint32
 	numGas       uint64
 	outMsgs      []value.Value
 	logs         []value.Value
 }
 
-func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBounds) *MachineAssertionContext {
+func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBoundsBlocks) *MachineAssertionContext {
 	ret := &MachineAssertionContext{
 		m,
 		false,

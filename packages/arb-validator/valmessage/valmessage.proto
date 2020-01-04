@@ -47,7 +47,7 @@ message UnanimousAssertionValidatorRequest {
     value.HashBuf beforeHash = 1;
     value.HashBuf beforeInbox = 2;
     uint64 sequenceNum = 3;
-    protocol.TimeBounds timeBounds = 4;
+    protocol.TimeBoundsBlocks timeBounds = 4;
     repeated SignedMessage signedMessages = 5;
 }
 

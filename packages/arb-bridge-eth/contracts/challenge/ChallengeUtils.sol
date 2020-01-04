@@ -30,8 +30,8 @@ library ChallengeUtils {
     {
         return keccak256(
             abi.encodePacked(
-                _topHash,
                 _lowerHash,
+                _topHash,
                 _chainLength
             )
         );

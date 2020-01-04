@@ -287,10 +287,10 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				PrevLeafHash: eventVal.Fields[0],
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
-					TimeBoundsBlocks: [2]structures.RollupTime{
-						structures.RollupTimeFromBlockNum(eventVal.TimeBoundsBlocks[0]),
-						structures.RollupTimeFromBlockNum(eventVal.TimeBoundsBlocks[1]),
-					},
+					TimeBounds: protocol.NewTimeBoundsBlocks(
+						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
+						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
+					),
 					ImportedMessageCount: eventVal.ImportedMessageCount,
 				},
 				Claim: &structures.AssertionClaim{
@@ -304,6 +304,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 						eventVal.Fields[5],
 					),
 				},
+				MaxPendingTop: eventVal.Fields[6],
 			}, nil
 		} else if log.Topics[0] == rollupConfirmedID {
 			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(log)

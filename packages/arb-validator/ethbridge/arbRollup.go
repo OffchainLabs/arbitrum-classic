@@ -250,7 +250,7 @@ func (vm *ArbRollup) MakeAssertion(
 		prevDeadlineTicks,
 		prevChildType,
 		assertionParams.NumSteps,
-		[2]*big.Int{assertionParams.TimeBoundsBlocks[0].Val, assertionParams.TimeBoundsBlocks[1].Val},
+		assertionParams.TimeBounds.AsIntArray(),
 		assertionParams.ImportedMessageCount,
 		assertionClaim.AssertionStub.DidInboxInsn,
 		assertionClaim.AssertionStub.NumGas,

@@ -237,7 +237,7 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 }
 
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
 	assCtx := NewMachineAssertionContext(
 		m,
 		timeBounds,
