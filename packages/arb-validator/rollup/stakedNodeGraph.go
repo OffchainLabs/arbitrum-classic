@@ -17,8 +17,10 @@
 package rollup
 
 import (
+	"bytes"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"sort"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
@@ -140,4 +142,38 @@ func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common
 func (chain *StakedNodeGraph) ChallengeResolved(contract, winner, loser common.Address) {
 	chain.RemoveStake(loser)
 	delete(chain.challenges, contract)
+}
+
+type SortableAddressList []common.Address
+
+func (sa SortableAddressList) Len() int {
+	return len(sa)
+}
+
+func (sa SortableAddressList) Less(i, j int) bool {
+	return bytes.Compare(sa[i][:], sa[j][:]) < 0
+}
+
+func (sa SortableAddressList) Swap(i, j int) {
+	sa[i], sa[j] = sa[j], sa[i]
+}
+
+func (sng *StakedNodeGraph) generateAlignedStakersProof(
+	confirmingNode *Node,
+	deadline RollupTime,
+) (stakerAddrs []common.Address, proof [][32]byte, offsets []uint64) {
+	sng.stakers.forall(func(st *Staker) {
+		stakerAddrs = append(stakerAddrs, st.address)
+	})
+	sort.Sort(SortableAddressList(stakerAddrs))
+
+	for i, sa := range stakerAddrs {
+		staker := sng.stakers.Get(sa)
+		if staker.creationTime.Cmp(deadline) >= 0 {
+			offsets[i] = uint64(len(proof))
+			subProof := GeneratePathProof(confirmingNode, staker.location)
+			proof = append(proof, subProof...)
+		}
+	}
+	return
 }
