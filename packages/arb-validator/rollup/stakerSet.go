@@ -38,6 +38,7 @@ func NewStakerSet() *StakerSet {
 }
 
 func (sl *StakerSet) Add(newStaker *Staker) {
+	newStaker.location.numStakers++
 	if _, ok := sl.idx[newStaker.address]; ok {
 		log.Fatal("tried to insert staker twice")
 	}
@@ -61,26 +62,25 @@ func (sl *StakerSet) forall(f func(*Staker)) {
 func (staker *Staker) MarshalToBuf() *StakerBuf {
 	if staker.challenge == nil {
 		return &StakerBuf{
-			Address:      staker.address.Bytes(),
-			Location:     marshalHash(staker.location.hash),
-			CreationTime: staker.creationTime.MarshalToBuf(),
-			InChallenge:  false,
+			Address:       staker.address.Bytes(),
+			Location:      marshalHash(staker.location.hash),
+			CreationTime:  staker.creationTime.MarshalToBuf(),
+			ChallengeAddr: nil,
 		}
 	} else {
 		return &StakerBuf{
 			Address:       staker.address.Bytes(),
 			Location:      marshalHash(staker.location.hash),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
-			InChallenge:   true,
 			ChallengeAddr: staker.challenge.contract.Bytes(),
 		}
 	}
 }
 
-func (buf *StakerBuf) Unmarshal(chain *ChainObserver) *Staker {
+func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
 	locArr := unmarshalHash(buf.Location)
-	if buf.InChallenge {
+	if buf.ChallengeAddr != nil {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),
 			location:     chain.nodeFromHash[locArr],

@@ -31,7 +31,7 @@ import (
 type ChallengeState uint8
 
 const (
-	ChallengeContinuing PendingTopState = iota
+	ChallengeContinuing ChallengeState = iota
 	ChallengeAsserterWon
 	ChallengeAsserterTimedOut
 	ChallengeChallengerTimedOut
@@ -39,7 +39,7 @@ const (
 
 var challengeNoEvents = errors.New("PendingTopChallengeContract notification channel terminated unexpectedly")
 
-func handleNextEvent(note ethbridge.Notification) (outNote ethbridge.Notification, state PendingTopState, err error) {
+func handleNextEvent(note ethbridge.Notification) (outNote ethbridge.Notification, state ChallengeState, err error) {
 	switch note.Event.(type) {
 	case ethbridge.AsserterTimeoutEvent:
 		return note, ChallengeAsserterTimedOut, nil
@@ -49,7 +49,7 @@ func handleNextEvent(note ethbridge.Notification) (outNote ethbridge.Notificatio
 	return note, 0, nil
 }
 
-func getNextEvent(outChan chan ethbridge.Notification) (note ethbridge.Notification, state PendingTopState, err error) {
+func getNextEvent(outChan chan ethbridge.Notification) (note ethbridge.Notification, state ChallengeState, err error) {
 	note, ok := <-outChan
 	if !ok {
 		return note, 0, challengeNoEvents
@@ -63,7 +63,7 @@ func getNextEventWithTimeout(
 	deadline *big.Int,
 	contract ethbridge.ChallengeContract,
 	client *ethclient.Client,
-) (note ethbridge.Notification, state PendingTopState, err error) {
+) (note ethbridge.Notification, state ChallengeState, err error) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {

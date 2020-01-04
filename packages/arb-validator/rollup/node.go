@@ -98,3 +98,37 @@ func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 	// can't set up prev and successorHash fields yet; return prevHashArr so caller can do this later
 	return node, prevHashArr
 }
+
+func GeneratePathProof(from, to *Node) [][32]byte {
+	// returns nil if no proof exists
+	if to == nil {
+		return nil
+	}
+	if from == to {
+		return [][32]byte{}
+	} else {
+		sub := GeneratePathProof(from, to.prev)
+		if sub == nil {
+			return nil
+		}
+		var inner32 [32]byte
+		innerHash := solsha3.SoliditySHA3(
+			solsha3.Bytes32(to.disputable.hash),
+			solsha3.Int256(to.linkType),
+			solsha3.Bytes32(to.protoStateHash()),
+		)
+		copy(inner32[:], innerHash)
+		return append(sub, inner32)
+	}
+}
+
+func GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
+	// returns nil, nil if no proof exists
+	proof1 := GeneratePathProof(from, to1)
+	proof2 := GeneratePathProof(from, to2)
+	if proof1 == nil || proof2 == nil || len(proof1) == 0 || len(proof2) == 0 || proof1[0] == proof2[0] {
+		return nil, nil
+	} else {
+		return proof1, proof2
+	}
+}

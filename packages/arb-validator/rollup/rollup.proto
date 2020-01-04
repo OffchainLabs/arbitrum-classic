@@ -27,13 +27,17 @@ message NodeGraphBuf {
     repeated value.HashBuf    leafHashes = 4;
 }
 
+message StakedNodeGraphBuf {
+    NodeGraphBuf nodeGraph = 1;
+    repeated StakerBuf stakers = 2;
+    repeated ChallengeBuf challenges = 3;
+}
+
 message ChainObserverBuf {
-    bytes contractAddress = 1;
-    ChainParamsBuf vmParams = 2;
-    PendingInboxBuf pendingInbox = 3;
-    NodeGraphBuf nodeGraph = 4;
-    repeated StakerBuf stakers = 5;
-    repeated ChallengeBuf challenges = 6;
+    StakedNodeGraphBuf stakedNodeGraph = 1;
+    bytes contractAddress = 2;
+    ChainParamsBuf vmParams = 3;
+    PendingInboxBuf pendingInbox = 4;
 }
 
 message ChainParamsBuf {
@@ -56,8 +60,7 @@ message StakerBuf {
     bytes address = 1;
     value.HashBuf location = 2;
     RollupTimeBuf creationTime = 3;
-    bool inChallenge = 4;
-    bytes challengeAddr = 5;
+    bytes challengeAddr = 4;
 }
 
 message ChallengeBuf {

@@ -19,6 +19,9 @@ package rollup
 import (
 	"errors"
 	"log"
+	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -171,6 +174,26 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		prevNode.successorHashes[kind] = newNode.hash
 		chain.leaves.Add(newNode)
 	}
+}
+
+func (chain *NodeGraph) notifyAssert(
+	prevLeafHash [32]byte,
+	timeBounds [2]RollupTime,
+	afterPendingTop [32]byte,
+	importedMessagesSlice [32]byte,
+	importedMessageCount *big.Int,
+	assertionStub *protocol.AssertionStub,
+) {
+	disputableNode := &DisputableNode{
+		prevNodeHash:          prevLeafHash,
+		timeBounds:            timeBounds,
+		afterPendingTop:       afterPendingTop,
+		importedMessagesSlice: importedMessagesSlice,
+		importedMessageCount:  importedMessageCount,
+		assertionStub:         assertionStub,
+	}
+	disputableNode.hash = disputableNode._hash()
+	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, unmarshalHash(disputableNode.assertionStub.AfterHash), nil)
 }
 
 func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {
