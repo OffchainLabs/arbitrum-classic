@@ -39,9 +39,11 @@ const char* getContractData(const std::string& contract_filename) {
     return buf;
 }
 
-InitialVmValues getInitialVmValues(const std::string& contract_filename,
-                                   TuplePool* pool) {
+InitialVmValues parseInitialVmValues(const std::string& contract_filename,
+                                     std::shared_ptr<TuplePool>& pool) {
     InitialVmValues initial_state;
+
+    initial_state.pool = pool;
 
     auto bufptr = getContractData(contract_filename);
 
@@ -76,10 +78,10 @@ InitialVmValues getInitialVmValues(const std::string& contract_filename,
 
         std::vector<Operation> ops;
         for (uint64_t i = 0; i < codeCount; i++) {
-            ops.emplace_back(deserializeOperation(bufptr, *pool));
+            ops.emplace_back(deserializeOperation(bufptr, *pool.get()));
         }
         initial_state.code = opsToCodePoints(ops);
-        initial_state.staticVal = deserialize_value(bufptr, *pool);
+        initial_state.staticVal = deserialize_value(bufptr, *pool.get());
         initial_state.valid_state = true;
 
         return initial_state;

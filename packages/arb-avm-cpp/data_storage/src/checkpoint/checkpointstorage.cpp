@@ -18,16 +18,17 @@
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/tuple.hpp>
+#include <avm_values/vmValueParser.hpp>
 
 #include <rocksdb/options.h>
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
 CheckpointStorage::CheckpointStorage(const std::string& db_path,
-                                     const InitialVmValues& initial_state_)
+                                     const std::string& contract_path)
     : datastorage(std::make_unique<DataStorage>(db_path)),
-      initial_state(initial_state_) {
-    pool = new TuplePool();
+      pool(std::make_shared<TuplePool>()) {
+    initial_state = parseInitialVmValues(contract_path, pool);
 }
 
 InitialVmValues CheckpointStorage::getInitialVmValues() const {

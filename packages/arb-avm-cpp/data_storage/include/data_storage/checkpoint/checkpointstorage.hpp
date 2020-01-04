@@ -33,12 +33,12 @@ class TransactionDB;
 class CheckpointStorage {
    private:
     std::unique_ptr<DataStorage> datastorage;
-    const InitialVmValues initial_state;
+    InitialVmValues initial_state;
 
    public:
-    TuplePool* pool;
+    std::shared_ptr<TuplePool> pool;
     CheckpointStorage(const std::string& db_path,
-                      const InitialVmValues& initial_state_);
+                      const std::string& contract_path);
     InitialVmValues getInitialVmValues() const;
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();

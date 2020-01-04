@@ -112,7 +112,7 @@ DbResult<Tuple> MachineStateFetcher::getTuple(
                     }
                 }
             }
-            auto tuple = Tuple(values, checkpoint_storage.pool);
+            auto tuple = Tuple(values, checkpoint_storage.pool.get());
             return DbResult<Tuple>{results.status, results.reference_count,
                                    tuple};
         }

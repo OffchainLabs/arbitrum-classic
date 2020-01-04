@@ -38,11 +38,10 @@ MachineState::MachineState()
       inbox(pool.get()) {}
 
 MachineState::MachineState(const std::vector<CodePoint>& code_,
-                           const value& static_val_)
-    : pool(std::make_unique<TuplePool>()),
-      pendingInbox(pool.get()),
-      context({0, 0}),
-      inbox(pool.get()) {
+                           const value& static_val_,
+                           std::shared_ptr<TuplePool>& pool_)
+    : pendingInbox(pool_.get()), context({0, 0}), inbox(pool_.get()) {
+    pool = pool_;
     code = code_;
     staticVal = static_val_;
 
@@ -52,7 +51,7 @@ MachineState::MachineState(const std::vector<CodePoint>& code_,
 
 bool MachineState::initialize_machinestate(
     const std::string& contract_filename) {
-    auto initial_state = getInitialVmValues(contract_filename, pool.get());
+    auto initial_state = parseInitialVmValues(contract_filename, pool);
 
     if (initial_state.valid_state) {
         code = initial_state.code;

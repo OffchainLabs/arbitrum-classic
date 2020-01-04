@@ -61,8 +61,7 @@ void getSavedMessageStack(MachineStateFetcher& fetcher,
 TEST_CASE("save messagestack") {
     SECTION("empty stack") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(current_path, state);
+        CheckpointStorage storage(current_path, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto stack = MessageStack(&pool);
@@ -72,8 +71,7 @@ TEST_CASE("save messagestack") {
     boost::filesystem::remove_all(current_path);
     SECTION("empty stack, twice") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(current_path, state);
+        CheckpointStorage storage(current_path, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto stack = MessageStack(&pool);
@@ -84,8 +82,7 @@ TEST_CASE("save messagestack") {
     boost::filesystem::remove_all(current_path);
     SECTION("stack with values") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(current_path, state);
+        CheckpointStorage storage(current_path, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto stack = MessageStack(&pool);
@@ -103,8 +100,7 @@ TEST_CASE("save messagestack") {
     boost::filesystem::remove_all(current_path);
     SECTION("stack with values, twice") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(current_path, state);
+        CheckpointStorage storage(current_path, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto stack = MessageStack(&pool);
@@ -127,8 +123,7 @@ TEST_CASE("save messagestack") {
 TEST_CASE("Get saved messagestack") {
     SECTION("empty stack") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(current_path, state);
+        CheckpointStorage storage(current_path, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -144,8 +139,7 @@ TEST_CASE("Get saved messagestack") {
     boost::filesystem::remove_all(current_path);
     SECTION("stack with values") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(current_path, state);
+        CheckpointStorage storage(current_path, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -170,8 +164,7 @@ TEST_CASE("Get saved messagestack") {
     boost::filesystem::remove_all(current_path);
     SECTION("save stack twice, with values") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(current_path, state);
+        CheckpointStorage storage(current_path, test_contract_path);
         std::vector<CodePoint> code;
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);

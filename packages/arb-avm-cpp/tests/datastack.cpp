@@ -48,8 +48,7 @@ void initializeDatastack(MachineStateSaver& msSaver,
 void saveDataStack(Datastack data_stack,
                    std::vector<unsigned char> expected_hash_key) {
     TuplePool pool;
-    auto state = getInitialVmValues(test_contract_path, &pool);
-    CheckpointStorage storage(dbpath, state);
+    CheckpointStorage storage(dbpath, test_contract_path);
     std::vector<CodePoint> code;
     auto saver = MachineStateSaver(storage.makeTransaction());
 
@@ -64,8 +63,7 @@ void saveDataStack(Datastack data_stack,
 void saveDataStackTwice(Datastack data_stack,
                         std::vector<unsigned char> expected_hash_key) {
     TuplePool pool;
-    auto state = getInitialVmValues(test_contract_path, &pool);
-    CheckpointStorage storage(dbpath, state);
+    CheckpointStorage storage(dbpath, test_contract_path);
     std::vector<CodePoint> code;
     auto saver = MachineStateSaver(storage.makeTransaction());
 
@@ -116,8 +114,7 @@ void saveTwiceAndGetDataStack(MachineStateSaver& saver,
 TEST_CASE("Initialize datastack") {
     SECTION("default") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbpath, state);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -134,8 +131,7 @@ TEST_CASE("Initialize datastack") {
 
     SECTION("push empty tuple") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbpath, state);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -154,11 +150,10 @@ TEST_CASE("Initialize datastack") {
 
     SECTION("push num, tuple") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbpath, state);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
-        CodePoint code_point = state.code[0];
-        CodePoint code_point2 = state.code[1];
+        CodePoint code_point = storage.getInitialVmValues().code[0];
+        CodePoint code_point2 = storage.getInitialVmValues().code[1];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -179,11 +174,10 @@ TEST_CASE("Initialize datastack") {
     boost::filesystem::remove_all(dbpath);
     SECTION("push codepoint, tuple") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbpath, state);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
-        CodePoint code_point = state.code[0];
-        CodePoint code_point2 = state.code[1];
+        CodePoint code_point = storage.getInitialVmValues().code[0];
+        CodePoint code_point2 = storage.getInitialVmValues().code[1];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -267,10 +261,9 @@ TEST_CASE("Save datastack") {
 TEST_CASE("Save and get datastack") {
     SECTION("save datastack and get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbpath, state);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
-        auto code_point = state.code[0];
+        auto code_point = storage.getInitialVmValues().code[0];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);
@@ -294,10 +287,9 @@ TEST_CASE("Save and get datastack") {
     boost::filesystem::remove_all(dbpath);
     SECTION("save datastack twice and get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbpath, state);
+        CheckpointStorage storage(dbpath, test_contract_path);
 
-        auto code_point = state.code[0];
+        auto code_point = storage.getInitialVmValues().code[0];
 
         auto saver = MachineStateSaver(storage.makeTransaction());
         auto fetcher = MachineStateFetcher(storage);

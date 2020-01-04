@@ -92,8 +92,7 @@ void deleteVal(CheckpointStorage& storage,
 
 TEST_CASE("Checkpointstorage initialize") {
     TuplePool pool;
-    auto state = getInitialVmValues(test_contract_path, &pool);
-    CheckpointStorage storage(dbPath, state);
+    CheckpointStorage storage(dbPath, test_contract_path);
     SECTION("get") {
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
@@ -109,23 +108,20 @@ TEST_CASE("Checkpointstorage initialize") {
 TEST_CASE("Save and get values") {
     SECTION("save and get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         getVal(storage, hash_key1, 1, true, value1);
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("db cleared") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         incrementRef(storage, hash_key1, 2, true);
         getVal(storage, hash_key1, 2, true, value1);
@@ -133,8 +129,7 @@ TEST_CASE("Save and get values") {
     boost::filesystem::remove_all(dbPath);
     SECTION("save, delete, get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
         getVal(storage, hash_key2, 1, true, value2);
@@ -146,8 +141,7 @@ TEST_CASE("Save and get values") {
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, delete, get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
         getVal(storage, hash_key2, 1, true, value2);
@@ -160,8 +154,7 @@ TEST_CASE("Save and get values") {
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, delete, get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         saveVal(storage, value2, hash_key2, 1, true);
         getVal(storage, hash_key2, 1, true, value2);
@@ -175,8 +168,7 @@ TEST_CASE("Save and get values") {
     boost::filesystem::remove_all(dbPath);
     SECTION("save, increment, get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         incrementRef(storage, hash_key1, 2, true);
         deleteVal(storage, hash_key1, 1, true);
@@ -187,8 +179,7 @@ TEST_CASE("Save and get values") {
     boost::filesystem::remove_all(dbPath);
     SECTION("save, delete, increment, get") {
         TuplePool pool;
-        auto state = getInitialVmValues(test_contract_path, &pool);
-        CheckpointStorage storage(dbPath, state);
+        CheckpointStorage storage(dbPath, test_contract_path);
         saveVal(storage, value1, hash_key1, 1, true);
         deleteVal(storage, hash_key1, 0, true);
         incrementRef(storage, hash_key1, 0, false);

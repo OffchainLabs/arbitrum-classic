@@ -31,13 +31,9 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
                                             const char* contract_path) {
     auto string_filename = std::string(db_path);
     auto string_contract_path = std::string(contract_path);
+    auto storage = new CheckpointStorage(string_filename, string_contract_path);
 
-    TuplePool pool;
-
-    auto state = getInitialVmValues(string_contract_path, &pool);
-
-    if (state.valid_state) {
-        auto storage = new CheckpointStorage(string_filename, state);
+    if (storage->getInitialVmValues().valid_state) {
         return static_cast<void*>(storage);
     } else {
         return nullptr;
@@ -55,7 +51,7 @@ CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr) {
     auto state = storage->getInitialVmValues();
 
     if (state.valid_state) {
-        MachineState machine_state(state.code, state.staticVal);
+        MachineState machine_state(state.code, state.staticVal, state.pool);
         auto machine = new Machine();
         machine->initializeMachine(machine_state);
 
@@ -88,12 +84,12 @@ int saveValue(CCheckpointStorage* storage_ptr, const void* value_data) {
     auto val = deserialize_value(data_ptr, pool);
     auto results = valueSaver.saveValue(val);
 
-    if (results.status.ok()) {
-        auto status = valueSaver.commitTransaction();
-        return status.ok();
-    } else {
+    if (!results.status.ok()) {
         return false;
     }
+
+    auto status = valueSaver.commitTransaction();
+    return status.ok();
 }
 
 ByteSlice getValue(const CCheckpointStorage* storage_ptr,
@@ -131,12 +127,12 @@ int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
 
     auto results = deleter.deleteValue(hash_key_vector);
 
-    if (results.status.ok()) {
-        auto status = deleter.commitTransaction();
-        return status.ok();
-    } else {
+    if (!results.status.ok()) {
         return false;
     }
+
+    auto status = deleter.commitTransaction();
+    return status.ok();
 }
 
 int saveData(CCheckpointStorage* storage_ptr,
@@ -158,12 +154,12 @@ int saveData(CCheckpointStorage* storage_ptr,
 
     auto results = transaction->saveData(key_vector, data_vector);
 
-    if (results.status.ok()) {
-        auto status = transaction->commit();
-        return status.ok();
-    } else {
+    if (!results.status.ok()) {
         return false;
     }
+
+    auto status = transaction->commit();
+    return status.ok();
 }
 
 ByteSlice getData(const CCheckpointStorage* storage_ptr, const void* key) {
@@ -197,9 +193,9 @@ int deleteData(CCheckpointStorage* storage_ptr, const void* key) {
     auto results = transaction->deleteData(key_vector);
 
     if (results.status.ok()) {
-        auto status = transaction->commit();
-        return status.ok();
-    } else {
         return false;
     }
+
+    auto status = transaction->commit();
+    return status.ok();
 }
