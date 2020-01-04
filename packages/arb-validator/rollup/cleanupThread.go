@@ -17,8 +17,9 @@
 package rollup
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type pruneParams struct {

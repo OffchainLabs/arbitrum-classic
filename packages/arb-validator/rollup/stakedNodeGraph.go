@@ -18,9 +18,12 @@ package rollup
 
 import (
 	"bytes"
+	"sort"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"sort"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
@@ -60,9 +63,9 @@ func (m *ChallengeBuf) Unmarshal() *Challenge {
 }
 
 func (chal *Challenge) Equals(chal2 *Challenge) bool {
-	return addressesEqual(chal.contract, chal2.contract) &&
-		addressesEqual(chal.asserter, chal2.asserter) &&
-		addressesEqual(chal.challenger, chal2.challenger) &&
+	return utils.AddressesEqual(chal.contract, chal2.contract) &&
+		utils.AddressesEqual(chal.asserter, chal2.asserter) &&
+		utils.AddressesEqual(chal.challenger, chal2.challenger) &&
 		chal.kind == chal2.kind
 }
 
@@ -134,7 +137,7 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 		challengeSetsEqual(s.challenges, s2.challenges)
 }
 
-func (chain *StakedNodeGraph) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime RollupTime) {
+func (chain *StakedNodeGraph) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime structures.RollupTime) {
 	chain.stakers.Add(&Staker{
 		stakerAddr,
 		chain.nodeFromHash[nodeHash],
@@ -187,7 +190,7 @@ func (sa SortableAddressList) Swap(i, j int) {
 
 func (sng *StakedNodeGraph) generateAlignedStakersProof(
 	confirmingNode *Node,
-	deadline RollupTime,
+	deadline structures.RollupTime,
 ) (stakerAddrs []common.Address, proof [][32]byte, offsets []uint64) {
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)

@@ -14,12 +14,16 @@
 * limitations under the License.
  */
 
-package rollup
+package structures
 
-import "math/big"
+import (
+	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+)
 
 type RollupTime struct {
-	val *big.Int
+	Val *big.Int
 }
 
 var _timeConversionFactor *big.Int
@@ -33,23 +37,23 @@ func RollupTimeFromBlockNum(blockNum *big.Int) RollupTime {
 }
 
 func (rt RollupTime) Add(rt2 RollupTime) RollupTime {
-	return RollupTime{new(big.Int).Add(rt.val, rt2.val)}
+	return RollupTime{new(big.Int).Add(rt.Val, rt2.Val)}
 }
 
 func (rt RollupTime) Cmp(rt2 RollupTime) int {
-	return rt.val.Cmp(rt2.val)
+	return rt.Val.Cmp(rt2.Val)
 }
 
 func (rt RollupTime) MarshalToBuf() *RollupTimeBuf {
 	return &RollupTimeBuf{
-		Val: marshalBigInt(rt.val),
+		Val: utils.MarshalBigInt(rt.Val),
 	}
 }
 
 func (rtb *RollupTimeBuf) Unmarshal() RollupTime {
-	return RollupTime{unmarshalBigInt(rtb.Val)}
+	return RollupTime{utils.UnmarshalBigInt(rtb.Val)}
 }
 
 func (rt RollupTime) Equals(rt2 RollupTime) bool {
-	return rt.val.Cmp(rt2.val) == 0
+	return rt.Val.Cmp(rt2.Val) == 0
 }

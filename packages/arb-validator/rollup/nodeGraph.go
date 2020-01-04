@@ -22,7 +22,9 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -58,9 +60,9 @@ func (chain *NodeGraph) MarshalToBuf() *NodeGraphBuf {
 	})
 	return &NodeGraphBuf{
 		Nodes:               allNodes,
-		OldestNodeHash:      marshalHash(chain.oldestNode.hash),
-		LatestConfirmedHash: marshalHash(chain.latestConfirmed.hash),
-		LeafHashes:          marshalSliceOfHashes(leafHashes),
+		OldestNodeHash:      utils.MarshalHash(chain.oldestNode.hash),
+		LatestConfirmedHash: utils.MarshalHash(chain.latestConfirmed.hash),
+		LeafHashes:          utils.MarshalSliceOfHashes(leafHashes),
 	}
 }
 
@@ -73,22 +75,22 @@ func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
 	}
 
 	for _, nodeBuf := range buf.Nodes {
-		nodeHash := unmarshalHash(nodeBuf.Hash)
+		nodeHash := utils.UnmarshalHash(nodeBuf.Hash)
 		node := chain.nodeFromHash[nodeHash]
-		prevHash := unmarshalHash(nodeBuf.PrevHash)
+		prevHash := utils.UnmarshalHash(nodeBuf.PrevHash)
 		if prevHash != zeroBytes32 {
 			prev := chain.nodeFromHash[prevHash]
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
 		}
 	}
-	chain.oldestNode = chain.nodeFromHash[unmarshalHash(buf.OldestNodeHash)]
+	chain.oldestNode = chain.nodeFromHash[utils.UnmarshalHash(buf.OldestNodeHash)]
 	for _, leafHashStr := range buf.LeafHashes {
-		leafHash := unmarshalHash(leafHashStr)
+		leafHash := utils.UnmarshalHash(leafHashStr)
 		chain.leaves.Add(chain.nodeFromHash[leafHash])
 	}
 
-	lcHash := unmarshalHash(buf.LatestConfirmedHash)
+	lcHash := utils.UnmarshalHash(buf.LatestConfirmedHash)
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
 	return chain
@@ -110,19 +112,18 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 }
 
 func (chain *NodeGraph) CreateInitialNode(machine machine.Machine) {
-	newNode := &Node{
-		depth: 0,
-		vmProtoData: &VMProtoData{
-			machineHash:  machine.Hash(),
-			inboxHash:    value.NewEmptyTuple().Hash(),
-			pendingTop:   value.NewEmptyTuple().Hash(),
-			pendingCount: big.NewInt(0),
-		},
-		machine:    machine.Clone(),
-		linkType:   ValidChildType,
-		numStakers: 0,
-	}
-	newNode.setHash()
+	newNode := NewNode(
+		nil,
+		ValidChildType,
+		structures.NewVMProtoData(
+			machine.Hash(),
+			value.NewEmptyTuple().Hash(),
+			value.NewEmptyTuple().Hash(),
+			big.NewInt(0),
+		),
+		machine,
+		0,
+	)
 	chain.leaves.Add(newNode)
 	chain.latestConfirmed = newNode
 }
@@ -151,8 +152,7 @@ func (chain *NodeGraph) considerPruningNode(node *Node) {
 
 func (chain *NodeGraph) CreateNodesOnAssert(
 	prevNode *Node,
-	dispNode *DisputableNode,
-	afterMachineHash [32]byte,
+	dispNode *structures.DisputableNode,
 	afterMachine machine.Machine,
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
@@ -165,58 +165,25 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	if afterMachine != nil {
 		afterMachine = afterMachine.Clone()
 	}
-	newNode := &Node{
-		depth:      1 + prevNode.depth,
-		disputable: dispNode,
-		prev:       prevNode,
-		linkType:   ValidChildType,
-		vmProtoData: &VMProtoData{
-			machineHash:  afterMachineHash,
-			inboxHash:    [32]byte{},
-			pendingTop:   dispNode.afterPendingTop,
-			pendingCount: nil,
-		},
-		machine:    afterMachine,
-		numStakers: 0,
-	}
-	newNode.setHash()
-	prevNode.successorHashes[ValidChildType] = newNode.hash
-	chain.leaves.Add(newNode)
+
+	chain.leaves.Add(NewNodeFromValidPrev(prevNode, dispNode, afterMachine))
 
 	// create nodes for invalid branches
 	for kind := ChildType(0); kind <= MaxInvalidChildType; kind++ {
-		newNode := &Node{
-			depth:       1 + prevNode.depth,
-			disputable:  dispNode,
-			prev:        prevNode,
-			linkType:    kind,
-			vmProtoData: prevNode.vmProtoData,
-			machine:     prevNode.machine,
-			numStakers:  0,
-		}
-		newNode.setHash()
-		prevNode.successorHashes[kind] = newNode.hash
-		chain.leaves.Add(newNode)
+		chain.leaves.Add(NewNodeFromInvalidPrev(prevNode, dispNode, kind))
 	}
 }
 
 func (chain *NodeGraph) notifyAssert(
 	prevLeafHash [32]byte,
-	timeBounds [2]RollupTime,
-	afterPendingTop [32]byte,
-	importedMessagesSlice [32]byte,
-	importedMessageCount *big.Int,
-	assertionStub *protocol.ExecutionAssertionStub,
+	params *structures.AssertionParams,
+	claim *structures.AssertionClaim,
 ) {
-	disputableNode := &DisputableNode{
-		timeBounds:            timeBounds,
-		afterPendingTop:       afterPendingTop,
-		importedMessagesSlice: importedMessagesSlice,
-		importedMessageCount:  importedMessageCount,
-		assertionStub:         assertionStub,
-	}
-	disputableNode.hash = disputableNode._hash()
-	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, unmarshalHash(disputableNode.assertionStub.AfterHash), nil)
+	disputableNode := structures.NewDisputableNode(
+		params,
+		claim,
+	)
+	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, nil)
 }
 
 func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {

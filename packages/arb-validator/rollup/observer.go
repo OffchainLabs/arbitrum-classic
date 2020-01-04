@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -85,13 +87,13 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 	defer chain.Unlock()
 	switch ev := notification.Event.(type) {
 	case ethbridge.StakeCreatedEvent:
-		chain.CreateStake(ev.Staker, ev.NodeHash, RollupTimeFromBlockNum(notification.Header.Number))
+		chain.CreateStake(ev.Staker, ev.NodeHash, structures.RollupTimeFromBlockNum(notification.Header.Number))
 		if chain.listener != nil && chain.listenForAddress == ev.Staker {
 			chain.listener.Notify(
 				&StakeCreatedChainEvent{
 					ev.Staker,
 					ev.NodeHash,
-					RollupTimeFromBlockNum(notification.Header.Number),
+					structures.RollupTimeFromBlockNum(notification.Header.Number),
 				},
 			)
 		}
@@ -133,14 +135,8 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 	case ethbridge.AssertedEvent:
 		chain.notifyAssert(
 			ev.PrevLeafHash,
-			[2]RollupTime{
-				RollupTimeFromBlockNum(ev.TimeBoundsBlocks[0]),
-				RollupTimeFromBlockNum(ev.TimeBoundsBlocks[1]),
-			},
-			ev.AfterPendingTop,
-			ev.ImportedMessagesSlice,
-			ev.ImportedMessageCount,
-			ev.Assertion,
+			ev.Params,
+			ev.Claim,
 		)
 	case ethbridge.ConfirmedEvent:
 		chain.ConfirmNode(ev.NodeHash)

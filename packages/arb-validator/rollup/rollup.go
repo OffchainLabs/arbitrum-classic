@@ -20,44 +20,18 @@ import (
 	"bytes"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
-
-type ChainParams struct {
-	stakeRequirement  *big.Int
-	gracePeriod       RollupTime
-	maxExecutionSteps uint32
-}
-
-func (params *ChainParams) MarshalToBuf() *ChainParamsBuf {
-	return &ChainParamsBuf{
-		StakeRequirement:  marshalBigInt(params.stakeRequirement),
-		GracePeriod:       params.gracePeriod.MarshalToBuf(),
-		MaxExecutionSteps: params.maxExecutionSteps,
-	}
-}
-
-func (m *ChainParamsBuf) Unmarshal() ChainParams {
-	return ChainParams{
-		stakeRequirement:  unmarshalBigInt(m.StakeRequirement),
-		gracePeriod:       m.GracePeriod.Unmarshal(),
-		maxExecutionSteps: m.MaxExecutionSteps,
-	}
-}
-
-func (cp ChainParams) Equals(cp2 ChainParams) bool {
-	return cp.stakeRequirement.Cmp(cp2.stakeRequirement) == 0 &&
-		cp.gracePeriod == cp2.gracePeriod &&
-		cp.maxExecutionSteps == cp2.maxExecutionSteps
-}
+//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
 
 type ChainObserver struct {
 	*StakedNodeGraph
 	rollupAddr       common.Address
-	vmParams         ChainParams
+	vmParams         structures.ChainParams
 	pendingInbox     *PendingInbox
 	listenForAddress common.Address
 	listener         ChainEventListener
@@ -66,7 +40,7 @@ type ChainObserver struct {
 func NewChain(
 	_rollupAddr common.Address,
 	_machine machine.Machine,
-	_vmParams ChainParams,
+	_vmParams structures.ChainParams,
 	_listenForAddress common.Address,
 	_listener ChainEventListener,
 ) *ChainObserver {

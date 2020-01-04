@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -282,19 +284,26 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return AssertedEvent{
-				PrevLeafHash:          eventVal.Fields[0],
-				NumSteps:              eventVal.NumSteps,
-				TimeBoundsBlocks:      eventVal.TimeBoundsBlocks,
-				ImportedMessageCount:  eventVal.ImportedMessageCount,
-				AfterPendingTop:       eventVal.Fields[1],
-				ImportedMessagesSlice: eventVal.Fields[2],
-				Assertion: protocol.NewExecutionAssertionStub(
-					eventVal.Fields[3],
-					eventVal.DidInboxInsn,
-					eventVal.NumArbGas,
-					eventVal.Fields[4],
-					eventVal.Fields[5],
-				),
+				PrevLeafHash: eventVal.Fields[0],
+				Params: &structures.AssertionParams{
+					NumSteps: eventVal.NumSteps,
+					TimeBoundsBlocks: [2]structures.RollupTime{
+						structures.RollupTimeFromBlockNum(eventVal.TimeBoundsBlocks[0]),
+						structures.RollupTimeFromBlockNum(eventVal.TimeBoundsBlocks[1]),
+					},
+					ImportedMessageCount: eventVal.ImportedMessageCount,
+				},
+				Claim: &structures.AssertionClaim{
+					AfterPendingTop:       eventVal.Fields[1],
+					ImportedMessagesSlice: eventVal.Fields[2],
+					AssertionStub: protocol.NewExecutionAssertionStub(
+						eventVal.Fields[3],
+						eventVal.DidInboxInsn,
+						eventVal.NumArbGas,
+						eventVal.Fields[4],
+						eventVal.Fields[5],
+					),
+				},
 			}, nil
 		} else if log.Topics[0] == rollupConfirmedID {
 			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(log)

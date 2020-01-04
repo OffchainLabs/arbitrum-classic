@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -214,35 +216,6 @@ func (vm *ArbRollup) PruneLeaf(
 	return vm.waitForReceipt(ctx, tx, "PruneLeaf")
 }
 
-type VMProtoState struct {
-	VMHash       [32]byte
-	InboxHash    [32]byte
-	PendingTop   [32]byte
-	PendingCount *big.Int
-}
-
-type AssertionParams struct {
-	timeBoundsBlocks     [2]*big.Int
-	importedMessageCount *big.Int
-	numSteps             uint32
-}
-
-type PendingTopOutput struct {
-	AfterPendingTop [32]byte
-}
-
-type MessagesOutput struct {
-	ImportedMessagesSlice [32]byte
-}
-
-type ExecutionOutput struct {
-	vmHash          [32]byte
-	didInboxInsn    bool
-	numArbGas       uint64
-	messagesAccHash [32]byte
-	logsAccHash     [32]byte
-}
-
 func (vm *ArbRollup) MakeAssertion(
 	ctx context.Context,
 
@@ -251,11 +224,9 @@ func (vm *ArbRollup) MakeAssertion(
 	prevDeadlineTicks *big.Int,
 	prevChildType uint32,
 
-	beforeState VMProtoState,
-	assertionParams AssertionParams,
-	pendingTopOutput PendingTopOutput,
-	messagesOutput MessagesOutput,
-	executionOutput ExecutionOutput,
+	beforeState structures.VMProtoData,
+	assertionParams structures.AssertionParams,
+	assertionClaim structures.AssertionClaim,
 	stakerProof [][32]byte,
 
 ) (*types.Receipt, error) {
@@ -263,26 +234,26 @@ func (vm *ArbRollup) MakeAssertion(
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth,
 		[10][32]byte{
-			beforeState.VMHash,
+			beforeState.MachineHash,
 			beforeState.InboxHash,
 			beforeState.PendingTop,
 			prevPrevLeafHash,
 			prevDisputableNodeHash,
-			pendingTopOutput.AfterPendingTop,
-			messagesOutput.ImportedMessagesSlice,
-			executionOutput.vmHash,
-			executionOutput.messagesAccHash,
-			executionOutput.logsAccHash,
+			assertionClaim.AfterPendingTop,
+			assertionClaim.ImportedMessagesSlice,
+			assertionClaim.AssertionStub.AfterHashValue(),
+			assertionClaim.AssertionStub.LastMessageHashValue(),
+			assertionClaim.AssertionStub.LastLogHashValue(),
 		},
 
 		beforeState.PendingCount,
 		prevDeadlineTicks,
 		prevChildType,
-		assertionParams.numSteps,
-		assertionParams.timeBoundsBlocks,
-		assertionParams.importedMessageCount,
-		executionOutput.didInboxInsn,
-		executionOutput.numArbGas,
+		assertionParams.NumSteps,
+		[2]*big.Int{assertionParams.TimeBoundsBlocks[0].Val, assertionParams.TimeBoundsBlocks[1].Val},
+		assertionParams.ImportedMessageCount,
+		assertionClaim.AssertionStub.DidInboxInsn,
+		assertionClaim.AssertionStub.NumGas,
 		stakerProof,
 	)
 	if err != nil {

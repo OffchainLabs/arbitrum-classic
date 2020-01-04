@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type IncomingMessageType int
@@ -102,13 +103,9 @@ func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type AssertedEvent struct {
-	PrevLeafHash          [32]byte
-	NumSteps              uint32
-	TimeBoundsBlocks      [2]*big.Int
-	ImportedMessageCount  *big.Int
-	AfterPendingTop       [32]byte
-	ImportedMessagesSlice [32]byte
-	Assertion             *protocol.ExecutionAssertionStub
+	PrevLeafHash [32]byte
+	Params       *structures.AssertionParams
+	Claim        *structures.AssertionClaim
 }
 
 func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {

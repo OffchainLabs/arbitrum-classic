@@ -1,0 +1,59 @@
+/*
+ * Copyright 2019, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+package structures;
+import "value/value.proto";
+import "protocol/protocol.proto";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
+
+message ChainParamsBuf {
+    value.BigIntegerBuf stakeRequirement = 1;
+    RollupTimeBuf gracePeriod = 2;
+    uint32 maxExecutionSteps = 3;
+}
+
+message VMProtoDataBuf {
+    value.HashBuf machineHash = 1;
+    value.HashBuf inboxHash = 2;
+    value.HashBuf pendingTop = 3;
+    value.BigIntegerBuf pendingCount = 4;
+}
+
+message AssertionParamsBuf {
+    uint32 numSteps = 1;
+    RollupTimeBuf timeLowerBound = 2;
+    RollupTimeBuf timeUpperBound = 3;
+    value.BigIntegerBuf importedMessageCount = 4;
+}
+
+message AssertionClaimBuf {
+    value.HashBuf afterPendingTop = 1;
+    value.HashBuf importedMessagesSlice = 2;
+    protocol.ExecutionAssertionStub assertionStub = 3;
+}
+
+message DisputableNodeBuf {
+    AssertionParamsBuf assertionParams = 1;
+    AssertionClaimBuf assertionClaim = 2;
+}
+
+message RollupTimeBuf {
+    value.BigIntegerBuf val = 1;
+}
+
+
+

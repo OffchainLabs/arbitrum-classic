@@ -17,7 +17,8 @@
 package rollup
 
 import (
-	"math/big"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -36,59 +37,85 @@ const (
 	MaxChildType        ChildType = 3
 )
 
-type VMProtoData struct {
-	machineHash  [32]byte
-	inboxHash    [32]byte
-	pendingTop   [32]byte
-	pendingCount *big.Int
-}
-
-func (d *VMProtoData) Hash() [32]byte {
-	var ret [32]byte
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(d.machineHash),
-		solsha3.Bytes32(d.inboxHash),
-		solsha3.Bytes32(d.pendingTop),
-		solsha3.Uint256(d.pendingCount),
-	))
-	return ret
-}
-
-func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
-	return &VMProtoDataBuf{
-		MachineHash:  marshalHash(node.machineHash),
-		InboxHash:    marshalHash(node.inboxHash),
-		PendingTop:   marshalHash(node.pendingTop),
-		PendingCount: marshalBigInt(node.pendingCount),
-	}
-}
-
-func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
-	return &VMProtoData{
-		machineHash:  unmarshalHash(buf.MachineHash),
-		inboxHash:    unmarshalHash(buf.InboxHash),
-		pendingTop:   unmarshalHash(buf.PendingTop),
-		pendingCount: unmarshalBigInt(buf.PendingCount),
-	}
-}
-
 type ExecutionNodeData struct {
 }
 
 type Node struct {
 	prev          *Node
-	deadlineTicks RollupTime
-	disputable    *DisputableNode
+	deadlineTicks structures.RollupTime
+	disputable    *structures.DisputableNode
 	linkType      ChildType
-	vmProtoData   *VMProtoData
+	vmProtoData   *structures.VMProtoData
 
-	machine machine.Machine // nil if unknown
-	depth   uint64
-	hash    [32]byte
+	machine   machine.Machine // nil if unknown
+	depth     uint64
+	innerHash [32]byte
+	hash      [32]byte
 
 	hasSuccessors   bool
 	successorHashes [MaxChildType + 1][32]byte
 	numStakers      uint64
+}
+
+func NewNode(
+	disputable *structures.DisputableNode,
+	linkType ChildType,
+	vmProtoData *structures.VMProtoData,
+	machine machine.Machine,
+	depth uint64,
+) *Node {
+	ret := &Node{
+		prev:            nil,
+		deadlineTicks:   structures.RollupTime{},
+		disputable:      disputable,
+		linkType:        linkType,
+		vmProtoData:     vmProtoData,
+		machine:         machine,
+		depth:           depth,
+		hasSuccessors:   false,
+		successorHashes: [4][32]byte{},
+		numStakers:      0,
+	}
+	ret.setHash()
+	return ret
+}
+
+func NewNodeFromValidPrev(
+	prev *Node,
+	disputable *structures.DisputableNode,
+	machine machine.Machine,
+) *Node {
+	ret := &Node{
+		prev:          prev,
+		deadlineTicks: structures.RollupTime{},
+		disputable:    disputable,
+		linkType:      ValidChildType,
+		vmProtoData:   disputable.ValidAfterVMProtoData(prev.vmProtoData),
+		machine:       machine,
+		depth:         prev.depth + 1,
+	}
+	ret.setHash()
+	prev.successorHashes[ValidChildType] = ret.hash
+	return ret
+}
+
+func NewNodeFromInvalidPrev(
+	prev *Node,
+	disputable *structures.DisputableNode,
+	kind ChildType,
+) *Node {
+	ret := &Node{
+		prev:          prev,
+		deadlineTicks: structures.RollupTime{},
+		disputable:    disputable,
+		linkType:      kind,
+		vmProtoData:   prev.vmProtoData,
+		machine:       prev.machine,
+		depth:         prev.depth + 1,
+	}
+	ret.setHash()
+	prev.successorHashes[kind] = ret.hash
+	return ret
 }
 
 func (node1 *Node) Equals(node2 *Node) bool {
@@ -101,14 +128,16 @@ func (node *Node) setHash() {
 		prevHashArr = node.prev.hash
 	}
 	innerHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(node.disputable.hash),
-		solsha3.Int256(node.linkType),
 		solsha3.Bytes32(node.vmProtoData.Hash()),
+		solsha3.Int256(node.deadlineTicks),
+		solsha3.Bytes32(node.disputable.Hash()),
+		solsha3.Int256(node.linkType),
 	)
 	hashSlice := solsha3.SoliditySHA3(
 		solsha3.Bytes32(prevHashArr),
 		solsha3.Bytes32(innerHash),
 	)
+	copy(node.innerHash[:], innerHash)
 	copy(node.hash[:], hashSlice)
 }
 
@@ -121,21 +150,20 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 		DisputableNode: node.disputable.MarshalToBuf(),
 		VmProtoData:    node.vmProtoData.MarshalToBuf(),
 		LinkType:       uint32(node.linkType),
-		PrevHash:       marshalHash(node.prev.hash),
+		PrevHash:       utils.MarshalHash(node.prev.hash),
 	}
 }
 
 func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
-	prevHashArr := unmarshalHash(buf.PrevHash)
-	node := &Node{
-		depth:       buf.Depth,
-		disputable:  buf.DisputableNode.Unmarshal(),
-		vmProtoData: buf.VmProtoData.Unmarshal(),
-		linkType:    ChildType(buf.LinkType),
-		numStakers:  0,
-	}
+	prevHashArr := utils.UnmarshalHash(buf.PrevHash)
+	node := NewNode(
+		buf.DisputableNode.Unmarshal(),
+		ChildType(buf.LinkType),
+		buf.VmProtoData.Unmarshal(),
+		nil,
+		buf.Depth,
+	)
 	//TODO: try to retrieve machine from checkpoint DB; might fail
-	node.setHash()
 	chain.nodeFromHash[node.hash] = node
 
 	// can't set up prev and successorHash fields yet; return prevHashArr so caller can do this later
@@ -154,14 +182,7 @@ func GeneratePathProof(from, to *Node) [][32]byte {
 	if sub == nil {
 		return nil
 	}
-	var inner32 [32]byte
-	innerHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(to.disputable.hash),
-		solsha3.Int256(to.linkType),
-		solsha3.Bytes32(to.vmProtoData.Hash()),
-	)
-	copy(inner32[:], innerHash)
-	return append(sub, inner32)
+	return append(sub, to.innerHash)
 }
 
 func GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
@@ -178,7 +199,7 @@ func GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
 func (n *Node) EqualsFull(n2 *Node) bool {
 	return n.Equals(n2) &&
 		n.depth == n2.depth &&
-		n.machineHash == n2.machineHash &&
+		n.vmProtoData.Equals(n2.vmProtoData) &&
 		n.linkType == n2.linkType &&
 		n.hasSuccessors == n2.hasSuccessors &&
 		n.successorHashes == n2.successorHashes &&

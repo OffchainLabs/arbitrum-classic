@@ -17,8 +17,17 @@
 syntax = "proto3";
 package rollup;
 import "value/value.proto";
-import "protocol/protocol.proto";
+import "structures/structures.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
+
+message NodeBuf {
+    uint64 depth = 1;
+    value.HashBuf hash = 2;
+    structures.DisputableNodeBuf disputableNode = 3;
+    structures.VMProtoDataBuf vmProtoData = 4;
+    uint32 linkType = 5;
+    value.HashBuf prevHash = 6;
+}
 
 message NodeGraphBuf {
     repeated NodeBuf nodes = 1;
@@ -36,30 +45,8 @@ message StakedNodeGraphBuf {
 message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
     bytes contractAddress = 2;
-    ChainParamsBuf vmParams = 3;
+    structures.ChainParamsBuf vmParams = 3;
     PendingInboxBuf pendingInbox = 4;
-}
-
-message ChainParamsBuf {
-    value.BigIntegerBuf stakeRequirement = 1;
-    RollupTimeBuf gracePeriod = 2;
-    uint32 maxExecutionSteps = 3;
-}
-
-message VMProtoDataBuf {
-    value.HashBuf machineHash = 1;
-    value.HashBuf inboxHash = 2;
-    value.HashBuf pendingTop = 3;
-    value.BigIntegerBuf pendingCount = 4;
-}
-
-message NodeBuf {
-    uint64 depth = 1;
-    value.HashBuf hash = 2;
-    DisputableNodeBuf disputableNode = 3;
-    VMProtoDataBuf vmProtoData = 4;
-    uint32 linkType = 5;
-    value.HashBuf prevHash = 6;
 }
 
 message StakerBuf {
@@ -76,24 +63,7 @@ message ChallengeBuf {
     uint32 kind = 4;
 }
 
-message DisputableNodeBuf {
-    uint32 numSteps = 1;
-    RollupTimeBuf timeLowerBound = 2;
-    RollupTimeBuf timeUpperBound = 3;
-    value.BigIntegerBuf importedMessageCount = 4;
-    value.HashBuf afterPendingTop = 5;
-    value.HashBuf importedMessagesSlice = 6;
-    protocol.ExecutionAssertionStub assertionStub = 7;
-}
-
 message PendingInboxBuf {
     repeated bytes items = 1;
     value.HashBuf hashOfRest = 2;
 }
-
-message RollupTimeBuf {
-    value.BigIntegerBuf val = 1;
-}
-
-
-

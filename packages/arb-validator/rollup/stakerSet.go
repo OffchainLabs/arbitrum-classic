@@ -20,13 +20,17 @@ import (
 	"bytes"
 	"log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type Staker struct {
 	address      common.Address
 	location     *Node
-	creationTime RollupTime
+	creationTime structures.RollupTime
 	challenge    *Challenge
 }
 
@@ -64,14 +68,14 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	if staker.challenge == nil {
 		return &StakerBuf{
 			Address:       staker.address.Bytes(),
-			Location:      marshalHash(staker.location.hash),
+			Location:      utils.MarshalHash(staker.location.hash),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: nil,
 		}
 	} else {
 		return &StakerBuf{
 			Address:       staker.address.Bytes(),
-			Location:      marshalHash(staker.location.hash),
+			Location:      utils.MarshalHash(staker.location.hash),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: staker.challenge.contract.Bytes(),
 		}
@@ -80,7 +84,7 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 
 func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	locArr := unmarshalHash(buf.Location)
+	locArr := structures.unmarshalHash(buf.Location)
 	if buf.ChallengeAddr != nil {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),

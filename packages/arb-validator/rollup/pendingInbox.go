@@ -22,6 +22,8 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/utils"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -119,13 +121,13 @@ func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
 	}
 	return &PendingInboxBuf{
 		Items:      msgs,
-		HashOfRest: marshalHash(pi.hashOfRest),
+		HashOfRest: utils.MarshalHash(pi.hashOfRest),
 	}
 }
 
 func (buf *PendingInboxBuf) Unmarshal() *MessageStack {
 	ret := NewMessageStack()
-	ret.hashOfRest = unmarshalHash(buf.HashOfRest)
+	ret.hashOfRest = utils.UnmarshalHash(buf.HashOfRest)
 	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
 		val, err := value.UnmarshalValue(bytes.NewBuffer([]byte(buf.Items[i])))
 		if err != nil {
