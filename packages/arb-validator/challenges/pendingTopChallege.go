@@ -14,15 +14,14 @@
 * limitations under the License.
  */
 
-package rollup
+package challenges
 
 import (
 	"context"
 	"errors"
+	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -31,13 +30,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
-func DefendExecutionClaim(
+func DefendPendingTopClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	startDefender machine.AssertionDefender,
+	pendingInbox *rollup.PendingInbox,
+	pendingTopClaim ethbridge.PendingTopOutput,
+	topPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client)
+	contract, err := ethbridge.NewPendingTopChallenge(address, client)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -45,23 +46,24 @@ func DefendExecutionClaim(
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
-	return defendExecution(
+	return defendPendingTop(
 		auth,
 		client,
-		contract,
 		noteChan,
-		startDefender,
+		contract,
+		pendingInbox,
+		pendingTopClaim,
+		topPending,
 	)
 }
 
-func ChallengeExecutionClaim(
+func ChallengePendingTopClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	startMachine machine.Machine,
-	startPrecondition *protocol.Precondition,
+	pendingInbox *rollup.PendingInbox,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client)
+	contract, err := ethbridge.NewPendingTopChallenge(address, client)
 	if err != nil {
 		return 0, err
 	}
@@ -69,22 +71,23 @@ func ChallengeExecutionClaim(
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
-	return challengeExecution(
+	return challengePendingTop(
 		auth,
 		client,
-		contract,
 		noteChan,
-		startMachine,
-		startPrecondition,
+		contract,
+		pendingInbox,
 	)
 }
 
-func defendExecution(
+func defendPendingTop(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
-	contract *ethbridge.ExecutionChallenge,
 	outChan chan ethbridge.Notification,
-	startDefender machine.AssertionDefender,
+	contract *ethbridge.PendingTopChallenge,
+	pendingInbox *rollup.PendingInbox,
+	pendingTopClaim ethbridge.PendingTopOutput,
+	topPending [32]byte,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -92,18 +95,24 @@ func defendExecution(
 	}
 	_, ok = note.Event.(ethbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("ExecutionChallenge expected InitiateChallengeEvent")
+		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
 	}
 
-	defender := startDefender
+	startState := pendingTopClaim.AfterPendingTop
+	endState := topPending
 
 	for {
-		if defender.NumSteps() == 1 {
-			proof, err := defender.SolidityOneStepProof()
+		messageCount, err := pendingInbox.SegmentSize(startState, endState)
+		if err != nil {
+			return 0, err
+		}
+
+		if messageCount == 1 {
+			nextHash, valueHash, err := pendingInbox.GenerateOneStepProof(startState)
 			if err != nil {
 				return 0, err
 			}
-			_, err = contract.OneStepProof(auth, defender.GetPrecondition(), defender.GetAssertion().Stub(), proof)
+			_, err = contract.OneStepProof(auth, startState, nextHash, valueHash)
 			if err != nil {
 				return 0, err
 			}
@@ -113,25 +122,27 @@ func defendExecution(
 			}
 			_, ok = note.Event.(ethbridge.OneStepProof)
 			if !ok {
-				return 0, errors.New("ExecutionChallenge expected OneStepProof")
+				return 0, errors.New("PendingTopChallenge expected OneStepProof")
 			}
 			return ChallengeAsserterWon, nil
 		}
 
-		defenders := defender.NBisect(50)
-		assertions := make([]*protocol.AssertionStub, 0, len(defenders))
-		for _, defender := range defenders {
-			assertions = append(assertions, defender.GetAssertion().Stub())
+		chainHashes, err := pendingInbox.GenerateBisection(startState, endState, 100)
+		if err != nil {
+			return 0, err
 		}
-		_, err := contract.BisectAssertion(auth, defender.GetPrecondition(), assertions)
+		_, err = contract.Bisect(auth, chainHashes, new(big.Int).SetUint64(messageCount))
+		if err != nil {
+			return 0, err
+		}
 
 		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		ev, ok := note.Event.(ethbridge.ExecutionBisectionEvent)
+		ev, ok := note.Event.(ethbridge.PendingTopBisectionEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
+			return 0, errors.New("PendingTopChallenge expected PendingTopBisectionEvent")
 		}
 
 		note, state, err = getNextEventWithTimeout(
@@ -146,19 +157,19 @@ func defendExecution(
 		}
 		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ContinueChallengeEvent")
+			return 0, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
 		}
-		defender = defenders[contEv.SegmentIndex.Uint64()]
+		startState = chainHashes[contEv.SegmentIndex.Uint64()]
+		endState = chainHashes[contEv.SegmentIndex.Uint64()+1]
 	}
 }
 
-func challengeExecution(
+func challengePendingTop(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
-	contract *ethbridge.ExecutionChallenge,
 	outChan chan ethbridge.Notification,
-	startMachine machine.Machine,
-	startPrecondition *protocol.Precondition,
+	contract *ethbridge.PendingTopChallenge,
+	pendingInbox *rollup.PendingInbox,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -166,11 +177,9 @@ func challengeExecution(
 	}
 	ev, ok := note.Event.(ethbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("ExecutionChallenge expected InitiateChallengeEvent")
+		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
 	}
 
-	mach := startMachine
-	precondition := startPrecondition
 	deadline := ev.DeadlineTicks
 	for {
 		note, state, err := getNextEventWithTimeout(
@@ -188,31 +197,26 @@ func challengeExecution(
 			return ChallengeAsserterWon, nil
 		}
 
-		ev, ok := note.Event.(ethbridge.ExecutionBisectionEvent)
+		ev, ok := note.Event.(ethbridge.PendingTopBisectionEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
+			return 0, errors.New("PendingTopChallenge expected PendingTopBisectionEvent")
 		}
-		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach, ev.Assertions, startPrecondition.TimeBounds)
+		challengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
 		if err != nil {
 			return 0, err
 		}
-		preconditions := protocol.GeneratePreconditions(precondition, ev.Assertions)
-		_, err = contract.ChooseSegment(
-			auth,
-			challengedAssertionNum,
-			preconditions,
-			ev.Assertions,
-		)
+		_, err = contract.ChooseSegment(auth, uint16(challengedSegment), ev.ChainHashes)
+		if err != nil {
+			return 0, err
+		}
 		note, state, err = getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
 		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ContinueChallengeEvent")
+			return 0, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
 		}
-		mach = m
-		precondition = preconditions[contEv.SegmentIndex.Uint64()]
 		deadline = contEv.DeadlineTicks
 	}
 }

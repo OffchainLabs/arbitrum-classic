@@ -14,12 +14,15 @@
 * limitations under the License.
  */
 
-package rollup
+package challenges
 
 import (
 	"context"
 	"errors"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -32,7 +35,7 @@ func DefendMessagesClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	pendingInbox *PendingInbox,
+	pendingInbox *rollup.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	messagesOutput ethbridge.MessagesOutput,
@@ -61,7 +64,7 @@ func ChallengeMessagesClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	pendingInbox *PendingInbox,
+	pendingInbox *rollup.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
@@ -89,7 +92,7 @@ func defendMessages(
 	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
-	pendingInbox *PendingInbox,
+	pendingInbox *rollup.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	messagesOutput ethbridge.MessagesOutput,
@@ -110,7 +113,7 @@ func defendMessages(
 
 	startPending := beforePending
 	endPending := afterPending
-	startMessages := messagesStack.hashOfRest
+	startMessages := value.NewEmptyTuple().Hash()
 	endMessages := messagesOutput.ImportedMessagesSlice
 
 	for {
@@ -191,7 +194,7 @@ func challengeMessages(
 	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
-	pendingInbox *PendingInbox,
+	pendingInbox *rollup.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {

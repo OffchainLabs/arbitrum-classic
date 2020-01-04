@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package rollup
+package challenges
 
 import (
 	"context"
