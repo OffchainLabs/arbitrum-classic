@@ -84,7 +84,7 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 
 func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	locArr := structures.unmarshalHash(buf.Location)
+	locArr := utils.UnmarshalHash(buf.Location)
 	if buf.ChallengeAddr != nil {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),
@@ -125,7 +125,7 @@ func (s *Staker) Equals(s2 *Staker) bool {
 	if s.location.hash != s2.location.hash {
 		return false
 	}
-	if s.creationTime.val.Cmp(s2.creationTime.val) != 0 {
+	if !s.creationTime.Equals(s2.creationTime) {
 		return false
 	}
 	if s.challenge == nil {

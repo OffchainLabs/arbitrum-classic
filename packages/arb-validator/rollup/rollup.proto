@@ -52,7 +52,7 @@ message ChainObserverBuf {
 message StakerBuf {
     bytes address = 1;
     value.HashBuf location = 2;
-    RollupTimeBuf creationTime = 3;
+    structures.RollupTimeBuf creationTime = 3;
     bytes challengeAddr = 4;
 }
 
