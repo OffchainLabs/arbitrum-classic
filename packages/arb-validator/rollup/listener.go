@@ -30,10 +30,9 @@ type ChanCEListener struct {
 	ch    chan interface{}
 }
 
-func NewChanCEListener(chain *ChainObserver, runLoop func(*ChanCEListener)) *ChanCEListener {
-	ret := &ChanCEListener{chain, make(chan interface{}, 64)}
+func NewChanCEListener(chain *ChainObserver, runLoop func(*ChanCEListener)) {
+	ret := &ChanCEListener{chain, make(chan interface{}, 1024)}
 	go runLoop(ret)
-	return ret
 }
 
 func (lis *ChanCEListener) Notify(ev interface{}) {
