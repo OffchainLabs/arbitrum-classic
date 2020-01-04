@@ -29,7 +29,7 @@ func NewOneStepProof(address common.Address, client *ethclient.Client) (*OneStep
 func (con *OneStepProof) ValidateProof(
 	auth *bind.CallOpts,
 	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
+	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
 	return con.contract.ValidateProof(

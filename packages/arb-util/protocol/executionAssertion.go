@@ -24,10 +24,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type Assertion struct {
+type ExecutionAssertion struct {
 	AfterHash    [32]byte
 	DidInboxInsn bool
-	NumSteps     uint32
 	NumGas       uint64
 	OutMsgs      []value.Value
 	Logs         []value.Value
@@ -38,12 +37,12 @@ type MultiReader interface {
 	io.ByteReader
 }
 
-func NewAssertion(afterHash [32]byte, didInboxInsn bool, numSteps uint32, numGas uint64, outMsgs []value.Value, logs []value.Value) *Assertion {
-	return &Assertion{afterHash, didInboxInsn, numSteps, numGas, outMsgs, logs}
+func NewExecutionAssertion(afterHash [32]byte, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
+	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
 }
 
-func (a *Assertion) Equals(b *Assertion) bool {
-	if a.AfterHash != b.AfterHash || (a.NumSteps != b.NumSteps) || (a.NumGas != b.NumGas) || (len(a.OutMsgs) != len(b.OutMsgs)) {
+func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
+	if a.AfterHash != b.AfterHash || (a.NumGas != b.NumGas) || (len(a.OutMsgs) != len(b.OutMsgs)) {
 		return false
 	}
 	for i, ao := range a.OutMsgs {
@@ -59,7 +58,7 @@ func (a *Assertion) Equals(b *Assertion) bool {
 	return true
 }
 
-func (a *Assertion) LogsHash() [32]byte {
+func (a *ExecutionAssertion) LogsHash() [32]byte {
 	var logHash [32]byte
 	for _, logVal := range a.Logs {
 		next := solsha3.SoliditySHA3(solsha3.Bytes32(logHash), solsha3.Bytes32(logVal.Hash()))
@@ -68,14 +67,14 @@ func (a *Assertion) LogsHash() [32]byte {
 	return logHash
 }
 
-func (a *Assertion) Stub() *AssertionStub {
+func (a *ExecutionAssertion) Stub() *ExecutionAssertionStub {
 	var lastHash [32]byte
 	for _, msg := range a.OutMsgs {
 		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
 		copy(lastHash[:], next)
 	}
 
-	return NewAssertionStub(
+	return NewExecutionAssertionStub(
 		a.AfterHash,
 		a.DidInboxInsn,
 		a.NumGas,

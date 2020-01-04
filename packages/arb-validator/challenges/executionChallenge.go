@@ -119,7 +119,7 @@ func defendExecution(
 		}
 
 		defenders := defender.NBisect(50)
-		assertions := make([]*protocol.AssertionStub, 0, len(defenders))
+		assertions := make([]*protocol.ExecutionAssertionStub, 0, len(defenders))
 		for _, defender := range defenders {
 			assertions = append(assertions, defender.GetAssertion().Stub())
 		}

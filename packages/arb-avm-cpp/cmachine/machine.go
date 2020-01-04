@@ -133,7 +133,7 @@ func (m *Machine) DeliverMessages(messages value.TupleValue) {
 	C.machineDeliverMessages(m.c, unsafe.Pointer(&msgData[0]))
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) (*protocol.ExecutionAssertion, uint32) {
 	startTime, err := value.Uint64FromBuf(timeBounds.StartTime)
 	if err != nil {
 		log.Fatal(err)
@@ -154,14 +154,13 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 	outMessageVals := bytesArrayToVals(outMessagesRaw, int(assertion.outMessageCount))
 	logVals := bytesArrayToVals(logsRaw, int(assertion.logCount))
 
-	return protocol.NewAssertion(
+	return protocol.NewExecutionAssertion(
 		m.Hash(),
 		int(assertion.didInboxInsn) != 0,
-		uint32(assertion.numSteps),
 		uint64(assertion.numGas),
 		outMessageVals,
 		logVals,
-	)
+	), uint32(assertion.numSteps)
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

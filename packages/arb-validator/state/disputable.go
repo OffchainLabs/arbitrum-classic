@@ -53,7 +53,7 @@ func (e *Error) Error() string {
 type proposedUpdate struct {
 	machine         machine.Machine
 	newMessageCount uint64
-	Assertion       *protocol.Assertion
+	Assertion       *protocol.ExecutionAssertion
 	timeBounds      *protocol.TimeBounds
 	sequenceNum     uint64
 	NewLogCount     int
@@ -75,7 +75,7 @@ type Waiting struct {
 
 	proposed    *proposedUpdate
 	accepted    *core.Core
-	assertion   *protocol.Assertion
+	assertion   *protocol.ExecutionAssertion
 	sequenceNum uint64
 	signatures  [][]byte
 
@@ -131,7 +131,7 @@ func (bot Waiting) ClosingUnanimous(retChan chan<- bool, errChan chan<- error) (
 	// If there is no active unanimous assertion, there is nothing to close
 	// TODO: Validator should refuse to unanimous assert again from the same start point
 	if bot.assertion == nil {
-		err := errors.New("couldn't close since no Assertion is open")
+		err := errors.New("couldn't close since no ExecutionAssertion is open")
 		if errChan != nil {
 			errChan <- err
 		}
@@ -290,12 +290,12 @@ func (bot Waiting) ValidateUnanimousAssertion(request valmessage.UnanimousReques
 }
 
 func (bot Waiting) PreparePendingUnanimous(
-	newAssertion *protocol.Assertion,
+	newAssertion *protocol.ExecutionAssertion,
 	messages []protocol.Message,
 	machine machine.Machine,
 	sequenceNum uint64,
 	timeBounds *protocol.TimeBounds,
-	shouldFinalize func(*protocol.Assertion) bool,
+	shouldFinalize func(*protocol.ExecutionAssertion) bool,
 ) (Waiting, error) {
 	newLogCount := len(newAssertion.Logs)
 	if bot.assertion != nil {
@@ -329,7 +329,7 @@ func (bot Waiting) PreparePendingUnanimous(
 
 func (bot Waiting) FinalizePendingUnanimous(signatures [][]byte) (Waiting, error) {
 	if bot.proposed == nil {
-		return Waiting{}, errors.New("no pending Assertion")
+		return Waiting{}, errors.New("no pending ExecutionAssertion")
 	}
 
 	return Waiting{
@@ -430,7 +430,7 @@ type watchingAssertion struct {
 	pending      *core.Core
 	deadline     uint64
 	precondition *protocol.Precondition
-	assertion    *protocol.Assertion
+	assertion    *protocol.ExecutionAssertion
 }
 
 func (bot watchingAssertion) SendMessageToVM(msg protocol.Message) {
@@ -496,7 +496,7 @@ type disputableAssertCore struct {
 	*core.Config
 	afterCore    *core.Core
 	precondition *protocol.Precondition
-	assertion    *protocol.Assertion
+	assertion    *protocol.ExecutionAssertion
 	resultChan   chan<- bool
 	errorChan    chan<- error
 }
@@ -514,7 +514,7 @@ func (bot attemptingAssertion) updateState(ev ethbridge.Event, time uint64, brid
 	switch ev := ev.(type) {
 	case ethbridge.PendingDisputableAssertionEvent:
 		if ev.Asserter != bot.Address {
-			bot.errorChan <- fmt.Errorf("attemptingAssertion: Other Assertion by %v got in before ours by %v", hexutil.Encode(ev.Asserter[:]), hexutil.Encode(bot.Address[:]))
+			bot.errorChan <- fmt.Errorf("attemptingAssertion: Other ExecutionAssertion by %v got in before ours by %v", hexutil.Encode(ev.Asserter[:]), hexutil.Encode(bot.Address[:]))
 			close(bot.errorChan)
 			close(bot.resultChan)
 			return NewWaiting(bot.Config, bot.Core).ChainUpdateState(ev, time, bridge)
@@ -608,7 +608,7 @@ type finalizingAssertion struct {
 	*core.Core
 	*core.Config
 	ResultChan chan<- bool
-	assertion  *protocol.Assertion
+	assertion  *protocol.ExecutionAssertion
 }
 
 func (bot finalizingAssertion) updateState(ev ethbridge.Event, time uint64, bridge bridge.ArbVMBridge) (ChainState, error) {

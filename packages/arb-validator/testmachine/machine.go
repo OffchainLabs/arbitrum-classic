@@ -112,8 +112,9 @@ func (m *Machine) DeliverMessages(msgs value.TupleValue) {
 	m.gomachine.DeliverMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
-	a := &protocol.Assertion{}
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) (*protocol.ExecutionAssertion, uint32) {
+	a := &protocol.ExecutionAssertion{}
+	totalSteps := uint32(0)
 	stepIncrease := int32(50)
 	for i := int32(0); i < maxSteps; i += stepIncrease {
 		steps := maxSteps - i
@@ -122,28 +123,33 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 		}
 
 		pcStart := m.gomachine.GetPC()
-		a1 := m.cppmachine.ExecuteAssertion(steps, timeBounds)
-		a2 := m.gomachine.ExecuteAssertion(steps, timeBounds)
+		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds)
+		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds)
 
-		if !a1.Equals(a2) {
+		if ranSteps1 != ranSteps2 {
+			pcEnd := m.gomachine.GetPC()
+			log.Println("cpp num steps", ranSteps1, a1.NumGas)
+			log.Println("go num steps", ranSteps2, a2.NumGas)
+			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
+		} else if !a1.Equals(a2) {
 			pcEnd := m.gomachine.GetPC()
 			m.cppmachine.PrintState()
 			m.gomachine.PrintState()
-			log.Println("cpp num steps, num gas", a1.NumSteps, a1.NumGas)
-			log.Println("go num steps, num gas", a2.NumSteps, a2.NumGas)
+			log.Println("cpp num steps, num gas", ranSteps1, a1.NumGas)
+			log.Println("go num steps, num gas", ranSteps2, a2.NumGas)
 			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
 		}
 		a.AfterHash = a1.AfterHash
-		a.NumSteps += a1.NumSteps
+		totalSteps += ranSteps1
 		a.NumGas += a1.NumGas
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
-		if a1.NumSteps < uint32(steps) {
+		if ranSteps1 < uint32(steps) {
 			break
 		}
 	}
-	fmt.Println("Ran", a.NumSteps, "steps")
-	return a
+	fmt.Println("Ran", totalSteps, "steps")
+	return a, totalSteps
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

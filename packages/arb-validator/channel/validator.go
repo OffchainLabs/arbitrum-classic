@@ -126,7 +126,7 @@ func (val *Validator) topOffDeposit(ctx context.Context) error {
 func (val *Validator) FinalizedUnanimousAssert(
 	ctx context.Context,
 	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
@@ -143,7 +143,7 @@ func (val *Validator) FinalizedUnanimousAssert(
 func (val *Validator) PendingUnanimousAssert(
 	ctx context.Context,
 	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 	sequenceNum uint64,
 	signatures [][]byte,
 ) (*types.Receipt, error) {
@@ -162,7 +162,7 @@ func (val *Validator) PendingUnanimousAssert(
 func (val *Validator) ConfirmUnanimousAsserted(
 	ctx context.Context,
 	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbChannel.ConfirmUnanimousAsserted(

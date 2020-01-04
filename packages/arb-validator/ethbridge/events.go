@@ -108,7 +108,7 @@ type AssertedEvent struct {
 	ImportedMessageCount  *big.Int
 	AfterPendingTop       [32]byte
 	ImportedMessagesSlice [32]byte
-	Assertion             *protocol.AssertionStub
+	Assertion             *protocol.ExecutionAssertionStub
 }
 
 func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {
@@ -156,7 +156,7 @@ type MessagesBisectionEvent struct {
 }
 
 type ExecutionBisectionEvent struct {
-	Assertions    []*protocol.AssertionStub
+	Assertions    []*protocol.ExecutionAssertionStub
 	TotalSteps    uint32
 	DeadlineTicks *big.Int
 }

@@ -118,7 +118,7 @@ func (val *ChallengeValidator) StartListening(ctx context.Context) (chan ethbrid
 func (val *ChallengeValidator) BisectAssertion(
 	ctx context.Context,
 	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
+	assertions []*protocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.challenge.BisectAssertion(
@@ -134,7 +134,7 @@ func (val *ChallengeValidator) ContinueChallenge(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
+	assertions []*protocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.challenge.ContinueChallenge(
@@ -150,7 +150,7 @@ func (val *ChallengeValidator) ContinueChallenge(
 func (val *ChallengeValidator) OneStepProof(
 	ctx context.Context,
 	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
+	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()

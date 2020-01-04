@@ -78,9 +78,9 @@ func (ac *MachineAssertionContext) NotifyStep(numGas uint64, isInboxInsn bool) {
 	}
 }
 
-func (ac *MachineAssertionContext) Finalize(m *Machine) *protocol.Assertion {
+func (ac *MachineAssertionContext) Finalize(m *Machine) (*protocol.ExecutionAssertion, uint32) {
 	ac.machine.SetContext(&machine.NoContext{})
-	return protocol.NewAssertion(ac.machine.Hash(), ac.didInboxInsn, ac.numSteps, ac.numGas, ac.outMsgs, ac.logs)
+	return protocol.NewExecutionAssertion(ac.machine.Hash(), ac.didInboxInsn, ac.numGas, ac.outMsgs, ac.logs), ac.numSteps
 }
 
 func (ac *MachineAssertionContext) EndContext() {

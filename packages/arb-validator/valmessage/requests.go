@@ -49,6 +49,6 @@ type UnanimousRequest struct {
 type UnanimousUpdateResults struct {
 	UnanimousRequestData
 	NewInboxHash [32]byte
-	Assertion    *protocol.Assertion
+	Assertion    *protocol.ExecutionAssertion
 	NewLogCount  int
 }

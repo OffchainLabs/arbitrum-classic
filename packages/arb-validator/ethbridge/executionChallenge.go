@@ -173,7 +173,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 func (c *ExecutionChallenge) BisectAssertion(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
-	assertions []*protocol.AssertionStub,
+	assertions []*protocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) (*types.Receipt, error) {
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
@@ -211,7 +211,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 func (c *ExecutionChallenge) OneStepProof(
 	auth *bind.TransactOpts,
 	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
+	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*types.Receipt, error) {
 	tx, err := c.Challenge.OneStepProof(
@@ -238,7 +238,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 	auth *bind.TransactOpts,
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,
-	assertions []*protocol.AssertionStub,
+	assertions []*protocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	bisectionHashes := make([][32]byte, 0, len(assertions))
 	for i := range assertions {
@@ -256,11 +256,11 @@ func (c *ExecutionChallenge) ChooseSegment(
 	)
 }
 
-func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisectedAssertion) []*protocol.AssertionStub {
+func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisectedAssertion) []*protocol.ExecutionAssertionStub {
 	bisectionCount := len(event.MachineHashes) - 1
-	assertions := make([]*protocol.AssertionStub, 0, bisectionCount)
+	assertions := make([]*protocol.ExecutionAssertionStub, 0, bisectionCount)
 	for i := 0; i < bisectionCount; i++ {
-		assertion := &protocol.AssertionStub{
+		assertion := &protocol.ExecutionAssertionStub{
 			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
 			DidInboxInsn:     event.DidInboxInsns[i],
 			NumGas:           event.Gases[i],

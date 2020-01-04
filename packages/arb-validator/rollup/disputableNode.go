@@ -24,11 +24,12 @@ import (
 )
 
 type DisputableNode struct {
+	numSteps              uint32
 	timeBounds            [2]RollupTime
 	importedMessageCount  *big.Int
 	afterPendingTop       [32]byte
 	importedMessagesSlice [32]byte
-	assertionStub         *protocol.AssertionStub
+	assertionStub         *protocol.ExecutionAssertionStub
 	hash                  [32]byte
 }
 
@@ -60,7 +61,7 @@ func (dn *DisputableNode) _hash() [32]byte {
 	retSlice := solsha3.SoliditySHA3(
 		solsha3.Bytes32(unmarshalHash(dn.assertionStub.AfterHash)),
 		solsha3.Bool(dn.assertionStub.DidInboxInsn),
-		solsha3.Uint32(dn.assertionStub.NumSteps),
+		solsha3.Uint32(dn.numSteps),
 		solsha3.Uint64(dn.assertionStub.NumGas),
 		solsha3.Bytes32(unmarshalHash(dn.assertionStub.FirstMessageHash)),
 		solsha3.Bytes32(unmarshalHash(dn.assertionStub.LastMessageHash)),

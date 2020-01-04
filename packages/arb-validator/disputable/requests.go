@@ -24,7 +24,7 @@ import (
 type AssertionRequest struct {
 	AfterCore    *core.Core
 	Precondition *protocol.Precondition
-	Assertion    *protocol.Assertion
+	Assertion    *protocol.ExecutionAssertion
 	ResultChan   chan<- bool
 	ErrorChan    chan<- error
 }

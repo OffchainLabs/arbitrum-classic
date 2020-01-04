@@ -288,7 +288,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				ImportedMessageCount:  eventVal.ImportedMessageCount,
 				AfterPendingTop:       eventVal.Fields[1],
 				ImportedMessagesSlice: eventVal.Fields[2],
-				Assertion: protocol.NewAssertionStub(
+				Assertion: protocol.NewExecutionAssertionStub(
 					eventVal.Fields[3],
 					eventVal.DidInboxInsn,
 					eventVal.NumArbGas,

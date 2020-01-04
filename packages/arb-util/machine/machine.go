@@ -53,7 +53,7 @@ type Machine interface {
 	InboxHash() value.HashOnlyValue
 	DeliverMessages(messages value.TupleValue)
 
-	ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion
+	ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) (*protocol.ExecutionAssertion, uint32)
 	MarshalForProof() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool

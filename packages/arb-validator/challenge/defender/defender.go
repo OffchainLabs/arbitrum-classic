@@ -30,7 +30,7 @@ import (
 )
 
 func New(assDef machine.AssertionDefender, deadline uint64, brdg bridge.Challenge) (challenge.State, error) {
-	if assDef.GetAssertion().NumSteps == 1 {
+	if assDef.NumSteps() == 1 {
 		fmt.Println("Generating proof")
 		proofData, err := assDef.SolidityOneStepProof()
 		if err != nil {
@@ -53,7 +53,7 @@ func New(assDef machine.AssertionDefender, deadline uint64, brdg bridge.Challeng
 	}
 
 	defenders := assDef.NBisect(50)
-	assertions := make([]*protocol.AssertionStub, 0, len(defenders))
+	assertions := make([]*protocol.ExecutionAssertionStub, 0, len(defenders))
 	for _, defender := range defenders {
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
@@ -72,7 +72,7 @@ func New(assDef machine.AssertionDefender, deadline uint64, brdg bridge.Challeng
 
 type bisectedAssert struct {
 	wholePrecondition *protocol.Precondition
-	wholeAssertion    *protocol.AssertionStub
+	wholeAssertion    *protocol.ExecutionAssertionStub
 	splitDefenders    []machine.AssertionDefender
 	deadline          uint64
 }
@@ -136,7 +136,7 @@ func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, brdg bri
 
 type oneStepChallenged struct {
 	precondition *protocol.Precondition
-	assertion    *protocol.AssertionStub
+	assertion    *protocol.ExecutionAssertionStub
 	deadline     uint64
 }
 
@@ -148,7 +148,7 @@ func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.Challenge) (c
 	// timeoutMsg := SendAsserterTimedOutChallengeMessage{
 	//	bot.deadline,
 	//	bot.precondition,
-	//	bot.Assertion,
+	//	bot.ExecutionAssertion,
 	//}
 	return challenge.TimedOutAsserter{}, nil
 }

@@ -187,7 +187,7 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 		}
 
 		// Force onchain assertion if there are outgoing messages
-		shouldFinalize := func(a *protocol.Assertion) bool {
+		shouldFinalize := func(a *protocol.ExecutionAssertion) bool {
 			return len(a.OutMsgs) > 0
 		}
 

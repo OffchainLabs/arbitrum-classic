@@ -186,14 +186,13 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	// create nodes for invalid branches
 	for kind := ChildType(0); kind <= MaxInvalidChildType; kind++ {
 		newNode := &Node{
-			depth:          1 + prevNode.depth,
-			disputable:     dispNode,
-			prev:           prevNode,
-			linkType:       kind,
-			machineHash:    prevNode.machineHash,
-			machine:        prevNode.machine,
-			pendingTopHash: prevNode.pendingTopHash,
-			numStakers:     0,
+			depth:       1 + prevNode.depth,
+			disputable:  dispNode,
+			prev:        prevNode,
+			linkType:    kind,
+			vmProtoData: prevNode.vmProtoData,
+			machine:     prevNode.machine,
+			numStakers:  0,
 		}
 		newNode.setHash()
 		prevNode.successorHashes[kind] = newNode.hash
@@ -207,10 +206,9 @@ func (chain *NodeGraph) notifyAssert(
 	afterPendingTop [32]byte,
 	importedMessagesSlice [32]byte,
 	importedMessageCount *big.Int,
-	assertionStub *protocol.AssertionStub,
+	assertionStub *protocol.ExecutionAssertionStub,
 ) {
 	disputableNode := &DisputableNode{
-		prevNodeHash:          prevLeafHash,
 		timeBounds:            timeBounds,
 		afterPendingTop:       afterPendingTop,
 		importedMessagesSlice: importedMessagesSlice,

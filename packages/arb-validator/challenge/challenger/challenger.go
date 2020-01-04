@@ -75,7 +75,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg b
 			err = nil
 		}
 		if err != nil {
-			return nil, &bridge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false Assertion are valid"}
+			return nil, &bridge.Error{Message: "ERROR: waitingContinuing: Critical bug: All segments in false ExecutionAssertion are valid"}
 		}
 		_, err = brdg.ContinueChallenge(
 			context.Background(),
@@ -101,7 +101,7 @@ type continuing struct {
 	challengedState     machine.Machine
 	deadline            uint64
 	precondition        *protocol.Precondition
-	assertions          []*protocol.AssertionStub
+	assertions          []*protocol.ExecutionAssertionStub
 	challengeEverything bool
 }
 

@@ -442,7 +442,7 @@ func (m *ValidatorCoordinator) Run(ctx context.Context) error {
 				err := m.initiateUnanimousAssertionImpl(assertCtx, forceFinal, m.maxStepsUnanSteps)
 				cancel()
 				if err == nil {
-					// Assertion was successful so we are done
+					// ExecutionAssertion was successful so we are done
 					break
 				}
 				log.Println("Coordinator hit problem unanimously asserting", err)
@@ -518,7 +518,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 		}
 
 		// Force onchain assertion if there are outgoing messages
-		shouldFinalize := func(a *protocol.Assertion) bool {
+		shouldFinalize := func(a *protocol.ExecutionAssertion) bool {
 			return len(a.OutMsgs) > 0
 		}
 

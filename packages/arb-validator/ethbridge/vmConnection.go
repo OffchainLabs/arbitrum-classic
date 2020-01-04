@@ -54,19 +54,19 @@ type VMConnection interface {
 	PendingDisputableAssert(
 		auth *bind.TransactOpts,
 		precondition *protocol.Precondition,
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	ConfirmDisputableAsserted(
 		auth *bind.TransactOpts,
 		precondition *protocol.Precondition,
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	InitiateChallenge(
 		auth *bind.TransactOpts,
 		precondition *protocol.Precondition,
-		assertion *protocol.AssertionStub,
+		assertion *protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 }
 
@@ -78,20 +78,20 @@ type ChallengeConnection interface {
 	BisectAssertion(
 		auth *bind.TransactOpts,
 		precondition *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		auth *bind.TransactOpts,
 		assertionToChallenge uint16,
 		precondition *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	OneStepProof(
 		auth *bind.TransactOpts,
 		precondition *protocol.Precondition,
-		assertion *protocol.AssertionStub,
+		assertion *protocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*types.Receipt, error)
 

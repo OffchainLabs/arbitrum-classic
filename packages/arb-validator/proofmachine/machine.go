@@ -100,8 +100,9 @@ func (m *Machine) DeliverMessages(msgs value.TupleValue) {
 	m.machine.DeliverMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) *protocol.Assertion {
-	a := &protocol.Assertion{}
+func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBounds) (*protocol.ExecutionAssertion, uint32) {
+	a := &protocol.ExecutionAssertion{}
+	totalSteps := uint32(0)
 	stepIncrease := int32(1)
 	stepsRan := 0
 	for i := int32(0); i < maxSteps; i += stepIncrease {
@@ -117,19 +118,19 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 		steps := int32(stepIncrease)
 		beforeHash := m.Hash()
 		inboxHash := m.InboxHash()
-		a1 := m.machine.ExecuteAssertion(steps, timeBounds)
+		a1, ranSteps := m.machine.ExecuteAssertion(steps, timeBounds)
 		a.AfterHash = a1.AfterHash
-		a.NumSteps += a1.NumSteps
+		totalSteps += ranSteps
 		a.NumGas += a1.NumGas
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
 
-		if a1.NumSteps == 0 {
+		if ranSteps == 0 {
 			fmt.Println(" machine halted ")
 			break
 		}
-		if a1.NumSteps != 1 {
-			log.Println("Num steps = ", a1.NumSteps)
+		if ranSteps != 1 {
+			log.Println("Num steps = ", ranSteps)
 		}
 		stepsRan++
 
@@ -160,7 +161,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 		}
 	}
 	fmt.Println("Proof mode ran ", stepsRan, " steps")
-	return a
+	return a, totalSteps
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

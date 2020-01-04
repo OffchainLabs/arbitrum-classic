@@ -42,14 +42,14 @@ type Bridge interface {
 	FinalizedUnanimousAssert(
 		ctx context.Context,
 		newInboxHash [32]byte,
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 		signatures [][]byte,
 	) (*types.Receipt, error)
 
 	PendingUnanimousAssert(
 		ctx context.Context,
 		newInboxHash [32]byte,
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 		sequenceNum uint64,
 		signatures [][]byte,
 	) (*types.Receipt, error)
@@ -57,7 +57,7 @@ type Bridge interface {
 	ConfirmUnanimousAsserted(
 		ctx context.Context,
 		newInboxHash [32]byte,
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 }
 
@@ -66,7 +66,7 @@ type ArbVMBridge interface {
 	SendMonitorErr(msg Error)
 
 	FinalizedAssertion(
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 		onChainTxHash []byte,
 		signatures [][]byte,
 		proposalResults *valmessage.UnanimousUpdateResults,
@@ -75,19 +75,19 @@ type ArbVMBridge interface {
 	PendingDisputableAssert(
 		ctx context.Context,
 		precondition *protocol.Precondition,
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	ConfirmDisputableAsserted(
 		ctx context.Context,
 		precondition *protocol.Precondition,
-		assertion *protocol.Assertion,
+		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	InitiateChallenge(
 		ctx context.Context,
 		precondition *protocol.Precondition,
-		assertion *protocol.AssertionStub,
+		assertion *protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	IsPendingUnanimous(
@@ -120,20 +120,20 @@ type Challenge interface {
 	BisectAssertion(
 		ctx context.Context,
 		precondition *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		ctx context.Context,
 		assertionToChallenge uint16,
 		preconditions *protocol.Precondition,
-		assertions []*protocol.AssertionStub,
+		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	OneStepProof(
 		ctx context.Context,
 		precondition *protocol.Precondition,
-		assertion *protocol.AssertionStub,
+		assertion *protocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*types.Receipt, error)
 

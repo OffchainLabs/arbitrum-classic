@@ -24,14 +24,14 @@ import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
-func NewAssertionStub(
+func NewExecutionAssertionStub(
 	afterHash [32]byte,
 	didInboxInsn bool,
 	numGas uint64,
 	messagesAcc [32]byte,
 	logsAcc [32]byte,
-) *AssertionStub {
-	return &AssertionStub{
+) *ExecutionAssertionStub {
+	return &ExecutionAssertionStub{
 		AfterHash:        value.NewHashBuf(afterHash),
 		DidInboxInsn:     didInboxInsn,
 		NumGas:           numGas,
@@ -42,7 +42,7 @@ func NewAssertionStub(
 	}
 }
 
-func (a *AssertionStub) Equals(b *AssertionStub) bool {
+func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
 	if a.AfterHash != b.AfterHash ||
 		a.NumGas != b.NumGas ||
 		!bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) ||
@@ -54,37 +54,37 @@ func (a *AssertionStub) Equals(b *AssertionStub) bool {
 	return true
 }
 
-func (a *AssertionStub) AfterHashValue() [32]byte {
+func (a *ExecutionAssertionStub) AfterHashValue() [32]byte {
 	var ret [32]byte
 	copy(ret[:], a.AfterHash.Value)
 	return ret
 }
 
-func (a *AssertionStub) FirstMessageHashValue() [32]byte {
+func (a *ExecutionAssertionStub) FirstMessageHashValue() [32]byte {
 	var ret [32]byte
 	copy(ret[:], a.FirstMessageHash.Value)
 	return ret
 }
 
-func (a *AssertionStub) LastMessageHashValue() [32]byte {
+func (a *ExecutionAssertionStub) LastMessageHashValue() [32]byte {
 	var ret [32]byte
 	copy(ret[:], a.LastMessageHash.Value)
 	return ret
 }
 
-func (a *AssertionStub) FirstLogHashValue() [32]byte {
+func (a *ExecutionAssertionStub) FirstLogHashValue() [32]byte {
 	var ret [32]byte
 	copy(ret[:], a.FirstLogHash.Value)
 	return ret
 }
 
-func (a *AssertionStub) LastLogHashValue() [32]byte {
+func (a *ExecutionAssertionStub) LastLogHashValue() [32]byte {
 	var ret [32]byte
 	copy(ret[:], a.LastLogHash.Value)
 	return ret
 }
 
-func (a *AssertionStub) Hash() [32]byte {
+func (a *ExecutionAssertionStub) Hash() [32]byte {
 	var ret [32]byte
 	hashVal := solsha3.SoliditySHA3(
 		solsha3.Bytes32(a.AfterHash.Value),
@@ -98,7 +98,7 @@ func (a *AssertionStub) Hash() [32]byte {
 	return ret
 }
 
-func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
+func (a *ExecutionAssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
 	nextBeforeInbox := pre.BeforeInbox
 	if a.DidInboxInsn {
 		nextBeforeInbox = value.NewHashBuf(value.NewEmptyTuple().Hash())
@@ -110,7 +110,7 @@ func (a *AssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
 	}
 }
 
-func GeneratePreconditions(pre *Precondition, assertions []*AssertionStub) []*Precondition {
+func GeneratePreconditions(pre *Precondition, assertions []*ExecutionAssertionStub) []*Precondition {
 	preconditions := make([]*Precondition, 0, len(assertions))
 	for _, assertion := range assertions {
 		preconditions = append(preconditions, pre)

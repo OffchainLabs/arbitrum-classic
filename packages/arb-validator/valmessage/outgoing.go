@@ -22,10 +22,10 @@ import (
 )
 
 type FinalizedAssertion struct {
-	Assertion       *protocol.Assertion     // Disputable assertion
-	OnChainTxHash   []byte                  // Disputable assertion on-chain Tx hash
-	Signatures      [][]byte                // Unanimous Validator signatures
-	ProposalResults *UnanimousUpdateResults // Unanimous proposal results
+	Assertion       *protocol.ExecutionAssertion // Disputable assertion
+	OnChainTxHash   []byte                       // Disputable assertion on-chain Tx hash
+	Signatures      [][]byte                     // Unanimous Validator signatures
+	ProposalResults *UnanimousUpdateResults      // Unanimous proposal results
 
 }
 
@@ -38,7 +38,7 @@ func (f FinalizedAssertion) NewLogs() []value.Value {
 	}
 }
 
-func (f FinalizedAssertion) GetAssertion() *protocol.Assertion {
+func (f FinalizedAssertion) GetAssertion() *protocol.ExecutionAssertion {
 	if f.ProposalResults != nil {
 		return f.ProposalResults.Assertion
 	} else {

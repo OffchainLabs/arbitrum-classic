@@ -31,7 +31,7 @@ import (
 type attemptingUnanimousClosing struct {
 	*core.Config
 	*core.Core
-	assertion *protocol.Assertion
+	assertion *protocol.ExecutionAssertion
 	retChan   chan<- bool
 	errChan   chan<- error
 }
@@ -47,7 +47,7 @@ func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethbridge.Event, tim
 		// Final update has already been sent
 		return bot, nil
 	case ethbridge.PendingDisputableAssertionEvent:
-		// Someone proposed a disputable Assertion
+		// Someone proposed a disputable ExecutionAssertion
 		// Final update has already been sent
 		return bot, nil
 	case ethbridge.FinalizedUnanimousAssertEvent:
@@ -69,7 +69,7 @@ type attemptingOffchainClosing struct {
 	*core.Config
 	*core.Core
 	sequenceNum uint64
-	assertion   *protocol.Assertion
+	assertion   *protocol.ExecutionAssertion
 	retChan     chan<- bool
 	errChan     chan<- error
 }
@@ -87,7 +87,7 @@ func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time
 			fmt.Println("Someone proposed an old update")
 			return bot, nil
 		} else if ev.SequenceNum > bot.sequenceNum {
-			err := errors.New("unanimous Assertion unexpectedly superseded")
+			err := errors.New("unanimous ExecutionAssertion unexpectedly superseded")
 			if bot.errChan != nil {
 				bot.errChan <- err
 			}
@@ -103,14 +103,14 @@ func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time
 			}, nil
 		}
 	case ethbridge.PendingDisputableAssertionEvent:
-		// Someone proposed a disputable Assertion
+		// Someone proposed a disputable ExecutionAssertion
 		// Unanimous proposal has already been sent
 		return bot, nil
 	case ethbridge.FinalizedUnanimousAssertEvent:
 		if bot.retChan != nil {
 			bot.retChan <- false
 		}
-		return nil, errors.New("unanimous Assertion unexpectedly superseded by final assert")
+		return nil, errors.New("unanimous ExecutionAssertion unexpectedly superseded by final assert")
 	default:
 		if bot.retChan != nil {
 			bot.retChan <- false
@@ -122,7 +122,7 @@ func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time
 type waitingOffchainClosing struct {
 	*core.Config
 	*core.Core
-	assertion *protocol.Assertion
+	assertion *protocol.ExecutionAssertion
 	deadline  uint64
 	retChan   chan<- bool
 	errChan   chan<- error
@@ -157,13 +157,13 @@ func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.B
 func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev.(type) {
 	case ethbridge.PendingUnanimousAssertEvent:
-		err := errors.New("unanimous Assertion unexpectedly superseded by sequence number")
+		err := errors.New("unanimous ExecutionAssertion unexpectedly superseded by sequence number")
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}
 		return nil, err
 	case ethbridge.FinalizedUnanimousAssertEvent:
-		err := errors.New("unanimous Assertion unexpectedly superseded by final assert")
+		err := errors.New("unanimous ExecutionAssertion unexpectedly superseded by final assert")
 		if bot.errChan != nil {
 			bot.errChan <- err
 		}

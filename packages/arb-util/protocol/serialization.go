@@ -67,7 +67,7 @@ func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 	), err
 }
 
-func NewAssertionBuf(a *Assertion) *AssertionBuf {
+func NewAssertionBuf(a *ExecutionAssertion) *ExecutionAssertionBuf {
 	messages := make([]*value.ValueBuf, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {
 		messages = append(messages, value.NewValueBuf(msg))
@@ -76,16 +76,15 @@ func NewAssertionBuf(a *Assertion) *AssertionBuf {
 	for _, msg := range a.OutMsgs {
 		logs = append(logs, value.NewValueBuf(msg))
 	}
-	return &AssertionBuf{
+	return &ExecutionAssertionBuf{
 		AfterHash:    value.NewHashBuf(a.AfterHash),
 		DidInboxInsn: a.DidInboxInsn,
-		NumSteps:     a.NumSteps,
 		Messages:     messages,
 		Logs:         logs,
 	}
 }
 
-func NewAssertionFromBuf(buf *AssertionBuf) (*Assertion, error) {
+func NewExecutionAssertionFromBuf(buf *ExecutionAssertionBuf) (*ExecutionAssertion, error) {
 	messages := make([]value.Value, 0, len(buf.Logs))
 	for _, valLog := range buf.Messages {
 		v, err := value.NewValueFromBuf(valLog)
@@ -103,10 +102,9 @@ func NewAssertionFromBuf(buf *AssertionBuf) (*Assertion, error) {
 		}
 		logs = append(logs, v)
 	}
-	return NewAssertion(
+	return NewExecutionAssertion(
 		value.NewHashFromBuf(buf.AfterHash),
 		buf.DidInboxInsn,
-		buf.NumSteps,
 		buf.NumGas,
 		messages,
 		logs,

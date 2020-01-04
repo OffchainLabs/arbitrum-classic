@@ -89,9 +89,9 @@ type unanimousUpdateRequest struct {
 	NewMessages []protocol.Message
 
 	Machine   machine.Machine
-	Assertion *protocol.Assertion
+	Assertion *protocol.ExecutionAssertion
 
-	ShouldFinalize func(*protocol.Assertion) bool
+	ShouldFinalize func(*protocol.ExecutionAssertion) bool
 
 	ResultChan chan<- valmessage.UnanimousUpdateResults
 	ErrChan    chan<- error
@@ -103,7 +103,7 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 	messageHashes [][]byte,
 	final bool,
 	maxSteps int32,
-	shouldFinalize func(*protocol.Assertion) bool,
+	shouldFinalize func(*protocol.ExecutionAssertion) bool,
 ) (
 	<-chan valmessage.UnanimousRequest,
 	<-chan valmessage.UnanimousUpdateResults,
@@ -181,7 +181,7 @@ func (validator *ChannelValidator) RequestFollowUnanimous(
 	request valmessage.UnanimousRequestData,
 	messages []protocol.Message,
 	maxSteps int32,
-	shouldFinalize func(*protocol.Assertion) bool,
+	shouldFinalize func(*protocol.ExecutionAssertion) bool,
 ) (<-chan valmessage.UnanimousUpdateResults, <-chan error) {
 	resultChan := make(chan valmessage.UnanimousUpdateResults, 1)
 	errChan := make(chan error, 1)

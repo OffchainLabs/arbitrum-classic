@@ -193,7 +193,7 @@ func (val *VMValidator) StartListening(ctx context.Context) (chan ethbridge.Noti
 }
 
 func (val *VMValidator) FinalizedAssertion(
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 	onChainTxHash []byte,
 	signatures [][]byte,
 	proposalResults *valmessage.UnanimousUpdateResults,
@@ -242,7 +242,7 @@ func (val *VMValidator) IsInChallenge(
 func (val *VMValidator) PendingDisputableAssert(
 	ctx context.Context,
 	precondition *protocol.Precondition,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbitrumVM.PendingDisputableAssert(
@@ -257,7 +257,7 @@ func (val *VMValidator) PendingDisputableAssert(
 func (val *VMValidator) ConfirmDisputableAsserted(
 	ctx context.Context,
 	precondition *protocol.Precondition,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbitrumVM.ConfirmDisputableAsserted(
@@ -272,7 +272,7 @@ func (val *VMValidator) ConfirmDisputableAsserted(
 func (val *VMValidator) InitiateChallenge(
 	ctx context.Context,
 	precondition *protocol.Precondition,
-	assertion *protocol.AssertionStub,
+	assertion *protocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbitrumVM.InitiateChallenge(
@@ -325,7 +325,7 @@ func (val *VMValidator) UnanimousAssertHash(
 	beforeHash [32]byte,
 	newInboxHash [32]byte,
 	originalInboxHash [32]byte,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 ) ([32]byte, error) {
 	return hashing.UnanimousAssertHash(
 		val.VMID,

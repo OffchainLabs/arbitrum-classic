@@ -23,20 +23,21 @@ import (
 )
 
 type AssertionDefender struct {
-	assertion    *protocol.Assertion
 	precondition *protocol.Precondition
+	numSteps     uint32
+	assertion    *protocol.ExecutionAssertion
 	initState    Machine
 }
 
-func NewAssertionDefender(assertion *protocol.Assertion, precondition *protocol.Precondition, initState Machine) AssertionDefender {
-	return AssertionDefender{assertion, precondition, initState.Clone()}
+func NewAssertionDefender(precondition *protocol.Precondition, numSteps uint32, assertion *protocol.ExecutionAssertion, initState Machine) AssertionDefender {
+	return AssertionDefender{precondition, numSteps, assertion, initState.Clone()}
 }
 
 func (ad AssertionDefender) NumSteps() uint32 {
-	return ad.assertion.NumSteps
+	return ad.numSteps
 }
 
-func (ad AssertionDefender) GetAssertion() *protocol.Assertion {
+func (ad AssertionDefender) GetAssertion() *protocol.ExecutionAssertion {
 	return ad.assertion
 }
 
@@ -66,10 +67,11 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 		}
 
 		initState := m.Clone()
-		assertion := m.ExecuteAssertion(int32(steps), pre.TimeBounds)
+		assertion, numSteps := m.ExecuteAssertion(int32(steps), pre.TimeBounds)
 		defenders = append(defenders, NewAssertionDefender(
-			assertion,
 			pre,
+			numSteps,
+			assertion,
 			initState,
 		))
 		pre = assertion.Stub().GeneratePostcondition(pre)
@@ -81,7 +83,7 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 	return ad.initState.MarshalForProof()
 }
 
-func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub, timeBounds *protocol.TimeBounds, totalSteps uint32) (uint16, Machine, error) {
+func ChooseAssertionToChallenge(m Machine, assertions []*protocol.ExecutionAssertionStub, timeBounds *protocol.TimeBounds, totalSteps uint32) (uint16, Machine, error) {
 	assertionCount := uint32(len(assertions))
 	for i := range assertions {
 		steps := uint32(0)
@@ -92,13 +94,13 @@ func ChooseAssertionToChallenge(m Machine, assertions []*protocol.AssertionStub,
 		}
 
 		initState := m.Clone()
-		generatedAssertion := m.ExecuteAssertion(
+		generatedAssertion, numSteps := m.ExecuteAssertion(
 			int32(steps),
 			timeBounds,
 		)
-		if !generatedAssertion.Stub().Equals(assertions[i]) {
+		if numSteps != steps || !generatedAssertion.Stub().Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}
 	}
-	return 0, nil, errors.New("all segments in false Assertion are valid")
+	return 0, nil, errors.New("all segments in false ExecutionAssertion are valid")
 }

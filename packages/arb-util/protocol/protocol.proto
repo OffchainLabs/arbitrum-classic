@@ -29,7 +29,7 @@ message Precondition {
     value.HashBuf beforeInbox = 3;
 }
 
-message AssertionStub {
+message ExecutionAssertionStub {
     value.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;
     uint64 numGas = 3;
@@ -39,11 +39,10 @@ message AssertionStub {
     value.HashBuf lastLogHash = 7;
 }
 
-message AssertionBuf {
+message ExecutionAssertionBuf {
     value.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;
-    uint32 numSteps = 3;
-    uint64 numGas = 4;
-    repeated value.ValueBuf messages = 5;
-    repeated value.ValueBuf logs = 6;
+    uint64 numGas = 3;
+    repeated value.ValueBuf messages = 4;
+    repeated value.ValueBuf logs = 5;
 }

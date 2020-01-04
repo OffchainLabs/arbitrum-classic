@@ -38,7 +38,7 @@ func CombineMessages(
 
 func UnanimousAssertPartialPartialHash(
 	newInboxHash [32]byte,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 ) []byte {
 	return solsha3.SoliditySHA3(
 		solsha3.Bytes32(newInboxHash),
@@ -51,7 +51,7 @@ func UnanimousAssertPartialHash(
 	beforeHash [32]byte,
 	newInboxHash [32]byte,
 	originalInboxHash [32]byte,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 ) ([32]byte, error) {
 	stub := assertion.Stub()
 	unanRest := UnanimousAssertPartialPartialHash(
@@ -75,7 +75,7 @@ func UnanimousAssertHash(
 	beforeHash [32]byte,
 	newInboxHash [32]byte,
 	originalInboxHash [32]byte,
-	assertion *protocol.Assertion,
+	assertion *protocol.ExecutionAssertion,
 ) ([32]byte, error) {
 	partialHash, err := UnanimousAssertPartialHash(
 		sequenceNum,
