@@ -68,7 +68,7 @@ func (chain *StakedNodeGraph) startCleanupThread(doneChan chan interface{}) {
 					}
 				})
 				chain.stakers.forall(func(staker *Staker) {
-					ancestor, _, err := chain.GetConflictAncestor(staker, chain.latestConfirmed)
+					ancestor, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
 					if err == nil {
 						mootedToDo = append(mootedToDo, recoverStakeMootedParams{
 							addr:     staker.address,
