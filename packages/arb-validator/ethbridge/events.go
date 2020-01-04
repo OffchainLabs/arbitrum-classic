@@ -51,11 +51,19 @@ type StakeCreatedEvent struct {
 	NodeHash [32]byte
 }
 
+func (e StakeCreatedEvent) RelatedToStaker(staker common.Address) bool {
+	return staker == e.Staker
+}
+
 type ChallengeStartedEvent struct {
 	Asserter          common.Address
 	Challenger        common.Address
 	ChallengeType     uint64
 	ChallengeContract common.Address
+}
+
+func (e ChallengeStartedEvent) RelatedToStaker(staker common.Address) bool {
+	return staker == e.Asserter || staker == e.Challenger
 }
 
 type ChallengeCompletedEvent struct {
@@ -64,17 +72,33 @@ type ChallengeCompletedEvent struct {
 	ChallengeContract common.Address
 }
 
+func (e ChallengeCompletedEvent) RelatedToStaker(staker common.Address) bool {
+	return staker == e.Winner || staker == e.Loser
+}
+
 type StakeRefundedEvent struct {
 	Staker common.Address
+}
+
+func (e StakeRefundedEvent) RelatedToStaker(staker common.Address) bool {
+	return staker == e.Staker
 }
 
 type PrunedEvent struct {
 	Leaf [32]byte
 }
 
+func (e PrunedEvent) RelatedToStaker(staker common.Address) bool {
+	return false
+}
+
 type StakeMovedEvent struct {
 	Staker   common.Address
 	Location [32]byte
+}
+
+func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
+	return staker == e.Staker
 }
 
 type AssertedEvent struct {
@@ -86,8 +110,16 @@ type AssertedEvent struct {
 	Assertion             *protocol.AssertionStub
 }
 
+func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {
+	return false
+}
+
 type ConfirmedEvent struct {
 	NodeHash [32]byte
+}
+
+func (e ConfirmedEvent) RelatedToStaker(staker common.Address) bool {
+	return false
 }
 
 type ConfirmedAssertionEvent struct {
