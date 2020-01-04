@@ -46,14 +46,20 @@ message ChainParamsBuf {
     uint32 maxExecutionSteps = 3;
 }
 
+message VMProtoDataBuf {
+    value.HashBuf machineHash = 1;
+    value.HashBuf inboxHash = 2;
+    value.HashBuf pendingTop = 3;
+    value.BigIntegerBuf pendingCount = 4;
+}
+
 message NodeBuf {
     uint64 depth = 1;
     value.HashBuf hash = 2;
     DisputableNodeBuf disputableNode = 3;
-    value.HashBuf machineHash = 4;
-    value.HashBuf pendingTopHash = 5;
-    uint32 linkType = 6;
-    value.HashBuf prevHash = 7;
+    VMProtoDataBuf vmProtoData = 4;
+    uint32 linkType = 5;
+    value.HashBuf prevHash = 6;
 }
 
 message StakerBuf {
