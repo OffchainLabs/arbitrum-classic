@@ -35,14 +35,15 @@ func DefendPendingTopClaim(
 	client *ethclient.Client,
 	address common.Address,
 	pendingInbox *rollup.PendingInbox,
-	pendingTopClaim ethbridge.PendingTopOutput,
+	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
 	contract, err := ethbridge.NewPendingTopChallenge(address, client)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
-	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
@@ -52,7 +53,7 @@ func DefendPendingTopClaim(
 		noteChan,
 		contract,
 		pendingInbox,
-		pendingTopClaim,
+		afterPendingTop,
 		topPending,
 	)
 }
@@ -67,7 +68,8 @@ func ChallengePendingTopClaim(
 	if err != nil {
 		return 0, err
 	}
-	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
@@ -86,7 +88,7 @@ func defendPendingTop(
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.PendingTopChallenge,
 	pendingInbox *rollup.PendingInbox,
-	pendingTopClaim ethbridge.PendingTopOutput,
+	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
@@ -98,7 +100,7 @@ func defendPendingTop(
 		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
 	}
 
-	startState := pendingTopClaim.AfterPendingTop
+	startState := afterPendingTop
 	endState := topPending
 
 	for {

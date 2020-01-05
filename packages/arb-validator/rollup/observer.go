@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -101,14 +103,82 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 			)
 		}
 	case ethbridge.ChallengeStartedEvent:
-		_ = chain.NewChallenge(ev.ChallengeContract, ev.Asserter, ev.Challenger, ChallengeType(ev.ChallengeType))
+		_ = chain.NewChallenge(ev.ChallengeContract, ev.Asserter, ev.Challenger, structures.ChildType(ev.ChallengeType))
 		if chain.listener != nil && (chain.listenForAddress == ev.Asserter || chain.listenForAddress == ev.Challenger) {
+			asserter := chain.stakers.Get(ev.Asserter)
+			challenger := chain.stakers.Get(ev.Challenger)
+			conflictNode, disputeType, err := chain.GetConflictAncestor(asserter.location, challenger.location)
+			if err != nil {
+				panic("No conflict ancestor for conflict")
+			}
+
+			if chain.listenForAddress == ev.Asserter {
+				switch disputeType {
+				case structures.InvalidPendingChildType:
+					go challenges.DefendPendingTopClaim(
+						nil,
+						nil,
+						ev.ChallengeContract,
+						chain.pendingInbox,
+						conflictNode.disputable.AssertionClaim.AfterPendingTop,
+						conflictNode.disputable.MaxPendingTop,
+					)
+				case structures.InvalidMessagesChildType:
+					go challenges.DefendMessagesClaim(
+						nil,
+						nil,
+						ev.ChallengeContract,
+						chain.pendingInbox,
+						conflictNode.vmProtoData.PendingTop,
+						conflictNode.disputable.AssertionClaim.AfterPendingTop,
+						conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+					)
+				case structures.InvalidExecutionChildType:
+					go challenges.DefendExecutionClaim(
+						nil,
+						nil,
+						ev.ChallengeContract,
+						conflictNode.ExecutionPrecondition(),
+						conflictNode.disputable.AssertionParams.NumSteps,
+						conflictNode.disputable.AssertionClaim.AssertionStub,
+						conflictNode.machine,
+					)
+				}
+			} else {
+				switch disputeType {
+				case structures.InvalidPendingChildType:
+					go challenges.ChallengePendingTopClaim(
+						nil,
+						nil,
+						ev.ChallengeContract,
+						chain.pendingInbox,
+					)
+				case structures.InvalidMessagesChildType:
+					go challenges.ChallengeMessagesClaim(
+						nil,
+						nil,
+						ev.ChallengeContract,
+						chain.pendingInbox,
+						conflictNode.vmProtoData.PendingTop,
+						conflictNode.disputable.AssertionClaim.AfterPendingTop,
+					)
+				case structures.InvalidExecutionChildType:
+					go challenges.ChallengeExecutionClaim(
+						nil,
+						nil,
+						ev.ChallengeContract,
+						conflictNode.ExecutionPrecondition(),
+						conflictNode.machine,
+					)
+				}
+			}
+
 			chain.listener.Notify(
 				&ChallengeStartedChainEvent{
 					ev.ChallengeContract,
 					ev.Asserter,
 					ev.Challenger,
-					ChallengeType(ev.ChallengeType),
+					structures.ChildType(ev.ChallengeType),
 				},
 			)
 		}

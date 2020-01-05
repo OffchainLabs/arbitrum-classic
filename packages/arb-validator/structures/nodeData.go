@@ -144,11 +144,10 @@ func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 }
 
 type DisputableNode struct {
-	assertionParams *AssertionParams
-	assertionClaim  *AssertionClaim
-	maxPendingTop   [32]byte
-	maxPendingCount *big.Int
-	hash            [32]byte
+	AssertionParams *AssertionParams
+	AssertionClaim  *AssertionClaim
+	MaxPendingTop   [32]byte
+	MaxPendingCount *big.Int
 }
 
 func NewDisputableNode(
@@ -157,22 +156,20 @@ func NewDisputableNode(
 	maxPendingTop [32]byte,
 	maxPendingCount *big.Int,
 ) *DisputableNode {
-	ret := &DisputableNode{
-		assertionParams: assertionParams,
-		assertionClaim:  assertionClaim,
-		maxPendingTop:   maxPendingTop,
-		maxPendingCount: maxPendingCount,
+	return &DisputableNode{
+		AssertionParams: assertionParams,
+		AssertionClaim:  assertionClaim,
+		MaxPendingTop:   maxPendingTop,
+		MaxPendingCount: maxPendingCount,
 	}
-	ret.hash = ret._hash()
-	return ret
 }
 
 func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
-		AssertionParams: dn.assertionParams.MarshalToBuf(),
-		AssertionClaim:  dn.assertionClaim.MarshalToBuf(),
-		MaxPendingTop:   utils.MarshalHash(dn.maxPendingTop),
-		MaxPendingCount: utils.MarshalBigInt(dn.maxPendingCount),
+		AssertionParams: dn.AssertionParams.MarshalToBuf(),
+		AssertionClaim:  dn.AssertionClaim.MarshalToBuf(),
+		MaxPendingTop:   utils.MarshalHash(dn.MaxPendingTop),
+		MaxPendingCount: utils.MarshalBigInt(dn.MaxPendingCount),
 	}
 }
 
@@ -185,103 +182,16 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	)
 }
 
-func (dn *DisputableNode) NodeDataHash(
-	params ChainParams,
-	vmProtoData *VMProtoData,
-	prevDeadline TimeTicks,
-	childType ChildType,
-	currentTime *protocol.TimeBlocks,
-) [32]byte {
-	ret := [32]byte{}
-	if dn == nil {
-		return ret
-	}
-	switch childType {
-	case InvalidPendingChildType:
-		pendingLeft := new(big.Int).Add(vmProtoData.PendingCount, dn.assertionParams.ImportedMessageCount)
-		pendingLeft = pendingLeft.Sub(dn.maxPendingCount, pendingLeft)
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(solsha3.SoliditySHA3(
-				solsha3.Bytes32(dn.assertionClaim.AfterPendingTop),
-				solsha3.Bytes32(dn.maxPendingTop),
-				solsha3.Uint256(pendingLeft),
-			)),
-			solsha3.Uint256(params.gracePeriod.Add(TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
-		))
-	case InvalidMessagesChildType:
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(solsha3.SoliditySHA3(
-				solsha3.Bytes32(vmProtoData.PendingTop),
-				solsha3.Bytes32(dn.assertionClaim.AfterPendingTop),
-				solsha3.Bytes32([32]byte{}),
-				solsha3.Bytes32(dn.assertionClaim.ImportedMessagesSlice),
-				solsha3.Uint256(dn.assertionParams.ImportedMessageCount),
-			)),
-			solsha3.Uint256(params.gracePeriod.Add(TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
-		))
-	case InvalidExecutionChildType:
-		beforeInbox := protocol.AddMessagesHashToInboxHash(vmProtoData.InboxHash, dn.assertionClaim.ImportedMessagesSlice)
-		checkTimeRaw := dn.assertionClaim.AssertionStub.NumGas / params.arbGasSpeedLimitPerTick
-		checkTime := TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
-		deadlineTicks := TimeFromBlockNum(currentTime).Add(params.gracePeriod)
-		if deadlineTicks.Cmp(prevDeadline) >= 0 {
-			deadlineTicks = deadlineTicks.Add(checkTime)
-		} else {
-			deadlineTicks = prevDeadline.Add(checkTime)
-		}
-		copy(ret[:], solsha3.SoliditySHA3(
-
-			//if (deadlineTicks >= prevDeadlineTicks) {
-			//	return deadlineTicks + checkTimeTicks;
-			//} else {
-			//	return prevDeadlineTicks + checkTimeTicks;
-			//}
-			solsha3.Bytes32(solsha3.SoliditySHA3(
-				solsha3.Uint32(dn.assertionParams.NumSteps),
-				solsha3.Bytes32(protocol.Precondition{
-					BeforeHash:  utils.MarshalHash(vmProtoData.MachineHash),
-					TimeBounds:  dn.assertionParams.TimeBounds,
-					BeforeInbox: utils.MarshalHash(beforeInbox),
-				}),
-				solsha3.Bytes32(dn.assertionClaim.AssertionStub.Hash()),
-			)),
-			solsha3.Uint256(params.gracePeriod.Add(deadlineTicks).Val),
-		))
-	case ValidChildType:
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(dn.assertionClaim.AssertionStub.LastMessageHashValue()),
-			solsha3.Bytes32(dn.assertionClaim.AssertionStub.LastLogHashValue()),
-		))
-	}
-	return ret
-}
-
-func (dn *DisputableNode) Hash() [32]byte {
-	return dn.hash
-}
-
-func (dn *DisputableNode) _hash() [32]byte {
-	// Hash calculation is incorrect
-	var ret [32]byte
-	retSlice := solsha3.SoliditySHA3(
-		solsha3.Bytes32(utils.UnmarshalHash(dn.assertionClaim.AssertionStub.AfterHash)),
-		solsha3.Bool(dn.assertionClaim.AssertionStub.DidInboxInsn),
-		//solsha3.Uint32(dn.numSteps),
-		solsha3.Uint64(dn.assertionClaim.AssertionStub.NumGas),
-		solsha3.Bytes32(utils.UnmarshalHash(dn.assertionClaim.AssertionStub.FirstMessageHash)),
-		solsha3.Bytes32(utils.UnmarshalHash(dn.assertionClaim.AssertionStub.LastMessageHash)),
-		solsha3.Bytes32(utils.UnmarshalHash(dn.assertionClaim.AssertionStub.FirstLogHash)),
-		solsha3.Bytes32(utils.UnmarshalHash(dn.assertionClaim.AssertionStub.LastLogHash)),
-	)
-	copy(ret[:], retSlice)
-	return ret
+func (dn *DisputableNode) CheckTime(params ChainParams) TimeTicks {
+	checkTimeRaw := dn.AssertionClaim.AssertionStub.NumGas / params.ArbGasSpeedLimitPerTick
+	return TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
 }
 
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
-		dn.assertionClaim.AssertionStub.AfterHashValue(),
+		dn.AssertionClaim.AssertionStub.AfterHashValue(),
 		value.NewEmptyTuple().Hash(),
-		dn.assertionClaim.AfterPendingTop,
-		new(big.Int).Add(prevState.PendingCount, dn.assertionParams.ImportedMessageCount),
+		dn.AssertionClaim.AfterPendingTop,
+		new(big.Int).Add(prevState.PendingCount, dn.AssertionParams.ImportedMessageCount),
 	)
 }

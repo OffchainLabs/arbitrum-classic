@@ -29,21 +29,13 @@ import (
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
 
-type ChallengeType uint32
-
-const (
-	InvalidPendingTopChallenge ChallengeType = 0
-	InvalidMessagesChallenge   ChallengeType = 1
-	InvalidExecutionChallenge  ChallengeType = 2
-)
-
 var zeroBytes32 [32]byte // deliberately zeroed
 
 type Challenge struct {
 	contract   common.Address
 	asserter   common.Address
 	challenger common.Address
-	kind       ChallengeType
+	kind       structures.ChildType
 }
 
 func (chal *Challenge) MarshalToBuf() *ChallengeBuf {
@@ -59,7 +51,7 @@ func (m *ChallengeBuf) Unmarshal() *Challenge {
 		contract:   common.BytesToAddress(m.Contract),
 		asserter:   common.BytesToAddress(m.Asserter),
 		challenger: common.BytesToAddress(m.Challenger),
-		kind:       ChallengeType(m.Kind),
+		kind:       structures.ChildType(m.Kind),
 	}
 }
 
@@ -162,7 +154,7 @@ func (chain *StakedNodeGraph) RemoveStake(stakerAddr common.Address) {
 	chain.stakers.Delete(staker)
 }
 
-func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind ChallengeType) *Challenge {
+func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind structures.ChildType) *Challenge {
 	ret := &Challenge{contract, asserter, challenger, kind}
 	chain.challenges[contract] = ret
 	chain.stakers.Get(asserter).challenge = ret

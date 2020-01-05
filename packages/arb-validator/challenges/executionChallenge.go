@@ -35,13 +35,17 @@ func DefendExecutionClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	startDefender machine.AssertionDefender,
+	precondition *protocol.Precondition,
+	numSteps uint32,
+	assertion *protocol.ExecutionAssertionStub,
+	startMachine machine.Machine,
 ) (ChallengeState, error) {
 	contract, err := ethbridge.NewExecutionChallenge(address, client)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
-	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
@@ -50,7 +54,12 @@ func DefendExecutionClaim(
 		client,
 		contract,
 		noteChan,
-		startDefender,
+		machine.NewAssertionDefender(
+			precondition,
+			numSteps,
+			assertion,
+			startMachine,
+		),
 	)
 }
 
@@ -58,14 +67,15 @@ func ChallengeExecutionClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	startMachine machine.Machine,
 	startPrecondition *protocol.Precondition,
+	startMachine machine.Machine,
 ) (ChallengeState, error) {
 	contract, err := ethbridge.NewExecutionChallenge(address, client)
 	if err != nil {
 		return 0, err
 	}
-	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
@@ -103,7 +113,7 @@ func defendExecution(
 			if err != nil {
 				return 0, err
 			}
-			_, err = contract.OneStepProof(auth, defender.GetPrecondition(), defender.GetAssertion().Stub(), proof)
+			_, err = contract.OneStepProof(auth, defender.GetPrecondition(), defender.GetAssertion(), proof)
 			if err != nil {
 				return 0, err
 			}
@@ -121,7 +131,7 @@ func defendExecution(
 		defenders := defender.NBisect(50)
 		assertions := make([]*protocol.ExecutionAssertionStub, 0, len(defenders))
 		for _, defender := range defenders {
-			assertions = append(assertions, defender.GetAssertion().Stub())
+			assertions = append(assertions, defender.GetAssertion())
 		}
 		_, err := contract.BisectAssertion(auth, defender.GetPrecondition(), assertions, defender.NumSteps())
 

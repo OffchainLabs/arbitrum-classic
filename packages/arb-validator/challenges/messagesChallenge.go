@@ -38,13 +38,14 @@ func DefendMessagesClaim(
 	pendingInbox *rollup.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
-	messagesOutput ethbridge.MessagesOutput,
+	importedMessagesSlice [32]byte,
 ) (ChallengeState, error) {
 	contract, err := ethbridge.NewMessagesChallenge(address, client)
 	if err != nil {
 		return 0, err
 	}
-	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
@@ -56,7 +57,7 @@ func DefendMessagesClaim(
 		pendingInbox,
 		beforePending,
 		afterPending,
-		messagesOutput,
+		importedMessagesSlice,
 	)
 }
 
@@ -72,7 +73,8 @@ func ChallengeMessagesClaim(
 	if err != nil {
 		return 0, err
 	}
-	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	noteChan := make(chan ethbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
@@ -95,7 +97,7 @@ func defendMessages(
 	pendingInbox *rollup.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
-	messagesOutput ethbridge.MessagesOutput,
+	importedMessagesSlice [32]byte,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -114,7 +116,7 @@ func defendMessages(
 	startPending := beforePending
 	endPending := afterPending
 	startMessages := value.NewEmptyTuple().Hash()
-	endMessages := messagesOutput.ImportedMessagesSlice
+	endMessages := importedMessagesSlice
 
 	for {
 		messageCount, err := pendingInbox.SegmentSize(startPending, endPending)

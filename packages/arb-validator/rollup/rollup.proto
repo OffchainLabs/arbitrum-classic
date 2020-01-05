@@ -21,13 +21,16 @@ import "structures/structures.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
 message NodeBuf {
-    uint64 depth = 1;
-    structures.DisputableNodeBuf disputableNode = 2;
-    structures.VMProtoDataBuf vmProtoData = 3;
+    value.HashBuf prevHash = 1;
+    structures.TimeTicksBuf deadline = 2;
+    structures.DisputableNodeBuf disputableNode = 3;
     uint32 linkType = 4;
-    value.HashBuf prevHash = 5;
-    value.HashBuf innerHash = 6;
-    value.HashBuf hash = 7;
+    structures.VMProtoDataBuf vmProtoData = 5;
+
+    value.HashBuf machineHash = 6;
+    uint64 depth = 7;
+    value.HashBuf innerHash = 8;
+    value.HashBuf hash = 9;
 }
 
 message NodeGraphBuf {

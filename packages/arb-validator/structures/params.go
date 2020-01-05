@@ -23,30 +23,30 @@ import (
 )
 
 type ChainParams struct {
-	stakeRequirement        *big.Int
-	gracePeriod             TimeTicks
-	maxExecutionSteps       uint32
-	arbGasSpeedLimitPerTick uint64
+	StakeRequirement        *big.Int
+	GracePeriod             TimeTicks
+	MaxExecutionSteps       uint32
+	ArbGasSpeedLimitPerTick uint64
 }
 
 func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 	return &ChainParamsBuf{
-		StakeRequirement:  utils.MarshalBigInt(params.stakeRequirement),
-		GracePeriod:       params.gracePeriod.MarshalToBuf(),
-		MaxExecutionSteps: params.maxExecutionSteps,
+		StakeRequirement:  utils.MarshalBigInt(params.StakeRequirement),
+		GracePeriod:       params.GracePeriod.MarshalToBuf(),
+		MaxExecutionSteps: params.MaxExecutionSteps,
 	}
 }
 
 func (m *ChainParamsBuf) Unmarshal() ChainParams {
 	return ChainParams{
-		stakeRequirement:  utils.UnmarshalBigInt(m.StakeRequirement),
-		gracePeriod:       m.GracePeriod.Unmarshal(),
-		maxExecutionSteps: m.MaxExecutionSteps,
+		StakeRequirement:  utils.UnmarshalBigInt(m.StakeRequirement),
+		GracePeriod:       m.GracePeriod.Unmarshal(),
+		MaxExecutionSteps: m.MaxExecutionSteps,
 	}
 }
 
 func (cp ChainParams) Equals(cp2 ChainParams) bool {
-	return cp.stakeRequirement.Cmp(cp2.stakeRequirement) == 0 &&
-		cp.gracePeriod == cp2.gracePeriod &&
-		cp.maxExecutionSteps == cp2.maxExecutionSteps
+	return cp.StakeRequirement.Cmp(cp2.StakeRequirement) == 0 &&
+		cp.GracePeriod == cp2.GracePeriod &&
+		cp.MaxExecutionSteps == cp2.MaxExecutionSteps
 }

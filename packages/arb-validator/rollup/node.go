@@ -115,28 +115,92 @@ func NewNodeFromPrev(
 	vmProtoData *structures.VMProtoData,
 	machine machine.Machine,
 ) *Node {
+	checkTime := disputable.CheckTime(params)
+	deadlineTicks := structures.TimeFromBlockNum(currentTime).Add(params.GracePeriod)
+	if deadlineTicks.Cmp(prev.deadline) >= 0 {
+		deadlineTicks = deadlineTicks.Add(checkTime)
+	} else {
+		deadlineTicks = prev.deadline.Add(checkTime)
+	}
+
 	ret := &Node{
 		prev:        prev,
-		deadline:    structures.TimeTicks{},
+		deadline:    deadlineTicks,
 		disputable:  disputable,
 		linkType:    kind,
 		vmProtoData: vmProtoData,
 		machine:     machine,
 		depth:       prev.depth + 1,
 	}
-	ret.setHash(disputable.NodeDataHash(
-		params,
-		vmProtoData,
-		prev.deadline,
-		kind,
-		currentTime,
-	))
+	ret.setHash(ret.NodeDataHash(params, currentTime))
 	prev.successorHashes[kind] = ret.hash
 	return ret
 }
 
 func (node1 *Node) Equals(node2 *Node) bool {
 	return node1.hash == node2.hash
+}
+
+func (node *Node) ExecutionPrecondition() *protocol.Precondition {
+	vmProtoData := node.prev.vmProtoData
+	beforeInbox := protocol.AddMessagesHashToInboxHash(vmProtoData.InboxHash, node.disputable.AssertionClaim.ImportedMessagesSlice)
+	return &protocol.Precondition{
+		BeforeHash:  utils.MarshalHash(vmProtoData.MachineHash),
+		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
+		BeforeInbox: utils.MarshalHash(beforeInbox),
+	}
+}
+
+func (node *Node) NodeDataHash(
+	params structures.ChainParams,
+	currentTime *protocol.TimeBlocks,
+) [32]byte {
+	ret := [32]byte{}
+	if node.disputable == nil {
+		return ret
+	}
+	vmProtoData := node.prev.vmProtoData
+
+	switch node.linkType {
+	case structures.InvalidPendingChildType:
+		pendingLeft := new(big.Int).Add(vmProtoData.PendingCount, node.disputable.AssertionParams.ImportedMessageCount)
+		pendingLeft = pendingLeft.Sub(node.disputable.MaxPendingCount, pendingLeft)
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(solsha3.SoliditySHA3(
+				solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
+				solsha3.Bytes32(node.disputable.MaxPendingTop),
+				solsha3.Uint256(pendingLeft),
+			)),
+			solsha3.Uint256(params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
+		))
+	case structures.InvalidMessagesChildType:
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(solsha3.SoliditySHA3(
+				solsha3.Bytes32(vmProtoData.PendingTop),
+				solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
+				solsha3.Bytes32([32]byte{}),
+				solsha3.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
+				solsha3.Uint256(node.disputable.AssertionParams.ImportedMessageCount),
+			)),
+			solsha3.Uint256(params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
+		))
+	case structures.InvalidExecutionChildType:
+		challengePeriod := structures.TimeFromBlockNum(currentTime).Add(params.GracePeriod).Add(node.disputable.CheckTime(params))
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(solsha3.SoliditySHA3(
+				solsha3.Uint32(node.disputable.AssertionParams.NumSteps),
+				solsha3.Bytes32(node.ExecutionPrecondition().Hash()),
+				solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.Hash()),
+			)),
+			solsha3.Uint256(challengePeriod.Val),
+		))
+	case structures.ValidChildType:
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHashValue()),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHashValue()),
+		))
+	}
+	return ret
 }
 
 func (node *Node) setHash(
@@ -161,15 +225,19 @@ func (node *Node) setHash(
 }
 
 func (node *Node) MarshalToBuf() *NodeBuf {
+	var machineHash *value.HashBuf
 	if node.machine != nil {
 		//TODO: marshal node.machine
+		machineHash = utils.MarshalHash(node.machine.Hash())
 	}
 	return &NodeBuf{
-		Depth:          node.depth,
-		DisputableNode: node.disputable.MarshalToBuf(),
-		VmProtoData:    node.vmProtoData.MarshalToBuf(),
-		LinkType:       uint32(node.linkType),
 		PrevHash:       utils.MarshalHash(node.prev.hash),
+		Deadline:       node.deadline.MarshalToBuf(),
+		DisputableNode: node.disputable.MarshalToBuf(),
+		LinkType:       uint32(node.linkType),
+		VmProtoData:    node.vmProtoData.MarshalToBuf(),
+		MachineHash:    machineHash,
+		Depth:          node.depth,
 		InnerHash:      utils.MarshalHash(node.innerHash),
 		Hash:           utils.MarshalHash(node.hash),
 	}
@@ -179,7 +247,7 @@ func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 	prevHashArr := utils.UnmarshalHash(buf.PrevHash)
 	node := &Node{
 		prev:        nil,
-		deadline:    structures.TimeTicks{big.NewInt(0)},
+		deadline:    buf.Deadline.Unmarshal(),
 		disputable:  buf.DisputableNode.Unmarshal(),
 		linkType:    structures.ChildType(buf.LinkType),
 		vmProtoData: buf.VmProtoData.Unmarshal(),

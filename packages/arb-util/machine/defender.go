@@ -25,11 +25,11 @@ import (
 type AssertionDefender struct {
 	precondition *protocol.Precondition
 	numSteps     uint32
-	assertion    *protocol.ExecutionAssertion
+	assertion    *protocol.ExecutionAssertionStub
 	initState    Machine
 }
 
-func NewAssertionDefender(precondition *protocol.Precondition, numSteps uint32, assertion *protocol.ExecutionAssertion, initState Machine) AssertionDefender {
+func NewAssertionDefender(precondition *protocol.Precondition, numSteps uint32, assertion *protocol.ExecutionAssertionStub, initState Machine) AssertionDefender {
 	return AssertionDefender{precondition, numSteps, assertion, initState.Clone()}
 }
 
@@ -37,7 +37,7 @@ func (ad AssertionDefender) NumSteps() uint32 {
 	return ad.numSteps
 }
 
-func (ad AssertionDefender) GetAssertion() *protocol.ExecutionAssertion {
+func (ad AssertionDefender) GetAssertion() *protocol.ExecutionAssertionStub {
 	return ad.assertion
 }
 
@@ -71,7 +71,7 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 		defenders = append(defenders, NewAssertionDefender(
 			pre,
 			numSteps,
-			assertion,
+			assertion.Stub(),
 			initState,
 		))
 		pre = assertion.Stub().GeneratePostcondition(pre)
