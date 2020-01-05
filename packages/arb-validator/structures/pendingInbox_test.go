@@ -14,11 +14,12 @@
 * limitations under the License.
  */
 
-package rollup
+package structures
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func TestPendingInboxInsert(t *testing.T) {

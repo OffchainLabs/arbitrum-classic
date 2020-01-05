@@ -21,20 +21,19 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendPendingTopClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
@@ -61,7 +60,7 @@ func ChallengePendingTopClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 ) (ChallengeState, error) {
 	contract, err := ethbridge.NewPendingTopChallenge(address, client, auth)
 	if err != nil {
@@ -84,7 +83,7 @@ func defendPendingTop(
 	ctx context.Context,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.PendingTopChallenge,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
@@ -166,7 +165,7 @@ func challengePendingTop(
 	ctx context.Context,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.PendingTopChallenge,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {

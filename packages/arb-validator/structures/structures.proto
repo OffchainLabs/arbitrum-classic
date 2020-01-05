@@ -55,3 +55,8 @@ message DisputableNodeBuf {
     value.HashBuf maxPendingTop = 3;
     value.BigIntegerBuf maxPendingCount = 4;
 }
+
+message PendingInboxBuf {
+    repeated bytes items = 1;
+    value.HashBuf hashOfRest = 2;
+}
