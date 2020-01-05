@@ -24,8 +24,6 @@ import (
 
 	errors2 "github.com/pkg/errors"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -49,22 +47,6 @@ func NewRollup(address common.Address, client *ethclient.Client, auth *bind.Tran
 	}
 	vm := &ArbRollup{Client: client, ArbRollup: arbitrumRollupContract, auth: auth}
 	return vm, err
-}
-
-func protoStateHash(
-	machineHash [32]byte,
-	inboxHash [32]byte,
-	pendingTop [32]byte,
-	pendingCount *big.Int,
-) [32]byte {
-	var ret [32]byte
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(machineHash),
-		solsha3.Bytes32(inboxHash),
-		solsha3.Bytes32(pendingTop),
-		solsha3.Uint256(pendingCount),
-	))
-	return ret
 }
 
 func (vm *ArbRollup) PlaceStake(
@@ -91,7 +73,7 @@ func (vm *ArbRollup) PlaceStake(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(ctx, vm.Client, vm.auth.From, tx, "PlaceStake")
+	return vm.waitForReceipt(ctx, tx, "PlaceStake")
 }
 
 func (vm *ArbRollup) RecoverStakeConfirmed(
@@ -106,7 +88,7 @@ func (vm *ArbRollup) RecoverStakeConfirmed(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(ctx, vm.Client, vm.auth.From, tx, "RecoverStakeConfirmed")
+	return vm.waitForReceipt(ctx, tx, "RecoverStakeConfirmed")
 }
 
 func (vm *ArbRollup) RecoverStakeOld(

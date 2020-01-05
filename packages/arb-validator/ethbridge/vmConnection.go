@@ -110,7 +110,7 @@ type ContractConnection interface {
 
 type ChallengeContract interface {
 	TimeoutChallenge(
-		auth *bind.TransactOpts,
+		ctx context.Context,
 	) (*types.Receipt, error)
 }
 

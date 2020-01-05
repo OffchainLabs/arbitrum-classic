@@ -49,8 +49,8 @@ type MessagesChallenge struct {
 	Challenge *messageschallenge.MessagesChallenge
 }
 
-func NewMessagesChallenge(address common.Address, client *ethclient.Client) (*MessagesChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client)
+func NewMessagesChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*MessagesChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -168,14 +168,14 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 }
 
 func (c *MessagesChallenge) Bisect(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	chainHashes [][32]byte,
 	segmentHashes [][32]byte,
 	chainLength *big.Int,
 ) (*types.Receipt, error) {
-
+	c.auth.Context = ctx
 	tx, err := c.Challenge.Bisect(
-		auth,
+		c.auth,
 		chainHashes,
 		segmentHashes,
 		chainLength,
@@ -183,19 +183,20 @@ func (c *MessagesChallenge) Bisect(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "Bisect")
+	return c.waitForReceipt(ctx, tx, "Bisect")
 }
 
 func (c *MessagesChallenge) OneStepProof(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	lowerHashA [32]byte,
 	topHashA [32]byte,
 	lowerHashB [32]byte,
 	topHashB [32]byte,
 	value [32]byte,
 ) (*types.Receipt, error) {
+	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
-		auth,
+		c.auth,
 		lowerHashA,
 		topHashA,
 		lowerHashB,
@@ -205,5 +206,5 @@ func (c *MessagesChallenge) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "OneStepProof")
+	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }

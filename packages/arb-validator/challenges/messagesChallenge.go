@@ -40,7 +40,7 @@ func DefendMessagesClaim(
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewMessagesChallenge(address, client)
+	contract, err := ethbridge.NewMessagesChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -50,7 +50,7 @@ func DefendMessagesClaim(
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendMessages(
-		auth,
+		ctx,
 		client,
 		noteChan,
 		contract,
@@ -69,7 +69,7 @@ func ChallengeMessagesClaim(
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewMessagesChallenge(address, client)
+	contract, err := ethbridge.NewMessagesChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -79,7 +79,7 @@ func ChallengeMessagesClaim(
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengeMessages(
-		auth,
+		ctx,
 		client,
 		noteChan,
 		contract,
@@ -90,7 +90,7 @@ func ChallengeMessagesClaim(
 }
 
 func defendMessages(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
@@ -133,7 +133,7 @@ func defendMessages(
 			if err != nil {
 				return 0, err
 			}
-			_, err = contract.OneStepProof(auth, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
+			_, err = contract.OneStepProof(ctx, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
 			if err != nil {
 				return 0, err
 			}
@@ -156,7 +156,7 @@ func defendMessages(
 		if err != nil {
 			return 0, err
 		}
-		_, err = contract.Bisect(auth, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
+		_, err = contract.Bisect(ctx, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
 			return 0, err
 		}
@@ -171,7 +171,7 @@ func defendMessages(
 		}
 
 		note, state, err = getNextEventWithTimeout(
-			auth,
+			ctx,
 			outChan,
 			ev.DeadlineTicks,
 			contract,
@@ -192,7 +192,7 @@ func defendMessages(
 }
 
 func challengeMessages(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
@@ -217,7 +217,7 @@ func challengeMessages(
 	deadline := ev.DeadlineTicks
 	for {
 		note, state, err := getNextEventWithTimeout(
-			auth,
+			ctx,
 			outChan,
 			deadline,
 			contract,
@@ -248,7 +248,7 @@ func challengeMessages(
 			maxSegment = messagesChallengedSegment
 		}
 
-		_, err = contract.ChooseSegment(auth, uint16(maxSegment), ev.ChainHashes)
+		_, err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes)
 		if err != nil {
 			return 0, err
 		}

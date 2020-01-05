@@ -38,7 +38,7 @@ func DefendPendingTopClaim(
 	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewPendingTopChallenge(address, client)
+	contract, err := ethbridge.NewPendingTopChallenge(address, client, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -48,7 +48,7 @@ func DefendPendingTopClaim(
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendPendingTop(
-		auth,
+		ctx,
 		client,
 		noteChan,
 		contract,
@@ -64,7 +64,7 @@ func ChallengePendingTopClaim(
 	address common.Address,
 	pendingInbox *rollup.PendingInbox,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewPendingTopChallenge(address, client)
+	contract, err := ethbridge.NewPendingTopChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -74,7 +74,7 @@ func ChallengePendingTopClaim(
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengePendingTop(
-		auth,
+		ctx,
 		client,
 		noteChan,
 		contract,
@@ -83,7 +83,7 @@ func ChallengePendingTopClaim(
 }
 
 func defendPendingTop(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.PendingTopChallenge,
@@ -114,7 +114,7 @@ func defendPendingTop(
 			if err != nil {
 				return 0, err
 			}
-			_, err = contract.OneStepProof(auth, startState, nextHash, valueHash)
+			_, err = contract.OneStepProof(ctx, startState, nextHash, valueHash)
 			if err != nil {
 				return 0, err
 			}
@@ -133,7 +133,7 @@ func defendPendingTop(
 		if err != nil {
 			return 0, err
 		}
-		_, err = contract.Bisect(auth, chainHashes, new(big.Int).SetUint64(messageCount))
+		_, err = contract.Bisect(ctx, chainHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
 			return 0, err
 		}
@@ -148,7 +148,7 @@ func defendPendingTop(
 		}
 
 		note, state, err = getNextEventWithTimeout(
-			auth,
+			ctx,
 			outChan,
 			ev.DeadlineTicks,
 			contract,
@@ -167,7 +167,7 @@ func defendPendingTop(
 }
 
 func challengePendingTop(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.PendingTopChallenge,
@@ -185,7 +185,7 @@ func challengePendingTop(
 	deadline := ev.DeadlineTicks
 	for {
 		note, state, err := getNextEventWithTimeout(
-			auth,
+			ctx,
 			outChan,
 			deadline,
 			contract,
@@ -207,7 +207,7 @@ func challengePendingTop(
 		if err != nil {
 			return 0, err
 		}
-		_, err = contract.ChooseSegment(auth, uint16(challengedSegment), ev.ChainHashes)
+		_, err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes)
 		if err != nil {
 			return 0, err
 		}

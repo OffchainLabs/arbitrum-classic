@@ -48,8 +48,8 @@ type BisectionChallenge struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func NewBisectionChallenge(address common.Address, client *ethclient.Client) (*BisectionChallenge, error) {
-	challenge, err := NewChallenge(address, client)
+func NewBisectionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*BisectionChallenge, error) {
+	challenge, err := NewChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -154,13 +154,14 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 }
 
 func (c *BisectionChallenge) ChooseSegment(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	segmentToChallenge uint16,
 	segments [][32]byte,
 ) (*types.Receipt, error) {
 	tree := NewMerkleTree(segments)
+	c.auth.Context = ctx
 	tx, err := c.BisectionChallenge.ChooseSegment(
-		auth,
+		c.auth,
 		big.NewInt(int64(segmentToChallenge)),
 		tree.GetProofFlat(int(segmentToChallenge)),
 		tree.GetRoot(),
@@ -169,5 +170,5 @@ func (c *BisectionChallenge) ChooseSegment(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "ChooseSegment")
+	return c.waitForReceipt(ctx, tx, "ChooseSegment")
 }

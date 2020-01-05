@@ -40,7 +40,7 @@ func DefendExecutionClaim(
 	assertion *protocol.ExecutionAssertionStub,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client)
+	contract, err := ethbridge.NewExecutionChallenge(address, client, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -50,7 +50,7 @@ func DefendExecutionClaim(
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendExecution(
-		auth,
+		ctx,
 		client,
 		contract,
 		noteChan,
@@ -70,7 +70,7 @@ func ChallengeExecutionClaim(
 	startPrecondition *protocol.Precondition,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client)
+	contract, err := ethbridge.NewExecutionChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -80,7 +80,7 @@ func ChallengeExecutionClaim(
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengeExecution(
-		auth,
+		ctx,
 		client,
 		contract,
 		noteChan,
@@ -90,7 +90,7 @@ func ChallengeExecutionClaim(
 }
 
 func defendExecution(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	client *ethclient.Client,
 	contract *ethbridge.ExecutionChallenge,
 	outChan chan ethbridge.Notification,
@@ -113,7 +113,7 @@ func defendExecution(
 			if err != nil {
 				return 0, err
 			}
-			_, err = contract.OneStepProof(auth, defender.GetPrecondition(), defender.GetAssertion(), proof)
+			_, err = contract.OneStepProof(ctx, defender.GetPrecondition(), defender.GetAssertion(), proof)
 			if err != nil {
 				return 0, err
 			}
@@ -133,7 +133,7 @@ func defendExecution(
 		for _, defender := range defenders {
 			assertions = append(assertions, defender.GetAssertion())
 		}
-		_, err := contract.BisectAssertion(auth, defender.GetPrecondition(), assertions, defender.NumSteps())
+		_, err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 
 		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
@@ -145,7 +145,7 @@ func defendExecution(
 		}
 
 		note, state, err = getNextEventWithTimeout(
-			auth,
+			ctx,
 			outChan,
 			ev.DeadlineTicks,
 			contract,
@@ -163,7 +163,7 @@ func defendExecution(
 }
 
 func challengeExecution(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	client *ethclient.Client,
 	contract *ethbridge.ExecutionChallenge,
 	outChan chan ethbridge.Notification,
@@ -184,7 +184,7 @@ func challengeExecution(
 	deadline := ev.DeadlineTicks
 	for {
 		note, state, err := getNextEventWithTimeout(
-			auth,
+			ctx,
 			outChan,
 			deadline,
 			contract,
@@ -208,7 +208,7 @@ func challengeExecution(
 		}
 		preconditions := protocol.GeneratePreconditions(precondition, ev.Assertions)
 		_, err = contract.ChooseSegment(
-			auth,
+			ctx,
 			challengedAssertionNum,
 			preconditions,
 			ev.Assertions,

@@ -22,8 +22,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
@@ -58,7 +56,7 @@ func getNextEvent(outChan chan ethbridge.Notification) (note ethbridge.Notificat
 }
 
 func getNextEventWithTimeout(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	outChan chan ethbridge.Notification,
 	deadline *big.Int,
 	contract ethbridge.ChallengeContract,
@@ -67,13 +65,15 @@ func getNextEventWithTimeout(
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
+		case <-ctx.Done():
+			return note, state, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
 			header, err := client.HeaderByNumber(context.Background(), nil)
 			if err != nil {
 				return note, 0, err
 			}
 			if header.Number.Cmp(deadline) >= 0 {
-				_, err := contract.TimeoutChallenge(auth)
+				_, err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return note, 0, err
 				}

@@ -53,8 +53,8 @@ type ExecutionChallenge struct {
 	Challenge *executionchallenge.ExecutionChallenge
 }
 
-func NewExecutionChallenge(address common.Address, client *ethclient.Client) (*ExecutionChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client)
+func NewExecutionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 }
 
 func (c *ExecutionChallenge) BisectAssertion(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
 	totalSteps uint32,
@@ -191,8 +191,9 @@ func (c *ExecutionChallenge) BisectAssertion(
 		logAccs = append(logAccs, assertion.LastLogHashValue())
 		gasses = append(gasses, assertion.NumGas)
 	}
+	c.auth.Context = ctx
 	tx, err := c.Challenge.BisectAssertion(
-		auth,
+		c.auth,
 		precondition.BeforeInboxValue(),
 		precondition.TimeBounds.AsIntArray(),
 		machineHashes,
@@ -205,17 +206,18 @@ func (c *ExecutionChallenge) BisectAssertion(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "BisectAssertion")
+	return c.waitForReceipt(ctx, tx, "BisectAssertion")
 }
 
 func (c *ExecutionChallenge) OneStepProof(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	precondition *protocol.Precondition,
 	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*types.Receipt, error) {
+	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
-		auth,
+		c.auth,
 		precondition.BeforeHashValue(),
 		precondition.BeforeInboxValue(),
 		precondition.TimeBounds.AsIntArray(),
@@ -231,11 +233,11 @@ func (c *ExecutionChallenge) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "OneStepProof")
+	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
 func (c *ExecutionChallenge) ChooseSegment(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
@@ -250,7 +252,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 		bisectionHashes = append(bisectionHashes, bisectionHash)
 	}
 	return c.BisectionChallenge.ChooseSegment(
-		auth,
+		ctx,
 		assertionToChallenge,
 		bisectionHashes,
 	)

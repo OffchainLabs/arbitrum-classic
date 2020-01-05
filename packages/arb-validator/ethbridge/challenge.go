@@ -52,10 +52,11 @@ type Challenge struct {
 
 	address common.Address
 	client  *ethclient.Client
+	auth    *bind.TransactOpts
 }
 
-func NewChallenge(address common.Address, client *ethclient.Client) (*Challenge, error) {
-	vm := &Challenge{Client: client, address: address}
+func NewChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*Challenge, error) {
+	vm := &Challenge{Client: client, address: address, auth: auth}
 	err := vm.setupContracts()
 	return vm, err
 }
@@ -186,13 +187,16 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 }
 
 func (c *Challenge) TimeoutChallenge(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 ) (*types.Receipt, error) {
-	tx, err := c.Challenge.TimeoutChallenge(
-		auth,
-	)
+	c.auth.Context = ctx
+	tx, err := c.Challenge.TimeoutChallenge(c.auth)
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "TimeoutChallenge")
+	return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
+}
+
+func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+	return waitForReceipt(ctx, c.Client, c.auth.From, tx, methodName)
 }

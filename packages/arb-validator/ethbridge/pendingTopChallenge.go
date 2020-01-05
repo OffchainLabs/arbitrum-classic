@@ -51,8 +51,8 @@ type PendingTopChallenge struct {
 	Challenge *pendingtopchallenge.PendingTopChallenge
 }
 
-func NewPendingTopChallenge(address common.Address, client *ethclient.Client) (*PendingTopChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client)
+func NewPendingTopChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*PendingTopChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -169,30 +169,31 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 }
 
 func (c *PendingTopChallenge) Bisect(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	chainHashes [][32]byte,
 	chainLength *big.Int,
 ) (*types.Receipt, error) {
-
+	c.auth.Context = ctx
 	tx, err := c.Challenge.Bisect(
-		auth,
+		c.auth,
 		chainHashes,
 		chainLength,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "Bisect")
+	return c.waitForReceipt(ctx, tx, "Bisect")
 }
 
 func (c *PendingTopChallenge) OneStepProof(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	lowerHashA [32]byte,
 	topHashA [32]byte,
 	value [32]byte,
 ) (*types.Receipt, error) {
+	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
-		auth,
+		c.auth,
 		lowerHashA,
 		topHashA,
 		value,
@@ -200,5 +201,5 @@ func (c *PendingTopChallenge) OneStepProof(
 	if err != nil {
 		return nil, err
 	}
-	return waitForReceipt(auth.Context, c.Client, auth.From, tx, "OneStepProof")
+	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
