@@ -51,7 +51,6 @@ func DefendExecutionClaim(
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendExecution(
 		ctx,
-		client,
 		contract,
 		noteChan,
 		machine.NewAssertionDefender(
@@ -81,7 +80,6 @@ func ChallengeExecutionClaim(
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengeExecution(
 		ctx,
-		client,
 		contract,
 		noteChan,
 		startMachine,
@@ -91,7 +89,6 @@ func ChallengeExecutionClaim(
 
 func defendExecution(
 	ctx context.Context,
-	client *ethclient.Client,
 	contract *ethbridge.ExecutionChallenge,
 	outChan chan ethbridge.Notification,
 	startDefender machine.AssertionDefender,
@@ -147,9 +144,8 @@ func defendExecution(
 		note, state, err = getNextEventWithTimeout(
 			ctx,
 			outChan,
-			ev.DeadlineTicks,
+			ev.Deadline,
 			contract,
-			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -164,7 +160,6 @@ func defendExecution(
 
 func challengeExecution(
 	ctx context.Context,
-	client *ethclient.Client,
 	contract *ethbridge.ExecutionChallenge,
 	outChan chan ethbridge.Notification,
 	startMachine machine.Machine,
@@ -181,14 +176,13 @@ func challengeExecution(
 
 	mach := startMachine
 	precondition := startPrecondition
-	deadline := ev.DeadlineTicks
+	deadline := ev.Deadline
 	for {
 		note, state, err := getNextEventWithTimeout(
 			ctx,
 			outChan,
 			deadline,
 			contract,
-			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -223,6 +217,6 @@ func challengeExecution(
 		}
 		mach = m
 		precondition = preconditions[contEv.SegmentIndex.Uint64()]
-		deadline = contEv.DeadlineTicks
+		deadline = contEv.Deadline
 	}
 }

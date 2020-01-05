@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -144,8 +146,8 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 			Header: header,
 			VMID:   c.address,
 			Event: ContinueChallengeEvent{
-				SegmentIndex:  contChal.SegmentIndex,
-				DeadlineTicks: contChal.DeadlineTicks,
+				SegmentIndex: contChal.SegmentIndex,
+				Deadline:     structures.TimeTicks{Val: contChal.DeadlineTicks},
 			},
 			TxHash: log.TxHash,
 		}

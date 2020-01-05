@@ -51,7 +51,6 @@ func DefendMessagesClaim(
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendMessages(
 		ctx,
-		client,
 		noteChan,
 		contract,
 		pendingInbox,
@@ -80,7 +79,6 @@ func ChallengeMessagesClaim(
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengeMessages(
 		ctx,
-		client,
 		noteChan,
 		contract,
 		pendingInbox,
@@ -91,7 +89,6 @@ func ChallengeMessagesClaim(
 
 func defendMessages(
 	ctx context.Context,
-	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
 	pendingInbox *rollup.PendingInbox,
@@ -173,9 +170,8 @@ func defendMessages(
 		note, state, err = getNextEventWithTimeout(
 			ctx,
 			outChan,
-			ev.DeadlineTicks,
+			ev.Deadline,
 			contract,
-			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -193,7 +189,6 @@ func defendMessages(
 
 func challengeMessages(
 	ctx context.Context,
-	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
 	pendingInbox *rollup.PendingInbox,
@@ -214,14 +209,13 @@ func challengeMessages(
 		return 0, err
 	}
 
-	deadline := ev.DeadlineTicks
+	deadline := ev.Deadline
 	for {
 		note, state, err := getNextEventWithTimeout(
 			ctx,
 			outChan,
 			deadline,
 			contract,
-			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -260,6 +254,6 @@ func challengeMessages(
 		if !ok {
 			return 0, errors.New("MessagesChallenge expected ContinueChallengeEvent")
 		}
-		deadline = contEv.DeadlineTicks
+		deadline = contEv.Deadline
 	}
 }

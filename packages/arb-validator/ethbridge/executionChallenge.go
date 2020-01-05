@@ -20,6 +20,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	errors2 "github.com/pkg/errors"
@@ -139,9 +141,9 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 				return nil, err
 			}
 			return ExecutionBisectionEvent{
-				Assertions:    translateBisectionEvent(bisectChal),
-				TotalSteps:    bisectChal.TotalSteps,
-				DeadlineTicks: bisectChal.DeadlineTicks,
+				Assertions: translateBisectionEvent(bisectChal),
+				TotalSteps: bisectChal.TotalSteps,
+				Deadline:   structures.TimeTicks{Val: bisectChal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == oneStepProofCompletedID {
 			_, err := c.Challenge.ParseOneStepProofCompleted(log)

@@ -19,10 +19,10 @@ package challenges
 import (
 	"context"
 	"errors"
-	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
@@ -58,9 +58,8 @@ func getNextEvent(outChan chan ethbridge.Notification) (note ethbridge.Notificat
 func getNextEventWithTimeout(
 	ctx context.Context,
 	outChan chan ethbridge.Notification,
-	deadline *big.Int,
+	deadline structures.TimeTicks,
 	contract ethbridge.ChallengeContract,
-	client *ethclient.Client,
 ) (note ethbridge.Notification, state ChallengeState, err error) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
@@ -68,11 +67,11 @@ func getNextEventWithTimeout(
 		case <-ctx.Done():
 			return note, state, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
-			header, err := client.HeaderByNumber(context.Background(), nil)
+			currentTime, err := contract.CurrentBlockTime(ctx)
 			if err != nil {
 				return note, 0, err
 			}
-			if header.Number.Cmp(deadline) >= 0 {
+			if structures.TimeFromBlockNum(currentTime).Cmp(deadline) >= 0 {
 				_, err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return note, 0, err

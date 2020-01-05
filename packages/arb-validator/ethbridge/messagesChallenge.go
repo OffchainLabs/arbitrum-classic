@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
 
 	ethereum "github.com/ethereum/go-ethereum"
@@ -138,7 +140,7 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 				ChainHashes:   eventVal.ChainHashes,
 				SegmentHashes: eventVal.SegmentHashes,
 				TotalLength:   eventVal.TotalLength,
-				DeadlineTicks: eventVal.DeadlineTicks,
+				Deadline:      structures.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == messagesOneStepProofCompletedID {
 			_, err := c.Challenge.ParseOneStepProofCompleted(log)

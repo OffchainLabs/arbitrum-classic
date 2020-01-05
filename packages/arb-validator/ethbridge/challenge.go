@@ -20,6 +20,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -47,7 +49,7 @@ func init() {
 }
 
 type Challenge struct {
-	Client    *ethclient.Client
+	*ClientConnection
 	Challenge *executionchallenge.Challenge
 
 	address common.Address
@@ -56,7 +58,7 @@ type Challenge struct {
 }
 
 func NewChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*Challenge, error) {
-	vm := &Challenge{Client: client, address: address, auth: auth}
+	vm := &Challenge{ClientConnection: &ClientConnection{client}, address: address, auth: auth}
 	err := vm.setupContracts()
 	return vm, err
 }
@@ -150,7 +152,7 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 				return nil, err
 			}
 			return InitiateChallengeEvent{
-				DeadlineTicks: eventVal.DeadlineTicks,
+				Deadline: structures.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == timedOutAsserterID {
 			_, err := c.Challenge.ParseAsserterTimedOut(log)
@@ -198,5 +200,5 @@ func (c *Challenge) TimeoutChallenge(
 }
 
 func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) (*types.Receipt, error) {
-	return waitForReceipt(ctx, c.Client, c.auth.From, tx, methodName)
+	return c.ClientConnection.waitForReceipt(ctx, c.auth.From, tx, methodName)
 }

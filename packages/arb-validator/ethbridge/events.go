@@ -126,7 +126,7 @@ type ConfirmedAssertionEvent struct {
 }
 
 type InitiateChallengeEvent struct {
-	DeadlineTicks *big.Int
+	Deadline structures.TimeTicks
 }
 
 type AsserterTimeoutEvent struct{}
@@ -134,29 +134,29 @@ type AsserterTimeoutEvent struct{}
 type ChallengerTimeoutEvent struct{}
 
 type ContinueChallengeEvent struct {
-	SegmentIndex  *big.Int
-	DeadlineTicks *big.Int
+	SegmentIndex *big.Int
+	Deadline     structures.TimeTicks
 }
 
 type OneStepProofEvent struct{}
 
 type PendingTopBisectionEvent struct {
-	ChainHashes   [][32]byte
-	TotalLength   *big.Int
-	DeadlineTicks *big.Int
+	ChainHashes [][32]byte
+	TotalLength *big.Int
+	Deadline    structures.TimeTicks
 }
 
 type MessagesBisectionEvent struct {
 	ChainHashes   [][32]byte
 	SegmentHashes [][32]byte
 	TotalLength   *big.Int
-	DeadlineTicks *big.Int
+	Deadline      structures.TimeTicks
 }
 
 type ExecutionBisectionEvent struct {
-	Assertions    []*protocol.ExecutionAssertionStub
-	TotalSteps    uint32
-	DeadlineTicks *big.Int
+	Assertions []*protocol.ExecutionAssertionStub
+	TotalSteps uint32
+	Deadline   structures.TimeTicks
 }
 
 type MessageDeliveredEvent struct {

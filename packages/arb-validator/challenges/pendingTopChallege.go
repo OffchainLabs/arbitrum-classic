@@ -49,7 +49,6 @@ func DefendPendingTopClaim(
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendPendingTop(
 		ctx,
-		client,
 		noteChan,
 		contract,
 		pendingInbox,
@@ -75,7 +74,6 @@ func ChallengePendingTopClaim(
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengePendingTop(
 		ctx,
-		client,
 		noteChan,
 		contract,
 		pendingInbox,
@@ -84,7 +82,6 @@ func ChallengePendingTopClaim(
 
 func defendPendingTop(
 	ctx context.Context,
-	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.PendingTopChallenge,
 	pendingInbox *rollup.PendingInbox,
@@ -150,9 +147,8 @@ func defendPendingTop(
 		note, state, err = getNextEventWithTimeout(
 			ctx,
 			outChan,
-			ev.DeadlineTicks,
+			ev.Deadline,
 			contract,
-			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -168,7 +164,6 @@ func defendPendingTop(
 
 func challengePendingTop(
 	ctx context.Context,
-	client *ethclient.Client,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.PendingTopChallenge,
 	pendingInbox *rollup.PendingInbox,
@@ -182,14 +177,13 @@ func challengePendingTop(
 		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
 	}
 
-	deadline := ev.DeadlineTicks
+	deadline := ev.Deadline
 	for {
 		note, state, err := getNextEventWithTimeout(
 			ctx,
 			outChan,
 			deadline,
 			contract,
-			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -219,6 +213,6 @@ func challengePendingTop(
 		if !ok {
 			return 0, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
 		}
-		deadline = contEv.DeadlineTicks
+		deadline = contEv.Deadline
 	}
 }

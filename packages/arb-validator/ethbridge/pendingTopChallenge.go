@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
@@ -137,9 +139,9 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 				return nil, err
 			}
 			return PendingTopBisectionEvent{
-				ChainHashes:   eventVal.ChainHashes,
-				TotalLength:   eventVal.TotalLength,
-				DeadlineTicks: eventVal.DeadlineTicks,
+				ChainHashes: eventVal.ChainHashes,
+				TotalLength: eventVal.TotalLength,
+				Deadline:    structures.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
 			_, err := c.Challenge.ParseOneStepProofCompleted(log)

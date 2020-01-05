@@ -108,7 +108,13 @@ type ContractConnection interface {
 	StartConnection(context.Context, chan Notification, chan error) error
 }
 
+type ChainContract interface {
+	CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error)
+}
+
 type ChallengeContract interface {
+	ChainContract
+
 	TimeoutChallenge(
 		ctx context.Context,
 	) (*types.Receipt, error)
