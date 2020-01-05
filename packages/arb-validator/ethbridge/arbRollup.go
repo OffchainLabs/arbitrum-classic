@@ -110,18 +110,18 @@ func (vm *ArbRollup) RecoverStakeOld(
 
 func (vm *ArbRollup) RecoverStakeMooted(
 	ctx context.Context,
-	disputableHash [32]byte,
+	nodeHash [32]byte,
 	staker common.Address,
 	latestConfirmedProof [][32]byte,
-	nodeProof [][32]byte,
+	stakerProof [][32]byte,
 ) (*types.Receipt, error) {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakeMooted(
 		vm.auth,
 		staker,
-		disputableHash,
+		nodeHash,
 		latestConfirmedProof,
-		nodeProof,
+		stakerProof,
 	)
 	if err != nil {
 		return nil, err
@@ -203,14 +203,13 @@ func (vm *ArbRollup) MakeAssertion(
 
 	prevPrevLeafHash [32]byte,
 	prevDisputableNodeHash [32]byte,
-	prevDeadlineTicks *big.Int,
-	prevChildType uint32,
+	prevDeadlineTicks structures.TimeTicks,
+	prevChildType structures.ChildType,
 
-	beforeState structures.VMProtoData,
+	beforeState *structures.VMProtoData,
 	assertionParams structures.AssertionParams,
 	assertionClaim structures.AssertionClaim,
 	stakerProof [][32]byte,
-
 ) (*types.Receipt, error) {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MakeAssertion(
@@ -227,10 +226,9 @@ func (vm *ArbRollup) MakeAssertion(
 			assertionClaim.AssertionStub.LastMessageHashValue(),
 			assertionClaim.AssertionStub.LastLogHashValue(),
 		},
-
 		beforeState.PendingCount,
-		prevDeadlineTicks,
-		prevChildType,
+		prevDeadlineTicks.Val,
+		uint32(prevChildType),
 		assertionParams.NumSteps,
 		assertionParams.TimeBounds.AsIntArray(),
 		assertionParams.ImportedMessageCount,

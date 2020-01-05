@@ -29,8 +29,9 @@ message NodeBuf {
 
     value.HashBuf machineHash = 6;
     uint64 depth = 7;
-    value.HashBuf innerHash = 8;
-    value.HashBuf hash = 9;
+    value.HashBuf nodeDataHash = 8;
+    value.HashBuf innerHash = 9;
+    value.HashBuf hash = 10;
 }
 
 message NodeGraphBuf {

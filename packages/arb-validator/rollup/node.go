@@ -39,10 +39,11 @@ type Node struct {
 	linkType    structures.ChildType
 	vmProtoData *structures.VMProtoData
 
-	machine   machine.Machine // nil if unknown
-	depth     uint64
-	innerHash [32]byte
-	hash      [32]byte
+	machine      machine.Machine // nil if unknown
+	depth        uint64
+	nodeDataHash [32]byte
+	innerHash    [32]byte
+	hash         [32]byte
 
 	hasSuccessors   bool
 	successorHashes [structures.MaxChildType + 1][32]byte
@@ -220,6 +221,7 @@ func (node *Node) setHash(
 		solsha3.Bytes32(prevHashArr),
 		solsha3.Bytes32(innerHash),
 	)
+	node.nodeDataHash = nodeDataHash
 	copy(node.innerHash[:], innerHash)
 	copy(node.hash[:], hashSlice)
 }
@@ -238,6 +240,7 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 		VmProtoData:    node.vmProtoData.MarshalToBuf(),
 		MachineHash:    machineHash,
 		Depth:          node.depth,
+		NodeDataHash:   utils.MarshalHash(node.nodeDataHash),
 		InnerHash:      utils.MarshalHash(node.innerHash),
 		Hash:           utils.MarshalHash(node.hash),
 	}
@@ -246,15 +249,16 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 	prevHashArr := utils.UnmarshalHash(buf.PrevHash)
 	node := &Node{
-		prev:        nil,
-		deadline:    buf.Deadline.Unmarshal(),
-		disputable:  buf.DisputableNode.Unmarshal(),
-		linkType:    structures.ChildType(buf.LinkType),
-		vmProtoData: buf.VmProtoData.Unmarshal(),
-		machine:     nil,
-		depth:       buf.Depth,
-		innerHash:   utils.UnmarshalHash(buf.InnerHash),
-		hash:        utils.UnmarshalHash(buf.Hash),
+		prev:         nil,
+		deadline:     buf.Deadline.Unmarshal(),
+		disputable:   buf.DisputableNode.Unmarshal(),
+		linkType:     structures.ChildType(buf.LinkType),
+		vmProtoData:  buf.VmProtoData.Unmarshal(),
+		machine:      nil,
+		depth:        buf.Depth,
+		nodeDataHash: utils.UnmarshalHash(buf.NodeDataHash),
+		innerHash:    utils.UnmarshalHash(buf.InnerHash),
+		hash:         utils.UnmarshalHash(buf.Hash),
 	}
 
 	//TODO: try to retrieve machine from checkpoint DB; might fail
