@@ -108,7 +108,7 @@ type AssertionParams struct {
 func (dn *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 	return &AssertionParamsBuf{
 		NumSteps:             dn.NumSteps,
-		TimeBoundsBlocks:     dn.TimeBounds,
+		TimeBounds:           dn.TimeBounds,
 		ImportedMessageCount: utils.MarshalBigInt(dn.ImportedMessageCount),
 	}
 }
@@ -116,7 +116,7 @@ func (dn *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             m.NumSteps,
-		TimeBounds:           m.TimeBoundsBlocks,
+		TimeBounds:           m.TimeBounds,
 		ImportedMessageCount: utils.UnmarshalBigInt(m.ImportedMessageCount),
 	}
 }
