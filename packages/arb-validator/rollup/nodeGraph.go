@@ -79,21 +79,31 @@ func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
 		params:          buf.Params.Unmarshal(),
 	}
 
+	// unmarshal nodes; their prev/successors will not be set up yet
+	for _, nodeBuf := range buf.Nodes {
+		_ = nodeBuf.Unmarshal(chain)
+	}
+	// now set up prevs and successors for all nodes
 	for _, nodeBuf := range buf.Nodes {
 		nodeHash := utils.UnmarshalHash(nodeBuf.Hash)
 		node := chain.nodeFromHash[nodeHash]
-		prevHash := utils.UnmarshalHash(nodeBuf.PrevHash)
-		if prevHash != zeroBytes32 {
-			// TODO: This assumes that prev node has already be loaded
+		if nodeBuf.PrevHash != nil {
+			prevHash := utils.UnmarshalHash(nodeBuf.PrevHash)
 			prev := chain.nodeFromHash[prevHash]
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
+			prev.hasSuccessors = true
 		}
 	}
+
 	chain.oldestNode = chain.nodeFromHash[utils.UnmarshalHash(buf.OldestNodeHash)]
 	for _, leafHashStr := range buf.LeafHashes {
 		leafHash := utils.UnmarshalHash(leafHashStr)
-		chain.leaves.Add(chain.nodeFromHash[leafHash])
+		node := chain.nodeFromHash[leafHash]
+		if node == nil {
+			log.Fatal("unexpected nil node")
+		}
+		chain.leaves.Add(node)
 	}
 
 	lcHash := utils.UnmarshalHash(buf.LatestConfirmedHash)
@@ -120,8 +130,10 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 
 func (chain *NodeGraph) CreateInitialNode(machine machine.Machine) {
 	newNode := NewInitialNode(machine)
+	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
 	chain.latestConfirmed = newNode
+	chain.oldestNode = newNode
 }
 
 func (chain *NodeGraph) pruneNode(node *Node) {

@@ -232,10 +232,18 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 		//TODO: marshal node.machine
 		machineHash = utils.MarshalHash(node.machine.Hash())
 	}
+	var prevHashBuf *value.HashBuf
+	if node.prev != nil {
+		prevHashBuf = utils.MarshalHash(node.prev.hash)
+	}
+	var disputableNodeBuf *structures.DisputableNodeBuf
+	if node.disputable != nil {
+		disputableNodeBuf = node.disputable.MarshalToBuf()
+	}
 	return &NodeBuf{
-		PrevHash:       utils.MarshalHash(node.prev.hash),
+		PrevHash:       prevHashBuf,
 		Deadline:       node.deadline.MarshalToBuf(),
-		DisputableNode: node.disputable.MarshalToBuf(),
+		DisputableNode: disputableNodeBuf,
 		LinkType:       uint32(node.linkType),
 		VmProtoData:    node.vmProtoData.MarshalToBuf(),
 		MachineHash:    machineHash,
@@ -246,12 +254,15 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 	}
 }
 
-func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
-	prevHashArr := utils.UnmarshalHash(buf.PrevHash)
+func (buf *NodeBuf) Unmarshal(chain *NodeGraph) *Node {
+	var disputableNode *structures.DisputableNode
+	if buf.DisputableNode != nil {
+		disputableNode = buf.DisputableNode.Unmarshal()
+	}
 	node := &Node{
 		prev:         nil,
 		deadline:     buf.Deadline.Unmarshal(),
-		disputable:   buf.DisputableNode.Unmarshal(),
+		disputable:   disputableNode,
 		linkType:     structures.ChildType(buf.LinkType),
 		vmProtoData:  buf.VmProtoData.Unmarshal(),
 		machine:      nil,
@@ -264,8 +275,8 @@ func (buf *NodeBuf) Unmarshal(chain *ChainObserver) (*Node, [32]byte) {
 	//TODO: try to retrieve machine from checkpoint DB; might fail
 	chain.nodeFromHash[node.hash] = node
 
-	// can't set up prev and successorHash fields yet; return prevHashArr so caller can do this later
-	return node, prevHashArr
+	// can't set up prev and successorHash fields yet; caller must do this later
+	return node
 }
 
 func GeneratePathProof(from, to *Node) [][32]byte {
