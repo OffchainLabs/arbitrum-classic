@@ -20,74 +20,28 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
 
 var zeroBytes32 [32]byte // deliberately zeroed
 
-type Challenge struct {
-	contract   common.Address
-	asserter   common.Address
-	challenger common.Address
-	kind       structures.ChildType
-}
-
-func (chal *Challenge) MarshalToBuf() *ChallengeBuf {
-	return &ChallengeBuf{
-		Contract:   chal.contract.Bytes(),
-		Asserter:   chal.asserter.Bytes(),
-		Challenger: chal.challenger.Bytes(),
-	}
-}
-
-func (m *ChallengeBuf) Unmarshal() *Challenge {
-	return &Challenge{
-		contract:   common.BytesToAddress(m.Contract),
-		asserter:   common.BytesToAddress(m.Asserter),
-		challenger: common.BytesToAddress(m.Challenger),
-		kind:       structures.ChildType(m.Kind),
-	}
-}
-
-func (chal *Challenge) Equals(chal2 *Challenge) bool {
-	return utils.AddressesEqual(chal.contract, chal2.contract) &&
-		utils.AddressesEqual(chal.asserter, chal2.asserter) &&
-		utils.AddressesEqual(chal.challenger, chal2.challenger) &&
-		chal.kind == chal2.kind
-}
-
-func challengeSetsEqual(s1, s2 map[common.Address]*Challenge) bool {
-	if len(s1) != len(s2) {
-		return false
-	}
-	for addr, chal := range s1 {
-		if s2[addr] == nil || !chal.Equals(s2[addr]) {
-			return false
-		}
-	}
-	return true
-}
-
 type StakedNodeGraph struct {
 	*NodeGraph
-	stakers    *StakerSet
-	challenges map[common.Address]*Challenge
+	stakers *StakerSet
 }
 
 func NewStakedNodeGraph(machine machine.Machine, params structures.ChainParams) *StakedNodeGraph {
-	ret := &StakedNodeGraph{
-		NodeGraph:  NewNodeGraph(machine, params),
-		stakers:    NewStakerSet(),
-		challenges: make(map[common.Address]*Challenge),
+	return &StakedNodeGraph{
+		NodeGraph: NewNodeGraph(machine, params),
+		stakers:   NewStakerSet(),
 	}
-	ret.startCleanupThread(nil)
-	return ret
 }
 
 func (chain *StakedNodeGraph) MarshalToBuf() *StakedNodeGraphBuf {
@@ -95,47 +49,34 @@ func (chain *StakedNodeGraph) MarshalToBuf() *StakedNodeGraphBuf {
 	chain.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
 	})
-	var allChallenges []*ChallengeBuf
-	for _, v := range chain.challenges {
-		allChallenges = append(allChallenges, v.MarshalToBuf())
-	}
 	return &StakedNodeGraphBuf{
-		NodeGraph:  chain.NodeGraph.MarshalToBuf(),
-		Stakers:    allStakers,
-		Challenges: allChallenges,
+		NodeGraph: chain.NodeGraph.MarshalToBuf(),
+		Stakers:   allStakers,
 	}
 }
 
 func (m *StakedNodeGraphBuf) Unmarshal() *StakedNodeGraph {
 	chain := &StakedNodeGraph{
-		NodeGraph:  m.NodeGraph.Unmarshal(),
-		stakers:    NewStakerSet(),
-		challenges: make(map[common.Address]*Challenge),
-	}
-	for _, chalBuf := range m.Challenges {
-		chal := chalBuf.Unmarshal()
-		chain.challenges[chal.contract] = chal
+		NodeGraph: m.NodeGraph.Unmarshal(),
+		stakers:   NewStakerSet(),
 	}
 	for _, stakerBuf := range m.Stakers {
 		chain.stakers.Add(stakerBuf.Unmarshal(chain))
 	}
-	chain.startCleanupThread(nil)
-
 	return chain
 }
 
 func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 	return s.NodeGraph.Equals(s2.NodeGraph) &&
-		s.stakers.Equals(s2.stakers) &&
-		challengeSetsEqual(s.challenges, s2.challenges)
+		s.stakers.Equals(s2.stakers)
 }
 
-func (chain *StakedNodeGraph) CreateStake(stakerAddr common.Address, nodeHash [32]byte, creationTime structures.TimeTicks) {
+func (chain *StakedNodeGraph) CreateStake(ev ethbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
 	chain.stakers.Add(&Staker{
-		stakerAddr,
-		chain.nodeFromHash[nodeHash],
-		creationTime,
-		nil,
+		ev.Staker,
+		chain.nodeFromHash[ev.NodeHash],
+		currentTime,
+		common.Address{},
 	})
 }
 
@@ -154,17 +95,14 @@ func (chain *StakedNodeGraph) RemoveStake(stakerAddr common.Address) {
 	chain.stakers.Delete(staker)
 }
 
-func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind structures.ChildType) *Challenge {
-	ret := &Challenge{contract, asserter, challenger, kind}
-	chain.challenges[contract] = ret
-	chain.stakers.Get(asserter).challenge = ret
-	chain.stakers.Get(challenger).challenge = ret
-	return ret
+func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind structures.ChildType) {
+	chain.stakers.Get(asserter).challenge = contract
+	chain.stakers.Get(challenger).challenge = contract
 }
 
 func (chain *StakedNodeGraph) ChallengeResolved(contract, winner, loser common.Address) {
+	chain.stakers.Get(winner).challenge = common.Address{}
 	chain.RemoveStake(loser)
-	delete(chain.challenges, contract)
 }
 
 type SortableAddressList []common.Address
@@ -190,13 +128,35 @@ func (sng *StakedNodeGraph) generateAlignedStakersProof(
 	})
 	sort.Sort(SortableAddressList(stakerAddrs))
 
-	for i, sa := range stakerAddrs {
+	for _, sa := range stakerAddrs {
 		staker := sng.stakers.Get(sa)
 		if staker.creationTime.Cmp(deadline) >= 0 {
-			offsets[i] = uint64(len(proof))
+			offsets = append(offsets, uint64(len(proof)))
 			subProof := GeneratePathProof(confirmingNode, staker.location)
 			proof = append(proof, subProof...)
 		}
 	}
 	return
+}
+
+func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParams, []recoverStakeOldParams) {
+	mootedToDo := []recoverStakeMootedParams{}
+	oldToDo := []recoverStakeOldParams{}
+	chain.stakers.forall(func(staker *Staker) {
+		ancestor, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
+		if err == nil {
+			mootedToDo = append(mootedToDo, recoverStakeMootedParams{
+				addr:     staker.address,
+				ancestor: ancestor,
+				lcProof:  GeneratePathProof(ancestor, chain.latestConfirmed),
+				stProof:  GeneratePathProof(ancestor, staker.location),
+			})
+		} else if staker.location.depth < chain.latestConfirmed.depth {
+			oldToDo = append(oldToDo, recoverStakeOldParams{
+				addr:  staker.address,
+				proof: GeneratePathProof(staker.location, chain.latestConfirmed),
+			})
+		}
+	})
+	return mootedToDo, oldToDo
 }

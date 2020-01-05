@@ -41,7 +41,7 @@ type recoverStakeMootedParams struct {
 	stProof  [][32]byte
 }
 
-func (chain *StakedNodeGraph) startCleanupThread(doneChan chan interface{}) {
+func (chain *ChainObserver) startCleanupThread(doneChan chan interface{}) {
 	if doneChan == nil {
 		doneChan = make(chan interface{})
 	}
@@ -53,38 +53,11 @@ func (chain *StakedNodeGraph) startCleanupThread(doneChan chan interface{}) {
 			case <-doneChan:
 				return
 			case <-ticker.C:
-				prunesToDo := []pruneParams{}
-				mootedToDo := []recoverStakeMootedParams{}
-				oldToDo := []recoverStakeOldParams{}
 				chain.RLock()
-				chain.leaves.forall(func(leaf *Node) {
-					ancestor, _, err := chain.GetConflictAncestor(leaf, chain.latestConfirmed)
-					if err == nil {
-						prunesToDo = append(prunesToDo, pruneParams{
-							leaf,
-							ancestor,
-							GeneratePathProof(ancestor, leaf),
-							GeneratePathProof(ancestor, chain.latestConfirmed),
-						})
-					}
-				})
-				chain.stakers.forall(func(staker *Staker) {
-					ancestor, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
-					if err == nil {
-						mootedToDo = append(mootedToDo, recoverStakeMootedParams{
-							addr:     staker.address,
-							ancestor: ancestor,
-							lcProof:  GeneratePathProof(ancestor, chain.latestConfirmed),
-							stProof:  GeneratePathProof(ancestor, staker.location),
-						})
-					} else if staker.location.depth < chain.latestConfirmed.depth {
-						oldToDo = append(oldToDo, recoverStakeOldParams{
-							addr:  staker.address,
-							proof: GeneratePathProof(staker.location, chain.latestConfirmed),
-						})
-					}
-				})
+				prunesToDo := chain.nodeGraph.generateNodePruneInfo()
+				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
 				chain.Unlock()
+
 				for _, prune := range prunesToDo {
 					_ = prune
 					//TODO: call contract's PruneLeaf method with params from prune

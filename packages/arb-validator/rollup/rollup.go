@@ -20,6 +20,9 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
+	"sync"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -32,33 +35,35 @@ import (
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
 
 type ChainObserver struct {
-	*StakedNodeGraph
-	rollupAddr       common.Address
-	pendingInbox     *structures.PendingInbox
-	listenForAddress common.Address
-	listener         ChainEventListener
+	*sync.RWMutex
+	nodeGraph    *StakedNodeGraph
+	rollupAddr   common.Address
+	pendingInbox *structures.PendingInbox
+	listeners    map[common.Address]ChainEventListener
 }
 
 func NewChain(
 	_rollupAddr common.Address,
 	_machine machine.Machine,
 	_vmParams structures.ChainParams,
-	_listenForAddress common.Address,
-	_listener ChainEventListener,
 ) *ChainObserver {
 	ret := &ChainObserver{
-		StakedNodeGraph:  NewStakedNodeGraph(_machine, _vmParams),
-		rollupAddr:       _rollupAddr,
-		pendingInbox:     structures.NewPendingInbox(),
-		listenForAddress: _listenForAddress,
-		listener:         _listener,
+		nodeGraph:    NewStakedNodeGraph(_machine, _vmParams),
+		rollupAddr:   _rollupAddr,
+		pendingInbox: structures.NewPendingInbox(),
+		listeners:    make(map[common.Address]ChainEventListener),
 	}
+	ret.startCleanupThread(nil)
 	return ret
+}
+
+func (chain *ChainObserver) RegisterListener(address common.Address, listener ChainEventListener) {
+	chain.listeners[address] = listener
 }
 
 func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 	return &ChainObserverBuf{
-		StakedNodeGraph: chain.StakedNodeGraph.MarshalToBuf(),
+		StakedNodeGraph: chain.nodeGraph.MarshalToBuf(),
 		ContractAddress: chain.rollupAddr.Bytes(),
 		PendingInbox:    chain.pendingInbox.MarshalToBuf(),
 	}
@@ -66,33 +71,100 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 
 func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listener ChainEventListener) *ChainObserver {
 	chain := &ChainObserver{
-		StakedNodeGraph:  m.StakedNodeGraph.Unmarshal(),
-		rollupAddr:       common.BytesToAddress(m.ContractAddress),
-		pendingInbox:     &structures.PendingInbox{m.PendingInbox.Unmarshal()},
-		listenForAddress: _listenForAddress,
-		listener:         _listener,
+		nodeGraph:    m.StakedNodeGraph.Unmarshal(),
+		rollupAddr:   common.BytesToAddress(m.ContractAddress),
+		pendingInbox: &structures.PendingInbox{m.PendingInbox.Unmarshal()},
+		listeners:    make(map[common.Address]ChainEventListener),
 	}
+	chain.startCleanupThread(nil)
 	return chain
 }
 
+func (chain *ChainObserver) PruneNode(ev ethbridge.PrunedEvent) {
+	chain.nodeGraph.PruneNodeByHash(ev.Leaf)
+}
+
+func (chain *ChainObserver) CreateStake(ev ethbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+	listener, ok := chain.listeners[ev.Staker]
+	if ok {
+		listener.StakeCreated(ev)
+	}
+	chain.nodeGraph.CreateStake(ev, currentTime)
+}
+
+func (chain *ChainObserver) RemoveStake(ev ethbridge.StakeRefundedEvent) {
+	listener, ok := chain.listeners[ev.Staker]
+	if ok {
+		listener.StakeRemoved(ev)
+	}
+	chain.nodeGraph.RemoveStake(ev.Staker)
+}
+
+func (chain *ChainObserver) MoveStake(ev ethbridge.StakeMovedEvent) {
+	listener, ok := chain.listeners[ev.Staker]
+	if ok {
+		listener.StakeMoved(ev)
+	}
+	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
+}
+
+func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
+	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
+	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
+	conflictNode, disputeType, err := chain.nodeGraph.GetConflictAncestor(asserter.location, challenger.location)
+	if err != nil {
+		panic("No conflict ancestor for conflict")
+	}
+
+	asserterListener, ok := chain.listeners[ev.Asserter]
+	if ok {
+		asserterListener.Challenged(ev, conflictNode, disputeType)
+	}
+
+	challengerListener, ok := chain.listeners[ev.Challenger]
+	if ok {
+		challengerListener.StartedChallenge(ev, conflictNode, disputeType)
+	}
+	chain.nodeGraph.NewChallenge(
+		ev.ChallengeContract,
+		ev.Asserter,
+		ev.Challenger,
+		ev.ChallengeType,
+	)
+}
+
+func (chain *ChainObserver) ChallengeResolved(ev ethbridge.ChallengeCompletedEvent) {
+	winner, ok := chain.listeners[ev.Winner]
+	if ok {
+		winner.WonChallenge(ev)
+	}
+
+	loser, ok := chain.listeners[ev.Loser]
+	if ok {
+		loser.LostChallenge(ev)
+	}
+	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
+}
+
+func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
+	chain.nodeGraph.ConfirmNode(ev.NodeHash)
+}
+
 func (chain *ChainObserver) notifyAssert(
-	prevLeafHash [32]byte,
-	params *structures.AssertionParams,
-	claim *structures.AssertionClaim,
-	maxPendingTop [32]byte,
+	ev ethbridge.AssertedEvent,
 	currentTime *protocol.TimeBlocks,
 ) error {
-	topPendingCount, ok := chain.pendingInbox.GetHeight(maxPendingTop)
+	topPendingCount, ok := chain.pendingInbox.GetHeight(ev.MaxPendingTop)
 	if !ok {
 		return errors.New("Couldn't find top message in inbox")
 	}
 	disputableNode := structures.NewDisputableNode(
-		params,
-		claim,
-		maxPendingTop,
+		ev.Params,
+		ev.Claim,
+		ev.MaxPendingTop,
 		topPendingCount,
 	)
-	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, nil, currentTime)
+	chain.nodeGraph.CreateNodesOnAssert(chain.nodeGraph.nodeFromHash[ev.PrevLeafHash], disputableNode, nil, currentTime)
 	return nil
 }
 
@@ -103,7 +175,7 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 }
 
 func (co *ChainObserver) Equals(co2 *ChainObserver) bool {
-	return co.StakedNodeGraph.Equals(co2.StakedNodeGraph) &&
+	return co.nodeGraph.Equals(co2.nodeGraph) &&
 		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
 		co.pendingInbox.Equals(co2.pendingInbox)
 }

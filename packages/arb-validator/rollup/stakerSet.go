@@ -31,7 +31,7 @@ type Staker struct {
 	address      common.Address
 	location     *Node
 	creationTime structures.TimeTicks
-	challenge    *Challenge
+	challenge    common.Address
 }
 
 type StakerSet struct {
@@ -65,7 +65,8 @@ func (sl *StakerSet) forall(f func(*Staker)) {
 }
 
 func (staker *Staker) MarshalToBuf() *StakerBuf {
-	if staker.challenge == nil {
+	emptyAddress := common.Address{}
+	if staker.challenge == emptyAddress {
 		return &StakerBuf{
 			Address:       staker.address.Bytes(),
 			Location:      utils.MarshalHash(staker.location.hash),
@@ -77,7 +78,7 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 			Address:       staker.address.Bytes(),
 			Location:      utils.MarshalHash(staker.location.hash),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
-			ChallengeAddr: staker.challenge.contract.Bytes(),
+			ChallengeAddr: staker.challenge.Bytes(),
 		}
 	}
 }
@@ -90,14 +91,14 @@ func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 			address:      common.BytesToAddress([]byte(buf.Address)),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    chain.challenges[common.BytesToAddress(buf.ChallengeAddr)],
+			challenge:    common.BytesToAddress(buf.ChallengeAddr),
 		}
 	} else {
 		return &Staker{
 			address:      common.BytesToAddress([]byte(buf.Address)),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    nil,
+			challenge:    common.Address{},
 		}
 	}
 }
@@ -128,13 +129,5 @@ func (s *Staker) Equals(s2 *Staker) bool {
 	if !s.creationTime.Equals(s2.creationTime) {
 		return false
 	}
-	if s.challenge == nil {
-		return s2.challenge == nil
-	} else {
-		if s2.challenge == nil {
-			return false
-		} else {
-			return bytes.Compare(s.challenge.contract[:], s2.challenge.contract[:]) == 0
-		}
-	}
+	return s.challenge == s2.challenge
 }

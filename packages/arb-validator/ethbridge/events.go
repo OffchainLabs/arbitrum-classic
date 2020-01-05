@@ -59,7 +59,7 @@ func (e StakeCreatedEvent) RelatedToStaker(staker common.Address) bool {
 type ChallengeStartedEvent struct {
 	Asserter          common.Address
 	Challenger        common.Address
-	ChallengeType     uint64
+	ChallengeType     structures.ChildType
 	ChallengeContract common.Address
 }
 

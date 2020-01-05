@@ -17,15 +17,20 @@
 package rollup
 
 import (
-	"log"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type ChainEventListener interface {
-	Notify(interface{})
+	StakeCreated(ethbridge.StakeCreatedEvent)
+	StakeRemoved(ethbridge.StakeRefundedEvent)
+	StakeMoved(ethbridge.StakeMovedEvent)
+	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, structures.ChildType)
+	Challenged(ethbridge.ChallengeStartedEvent, *Node, structures.ChildType)
+	LostChallenge(ethbridge.ChallengeCompletedEvent)
+	WonChallenge(ethbridge.ChallengeCompletedEvent)
 }
 
 type ChanCEListener struct {
@@ -38,67 +43,85 @@ func NewChanCEListener(chain *ChainObserver, runLoop func(*ChanCEListener)) {
 	go runLoop(ret)
 }
 
-func (lis *ChanCEListener) Notify(ev interface{}) {
-	select {
-	case lis.ch <- ev:
-		// do nothing
-	default:
-		log.Fatal("ChanCEListener: ran out of buffer space")
+func (lis *ChanCEListener) StakeCreated(ethbridge.StakeCreatedEvent) {
+
+}
+
+func (lis *ChanCEListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
+
+}
+
+func (lis *ChanCEListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
+
+}
+
+func (lis *ChanCEListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
+	switch disputeType {
+	case structures.InvalidPendingChildType:
+		go challenges.ChallengePendingTopClaim(
+			nil,
+			nil,
+			ev.ChallengeContract,
+			lis.chain.pendingInbox,
+		)
+	case structures.InvalidMessagesChildType:
+		go challenges.ChallengeMessagesClaim(
+			nil,
+			nil,
+			ev.ChallengeContract,
+			lis.chain.pendingInbox,
+			conflictNode.vmProtoData.PendingTop,
+			conflictNode.disputable.AssertionClaim.AfterPendingTop,
+		)
+	case structures.InvalidExecutionChildType:
+		go challenges.ChallengeExecutionClaim(
+			nil,
+			nil,
+			ev.ChallengeContract,
+			conflictNode.ExecutionPrecondition(),
+			conflictNode.machine,
+		)
 	}
 }
 
-type StakeCreatedChainEvent struct {
-	staker       common.Address
-	nodeHash     [32]byte
-	creationTime structures.TimeTicks
-}
-
-type StakeMovedChainEvent struct {
-	staker     common.Address
-	toNodeHash [32]byte
-}
-
-type StakeRefundedChainEvent struct {
-	staker common.Address
-}
-
-type ChallengeStartedChainEvent struct {
-	challengeContract common.Address
-	asserter          common.Address
-	challenger        common.Address
-	kind              structures.ChildType
-}
-
-type ChallengeCompletedChainEvent struct {
-	challengeContract common.Address
-	winner            common.Address
-	loser             common.Address
-}
-
-func sinkRunLoop(lis *ChanCEListener) {
-	for {
-		_, ok := <-lis.ch
-		if !ok {
-			return
-		}
+func (lis *ChanCEListener) Challenged(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
+	switch disputeType {
+	case structures.InvalidPendingChildType:
+		go challenges.DefendPendingTopClaim(
+			nil,
+			nil,
+			ev.ChallengeContract,
+			lis.chain.pendingInbox,
+			conflictNode.disputable.AssertionClaim.AfterPendingTop,
+			conflictNode.disputable.MaxPendingTop,
+		)
+	case structures.InvalidMessagesChildType:
+		go challenges.DefendMessagesClaim(
+			nil,
+			nil,
+			ev.ChallengeContract,
+			lis.chain.pendingInbox,
+			conflictNode.vmProtoData.PendingTop,
+			conflictNode.disputable.AssertionClaim.AfterPendingTop,
+			conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+		)
+	case structures.InvalidExecutionChildType:
+		go challenges.DefendExecutionClaim(
+			nil,
+			nil,
+			ev.ChallengeContract,
+			conflictNode.ExecutionPrecondition(),
+			conflictNode.disputable.AssertionParams.NumSteps,
+			conflictNode.disputable.AssertionClaim.AssertionStub,
+			conflictNode.machine,
+		)
 	}
 }
 
-func templateRunLoop(lis *ChanCEListener) {
-	for {
-		inEv, ok := <-lis.ch
-		if !ok {
-			return
-		}
-		switch ev := inEv.(type) {
-		case StakeCreatedChainEvent:
-		case StakeMovedChainEvent:
-		case StakeRefundedChainEvent:
-		case ChallengeStartedChainEvent:
-		case ChallengeCompletedChainEvent:
-		default:
-			_ = ev //suppress compiler warning
-			log.Fatal("unrecognized event type in rollup chain listener")
-		}
-	}
+func (lis *ChanCEListener) LostChallenge(ethbridge.ChallengeCompletedEvent) {
+
+}
+
+func (lis *ChanCEListener) WonChallenge(ethbridge.ChallengeCompletedEvent) {
+
 }
