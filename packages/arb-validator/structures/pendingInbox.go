@@ -22,10 +22,7 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -119,7 +116,7 @@ func hash2(h1, h2 [32]byte) [32]byte {
 	).Hash()
 }
 
-func (pi *MessageStack) MarshalToBuf() *rollup.PendingInboxBuf {
+func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
 	var msgs [][]byte
 	for item := pi.head; item != nil; item = item.prev {
 		bb := bytes.NewBuffer(nil)
@@ -129,7 +126,7 @@ func (pi *MessageStack) MarshalToBuf() *rollup.PendingInboxBuf {
 		}
 		msgs = append(msgs, bb.Bytes())
 	}
-	return &rollup.PendingInboxBuf{
+	return &PendingInboxBuf{
 		Items:      msgs,
 		HashOfRest: utils.MarshalHash(pi.hashOfRest),
 	}
