@@ -29,13 +29,19 @@ type TimeTicks struct {
 }
 
 var _timeConversionFactor *big.Int
+var _timeTicksPerSecond *big.Int
 
 func init() {
-	_timeConversionFactor = big.NewInt(13000)
+	_timeTicksPerSecond = big.NewInt(1000)
+	_timeConversionFactor = new(big.Int).Mul(big.NewInt(13), _timeTicksPerSecond)
 }
 
 func TimeFromBlockNum(blockNum *protocol.TimeBlocks) TimeTicks {
 	return TimeTicks{new(big.Int).Mul(_timeConversionFactor, blockNum.AsInt())}
+}
+
+func TimeFromSeconds(seconds int64) TimeTicks {
+	return TimeTicks{new(big.Int).Mul(_timeTicksPerSecond, big.NewInt(seconds))}
 }
 
 func (rt TimeTicks) Add(rt2 TimeTicks) TimeTicks {
