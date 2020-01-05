@@ -43,10 +43,10 @@ type Connection struct {
 	fromAddress common.Address
 	osp         *ethbridge.OneStepProof
 	client      *ethclient.Client
-	proofbounds [2]uint64
+	proofbounds [2]uint32
 }
 
-func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint64) (*Connection, error) {
+func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
 	client, err := ethclient.Dial(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
@@ -100,25 +100,24 @@ func (m *Machine) DeliverMessages(msgs value.TupleValue) {
 	m.machine.DeliverMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
 	a := &protocol.ExecutionAssertion{}
 	totalSteps := uint32(0)
-	stepIncrease := int32(1)
+	stepIncrease := uint32(1)
 	stepsRan := 0
-	for i := int32(0); i < maxSteps; i += stepIncrease {
+	for i := uint32(0); i < maxSteps; i += stepIncrease {
 		var proof []byte
 		var err error
 		// only marshall if we are going to validate (see below)
-		if i >= int32(m.ethConn.proofbounds[0]) && i <= int32(m.ethConn.proofbounds[1]) {
+		if i >= m.ethConn.proofbounds[0] && i <= m.ethConn.proofbounds[1] {
 			proof, err = m.MarshalForProof()
 			if err != nil {
 				log.Println("error marshaling")
 			}
 		}
-		steps := int32(stepIncrease)
 		beforeHash := m.Hash()
 		inboxHash := m.InboxHash()
-		a1, ranSteps := m.machine.ExecuteAssertion(steps, timeBounds)
+		a1, ranSteps := m.machine.ExecuteAssertion(stepIncrease, timeBounds)
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps
 		a.NumGas += a1.NumGas
@@ -135,7 +134,7 @@ func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoun
 		stepsRan++
 
 		// only marshall and validate if step is within proofbounds
-		if i >= int32(m.ethConn.proofbounds[0]) && i <= int32(m.ethConn.proofbounds[1]) {
+		if i >= m.ethConn.proofbounds[0] && i <= m.ethConn.proofbounds[1] {
 			callOpts := &bind.CallOpts{
 				Pending: true,
 				From:    m.ethConn.fromAddress,

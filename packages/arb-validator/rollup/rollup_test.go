@@ -17,11 +17,12 @@
 package rollup
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"math/big"
-	"testing"
 )
 
 func TestCreateChain(t *testing.T) {
@@ -39,8 +40,6 @@ func TestCreateChain(t *testing.T) {
 			MaxExecutionSteps:       1000000,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
-		dummyAddress,
-		nil,
 	)
 	chainBuf := chain.MarshalToBuf()
 	chain2 := chainBuf.Unmarshal(dummyAddress, nil)

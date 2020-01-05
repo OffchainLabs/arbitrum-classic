@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"math/rand"
 	"os"
 	"testing"
@@ -60,7 +61,7 @@ func setupTestValidateProof(t *testing.T) (*proofmachine.Connection, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proofbounds := [2]uint64{0, 10000}
+	proofbounds := [2]uint32{0, 10000}
 	return proofmachine.NewEthConnection(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
 }
 
@@ -76,12 +77,12 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *proofmachine.Co
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := protocol.NewTimeBoundsBlocks(0, 10000)
-	steps := int32(100000)
+	timeBounds := protocol.NewTimeBoundsBlocks(protocol.NewTimeBlocks(big.NewInt(0)), protocol.NewTimeBlocks(big.NewInt(10000)))
+	steps := uint32(100000)
 	cont := true
 
 	for cont {
-		a := mach.ExecuteAssertion(steps, timeBounds)
+		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds)
 		lastReason := mach.LastBlockReason()
 		if lastReason != nil {
 			if lastReason.IsBlocked(mach, 0) && lastReason.Equals(machine.ErrorBlocked{}) {
@@ -89,15 +90,15 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *proofmachine.Co
 				break
 			}
 		}
-		if a.NumSteps == 0 {
+		if stepsExecuted == 0 {
 			if lastReason.IsBlocked(mach, 0) && !lastReason.Equals(machine.BreakpointBlocked{}) {
 				cont = false
 			}
 			fmt.Println(" machine halted ")
 			//break
 		}
-		if a.NumSteps != 1 {
-			t.Log("Num steps = ", a.NumSteps)
+		if stepsExecuted != 1 {
+			t.Log("Num steps = ", stepsExecuted)
 		}
 	}
 	t.Log("called ValidateProof")

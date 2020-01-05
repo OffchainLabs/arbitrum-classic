@@ -146,7 +146,10 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 				Destination: msg.Destination,
 			})
 		}
-		timeBounds := protocol.NewTimeBoundsBlocks(validator.latestHeader.Number.Uint64(), validator.latestHeader.Number.Uint64()+length)
+		timeBounds := protocol.NewTimeBoundsBlocks(
+			protocol.NewTimeBlocks(validator.latestHeader.Number),
+			protocol.NewTimeBlocks(new(big.Int).Add(validator.latestHeader.Number, new(big.Int).SetUint64(length))),
+		)
 		seqNum := bot.OffchainContext(final)
 		clonedMachine := bot.GetCore().GetMachine().Clone()
 		requestData := valmessage.UnanimousRequestData{

@@ -67,7 +67,7 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 		}
 
 		initState := m.Clone()
-		assertion, numSteps := m.ExecuteAssertion(int32(steps), pre.TimeBounds)
+		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds)
 		defenders = append(defenders, NewAssertionDefender(
 			pre,
 			numSteps,
@@ -100,7 +100,7 @@ func ChooseAssertionToChallenge(
 
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
-			int32(steps),
+			steps,
 			timeBounds,
 		)
 		if numSteps != steps || !generatedAssertion.Stub().Equals(assertions[i]) {

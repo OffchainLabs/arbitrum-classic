@@ -112,11 +112,11 @@ func (m *Machine) DeliverMessages(msgs value.TupleValue) {
 	m.gomachine.DeliverMessages(msgs)
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
 	a := &protocol.ExecutionAssertion{}
 	totalSteps := uint32(0)
-	stepIncrease := int32(50)
-	for i := int32(0); i < maxSteps; i += stepIncrease {
+	stepIncrease := uint32(50)
+	for i := uint32(0); i < maxSteps; i += stepIncrease {
 		steps := maxSteps - i
 		if steps > stepIncrease {
 			steps = stepIncrease
