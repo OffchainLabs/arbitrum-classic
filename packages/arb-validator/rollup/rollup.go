@@ -34,7 +34,7 @@ import (
 type ChainObserver struct {
 	*StakedNodeGraph
 	rollupAddr       common.Address
-	pendingInbox     *PendingInbox
+	pendingInbox     *structures.PendingInbox
 	listenForAddress common.Address
 	listener         ChainEventListener
 }
@@ -49,7 +49,7 @@ func NewChain(
 	ret := &ChainObserver{
 		StakedNodeGraph:  NewStakedNodeGraph(_machine, _vmParams),
 		rollupAddr:       _rollupAddr,
-		pendingInbox:     NewPendingInbox(),
+		pendingInbox:     structures.NewPendingInbox(),
 		listenForAddress: _listenForAddress,
 		listener:         _listener,
 	}
@@ -68,7 +68,7 @@ func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listener
 	chain := &ChainObserver{
 		StakedNodeGraph:  m.StakedNodeGraph.Unmarshal(),
 		rollupAddr:       common.BytesToAddress(m.ContractAddress),
-		pendingInbox:     &PendingInbox{m.PendingInbox.Unmarshal()},
+		pendingInbox:     &structures.PendingInbox{m.PendingInbox.Unmarshal()},
 		listenForAddress: _listenForAddress,
 		listener:         _listener,
 	}
@@ -82,7 +82,7 @@ func (chain *ChainObserver) notifyAssert(
 	maxPendingTop [32]byte,
 	currentTime *protocol.TimeBlocks,
 ) error {
-	topPending, ok := chain.pendingInbox.index[maxPendingTop]
+	topPendingCount, ok := chain.pendingInbox.GetHeight(maxPendingTop)
 	if !ok {
 		return errors.New("Couldn't find top message in inbox")
 	}
@@ -90,7 +90,7 @@ func (chain *ChainObserver) notifyAssert(
 		params,
 		claim,
 		maxPendingTop,
-		topPending.count,
+		topPendingCount,
 	)
 	chain.CreateNodesOnAssert(chain.nodeFromHash[prevLeafHash], disputableNode, nil, currentTime)
 	return nil

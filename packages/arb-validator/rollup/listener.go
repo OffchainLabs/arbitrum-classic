@@ -66,7 +66,7 @@ type ChallengeStartedChainEvent struct {
 	challengeContract common.Address
 	asserter          common.Address
 	challenger        common.Address
-	kind              ChallengeType
+	kind              structures.ChildType
 }
 
 type ChallengeCompletedChainEvent struct {

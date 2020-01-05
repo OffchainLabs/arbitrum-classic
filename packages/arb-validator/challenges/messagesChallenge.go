@@ -21,21 +21,20 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendMessagesClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
@@ -64,7 +63,7 @@ func ChallengeMessagesClaim(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	address common.Address,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
@@ -91,7 +90,7 @@ func defendMessages(
 	ctx context.Context,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
@@ -191,7 +190,7 @@ func challengeMessages(
 	ctx context.Context,
 	outChan chan ethbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
-	pendingInbox *rollup.PendingInbox,
+	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {

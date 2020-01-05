@@ -14,13 +14,15 @@
 * limitations under the License.
  */
 
-package rollup
+package structures
 
 import (
 	"bytes"
 	"errors"
 	"log"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
@@ -90,6 +92,14 @@ func (pi *MessageStack) DeliverMessage(msg value.Value) {
 	}
 }
 
+func (pi *MessageStack) GetHeight(acc [32]byte) (*big.Int, bool) {
+	item, ok := pi.index[acc]
+	if !ok {
+		return nil, false
+	}
+	return item.count, true
+}
+
 func (pi *MessageStack) SegmentSize(olderAcc [32]byte, newerAcc [32]byte) (uint64, error) {
 	oldItem, ok := pi.index[olderAcc]
 	if !ok {
@@ -109,7 +119,7 @@ func hash2(h1, h2 [32]byte) [32]byte {
 	).Hash()
 }
 
-func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
+func (pi *MessageStack) MarshalToBuf() *rollup.PendingInboxBuf {
 	var msgs [][]byte
 	for item := pi.head; item != nil; item = item.prev {
 		bb := bytes.NewBuffer(nil)
@@ -119,7 +129,7 @@ func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
 		}
 		msgs = append(msgs, bb.Bytes())
 	}
-	return &PendingInboxBuf{
+	return &rollup.PendingInboxBuf{
 		Items:      msgs,
 		HashOfRest: utils.MarshalHash(pi.hashOfRest),
 	}

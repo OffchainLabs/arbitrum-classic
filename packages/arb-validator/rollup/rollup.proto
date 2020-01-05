@@ -51,7 +51,7 @@ message StakedNodeGraphBuf {
 message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
     bytes contractAddress = 2;
-    PendingInboxBuf pendingInbox = 3;
+    structures.PendingInboxBuf pendingInbox = 3;
 }
 
 message StakerBuf {
@@ -66,9 +66,4 @@ message ChallengeBuf {
     bytes asserter = 2;
     bytes challenger = 3;
     uint32 kind = 4;
-}
-
-message PendingInboxBuf {
-    repeated bytes items = 1;
-    value.HashBuf hashOfRest = 2;
 }
