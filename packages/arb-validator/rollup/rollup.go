@@ -105,6 +105,5 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 func (co *ChainObserver) Equals(co2 *ChainObserver) bool {
 	return co.StakedNodeGraph.Equals(co2.StakedNodeGraph) &&
 		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
-		co.pendingInbox.Equals(co2.pendingInbox) &&
-		bytes.Compare(co.listenForAddress[:], co2.listenForAddress[:]) == 0
+		co.pendingInbox.Equals(co2.pendingInbox)
 }
