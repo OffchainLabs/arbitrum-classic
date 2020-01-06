@@ -144,7 +144,7 @@ func (chain *NodeGraph) pruneNode(node *Node) {
 }
 
 func (chain *NodeGraph) considerPruningNode(node *Node) {
-	if node.numStakers > 0 {
+	if node.numStakers > 0 || chain.leaves.IsLeaf(node) {
 		return
 	}
 	for kind := structures.MinChildType; kind <= structures.MaxChildType; kind++ {

@@ -37,7 +37,13 @@ func TestCreateEmptyChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if chain.nodeGraph.leaves.NumLeaves() != 1 {
+		t.Fatal("unexpected leaf count")
+	}
+	tryMarshalUnmarshal(chain, t)
+}
 
+func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	chainBuf := chain.MarshalToBuf()
 	chain2 := chainBuf.Unmarshal(dummyAddress, nil)
 	if !chain.Equals(chain2) {
@@ -54,12 +60,46 @@ func TestDoAssertion(t *testing.T) {
 	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
 	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
 	doAnAssertion(chain, validTip)
-
-	chainBuf := chain.MarshalToBuf()
-	chain2 := chainBuf.Unmarshal(dummyAddress, nil)
-	if !chain.Equals(chain2) {
-		t.Fail()
+	if chain.nodeGraph.leaves.NumLeaves() != 7 {
+		t.Fatal("unexpected leaf count")
 	}
+
+	tryMarshalUnmarshal(chain, t)
+}
+
+func TestChallenge(t *testing.T) {
+	chain, _, err := setUpChain()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
+	staker1addr := common.BytesToAddress([]byte{1})
+	staker2addr := common.BytesToAddress([]byte{2})
+	contractAddr := common.BytesToAddress([]byte{3})
+	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
+	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.InvalidMessagesChildType)
+	confNode, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !confNode.Equals(chain.nodeGraph.latestConfirmed) {
+		t.Fatal("unexpected value for conflict ancestor")
+	}
+	if childType != structures.InvalidMessagesChildType {
+		t.Fatal("unexpected value for conflict type")
+	}
+
+	createOneStaker(chain, staker1addr, validTip.hash)
+	createOneStaker(chain, staker2addr, tip2.hash)
+
+	chain.nodeGraph.NewChallenge(contractAddr, staker1addr, staker2addr, structures.InvalidMessagesChildType)
+
+	tryMarshalUnmarshal(chain, t)
+
+	chain.nodeGraph.ChallengeResolved(contractAddr, staker1addr, staker2addr)
+
+	tryMarshalUnmarshal(chain, t)
 }
 
 func doAnAssertion(chain *ChainObserver, baseNode *Node) {
@@ -111,12 +151,7 @@ func TestCreateStakers(t *testing.T) {
 	}
 
 	createSomeStakers(chain)
-
-	chainBuf := chain.MarshalToBuf()
-	chain2 := chainBuf.Unmarshal(dummyAddress, nil)
-	if !chain.Equals(chain2) {
-		t.Fail()
-	}
+	tryMarshalUnmarshal(chain, t)
 }
 
 func setUpChain() (*ChainObserver, machine.Machine, error) {
@@ -140,13 +175,16 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 
 func createSomeStakers(chain *ChainObserver) {
 	for i := 0; i < 5; i++ {
-		stakerAddress := common.BytesToAddress([]byte{byte(i)})
-		chain.CreateStake(
-			ethbridge.StakeCreatedEvent{
-				Staker:   stakerAddress,
-				NodeHash: chain.nodeGraph.latestConfirmed.hash,
-			},
-			structures.TimeFromSeconds(73),
-		)
+		createOneStaker(chain, common.BytesToAddress([]byte{byte(i)}), chain.nodeGraph.latestConfirmed.hash)
 	}
+}
+
+func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash [32]byte) {
+	chain.CreateStake(
+		ethbridge.StakeCreatedEvent{
+			Staker:   stakerAddr,
+			NodeHash: nodeHash,
+		},
+		structures.TimeFromSeconds(73),
+	)
 }

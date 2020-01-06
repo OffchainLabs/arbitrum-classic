@@ -33,6 +33,10 @@ func (ll *LeafSet) IsLeaf(node *Node) bool {
 	return ok
 }
 
+func (ll *LeafSet) NumLeaves() int {
+	return len(ll.idx)
+}
+
 func (ll *LeafSet) Add(node *Node) {
 	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
