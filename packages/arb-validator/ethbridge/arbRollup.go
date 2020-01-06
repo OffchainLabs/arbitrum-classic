@@ -214,9 +214,8 @@ func (vm *ArbRollup) MakeAssertion(
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth,
-		[10][32]byte{
+		[9][32]byte{
 			beforeState.MachineHash,
-			beforeState.InboxHash,
 			beforeState.PendingTop,
 			prevPrevLeafHash,
 			prevDisputableNodeHash,

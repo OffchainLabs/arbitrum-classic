@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -45,7 +46,6 @@ type Node struct {
 	innerHash    [32]byte
 	hash         [32]byte
 
-	hasSuccessors   bool
 	successorHashes [structures.MaxChildType + 1][32]byte
 	numStakers      uint64
 }
@@ -60,7 +60,6 @@ func NewInitialNode(
 		linkType:   0,
 		vmProtoData: structures.NewVMProtoData(
 			machine.Hash(),
-			value.NewEmptyTuple().Hash(),
 			value.NewEmptyTuple().Hash(),
 			big.NewInt(0),
 		),
@@ -133,13 +132,13 @@ func NewNodeFromPrev(
 		machine:     machine,
 		depth:       prev.depth + 1,
 	}
-	ret.setHash(ret.NodeDataHash(params, currentTime))
+	ret.setHash(ret.NodeDataHash(params))
 	prev.successorHashes[kind] = ret.hash
 	return ret
 }
 
-func (node1 *Node) Equals(node2 *Node) bool {
-	return node1.hash == node2.hash
+func (node *Node) Equals(node2 *Node) bool {
+	return node.hash == node2.hash
 }
 
 func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Node {
@@ -148,7 +147,7 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Nod
 
 func (node *Node) ExecutionPrecondition() *protocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
-	beforeInbox := protocol.AddMessagesHashToInboxHash(vmProtoData.InboxHash, node.disputable.AssertionClaim.ImportedMessagesSlice)
+	beforeInbox := protocol.AddMessagesHashToInboxHash(value.NewEmptyTuple().Hash(), node.disputable.AssertionClaim.ImportedMessagesSlice)
 	return &protocol.Precondition{
 		BeforeHash:  utils.MarshalHash(vmProtoData.MachineHash),
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
@@ -158,12 +157,30 @@ func (node *Node) ExecutionPrecondition() *protocol.Precondition {
 
 func (node *Node) NodeDataHash(
 	params structures.ChainParams,
-	currentTime *protocol.TimeBlocks,
 ) [32]byte {
 	ret := [32]byte{}
 	if node.disputable == nil {
 		return ret
 	}
+	if node.linkType == structures.ValidChildType {
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHashValue()),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHashValue()),
+		))
+	} else {
+		challengeDataHash, challengePeriodTicks := node.ChallengeNodeData(params)
+		copy(ret[:], solsha3.SoliditySHA3(
+			solsha3.Bytes32(challengeDataHash),
+			solsha3.Uint256(challengePeriodTicks.Val),
+		))
+	}
+	return ret
+}
+
+func (node *Node) ChallengeNodeData(
+	params structures.ChainParams,
+) ([32]byte, structures.TimeTicks) {
+	ret := [32]byte{}
 	vmProtoData := node.prev.vmProtoData
 
 	switch node.linkType {
@@ -171,41 +188,33 @@ func (node *Node) NodeDataHash(
 		pendingLeft := new(big.Int).Add(vmProtoData.PendingCount, node.disputable.AssertionParams.ImportedMessageCount)
 		pendingLeft = pendingLeft.Sub(node.disputable.MaxPendingCount, pendingLeft)
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(solsha3.SoliditySHA3(
-				solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
-				solsha3.Bytes32(node.disputable.MaxPendingTop),
-				solsha3.Uint256(pendingLeft),
-			)),
-			solsha3.Uint256(params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
+			solsha3.Bytes32(node.disputable.MaxPendingTop),
+			solsha3.Uint256(pendingLeft),
 		))
+		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
+		return ret, challengePeriod
 	case structures.InvalidMessagesChildType:
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(solsha3.SoliditySHA3(
-				solsha3.Bytes32(vmProtoData.PendingTop),
-				solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
-				solsha3.Bytes32([32]byte{}),
-				solsha3.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
-				solsha3.Uint256(node.disputable.AssertionParams.ImportedMessageCount),
-			)),
-			solsha3.Uint256(params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1)))).Val),
+			solsha3.Bytes32(vmProtoData.PendingTop),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
+			solsha3.Bytes32([32]byte{}),
+			solsha3.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
+			solsha3.Uint256(node.disputable.AssertionParams.ImportedMessageCount),
 		))
+		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
+		return ret, challengePeriod
 	case structures.InvalidExecutionChildType:
-		challengePeriod := structures.TimeFromBlockNum(currentTime).Add(params.GracePeriod).Add(node.disputable.CheckTime(params))
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(solsha3.SoliditySHA3(
-				solsha3.Uint32(node.disputable.AssertionParams.NumSteps),
-				solsha3.Bytes32(node.ExecutionPrecondition().Hash()),
-				solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.Hash()),
-			)),
-			solsha3.Uint256(challengePeriod.Val),
+			solsha3.Uint32(node.disputable.AssertionParams.NumSteps),
+			solsha3.Bytes32(node.ExecutionPrecondition().Hash()),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.Hash()),
 		))
-	case structures.ValidChildType:
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHashValue()),
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHashValue()),
-		))
+		challengePeriod := params.GracePeriod.Add(node.disputable.CheckTime(params))
+		return ret, challengePeriod
+	default:
+		panic("Unhandled challenge type")
 	}
-	return ret
 }
 
 func (node *Node) setHash(
@@ -258,22 +267,22 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 	}
 }
 
-func (buf *NodeBuf) Unmarshal(chain *NodeGraph) *Node {
+func (m *NodeBuf) Unmarshal(chain *NodeGraph) *Node {
 	var disputableNode *structures.DisputableNode
-	if buf.DisputableNode != nil {
-		disputableNode = buf.DisputableNode.Unmarshal()
+	if m.DisputableNode != nil {
+		disputableNode = m.DisputableNode.Unmarshal()
 	}
 	node := &Node{
 		prev:         nil,
-		deadline:     buf.Deadline.Unmarshal(),
+		deadline:     m.Deadline.Unmarshal(),
 		disputable:   disputableNode,
-		linkType:     structures.ChildType(buf.LinkType),
-		vmProtoData:  buf.VmProtoData.Unmarshal(),
+		linkType:     structures.ChildType(m.LinkType),
+		vmProtoData:  m.VmProtoData.Unmarshal(),
 		machine:      nil,
-		depth:        buf.Depth,
-		nodeDataHash: utils.UnmarshalHash(buf.NodeDataHash),
-		innerHash:    utils.UnmarshalHash(buf.InnerHash),
-		hash:         utils.UnmarshalHash(buf.Hash),
+		depth:        m.Depth,
+		nodeDataHash: utils.UnmarshalHash(m.NodeDataHash),
+		innerHash:    utils.UnmarshalHash(m.InnerHash),
+		hash:         utils.UnmarshalHash(m.Hash),
 	}
 
 	//TODO: try to retrieve machine from checkpoint DB; might fail
@@ -309,12 +318,39 @@ func GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
 	}
 }
 
-func (n *Node) EqualsFull(n2 *Node) bool {
-	return n.Equals(n2) &&
-		n.depth == n2.depth &&
-		n.vmProtoData.Equals(n2.vmProtoData) &&
-		n.linkType == n2.linkType &&
-		n.hasSuccessors == n2.hasSuccessors &&
-		n.successorHashes == n2.successorHashes &&
-		n.numStakers == n2.numStakers
+func (node *Node) EqualsFull(n2 *Node) bool {
+	return node.Equals(n2) &&
+		node.depth == n2.depth &&
+		node.vmProtoData.Equals(n2.vmProtoData) &&
+		node.linkType == n2.linkType &&
+		node.successorHashes == n2.successorHashes &&
+		node.numStakers == n2.numStakers
+}
+
+func CommonAncestor(n1, n2 *Node) *Node {
+	n1, _, _ = GetConflictAncestor(n1, n2)
+	return n1.prev
+}
+
+func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
+	n1Orig := n1
+	n2Orig := n2
+	for n1.depth > n2.depth {
+		n1 = n1.prev
+	}
+	for n2.depth > n1.depth {
+		n2 = n2.prev
+	}
+
+	// Now n1 and n2 are at the same height so we can start looking for a challenge
+
+	for n1.prev != n2.prev {
+		n1 = n1.prev
+		n2 = n2.prev
+	}
+
+	if n1 == n1Orig || n1 == n2Orig {
+		return n1, n2, errors.New("no conflict")
+	}
+	return n1, n2, nil
 }

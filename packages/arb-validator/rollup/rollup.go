@@ -108,7 +108,7 @@ func (chain *ChainObserver) MoveStake(ev ethbridge.StakeMovedEvent) {
 func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	n1, _, disputeType, err := chain.nodeGraph.GetConflictAncestor(asserter.location, challenger.location)
+	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
@@ -120,7 +120,7 @@ func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 		ev.ChallengeType,
 	)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ev, n1.prev, disputeType)
+		lis.StartedChallenge(ev, asserterAncestor, challengerAncestor)
 	}
 }
 
@@ -151,6 +151,32 @@ func (chain *ChainObserver) notifyAssert(
 	)
 	chain.nodeGraph.CreateNodesOnAssert(chain.nodeGraph.nodeFromHash[ev.PrevLeafHash], disputableNode, nil, currentTime)
 	return nil
+}
+
+func (chain *ChainObserver) EvaluateValidNode(node *Node) {
+	params := node.disputable.AssertionParams
+	claim := node.disputable.AssertionClaim
+	correctAfterPendingTopHeight := new(big.Int).Add(node.prev.vmProtoData.PendingCount, params.ImportedMessageCount)
+	claimHeight, found := chain.pendingInbox.GetHeight(claim.AfterPendingTop)
+	if !found || correctAfterPendingTopHeight.Cmp(claimHeight) != 0 {
+		// AfterPendingTop claim incorrect
+		return
+	}
+
+	messageStack, _ := chain.pendingInbox.Substack(node.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
+	if messageStack.GetTopHash() != claim.ImportedMessagesSlice {
+		// ImportedMessagesSlice claim incorrect
+		return
+	}
+
+	messagesVal := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
+	mach := node.prev.machine.Clone()
+	mach.DeliverMessages(messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds)
+	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
+		// AssertionStub claim incorrect
+		return
+	}
 }
 
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {

@@ -89,7 +89,6 @@ func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
 			prev := chain.nodeFromHash[prevHash]
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
-			prev.hasSuccessors = true
 		}
 	}
 
@@ -143,16 +142,22 @@ func (chain *NodeGraph) pruneNode(node *Node) {
 	delete(chain.nodeFromHash, node.hash)
 }
 
-func (chain *NodeGraph) considerPruningNode(node *Node) {
+func (chain *NodeGraph) HasReference(node *Node) bool {
 	if node.numStakers > 0 || chain.leaves.IsLeaf(node) {
-		return
+		return true
 	}
-	for kind := structures.MinChildType; kind <= structures.MaxChildType; kind++ {
-		if node.successorHashes[kind] != zeroBytes32 {
-			return
+	for _, nodeHash := range node.successorHashes {
+		if nodeHash != zeroBytes32 {
+			return true
 		}
 	}
-	chain.pruneNode(node)
+	return false
+}
+
+func (chain *NodeGraph) considerPruningNode(node *Node) {
+	if !chain.HasReference(node) {
+		chain.pruneNode(node)
+	}
 }
 
 func (chain *NodeGraph) CreateNodesOnAssert(
@@ -165,7 +170,6 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		log.Fatal("can't assert on non-leaf node")
 	}
 	chain.leaves.Delete(prevNode)
-	prevNode.hasSuccessors = true
 
 	// create node for valid branch
 	if afterMachine != nil {
@@ -193,12 +197,12 @@ func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {
 			return
 		}
 		var successor *Node
-		for kind := structures.MinChildType; kind <= structures.MaxChildType; kind++ {
-			if node.successorHashes[kind] != zeroBytes32 {
+		for _, successorHash := range chain.oldestNode.successorHashes {
+			if successorHash != zeroBytes32 {
 				if successor != nil {
 					return
 				}
-				successor = chain.nodeFromHash[node.successorHashes[kind]]
+				successor = chain.nodeFromHash[successorHash]
 			}
 		}
 		chain.pruneNode(chain.oldestNode)
@@ -218,14 +222,13 @@ func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
 	prunesToDo := []pruneParams{}
 	chain.leaves.forall(func(leaf *Node) {
-		n1, _, _, err := chain.GetConflictAncestor(leaf, chain.latestConfirmed)
-		ancestor := n1.prev
+		leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
 		if err == nil {
 			prunesToDo = append(prunesToDo, pruneParams{
 				leaf,
-				ancestor,
-				GeneratePathProof(ancestor, leaf),
-				GeneratePathProof(ancestor, chain.latestConfirmed),
+				leafAncestor.prev,
+				GeneratePathProof(leafAncestor.prev, leaf),
+				GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
 			})
 		}
 	})

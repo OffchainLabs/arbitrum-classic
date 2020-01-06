@@ -32,9 +32,8 @@ message ChainParamsBuf {
 
 message VMProtoDataBuf {
     value.HashBuf machineHash = 1;
-    value.HashBuf inboxHash = 2;
-    value.HashBuf pendingTop = 3;
-    value.BigIntegerBuf pendingCount = 4;
+    value.HashBuf pendingTop = 2;
+    value.BigIntegerBuf pendingCount = 3;
 }
 
 message AssertionParamsBuf {

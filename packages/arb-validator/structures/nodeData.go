@@ -21,8 +21,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	protocol "github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
@@ -44,20 +42,17 @@ const (
 
 type VMProtoData struct {
 	MachineHash  [32]byte
-	InboxHash    [32]byte
 	PendingTop   [32]byte
 	PendingCount *big.Int
 }
 
 func NewVMProtoData(
 	machineHash [32]byte,
-	inboxHash [32]byte,
 	pendingTop [32]byte,
 	pendingCount *big.Int,
 ) *VMProtoData {
 	return &VMProtoData{
 		MachineHash:  machineHash,
-		InboxHash:    inboxHash,
 		PendingTop:   pendingTop,
 		PendingCount: pendingCount,
 	}
@@ -65,7 +60,6 @@ func NewVMProtoData(
 
 func (d *VMProtoData) Equals(o *VMProtoData) bool {
 	return d.MachineHash == o.MachineHash &&
-		d.InboxHash == o.InboxHash &&
 		d.PendingTop == o.PendingTop &&
 		d.PendingCount.Cmp(o.PendingCount) == 0
 }
@@ -74,7 +68,6 @@ func (d *VMProtoData) Hash() [32]byte {
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(d.MachineHash),
-		solsha3.Bytes32(d.InboxHash),
 		solsha3.Bytes32(d.PendingTop),
 		solsha3.Uint256(d.PendingCount),
 	))
@@ -84,7 +77,6 @@ func (d *VMProtoData) Hash() [32]byte {
 func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 	return &VMProtoDataBuf{
 		MachineHash:  utils.MarshalHash(node.MachineHash),
-		InboxHash:    utils.MarshalHash(node.InboxHash),
 		PendingTop:   utils.MarshalHash(node.PendingTop),
 		PendingCount: utils.MarshalBigInt(node.PendingCount),
 	}
@@ -93,7 +85,6 @@ func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	return &VMProtoData{
 		MachineHash:  utils.UnmarshalHash(buf.MachineHash),
-		InboxHash:    utils.UnmarshalHash(buf.InboxHash),
 		PendingTop:   utils.UnmarshalHash(buf.PendingTop),
 		PendingCount: utils.UnmarshalBigInt(buf.PendingCount),
 	}
@@ -190,7 +181,6 @@ func (dn *DisputableNode) CheckTime(params ChainParams) TimeTicks {
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
 		dn.AssertionClaim.AssertionStub.AfterHashValue(),
-		value.NewEmptyTuple().Hash(),
 		dn.AssertionClaim.AfterPendingTop,
 		new(big.Int).Add(prevState.PendingCount, dn.AssertionParams.ImportedMessageCount),
 	)
