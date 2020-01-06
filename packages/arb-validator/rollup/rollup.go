@@ -39,7 +39,7 @@ type ChainObserver struct {
 	nodeGraph    *StakedNodeGraph
 	rollupAddr   common.Address
 	pendingInbox *structures.PendingInbox
-	listeners    map[common.Address]ChainEventListener
+	listeners    []ChainListener
 }
 
 func NewChain(
@@ -51,14 +51,14 @@ func NewChain(
 		nodeGraph:    NewStakedNodeGraph(_machine, _vmParams),
 		rollupAddr:   _rollupAddr,
 		pendingInbox: structures.NewPendingInbox(),
-		listeners:    make(map[common.Address]ChainEventListener),
+		listeners:    []ChainListener{},
 	}
 	ret.startCleanupThread(nil)
 	return ret
 }
 
-func (chain *ChainObserver) RegisterListener(address common.Address, listener ChainEventListener) {
-	chain.listeners[address] = listener
+func (chain *ChainObserver) AddListener(listener ChainListener) {
+	chain.listeners = append(chain.listeners, listener)
 }
 
 func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
@@ -74,7 +74,7 @@ func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address) *ChainObs
 		nodeGraph:    m.StakedNodeGraph.Unmarshal(),
 		rollupAddr:   common.BytesToAddress(m.ContractAddress),
 		pendingInbox: &structures.PendingInbox{m.PendingInbox.Unmarshal()},
-		listeners:    make(map[common.Address]ChainEventListener),
+		listeners:    []ChainListener{},
 	}
 	chain.startCleanupThread(nil)
 	return chain
@@ -86,25 +86,22 @@ func (chain *ChainObserver) PruneNode(ev ethbridge.PrunedEvent) {
 
 func (chain *ChainObserver) CreateStake(ev ethbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
 	chain.nodeGraph.CreateStake(ev, currentTime)
-	listener, ok := chain.listeners[ev.Staker]
-	if ok {
-		listener.StakeCreated(ev)
+	for _, lis := range chain.listeners {
+		lis.StakeCreated(ev)
 	}
 }
 
 func (chain *ChainObserver) RemoveStake(ev ethbridge.StakeRefundedEvent) {
 	chain.nodeGraph.RemoveStake(ev.Staker)
-	listener, ok := chain.listeners[ev.Staker]
-	if ok {
-		listener.StakeRemoved(ev)
+	for _, lis := range chain.listeners {
+		lis.StakeRemoved(ev)
 	}
 }
 
 func (chain *ChainObserver) MoveStake(ev ethbridge.StakeMovedEvent) {
 	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
-	listener, ok := chain.listeners[ev.Staker]
-	if ok {
-		listener.StakeMoved(ev)
+	for _, lis := range chain.listeners {
+		lis.StakeMoved(ev)
 	}
 }
 
@@ -122,27 +119,15 @@ func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 		ev.Challenger,
 		ev.ChallengeType,
 	)
-	asserterListener, ok := chain.listeners[ev.Asserter]
-	if ok {
-		asserterListener.Challenged(ev, conflictNode, disputeType)
-	}
-
-	challengerListener, ok := chain.listeners[ev.Challenger]
-	if ok {
-		challengerListener.StartedChallenge(ev, conflictNode, disputeType)
+	for _, lis := range chain.listeners {
+		lis.StartedChallenge(ev, conflictNode, disputeType)
 	}
 }
 
 func (chain *ChainObserver) ChallengeResolved(ev ethbridge.ChallengeCompletedEvent) {
 	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
-	winner, ok := chain.listeners[ev.Winner]
-	if ok {
-		winner.WonChallenge(ev)
-	}
-
-	loser, ok := chain.listeners[ev.Loser]
-	if ok {
-		loser.LostChallenge(ev)
+	for _, lis := range chain.listeners {
+		lis.CompletedChallenge(ev)
 	}
 }
 

@@ -17,45 +17,55 @@
 package rollup
 
 import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
-type ChainEventListener interface {
+type ChainListener interface {
 	StakeCreated(ethbridge.StakeCreatedEvent)
 	StakeRemoved(ethbridge.StakeRefundedEvent)
 	StakeMoved(ethbridge.StakeMovedEvent)
 	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, structures.ChildType)
-	Challenged(ethbridge.ChallengeStartedEvent, *Node, structures.ChildType)
-	LostChallenge(ethbridge.ChallengeCompletedEvent)
-	WonChallenge(ethbridge.ChallengeCompletedEvent)
+	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
 }
 
-type ChanCEListener struct {
-	chain *ChainObserver
-	ch    chan interface{}
+type ValidatorChainListener struct {
+	chain  *ChainObserver
+	myAddr common.Address
+	ch     chan interface{}
 }
 
-func NewChanCEListener(chain *ChainObserver, runLoop func(*ChanCEListener)) {
-	ret := &ChanCEListener{chain, make(chan interface{}, 1024)}
+func NewChanCEListener(chain *ChainObserver, myAddr common.Address, runLoop func(*ValidatorChainListener)) {
+	ret := &ValidatorChainListener{chain, myAddr, make(chan interface{}, 1024)}
 	go runLoop(ret)
 }
 
-func (lis *ChanCEListener) StakeCreated(ethbridge.StakeCreatedEvent) {
+func (lis *ValidatorChainListener) StakeCreated(ethbridge.StakeCreatedEvent) {
 
 }
 
-func (lis *ChanCEListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
+func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
 
 }
 
-func (lis *ChanCEListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
+func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
 
 }
 
-func (lis *ChanCEListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
+func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
+	if utils.AddressesEqual(lis.myAddr, ev.Asserter) {
+		lis.actAsAsserter(ev, conflictNode, disputeType)
+	}
+	if utils.AddressesEqual(lis.myAddr, ev.Challenger) {
+		lis.actAsChallenger(ev, conflictNode, disputeType)
+	}
+}
+
+func (lis *ValidatorChainListener) actAsChallenger(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
 	switch disputeType {
 	case structures.InvalidPendingChildType:
 		go challenges.ChallengePendingTopClaim(
@@ -84,7 +94,7 @@ func (lis *ChanCEListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, 
 	}
 }
 
-func (lis *ChanCEListener) Challenged(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
+func (lis *ValidatorChainListener) actAsAsserter(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
 	switch disputeType {
 	case structures.InvalidPendingChildType:
 		go challenges.DefendPendingTopClaim(
@@ -118,10 +128,19 @@ func (lis *ChanCEListener) Challenged(ev ethbridge.ChallengeStartedEvent, confli
 	}
 }
 
-func (lis *ChanCEListener) LostChallenge(ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeCompletedEvent) {
+	if utils.AddressesEqual(lis.myAddr, ev.Winner) {
+		lis.wonChallenge(ev)
+	}
+	if utils.AddressesEqual(lis.myAddr, ev.Loser) {
+		lis.lostChallenge(ev)
+	}
+}
+
+func (lis *ValidatorChainListener) lostChallenge(ethbridge.ChallengeCompletedEvent) {
 
 }
 
-func (lis *ChanCEListener) WonChallenge(ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) wonChallenge(ethbridge.ChallengeCompletedEvent) {
 
 }
