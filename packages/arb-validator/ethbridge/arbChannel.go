@@ -255,6 +255,9 @@ func (vm *ArbChannel) VerifyVM(
 	machine [32]byte,
 ) error {
 	err := vm.ArbBase.VerifyVM(auth, config, machine)
+	if err != nil {
+		return err
+	}
 	validators := make([]common.Address, 0, len(config.AssertKeys))
 	for _, assertKey := range config.AssertKeys {
 		validators = append(validators, protocol.NewAddressFromBuf(assertKey))

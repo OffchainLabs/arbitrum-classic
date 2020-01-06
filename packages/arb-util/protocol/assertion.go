@@ -27,6 +27,7 @@ import (
 type Assertion struct {
 	AfterHash [32]byte
 	NumSteps  uint32
+	NumGas    uint64
 	OutMsgs   []value.Value
 	Logs      []value.Value
 }
@@ -36,12 +37,12 @@ type MultiReader interface {
 	io.ByteReader
 }
 
-func NewAssertion(afterHash [32]byte, numSteps uint32, outMsgs []value.Value, logs []value.Value) *Assertion {
-	return &Assertion{afterHash, numSteps, outMsgs, logs}
+func NewAssertion(afterHash [32]byte, numSteps uint32, numGas uint64, outMsgs []value.Value, logs []value.Value) *Assertion {
+	return &Assertion{afterHash, numSteps, numGas, outMsgs, logs}
 }
 
 func (a *Assertion) Equals(b *Assertion) bool {
-	if a.AfterHash != b.AfterHash || (a.NumSteps != b.NumSteps) || (len(a.OutMsgs) != len(b.OutMsgs)) {
+	if a.AfterHash != b.AfterHash || (a.NumSteps != b.NumSteps) || (a.NumGas != b.NumGas) || (len(a.OutMsgs) != len(b.OutMsgs)) {
 		return false
 	}
 	for i, ao := range a.OutMsgs {
@@ -76,6 +77,7 @@ func (a *Assertion) Stub() *AssertionStub {
 	return &AssertionStub{
 		AfterHash:        value.NewHashBuf(a.AfterHash),
 		NumSteps:         a.NumSteps,
+		NumGas:           a.NumGas,
 		FirstMessageHash: value.NewHashBuf([32]byte{}),
 		LastMessageHash:  value.NewHashBuf(lastHash),
 		FirstLogHash:     value.NewHashBuf([32]byte{}),

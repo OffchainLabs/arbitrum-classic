@@ -232,22 +232,22 @@ func TestDiv(t *testing.T) {
 
 func TestSDiv(t *testing.T) {
 	// test -6/3=-2
-	res, err := binaryIntOpTest(math.U256(big.NewInt(-6)), math.U256(big.NewInt(3)), math.U256(big.NewInt(-2)), code.SDIV)
+	res, err := binaryIntOpTest(math.U256(big.NewInt(-6)), big.NewInt(3), math.U256(big.NewInt(-2)), code.SDIV)
 	if !res {
 		t.Error(err)
 	}
 	// test 6/-3=-2
-	res, err = binaryIntOpTest(math.U256(big.NewInt(6)), math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), code.SDIV)
+	res, err = binaryIntOpTest(big.NewInt(6), math.U256(big.NewInt(-3)), math.U256(big.NewInt(-2)), code.SDIV)
 	if !res {
 		t.Error(err)
 	}
 	// test -6/-3=2
-	res, err = binaryIntOpTest(math.U256(big.NewInt(-6)), math.U256(big.NewInt(-3)), math.U256(big.NewInt(2)), code.SDIV)
+	res, err = binaryIntOpTest(math.U256(big.NewInt(-6)), math.U256(big.NewInt(-3)), big.NewInt(2), code.SDIV)
 	if !res {
 		t.Error(err)
 	}
 	// test 6/3=2
-	res, err = binaryIntOpTest(math.U256(big.NewInt(6)), math.U256(big.NewInt(3)), math.U256(big.NewInt(2)), code.SDIV)
+	res, err = binaryIntOpTest(big.NewInt(6), big.NewInt(3), big.NewInt(2), code.SDIV)
 	if !res {
 		t.Error(err)
 	}
@@ -278,7 +278,7 @@ func TestMod(t *testing.T) {
 
 func TestSMod(t *testing.T) {
 	// test -8%3=-2
-	res, err := binaryIntOpTest(math.U256(big.NewInt(-8)), math.U256(big.NewInt(3)), math.U256(big.NewInt(-2)), code.SMOD)
+	res, err := binaryIntOpTest(math.U256(big.NewInt(-8)), big.NewInt(3), math.U256(big.NewInt(-2)), code.SMOD)
 	if !res {
 		t.Error(err)
 	}
@@ -288,12 +288,12 @@ func TestSMod(t *testing.T) {
 		t.Error(err)
 	}
 	// test 8%3=2
-	res, err = binaryIntOpTest(math.U256(big.NewInt(8)), math.U256(big.NewInt(3)), math.U256(big.NewInt(2)), code.SMOD)
+	res, err = binaryIntOpTest(big.NewInt(8), big.NewInt(3), big.NewInt(2), code.SMOD)
 	if !res {
 		t.Error(err)
 	}
 	// test -8%0=0
-	res, err = binaryIntOpTest(math.U256(big.NewInt(-8)), math.U256(big.NewInt(0)), math.U256(big.NewInt(0)), code.SMOD)
+	res, err = binaryIntOpTest(math.U256(big.NewInt(-8)), big.NewInt(0), big.NewInt(0), code.SMOD)
 	if res {
 		t.Error("Divide by 0 expected")
 	}
@@ -311,7 +311,12 @@ func TestAddMod(t *testing.T) {
 		t.Error(err)
 	}
 	// test (0+0)%7=0
-	res, err = tertiaryIntOpTest(math.U256(big.NewInt(0)), big.NewInt(0), big.NewInt(7), big.NewInt(0), code.ADDMOD)
+	res, err = tertiaryIntOpTest(big.NewInt(0), big.NewInt(0), big.NewInt(7), big.NewInt(0), code.ADDMOD)
+	if !res {
+		t.Error(err)
+	}
+	// test (3+3)%(-4) = 6
+	res, err = tertiaryIntOpTest(big.NewInt(3), big.NewInt(3), math.U256(big.NewInt(-4)), big.NewInt(6), code.ADDMOD)
 	if !res {
 		t.Error(err)
 	}
@@ -350,12 +355,12 @@ func TestSignextend(t *testing.T) {
 		t.Error(err)
 	}
 	// test
-	res, err = binaryIntOpTest(big.NewInt(1), big.NewInt(0), math.U256(big.NewInt(1)), code.SIGNEXTEND)
+	res, err = binaryIntOpTest(big.NewInt(1), big.NewInt(0), big.NewInt(1), code.SIGNEXTEND)
 	if !res {
 		t.Error(err)
 	}
 	// test
-	res, err = binaryIntOpTest(big.NewInt(127), big.NewInt(0), math.U256(big.NewInt(127)), code.SIGNEXTEND)
+	res, err = binaryIntOpTest(big.NewInt(127), big.NewInt(0), big.NewInt(127), code.SIGNEXTEND)
 	if !res {
 		t.Error(err)
 	}
@@ -370,7 +375,7 @@ func TestSignextend(t *testing.T) {
 		t.Error(err)
 	}
 	// test
-	res, err = binaryIntOpTest(big.NewInt(257), big.NewInt(0), math.U256(big.NewInt(1)), code.SIGNEXTEND)
+	res, err = binaryIntOpTest(big.NewInt(257), big.NewInt(0), big.NewInt(1), code.SIGNEXTEND)
 	if !res {
 		t.Error(err)
 	}
@@ -380,12 +385,12 @@ func TestSignextend(t *testing.T) {
 		t.Error(err)
 	}
 	// test
-	res, err = binaryIntOpTest(big.NewInt(65537), big.NewInt(1), math.U256(big.NewInt(1)), code.SIGNEXTEND)
+	res, err = binaryIntOpTest(big.NewInt(65537), big.NewInt(1), big.NewInt(1), code.SIGNEXTEND)
 	if !res {
 		t.Error(err)
 	}
 	// test
-	res, err = binaryIntOpTest(big.NewInt(65537), big.NewInt(2), math.U256(big.NewInt(65537)), code.SIGNEXTEND)
+	res, err = binaryIntOpTest(big.NewInt(65537), big.NewInt(2), big.NewInt(65537), code.SIGNEXTEND)
 	if !res {
 		t.Error(err)
 	}
@@ -619,7 +624,7 @@ func TestNot(t *testing.T) {
 		t.Error(err)
 	}
 	// test !0xfffffffffffffffffffffffffffffffc(-4) = 0x03(3)
-	res, err = unaryIntOpTest(math.U256(big.NewInt(-4)), math.U256(big.NewInt(3)), code.NOT)
+	res, err = unaryIntOpTest(math.U256(big.NewInt(-4)), big.NewInt(3), code.NOT)
 	if !res {
 		t.Error(err)
 	}

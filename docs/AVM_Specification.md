@@ -144,6 +144,14 @@ Certain conditions are said to “raise an Error”. If an Error is raised when 
 
 Some instructions are said to “block” until some condition is true. This means that if the condition is false, the instruction cannot complete execution and the VM must stay in the state it was in before the instruction. If the condition is true, the VM can execute the instruction. The result is as if the VM stopped and waited until the condition became true.
 
+## ArbGas
+
+Every instruction consumes some amount of Arbitrum Gas, also known as ArbGas. (ArbGas is not the same as Ethereum Gas.)
+
+At present, every instruction consumes one unit of ArbGas. This is expected to change in the future.
+
+There is no charge for ArbGas and there is no limit on the amount of ArbGas that a VM can use. The purpose of ArbGas is to allow clients and validators to monitor and control how much computational work a VM is requiring. For example, it is likely that features will be added to allow validators to limit the amount of ArbGas that any one call to a VM or contract can consume.
+
 ## Instructions
 
 A VM that is in the Halted or ErrorStop state cannot execute instructions.
@@ -164,7 +172,7 @@ The instructions are as follows:
 | 0x05                                            | sdiv          | Pop two values (A, B) off the Data Stack. If A and B are both Integers and B is non-zero, Push A/B (signed integer divide) onto the Data Stack. Otherwise, raise an Error.                                                                                                                                     |
 | 0x06                                            | mod           | Same as div, except compute (A mod B), treating A and B as unsigned integers.                                                                                                                                                                                                                                  |
 | 0x07                                            | smod          | Same as sdiv, except compute (A mod B), treating A and B as signed integers, rather than doing integer divide. The result is defined to be equal to sgn(A)\*(abs(A)%abs(B)), where sgn(x) is 1,0, or -1, if x is positive, zero, or negative, respectively, and abs is absolute value.                         |
-| 0x08                                            | addmod        | Pop three values (A, B, C) off the Data Stack. If A, B, and C are all Integers, and C is not zero, Push the value (A+B) % C (calculated without 256-bit truncation until end) onto the Data Stack. Otherwise, raise an Error.                                                                                  |
+| 0x08                                            | addmod        | Pop three values (A, B, C) off the Data Stack. If A, B, and C are all Integers, and C is not zero, Treating A, B, and C as unsigned integers, Push the value (A+B) % C (calculated without 256-bit truncation until end) onto the Data Stack. Otherwise, raise an Error.                                       |
 | 0x09                                            | mulmod        | Same as addmod, except multiply rather than add.                                                                                                                                                                                                                                                               |
 | 0x0a                                            | exp           | Same as add, except exponentiate rather than add.                                                                                                                                                                                                                                                              |
 | &nbsp;                                          |               | &nbsp;                                                                                                                                                                                                                                                                                                         |

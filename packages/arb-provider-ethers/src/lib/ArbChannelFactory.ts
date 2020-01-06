@@ -14,6 +14,40 @@ export class ArbChannelFactory {
 
 const _abi = [
     {
+        constant: false,
+        inputs: [
+            {
+                name: '_preconditionHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_numGas',
+                type: 'uint64',
+            },
+            {
+                name: '_messages',
+                type: 'bytes',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
+            },
+        ],
+        name: 'confirmDisputableAsserted',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
         constant: true,
         inputs: [
             {
@@ -84,6 +118,48 @@ const _abi = [
         ],
         payable: false,
         stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: false,
+        inputs: [
+            {
+                name: '_beforeHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_beforeInbox',
+                type: 'bytes32',
+            },
+            {
+                name: '_afterHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_messagesAccHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_logsAccHash',
+                type: 'bytes32',
+            },
+            {
+                name: '_numSteps',
+                type: 'uint32',
+            },
+            {
+                name: '_numGas',
+                type: 'uint64',
+            },
+            {
+                name: '_timeBounds',
+                type: 'uint64[2]',
+            },
+        ],
+        name: 'pendingDisputableAssert',
+        outputs: [],
+        payable: false,
+        stateMutability: 'nonpayable',
         type: 'function',
     },
     {
@@ -313,74 +389,6 @@ const _abi = [
         type: 'function',
     },
     {
-        constant: false,
-        inputs: [
-            {
-                name: '_preconditionHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_afterHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_messages',
-                type: 'bytes',
-            },
-            {
-                name: '_logsAccHash',
-                type: 'bytes32',
-            },
-        ],
-        name: 'confirmDisputableAsserted',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
-        constant: false,
-        inputs: [
-            {
-                name: '_beforeHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_beforeInbox',
-                type: 'bytes32',
-            },
-            {
-                name: '_afterHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_messagesAccHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_logsAccHash',
-                type: 'bytes32',
-            },
-            {
-                name: '_numSteps',
-                type: 'uint32',
-            },
-            {
-                name: '_timeBounds',
-                type: 'uint64[2]',
-            },
-        ],
-        name: 'pendingDisputableAssert',
-        outputs: [],
-        payable: false,
-        stateMutability: 'nonpayable',
-        type: 'function',
-    },
-    {
         anonymous: false,
         inputs: [
             {
@@ -448,6 +456,11 @@ const _abi = [
                 indexed: false,
                 name: 'numSteps',
                 type: 'uint32',
+            },
+            {
+                indexed: false,
+                name: 'numGas',
+                type: 'uint64',
             },
             {
                 indexed: false,
