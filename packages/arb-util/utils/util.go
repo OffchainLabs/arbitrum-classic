@@ -61,3 +61,13 @@ func UnmarshalBigInt(buf *value.BigIntegerBuf) *big.Int {
 func AddressesEqual(a1, a2 common.Address) bool {
 	return bytes.Compare(a1[:], a2[:]) == 0
 }
+
+var zeroAddress common.Address
+
+func init() {
+	zeroAddress = common.BytesToAddress([]byte{})
+}
+
+func AddressIsZero(addr common.Address) bool {
+	return AddressesEqual(addr, zeroAddress)
+}

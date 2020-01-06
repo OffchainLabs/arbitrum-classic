@@ -39,7 +39,7 @@ type ValidatorChainListener struct {
 	ch     chan interface{}
 }
 
-func NewChanCEListener(chain *ChainObserver, myAddr common.Address, runLoop func(*ValidatorChainListener)) {
+func NewValidatorChainListener(chain *ChainObserver, myAddr common.Address, runLoop func(*ValidatorChainListener)) {
 	ret := &ValidatorChainListener{chain, myAddr, make(chan interface{}, 1024)}
 	go runLoop(ret)
 }
