@@ -45,7 +45,7 @@ func TestCreateEmptyChain(t *testing.T) {
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	chainBuf := chain.MarshalToBuf()
-	chain2 := chainBuf.Unmarshal(dummyAddress, nil)
+	chain2 := chainBuf.Unmarshal(dummyAddress)
 	if !chain.Equals(chain2) {
 		t.Fail()
 	}

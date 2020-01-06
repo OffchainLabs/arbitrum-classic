@@ -69,7 +69,7 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 	}
 }
 
-func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address, _listener ChainEventListener) *ChainObserver {
+func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address) *ChainObserver {
 	chain := &ChainObserver{
 		nodeGraph:    m.StakedNodeGraph.Unmarshal(),
 		rollupAddr:   common.BytesToAddress(m.ContractAddress),
@@ -85,27 +85,27 @@ func (chain *ChainObserver) PruneNode(ev ethbridge.PrunedEvent) {
 }
 
 func (chain *ChainObserver) CreateStake(ev ethbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+	chain.nodeGraph.CreateStake(ev, currentTime)
 	listener, ok := chain.listeners[ev.Staker]
 	if ok {
 		listener.StakeCreated(ev)
 	}
-	chain.nodeGraph.CreateStake(ev, currentTime)
 }
 
 func (chain *ChainObserver) RemoveStake(ev ethbridge.StakeRefundedEvent) {
+	chain.nodeGraph.RemoveStake(ev.Staker)
 	listener, ok := chain.listeners[ev.Staker]
 	if ok {
 		listener.StakeRemoved(ev)
 	}
-	chain.nodeGraph.RemoveStake(ev.Staker)
 }
 
 func (chain *ChainObserver) MoveStake(ev ethbridge.StakeMovedEvent) {
+	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
 	listener, ok := chain.listeners[ev.Staker]
 	if ok {
 		listener.StakeMoved(ev)
 	}
-	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
 }
 
 func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
@@ -116,6 +116,12 @@ func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 		panic("No conflict ancestor for conflict")
 	}
 
+	chain.nodeGraph.NewChallenge(
+		ev.ChallengeContract,
+		ev.Asserter,
+		ev.Challenger,
+		ev.ChallengeType,
+	)
 	asserterListener, ok := chain.listeners[ev.Asserter]
 	if ok {
 		asserterListener.Challenged(ev, conflictNode, disputeType)
@@ -125,15 +131,10 @@ func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 	if ok {
 		challengerListener.StartedChallenge(ev, conflictNode, disputeType)
 	}
-	chain.nodeGraph.NewChallenge(
-		ev.ChallengeContract,
-		ev.Asserter,
-		ev.Challenger,
-		ev.ChallengeType,
-	)
 }
 
 func (chain *ChainObserver) ChallengeResolved(ev ethbridge.ChallengeCompletedEvent) {
+	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
 	winner, ok := chain.listeners[ev.Winner]
 	if ok {
 		winner.WonChallenge(ev)
@@ -143,7 +144,6 @@ func (chain *ChainObserver) ChallengeResolved(ev ethbridge.ChallengeCompletedEve
 	if ok {
 		loser.LostChallenge(ev)
 	}
-	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
 }
 
 func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
