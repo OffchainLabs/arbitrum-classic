@@ -302,14 +302,14 @@ func (vm *ArbRollup) StartChallenge(
 	challengerAddress common.Address,
 	node [32]byte,
 	disputableDeadline *big.Int,
-	staker1Position uint64,
-	staker2Position uint64,
+	staker1Position structures.ChildType,
+	staker2Position structures.ChildType,
 	vmProtoHash1 [32]byte,
 	vmProtoHash2 [32]byte,
 	proof1 [][32]byte,
 	proof2 [][32]byte,
 	challenge1DataHash [32]byte,
-	challenge1PeriodTicks *big.Int,
+	challenge1PeriodTicks structures.TimeTicks,
 	challenge2NodeHash [32]byte,
 ) (*types.Receipt, error) {
 	vm.auth.Context = ctx
@@ -320,8 +320,8 @@ func (vm *ArbRollup) StartChallenge(
 		node,
 		disputableDeadline,
 		[2]*big.Int{
-			new(big.Int).SetUint64(staker1Position),
-			new(big.Int).SetUint64(staker2Position),
+			new(big.Int).SetUint64(uint64(staker1Position)),
+			new(big.Int).SetUint64(uint64(staker2Position)),
 		},
 		[2][32]byte{
 			vmProtoHash1,
@@ -330,7 +330,7 @@ func (vm *ArbRollup) StartChallenge(
 		proof1,
 		proof2,
 		challenge1DataHash,
-		challenge1PeriodTicks,
+		challenge1PeriodTicks.Val,
 		challenge2NodeHash,
 	)
 	if err != nil {

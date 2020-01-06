@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -37,6 +38,7 @@ type ChainListener interface {
 
 type ValidatorChainListener struct {
 	chain  *ChainObserver
+	vm     *ethbridge.ArbRollup
 	myAddr common.Address
 	client *ethclient.Client
 	auth   *bind.TransactOpts
@@ -45,12 +47,13 @@ type ValidatorChainListener struct {
 
 func NewValidatorChainListener(
 	chain *ChainObserver,
+	vm *ethbridge.ArbRollup,
 	myAddr common.Address,
 	client *ethclient.Client,
 	auth *bind.TransactOpts,
 	runLoop func(*ValidatorChainListener),
 ) {
-	ret := &ValidatorChainListener{chain, myAddr, client, auth, make(chan interface{}, 1024)}
+	ret := &ValidatorChainListener{chain, vm, myAddr, client, auth, make(chan interface{}, 1024)}
 	go runLoop(ret)
 }
 
@@ -86,7 +89,22 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(stakerAddr common.A
 }
 
 func (lis *ValidatorChainListener) initiateChallenge(opp *challengeOpportunity) {
-	//TODO: submit challenge, based on opp
+	lis.vm.StartChallenge(
+		context.TODO(),
+		opp.asserter,
+		opp.challenger,
+		opp.prevNodeHash,
+		opp.deadlineTicks.Val,
+		opp.asserterNodeType,
+		opp.challengerNodeType,
+		opp.asserterProtoHash,
+		opp.challengerProtoHash,
+		opp.asserterProof,
+		opp.challengerProof,
+		opp.asserterDataHash,
+		opp.asserterPeriodTicks,
+		opp.challengerNodeHash,
+	)
 }
 
 func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
