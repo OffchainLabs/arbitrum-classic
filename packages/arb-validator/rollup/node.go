@@ -61,7 +61,6 @@ func NewInitialNode(
 		vmProtoData: structures.NewVMProtoData(
 			machine.Hash(),
 			value.NewEmptyTuple().Hash(),
-			value.NewEmptyTuple().Hash(),
 			big.NewInt(0),
 		),
 		machine: machine,
@@ -148,7 +147,7 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Nod
 
 func (node *Node) ExecutionPrecondition() *protocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
-	beforeInbox := protocol.AddMessagesHashToInboxHash(vmProtoData.InboxHash, node.disputable.AssertionClaim.ImportedMessagesSlice)
+	beforeInbox := protocol.AddMessagesHashToInboxHash(value.NewEmptyTuple().Hash(), node.disputable.AssertionClaim.ImportedMessagesSlice)
 	return &protocol.Precondition{
 		BeforeHash:  utils.MarshalHash(vmProtoData.MachineHash),
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,

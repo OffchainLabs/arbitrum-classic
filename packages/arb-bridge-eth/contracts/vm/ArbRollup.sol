@@ -195,7 +195,6 @@ contract ArbRollup is NodeGraph, Staking {
 
     // fields
      // beforeVMHash
-     // beforeInboxHash
      // beforePendingTop
      // prevPrevLeafHash
      // prevDisputableNodeHash
@@ -206,7 +205,7 @@ contract ArbRollup is NodeGraph, Staking {
      // logsAccHash
 
     function makeAssertion(
-        bytes32[10] calldata _fields,
+        bytes32[9] calldata _fields,
         uint256 _beforePendingCount,
         uint256 _prevDeadlineTicks,
         uint32 _prevChildType,
@@ -223,27 +222,26 @@ contract ArbRollup is NodeGraph, Staking {
             MakeAssertionData(
                 _fields[0],
                 _fields[1],
-                _fields[2],
                 _beforePendingCount,
 
-                _fields[3],
+                _fields[2],
                 _prevDeadlineTicks,
-                _fields[4],
+                _fields[3],
                 _prevChildType,
 
                 _numSteps,
                 _timeBoundsBlocks,
                 _importedMessageCount,
 
+                _fields[4],
+
                 _fields[5],
 
                 _fields[6],
-
-                _fields[7],
                 _didInboxInsn,
                 _numArbGas,
-                _fields[8],
-                _fields[9]
+                _fields[7],
+                _fields[8]
             )
         );
         Staker storage staker = getValidStaker(msg.sender);

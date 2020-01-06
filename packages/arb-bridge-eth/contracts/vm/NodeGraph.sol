@@ -41,6 +41,8 @@ contract NodeGraph is ChallengeType {
     string constant MAKE_STEP = "MAKE_STEP";
     // Precondition: not within time bounds
     string constant MAKE_TIME = "MAKE_TIME";
+    //
+    string constant MAKE_MESSAGES = "MAKE_MESSAGES";
 
     uint256 constant VALID_CHILD_TYPE = 3;
     uint256 constant MAX_CHILD_TYPE = 3;
@@ -74,7 +76,6 @@ contract NodeGraph is ChallengeType {
 
     struct MakeAssertionData {
         bytes32 beforeVMHash;
-        bytes32 beforeInboxHash;
         bytes32 beforePendingTop;
         uint256 beforePendingCount;
 
@@ -139,7 +140,6 @@ contract NodeGraph is ChallengeType {
         bytes32 vmProtoStateHash = RollupUtils.protoStateHash(
             _vmState,
             Value.hashEmptyTuple(),
-            Value.hashEmptyTuple(),
             0
         );
         bytes32 initialNode = RollupUtils.childNodeHash(
@@ -161,7 +161,6 @@ contract NodeGraph is ChallengeType {
     function makeAssertion(MakeAssertionData memory data) internal returns(bytes32, bytes32) {
         bytes32 vmProtoHashBefore = RollupUtils.protoStateHash(
             data.beforeVMHash,
-            data.beforeInboxHash,
             data.beforePendingTop,
             data.beforePendingCount
         );
@@ -176,6 +175,7 @@ contract NodeGraph is ChallengeType {
         require(!VM.isErrored(data.beforeVMHash) && !VM.isHalted(data.beforeVMHash), MAKE_RUN);
         require(data.numSteps <= vmParams.maxExecutionSteps, MAKE_STEP);
         require(VM.withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
+        require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
 
         uint256 deadlineTicks = _computeDeadline(
             data.numArbGas / vmParams.arbGasSpeedLimitPerTick,
@@ -183,7 +183,6 @@ contract NodeGraph is ChallengeType {
             data.prevDeadlineTicks
         );
         (bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
-        bytes32 execBeforeInboxHash = Protocol.addMessagesToInbox(data.beforeInboxHash, data.importedMessagesSlice);
 
         leaves[generateInvalidPendingTopLeaf(
             data,
@@ -203,17 +202,12 @@ contract NodeGraph is ChallengeType {
             data,
             prevLeaf,
             deadlineTicks,
-            execBeforeInboxHash,
             vmProtoHashBefore
         )] = true;
-        if (data.didInboxInsn) {
-            execBeforeInboxHash = Value.hashEmptyTuple();
-        }
         bytes32 validHash = generateValidLeaf(
             data,
             prevLeaf,
-            deadlineTicks,
-            execBeforeInboxHash
+            deadlineTicks
         );
         leaves[validHash] = true;
         delete leaves[prevLeaf];
@@ -331,13 +325,13 @@ contract NodeGraph is ChallengeType {
         MakeAssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks,
-        bytes32 execBeforeInboxHash,
         bytes32 vmProtoHashBefore
     )
         private
         view
         returns(bytes32)
     {
+        bytes32 beforeInboxHash = Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice);
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
             data.didInboxInsn,
@@ -357,7 +351,7 @@ contract NodeGraph is ChallengeType {
                         Protocol.generatePreconditionHash(
                              data.beforeVMHash,
                              data.timeBoundsBlocks,
-                             execBeforeInboxHash
+                             beforeInboxHash
                         ),
                         assertionHash
                     ),
@@ -372,8 +366,7 @@ contract NodeGraph is ChallengeType {
     function generateValidLeaf(
         MakeAssertionData memory data,
         bytes32 prevLeaf,
-        uint256 deadlineTicks,
-        bytes32 execBeforeInboxHash
+        uint256 deadlineTicks
     )
         private
         pure
@@ -389,7 +382,6 @@ contract NodeGraph is ChallengeType {
             VALID_CHILD_TYPE,
             RollupUtils.protoStateHash(
                 data.afterVMHash,
-                execBeforeInboxHash,
                 data.afterPendingTop,
                 data.beforePendingCount + data.importedMessageCount
             )

@@ -18,8 +18,9 @@ package rollup
 
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"sort"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -174,7 +175,7 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 	if !utils.AddressIsZero(staker1.challenge) || !utils.AddressIsZero(staker2.challenge) {
 		return nil
 	}
-	conflictNode, conflictType, err := chain.GetConflictAncestor(staker1.location, staker2.location)
+	conflictNode, conflictType, err := GetConflictAncestor(staker1.location, staker2.location)
 	if err != nil {
 		return nil
 	}

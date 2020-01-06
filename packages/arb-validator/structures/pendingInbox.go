@@ -255,10 +255,6 @@ func (pi *MessageStack) Substack(olderAcc, newerAcc [32]byte) (*MessageStack, er
 	return stack, nil
 }
 
-func (pi *MessageStack) GetTopHash() [32]byte {
-	return pi.head.hash
-}
-
 func (pi *MessageStack) ValueForSubseq(olderAcc, newerAcc [32]byte) value.TupleValue {
 	oldItem, ok := pi.index[olderAcc]
 	if !ok {
