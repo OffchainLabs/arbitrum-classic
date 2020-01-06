@@ -18,9 +18,7 @@ package rollup
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -38,22 +36,17 @@ type ChainListener interface {
 
 type ValidatorChainListener struct {
 	chain  *ChainObserver
-	vm     *ethbridge.ArbRollup
 	myAddr common.Address
-	client *ethclient.Client
-	auth   *bind.TransactOpts
-	ch     chan interface{}
+	client *ethbridge.ArbRollup
 }
 
 func NewValidatorChainListener(
 	chain *ChainObserver,
-	vm *ethbridge.ArbRollup,
 	myAddr common.Address,
-	client *ethclient.Client,
-	auth *bind.TransactOpts,
+	client *ethbridge.ArbRollup,
 	runLoop func(*ValidatorChainListener),
 ) {
-	ret := &ValidatorChainListener{chain, vm, myAddr, client, auth, make(chan interface{}, 1024)}
+	ret := &ValidatorChainListener{chain, myAddr, client}
 	go runLoop(ret)
 }
 
@@ -97,7 +90,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(stakerAddr common.A
 
 func (lis *ValidatorChainListener) initiateChallenge(opp *challengeOpportunity) {
 	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
-		lis.vm.StartChallenge(
+		lis.client.StartChallenge(
 			context.TODO(),
 			opp.asserter,
 			opp.challenger,

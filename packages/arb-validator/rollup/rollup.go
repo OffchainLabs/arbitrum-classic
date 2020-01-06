@@ -43,6 +43,7 @@ type ChainObserver struct {
 }
 
 func NewChain(
+	_client *ethbridge.ArbRollup,
 	_rollupAddr common.Address,
 	_machine machine.Machine,
 	_vmParams structures.ChainParams,
@@ -53,7 +54,9 @@ func NewChain(
 		pendingInbox: structures.NewPendingInbox(),
 		listeners:    []ChainListener{},
 	}
-	ret.startCleanupThread(nil)
+	if _client != nil {
+		ret.startCleanupThread(_client, nil)
+	}
 	return ret
 }
 
@@ -69,14 +72,16 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 	}
 }
 
-func (m *ChainObserverBuf) Unmarshal(_listenForAddress common.Address) *ChainObserver {
+func (m *ChainObserverBuf) Unmarshal(_client *ethbridge.ArbRollup) *ChainObserver {
 	chain := &ChainObserver{
 		nodeGraph:    m.StakedNodeGraph.Unmarshal(),
 		rollupAddr:   common.BytesToAddress(m.ContractAddress),
 		pendingInbox: &structures.PendingInbox{m.PendingInbox.Unmarshal()},
 		listeners:    []ChainListener{},
 	}
-	chain.startCleanupThread(nil)
+	if _client != nil {
+		chain.startCleanupThread(_client, nil)
+	}
 	return chain
 }
 

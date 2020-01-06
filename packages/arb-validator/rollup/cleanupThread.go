@@ -17,6 +17,8 @@
 package rollup
 
 import (
+	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -41,7 +43,7 @@ type recoverStakeMootedParams struct {
 	stProof  [][32]byte
 }
 
-func (chain *ChainObserver) startCleanupThread(doneChan chan interface{}) {
+func (chain *ChainObserver) startCleanupThread(client *ethbridge.ArbRollup, doneChan chan interface{}) {
 	if doneChan == nil {
 		doneChan = make(chan interface{})
 	}
@@ -59,16 +61,29 @@ func (chain *ChainObserver) startCleanupThread(doneChan chan interface{}) {
 				chain.Unlock()
 
 				for _, prune := range prunesToDo {
-					_ = prune
-					//TODO: call contract's PruneLeaf method with params from prune
+					client.PruneLeaf(
+						context.TODO(),
+						prune.leaf.hash,
+						prune.ancestor.hash,
+						prune.leafProof,
+						prune.ancProof,
+					)
 				}
 				for _, moot := range mootedToDo {
-					_ = moot
-					//TODO: call contract's RecoverStakeMooted method with params from moot
+					client.RecoverStakeMooted(
+						context.TODO(),
+						moot.ancestor.hash,
+						moot.addr,
+						moot.lcProof,
+						moot.stProof,
+					)
 				}
 				for _, old := range oldToDo {
-					_ = old
-					//TODO: call contract's RecoverStakeOld method with params from old
+					client.RecoverStakeOld(
+						context.TODO(),
+						old.addr,
+						old.proof,
+					)
 				}
 			}
 		}
