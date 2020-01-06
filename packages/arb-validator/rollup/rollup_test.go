@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"math/big"
 	"testing"
 
@@ -50,8 +51,8 @@ func TestDoAssertion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	doAnAssertion(chain, chain.latestConfirmed)
-	validTip := chain.latestConfirmed.GetSuccessor(chain.NodeGraph, structures.ValidChildType)
+	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
+	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
 	doAnAssertion(chain, validTip)
 
 	chainBuf := chain.MarshalToBuf()
@@ -95,7 +96,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		chain.pendingInbox.GetTopHash(),
 		big.NewInt(0),
 	)
-	chain.CreateNodesOnAssert(
+	chain.nodeGraph.CreateNodesOnAssert(
 		baseNode,
 		disputableNode,
 		theMachine,
@@ -140,6 +141,12 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 func createSomeStakers(chain *ChainObserver) {
 	for i := 0; i < 5; i++ {
 		stakerAddress := common.BytesToAddress([]byte{byte(i)})
-		chain.CreateStake(stakerAddress, chain.latestConfirmed.hash, structures.TimeFromSeconds(73))
+		chain.CreateStake(
+			ethbridge.StakeCreatedEvent{
+				Staker:   stakerAddress,
+				NodeHash: chain.nodeGraph.latestConfirmed.hash,
+			},
+			structures.TimeFromSeconds(73),
+		)
 	}
 }

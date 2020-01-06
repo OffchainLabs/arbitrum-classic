@@ -50,7 +50,6 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 }
 
 func (chain *NodeGraph) MarshalToBuf() *NodeGraphBuf {
-	// TODO: Without topographic ordering, deserialization is difficult
 	var allNodes []*NodeBuf
 	for _, v := range chain.nodeFromHash {
 		allNodes = append(allNodes, v.MarshalToBuf())
