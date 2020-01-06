@@ -53,7 +53,7 @@ MachineState::MachineState(const std::vector<CodePoint>& code_,
 
 bool MachineState::initialize_machinestate(
     const std::string& contract_filename) {
-    auto initial_state = parseInitialVmValues(contract_filename, pool);
+    auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
 
     if (initial_state.valid_state) {
         code = initial_state.code;

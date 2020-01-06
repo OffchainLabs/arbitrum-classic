@@ -28,7 +28,7 @@ CheckpointStorage::CheckpointStorage(const std::string& db_path,
                                      const std::string& contract_path)
     : datastorage(std::make_unique<DataStorage>(db_path)),
       pool(std::make_shared<TuplePool>()) {
-    initial_state = parseInitialVmValues(contract_path, pool);
+    initial_state = parseInitialVmValues(contract_path, *pool.get());
 }
 
 InitialVmValues CheckpointStorage::getInitialVmValues() const {

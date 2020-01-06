@@ -27,6 +27,6 @@ struct InitialVmValues {
 };
 
 InitialVmValues parseInitialVmValues(const std::string& contract_filename,
-                                     std::shared_ptr<TuplePool> pool);
+                                     TuplePool& pool);
 
 #endif /* vmValueParser_hpp */
