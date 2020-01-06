@@ -36,10 +36,12 @@ import (
 
 type ChainObserver struct {
 	*sync.RWMutex
-	nodeGraph    *StakedNodeGraph
-	rollupAddr   common.Address
-	pendingInbox *structures.PendingInbox
-	listeners    []ChainListener
+	nodeGraph         *StakedNodeGraph
+	rollupAddr        common.Address
+	pendingInbox      *structures.PendingInbox
+	knownValidNode    *Node
+	listeners         []ChainListener
+	assertionMadeCond *sync.Cond
 }
 
 func NewChain(
@@ -47,15 +49,25 @@ func NewChain(
 	_rollupAddr common.Address,
 	_machine machine.Machine,
 	_vmParams structures.ChainParams,
+	_updateOpinion bool,
 ) *ChainObserver {
 	ret := &ChainObserver{
+		RWMutex:      &sync.RWMutex{},
 		nodeGraph:    NewStakedNodeGraph(_machine, _vmParams),
 		rollupAddr:   _rollupAddr,
 		pendingInbox: structures.NewPendingInbox(),
 		listeners:    []ChainListener{},
 	}
+	ret.knownValidNode = ret.nodeGraph.latestConfirmed
+	ret.Lock()
+	defer ret.Unlock()
+
 	if _client != nil {
 		ret.startCleanupThread(_client, nil)
+	}
+	if _updateOpinion {
+		ret.assertionMadeCond = sync.NewCond(ret)
+		ret.startOpinionUpdateThread()
 	}
 	return ret
 }
@@ -137,6 +149,10 @@ func (chain *ChainObserver) ChallengeResolved(ev ethbridge.ChallengeCompletedEve
 }
 
 func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
+	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
+	if newNode.depth > chain.nodeGraph.latestConfirmed.depth {
+		chain.knownValidNode = chain.nodeGraph.nodeFromHash[ev.NodeHash]
+	}
 	chain.nodeGraph.ConfirmNode(ev.NodeHash)
 }
 
@@ -155,33 +171,10 @@ func (chain *ChainObserver) notifyAssert(
 		topPendingCount,
 	)
 	chain.nodeGraph.CreateNodesOnAssert(chain.nodeGraph.nodeFromHash[ev.PrevLeafHash], disputableNode, nil, currentTime)
+	if chain.assertionMadeCond != nil {
+		chain.assertionMadeCond.Broadcast()
+	}
 	return nil
-}
-
-func (chain *ChainObserver) EvaluateValidNode(node *Node) {
-	params := node.disputable.AssertionParams
-	claim := node.disputable.AssertionClaim
-	correctAfterPendingTopHeight := new(big.Int).Add(node.prev.vmProtoData.PendingCount, params.ImportedMessageCount)
-	claimHeight, found := chain.pendingInbox.GetHeight(claim.AfterPendingTop)
-	if !found || correctAfterPendingTopHeight.Cmp(claimHeight) != 0 {
-		// AfterPendingTop claim incorrect
-		return
-	}
-
-	messageStack, _ := chain.pendingInbox.Substack(node.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
-	if messageStack.GetTopHash() != claim.ImportedMessagesSlice {
-		// ImportedMessagesSlice claim incorrect
-		return
-	}
-
-	messagesVal := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
-	mach := node.prev.machine.Clone()
-	mach.DeliverMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds)
-	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
-		// AssertionStub claim incorrect
-		return
-	}
 }
 
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {

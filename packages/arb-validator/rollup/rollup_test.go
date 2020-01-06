@@ -171,6 +171,7 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 			MaxExecutionSteps:       1000000,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
+		false,
 	)
 	return chain, theMachine, nil
 }
