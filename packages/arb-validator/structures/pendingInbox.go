@@ -255,7 +255,11 @@ func (pi *MessageStack) Substack(olderAcc, newerAcc [32]byte) (*MessageStack, er
 	return stack, nil
 }
 
-func (pi *MessageStack) ValueForSubseq(olderAcc, newerAcc [32]byte) value.Value {
+func (pi *MessageStack) GetTopHash() [32]byte {
+	return pi.head.hash
+}
+
+func (pi *MessageStack) ValueForSubseq(olderAcc, newerAcc [32]byte) value.TupleValue {
 	oldItem, ok := pi.index[olderAcc]
 	if !ok {
 		oldItem = nil
@@ -267,7 +271,7 @@ func (pi *MessageStack) ValueForSubseq(olderAcc, newerAcc [32]byte) value.Value 
 	return valueForSubseq2(oldItem, newItem)
 }
 
-func valueForSubseq2(oldItem, newItem *messageStackItem) value.Value {
+func valueForSubseq2(oldItem, newItem *messageStackItem) value.TupleValue {
 	if newItem == oldItem {
 		return value.NewEmptyTuple()
 	} else {

@@ -144,7 +144,7 @@ func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedPar
 	mootedToDo := []recoverStakeMootedParams{}
 	oldToDo := []recoverStakeOldParams{}
 	chain.stakers.forall(func(staker *Staker) {
-		ancestor, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
+		ancestor, _, err := GetConflictAncestor(staker.location, chain.latestConfirmed)
 		if err == nil {
 			mootedToDo = append(mootedToDo, recoverStakeMootedParams{
 				addr:     staker.address,

@@ -17,6 +17,7 @@
 package rollup
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -45,7 +46,6 @@ type Node struct {
 	innerHash    [32]byte
 	hash         [32]byte
 
-	hasSuccessors   bool
 	successorHashes [structures.MaxChildType + 1][32]byte
 	numStakers      uint64
 }
@@ -314,7 +314,43 @@ func (n *Node) EqualsFull(n2 *Node) bool {
 		n.depth == n2.depth &&
 		n.vmProtoData.Equals(n2.vmProtoData) &&
 		n.linkType == n2.linkType &&
-		n.hasSuccessors == n2.hasSuccessors &&
 		n.successorHashes == n2.successorHashes &&
 		n.numStakers == n2.numStakers
+}
+
+func CommonAncestor(n1, n2 *Node) *Node {
+	n1, _, _ = GetConflictAncestor(n1, n2)
+	return n1
+}
+
+func GetConflictAncestor(n1, n2 *Node) (*Node, structures.ChildType, error) {
+	n1Orig := n1
+	n2Orig := n2
+	prevN1 := n1
+	prevN2 := n1
+	for n1.depth > n2.depth {
+		prevN1 = n1
+		n1 = n1.prev
+	}
+	for n2.depth > n1.depth {
+		prevN2 = n2
+		n2 = n2.prev
+	}
+
+	for n1 != n2 {
+		prevN1 = n1
+		prevN2 = n2
+		n1 = n1.prev
+		n2 = n2.prev
+	}
+
+	if n1 == n1Orig || n1 == n2Orig {
+		return n1, 0, errors.New("no conflict")
+	}
+	linkType := prevN1.linkType
+	if prevN2.linkType < linkType {
+		linkType = prevN2.linkType
+	}
+
+	return n1, linkType, nil
 }
