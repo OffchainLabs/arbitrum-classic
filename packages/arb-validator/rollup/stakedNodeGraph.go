@@ -160,3 +160,49 @@ func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedPar
 	})
 	return mootedToDo, oldToDo
 }
+
+type challengeOpportunity struct {
+	asserter        common.Address
+	challenger      common.Address
+	kind            structures.ChildType
+	asserterProof   [][32]byte
+	challengerProof [][32]byte
+}
+
+func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {
+	conflictNode, conflictType, err := chain.GetConflictAncestor(staker1.location, staker2.location)
+	if err != nil {
+		return nil
+	}
+	linkType1 := staker1.location.linkType
+	linkType2 := staker2.location.linkType
+	if linkType1 < linkType2 {
+		return &challengeOpportunity{
+			staker2.address,
+			staker1.address,
+			conflictType,
+			GeneratePathProof(conflictNode, staker2.location),
+			GeneratePathProof(conflictNode, staker1.location),
+		}
+	} else {
+		return &challengeOpportunity{
+			staker1.address,
+			staker2.address,
+			conflictType,
+			GeneratePathProof(conflictNode, staker1.location),
+			GeneratePathProof(conflictNode, staker2.location),
+		}
+	}
+}
+
+func (chain *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *challengeOpportunity {
+	for _, staker2 := range chain.stakers.idx {
+		if !staker2.Equals(staker) {
+			opp := chain.checkChallengeOpportunityPair(staker, staker2)
+			if opp != nil {
+				return opp
+			}
+		}
+	}
+	return nil
+}
