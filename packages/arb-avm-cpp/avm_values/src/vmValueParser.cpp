@@ -40,7 +40,7 @@ const char* getContractData(const std::string& contract_filename) {
 }
 
 InitialVmValues parseInitialVmValues(const std::string& contract_filename,
-                                     std::shared_ptr<TuplePool>& pool) {
+                                     std::shared_ptr<TuplePool> pool) {
     InitialVmValues initial_state;
 
     auto bufptr = getContractData(contract_filename);

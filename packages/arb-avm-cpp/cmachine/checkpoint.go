@@ -115,13 +115,17 @@ func (checkpoint *CheckpointStorage) DeleteValue(hashValue [32]byte) bool {
 }
 
 func (checkpoint *CheckpointStorage) SaveData(key []byte, data []byte) bool {
-	success := C.saveData(checkpoint.c, unsafe.Pointer(&key[0]), unsafe.Pointer(&data[0]))
+	success := C.saveData(checkpoint.c,
+		unsafe.Pointer(&key[0]),
+		C.int(len(key)),
+		unsafe.Pointer(&data[0]),
+		C.int(len(data)))
 
 	return success == 1
 }
 
 func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
-	cData := C.getData(checkpoint.c, unsafe.Pointer(&key[0]))
+	cData := C.getData(checkpoint.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
 	C.free(unsafe.Pointer(cData.data))
@@ -130,7 +134,7 @@ func (checkpoint *CheckpointStorage) GetData(key []byte) []byte {
 }
 
 func (checkpoint *CheckpointStorage) DeleteData(key []byte) bool {
-	success := C.deleteData(checkpoint.c, unsafe.Pointer(&key[0]))
+	success := C.deleteData(checkpoint.c, unsafe.Pointer(&key[0]), C.int(len(key)))
 
 	return success == 1
 }

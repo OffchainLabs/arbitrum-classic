@@ -137,20 +137,18 @@ int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key) {
 
 int saveData(CCheckpointStorage* storage_ptr,
              const void* key,
-             const void* data) {
+             int key_length,
+             const void* data,
+             int data_length) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto transaction = storage->makeTransaction();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
     auto data_ptr = reinterpret_cast<const char*>(data);
 
-    auto key_str = std::string(key_ptr);
-    auto data_str = std::string(data_ptr);
-
-    auto key_vector =
-        std::vector<unsigned char>(key_str.begin(), key_str.end());
+    auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
     auto data_vector =
-        std::vector<unsigned char>(data_str.begin(), data_str.end());
+        std::vector<unsigned char>(data_ptr, data_ptr + data_length);
 
     auto results = transaction->saveData(key_vector, data_vector);
 
@@ -162,14 +160,14 @@ int saveData(CCheckpointStorage* storage_ptr,
     return status.ok();
 }
 
-ByteSlice getData(const CCheckpointStorage* storage_ptr, const void* key) {
+ByteSlice getData(const CCheckpointStorage* storage_ptr,
+                  const void* key,
+                  int key_length) {
     auto storage = static_cast<const CheckpointStorage*>(storage_ptr);
     auto transaction = storage->makeConstTransaction();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
-    auto key_str = std::string(key_ptr);
-    auto key_vector =
-        std::vector<unsigned char>(key_str.begin(), key_str.end());
+    auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
 
     auto results = transaction->getData(key_vector);
 
@@ -181,14 +179,14 @@ ByteSlice getData(const CCheckpointStorage* storage_ptr, const void* key) {
     return {void_data, static_cast<int>(results.stored_value.size())};
 }
 
-int deleteData(CCheckpointStorage* storage_ptr, const void* key) {
+int deleteData(CCheckpointStorage* storage_ptr,
+               const void* key,
+               int key_length) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     auto transaction = storage->makeTransaction();
 
     auto key_ptr = reinterpret_cast<const char*>(key);
-    auto key_str = std::string(key_ptr);
-    auto key_vector =
-        std::vector<unsigned char>(key_str.begin(), key_str.end());
+    auto key_vector = std::vector<unsigned char>(key_ptr, key_ptr + key_length);
 
     auto results = transaction->deleteData(key_vector);
 

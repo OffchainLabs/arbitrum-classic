@@ -41,9 +41,15 @@ ByteSlice getValue(const CCheckpointStorage* storage_ptr, const void* hash_key);
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key);
 int saveData(CCheckpointStorage* storage_ptr,
              const void* key,
-             const void* data);
-ByteSlice getData(const CCheckpointStorage* storage_ptr, const void* key);
-int deleteData(CCheckpointStorage* storage_ptr, const void* key);
+             int key_length,
+             const void* data,
+             int data_length);
+ByteSlice getData(const CCheckpointStorage* storage_ptr,
+                  const void* key,
+                  int key_length);
+int deleteData(CCheckpointStorage* storage_ptr,
+               const void* key,
+               int key_length);
 
 #ifdef __cplusplus
 }

@@ -60,7 +60,7 @@ struct MachineState {
     MachineState();
     MachineState(const std::vector<CodePoint>& code_,
                  const value& static_val_,
-                 std::shared_ptr<TuplePool>& pool_);
+                 std::shared_ptr<TuplePool> pool_);
     bool initialize_machinestate(const std::string& contract_filename);
 
     void readInbox(char* newInbox);
