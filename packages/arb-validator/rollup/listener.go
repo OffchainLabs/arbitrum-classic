@@ -17,7 +17,9 @@
 package rollup
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -36,16 +38,24 @@ type ChainListener interface {
 type ValidatorChainListener struct {
 	chain  *ChainObserver
 	myAddr common.Address
+	client *ethclient.Client
+	auth   *bind.TransactOpts
 	ch     chan interface{}
 }
 
-func NewValidatorChainListener(chain *ChainObserver, myAddr common.Address, runLoop func(*ValidatorChainListener)) {
-	ret := &ValidatorChainListener{chain, myAddr, make(chan interface{}, 1024)}
+func NewValidatorChainListener(
+	chain *ChainObserver,
+	myAddr common.Address,
+	client *ethclient.Client,
+	auth *bind.TransactOpts,
+	runLoop func(*ValidatorChainListener),
+) {
+	ret := &ValidatorChainListener{chain, myAddr, client, auth, make(chan interface{}, 1024)}
 	go runLoop(ret)
 }
 
-func (lis *ValidatorChainListener) StakeCreated(ethbridge.StakeCreatedEvent) {
-
+func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) {
+	lis.challengeStakerIfPossible(ev.Staker)
 }
 
 func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
@@ -53,7 +63,30 @@ func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
 }
 
 func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
+	lis.challengeStakerIfPossible(ev.Staker)
+}
 
+func (lis *ValidatorChainListener) challengeStakerIfPossible(stakerAddr common.Address) {
+	if !utils.AddressesEqual(stakerAddr, lis.myAddr) {
+		newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
+		meAsStaker := lis.chain.nodeGraph.stakers.Get(lis.myAddr)
+		if meAsStaker != nil {
+			opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
+			if opp != nil {
+				lis.initiateChallenge(opp)
+				return
+			}
+		}
+		opp := lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
+		if opp != nil {
+			lis.initiateChallenge(opp)
+			return
+		}
+	}
+}
+
+func (lis *ValidatorChainListener) initiateChallenge(opp *challengeOpportunity) {
+	//TODO: submit challenge, based on opp
 }
 
 func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {

@@ -79,10 +79,11 @@ func TestChallenge(t *testing.T) {
 	contractAddr := common.BytesToAddress([]byte{3})
 	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
 	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.InvalidMessagesChildType)
-	confNode, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
+	n1, _, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	confNode := n1.prev
 	if !confNode.Equals(chain.nodeGraph.latestConfirmed) {
 		t.Fatal("unexpected value for conflict ancestor")
 	}

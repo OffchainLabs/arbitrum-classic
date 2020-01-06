@@ -211,14 +211,15 @@ func (chain *NodeGraph) PruneNodeByHash(nodeHash [32]byte) {
 }
 
 func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
-	n1, _, _ = chain.GetConflictAncestor(n1, n2)
-	return n1
+	n1, _, _, _ = chain.GetConflictAncestor(n1, n2)
+	return n1.prev
 }
 
 func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
 	prunesToDo := []pruneParams{}
 	chain.leaves.forall(func(leaf *Node) {
-		ancestor, _, err := chain.GetConflictAncestor(leaf, chain.latestConfirmed)
+		n1, _, _, err := chain.GetConflictAncestor(leaf, chain.latestConfirmed)
+		ancestor := n1.prev
 		if err == nil {
 			prunesToDo = append(prunesToDo, pruneParams{
 				leaf,
@@ -231,7 +232,7 @@ func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
 	return prunesToDo
 }
 
-func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, structures.ChildType, error) {
+func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, *Node, structures.ChildType, error) {
 	n1Orig := n1
 	n2Orig := n2
 	prevN1 := n1
@@ -253,12 +254,12 @@ func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, structures.Chi
 	}
 
 	if n1 == n1Orig || n1 == n2Orig {
-		return n1, 0, errors.New("no conflict")
+		return prevN1, prevN2, 0, errors.New("no conflict")
 	}
 	linkType := prevN1.linkType
 	if prevN2.linkType < linkType {
 		linkType = prevN2.linkType
 	}
 
-	return n1, linkType, nil
+	return prevN1, prevN2, linkType, nil
 }

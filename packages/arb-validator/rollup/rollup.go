@@ -108,7 +108,7 @@ func (chain *ChainObserver) MoveStake(ev ethbridge.StakeMovedEvent) {
 func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
-	conflictNode, disputeType, err := chain.nodeGraph.GetConflictAncestor(asserter.location, challenger.location)
+	n1, _, disputeType, err := chain.nodeGraph.GetConflictAncestor(asserter.location, challenger.location)
 	if err != nil {
 		panic("No conflict ancestor for conflict")
 	}
@@ -120,7 +120,7 @@ func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 		ev.ChallengeType,
 	)
 	for _, lis := range chain.listeners {
-		lis.StartedChallenge(ev, conflictNode, disputeType)
+		lis.StartedChallenge(ev, n1.prev, disputeType)
 	}
 }
 

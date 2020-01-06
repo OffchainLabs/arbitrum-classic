@@ -144,7 +144,8 @@ func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedPar
 	mootedToDo := []recoverStakeMootedParams{}
 	oldToDo := []recoverStakeOldParams{}
 	chain.stakers.forall(func(staker *Staker) {
-		ancestor, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
+		n1, _, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
+		ancestor := n1.prev
 		if err == nil {
 			mootedToDo = append(mootedToDo, recoverStakeMootedParams{
 				addr:     staker.address,
@@ -174,12 +175,13 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 	if !utils.AddressIsZero(staker1.challenge) || !utils.AddressIsZero(staker2.challenge) {
 		return nil
 	}
-	conflictNode, conflictType, err := chain.GetConflictAncestor(staker1.location, staker2.location)
+	n1, n2, conflictType, err := chain.GetConflictAncestor(staker1.location, staker2.location)
 	if err != nil {
 		return nil
 	}
-	linkType1 := staker1.location.linkType
-	linkType2 := staker2.location.linkType
+	conflictNode := n1.prev
+	linkType1 := n1.linkType
+	linkType2 := n2.linkType
 	if linkType1 < linkType2 {
 		return &challengeOpportunity{
 			staker2.address,
@@ -203,13 +205,15 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *chal
 	if !utils.AddressIsZero(staker.challenge) {
 		return nil
 	}
-	for _, staker2 := range chain.stakers.idx {
+	var ret *challengeOpportunity
+	chain.stakers.forall(func(staker2 *Staker) {
 		if !staker2.Equals(staker) {
 			opp := chain.checkChallengeOpportunityPair(staker, staker2)
 			if opp != nil {
-				return opp
+				ret = opp
+				return
 			}
 		}
-	}
-	return nil
+	})
+	return ret
 }
