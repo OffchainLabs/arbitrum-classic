@@ -59,7 +59,13 @@ module.exports = async function(deployer, network, accounts) {
   deployer.link(BytesLib, []);
 
   deployer.deploy(Value);
-  deployer.link(Value, [Protocol, GlobalPendingInbox, OneStepProof, ArbRollup]);
+  deployer.link(Value, [
+    Protocol,
+    GlobalPendingInbox,
+    ExecutionChallenge,
+    OneStepProof,
+    ArbRollup
+  ]);
 
   deployer.deploy(Protocol);
   deployer.link(Protocol, [
