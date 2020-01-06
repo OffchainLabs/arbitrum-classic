@@ -29,7 +29,7 @@ type ChainListener interface {
 	StakeCreated(ethbridge.StakeCreatedEvent)
 	StakeRemoved(ethbridge.StakeRefundedEvent)
 	StakeMoved(ethbridge.StakeMovedEvent)
-	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, structures.ChildType)
+	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)
 	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
 }
 
@@ -56,17 +56,17 @@ func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
 
 }
 
-func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
+func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
 	if utils.AddressesEqual(lis.myAddr, ev.Asserter) {
-		lis.actAsAsserter(ev, conflictNode, disputeType)
+		lis.actAsAsserter(ev, asserterAncestor)
 	}
 	if utils.AddressesEqual(lis.myAddr, ev.Challenger) {
-		lis.actAsChallenger(ev, conflictNode, disputeType)
+		lis.actAsChallenger(ev, asserterAncestor)
 	}
 }
 
-func (lis *ValidatorChainListener) actAsChallenger(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
-	switch disputeType {
+func (lis *ValidatorChainListener) actAsChallenger(ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
+	switch conflictNode.linkType {
 	case structures.InvalidPendingChildType:
 		go challenges.ChallengePendingTopClaim(
 			nil,
@@ -94,8 +94,8 @@ func (lis *ValidatorChainListener) actAsChallenger(ev ethbridge.ChallengeStarted
 	}
 }
 
-func (lis *ValidatorChainListener) actAsAsserter(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, disputeType structures.ChildType) {
-	switch disputeType {
+func (lis *ValidatorChainListener) actAsAsserter(ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
+	switch conflictNode.linkType {
 	case structures.InvalidPendingChildType:
 		go challenges.DefendPendingTopClaim(
 			nil,

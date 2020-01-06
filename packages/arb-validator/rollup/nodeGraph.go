@@ -216,13 +216,13 @@ func (chain *NodeGraph) PruneNodeByHash(nodeHash [32]byte) {
 func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
 	prunesToDo := []pruneParams{}
 	chain.leaves.forall(func(leaf *Node) {
-		ancestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
+		leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
 		if err == nil {
 			prunesToDo = append(prunesToDo, pruneParams{
 				leaf,
-				ancestor,
-				GeneratePathProof(ancestor, leaf),
-				GeneratePathProof(ancestor, chain.latestConfirmed),
+				leafAncestor.prev,
+				GeneratePathProof(leafAncestor.prev, leaf),
+				GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
 			})
 		}
 	})

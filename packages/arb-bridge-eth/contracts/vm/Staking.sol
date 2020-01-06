@@ -127,8 +127,8 @@ contract Staking is ChallengeType {
     function startChallenge(
         address payable asserterAddress,
         address payable challengerAddress,
-        bytes32 node,
-        uint256 disputableDeadlineTicks,
+        bytes32 prevNode,
+        uint256 deadlineTicks,
         uint256[2] memory stakerPositions,
         bytes32[2] memory vmProtoHashes,
         bytes32[] memory proof1,
@@ -142,16 +142,16 @@ contract Staking is ChallengeType {
         Staker storage asserter = getValidStaker(asserterAddress);
         Staker storage challenger = getValidStaker(challengerAddress);
 
-        require(RollupTime.blocksToTicks(asserter.creationTimeBlocks) < disputableDeadlineTicks, STK1_DEADLINE);
-        require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < disputableDeadlineTicks, STK2_DEADLINE);
+        require(RollupTime.blocksToTicks(asserter.creationTimeBlocks) < deadlineTicks, STK1_DEADLINE);
+        require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < deadlineTicks, STK2_DEADLINE);
         require(!asserter.inChallenge, STK1_IN_CHAL);
         require(!challenger.inChallenge, STK2_IN_CHAL);
         require(stakerPositions[0] < stakerPositions[1], TYPE_ORDER);
         require(
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
-                    node,
-                    disputableDeadlineTicks,
+                    prevNode,
+                    deadlineTicks,
                     keccak256(
                         abi.encodePacked(
                             challenge1DataHash,
@@ -169,8 +169,8 @@ contract Staking is ChallengeType {
         require(
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
-                    node,
-                    disputableDeadlineTicks,
+                    prevNode,
+                    deadlineTicks,
                     challenge2NodeHash,
                     stakerPositions[1],
                     vmProtoHashes[1]
