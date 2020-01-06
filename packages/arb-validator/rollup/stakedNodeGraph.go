@@ -241,3 +241,21 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *chal
 	})
 	return ret
 }
+
+func (chain *StakedNodeGraph) checkChallengeOpportunityAllPairs() []*challengeOpportunity {
+	ret := []*challengeOpportunity{}
+	stakers := []*Staker{}
+	chain.stakers.forall(func(s *Staker) {
+		stakers = append(stakers, s)
+	})
+	for i, s1 := range stakers {
+		for j := i + 1; j < len(stakers); j++ {
+			opp := chain.checkChallengeOpportunityPair(s1, stakers[j])
+			if opp != nil {
+				ret = append(ret, opp)
+				break
+			}
+		}
+	}
+	return ret
+}

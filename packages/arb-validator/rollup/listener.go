@@ -58,7 +58,14 @@ func NewValidatorChainListener(
 }
 
 func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) {
-	lis.challengeStakerIfPossible(ev.Staker)
+	if utils.AddressesEqual(ev.Staker, lis.myAddr) {
+		opps := lis.chain.nodeGraph.checkChallengeOpportunityAllPairs()
+		for _, opp := range opps {
+			lis.initiateChallenge(opp)
+		}
+	} else {
+		lis.challengeStakerIfPossible(ev.Staker)
+	}
 }
 
 func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
@@ -89,22 +96,24 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(stakerAddr common.A
 }
 
 func (lis *ValidatorChainListener) initiateChallenge(opp *challengeOpportunity) {
-	lis.vm.StartChallenge(
-		context.TODO(),
-		opp.asserter,
-		opp.challenger,
-		opp.prevNodeHash,
-		opp.deadlineTicks.Val,
-		opp.asserterNodeType,
-		opp.challengerNodeType,
-		opp.asserterProtoHash,
-		opp.challengerProtoHash,
-		opp.asserterProof,
-		opp.challengerProof,
-		opp.asserterDataHash,
-		opp.asserterPeriodTicks,
-		opp.challengerNodeHash,
-	)
+	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
+		lis.vm.StartChallenge(
+			context.TODO(),
+			opp.asserter,
+			opp.challenger,
+			opp.prevNodeHash,
+			opp.deadlineTicks.Val,
+			opp.asserterNodeType,
+			opp.challengerNodeType,
+			opp.asserterProtoHash,
+			opp.challengerProtoHash,
+			opp.asserterProof,
+			opp.challengerProof,
+			opp.asserterDataHash,
+			opp.asserterPeriodTicks,
+			opp.challengerNodeHash,
+		)
+	}()
 }
 
 func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
@@ -186,6 +195,7 @@ func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeComp
 	if utils.AddressesEqual(lis.myAddr, ev.Loser) {
 		lis.lostChallenge(ev)
 	}
+	lis.challengeStakerIfPossible(ev.Winner)
 }
 
 func (lis *ValidatorChainListener) lostChallenge(ethbridge.ChallengeCompletedEvent) {
