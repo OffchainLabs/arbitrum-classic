@@ -153,6 +153,32 @@ func (chain *ChainObserver) notifyAssert(
 	return nil
 }
 
+func (chain *ChainObserver) EvaluateValidNode(node *Node) {
+	params := node.disputable.AssertionParams
+	claim := node.disputable.AssertionClaim
+	correctAfterPendingTopHeight := new(big.Int).Add(node.prev.vmProtoData.PendingCount, params.ImportedMessageCount)
+	claimHeight, found := chain.pendingInbox.GetHeight(claim.AfterPendingTop)
+	if !found || correctAfterPendingTopHeight.Cmp(claimHeight) != 0 {
+		// AfterPendingTop claim incorrect
+		return
+	}
+
+	messageStack, _ := chain.pendingInbox.Substack(node.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
+	if messageStack.GetTopHash() != claim.ImportedMessagesSlice {
+		// ImportedMessagesSlice claim incorrect
+		return
+	}
+
+	messagesVal := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
+	mach := node.prev.machine.Clone()
+	mach.DeliverMessages(messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds)
+	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
+		// AssertionStub claim incorrect
+		return
+	}
+}
+
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	chain.Lock()
 	defer chain.Unlock()
