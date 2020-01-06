@@ -17,6 +17,9 @@
 package rollup
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -24,8 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"math/big"
-	"testing"
 )
 
 var dummyAddress common.Address
@@ -132,8 +133,6 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 			MaxExecutionSteps:       1000000,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
-		dummyAddress,
-		nil,
 	)
 	return chain, theMachine, nil
 }

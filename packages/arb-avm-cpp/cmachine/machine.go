@@ -135,7 +135,7 @@ func (m *Machine) DeliverMessages(messages value.TupleValue) {
 	C.machineDeliverMessages(m.c, unsafe.Pointer(&msgData[0]))
 }
 
-func (m *Machine) ExecuteAssertion(maxSteps int32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
 	startTime := utils.UnmarshalBigInt(timeBounds.Start.Val)
 	endTime := utils.UnmarshalBigInt(timeBounds.End.Val)
 

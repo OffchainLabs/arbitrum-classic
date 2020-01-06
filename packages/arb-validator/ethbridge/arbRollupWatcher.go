@@ -240,7 +240,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			return ChallengeStartedEvent{
 				Asserter:          eventVal.Asserter,
 				Challenger:        eventVal.Challenger,
-				ChallengeType:     eventVal.ChallengeType.Uint64(),
+				ChallengeType:     structures.ChildType(eventVal.ChallengeType.Uint64()),
 				ChallengeContract: eventVal.ChallengeContract,
 			}, nil
 		} else if log.Topics[0] == rollupChallengeCompletedID {

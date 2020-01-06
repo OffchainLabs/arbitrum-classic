@@ -1,243 +1,243 @@
-aliases:
-  - &restore_yarn_cache
-    keys:
-      - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
-      - yarn-packages-v1-{{ .Branch }}-
-      - yarn-packages-v1-
-  - &save_yarn_cache
-    paths:
-      - ~/.cache/yarn
-    key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
-  - &restore_python_cache
-    keys:
-      - python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
-      - python-packages-v2-{{ .Branch }}-
-      - python-packages-v2-
-  - &save_python_cache
-    paths:
-      - ~/.local/lib/python3.7/site-packages
-    key: python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
-  - &restore_ethbridge_cache
-    keys:
-      - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
-      - yarn-packages-v1-{{ .Branch }}-
-      - yarn-packages-v1-
-  - &save_ethbridge_cache
-    paths:
-      - ~/.cache/yarn
-    key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+# aliases:
+#   - &restore_yarn_cache
+#     keys:
+#       - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+#       - yarn-packages-v1-{{ .Branch }}-
+#       - yarn-packages-v1-
+#   - &save_yarn_cache
+#     paths:
+#       - ~/.cache/yarn
+#     key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+#   - &restore_python_cache
+#     keys:
+#       - python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+#       - python-packages-v2-{{ .Branch }}-
+#       - python-packages-v2-
+#   - &save_python_cache
+#     paths:
+#       - ~/.local/lib/python3.7/site-packages
+#     key: python-packages-v2-{{ .Branch }}-{{ checksum "packages/arb-compiler-evm/requirements.txt" }}
+#   - &restore_ethbridge_cache
+#     keys:
+#       - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+#       - yarn-packages-v1-{{ .Branch }}-
+#       - yarn-packages-v1-
+#   - &save_ethbridge_cache
+#     paths:
+#       - ~/.cache/yarn
+#     key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
 
-  - &restore_go_cache
-    keys:
-      - go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-      - go-mod-v4-{{ .Branch }}-
-      - go-mod-v4-
-  - &save_go_cache
-    key: go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
-    paths:
-      - ~/go/pkg/mod
-  - &restore_conan_cache
-    keys:
-      - conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-      - conan-packages-v1-{{ .Branch }}-
-      - conan-packages-v1-
-  - &save_conan_cache
-    paths:
-      - ~/.conan/data
-    key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
-  - &test-path /tmp/test-results
-version: 2
+#   - &restore_go_cache
+#     keys:
+#       - go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+#       - go-mod-v4-{{ .Branch }}-
+#       - go-mod-v4-
+#   - &save_go_cache
+#     key: go-mod-v4-{{ .Branch }}-{{ checksum "packages/arb-validator/go.sum" }}
+#     paths:
+#       - ~/go/pkg/mod
+#   - &restore_conan_cache
+#     keys:
+#       - conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+#       - conan-packages-v1-{{ .Branch }}-
+#       - conan-packages-v1-
+#   - &save_conan_cache
+#     paths:
+#       - ~/.conan/data
+#     key: conan-packages-v1-{{ .Branch }}-{{ checksum "packages/arb-avm-cpp/conanfile.txt" }}
+#   - &test-path /tmp/test-results
+# version: 2
 workflows:
   version: 2
   build:
     jobs:
       - go-deps
-      - cpp-avm
-      - frontend
-      - ethbridge
-      - backend:
-          requires:
-            - go-deps
-            - cpp-avm
-            - ethbridge
+#       - cpp-avm
+#       - frontend
+#       - ethbridge
+#       - backend:
+#           requires:
+#             - go-deps
+#             - cpp-avm
+#             - ethbridge
 jobs:
   go-deps:
-    docker:
-      - image: offchainlabs/backend-base:0.1.0
-    steps:
-      - checkout
-      - restore_cache: *restore_go_cache
-      - run:
-          command: |
-            cd packages/arb-provider-go
-            go mod download
-      - save_cache: *save_go_cache
-  frontend:
-    docker:
-      - image: offchainlabs/frontend-base:0.1.0
-    environment:
-      TEST_RESULTS: *test-path
-    steps:
-      - checkout
-      - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_yarn_cache
-      - run: yarn install --cache-folder ~/.cache/yarn
-      - save_cache: *save_yarn_cache
-      - restore_cache: *restore_python_cache
-      - run:
-          command: | # use pipenv to install dependencies
-            pip3 install --user -r requirements.txt
-            python3 setup.py install --user
-          working_directory: /home/user/project/packages/arb-compiler-evm
-      - save_cache: *save_python_cache
-      - run:
-          name: test arb-compiler-evm
-          command: |
-            coverage run --source=/home/user/project setup.py test
-            cd tests/sol-syscall
-            truffle migrate --reset --compile-all --network arbitrum
-            coverage run --source=/home/user/project truffle_runner.py compiled.json
-            cd ../..
-            coverage combine .coverage tests/sol-syscall/.coverage
-          working_directory: /home/user/project/packages/arb-compiler-evm
-      - run:
-          name: test arb-provider-ethers
-          command: |
-            yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-ethers.xml"
-          working_directory: /home/user/project/packages/arb-provider-ethers
-      - run:
-          name: test arb-provider-web3
-          command: |
-            yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-web3.xml"
-          working_directory: /home/user/project/packages/arb-provider-web3
-      - run:
-          name: test arb-provider-truffle
-          command: |
-            yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
-          environment:
-            JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-truffle.xml"
-          working_directory: /home/user/project/packages/arb-provider-truffle
-      - run: codecovbash -R /home/user/project
-      - store_test_results:
-          path: *test-path
-  ethbridge:
-    docker:
-      - image: offchainlabs/ethbridge-base:0.1.0
-    steps:
-      - checkout
-      - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
-      - run:
-          command: |
-            yarn --production
-            echo arbitrum > ~/password.txt
-            mkdir -p /home/user/.local/share/io.parity.ethereum/
-            cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
-            parity --chain=parity/poa.json account import parity/keystore/
-          working_directory: /home/user/arb-bridge-eth
-      - run:
-          command: parity --chain parity/poa.json --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
-          background: true
-          working_directory: /home/user/arb-bridge-eth
-      - run:
-          name: test arb-bridge-eth
-          command: |
-            truffle migrate --network parity
-          working_directory: /home/user/arb-bridge-eth
-      - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
-      - run: killall -HUP parity
-      - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/.local/share/
-          paths:
-            - io.parity.ethereum
-  cpp-avm:
-    docker:
-      - image: offchainlabs/cpp-base:0.1.0
-    environment: # environment variables for the build itself
-      TEST_RESULTS: *test-path # path to where test results will be saved
-    steps:
-      - checkout
-      - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_conan_cache
-      - run:
-          command: |
-            mkdir -p packages/arb-avm-cpp/build
-            cd packages/arb-avm-cpp/build
-            conan install ..
-            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
-            cmake --build . -j 2
-            cp lib/lib* ../cmachine/
-      - save_cache: *save_conan_cache
-      - run:
-          name: test arb-avm-cpp
-          command: |
-            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
-            lcov --capture --directory . --output-file coverage.info
-            lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
-            lcov --list coverage.info
-          working_directory: /home/user/project/packages/arb-avm-cpp/build
-      - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/project/packages/arb-avm-cpp/cmachine
-          paths:
-            - ./*.a
-      - run: codecovbash -R /home/user/project
-      - store_test_results:
-          path: *test-path
-  backend:
-    docker:
-      - image: offchainlabs/backend-base:0.1.0
-    environment: # environment variables for the build itself
-      TEST_RESULTS: *test-path # path to where test results will be saved
-    steps:
-      - checkout
-      - run: mkdir -p $TEST_RESULTS
-      - attach_workspace:
-          at: /home/user/workspace
-      - run:
-          command: |
-            echo arbitrum > ~/password.txt
-            mkdir -p /home/user/.local/share
-            cp -r /home/user/workspace/io.parity.ethereum /home/user/.local/share
-            cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
-      - restore_cache: *restore_go_cache
-      - run:
-          command: |
-            cd packages/arb-validator
-            export CGO_LDFLAGS="-lgcov --coverage"
-            go install -v ./...
-      - run:
-          name: start parity
-          command: parity --chain parity/poa.json --geth --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
-          background: true
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run:
-          name: test arb-util
-          command: |
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
-          working_directory: /home/user/project/packages/arb-util
-      - run:
-          name: test arb-avm-go
-          command: |
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
-          working_directory: /home/user/project/packages/arb-avm-go
-      - run:
-          name: test arb-validator
-          command: |
-            export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/... ./...
-          working_directory: /home/user/project/packages/arb-validator
-      - run:
-          name: test arb-provider-go
-          command: |
-            export CGO_LDFLAGS="-lgcov --coverage"
-            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/...,../arb-validator/... ./...
-          working_directory: /home/user/project/packages/arb-provider-go
-      - run: codecovbash -R /home/user/project
-      - store_test_results:
-          path: *test-path
+#     docker:
+#       - image: offchainlabs/backend-base:0.1.0
+#     steps:
+#       - checkout
+#       - restore_cache: *restore_go_cache
+#       - run:
+#           command: |
+#             cd packages/arb-provider-go
+#             go mod download
+#       - save_cache: *save_go_cache
+#   frontend:
+#     docker:
+#       - image: offchainlabs/frontend-base:0.1.0
+#     environment:
+#       TEST_RESULTS: *test-path
+#     steps:
+#       - checkout
+#       - run: mkdir -p $TEST_RESULTS
+#       - restore_cache: *restore_yarn_cache
+#       - run: yarn install --cache-folder ~/.cache/yarn
+#       - save_cache: *save_yarn_cache
+#       - restore_cache: *restore_python_cache
+#       - run:
+#           command: | # use pipenv to install dependencies
+#             pip3 install --user -r requirements.txt
+#             python3 setup.py install --user
+#           working_directory: /home/user/project/packages/arb-compiler-evm
+#       - save_cache: *save_python_cache
+#       - run:
+#           name: test arb-compiler-evm
+#           command: |
+#             coverage run --source=/home/user/project setup.py test
+#             cd tests/sol-syscall
+#             truffle migrate --reset --compile-all --network arbitrum
+#             coverage run --source=/home/user/project truffle_runner.py compiled.json
+#             cd ../..
+#             coverage combine .coverage tests/sol-syscall/.coverage
+#           working_directory: /home/user/project/packages/arb-compiler-evm
+#       - run:
+#           name: test arb-provider-ethers
+#           command: |
+#             yarn test --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+#             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
+#           environment:
+#             JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-ethers.xml"
+#           working_directory: /home/user/project/packages/arb-provider-ethers
+#       - run:
+#           name: test arb-provider-web3
+#           command: |
+#             yarn test --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+#             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-web3-lint.xml
+#           environment:
+#             JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-web3.xml"
+#           working_directory: /home/user/project/packages/arb-provider-web3
+#       - run:
+#           name: test arb-provider-truffle
+#           command: |
+#             yarn test  --pass-with-no-tests --coverage --ci --runInBand --reporters=default --reporters=jest-junit
+#             yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-truffle-lint.xml
+#           environment:
+#             JEST_JUNIT_OUTPUT: "${TEST_RESULTS}/arb-provider-truffle.xml"
+#           working_directory: /home/user/project/packages/arb-provider-truffle
+#       - run: codecovbash -R /home/user/project
+#       - store_test_results:
+#           path: *test-path
+#   ethbridge:
+#     docker:
+#       - image: offchainlabs/ethbridge-base:0.1.0
+#     steps:
+#       - checkout
+#       - run: mv /home/user/project/packages/arb-bridge-eth /home/user/
+#       - run:
+#           command: |
+#             yarn --production
+#             echo arbitrum > ~/password.txt
+#             mkdir -p /home/user/.local/share/io.parity.ethereum/
+#             cp parity/config.toml /home/user/.local/share/io.parity.ethereum/
+#             parity --chain=parity/poa.json account import parity/keystore/
+#           working_directory: /home/user/arb-bridge-eth
+#       - run:
+#           command: parity --chain parity/poa.json --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
+#           background: true
+#           working_directory: /home/user/arb-bridge-eth
+#       - run:
+#           name: test arb-bridge-eth
+#           command: |
+#             truffle migrate --network parity
+#           working_directory: /home/user/arb-bridge-eth
+#       - run: cat /home/user/arb-bridge-eth/bridge_eth_addresses.json
+#       - run: killall -HUP parity
+#       - persist_to_workspace: # store the built files into the workspace for other jobs.
+#           root: /home/user/.local/share/
+#           paths:
+#             - io.parity.ethereum
+#   cpp-avm:
+#     docker:
+#       - image: offchainlabs/cpp-base:0.1.0
+#     environment: # environment variables for the build itself
+#       TEST_RESULTS: *test-path # path to where test results will be saved
+#     steps:
+#       - checkout
+#       - run: mkdir -p $TEST_RESULTS
+#       - restore_cache: *restore_conan_cache
+#       - run:
+#           command: |
+#             mkdir -p packages/arb-avm-cpp/build
+#             cd packages/arb-avm-cpp/build
+#             conan install ..
+#             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
+#             cmake --build . -j 2
+#             cp lib/lib* ../cmachine/
+#       - save_cache: *save_conan_cache
+#       - run:
+#           name: test arb-avm-cpp
+#           command: |
+#             ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+#             lcov --capture --directory . --output-file coverage.info
+#             lcov --remove coverage.info --output-file coverage.info '*/.conan/*' '/usr/*' '*/tests/*' '*/external/*'
+#             lcov --list coverage.info
+#           working_directory: /home/user/project/packages/arb-avm-cpp/build
+#       - persist_to_workspace: # store the built files into the workspace for other jobs.
+#           root: /home/user/project/packages/arb-avm-cpp/cmachine
+#           paths:
+#             - ./*.a
+#       - run: codecovbash -R /home/user/project
+#       - store_test_results:
+#           path: *test-path
+#   backend:
+#     docker:
+#       - image: offchainlabs/backend-base:0.1.0
+#     environment: # environment variables for the build itself
+#       TEST_RESULTS: *test-path # path to where test results will be saved
+#     steps:
+#       - checkout
+#       - run: mkdir -p $TEST_RESULTS
+#       - attach_workspace:
+#           at: /home/user/workspace
+#       - run:
+#           command: |
+#             echo arbitrum > ~/password.txt
+#             mkdir -p /home/user/.local/share
+#             cp -r /home/user/workspace/io.parity.ethereum /home/user/.local/share
+#             cp /home/user/workspace/*.a /home/user/project/packages/arb-avm-cpp/cmachine
+#       - restore_cache: *restore_go_cache
+#       - run:
+#           command: |
+#             cd packages/arb-validator
+#             export CGO_LDFLAGS="-lgcov --coverage"
+#             go install -v ./...
+#       - run:
+#           name: start parity
+#           command: parity --chain parity/poa.json --geth --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt
+#           background: true
+#           working_directory: /home/user/project/packages/arb-bridge-eth
+#       - run:
+#           name: test arb-util
+#           command: |
+#             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
+#           working_directory: /home/user/project/packages/arb-util
+#       - run:
+#           name: test arb-avm-go
+#           command: |
+#             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/... ./...
+#           working_directory: /home/user/project/packages/arb-avm-go
+#       - run:
+#           name: test arb-validator
+#           command: |
+#             export CGO_LDFLAGS="-lgcov --coverage"
+#             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-validator.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/... ./...
+#           working_directory: /home/user/project/packages/arb-validator
+#       - run:
+#           name: test arb-provider-go
+#           command: |
+#             export CGO_LDFLAGS="-lgcov --coverage"
+#             gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-provider-go.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./...,../arb-util/...,../arb-avm-go/...,../arb-validator/... ./...
+#           working_directory: /home/user/project/packages/arb-provider-go
+#       - run: codecovbash -R /home/user/project
+#       - store_test_results:
+#           path: *test-path

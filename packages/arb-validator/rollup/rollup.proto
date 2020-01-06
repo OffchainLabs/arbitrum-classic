@@ -45,7 +45,6 @@ message NodeGraphBuf {
 message StakedNodeGraphBuf {
     NodeGraphBuf nodeGraph = 1;
     repeated StakerBuf stakers = 2;
-    repeated ChallengeBuf challenges = 3;
 }
 
 message ChainObserverBuf {
@@ -59,11 +58,4 @@ message StakerBuf {
     value.HashBuf location = 2;
     structures.TimeTicksBuf creationTime = 3;
     bytes challengeAddr = 4;
-}
-
-message ChallengeBuf {
-    bytes contract = 1;
-    bytes asserter = 2;
-    bytes challenger = 3;
-    uint32 kind = 4;
 }

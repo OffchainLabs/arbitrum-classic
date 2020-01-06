@@ -22,8 +22,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -92,133 +90,25 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 	switch ev := notification.Event.(type) {
 	case ethbridge.StakeCreatedEvent:
 		currentTime := structures.TimeFromBlockNum(protocol.NewTimeBlocks(notification.Header.Number))
-		chain.CreateStake(ev.Staker, ev.NodeHash, currentTime)
-		if chain.listener != nil && chain.listenForAddress == ev.Staker {
-			chain.listener.Notify(
-				&StakeCreatedChainEvent{
-					ev.Staker,
-					ev.NodeHash,
-					currentTime,
-				},
-			)
-		}
+		chain.CreateStake(ev, currentTime)
 	case ethbridge.ChallengeStartedEvent:
-		_ = chain.NewChallenge(ev.ChallengeContract, ev.Asserter, ev.Challenger, structures.ChildType(ev.ChallengeType))
-		if chain.listener != nil && (chain.listenForAddress == ev.Asserter || chain.listenForAddress == ev.Challenger) {
-			asserter := chain.stakers.Get(ev.Asserter)
-			challenger := chain.stakers.Get(ev.Challenger)
-			conflictNode, disputeType, err := chain.GetConflictAncestor(asserter.location, challenger.location)
-			if err != nil {
-				panic("No conflict ancestor for conflict")
-			}
-
-			if chain.listenForAddress == ev.Asserter {
-				switch disputeType {
-				case structures.InvalidPendingChildType:
-					go challenges.DefendPendingTopClaim(
-						nil,
-						nil,
-						ev.ChallengeContract,
-						chain.pendingInbox,
-						conflictNode.disputable.AssertionClaim.AfterPendingTop,
-						conflictNode.disputable.MaxPendingTop,
-					)
-				case structures.InvalidMessagesChildType:
-					go challenges.DefendMessagesClaim(
-						nil,
-						nil,
-						ev.ChallengeContract,
-						chain.pendingInbox,
-						conflictNode.vmProtoData.PendingTop,
-						conflictNode.disputable.AssertionClaim.AfterPendingTop,
-						conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
-					)
-				case structures.InvalidExecutionChildType:
-					go challenges.DefendExecutionClaim(
-						nil,
-						nil,
-						ev.ChallengeContract,
-						conflictNode.ExecutionPrecondition(),
-						conflictNode.disputable.AssertionParams.NumSteps,
-						conflictNode.disputable.AssertionClaim.AssertionStub,
-						conflictNode.machine,
-					)
-				}
-			} else {
-				switch disputeType {
-				case structures.InvalidPendingChildType:
-					go challenges.ChallengePendingTopClaim(
-						nil,
-						nil,
-						ev.ChallengeContract,
-						chain.pendingInbox,
-					)
-				case structures.InvalidMessagesChildType:
-					go challenges.ChallengeMessagesClaim(
-						nil,
-						nil,
-						ev.ChallengeContract,
-						chain.pendingInbox,
-						conflictNode.vmProtoData.PendingTop,
-						conflictNode.disputable.AssertionClaim.AfterPendingTop,
-					)
-				case structures.InvalidExecutionChildType:
-					go challenges.ChallengeExecutionClaim(
-						nil,
-						nil,
-						ev.ChallengeContract,
-						conflictNode.ExecutionPrecondition(),
-						conflictNode.machine,
-					)
-				}
-			}
-
-			chain.listener.Notify(
-				&ChallengeStartedChainEvent{
-					ev.ChallengeContract,
-					ev.Asserter,
-					ev.Challenger,
-					structures.ChildType(ev.ChallengeType),
-				},
-			)
-		}
+		chain.NewChallenge(ev)
 	case ethbridge.ChallengeCompletedEvent:
-		chain.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
-		if chain.listener != nil && (chain.listenForAddress == ev.Winner || chain.listenForAddress == ev.Loser) {
-			chain.listener.Notify(
-				&ChallengeCompletedChainEvent{
-					ev.ChallengeContract,
-					ev.Winner,
-					ev.Loser,
-				},
-			)
-		}
+		chain.ChallengeResolved(ev)
 	case ethbridge.StakeRefundedEvent:
-		chain.RemoveStake(ev.Staker)
-		if chain.listener != nil && chain.listenForAddress == ev.Staker {
-			chain.listener.Notify(&StakeRefundedChainEvent{ev.Staker})
-		}
+		chain.RemoveStake(ev)
 	case ethbridge.PrunedEvent:
-		chain.PruneNodeByHash(ev.Leaf)
+		chain.PruneNode(ev)
 	case ethbridge.StakeMovedEvent:
-		chain.MoveStake(ev.Staker, ev.Location)
-		if chain.listener != nil && chain.listenForAddress == ev.Staker {
-			chain.listener.Notify(&StakeMovedChainEvent{ev.Staker, ev.Location})
-		}
+		chain.MoveStake(ev)
 	case ethbridge.AssertedEvent:
 		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
-		err := chain.notifyAssert(
-			ev.PrevLeafHash,
-			ev.Params,
-			ev.Claim,
-			ev.MaxPendingTop,
-			currentTime,
-		)
+		err := chain.notifyAssert(ev, currentTime)
 		if err != nil {
 			panic(err)
 		}
 	case ethbridge.ConfirmedEvent:
-		chain.ConfirmNode(ev.NodeHash)
+		chain.ConfirmNode(ev)
 	}
 }
 

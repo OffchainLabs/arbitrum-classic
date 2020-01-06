@@ -23,12 +23,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -45,7 +43,11 @@ func TestMachineAdd(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	m.ExecuteAssertion(80000, protocol.NewTimeBoundsBlocks(0, 100000))
+	tb := protocol.NewTimeBoundsBlocks(
+		protocol.NewTimeBlocks(big.NewInt(0)),
+		protocol.NewTimeBlocks(big.NewInt(100000)),
+	)
+	m.ExecuteAssertion(80000, tb)
 }
 
 func runInstOpNoFault(m *Machine, oper value.Operation) (bool, string) {
@@ -749,7 +751,6 @@ func TestInbox(t *testing.T) {
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
-	knowninbox := protocol.NewEmptyInbox()
 
 	var tok protocol.TokenType
 	tok[0] = 15
@@ -761,13 +762,17 @@ func TestInbox(t *testing.T) {
 		big.NewInt(3),
 		common.HexToAddress("af3253"),
 	)
-	m.SendOnchainMessage(msg)
-	m.DeliverOnchainMessage()
+	messageStack := protocol.NewMessageStack()
+	messageStack.AddMessage(msg.AsValue())
 
-	knowninbox.SendMessage(msg)
-	knowninbox.DeliverMessages()
+	m.DeliverMessages(messageStack.GetValue())
+	knowninbox := protocol.NewInbox()
+	knowninbox.WithAddedMessages(messageStack.GetValue())
 
-	NewMachineAssertionContext(m, protocol.NewTimeBoundsBlocks(0, 100000))
+	NewMachineAssertionContext(m, protocol.NewTimeBoundsBlocks(
+		protocol.NewTimeBlocks(big.NewInt(0)),
+		protocol.NewTimeBlocks(big.NewInt(100000)),
+	))
 
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(1),
@@ -1493,7 +1498,10 @@ func TestLog(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 	m.Stack().Push(value.NewInt64Value(5))
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(0, 1000))
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(
+		protocol.NewTimeBlocks(big.NewInt(0)),
+		protocol.NewTimeBlocks(big.NewInt(10000)),
+	))
 	// verify known and unknown match
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
@@ -1531,7 +1539,10 @@ func TestSendFungible(t *testing.T) {
 	m.Stack().Push(tup)
 
 	// send token 15 value=7 to dest 4
-	ad := m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(0, 1000))
+	ad, _ := m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(
+		protocol.NewTimeBlocks(big.NewInt(0)),
+		protocol.NewTimeBlocks(big.NewInt(10000)),
+	))
 	// verify known and unknown match
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
@@ -1559,8 +1570,10 @@ func TestGettime(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 
-	m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(5, 10))
-
+	m.ExecuteAssertion(10, protocol.NewTimeBoundsBlocks(
+		protocol.NewTimeBlocks(big.NewInt(5)),
+		protocol.NewTimeBlocks(big.NewInt(10)),
+	))
 	// verify known and unknown match
 	knownMachine.Stack().Push(value.NewTuple2(value.NewInt64Value(5), value.NewInt64Value(10)))
 	if ok, err := Equal(knownMachine, m); !ok {

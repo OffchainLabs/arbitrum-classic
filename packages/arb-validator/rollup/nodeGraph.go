@@ -19,7 +19,6 @@ package rollup
 import (
 	"errors"
 	"log"
-	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -31,7 +30,6 @@ import (
 )
 
 type NodeGraph struct {
-	*sync.RWMutex
 	latestConfirmed *Node
 	leaves          *LeafSet
 	nodeFromHash    map[[32]byte]*Node
@@ -216,6 +214,22 @@ func (chain *NodeGraph) PruneNodeByHash(nodeHash [32]byte) {
 func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 	n1, _, _ = chain.GetConflictAncestor(n1, n2)
 	return n1
+}
+
+func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
+	prunesToDo := []pruneParams{}
+	chain.leaves.forall(func(leaf *Node) {
+		ancestor, _, err := chain.GetConflictAncestor(leaf, chain.latestConfirmed)
+		if err == nil {
+			prunesToDo = append(prunesToDo, pruneParams{
+				leaf,
+				ancestor,
+				GeneratePathProof(ancestor, leaf),
+				GeneratePathProof(ancestor, chain.latestConfirmed),
+			})
+		}
+	})
+	return prunesToDo
 }
 
 func (chain *NodeGraph) GetConflictAncestor(n1, n2 *Node) (*Node, structures.ChildType, error) {
