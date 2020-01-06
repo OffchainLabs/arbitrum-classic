@@ -175,11 +175,15 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		afterMachine = afterMachine.Clone()
 	}
 
-	chain.leaves.Add(NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime))
+	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime)
+	chain.nodeFromHash[newNode.hash] = newNode
+	chain.leaves.Add(newNode)
 
 	// create nodes for invalid branches
 	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
-		chain.leaves.Add(NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime))
+		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime)
+		chain.nodeFromHash[newNode.hash] = newNode
+		chain.leaves.Add(newNode)
 	}
 }
 

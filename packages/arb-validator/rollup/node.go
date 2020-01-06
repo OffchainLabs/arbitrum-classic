@@ -142,6 +142,10 @@ func (node1 *Node) Equals(node2 *Node) bool {
 	return node1.hash == node2.hash
 }
 
+func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Node {
+	return chain.nodeFromHash[node.successorHashes[kind]]
+}
+
 func (node *Node) ExecutionPrecondition() *protocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
 	beforeInbox := protocol.AddMessagesHashToInboxHash(vmProtoData.InboxHash, node.disputable.AssertionClaim.ImportedMessagesSlice)

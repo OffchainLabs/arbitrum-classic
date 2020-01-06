@@ -64,6 +64,14 @@ func NewMessageStack() *MessageStack {
 	}
 }
 
+func (ms *MessageStack) GetTopHash() [32]byte {
+	if ms.head == nil {
+		return value.NewEmptyTuple().Hash()
+	} else {
+		return ms.head.hash
+	}
+}
+
 func (pi *MessageStack) DeliverMessage(msg value.Value) {
 	if pi.head == nil {
 		item := &messageStackItem{

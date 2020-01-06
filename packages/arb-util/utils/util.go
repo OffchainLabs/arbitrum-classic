@@ -50,6 +50,9 @@ func MarshalBigInt(bi *big.Int) *value.BigIntegerBuf {
 		Value: bi.Bytes(),
 	}
 }
+func MarshalInt64ToBigIntBuf(val int64) *value.BigIntegerBuf {
+	return MarshalBigInt(big.NewInt(val))
+}
 
 func UnmarshalBigInt(buf *value.BigIntegerBuf) *big.Int {
 	return new(big.Int).SetBytes(buf.Value)
