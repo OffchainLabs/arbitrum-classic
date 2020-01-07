@@ -41,9 +41,9 @@ MachineState::MachineState(const std::vector<CodePoint>& code_,
                            const value& static_val_,
                            std::shared_ptr<TuplePool> pool_)
     : pool(std::move(pool_)),
-      pendingInbox(pool_.get()),
+      pendingInbox(pool.get()),
       context({0, 0}),
-      inbox(pool_.get()) {
+      inbox(pool.get()) {
     code = code_;
     staticVal = static_val_;
 
