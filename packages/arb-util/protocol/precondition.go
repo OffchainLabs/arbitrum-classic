@@ -62,7 +62,7 @@ func (tb *TimeBoundsBlocks) AsIntArray() [2]*big.Int {
 	return [2]*big.Int{utils.UnmarshalBigInt(tb.Start.Val), utils.UnmarshalBigInt(tb.End.Val)}
 }
 
-func (tb *TimeBoundsBlocks) Equals(other TimeBoundsBlocks) bool {
+func (tb *TimeBoundsBlocks) Equals(other *TimeBoundsBlocks) bool {
 	return tb.Start.Unmarshal().AsInt().Cmp(other.Start.Unmarshal().AsInt()) == 0 &&
 		tb.End.Unmarshal().AsInt().Cmp(other.End.Unmarshal().AsInt()) == 0
 }

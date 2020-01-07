@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"math/big"
@@ -43,7 +44,7 @@ type ChainObserver struct {
 	knownValidNode    *Node
 	listeners         []ChainListener
 	isOpinionated     bool
-	assertionMadeCond *sync.Cond
+	assertionMadeChan chan bool
 }
 
 func NewChain(
@@ -69,8 +70,8 @@ func NewChain(
 	}
 	if _updateOpinion {
 		ret.isOpinionated = true
-		ret.assertionMadeCond = sync.NewCond(ret.RLocker())
-		ret.startOpinionUpdateThread()
+		ret.assertionMadeChan = make(chan bool)
+		ret.startOpinionUpdateThread(context.TODO())
 	}
 	return ret
 }
@@ -108,8 +109,8 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext
 	}
 	if m.IsOpinionated {
 		chain.isOpinionated = true
-		chain.assertionMadeCond = sync.NewCond(chain.RLocker())
-		chain.startOpinionUpdateThread()
+		chain.assertionMadeChan = make(chan bool)
+		chain.startOpinionUpdateThread(context.TODO())
 	}
 	return chain
 }
@@ -196,8 +197,8 @@ func (chain *ChainObserver) notifyAssert(
 		topPendingCount,
 	)
 	chain.nodeGraph.CreateNodesOnAssert(chain.nodeGraph.nodeFromHash[ev.PrevLeafHash], disputableNode, nil, currentTime)
-	if chain.assertionMadeCond != nil {
-		chain.assertionMadeCond.Broadcast()
+	if chain.assertionMadeChan != nil {
+		chain.assertionMadeChan <- true
 	}
 	return nil
 }

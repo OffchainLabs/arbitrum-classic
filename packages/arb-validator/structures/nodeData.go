@@ -96,6 +96,12 @@ type AssertionParams struct {
 	ImportedMessageCount *big.Int
 }
 
+func (ap *AssertionParams) Equals(o *AssertionParams) bool {
+	return ap.NumSteps == o.NumSteps &&
+		ap.TimeBounds.Equals(o.TimeBounds) &&
+		ap.ImportedMessageCount.Cmp(o.ImportedMessageCount) == 0
+}
+
 func (ap *AssertionParams) Clone() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             ap.NumSteps,
@@ -124,6 +130,12 @@ type AssertionClaim struct {
 	AfterPendingTop       [32]byte
 	ImportedMessagesSlice [32]byte
 	AssertionStub         *protocol.ExecutionAssertionStub
+}
+
+func (dn *AssertionClaim) Equals(o *AssertionClaim) bool {
+	return dn.AfterPendingTop == o.AfterPendingTop &&
+		dn.ImportedMessagesSlice == o.ImportedMessagesSlice &&
+		dn.AssertionStub.Equals(o.AssertionStub)
 }
 
 func (dn *AssertionClaim) Clone() *AssertionClaim {
