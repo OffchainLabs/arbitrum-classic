@@ -385,8 +385,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash common
 		log.Println("TransactionReceipt error:", err)
 		return nil, err
 	} else if !ok {
-		// transaction was not found - throw an error?
-		return nil, nil
+		return nil, ethereum.NotFound
 	}
 
 	processed, err := evm.ProcessLog(result)
@@ -434,13 +433,6 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash common
 		}
 	}
 
-	var newContractAddr common.Address
-	if ethMsg.Data.CallData.ContractID != nil {
-		newContractAddr = common.BytesToAddress(ethMsg.Data.CallData.ContractID.Bytes()[12:])
-	} else {
-		newContractAddr = common.BytesToAddress([]byte{0})
-	}
-
 	return &types.Receipt{
 		PostState:         []byte{0},
 		Status:            status,
@@ -448,7 +440,7 @@ func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash common
 		Bloom:             types.BytesToBloom([]byte{0}),
 		Logs:              evmLogs,
 		TxHash:            txHash,
-		ContractAddress:   newContractAddr,
+		ContractAddress:   common.BytesToAddress([]byte{0}),
 		GasUsed:           1,
 		BlockHash:         txHash,
 		BlockNumber:       ethMsg.Data.Number,
