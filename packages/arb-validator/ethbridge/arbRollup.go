@@ -52,8 +52,6 @@ func NewRollup(address common.Address, client *ethclient.Client, auth *bind.Tran
 func (vm *ArbRollup) PlaceStake(
 	ctx context.Context,
 	stakeAmount *big.Int,
-	location [32]byte,
-	leaf [32]byte,
 	proof1 [][32]byte,
 	proof2 [][32]byte,
 ) (*types.Receipt, error) {
@@ -65,8 +63,6 @@ func (vm *ArbRollup) PlaceStake(
 	}
 	tx, err := vm.ArbRollup.PlaceStake(
 		call,
-		location,
-		leaf,
 		proof1,
 		proof2,
 	)
@@ -136,7 +132,6 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 	disputableNodeHashVal [32]byte,
 	childType uint64,
 	vmProtoStateHash [32]byte,
-	leaf [32]byte,
 	proof [][32]byte,
 ) (*types.Receipt, error) {
 	vm.auth.Context = ctx
@@ -147,7 +142,6 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 		disputableNodeHashVal,
 		new(big.Int).SetUint64(childType),
 		vmProtoStateHash,
-		leaf,
 		proof,
 	)
 	if err != nil {
@@ -158,16 +152,12 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 
 func (vm *ArbRollup) MoveStake(
 	ctx context.Context,
-	newLocation [32]byte,
-	leaf [32]byte,
 	proof1 [][32]byte,
 	proof2 [][32]byte,
 ) (*types.Receipt, error) {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MoveStake(
 		vm.auth,
-		newLocation,
-		leaf,
 		proof1,
 		proof2,
 	)
@@ -179,7 +169,6 @@ func (vm *ArbRollup) MoveStake(
 
 func (vm *ArbRollup) PruneLeaf(
 	ctx context.Context,
-	leaf [32]byte,
 	from [32]byte,
 	proof1 [][32]byte,
 	proof2 [][32]byte,
@@ -187,7 +176,6 @@ func (vm *ArbRollup) PruneLeaf(
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.PruneLeaf(
 		vm.auth,
-		leaf,
 		from,
 		proof1,
 		proof2,

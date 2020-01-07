@@ -23,12 +23,10 @@ import "./Staking.sol";
 contract ArbRollup is NodeGraph, Staking {
 
     // invalid path proof
-    string constant PLACE_PATH_PROOF = "PLACE_PATH_PROOF";
+    string constant PLACE_LEAF = "PLACE_LEAF";
 
     // invalid leaf
     string constant MOVE_LEAF = "MOVE_LEAF";
-    // new stake location is not in path
-    string constant MOVE_LOC = "MOVE_LOC";
 
     // invalid path proof
     string constant RECOV_PATH_PROOF = "RECOV_PATH_PROOF";
@@ -40,8 +38,6 @@ contract ArbRollup is NodeGraph, Staking {
     string constant RECOV_DEADLINE_LEAF = "RECOV_DEADLINE_LEAF";
     // Node is not passed deadline
     string constant RECOV_DEADLINE_TIME = "RECOV_DEADLINE_TIME";
-    // Node proof invalid
-    string constant RECOV_DEADLINE_PROOF = "RECOV_DEADLINE_PROOF";
 
     // invalid staker location proof
     string constant MAKE_STAKER_PROOF = "MAKE_STAKER_PROOF";
@@ -89,49 +85,28 @@ contract ArbRollup is NodeGraph, Staking {
     }
 
     function placeStake(
-        bytes32 location,
-        bytes32 _leaf,
         bytes32[] calldata proof1,
         bytes32[] calldata proof2
     )
         external
         payable
     {
-        require(isValidLeaf(_leaf), "invalid leaf");
-        require(
-            RollupUtils.isInPath(
-                latestConfirmed(),
-                location,
-                _leaf,
-                proof1,
-                proof2
-            ),
-            PLACE_PATH_PROOF
-        );
+        bytes32 location = RollupUtils.calculatePath(latestConfirmed(), proof1);
+        bytes32 leaf = RollupUtils.calculatePath(location, proof2);
+        require(isValidLeaf(leaf), PLACE_LEAF);
         createStake(location);
     }
 
     function moveStake(
-        bytes32 newLocation,
-        bytes32    _leaf,
         bytes32[] calldata proof1,
         bytes32[] calldata proof2
     )
         external
     {
         Staker storage staker = getValidStaker(msg.sender);
-        require(isValidLeaf(_leaf), MOVE_LEAF);
-        require(
-            RollupUtils.isInPath(
-                staker.location,
-                newLocation,
-                _leaf,
-                proof1,
-                proof2
-            ),
-            MOVE_LOC
-        );
-
+        bytes32 newLocation = RollupUtils.calculatePath(staker.location, proof1);
+        bytes32 leaf = RollupUtils.calculatePath(newLocation, proof2);
+        require(isValidLeaf(leaf), MOVE_LEAF);
         updateStakerLocation(msg.sender, newLocation);
     }
 
@@ -154,13 +129,9 @@ contract ArbRollup is NodeGraph, Staking {
     {
         Staker storage staker = getValidStaker(stakerAddress);
         require(
-            RollupUtils.isConflict(
-                node,
-                latestConfirmed(),
-                staker.location,
-                latestConfirmedProof,
-                stakerProof
-            ),
+            latestConfirmedProof[0] != stakerProof[0] &&
+            RollupUtils.calculatePath(node, latestConfirmedProof) == latestConfirmed() &&
+            RollupUtils.calculatePath(node, stakerProof) == staker.location,
             RECOV_CONFLICT_PROOF
         );
         refundStaker(stakerAddress);
@@ -173,7 +144,6 @@ contract ArbRollup is NodeGraph, Staking {
         bytes32 disputableNodeHashVal,
         uint256 childType,
         bytes32 vmProtoStateHash,
-        bytes32 leaf,
         bytes32[] calldata proof
     )
         external
@@ -186,9 +156,9 @@ contract ArbRollup is NodeGraph, Staking {
             childType,
             vmProtoStateHash
         );
+        bytes32 leaf = RollupUtils.calculatePath(nextNode, proof);
         require(isValidLeaf(leaf), RECOV_DEADLINE_LEAF);
         require(block.number >= RollupTime.blocksToTicks(deadlineTicks), RECOV_DEADLINE_TIME);
-        require(RollupUtils.isPath(nextNode, leaf, proof), RECOV_DEADLINE_PROOF);
 
         refundStaker(stakerAddress);
     }
@@ -245,7 +215,7 @@ contract ArbRollup is NodeGraph, Staking {
             )
         );
         Staker storage staker = getValidStaker(msg.sender);
-        require(RollupUtils.isPath(staker.location, prevLeaf, _stakerProof), MAKE_STAKER_PROOF);
+        require(RollupUtils.calculatePath(staker.location, _stakerProof) == prevLeaf, MAKE_STAKER_PROOF);
         updateStakerLocation(msg.sender, newValid);
     }
 
@@ -321,7 +291,7 @@ contract ArbRollup is NodeGraph, Staking {
 
     function _recoverStakeConfirmed(address payable stakerAddress, bytes32[] memory proof) private {
         Staker storage staker = getValidStaker(stakerAddress);
-        require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), RECOV_PATH_PROOF);
+        require(RollupUtils.calculatePath(staker.location, proof) == latestConfirmed(), RECOV_PATH_PROOF);
         refundStaker(stakerAddress);
     }
 
