@@ -19,6 +19,7 @@ package rollup
 import (
 	"bytes"
 	"errors"
+	"github.com/golang/protobuf/proto"
 	"math/big"
 	"sync"
 
@@ -87,6 +88,11 @@ func (chain *ChainObserver) MarshalForCheckpoint(ctx structures.CheckpointContex
 	}
 }
 
+func (chain *ChainObserver) MarshalToBytes(ctx structures.CheckpointContext) ([]byte, error) {
+	cob := chain.MarshalForCheckpoint(ctx)
+	return proto.Marshal(cob)
+}
+
 func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, _client *ethbridge.ArbRollup) *ChainObserver {
 	chain := &ChainObserver{
 		RWMutex:      &sync.RWMutex{},
@@ -106,6 +112,14 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext
 		chain.startOpinionUpdateThread()
 	}
 	return chain
+}
+
+func UnmarshalChainObserverFromBytes(buf []byte, ctx structures.RestoreContext, client *ethbridge.ArbRollup) (*ChainObserver, error) {
+	cob := &ChainObserverBuf{}
+	if err := proto.Unmarshal(buf, cob); err != nil {
+		return nil, err
+	}
+	return cob.UnmarshalFromCheckpoint(ctx, client), nil
 }
 
 func (chain *ChainObserver) PruneNode(ev ethbridge.PrunedEvent) {

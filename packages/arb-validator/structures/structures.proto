@@ -65,3 +65,10 @@ message CheckpointManifest {
     repeated value.HashBuf values = 1;
     repeated value.HashBuf machines = 2;
 }
+
+message CheckpointMetadata {
+    uint64 formatVersion = 1;
+    value.BigIntegerBuf oldestBlockHeight = 2;
+    value.BigIntegerBuf newestBlockHeight = 3;
+}
+

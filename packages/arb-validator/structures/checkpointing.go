@@ -17,6 +17,7 @@
 package structures
 
 import (
+	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -76,8 +77,111 @@ func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
 	return ctx.machines[h]
 }
 
+type RollupCheckpointer struct {
+	versionsToKeep *big.Int
+	cp             CheckpointerWithMetadata
+}
+
+func NewRollupCheckpointer(kind string, versionsToKeep int64) *RollupCheckpointer {
+	switch kind {
+	case "dummy":
+		return &RollupCheckpointer{big.NewInt(versionsToKeep), NewDummyCheckpointer()}
+	default:
+		return nil
+	}
+}
+
+func (rcp *RollupCheckpointer) SaveCheckpoint(
+	blockHeight *big.Int,
+	contents []byte,
+	manifest *CheckpointManifest,
+	values map[[32]byte]value.Value,
+	machines map[[32]byte]machine.Machine,
+) error {
+	var metadataBuf *CheckpointMetadata
+	var oldestInCp *big.Int
+	var newestInCp *big.Int
+	rawMetadata := rcp.cp.RestoreMetadata()
+	if rawMetadata == nil {
+		oldestInCp = blockHeight
+		newestInCp = blockHeight
+		metadataBuf = &CheckpointMetadata{
+			FormatVersion:     1,
+			OldestBlockHeight: utils.MarshalBigInt(oldestInCp),
+			NewestBlockHeight: utils.MarshalBigInt(newestInCp),
+		}
+		buf, err := proto.Marshal(metadataBuf)
+		if err != nil {
+			return err
+		}
+		rcp.cp.SaveMetadata(buf)
+	} else {
+		metadataBuf = &CheckpointMetadata{}
+		if err := proto.Unmarshal(rawMetadata, metadataBuf); err != nil {
+			return err
+		}
+		oldestInCp = utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
+		newestInCp = utils.UnmarshalBigInt(metadataBuf.NewestBlockHeight)
+		if blockHeight.Cmp(newestInCp) > 0 {
+			metadataBuf.NewestBlockHeight = utils.MarshalBigInt(blockHeight)
+			buf, err := proto.Marshal(metadataBuf)
+			if err != nil {
+				return err
+			}
+			rcp.cp.SaveMetadata(buf)
+		}
+	}
+	rcp.cp.SaveCheckpoint(blockHeight, contents, manifest, values, machines)
+
+	if oldestInCp.Cmp(new(big.Int).Sub(newestInCp, rcp.versionsToKeep)) < 0 {
+		go func() {
+			//TODO: clean up old versions
+		}()
+	}
+	return nil
+}
+
+func (rcp *RollupCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext, error) {
+	var metadataBuf *CheckpointMetadata
+	var oldestInCp *big.Int
+	var newestInCp *big.Int
+	rawMetadata := rcp.cp.RestoreMetadata()
+	if rawMetadata == nil {
+		return nil, nil, nil
+	}
+
+	metadataBuf = &CheckpointMetadata{}
+	if err := proto.Unmarshal(rawMetadata, metadataBuf); err != nil {
+		return nil, nil, err
+	}
+	oldestInCp = utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
+	newestInCp = utils.UnmarshalBigInt(metadataBuf.NewestBlockHeight)
+
+	if blockHeight.Cmp(oldestInCp) < 0 || blockHeight.Cmp(newestInCp) > 0 {
+		return nil, nil, nil
+	}
+
+	buf, ctx := rcp.cp.RestoreCheckpoint(blockHeight)
+	return buf, ctx, nil
+}
+
+type CheckpointerWithMetadata interface {
+	SaveMetadata([]byte)
+	RestoreMetadata() []byte
+	SaveCheckpoint(
+		blockHeight *big.Int,
+		contents []byte,
+		manifest *CheckpointManifest,
+		values map[[32]byte]value.Value,
+		machines map[[32]byte]machine.Machine,
+	)
+	RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext) // returns nil, nil if no data at blockHeight
+	DeleteCheckpoint(blockHeight *big.Int)
+}
+
 type DummyCheckpointer struct {
-	cp map[*big.Int]*dummyCheckpoint
+	metadata []byte
+	cp       map[*big.Int]*dummyCheckpoint
 }
 
 type dummyCheckpoint struct {
@@ -95,11 +199,19 @@ func (dcp *dummyCheckpoint) GetMachine(h [32]byte) machine.Machine {
 	return dcp.machines[h]
 }
 
-func NewDummyCheckpointer() *DummyCheckpointer {
-	return &DummyCheckpointer{make(map[*big.Int]*dummyCheckpoint)}
+func NewDummyCheckpointer() CheckpointerWithMetadata {
+	return &DummyCheckpointer{[]byte{}, make(map[*big.Int]*dummyCheckpoint)}
 }
 
-func (cp *DummyCheckpointer) Save(
+func (cp *DummyCheckpointer) SaveMetadata(data []byte) {
+	cp.metadata = append([]byte{}, data...)
+}
+
+func (cp *DummyCheckpointer) RestoreMetadata() []byte {
+	return append([]byte{}, cp.metadata...)
+}
+
+func (cp *DummyCheckpointer) SaveCheckpoint(
 	blockHeight *big.Int,
 	contents []byte,
 	manifest *CheckpointManifest,
@@ -109,11 +221,15 @@ func (cp *DummyCheckpointer) Save(
 	cp.cp[blockHeight] = &dummyCheckpoint{contents, manifest, values, machines}
 }
 
-func (cp *DummyCheckpointer) Restore(blockHeight *big.Int) ([]byte, RestoreContext) {
+func (cp *DummyCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext) {
 	dcp := cp.cp[blockHeight]
 	if dcp == nil {
 		return nil, nil
 	} else {
 		return dcp.contents, dcp
 	}
+}
+
+func (cp *DummyCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
+	delete(cp.cp, blockHeight)
 }
