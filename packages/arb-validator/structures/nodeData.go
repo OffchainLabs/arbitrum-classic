@@ -96,11 +96,19 @@ type AssertionParams struct {
 	ImportedMessageCount *big.Int
 }
 
-func (dn *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
+func (ap *AssertionParams) Clone() *AssertionParams {
+	return &AssertionParams{
+		NumSteps:             ap.NumSteps,
+		TimeBounds:           ap.TimeBounds.Clone(),
+		ImportedMessageCount: new(big.Int).Set(ap.ImportedMessageCount),
+	}
+}
+
+func (ap *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 	return &AssertionParamsBuf{
-		NumSteps:             dn.NumSteps,
-		TimeBounds:           dn.TimeBounds,
-		ImportedMessageCount: utils.MarshalBigInt(dn.ImportedMessageCount),
+		NumSteps:             ap.NumSteps,
+		TimeBounds:           ap.TimeBounds,
+		ImportedMessageCount: utils.MarshalBigInt(ap.ImportedMessageCount),
 	}
 }
 
@@ -116,6 +124,14 @@ type AssertionClaim struct {
 	AfterPendingTop       [32]byte
 	ImportedMessagesSlice [32]byte
 	AssertionStub         *protocol.ExecutionAssertionStub
+}
+
+func (dn *AssertionClaim) Clone() *AssertionClaim {
+	return &AssertionClaim{
+		AfterPendingTop:       dn.AfterPendingTop,
+		ImportedMessagesSlice: dn.ImportedMessagesSlice,
+		AssertionStub:         dn.AssertionStub.Clone(),
+	}
 }
 
 func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {

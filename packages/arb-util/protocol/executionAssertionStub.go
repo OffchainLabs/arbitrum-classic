@@ -19,6 +19,8 @@ package protocol
 import (
 	"bytes"
 
+	"github.com/golang/protobuf/proto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -40,6 +42,10 @@ func NewExecutionAssertionStub(
 		FirstLogHash:     value.NewHashBuf([32]byte{}),
 		LastLogHash:      value.NewHashBuf(logsAcc),
 	}
+}
+
+func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
+	return proto.Clone(a).(*ExecutionAssertionStub)
 }
 
 func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
