@@ -51,6 +51,7 @@ message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
     bytes contractAddress = 2;
     structures.PendingInboxBuf pendingInbox = 3;
+    bool isOpinionated = 4;
 }
 
 message StakerBuf {

@@ -41,6 +41,7 @@ type ChainObserver struct {
 	pendingInbox      *structures.PendingInbox
 	knownValidNode    *Node
 	listeners         []ChainListener
+	isOpinionated     bool
 	assertionMadeCond *sync.Cond
 }
 
@@ -66,6 +67,7 @@ func NewChain(
 		ret.startCleanupThread(_client, nil)
 	}
 	if _updateOpinion {
+		ret.isOpinionated = true
 		ret.assertionMadeCond = sync.NewCond(ret)
 		ret.startOpinionUpdateThread()
 	}
@@ -81,6 +83,7 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 		StakedNodeGraph: chain.nodeGraph.MarshalToBuf(),
 		ContractAddress: chain.rollupAddr.Bytes(),
 		PendingInbox:    chain.pendingInbox.MarshalToBuf(),
+		IsOpinionated:   chain.isOpinionated,
 	}
 }
 
@@ -93,6 +96,11 @@ func (m *ChainObserverBuf) Unmarshal(_client *ethbridge.ArbRollup) *ChainObserve
 	}
 	if _client != nil {
 		chain.startCleanupThread(_client, nil)
+	}
+	if m.IsOpinionated {
+		chain.isOpinionated = true
+		chain.assertionMadeCond = sync.NewCond(chain)
+		chain.startOpinionUpdateThread()
 	}
 	return chain
 }
