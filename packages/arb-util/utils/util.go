@@ -17,7 +17,6 @@
 package utils
 
 import (
-	"bytes"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -58,10 +57,6 @@ func UnmarshalBigInt(buf *value.BigIntegerBuf) *big.Int {
 	return new(big.Int).SetBytes(buf.Value)
 }
 
-func AddressesEqual(a1, a2 common.Address) bool {
-	return bytes.Compare(a1[:], a2[:]) == 0
-}
-
 var zeroAddress common.Address
 
 func init() {
@@ -69,5 +64,5 @@ func init() {
 }
 
 func AddressIsZero(addr common.Address) bool {
-	return AddressesEqual(addr, zeroAddress)
+	return addr == zeroAddress
 }

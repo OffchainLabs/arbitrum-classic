@@ -19,8 +19,11 @@ package rollup
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -33,65 +36,20 @@ type ChainListener interface {
 	StakeMoved(ethbridge.StakeMovedEvent)
 	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)
 	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
+
+	AssertionPrepared(*preparedAssertion)
 }
 
-type ValidatorChainListener struct {
-	chain  *ChainObserver
-	myAddr common.Address
-	client *ethbridge.ArbRollup
+type StakerListener struct {
+	myAddr   common.Address
+	auth     *bind.TransactOpts
+	client   *ethclient.Client
+	contract *ethbridge.ArbRollup
 }
 
-func NewValidatorChainListener(
-	chain *ChainObserver,
-	myAddr common.Address,
-	client *ethbridge.ArbRollup,
-	runLoop func(*ValidatorChainListener),
-) {
-	ret := &ValidatorChainListener{chain, myAddr, client}
-	go runLoop(ret)
-}
-
-func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) {
-	if utils.AddressesEqual(ev.Staker, lis.myAddr) {
-		opps := lis.chain.nodeGraph.checkChallengeOpportunityAllPairs()
-		for _, opp := range opps {
-			lis.initiateChallenge(context.TODO(), opp)
-		}
-	} else {
-		lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
-	}
-}
-
-func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
-
-}
-
-func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
-	lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
-}
-
-func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context, stakerAddr common.Address) {
-	if !utils.AddressesEqual(stakerAddr, lis.myAddr) {
-		newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
-		meAsStaker := lis.chain.nodeGraph.stakers.Get(lis.myAddr)
-		if meAsStaker != nil {
-			opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
-			if opp != nil {
-				lis.initiateChallenge(ctx, opp)
-				return
-			}
-		}
-		opp := lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
-		if opp != nil {
-			lis.initiateChallenge(ctx, opp)
-			return
-		}
-	}
-}
-
-func (lis *ValidatorChainListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
+func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
 	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
-		lis.client.StartChallenge(
+		staker.contract.StartChallenge(
 			ctx,
 			opp.asserter,
 			opp.challenger,
@@ -110,37 +68,28 @@ func (lis *ValidatorChainListener) initiateChallenge(ctx context.Context, opp *c
 	}()
 }
 
-func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
-	if utils.AddressesEqual(lis.myAddr, ev.Asserter) {
-		lis.actAsAsserter(ev, asserterAncestor)
-	}
-	if utils.AddressesEqual(lis.myAddr, ev.Challenger) {
-		lis.actAsChallenger(ev, asserterAncestor)
-	}
-}
-
-func (lis *ValidatorChainListener) actAsChallenger(ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
+func (staker *StakerListener) actAsChallenger(pendingInbox *structures.PendingInbox, ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
 	switch conflictNode.linkType {
 	case structures.InvalidPendingChildType:
 		go challenges.ChallengePendingTopClaim(
-			nil,
-			nil,
+			staker.auth,
+			staker.client,
 			ev.ChallengeContract,
-			lis.chain.pendingInbox,
+			pendingInbox,
 		)
 	case structures.InvalidMessagesChildType:
 		go challenges.ChallengeMessagesClaim(
-			nil,
-			nil,
+			staker.auth,
+			staker.client,
 			ev.ChallengeContract,
-			lis.chain.pendingInbox,
+			pendingInbox,
 			conflictNode.vmProtoData.PendingTop,
 			conflictNode.disputable.AssertionClaim.AfterPendingTop,
 		)
 	case structures.InvalidExecutionChildType:
 		go challenges.ChallengeExecutionClaim(
-			nil,
-			nil,
+			staker.auth,
+			staker.client,
 			ev.ChallengeContract,
 			conflictNode.ExecutionPrecondition(),
 			conflictNode.machine,
@@ -148,31 +97,31 @@ func (lis *ValidatorChainListener) actAsChallenger(ev ethbridge.ChallengeStarted
 	}
 }
 
-func (lis *ValidatorChainListener) actAsAsserter(ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
+func (staker *StakerListener) actAsAsserter(pendingInbox *structures.PendingInbox, ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
 	switch conflictNode.linkType {
 	case structures.InvalidPendingChildType:
 		go challenges.DefendPendingTopClaim(
-			nil,
-			nil,
+			staker.auth,
+			staker.client,
 			ev.ChallengeContract,
-			lis.chain.pendingInbox,
+			pendingInbox,
 			conflictNode.disputable.AssertionClaim.AfterPendingTop,
 			conflictNode.disputable.MaxPendingTop,
 		)
 	case structures.InvalidMessagesChildType:
 		go challenges.DefendMessagesClaim(
-			nil,
-			nil,
+			staker.auth,
+			staker.client,
 			ev.ChallengeContract,
-			lis.chain.pendingInbox,
+			pendingInbox,
 			conflictNode.vmProtoData.PendingTop,
 			conflictNode.disputable.AssertionClaim.AfterPendingTop,
 			conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
 		)
 	case structures.InvalidExecutionChildType:
 		go challenges.DefendExecutionClaim(
-			nil,
-			nil,
+			staker.auth,
+			staker.client,
 			ev.ChallengeContract,
 			conflictNode.ExecutionPrecondition(),
 			conflictNode.disputable.AssertionParams.NumSteps,
@@ -182,11 +131,92 @@ func (lis *ValidatorChainListener) actAsAsserter(ev ethbridge.ChallengeStartedEv
 	}
 }
 
+type ValidatorChainListener struct {
+	chain   *ChainObserver
+	stakers map[common.Address]*StakerListener
+}
+
+func NewValidatorChainListener(
+	chain *ChainObserver,
+) *ValidatorChainListener {
+	return &ValidatorChainListener{chain, make(map[common.Address]*StakerListener)}
+}
+
+func (lis *ValidatorChainListener) AddStaker(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) error {
+	contract, err := ethbridge.NewRollup(lis.chain.rollupAddr, client, auth)
+	if err != nil {
+		return err
+	}
+	lis.stakers[address] = &StakerListener{
+		myAddr:   address,
+		client:   client,
+		contract: contract,
+	}
+	return nil
+}
+
+func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) {
+	staker, ok := lis.stakers[ev.Staker]
+	if ok {
+		opps := lis.chain.nodeGraph.checkChallengeOpportunityAllPairs()
+		for _, opp := range opps {
+			staker.initiateChallenge(context.TODO(), opp)
+		}
+	} else {
+		lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
+	}
+}
+
+func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
+
+}
+
+func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
+	lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
+}
+
+func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context, stakerAddr common.Address) {
+	_, ok := lis.stakers[stakerAddr]
+	if !ok {
+		newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
+		for myAddr, staker := range lis.stakers {
+			meAsStaker := lis.chain.nodeGraph.stakers.Get(myAddr)
+			if meAsStaker != nil {
+				opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
+				if opp != nil {
+					staker.initiateChallenge(ctx, opp)
+					return
+				}
+			}
+			opp := lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
+			if opp != nil {
+				staker.initiateChallenge(ctx, opp)
+				return
+			}
+		}
+	}
+}
+
+func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
+	asserter, ok := lis.stakers[ev.Asserter]
+	if ok {
+		asserter.actAsAsserter(lis.chain.pendingInbox, ev, asserterAncestor)
+	}
+
+	challenger, ok := lis.stakers[ev.Challenger]
+	if ok {
+		challenger.actAsChallenger(lis.chain.pendingInbox, ev, asserterAncestor)
+	}
+}
+
 func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeCompletedEvent) {
-	if utils.AddressesEqual(lis.myAddr, ev.Winner) {
+	_, ok := lis.stakers[ev.Winner]
+	if ok {
 		lis.wonChallenge(ev)
 	}
-	if utils.AddressesEqual(lis.myAddr, ev.Loser) {
+
+	_, ok = lis.stakers[ev.Loser]
+	if ok {
 		lis.lostChallenge(ev)
 	}
 	lis.challengeStakerIfPossible(context.TODO(), ev.Winner)
@@ -197,5 +227,9 @@ func (lis *ValidatorChainListener) lostChallenge(ethbridge.ChallengeCompletedEve
 }
 
 func (lis *ValidatorChainListener) wonChallenge(ethbridge.ChallengeCompletedEvent) {
+
+}
+
+func (list *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion) {
 
 }

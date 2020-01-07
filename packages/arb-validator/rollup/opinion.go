@@ -97,6 +97,9 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				break
 			case prepped := <-assertionPreparedChan:
 				preparedAssertions[prepped.prevLeaf] = prepped
+				for _, lis := range chain.listeners {
+					lis.AssertionPrepared(prepped)
+				}
 			case <-ticker.C:
 				chain.RLock()
 				// Catch up to current head
