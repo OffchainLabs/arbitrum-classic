@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -lstdc++ -lm -lrocksdb
+#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb
 #include "../cavm/cmachine.h"
 #include "../cavm/ccheckpointstorage.h"
 #include <stdio.h>
@@ -189,11 +189,14 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 }
 
 func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
-	cCheckpointName := C.CString(checkpointName)
 	cCheckpointStorage, ok := storage.(*CheckpointStorage)
 
 	if ok {
+		cCheckpointName := C.CString(checkpointName)
 		success := C.restoreMachine(m.c, cCheckpointStorage.c, cCheckpointName)
+
+		C.free(unsafe.Pointer(cCheckpointName))
+
 		return success == 1
 	} else {
 		return false

@@ -18,6 +18,7 @@
 #include "bigint_utils.hpp"
 
 #include <avm/machine.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
 
 #include <sys/stat.h>
 #include <fstream>

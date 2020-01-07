@@ -18,8 +18,8 @@
 
 #include <bigint_utils.hpp>
 
-#include <avm/value/tuple.hpp>
-#include <avm/value/value.hpp>
+#include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>

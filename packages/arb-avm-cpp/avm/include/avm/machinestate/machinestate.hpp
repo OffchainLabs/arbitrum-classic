@@ -20,7 +20,7 @@
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/messagestack.hpp>
-#include <avm/value/value.hpp>
+#include <avm_values/value.hpp>
 
 #include <memory>
 #include <vector>
@@ -58,8 +58,11 @@ struct MachineState {
     BlockReason blockReason;
 
     MachineState();
+    MachineState(const std::vector<CodePoint>& code_,
+                 const value& static_val_,
+                 std::shared_ptr<TuplePool> pool_);
+    bool initialize_machinestate(const std::string& contract_filename);
 
-    bool deserialize(const char* data);
     void readInbox(char* newInbox);
     std::vector<unsigned char> marshalForProof();
     uint64_t pendingMessageCount() const;

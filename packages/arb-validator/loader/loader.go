@@ -38,6 +38,6 @@ func LoadMachineFromFile(fileName string, warnMode bool, vmtype string) (machine
 	}
 }
 
-func CreateCheckpointStorage(dbPath string) (machine.CheckpointStorage, error) {
-	return cmachine.NewCheckpoint(dbPath)
+func CreateCheckpointStorage(dbPath string, contractFile string) (machine.CheckpointStorage, error) {
+	return cmachine.NewCheckpoint(dbPath, contractFile)
 }

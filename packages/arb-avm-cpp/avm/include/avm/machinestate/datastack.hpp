@@ -17,8 +17,8 @@
 #ifndef datastack_hpp
 #define datastack_hpp
 
-#include <avm/value/tuple.hpp>
-#include <avm/value/value.hpp>
+#include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <vector>
 

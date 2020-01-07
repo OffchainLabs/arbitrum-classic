@@ -40,11 +40,6 @@ typedef enum {
 } CStatus;
 
 typedef struct {
-    void* data;
-    int length;
-} ByteSlice;
-
-typedef struct {
     enum CBlockType blockType;
     ByteSlice val1;
     ByteSlice val2;
@@ -60,8 +55,6 @@ typedef struct {
     uint64_t numSteps;
     uint64_t numGas;
 } RawAssertion;
-
-typedef void CMachine;
 
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
