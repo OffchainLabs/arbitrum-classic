@@ -43,8 +43,6 @@ type Machine struct {
 	status      machine.Status
 	blockReason machine.BlockReason
 
-	inbox *protocol.Inbox
-
 	sizeLimit     int64
 	sizeException bool
 
@@ -94,7 +92,6 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 	register := NewMachineValue(value.NewEmptyTuple())
 	static := NewMachineValue(staticVal)
 	errHandler := value.ErrorCodePoint
-	inbox := protocol.NewInbox()
 	var wh WarningHandler
 	if warn {
 		wh = NewVerboseWarningHandler(nil)
@@ -113,7 +110,6 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		&machine.NoContext{},
 		machine.Extensive,
 		nil,
-		inbox,
 		sizeLimit,
 		false,
 		wh,
@@ -154,11 +150,11 @@ func (m *Machine) SetContext(mc machine.Context) {
 	m.context = mc
 }
 
-func (m *Machine) ReadInbox() value.Value {
-	return m.inbox.Receive()
+func (m *Machine) GetInbox() value.TupleValue {
+	return m.context.GetInbox()
 }
 
-func (m *Machine) GetTimeBounds() value.Value {
+func (m *Machine) GetTimeBounds() value.TupleValue {
 	return m.context.GetTimeBounds()
 }
 
@@ -237,10 +233,11 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 }
 
 // ExecuteAssertion runs the machine up to maxSteps steps, stoping earlier if halted, errored or blocked
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
 	assCtx := NewMachineAssertionContext(
 		m,
 		timeBounds,
+		inbox,
 	)
 	m.blockReason = nil
 	for assCtx.StepCount() < maxSteps {
@@ -251,14 +248,6 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		}
 	}
 	return assCtx.Finalize(m)
-}
-
-func (m *Machine) DeliverMessages(messages value.TupleValue) {
-	m.inbox = m.inbox.WithAddedMessages(messages)
-}
-
-func (m *Machine) InboxHash() value.HashOnlyValue {
-	return value.NewHashOnlyValueFromValue(m.inbox.Receive())
 }
 
 func (m *Machine) Send(message value.Value) {
@@ -391,7 +380,6 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		&machine.NoContext{},
 		m.status,
 		m.blockReason,
-		m.inbox.Clone(),
 		m.sizeLimit,
 		m.sizeException,
 		newWarnHandler,

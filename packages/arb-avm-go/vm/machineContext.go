@@ -24,19 +24,21 @@ import (
 
 type MachineAssertionContext struct {
 	machine      *Machine
-	didInboxInsn bool
 	timeBounds   *protocol.TimeBoundsBlocks
+	inbox        value.TupleValue
+	didInboxInsn bool
 	numSteps     uint32
 	numGas       uint64
 	outMsgs      []value.Value
 	logs         []value.Value
 }
 
-func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBoundsBlocks) *MachineAssertionContext {
+func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) *MachineAssertionContext {
 	ret := &MachineAssertionContext{
 		m,
-		false,
 		timeBounds,
+		inbox,
+		false,
 		0,
 		0,
 		make([]value.Value, 0),
@@ -48,6 +50,15 @@ func NewMachineAssertionContext(m *Machine, timeBounds *protocol.TimeBoundsBlock
 
 func (ac *MachineAssertionContext) LoggedValue(data value.Value) {
 	ac.logs = append(ac.logs, data)
+}
+
+func (m *MachineAssertionContext) GetInbox() value.TupleValue {
+	return m.inbox
+}
+
+func (m *MachineAssertionContext) ReadInbox() {
+	m.didInboxInsn = true
+	m.inbox = value.NewEmptyTuple()
 }
 
 func (ac *MachineAssertionContext) Send(message value.Value) {
@@ -66,16 +77,13 @@ func (ac *MachineAssertionContext) OutMessageCount() int {
 	return len(ac.outMsgs)
 }
 
-func (ac *MachineAssertionContext) GetTimeBounds() value.Value {
+func (ac *MachineAssertionContext) GetTimeBounds() value.TupleValue {
 	return ac.timeBounds.AsValue()
 }
 
-func (ac *MachineAssertionContext) NotifyStep(numGas uint64, isInboxInsn bool) {
+func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {
 	ac.numSteps++
 	ac.numGas = ac.numGas + numGas
-	if isInboxInsn {
-		ac.didInboxInsn = true
-	}
 }
 
 func (ac *MachineAssertionContext) Finalize(m *Machine) (*protocol.ExecutionAssertion, uint32) {

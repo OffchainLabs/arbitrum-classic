@@ -20,9 +20,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"math/big"
 	"sync"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -213,4 +214,16 @@ func (co *ChainObserver) Equals(co2 *ChainObserver) bool {
 	return co.nodeGraph.Equals(co2.nodeGraph) &&
 		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
 		co.pendingInbox.Equals(co2.pendingInbox)
+}
+
+func (chain *ChainObserver) ExecutionPrecondition(node *Node) *protocol.Precondition {
+	vmProtoData := node.prev.vmProtoData
+	inbox := protocol.NewInbox()
+	messages := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, node.disputable.AssertionClaim.AfterPendingTop)
+	inbox.WithAddedMessages(messages)
+	return &protocol.Precondition{
+		BeforeHash:  vmProtoData.MachineHash,
+		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
+		BeforeInbox: inbox.Receive(),
+	}
 }

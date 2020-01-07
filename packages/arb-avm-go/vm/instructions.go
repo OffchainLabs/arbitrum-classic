@@ -26,7 +26,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -148,14 +147,14 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	}()
 
 	if err == nil {
-		m.context.NotifyStep(gas, op.GetOp() == code.INBOX)
+		m.context.NotifyStep(gas)
 		return mods, nil
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
 		return mods, blocked.reason
 	}
-	m.context.NotifyStep(gas, op.GetOp() == code.INBOX)
+	m.context.NotifyStep(gas)
 
 	//fmt.Printf("error running instruction %v: %v\n", code.InstructionNames[op.GetOp()], err)
 
@@ -685,15 +684,15 @@ func insnInbox(state *Machine) (StackMods, error) {
 		return mods, err
 	}
 	biTimeout := timeout.BigInt()
-	lowerTimeBound, err := state.GetTimeBounds().(value.TupleValue).GetByInt64(0)
+	lowerTimeBound, err := state.GetTimeBounds().GetByInt64(0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	inboxVal := state.ReadInbox()
-	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && inboxVal == value.NewEmptyTuple() {
+	inboxVal := state.GetInbox()
+	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
 		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
-	state.inbox = protocol.NewInbox()
+	state.context.ReadInbox()
 	mods = PushStackBox(state, mods, inboxVal)
 	state.IncrPC()
 	return mods, nil
@@ -1016,7 +1015,7 @@ func insnSend(state *Machine) (StackMods, error) {
 
 func insnGettime(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
-	mods = PushStackBox(state, mods, state.GetTimeBounds())
+	mods = PushStackTuple(state, mods, state.GetTimeBounds())
 	state.IncrPC()
 	return mods, nil
 }

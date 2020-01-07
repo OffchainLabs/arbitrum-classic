@@ -17,7 +17,6 @@
 package protocol
 
 import (
-	"bytes"
 	"errors"
 	"math/big"
 
@@ -79,7 +78,7 @@ func (tb *TimeBoundsBlocks) IsValidTime(time *TimeBlocks) error {
 	return nil
 }
 
-func (tb *TimeBoundsBlocks) AsValue() value.Value {
+func (tb *TimeBoundsBlocks) AsValue() value.TupleValue {
 	newTup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewIntValue(tb.Start.Unmarshal().AsInt()),
 		value.NewIntValue(tb.End.Unmarshal().AsInt()),
@@ -87,42 +86,29 @@ func (tb *TimeBoundsBlocks) AsValue() value.Value {
 	return newTup
 }
 
+type Precondition struct {
+	BeforeHash  [32]byte
+	TimeBounds  *TimeBoundsBlocks
+	BeforeInbox value.Value
+}
+
 func NewPrecondition(beforeHash [32]byte, timeBounds *TimeBoundsBlocks, beforeInbox value.Value) *Precondition {
-	return &Precondition{BeforeHash: value.NewHashBuf(beforeHash), TimeBounds: timeBounds, BeforeInbox: value.NewHashBuf(beforeInbox.Hash())}
-}
-
-func (pre *Precondition) BeforeHashValue() [32]byte {
-	var ret [32]byte
-	copy(ret[:], pre.BeforeHash.Value)
-	return ret
-}
-
-func (pre *Precondition) BeforeInboxValue() [32]byte {
-	var ret [32]byte
-	copy(ret[:], pre.BeforeInbox.Value)
-	return ret
+	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
 }
 
 func (pre *Precondition) Equals(b *Precondition) bool {
-	if !bytes.Equal(pre.BeforeHash.Value, b.BeforeHash.Value) {
-		return false
-	}
-	if pre.TimeBounds != b.TimeBounds {
-		return false
-	}
-	if !bytes.Equal(pre.BeforeInbox.Value, b.BeforeInbox.Value) {
-		return false
-	}
-	return true
+	return pre.BeforeHash == b.BeforeHash ||
+		pre.TimeBounds.Equals(b.TimeBounds) ||
+		value.Eq(pre.BeforeInbox, b.BeforeInbox)
 }
 
 func (pre *Precondition) Hash() [32]byte {
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(pre.BeforeHash.Value),
+		solsha3.Bytes32(pre.BeforeHash),
 		solsha3.Uint128(utils.UnmarshalBigInt(pre.TimeBounds.Start.Val)),
 		solsha3.Uint128(utils.UnmarshalBigInt(pre.TimeBounds.End.Val)),
-		solsha3.Bytes32(pre.BeforeInbox.Value),
+		solsha3.Bytes32(pre.BeforeInbox),
 	))
 	return ret
 }

@@ -19,26 +19,23 @@ package machine
 import (
 	"errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type AssertionDefender struct {
 	precondition *protocol.Precondition
 	numSteps     uint32
-	assertion    *protocol.ExecutionAssertionStub
 	initState    Machine
 }
 
-func NewAssertionDefender(precondition *protocol.Precondition, numSteps uint32, assertion *protocol.ExecutionAssertionStub, initState Machine) AssertionDefender {
-	return AssertionDefender{precondition, numSteps, assertion, initState.Clone()}
+func NewAssertionDefender(precondition *protocol.Precondition, numSteps uint32, initState Machine) AssertionDefender {
+	return AssertionDefender{precondition, numSteps, initState.Clone()}
 }
 
 func (ad AssertionDefender) NumSteps() uint32 {
 	return ad.numSteps
-}
-
-func (ad AssertionDefender) GetAssertion() *protocol.ExecutionAssertionStub {
-	return ad.assertion
 }
 
 func (ad AssertionDefender) GetPrecondition() *protocol.Precondition {
@@ -49,12 +46,13 @@ func (ad AssertionDefender) GetMachineState() Machine {
 	return ad.initState
 }
 
-func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
+func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*protocol.ExecutionAssertionStub) {
 	nsteps := ad.NumSteps()
 	if nsteps < slices {
 		slices = nsteps
 	}
 	defenders := make([]AssertionDefender, 0, slices)
+	assertions := make([]*protocol.ExecutionAssertionStub, 0, slices)
 	m := ad.initState.Clone()
 
 	pre := ad.precondition
@@ -67,16 +65,17 @@ func (ad AssertionDefender) NBisect(slices uint32) []AssertionDefender {
 		}
 
 		initState := m.Clone()
-		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds)
+		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 		defenders = append(defenders, NewAssertionDefender(
 			pre,
 			numSteps,
-			assertion.Stub(),
 			initState,
 		))
-		pre = assertion.Stub().GeneratePostcondition(pre)
+		stub := assertion.Stub()
+		assertions = append(assertions, stub)
+		pre = stub.GeneratePostcondition(pre)
 	}
-	return defenders
+	return defenders, assertions
 }
 
 func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
@@ -85,8 +84,8 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 
 func ChooseAssertionToChallenge(
 	m Machine,
+	pre *protocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
-	timeBounds *protocol.TimeBoundsBlocks,
 	totalSteps uint32,
 ) (uint16, Machine, error) {
 	assertionCount := uint32(len(assertions))
@@ -101,11 +100,14 @@ func ChooseAssertionToChallenge(
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
-			timeBounds,
+			pre.TimeBounds,
+			pre.BeforeInbox.(value.TupleValue),
 		)
-		if numSteps != steps || !generatedAssertion.Stub().Equals(assertions[i]) {
+		stub := generatedAssertion.Stub()
+		if numSteps != steps || !stub.Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}
+		pre = stub.GeneratePostcondition(pre)
 	}
 	return 0, nil, errors.New("all segments in false ExecutionAssertion are valid")
 }

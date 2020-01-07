@@ -153,14 +153,15 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Nod
 	return chain.nodeFromHash[node.successorHashes[kind]]
 }
 
-func (node *Node) ExecutionPrecondition() *protocol.Precondition {
+func (node *Node) ExecutionPreconditionHash() [32]byte {
 	vmProtoData := node.prev.vmProtoData
 	beforeInbox := protocol.AddMessagesHashToInboxHash(value.NewEmptyTuple().Hash(), node.disputable.AssertionClaim.ImportedMessagesSlice)
-	return &protocol.Precondition{
-		BeforeHash:  utils.MarshalHash(vmProtoData.MachineHash),
+	pre := &protocol.Precondition{
+		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: utils.MarshalHash(beforeInbox),
+		BeforeInbox: value.NewHashOnlyValue(beforeInbox, 0),
 	}
+	return pre.Hash()
 }
 
 func (node *Node) NodeDataHash(
@@ -215,7 +216,7 @@ func (node *Node) ChallengeNodeData(
 	case structures.InvalidExecutionChildType:
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Uint32(node.disputable.AssertionParams.NumSteps),
-			solsha3.Bytes32(node.ExecutionPrecondition().Hash()),
+			solsha3.Bytes32(node.ExecutionPreconditionHash()),
 			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.Hash()),
 		))
 		challengePeriod := params.GracePeriod.Add(node.disputable.CheckTime(params))

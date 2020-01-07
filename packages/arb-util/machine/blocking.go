@@ -17,18 +17,19 @@
 package machine
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type BlockReason interface {
-	IsBlocked(m Machine, currentTime uint64) bool
+	IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool
 	Equals(b BlockReason) bool
 }
 
 type HaltBlocked struct {
 }
 
-func (b HaltBlocked) IsBlocked(m Machine, currentTime uint64) bool {
+func (b HaltBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
 	return true
 }
 
@@ -40,7 +41,7 @@ func (b HaltBlocked) Equals(a BlockReason) bool {
 type ErrorBlocked struct {
 }
 
-func (b ErrorBlocked) IsBlocked(m Machine, currentTime uint64) bool {
+func (b ErrorBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
 	return true
 }
 
@@ -52,7 +53,7 @@ func (b ErrorBlocked) Equals(a BlockReason) bool {
 type BreakpointBlocked struct {
 }
 
-func (b BreakpointBlocked) IsBlocked(m Machine, currentTime uint64) bool {
+func (b BreakpointBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
 	return false
 }
 
@@ -65,9 +66,8 @@ type InboxBlocked struct {
 	Timeout value.IntValue
 }
 
-func (b InboxBlocked) IsBlocked(m Machine, currentTime uint64) bool {
-	biTimeout := b.Timeout.BigInt()
-	return m.InboxHash().Hash() == value.NewEmptyTuple().Hash() && (!biTimeout.IsUint64() || biTimeout.Uint64() > currentTime)
+func (b InboxBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
+	return b.Timeout.BigInt().Cmp(currentTime.AsInt()) > 0
 }
 
 func (b InboxBlocked) Equals(a BlockReason) bool {
