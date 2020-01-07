@@ -27,7 +27,6 @@ set(LIB_HEADERS
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/messagestack.hpp
   include/avm/machinestate/blockreason.hpp
-  include/avm/machinestate/tokenTracker.hpp
 )
 
 set(LIB_SOURCES
@@ -37,7 +36,6 @@ set(LIB_SOURCES
   src/machinestate/messagestack.cpp
   src/machinestate/datastack.cpp
   src/machinestate/blockreason.cpp
-  src/machinestate/tokenTracker.cpp
 )
 
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )

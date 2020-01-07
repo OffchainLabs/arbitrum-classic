@@ -18,7 +18,6 @@
 
 #include <avm/machinestate/messagestack.hpp>
 
-#include <avm/machinestate/tokenTracker.hpp>
 #include <data_storage/checkpoint/checkpointstorage.hpp>
 #include <data_storage/checkpoint/machinestatefetcher.hpp>
 #include <data_storage/checkpoint/machinestatesaver.hpp>
