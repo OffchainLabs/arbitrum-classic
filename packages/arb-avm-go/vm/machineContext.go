@@ -17,10 +17,49 @@
 package vm
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
+
+type Context interface {
+	Send(message value.Value)
+	GetTimeBounds() value.TupleValue
+	NotifyStep(uint64)
+	LoggedValue(value.Value)
+	GetInbox() value.TupleValue
+	ReadInbox()
+
+	OutMessageCount() int
+}
+
+type NoContext struct{}
+
+func (m *NoContext) LoggedValue(data value.Value) {
+
+}
+
+func (m *NoContext) GetInbox() value.TupleValue {
+	return value.NewEmptyTuple()
+}
+
+func (m *NoContext) ReadInbox() {
+
+}
+
+func (m *NoContext) Send(message value.Value) {
+
+}
+
+func (m *NoContext) OutMessageCount() int {
+	return 0
+}
+
+func (m *NoContext) GetTimeBounds() value.TupleValue {
+	return value.NewEmptyTuple()
+}
+
+func (m *NoContext) NotifyStep(uint64) {
+}
 
 type MachineAssertionContext struct {
 	machine      *Machine
@@ -87,10 +126,10 @@ func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {
 }
 
 func (ac *MachineAssertionContext) Finalize(m *Machine) (*protocol.ExecutionAssertion, uint32) {
-	ac.machine.SetContext(&machine.NoContext{})
+	ac.machine.SetContext(&NoContext{})
 	return protocol.NewExecutionAssertion(ac.machine.Hash(), ac.didInboxInsn, ac.numGas, ac.outMsgs, ac.logs), ac.numSteps
 }
 
 func (ac *MachineAssertionContext) EndContext() {
-	ac.machine.SetContext(&machine.NoContext{})
+	ac.machine.SetContext(&NoContext{})
 }

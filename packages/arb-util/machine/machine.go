@@ -5,46 +5,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type Context interface {
-	Send(message value.Value)
-	GetTimeBounds() value.TupleValue
-	NotifyStep(uint64)
-	LoggedValue(value.Value)
-	GetInbox() value.TupleValue
-	ReadInbox()
-
-	OutMessageCount() int
-}
-
-type NoContext struct{}
-
-func (m *NoContext) LoggedValue(data value.Value) {
-
-}
-
-func (m *NoContext) GetInbox() value.TupleValue {
-	return value.NewEmptyTuple()
-}
-
-func (m *NoContext) ReadInbox() {
-
-}
-
-func (m *NoContext) Send(message value.Value) {
-
-}
-
-func (m *NoContext) OutMessageCount() int {
-	return 0
-}
-
-func (m *NoContext) GetTimeBounds() value.TupleValue {
-	return value.NewEmptyTuple()
-}
-
-func (m *NoContext) NotifyStep(uint64) {
-}
-
 type Status int
 
 const (

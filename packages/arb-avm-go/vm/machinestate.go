@@ -39,7 +39,7 @@ type Machine struct {
 	static      *MachineValue
 	pc          *MachinePC
 	errHandler  value.CodePointValue
-	context     machine.Context
+	context     Context
 	status      machine.Status
 	blockReason machine.BlockReason
 
@@ -107,7 +107,7 @@ func NewMachine(opCodes []value.Operation, staticVal value.Value, warn bool, siz
 		static,
 		pc,
 		errHandler,
-		&machine.NoContext{},
+		&NoContext{},
 		machine.Extensive,
 		nil,
 		sizeLimit,
@@ -146,7 +146,7 @@ func (m *Machine) Static() *MachineValue {
 	return m.static
 }
 
-func (m *Machine) SetContext(mc machine.Context) {
+func (m *Machine) SetContext(mc Context) {
 	m.context = mc
 }
 
@@ -377,7 +377,7 @@ func (m *Machine) Clone() machine.Machine { // clone machine state--new machine 
 		m.static.Clone(),
 		newPcPointer,
 		m.errHandler,
-		&machine.NoContext{},
+		&NoContext{},
 		m.status,
 		m.blockReason,
 		m.sizeLimit,
