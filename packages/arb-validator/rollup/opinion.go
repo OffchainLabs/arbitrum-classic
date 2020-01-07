@@ -17,10 +17,11 @@
 package rollup
 
 import (
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"math/big"
 )
 
 func (chain *ChainObserver) startOpinionUpdateThread() {
@@ -32,54 +33,65 @@ func (chain *ChainObserver) startOpinionUpdateThread() {
 			}
 
 			currentOpinion := chain.knownValidNode
-			claim := currentOpinion.disputable.AssertionClaim
+			successorHashes := [4][32]byte{}
+			copy(successorHashes[:], currentOpinion.successorHashes[:])
+			successor := func() *Node {
+				for _, successor := range currentOpinion.successorHashes {
+					if successor != zeroBytes32 {
+						return chain.nodeGraph.nodeFromHash[successor]
+					}
+				}
+				return nil
+			}()
+
+			params := successor.disputable.AssertionParams.Clone()
+			claim := successor.disputable.AssertionClaim.Clone()
 			claimHeight, found := chain.pendingInbox.GetHeight(claim.AfterPendingTop)
-			var successors [structures.MaxChildType + 1]*Node
-			for i, sh := range currentOpinion.successorHashes {
-				successors[i] = chain.nodeGraph.nodeFromHash[sh]
+			var claimHeightCopy *big.Int
+			if found {
+				claimHeightCopy = new(big.Int).Set(claimHeight)
 			}
-			messageStack, _ := chain.pendingInbox.Substack(currentOpinion.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
-			topHash := messageStack.GetTopHash()
-			messagesVal := chain.pendingInbox.ValueForSubseq(currentOpinion.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
-			prevMach := currentOpinion.prev.machine.Clone()
+			messageStack, _ := chain.pendingInbox.Substack(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
+			messagesVal := chain.pendingInbox.ValueForSubseq(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
+			prevMach := currentOpinion.machine.Clone()
+			prevPendingCount := new(big.Int).Set(currentOpinion.vmProtoData.PendingCount)
 			chain.RUnlock()
 
-			newOpinion := updateNodeOpinion(currentOpinion, claimHeight, found, successors, topHash, messagesVal, prevMach)
+			newOpinion := getNodeOpinion(params, claim, prevPendingCount, claimHeightCopy, messageStack, messagesVal, prevMach)
 
 			chain.Lock()
-			if newOpinion.depth > chain.nodeGraph.latestConfirmed.depth {
-				chain.knownValidNode = newOpinion
+			correctNode, ok := chain.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
+			if ok {
+				chain.knownValidNode = correctNode
 			}
 			chain.Unlock()
 		}
 	}()
 }
 
-func updateNodeOpinion(
-	currentOpinion *Node,
+func getNodeOpinion(
+	params *structures.AssertionParams,
+	claim *structures.AssertionClaim,
+	prevPendingCount *big.Int,
 	claimHeight *big.Int,
-	found bool,
-	successors [structures.MaxChildType + 1]*Node,
-	topHash [32]byte,
+	messageStack *structures.MessageStack,
 	messagesVal value.TupleValue,
 	prevMach machine.Machine,
-) *Node {
-	params := currentOpinion.disputable.AssertionParams
-	claim := currentOpinion.disputable.AssertionClaim
-	correctAfterPendingTopHeight := new(big.Int).Add(currentOpinion.prev.vmProtoData.PendingCount, params.ImportedMessageCount)
-	if !found || correctAfterPendingTopHeight.Cmp(claimHeight) != 0 {
-		return successors[structures.InvalidPendingChildType]
+) structures.ChildType {
+	correctAfterPendingTopHeight := new(big.Int).Add(prevPendingCount, params.ImportedMessageCount)
+	if claimHeight == nil || correctAfterPendingTopHeight.Cmp(claimHeight) != 0 {
+		return structures.InvalidPendingChildType
 	}
-	if topHash != claim.ImportedMessagesSlice {
-		return successors[structures.InvalidMessagesChildType]
+	if messageStack.GetTopHash() != claim.ImportedMessagesSlice {
+		return structures.InvalidMessagesChildType
 	}
 
-	mach := currentOpinion.prev.machine.Clone()
+	mach := prevMach
 	mach.DeliverMessages(messagesVal)
 	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
-		return successors[structures.InvalidExecutionChildType]
+		return structures.InvalidExecutionChildType
 	}
 
-	return successors[structures.ValidChildType]
+	return structures.ValidChildType
 }

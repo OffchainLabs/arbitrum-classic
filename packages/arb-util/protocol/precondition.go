@@ -21,10 +21,11 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/golang/protobuf/proto"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -51,6 +52,10 @@ func NewTimeBoundsBlocks(startTimeBlocks, endTimeBlocks *TimeBlocks) *TimeBounds
 		Start: startTimeBlocks.Marshal(),
 		End:   endTimeBlocks.Marshal(),
 	}
+}
+
+func (tb *TimeBoundsBlocks) Clone() *TimeBoundsBlocks {
+	return proto.Clone(tb).(*TimeBoundsBlocks)
 }
 
 func (tb *TimeBoundsBlocks) AsIntArray() [2]*big.Int {
