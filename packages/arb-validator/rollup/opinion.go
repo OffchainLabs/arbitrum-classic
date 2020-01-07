@@ -150,8 +150,9 @@ func (chain *ChainObserver) prepareAssertion(
 	mach := currentOpinion.machine.Clone()
 	chain.RUnlock()
 
-	mach.DeliverMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds)
+	inbox := protocol.NewInbox()
+	inbox.WithAddedMessages(messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, inbox.Receive())
 	var params *structures.AssertionParams
 	var claim *structures.AssertionClaim
 	if assertion.DidInboxInsn {
@@ -208,8 +209,9 @@ func getNodeOpinion(
 	}
 
 	mach := prevMach
-	mach.DeliverMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds)
+	inbox := protocol.NewInbox()
+	inbox.WithAddedMessages(messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, inbox.Receive())
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
 		return structures.InvalidExecutionChildType
 	}

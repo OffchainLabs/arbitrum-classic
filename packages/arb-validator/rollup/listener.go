@@ -20,6 +20,9 @@ import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -85,67 +88,68 @@ func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAs
 	}()
 }
 
-func (staker *StakerListener) actAsChallenger(pendingInbox *structures.PendingInbox, ev arbbridge.ChallengeStartedEvent, conflictNode *Node) {
-	switch conflictNode.linkType {
-	case structures.InvalidPendingChildType:
-		go challenges.ChallengePendingTopClaim(
-			staker.auth,
-			staker.client,
-			ev.ChallengeContract,
-			pendingInbox,
-		)
-	case structures.InvalidMessagesChildType:
-		go challenges.ChallengeMessagesClaim(
-			staker.auth,
-			staker.client,
-			ev.ChallengeContract,
-			pendingInbox,
-			conflictNode.vmProtoData.PendingTop,
-			conflictNode.disputable.AssertionClaim.AfterPendingTop,
-		)
-	case structures.InvalidExecutionChildType:
-		go challenges.ChallengeExecutionClaim(
-			staker.auth,
-			staker.client,
-			ev.ChallengeContract,
-			conflictNode.ExecutionPrecondition(),
-			conflictNode.machine,
-		)
-	}
+func (staker *StakerListener) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
+	go challenges.ChallengePendingTopClaim(
+		staker.auth,
+		staker.client,
+		contractAddress,
+		pendingInbox,
+	)
 }
 
-func (staker *StakerListener) actAsAsserter(pendingInbox *structures.PendingInbox, ev arbbridge.ChallengeStartedEvent, conflictNode *Node) {
-	switch conflictNode.linkType {
-	case structures.InvalidPendingChildType:
-		go challenges.DefendPendingTopClaim(
-			staker.auth,
-			staker.client,
-			ev.ChallengeContract,
-			pendingInbox,
-			conflictNode.disputable.AssertionClaim.AfterPendingTop,
-			conflictNode.disputable.MaxPendingTop,
-		)
-	case structures.InvalidMessagesChildType:
-		go challenges.DefendMessagesClaim(
-			staker.auth,
-			staker.client,
-			ev.ChallengeContract,
-			pendingInbox,
-			conflictNode.vmProtoData.PendingTop,
-			conflictNode.disputable.AssertionClaim.AfterPendingTop,
-			conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
-		)
-	case structures.InvalidExecutionChildType:
-		go challenges.DefendExecutionClaim(
-			staker.auth,
-			staker.client,
-			ev.ChallengeContract,
-			conflictNode.ExecutionPrecondition(),
-			conflictNode.disputable.AssertionParams.NumSteps,
-			conflictNode.disputable.AssertionClaim.AssertionStub,
-			conflictNode.machine,
-		)
-	}
+func (staker *StakerListener) challengeMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+	go challenges.ChallengeMessagesClaim(
+		staker.auth,
+		staker.client,
+		contractAddress,
+		pendingInbox,
+		conflictNode.vmProtoData.PendingTop,
+		conflictNode.disputable.AssertionClaim.AfterPendingTop,
+	)
+}
+
+func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition) {
+	go challenges.ChallengeExecutionClaim(
+		staker.auth,
+		staker.client,
+		contractAddress,
+		pre,
+		mach,
+	)
+}
+
+func (staker *StakerListener) defendPendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+	go challenges.DefendPendingTopClaim(
+		staker.auth,
+		staker.client,
+		contractAddress,
+		pendingInbox,
+		conflictNode.disputable.AssertionClaim.AfterPendingTop,
+		conflictNode.disputable.MaxPendingTop,
+	)
+}
+
+func (staker *StakerListener) defendMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+	go challenges.DefendMessagesClaim(
+		staker.auth,
+		staker.client,
+		contractAddress,
+		pendingInbox,
+		conflictNode.vmProtoData.PendingTop,
+		conflictNode.disputable.AssertionClaim.AfterPendingTop,
+		conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+	)
+}
+
+func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition, numSteps uint32) {
+	go challenges.DefendExecutionClaim(
+		staker.auth,
+		staker.client,
+		contractAddress,
+		pre,
+		numSteps,
+		mach,
+	)
 }
 
 type ValidatorChainListener struct {
@@ -214,15 +218,38 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 	}
 }
 
-func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
 	asserter, ok := lis.stakers[ev.Asserter]
 	if ok {
-		asserter.actAsAsserter(lis.chain.pendingInbox, ev, asserterAncestor)
+		switch conflictNode.linkType {
+		case structures.InvalidPendingChildType:
+			asserter.defendPendingTop(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+		case structures.InvalidMessagesChildType:
+			asserter.defendMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+		case structures.InvalidExecutionChildType:
+			asserter.defendExecution(
+				ev.ChallengeContract,
+				conflictNode.machine,
+				lis.chain.ExecutionPrecondition(conflictNode),
+				conflictNode.disputable.AssertionParams.NumSteps,
+			)
+		}
 	}
 
 	challenger, ok := lis.stakers[ev.Challenger]
 	if ok {
-		challenger.actAsChallenger(lis.chain.pendingInbox, ev, asserterAncestor)
+		switch conflictNode.linkType {
+		case structures.InvalidPendingChildType:
+			challenger.challengePendingTop(ev.ChallengeContract, lis.chain.pendingInbox)
+		case structures.InvalidMessagesChildType:
+			challenger.challengeMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+		case structures.InvalidExecutionChildType:
+			challenger.challengeExecution(
+				ev.ChallengeContract,
+				conflictNode.machine,
+				lis.chain.ExecutionPrecondition(conflictNode),
+			)
+		}
 	}
 }
 

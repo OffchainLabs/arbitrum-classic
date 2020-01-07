@@ -27,7 +27,7 @@ message TimeBoundsBlocks {
     TimeBlocksBuf end = 2;
 }
 
-message Precondition {
+message PreconditionBuf {
     value.HashBuf beforeHash = 1;
     TimeBoundsBlocks timeBounds = 2;
     value.HashBuf beforeInbox = 3;

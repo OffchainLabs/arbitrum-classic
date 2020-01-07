@@ -21,6 +21,8 @@ import (
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -36,7 +38,6 @@ func DefendExecutionClaim(
 	address common.Address,
 	precondition *protocol.Precondition,
 	numSteps uint32,
-	assertion *protocol.ExecutionAssertionStub,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
 	contract, err := ethbridge.NewExecutionChallenge(address, client, auth)
@@ -55,7 +56,6 @@ func DefendExecutionClaim(
 		machine.NewAssertionDefender(
 			precondition,
 			numSteps,
-			assertion,
 			startMachine,
 		),
 	)
@@ -109,7 +109,9 @@ func defendExecution(
 			if err != nil {
 				return 0, err
 			}
-			err = contract.OneStepProof(ctx, defender.GetPrecondition(), defender.GetAssertion(), proof)
+			pre := defender.GetPrecondition()
+			assertion, _ := defender.GetMachineState().ExecuteAssertion(1, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+			_, err = contract.OneStepProof(ctx, defender.GetPrecondition(), assertion.Stub(), proof)
 			if err != nil {
 				return 0, err
 			}
@@ -124,12 +126,8 @@ func defendExecution(
 			return ChallengeAsserterWon, nil
 		}
 
-		defenders := defender.NBisect(50)
-		assertions := make([]*protocol.ExecutionAssertionStub, 0, len(defenders))
-		for _, defender := range defenders {
-			assertions = append(assertions, defender.GetAssertion())
-		}
-		err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
+		defenders, assertions := defender.NBisect(50)
+		_, err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 
 		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
@@ -195,7 +193,7 @@ func challengeExecution(
 		if !ok {
 			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
 		}
-		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach, ev.Assertions, startPrecondition.TimeBounds, ev.TotalSteps)
+		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach, startPrecondition, ev.Assertions, ev.TotalSteps)
 		if err != nil {
 			return 0, err
 		}

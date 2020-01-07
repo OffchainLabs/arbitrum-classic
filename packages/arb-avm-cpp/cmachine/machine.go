@@ -115,27 +115,15 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	return nil
 }
 
-func (m *Machine) InboxHash() value.HashOnlyValue {
-	var hash [32]byte
-	C.machineInboxHash(m.c, unsafe.Pointer(&hash[0]))
-	return value.NewHashOnlyValue(hash, 0)
-}
-
 func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
-func (m *Machine) DeliverMessages(messages value.TupleValue) {
-	var buf bytes.Buffer
-	err := value.MarshalValue(messages, &buf)
-	if err != nil {
-		panic(err)
-	}
-	msgData := buf.Bytes()
-	C.machineDeliverMessages(m.c, unsafe.Pointer(&msgData[0]))
-}
-
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint32,
+	timeBounds *protocol.TimeBoundsBlocks,
+	inbox value.TupleValue,
+) (*protocol.ExecutionAssertion, uint32) {
 	startTime := utils.UnmarshalBigInt(timeBounds.Start.Val)
 	endTime := utils.UnmarshalBigInt(timeBounds.End.Val)
 
@@ -151,13 +139,21 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		log.Fatal(err)
 	}
 
+	var buf bytes.Buffer
+	err = value.MarshalValue(inbox, &buf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	startTimeData := startTimeBuf.Bytes()
 	endTimeData := endTimeBuf.Bytes()
+	msgData := buf.Bytes()
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		unsafe.Pointer(&startTimeData[0]),
 		unsafe.Pointer(&endTimeData[0]),
+		unsafe.Pointer(&msgData[0]),
 	)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)

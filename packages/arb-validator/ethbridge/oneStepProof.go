@@ -34,9 +34,9 @@ func (con *OneStepProof) ValidateProof(
 ) (*big.Int, error) {
 	return con.contract.ValidateProof(
 		auth,
-		precondition.BeforeHashValue(),
+		precondition.BeforeHash,
 		precondition.TimeBounds.AsIntArray(),
-		precondition.BeforeInboxValue(),
+		precondition.BeforeInbox.Hash(),
 		assertion.AfterHashValue(),
 		assertion.DidInboxInsn,
 		assertion.FirstMessageHashValue(),

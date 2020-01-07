@@ -65,15 +65,14 @@ void machineHash(CMachine* m, void* ret);
 CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
-void machineInboxHash(CMachine* m, void* ret);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineLastBlockReason(CMachine* m);
-void machineDeliverMessages(CMachine* m, void* data);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* timeboundStart,
-                                     void* timeboundEnd);
+                                     void* timeboundEnd,
+                                     void* inbox);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 

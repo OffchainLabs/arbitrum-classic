@@ -92,14 +92,6 @@ void machinePrint(CMachine* m) {
     std::cout << "Machine info\n" << *mach << std::endl;
 }
 
-void machineInboxHash(CMachine* m, void* ret) {
-    assert(m);
-    uint256_t retHash = static_cast<Machine*>(m)->inboxHash();
-    std::array<unsigned char, 32> val;
-    to_big_endian(retHash, val.begin());
-    std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
-}
-
 CStatus machineCurrentStatus(CMachine* m) {
     Machine* mach = static_cast<Machine*>(m);
     switch (mach->currentStatus()) {
@@ -164,25 +156,23 @@ ByteSlice machineMarshallForProof(CMachine* m) {
     return {voidData, static_cast<int>(proof.size())};
 }
 
-void machineDeliverMessages(CMachine* m, void* messagesData) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    auto data = reinterpret_cast<const char*>(messagesData);
-    auto messages = deserialize_value(data, mach->getPool());
-    mach->deliverMessages(nonstd::get<Tuple>(std::move(messages)));
-}
-
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* timeboundStartData,
-                                     void* timeboundEndData) {
+                                     void* timeboundEndData,
+                                     void* inbox) {
     assert(m);
     Machine* mach = static_cast<Machine*>(m);
     auto timeboundStartPtr = reinterpret_cast<const char*>(timeboundStartData);
     auto timeboundStart = deserializeUint256t(timeboundStartPtr);
     auto timeboundEndPtr = reinterpret_cast<const char*>(timeboundEndData);
     auto timeboundEnd = deserializeUint256t(timeboundEndPtr);
-    Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd);
+
+    auto inboxData = reinterpret_cast<const char*>(inbox);
+    auto messages = deserialize_value(inboxData, mach->getPool());
+
+    Assertion assertion = mach->run(maxSteps, timeboundStart, timeboundEnd,
+                                    nonstd::get<Tuple>(std::move(messages)));
     std::vector<unsigned char> outMsgData;
     for (const auto& outMsg : assertion.outMessages) {
         marshal_value(outMsg, outMsgData);

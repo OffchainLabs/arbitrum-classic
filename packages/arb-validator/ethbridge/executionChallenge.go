@@ -184,7 +184,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
 	logAccs := make([][32]byte, 0, len(assertions)+1)
 	gasses := make([]uint64, 0, len(assertions))
-	machineHashes = append(machineHashes, precondition.BeforeHashValue())
+	machineHashes = append(machineHashes, precondition.BeforeHash)
 	messageAccs = append(messageAccs, assertions[0].FirstMessageHashValue())
 	logAccs = append(logAccs, assertions[0].FirstLogHashValue())
 	for _, assertion := range assertions {
@@ -197,7 +197,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	c.auth.Context = ctx
 	tx, err := c.Challenge.BisectAssertion(
 		c.auth,
-		precondition.BeforeInboxValue(),
+		precondition.BeforeHash,
 		precondition.TimeBounds.AsIntArray(),
 		machineHashes,
 		didInboxInsns,
@@ -221,8 +221,8 @@ func (c *ExecutionChallenge) OneStepProof(
 	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
 		c.auth,
-		precondition.BeforeHashValue(),
-		precondition.BeforeInboxValue(),
+		precondition.BeforeHash,
+		precondition.BeforeInbox.Hash(),
 		precondition.TimeBounds.AsIntArray(),
 		assertion.AfterHashValue(),
 		assertion.DidInboxInsn,

@@ -568,14 +568,13 @@ void getTime(MachineState& m) {
 BlockReason inboxOp(MachineState& m) {
     m.stack.prepForMod(1);
     auto& aNum = assumeInt(m.stack[0]);
-    if (aNum > m.context.timeBounds[0] && m.inbox.isEmpty()) {
+    if (aNum > m.context.timeBounds[0] && m.context.inbox.tuple_size() == 0) {
         m.stack.popClear();
         return InboxBlocked(aNum);
     } else {
-        value inboxCopy = m.inbox.messages;
-        m.stack[0] = std::move(inboxCopy);
-        m.inbox.clear();
+        m.stack[0] = std::move(m.context.inbox);
         ++m.pc;
+        m.context.executedInbox();
         return NotBlocked{};
     }
 }

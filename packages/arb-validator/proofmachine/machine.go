@@ -92,15 +92,7 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	return m.machine.LastBlockReason()
 }
 
-func (m *Machine) InboxHash() value.HashOnlyValue {
-	return m.machine.InboxHash()
-}
-
-func (m *Machine) DeliverMessages(msgs value.TupleValue) {
-	m.machine.DeliverMessages(msgs)
-}
-
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
 	a := &protocol.ExecutionAssertion{}
 	totalSteps := uint32(0)
 	stepIncrease := uint32(1)
@@ -116,8 +108,7 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 			}
 		}
 		beforeHash := m.Hash()
-		inboxHash := m.InboxHash()
-		a1, ranSteps := m.machine.ExecuteAssertion(stepIncrease, timeBounds)
+		a1, ranSteps := m.machine.ExecuteAssertion(stepIncrease, timeBounds, inbox)
 		a.AfterHash = a1.AfterHash
 		totalSteps += ranSteps
 		a.NumGas += a1.NumGas
@@ -142,7 +133,7 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 			}
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
-			precond := protocol.NewPrecondition(beforeHash, timeBounds, inboxHash)
+			precond := protocol.NewPrecondition(beforeHash, timeBounds, inbox)
 
 			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
 			if err != nil {
@@ -157,6 +148,10 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 				m.PrintState()
 				log.Fatalln("Proof invalid")
 			}
+		}
+
+		if a1.DidInboxInsn {
+			inbox = value.NewEmptyTuple()
 		}
 	}
 	fmt.Println("Proof mode ran ", stepsRan, " steps")
