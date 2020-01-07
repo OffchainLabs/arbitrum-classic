@@ -29,10 +29,16 @@ import (
 )
 
 type preparedAssertion struct {
-	prevLeaf [32]byte
-	params   *structures.AssertionParams
-	claim    *structures.AssertionClaim
-	machine  machine.Machine
+	prevLeaf         [32]byte
+	prevPrevLeafHash [32]byte
+	prevDataHash     [32]byte
+	prevDeadline     structures.TimeTicks
+	prevChildType    structures.ChildType
+
+	beforeState *structures.VMProtoData
+	params      *structures.AssertionParams
+	claim       *structures.AssertionClaim
+	machine     machine.Machine
 }
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
@@ -97,9 +103,11 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				break
 			case prepped := <-assertionPreparedChan:
 				preparedAssertions[prepped.prevLeaf] = prepped
+				chain.RLock()
 				for _, lis := range chain.listeners {
 					lis.AssertionPrepared(prepped)
 				}
+				chain.RUnlock()
 			case <-ticker.C:
 				chain.RLock()
 				// Catch up to current head
@@ -127,11 +135,16 @@ func (chain *ChainObserver) prepareAssertion(
 	chain.RLock()
 	currentOpinion := chain.knownValidNode
 	currentOpinionHash := currentOpinion.hash
+	prevPrevLeafHash := currentOpinion.PrevHash()
+	prevDataHash := currentOpinion.nodeDataHash
+	prevDeadline := structures.TimeTicks{new(big.Int).Set(currentOpinion.deadline.Val)}
+	prevChildType := currentOpinion.linkType
+	beforeState := currentOpinion.vmProtoData.Clone()
 	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {
 		return nil
 	}
 	afterPendingTop := chain.pendingInbox.GetTopHash()
-	beforePendingTop := currentOpinion.vmProtoData.PendingTop
+	beforePendingTop := beforeState.PendingTop
 	messageStack, _ := chain.pendingInbox.Substack(beforePendingTop, afterPendingTop)
 	messagesVal := chain.pendingInbox.ValueForSubseq(beforePendingTop, afterPendingTop)
 	mach := currentOpinion.machine.Clone()
@@ -165,10 +178,15 @@ func (chain *ChainObserver) prepareAssertion(
 		}
 	}
 	return &preparedAssertion{
-		prevLeaf: currentOpinionHash,
-		params:   params,
-		claim:    claim,
-		machine:  mach,
+		prevLeaf:         currentOpinionHash,
+		prevPrevLeafHash: prevPrevLeafHash,
+		prevDataHash:     prevDataHash,
+		prevDeadline:     prevDeadline,
+		prevChildType:    prevChildType,
+		beforeState:      beforeState,
+		params:           params,
+		claim:            claim,
+		machine:          mach,
 	}
 }
 

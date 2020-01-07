@@ -64,6 +64,14 @@ func (d *VMProtoData) Equals(o *VMProtoData) bool {
 		d.PendingCount.Cmp(o.PendingCount) == 0
 }
 
+func (d *VMProtoData) Clone() *VMProtoData {
+	return &VMProtoData{
+		MachineHash:  d.MachineHash,
+		PendingTop:   d.PendingTop,
+		PendingCount: new(big.Int).Set(d.PendingCount),
+	}
+}
+
 func (d *VMProtoData) Hash() [32]byte {
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(

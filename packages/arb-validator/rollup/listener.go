@@ -68,6 +68,22 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 	}()
 }
 
+func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) {
+	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
+		staker.contract.MakeAssertion(
+			ctx,
+			opp.prevPrevLeafHash,
+			opp.prevDataHash,
+			opp.prevDeadline,
+			opp.prevChildType,
+			opp.beforeState,
+			opp.params,
+			opp.claim,
+			proof,
+		)
+	}()
+}
+
 func (staker *StakerListener) actAsChallenger(pendingInbox *structures.PendingInbox, ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
 	switch conflictNode.linkType {
 	case structures.InvalidPendingChildType:
@@ -230,6 +246,15 @@ func (lis *ValidatorChainListener) wonChallenge(ethbridge.ChallengeCompletedEven
 
 }
 
-func (list *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion) {
-
+func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion) {
+	leaf, ok := lis.chain.nodeGraph.nodeFromHash[prepared.prevLeaf]
+	if ok {
+		for _, staker := range lis.stakers {
+			stakerPos := lis.chain.nodeGraph.stakers.Get(staker.myAddr)
+			proof := GeneratePathProof(stakerPos.location, leaf)
+			if proof != nil {
+				staker.makeAssertion(context.TODO(), prepared, proof)
+			}
+		}
+	}
 }

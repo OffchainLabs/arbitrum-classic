@@ -141,6 +141,14 @@ func (node *Node) Equals(node2 *Node) bool {
 	return node.hash == node2.hash
 }
 
+func (node *Node) PrevHash() [32]byte {
+	if node.prev != nil {
+		return node.prev.hash
+	} else {
+		return [32]byte{}
+	}
+}
+
 func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Node {
 	return chain.nodeFromHash[node.successorHashes[kind]]
 }
