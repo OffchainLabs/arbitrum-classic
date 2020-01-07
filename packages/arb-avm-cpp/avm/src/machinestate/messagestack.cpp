@@ -15,9 +15,10 @@
  */
 
 #include <avm/machinestate/messagestack.hpp>
+#include <avm/machinestate/tokenTracker.hpp>
 
-#include <avm/checkpoint/machinestatefetcher.hpp>
-#include <avm/checkpoint/machinestatesaver.hpp>
+#include <data_storage/checkpoint/machinestatefetcher.hpp>
+#include <data_storage/checkpoint/machinestatesaver.hpp>
 
 MessageStackSaveResults MessageStack::checkpointState(
     MachineStateSaver& msSaver) {

@@ -16,30 +16,14 @@
 
 #include <avm/machinestate/machinestate.hpp>
 
-#include <avm/checkpoint/checkpointstorage.hpp>
-#include <avm/checkpoint/machinestatefetcher.hpp>
-#include <avm/checkpoint/machinestatesaver.hpp>
-#include <avm/exceptions.hpp>
 #include <avm/machinestate/machineoperation.hpp>
+#include <avm_values/exceptions.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machinestatefetcher.hpp>
+#include <data_storage/checkpoint/machinestatesaver.hpp>
 
+#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <util.hpp>
-
-namespace {
-std::vector<CodePoint> opsToCodePoints(const std::vector<Operation>& ops) {
-    std::vector<CodePoint> cps;
-    cps.reserve(ops.size());
-    uint64_t pc = 0;
-    for (auto& op : ops) {
-        cps.emplace_back(pc, std::move(op), 0);
-        pc++;
-    }
-    for (uint64_t i = 0; i < cps.size() - 1; i++) {
-        cps[cps.size() - 2 - i].nextHash = hash(cps[cps.size() - 1 - i]);
-    }
-    return cps;
-}
-}  // namespace
 
 void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
     std::array<unsigned char, 32> tmpbuf;
@@ -49,6 +33,34 @@ void uint256_t_to_buf(const uint256_t& val, std::vector<unsigned char>& buf) {
 
 MachineState::MachineState()
     : pool(std::make_unique<TuplePool>()), context({0, 0}), inbox(pool.get()) {}
+
+MachineState::MachineState(const std::vector<CodePoint>& code_,
+                           const value& static_val_,
+                           std::shared_ptr<TuplePool> pool_)
+    : pool(std::move(pool_)), context({0, 0}), inbox(pool.get()) {
+    code = code_;
+    staticVal = static_val_;
+
+    errpc = getErrCodePoint();
+    pc = 0;
+}
+
+bool MachineState::initialize_machinestate(
+    const std::string& contract_filename) {
+    auto initial_state = parseInitialVmValues(contract_filename, *pool.get());
+
+    if (initial_state.valid_state) {
+        code = initial_state.code;
+        staticVal = initial_state.staticVal;
+
+        errpc = getErrCodePoint();
+        pc = 0;
+
+        return true;
+    } else {
+        return false;
+    }
+}
 
 uint256_t MachineState::hash() const {
     if (state == Status::Halted)
@@ -112,45 +124,6 @@ uint256_t MachineState::hash() const {
     return from_big_endian(hashData.begin(), hashData.end());
 }
 
-bool MachineState::deserialize(const char* bufptr) {
-    uint32_t version;
-    memcpy(&version, bufptr, sizeof(version));
-    version = __builtin_bswap32(version);
-    bufptr += sizeof(version);
-
-    if (version != CURRENT_AO_VERSION) {
-        std::cerr << "incorrect version of .ao file" << std::endl;
-        std::cerr << "expected version " << CURRENT_AO_VERSION
-                  << " found version " << version << std::endl;
-        return false;
-    }
-
-    uint32_t extentionId = 1;
-    while (extentionId != 0) {
-        memcpy(&extentionId, bufptr, sizeof(extentionId));
-        extentionId = __builtin_bswap32(extentionId);
-        bufptr += sizeof(extentionId);
-        if (extentionId > 0) {
-            //            std::cout << "found extention" << std::endl;
-        }
-    }
-    uint64_t codeCount;
-    memcpy(&codeCount, bufptr, sizeof(codeCount));
-    bufptr += sizeof(codeCount);
-    codeCount = boost::endian::big_to_native(codeCount);
-    code.reserve(codeCount);
-
-    std::vector<Operation> ops;
-    for (uint64_t i = 0; i < codeCount; i++) {
-        ops.emplace_back(deserializeOperation(bufptr, *pool));
-    }
-    code = opsToCodePoints(ops);
-    errpc = getErrCodePoint();
-    staticVal = deserialize_value(bufptr, *pool);
-    pc = 0;
-    return true;
-}
-
 void MachineState::deliverMessages(Tuple&& messages) {
     inbox.addMessages(std::move(messages));
 }
@@ -207,15 +180,15 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
         static_val_results.status.ok() && register_val_results.status.ok() &&
         pc_results.status.ok() && err_code_point.status.ok()) {
         auto machine_state_data =
-            ParsedState{static_val_results.storage_key,
-                        register_val_results.storage_key,
-                        datastack_results.storage_key,
-                        auxstack_results.storage_key,
-                        inbox_results.msgs_tuple_results.storage_key,
-                        pc_results.storage_key,
-                        err_code_point.storage_key,
-                        status_str,
-                        blockreason_str};
+            MachineStateKeys{static_val_results.storage_key,
+                             register_val_results.storage_key,
+                             datastack_results.storage_key,
+                             auxstack_results.storage_key,
+                             inbox_results.msgs_tuple_results.storage_key,
+                             pc_results.storage_key,
+                             err_code_point.storage_key,
+                             status_str,
+                             blockreason_str};
 
         auto results =
             stateSaver.saveMachineState(machine_state_data, hash_key);
@@ -229,7 +202,7 @@ SaveResults MachineState::checkpointState(CheckpointStorage& storage) {
 bool MachineState::restoreCheckpoint(
     const CheckpointStorage& storage,
     const std::vector<unsigned char>& checkpoint_key) {
-    auto stateFetcher = MachineStateFetcher(storage, pool.get(), code);
+    auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
     if (results.status.ok()) {

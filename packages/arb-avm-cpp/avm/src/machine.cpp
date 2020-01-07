@@ -18,11 +18,12 @@
 #include <fstream>
 #include <iostream>
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
 #include <avm/machine.hpp>
-#include <avm/opcodes.hpp>
+#include <avm_values/opcodes.hpp>
+#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <util.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machinestatedeleter.hpp>
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
@@ -41,23 +42,11 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
 }
 
 bool Machine::initializeMachine(const std::string& filename) {
-    std::ifstream myfile;
+    return machine_state.initialize_machinestate(filename);
+}
 
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(filename, std::ios::in);
-
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
-
-        return deserialize(buf);
-    } else {
-        return false;
-    }
+void Machine::initializeMachine(const MachineState& initial_state) {
+    machine_state = initial_state;
 }
 
 void Machine::deliverMessages(Tuple messages) {
@@ -164,5 +153,6 @@ bool Machine::restoreCheckpoint(
 
 DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
     auto checkpoint_key = GetHashKey(hash());
+
     return ::deleteCheckpoint(storage, checkpoint_key);
 }

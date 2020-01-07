@@ -46,22 +46,8 @@ int main(int argc, char* argv[]) {
     }
     std::cout << filename << std::endl;
 
-    std::ifstream myfile;
-
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(filename, std::ios::in);
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
-    }
-    std::cout << "In read_files. Done reading " << filename << std::endl;
-
     Machine mach;
-    mach.deserialize(buf);
+    mach.initializeMachine(filename);
 
     auto start = std::chrono::high_resolution_clock::now();
 

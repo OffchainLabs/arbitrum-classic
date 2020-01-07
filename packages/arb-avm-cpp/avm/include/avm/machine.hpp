@@ -18,7 +18,7 @@
 #define machine_hpp
 
 #include <avm/machinestate/machinestate.hpp>
-#include <avm/value/value.hpp>
+#include <avm_values/value.hpp>
 
 #include <memory>
 #include <vector>
@@ -39,7 +39,7 @@ class Machine {
 
    public:
     bool initializeMachine(const std::string& filename);
-    bool deserialize(char* data) { return machine_state.deserialize(data); }
+    void initializeMachine(const MachineState& initial_state);
 
     Assertion run(uint64_t stepCount,
                   uint256_t timeBoundStart,

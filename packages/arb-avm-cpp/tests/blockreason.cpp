@@ -15,12 +15,13 @@
  */
 
 #include <avm/machinestate/blockreason.hpp>
+#include <data_storage/checkpoint/checkpointutils.hpp>
 
 #include <catch2/catch.hpp>
 
 void serializeBlockReason(BlockReason& block_reason, BlockType expected_type) {
     auto serialized = serializeForCheckpoint(block_reason);
-    auto type = (BlockType)serialized[0];
+    auto type = serialized[0];
     REQUIRE(type == expected_type);
     REQUIRE(serialized.size() == blockreason_type_length[expected_type]);
 }
