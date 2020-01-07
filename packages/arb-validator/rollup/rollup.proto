@@ -42,8 +42,21 @@ message NodeGraphBuf {
     structures.ChainParamsBuf params = 5;
 }
 
+message NodeGraphCkpBuf {
+    repeated value.HashBuf nodeHashes = 1;
+    value.HashBuf oldestNodeHash = 2;
+    value.HashBuf latestConfirmedHash = 3;
+    repeated value.HashBuf leafHashes = 4;
+    structures.ChainParamsBuf params = 5;
+}
+
 message StakedNodeGraphBuf {
     NodeGraphBuf nodeGraph = 1;
+    repeated StakerBuf stakers = 2;
+}
+
+message StakedNodeGraphCkpBuf {
+    NodeGraphCkpBuf nodeGraph = 1;
     repeated StakerBuf stakers = 2;
 }
 
@@ -51,6 +64,13 @@ message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
     bytes contractAddress = 2;
     structures.PendingInboxBuf pendingInbox = 3;
+    bool isOpinionated = 4;
+}
+
+message ChainObserverCkpBuf {
+    StakedNodeGraphCkpBuf stakedNodeGraph = 1;
+    bytes contractAddress = 2;
+    structures.PendingInboxCkpBuf pendingInbox = 3;
     bool isOpinionated = 4;
 }
 

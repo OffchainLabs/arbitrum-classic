@@ -17,6 +17,7 @@
 package structures
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -24,8 +25,8 @@ import (
 
 func TestPendingInboxInsert(t *testing.T) {
 	pi := NewPendingInbox()
-	if pi.head != nil {
-		t.Error("head of new PendingInbox should be nil")
+	if pi.newest != nil {
+		t.Error("newest of new PendingInbox should be nil")
 	}
 	buf := pi.MarshalToBuf()
 	pi2 := buf.Unmarshal()
@@ -37,27 +38,41 @@ func TestPendingInboxInsert(t *testing.T) {
 	val2 := value.NewTuple2(val1, value.NewTuple2(val1, val1))
 
 	pi.DeliverMessage(val1)
-	if !pi.head.message.Equal(val1) {
-		t.Error("head of PendingInbox wrong at val1")
+	if !pi.newest.message.Equal(val1) {
+		t.Error("newest of PendingInbox wrong at val1")
 	}
 	buf = pi.MarshalToBuf()
 	pi2 = buf.Unmarshal()
-	if pi.head.hash != pi2.head.hash {
+	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
 
 	pi.DeliverMessage(val2)
-	if !pi.head.message.Equal(val2) {
-		t.Error("head of PendingInbox wrong at val2")
+	if !pi.newest.message.Equal(val2) {
+		t.Error("newest of PendingInbox wrong at val2")
 	}
 	buf = pi.MarshalToBuf()
 	pi2 = buf.Unmarshal()
-	if pi.head.hash != pi2.head.hash {
+	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of two-item pending inbox")
 	}
 
-	val3 := pi.ValueForSubseq(pi.hashOfRest, pi.head.hash)
-	if val3.Hash() != pi.head.hash {
+	val3 := pi.ValueForSubseq(pi.hashOfRest, pi.newest.hash)
+	if val3.Hash() != pi.newest.hash {
 		t.Error("unexpected hash for extracted inbox")
+	}
+
+	pi.DiscardUpToCount(big.NewInt(0))
+	buf = pi.MarshalToBuf()
+	pi2 = buf.Unmarshal()
+	if pi.newest.hash != pi2.newest.hash {
+		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
+	}
+
+	pi.DiscardUpToCount(big.NewInt(1))
+	buf = pi.MarshalToBuf()
+	pi2 = buf.Unmarshal()
+	if pi.newest.hash != pi2.newest.hash {
+		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
 }

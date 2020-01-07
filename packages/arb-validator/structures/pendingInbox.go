@@ -51,47 +51,55 @@ func (msi *messageStackItem) Equals(msi2 *messageStackItem) bool {
 }
 
 type MessageStack struct {
-	head       *messageStackItem
+	topCount   *big.Int
+	newest     *messageStackItem
+	oldest     *messageStackItem
 	index      map[[32]byte]*messageStackItem
 	hashOfRest [32]byte
 }
 
 func NewMessageStack() *MessageStack {
 	return &MessageStack{
-		head:       nil,
+		topCount:   big.NewInt(0),
+		newest:     nil,
+		oldest:     nil,
 		index:      make(map[[32]byte]*messageStackItem),
 		hashOfRest: value.NewEmptyTuple().Hash(),
 	}
 }
 
 func (ms *MessageStack) GetTopHash() [32]byte {
-	if ms.head == nil {
+	if ms.newest == nil {
 		return value.NewEmptyTuple().Hash()
 	} else {
-		return ms.head.hash
+		return ms.newest.hash
 	}
 }
 
 func (pi *MessageStack) DeliverMessage(msg value.Value) {
-	if pi.head == nil {
+	newTopCount := new(big.Int).Add(pi.topCount, big.NewInt(1))
+	if pi.newest == nil {
 		item := &messageStackItem{
 			message: msg,
 			prev:    nil,
 			next:    nil,
 			hash:    hash2(pi.hashOfRest, msg.Hash()),
-			count:   big.NewInt(1),
+			count:   newTopCount,
 		}
-		pi.head = item
+		pi.topCount = new(big.Int).Set(newTopCount)
+		pi.newest = item
+		pi.oldest = item
 		pi.index[item.hash] = item
 	} else {
 		item := &messageStackItem{
 			message: msg,
-			prev:    pi.head,
+			prev:    pi.newest,
 			next:    nil,
-			hash:    hash2(pi.head.hash, msg.Hash()),
-			count:   new(big.Int).Add(pi.head.count, big.NewInt(1)),
+			hash:    hash2(pi.newest.hash, msg.Hash()),
+			count:   newTopCount,
 		}
-		pi.head = item
+		pi.topCount = new(big.Int).Set(newTopCount)
+		pi.newest = item
 		item.prev.next = item
 		pi.index[item.hash] = item
 	}
@@ -126,7 +134,7 @@ func hash2(h1, h2 [32]byte) [32]byte {
 
 func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
 	var msgs [][]byte
-	for item := pi.head; item != nil; item = item.prev {
+	for item := pi.newest; item != nil; item = item.prev {
 		bb := bytes.NewBuffer(nil)
 		err := value.MarshalValue(item.message, bb)
 		if err != nil {
@@ -134,7 +142,14 @@ func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
 		}
 		msgs = append(msgs, bb.Bytes())
 	}
+	var topCount *big.Int
+	if pi.newest == nil {
+		topCount = big.NewInt(0)
+	} else {
+		topCount = pi.newest.count
+	}
 	return &PendingInboxBuf{
+		TopCount:   utils.MarshalBigInt(topCount),
 		Items:      msgs,
 		HashOfRest: utils.MarshalHash(pi.hashOfRest),
 	}
@@ -142,6 +157,7 @@ func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
 
 func (buf *PendingInboxBuf) Unmarshal() *MessageStack {
 	ret := NewMessageStack()
+	ret.topCount = new(big.Int).Sub(utils.UnmarshalBigInt(buf.TopCount), big.NewInt(int64(len(buf.Items))))
 	ret.hashOfRest = utils.UnmarshalHash(buf.HashOfRest)
 	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
 		val, err := value.UnmarshalValue(bytes.NewBuffer([]byte(buf.Items[i])))
@@ -177,7 +193,7 @@ func (pi *MessageStack) GenerateBisection(startItemHash [32]byte, endItemHash [3
 		return nil, errors.New("endItemHash not found")
 	}
 
-	count := new(big.Int).Sub(pi.head.count, endItem.count).Uint64()
+	count := new(big.Int).Sub(pi.newest.count, endItem.count).Uint64()
 	if count < segments {
 		segments = count
 	}
@@ -288,23 +304,17 @@ func NewPendingInbox() *PendingInbox {
 	}
 }
 
-func (pi *PendingInbox) DiscardUpTo(hash [32]byte) (discardedSomething bool) {
-	item, ok := pi.index[hash]
-	if !ok {
-		return false
-	}
-	pi.hashOfRest = item.hash
-	if item.next != nil {
-		item.next.prev = nil
-	}
-	pi.discardItems(item)
-	return true
-}
-
-func (pi *PendingInbox) discardItems(item *messageStackItem) {
-	for item != nil {
-		delete(pi.index, item.hash)
-		item = item.prev
+func (pi *PendingInbox) DiscardUpToCount(count *big.Int) {
+	for pi.oldest != nil && pi.oldest.count.Cmp(count) < 0 {
+		victim := pi.oldest
+		if victim == pi.newest {
+			pi.oldest = nil
+			pi.newest = nil
+		} else {
+			pi.oldest = victim.next
+			pi.oldest.prev = nil
+		}
+		delete(pi.index, victim.hash)
 	}
 }
 
