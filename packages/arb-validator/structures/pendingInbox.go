@@ -49,7 +49,6 @@ func (msi *messageStackItem) Equals(msi2 *messageStackItem) bool {
 }
 
 type MessageStack struct {
-	topCount   *big.Int
 	newest     *messageStackItem
 	oldest     *messageStackItem
 	index      map[[32]byte]*messageStackItem
@@ -58,7 +57,6 @@ type MessageStack struct {
 
 func NewMessageStack() *MessageStack {
 	return &MessageStack{
-		topCount:   big.NewInt(0),
 		newest:     nil,
 		oldest:     nil,
 		index:      make(map[[32]byte]*messageStackItem),
@@ -74,8 +72,16 @@ func (ms *MessageStack) GetTopHash() [32]byte {
 	}
 }
 
+func (ms *MessageStack) TopCount() *big.Int {
+	if ms.newest == nil {
+		return big.NewInt(0)
+	} else {
+		return ms.newest.count
+	}
+}
+
 func (pi *MessageStack) DeliverMessage(msg value.Value) {
-	newTopCount := new(big.Int).Add(pi.topCount, big.NewInt(1))
+	newTopCount := new(big.Int).Add(pi.TopCount(), big.NewInt(1))
 	if pi.newest == nil {
 		item := &messageStackItem{
 			message: msg,
@@ -84,7 +90,6 @@ func (pi *MessageStack) DeliverMessage(msg value.Value) {
 			hash:    hash2(pi.hashOfRest, msg.Hash()),
 			count:   newTopCount,
 		}
-		pi.topCount = new(big.Int).Set(newTopCount)
 		pi.newest = item
 		pi.oldest = item
 		pi.index[item.hash] = item
@@ -96,7 +101,6 @@ func (pi *MessageStack) DeliverMessage(msg value.Value) {
 			hash:    hash2(pi.newest.hash, msg.Hash()),
 			count:   newTopCount,
 		}
-		pi.topCount = new(big.Int).Set(newTopCount)
 		pi.newest = item
 		item.prev.next = item
 		pi.index[item.hash] = item
@@ -151,7 +155,6 @@ func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInbo
 
 func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) *MessageStack {
 	ret := NewMessageStack()
-	ret.topCount = new(big.Int).Sub(utils.UnmarshalBigInt(buf.TopCount), big.NewInt(int64(len(buf.ItemHashes))))
 	ret.hashOfRest = utils.UnmarshalHash(buf.HashOfRest)
 	for i := len(buf.ItemHashes) - 1; i >= 0; i = i - 1 {
 		val := ctx.GetValue(utils.UnmarshalHash(buf.ItemHashes[i]))
