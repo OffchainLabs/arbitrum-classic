@@ -68,7 +68,7 @@ func NewChain(
 	}
 	if _updateOpinion {
 		ret.isOpinionated = true
-		ret.assertionMadeCond = sync.NewCond(ret)
+		ret.assertionMadeCond = sync.NewCond(ret.RLocker())
 		ret.startOpinionUpdateThread()
 	}
 	return ret
@@ -102,7 +102,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext
 	}
 	if m.IsOpinionated {
 		chain.isOpinionated = true
-		chain.assertionMadeCond = sync.NewCond(chain)
+		chain.assertionMadeCond = sync.NewCond(chain.RLocker())
 		chain.startOpinionUpdateThread()
 	}
 	return chain
