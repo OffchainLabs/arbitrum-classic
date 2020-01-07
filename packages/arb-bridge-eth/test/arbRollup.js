@@ -66,6 +66,20 @@ function protoStateHash(machineHash, pendingTop, pendingCount) {
   );
 }
 
+function childNodeInnerHash(
+  deadlineTicks,
+  nodeDataHash,
+  childType,
+  vmProtoStateHash
+) {
+  return web3.utils.soliditySha3(
+    { t: "bytes32", v: vmProtoStateHash },
+    { t: "uint256", v: deadlineTicks },
+    { t: "bytes32", v: nodeDataHash },
+    { t: "uint256", v: childType }
+  );
+}
+
 function childNodeHash(
   prevNodeHash,
   deadlineTicks,
@@ -77,13 +91,20 @@ function childNodeHash(
     { t: "bytes32", v: prevNodeHash },
     {
       t: "bytes32",
-      v: web3.utils.soliditySha3(
-        { t: "bytes32", v: vmProtoStateHash },
-        { t: "uint256", v: deadlineTicks },
-        { t: "bytes32", v: nodeDataHash },
-        { t: "uint256", v: childType }
+      v: childNodeInnerHash(
+        deadlineTicks,
+        nodeDataHash,
+        childType,
+        vmProtoStateHash
       )
     }
+  );
+}
+
+function childNodeShortHash(prevNodeHash, nodeInnerHash) {
+  return web3.utils.soliditySha3(
+    { t: "bytes32", v: prevNodeHash },
+    { t: "bytes32", v: nodeInnerHash }
   );
 }
 
@@ -127,6 +148,7 @@ let grace_period_ticks = 10000;
 
 var arb_rollup;
 var deadline;
+var original_node;
 
 contract("ArbRollup", accounts => {
   it("should initialize", async () => {
@@ -143,6 +165,8 @@ contract("ArbRollup", accounts => {
       challenge_factory.address,
       global_inbox.address
     );
+
+    original_node = await arb_rollup.latestConfirmed();
   });
 
   it("should fail to assert on invalid leaf", async () => {
@@ -203,9 +227,8 @@ contract("ArbRollup", accounts => {
   });
 
   it("should create a stake", async () => {
-    let latest = await arb_rollup.latestConfirmed();
     await expectEvent(
-      await arb_rollup.placeStake(latest, latest, [], [], {
+      await arb_rollup.placeStake([], [], {
         from: accounts[0],
         value: stakeRequirement
       }),
@@ -214,9 +237,8 @@ contract("ArbRollup", accounts => {
   });
 
   it("should make an assertion", async () => {
-    let latest = await arb_rollup.latestConfirmed();
     assert.isTrue(
-      await arb_rollup.isValidLeaf(latest),
+      await arb_rollup.isValidLeaf(original_node),
       "latest confirmed should be leaf before asserting"
     );
     let current_block = await web3.eth.getBlock("latest");
@@ -231,7 +253,7 @@ contract("ArbRollup", accounts => {
     deadline = 13000 * tx.receipt.blockNumber + grace_period_ticks;
 
     let invalid_pending_top_hash_val = childNodeHash(
-      latest,
+      original_node,
       deadline,
       invalidPendingTopHash(
         empty_tuple_hash,
@@ -243,7 +265,7 @@ contract("ArbRollup", accounts => {
       protoStateHash(initial_vm_state, empty_tuple_hash, 0)
     );
     let invalid_messages_hash_val = childNodeHash(
-      latest,
+      original_node,
       deadline,
       invalidMessagesHash(
         empty_tuple_hash,
@@ -257,15 +279,15 @@ contract("ArbRollup", accounts => {
       protoStateHash(initial_vm_state, empty_tuple_hash, 0)
     );
     let valid_child_hash = childNodeHash(
-      latest,
+      original_node,
       deadline,
       validHash("0x00", "0x00"),
       3,
       protoStateHash("0x00", empty_tuple_hash, 0)
     );
     assert.isFalse(
-      await arb_rollup.isValidLeaf(latest),
-      "latest confirmed should be removed as leaf"
+      await arb_rollup.isValidLeaf(original_node),
+      "original_node confirmed should be removed as leaf"
     );
     assert.isTrue(
       await arb_rollup.isValidLeaf(invalid_pending_top_hash_val),
@@ -283,8 +305,6 @@ contract("ArbRollup", accounts => {
   });
 
   it("should confirm an assertion", async () => {
-    let latest = await arb_rollup.latestConfirmed();
-
     let current_block = await web3.eth.getBlock("latest");
     await expectEvent(
       await arb_rollup.confirmValid(
@@ -297,6 +317,57 @@ contract("ArbRollup", accounts => {
         [0, 0]
       ),
       "RollupConfirmed"
+    );
+
+    let valid_child_hash = childNodeHash(
+      original_node,
+      deadline,
+      validHash("0x00", "0x00"),
+      3,
+      protoStateHash("0x00", empty_tuple_hash, 0)
+    );
+
+    assert.equal(
+      await arb_rollup.latestConfirmed(),
+      valid_child_hash,
+      "latest confirmed should now be valid child"
+    );
+  });
+
+  it("should prune a leaf", async () => {
+    let valid_child_hash_inner = childNodeInnerHash(
+      deadline,
+      validHash("0x00", "0x00"),
+      3,
+      protoStateHash("0x00", empty_tuple_hash, 0)
+    );
+    let invalid_pending_top_hash_inner = childNodeInnerHash(
+      deadline,
+      invalidPendingTopHash(
+        empty_tuple_hash,
+        empty_tuple_hash,
+        0,
+        grace_period_ticks + 13000
+      ),
+      0,
+      protoStateHash(initial_vm_state, empty_tuple_hash, 0)
+    );
+    let invalid_pending_top_hash_val = childNodeShortHash(
+      original_node,
+      invalid_pending_top_hash_inner
+    );
+    assert.isTrue(
+      await arb_rollup.isValidLeaf(invalid_pending_top_hash_val),
+      "invalid messages should be leaf"
+    );
+    await arb_rollup.pruneLeaf(
+      original_node,
+      [invalid_pending_top_hash_inner],
+      [valid_child_hash_inner]
+    );
+    assert.isFalse(
+      await arb_rollup.isValidLeaf(invalid_pending_top_hash_val),
+      "invalid messages should be leaf"
     );
   });
 });
