@@ -21,7 +21,7 @@ library RollupUtils {
     function protoStateHash(
         bytes32 machineHash,
         bytes32 pendingTop,
-        uint256 pendingCountCount
+        uint256 pendingCount
     )
         internal
         pure
@@ -31,7 +31,7 @@ library RollupUtils {
             abi.encodePacked(
                 machineHash,
                 pendingTop,
-                pendingCountCount
+                pendingCount
             )
         );
     }
@@ -55,7 +55,7 @@ library RollupUtils {
     function childNodeHash(
         bytes32 prevNodeHash,
         uint256 deadlineTicks,
-        bytes32 disputableNodeHashVal,
+        bytes32 nodeDataHash,
         uint256 childType,
         bytes32 vmProtoStateHash
     )
@@ -70,7 +70,7 @@ library RollupUtils {
                     abi.encodePacked(
                         vmProtoStateHash,
                         deadlineTicks,
-                        disputableNodeHashVal,
+                        nodeDataHash,
                         childType
                     )
                 )

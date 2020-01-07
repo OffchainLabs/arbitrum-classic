@@ -227,7 +227,7 @@ contract Staking is ChallengeType {
         internal
     {
         require(msg.value == stakeRequirement, STK_AMT);
-        require(stakers[msg.sender].location != 0x00, ALRDY_STAKED);
+        require(stakers[msg.sender].location == 0x00, ALRDY_STAKED);
         stakers[msg.sender] = Staker(
             location,
             uint128(block.number),

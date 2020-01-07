@@ -41,8 +41,10 @@ contract NodeGraph is ChallengeType {
     string constant MAKE_STEP = "MAKE_STEP";
     // Precondition: not within time bounds
     string constant MAKE_TIME = "MAKE_TIME";
-    //
+    // Imported messages without reading them
     string constant MAKE_MESSAGES = "MAKE_MESSAGES";
+    // Tried to import more messages than exist in pending inbox
+    string constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
 
     uint256 constant VALID_CHILD_TYPE = 3;
     uint256 constant MAX_CHILD_TYPE = 3;
@@ -123,6 +125,14 @@ contract NodeGraph is ChallengeType {
         emit RollupPruned(_leaf);
     }
 
+    function latestConfirmed() public view returns (bytes32) {
+        return latestConfirmedPriv;
+    }
+
+    function isValidLeaf(bytes32 leaf) public view returns(bool) {
+        return leaves[leaf];
+    }
+
     function init(
         bytes32 _vmState,
         uint128 _gracePeriodTicks,
@@ -177,12 +187,15 @@ contract NodeGraph is ChallengeType {
         require(VM.withinTimeBounds(data.timeBoundsBlocks), MAKE_TIME);
         require(data.importedMessageCount == 0 || data.didInboxInsn, MAKE_MESSAGES);
 
+        (bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
+        require(data.importedMessageCount <= pendingCount.sub(data.beforePendingCount), MAKE_MESSAGE_CNT);
+
         uint256 deadlineTicks = _computeDeadline(
             data.numArbGas / vmParams.arbGasSpeedLimitPerTick,
             vmParams.gracePeriodTicks,
             data.prevDeadlineTicks
         );
-        (bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
+
 
         leaves[generateInvalidPendingTopLeaf(
             data,
@@ -236,14 +249,6 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function latestConfirmed() internal view returns (bytes32) {
-        return latestConfirmedPriv;
-    }
-
-    function isValidLeaf(bytes32 leaf) internal view returns(bool) {
-        return leaves[leaf];
-    }
-
     function _computeDeadline(
         uint256 checkTimeTicks,
         uint256 gracePeriodTicks,
@@ -281,7 +286,7 @@ contract NodeGraph is ChallengeType {
                     ChallengeUtils.pendingTopHash(
                         data.afterPendingTop,
                         pendingValue,
-                        pendingCount.sub(data.beforePendingCount + data.importedMessageCount)
+                        pendingCount - (data.beforePendingCount + data.importedMessageCount)
                     ),
                     vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
                 )
@@ -309,7 +314,7 @@ contract NodeGraph is ChallengeType {
                     ChallengeUtils.messagesHash(
                         data.beforePendingTop,
                         data.afterPendingTop,
-                        0x00,
+                        Value.hashEmptyTuple(),
                         data.importedMessagesSlice,
                         data.importedMessageCount
                     ),
