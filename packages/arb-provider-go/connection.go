@@ -171,6 +171,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 		return err
 	}
 
+	// TODO sendTransaction shouldn't wait for the tx to be confirmed
 	return func() error {
 		for {
 			resultVal, ok, err := conn.proxy.GetMessageResult(txHash)
@@ -370,4 +371,87 @@ func (sub *subscription) Unsubscribe() {
 // The error channel is closed by Unsubscribe.
 func (sub *subscription) Err() <-chan error {
 	return sub.errChan
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Methods of Deploy Backend
+// CodeAt is implemented above
+
+// TransactionReceipt returns the receipt of a transaction by transaction hash.
+// Note that the receipt is not available for pending transactions.
+func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	result, ok, err := conn.proxy.GetMessageResult(txHash.Bytes())
+	if err != nil {
+		log.Println("TransactionReceipt error:", err)
+		return nil, err
+	} else if !ok {
+		// transaction was not found - throw an error?
+		return nil, nil
+	}
+
+	processed, err := evm.ProcessLog(result)
+	if err != nil {
+		log.Println("TransactionReceipt ProcessLog error:", err)
+		return nil, err
+	}
+
+	status := uint64(0)
+	var logs []evm.Log
+	switch res := processed.(type) {
+	case evm.Return:
+		status = 1
+		logs = res.Logs
+	case evm.Stop:
+		status = 1
+		logs = res.Logs
+	default:
+		// Transaction unsuccessful
+	}
+
+	ethMsg := processed.GetEthMsg()
+
+	var evmLogs []*types.Log
+	if logs != nil {
+		for i, l := range logs {
+			addressBytes := l.ContractID.ToBytes()
+
+			evmParsedTopics := make([]common.Hash, len(l.Topics))
+			for j, t := range l.Topics {
+				evmParsedTopics[j] = common.BytesToHash(t[:])
+			}
+
+			evmLogs[i] = &types.Log{
+				Address:     common.BytesToAddress(addressBytes[12:]),
+				Topics:      evmParsedTopics,
+				Data:        l.Data,
+				BlockNumber: ethMsg.Data.Number.Uint64(),
+				TxHash:      txHash,
+				TxIndex:     0,
+				BlockHash:   txHash,
+				Index:       uint(i),
+				Removed:     false,
+			}
+		}
+	}
+
+	var newContractAddr common.Address
+	if ethMsg.Data.CallData.ContractID != nil {
+		newContractAddr = common.BytesToAddress(ethMsg.Data.CallData.ContractID.Bytes()[12:])
+	} else {
+		newContractAddr = common.BytesToAddress([]byte{0})
+	}
+
+	return &types.Receipt{
+		PostState:         []byte{0},
+		Status:            status,
+		CumulativeGasUsed: 1,
+		Bloom:             types.BytesToBloom([]byte{0}),
+		Logs:              evmLogs,
+		TxHash:            txHash,
+		ContractAddress:   newContractAddr,
+		GasUsed:           1,
+		BlockHash:         txHash,
+		BlockNumber:       ethMsg.Data.Number,
+		TransactionIndex:  0,
+	}, nil
 }
