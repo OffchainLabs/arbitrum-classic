@@ -164,19 +164,19 @@ func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedPar
 }
 
 type challengeOpportunity struct {
-	asserter            common.Address
-	challenger          common.Address
-	prevNodeHash        [32]byte
-	deadlineTicks       structures.TimeTicks
-	asserterNodeType    structures.ChildType
-	challengerNodeType  structures.ChildType
-	asserterProtoHash   [32]byte
-	challengerProtoHash [32]byte
-	asserterProof       [][32]byte
-	challengerProof     [][32]byte
-	asserterDataHash    [32]byte
-	asserterPeriodTicks structures.TimeTicks
-	challengerNodeHash  [32]byte
+	asserter              common.Address
+	challenger            common.Address
+	prevNodeHash          [32]byte
+	deadlineTicks         structures.TimeTicks
+	asserterNodeType      structures.ChildType
+	challengerNodeType    structures.ChildType
+	asserterVMProtoHash   [32]byte
+	challengerVMProtoHash [32]byte
+	asserterProof         [][32]byte
+	challengerProof       [][32]byte
+	asserterDataHash      [32]byte
+	asserterPeriodTicks   structures.TimeTicks
+	challengerNodeHash    [32]byte
 }
 
 func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {
@@ -195,33 +195,33 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 	var challengerStaker *Staker
 	var challengerAncestor *Node
 	if linkType1 < linkType2 {
-		asserterStaker = staker1
-		asserterAncestor = staker1Ancestor
-		challengerStaker = staker2
-		challengerAncestor = staker2Ancestor
-	} else {
 		asserterStaker = staker2
 		asserterAncestor = staker2Ancestor
 		challengerStaker = staker1
 		challengerAncestor = staker1Ancestor
+	} else {
+		asserterStaker = staker1
+		asserterAncestor = staker1Ancestor
+		challengerStaker = staker2
+		challengerAncestor = staker2Ancestor
 	}
 
 	asserterDataHash, asserterPeriodTicks := asserterAncestor.ChallengeNodeData(chain.params)
 
 	return &challengeOpportunity{
-		asserter:            asserterStaker.address,
-		challenger:          challengerStaker.address,
-		prevNodeHash:        asserterAncestor.prev.hash,
-		deadlineTicks:       asserterAncestor.deadline,
-		asserterNodeType:    asserterAncestor.linkType,
-		challengerNodeType:  challengerAncestor.linkType,
-		asserterProtoHash:   asserterAncestor.vmProtoData.Hash(),
-		challengerProtoHash: challengerAncestor.vmProtoData.Hash(),
-		asserterProof:       GeneratePathProof(asserterAncestor, asserterStaker.location),
-		challengerProof:     GeneratePathProof(challengerAncestor, challengerStaker.location),
-		asserterDataHash:    asserterDataHash,
-		asserterPeriodTicks: asserterPeriodTicks,
-		challengerNodeHash:  challengerAncestor.nodeDataHash,
+		asserter:              asserterStaker.address,
+		challenger:            challengerStaker.address,
+		prevNodeHash:          asserterAncestor.prev.hash,
+		deadlineTicks:         asserterAncestor.deadline,
+		asserterNodeType:      asserterAncestor.linkType,
+		challengerNodeType:    challengerAncestor.linkType,
+		asserterVMProtoHash:   asserterAncestor.vmProtoData.Hash(),
+		challengerVMProtoHash: challengerAncestor.vmProtoData.Hash(),
+		asserterProof:         GeneratePathProof(asserterAncestor, asserterStaker.location),
+		challengerProof:       GeneratePathProof(challengerAncestor, challengerStaker.location),
+		asserterDataHash:      asserterDataHash,
+		asserterPeriodTicks:   asserterPeriodTicks,
+		challengerNodeHash:    challengerAncestor.nodeDataHash,
 	}
 }
 

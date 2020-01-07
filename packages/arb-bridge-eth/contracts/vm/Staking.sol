@@ -56,10 +56,10 @@ contract Staking is ChallengeType {
     string constant TYPE_ORDER = "TYPE_ORDER";
     // Invalid child type
     string constant INVLD_CHLD_TYPE = "INVLD_CHLD_TYPE";
-    // Invalid staker1 proof
-    string constant STK1_PROOF = "STK1_PROOF";
-    // Invalid staker2 proof
-    string constant STK2_PROOF = "STK2_PROOF";
+    // Challenge asserter proof
+    string constant ASSERT_PROOF = "ASSERT_PROOF";
+    // Challenge challenger proof
+    string constant CHAL_PROOF = "CHAL_PROOF";
 
     // must include proof for all stakers
     string constant CHCK_COUNT = "CHCK_COUNT";
@@ -99,7 +99,7 @@ contract Staking is ChallengeType {
     event RollupChallengeStarted(
         address asserter,
         address challenger,
-        uint256    challengeType,
+        uint256 challengeType,
         address challengeContract
     );
 
@@ -129,13 +129,13 @@ contract Staking is ChallengeType {
         address payable challengerAddress,
         bytes32 prevNode,
         uint256 deadlineTicks,
-        uint256[2] memory stakerPositions,
-        bytes32[2] memory vmProtoHashes,
-        bytes32[] memory proof1,
-        bytes32[] memory proof2,
-        bytes32 challenge1DataHash,
-        uint128 challenge1PeriodTicks,
-        bytes32 challenge2NodeHash
+        uint256[2] memory stakerNodeTypes, // [asserterNodeType, challengerNodeType]
+        bytes32[2] memory vmProtoHashes, // [asserterVMProtoHash, challengerVMProtoHash]
+        bytes32[] memory asserterProof,
+        bytes32[] memory challengerProof,
+        bytes32 asserterDataHash,
+        uint128 asserterPeriodTicks,
+        bytes32 challengerNodeHash
     )
         public
     {
@@ -146,7 +146,7 @@ contract Staking is ChallengeType {
         require(RollupTime.blocksToTicks(challenger.creationTimeBlocks) < deadlineTicks, STK2_DEADLINE);
         require(!asserter.inChallenge, STK1_IN_CHAL);
         require(!challenger.inChallenge, STK2_IN_CHAL);
-        require(stakerPositions[0] < stakerPositions[1], TYPE_ORDER);
+        require(stakerNodeTypes[0] > stakerNodeTypes[1], TYPE_ORDER);
         require(
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
@@ -154,31 +154,31 @@ contract Staking is ChallengeType {
                     deadlineTicks,
                     keccak256(
                         abi.encodePacked(
-                            challenge1DataHash,
-                            challenge1PeriodTicks
+                            asserterDataHash,
+                            asserterPeriodTicks
                         )
                     ),
-                    stakerPositions[0],
+                    stakerNodeTypes[0],
                     vmProtoHashes[0]
                 ),
                 asserter.location,
-                proof1
+                asserterProof
             ),
-            STK1_PROOF
+            ASSERT_PROOF
         );
         require(
             RollupUtils.isPath(
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
-                    challenge2NodeHash,
-                    stakerPositions[1],
+                    challengerNodeHash,
+                    stakerNodeTypes[1],
                     vmProtoHashes[1]
                 ),
                 challenger.location,
-                proof2
+                challengerProof
             ),
-            STK2_PROOF
+            CHAL_PROOF
         );
 
         asserter.inChallenge = true;
@@ -187,15 +187,15 @@ contract Staking is ChallengeType {
         address newChallengeAddr = challengeFactory.createChallenge(
             asserterAddress,
             challengerAddress,
-            challenge1PeriodTicks,
-            challenge1DataHash,
-            stakerPositions[0]
+            asserterPeriodTicks,
+            asserterDataHash,
+            stakerNodeTypes[0]
         );
 
         emit RollupChallengeStarted(
             asserterAddress,
             challengerAddress,
-            stakerPositions[0],
+            stakerNodeTypes[0],
             newChallengeAddr
         );
     }
@@ -270,7 +270,7 @@ contract Staking is ChallengeType {
             address stakerAddress = stakerAddresses[i];
             require(bytes20(stakerAddress) > prevStaker, CHCK_ORDER);
             Staker storage staker = getValidStaker(stakerAddress);
-            if (RollupTime.blocksToTicks(staker.creationTimeBlocks) >= deadlineTicks) {
+            if (RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks) {
                 require(
                     RollupUtils.isPathOffset(
                         node,
