@@ -323,8 +323,6 @@ contract ArbRollup is NodeGraph, Staking {
         Staker storage staker = getValidStaker(stakerAddress);
         require(RollupUtils.isPath(staker.location, latestConfirmed(), proof), RECOV_PATH_PROOF);
         refundStaker(stakerAddress);
-
-
     }
 
     function _confirmNode(
@@ -345,7 +343,7 @@ contract ArbRollup is NodeGraph, Staking {
             branch,
             vmProtoStateHash
         );
-        require(block.number >= RollupTime.blocksToTicks(deadlineTicks), CONF_TIME);
+        require(RollupTime.blocksToTicks(block.number) >= deadlineTicks, CONF_TIME);
         uint activeCount = checkAlignedStakers(
             to,
             deadlineTicks,

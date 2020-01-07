@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
@@ -54,10 +55,10 @@ func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) 
 	if utils.AddressesEqual(ev.Staker, lis.myAddr) {
 		opps := lis.chain.nodeGraph.checkChallengeOpportunityAllPairs()
 		for _, opp := range opps {
-			lis.initiateChallenge(opp)
+			lis.initiateChallenge(context.TODO(), opp)
 		}
 	} else {
-		lis.challengeStakerIfPossible(ev.Staker)
+		lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
 	}
 }
 
@@ -66,40 +67,40 @@ func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
 }
 
 func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
-	lis.challengeStakerIfPossible(ev.Staker)
+	lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
 }
 
-func (lis *ValidatorChainListener) challengeStakerIfPossible(stakerAddr common.Address) {
+func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context, stakerAddr common.Address) {
 	if !utils.AddressesEqual(stakerAddr, lis.myAddr) {
 		newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
 		meAsStaker := lis.chain.nodeGraph.stakers.Get(lis.myAddr)
 		if meAsStaker != nil {
 			opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
 			if opp != nil {
-				lis.initiateChallenge(opp)
+				lis.initiateChallenge(ctx, opp)
 				return
 			}
 		}
 		opp := lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
 		if opp != nil {
-			lis.initiateChallenge(opp)
+			lis.initiateChallenge(ctx, opp)
 			return
 		}
 	}
 }
 
-func (lis *ValidatorChainListener) initiateChallenge(opp *challengeOpportunity) {
+func (lis *ValidatorChainListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
 	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
 		lis.client.StartChallenge(
-			context.TODO(),
+			ctx,
 			opp.asserter,
 			opp.challenger,
 			opp.prevNodeHash,
 			opp.deadlineTicks.Val,
 			opp.asserterNodeType,
 			opp.challengerNodeType,
-			opp.asserterProtoHash,
-			opp.challengerProtoHash,
+			opp.asserterVMProtoHash,
+			opp.challengerVMProtoHash,
 			opp.asserterProof,
 			opp.challengerProof,
 			opp.asserterDataHash,
@@ -188,7 +189,7 @@ func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeComp
 	if utils.AddressesEqual(lis.myAddr, ev.Loser) {
 		lis.lostChallenge(ev)
 	}
-	lis.challengeStakerIfPossible(ev.Winner)
+	lis.challengeStakerIfPossible(context.TODO(), ev.Winner)
 }
 
 func (lis *ValidatorChainListener) lostChallenge(ethbridge.ChallengeCompletedEvent) {
