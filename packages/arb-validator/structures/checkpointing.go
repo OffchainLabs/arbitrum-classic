@@ -18,12 +18,14 @@ package structures
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type CheckpointContext interface {
 	AddValue(value.Value)
 	AddMachine(machine.Machine)
+	Manifest() *CheckpointManifest
 }
 
 type CheckpointContextImpl struct {
@@ -49,6 +51,18 @@ func (ctx *CheckpointContextImpl) AddValue(val value.Value) {
 
 func (ctx *CheckpointContextImpl) AddMachine(mach machine.Machine) {
 	ctx.machines[mach.Hash()] = mach
+}
+
+func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
+	vals := []*value.HashBuf{}
+	for h, _ := range ctx.values {
+		vals = append(vals, utils.MarshalHash(h))
+	}
+	machines := []*value.HashBuf{}
+	for h, _ := range ctx.machines {
+		machines = append(machines, utils.MarshalHash(h))
+	}
+	return &CheckpointManifest{Values: vals, Machines: machines}
 }
 
 func (ctx *CheckpointContextImpl) GetValue(h [32]byte) value.Value {

@@ -60,3 +60,8 @@ message PendingInboxBuf {
     repeated value.HashBuf itemHashes = 2;
     value.HashBuf hashOfRest = 3;
 }
+
+message CheckpointManifest {
+    repeated value.HashBuf values = 1;
+    repeated value.HashBuf machines = 2;
+}
