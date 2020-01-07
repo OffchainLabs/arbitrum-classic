@@ -201,13 +201,12 @@ MachineStateKeys extractStateKeys(
     auto register_val = extractHashKey(current_iter);
     auto datastack = extractHashKey(current_iter);
     auto auxstack = extractHashKey(current_iter);
-    auto inbox = extractHashKey(current_iter);
     auto pc = extractHashKey(current_iter);
     auto err_pc = extractHashKey(current_iter);
 
-    return MachineStateKeys{static_val, register_val, datastack,
-                            auxstack,   inbox,        pc,
-                            err_pc,     status,       blockreason_vector};
+    return MachineStateKeys{
+        static_val, register_val, datastack, auxstack,
+        pc,         err_pc,       status,    blockreason_vector};
 }
 
 std::vector<unsigned char> serializeStateKeys(
@@ -234,10 +233,6 @@ std::vector<unsigned char> serializeStateKeys(
     state_data_vector.insert(state_data_vector.end(),
                              state_data.auxstack_key.begin(),
                              state_data.auxstack_key.end());
-
-    state_data_vector.insert(state_data_vector.end(),
-                             state_data.inbox_key.begin(),
-                             state_data.inbox_key.end());
 
     state_data_vector.insert(state_data_vector.end(), state_data.pc_key.begin(),
                              state_data.pc_key.end());

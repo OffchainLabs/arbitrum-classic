@@ -43,7 +43,8 @@ class Machine {
 
     Assertion run(uint64_t stepCount,
                   uint256_t timeBoundStart,
-                  uint256_t timeBoundEnd);
+                  uint256_t timeBoundEnd,
+                  Tuple messages);
 
     Status currentStatus() { return machine_state.state; }
     BlockReason lastBlockReason() { return machine_state.blockReason; }
@@ -51,10 +52,6 @@ class Machine {
     std::vector<unsigned char> marshalForProof() {
         return machine_state.marshalForProof();
     }
-
-    uint256_t inboxHash() const { return ::hash(machine_state.inbox.messages); }
-
-    void deliverMessages(Tuple messages);
 
     TuplePool& getPool() { return *machine_state.pool; }
 

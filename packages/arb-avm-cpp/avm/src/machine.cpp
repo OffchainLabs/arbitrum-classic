@@ -49,15 +49,12 @@ void Machine::initializeMachine(const MachineState& initial_state) {
     machine_state = initial_state;
 }
 
-void Machine::deliverMessages(Tuple messages) {
-    machine_state.deliverMessages(std::move(messages));
-}
-
 Assertion Machine::run(uint64_t stepCount,
                        uint256_t timeBoundStart,
-                       uint256_t timeBoundEnd) {
-    machine_state.context =
-        AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
+                       uint256_t timeBoundEnd,
+                       Tuple messages) {
+    machine_state.context = AssertionContext{
+        TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
     machine_state.blockReason = NotBlocked{};
     while (machine_state.context.numSteps < stepCount) {
         runOne();

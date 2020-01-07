@@ -485,7 +485,6 @@ void getSavedState(MachineStateFetcher& fetcher,
     REQUIRE(data.blockreason_str == expected_data.blockreason_str);
     REQUIRE(data.static_val_key == expected_data.static_val_key);
     REQUIRE(data.pc_key == expected_data.pc_key);
-    REQUIRE(data.inbox_key == expected_data.inbox_key);
     REQUIRE(data.datastack_key == expected_data.datastack_key);
     REQUIRE(data.auxstack_key == expected_data.auxstack_key);
     REQUIRE(data.register_val_key == expected_data.register_val_key);
@@ -563,13 +562,11 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
                                  Status state,
                                  CodePoint pc,
                                  CodePoint err_pc,
-                                 MessageStack inbox,
                                  BlockReason blockReason) {
     TuplePool pool;
 
     auto datastack_results = stack.checkpointState(stateSaver, &pool);
     auto auxstack_results = auxstack.checkpointState(stateSaver, &pool);
-    auto inbox_results = inbox.checkpointState(stateSaver);
 
     auto static_val_results = stateSaver.saveValue(staticVal);
     auto register_val_results = stateSaver.saveValue(registerVal);
@@ -583,7 +580,6 @@ MachineStateKeys makeStorageData(MachineStateSaver& stateSaver,
                             register_val_results.storage_key,
                             datastack_results.storage_key,
                             auxstack_results.storage_key,
-                            inbox_results.msgs_tuple_results.storage_key,
                             pc_results.storage_key,
                             err_pc_results.storage_key,
                             status_str,
@@ -646,9 +642,9 @@ MachineStateKeys getStateValues(MachineStateSaver& saver) {
 
     auto inbox_blocked = InboxBlocked(::hash(inbox_stack.messages));
 
-    auto saved_data = makeStorageData(
-        saver, static_val, register_val, data_stack, aux_stack, state,
-        pc_codepoint, err_pc_codepoint, inbox_stack, inbox_blocked);
+    auto saved_data =
+        makeStorageData(saver, static_val, register_val, data_stack, aux_stack,
+                        state, pc_codepoint, err_pc_codepoint, inbox_blocked);
 
     return saved_data;
 }
@@ -665,9 +661,9 @@ MachineStateKeys getDefaultValues(MachineStateSaver& saver) {
     Status state = Status::Extensive;
     CodePoint code_point(0, Operation(), 0);
 
-    auto data = makeStorageData(saver, static_val, Tuple(), Datastack(),
-                                Datastack(), state, code_point, code_point,
-                                MessageStack(&pool), NotBlocked());
+    auto data =
+        makeStorageData(saver, static_val, Tuple(), Datastack(), Datastack(),
+                        state, code_point, code_point, NotBlocked());
 
     return data;
 }
@@ -677,7 +673,6 @@ std::vector<std::vector<unsigned char>> getHashKeys(MachineStateKeys data) {
 
     hash_keys.push_back(data.auxstack_key);
     hash_keys.push_back(data.datastack_key);
-    hash_keys.push_back(data.inbox_key);
     hash_keys.push_back(data.pc_key);
     hash_keys.push_back(data.err_pc_key);
     hash_keys.push_back(data.register_val_key);
