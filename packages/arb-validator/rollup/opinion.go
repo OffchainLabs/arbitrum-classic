@@ -42,7 +42,7 @@ func (chain *ChainObserver) startOpinionUpdateThread() {
 			topHash := messageStack.GetTopHash()
 			messagesVal := chain.pendingInbox.ValueForSubseq(currentOpinion.prev.vmProtoData.PendingTop, claim.AfterPendingTop)
 			prevMach := currentOpinion.prev.machine.Clone()
-			chain.Unlock()
+			chain.RUnlock()
 
 			newOpinion := updateNodeOpinion(currentOpinion, claimHeight, found, successors, topHash, messagesVal, prevMach)
 

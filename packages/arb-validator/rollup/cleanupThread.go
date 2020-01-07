@@ -58,7 +58,7 @@ func (chain *ChainObserver) startCleanupThread(client *ethbridge.ArbRollup, done
 				chain.RLock()
 				prunesToDo := chain.nodeGraph.generateNodePruneInfo()
 				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
-				chain.Unlock()
+				chain.RUnlock()
 
 				for _, prune := range prunesToDo {
 					client.PruneLeaf(
