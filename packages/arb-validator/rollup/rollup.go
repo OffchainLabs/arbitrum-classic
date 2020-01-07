@@ -89,11 +89,14 @@ func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
 
 func (m *ChainObserverBuf) Unmarshal(_client *ethbridge.ArbRollup) *ChainObserver {
 	chain := &ChainObserver{
+		RWMutex:      &sync.RWMutex{},
 		nodeGraph:    m.StakedNodeGraph.Unmarshal(),
 		rollupAddr:   common.BytesToAddress(m.ContractAddress),
 		pendingInbox: &structures.PendingInbox{m.PendingInbox.Unmarshal()},
 		listeners:    []ChainListener{},
 	}
+	chain.Lock()
+	defer chain.Unlock()
 	if _client != nil {
 		chain.startCleanupThread(_client, nil)
 	}
