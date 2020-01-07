@@ -78,21 +78,21 @@ func (chain *ChainObserver) AddListener(listener ChainListener) {
 	chain.listeners = append(chain.listeners, listener)
 }
 
-func (chain *ChainObserver) MarshalToBuf() *ChainObserverBuf {
+func (chain *ChainObserver) MarshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
-		StakedNodeGraph: chain.nodeGraph.MarshalToBuf(),
+		StakedNodeGraph: chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress: chain.rollupAddr.Bytes(),
-		PendingInbox:    chain.pendingInbox.MarshalToBuf(),
+		PendingInbox:    chain.pendingInbox.MarshalForCheckpoint(ctx),
 		IsOpinionated:   chain.isOpinionated,
 	}
 }
 
-func (m *ChainObserverBuf) Unmarshal(_client *ethbridge.ArbRollup) *ChainObserver {
+func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, _client *ethbridge.ArbRollup) *ChainObserver {
 	chain := &ChainObserver{
 		RWMutex:      &sync.RWMutex{},
-		nodeGraph:    m.StakedNodeGraph.Unmarshal(),
+		nodeGraph:    m.StakedNodeGraph.UnmarshalFromCheckpoint(ctx),
 		rollupAddr:   common.BytesToAddress(m.ContractAddress),
-		pendingInbox: &structures.PendingInbox{m.PendingInbox.Unmarshal()},
+		pendingInbox: &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(ctx)},
 		listeners:    []ChainListener{},
 	}
 	chain.Lock()

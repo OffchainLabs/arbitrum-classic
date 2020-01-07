@@ -44,8 +44,9 @@ func TestCreateEmptyChain(t *testing.T) {
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
-	chainBuf := chain.MarshalToBuf()
-	chain2 := chainBuf.Unmarshal(nil)
+	ctx := structures.NewCheckpointContextImpl()
+	chainBuf := chain.MarshalForCheckpoint(ctx)
+	chain2 := chainBuf.UnmarshalFromCheckpoint(ctx, nil)
 	if !chain.Equals(chain2) {
 		t.Fail()
 	}

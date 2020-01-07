@@ -28,8 +28,7 @@ func TestPendingInboxInsert(t *testing.T) {
 	if pi.newest != nil {
 		t.Error("newest of new PendingInbox should be nil")
 	}
-	buf := pi.MarshalToBuf()
-	pi2 := buf.Unmarshal()
+	pi2 := marshalUnmarshal(pi)
 	if pi.hashOfRest != pi2.hashOfRest {
 		t.Error("marshal/unmarshal changes hash of empty pending inbox")
 	}
@@ -41,8 +40,7 @@ func TestPendingInboxInsert(t *testing.T) {
 	if !pi.newest.message.Equal(val1) {
 		t.Error("newest of PendingInbox wrong at val1")
 	}
-	buf = pi.MarshalToBuf()
-	pi2 = buf.Unmarshal()
+	pi2 = marshalUnmarshal(pi)
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
@@ -51,8 +49,7 @@ func TestPendingInboxInsert(t *testing.T) {
 	if !pi.newest.message.Equal(val2) {
 		t.Error("newest of PendingInbox wrong at val2")
 	}
-	buf = pi.MarshalToBuf()
-	pi2 = buf.Unmarshal()
+	pi2 = marshalUnmarshal(pi)
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of two-item pending inbox")
 	}
@@ -63,16 +60,19 @@ func TestPendingInboxInsert(t *testing.T) {
 	}
 
 	pi.DiscardUpToCount(big.NewInt(0))
-	buf = pi.MarshalToBuf()
-	pi2 = buf.Unmarshal()
+	pi2 = marshalUnmarshal(pi)
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
 
 	pi.DiscardUpToCount(big.NewInt(1))
-	buf = pi.MarshalToBuf()
-	pi2 = buf.Unmarshal()
+	pi2 = marshalUnmarshal(pi)
 	if pi.newest.hash != pi2.newest.hash {
 		t.Error("marshal/unmarshal changes hash of one-item pending inbox")
 	}
+}
+
+func marshalUnmarshal(pi *PendingInbox) *MessageStack {
+	ctx := NewCheckpointContextImpl()
+	return pi.MarshalForCheckpoint(ctx).UnmarshalFromCheckpoint(ctx)
 }

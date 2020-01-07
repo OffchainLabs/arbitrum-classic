@@ -49,10 +49,10 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 	return ret
 }
 
-func (chain *NodeGraph) MarshalToBuf() *NodeGraphBuf {
+func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
 	var allNodes []*NodeBuf
-	for _, v := range chain.nodeFromHash {
-		allNodes = append(allNodes, v.MarshalToBuf())
+	for _, n := range chain.nodeFromHash {
+		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx))
 	}
 	var leafHashes [][32]byte
 	chain.leaves.forall(func(node *Node) {
@@ -67,7 +67,7 @@ func (chain *NodeGraph) MarshalToBuf() *NodeGraphBuf {
 	}
 }
 
-func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
+func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) *NodeGraph {
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
@@ -78,7 +78,7 @@ func (buf *NodeGraphBuf) Unmarshal() *NodeGraph {
 
 	// unmarshal nodes; their prev/successors will not be set up yet
 	for _, nodeBuf := range buf.Nodes {
-		_ = nodeBuf.Unmarshal(chain)
+		_ = nodeBuf.UnmarshalFromCheckpoint(ctx, chain)
 	}
 	// now set up prevs and successors for all nodes
 	for _, nodeBuf := range buf.Nodes {

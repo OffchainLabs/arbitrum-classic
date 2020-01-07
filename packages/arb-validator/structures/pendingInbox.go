@@ -17,9 +17,7 @@
 package structures
 
 import (
-	"bytes"
 	"errors"
-	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
@@ -132,15 +130,11 @@ func hash2(h1, h2 [32]byte) [32]byte {
 	).Hash()
 }
 
-func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
-	var msgs [][]byte
+func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInboxBuf {
+	var msgHashes []*value.HashBuf
 	for item := pi.newest; item != nil; item = item.prev {
-		bb := bytes.NewBuffer(nil)
-		err := value.MarshalValue(item.message, bb)
-		if err != nil {
-			log.Fatal(err)
-		}
-		msgs = append(msgs, bb.Bytes())
+		ctx.AddValue(item.message)
+		msgHashes = append(msgHashes, utils.MarshalHash(item.message.Hash()))
 	}
 	var topCount *big.Int
 	if pi.newest == nil {
@@ -150,20 +144,17 @@ func (pi *MessageStack) MarshalToBuf() *PendingInboxBuf {
 	}
 	return &PendingInboxBuf{
 		TopCount:   utils.MarshalBigInt(topCount),
-		Items:      msgs,
+		ItemHashes: msgHashes,
 		HashOfRest: utils.MarshalHash(pi.hashOfRest),
 	}
 }
 
-func (buf *PendingInboxBuf) Unmarshal() *MessageStack {
+func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) *MessageStack {
 	ret := NewMessageStack()
-	ret.topCount = new(big.Int).Sub(utils.UnmarshalBigInt(buf.TopCount), big.NewInt(int64(len(buf.Items))))
+	ret.topCount = new(big.Int).Sub(utils.UnmarshalBigInt(buf.TopCount), big.NewInt(int64(len(buf.ItemHashes))))
 	ret.hashOfRest = utils.UnmarshalHash(buf.HashOfRest)
-	for i := len(buf.Items) - 1; i >= 0; i = i - 1 {
-		val, err := value.UnmarshalValue(bytes.NewBuffer([]byte(buf.Items[i])))
-		if err != nil {
-			log.Fatal(err)
-		}
+	for i := len(buf.ItemHashes) - 1; i >= 0; i = i - 1 {
+		val := ctx.GetValue(utils.UnmarshalHash(buf.ItemHashes[i]))
 		ret.DeliverMessage(val)
 	}
 	return ret

@@ -239,10 +239,10 @@ func (node *Node) setHash(
 	copy(node.hash[:], hashSlice)
 }
 
-func (node *Node) MarshalToBuf() *NodeBuf {
+func (node *Node) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeBuf {
 	var machineHash *value.HashBuf
 	if node.machine != nil {
-		//TODO: marshal node.machine
+		ctx.AddMachine(node.machine)
 		machineHash = utils.MarshalHash(node.machine.Hash())
 	}
 	var prevHashBuf *value.HashBuf
@@ -267,7 +267,7 @@ func (node *Node) MarshalToBuf() *NodeBuf {
 	}
 }
 
-func (m *NodeBuf) Unmarshal(chain *NodeGraph) *Node {
+func (m *NodeBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, chain *NodeGraph) *Node {
 	var disputableNode *structures.DisputableNode
 	if m.DisputableNode != nil {
 		disputableNode = m.DisputableNode.Unmarshal()
@@ -285,7 +285,10 @@ func (m *NodeBuf) Unmarshal(chain *NodeGraph) *Node {
 		hash:         utils.UnmarshalHash(m.Hash),
 	}
 
-	//TODO: try to retrieve machine from checkpoint DB; might fail
+	if m.MachineHash != nil {
+		node.machine = ctx.GetMachine(utils.UnmarshalHash(m.MachineHash))
+	}
+
 	chain.nodeFromHash[node.hash] = node
 
 	// can't set up prev and successorHash fields yet; caller must do this later

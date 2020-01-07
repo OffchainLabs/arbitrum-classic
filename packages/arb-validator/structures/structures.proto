@@ -57,12 +57,6 @@ message DisputableNodeBuf {
 
 message PendingInboxBuf {
     value.BigIntegerBuf topCount = 1;
-    repeated bytes items =21;
-    value.HashBuf hashOfRest = 3;
-}
-
-message PendingInboxCkpBuf {
-    value.BigIntegerBuf topCount = 1;
     repeated value.HashBuf itemHashes = 2;
     value.HashBuf hashOfRest = 3;
 }

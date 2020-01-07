@@ -46,20 +46,20 @@ func NewStakedNodeGraph(machine machine.Machine, params structures.ChainParams) 
 	}
 }
 
-func (chain *StakedNodeGraph) MarshalToBuf() *StakedNodeGraphBuf {
+func (chain *StakedNodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *StakedNodeGraphBuf {
 	var allStakers []*StakerBuf
 	chain.stakers.forall(func(staker *Staker) {
 		allStakers = append(allStakers, staker.MarshalToBuf())
 	})
 	return &StakedNodeGraphBuf{
-		NodeGraph: chain.NodeGraph.MarshalToBuf(),
+		NodeGraph: chain.NodeGraph.MarshalForCheckpoint(ctx),
 		Stakers:   allStakers,
 	}
 }
 
-func (m *StakedNodeGraphBuf) Unmarshal() *StakedNodeGraph {
+func (m *StakedNodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) *StakedNodeGraph {
 	chain := &StakedNodeGraph{
-		NodeGraph: m.NodeGraph.Unmarshal(),
+		NodeGraph: m.NodeGraph.UnmarshalFromCheckpoint(ctx),
 		stakers:   NewStakerSet(),
 	}
 	for _, stakerBuf := range m.Stakers {
