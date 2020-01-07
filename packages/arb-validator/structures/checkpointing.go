@@ -20,6 +20,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"math/big"
 )
 
 type CheckpointContext interface {
@@ -50,7 +51,9 @@ func (ctx *CheckpointContextImpl) AddValue(val value.Value) {
 }
 
 func (ctx *CheckpointContextImpl) AddMachine(mach machine.Machine) {
-	ctx.machines[mach.Hash()] = mach
+	if ctx.machines[mach.Hash()] == nil {
+		ctx.machines[mach.Hash()] = mach.Clone()
+	}
 }
 
 func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
@@ -71,4 +74,46 @@ func (ctx *CheckpointContextImpl) GetValue(h [32]byte) value.Value {
 
 func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
 	return ctx.machines[h]
+}
+
+type DummyCheckpointer struct {
+	cp map[*big.Int]*dummyCheckpoint
+}
+
+type dummyCheckpoint struct {
+	contents []byte
+	manifest *CheckpointManifest
+	values   map[[32]byte]value.Value
+	machines map[[32]byte]machine.Machine
+}
+
+func (dcp *dummyCheckpoint) GetValue(h [32]byte) value.Value {
+	return dcp.values[h]
+}
+
+func (dcp *dummyCheckpoint) GetMachine(h [32]byte) machine.Machine {
+	return dcp.machines[h]
+}
+
+func NewDummyCheckpointer() *DummyCheckpointer {
+	return &DummyCheckpointer{make(map[*big.Int]*dummyCheckpoint)}
+}
+
+func (cp *DummyCheckpointer) Save(
+	blockHeight *big.Int,
+	contents []byte,
+	manifest *CheckpointManifest,
+	values map[[32]byte]value.Value,
+	machines map[[32]byte]machine.Machine,
+) {
+	cp.cp[blockHeight] = &dummyCheckpoint{contents, manifest, values, machines}
+}
+
+func (cp *DummyCheckpointer) Restore(blockHeight *big.Int) ([]byte, RestoreContext) {
+	dcp := cp.cp[blockHeight]
+	if dcp == nil {
+		return nil, nil
+	} else {
+		return dcp.contents, dcp
+	}
 }
