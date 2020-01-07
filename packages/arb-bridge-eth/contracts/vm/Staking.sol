@@ -148,7 +148,7 @@ contract Staking is ChallengeType {
         require(!challenger.inChallenge, STK2_IN_CHAL);
         require(stakerNodeTypes[0] > stakerNodeTypes[1], TYPE_ORDER);
         require(
-            RollupUtils.isPath(
+            RollupUtils.calculatePath(
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
@@ -161,13 +161,12 @@ contract Staking is ChallengeType {
                     stakerNodeTypes[0],
                     vmProtoHashes[0]
                 ),
-                asserter.location,
                 asserterProof
-            ),
+            ) == asserter.location,
             ASSERT_PROOF
         );
         require(
-            RollupUtils.isPath(
+            RollupUtils.calculatePath(
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
@@ -175,9 +174,8 @@ contract Staking is ChallengeType {
                     stakerNodeTypes[1],
                     vmProtoHashes[1]
                 ),
-                challenger.location,
                 challengerProof
-            ),
+            ) == challenger.location,
             CHAL_PROOF
         );
 
@@ -272,13 +270,12 @@ contract Staking is ChallengeType {
             Staker storage staker = getValidStaker(stakerAddress);
             if (RollupTime.blocksToTicks(staker.creationTimeBlocks) < deadlineTicks) {
                 require(
-                    RollupUtils.isPathOffset(
+                    RollupUtils.calculatePathOffset(
                         node,
-                        staker.location,
                         stakerProofs,
                         stakerProofOffsets[i],
                         stakerProofOffsets[i+1]
-                    ),
+                    ) == staker.location,
                     CHCK_STAKER_PROOF
                 );
                 activeCount++;

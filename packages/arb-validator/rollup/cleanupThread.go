@@ -18,8 +18,9 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -63,7 +64,6 @@ func (chain *ChainObserver) startCleanupThread(client *ethbridge.ArbRollup, done
 				for _, prune := range prunesToDo {
 					client.PruneLeaf(
 						context.TODO(),
-						prune.leaf.hash,
 						prune.ancestor.hash,
 						prune.leafProof,
 						prune.ancProof,

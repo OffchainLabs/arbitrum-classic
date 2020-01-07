@@ -46,6 +46,9 @@ contract NodeGraph is ChallengeType {
     // Tried to import more messages than exist in pending inbox
     string constant MAKE_MESSAGE_CNT = "MAKE_MESSAGE_CNT";
 
+    string constant PRUNE_LEAF = "PRUNE_LEAF";
+    string constant PRUNE_CONFLICT = "PRUNE_CONFLICT";
+
     uint256 constant VALID_CHILD_TYPE = 3;
     uint256 constant MAX_CHILD_TYPE = 3;
 
@@ -102,27 +105,22 @@ contract NodeGraph is ChallengeType {
     }
 
     function pruneLeaf(
-        bytes32 _leaf,
         bytes32 from,
         bytes32[] calldata leafProof,
         bytes32[] calldata latestConfirmedProof
     )
         external
     {
-        require(isValidLeaf(_leaf), "invalid leaf");
+        bytes32 leaf = RollupUtils.calculatePath(from, leafProof);
+        require(isValidLeaf(leaf), PRUNE_LEAF);
         require(
-            RollupUtils.isConflict(
-                from,
-                _leaf,
-                latestConfirmed(),
-                leafProof,
-                latestConfirmedProof
-            ),
-            "Invalid conflict proof"
+            leafProof[0] != latestConfirmedProof[0] &&
+            RollupUtils.calculatePath(from, latestConfirmedProof) == latestConfirmed(),
+            PRUNE_CONFLICT
         );
-        delete leaves[_leaf];
+        delete leaves[leaf];
 
-        emit RollupPruned(_leaf);
+        emit RollupPruned(leaf);
     }
 
     function latestConfirmed() public view returns (bytes32) {

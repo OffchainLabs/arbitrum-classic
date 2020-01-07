@@ -78,70 +78,36 @@ library RollupUtils {
         );
     }
 
-    function isPath(
+    function calculatePath(
         bytes32 from,
-        bytes32 to,
         bytes32[] memory proof
     )
         internal
         pure
-        returns(bool)
+        returns(bytes32)
     {
-        return isPathOffset(
+        return calculatePathOffset(
             from,
-            to,
             proof,
             0,
             proof.length
         );
     }
 
-    function isPathOffset(
+    function calculatePathOffset(
         bytes32 from,
-        bytes32 to,
         bytes32[] memory proof,
         uint256 start,
         uint256 end
     )
         internal
         pure
-        returns(bool)
+        returns(bytes32)
     {
         bytes32 node = from;
         for (uint256 i = start; i<end; i++) {
             node = keccak256(abi.encodePacked(node, proof[i]));
         }
-        return (node==to);
-    }
-
-    function isInPath(
-        bytes32 from,
-        bytes32 middle,
-        bytes32 to,
-        bytes32[] memory proof1,
-        bytes32[] memory proof2
-    )
-        internal
-        pure
-        returns(bool)
-    {
-        return isPath(from, middle, proof1) &&
-            isPath(middle, to, proof2);
-    }
-
-    function isConflict(
-        bytes32 from,
-        bytes32 to1,
-        bytes32 to2,
-        bytes32[] memory proof1,
-        bytes32[] memory proof2
-    )
-        internal
-        pure
-        returns(bool)
-    {
-        return proof1[0] != proof2[0] &&
-            isPath(from, to1, proof1) &&
-            isPath(from, to2, proof2);
+        return node;
     }
 }
