@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -73,7 +74,7 @@ func (c *Challenge) setupContracts() error {
 	return nil
 }
 
-func (c *Challenge) StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error {
+func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := c.setupContracts(); err != nil {
 		return err
 	}
@@ -123,9 +124,9 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan Notificati
 			case <-ctx.Done():
 				break
 			case header := <-headers:
-				outChan <- Notification{
+				outChan <- arbbridge.Notification{
 					Header: header,
-					Event:  NewTimeEvent{},
+					Event:  arbbridge.NewTimeEvent{},
 				}
 			case log := <-logChan:
 				if err := c.processEvents(ctx, log, outChan); err != nil {
@@ -144,14 +145,14 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan Notificati
 	return nil
 }
 
-func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan chan Notification) error {
-	event, err := func() (Event, error) {
+func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == initiatedChallengeID {
 			eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
 			if err != nil {
 				return nil, err
 			}
-			return InitiateChallengeEvent{
+			return arbbridge.InitiateChallengeEvent{
 				Deadline: structures.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == timedOutAsserterID {
@@ -159,13 +160,13 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 			if err != nil {
 				return nil, err
 			}
-			return AsserterTimeoutEvent{}, nil
+			return arbbridge.AsserterTimeoutEvent{}, nil
 		} else if log.Topics[0] == timedOutChallengerID {
 			_, err := c.Challenge.ParseChallengerTimedOut(log)
 			if err != nil {
 				return nil, err
 			}
-			return ChallengerTimeoutEvent{}, nil
+			return arbbridge.ChallengerTimeoutEvent{}, nil
 		}
 		return nil, errors2.New("unknown arbitrum event type")
 	}()
@@ -178,7 +179,7 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 		return err
 	}
 
-	outChan <- Notification{
+	outChan <- arbbridge.Notification{
 		Header: header,
 		VMID:   c.address,
 		Event:  event,
@@ -190,15 +191,15 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 
 func (c *Challenge) TimeoutChallenge(
 	ctx context.Context,
-) (*types.Receipt, error) {
+) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.TimeoutChallenge(c.auth)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
 }
 
-func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 	return c.ClientConnection.waitForReceipt(ctx, c.auth.From, tx, methodName)
 }

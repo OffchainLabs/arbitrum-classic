@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
 
@@ -73,7 +74,7 @@ func (c *BisectionChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error {
+func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := c.Challenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
@@ -131,7 +132,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan N
 	return nil
 }
 
-func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan Notification) error {
+func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
@@ -142,10 +143,10 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 		if err != nil {
 			return err
 		}
-		outChan <- Notification{
+		outChan <- arbbridge.Notification{
 			Header: header,
 			VMID:   c.address,
-			Event: ContinueChallengeEvent{
+			Event: arbbridge.ContinueChallengeEvent{
 				SegmentIndex: contChal.SegmentIndex,
 				Deadline:     structures.TimeTicks{Val: contChal.DeadlineTicks},
 			},
@@ -159,7 +160,7 @@ func (c *BisectionChallenge) ChooseSegment(
 	ctx context.Context,
 	segmentToChallenge uint16,
 	segments [][32]byte,
-) (*types.Receipt, error) {
+) error {
 	tree := NewMerkleTree(segments)
 	c.auth.Context = ctx
 	tx, err := c.BisectionChallenge.ChooseSegment(
@@ -170,7 +171,7 @@ func (c *BisectionChallenge) ChooseSegment(
 		tree.GetNode(int(segmentToChallenge)),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "ChooseSegment")
 }

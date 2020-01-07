@@ -17,9 +17,9 @@
 package observer
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func New(
@@ -47,9 +47,9 @@ func (bot waitingChallenge) UpdateTime(time uint64, bridge bridge.Challenge) (ch
 	return challenge.TimedOutAsserter{}, nil
 }
 
-func (bot waitingChallenge) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
+func (bot waitingChallenge) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ExecutionBisectionEvent:
+	case arbbridge.ExecutionBisectionEvent:
 		return waitingBisected{ev.Deadline}, nil
 	default:
 		return nil, &bridge.Error{Message: "ERROR: waitingChallenge: VM state got unsynchronized"}
@@ -73,9 +73,9 @@ func (bot waitingBisected) UpdateTime(time uint64, bridge bridge.Challenge) (cha
 	return challenge.TimedOutChallenger{}, nil
 }
 
-func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ContinueChallengeEvent:
+	case arbbridge.ContinueChallengeEvent:
 		return waitingChallenge{
 			ev.Deadline,
 		}, nil

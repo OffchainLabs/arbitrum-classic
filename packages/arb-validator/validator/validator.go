@@ -21,10 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 
@@ -78,7 +77,7 @@ func (bot *ChainBot) updateTime(time uint64) error {
 	return nil
 }
 
-func (bot *ChainBot) updateState(ev ethbridge.Event, time uint64) error {
+func (bot *ChainBot) updateState(ev arbbridge.Event, time uint64) error {
 	newBot, err := bot.ChainState.ChainUpdateState(ev, time, bot.bridge)
 	if err != nil {
 		return err
@@ -121,7 +120,7 @@ func (bot *ChannelBot) updateTime(time uint64) error {
 	return nil
 }
 
-func (bot *ChannelBot) updateState(ev ethbridge.Event, time uint64) error {
+func (bot *ChannelBot) updateState(ev arbbridge.Event, time uint64) error {
 	newBot, err := bot.ChannelState.ChannelUpdateState(ev, time, bot.bridge)
 	if err != nil {
 		return err
@@ -133,7 +132,7 @@ func (bot *ChannelBot) updateState(ev ethbridge.Event, time uint64) error {
 type Bot interface {
 	state.State
 	updateTime(uint64) error
-	updateState(ethbridge.Event, uint64) error
+	updateState(arbbridge.Event, uint64) error
 	getBridge() bridge.ArbVMBridge
 	attemptDisputableAssertion(ctx context.Context, request *disputable.AssertionRequest) (bool, error)
 }
@@ -320,7 +319,7 @@ func (validator *Validator) validatorClosing() {
 	validator.bot.getBridge().SendMonitorErr(bridge.Error{errors.New("WARNING: validator closing"), "WARNING: validator closing", false})
 }
 
-func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.Notification) {
+func (validator *Validator) Run(ctx context.Context, recvChan <-chan arbbridge.Notification) {
 	defer validator.validatorClosing()
 	for {
 		select {
@@ -365,9 +364,9 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 			}
 
 			switch ev := notification.Event.(type) {
-			case ethbridge.NewTimeEvent:
+			case arbbridge.NewTimeEvent:
 				break
-			case ethbridge.VMEvent:
+			case arbbridge.VMEvent:
 				err := validator.bot.updateState(ev, notification.Header.Number.Uint64())
 				if err != nil {
 					//log.Printf("*****Validator %v: error - %v\n", validator.Name, err)
@@ -385,7 +384,7 @@ func (validator *Validator) Run(ctx context.Context, recvChan <-chan ethbridge.N
 						return
 					}
 				}
-			case ethbridge.MessageDeliveredEvent:
+			case arbbridge.MessageDeliveredEvent:
 				validator.bot.SendMessageToVM(ev.Msg)
 			default:
 				panic("Should never receive other kinds of events")

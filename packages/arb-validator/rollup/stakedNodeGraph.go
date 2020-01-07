@@ -18,11 +18,10 @@ package rollup
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"sort"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -73,7 +72,7 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 		s.stakers.Equals(s2.stakers)
 }
 
-func (chain *StakedNodeGraph) CreateStake(ev ethbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
 	chain.stakers.Add(&Staker{
 		ev.Staker,
 		chain.nodeFromHash[ev.NodeHash],

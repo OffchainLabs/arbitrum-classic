@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -44,7 +44,7 @@ type recoverStakeMootedParams struct {
 	stProof  [][32]byte
 }
 
-func (chain *ChainObserver) startCleanupThread(client *ethbridge.ArbRollup, doneChan chan interface{}) {
+func (chain *ChainObserver) startCleanupThread(client arbbridge.ArbRollup, doneChan chan interface{}) {
 	if doneChan == nil {
 		doneChan = make(chan interface{})
 	}

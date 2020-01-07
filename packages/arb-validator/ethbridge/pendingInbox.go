@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -49,10 +48,10 @@ func NewPendingInbox(address common.Address, client *ethclient.Client) (*Pending
 func (con *PendingInbox) SendMessage(
 	auth *bind.TransactOpts,
 	msg protocol.Message,
-) (*types.Receipt, error) {
+) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-		return nil, err
+		return err
 	}
 	tx, err := con.GlobalPendingInbox.SendMessage(
 		auth,
@@ -62,7 +61,7 @@ func (con *PendingInbox) SendMessage(
 		dataBuf.Bytes(),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return waitForReceipt(auth.Context, con.client, auth.From, tx, "SendMessage")
 }
@@ -71,10 +70,10 @@ func (con *PendingInbox) ForwardMessage(
 	auth *bind.TransactOpts,
 	msg protocol.Message,
 	sig []byte,
-) (*types.Receipt, error) {
+) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
-		return nil, err
+		return err
 	}
 	tx, err := con.GlobalPendingInbox.ForwardMessage(
 		auth,
@@ -85,7 +84,7 @@ func (con *PendingInbox) ForwardMessage(
 		sig,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return waitForReceipt(auth.Context, con.client, auth.From, tx, "ForwardMessage")
 }
@@ -95,10 +94,10 @@ func (con *PendingInbox) SendEthMessage(
 	data value.Value,
 	destination common.Address,
 	amount *big.Int,
-) (*types.Receipt, error) {
+) (uint64, error) {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(data, &dataBuf); err != nil {
-		return nil, err
+		return 0, err
 	}
 	tx, err := con.GlobalPendingInbox.SendEthMessage(
 		&bind.TransactOpts{
@@ -111,12 +110,13 @@ func (con *PendingInbox) SendEthMessage(
 		dataBuf.Bytes(),
 	)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return waitForReceipt(auth.Context, con.client, auth.From, tx, "SendEthMessage")
+	receipt, err := waitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "SendEthMessage")
+	return receipt.Status, err
 }
 
-func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) (*types.Receipt, error) {
+func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) error {
 	tx, err := con.GlobalPendingInbox.DepositEth(
 		&bind.TransactOpts{
 			From:     auth.From,
@@ -127,7 +127,7 @@ func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, 
 		dest,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return waitForReceipt(auth.Context, con.client, auth.From, tx, "DepositFunds")
 }

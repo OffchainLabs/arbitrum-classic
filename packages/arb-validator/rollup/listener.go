@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -31,11 +32,11 @@ import (
 )
 
 type ChainListener interface {
-	StakeCreated(ethbridge.StakeCreatedEvent)
-	StakeRemoved(ethbridge.StakeRefundedEvent)
-	StakeMoved(ethbridge.StakeMovedEvent)
-	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)
-	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
+	StakeCreated(arbbridge.StakeCreatedEvent)
+	StakeRemoved(arbbridge.StakeRefundedEvent)
+	StakeMoved(arbbridge.StakeMovedEvent)
+	StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)
+	CompletedChallenge(event arbbridge.ChallengeCompletedEvent)
 
 	AssertionPrepared(*preparedAssertion)
 }
@@ -84,7 +85,7 @@ func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAs
 	}()
 }
 
-func (staker *StakerListener) actAsChallenger(pendingInbox *structures.PendingInbox, ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
+func (staker *StakerListener) actAsChallenger(pendingInbox *structures.PendingInbox, ev arbbridge.ChallengeStartedEvent, conflictNode *Node) {
 	switch conflictNode.linkType {
 	case structures.InvalidPendingChildType:
 		go challenges.ChallengePendingTopClaim(
@@ -113,7 +114,7 @@ func (staker *StakerListener) actAsChallenger(pendingInbox *structures.PendingIn
 	}
 }
 
-func (staker *StakerListener) actAsAsserter(pendingInbox *structures.PendingInbox, ev ethbridge.ChallengeStartedEvent, conflictNode *Node) {
+func (staker *StakerListener) actAsAsserter(pendingInbox *structures.PendingInbox, ev arbbridge.ChallengeStartedEvent, conflictNode *Node) {
 	switch conflictNode.linkType {
 	case structures.InvalidPendingChildType:
 		go challenges.DefendPendingTopClaim(
@@ -171,7 +172,7 @@ func (lis *ValidatorChainListener) AddStaker(address common.Address, client *eth
 	return nil
 }
 
-func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) {
+func (lis *ValidatorChainListener) StakeCreated(ev arbbridge.StakeCreatedEvent) {
 	staker, ok := lis.stakers[ev.Staker]
 	if ok {
 		opps := lis.chain.nodeGraph.checkChallengeOpportunityAllPairs()
@@ -183,11 +184,11 @@ func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) 
 	}
 }
 
-func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
+func (lis *ValidatorChainListener) StakeRemoved(arbbridge.StakeRefundedEvent) {
 
 }
 
-func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
+func (lis *ValidatorChainListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
 	lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
 }
 
@@ -213,7 +214,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 	}
 }
 
-func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStartedEvent, asserterAncestor *Node, challengerAncestor *Node) {
 	asserter, ok := lis.stakers[ev.Asserter]
 	if ok {
 		asserter.actAsAsserter(lis.chain.pendingInbox, ev, asserterAncestor)
@@ -225,7 +226,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStarte
 	}
 }
 
-func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) CompletedChallenge(ev arbbridge.ChallengeCompletedEvent) {
 	_, ok := lis.stakers[ev.Winner]
 	if ok {
 		lis.wonChallenge(ev)
@@ -238,11 +239,11 @@ func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeComp
 	lis.challengeStakerIfPossible(context.TODO(), ev.Winner)
 }
 
-func (lis *ValidatorChainListener) lostChallenge(ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) lostChallenge(arbbridge.ChallengeCompletedEvent) {
 
 }
 
-func (lis *ValidatorChainListener) wonChallenge(ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEvent) {
 
 }
 

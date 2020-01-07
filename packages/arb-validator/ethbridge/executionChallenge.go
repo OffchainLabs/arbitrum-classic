@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -75,7 +76,7 @@ func (c *ExecutionChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error {
+func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
@@ -133,14 +134,14 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan N
 	return nil
 }
 
-func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan Notification) error {
-	event, err := func() (Event, error) {
+func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == bisectedAssertionID {
 			bisectChal, err := c.Challenge.ParseBisectedAssertion(log)
 			if err != nil {
 				return nil, err
 			}
-			return ExecutionBisectionEvent{
+			return arbbridge.ExecutionBisectionEvent{
 				Assertions: translateBisectionEvent(bisectChal),
 				TotalSteps: bisectChal.TotalSteps,
 				Deadline:   structures.TimeTicks{Val: bisectChal.DeadlineTicks},
@@ -150,7 +151,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 			if err != nil {
 				return nil, err
 			}
-			return OneStepProofEvent{}, nil
+			return arbbridge.OneStepProofEvent{}, nil
 		}
 		return nil, errors2.New("unknown arbitrum event type")
 	}()
@@ -163,7 +164,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 	if err != nil {
 		return err
 	}
-	outChan <- Notification{
+	outChan <- arbbridge.Notification{
 		Header: header,
 		VMID:   c.address,
 		Event:  event,
@@ -177,7 +178,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	precondition *protocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
 	totalSteps uint32,
-) (*types.Receipt, error) {
+) error {
 	machineHashes := make([][32]byte, 0, len(assertions)+1)
 	didInboxInsns := make([]bool, 0, len(assertions))
 	messageAccs := make([][32]byte, 0, len(assertions)+1)
@@ -206,7 +207,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 		totalSteps,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "BisectAssertion")
 }
@@ -216,7 +217,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	precondition *protocol.Precondition,
 	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
-) (*types.Receipt, error) {
+) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
 		c.auth,
@@ -233,7 +234,7 @@ func (c *ExecutionChallenge) OneStepProof(
 		proof,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
@@ -243,7 +244,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
-) (*types.Receipt, error) {
+) error {
 	bisectionHashes := make([][32]byte, 0, len(assertions))
 	for i := range assertions {
 		bisectionHash := [32]byte{}

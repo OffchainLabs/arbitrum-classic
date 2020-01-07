@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"time"
 
@@ -31,7 +32,7 @@ import (
 type VMConnection interface {
 	StartConnection(ctx context.Context) error
 
-	GetChans() (chan Notification, chan error)
+	GetChans() (chan arbbridge.Notification, chan error)
 
 	VerifyVM(
 		auth *bind.CallOpts,
@@ -73,7 +74,7 @@ type VMConnection interface {
 type ChallengeConnection interface {
 	StartConnection(ctx context.Context) error
 
-	GetChans() (chan Notification, chan error)
+	GetChans() (chan arbbridge.Notification, chan error)
 
 	BisectAssertion(
 		auth *bind.TransactOpts,
@@ -105,7 +106,7 @@ type ChallengeConnection interface {
 }
 
 type ContractConnection interface {
-	StartConnection(context.Context, chan Notification, chan error) error
+	StartConnection(context.Context, chan arbbridge.Notification, chan error) error
 }
 
 type ChainContract interface {
@@ -115,13 +116,11 @@ type ChainContract interface {
 type ChallengeContract interface {
 	ChainContract
 
-	TimeoutChallenge(
-		ctx context.Context,
-	) (*types.Receipt, error)
+	TimeoutChallenge(ctx context.Context) error
 }
 
-func HandleBlockchainNotifications(ctx context.Context, noteChan chan Notification, contract ContractConnection) {
-	outChan := make(chan Notification, 1024)
+func HandleBlockchainNotifications(ctx context.Context, noteChan chan arbbridge.Notification, contract ContractConnection) {
+	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	defer close(outChan)
 	defer close(errChan)

@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -45,7 +46,7 @@ func DefendMessagesClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan ethbridge.Notification, 1024)
+	noteChan := make(chan arbbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendMessages(
@@ -73,7 +74,7 @@ func ChallengeMessagesClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan ethbridge.Notification, 1024)
+	noteChan := make(chan arbbridge.Notification, 1024)
 
 	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengeMessages(
@@ -88,7 +89,7 @@ func ChallengeMessagesClaim(
 
 func defendMessages(
 	ctx context.Context,
-	outChan chan ethbridge.Notification,
+	outChan chan arbbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
@@ -99,7 +100,7 @@ func defendMessages(
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	_, ok = note.Event.(ethbridge.InitiateChallengeEvent)
+	_, ok = note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
 		return 0, errors.New("MessagesChallenge expected InitiateChallengeEvent")
 	}
@@ -129,7 +130,7 @@ func defendMessages(
 			if err != nil {
 				return 0, err
 			}
-			_, err = contract.OneStepProof(ctx, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
+			err = contract.OneStepProof(ctx, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
 			if err != nil {
 				return 0, err
 			}
@@ -152,7 +153,7 @@ func defendMessages(
 		if err != nil {
 			return 0, err
 		}
-		_, err = contract.Bisect(ctx, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
+		err = contract.Bisect(ctx, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
 		if err != nil {
 			return 0, err
 		}
@@ -161,7 +162,7 @@ func defendMessages(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		ev, ok := note.Event.(ethbridge.MessagesBisectionEvent)
+		ev, ok := note.Event.(arbbridge.MessagesBisectionEvent)
 		if !ok {
 			return 0, errors.New("MessagesChallenge expected MessagesBisectionEvent")
 		}
@@ -175,7 +176,7 @@ func defendMessages(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
+		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
 			return 0, errors.New("MessagesChallenge expected ContinueChallengeEvent")
 		}
@@ -188,7 +189,7 @@ func defendMessages(
 
 func challengeMessages(
 	ctx context.Context,
-	outChan chan ethbridge.Notification,
+	outChan chan arbbridge.Notification,
 	contract *ethbridge.MessagesChallenge,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
@@ -198,7 +199,7 @@ func challengeMessages(
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	ev, ok := note.Event.(ethbridge.InitiateChallengeEvent)
+	ev, ok := note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
 		return 0, errors.New("MessagesChallenge expected InitiateChallengeEvent")
 	}
@@ -224,7 +225,7 @@ func challengeMessages(
 			return ChallengeAsserterWon, nil
 		}
 
-		ev, ok := note.Event.(ethbridge.MessagesBisectionEvent)
+		ev, ok := note.Event.(arbbridge.MessagesBisectionEvent)
 		if !ok {
 			return 0, errors.New("MessagesChallenge expected MessagesBisectionEvent")
 		}
@@ -241,7 +242,7 @@ func challengeMessages(
 			maxSegment = messagesChallengedSegment
 		}
 
-		_, err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes)
+		err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes)
 		if err != nil {
 			return 0, err
 		}
@@ -249,7 +250,7 @@ func challengeMessages(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
+		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
 			return 0, errors.New("MessagesChallenge expected ContinueChallengeEvent")
 		}

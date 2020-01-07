@@ -17,7 +17,7 @@
 package rollup
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"testing"
 
@@ -185,7 +185,7 @@ func createSomeStakers(chain *ChainObserver) {
 
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash [32]byte) {
 	chain.CreateStake(
-		ethbridge.StakeCreatedEvent{
+		arbbridge.StakeCreatedEvent{
 			Staker:   stakerAddr,
 			NodeHash: nodeHash,
 		},

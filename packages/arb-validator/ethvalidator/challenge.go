@@ -18,6 +18,7 @@ package ethvalidator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"sync"
 	"time"
@@ -72,8 +73,8 @@ func NewChallengeValidator(
 	return vmVal, nil
 }
 
-func (val *ChallengeValidator) StartListening(ctx context.Context) (chan ethbridge.Notification, error) {
-	parsedChan := make(chan ethbridge.Notification, 1024)
+func (val *ChallengeValidator) StartListening(ctx context.Context) (chan arbbridge.Notification, error) {
+	parsedChan := make(chan arbbridge.Notification, 1024)
 
 	if err := val.challenge.StartConnection(ctx); err != nil {
 		return nil, err

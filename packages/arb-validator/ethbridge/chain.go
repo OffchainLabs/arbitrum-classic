@@ -37,7 +37,11 @@ type ArbAddresses struct {
 	OneStepProof       string `json:"OneStepProof"`
 }
 
-func waitForReceipt(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func waitForReceipt(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) error {
+	_, err := waitForReceiptWithResults(ctx, client, from, tx, methodName)
+	return err
+}
+func waitForReceiptWithResults(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):

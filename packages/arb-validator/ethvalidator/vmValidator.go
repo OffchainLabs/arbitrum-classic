@@ -19,6 +19,7 @@ package ethvalidator
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"sync"
@@ -146,11 +147,11 @@ func (val *VMValidator) Sign(msgHash [32]byte) ([]byte, error) {
 	return val.Validator.Sign(msgHash[:])
 }
 
-func (val *VMValidator) StartListening(ctx context.Context) (chan ethbridge.Notification, error) {
+func (val *VMValidator) StartListening(ctx context.Context) (chan arbbridge.Notification, error) {
 	if err := val.ensureVMActivated(); err != nil {
 		return nil, err
 	}
-	parsedChan := make(chan ethbridge.Notification, 1024)
+	parsedChan := make(chan arbbridge.Notification, 1024)
 
 	if err := val.arbitrumVM.StartConnection(ctx); err != nil {
 		return nil, err
@@ -284,36 +285,25 @@ func (val *VMValidator) InitiateChallenge(
 	return receipt, err
 }
 
-func (val *VMValidator) SendMessage(
-	ctx context.Context,
-	data value.Value,
-	tokenType [21]byte,
-	currency *big.Int,
-) (*types.Receipt, error) {
+func (val *VMValidator) SendMessage(ctx context.Context, data value.Value, tokenType [21]byte, currency *big.Int) error {
 	val.Mutex.Unlock()
-	receipt, err := val.Validator.SendMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
+	err := val.Validator.SendMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
 	val.Mutex.Unlock()
-	return receipt, err
+	return err
 }
 
-func (val *VMValidator) ForwardMessage(
-	ctx context.Context,
-	data value.Value,
-	tokenType [21]byte,
-	currency *big.Int,
-	sig []byte,
-) (*types.Receipt, error) {
+func (val *VMValidator) ForwardMessage(ctx context.Context, data value.Value, tokenType [21]byte, currency *big.Int, sig []byte) error {
 	val.Mutex.Lock()
-	receipt, err := val.Validator.ForwardMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
+	err := val.Validator.ForwardMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
 	val.Mutex.Unlock()
-	return receipt, err
+	return err
 }
 
 func (val *VMValidator) SendEthMessage(
 	ctx context.Context,
 	data value.Value,
 	amount *big.Int,
-) (*types.Receipt, error) {
+) (uint64, error) {
 	val.Mutex.Lock()
 	receipt, err := val.Validator.SendEthMessage(val.Validator.MakeAuth(ctx), data, val.VMID, amount)
 	val.Mutex.Unlock()

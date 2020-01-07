@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"time"
@@ -36,12 +37,14 @@ type Observer struct {
 }
 
 func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error) {
-	rollup, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
+	var rollup arbbridge.ArbRollupWatcher
+	roll, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return nil, err
 	}
+	rollup = roll
 	ctx := context.TODO()
-	outChan := make(chan ethbridge.Notification, 1024)
+	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
 		return nil, err
@@ -84,30 +87,30 @@ func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error
 	return &Observer{}, nil
 }
 
-func handleNotification(notification ethbridge.Notification, chain *ChainObserver) {
+func handleNotification(notification arbbridge.Notification, chain *ChainObserver) {
 	chain.Lock()
 	defer chain.Unlock()
 	switch ev := notification.Event.(type) {
-	case ethbridge.StakeCreatedEvent:
+	case arbbridge.StakeCreatedEvent:
 		currentTime := structures.TimeFromBlockNum(protocol.NewTimeBlocks(notification.Header.Number))
 		chain.CreateStake(ev, currentTime)
-	case ethbridge.ChallengeStartedEvent:
+	case arbbridge.ChallengeStartedEvent:
 		chain.NewChallenge(ev)
-	case ethbridge.ChallengeCompletedEvent:
+	case arbbridge.ChallengeCompletedEvent:
 		chain.ChallengeResolved(ev)
-	case ethbridge.StakeRefundedEvent:
+	case arbbridge.StakeRefundedEvent:
 		chain.RemoveStake(ev)
-	case ethbridge.PrunedEvent:
+	case arbbridge.PrunedEvent:
 		chain.PruneNode(ev)
-	case ethbridge.StakeMovedEvent:
+	case arbbridge.StakeMovedEvent:
 		chain.MoveStake(ev)
-	case ethbridge.AssertedEvent:
+	case arbbridge.AssertedEvent:
 		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
 		err := chain.notifyAssert(ev, currentTime)
 		if err != nil {
 			panic(err)
 		}
-	case ethbridge.ConfirmedEvent:
+	case arbbridge.ConfirmedEvent:
 		chain.ConfirmNode(ev)
 	}
 }

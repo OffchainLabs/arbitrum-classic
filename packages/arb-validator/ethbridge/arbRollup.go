@@ -49,12 +49,7 @@ func NewRollup(address common.Address, client *ethclient.Client, auth *bind.Tran
 	return vm, err
 }
 
-func (vm *ArbRollup) PlaceStake(
-	ctx context.Context,
-	stakeAmount *big.Int,
-	proof1 [][32]byte,
-	proof2 [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof1 [][32]byte, proof2 [][32]byte) error {
 	call := &bind.TransactOpts{
 		From:    vm.auth.From,
 		Signer:  vm.auth.Signer,
@@ -67,31 +62,24 @@ func (vm *ArbRollup) PlaceStake(
 		proof2,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "PlaceStake")
 }
 
-func (vm *ArbRollup) RecoverStakeConfirmed(
-	ctx context.Context,
-	proof [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) RecoverStakeConfirmed(ctx context.Context, proof [][32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakeConfirmed(
 		vm.auth,
 		proof,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "RecoverStakeConfirmed")
 }
 
-func (vm *ArbRollup) RecoverStakeOld(
-	ctx context.Context,
-	staker common.Address,
-	proof [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) RecoverStakeOld(ctx context.Context, staker common.Address, proof [][32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakeOld(
 		vm.auth,
@@ -99,18 +87,12 @@ func (vm *ArbRollup) RecoverStakeOld(
 		proof,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "RecoverStakeOld")
 }
 
-func (vm *ArbRollup) RecoverStakeMooted(
-	ctx context.Context,
-	nodeHash [32]byte,
-	staker common.Address,
-	latestConfirmedProof [][32]byte,
-	stakerProof [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) RecoverStakeMooted(ctx context.Context, nodeHash [32]byte, staker common.Address, latestConfirmedProof [][32]byte, stakerProof [][32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakeMooted(
 		vm.auth,
@@ -120,20 +102,12 @@ func (vm *ArbRollup) RecoverStakeMooted(
 		stakerProof,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "RecoverStakeMooted")
 }
 
-func (vm *ArbRollup) RecoverStakePassedDeadline(
-	ctx context.Context,
-	stakerAddress common.Address,
-	deadlineTicks *big.Int,
-	disputableNodeHashVal [32]byte,
-	childType uint64,
-	vmProtoStateHash [32]byte,
-	proof [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal [32]byte, childType uint64, vmProtoStateHash [32]byte, proof [][32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.RecoverStakePassedDeadline(
 		vm.auth,
@@ -145,16 +119,12 @@ func (vm *ArbRollup) RecoverStakePassedDeadline(
 		proof,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "RecoverStakePassedDeadline")
 }
 
-func (vm *ArbRollup) MoveStake(
-	ctx context.Context,
-	proof1 [][32]byte,
-	proof2 [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) MoveStake(ctx context.Context, proof1 [][32]byte, proof2 [][32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MoveStake(
 		vm.auth,
@@ -162,17 +132,12 @@ func (vm *ArbRollup) MoveStake(
 		proof2,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "MoveStake")
 }
 
-func (vm *ArbRollup) PruneLeaf(
-	ctx context.Context,
-	from [32]byte,
-	proof1 [][32]byte,
-	proof2 [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) PruneLeaf(ctx context.Context, from [32]byte, proof1 [][32]byte, proof2 [][32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.PruneLeaf(
 		vm.auth,
@@ -181,24 +146,12 @@ func (vm *ArbRollup) PruneLeaf(
 		proof2,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "PruneLeaf")
 }
 
-func (vm *ArbRollup) MakeAssertion(
-	ctx context.Context,
-
-	prevPrevLeafHash [32]byte,
-	prevDataHash [32]byte,
-	prevDeadline structures.TimeTicks,
-	prevChildType structures.ChildType,
-
-	beforeState *structures.VMProtoData,
-	assertionParams *structures.AssertionParams,
-	assertionClaim *structures.AssertionClaim,
-	stakerProof [][32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) MakeAssertion(ctx context.Context, prevPrevLeafHash [32]byte, prevDataHash [32]byte, prevDeadline structures.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof [][32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth,
@@ -224,21 +177,12 @@ func (vm *ArbRollup) MakeAssertion(
 		stakerProof,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
 
-func (vm *ArbRollup) ConfirmValid(
-	ctx context.Context,
-	deadlineTics *big.Int,
-	outMsgs []value.Value,
-	logsAccHash [32]byte,
-	protoHash [32]byte,
-	stakerAddresses []common.Address,
-	stakerProofs [][32]byte,
-	stakerProofOffsets []*big.Int,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) ConfirmValid(ctx context.Context, deadlineTics *big.Int, outMsgs []value.Value, logsAccHash [32]byte, protoHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
 	vm.auth.Context = ctx
 	messages := hashing.CombineMessages(outMsgs)
 	tx, err := vm.ArbRollup.ConfirmValid(
@@ -252,21 +196,12 @@ func (vm *ArbRollup) ConfirmValid(
 		stakerProofOffsets,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "ConfirmValid")
 }
 
-func (vm *ArbRollup) ConfirmInvalid(
-	ctx context.Context,
-	deadlineTics *big.Int,
-	challengeNodeData [32]byte,
-	branch uint64,
-	protoHash [32]byte,
-	stakerAddresses []common.Address,
-	stakerProofs [][32]byte,
-	stakerProofOffsets []*big.Int,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) ConfirmInvalid(ctx context.Context, deadlineTics *big.Int, challengeNodeData [32]byte, branch uint64, protoHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.ConfirmInvalid(
 		vm.auth,
@@ -279,27 +214,12 @@ func (vm *ArbRollup) ConfirmInvalid(
 		stakerProofOffsets,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "ConfirmInvalid")
 }
 
-func (vm *ArbRollup) StartChallenge(
-	ctx context.Context,
-	asserterAddress common.Address,
-	challengerAddress common.Address,
-	prevNode [32]byte,
-	disputableDeadline *big.Int,
-	asserterPosition structures.ChildType,
-	challengerPosition structures.ChildType,
-	asserterVMProtoHash [32]byte,
-	challengerVMProtoHash [32]byte,
-	asserterProof [][32]byte,
-	challengerProof [][32]byte,
-	asserterDataHash [32]byte,
-	asserterPeriodTicks structures.TimeTicks,
-	challengerNodeHash [32]byte,
-) (*types.Receipt, error) {
+func (vm *ArbRollup) StartChallenge(ctx context.Context, asserterAddress common.Address, challengerAddress common.Address, prevNode [32]byte, disputableDeadline *big.Int, asserterPosition structures.ChildType, challengerPosition structures.ChildType, asserterVMProtoHash [32]byte, challengerVMProtoHash [32]byte, asserterProof [][32]byte, challengerProof [][32]byte, asserterDataHash [32]byte, asserterPeriodTicks structures.TimeTicks, challengerNodeHash [32]byte) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.StartChallenge(
 		vm.auth,
@@ -322,9 +242,9 @@ func (vm *ArbRollup) StartChallenge(
 		challengerNodeHash,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return vm.waitForReceipt(ctx, tx, "StartExecutionChallenge")
+	return vm.waitForReceipt(ctx, tx, "StartChallenge")
 }
 
 //func (vm *ArbRollup) VerifyVM(
@@ -365,6 +285,6 @@ func (vm *ArbRollup) StartChallenge(
 //	return nil
 //}
 
-func (vm *ArbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func (vm *ArbRollup) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 	return waitForReceipt(ctx, vm.Client, vm.auth.From, tx, methodName)
 }

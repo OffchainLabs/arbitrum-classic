@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
 
@@ -73,7 +74,7 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error {
+func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
@@ -131,14 +132,14 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 	return nil
 }
 
-func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan Notification) error {
-	event, err := func() (Event, error) {
+func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == pendingTopBisectedID {
 			eventVal, err := c.Challenge.ParseBisected(log)
 			if err != nil {
 				return nil, err
 			}
-			return PendingTopBisectionEvent{
+			return arbbridge.PendingTopBisectionEvent{
 				ChainHashes: eventVal.ChainHashes,
 				TotalLength: eventVal.TotalLength,
 				Deadline:    structures.TimeTicks{Val: eventVal.DeadlineTicks},
@@ -148,7 +149,7 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 			if err != nil {
 				return nil, err
 			}
-			return OneStepProofEvent{}, nil
+			return arbbridge.OneStepProofEvent{}, nil
 		}
 		return nil, errors2.New("unknown arbitrum event type")
 	}()
@@ -161,7 +162,7 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 	if err != nil {
 		return err
 	}
-	outChan <- Notification{
+	outChan <- arbbridge.Notification{
 		Header: header,
 		VMID:   c.address,
 		Event:  event,
@@ -174,7 +175,7 @@ func (c *PendingTopChallenge) Bisect(
 	ctx context.Context,
 	chainHashes [][32]byte,
 	chainLength *big.Int,
-) (*types.Receipt, error) {
+) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.Bisect(
 		c.auth,
@@ -182,7 +183,7 @@ func (c *PendingTopChallenge) Bisect(
 		chainLength,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
@@ -192,7 +193,7 @@ func (c *PendingTopChallenge) OneStepProof(
 	lowerHashA [32]byte,
 	topHashA [32]byte,
 	value [32]byte,
-) (*types.Receipt, error) {
+) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
 		c.auth,
@@ -201,7 +202,7 @@ func (c *PendingTopChallenge) OneStepProof(
 		value,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }

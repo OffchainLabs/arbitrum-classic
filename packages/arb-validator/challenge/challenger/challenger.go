@@ -18,9 +18,8 @@ package challenger
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/rand"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -59,9 +58,9 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Challenge) (c
 	return challenge.TimedOutAsserter{}, err
 }
 
-func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
+func (bot waitingContinuing) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ExecutionBisectionEvent:
+	case arbbridge.ExecutionBisectionEvent:
 		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
 		if err != nil && bot.challengeEverything {
 			assertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
@@ -90,7 +89,7 @@ func (bot waitingContinuing) UpdateState(ev ethbridge.Event, time uint64, brdg b
 			precondition:        bot.challengedPrecondition,
 			assertions:          ev.Assertions,
 		}, err
-	case ethbridge.OneStepProofEvent:
+	case arbbridge.OneStepProofEvent:
 		return nil, nil
 	default:
 		return nil, &bridge.Error{Message: "ERROR: waitingContinuing: VM state got unsynchronized"}
@@ -119,9 +118,9 @@ func (bot continuing) UpdateTime(time uint64, bridge bridge.Challenge) (challeng
 	return challenge.TimedOutChallenger{}, nil
 }
 
-func (bot continuing) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
+func (bot continuing) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ContinueChallengeEvent:
+	case arbbridge.ContinueChallengeEvent:
 		preconditions := protocol.GeneratePreconditions(bot.precondition, bot.assertions)
 		return waitingContinuing{
 			preconditions[ev.ChallengedAssertion],

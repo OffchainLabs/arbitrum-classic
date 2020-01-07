@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"bytes"
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
 
@@ -66,7 +67,7 @@ func init() {
 	confirmedAssertionID = parsed.Events["ConfirmedAssertion"].ID()
 }
 
-type ArbRollupWatcher struct {
+type EthRollupWatcher struct {
 	Client             *ethclient.Client
 	ArbRollup          *rollup.ArbRollup
 	GlobalPendingInbox *rollup.IGlobalPendingInbox
@@ -75,13 +76,13 @@ type ArbRollupWatcher struct {
 	client  *ethclient.Client
 }
 
-func NewRollupWatcher(address common.Address, client *ethclient.Client) (*ArbRollupWatcher, error) {
-	vm := &ArbRollupWatcher{Client: client, address: address}
-	err := vm.setupContracts()
+func NewRollupWatcher(address common.Address, client *ethclient.Client) (*EthRollupWatcher, error) {
+	vm := &EthRollupWatcher{Client: client, address: address}
+	err := vm.SetupContracts()
 	return vm, err
 }
 
-func (vm *ArbRollupWatcher) setupContracts() error {
+func (vm *EthRollupWatcher) SetupContracts() error {
 	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbRollup")
@@ -104,8 +105,8 @@ func (vm *ArbRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *ArbRollupWatcher) StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error {
-	if err := vm.setupContracts(); err != nil {
+func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+	if err := vm.SetupContracts(); err != nil {
 		return err
 	}
 
@@ -160,9 +161,9 @@ func (vm *ArbRollupWatcher) StartConnection(ctx context.Context, outChan chan No
 			case <-ctx.Done():
 				break
 			case header := <-headers:
-				outChan <- Notification{
+				outChan <- arbbridge.Notification{
 					Header: header,
-					Event:  NewTimeEvent{},
+					Event:  arbbridge.NewTimeEvent{},
 				}
 			case val := <-messageDeliveredChan:
 				header, err := vm.Client.HeaderByHash(context.Background(), val.Raw.BlockHash)
@@ -193,16 +194,16 @@ func (vm *ArbRollupWatcher) StartConnection(ctx context.Context, outChan chan No
 				})
 
 				msg := protocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
-				outChan <- Notification{
+				outChan <- arbbridge.Notification{
 					Header: header,
 					VMID:   val.VmId,
-					Event: MessageDeliveredEvent{
+					Event: arbbridge.MessageDeliveredEvent{
 						Msg: msg,
 					},
 					TxHash: val.Raw.TxHash,
 				}
 			case log := <-logChan:
-				if err := vm.processEvents(ctx, log, outChan); err != nil {
+				if err := vm.ProcessEvents(ctx, log, outChan); err != nil {
 					errChan <- err
 					return
 				}
@@ -221,14 +222,14 @@ func (vm *ArbRollupWatcher) StartConnection(ctx context.Context, outChan chan No
 	return nil
 }
 
-func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan Notification) error {
-	event, err := func() (Event, error) {
+func (vm *EthRollupWatcher) ProcessEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == rollupStakeCreatedID {
 			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(log)
 			if err != nil {
 				return nil, err
 			}
-			return StakeCreatedEvent{
+			return arbbridge.StakeCreatedEvent{
 				Staker:   eventVal.Staker,
 				NodeHash: eventVal.NodeHash,
 			}, nil
@@ -237,7 +238,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return ChallengeStartedEvent{
+			return arbbridge.ChallengeStartedEvent{
 				Asserter:          eventVal.Asserter,
 				Challenger:        eventVal.Challenger,
 				ChallengeType:     structures.ChildType(eventVal.ChallengeType.Uint64()),
@@ -248,7 +249,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return ChallengeCompletedEvent{
+			return arbbridge.ChallengeCompletedEvent{
 				Winner:            eventVal.Winner,
 				Loser:             eventVal.Loser,
 				ChallengeContract: eventVal.ChallengeContract,
@@ -258,7 +259,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return StakeRefundedEvent{
+			return arbbridge.StakeRefundedEvent{
 				Staker: eventVal.Staker,
 			}, nil
 		} else if log.Topics[0] == rollupPrunedID {
@@ -266,7 +267,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return PrunedEvent{
+			return arbbridge.PrunedEvent{
 				Leaf: eventVal.Leaf,
 			}, nil
 		} else if log.Topics[0] == rollupStakeMovedID {
@@ -274,7 +275,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return StakeMovedEvent{
+			return arbbridge.StakeMovedEvent{
 				Staker:   eventVal.Staker,
 				Location: eventVal.ToNodeHash,
 			}, nil
@@ -283,7 +284,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return AssertedEvent{
+			return arbbridge.AssertedEvent{
 				PrevLeafHash: eventVal.Fields[0],
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
@@ -311,7 +312,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return ConfirmedEvent{
+			return arbbridge.ConfirmedEvent{
 				NodeHash: eventVal.NodeHash,
 			}, nil
 		} else if log.Topics[0] == confirmedAssertionID {
@@ -319,7 +320,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return ConfirmedAssertionEvent{
+			return arbbridge.ConfirmedAssertionEvent{
 				LogsAccHash: eventVal.LogsAccHash,
 			}, nil
 		}
@@ -333,7 +334,7 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	if err != nil {
 		return err
 	}
-	outChan <- Notification{
+	outChan <- arbbridge.Notification{
 		Header: header,
 		VMID:   vm.address,
 		Event:  event,
