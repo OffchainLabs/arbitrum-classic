@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"math/big"
 	"sync"
 
@@ -124,7 +123,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext
 	return chain
 }
 
-func UnmarshalChainObserverFromBytes(buf []byte, ctx structures.RestoreContext, client *ethbridge.ArbRollup) (*ChainObserver, error) {
+func UnmarshalChainObserverFromBytes(buf []byte, ctx structures.RestoreContext, client arbbridge.ArbRollup) (*ChainObserver, error) {
 	cob := &ChainObserverBuf{}
 	if err := proto.Unmarshal(buf, cob); err != nil {
 		return nil, err

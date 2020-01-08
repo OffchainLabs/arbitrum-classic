@@ -48,7 +48,7 @@ func DefendMessagesClaim(
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
 
-	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendMessages(
 		ctx,
 		noteChan,
@@ -76,7 +76,7 @@ func ChallengeMessagesClaim(
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
 
-	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengeMessages(
 		ctx,
 		noteChan,

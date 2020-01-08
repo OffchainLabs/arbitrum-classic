@@ -39,7 +39,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -53,7 +52,7 @@ type VMValidator struct {
 	Mutex               *sync.Mutex
 	// private thread only
 	Validator      *Validator
-	arbitrumVM     ethbridge.VMConnection
+	arbitrumVM     arbbridge.VMConnection
 	MessageMonChan chan bridge.BridgeMessage
 	ErrorMonChan   chan bridge.Error
 }
@@ -76,7 +75,7 @@ func NewVMValidator(
 	machine machine.Machine,
 	config *valmessage.VMConfiguration,
 	challengeEverything bool,
-	con ethbridge.VMConnection,
+	con arbbridge.VMConnection,
 ) (*VMValidator, error) {
 	callOpts := &bind.CallOpts{
 		Pending: false,

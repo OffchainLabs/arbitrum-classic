@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type AnnouncerListener struct{}

@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type ChallengeState uint8
@@ -60,7 +58,7 @@ func getNextEventWithTimeout(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	deadline structures.TimeTicks,
-	contract ethbridge.ChallengeContract,
+	contract arbbridge.ChallengeContract,
 ) (note arbbridge.Notification, state ChallengeState, err error) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {

@@ -33,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type ChainListener interface {
@@ -175,10 +174,12 @@ func NewValidatorChainListener(
 }
 
 func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
-	contract, err := ethbridge.NewRollup(lis.chain.rollupAddr, client, auth)
+	var contract arbbridge.ArbRollup
+	contr, err := ethbridge.NewRollup(lis.chain.rollupAddr, client, auth)
 	if err != nil {
 		return err
 	}
+	contract = contr
 	location := lis.chain.knownValidNode
 	proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
 	proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))

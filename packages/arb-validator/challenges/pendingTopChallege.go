@@ -46,7 +46,7 @@ func DefendPendingTopClaim(
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
 
-	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendPendingTop(
 		ctx,
 		noteChan,
@@ -71,7 +71,7 @@ func ChallengePendingTopClaim(
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
 
-	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengePendingTop(
 		ctx,
 		noteChan,

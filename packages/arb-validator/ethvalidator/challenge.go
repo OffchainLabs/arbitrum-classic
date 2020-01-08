@@ -35,7 +35,7 @@ type ChallengeValidator struct {
 	Mutex *sync.Mutex
 	// private thread only
 	Validator      *Validator
-	challenge      ethbridge.ChallengeConnection
+	challenge      arbbridge.ChallengeConnection
 	MessageMonChan chan bridge.BridgeMessage
 	ErrorMonChan   chan bridge.Error
 }

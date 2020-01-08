@@ -20,6 +20,7 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"flag"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -111,10 +112,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	factory, err := ethbridge.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
+	factory, err := arb.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	auth.Context = context.Background()
 	address, err := factory.CreateRollup(
 		auth,
