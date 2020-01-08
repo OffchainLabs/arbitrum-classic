@@ -213,10 +213,10 @@ contract Staking is ChallengeType {
         stakeRequirement = _stakeRequirement;
     }
 
-    function getValidStaker(address _stakerAddress) internal view returns (Staker storage) {
-        Staker storage staker = stakers[_stakerAddress];
-        require(staker.location != 0x00, INV_STAKER);
-        return staker;
+    function getStakerLocation(address _stakerAddress) internal view returns (bytes32) {
+        bytes32 location = stakers[_stakerAddress].location;
+        require(location != 0x00, INV_STAKER);
+        return location;
     }
 
     function createStake(
@@ -237,8 +237,7 @@ contract Staking is ChallengeType {
     }
 
     function updateStakerLocation(address _stakerAddress, bytes32 _location) internal {
-        Staker storage staker = getValidStaker(_stakerAddress);
-        staker.location = _location;
+        stakers[_stakerAddress].location = _location;
         emit RollupStakeMoved(_stakerAddress, _location);
     }
 
@@ -283,6 +282,12 @@ contract Staking is ChallengeType {
             prevStaker = bytes20(stakerAddress);
         }
         return activeCount;
+    }
+
+    function getValidStaker(address _stakerAddress) private view returns (Staker storage) {
+        Staker storage staker = stakers[_stakerAddress];
+        require(staker.location != 0x00, INV_STAKER);
+        return staker;
     }
 
     function deleteStaker(address _stakerAddress) private {

@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-var BytesLib = artifacts.require("bytes/BytesLib.sol");
-
-var DebugPrint = artifacts.require("./libraries/DebugPrint.sol");
-var SigUtils = artifacts.require("./libraries/SigUtils.sol");
-var MerkleLib = artifacts.require("./libraries/MerkleLib.sol");
-var RollupTime = artifacts.require("./libraries/RollupTime.sol");
-
 var OneStepProof = artifacts.require("./arch/OneStepProof.sol");
 
 var MessagesChallenge = artifacts.require("./challenge/MessagesChallenge.sol");
@@ -32,7 +25,6 @@ var ExecutionChallenge = artifacts.require(
 );
 var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
 
-var VM = artifacts.require("./VM.sol");
 var ArbRollup = artifacts.require("./vm/ArbRollup.sol");
 var ArbFactory = artifacts.require("./vm/ArbFactory.sol");
 
