@@ -17,6 +17,9 @@
 package rollup
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 	"testing"
 
@@ -24,17 +27,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var dummyAddress common.Address
 
 func TestCreateEmptyChain(t *testing.T) {
-	chain, _, err := setUpChain()
+	testCreateEmptyChain("dummy", "contract.ao", t)
+	testCreateEmptyChain("fresh_cstore", "contract.ao", t)
+}
+
+func testCreateEmptyChain(checkpointType string, contractPath string, t *testing.T) {
+	chain, _, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,8 +46,6 @@ func TestCreateEmptyChain(t *testing.T) {
 		t.Fatal("unexpected leaf count")
 	}
 	tryMarshalUnmarshal(chain, t)
-	cp := structures.NewRollupCheckpointer("dummy", 1000000, "contract.ao")
-	tryMarshalUnmarshalWithCheckpointer(chain, cp, t)
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
@@ -73,7 +75,12 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 }
 
 func TestDoAssertion(t *testing.T) {
-	chain, _, err := setUpChain()
+	testDoAssertion("dummy", "contract.ao", t)
+	testDoAssertion("fresh_cstore", "contract.ao", t)
+}
+
+func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
+	chain, _, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +96,12 @@ func TestDoAssertion(t *testing.T) {
 }
 
 func TestChallenge(t *testing.T) {
-	chain, _, err := setUpChain()
+	testChallenge("dummy", "contract.ao", t)
+	testChallenge("fresh_cstore", "contract.ao", t)
+}
+
+func testChallenge(checkpointType string, contractPath string, t *testing.T) {
+	chain, _, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +180,12 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 }
 
 func TestCreateStakers(t *testing.T) {
-	chain, _, err := setUpChain()
+	testCreateStakers("dummy", "contract.ao", t)
+	testCreateStakers("fresh_cstore", "contract.ao", t)
+}
+
+func testCreateStakers(checkpointType string, contractPath string, t *testing.T) {
+	chain, _, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,14 +194,15 @@ func TestCreateStakers(t *testing.T) {
 	tryMarshalUnmarshal(chain, t)
 }
 
-func setUpChain() (*ChainObserver, machine.Machine, error) {
-	var dummyAddress common.Address
-	theMachine, err := loader.LoadMachineFromFile("contract.ao", true, "test")
+func setUpChain(checkpointType string, contractPath string) (*ChainObserver, machine.Machine, error) {
+	checkpointer := structures.NewRollupCheckpointer(checkpointType, 1000000, contractPath)
+	theMachine, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return nil, nil, err
 	}
 	chain := NewChain(
 		dummyAddress,
+		checkpointer,
 		theMachine,
 		structures.ChainParams{
 			StakeRequirement:        big.NewInt(1),
