@@ -163,7 +163,7 @@ func (vm *ArbRollup) MakeAssertion(
 	assertionParams *structures.AssertionParams,
 	assertionClaim *structures.AssertionClaim,
 	stakerProof [][32]byte,
-) (*types.Receipt, error) {
+) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth,
