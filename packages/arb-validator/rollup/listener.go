@@ -174,12 +174,10 @@ func NewValidatorChainListener(
 }
 
 func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
-	var contract arbbridge.ArbRollup
-	contr, err := arb.NewRollup(lis.chain.rollupAddr, client, auth)
+	contract, err := arb.NewRollup(lis.chain.rollupAddr, client, auth)
 	if err != nil {
 		return err
 	}
-	contract = contr
 	location := lis.chain.knownValidNode
 	proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
 	proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
