@@ -19,8 +19,11 @@ package ethbridge
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -283,6 +286,11 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
+			fmt.Println("Saw assertion event")
+			fmt.Println(hexutil.Encode(eventVal.NewNodes[0][:]))
+			fmt.Println(hexutil.Encode(eventVal.NewNodes[1][:]))
+			fmt.Println(hexutil.Encode(eventVal.NewNodes[2][:]))
+			fmt.Println(hexutil.Encode(eventVal.NewNodes[3][:]))
 			return AssertedEvent{
 				PrevLeafHash: eventVal.PrevLeaf,
 				Params: &structures.AssertionParams{
