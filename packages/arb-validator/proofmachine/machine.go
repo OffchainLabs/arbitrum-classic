@@ -166,6 +166,6 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return m.machine.Checkpoint(storage)
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
-	return m.machine.RestoreCheckpoint(storage, checkpointName)
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
+	return m.machine.RestoreCheckpoint(storage, machineHash)
 }

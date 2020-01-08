@@ -33,13 +33,20 @@ import (
 
 var dummyAddress common.Address
 
+var dummyRollupAddress1 = common.BytesToAddress([]byte{1})
+var dummyRollupAddress2 = common.BytesToAddress([]byte{2})
+var dummyRollupAddress3 = common.BytesToAddress([]byte{3})
+var dummyRollupAddress4 = common.BytesToAddress([]byte{4})
+var dummyRollupAddress5 = common.BytesToAddress([]byte{5})
+var dummyRollupAddress6 = common.BytesToAddress([]byte{6})
+
 func TestCreateEmptyChain(t *testing.T) {
-	testCreateEmptyChain("inmemory_testing", "contract.ao", t)
-	testCreateEmptyChain("fresh_rocksdb", "contract.ao", t)
+	testCreateEmptyChain(dummyRollupAddress1, "inmemory_testing", "contract.ao", t)
+	testCreateEmptyChain(dummyRollupAddress2, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testCreateEmptyChain(checkpointType string, contractPath string, t *testing.T) {
-	chain, err := setUpChain(checkpointType, contractPath)
+func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+	chain, err := setUpChain(rollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,12 +85,13 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 }
 
 func TestDoAssertion(t *testing.T) {
-	testDoAssertion("inmemory_testing", "contract.ao", t)
-	testDoAssertion("fresh_rocksdb", "contract.ao", t)
+	testDoAssertion(dummyRollupAddress3, "inmemory_testing", "contract.ao", t)
+	testDoAssertion(dummyRollupAddress4, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
-	chain, err := setUpChain(checkpointType, contractPath)
+func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+
+	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,12 +107,15 @@ func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
 }
 
 func TestChallenge(t *testing.T) {
-	testChallenge("inmemory_testing", "contract.ao", t)
-	testChallenge("fresh_rocksdb", "contract.ao", t)
+	var dummyRollupAddress1 = common.HexToAddress("a")
+	//var dummyRollupAddress2 = common.HexToAddress("b")
+	testChallenge(dummyRollupAddress1, "inmemory_testing", "contract.ao", t)
+	//testChallenge(dummyRollupAddress2, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testChallenge(checkpointType string, contractPath string, t *testing.T) {
-	chain, err := setUpChain(checkpointType, contractPath)
+func testChallenge(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+
+	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,12 +194,12 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 }
 
 func TestCreateStakers(t *testing.T) {
-	testCreateStakers("inmemory_testing", "contract.ao", t)
-	testCreateStakers("fresh_rocksdb", "contract.ao", t)
+	testCreateStakers(dummyRollupAddress5, "inmemory_testing", "contract.ao", t)
+	testCreateStakers(dummyRollupAddress6, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testCreateStakers(checkpointType string, contractPath string, t *testing.T) {
-	chain, err := setUpChain(checkpointType, contractPath)
+func testCreateStakers(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,11 +208,11 @@ func testCreateStakers(checkpointType string, contractPath string, t *testing.T)
 	tryMarshalUnmarshal(chain, t)
 }
 
-func setUpChain(checkpointType string, contractPath string) (*ChainObserver, error) {
-	var dummyRollupAddress common.Address
+func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
+
 	checkpointer := structures.NewRollupCheckpointerWithType(
 		context.TODO(),
-		dummyRollupAddress,
+		rollupAddress,
 		contractPath,
 		1000000,
 		checkpointType,
