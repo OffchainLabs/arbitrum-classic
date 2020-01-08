@@ -17,6 +17,7 @@
 package structures
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -96,21 +97,33 @@ type RollupCheckpointer struct {
 	cp             CheckpointerWithMetadata
 }
 
-const checkpointPathForTesting = "/tmp/rollup_test_dbpath"
+const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
 
-func NewRollupCheckpointer(kind string, versionsToKeep int64, contractPath string) *RollupCheckpointer {
+func makeCheckpointDatabasePath(rollupAddr common.Address) string {
+	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
+}
+
+func NewRollupCheckpointer(
+	rollupAddr common.Address,
+	kind string,
+	versionsToKeep int64,
+	contractPath string,
+) *RollupCheckpointer {
+	databasePath := makeCheckpointDatabasePath(rollupAddr)
 	switch kind {
-	case "dummy":
+	case "dummy": // inefficient in-memory checkpointer, for testing
 		return &RollupCheckpointer{big.NewInt(versionsToKeep), NewDummyCheckpointer(contractPath)}
-	case "fresh_cstore":
-		if err := os.RemoveAll(checkpointPathForTesting); err != nil {
+	case "fresh_rocksdb": // for testing only -- use rocksdb but delete old database first
+		if err := os.RemoveAll(databasePath); err != nil {
 			log.Fatal(err)
 		}
 		fallthrough
-	case "cstore":
+	case "": // empty string gives you what you want for production
+		fallthrough
+	case "rocksdb": // store in rocksdb database, keyed to rollupAddr -- use this for production
 		return &RollupCheckpointer{
 			big.NewInt(versionsToKeep),
-			NewCstoreCheckpointer(checkpointPathForTesting, "contract.ao"),
+			NewCstoreCheckpointer(databasePath, "contract.ao"),
 		}
 	default:
 		return nil

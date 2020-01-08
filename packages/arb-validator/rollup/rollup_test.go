@@ -34,7 +34,7 @@ var dummyAddress common.Address
 
 func TestCreateEmptyChain(t *testing.T) {
 	testCreateEmptyChain("dummy", "contract.ao", t)
-	testCreateEmptyChain("fresh_cstore", "contract.ao", t)
+	testCreateEmptyChain("fresh_rocksdb", "contract.ao", t)
 }
 
 func testCreateEmptyChain(checkpointType string, contractPath string, t *testing.T) {
@@ -76,7 +76,7 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 
 func TestDoAssertion(t *testing.T) {
 	testDoAssertion("dummy", "contract.ao", t)
-	testDoAssertion("fresh_cstore", "contract.ao", t)
+	testDoAssertion("fresh_rocksdb", "contract.ao", t)
 }
 
 func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
@@ -97,7 +97,7 @@ func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
 
 func TestChallenge(t *testing.T) {
 	testChallenge("dummy", "contract.ao", t)
-	testChallenge("fresh_cstore", "contract.ao", t)
+	testChallenge("fresh_rocksdb", "contract.ao", t)
 }
 
 func testChallenge(checkpointType string, contractPath string, t *testing.T) {
@@ -181,7 +181,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 
 func TestCreateStakers(t *testing.T) {
 	testCreateStakers("dummy", "contract.ao", t)
-	testCreateStakers("fresh_cstore", "contract.ao", t)
+	testCreateStakers("fresh_rocksdb", "contract.ao", t)
 }
 
 func testCreateStakers(checkpointType string, contractPath string, t *testing.T) {
@@ -195,7 +195,8 @@ func testCreateStakers(checkpointType string, contractPath string, t *testing.T)
 }
 
 func setUpChain(checkpointType string, contractPath string) (*ChainObserver, machine.Machine, error) {
-	checkpointer := structures.NewRollupCheckpointer(checkpointType, 1000000, contractPath)
+	var dummyRollupAddress common.Address
+	checkpointer := structures.NewRollupCheckpointer(dummyRollupAddress, checkpointType, 1000000, contractPath)
 	theMachine, err := checkpointer.GetInitialMachine()
 	if err != nil {
 		return nil, nil, err
