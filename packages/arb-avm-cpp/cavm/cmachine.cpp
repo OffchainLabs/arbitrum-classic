@@ -61,15 +61,17 @@ int checkpointMachine(CMachine* m, CCheckpointStorage* storage) {
 
 int restoreMachine(CMachine* m,
                    CCheckpointStorage* storage,
-                   const char* check_point) {
+                   const void* machine_hash) {
     auto machine = *(static_cast<Machine*>(m));
 
-    auto name_str = std::string(check_point);
-    auto name_vector =
-        std::vector<unsigned char>(name_str.begin(), name_str.end());
+    auto machine_hash_ptr = reinterpret_cast<const char*>(machine_hash);
+    auto hash = deserializeUint256t(machine_hash_ptr);
+
+    std::vector<unsigned char> hash_vector;
+    marshal_value(hash, hash_vector);
 
     return machine.restoreCheckpoint(
-        *(static_cast<CheckpointStorage*>(storage)), name_vector);
+        *(static_cast<CheckpointStorage*>(storage)), hash_vector);
 }
 
 void machineHash(CMachine* m, void* ret) {

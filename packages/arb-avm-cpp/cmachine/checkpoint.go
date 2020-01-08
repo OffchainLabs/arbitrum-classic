@@ -71,11 +71,8 @@ func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error
 	return ret, nil
 }
 
-func (checkpoint *CheckpointStorage) DeleteCheckpoint(checkpointName string) bool {
-	cCheckpointName := C.CString(checkpointName)
-	success := C.deleteCheckpoint(checkpoint.c, cCheckpointName)
-
-	C.free(unsafe.Pointer(cCheckpointName))
+func (checkpoint *CheckpointStorage) DeleteCheckpoint(machineHash [32]byte) bool {
+	success := C.deleteCheckpoint(checkpoint.c, unsafe.Pointer(&machineHash[0]))
 
 	return success == 1
 }

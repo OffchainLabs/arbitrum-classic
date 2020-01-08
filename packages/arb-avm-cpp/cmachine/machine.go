@@ -182,14 +182,11 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return success == 1
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
 	cCheckpointStorage, ok := storage.(*CheckpointStorage)
 
 	if ok {
-		cCheckpointName := C.CString(checkpointName)
-		success := C.restoreMachine(m.c, cCheckpointStorage.c, cCheckpointName)
-
-		C.free(unsafe.Pointer(cCheckpointName))
+		success := C.restoreMachine(m.c, cCheckpointStorage.c, unsafe.Pointer(&machineHash[0]))
 
 		return success == 1
 	} else {

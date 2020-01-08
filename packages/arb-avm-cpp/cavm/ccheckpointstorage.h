@@ -34,8 +34,7 @@ CCheckpointStorage* createCheckpointStorage(const char* filename,
                                             const char* contract_path);
 void destroyCheckpointStorage(CCheckpointStorage* storage);
 CMachine* getInitialMachine(const CCheckpointStorage* storage_ptr);
-int deleteCheckpoint(CCheckpointStorage* storage_ptr,
-                     const char* checkpoint_name);
+int deleteCheckpoint(CCheckpointStorage* storage_ptr, const void* machine_hash);
 int saveValue(CCheckpointStorage* storage_ptr, const void* value_data);
 ByteSlice getValue(const CCheckpointStorage* storage_ptr, const void* hash_key);
 int deleteValue(CCheckpointStorage* storage_ptr, const void* hash_key);
