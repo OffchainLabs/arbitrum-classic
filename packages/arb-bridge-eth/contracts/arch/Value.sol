@@ -59,7 +59,7 @@ library Value {
         }
     }
 
-    function hashInt(uint256 val) public pure returns (bytes32) {
+    function hashInt(uint256 val) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(val));
     }
 
@@ -68,7 +68,7 @@ library Value {
         bool immediate,
         bytes32 immediateVal,
         bytes32 nextCodePoint
-    ) public pure returns (bytes32) {
+    ) internal pure returns (bytes32) {
         if (immediate) {
             return keccak256(
                 abi.encodePacked(
@@ -88,7 +88,7 @@ library Value {
         );
     }
 
-    function hashCodePointBasic(uint8 opcode, bytes32 nextCodePoint) public pure returns (bytes32) {
+    function hashCodePointBasic(uint8 opcode, bytes32 nextCodePoint) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
                 CODE_POINT_TYPECODE,
@@ -103,7 +103,7 @@ library Value {
         bytes32 immediateVal,
         bytes32 nextCodePoint
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -117,7 +117,7 @@ library Value {
         );
     }
 
-    function hashEmptyTuple() public pure returns (bytes32) {
+    function hashEmptyTuple() internal pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](0);
         return keccak256(
             abi.encodePacked(
@@ -256,7 +256,7 @@ library Value {
         return Data(0, _val, new Data[](0), CODE_POINT_TYPECODE);
     }
 
-    function isValidTupleSize(uint256 size) public pure returns (bool) {
+    function isValidTupleSize(uint256 size) internal pure returns (bool) {
         return size <= 8;
     }
 
@@ -369,7 +369,7 @@ library Value {
         return (10000 + uint(valType), 0, newInt(0));
     }
 
-    function deserializeValidHashed(bytes memory data, uint256 offset) public pure returns(uint, bytes32) {
+    function deserializeValidHashed(bytes memory data, uint256 offset) internal pure returns(uint, bytes32) {
         uint256 valid;
         uint256 newOffset;
         Data memory value;
@@ -378,7 +378,7 @@ library Value {
         return (newOffset, value.hash().hash);
     }
 
-    function getNextValid(bytes memory data, uint256 offset) public pure returns(uint, bytes memory) {
+    function getNextValid(bytes memory data, uint256 offset) internal pure returns(uint, bytes memory) {
         uint256 valid;
         uint256 nextOffset;
         Data memory value;
@@ -387,7 +387,7 @@ library Value {
         return (nextOffset, data.slice(offset, nextOffset - offset));
     }
 
-    function deserializeHashed(bytes memory data) public pure returns (bytes32) {
+    function deserializeHashed(bytes memory data) internal pure returns (bytes32) {
         uint256 valid;
         uint256 offset = 0;
         Data memory value;
@@ -400,7 +400,7 @@ library Value {
         bytes memory data,
         uint256 startOffset
     )
-        public
+        internal
         pure
         returns(
             bool valid,

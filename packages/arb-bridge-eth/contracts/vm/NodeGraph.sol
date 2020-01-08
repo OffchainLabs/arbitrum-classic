@@ -188,12 +188,14 @@ contract NodeGraph is ChallengeType {
         (bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
         require(data.importedMessageCount <= pendingCount.sub(data.beforePendingCount), MAKE_MESSAGE_CNT);
 
+        uint256 gracePeriodTicks = vmParams.gracePeriodTicks;
+        uint256 ticksForGas = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
+
         uint256 deadlineTicks = _computeDeadline(
-            data.numArbGas / vmParams.arbGasSpeedLimitPerTick,
-            vmParams.gracePeriodTicks,
+            ticksForGas,
+            gracePeriodTicks,
             data.prevDeadlineTicks
         );
-
 
         leaves[generateInvalidPendingTopLeaf(
             data,
@@ -201,19 +203,23 @@ contract NodeGraph is ChallengeType {
             deadlineTicks,
             pendingValue,
             pendingCount,
-            vmProtoHashBefore
+            vmProtoHashBefore,
+            gracePeriodTicks
         )] = true;
         leaves[generateInvalidMessagesLeaf(
             data,
             prevLeaf,
             deadlineTicks,
-            vmProtoHashBefore
+            vmProtoHashBefore,
+            gracePeriodTicks
         )] = true;
         leaves[generateInvalidExecutionLeaf(
             data,
             prevLeaf,
             deadlineTicks,
-            vmProtoHashBefore
+            vmProtoHashBefore,
+            gracePeriodTicks,
+            ticksForGas
         )] = true;
         bytes32 validHash = generateValidLeaf(
             data,
@@ -222,7 +228,16 @@ contract NodeGraph is ChallengeType {
         );
         leaves[validHash] = true;
         delete leaves[prevLeaf];
+        emitAssertedEvent(data, prevLeaf, pendingValue);
+        return (prevLeaf, validHash);
+    }
 
+    function confirmNode(bytes32 to) internal {
+        latestConfirmedPriv = to;
+        emit RollupConfirmed(to);
+    }
+
+    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue) private {
         emit RollupAsserted(
             [
                 prevLeaf,
@@ -239,12 +254,6 @@ contract NodeGraph is ChallengeType {
             data.didInboxInsn,
             data.numArbGas
         );
-        return (prevLeaf, validHash);
-    }
-
-    function confirmNode(bytes32 to) internal {
-        latestConfirmedPriv = to;
-        emit RollupConfirmed(to);
     }
 
     function _computeDeadline(
@@ -270,10 +279,11 @@ contract NodeGraph is ChallengeType {
         uint256 deadlineTicks,
         bytes32 pendingValue,
         uint256 pendingCount,
-        bytes32 vmProtoHashBefore
+        bytes32 vmProtoHashBefore,
+        uint256 gracePeriodTicks
     )
         private
-        view
+        pure
         returns(bytes32)
     {
         return RollupUtils.childNodeHash(
@@ -286,7 +296,7 @@ contract NodeGraph is ChallengeType {
                         pendingValue,
                         pendingCount - (data.beforePendingCount + data.importedMessageCount)
                     ),
-                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
+                    gracePeriodTicks + RollupTime.blocksToTicks(1)
                 )
             ),
             INVALID_PENDING_TOP_TYPE,
@@ -298,10 +308,11 @@ contract NodeGraph is ChallengeType {
         MakeAssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks,
-        bytes32 vmProtoHashBefore
+        bytes32 vmProtoHashBefore,
+        uint256 gracePeriodTicks
     )
         private
-        view
+        pure
         returns(bytes32)
     {
         return RollupUtils.childNodeHash(
@@ -316,7 +327,7 @@ contract NodeGraph is ChallengeType {
                         data.importedMessagesSlice,
                         data.importedMessageCount
                     ),
-                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
+                    gracePeriodTicks + RollupTime.blocksToTicks(1)
                 )
             ),
             INVALID_MESSAGES_TYPE,
@@ -328,13 +339,14 @@ contract NodeGraph is ChallengeType {
         MakeAssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks,
-        bytes32 vmProtoHashBefore
+        bytes32 vmProtoHashBefore,
+        uint256 gracePeriodTicks,
+        uint256 ticksForGas
     )
         private
-        view
+        pure
         returns(bytes32)
     {
-        bytes32 beforeInboxHash = Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice);
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
             data.didInboxInsn,
@@ -344,21 +356,23 @@ contract NodeGraph is ChallengeType {
             0x00,
             data.logsAccHash
         );
+        bytes32 beforeInboxHash = Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice);
+        bytes32 executionHash = ChallengeUtils.executionHash(
+            data.numSteps,
+            Protocol.generatePreconditionHash(
+                 data.beforeVMHash,
+                 data.timeBoundsBlocks,
+                 beforeInboxHash
+            ),
+            assertionHash
+        );
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
             keccak256(
                 abi.encodePacked(
-                    ChallengeUtils.executionHash(
-                        data.numSteps,
-                        Protocol.generatePreconditionHash(
-                             data.beforeVMHash,
-                             data.timeBoundsBlocks,
-                             beforeInboxHash
-                        ),
-                        assertionHash
-                    ),
-                    vmParams.gracePeriodTicks + data.numArbGas / vmParams.arbGasSpeedLimitPerTick
+                    executionHash,
+                    gracePeriodTicks + ticksForGas
                 )
             ),
             INVALID_EXECUTION_TYPE,

@@ -23,7 +23,7 @@ library SigUtils {
         bytes memory _signatures,
         uint256 _pos
     )
-        public
+        internal
         pure
         returns (uint8 v, bytes32 r, bytes32 s)
     {
@@ -52,7 +52,7 @@ library SigUtils {
     /// @notice Counts the number of signatures in a signatures bytes array. Returns 0 if the length is invalid.
     /// @param _signatures The signatures bytes array
     /// @dev Signatures are 65 bytes long and are densely packed.
-    function countSignatures(bytes memory _signatures) public pure returns (uint) {
+    function countSignatures(bytes memory _signatures) internal pure returns (uint) {
         return _signatures.length % 65 == 0 ? _signatures.length / 65 : 0;
     }
 
@@ -63,7 +63,7 @@ library SigUtils {
         bytes32 _messageHash,
         bytes memory _signatures
     )
-        public
+        internal
         pure
         returns (address[] memory)
     {
@@ -93,7 +93,7 @@ library SigUtils {
         bytes32 _messageHash,
         bytes memory _signature
     )
-        public
+        internal
         pure
         returns (address)
     {
