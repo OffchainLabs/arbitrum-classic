@@ -53,7 +53,7 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	panic("implement me")
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
 	panic("implement me")
 }
 
