@@ -190,13 +190,13 @@ func (vm *ArbRollup) MakeAssertion(
 	ctx context.Context,
 
 	prevPrevLeafHash [32]byte,
-	prevDisputableNodeHash [32]byte,
-	prevDeadlineTicks structures.TimeTicks,
+	prevDataHash [32]byte,
+	prevDeadline structures.TimeTicks,
 	prevChildType structures.ChildType,
 
 	beforeState *structures.VMProtoData,
-	assertionParams structures.AssertionParams,
-	assertionClaim structures.AssertionClaim,
+	assertionParams *structures.AssertionParams,
+	assertionClaim *structures.AssertionClaim,
 	stakerProof [][32]byte,
 ) (*types.Receipt, error) {
 	vm.auth.Context = ctx
@@ -206,7 +206,7 @@ func (vm *ArbRollup) MakeAssertion(
 			beforeState.MachineHash,
 			beforeState.PendingTop,
 			prevPrevLeafHash,
-			prevDisputableNodeHash,
+			prevDataHash,
 			assertionClaim.AfterPendingTop,
 			assertionClaim.ImportedMessagesSlice,
 			assertionClaim.AssertionStub.AfterHashValue(),
@@ -214,7 +214,7 @@ func (vm *ArbRollup) MakeAssertion(
 			assertionClaim.AssertionStub.LastLogHashValue(),
 		},
 		beforeState.PendingCount,
-		prevDeadlineTicks.Val,
+		prevDeadline.Val,
 		uint32(prevChildType),
 		assertionParams.NumSteps,
 		assertionParams.TimeBounds.AsIntArray(),

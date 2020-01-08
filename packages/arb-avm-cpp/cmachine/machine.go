@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -lstdc++ -lm -lrocksdb
+#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb
 #include "../cavm/cmachine.h"
 #include "../cavm/ccheckpointstorage.h"
 #include <stdio.h>
@@ -115,27 +115,15 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	return nil
 }
 
-func (m *Machine) InboxHash() value.HashOnlyValue {
-	var hash [32]byte
-	C.machineInboxHash(m.c, unsafe.Pointer(&hash[0]))
-	return value.NewHashOnlyValue(hash, 0)
-}
-
 func (m *Machine) PrintState() {
 	C.machinePrint(m.c)
 }
 
-func (m *Machine) DeliverMessages(messages value.TupleValue) {
-	var buf bytes.Buffer
-	err := value.MarshalValue(messages, &buf)
-	if err != nil {
-		panic(err)
-	}
-	msgData := buf.Bytes()
-	C.machineDeliverMessages(m.c, unsafe.Pointer(&msgData[0]))
-}
-
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(
+	maxSteps uint32,
+	timeBounds *protocol.TimeBoundsBlocks,
+	inbox value.TupleValue,
+) (*protocol.ExecutionAssertion, uint32) {
 	startTime := utils.UnmarshalBigInt(timeBounds.Start.Val)
 	endTime := utils.UnmarshalBigInt(timeBounds.End.Val)
 
@@ -151,13 +139,21 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		log.Fatal(err)
 	}
 
+	var buf bytes.Buffer
+	err = value.MarshalValue(inbox, &buf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	startTimeData := startTimeBuf.Bytes()
 	endTimeData := endTimeBuf.Bytes()
+	msgData := buf.Bytes()
 	assertion := C.machineExecuteAssertion(
 		m.c,
 		C.uint64_t(maxSteps),
 		unsafe.Pointer(&startTimeData[0]),
 		unsafe.Pointer(&endTimeData[0]),
+		unsafe.Pointer(&msgData[0]),
 	)
 
 	outMessagesRaw := C.GoBytes(unsafe.Pointer(assertion.outMessageData), assertion.outMessageLength)
@@ -187,11 +183,14 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 }
 
 func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, checkpointName string) bool {
-	cCheckpointName := C.CString(checkpointName)
 	cCheckpointStorage, ok := storage.(*CheckpointStorage)
 
 	if ok {
+		cCheckpointName := C.CString(checkpointName)
 		success := C.restoreMachine(m.c, cCheckpointStorage.c, cCheckpointName)
+
+		C.free(unsafe.Pointer(cCheckpointName))
+
 		return success == 1
 	} else {
 		return false

@@ -19,6 +19,8 @@ package protocol
 import (
 	"bytes"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+
 	"github.com/golang/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -107,10 +109,10 @@ func (a *ExecutionAssertionStub) Hash() [32]byte {
 func (a *ExecutionAssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
 	nextBeforeInbox := pre.BeforeInbox
 	if a.DidInboxInsn {
-		nextBeforeInbox = value.NewHashBuf(value.NewEmptyTuple().Hash())
+		nextBeforeInbox = value.NewEmptyTuple()
 	}
 	return &Precondition{
-		BeforeHash:  a.AfterHash,
+		BeforeHash:  utils.UnmarshalHash(a.AfterHash),
 		TimeBounds:  pre.TimeBounds,
 		BeforeInbox: nextBeforeInbox,
 	}

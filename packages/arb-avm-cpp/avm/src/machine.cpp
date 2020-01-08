@@ -18,11 +18,12 @@
 #include <fstream>
 #include <iostream>
 
-#include <avm/checkpoint/checkpointdeleter.hpp>
 #include <avm/machine.hpp>
-#include <avm/opcodes.hpp>
+#include <avm_values/opcodes.hpp>
+#include <avm_values/util.hpp>
 #include <bigint_utils.hpp>
-#include <util.hpp>
+#include <data_storage/checkpoint/checkpointstorage.hpp>
+#include <data_storage/checkpoint/machinestatedeleter.hpp>
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
@@ -41,34 +42,19 @@ std::ostream& operator<<(std::ostream& os, const Machine& val) {
 }
 
 bool Machine::initializeMachine(const std::string& filename) {
-    std::ifstream myfile;
-
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(filename, std::ios::in);
-
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
-
-        return deserialize(buf);
-    } else {
-        return false;
-    }
+    return machine_state.initialize_machinestate(filename);
 }
 
-void Machine::deliverMessages(Tuple messages) {
-    machine_state.deliverMessages(std::move(messages));
+void Machine::initializeMachine(const MachineState& initial_state) {
+    machine_state = initial_state;
 }
 
 Assertion Machine::run(uint64_t stepCount,
                        uint256_t timeBoundStart,
-                       uint256_t timeBoundEnd) {
-    machine_state.context =
-        AssertionContext{TimeBounds{{timeBoundStart, timeBoundEnd}}};
+                       uint256_t timeBoundEnd,
+                       Tuple messages) {
+    machine_state.context = AssertionContext{
+        TimeBounds{{timeBoundStart, timeBoundEnd}}, std::move(messages)};
     machine_state.blockReason = NotBlocked{};
     while (machine_state.context.numSteps < stepCount) {
         runOne();
@@ -164,5 +150,6 @@ bool Machine::restoreCheckpoint(
 
 DeleteResults Machine::deleteCheckpoint(CheckpointStorage& storage) {
     auto checkpoint_key = GetHashKey(hash());
+
     return ::deleteCheckpoint(storage, checkpoint_key);
 }

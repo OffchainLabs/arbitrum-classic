@@ -98,21 +98,7 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 	return b1
 }
 
-func (m *Machine) InboxHash() value.HashOnlyValue {
-	h1 := m.cppmachine.InboxHash()
-	h2 := m.gomachine.InboxHash()
-	if !h1.Equal(h2) {
-		log.Fatalln("InboxHash error at pc", m.gomachine.GetPC())
-	}
-	return h1
-}
-
-func (m *Machine) DeliverMessages(msgs value.TupleValue) {
-	m.cppmachine.DeliverMessages(msgs)
-	m.gomachine.DeliverMessages(msgs)
-}
-
-func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks) (*protocol.ExecutionAssertion, uint32) {
+func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
 	a := &protocol.ExecutionAssertion{}
 	totalSteps := uint32(0)
 	stepIncrease := uint32(50)
@@ -123,8 +109,8 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		}
 
 		pcStart := m.gomachine.GetPC()
-		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds)
-		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds)
+		a1, ranSteps1 := m.cppmachine.ExecuteAssertion(steps, timeBounds, inbox)
+		a2, ranSteps2 := m.gomachine.ExecuteAssertion(steps, timeBounds, inbox)
 
 		if ranSteps1 != ranSteps2 {
 			pcEnd := m.gomachine.GetPC()
@@ -144,6 +130,10 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		a.NumGas += a1.NumGas
 		a.Logs = append(a.Logs, a1.Logs...)
 		a.OutMsgs = append(a.OutMsgs, a1.OutMsgs...)
+		a.DidInboxInsn = a.DidInboxInsn || a1.DidInboxInsn
+		if a1.DidInboxInsn {
+			inbox = value.NewEmptyTuple()
+		}
 		if ranSteps1 < uint32(steps) {
 			break
 		}

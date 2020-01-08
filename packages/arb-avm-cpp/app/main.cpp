@@ -46,22 +46,8 @@ int main(int argc, char* argv[]) {
     }
     std::cout << filename << std::endl;
 
-    std::ifstream myfile;
-
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-
-    char* buf = (char*)malloc(filestatus.st_size);
-
-    myfile.open(filename, std::ios::in);
-    if (myfile.is_open()) {
-        myfile.read((char*)buf, filestatus.st_size);
-        myfile.close();
-    }
-    std::cout << "In read_files. Done reading " << filename << std::endl;
-
     Machine mach;
-    mach.deserialize(buf);
+    mach.initializeMachine(filename);
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -109,12 +95,20 @@ int main(int argc, char* argv[]) {
     auto msg3 = Tuple{msg3Data, uint256_t{0}, uint256_t{0}, uint256_t{0},
                       &mach.getPool()};
 
-    mach.deliverMessages(Tuple{uint256_t{0}, Tuple{}, msg1, &mach.getPool()});
-    Assertion assertion1 = mach.run(stepCount, 0, 0);
-    mach.deliverMessages(Tuple{uint256_t{0}, Tuple{}, msg2, &mach.getPool()});
-    Assertion assertion2 = mach.run(stepCount, 0, 0);
-    mach.deliverMessages(Tuple{uint256_t{0}, Tuple{}, msg3, &mach.getPool()});
-    Assertion assertion3 = mach.run(stepCount, 0, 0);
+    MessageStack stack1{&mach.getPool()};
+    MessageStack stack2{&mach.getPool()};
+    MessageStack stack3{&mach.getPool()};
+
+    stack1.addMessages(Tuple{uint256_t{0}, Tuple{}, msg1, &mach.getPool()});
+    stack2.addMessages(Tuple{uint256_t{0}, Tuple{}, msg2, &mach.getPool()});
+    stack3.addMessages(Tuple{uint256_t{0}, Tuple{}, msg3, &mach.getPool()});
+
+    Assertion assertion1 =
+        mach.run(stepCount, 0, 0, std::move(stack1.messages));
+    Assertion assertion2 =
+        mach.run(stepCount, 0, 0, std::move(stack2.messages));
+    Assertion assertion3 =
+        mach.run(stepCount, 0, 0, std::move(stack3.messages));
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;

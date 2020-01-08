@@ -17,21 +17,38 @@
 package rollup
 
 import (
+	"context"
 	"math/big"
+	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func (chain *ChainObserver) startOpinionUpdateThread() {
-	go func() {
-		for {
-			chain.RLock()
-			for chain.nodeGraph.leaves.IsLeaf(chain.knownValidNode) {
-				chain.assertionMadeCond.Wait()
-			}
+type preparedAssertion struct {
+	prevLeaf         [32]byte
+	prevPrevLeafHash [32]byte
+	prevDataHash     [32]byte
+	prevDeadline     structures.TimeTicks
+	prevChildType    structures.ChildType
 
+	beforeState *structures.VMProtoData
+	params      *structures.AssertionParams
+	claim       *structures.AssertionClaim
+	machine     machine.Machine
+}
+
+func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		assertionPreparedChan := make(chan *preparedAssertion, 20)
+		preparingAssertions := make(map[[32]byte]bool)
+		preparedAssertions := make(map[[32]byte]*preparedAssertion)
+
+		updateCurrent := func() {
 			currentOpinion := chain.knownValidNode
 			successorHashes := [4][32]byte{}
 			copy(successorHashes[:], currentOpinion.successorHashes[:])
@@ -44,20 +61,33 @@ func (chain *ChainObserver) startOpinionUpdateThread() {
 				return nil
 			}()
 
-			params := successor.disputable.AssertionParams.Clone()
-			claim := successor.disputable.AssertionClaim.Clone()
-			claimHeight, found := chain.pendingInbox.GetHeight(claim.AfterPendingTop)
-			var claimHeightCopy *big.Int
-			if found {
-				claimHeightCopy = new(big.Int).Set(claimHeight)
-			}
-			messageStack, _ := chain.pendingInbox.Substack(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
-			messagesVal := chain.pendingInbox.ValueForSubseq(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
-			prevMach := currentOpinion.machine.Clone()
-			prevPendingCount := new(big.Int).Set(currentOpinion.vmProtoData.PendingCount)
-			chain.RUnlock()
+			var newOpinion structures.ChildType
+			prepped, found := preparedAssertions[currentOpinion.hash]
 
-			newOpinion := getNodeOpinion(params, claim, prevPendingCount, claimHeightCopy, messageStack, messagesVal, prevMach)
+			if found &&
+				prepped.params.Equals(successor.disputable.AssertionParams) &&
+				prepped.claim.Equals(successor.disputable.AssertionClaim) {
+				newOpinion = structures.ValidChildType
+				chain.RUnlock()
+			} else {
+				params := successor.disputable.AssertionParams.Clone()
+				claim := successor.disputable.AssertionClaim.Clone()
+				claimHeight, found := chain.pendingInbox.GetHeight(claim.AfterPendingTop)
+				var claimHeightCopy *big.Int
+				if found {
+					claimHeightCopy = new(big.Int).Set(claimHeight)
+				}
+				messageStack, _ := chain.pendingInbox.Substack(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
+				messagesVal := chain.pendingInbox.ValueForSubseq(currentOpinion.vmProtoData.PendingTop, claim.AfterPendingTop)
+				prevMach := currentOpinion.machine.Clone()
+				prevPendingCount := new(big.Int).Set(currentOpinion.vmProtoData.PendingCount)
+				chain.RUnlock()
+
+				newOpinion = getNodeOpinion(params, claim, prevPendingCount, claimHeightCopy, messageStack, messagesVal, prevMach)
+			}
+			// Reset prepared
+			preparingAssertions = make(map[[32]byte]bool)
+			preparedAssertions = make(map[[32]byte]*preparedAssertion)
 
 			chain.Lock()
 			correctNode, ok := chain.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
@@ -66,7 +96,99 @@ func (chain *ChainObserver) startOpinionUpdateThread() {
 			}
 			chain.Unlock()
 		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				break
+			case prepped := <-assertionPreparedChan:
+				preparedAssertions[prepped.prevLeaf] = prepped
+				chain.RLock()
+				for _, lis := range chain.listeners {
+					lis.AssertionPrepared(prepped)
+				}
+				chain.RUnlock()
+			case <-ticker.C:
+				chain.RLock()
+				// Catch up to current head
+				for !chain.nodeGraph.leaves.IsLeaf(chain.knownValidNode) {
+					updateCurrent()
+					chain.RLock()
+				}
+				chain.RUnlock()
+				// Prepare next assertion
+				_, isPreparing := preparingAssertions[chain.knownValidNode.hash]
+				if !isPreparing {
+					preparingAssertions[chain.knownValidNode.hash] = true
+					go func() {
+						assertionPreparedChan <- chain.prepareAssertion(nil)
+					}()
+				}
+			}
+		}
 	}()
+}
+
+func (chain *ChainObserver) prepareAssertion(
+	timeBounds *protocol.TimeBoundsBlocks,
+) *preparedAssertion {
+	chain.RLock()
+	currentOpinion := chain.knownValidNode
+	currentOpinionHash := currentOpinion.hash
+	prevPrevLeafHash := currentOpinion.PrevHash()
+	prevDataHash := currentOpinion.nodeDataHash
+	prevDeadline := structures.TimeTicks{new(big.Int).Set(currentOpinion.deadline.Val)}
+	prevChildType := currentOpinion.linkType
+	beforeState := currentOpinion.vmProtoData.Clone()
+	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {
+		return nil
+	}
+	afterPendingTop := chain.pendingInbox.GetTopHash()
+	beforePendingTop := beforeState.PendingTop
+	messageStack, _ := chain.pendingInbox.Substack(beforePendingTop, afterPendingTop)
+	messagesVal := chain.pendingInbox.ValueForSubseq(beforePendingTop, afterPendingTop)
+	mach := currentOpinion.machine.Clone()
+	chain.RUnlock()
+
+	inbox := protocol.NewInbox()
+	inbox.WithAddedMessages(messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, inbox.Receive())
+	var params *structures.AssertionParams
+	var claim *structures.AssertionClaim
+	if assertion.DidInboxInsn {
+		params = &structures.AssertionParams{
+			NumSteps:             stepsRun,
+			TimeBounds:           timeBounds,
+			ImportedMessageCount: messageStack.TopCount(),
+		}
+		claim = &structures.AssertionClaim{
+			AfterPendingTop:       afterPendingTop,
+			ImportedMessagesSlice: messageStack.GetTopHash(),
+			AssertionStub:         assertion.Stub(),
+		}
+	} else {
+		params = &structures.AssertionParams{
+			NumSteps:             stepsRun,
+			TimeBounds:           timeBounds,
+			ImportedMessageCount: big.NewInt(0),
+		}
+		claim = &structures.AssertionClaim{
+			AfterPendingTop:       beforePendingTop,
+			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
+			AssertionStub:         assertion.Stub(),
+		}
+	}
+	return &preparedAssertion{
+		prevLeaf:         currentOpinionHash,
+		prevPrevLeafHash: prevPrevLeafHash,
+		prevDataHash:     prevDataHash,
+		prevDeadline:     prevDeadline,
+		prevChildType:    prevChildType,
+		beforeState:      beforeState,
+		params:           params,
+		claim:            claim,
+		machine:          mach,
+	}
 }
 
 func getNodeOpinion(
@@ -87,8 +209,9 @@ func getNodeOpinion(
 	}
 
 	mach := prevMach
-	mach.DeliverMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds)
+	inbox := protocol.NewInbox()
+	inbox.WithAddedMessages(messagesVal)
+	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, inbox.Receive())
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
 		return structures.InvalidExecutionChildType
 	}

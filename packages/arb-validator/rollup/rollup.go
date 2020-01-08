@@ -18,10 +18,12 @@ package rollup
 
 import (
 	"bytes"
+	"context"
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"math/big"
 	"sync"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -43,7 +45,7 @@ type ChainObserver struct {
 	knownValidNode    *Node
 	listeners         []ChainListener
 	isOpinionated     bool
-	assertionMadeCond *sync.Cond
+	assertionMadeChan chan bool
 }
 
 func NewChain(
@@ -69,8 +71,8 @@ func NewChain(
 	}
 	if _updateOpinion {
 		ret.isOpinionated = true
-		ret.assertionMadeCond = sync.NewCond(ret.RLocker())
-		ret.startOpinionUpdateThread()
+		ret.assertionMadeChan = make(chan bool)
+		ret.startOpinionUpdateThread(context.TODO())
 	}
 	return ret
 }
@@ -108,8 +110,8 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext
 	}
 	if m.IsOpinionated {
 		chain.isOpinionated = true
-		chain.assertionMadeCond = sync.NewCond(chain.RLocker())
-		chain.startOpinionUpdateThread()
+		chain.assertionMadeChan = make(chan bool)
+		chain.startOpinionUpdateThread(context.TODO())
 	}
 	return chain
 }
@@ -196,8 +198,8 @@ func (chain *ChainObserver) notifyAssert(
 		topPendingCount,
 	)
 	chain.nodeGraph.CreateNodesOnAssert(chain.nodeGraph.nodeFromHash[ev.PrevLeafHash], disputableNode, nil, currentTime)
-	if chain.assertionMadeCond != nil {
-		chain.assertionMadeCond.Broadcast()
+	if chain.assertionMadeChan != nil {
+		chain.assertionMadeChan <- true
 	}
 	return nil
 }
@@ -212,4 +214,16 @@ func (co *ChainObserver) Equals(co2 *ChainObserver) bool {
 	return co.nodeGraph.Equals(co2.nodeGraph) &&
 		bytes.Compare(co.rollupAddr[:], co2.rollupAddr[:]) == 0 &&
 		co.pendingInbox.Equals(co2.pendingInbox)
+}
+
+func (chain *ChainObserver) ExecutionPrecondition(node *Node) *protocol.Precondition {
+	vmProtoData := node.prev.vmProtoData
+	inbox := protocol.NewInbox()
+	messages := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, node.disputable.AssertionClaim.AfterPendingTop)
+	inbox.WithAddedMessages(messages)
+	return &protocol.Precondition{
+		BeforeHash:  vmProtoData.MachineHash,
+		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
+		BeforeInbox: inbox.Receive(),
+	}
 }

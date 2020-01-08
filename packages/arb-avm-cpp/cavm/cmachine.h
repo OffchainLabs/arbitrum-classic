@@ -40,11 +40,6 @@ typedef enum {
 } CStatus;
 
 typedef struct {
-    void* data;
-    int length;
-} ByteSlice;
-
-typedef struct {
     enum CBlockType blockType;
     ByteSlice val1;
     ByteSlice val2;
@@ -62,8 +57,6 @@ typedef struct {
     int didInboxInsn;
 } RawAssertion;
 
-typedef void CMachine;
-
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 
@@ -72,15 +65,14 @@ void machineHash(CMachine* m, void* ret);
 CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
-void machineInboxHash(CMachine* m, void* ret);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineLastBlockReason(CMachine* m);
-void machineDeliverMessages(CMachine* m, void* data);
 
 RawAssertion machineExecuteAssertion(CMachine* m,
                                      uint64_t maxSteps,
                                      void* timeboundStart,
-                                     void* timeboundEnd);
+                                     void* timeboundEnd,
+                                     void* inbox);
 
 ByteSlice machineMarshallForProof(CMachine* m);
 

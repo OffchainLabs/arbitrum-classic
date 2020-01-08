@@ -64,6 +64,14 @@ func (d *VMProtoData) Equals(o *VMProtoData) bool {
 		d.PendingCount.Cmp(o.PendingCount) == 0
 }
 
+func (d *VMProtoData) Clone() *VMProtoData {
+	return &VMProtoData{
+		MachineHash:  d.MachineHash,
+		PendingTop:   d.PendingTop,
+		PendingCount: new(big.Int).Set(d.PendingCount),
+	}
+}
+
 func (d *VMProtoData) Hash() [32]byte {
 	var ret [32]byte
 	copy(ret[:], solsha3.SoliditySHA3(
@@ -96,6 +104,12 @@ type AssertionParams struct {
 	ImportedMessageCount *big.Int
 }
 
+func (ap *AssertionParams) Equals(o *AssertionParams) bool {
+	return ap.NumSteps == o.NumSteps &&
+		ap.TimeBounds.Equals(o.TimeBounds) &&
+		ap.ImportedMessageCount.Cmp(o.ImportedMessageCount) == 0
+}
+
 func (ap *AssertionParams) Clone() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             ap.NumSteps,
@@ -124,6 +138,12 @@ type AssertionClaim struct {
 	AfterPendingTop       [32]byte
 	ImportedMessagesSlice [32]byte
 	AssertionStub         *protocol.ExecutionAssertionStub
+}
+
+func (dn *AssertionClaim) Equals(o *AssertionClaim) bool {
+	return dn.AfterPendingTop == o.AfterPendingTop &&
+		dn.ImportedMessagesSlice == o.ImportedMessagesSlice &&
+		dn.AssertionStub.Equals(o.AssertionStub)
 }
 
 func (dn *AssertionClaim) Clone() *AssertionClaim {
