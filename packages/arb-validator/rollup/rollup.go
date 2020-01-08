@@ -49,16 +49,15 @@ type ChainObserver struct {
 }
 
 func NewChain(
-	_client *ethbridge.ArbRollup,
-	_rollupAddr common.Address,
-	_machine machine.Machine,
-	_vmParams structures.ChainParams,
-	_updateOpinion bool,
+	rollupAddr common.Address,
+	machine machine.Machine,
+	vmParams structures.ChainParams,
+	updateOpinion bool,
 ) *ChainObserver {
 	ret := &ChainObserver{
 		RWMutex:      &sync.RWMutex{},
-		nodeGraph:    NewStakedNodeGraph(_machine, _vmParams),
-		rollupAddr:   _rollupAddr,
+		nodeGraph:    NewStakedNodeGraph(machine, vmParams),
+		rollupAddr:   rollupAddr,
 		pendingInbox: structures.NewPendingInbox(),
 		listeners:    []ChainListener{},
 	}
@@ -66,10 +65,8 @@ func NewChain(
 	ret.Lock()
 	defer ret.Unlock()
 
-	if _client != nil {
-		ret.startCleanupThread(_client, nil)
-	}
-	if _updateOpinion {
+	ret.startCleanupThread(context.TODO())
+	if updateOpinion {
 		ret.isOpinionated = true
 		ret.assertionMadeChan = make(chan bool)
 		ret.startOpinionUpdateThread(context.TODO())
@@ -78,7 +75,9 @@ func NewChain(
 }
 
 func (chain *ChainObserver) AddListener(listener ChainListener) {
+	chain.Lock()
 	chain.listeners = append(chain.listeners, listener)
+	chain.Unlock()
 }
 
 func (chain *ChainObserver) MarshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
@@ -106,7 +105,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext
 	chain.Lock()
 	defer chain.Unlock()
 	if _client != nil {
-		chain.startCleanupThread(_client, nil)
+		chain.startCleanupThread(context.TODO())
 	}
 	if m.IsOpinionated {
 		chain.isOpinionated = true
@@ -177,8 +176,8 @@ func (chain *ChainObserver) ChallengeResolved(ev ethbridge.ChallengeCompletedEve
 
 func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
 	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
-	if newNode.depth > chain.nodeGraph.latestConfirmed.depth {
-		chain.knownValidNode = chain.nodeGraph.nodeFromHash[ev.NodeHash]
+	if newNode.depth > chain.knownValidNode.depth {
+		chain.knownValidNode = newNode
 	}
 	chain.nodeGraph.ConfirmNode(ev.NodeHash)
 }
@@ -186,6 +185,7 @@ func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
 func (chain *ChainObserver) notifyAssert(
 	ev ethbridge.AssertedEvent,
 	currentTime *protocol.TimeBlocks,
+	assertionTxHash [32]byte,
 ) error {
 	topPendingCount, ok := chain.pendingInbox.GetHeight(ev.MaxPendingTop)
 	if !ok {
@@ -197,7 +197,13 @@ func (chain *ChainObserver) notifyAssert(
 		ev.MaxPendingTop,
 		topPendingCount,
 	)
-	chain.nodeGraph.CreateNodesOnAssert(chain.nodeGraph.nodeFromHash[ev.PrevLeafHash], disputableNode, nil, currentTime)
+	chain.nodeGraph.CreateNodesOnAssert(
+		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],
+		disputableNode,
+		nil,
+		currentTime,
+		assertionTxHash,
+	)
 	if chain.assertionMadeChan != nil {
 		chain.assertionMadeChan <- true
 	}

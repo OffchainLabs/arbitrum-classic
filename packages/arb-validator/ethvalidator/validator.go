@@ -21,11 +21,11 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -43,8 +43,7 @@ type Validator struct {
 	arbAddresses  ethbridge.ArbAddresses
 	Client        *ethclient.Client
 
-	*ethbridge.ChainFactory
-	*ethbridge.ChannelFactory
+	*ethbridge.ArbFactory
 	*ethbridge.PendingInbox
 	auth *bind.TransactOpts
 }
@@ -61,12 +60,7 @@ func NewValidator(
 		return nil, err
 	}
 
-	chainFactory, err := ethbridge.NewChainFactory(common.HexToAddress(connectionInfo.ChainFactory), client)
-	if err != nil {
-		return nil, err
-	}
-
-	channelFactory, err := ethbridge.NewChannelFactory(common.HexToAddress(connectionInfo.ChannelFactory), client)
+	arbFactory, err := ethbridge.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
 	if err != nil {
 		return nil, err
 	}
@@ -77,14 +71,13 @@ func NewValidator(
 	}
 
 	return &Validator{
-		key:            key,
-		serverAddress:  ethURL,
-		arbAddresses:   connectionInfo,
-		Client:         client,
-		ChainFactory:   chainFactory,
-		ChannelFactory: channelFactory,
-		PendingInbox:   pendingInbox,
-		auth:           auth,
+		key:           key,
+		serverAddress: ethURL,
+		arbAddresses:  connectionInfo,
+		Client:        client,
+		ArbFactory:    arbFactory,
+		PendingInbox:  pendingInbox,
+		auth:          auth,
 	}, nil
 }
 
@@ -131,26 +124,16 @@ func (val *Validator) GetTokenBalance(
 	return amt, err
 }
 
-func (val *Validator) CreateChannel(
+func (val *Validator) CreateRollup(
 	ctx context.Context,
-	config *valmessage.VMConfiguration,
+	config structures.ChainParams,
 	vmState [32]byte,
+	owner common.Address,
 ) (common.Address, error) {
-	return val.ChannelFactory.CreateChannel(
+	return val.ArbFactory.CreateRollup(
 		val.MakeAuth(ctx),
-		config,
 		vmState,
-	)
-}
-
-func (val *Validator) CreateChain(
-	ctx context.Context,
-	config *valmessage.VMConfiguration,
-	vmState [32]byte,
-) (common.Address, error) {
-	return val.ChainFactory.CreateChain(
-		val.MakeAuth(ctx),
 		config,
-		vmState,
+		owner,
 	)
 }

@@ -41,6 +41,11 @@ type ChainListener interface {
 	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
 
 	AssertionPrepared(*preparedAssertion)
+	PrunableLeafs([]pruneParams)
+	MootableStakes([]recoverStakeMootedParams)
+	OldStakes([]recoverStakeOldParams)
+
+	AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte)
 }
 
 type StakerListener struct {
@@ -162,11 +167,12 @@ func NewValidatorChainListener(
 	return &ValidatorChainListener{chain, make(map[common.Address]*StakerListener)}
 }
 
-func (lis *ValidatorChainListener) AddStaker(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) error {
+func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
 	contract, err := ethbridge.NewRollup(lis.chain.rollupAddr, client, auth)
 	if err != nil {
 		return err
 	}
+	address := auth.From
 	lis.stakers[address] = &StakerListener{
 		myAddr:   address,
 		client:   client,
@@ -285,3 +291,48 @@ func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion
 		}
 	}
 }
+
+func (lis *ValidatorChainListener) PrunableLeafs(params []pruneParams) {
+	for _, staker := range lis.stakers {
+		for _, prune := range params {
+			go staker.contract.PruneLeaf(
+				context.TODO(),
+				prune.ancestor.hash,
+				prune.leafProof,
+				prune.ancProof,
+			)
+		}
+		break
+	}
+
+}
+
+func (lis *ValidatorChainListener) MootableStakes(params []recoverStakeMootedParams) {
+	for _, staker := range lis.stakers {
+		for _, moot := range params {
+			go staker.contract.RecoverStakeMooted(
+				context.TODO(),
+				moot.ancestor.hash,
+				moot.addr,
+				moot.lcProof,
+				moot.stProof,
+			)
+		}
+		break
+	}
+}
+
+func (lis *ValidatorChainListener) OldStakes(params []recoverStakeOldParams) {
+	for _, staker := range lis.stakers {
+		for _, old := range params {
+			go staker.contract.RecoverStakeOld(
+				context.TODO(),
+				old.addr,
+				old.proof,
+			)
+		}
+		break
+	}
+}
+
+func (lis *ValidatorChainListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {}

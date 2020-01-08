@@ -3,6 +3,8 @@ package ethbridge
 import (
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
 	errors2 "github.com/pkg/errors"
 
@@ -27,19 +29,16 @@ func NewArbFactory(address common.Address, client *ethclient.Client) (*ArbFactor
 func (con *ArbFactory) CreateRollup(
 	auth *bind.TransactOpts,
 	vmState [32]byte,
-	gracePeriodTicks *big.Int,
-	arbGasSpeedLimitPerTick *big.Int,
-	maxExecutionSteps uint32,
-	stakeRequirement *big.Int,
+	params structures.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
 	tx, err := con.contract.CreateRollup(
 		auth,
 		vmState,
-		gracePeriodTicks,
-		arbGasSpeedLimitPerTick,
-		maxExecutionSteps,
-		stakeRequirement,
+		params.GracePeriod.Val,
+		new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
+		params.MaxExecutionSteps,
+		params.StakeRequirement,
 		owner,
 	)
 	if err != nil {

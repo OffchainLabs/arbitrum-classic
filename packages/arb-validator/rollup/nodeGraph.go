@@ -165,6 +165,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	dispNode *structures.DisputableNode,
 	afterMachine machine.Machine,
 	currentTime *protocol.TimeBlocks,
+	assertionTxHash [32]byte,
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
@@ -176,13 +177,13 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		afterMachine = afterMachine.Clone()
 	}
 
-	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime)
+	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime, assertionTxHash)
 	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
 
 	// create nodes for invalid branches
 	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
-		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime)
+		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
 		chain.nodeFromHash[newNode.hash] = newNode
 		chain.leaves.Add(newNode)
 	}

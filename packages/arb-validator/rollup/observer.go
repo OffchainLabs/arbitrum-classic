@@ -103,7 +103,7 @@ func handleNotification(notification ethbridge.Notification, chain *ChainObserve
 		chain.MoveStake(ev)
 	case ethbridge.AssertedEvent:
 		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
-		err := chain.notifyAssert(ev, currentTime)
+		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
 		if err != nil {
 			panic(err)
 		}
