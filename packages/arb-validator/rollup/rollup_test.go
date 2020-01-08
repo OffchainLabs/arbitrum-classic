@@ -41,7 +41,7 @@ func TestCreateEmptyChain(t *testing.T) {
 		t.Fatal("unexpected leaf count")
 	}
 	tryMarshalUnmarshal(chain, t)
-	cp := structures.NewRollupCheckpointer("dummy", 1000000)
+	cp := structures.NewRollupCheckpointer("dummy", 1000000, "contract.ao")
 	tryMarshalUnmarshalWithCheckpointer(chain, cp, t)
 }
 
