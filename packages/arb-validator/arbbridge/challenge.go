@@ -21,6 +21,7 @@ import (
 )
 
 type Challenge interface {
+	ClientConnection
 	StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
 	TimeoutChallenge(
 		ctx context.Context,

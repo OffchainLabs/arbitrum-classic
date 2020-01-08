@@ -18,8 +18,8 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"log"
 	"sync"
 
@@ -175,7 +175,7 @@ func NewValidatorChainListener(
 
 func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
 	var contract arbbridge.ArbRollup
-	contr, err := ethbridge.NewRollup(lis.chain.rollupAddr, client, auth)
+	contr, err := arb.NewRollup(lis.chain.rollupAddr, client, auth)
 	if err != nil {
 		return err
 	}

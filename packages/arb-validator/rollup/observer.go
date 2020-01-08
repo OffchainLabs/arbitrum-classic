@@ -30,12 +30,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 )
 
 func RunObserver(chain *ChainObserver, clnt *ethclient.Client) error {
 	var rollup arbbridge.ArbRollupWatcher
-	roll, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
+	roll, err := arb.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return err
 	}

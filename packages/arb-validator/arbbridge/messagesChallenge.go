@@ -18,13 +18,23 @@ package arbbridge
 
 import (
 	"context"
+	"math/big"
 )
 
-type BisectionChallenge interface {
-	Challenge
-	ChooseSegment(
+type MessagesChallenge interface {
+	BisectionChallenge
+	Bisect(
 		ctx context.Context,
-		segmentToChallenge uint16,
-		segments [][32]byte,
+		chainHashes [][32]byte,
+		segmentHashes [][32]byte,
+		chainLength *big.Int,
+	) error
+	OneStepProof(
+		ctx context.Context,
+		lowerHashA [32]byte,
+		topHashA [32]byte,
+		lowerHashB [32]byte,
+		topHashB [32]byte,
+		value [32]byte,
 	) error
 }

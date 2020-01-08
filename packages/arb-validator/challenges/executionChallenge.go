@@ -19,9 +19,9 @@ package challenges
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -29,7 +29,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func DefendExecutionClaim(
@@ -40,7 +39,7 @@ func DefendExecutionClaim(
 	numSteps uint32,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client, auth)
+	contract, err := arb.NewExecutionChallenge(address, client, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -68,7 +67,7 @@ func ChallengeExecutionClaim(
 	startPrecondition *protocol.Precondition,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client, auth)
+	contract, err := arb.NewExecutionChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -88,7 +87,7 @@ func ChallengeExecutionClaim(
 
 func defendExecution(
 	ctx context.Context,
-	contract *ethbridge.ExecutionChallenge,
+	contract arbbridge.ExecutionChallenge,
 	outChan chan arbbridge.Notification,
 	startDefender machine.AssertionDefender,
 ) (ChallengeState, error) {
@@ -119,7 +118,7 @@ func defendExecution(
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(ethbridge.OneStepProof)
+			_, ok = note.Event.(arbbridge.OneStepProof)
 			if !ok {
 				return 0, errors.New("ExecutionChallenge expected OneStepProof")
 			}
@@ -157,7 +156,7 @@ func defendExecution(
 
 func challengeExecution(
 	ctx context.Context,
-	contract *ethbridge.ExecutionChallenge,
+	contract arbbridge.ExecutionChallenge,
 	outChan chan arbbridge.Notification,
 	startMachine machine.Machine,
 	startPrecondition *protocol.Precondition,
@@ -185,7 +184,7 @@ func challengeExecution(
 			return state, err
 		}
 
-		if _, ok := note.Event.(ethbridge.OneStepProof); ok {
+		if _, ok := note.Event.(arbbridge.OneStepProof); ok {
 			return ChallengeAsserterWon, nil
 		}
 
@@ -198,7 +197,7 @@ func challengeExecution(
 			return 0, err
 		}
 		preconditions := protocol.GeneratePreconditions(precondition, ev.Assertions)
-		err = contract.ChooseSegment(
+		err = contract.ExecutionChallengeChooseSegment(
 			ctx,
 			challengedAssertionNum,
 			preconditions,

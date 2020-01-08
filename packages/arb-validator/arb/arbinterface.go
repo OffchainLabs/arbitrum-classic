@@ -57,3 +57,19 @@ func NewPendingInbox(address common.Address, client *ethclient.Client) (arbbridg
 func NewPendingTopChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (arbbridge.PendingTopChallenge, error) {
 	return ethbridge.NewPendingTopChallenge(address, client, auth)
 }
+
+func NewRollup(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (arbbridge.ArbRollup, error) {
+	return ethbridge.NewRollup(address, client, auth)
+}
+
+func NewExecutionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (arbbridge.ExecutionChallenge, error) {
+	return ethbridge.NewExecutionChallenge(address, client, auth)
+}
+
+func NewMessagesChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (arbbridge.MessagesChallenge, error) {
+	return ethbridge.NewMessagesChallenge(address, client, auth)
+}
+
+func NewRollupWatcher(address common.Address, client *ethclient.Client) (arbbridge.ArbRollupWatcher, error) {
+	return ethbridge.NewRollupWatcher(address, client)
+}

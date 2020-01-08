@@ -18,13 +18,10 @@ package arbbridge
 
 import (
 	"context"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-type BisectionChallenge interface {
-	Challenge
-	ChooseSegment(
-		ctx context.Context,
-		segmentToChallenge uint16,
-		segments [][32]byte,
-	) error
+type ClientConnection interface {
+	CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error)
 }

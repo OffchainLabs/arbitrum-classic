@@ -239,7 +239,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
-func (c *ExecutionChallenge) ChooseSegment(
+func (c *ExecutionChallenge) ExecutionChallengeChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,

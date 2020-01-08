@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -40,7 +40,7 @@ func DefendMessagesClaim(
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewMessagesChallenge(address, client, auth)
+	contract, err := arb.NewMessagesChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -68,7 +68,7 @@ func ChallengeMessagesClaim(
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewMessagesChallenge(address, client, auth)
+	contract, err := arb.NewMessagesChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -90,7 +90,7 @@ func ChallengeMessagesClaim(
 func defendMessages(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
-	contract *ethbridge.MessagesChallenge,
+	contract arbbridge.MessagesChallenge,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
@@ -138,7 +138,7 @@ func defendMessages(
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(ethbridge.OneStepProof)
+			_, ok = note.Event.(arbbridge.OneStepProof)
 			if !ok {
 				return 0, errors.New("MessagesChallenge expected OneStepProof")
 			}
@@ -190,7 +190,7 @@ func defendMessages(
 func challengeMessages(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
-	contract *ethbridge.MessagesChallenge,
+	contract arbbridge.MessagesChallenge,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
@@ -221,7 +221,7 @@ func challengeMessages(
 			return state, err
 		}
 
-		if _, ok := note.Event.(ethbridge.OneStepProof); ok {
+		if _, ok := note.Event.(arbbridge.OneStepProof); ok {
 			return ChallengeAsserterWon, nil
 		}
 

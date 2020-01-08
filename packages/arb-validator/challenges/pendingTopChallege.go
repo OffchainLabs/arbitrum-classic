@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -64,7 +63,7 @@ func ChallengePendingTopClaim(
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewPendingTopChallenge(address, client, auth)
+	contract, err := arb.NewPendingTopChallenge(address, client, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -120,7 +119,7 @@ func defendPendingTop(
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(ethbridge.OneStepProof)
+			_, ok = note.Event.(arbbridge.OneStepProof)
 			if !ok {
 				return 0, errors.New("PendingTopChallenge expected OneStepProof")
 			}
@@ -166,7 +165,7 @@ func defendPendingTop(
 func challengePendingTop(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
-	contract *ethbridge.PendingTopChallenge,
+	contract arbbridge.PendingTopChallenge,
 	pendingInbox *structures.PendingInbox,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
@@ -190,7 +189,7 @@ func challengePendingTop(
 			return state, err
 		}
 
-		if _, ok := note.Event.(ethbridge.OneStepProof); ok {
+		if _, ok := note.Event.(arbbridge.OneStepProof); ok {
 			return ChallengeAsserterWon, nil
 		}
 
