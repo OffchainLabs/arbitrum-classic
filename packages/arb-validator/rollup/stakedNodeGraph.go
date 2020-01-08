@@ -18,8 +18,10 @@ package rollup
 
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"log"
 	"sort"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
@@ -83,9 +85,17 @@ func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, curren
 
 func (chain *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash [32]byte) {
 	staker := chain.stakers.Get(stakerAddr)
+	if staker == nil {
+		panic("Moved nonexistant staker")
+	}
 	staker.location.numStakers--
 	// no need to consider pruning staker.location, because a successor of it is getting a stake
-	staker.location = chain.nodeFromHash[nodeHash]
+	newLocation, ok := chain.nodeFromHash[nodeHash]
+	if !ok {
+		log.Println("Bad location", hexutil.Encode(nodeHash[:]))
+		panic("Moved to nonexistant location")
+	}
+	staker.location = newLocation
 	staker.location.numStakers++
 }
 

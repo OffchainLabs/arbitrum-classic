@@ -31,8 +31,7 @@ import (
 )
 
 type ArbAddresses struct {
-	ChainFactory       string `json:"ChainFactory"`
-	ChannelFactory     string `json:"ChannelFactory"`
+	ArbFactory         string `json:"ArbFactory"`
 	GlobalPendingInbox string `json:"GlobalPendingInbox"`
 	OneStepProof       string `json:"OneStepProof"`
 }

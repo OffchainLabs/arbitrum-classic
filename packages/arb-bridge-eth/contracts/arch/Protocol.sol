@@ -28,7 +28,7 @@ library Protocol {
         uint256 _value,
         address _destination
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -45,7 +45,7 @@ library Protocol {
         uint128[2] memory _timeBounds,
         bytes32 _beforeInbox
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -68,7 +68,7 @@ library Protocol {
         bytes32 _firstLogHash,
         bytes32 _lastLogHash
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
@@ -85,7 +85,7 @@ library Protocol {
         );
     }
 
-    function generateLastMessageHash(bytes memory _messages) public pure returns (bytes32) {
+    function generateLastMessageHash(bytes memory _messages) internal pure returns (bytes32) {
         bytes32 hashVal = 0x00;
         uint256 offset = 0;
         bytes32 msgHash;
@@ -97,7 +97,7 @@ library Protocol {
         return hashVal;
     }
 
-    function addMessageToPending(bytes32 pending, bytes32 message) public pure returns (bytes32) {
+    function addMessageToPending(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
         return Value.hashTuple([
             Value.newInt(0),
             Value.newHashOnly(pending),
@@ -105,7 +105,7 @@ library Protocol {
         ]);
     }
 
-    function addMessagesToInbox(bytes32 inbox, bytes32 messages) public pure returns (bytes32) {
+    function addMessagesToInbox(bytes32 inbox, bytes32 messages) internal pure returns (bytes32) {
         return Value.hashTuple([
             Value.newInt(1),
             Value.newHashOnly(inbox),

@@ -71,7 +71,7 @@ def setup_validator_states(contract, n_validators, ethaddrs, source_address, por
 
     # Check for validator_states in cwd
     if os.path.isdir(VALIDATOR_STATES):
-        exit("Error:", VALIDATOR_STATES, "exists in the current working directory")
+        exit("Error: " + VALIDATOR_STATES + " exists in the current working directory")
 
     # Extract keys from acct_keys
     accounts = [Account.create() for _ in range(n_validators)]
@@ -135,15 +135,21 @@ def main():
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "--docker",
+        "--ganache-docker",
         action="store_true",
-        dest="is_docker",
+        dest="is_ganache",
+        help="Generate states based on arb-bridge-eth docker images",
+    )
+    group.add_argument(
+        "--parity-docker",
+        action="store_true",
+        dest="is_parity",
         help="Generate states based on arb-bridge-eth docker images",
     )
     group.add_argument(
         "--local",
-        action="store_false",
-        dest="is_docker",
+        action="store_true",
+        dest="is_local",
         help="Generate states based on local inputs",
     )
     parser.add_argument(
@@ -170,9 +176,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.is_docker:
-        setup_validator_states_docker(args.contract, args.n_validators)
-    else:
+    if args.is_local:
         setup_validator_states(
             args.contract,
             args.n_validators,
@@ -180,6 +184,10 @@ def main():
             args.bridge_eth_addresses,
             args.port,
         )
+    elif args.is_parity:
+        setup_validator_states_docker(args.contract, args.n_validators, "parity")
+    elif args.is_ganache:
+        setup_validator_states_docker(args.contract, args.n_validators, "ganache")
 
 
 if __name__ == "__main__":

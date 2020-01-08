@@ -33,21 +33,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
-type Observer struct {
-}
-
-func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error) {
-	var rollup arbbridge.ArbRollupWatcher
-	roll, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
+func RunObserver(chain *ChainObserver, clnt *ethclient.Client) error {
+	rollup, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rollup = roll
 	ctx := context.TODO()
 	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
-		return nil, err
+		return err
 	}
 
 	go func() {
@@ -84,7 +80,7 @@ func NewObserver(chain *ChainObserver, clnt *ethclient.Client) (*Observer, error
 			}
 		}
 	}()
-	return &Observer{}, nil
+	return nil
 }
 
 func handleNotification(notification arbbridge.Notification, chain *ChainObserver) {
@@ -106,7 +102,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 		chain.MoveStake(ev)
 	case arbbridge.AssertedEvent:
 		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
-		err := chain.notifyAssert(ev, currentTime)
+		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
 		if err != nil {
 			panic(err)
 		}

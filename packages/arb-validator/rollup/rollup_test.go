@@ -17,9 +17,10 @@
 package rollup
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -41,12 +42,31 @@ func TestCreateEmptyChain(t *testing.T) {
 		t.Fatal("unexpected leaf count")
 	}
 	tryMarshalUnmarshal(chain, t)
+	cp := structures.NewRollupCheckpointer("dummy", 1000000, "contract.ao")
+	tryMarshalUnmarshalWithCheckpointer(chain, cp, t)
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := structures.NewCheckpointContextImpl()
 	chainBuf := chain.MarshalForCheckpoint(ctx)
 	chain2 := chainBuf.UnmarshalFromCheckpoint(ctx, nil)
+	if !chain.Equals(chain2) {
+		t.Fail()
+	}
+}
+
+func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.RollupCheckpointer, t *testing.T) {
+	blockHeight := big.NewInt(7337)
+	ctx := structures.NewCheckpointContextImpl()
+	buf, err := chain.MarshalToBytes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cp.SaveCheckpoint(blockHeight, buf, ctx)
+	chain2, err := UnmarshalChainObserverFromBytes(buf, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !chain.Equals(chain2) {
 		t.Fail()
 	}
@@ -110,7 +130,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		Start: &protocol.TimeBlocksBuf{Val: utils.MarshalInt64ToBigIntBuf(0)},
 		End:   &protocol.TimeBlocksBuf{Val: utils.MarshalInt64ToBigIntBuf(1000)},
 	}
-	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds)
+	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple())
 	_ = execAssertion
 
 	assertionParams := &structures.AssertionParams{
@@ -143,6 +163,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		disputableNode,
 		theMachine,
 		protocol.NewTimeBlocks(big.NewInt(10)),
+		[32]byte{},
 	)
 }
 
@@ -163,7 +184,6 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 		return nil, nil, err
 	}
 	chain := NewChain(
-		nil,
 		dummyAddress,
 		theMachine,
 		structures.ChainParams{
@@ -173,6 +193,7 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
+		big.NewInt(10),
 	)
 	return chain, theMachine, nil
 }

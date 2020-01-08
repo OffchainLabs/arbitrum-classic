@@ -3,7 +3,7 @@ package machine
 import "github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 type CheckpointStorage interface {
-	DeleteCheckpoint(checkpointName string) bool
+	DeleteCheckpoint(machineHash [32]byte) bool
 	GetInitialMachine() (Machine, error)
 	SaveValue(val value.Value) bool
 	GetValue(hashValue [32]byte) value.Value

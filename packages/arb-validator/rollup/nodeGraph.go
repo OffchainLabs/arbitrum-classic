@@ -18,7 +18,10 @@ package rollup
 
 import (
 	"errors"
+	"fmt"
 	"log"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -160,11 +163,21 @@ func (chain *NodeGraph) considerPruningNode(node *Node) {
 	}
 }
 
+func (chain *NodeGraph) getLeaf(node *Node) *Node {
+	for _, successor := range node.successorHashes {
+		if successor != zeroBytes32 {
+			return chain.getLeaf(chain.nodeFromHash[successor])
+		}
+	}
+	return node
+}
+
 func (chain *NodeGraph) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *structures.DisputableNode,
 	afterMachine machine.Machine,
 	currentTime *protocol.TimeBlocks,
+	assertionTxHash [32]byte,
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
@@ -176,15 +189,18 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		afterMachine = afterMachine.Clone()
 	}
 
-	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime)
+	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime, assertionTxHash)
 	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
 
+	fmt.Println("Made node", hexutil.Encode(newNode.hash[:]))
+
 	// create nodes for invalid branches
 	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
-		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime)
+		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
 		chain.nodeFromHash[newNode.hash] = newNode
 		chain.leaves.Add(newNode)
+		fmt.Println("Made node", hexutil.Encode(newNode.hash[:]))
 	}
 }
 

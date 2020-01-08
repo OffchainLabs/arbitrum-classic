@@ -26,7 +26,7 @@ library DebugPrint {
         }
     }
 
-    function bytes32string(bytes32 b32) external pure returns (string memory out) {
+    function bytes32string(bytes32 b32) internal pure returns (string memory out) {
         bytes memory s = new bytes(64);
 
         for (uint256 i = 0; i < 32; i++) {

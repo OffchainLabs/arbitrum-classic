@@ -118,7 +118,7 @@ library Machine {
         bytes32 staticHash,
         bytes32 errHandlerHash
     )
-        public
+        internal
         pure
         returns (bytes32)
     {
