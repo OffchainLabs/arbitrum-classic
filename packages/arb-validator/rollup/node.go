@@ -18,7 +18,10 @@ package rollup
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -29,9 +32,6 @@ import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
-
-type ExecutionNodeData struct {
-}
 
 type Node struct {
 	prev        *Node
@@ -51,9 +51,7 @@ type Node struct {
 	numStakers      uint64
 }
 
-func NewInitialNode(
-	machine machine.Machine,
-) *Node {
+func NewInitialNode(machine machine.Machine) *Node {
 	ret := &Node{
 		prev:       nil,
 		deadline:   structures.TimeTicks{big.NewInt(0)},
@@ -68,6 +66,7 @@ func NewInitialNode(
 		depth:   0,
 	}
 	ret.setHash([32]byte{})
+	fmt.Println("Made initial node", hexutil.Encode(ret.hash[:]))
 	return ret
 }
 
@@ -141,6 +140,7 @@ func NewNodeFromPrev(
 	}
 	ret.setHash(ret.NodeDataHash(params))
 	prev.successorHashes[kind] = ret.hash
+	fmt.Println("Made node", kind, hexutil.Encode(ret.hash[:]))
 	return ret
 }
 
@@ -171,9 +171,7 @@ func (node *Node) ExecutionPreconditionHash() [32]byte {
 	return pre.Hash()
 }
 
-func (node *Node) NodeDataHash(
-	params structures.ChainParams,
-) [32]byte {
+func (node *Node) NodeDataHash(params structures.ChainParams) [32]byte {
 	ret := [32]byte{}
 	if node.disputable == nil {
 		return ret
@@ -193,9 +191,7 @@ func (node *Node) NodeDataHash(
 	return ret
 }
 
-func (node *Node) ChallengeNodeData(
-	params structures.ChainParams,
-) ([32]byte, structures.TimeTicks) {
+func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, structures.TimeTicks) {
 	ret := [32]byte{}
 	vmProtoData := node.prev.vmProtoData
 
@@ -233,9 +229,7 @@ func (node *Node) ChallengeNodeData(
 	}
 }
 
-func (node *Node) setHash(
-	nodeDataHash [32]byte,
-) {
+func (node *Node) setHash(nodeDataHash [32]byte) {
 	var prevHashArr [32]byte
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
@@ -243,9 +237,9 @@ func (node *Node) setHash(
 
 	innerHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(node.vmProtoData.Hash()),
-		solsha3.Uint256(node.deadline),
+		solsha3.Uint256(node.deadline.Val),
 		solsha3.Bytes32(nodeDataHash),
-		solsha3.Uint256(node.linkType),
+		solsha3.Uint256(uint(node.linkType)),
 	)
 	hashSlice := solsha3.SoliditySHA3(
 		solsha3.Bytes32(prevHashArr),

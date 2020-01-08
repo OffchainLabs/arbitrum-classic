@@ -17,7 +17,10 @@
 package structures
 
 import (
+	"fmt"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
@@ -104,6 +107,16 @@ type AssertionParams struct {
 	ImportedMessageCount *big.Int
 }
 
+func (ap *AssertionParams) String() string {
+	return fmt.Sprintf(
+		"AssertionParams(NumSteps: %v, TimeBounds: [%v, %v], ImportedCount: %v)",
+		ap.NumSteps,
+		ap.TimeBounds.Start.Unmarshal().AsInt(),
+		ap.TimeBounds.End.Unmarshal().AsInt(),
+		ap.ImportedMessageCount,
+	)
+}
+
 func (ap *AssertionParams) Equals(o *AssertionParams) bool {
 	return ap.NumSteps == o.NumSteps &&
 		ap.TimeBounds.Equals(o.TimeBounds) &&
@@ -138,6 +151,23 @@ type AssertionClaim struct {
 	AfterPendingTop       [32]byte
 	ImportedMessagesSlice [32]byte
 	AssertionStub         *protocol.ExecutionAssertionStub
+}
+
+func (dn *AssertionClaim) String() string {
+	return fmt.Sprintf(
+		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, "+
+			"Assertion: (AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
+			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v))",
+		hexutil.Encode(dn.AfterPendingTop[:]),
+		hexutil.Encode(dn.ImportedMessagesSlice[:]),
+		hexutil.Encode(dn.AssertionStub.AfterHash.Value),
+		dn.AssertionStub.DidInboxInsn,
+		dn.AssertionStub.NumGas,
+		hexutil.Encode(dn.AssertionStub.FirstMessageHash.Value),
+		hexutil.Encode(dn.AssertionStub.LastMessageHash.Value),
+		hexutil.Encode(dn.AssertionStub.FirstLogHash.Value),
+		hexutil.Encode(dn.AssertionStub.LastLogHash.Value),
+	)
 }
 
 func (dn *AssertionClaim) Equals(o *AssertionClaim) bool {

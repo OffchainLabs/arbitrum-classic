@@ -23,30 +23,15 @@ import (
 )
 
 func AddMessagesHashToInboxHash(inbox [32]byte, messages [32]byte) [32]byte {
+	if messages == value.NewEmptyTuple().Hash() {
+		return inbox
+	}
 	tup, _ := value.NewTupleFromSlice([]value.Value{
 		value.NewInt64Value(0),
 		value.NewHashOnlyValue(inbox, 0),
 		value.NewHashOnlyValue(messages, 0),
 	})
 	return tup.Hash()
-}
-
-func AddMessageAcc(currentInbox value.Value, msgVal value.Value) value.TupleValue {
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(0),
-		currentInbox,
-		msgVal,
-	})
-	return tup
-}
-
-func AddMessage(currentInbox value.Value, msgVal value.Value) value.TupleValue {
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		currentInbox,
-		msgVal,
-	})
-	return tup
 }
 
 type MessageStack struct {

@@ -43,8 +43,12 @@ func (al *AnnouncerListener) CompletedChallenge(event ethbridge.ChallengeComplet
 	log.Println("CompletedChallenge")
 }
 
-func (al *AnnouncerListener) SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
+func (al *AnnouncerListener) SawAssertion(ev ethbridge.AssertedEvent, time *protocol.TimeBlocks, txHash [32]byte) {
 	log.Println("SawAssertion")
+	log.Println("Prev Leaf:", hexutil.Encode(ev.PrevLeafHash[:]))
+	log.Println("Max pending value:", hexutil.Encode(ev.MaxPendingTop[:]))
+	log.Println("Params:", ev.Params)
+	log.Println("Claim:", ev.Claim)
 }
 
 func (al *AnnouncerListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
