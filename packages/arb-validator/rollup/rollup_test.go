@@ -17,16 +17,17 @@
 package rollup
 
 import (
+	"context"
+	"math/big"
+	"testing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"math/big"
-	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -38,7 +39,7 @@ func TestCreateEmptyChain(t *testing.T) {
 }
 
 func testCreateEmptyChain(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +81,7 @@ func TestDoAssertion(t *testing.T) {
 }
 
 func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +102,7 @@ func TestChallenge(t *testing.T) {
 }
 
 func testChallenge(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +186,7 @@ func TestCreateStakers(t *testing.T) {
 }
 
 func testCreateStakers(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,17 +195,13 @@ func testCreateStakers(checkpointType string, contractPath string, t *testing.T)
 	tryMarshalUnmarshal(chain, t)
 }
 
-func setUpChain(checkpointType string, contractPath string) (*ChainObserver, machine.Machine, error) {
+func setUpChain(checkpointType string, contractPath string) (*ChainObserver, error) {
 	var dummyRollupAddress common.Address
 	checkpointer := structures.NewRollupCheckpointerWithType(dummyRollupAddress, contractPath, 1000000, checkpointType)
-	theMachine, err := checkpointer.GetInitialMachine()
-	if err != nil {
-		return nil, nil, err
-	}
-	chain := NewChain(
+	return NewChain(
+		context.TODO(),
 		dummyAddress,
 		checkpointer,
-		theMachine,
 		structures.ChainParams{
 			StakeRequirement:        big.NewInt(1),
 			GracePeriod:             structures.TimeFromSeconds(60 * 60),
@@ -214,7 +211,6 @@ func setUpChain(checkpointType string, contractPath string) (*ChainObserver, mac
 		false,
 		big.NewInt(10),
 	)
-	return chain, theMachine, nil
 }
 
 func createSomeStakers(chain *ChainObserver) {
