@@ -19,6 +19,7 @@ package rollup
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -177,6 +178,9 @@ func (node *Node) NodeDataHash(params structures.ChainParams) [32]byte {
 		return ret
 	}
 	if node.linkType == structures.ValidChildType {
+		log.Println("ValidChildType")
+		log.Println(hexutil.Encode(node.disputable.AssertionClaim.AssertionStub.LastMessageHash.Value))
+		log.Println(hexutil.Encode(node.disputable.AssertionClaim.AssertionStub.LastLogHash.Value))
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHashValue()),
 			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHashValue()),
@@ -207,10 +211,15 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidMessagesChildType:
+		log.Println("InvalidMessagesChildType")
+		log.Println(hexutil.Encode(vmProtoData.PendingTop[:]))
+		log.Println(hexutil.Encode(node.disputable.AssertionClaim.AfterPendingTop[:]))
+		log.Println(hexutil.Encode(node.disputable.AssertionClaim.ImportedMessagesSlice[:]))
+		log.Println(node.disputable.AssertionParams.ImportedMessageCount)
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(vmProtoData.PendingTop),
 			solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
-			solsha3.Bytes32([32]byte{}),
+			solsha3.Bytes32(value.NewEmptyTuple().Hash()),
 			solsha3.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
 			solsha3.Uint256(node.disputable.AssertionParams.ImportedMessageCount),
 		))

@@ -55,7 +55,7 @@ func NewServer(
 	}
 	ctx := context.Background()
 
-	checkpointer := structures.NewRollupCheckpointer(rollupAddress, codeFile, 100)
+	checkpointer := structures.NewRollupCheckpointer(ctx, rollupAddress, codeFile, 100)
 
 	chainObserver, err := rollup.NewChain(ctx, rollupAddress, checkpointer, config, true, header.Number)
 	if err != nil {

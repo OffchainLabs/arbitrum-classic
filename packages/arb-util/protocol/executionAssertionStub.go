@@ -96,6 +96,7 @@ func (a *ExecutionAssertionStub) Hash() [32]byte {
 	var ret [32]byte
 	hashVal := solsha3.SoliditySHA3(
 		solsha3.Bytes32(a.AfterHash.Value),
+		solsha3.Bool(a.DidInboxInsn),
 		solsha3.Uint64(a.NumGas),
 		solsha3.Bytes32(a.FirstMessageHash.Value),
 		solsha3.Bytes32(a.LastMessageHash.Value),
