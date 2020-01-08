@@ -83,7 +83,7 @@ contract NodeGraph is ChallengeType {
 
         bytes32 prevPrevLeafHash;
         uint256 prevDeadlineTicks;
-        bytes32 prevDisputableNodeHash;
+        bytes32 prevDataHash;
         uint32  prevChildType;
 
         uint32 numSteps;
@@ -172,7 +172,7 @@ contract NodeGraph is ChallengeType {
         bytes32 prevLeaf = RollupUtils.childNodeHash(
             data.prevPrevLeafHash,
             data.prevDeadlineTicks,
-            data.prevDisputableNodeHash,
+            data.prevDataHash,
             data.prevChildType,
             vmProtoHashBefore
         );

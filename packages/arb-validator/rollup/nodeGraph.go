@@ -18,10 +18,7 @@ package rollup
 
 import (
 	"errors"
-	"fmt"
 	"log"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -193,14 +190,11 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
 
-	fmt.Println("Made node", hexutil.Encode(newNode.hash[:]))
-
 	// create nodes for invalid branches
 	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
 		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
 		chain.nodeFromHash[newNode.hash] = newNode
 		chain.leaves.Add(newNode)
-		fmt.Println("Made node", hexutil.Encode(newNode.hash[:]))
 	}
 }
 
