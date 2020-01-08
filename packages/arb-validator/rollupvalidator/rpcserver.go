@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -39,10 +38,10 @@ func NewRPCServer(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	rollupAddress common.Address,
-	machine machine.Machine,
+	codeFile string,
 	config structures.ChainParams,
 ) (*RPCServer, error) {
-	server, err := NewServer(auth, client, rollupAddress, machine, config)
+	server, err := NewServer(auth, client, rollupAddress, codeFile, config)
 	return &RPCServer{server}, err
 }
 

@@ -35,7 +35,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
@@ -54,16 +53,20 @@ type ChainObserver struct {
 }
 
 func NewChain(
+	ctx context.Context,
 	rollupAddr common.Address,
 	checkpointer *structures.RollupCheckpointer,
-	machine machine.Machine,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
 	startTime *big.Int,
-) *ChainObserver {
+) (*ChainObserver, error) {
+	mach, err := checkpointer.GetInitialMachine()
+	if err != nil {
+		return nil, err
+	}
 	ret := &ChainObserver{
 		RWMutex:           &sync.RWMutex{},
-		nodeGraph:         NewStakedNodeGraph(machine, vmParams),
+		nodeGraph:         NewStakedNodeGraph(mach, vmParams),
 		rollupAddr:        rollupAddr,
 		pendingInbox:      structures.NewPendingInbox(),
 		latestBlockNumber: startTime,
@@ -74,13 +77,13 @@ func NewChain(
 	ret.Lock()
 	defer ret.Unlock()
 
-	ret.startCleanupThread(context.TODO())
+	ret.startCleanupThread(ctx)
 	if updateOpinion {
 		ret.isOpinionated = true
 		ret.assertionMadeChan = make(chan bool, 20)
-		ret.startOpinionUpdateThread(context.TODO())
+		ret.startOpinionUpdateThread(ctx)
 	}
-	return ret
+	return ret, nil
 }
 
 func (chain *ChainObserver) AddListener(listener ChainListener) {

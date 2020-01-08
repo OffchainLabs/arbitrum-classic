@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -47,16 +46,23 @@ func NewServer(
 	auth *bind.TransactOpts,
 	client *ethclient.Client,
 	rollupAddress common.Address,
-	machine machine.Machine,
+	codeFile string,
 	config structures.ChainParams,
 ) (*Server, error) {
 	header, err := client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		return nil, err
 	}
-	chainObserver := rollup.NewChain(rollupAddress, machine, config, true, header.Number)
+	ctx := context.Background()
 
-	err = rollup.RunObserver(chainObserver, client)
+	checkpointer := structures.NewRollupCheckpointer(rollupAddress, codeFile, 100)
+
+	chainObserver, err := rollup.NewChain(ctx, rollupAddress, checkpointer, config, true, header.Number)
+	if err != nil {
+		return nil, err
+	}
+
+	err = rollup.RunObserver(ctx, chainObserver, client)
 	if err != nil {
 		return nil, err
 	}

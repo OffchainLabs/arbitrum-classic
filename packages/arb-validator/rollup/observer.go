@@ -32,12 +32,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
-func RunObserver(chain *ChainObserver, clnt *ethclient.Client) error {
+func RunObserver(ctx context.Context, chain *ChainObserver, clnt *ethclient.Client) error {
 	rollup, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return err
 	}
-	ctx := context.TODO()
 	outChan := make(chan ethbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
