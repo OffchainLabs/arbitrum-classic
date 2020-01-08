@@ -28,6 +28,8 @@ type CheckpointContext interface {
 	AddValue(value.Value)
 	AddMachine(machine.Machine)
 	Manifest() *CheckpointManifest
+	Values() map[[32]byte]value.Value
+	Machines() map[[32]byte]machine.Machine
 }
 
 type CheckpointContextImpl struct {
@@ -69,6 +71,14 @@ func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
 	return &CheckpointManifest{Values: vals, Machines: machines}
 }
 
+func (ctx *CheckpointContextImpl) Values() map[[32]byte]value.Value {
+	return ctx.values
+}
+
+func (ctx *CheckpointContextImpl) Machines() map[[32]byte]machine.Machine {
+	return ctx.machines
+}
+
 func (ctx *CheckpointContextImpl) GetValue(h [32]byte) value.Value {
 	return ctx.values[h]
 }
@@ -94,15 +104,13 @@ func NewRollupCheckpointer(kind string, versionsToKeep int64) *RollupCheckpointe
 func (rcp *RollupCheckpointer) SaveCheckpoint(
 	blockHeight *big.Int,
 	contents []byte,
-	manifest *CheckpointManifest,
-	values map[[32]byte]value.Value,
-	machines map[[32]byte]machine.Machine,
+	ctx CheckpointContext,
 ) error {
 	var metadataBuf *CheckpointMetadata
 	var oldestInCp *big.Int
 	var newestInCp *big.Int
 	rawMetadata := rcp.cp.RestoreMetadata()
-	if rawMetadata == nil {
+	if rawMetadata == nil || len(rawMetadata) == 0 {
 		oldestInCp = blockHeight
 		newestInCp = blockHeight
 		metadataBuf = &CheckpointMetadata{
@@ -131,7 +139,7 @@ func (rcp *RollupCheckpointer) SaveCheckpoint(
 			rcp.cp.SaveMetadata(buf)
 		}
 	}
-	rcp.cp.SaveCheckpoint(blockHeight, contents, manifest, values, machines)
+	rcp.cp.SaveCheckpoint(blockHeight, contents, ctx.Manifest(), ctx.Values(), ctx.Machines())
 
 	if oldestInCp.Cmp(new(big.Int).Sub(newestInCp, rcp.versionsToKeep)) < 0 {
 		go func() {
@@ -200,7 +208,7 @@ func (dcp *dummyCheckpoint) GetMachine(h [32]byte) machine.Machine {
 }
 
 func NewDummyCheckpointer() CheckpointerWithMetadata {
-	return &DummyCheckpointer{[]byte{}, make(map[*big.Int]*dummyCheckpoint)}
+	return &DummyCheckpointer{nil, make(map[*big.Int]*dummyCheckpoint)}
 }
 
 func (cp *DummyCheckpointer) SaveMetadata(data []byte) {

@@ -41,12 +41,31 @@ func TestCreateEmptyChain(t *testing.T) {
 		t.Fatal("unexpected leaf count")
 	}
 	tryMarshalUnmarshal(chain, t)
+	cp := structures.NewRollupCheckpointer("dummy", 1000000)
+	tryMarshalUnmarshalWithCheckpointer(chain, cp, t)
 }
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := structures.NewCheckpointContextImpl()
 	chainBuf := chain.MarshalForCheckpoint(ctx)
 	chain2 := chainBuf.UnmarshalFromCheckpoint(ctx, nil)
+	if !chain.Equals(chain2) {
+		t.Fail()
+	}
+}
+
+func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.RollupCheckpointer, t *testing.T) {
+	blockHeight := big.NewInt(7337)
+	ctx := structures.NewCheckpointContextImpl()
+	buf, err := chain.MarshalToBytes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cp.SaveCheckpoint(blockHeight, buf, ctx)
+	chain2, err := UnmarshalChainObserverFromBytes(buf, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !chain.Equals(chain2) {
 		t.Fail()
 	}
