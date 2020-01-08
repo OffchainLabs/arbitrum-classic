@@ -347,6 +347,6 @@ func (csc *CStoreCheckpointer) GetMachine(h [32]byte) machine.Machine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ret.RestoreCheckpoint(csc.st, string(h[:]))
+	ret.RestoreCheckpoint(csc.st, h)
 	return ret
 }
