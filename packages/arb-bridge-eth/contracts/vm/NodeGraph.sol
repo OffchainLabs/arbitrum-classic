@@ -64,7 +64,8 @@ contract NodeGraph is ChallengeType {
         uint128[2] timeBoundsBlocks,
         uint64 numArbGas,
         uint32 numSteps,
-        bool didInboxInsn
+        bool didInboxInsn,
+        bytes32[4] newNodes
     );
 
     event RollupConfirmed(bytes32 nodeHash);
@@ -229,7 +230,7 @@ contract NodeGraph is ChallengeType {
         leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, pendingValue);
+        emitAssertedEvent(data, prevLeaf, pendingValue, [invalidPending, invalidMessages, invalidExec, validHash]);
         return (prevLeaf, validHash);
     }
 
@@ -238,7 +239,7 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue) private {
+    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue, bytes32[4] memory newNodes) private {
         emit RollupAsserted(
             prevLeaf,
             pendingValue,
@@ -251,7 +252,8 @@ contract NodeGraph is ChallengeType {
             data.timeBoundsBlocks,
             data.numArbGas,
             data.numSteps,
-            data.didInboxInsn
+            data.didInboxInsn,
+            newNodes
         );
     }
 

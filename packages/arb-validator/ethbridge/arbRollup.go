@@ -201,6 +201,7 @@ func (vm *ArbRollup) MakeAssertion(
 	stakerProof [][32]byte,
 ) (*types.Receipt, error) {
 	log.Println("Making assertion")
+	log.Println("BeforeState:", beforeState)
 	log.Println("Params:", assertionParams)
 	log.Println("Claim:", assertionClaim)
 	vm.auth.Context = ctx
