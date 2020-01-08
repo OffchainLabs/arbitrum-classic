@@ -19,6 +19,9 @@ package rollup
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
+	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -30,8 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type ChainListener interface {
@@ -48,7 +50,7 @@ type StakerListener struct {
 	myAddr   common.Address
 	auth     *bind.TransactOpts
 	client   *ethclient.Client
-	contract *ethbridge.ArbRollup
+	contract arbbridge.ArbRollup
 }
 
 func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
@@ -218,7 +220,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 	}
 }
 
-func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
 	asserter, ok := lis.stakers[ev.Asserter]
 	if ok {
 		switch conflictNode.linkType {

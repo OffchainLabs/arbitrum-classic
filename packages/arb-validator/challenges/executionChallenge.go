@@ -111,7 +111,7 @@ func defendExecution(
 			}
 			pre := defender.GetPrecondition()
 			assertion, _ := defender.GetMachineState().ExecuteAssertion(1, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
-			_, err = contract.OneStepProof(ctx, defender.GetPrecondition(), assertion.Stub(), proof)
+			err = contract.OneStepProof(ctx, defender.GetPrecondition(), assertion.Stub(), proof)
 			if err != nil {
 				return 0, err
 			}
@@ -127,7 +127,7 @@ func defendExecution(
 		}
 
 		defenders, assertions := defender.NBisect(50)
-		_, err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
+		err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 
 		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
