@@ -37,12 +37,10 @@ var dummyRollupAddress1 = common.BytesToAddress([]byte{1})
 var dummyRollupAddress2 = common.BytesToAddress([]byte{2})
 var dummyRollupAddress3 = common.BytesToAddress([]byte{3})
 var dummyRollupAddress4 = common.BytesToAddress([]byte{4})
-var dummyRollupAddress5 = common.BytesToAddress([]byte{5})
-var dummyRollupAddress6 = common.BytesToAddress([]byte{6})
 
 func TestCreateEmptyChain(t *testing.T) {
 	testCreateEmptyChain(dummyRollupAddress1, "inmemory_testing", "contract.ao", t)
-	testCreateEmptyChain(dummyRollupAddress2, "fresh_rocksdb", "contract.ao", t)
+	testCreateEmptyChain(dummyRollupAddress1, "fresh_rocksdb", "contract.ao", t)
 }
 
 func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
@@ -85,8 +83,8 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 }
 
 func TestDoAssertion(t *testing.T) {
-	testDoAssertion(dummyRollupAddress3, "inmemory_testing", "contract.ao", t)
-	testDoAssertion(dummyRollupAddress4, "fresh_rocksdb", "contract.ao", t)
+	testDoAssertion(dummyRollupAddress2, "inmemory_testing", "contract.ao", t)
+	testDoAssertion(dummyRollupAddress2, "fresh_rocksdb", "contract.ao", t)
 }
 
 func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
@@ -107,10 +105,8 @@ func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, c
 }
 
 func TestChallenge(t *testing.T) {
-	var dummyRollupAddress1 = common.HexToAddress("a")
-	//var dummyRollupAddress2 = common.HexToAddress("b")
-	testChallenge(dummyRollupAddress1, "inmemory_testing", "contract.ao", t)
-	//testChallenge(dummyRollupAddress2, "fresh_rocksdb", "contract.ao", t)
+	testChallenge(dummyRollupAddress3, "inmemory_testing", "contract.ao", t)
+	testChallenge(dummyRollupAddress3, "fresh_rocksdb", "contract.ao", t)
 }
 
 func testChallenge(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
@@ -194,8 +190,8 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 }
 
 func TestCreateStakers(t *testing.T) {
-	testCreateStakers(dummyRollupAddress5, "inmemory_testing", "contract.ao", t)
-	testCreateStakers(dummyRollupAddress6, "fresh_rocksdb", "contract.ao", t)
+	testCreateStakers(dummyRollupAddress4, "inmemory_testing", "contract.ao", t)
+	testCreateStakers(dummyRollupAddress4, "fresh_rocksdb", "contract.ao", t)
 }
 
 func testCreateStakers(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
