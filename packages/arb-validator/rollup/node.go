@@ -40,11 +40,12 @@ type Node struct {
 	linkType    structures.ChildType
 	vmProtoData *structures.VMProtoData
 
-	machine      machine.Machine // nil if unknown
-	depth        uint64
-	nodeDataHash [32]byte
-	innerHash    [32]byte
-	hash         [32]byte
+	machine         machine.Machine // nil if unknown
+	depth           uint64
+	nodeDataHash    [32]byte
+	innerHash       [32]byte
+	hash            [32]byte
+	assertionTxHash [32]byte
 
 	successorHashes [structures.MaxChildType + 1][32]byte
 	numStakers      uint64
@@ -76,6 +77,7 @@ func NewNodeFromValidPrev(
 	machine machine.Machine,
 	params structures.ChainParams,
 	currentTime *protocol.TimeBlocks,
+	assertionTxHash [32]byte,
 ) *Node {
 	return NewNodeFromPrev(
 		prev,
@@ -85,6 +87,7 @@ func NewNodeFromValidPrev(
 		currentTime,
 		disputable.ValidAfterVMProtoData(prev.vmProtoData),
 		machine,
+		assertionTxHash,
 	)
 }
 
@@ -94,6 +97,7 @@ func NewNodeFromInvalidPrev(
 	kind structures.ChildType,
 	params structures.ChainParams,
 	currentTime *protocol.TimeBlocks,
+	assertionTxHash [32]byte,
 ) *Node {
 	return NewNodeFromPrev(
 		prev,
@@ -103,6 +107,7 @@ func NewNodeFromInvalidPrev(
 		currentTime,
 		prev.vmProtoData,
 		prev.machine,
+		assertionTxHash,
 	)
 }
 
@@ -114,6 +119,7 @@ func NewNodeFromPrev(
 	currentTime *protocol.TimeBlocks,
 	vmProtoData *structures.VMProtoData,
 	machine machine.Machine,
+	assertionTxHash [32]byte,
 ) *Node {
 	checkTime := disputable.CheckTime(params)
 	deadlineTicks := structures.TimeFromBlockNum(currentTime).Add(params.GracePeriod)
@@ -124,13 +130,14 @@ func NewNodeFromPrev(
 	}
 
 	ret := &Node{
-		prev:        prev,
-		deadline:    deadlineTicks,
-		disputable:  disputable,
-		linkType:    kind,
-		vmProtoData: vmProtoData,
-		machine:     machine,
-		depth:       prev.depth + 1,
+		prev:            prev,
+		deadline:        deadlineTicks,
+		disputable:      disputable,
+		linkType:        kind,
+		vmProtoData:     vmProtoData,
+		machine:         machine,
+		depth:           prev.depth + 1,
+		assertionTxHash: assertionTxHash,
 	}
 	ret.setHash(ret.NodeDataHash(params))
 	prev.successorHashes[kind] = ret.hash
@@ -233,11 +240,12 @@ func (node *Node) setHash(
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
+
 	innerHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(node.vmProtoData.Hash()),
-		solsha3.Int256(node.deadline),
+		solsha3.Uint256(node.deadline),
 		solsha3.Bytes32(nodeDataHash),
-		solsha3.Int256(node.linkType),
+		solsha3.Uint256(node.linkType),
 	)
 	hashSlice := solsha3.SoliditySHA3(
 		solsha3.Bytes32(prevHashArr),

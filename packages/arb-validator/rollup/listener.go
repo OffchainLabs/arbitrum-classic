@@ -18,6 +18,8 @@ package rollup
 
 import (
 	"context"
+	"log"
+	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -39,11 +41,19 @@ type ChainListener interface {
 	StakeMoved(ethbridge.StakeMovedEvent)
 	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)
 	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
+	SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
+	ConfirmedNode(ethbridge.ConfirmedEvent)
 
 	AssertionPrepared(*preparedAssertion)
+	PrunableLeafs([]pruneParams)
+	MootableStakes([]recoverStakeMootedParams)
+	OldStakes([]recoverStakeOldParams)
+
+	AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte)
 }
 
 type StakerListener struct {
+	sync.Mutex
 	myAddr   common.Address
 	auth     *bind.TransactOpts
 	client   *ethclient.Client
@@ -71,20 +81,21 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 	}()
 }
 
-func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) {
-	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
-		staker.contract.MakeAssertion(
-			ctx,
-			opp.prevPrevLeafHash,
-			opp.prevDataHash,
-			opp.prevDeadline,
-			opp.prevChildType,
-			opp.beforeState,
-			opp.params,
-			opp.claim,
-			proof,
-		)
-	}()
+func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) error {
+	staker.Lock()
+	_, err := staker.contract.MakeAssertion(
+		ctx,
+		opp.prevPrevLeafHash,
+		opp.prevDataHash,
+		opp.prevDeadline,
+		opp.prevChildType,
+		opp.beforeState,
+		opp.params,
+		opp.claim,
+		proof,
+	)
+	staker.Unlock()
+	return err
 }
 
 func (staker *StakerListener) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
@@ -162,16 +173,22 @@ func NewValidatorChainListener(
 	return &ValidatorChainListener{chain, make(map[common.Address]*StakerListener)}
 }
 
-func (lis *ValidatorChainListener) AddStaker(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) error {
+func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
 	contract, err := ethbridge.NewRollup(lis.chain.rollupAddr, client, auth)
 	if err != nil {
 		return err
 	}
-	lis.stakers[address] = &StakerListener{
+	location := lis.chain.knownValidNode
+	proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
+	proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
+	go contract.PlaceStake(context.TODO(), lis.chain.nodeGraph.params.StakeRequirement, proof1, proof2)
+	address := auth.From
+	staker := &StakerListener{
 		myAddr:   address,
 		client:   client,
 		contract: contract,
 	}
+	lis.stakers[address] = staker
 	return nil
 }
 
@@ -273,15 +290,77 @@ func (lis *ValidatorChainListener) wonChallenge(ethbridge.ChallengeCompletedEven
 
 }
 
+func (lis *ValidatorChainListener) SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
+
+}
+
+func (lis *ValidatorChainListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
+
+}
+
 func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion) {
 	leaf, ok := lis.chain.nodeGraph.nodeFromHash[prepared.prevLeaf]
 	if ok {
 		for _, staker := range lis.stakers {
 			stakerPos := lis.chain.nodeGraph.stakers.Get(staker.myAddr)
-			proof := GeneratePathProof(stakerPos.location, leaf)
-			if proof != nil {
-				staker.makeAssertion(context.TODO(), prepared, proof)
+			if stakerPos != nil {
+				proof := GeneratePathProof(stakerPos.location, leaf)
+				if proof != nil {
+					go func() {
+						err := staker.makeAssertion(context.TODO(), prepared, proof)
+						if err != nil {
+							log.Println("Error making assertion", err)
+						}
+					}()
+
+					break
+				}
 			}
 		}
 	}
 }
+
+func (lis *ValidatorChainListener) PrunableLeafs(params []pruneParams) {
+	for _, staker := range lis.stakers {
+		for _, prune := range params {
+			go staker.contract.PruneLeaf(
+				context.TODO(),
+				prune.ancestor.hash,
+				prune.leafProof,
+				prune.ancProof,
+			)
+		}
+		break
+	}
+
+}
+
+func (lis *ValidatorChainListener) MootableStakes(params []recoverStakeMootedParams) {
+	for _, staker := range lis.stakers {
+		for _, moot := range params {
+			go staker.contract.RecoverStakeMooted(
+				context.TODO(),
+				moot.ancestor.hash,
+				moot.addr,
+				moot.lcProof,
+				moot.stProof,
+			)
+		}
+		break
+	}
+}
+
+func (lis *ValidatorChainListener) OldStakes(params []recoverStakeOldParams) {
+	for _, staker := range lis.stakers {
+		for _, old := range params {
+			go staker.contract.RecoverStakeOld(
+				context.TODO(),
+				old.addr,
+				old.proof,
+			)
+		}
+		break
+	}
+}
+
+func (lis *ValidatorChainListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {}

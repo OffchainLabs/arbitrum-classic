@@ -14,17 +14,7 @@
  * limitations under the License.
  */
 
-var BytesLib = artifacts.require("bytes/BytesLib.sol");
-
-var DebugPrint = artifacts.require("./libraries/DebugPrint.sol");
-var SigUtils = artifacts.require("./libraries/SigUtils.sol");
-var MerkleLib = artifacts.require("./libraries/MerkleLib.sol");
-var RollupTime = artifacts.require("./libraries/RollupTime.sol");
-
-var Machine = artifacts.require("./arch/Machine.sol");
 var OneStepProof = artifacts.require("./arch/OneStepProof.sol");
-var Protocol = artifacts.require("./arch/Protocol.sol");
-var Value = artifacts.require("./arch/Value.sol");
 
 var MessagesChallenge = artifacts.require("./challenge/MessagesChallenge.sol");
 var PendingTopChallenge = artifacts.require(
@@ -35,62 +25,14 @@ var ExecutionChallenge = artifacts.require(
 );
 var ChallengeFactory = artifacts.require("./factories/ChallengeFactory.sol");
 
-var VM = artifacts.require("./VM.sol");
 var ArbRollup = artifacts.require("./vm/ArbRollup.sol");
 var ArbFactory = artifacts.require("./vm/ArbFactory.sol");
 
 var GlobalPendingInbox = artifacts.require("./GlobalPendingInbox.sol");
 
 module.exports = async function(deployer, network, accounts) {
-  deployer.deploy(DebugPrint);
-  deployer.link(DebugPrint, []);
-
-  deployer.deploy(MerkleLib);
-  deployer.link(MerkleLib, [
-    MessagesChallenge,
-    PendingTopChallenge,
-    ExecutionChallenge
-  ]);
-
-  deployer.deploy(SigUtils);
-  deployer.link(SigUtils, [GlobalPendingInbox]);
-
-  deployer.deploy(BytesLib);
-  deployer.link(BytesLib, []);
-
-  deployer.deploy(Value);
-  deployer.link(Value, [
-    Protocol,
-    GlobalPendingInbox,
-    ExecutionChallenge,
-    OneStepProof,
-    ArbRollup
-  ]);
-
-  deployer.deploy(Protocol);
-  deployer.link(Protocol, [
-    MessagesChallenge,
-    PendingTopChallenge,
-    ExecutionChallenge,
-    ArbRollup
-  ]);
-
-  deployer.deploy(Machine);
-  deployer.link(Machine, []);
-
   deployer.deploy(OneStepProof);
   deployer.link(OneStepProof, [ExecutionChallenge]);
-
-  deployer.deploy(VM);
-  deployer.link(VM, [ArbRollup]);
-
-  deployer.deploy(RollupTime);
-  deployer.link(RollupTime, [
-    ArbRollup,
-    MessagesChallenge,
-    PendingTopChallenge,
-    ExecutionChallenge
-  ]);
 
   await deployer.deploy(GlobalPendingInbox);
 

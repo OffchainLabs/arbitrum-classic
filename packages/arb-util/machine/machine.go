@@ -25,7 +25,7 @@ type Machine interface {
 	MarshalForProof() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool
-	RestoreCheckpoint(storage CheckpointStorage, checkpointName string) bool
+	RestoreCheckpoint(storage CheckpointStorage, machineHash [32]byte) bool
 }
 
 func IsMachineBlocked(machine Machine, currentTime *protocol.TimeBlocks) bool {

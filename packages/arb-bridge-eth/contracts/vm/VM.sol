@@ -32,11 +32,11 @@ library VM {
         uint32  maxExecutionSteps;
     }
 
-    function isErrored(bytes32 vmStateHash) external pure returns(bool) {
+    function isErrored(bytes32 vmStateHash) internal pure returns(bool) {
         return vmStateHash == MACHINE_ERROR_HASH;
     }
 
-    function isHalted(bytes32 vmStateHash) external pure returns(bool) {
+    function isHalted(bytes32 vmStateHash) internal pure returns(bool) {
         return vmStateHash == MACHINE_HALT_HASH;
     }
 

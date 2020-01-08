@@ -17,9 +17,10 @@
 package rollup
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"math/big"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -162,6 +163,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		disputableNode,
 		theMachine,
 		protocol.NewTimeBlocks(big.NewInt(10)),
+		[32]byte{},
 	)
 }
 
@@ -182,7 +184,6 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 		return nil, nil, err
 	}
 	chain := NewChain(
-		nil,
 		dummyAddress,
 		theMachine,
 		structures.ChainParams{
@@ -192,6 +193,7 @@ func setUpChain() (*ChainObserver, machine.Machine, error) {
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
+		big.NewInt(10),
 	)
 	return chain, theMachine, nil
 }

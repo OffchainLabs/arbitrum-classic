@@ -20,8 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -44,16 +42,13 @@ type recoverStakeMootedParams struct {
 	stProof  [][32]byte
 }
 
-func (chain *ChainObserver) startCleanupThread(client *ethbridge.ArbRollup, doneChan chan interface{}) {
-	if doneChan == nil {
-		doneChan = make(chan interface{})
-	}
+func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-doneChan:
+			case <-ctx.Done():
 				return
 			case <-ticker.C:
 				chain.RLock()
@@ -61,29 +56,10 @@ func (chain *ChainObserver) startCleanupThread(client *ethbridge.ArbRollup, done
 				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
 				chain.RUnlock()
 
-				for _, prune := range prunesToDo {
-					client.PruneLeaf(
-						context.TODO(),
-						prune.ancestor.hash,
-						prune.leafProof,
-						prune.ancProof,
-					)
-				}
-				for _, moot := range mootedToDo {
-					client.RecoverStakeMooted(
-						context.TODO(),
-						moot.ancestor.hash,
-						moot.addr,
-						moot.lcProof,
-						moot.stProof,
-					)
-				}
-				for _, old := range oldToDo {
-					client.RecoverStakeOld(
-						context.TODO(),
-						old.addr,
-						old.proof,
-					)
+				for _, listener := range chain.listeners {
+					listener.PrunableLeafs(prunesToDo)
+					listener.MootableStakes(mootedToDo)
+					listener.OldStakes(oldToDo)
 				}
 			}
 		}

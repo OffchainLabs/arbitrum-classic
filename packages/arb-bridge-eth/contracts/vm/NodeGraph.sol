@@ -52,22 +52,19 @@ contract NodeGraph is ChallengeType {
     uint256 constant VALID_CHILD_TYPE = 3;
     uint256 constant MAX_CHILD_TYPE = 3;
 
-    // Fields
-    //   prevLeafHash
-    //   afterPendingTop
-    //   importedMessagesSlice
-    //   afterVMHash
-    //   messagesAccHash
-    //   logsAccHash
-    //   maxPendingTop
-
     event RollupAsserted(
-        bytes32[7] fields,
-        uint32 numSteps,
-        uint128[2] timeBoundsBlocks,
+        bytes32 prevLeaf,
+        bytes32 pendingValue,
         uint256 importedMessageCount,
-        bool didInboxInsn,
-        uint64 numArbGas
+        bytes32 afterPendingTop,
+        bytes32 importedMessagesSlice,
+        bytes32 afterVMHash,
+        bytes32 messagesAccHash,
+        bytes32 logsAccHash,
+        uint128[2] timeBoundsBlocks,
+        uint64 numArbGas,
+        uint32 numSteps,
+        bool didInboxInsn
     );
 
     event RollupConfirmed(bytes32 nodeHash);
@@ -188,57 +185,51 @@ contract NodeGraph is ChallengeType {
         (bytes32 pendingValue, uint256 pendingCount) = globalInbox.getPending();
         require(data.importedMessageCount <= pendingCount.sub(data.beforePendingCount), MAKE_MESSAGE_CNT);
 
-        uint256 deadlineTicks = _computeDeadline(
-            data.numArbGas / vmParams.arbGasSpeedLimitPerTick,
-            vmParams.gracePeriodTicks,
-            data.prevDeadlineTicks
-        );
+        uint256 gracePeriodTicks = vmParams.gracePeriodTicks;
+        uint256 checkTimeTicks = data.numArbGas / vmParams.arbGasSpeedLimitPerTick;
+        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks;
+        if (deadlineTicks < data.prevDeadlineTicks) {
+            deadlineTicks = data.prevDeadlineTicks;
+        }
+        deadlineTicks += checkTimeTicks;
 
-
-        leaves[generateInvalidPendingTopLeaf(
+        bytes32 invalidPending = generateInvalidPendingTopLeaf(
             data,
             prevLeaf,
             deadlineTicks,
             pendingValue,
             pendingCount,
-            vmProtoHashBefore
-        )] = true;
-        leaves[generateInvalidMessagesLeaf(
+            vmProtoHashBefore,
+            gracePeriodTicks
+        );
+        bytes32 invalidMessages = generateInvalidMessagesLeaf(
             data,
             prevLeaf,
             deadlineTicks,
-            vmProtoHashBefore
-        )] = true;
-        leaves[generateInvalidExecutionLeaf(
+            vmProtoHashBefore,
+            gracePeriodTicks
+        );
+        bytes32 invalidExec = generateInvalidExecutionLeaf(
             data,
             prevLeaf,
             deadlineTicks,
-            vmProtoHashBefore
-        )] = true;
+            vmProtoHashBefore,
+            gracePeriodTicks,
+            checkTimeTicks
+        );
         bytes32 validHash = generateValidLeaf(
             data,
             prevLeaf,
             deadlineTicks
         );
+
+        leaves[invalidPending] = true;
+        leaves[invalidMessages] = true;
+        leaves[invalidExec] = true;
         leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emit RollupAsserted(
-            [
-                prevLeaf,
-                data.afterPendingTop,
-                data.importedMessagesSlice,
-                data.afterVMHash,
-                data.messagesAccHash,
-                data.logsAccHash,
-                pendingValue
-            ],
-            data.numSteps,
-            data.timeBoundsBlocks,
-            data.importedMessageCount,
-            data.didInboxInsn,
-            data.numArbGas
-        );
+        emitAssertedEvent(data, prevLeaf, pendingValue);
         return (prevLeaf, validHash);
     }
 
@@ -247,21 +238,21 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function _computeDeadline(
-        uint256 checkTimeTicks,
-        uint256 gracePeriodTicks,
-        uint256 prevDeadlineTicks
-    )
-        private
-        view
-        returns(uint256)
-    {
-        uint256 deadlineTicks = RollupTime.blocksToTicks(block.number) + gracePeriodTicks;
-        if (deadlineTicks >= prevDeadlineTicks) {
-            return deadlineTicks + checkTimeTicks;
-        } else {
-            return prevDeadlineTicks + checkTimeTicks;
-        }
+    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue) private {
+        emit RollupAsserted(
+            prevLeaf,
+            pendingValue,
+            data.importedMessageCount,
+            data.afterPendingTop,
+            data.importedMessagesSlice,
+            data.afterVMHash,
+            data.messagesAccHash,
+            data.logsAccHash,
+            data.timeBoundsBlocks,
+            data.numArbGas,
+            data.numSteps,
+            data.didInboxInsn
+        );
     }
 
     function generateInvalidPendingTopLeaf(
@@ -270,23 +261,25 @@ contract NodeGraph is ChallengeType {
         uint256 deadlineTicks,
         bytes32 pendingValue,
         uint256 pendingCount,
-        bytes32 vmProtoHashBefore
+        bytes32 vmProtoHashBefore,
+        uint256 gracePeriodTicks
     )
         private
-        view
+        pure
         returns(bytes32)
     {
+        bytes32 challengeHash = ChallengeUtils.pendingTopHash(
+            data.afterPendingTop,
+            pendingValue,
+            pendingCount - (data.beforePendingCount + data.importedMessageCount)
+        );
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
             keccak256(
                 abi.encodePacked(
-                    ChallengeUtils.pendingTopHash(
-                        data.afterPendingTop,
-                        pendingValue,
-                        pendingCount - (data.beforePendingCount + data.importedMessageCount)
-                    ),
-                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
+                    challengeHash,
+                    gracePeriodTicks + RollupTime.blocksToTicks(1)
                 )
             ),
             INVALID_PENDING_TOP_TYPE,
@@ -298,10 +291,11 @@ contract NodeGraph is ChallengeType {
         MakeAssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks,
-        bytes32 vmProtoHashBefore
+        bytes32 vmProtoHashBefore,
+        uint256 gracePeriodTicks
     )
         private
-        view
+        pure
         returns(bytes32)
     {
         return RollupUtils.childNodeHash(
@@ -316,7 +310,7 @@ contract NodeGraph is ChallengeType {
                         data.importedMessagesSlice,
                         data.importedMessageCount
                     ),
-                    vmParams.gracePeriodTicks + RollupTime.blocksToTicks(1)
+                    gracePeriodTicks + RollupTime.blocksToTicks(1)
                 )
             ),
             INVALID_MESSAGES_TYPE,
@@ -328,13 +322,14 @@ contract NodeGraph is ChallengeType {
         MakeAssertionData memory data,
         bytes32 prevLeaf,
         uint256 deadlineTicks,
-        bytes32 vmProtoHashBefore
+        bytes32 vmProtoHashBefore,
+        uint256 gracePeriodTicks,
+        uint256 checkTimeTicks
     )
         private
-        view
+        pure
         returns(bytes32)
     {
-        bytes32 beforeInboxHash = Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice);
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
             data.didInboxInsn,
@@ -344,21 +339,22 @@ contract NodeGraph is ChallengeType {
             0x00,
             data.logsAccHash
         );
+        bytes32 executionHash = ChallengeUtils.executionHash(
+            data.numSteps,
+            Protocol.generatePreconditionHash(
+                 data.beforeVMHash,
+                 data.timeBoundsBlocks,
+                 Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice)
+            ),
+            assertionHash
+        );
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
             keccak256(
                 abi.encodePacked(
-                    ChallengeUtils.executionHash(
-                        data.numSteps,
-                        Protocol.generatePreconditionHash(
-                             data.beforeVMHash,
-                             data.timeBoundsBlocks,
-                             beforeInboxHash
-                        ),
-                        assertionHash
-                    ),
-                    vmParams.gracePeriodTicks + data.numArbGas / vmParams.arbGasSpeedLimitPerTick
+                    executionHash,
+                    gracePeriodTicks + checkTimeTicks
                 )
             ),
             INVALID_EXECUTION_TYPE,

@@ -319,7 +319,7 @@ async function makeAssertion(
     receipt: receipt,
     assertion: new Assertion(
       receipt.receipt.blockNumber,
-      receipt.logs[0].args["0"][6],
+      receipt.logs[0].args.pendingValue,
       0,
       prevPrevNode,
       prevProtoData,
