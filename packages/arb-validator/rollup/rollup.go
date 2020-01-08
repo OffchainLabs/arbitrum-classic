@@ -48,12 +48,14 @@ type ChainObserver struct {
 	knownValidNode    *Node
 	latestBlockNumber *big.Int
 	listeners         []ChainListener
+	checkpointer      *structures.RollupCheckpointer
 	isOpinionated     bool
 	assertionMadeChan chan bool
 }
 
 func NewChain(
 	rollupAddr common.Address,
+	checkpointer *structures.RollupCheckpointer,
 	machine machine.Machine,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
@@ -66,6 +68,7 @@ func NewChain(
 		pendingInbox:      structures.NewPendingInbox(),
 		latestBlockNumber: startTime,
 		listeners:         []ChainListener{},
+		checkpointer:      checkpointer,
 	}
 	ret.knownValidNode = ret.nodeGraph.latestConfirmed
 	ret.Lock()
