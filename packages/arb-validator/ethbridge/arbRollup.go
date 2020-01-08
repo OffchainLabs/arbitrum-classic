@@ -164,7 +164,7 @@ func (vm *ArbRollup) MakeAssertion(
 	assertionParams *structures.AssertionParams,
 	assertionClaim *structures.AssertionClaim,
 	stakerProof [][32]byte,
-) (*types.Receipt, error) {
+) error {
 	log.Println("Making assertion")
 	log.Println("Params:", assertionParams)
 	log.Println("Claim:", assertionClaim)
@@ -260,7 +260,7 @@ func (vm *ArbRollup) StartChallenge(ctx context.Context, asserterAddress common.
 	if err != nil {
 		return err
 	}
-	return vm.waitForReceipt(ctx, tx, "StartChallenge")
+	return vm.waitForReceipt(ctx, tx, "StartExecutionChallenge")
 }
 
 //func (vm *ArbRollup) VerifyVM(

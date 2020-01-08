@@ -34,11 +34,11 @@ import (
 )
 
 func RunObserver(ctx context.Context, chain *ChainObserver, clnt *ethclient.Client) error {
-	rollup, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
+	rollup, err := arb.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return err
 	}
-	outChan := make(chan ethbridge.Notification, 1024)
+	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
