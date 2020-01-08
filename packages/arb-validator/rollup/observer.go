@@ -34,7 +34,8 @@ import (
 )
 
 func RunObserver(chain *ChainObserver, clnt *ethclient.Client) error {
-	rollup, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
+	var rollup arbbridge.ArbRollupWatcher
+	roll, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return err
 	}

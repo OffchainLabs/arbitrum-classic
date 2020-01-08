@@ -25,6 +25,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/ethereum/go-ethereum/common"

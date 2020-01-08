@@ -18,6 +18,8 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"log"
 	"sync"
 
@@ -35,13 +37,13 @@ import (
 )
 
 type ChainListener interface {
-	StakeCreated(ethbridge.StakeCreatedEvent)
-	StakeRemoved(ethbridge.StakeRefundedEvent)
-	StakeMoved(ethbridge.StakeMovedEvent)
-	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)
-	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
-	SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
-	ConfirmedNode(ethbridge.ConfirmedEvent)
+	StakeCreated(arbbridge.StakeCreatedEvent)
+	StakeRemoved(arbbridge.StakeRefundedEvent)
+	StakeMoved(arbbridge.StakeMovedEvent)
+	StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)
+	CompletedChallenge(event arbbridge.ChallengeCompletedEvent)
+	SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
+	ConfirmedNode(arbbridge.ConfirmedEvent)
 
 	AssertionPrepared(*preparedAssertion)
 	PrunableLeafs([]pruneParams)
@@ -82,7 +84,7 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 
 func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) error {
 	staker.Lock()
-	_, err := staker.contract.MakeAssertion(
+	err := staker.contract.MakeAssertion(
 		ctx,
 		opp.prevPrevLeafHash,
 		opp.prevDataHash,
@@ -289,11 +291,11 @@ func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEven
 
 }
 
-func (lis *ValidatorChainListener) SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
+func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
 
 }
 
-func (lis *ValidatorChainListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
+func (lis *ValidatorChainListener) ConfirmedNode(arbbridge.ConfirmedEvent) {
 
 }
 

@@ -17,10 +17,11 @@
 package rollup
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"testing"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"

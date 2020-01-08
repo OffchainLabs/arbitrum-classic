@@ -285,7 +285,7 @@ func (vm *EthRollupWatcher) ProcessEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.AssertedEvent{
-				PrevLeafHash: eventVal.Fields,
+				PrevLeafHash: eventVal.PrevLeaf,
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
 					TimeBounds: protocol.NewTimeBoundsBlocks(

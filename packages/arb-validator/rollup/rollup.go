@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"math/big"
 	"sync"
 
@@ -27,7 +28,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -99,7 +100,7 @@ func (chain *ChainObserver) MarshalToBytes(ctx structures.CheckpointContext) ([]
 	return proto.Marshal(cob)
 }
 
-func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, _client *ethbridge.ArbRollup) *ChainObserver {
+func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, _client arbbridge.ArbRollup) *ChainObserver {
 	chain := &ChainObserver{
 		RWMutex:      &sync.RWMutex{},
 		nodeGraph:    m.StakedNodeGraph.UnmarshalFromCheckpoint(ctx),
