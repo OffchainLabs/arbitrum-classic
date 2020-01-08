@@ -18,6 +18,10 @@ package structures
 
 import (
 	"context"
+	"log"
+	"math/big"
+	"os"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -25,9 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"log"
-	"math/big"
-	"os"
 )
 
 type CheckpointContext interface {
@@ -153,7 +154,7 @@ func NewRollupCheckpointerWithType(
 	case "rocksdb": // store in rocksdb database, keyed to rollupAddr -- use this for production
 		return &RollupCheckpointer{
 			big.NewInt(int64(maxReorgDepth)),
-			newProductionCheckpointer(databasePath, "contract.ao"),
+			newProductionCheckpointer(databasePath, arbitrumCodeFilePath),
 			asyncWorker,
 		}
 	default:
