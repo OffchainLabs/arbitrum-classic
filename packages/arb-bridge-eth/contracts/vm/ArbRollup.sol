@@ -167,7 +167,7 @@ contract ArbRollup is NodeGraph, Staking {
      // beforeVMHash
      // beforePendingTop
      // prevPrevLeafHash
-     // prevDisputableNodeHash
+     // prevDataHash
      // afterPendingTop
      // importedMessagesSlice
      // afterVMHash

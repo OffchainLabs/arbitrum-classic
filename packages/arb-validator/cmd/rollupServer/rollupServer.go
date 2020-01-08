@@ -125,7 +125,7 @@ func main() {
 		common.Address{},
 	)
 
-	server, err := rollupvalidator.NewRPCServer(auth, client, address, mach, config)
+	server, err := rollupvalidator.NewRPCServer(auth, client, address, flag.Arg(0), config)
 	if err != nil {
 		log.Fatal(err)
 	}

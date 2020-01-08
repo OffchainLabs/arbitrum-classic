@@ -17,6 +17,8 @@
 package structures
 
 import (
+	"context"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -92,35 +94,93 @@ func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
 }
 
 type RollupCheckpointer struct {
-	versionsToKeep *big.Int
-	cp             CheckpointerWithMetadata
+	maxReorgDepth *big.Int
+	cp            checkpointerWithMetadata
+	asyncCkptChan chan func()
 }
 
-const checkpointPathForTesting = "/tmp/rollup_test_dbpath"
+const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
 
-func NewRollupCheckpointer(kind string, versionsToKeep int64, contractPath string) *RollupCheckpointer {
-	switch kind {
-	case "dummy":
-		return &RollupCheckpointer{big.NewInt(versionsToKeep), NewDummyCheckpointer(contractPath)}
-	case "fresh_cstore":
-		if err := os.RemoveAll(checkpointPathForTesting); err != nil {
+func makeCheckpointDatabasePath(rollupAddr common.Address) string {
+	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
+}
+
+func NewRollupCheckpointer(
+	ctx context.Context,
+	rollupAddr common.Address,
+	arbitrumCodeFilePath string,
+	maxReorgDepth uint64,
+) *RollupCheckpointer {
+	return NewRollupCheckpointerWithType(ctx, rollupAddr, arbitrumCodeFilePath, maxReorgDepth, "")
+}
+
+func NewRollupCheckpointerWithType(
+	ctx context.Context,
+	rollupAddr common.Address,
+	arbitrumCodeFilePath string,
+	maxReorgDepth uint64,
+	checkpointerType string,
+) *RollupCheckpointer {
+	databasePath := makeCheckpointDatabasePath(rollupAddr)
+	asyncWorker := func() chan func() {
+		workChan := make(chan func())
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case job := <-workChan:
+					job()
+				}
+			}
+		}()
+		return workChan
+	}()
+	switch checkpointerType {
+	case "inmemory_testing": // inefficient in-memory checkpointer, for testing
+		return &RollupCheckpointer{
+			big.NewInt(int64(maxReorgDepth)),
+			newDummyCheckpointer(arbitrumCodeFilePath),
+			asyncWorker,
+		}
+	case "fresh_rocksdb": // for testing only -- use rocksdb but delete old database first
+		if err := os.RemoveAll(databasePath); err != nil {
 			log.Fatal(err)
 		}
 		fallthrough
-	case "cstore":
+	case "": // empty string gives you what you want for production
+		fallthrough
+	case "rocksdb": // store in rocksdb database, keyed to rollupAddr -- use this for production
 		return &RollupCheckpointer{
-			big.NewInt(versionsToKeep),
-			NewCstoreCheckpointer(checkpointPathForTesting, "contract.ao"),
+			big.NewInt(int64(maxReorgDepth)),
+			newProductionCheckpointer(databasePath, "contract.ao"),
+			asyncWorker,
 		}
 	default:
 		return nil
 	}
 }
 
-func (rcp *RollupCheckpointer) SaveCheckpoint(
+func (rcp *RollupCheckpointer) AsyncSaveCheckpoint(
 	blockHeight *big.Int,
 	contents []byte,
-	ctx CheckpointContext,
+	checkpointCtx CheckpointContext,
+	doneChan chan interface{},
+) {
+	rcp.asyncCkptChan <- func() {
+		if err := rcp._saveCheckpoint(blockHeight, contents, checkpointCtx); err != nil {
+			log.Fatal(err)
+		}
+		if doneChan != nil {
+			close(doneChan)
+		}
+	}
+}
+
+func (rcp *RollupCheckpointer) _saveCheckpoint(
+	blockHeight *big.Int,
+	contents []byte,
+	checkpointCtx CheckpointContext,
 ) error {
 	var metadataBuf *CheckpointMetadata
 	var oldestInCp *big.Int
@@ -155,9 +215,9 @@ func (rcp *RollupCheckpointer) SaveCheckpoint(
 			rcp.cp.SaveMetadata(buf)
 		}
 	}
-	rcp.cp.SaveCheckpoint(blockHeight, contents, ctx.Manifest(), ctx.Values(), ctx.Machines())
+	rcp.cp.SaveCheckpoint(blockHeight, contents, checkpointCtx.Manifest(), checkpointCtx.Values(), checkpointCtx.Machines())
 
-	if oldestInCp.Cmp(new(big.Int).Sub(newestInCp, rcp.versionsToKeep)) < 0 {
+	if oldestInCp.Cmp(new(big.Int).Sub(newestInCp, rcp.maxReorgDepth)) < 0 {
 		go func() {
 			//TODO: clean up old versions
 		}()
@@ -185,15 +245,15 @@ func (rcp *RollupCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, 
 		return nil, nil, nil
 	}
 
-	buf, ctx := rcp.cp.RestoreCheckpoint(blockHeight)
-	return buf, ctx, nil
+	buf, checkpointCtx := rcp.cp.RestoreCheckpoint(blockHeight)
+	return buf, checkpointCtx, nil
 }
 
 func (cp *RollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return cp.cp.GetInitialMachine()
 }
 
-type CheckpointerWithMetadata interface {
+type checkpointerWithMetadata interface {
 	SaveMetadata([]byte)
 	RestoreMetadata() []byte
 	SaveCheckpoint(
@@ -209,18 +269,18 @@ type CheckpointerWithMetadata interface {
 	GetInitialMachine() (machine.Machine, error)
 }
 
-type DummyCheckpointer struct {
+type dummyCheckpointer struct {
 	metadata       []byte
 	cp             map[*big.Int]*dummyCheckpoint
 	initialMachine machine.Machine
 }
 
-func NewDummyCheckpointer(contractPath string) *DummyCheckpointer {
+func newDummyCheckpointer(contractPath string) *dummyCheckpointer {
 	theMachine, err := loader.LoadMachineFromFile("contract.ao", true, "test")
 	if err != nil {
-		log.Fatal("NewDummyCheckpointer: error loading ", contractPath)
+		log.Fatal("newDummyCheckpointer: error loading ", contractPath)
 	}
-	return &DummyCheckpointer{
+	return &dummyCheckpointer{
 		nil,
 		make(map[*big.Int]*dummyCheckpoint),
 		theMachine,
@@ -242,15 +302,15 @@ func (dcp *dummyCheckpoint) GetMachine(h [32]byte) machine.Machine {
 	return dcp.machines[h]
 }
 
-func (cp *DummyCheckpointer) SaveMetadata(data []byte) {
+func (cp *dummyCheckpointer) SaveMetadata(data []byte) {
 	cp.metadata = append([]byte{}, data...)
 }
 
-func (cp *DummyCheckpointer) RestoreMetadata() []byte {
+func (cp *dummyCheckpointer) RestoreMetadata() []byte {
 	return append([]byte{}, cp.metadata...)
 }
 
-func (cp *DummyCheckpointer) SaveCheckpoint(
+func (cp *dummyCheckpointer) SaveCheckpoint(
 	blockHeight *big.Int,
 	contents []byte,
 	manifest *CheckpointManifest,
@@ -260,7 +320,7 @@ func (cp *DummyCheckpointer) SaveCheckpoint(
 	cp.cp[blockHeight] = &dummyCheckpoint{contents, manifest, values, machines}
 }
 
-func (cp *DummyCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext) {
+func (cp *dummyCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext) {
 	dcp := cp.cp[blockHeight]
 	if dcp == nil {
 		return nil, nil
@@ -269,11 +329,11 @@ func (cp *DummyCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, Re
 	}
 }
 
-func (cp *DummyCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
+func (cp *dummyCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
 	delete(cp.cp, blockHeight)
 }
 
-func (cp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
+func (cp *dummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return cp.initialMachine.Clone(), nil
 }
 
@@ -290,30 +350,30 @@ func manifestKey(blockHeight *big.Int) []byte {
 	return append([]byte("manifest:"), bhBytes...)
 }
 
-type CStoreCheckpointer struct {
+type productionCheckpointer struct {
 	st machine.CheckpointStorage
 }
 
-func NewCstoreCheckpointer(dbpath, contractpath string) *CStoreCheckpointer {
+func newProductionCheckpointer(dbpath, contractpath string) *productionCheckpointer {
 	checkpoint, err := cmachine.NewCheckpoint(dbpath, contractpath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return &CStoreCheckpointer{checkpoint}
+	return &productionCheckpointer{checkpoint}
 }
 
-func (csc *CStoreCheckpointer) SaveMetadata(data []byte) {
+func (csc *productionCheckpointer) SaveMetadata(data []byte) {
 	ok := csc.st.SaveData(metadataKey, data)
 	if !ok {
 		log.Fatal("metadata checkpointing failure")
 	}
 }
 
-func (csc *CStoreCheckpointer) RestoreMetadata() []byte {
+func (csc *productionCheckpointer) RestoreMetadata() []byte {
 	return csc.st.GetData(metadataKey)
 }
 
-func (csc *CStoreCheckpointer) SaveCheckpoint(
+func (csc *productionCheckpointer) SaveCheckpoint(
 	blockHeight *big.Int,
 	contents []byte,
 	manifest *CheckpointManifest,
@@ -353,7 +413,7 @@ func (csc *CStoreCheckpointer) SaveCheckpoint(
 	}
 }
 
-func (csc *CStoreCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext) { // returns nil, nil if no data at blockHeight
+func (csc *productionCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext) { // returns nil, nil if no data at blockHeight
 	// check for consistency with metadata
 	metadataBytes := csc.RestoreMetadata()
 	metadataBuf := &CheckpointMetadata{}
@@ -372,12 +432,18 @@ func (csc *CStoreCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, 
 	return contentBytes, csc
 }
 
-func (csc *CStoreCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
-	// update metadata
+func (csc *productionCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
+	// make a best effort to delete an old checkpoint, but ignore any errors
+	// errors might cause some harmless extra info to remain in the database
+	//
+	// this assumes it's being called on the oldest remaining checkpoint
+	// if that's not true, older checkpoints will remain harmlessly in the database
+
+	// update metadata to reflect deletion
 	metadataBytes := csc.RestoreMetadata()
 	metadataBuf := &CheckpointMetadata{}
 	if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
-		log.Fatal(err)
+		return
 	}
 	oldestHeight := utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
 	newestHeight := utils.UnmarshalBigInt(metadataBuf.NewestBlockHeight)
@@ -389,23 +455,36 @@ func (csc *CStoreCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
 		var err error
 		metadataBytes, err = proto.Marshal(metadataBuf)
 		if err != nil {
-			log.Fatal(err)
+			return
 		}
 		csc.SaveMetadata(metadataBytes)
 	}
 
-	//TODO: need to clean up no-longer-needed data
-	// read manifest
-	// delete manifest from DB
-	// use manifest to delete values and machines
-	// delete contents
+	manifestBytes := csc.st.GetData(manifestKey(blockHeight))
+	if manifestBytes == nil {
+		return
+	}
+	manifestBuf := &CheckpointManifest{}
+	if err := proto.Unmarshal(manifestBytes, manifestBuf); err != nil {
+		return
+	}
+	csc.st.DeleteData(manifestKey(blockHeight))
+	for _, vbuf := range manifestBuf.Values {
+		valhash := utils.UnmarshalHash(vbuf)
+		csc.st.DeleteValue(valhash)
+	}
+	for _, mbuf := range manifestBuf.Machines {
+		machhash := utils.UnmarshalHash(mbuf)
+		csc.st.DeleteCheckpoint(machhash)
+	}
+	csc.st.DeleteData(contentsKey)
 }
 
-func (csc *CStoreCheckpointer) GetValue(h [32]byte) value.Value {
+func (csc *productionCheckpointer) GetValue(h [32]byte) value.Value {
 	return csc.st.GetValue(h)
 }
 
-func (csc *CStoreCheckpointer) GetMachine(h [32]byte) machine.Machine {
+func (csc *productionCheckpointer) GetMachine(h [32]byte) machine.Machine {
 	ret, err := csc.st.GetInitialMachine()
 	if err != nil {
 		log.Fatal(err)
@@ -414,6 +493,6 @@ func (csc *CStoreCheckpointer) GetMachine(h [32]byte) machine.Machine {
 	return ret
 }
 
-func (csc *CStoreCheckpointer) GetInitialMachine() (machine.Machine, error) {
+func (csc *productionCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return csc.st.GetInitialMachine()
 }

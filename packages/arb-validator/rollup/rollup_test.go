@@ -17,28 +17,29 @@
 package rollup
 
 import (
+	"context"
+	"math/big"
+	"testing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"math/big"
-	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var dummyAddress common.Address
 
 func TestCreateEmptyChain(t *testing.T) {
-	testCreateEmptyChain("dummy", "contract.ao", t)
-	testCreateEmptyChain("fresh_cstore", "contract.ao", t)
+	testCreateEmptyChain("inmemory_testing", "contract.ao", t)
+	testCreateEmptyChain("fresh_rocksdb", "contract.ao", t)
 }
 
 func testCreateEmptyChain(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +65,9 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 	if err != nil {
 		t.Fatal(err)
 	}
-	cp.SaveCheckpoint(blockHeight, buf, ctx)
+	doneChan := make(chan interface{})
+	cp.AsyncSaveCheckpoint(blockHeight, buf, ctx, doneChan)
+	<-doneChan
 	chain2, err := UnmarshalChainObserverFromBytes(buf, ctx, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -75,12 +78,12 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 }
 
 func TestDoAssertion(t *testing.T) {
-	testDoAssertion("dummy", "contract.ao", t)
-	testDoAssertion("fresh_cstore", "contract.ao", t)
+	testDoAssertion("inmemory_testing", "contract.ao", t)
+	testDoAssertion("fresh_rocksdb", "contract.ao", t)
 }
 
 func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,12 +99,12 @@ func testDoAssertion(checkpointType string, contractPath string, t *testing.T) {
 }
 
 func TestChallenge(t *testing.T) {
-	testChallenge("dummy", "contract.ao", t)
-	testChallenge("fresh_cstore", "contract.ao", t)
+	testChallenge("inmemory_testing", "contract.ao", t)
+	testChallenge("fresh_rocksdb", "contract.ao", t)
 }
 
 func testChallenge(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,12 +183,12 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 }
 
 func TestCreateStakers(t *testing.T) {
-	testCreateStakers("dummy", "contract.ao", t)
-	testCreateStakers("fresh_cstore", "contract.ao", t)
+	testCreateStakers("inmemory_testing", "contract.ao", t)
+	testCreateStakers("fresh_rocksdb", "contract.ao", t)
 }
 
 func testCreateStakers(checkpointType string, contractPath string, t *testing.T) {
-	chain, _, err := setUpChain(checkpointType, contractPath)
+	chain, err := setUpChain(checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,16 +197,19 @@ func testCreateStakers(checkpointType string, contractPath string, t *testing.T)
 	tryMarshalUnmarshal(chain, t)
 }
 
-func setUpChain(checkpointType string, contractPath string) (*ChainObserver, machine.Machine, error) {
-	checkpointer := structures.NewRollupCheckpointer(checkpointType, 1000000, contractPath)
-	theMachine, err := checkpointer.GetInitialMachine()
-	if err != nil {
-		return nil, nil, err
-	}
-	chain := NewChain(
+func setUpChain(checkpointType string, contractPath string) (*ChainObserver, error) {
+	var dummyRollupAddress common.Address
+	checkpointer := structures.NewRollupCheckpointerWithType(
+		context.TODO(),
+		dummyRollupAddress,
+		contractPath,
+		1000000,
+		checkpointType,
+	)
+	return NewChain(
+		context.TODO(),
 		dummyAddress,
 		checkpointer,
-		theMachine,
 		structures.ChainParams{
 			StakeRequirement:        big.NewInt(1),
 			GracePeriod:             structures.TimeFromSeconds(60 * 60),
@@ -213,7 +219,6 @@ func setUpChain(checkpointType string, contractPath string) (*ChainObserver, mac
 		false,
 		big.NewInt(10),
 	)
-	return chain, theMachine, nil
 }
 
 func createSomeStakers(chain *ChainObserver) {

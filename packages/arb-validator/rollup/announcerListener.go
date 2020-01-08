@@ -45,6 +45,10 @@ func (al *AnnouncerListener) CompletedChallenge(event arbbridge.ChallengeComplet
 
 func (al *AnnouncerListener) SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
 	log.Println("SawAssertion")
+	log.Println("Prev Leaf:", hexutil.Encode(ev.PrevLeafHash[:]))
+	log.Println("Max pending value:", hexutil.Encode(ev.MaxPendingTop[:]))
+	log.Println("Params:", ev.Params)
+	log.Println("Claim:", ev.Claim)
 }
 
 func (al *AnnouncerListener) ConfirmedNode(arbbridge.ConfirmedEvent) {

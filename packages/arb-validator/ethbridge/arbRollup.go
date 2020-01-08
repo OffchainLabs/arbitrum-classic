@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -151,7 +152,22 @@ func (vm *ArbRollup) PruneLeaf(ctx context.Context, from [32]byte, proof1 [][32]
 	return vm.waitForReceipt(ctx, tx, "PruneLeaf")
 }
 
-func (vm *ArbRollup) MakeAssertion(ctx context.Context, prevPrevLeafHash [32]byte, prevDataHash [32]byte, prevDeadline structures.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof [][32]byte) error {
+func (vm *ArbRollup) MakeAssertion(
+	ctx context.Context,
+
+	prevPrevLeafHash [32]byte,
+	prevDataHash [32]byte,
+	prevDeadline structures.TimeTicks,
+	prevChildType structures.ChildType,
+
+	beforeState *structures.VMProtoData,
+	assertionParams *structures.AssertionParams,
+	assertionClaim *structures.AssertionClaim,
+	stakerProof [][32]byte,
+) (*types.Receipt, error) {
+	log.Println("Making assertion")
+	log.Println("Params:", assertionParams)
+	log.Println("Claim:", assertionClaim)
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth,
