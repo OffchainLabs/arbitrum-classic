@@ -194,6 +194,11 @@ bool MachineState::restoreCheckpoint(
     auto stateFetcher = MachineStateFetcher(storage);
     auto results = stateFetcher.getMachineState(checkpoint_key);
 
+    auto initial_vales = storage.getInitialVmValues();
+
+    code = initial_vales.code;
+    pool = storage.pool;
+
     if (results.status.ok()) {
         auto state_data = results.data;
 

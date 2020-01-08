@@ -92,15 +92,23 @@ TEST_CASE("Checkpoint State") {
         MachineState machine_state(initial_machine.code,
                                    initial_machine.staticVal, storage.pool);
 
-        Machine machine2;
-        machine2.initializeMachine(machine_state);
+        auto machine2 = new Machine();
+        machine2->initializeMachine(machine_state);
 
         auto hash1 = machine.hash();
-        auto hash2 = machine2.hash();
-        std::cout << hash1 << std::endl;
-        std::cout << hash2 << std::endl;
+        auto hash2 = machine2->hash();
+
+        machine.checkpoint(storage);
+
+        Machine machine3;
+        machine3.restoreCheckpoint(storage, GetHashKey(hash1));
+
+        auto hash3 = machine3.hash();
+
         REQUIRE(hash1 == hash2);
+        REQUIRE(hash3 == hash2);
     }
+    boost::filesystem::remove_all(save_path);
 }
 
 TEST_CASE("Delete machine checkpoint") {
