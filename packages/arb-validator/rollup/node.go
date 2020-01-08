@@ -19,7 +19,6 @@ package rollup
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -141,7 +140,6 @@ func NewNodeFromPrev(
 	}
 	ret.setHash(ret.NodeDataHash(params))
 	prev.successorHashes[kind] = ret.hash
-	fmt.Println("Made node", kind, hexutil.Encode(ret.hash[:]))
 	return ret
 }
 
@@ -178,9 +176,6 @@ func (node *Node) NodeDataHash(params structures.ChainParams) [32]byte {
 		return ret
 	}
 	if node.linkType == structures.ValidChildType {
-		log.Println("ValidChildType")
-		log.Println(hexutil.Encode(node.disputable.AssertionClaim.AssertionStub.LastMessageHash.Value))
-		log.Println(hexutil.Encode(node.disputable.AssertionClaim.AssertionStub.LastLogHash.Value))
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHashValue()),
 			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHashValue()),
@@ -211,11 +206,6 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidMessagesChildType:
-		log.Println("InvalidMessagesChildType")
-		log.Println(hexutil.Encode(vmProtoData.PendingTop[:]))
-		log.Println(hexutil.Encode(node.disputable.AssertionClaim.AfterPendingTop[:]))
-		log.Println(hexutil.Encode(node.disputable.AssertionClaim.ImportedMessagesSlice[:]))
-		log.Println(node.disputable.AssertionParams.ImportedMessageCount)
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(vmProtoData.PendingTop),
 			solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
@@ -243,12 +233,11 @@ func (node *Node) setHash(nodeDataHash [32]byte) {
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
-
 	innerHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(node.vmProtoData.Hash()),
 		solsha3.Uint256(node.deadline.Val),
 		solsha3.Bytes32(nodeDataHash),
-		solsha3.Uint256(uint(node.linkType)),
+		solsha3.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
 	)
 	hashSlice := solsha3.SoliditySHA3(
 		solsha3.Bytes32(prevHashArr),

@@ -19,11 +19,8 @@ package ethbridge
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"math/big"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -52,6 +49,7 @@ var rollupStakeMovedID common.Hash
 var rollupAssertedID common.Hash
 var rollupConfirmedID common.Hash
 var confirmedAssertionID common.Hash
+var debugEventID common.Hash
 
 func init() {
 	parsed, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
@@ -67,6 +65,7 @@ func init() {
 	rollupAssertedID = parsed.Events["RollupAsserted"].ID()
 	rollupConfirmedID = parsed.Events["RollupConfirmed"].ID()
 	confirmedAssertionID = parsed.Events["ConfirmedAssertion"].ID()
+	debugEventID = parsed.Events["DebugData"].ID()
 }
 
 type ArbRollupWatcher struct {
@@ -137,6 +136,7 @@ func (vm *ArbRollupWatcher) StartConnection(ctx context.Context, outChan chan No
 				rollupAssertedID,
 				rollupConfirmedID,
 				confirmedAssertionID,
+				debugEventID,
 			},
 		},
 	}
@@ -286,11 +286,6 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("Saw assertion event")
-			fmt.Println(hexutil.Encode(eventVal.NewNodes[0][:]))
-			fmt.Println(hexutil.Encode(eventVal.NewNodes[1][:]))
-			fmt.Println(hexutil.Encode(eventVal.NewNodes[2][:]))
-			fmt.Println(hexutil.Encode(eventVal.NewNodes[3][:]))
 			return AssertedEvent{
 				PrevLeafHash: eventVal.PrevLeaf,
 				Params: &structures.AssertionParams{
@@ -330,6 +325,24 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 			return ConfirmedAssertionEvent{
 				LogsAccHash: eventVal.LogsAccHash,
 			}, nil
+		} else if log.Topics[0] == debugEventID {
+			//eventVal, err := vm.ArbRollup.ParseDebugData(log)
+			//if err != nil {
+			//	return nil, err
+			//}
+			//fmt.Println("Debug event")
+			//fmt.Println("PrevLeaf", hexutil.Encode(eventVal.PrevLeaf[:]))
+			//fmt.Println("DeadlineTicks", eventVal.DeadlineTicks)
+			//fmt.Println("BeforePendingTop", hexutil.Encode(eventVal.BeforePendingTop[:]))
+			//fmt.Println("AfterPendingTop", hexutil.Encode(eventVal.AfterPendingTop[:]))
+			//fmt.Println("ImportedMessagesSlice", hexutil.Encode(eventVal.ImportedMessagesSlice[:]))
+			//fmt.Println("ImportedMessageCount", eventVal.ImportedMessageCount)
+			//fmt.Println("ChallengePeriod", eventVal.ChallengePeriod)
+			//fmt.Println("ChildType", eventVal.ChildType)
+			//fmt.Println("VmProtoHashBefore", hexutil.Encode(eventVal.VmProtoHashBefore[:]))
+			//fmt.Println("ChallengeHash", hexutil.Encode(eventVal.ChallengeHash[:]))
+			//fmt.Println("NodeDataHash", hexutil.Encode(eventVal.NodeDataHash[:]))
+			return nil, nil
 		}
 		return nil, errors2.New("unknown arbitrum event type")
 	}()
@@ -337,16 +350,17 @@ func (vm *ArbRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	if err != nil {
 		return err
 	}
-	header, err := vm.Client.HeaderByHash(ctx, log.BlockHash)
-	if err != nil {
-		return err
+	if event != nil {
+		header, err := vm.Client.HeaderByHash(ctx, log.BlockHash)
+		if err != nil {
+			return err
+		}
+		outChan <- Notification{
+			Header: header,
+			VMID:   vm.address,
+			Event:  event,
+			TxHash: log.TxHash,
+		}
 	}
-	outChan <- Notification{
-		Header: header,
-		VMID:   vm.address,
-		Event:  event,
-		TxHash: log.TxHash,
-	}
-
 	return nil
 }
