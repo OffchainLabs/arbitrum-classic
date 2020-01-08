@@ -240,11 +240,12 @@ func (node *Node) setHash(
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
+
 	innerHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(node.vmProtoData.Hash()),
-		solsha3.Int256(node.deadline),
+		solsha3.Uint256(node.deadline),
 		solsha3.Bytes32(nodeDataHash),
-		solsha3.Int256(node.linkType),
+		solsha3.Uint256(node.linkType),
 	)
 	hashSlice := solsha3.SoliditySHA3(
 		solsha3.Bytes32(prevHashArr),

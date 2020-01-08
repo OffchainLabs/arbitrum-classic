@@ -80,6 +80,14 @@ func (ms *MessageStack) TopCount() *big.Int {
 	}
 }
 
+func (ms *MessageStack) BottomCount() *big.Int {
+	if ms.oldest == nil {
+		return big.NewInt(0)
+	} else {
+		return ms.oldest.count
+	}
+}
+
 func (pi *MessageStack) DeliverMessage(msg value.Value) {
 	newTopCount := new(big.Int).Add(pi.TopCount(), big.NewInt(1))
 	if pi.newest == nil {
@@ -110,7 +118,15 @@ func (pi *MessageStack) DeliverMessage(msg value.Value) {
 func (pi *MessageStack) GetHeight(acc [32]byte) (*big.Int, bool) {
 	item, ok := pi.index[acc]
 	if !ok {
-		return nil, false
+		if pi.hashOfRest == acc {
+			if pi.BottomCount().Cmp(big.NewInt(0)) == 0 {
+				return big.NewInt(0), true
+			} else {
+				return new(big.Int).Sub(pi.BottomCount(), big.NewInt(1)), true
+			}
+		} else {
+			return nil, false
+		}
 	}
 	return item.count, true
 }
@@ -245,14 +261,25 @@ func (pi *MessageStack) GenerateOneStepProof(startItemHash [32]byte) ([32]byte, 
 }
 
 func (pi *MessageStack) Substack(olderAcc, newerAcc [32]byte) (*MessageStack, error) {
-	oldItem, ok := pi.index[olderAcc]
-	if !ok {
-		return nil, errors.New("olderAcc not found")
+	if olderAcc == newerAcc {
+		return NewMessageStack(), nil
 	}
+	var oldItem *messageStackItem
+	if olderAcc == pi.hashOfRest {
+		oldItem = pi.oldest
+	} else {
+		old, ok := pi.index[olderAcc]
+		if !ok {
+			return nil, errors.New("olderAcc not found")
+		}
+		oldItem = old.next
+	}
+
 	newItem, ok := pi.index[newerAcc]
 	if !ok {
 		return nil, errors.New("newerAcc not found")
 	}
+
 	if oldItem.count.Cmp(newItem.count) > 0 {
 		return nil, errors.New("olderAcc is not before newerAcc")
 	}
@@ -262,6 +289,7 @@ func (pi *MessageStack) Substack(olderAcc, newerAcc [32]byte) (*MessageStack, er
 		stack.DeliverMessage(item.message)
 		item = item.next
 	}
+	stack.DeliverMessage(item.message)
 	return stack, nil
 }
 

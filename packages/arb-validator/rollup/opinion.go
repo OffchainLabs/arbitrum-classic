@@ -135,15 +135,28 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					updateCurrent()
 					chain.RLock()
 				}
+				currentTime := chain.latestBlockNumber
+				currentValidHash := chain.knownValidNode.hash
 				chain.RUnlock()
 				// Prepare next assertion
-				_, isPreparing := preparingAssertions[chain.knownValidNode.hash]
+				_, isPreparing := preparingAssertions[currentValidHash]
+				prepared, isPrepared := preparedAssertions[currentValidHash]
 				if !isPreparing {
-					preparingAssertions[chain.knownValidNode.hash] = true
+					preparingAssertions[currentValidHash] = true
 					go func() {
-						assertionPreparedChan <- chain.prepareAssertion(nil)
+						assertionPreparedChan <- chain.prepareAssertion(protocol.NewTimeBoundsBlocks(
+							protocol.NewTimeBlocks(currentTime),
+							protocol.NewTimeBlocks(new(big.Int).Add(currentTime, big.NewInt(10))),
+						))
 					}()
+				} else if isPrepared {
+					chain.RLock()
+					for _, lis := range chain.listeners {
+						lis.AssertionPrepared(prepared)
+					}
+					chain.RUnlock()
 				}
+
 			}
 		}
 	}()

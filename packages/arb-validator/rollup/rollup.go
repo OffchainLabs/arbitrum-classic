@@ -19,9 +19,11 @@ package rollup
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 	"math/big"
 	"sync"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/golang/protobuf/proto"
 
@@ -43,6 +45,7 @@ type ChainObserver struct {
 	rollupAddr        common.Address
 	pendingInbox      *structures.PendingInbox
 	knownValidNode    *Node
+	latestBlockNumber *big.Int
 	listeners         []ChainListener
 	isOpinionated     bool
 	assertionMadeChan chan bool
@@ -53,13 +56,15 @@ func NewChain(
 	machine machine.Machine,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
+	startTime *big.Int,
 ) *ChainObserver {
 	ret := &ChainObserver{
-		RWMutex:      &sync.RWMutex{},
-		nodeGraph:    NewStakedNodeGraph(machine, vmParams),
-		rollupAddr:   rollupAddr,
-		pendingInbox: structures.NewPendingInbox(),
-		listeners:    []ChainListener{},
+		RWMutex:           &sync.RWMutex{},
+		nodeGraph:         NewStakedNodeGraph(machine, vmParams),
+		rollupAddr:        rollupAddr,
+		pendingInbox:      structures.NewPendingInbox(),
+		latestBlockNumber: startTime,
+		listeners:         []ChainListener{},
 	}
 	ret.knownValidNode = ret.nodeGraph.latestConfirmed
 	ret.Lock()
@@ -68,7 +73,7 @@ func NewChain(
 	ret.startCleanupThread(context.TODO())
 	if updateOpinion {
 		ret.isOpinionated = true
-		ret.assertionMadeChan = make(chan bool)
+		ret.assertionMadeChan = make(chan bool, 20)
 		ret.startOpinionUpdateThread(context.TODO())
 	}
 	return ret
@@ -180,6 +185,9 @@ func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
 		chain.knownValidNode = newNode
 	}
 	chain.nodeGraph.ConfirmNode(ev.NodeHash)
+	for _, listener := range chain.listeners {
+		listener.ConfirmedNode(ev)
+	}
 }
 
 func (chain *ChainObserver) notifyAssert(
@@ -189,7 +197,7 @@ func (chain *ChainObserver) notifyAssert(
 ) error {
 	topPendingCount, ok := chain.pendingInbox.GetHeight(ev.MaxPendingTop)
 	if !ok {
-		return errors.New("Couldn't find top message in inbox")
+		return fmt.Errorf("Couldn't find top message in inbox: %v", hexutil.Encode(ev.MaxPendingTop[:]))
 	}
 	disputableNode := structures.NewDisputableNode(
 		ev.Params,
@@ -204,6 +212,9 @@ func (chain *ChainObserver) notifyAssert(
 		currentTime,
 		assertionTxHash,
 	)
+	for _, listener := range chain.listeners {
+		listener.SawAssertion(ev, currentTime, assertionTxHash)
+	}
 	if chain.assertionMadeChan != nil {
 		chain.assertionMadeChan <- true
 	}
@@ -213,6 +224,7 @@ func (chain *ChainObserver) notifyAssert(
 func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	chain.Lock()
 	defer chain.Unlock()
+	chain.latestBlockNumber = blockNum
 	//TODO: checkpoint, and take other appropriate actions for new block
 }
 

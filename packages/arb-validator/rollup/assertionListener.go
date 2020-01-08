@@ -30,11 +30,13 @@ type AssertionListener struct {
 	CompletedAssertionChan chan FinalizedAssertion
 }
 
-func (al *AssertionListener) StakeCreated(ethbridge.StakeCreatedEvent)                       {}
-func (al *AssertionListener) StakeRemoved(ethbridge.StakeRefundedEvent)                      {}
-func (al *AssertionListener) StakeMoved(ethbridge.StakeMovedEvent)                           {}
-func (al *AssertionListener) StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node) {}
-func (al *AssertionListener) CompletedChallenge(event ethbridge.ChallengeCompletedEvent)     {}
+func (al *AssertionListener) StakeCreated(ethbridge.StakeCreatedEvent)                             {}
+func (al *AssertionListener) StakeRemoved(ethbridge.StakeRefundedEvent)                            {}
+func (al *AssertionListener) StakeMoved(ethbridge.StakeMovedEvent)                                 {}
+func (al *AssertionListener) StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)       {}
+func (al *AssertionListener) CompletedChallenge(event ethbridge.ChallengeCompletedEvent)           {}
+func (al *AssertionListener) SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {}
+func (al *AssertionListener) ConfirmedNode(ethbridge.ConfirmedEvent)                               {}
 
 func (al *AssertionListener) AssertionPrepared(*preparedAssertion)      {}
 func (al *AssertionListener) PrunableLeafs([]pruneParams)               {}

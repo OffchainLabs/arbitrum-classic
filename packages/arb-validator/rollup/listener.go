@@ -18,6 +18,8 @@ package rollup
 
 import (
 	"context"
+	"log"
+	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -39,6 +41,8 @@ type ChainListener interface {
 	StakeMoved(ethbridge.StakeMovedEvent)
 	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)
 	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
+	SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
+	ConfirmedNode(ethbridge.ConfirmedEvent)
 
 	AssertionPrepared(*preparedAssertion)
 	PrunableLeafs([]pruneParams)
@@ -49,6 +53,7 @@ type ChainListener interface {
 }
 
 type StakerListener struct {
+	sync.Mutex
 	myAddr   common.Address
 	auth     *bind.TransactOpts
 	client   *ethclient.Client
@@ -76,20 +81,21 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 	}()
 }
 
-func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) {
-	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
-		staker.contract.MakeAssertion(
-			ctx,
-			opp.prevPrevLeafHash,
-			opp.prevDataHash,
-			opp.prevDeadline,
-			opp.prevChildType,
-			opp.beforeState,
-			opp.params,
-			opp.claim,
-			proof,
-		)
-	}()
+func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) error {
+	staker.Lock()
+	_, err := staker.contract.MakeAssertion(
+		ctx,
+		opp.prevPrevLeafHash,
+		opp.prevDataHash,
+		opp.prevDeadline,
+		opp.prevChildType,
+		opp.beforeState,
+		opp.params,
+		opp.claim,
+		proof,
+	)
+	staker.Unlock()
+	return err
 }
 
 func (staker *StakerListener) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
@@ -172,12 +178,17 @@ func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bin
 	if err != nil {
 		return err
 	}
+	location := lis.chain.knownValidNode
+	proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
+	proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
+	go contract.PlaceStake(context.TODO(), lis.chain.nodeGraph.params.StakeRequirement, proof1, proof2)
 	address := auth.From
-	lis.stakers[address] = &StakerListener{
+	staker := &StakerListener{
 		myAddr:   address,
 		client:   client,
 		contract: contract,
 	}
+	lis.stakers[address] = staker
 	return nil
 }
 
@@ -279,14 +290,31 @@ func (lis *ValidatorChainListener) wonChallenge(ethbridge.ChallengeCompletedEven
 
 }
 
+func (lis *ValidatorChainListener) SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
+
+}
+
+func (lis *ValidatorChainListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
+
+}
+
 func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion) {
 	leaf, ok := lis.chain.nodeGraph.nodeFromHash[prepared.prevLeaf]
 	if ok {
 		for _, staker := range lis.stakers {
 			stakerPos := lis.chain.nodeGraph.stakers.Get(staker.myAddr)
-			proof := GeneratePathProof(stakerPos.location, leaf)
-			if proof != nil {
-				staker.makeAssertion(context.TODO(), prepared, proof)
+			if stakerPos != nil {
+				proof := GeneratePathProof(stakerPos.location, leaf)
+				if proof != nil {
+					go func() {
+						err := staker.makeAssertion(context.TODO(), prepared, proof)
+						if err != nil {
+							log.Println("Error making assertion", err)
+						}
+					}()
+
+					break
+				}
 			}
 		}
 	}

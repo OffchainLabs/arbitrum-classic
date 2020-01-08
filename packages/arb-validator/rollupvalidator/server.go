@@ -50,15 +50,25 @@ func NewServer(
 	machine machine.Machine,
 	config structures.ChainParams,
 ) (*Server, error) {
-	chainObserver := rollup.NewChain(rollupAddress, machine, config, true)
+	header, err := client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, err
+	}
+	chainObserver := rollup.NewChain(rollupAddress, machine, config, true, header.Number)
+
+	err = rollup.RunObserver(chainObserver, client)
+	if err != nil {
+		return nil, err
+	}
 
 	validatorListener := rollup.NewValidatorChainListener(chainObserver)
-	err := validatorListener.AddStaker(client, auth)
+	err = validatorListener.AddStaker(client, auth)
 	if err != nil {
 		return nil, err
 	}
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
+	chainObserver.AddListener(&rollup.AnnouncerListener{})
 	chainObserver.AddListener(validatorListener)
 	chainObserver.AddListener(assertionListener)
 

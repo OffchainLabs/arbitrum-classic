@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	jsonenc "encoding/json"
 	"flag"
 	"io/ioutil"
@@ -49,8 +50,9 @@ import (
 // 4) ethURL
 func main() {
 	// Check number of args
-	if len(flag.Args()) != 4 {
-		log.Fatalln("usage: coordinatorServer <contract.ao> <private_key.txt> <bridge_eth_addresses.json> <ethURL>")
+	flag.Parse()
+	if flag.NArg() != 4 {
+		log.Fatalln("usage: rollupServer <contract.ao> <private_key.txt> <bridge_eth_addresses.json> <ethURL>")
 	}
 
 	// 1) Compiled Arbitrum bytecode
@@ -78,7 +80,7 @@ func main() {
 	}
 
 	// 3) Global EthBridge addresses json
-	jsonFile, err := os.Open(flag.Arg(3))
+	jsonFile, err := os.Open(flag.Arg(2))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -93,7 +95,7 @@ func main() {
 	}
 
 	// 5) URL
-	ethURL := flag.Arg(4)
+	ethURL := flag.Arg(3)
 
 	config := structures.ChainParams{
 		StakeRequirement:        big.NewInt(10),
@@ -113,6 +115,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	auth.Context = context.Background()
 	address, err := factory.CreateRollup(
 		auth,
 		mach.Hash(),
