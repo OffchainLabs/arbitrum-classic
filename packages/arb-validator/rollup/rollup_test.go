@@ -199,7 +199,13 @@ func testCreateStakers(checkpointType string, contractPath string, t *testing.T)
 
 func setUpChain(checkpointType string, contractPath string) (*ChainObserver, error) {
 	var dummyRollupAddress common.Address
-	checkpointer := structures.NewRollupCheckpointerWithType(dummyRollupAddress, contractPath, 1000000, checkpointType)
+	checkpointer := structures.NewRollupCheckpointerWithType(
+		context.TODO(),
+		dummyRollupAddress,
+		contractPath,
+		1000000,
+		checkpointType,
+	)
 	return NewChain(
 		context.TODO(),
 		dummyAddress,

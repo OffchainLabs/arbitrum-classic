@@ -17,6 +17,7 @@
 package structures
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -105,14 +106,16 @@ func makeCheckpointDatabasePath(rollupAddr common.Address) string {
 }
 
 func NewRollupCheckpointer(
+	ctx context.Context,
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	maxReorgDepth uint64,
 ) *RollupCheckpointer {
-	return NewRollupCheckpointerWithType(rollupAddr, arbitrumCodeFilePath, maxReorgDepth, "")
+	return NewRollupCheckpointerWithType(ctx, rollupAddr, arbitrumCodeFilePath, maxReorgDepth, "")
 }
 
 func NewRollupCheckpointerWithType(
+	ctx context.Context,
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	maxReorgDepth uint64,
@@ -123,8 +126,12 @@ func NewRollupCheckpointerWithType(
 		workChan := make(chan func())
 		go func() {
 			for {
-				job := <-workChan
-				job()
+				select {
+				case <-ctx.Done():
+					return
+				case job := <-workChan:
+					job()
+				}
 			}
 		}()
 		return workChan
