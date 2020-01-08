@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
@@ -38,7 +39,7 @@ func DefendPendingTopClaim(
 	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewPendingTopChallenge(address, client, auth)
+	contract, err := arb.NewPendingTopChallenge(address, client, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -83,7 +84,7 @@ func ChallengePendingTopClaim(
 func defendPendingTop(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
-	contract *ethbridge.PendingTopChallenge,
+	contract arbbridge.PendingTopChallenge,
 	pendingInbox *structures.PendingInbox,
 	afterPendingTop [32]byte,
 	topPending [32]byte,

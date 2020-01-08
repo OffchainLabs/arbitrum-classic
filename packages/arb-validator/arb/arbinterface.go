@@ -34,6 +34,10 @@ func NewArbFactory(address common.Address, client *ethclient.Client) (arbbridge.
 	return factory, err
 }
 
+func NewBisectionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (arbbridge.BisectionChallenge, error) {
+	return NewBisectionChallenge(address, client, auth)
+}
+
 func NewOneStepProof(address common.Address, client *ethclient.Client) (arbbridge.OneStepProof, error) {
 	oneStepProof, err := ethbridge.NewOneStepProof(address, client)
 	if err != nil {

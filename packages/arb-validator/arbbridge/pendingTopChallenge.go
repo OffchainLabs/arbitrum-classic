@@ -22,7 +22,8 @@ import (
 )
 
 type PendingTopChallenge interface {
-	StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
+	BisectionChallenge
+	//StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
 	Bisect(
 		ctx context.Context,
 		chainHashes [][32]byte,
