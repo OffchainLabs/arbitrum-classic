@@ -278,16 +278,28 @@ contract NodeGraph is ChallengeType {
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            keccak256(
-                abi.encodePacked(
-                    challengeHash,
-                    gracePeriodTicks + RollupTime.blocksToTicks(1)
-                )
+            RollupUtils.challengeDataHash(
+                challengeHash,
+                gracePeriodTicks + RollupTime.blocksToTicks(1)
             ),
             INVALID_PENDING_TOP_TYPE,
             vmProtoHashBefore
         );
     }
+
+    event DebugData(
+        bytes32 prevLeaf,
+        uint256 deadlineTicks,
+        bytes32 beforePendingTop,
+        bytes32 afterPendingTop,
+        bytes32 importedMessagesSlice,
+        uint256 importedMessageCount,
+        uint256 challengePeriod,
+        uint256 childType,
+        bytes32 vmProtoHashBefore,
+        bytes32 challengeHash,
+        bytes32 nodeDataHash
+    );
 
     function generateInvalidMessagesLeaf(
         MakeAssertionData memory data,
@@ -297,24 +309,36 @@ contract NodeGraph is ChallengeType {
         uint256 gracePeriodTicks
     )
         private
-        pure
         returns(bytes32)
     {
+        bytes32 challengeHash = ChallengeUtils.messagesHash(
+            data.beforePendingTop,
+            data.afterPendingTop,
+            Value.hashEmptyTuple(),
+            data.importedMessagesSlice,
+            data.importedMessageCount
+        );
+        bytes32 nodeDataHash = RollupUtils.challengeDataHash(
+            challengeHash,
+            gracePeriodTicks + RollupTime.blocksToTicks(1)
+        );
+        emit DebugData(
+            prevLeaf,
+            deadlineTicks,
+            data.beforePendingTop,
+            data.afterPendingTop,
+            data.importedMessagesSlice,
+            data.importedMessageCount,
+            gracePeriodTicks + RollupTime.blocksToTicks(1),
+            INVALID_MESSAGES_TYPE,
+            vmProtoHashBefore,
+            challengeHash,
+            nodeDataHash
+        );
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            keccak256(
-                abi.encodePacked(
-                    ChallengeUtils.messagesHash(
-                        data.beforePendingTop,
-                        data.afterPendingTop,
-                        Value.hashEmptyTuple(),
-                        data.importedMessagesSlice,
-                        data.importedMessageCount
-                    ),
-                    gracePeriodTicks + RollupTime.blocksToTicks(1)
-                )
-            ),
+            nodeDataHash,
             INVALID_MESSAGES_TYPE,
             vmProtoHashBefore
         );
@@ -353,11 +377,9 @@ contract NodeGraph is ChallengeType {
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            keccak256(
-                abi.encodePacked(
-                    executionHash,
-                    gracePeriodTicks + checkTimeTicks
-                )
+            RollupUtils.challengeDataHash(
+                executionHash,
+                gracePeriodTicks + checkTimeTicks
             ),
             INVALID_EXECUTION_TYPE,
             vmProtoHashBefore
@@ -376,7 +398,7 @@ contract NodeGraph is ChallengeType {
         return RollupUtils.childNodeHash(
             prevLeaf,
             deadlineTicks,
-            RollupUtils.validNodeHash(
+            RollupUtils.validDataHash(
                 data.messagesAccHash,
                 data.logsAccHash
             ),

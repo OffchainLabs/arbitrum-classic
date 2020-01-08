@@ -36,7 +36,7 @@ library RollupUtils {
         );
     }
 
-    function validNodeHash(
+    function validDataHash(
         bytes32 messagesAcc,
         bytes32 logsAcc
     )
@@ -48,6 +48,22 @@ library RollupUtils {
             abi.encodePacked(
                 messagesAcc,
                 logsAcc
+            )
+        );
+    }
+
+    function challengeDataHash(
+        bytes32 challenge,
+        uint256 challengePeriod
+    )
+        internal
+        pure
+        returns(bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                challenge,
+                challengePeriod
             )
         );
     }
