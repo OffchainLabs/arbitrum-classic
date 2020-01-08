@@ -129,7 +129,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		Start: &protocol.TimeBlocksBuf{Val: utils.MarshalInt64ToBigIntBuf(0)},
 		End:   &protocol.TimeBlocksBuf{Val: utils.MarshalInt64ToBigIntBuf(1000)},
 	}
-	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds)
+	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple())
 	_ = execAssertion
 
 	assertionParams := &structures.AssertionParams{
