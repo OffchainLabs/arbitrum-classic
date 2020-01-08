@@ -42,6 +42,21 @@ type preparedAssertion struct {
 	machine     machine.Machine
 }
 
+func (pa *preparedAssertion) Clone() *preparedAssertion {
+	return &preparedAssertion{
+		prevLeaf:         pa.prevLeaf,
+		prevPrevLeafHash: pa.prevPrevLeafHash,
+		prevDataHash:     pa.prevDataHash,
+		prevDeadline:     structures.TimeTicks{new(big.Int).Set(pa.prevDeadline.Val)},
+		prevChildType:    pa.prevChildType,
+		beforeState:      pa.beforeState.Clone(),
+		params:           pa.params.Clone(),
+		claim:            pa.claim.Clone(),
+		assertion:        pa.assertion,
+		machine:          pa.machine,
+	}
+}
+
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(time.Second)
@@ -125,7 +140,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				preparedAssertions[prepped.prevLeaf] = prepped
 				chain.RLock()
 				for _, lis := range chain.listeners {
-					lis.AssertionPrepared(prepped)
+					lis.AssertionPrepared(prepped.Clone())
 				}
 				chain.RUnlock()
 			case <-ticker.C:
@@ -152,7 +167,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				} else if isPrepared {
 					chain.RLock()
 					for _, lis := range chain.listeners {
-						lis.AssertionPrepared(prepared)
+						lis.AssertionPrepared(prepared.Clone())
 					}
 					chain.RUnlock()
 				}

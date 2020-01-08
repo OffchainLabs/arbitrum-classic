@@ -310,6 +310,8 @@ func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion
 						err := staker.makeAssertion(context.TODO(), prepared, proof)
 						if err != nil {
 							log.Println("Error making assertion", err)
+						} else {
+							log.Println("Successfully made assertion")
 						}
 					}()
 

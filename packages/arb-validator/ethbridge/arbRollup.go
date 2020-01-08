@@ -18,7 +18,6 @@ package ethbridge
 
 import (
 	"context"
-	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -164,10 +163,7 @@ func (vm *ArbRollup) MakeAssertion(
 	assertionParams *structures.AssertionParams,
 	assertionClaim *structures.AssertionClaim,
 	stakerProof [][32]byte,
-) error {
-	log.Println("Making assertion")
-	log.Println("Params:", assertionParams)
-	log.Println("Claim:", assertionClaim)
+) (*types.Receipt, error) {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.MakeAssertion(
 		vm.auth,
