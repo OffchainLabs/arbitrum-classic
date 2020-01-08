@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 	"sync"
 
@@ -228,7 +229,12 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockNumber = blockNum
-	//TODO: checkpoint, and take other appropriate actions for new block
+	ckptCtx := structures.NewCheckpointContextImpl()
+	buf, err := chain.MarshalToBytes(ckptCtx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	chain.checkpointer.AsyncSaveCheckpoint(blockNum, buf, ckptCtx, nil)
 }
 
 func (co *ChainObserver) Equals(co2 *ChainObserver) bool {

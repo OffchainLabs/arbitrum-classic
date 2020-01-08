@@ -95,6 +95,7 @@ func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
 type RollupCheckpointer struct {
 	maxReorgDepth *big.Int
 	cp            checkpointerWithMetadata
+	asyncCkptChan chan func()
 }
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
@@ -118,9 +119,23 @@ func NewRollupCheckpointerWithType(
 	checkpointerType string,
 ) *RollupCheckpointer {
 	databasePath := makeCheckpointDatabasePath(rollupAddr)
+	asyncWorker := func() chan func() {
+		workChan := make(chan func())
+		go func() {
+			for {
+				job := <-workChan
+				job()
+			}
+		}()
+		return workChan
+	}()
 	switch checkpointerType {
 	case "inmemory_testing": // inefficient in-memory checkpointer, for testing
-		return &RollupCheckpointer{big.NewInt(int64(maxReorgDepth)), newDummyCheckpointer(arbitrumCodeFilePath)}
+		return &RollupCheckpointer{
+			big.NewInt(int64(maxReorgDepth)),
+			newDummyCheckpointer(arbitrumCodeFilePath),
+			asyncWorker,
+		}
 	case "fresh_rocksdb": // for testing only -- use rocksdb but delete old database first
 		if err := os.RemoveAll(databasePath); err != nil {
 			log.Fatal(err)
@@ -132,16 +147,33 @@ func NewRollupCheckpointerWithType(
 		return &RollupCheckpointer{
 			big.NewInt(int64(maxReorgDepth)),
 			newProductionCheckpointer(databasePath, "contract.ao"),
+			asyncWorker,
 		}
 	default:
 		return nil
 	}
 }
 
-func (rcp *RollupCheckpointer) SaveCheckpoint(
+func (rcp *RollupCheckpointer) AsyncSaveCheckpoint(
 	blockHeight *big.Int,
 	contents []byte,
-	ctx CheckpointContext,
+	checkpointCtx CheckpointContext,
+	doneChan chan interface{},
+) {
+	rcp.asyncCkptChan <- func() {
+		if err := rcp._saveCheckpoint(blockHeight, contents, checkpointCtx); err != nil {
+			log.Fatal(err)
+		}
+		if doneChan != nil {
+			close(doneChan)
+		}
+	}
+}
+
+func (rcp *RollupCheckpointer) _saveCheckpoint(
+	blockHeight *big.Int,
+	contents []byte,
+	checkpointCtx CheckpointContext,
 ) error {
 	var metadataBuf *CheckpointMetadata
 	var oldestInCp *big.Int
@@ -176,7 +208,7 @@ func (rcp *RollupCheckpointer) SaveCheckpoint(
 			rcp.cp.SaveMetadata(buf)
 		}
 	}
-	rcp.cp.SaveCheckpoint(blockHeight, contents, ctx.Manifest(), ctx.Values(), ctx.Machines())
+	rcp.cp.SaveCheckpoint(blockHeight, contents, checkpointCtx.Manifest(), checkpointCtx.Values(), checkpointCtx.Machines())
 
 	if oldestInCp.Cmp(new(big.Int).Sub(newestInCp, rcp.maxReorgDepth)) < 0 {
 		go func() {
@@ -206,8 +238,8 @@ func (rcp *RollupCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, 
 		return nil, nil, nil
 	}
 
-	buf, ctx := rcp.cp.RestoreCheckpoint(blockHeight)
-	return buf, ctx, nil
+	buf, checkpointCtx := rcp.cp.RestoreCheckpoint(blockHeight)
+	return buf, checkpointCtx, nil
 }
 
 func (cp *RollupCheckpointer) GetInitialMachine() (machine.Machine, error) {

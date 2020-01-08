@@ -64,7 +64,9 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 	if err != nil {
 		t.Fatal(err)
 	}
-	cp.SaveCheckpoint(blockHeight, buf, ctx)
+	doneChan := make(chan interface{})
+	cp.AsyncSaveCheckpoint(blockHeight, buf, ctx, doneChan)
+	<-doneChan
 	chain2, err := UnmarshalChainObserverFromBytes(buf, ctx, nil)
 	if err != nil {
 		t.Fatal(err)
