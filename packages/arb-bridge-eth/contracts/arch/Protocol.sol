@@ -99,22 +99,8 @@ library Protocol {
 
     function addMessageToPending(bytes32 pending, bytes32 message) internal pure returns (bytes32) {
         return Value.hashTuple([
-            Value.newInt(0),
             Value.newHashOnly(pending),
             Value.newHashOnly(message)
         ]);
-    }
-
-    function addMessagesToInbox(bytes32 inbox, bytes32 messages) internal pure returns (bytes32) {
-        if (messages != Value.hashEmptyTuple()) {
-            return Value.hashTuple([
-                Value.newInt(1),
-                Value.newHashOnly(inbox),
-                Value.newHashOnly(messages)
-            ]);
-        } else {
-            return inbox;
-        }
-
     }
 }

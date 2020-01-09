@@ -85,6 +85,8 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	chain.Lock()
 	defer chain.Unlock()
 	switch ev := notification.Event.(type) {
+	case arbbridge.MessageDeliveredEvent:
+		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
 		currentTime := structures.TimeFromBlockNum(protocol.NewTimeBlocks(notification.Header.Number))
 		chain.createStake(ev, currentTime)

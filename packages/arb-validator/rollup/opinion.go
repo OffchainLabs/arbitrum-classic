@@ -196,9 +196,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	timeBounds := chain.currentTimeBounds()
 	chain.RUnlock()
 
-	inbox := protocol.NewInbox()
-	inbox.WithAddedMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, inbox.Receive())
+	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, messagesVal)
 
 	log.Println("Prepared assertion of", stepsRun, "steps, ending with", mach.LastBlockReason())
 	var params *structures.AssertionParams
@@ -258,9 +256,7 @@ func getNodeOpinion(
 	}
 
 	mach := prevMach
-	inbox := protocol.NewInbox()
-	inbox.WithAddedMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, inbox.Receive())
+	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, messagesVal)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
 		return structures.InvalidExecutionChildType, nil
 	}

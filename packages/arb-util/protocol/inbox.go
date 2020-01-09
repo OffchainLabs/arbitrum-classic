@@ -22,18 +22,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func AddMessagesHashToInboxHash(inbox [32]byte, messages [32]byte) [32]byte {
-	if messages == value.NewEmptyTuple().Hash() {
-		return inbox
-	}
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewHashOnlyValue(inbox, 0),
-		value.NewHashOnlyValue(messages, 0),
-	})
-	return tup.Hash()
-}
-
 type MessageStack struct {
 	msg value.TupleValue
 }
@@ -59,41 +47,5 @@ func (in *MessageStack) IsEmpty() bool {
 }
 
 func (in *MessageStack) AddMessage(msgVal value.Value) {
-	in.msg, _ = value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(0),
-		in.msg,
-		msgVal,
-	})
-}
-
-type Inbox struct {
-	messages value.TupleValue
-}
-
-func NewInbox() *Inbox {
-	return &Inbox{value.NewEmptyTuple()}
-}
-
-func (in *Inbox) Clone() *Inbox {
-	return &Inbox{in.messages}
-}
-
-func (in *Inbox) String() string {
-	return fmt.Sprintf("Inbox(%v)", in.messages)
-}
-
-func (in *Inbox) WithAddedMessages(messages value.TupleValue) *Inbox {
-	if messages.Len() == 0 {
-		return in
-	}
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		in.messages,
-		messages,
-	})
-	return &Inbox{tup}
-}
-
-func (in *Inbox) Receive() value.TupleValue {
-	return in.messages
+	in.msg = value.NewTuple2(in.msg, msgVal)
 }

@@ -163,6 +163,10 @@ func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx
 	return cob.UnmarshalFromCheckpoint(ctx, restoreCtx, client), nil
 }
 
+func (chain *ChainObserver) messageDelivered(ev arbbridge.MessageDeliveredEvent) {
+	chain.pendingInbox.DeliverMessage(ev.Msg.AsValue())
+}
+
 func (chain *ChainObserver) pruneLeaf(ev arbbridge.PrunedEvent) {
 	chain.nodeGraph.leaves.Delete(chain.nodeGraph.nodeFromHash[ev.Leaf])
 	chain.nodeGraph.PruneNodeByHash(ev.Leaf)
@@ -280,13 +284,11 @@ func (co *ChainObserver) equals(co2 *ChainObserver) bool {
 
 func (chain *ChainObserver) executionPrecondition(node *Node) *protocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
-	inbox := protocol.NewInbox()
 	messages := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, node.disputable.AssertionClaim.AfterPendingTop)
-	inbox.WithAddedMessages(messages)
 	return &protocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: inbox.Receive(),
+		BeforeInbox: messages,
 	}
 }
 
