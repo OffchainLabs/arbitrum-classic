@@ -80,11 +80,11 @@ type EthRollupWatcher struct {
 
 func NewRollupWatcher(address common.Address, client *ethclient.Client) (*EthRollupWatcher, error) {
 	vm := &EthRollupWatcher{Client: client, address: address}
-	err := vm.SetupContracts()
+	err := vm.setupContracts()
 	return vm, err
 }
 
-func (vm *EthRollupWatcher) SetupContracts() error {
+func (vm *EthRollupWatcher) setupContracts() error {
 	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ArbRollup")
@@ -108,7 +108,7 @@ func (vm *EthRollupWatcher) SetupContracts() error {
 }
 
 func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := vm.SetupContracts(); err != nil {
+	if err := vm.setupContracts(); err != nil {
 		return err
 	}
 
