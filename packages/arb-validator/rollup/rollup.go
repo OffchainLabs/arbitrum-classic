@@ -106,23 +106,27 @@ func (chain *ChainObserver) MarshalToBytes(ctx structures.CheckpointContext) ([]
 	return proto.Marshal(cob)
 }
 
-func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, _client *ethbridge.ArbRollup) *ChainObserver {
+func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
+	ctx context.Context,
+	restoreCtx structures.RestoreContext,
+	_client *ethbridge.ArbRollup,
+) *ChainObserver {
 	chain := &ChainObserver{
 		RWMutex:      &sync.RWMutex{},
-		nodeGraph:    m.StakedNodeGraph.UnmarshalFromCheckpoint(ctx),
+		nodeGraph:    m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx),
 		rollupAddr:   common.BytesToAddress(m.ContractAddress),
-		pendingInbox: &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(ctx)},
+		pendingInbox: &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
 		listeners:    []ChainListener{},
 	}
 	chain.Lock()
 	defer chain.Unlock()
 	if _client != nil {
-		chain.startCleanupThread(context.TODO())
+		chain.startCleanupThread(ctx)
 	}
 	if m.IsOpinionated {
 		chain.isOpinionated = true
 		chain.assertionMadeChan = make(chan bool)
-		chain.startOpinionUpdateThread(context.TODO())
+		chain.startOpinionUpdateThread(ctx)
 	}
 	return chain
 }
