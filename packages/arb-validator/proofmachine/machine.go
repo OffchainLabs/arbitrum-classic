@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -42,7 +41,7 @@ type Machine struct {
 
 type Connection struct {
 	fromAddress common.Address
-	osp         *ethbridge.OneStepProof
+	osp         arbbridge.OneStepProof
 	client      arbbridge.ArbClient
 	proofbounds [2]uint32
 }
@@ -53,7 +52,7 @@ func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, eth
 	if err != nil {
 		log.Fatal("Connection failure ", err)
 	}
-	osp, err := ethbridge.NewOneStepProof(contractAddress, client)
+	osp, err := arb.NewOneStepProof(contractAddress, client)
 	if err != nil {
 		log.Fatal(err)
 	}

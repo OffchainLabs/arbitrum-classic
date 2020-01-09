@@ -30,6 +30,16 @@ var mock bool = false
 
 //var mock bool = true
 
+func NewArbClient() arbbridge.ArbClient {
+	var client arbbridge.ArbClient
+	if mock {
+		//client = mockbridge.NewArbClient()
+	} else {
+		client = ethbridge.NewEthClient()
+	}
+	return client
+}
+
 func NewArbFactory(address common.Address, client arbbridge.ArbClient) (arbbridge.ArbFactory, error) {
 	var factory arbbridge.ArbFactory
 	var err error
@@ -44,52 +54,100 @@ func NewArbFactory(address common.Address, client arbbridge.ArbClient) (arbbridg
 	return factory, err
 }
 
-func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.BisectionChallenge, error) {
-	return NewBisectionChallenge(address, client, auth)
+func NewRollup(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.ArbRollup, error) {
+	var rollup arbbridge.ArbRollup
+	var err error
+	if mock {
+		rollup, err = mockbridge.NewRollup(address, client, auth)
+	} else {
+		rollup, err = ethbridge.NewRollup(address, client, auth)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return rollup, err
+}
+
+func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (arbbridge.ArbRollupWatcher, error) {
+	var rollupWatcher arbbridge.ArbRollupWatcher
+	var err error
+	if mock {
+		rollupWatcher, err = mockbridge.NewRollupWatcher(address, client)
+	} else {
+		rollupWatcher, err = ethbridge.NewRollupWatcher(address, client)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return rollupWatcher, err
+}
+
+func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.ExecutionChallenge, error) {
+	var executionChallenge arbbridge.ExecutionChallenge
+	var err error
+	if mock {
+		executionChallenge, err = mockbridge.NewExecutionChallenge(address, client, auth)
+	} else {
+		executionChallenge, err = ethbridge.NewExecutionChallenge(address, client, auth)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return executionChallenge, err
+}
+
+func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.MessagesChallenge, error) {
+	var messagesChallenge arbbridge.MessagesChallenge
+	var err error
+	if mock {
+		messagesChallenge, err = mockbridge.NewMessagesChallenge(address, client, auth)
+	} else {
+		messagesChallenge, err = ethbridge.NewMessagesChallenge(address, client, auth)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return messagesChallenge, err
 }
 
 func NewOneStepProof(address common.Address, client arbbridge.ArbClient) (arbbridge.OneStepProof, error) {
-	oneStepProof, err := ethbridge.NewOneStepProof(address, client)
-	if err != nil {
-		return nil, err
+	var oneStepProof arbbridge.OneStepProof
+	var err error
+	if mock {
+		oneStepProof, err = mockbridge.NewOneStepProof(address, client)
+	} else {
+		oneStepProof, err = ethbridge.NewOneStepProof(address, client)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return oneStepProof, err
 }
 
 func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (arbbridge.PendingInbox, error) {
-	pendingInbox, err := ethbridge.NewPendingInbox(address, client)
-	if err != nil {
-		return nil, err
+	var pendingInbox arbbridge.PendingInbox
+	var err error
+	if mock {
+		pendingInbox, err = mockbridge.NewPendingInbox(address, client)
+	} else {
+		pendingInbox, err = ethbridge.NewPendingInbox(address, client)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return pendingInbox, err
 }
 
 func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.PendingTopChallenge, error) {
-	return ethbridge.NewPendingTopChallenge(address, client, auth)
-}
-
-func NewRollup(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.ArbRollup, error) {
-	return ethbridge.NewRollup(address, client, auth)
-}
-
-func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.ExecutionChallenge, error) {
-	return ethbridge.NewExecutionChallenge(address, client, auth)
-}
-
-func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (arbbridge.MessagesChallenge, error) {
-	return ethbridge.NewMessagesChallenge(address, client, auth)
-}
-
-func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (arbbridge.ArbRollupWatcher, error) {
-	return ethbridge.NewRollupWatcher(address, client)
-}
-
-func NewArbClient() arbbridge.ArbClient {
-	var client arbbridge.ArbClient
+	var pendingTopChallenge arbbridge.PendingTopChallenge
+	var err error
 	if mock {
-		//client = mockbridge.NewArbClient()
+		pendingTopChallenge, err = mockbridge.NewPendingTopChallenge(address, client, auth)
 	} else {
-		client = ethbridge.NewEthClient()
+		pendingTopChallenge, err = ethbridge.NewPendingTopChallenge(address, client, auth)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-	return client
+	return pendingTopChallenge, err
 }
