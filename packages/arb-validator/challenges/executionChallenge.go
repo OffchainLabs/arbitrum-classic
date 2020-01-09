@@ -20,26 +20,23 @@ import (
 	"context"
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 func DefendExecutionClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	precondition *protocol.Precondition,
 	numSteps uint32,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := arb.NewExecutionChallenge(address, client, auth)
+	contract, err := client.NewExecutionChallenge(address, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -62,12 +59,12 @@ func DefendExecutionClaim(
 
 func ChallengeExecutionClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	startPrecondition *protocol.Precondition,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := arb.NewExecutionChallenge(address, client, auth)
+	contract, err := client.NewExecutionChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}

@@ -19,28 +19,25 @@ package challenges
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendMessagesClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
 ) (ChallengeState, error) {
-	contract, err := arb.NewMessagesChallenge(address, client, auth)
+	contract, err := client.NewMessagesChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -62,13 +59,13 @@ func DefendMessagesClaim(
 
 func ChallengeMessagesClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := arb.NewMessagesChallenge(address, client, auth)
+	contract, err := client.NewMessagesChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}

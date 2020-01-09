@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-package arbbridge
+package mockbridge
 
 import (
-	"math/big"
+	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-type OneStepProof interface {
-	ValidateProof(
-		auth *bind.CallOpts,
-		precondition *protocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
-		proof []byte,
-	) (*big.Int, error)
+type ClientConnection struct {
+	Client arbbridge.ArbClient
+}
+
+func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error) {
+	header, err := c.Client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return protocol.NewTimeBlocks(header.Number), nil
 }

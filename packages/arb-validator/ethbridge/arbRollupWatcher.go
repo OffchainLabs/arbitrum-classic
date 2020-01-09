@@ -207,7 +207,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 					TxHash: val.Raw.TxHash,
 				}
 			case log := <-logChan:
-				if err := vm.ProcessEvents(ctx, log, outChan); err != nil {
+				if err := vm.processEvents(ctx, log, outChan); err != nil {
 					errChan <- err
 					return
 				}
@@ -226,7 +226,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 	return nil
 }
 
-func (vm *EthRollupWatcher) ProcessEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == rollupStakeCreatedID {
 			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(log)

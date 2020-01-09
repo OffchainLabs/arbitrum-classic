@@ -19,26 +19,24 @@ package challenges
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendPendingTopClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := arb.NewPendingTopChallenge(address, client, auth)
+	contract, err := client.NewPendingTopChallenge(address, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -59,11 +57,11 @@ func DefendPendingTopClaim(
 
 func ChallengePendingTopClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 ) (ChallengeState, error) {
-	contract, err := arb.NewPendingTopChallenge(address, client, auth)
+	contract, err := client.NewPendingTopChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}

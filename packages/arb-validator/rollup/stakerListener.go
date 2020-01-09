@@ -22,7 +22,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -35,7 +34,7 @@ type StakerListener struct {
 	sync.Mutex
 	myAddr   common.Address
 	auth     *bind.TransactOpts
-	client   *ethclient.Client
+	client   arbbridge.ArbClient
 	contract arbbridge.ArbRollup
 }
 

@@ -38,7 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -113,12 +112,12 @@ func main() {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	client, err := ethclient.Dial(ethURL)
+	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	factory, err := arb.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
+	factory, err := client.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory))
 	if err != nil {
 		log.Fatal(err)
 	}

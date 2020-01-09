@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package ethvalidator
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
@@ -30,11 +29,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 type Validator struct {
@@ -43,7 +40,7 @@ type Validator struct {
 	// Not in thread, but internal only
 	serverAddress string
 	arbAddresses  ethbridge.ArbAddresses
-	Client        *ethclient.Client
+	Client        arbbridge.ArbClient
 
 	arbbridge.ArbFactory
 	arbbridge.PendingInbox
@@ -57,17 +54,17 @@ func NewValidator(
 ) (*Validator, error) {
 	auth := bind.NewKeyedTransactor(key)
 
-	client, err := ethclient.Dial(ethURL)
+	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		return nil, err
 	}
 
-	arbFactory, err := arb.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
+	arbFactory, err := client.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory))
 	if err != nil {
 		return nil, err
 	}
 
-	pendingInbox, err := arb.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
+	pendingInbox, err := client.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox))
 	if err != nil {
 		return nil, err
 	}
