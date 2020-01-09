@@ -19,9 +19,10 @@ package ethbridge
 import (
 	"bytes"
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -332,6 +333,11 @@ func (vm *EthRollupWatcher) ProcessEvents(ctx context.Context, log types.Log, ou
 			//	return nil, err
 			//}
 			//fmt.Println("Debug event")
+			//fmt.Println("BeforeVMHash", hexutil.Encode(eventVal.BeforeVMHash[:]))
+			//fmt.Println("TimeBounds", eventVal.TimeBoundsBlocks)
+			//fmt.Println("Inbox hash", hexutil.Encode(eventVal.Inbox[:]))
+			//fmt.Println("PreconditionHash", hexutil.Encode(eventVal.Precondition[:]))
+
 			//fmt.Println("PrevLeaf", hexutil.Encode(eventVal.PrevLeaf[:]))
 			//fmt.Println("DeadlineTicks", eventVal.DeadlineTicks)
 			//fmt.Println("BeforePendingTop", hexutil.Encode(eventVal.BeforePendingTop[:]))

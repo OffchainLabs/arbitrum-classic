@@ -17,8 +17,9 @@
 package rollup
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -45,14 +46,16 @@ func (al *AnnouncerListener) CompletedChallenge(event arbbridge.ChallengeComplet
 
 func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *protocol.TimeBlocks, txHash [32]byte) {
 	log.Println("SawAssertion")
-	log.Println("Prev Leaf:", hexutil.Encode(ev.PrevLeafHash[:]))
-	log.Println("Max pending value:", hexutil.Encode(ev.MaxPendingTop[:]))
 	log.Println("Params:", ev.Params)
 	log.Println("Claim:", ev.Claim)
 }
 
-func (al *AnnouncerListener) ConfirmedNode(arbbridge.ConfirmedEvent) {
-	log.Println("ConfirmedNode")
+func (al *AnnouncerListener) ConfirmedNode(ev arbbridge.ConfirmedEvent) {
+	log.Println("ConfirmedNode", hexutil.Encode(ev.NodeHash[:]))
+}
+
+func (al *AnnouncerListener) PrunedLeaf(ev arbbridge.PrunedEvent) {
+	log.Println("PrunedLeaf", hexutil.Encode(ev.Leaf[:]))
 }
 
 func (al *AnnouncerListener) AssertionPrepared(*preparedAssertion) {
@@ -72,6 +75,10 @@ func (al *AnnouncerListener) MootableStakes([]recoverStakeMootedParams) {
 }
 func (al *AnnouncerListener) OldStakes([]recoverStakeOldParams) {
 	log.Println("OldStakes")
+}
+
+func (al *AnnouncerListener) AdvancedKnownValidNode(nodeHash [32]byte) {
+	log.Println("AdvancedKnownValidNode", hexutil.Encode(nodeHash[:]))
 }
 
 func (lis *AnnouncerListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {

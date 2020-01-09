@@ -18,10 +18,11 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -94,7 +95,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.StakeRefundedEvent:
 		chain.RemoveStake(ev)
 	case arbbridge.PrunedEvent:
-		chain.PruneNode(ev)
+		chain.PruneLeaf(ev)
 	case arbbridge.StakeMovedEvent:
 		chain.MoveStake(ev)
 	case arbbridge.AssertedEvent:

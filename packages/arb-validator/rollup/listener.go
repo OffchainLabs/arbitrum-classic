@@ -18,9 +18,10 @@ package rollup
 
 import (
 	"context"
+	"log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -40,6 +41,7 @@ type ChainListener interface {
 	CompletedChallenge(event arbbridge.ChallengeCompletedEvent)
 	SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
 	ConfirmedNode(arbbridge.ConfirmedEvent)
+	PrunedLeaf(arbbridge.PrunedEvent)
 
 	AssertionPrepared(*preparedAssertion)
 	ValidNodeConfirmable(*confirmValidOpportunity)
@@ -48,6 +50,7 @@ type ChainListener interface {
 	MootableStakes([]recoverStakeMootedParams)
 	OldStakes([]recoverStakeOldParams)
 
+	AdvancedKnownValidNode([32]byte)
 	AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte)
 }
 
@@ -56,6 +59,7 @@ type ValidatorChainListener struct {
 	stakers                map[common.Address]*StakerListener
 	broadcastAssertions    map[[32]byte]bool
 	broadcastConfirmations map[[32]byte]bool
+	broadcastLeafPrunes    map[[32]byte]bool
 }
 
 func NewValidatorChainListener(
@@ -66,6 +70,7 @@ func NewValidatorChainListener(
 		stakers:                make(map[common.Address]*StakerListener),
 		broadcastAssertions:    make(map[[32]byte]bool),
 		broadcastConfirmations: make(map[[32]byte]bool),
+		broadcastLeafPrunes:    make(map[[32]byte]bool),
 	}
 }
 
@@ -194,6 +199,10 @@ func (lis *ValidatorChainListener) ConfirmedNode(arbbridge.ConfirmedEvent) {
 
 }
 
+func (lis *ValidatorChainListener) PrunedLeaf(arbbridge.PrunedEvent) {
+
+}
+
 func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion) {
 	_, alreadySent := lis.broadcastAssertions[prepared.leafHash]
 	if alreadySent {
@@ -229,6 +238,7 @@ func (lis *ValidatorChainListener) ValidNodeConfirmable(conf *confirmValidOpport
 		return
 	}
 	for _, staker := range lis.stakers {
+		lis.broadcastConfirmations[conf.nodeHash] = true
 		go func() {
 			staker.Lock()
 			staker.contract.ConfirmValid(
@@ -253,6 +263,7 @@ func (lis *ValidatorChainListener) InvalidNodeConfirmable(conf *confirmInvalidOp
 		return
 	}
 	for _, staker := range lis.stakers {
+		lis.broadcastConfirmations[conf.nodeHash] = true
 		go func() {
 			staker.Lock()
 			staker.contract.ConfirmInvalid(
@@ -274,28 +285,41 @@ func (lis *ValidatorChainListener) InvalidNodeConfirmable(conf *confirmInvalidOp
 func (lis *ValidatorChainListener) PrunableLeafs(params []pruneParams) {
 	for _, staker := range lis.stakers {
 		for _, prune := range params {
-			go staker.contract.PruneLeaf(
-				context.TODO(),
-				prune.ancestor.hash,
-				prune.leafProof,
-				prune.ancProof,
-			)
+			_, alreadySent := lis.broadcastLeafPrunes[prune.leafHash]
+			if alreadySent {
+				continue
+			}
+			lis.broadcastLeafPrunes[prune.leafHash] = true
+			pruneCopy := prune.Clone()
+			go func() {
+				staker.Lock()
+				staker.contract.PruneLeaf(
+					context.TODO(),
+					pruneCopy.ancestorHash,
+					pruneCopy.leafProof,
+					pruneCopy.ancProof,
+				)
+				staker.Unlock()
+			}()
 		}
 		break
 	}
-
 }
 
 func (lis *ValidatorChainListener) MootableStakes(params []recoverStakeMootedParams) {
 	for _, staker := range lis.stakers {
 		for _, moot := range params {
-			go staker.contract.RecoverStakeMooted(
-				context.TODO(),
-				moot.ancestor.hash,
-				moot.addr,
-				moot.lcProof,
-				moot.stProof,
-			)
+			go func() {
+				staker.Lock()
+				staker.contract.RecoverStakeMooted(
+					context.TODO(),
+					moot.ancestorHash,
+					moot.addr,
+					moot.lcProof,
+					moot.stProof,
+				)
+				staker.Unlock()
+			}()
 		}
 		break
 	}
@@ -304,14 +328,19 @@ func (lis *ValidatorChainListener) MootableStakes(params []recoverStakeMootedPar
 func (lis *ValidatorChainListener) OldStakes(params []recoverStakeOldParams) {
 	for _, staker := range lis.stakers {
 		for _, old := range params {
-			go staker.contract.RecoverStakeOld(
-				context.TODO(),
-				old.addr,
-				old.proof,
-			)
+			go func() {
+				staker.Lock()
+				staker.contract.RecoverStakeOld(
+					context.TODO(),
+					old.addr,
+					old.proof,
+				)
+				staker.Unlock()
+			}()
 		}
 		break
 	}
 }
 
+func (lis *ValidatorChainListener) AdvancedKnownValidNode([32]byte)                               {}
 func (lis *ValidatorChainListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {}

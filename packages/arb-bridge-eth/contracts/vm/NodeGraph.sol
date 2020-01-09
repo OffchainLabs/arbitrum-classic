@@ -64,8 +64,7 @@ contract NodeGraph is ChallengeType {
         uint128[2] timeBoundsBlocks,
         uint64 numArbGas,
         uint32 numSteps,
-        bool didInboxInsn,
-        bytes32[4] newNodes
+        bool didInboxInsn
     );
 
     event RollupConfirmed(bytes32 nodeHash);
@@ -230,7 +229,7 @@ contract NodeGraph is ChallengeType {
         leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, pendingValue, [invalidPending, invalidMessages, invalidExec, validHash]);
+        emitAssertedEvent(data, prevLeaf, pendingValue);
         return (prevLeaf, validHash);
     }
 
@@ -239,7 +238,7 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue, bytes32[4] memory newNodes) private {
+    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue) private {
         emit RollupAsserted(
             prevLeaf,
             pendingValue,
@@ -252,8 +251,7 @@ contract NodeGraph is ChallengeType {
             data.timeBoundsBlocks,
             data.numArbGas,
             data.numSteps,
-            data.didInboxInsn,
-            newNodes
+            data.didInboxInsn
         );
     }
 
@@ -287,20 +285,6 @@ contract NodeGraph is ChallengeType {
         );
     }
 
-    event DebugData(
-        bytes32 prevLeaf,
-        uint256 deadlineTicks,
-        bytes32 beforePendingTop,
-        bytes32 afterPendingTop,
-        bytes32 importedMessagesSlice,
-        uint256 importedMessageCount,
-        uint256 challengePeriod,
-        uint256 childType,
-        bytes32 vmProtoHashBefore,
-        bytes32 challengeHash,
-        bytes32 nodeDataHash
-    );
-
     function generateInvalidMessagesLeaf(
         MakeAssertionData memory data,
         bytes32 prevLeaf,
@@ -309,6 +293,7 @@ contract NodeGraph is ChallengeType {
         uint256 gracePeriodTicks
     )
         private
+        pure
         returns(bytes32)
     {
         bytes32 challengeHash = ChallengeUtils.messagesHash(
@@ -321,19 +306,6 @@ contract NodeGraph is ChallengeType {
         bytes32 nodeDataHash = RollupUtils.challengeDataHash(
             challengeHash,
             gracePeriodTicks + RollupTime.blocksToTicks(1)
-        );
-        emit DebugData(
-            prevLeaf,
-            deadlineTicks,
-            data.beforePendingTop,
-            data.afterPendingTop,
-            data.importedMessagesSlice,
-            data.importedMessageCount,
-            gracePeriodTicks + RollupTime.blocksToTicks(1),
-            INVALID_MESSAGES_TYPE,
-            vmProtoHashBefore,
-            challengeHash,
-            nodeDataHash
         );
         return RollupUtils.childNodeHash(
             prevLeaf,
@@ -356,6 +328,11 @@ contract NodeGraph is ChallengeType {
         pure
         returns(bytes32)
     {
+        bytes32 preconditionHash = Protocol.generatePreconditionHash(
+             data.beforeVMHash,
+             data.timeBoundsBlocks,
+             Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice)
+        );
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,
             data.didInboxInsn,
@@ -367,11 +344,7 @@ contract NodeGraph is ChallengeType {
         );
         bytes32 executionHash = ChallengeUtils.executionHash(
             data.numSteps,
-            Protocol.generatePreconditionHash(
-                 data.beforeVMHash,
-                 data.timeBoundsBlocks,
-                 Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice)
-            ),
+            preconditionHash,
             assertionHash
         );
         return RollupUtils.childNodeHash(

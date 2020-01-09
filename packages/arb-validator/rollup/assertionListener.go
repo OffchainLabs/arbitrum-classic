@@ -37,6 +37,7 @@ func (al *AssertionListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *
 func (al *AssertionListener) CompletedChallenge(event arbbridge.ChallengeCompletedEvent)           {}
 func (al *AssertionListener) SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {}
 func (al *AssertionListener) ConfirmedNode(arbbridge.ConfirmedEvent)                               {}
+func (al *AssertionListener) PrunedLeaf(arbbridge.PrunedEvent)                                     {}
 
 func (al *AssertionListener) AssertionPrepared(*preparedAssertion)              {}
 func (al *AssertionListener) ValidNodeConfirmable(*confirmValidOpportunity)     {}
@@ -45,6 +46,7 @@ func (al *AssertionListener) PrunableLeafs([]pruneParams)                       
 func (al *AssertionListener) MootableStakes([]recoverStakeMootedParams)         {}
 func (al *AssertionListener) OldStakes([]recoverStakeOldParams)                 {}
 
+func (al *AssertionListener) AdvancedKnownValidNode([32]byte) {}
 func (al *AssertionListener) AdvancedKnownAssertion(assertion *protocol.ExecutionAssertion, txHash [32]byte) {
 	al.CompletedAssertionChan <- FinalizedAssertion{
 		Assertion:     assertion,
