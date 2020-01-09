@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -37,12 +38,12 @@ type PendingInbox struct {
 	client             *ethclient.Client
 }
 
-func NewPendingInbox(address common.Address, client *ethclient.Client) (*PendingInbox, error) {
-	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
+func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (*PendingInbox, error) {
+	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client.(*EthArbClient).client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
-	return &PendingInbox{globalPendingInboxContract, client}, nil
+	return &PendingInbox{globalPendingInboxContract, client.(*EthArbClient).client}, nil
 }
 
 func (con *PendingInbox) SendMessage(

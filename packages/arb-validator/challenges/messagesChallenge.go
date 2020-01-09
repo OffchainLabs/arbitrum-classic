@@ -25,15 +25,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendMessagesClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
@@ -62,7 +60,7 @@ func DefendMessagesClaim(
 
 func ChallengeMessagesClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,

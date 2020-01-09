@@ -24,8 +24,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -69,7 +67,7 @@ func NewValidatorChainListener(
 	}
 }
 
-func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
+func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbClient, auth *bind.TransactOpts) error {
 	contract, err := arb.NewRollup(lis.chain.rollupAddr, client, auth)
 	if err != nil {
 		return err

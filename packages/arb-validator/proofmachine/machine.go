@@ -20,13 +20,14 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -42,12 +43,13 @@ type Machine struct {
 type Connection struct {
 	fromAddress common.Address
 	osp         *ethbridge.OneStepProof
-	client      *ethclient.Client
+	client      arbbridge.ArbClient
 	proofbounds [2]uint32
 }
 
 func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
-	client, err := ethclient.Dial(ethURL)
+	client := arb.NewArbClient()
+	err := client.Dial(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
 	}

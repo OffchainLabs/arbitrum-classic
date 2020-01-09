@@ -33,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	errors2 "github.com/pkg/errors"
 )
 
@@ -54,8 +53,8 @@ type PendingTopChallenge struct {
 	Challenge *pendingtopchallenge.PendingTopChallenge
 }
 
-func NewPendingTopChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*PendingTopChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*PendingTopChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client.(*EthArbClient).client, auth)
 	if err != nil {
 		return nil, err
 	}

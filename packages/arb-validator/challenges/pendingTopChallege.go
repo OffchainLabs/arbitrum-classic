@@ -25,14 +25,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendPendingTopClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	afterPendingTop [32]byte,
@@ -59,7 +58,7 @@ func DefendPendingTopClaim(
 
 func ChallengePendingTopClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 ) (ChallengeState, error) {

@@ -18,12 +18,11 @@ package rollupvalidator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -36,7 +35,7 @@ type RPCServer struct {
 // NewServer returns a new instance of the Server class
 func NewRPCServer(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	rollupAddress common.Address,
 	codeFile string,
 	config structures.ChainParams,

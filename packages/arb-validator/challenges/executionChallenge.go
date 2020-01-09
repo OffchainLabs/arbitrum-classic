@@ -25,15 +25,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 func DefendExecutionClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	precondition *protocol.Precondition,
 	numSteps uint32,
@@ -62,7 +60,7 @@ func DefendExecutionClaim(
 
 func ChallengeExecutionClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	startPrecondition *protocol.Precondition,
 	startMachine machine.Machine,

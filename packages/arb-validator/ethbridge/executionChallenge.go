@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -56,8 +55,8 @@ type ExecutionChallenge struct {
 	Challenge *executionchallenge.ExecutionChallenge
 }
 
-func NewExecutionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client.(*EthArbClient).client, auth)
 	if err != nil {
 		return nil, err
 	}

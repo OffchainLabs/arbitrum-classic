@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	errors2 "github.com/pkg/errors"
 )
 
@@ -52,8 +51,8 @@ type MessagesChallenge struct {
 	Challenge *messageschallenge.MessagesChallenge
 }
 
-func NewMessagesChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*MessagesChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*MessagesChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client.(*EthArbClient).client, auth)
 	if err != nil {
 		return nil, err
 	}

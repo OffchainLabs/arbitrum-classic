@@ -78,8 +78,8 @@ type EthRollupWatcher struct {
 	client  *ethclient.Client
 }
 
-func NewRollupWatcher(address common.Address, client *ethclient.Client) (*EthRollupWatcher, error) {
-	vm := &EthRollupWatcher{Client: client, address: address}
+func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthRollupWatcher, error) {
+	vm := &EthRollupWatcher{Client: client.(*EthArbClient).client, address: address}
 	err := vm.setupContracts()
 	return vm, err
 }

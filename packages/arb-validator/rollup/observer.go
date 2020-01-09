@@ -29,11 +29,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 )
 
-func RunObserver(ctx context.Context, chain *ChainObserver, clnt *ethclient.Client) error {
+func RunObserver(ctx context.Context, chain *ChainObserver, clnt arbbridge.ArbClient) error {
 	rollup, err := arb.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return err
