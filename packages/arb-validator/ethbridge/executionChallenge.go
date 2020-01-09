@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"strings"
 
@@ -55,8 +56,8 @@ type ExecutionChallenge struct {
 	Challenge *executionchallenge.ExecutionChallenge
 }
 
-func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client.(*EthArbClient).client, auth)
+func NewExecutionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}

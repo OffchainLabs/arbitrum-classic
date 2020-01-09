@@ -18,11 +18,20 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 )
 
 type ArbClient interface {
-	Dial(ethURL string) error
+	NewArbFactory(address common.Address) (ArbFactory, error)
+	NewRollup(address common.Address, auth *bind.TransactOpts) (ArbRollup, error)
+	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
+	NewExecutionChallenge(address common.Address, auth *bind.TransactOpts) (ExecutionChallenge, error)
+	NewMessagesChallenge(address common.Address, auth *bind.TransactOpts) (MessagesChallenge, error)
+	NewOneStepProof(address common.Address) (OneStepProof, error)
+	NewPendingInbox(address common.Address) (PendingInbox, error)
+	NewPendingTopChallenge(address common.Address, auth *bind.TransactOpts) (PendingTopChallenge, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 }

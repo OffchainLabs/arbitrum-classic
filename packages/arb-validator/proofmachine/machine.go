@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"log"
 	"math/big"
 
@@ -47,12 +48,11 @@ type Connection struct {
 }
 
 func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
-	client := arb.NewArbClient()
-	err := client.Dial(ethURL)
+	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
 	}
-	osp, err := arb.NewOneStepProof(contractAddress, client)
+	osp, err := client.NewOneStepProof(contractAddress)
 	if err != nil {
 		log.Fatal(err)
 	}

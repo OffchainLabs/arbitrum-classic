@@ -20,7 +20,6 @@ import (
 	"context"
 	jsonenc "encoding/json"
 	"flag"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -106,13 +105,12 @@ func main() {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	client := arb.NewArbClient()
-	err = client.Dial(ethURL)
+	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	factory, err := arb.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
+	factory, err := client.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory))
 	if err != nil {
 		log.Fatal(err)
 	}

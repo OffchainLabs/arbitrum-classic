@@ -17,7 +17,6 @@
 package ethbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -34,13 +33,13 @@ type OneStepProof struct {
 	client   *ethclient.Client
 }
 
-func NewOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneStepProof, error) {
-	contract, err := onestepproof.NewOneStepProof(address, client.(*EthArbClient).client)
+func NewOneStepProof(address common.Address, client *ethclient.Client) (*OneStepProof, error) {
+	contract, err := onestepproof.NewOneStepProof(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to OneStepProof")
 	}
 
-	return &OneStepProof{contract, client.(*EthArbClient).client}, nil
+	return &OneStepProof{contract, client}, nil
 }
 
 func (con *OneStepProof) ValidateProof(

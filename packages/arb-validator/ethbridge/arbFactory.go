@@ -17,7 +17,6 @@
 package ethbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -35,12 +34,12 @@ type ArbFactory struct {
 	client   *ethclient.Client
 }
 
-func NewArbFactory(address common.Address, client arbbridge.ArbClient) (*ArbFactory, error) {
-	vmCreatorContract, err := arbfactory.NewArbFactory(address, client.(*EthArbClient).client)
+func NewArbFactory(address common.Address, client *ethclient.Client) (*ArbFactory, error) {
+	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ArbFactory")
 	}
-	return &ArbFactory{vmCreatorContract, client.(*EthArbClient).client}, nil
+	return &ArbFactory{vmCreatorContract, client}, nil
 }
 
 func (con *ArbFactory) CreateRollup(

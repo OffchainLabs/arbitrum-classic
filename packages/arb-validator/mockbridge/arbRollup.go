@@ -38,11 +38,11 @@ type ArbRollup struct {
 }
 
 func NewRollup(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*ArbRollup, error) {
-	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*EthArbClient).client)
+	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*ArbClient).client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")
 	//}
-	//vm := &ArbRollup{Client: client.(*EthArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
+	//vm := &ArbRollup{Client: client.(*ArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
 	return &ArbRollup{
 		Client:    nil,
 		ArbRollup: nil,

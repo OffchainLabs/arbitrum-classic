@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
@@ -53,8 +54,8 @@ type PendingTopChallenge struct {
 	Challenge *pendingtopchallenge.PendingTopChallenge
 }
 
-func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*PendingTopChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client.(*EthArbClient).client, auth)
+func NewPendingTopChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*PendingTopChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}

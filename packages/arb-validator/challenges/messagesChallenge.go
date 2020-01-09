@@ -19,7 +19,6 @@ package challenges
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
@@ -38,7 +37,7 @@ func DefendMessagesClaim(
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
 ) (ChallengeState, error) {
-	contract, err := arb.NewMessagesChallenge(address, client, auth)
+	contract, err := client.NewMessagesChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}
@@ -66,7 +65,7 @@ func ChallengeMessagesClaim(
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := arb.NewMessagesChallenge(address, client, auth)
+	contract, err := client.NewMessagesChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}

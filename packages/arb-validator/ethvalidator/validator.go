@@ -19,7 +19,6 @@ package ethvalidator
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
@@ -55,18 +54,17 @@ func NewValidator(
 ) (*Validator, error) {
 	auth := bind.NewKeyedTransactor(key)
 
-	client := arb.NewArbClient()
-	err := client.Dial(ethURL)
+	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		return nil, err
 	}
 
-	arbFactory, err := arb.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
+	arbFactory, err := client.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory))
 	if err != nil {
 		return nil, err
 	}
 
-	pendingInbox, err := arb.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
+	pendingInbox, err := client.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox))
 	if err != nil {
 		return nil, err
 	}

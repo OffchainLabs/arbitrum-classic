@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -37,7 +36,7 @@ func DefendExecutionClaim(
 	numSteps uint32,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := arb.NewExecutionChallenge(address, client, auth)
+	contract, err := client.NewExecutionChallenge(address, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
@@ -65,7 +64,7 @@ func ChallengeExecutionClaim(
 	startPrecondition *protocol.Precondition,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := arb.NewExecutionChallenge(address, client, auth)
+	contract, err := client.NewExecutionChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}

@@ -20,7 +20,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -73,7 +72,7 @@ func NewValidatorChainListener(
 }
 
 func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbClient, auth *bind.TransactOpts) error {
-	contract, err := arb.NewRollup(lis.chain.rollupAddr, client, auth)
+	contract, err := client.NewRollup(lis.chain.rollupAddr, auth)
 	if err != nil {
 		return err
 	}

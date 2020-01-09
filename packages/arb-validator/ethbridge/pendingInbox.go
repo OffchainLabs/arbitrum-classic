@@ -18,7 +18,6 @@ package ethbridge
 
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
@@ -38,12 +37,12 @@ type PendingInbox struct {
 	client             *ethclient.Client
 }
 
-func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (*PendingInbox, error) {
-	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client.(*EthArbClient).client)
+func NewPendingInbox(address common.Address, client *ethclient.Client) (*PendingInbox, error) {
+	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
-	return &PendingInbox{globalPendingInboxContract, client.(*EthArbClient).client}, nil
+	return &PendingInbox{globalPendingInboxContract, client}, nil
 }
 
 func (con *PendingInbox) SendMessage(

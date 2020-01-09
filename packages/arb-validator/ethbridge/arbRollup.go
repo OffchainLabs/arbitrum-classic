@@ -18,7 +18,6 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -41,12 +40,12 @@ type ArbRollup struct {
 	auth      *bind.TransactOpts
 }
 
-func NewRollup(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*ArbRollup, error) {
-	arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*EthArbClient).client)
+func NewRollup(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ArbRollup, error) {
+	arbitrumRollupContract, err := rollup.NewArbRollup(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")
 	}
-	vm := &ArbRollup{Client: client.(*EthArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
+	vm := &ArbRollup{Client: client, ArbRollup: arbitrumRollupContract, auth: auth}
 	return vm, err
 }
 
