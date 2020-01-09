@@ -22,14 +22,14 @@ import (
 )
 
 type BlockReason interface {
-	IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool
+	IsBlocked(m Machine, currentTime *protocol.TimeBlocks, newMessages bool) bool
 	Equals(b BlockReason) bool
 }
 
 type HaltBlocked struct {
 }
 
-func (b HaltBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
+func (b HaltBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks, newMessages bool) bool {
 	return true
 }
 
@@ -41,7 +41,7 @@ func (b HaltBlocked) Equals(a BlockReason) bool {
 type ErrorBlocked struct {
 }
 
-func (b ErrorBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
+func (b ErrorBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks, newMessages bool) bool {
 	return true
 }
 
@@ -53,7 +53,7 @@ func (b ErrorBlocked) Equals(a BlockReason) bool {
 type BreakpointBlocked struct {
 }
 
-func (b BreakpointBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
+func (b BreakpointBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks, newMessages bool) bool {
 	return false
 }
 
@@ -66,8 +66,8 @@ type InboxBlocked struct {
 	Timeout value.IntValue
 }
 
-func (b InboxBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks) bool {
-	return b.Timeout.BigInt().Cmp(currentTime.AsInt()) > 0
+func (b InboxBlocked) IsBlocked(m Machine, currentTime *protocol.TimeBlocks, newMessages bool) bool {
+	return b.Timeout.BigInt().Cmp(currentTime.AsInt()) > 0 && !newMessages
 }
 
 func (b InboxBlocked) Equals(a BlockReason) bool {

@@ -260,7 +260,7 @@ contract Staking is ChallengeType {
     {
         uint256 _stakerCount = stakerAddresses.length;
         require(_stakerCount == stakerCount, CHCK_COUNT);
-        require(_stakerCount == stakerProofOffsets.length + 1, CHCK_OFFSETS);
+        require(_stakerCount + 1 == stakerProofOffsets.length, CHCK_OFFSETS);
         bytes20 prevStaker = 0x00;
         uint activeCount = 0;
         for (uint256 i = 0; i < _stakerCount; i++) {

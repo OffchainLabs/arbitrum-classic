@@ -28,10 +28,10 @@ type Machine interface {
 	RestoreCheckpoint(storage CheckpointStorage, machineHash [32]byte) bool
 }
 
-func IsMachineBlocked(machine Machine, currentTime *protocol.TimeBlocks) bool {
+func IsMachineBlocked(machine Machine, currentTime *protocol.TimeBlocks, newMessages bool) bool {
 	lastReason := machine.LastBlockReason()
 	if lastReason == nil {
 		return false
 	}
-	return lastReason.IsBlocked(machine, currentTime)
+	return lastReason.IsBlocked(machine, currentTime, newMessages)
 }

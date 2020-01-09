@@ -168,6 +168,9 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 	sort.Sort(SortableAddressList(stakerAddrs))
 
 	for _, successor := range sng.latestConfirmed.successorHashes {
+		if successor == zeroBytes32 {
+			continue
+		}
 		node := sng.nodeFromHash[successor]
 		proof, offsets := sng.generateAlignedStakersProof(
 			node,
@@ -182,7 +185,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 				}
 				return &confirmValidOpportunity{
 					nodeHash:           node.hash,
-					deadlineTicks:      node.deadline,
+					deadlineTicks:      structures.TimeTicks{new(big.Int).Set(node.deadline.Val)},
 					messages:           node.assertion.OutMsgs,
 					logsAcc:            node.disputable.AssertionClaim.AssertionStub.LastLogHashValue(),
 					vmProtoStateHash:   node.vmProtoData.Hash(),
@@ -193,7 +196,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 			} else {
 				return nil, &confirmInvalidOpportunity{
 					nodeHash:           node.hash,
-					deadlineTicks:      node.deadline,
+					deadlineTicks:      structures.TimeTicks{new(big.Int).Set(node.deadline.Val)},
 					challengeNodeData:  node.nodeDataHash,
 					branch:             node.linkType,
 					vmProtoStateHash:   node.vmProtoData.Hash(),
@@ -215,13 +218,14 @@ func (sng *StakedNodeGraph) generateAlignedStakersProof(
 ) ([][32]byte, []*big.Int) {
 	proof := make([][32]byte, 0)
 	offsets := make([]*big.Int, 0)
-	if currentTime.Cmp(confirmingNode.deadline) < 0 {
+	deadline := confirmingNode.deadline
+	if currentTime.Cmp(deadline) < 0 {
 		return nil, nil
 	}
 	offsets = append(offsets, big.NewInt(0))
 	for _, sa := range stakerAddrs {
 		staker := sng.stakers.Get(sa)
-		if staker.creationTime.Cmp(confirmingNode.deadline) >= 0 {
+		if staker.creationTime.Cmp(deadline) >= 0 {
 			continue
 		}
 		subProof := GeneratePathProof(confirmingNode, staker.location)
@@ -231,7 +235,7 @@ func (sng *StakedNodeGraph) generateAlignedStakersProof(
 		proof = append(proof, subProof...)
 		offsets = append(offsets, new(big.Int).SetUint64(uint64(len(proof))))
 	}
-	if len(proof) == 0 {
+	if len(offsets) == 1 {
 		return nil, nil
 	}
 	return proof, offsets
@@ -244,10 +248,10 @@ func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedPar
 		stakerAncestor, _, _, err := chain.GetConflictAncestor(staker.location, chain.latestConfirmed)
 		if err == nil {
 			mootedToDo = append(mootedToDo, recoverStakeMootedParams{
-				addr:     staker.address,
-				ancestor: stakerAncestor.prev,
-				lcProof:  GeneratePathProof(stakerAncestor.prev, chain.latestConfirmed),
-				stProof:  GeneratePathProof(stakerAncestor.prev, staker.location),
+				addr:         staker.address,
+				ancestorHash: stakerAncestor.prev.hash,
+				lcProof:      GeneratePathProof(stakerAncestor.prev, chain.latestConfirmed),
+				stProof:      GeneratePathProof(stakerAncestor.prev, staker.location),
 			})
 		} else if staker.location.depth < chain.latestConfirmed.depth {
 			oldToDo = append(oldToDo, recoverStakeOldParams{

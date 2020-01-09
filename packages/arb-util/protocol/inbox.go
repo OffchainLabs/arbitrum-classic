@@ -27,7 +27,7 @@ func AddMessagesHashToInboxHash(inbox [32]byte, messages [32]byte) [32]byte {
 		return inbox
 	}
 	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(0),
+		value.NewInt64Value(1),
 		value.NewHashOnlyValue(inbox, 0),
 		value.NewHashOnlyValue(messages, 0),
 	})

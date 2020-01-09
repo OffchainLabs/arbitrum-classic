@@ -342,8 +342,6 @@ func CommonAncestor(n1, n2 *Node) *Node {
 }
 
 func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
-	n1Orig := n1
-	n2Orig := n2
 	for n1.depth > n2.depth {
 		n1 = n1.prev
 	}
@@ -352,13 +350,12 @@ func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
 	}
 
 	// Now n1 and n2 are at the same height so we can start looking for a challenge
-
 	for n1.prev != n2.prev {
 		n1 = n1.prev
 		n2 = n2.prev
 	}
 
-	if n1 == n1Orig || n1 == n2Orig {
+	if n1.linkType == n2.linkType {
 		return n1, n2, errors.New("no conflict")
 	}
 	return n1, n2, nil

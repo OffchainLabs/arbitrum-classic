@@ -139,8 +139,12 @@ func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx
 	return cob.UnmarshalFromCheckpoint(ctx, restoreCtx, client), nil
 }
 
-func (chain *ChainObserver) PruneNode(ev arbbridge.PrunedEvent) {
+func (chain *ChainObserver) PruneLeaf(ev arbbridge.PrunedEvent) {
+	chain.nodeGraph.leaves.Delete(chain.nodeGraph.nodeFromHash[ev.Leaf])
 	chain.nodeGraph.PruneNodeByHash(ev.Leaf)
+	for _, lis := range chain.listeners {
+		lis.PrunedLeaf(ev)
+	}
 }
 
 func (chain *ChainObserver) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {

@@ -127,9 +127,13 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				chain.knownValidNode = correctNode
 				chain.Unlock()
-			} else {
-				chain.RUnlock()
+				chain.RLock()
+				for _, listener := range chain.listeners {
+					listener.AdvancedKnownValidNode(chain.knownValidNode.hash)
+				}
+
 			}
+			chain.RUnlock()
 
 		}
 
@@ -149,13 +153,16 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.knownValidNode.hash]
 				if !isPreparing {
-					preparingAssertions[chain.knownValidNode.hash] = true
-					go func() {
-						assertionPreparedChan <- chain.prepareAssertion(protocol.NewTimeBoundsBlocks(
-							chain.latestBlockNumber,
-							protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
-						))
-					}()
+					newMessages := chain.knownValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
+					if !machine.IsMachineBlocked(chain.knownValidNode.machine, chain.latestBlockNumber, newMessages) {
+						preparingAssertions[chain.knownValidNode.hash] = true
+						go func() {
+							assertionPreparedChan <- chain.prepareAssertion(protocol.NewTimeBoundsBlocks(
+								chain.latestBlockNumber,
+								protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
+							))
+						}()
+					}
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.knownValidNode.hash]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.knownValidNode) {
