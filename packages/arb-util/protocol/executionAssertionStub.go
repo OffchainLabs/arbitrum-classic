@@ -51,15 +51,12 @@ func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
 }
 
 func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
-	if a.AfterHash != b.AfterHash ||
-		a.NumGas != b.NumGas ||
-		!bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) ||
-		!bytes.Equal(a.LastMessageHash.Value, b.LastMessageHash.Value) ||
-		!bytes.Equal(a.FirstLogHash.Value, b.FirstLogHash.Value) ||
-		!bytes.Equal(a.LastLogHash.Value, b.LastLogHash.Value) {
-		return false
-	}
-	return true
+	return bytes.Equal(a.AfterHash.Value, b.AfterHash.Value) &&
+		a.NumGas == b.NumGas &&
+		bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) &&
+		bytes.Equal(a.LastMessageHash.Value, b.LastMessageHash.Value) &&
+		bytes.Equal(a.FirstLogHash.Value, b.FirstLogHash.Value) &&
+		bytes.Equal(a.LastLogHash.Value, b.LastLogHash.Value)
 }
 
 func (a *ExecutionAssertionStub) AfterHashValue() [32]byte {
@@ -96,6 +93,7 @@ func (a *ExecutionAssertionStub) Hash() [32]byte {
 	var ret [32]byte
 	hashVal := solsha3.SoliditySHA3(
 		solsha3.Bytes32(a.AfterHash.Value),
+		solsha3.Bool(a.DidInboxInsn),
 		solsha3.Uint64(a.NumGas),
 		solsha3.Bytes32(a.FirstMessageHash.Value),
 		solsha3.Bytes32(a.LastMessageHash.Value),

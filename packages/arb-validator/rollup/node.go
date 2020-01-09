@@ -18,10 +18,7 @@ package rollup
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -51,22 +48,21 @@ type Node struct {
 	numStakers      uint64
 }
 
-func NewInitialNode(machine machine.Machine) *Node {
+func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
 		prev:       nil,
 		deadline:   structures.TimeTicks{big.NewInt(0)},
 		disputable: nil,
 		linkType:   0,
 		vmProtoData: structures.NewVMProtoData(
-			machine.Hash(),
+			mach.Hash(),
 			value.NewEmptyTuple().Hash(),
 			big.NewInt(0),
 		),
-		machine: machine,
+		machine: mach,
 		depth:   0,
 	}
 	ret.setHash([32]byte{})
-	fmt.Println("Made initial node", hexutil.Encode(ret.hash[:]))
 	return ret
 }
 
@@ -140,7 +136,6 @@ func NewNodeFromPrev(
 	}
 	ret.setHash(ret.NodeDataHash(params))
 	prev.successorHashes[kind] = ret.hash
-	fmt.Println("Made node", kind, hexutil.Encode(ret.hash[:]))
 	return ret
 }
 
@@ -210,7 +205,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(vmProtoData.PendingTop),
 			solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
-			solsha3.Bytes32([32]byte{}),
+			solsha3.Bytes32(value.NewEmptyTuple().Hash()),
 			solsha3.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
 			solsha3.Uint256(node.disputable.AssertionParams.ImportedMessageCount),
 		))
@@ -234,12 +229,11 @@ func (node *Node) setHash(nodeDataHash [32]byte) {
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
-
 	innerHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(node.vmProtoData.Hash()),
 		solsha3.Uint256(node.deadline.Val),
 		solsha3.Bytes32(nodeDataHash),
-		solsha3.Uint256(uint(node.linkType)),
+		solsha3.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
 	)
 	hashSlice := solsha3.SoliditySHA3(
 		solsha3.Bytes32(prevHashArr),

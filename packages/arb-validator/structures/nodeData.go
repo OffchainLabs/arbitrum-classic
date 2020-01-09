@@ -61,6 +61,15 @@ func NewVMProtoData(
 	}
 }
 
+func (d *VMProtoData) String() string {
+	return fmt.Sprintf(
+		"VMProtoData(MachineHash: %v, PendingTop: %v, PendingCount: %v)",
+		hexutil.Encode(d.MachineHash[:]),
+		hexutil.Encode(d.PendingTop[:]),
+		d.PendingCount,
+	)
+}
+
 func (d *VMProtoData) Equals(o *VMProtoData) bool {
 	return d.MachineHash == o.MachineHash &&
 		d.PendingTop == o.PendingTop &&

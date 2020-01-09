@@ -152,11 +152,9 @@ contract Staking is ChallengeType {
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
-                    keccak256(
-                        abi.encodePacked(
-                            asserterDataHash,
-                            asserterPeriodTicks
-                        )
+                    RollupUtils.challengeDataHash(
+                        asserterDataHash,
+                        asserterPeriodTicks
                     ),
                     stakerNodeTypes[0],
                     vmProtoHashes[0]

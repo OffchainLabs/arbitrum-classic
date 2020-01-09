@@ -31,11 +31,17 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
                                             const char* contract_path) {
     auto string_filename = std::string(db_path);
     auto string_contract_path = std::string(contract_path);
-    auto storage = new CheckpointStorage(string_filename, string_contract_path);
 
-    if (storage->getInitialVmValues().valid_state) {
-        return static_cast<void*>(storage);
-    } else {
+    try {
+        auto storage =
+            new CheckpointStorage(string_filename, string_contract_path);
+
+        if (storage->getInitialVmValues().valid_state) {
+            return static_cast<void*>(storage);
+        } else {
+            return nullptr;
+        }
+    } catch (std::exception exp) {
         return nullptr;
     }
 }

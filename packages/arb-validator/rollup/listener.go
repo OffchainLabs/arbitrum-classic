@@ -163,14 +163,15 @@ func (staker *StakerListener) defendExecution(contractAddress common.Address, ma
 }
 
 type ValidatorChainListener struct {
-	chain   *ChainObserver
-	stakers map[common.Address]*StakerListener
+	chain               *ChainObserver
+	stakers             map[common.Address]*StakerListener
+	broadcastAssertions map[[32]byte]bool
 }
 
 func NewValidatorChainListener(
 	chain *ChainObserver,
 ) *ValidatorChainListener {
-	return &ValidatorChainListener{chain, make(map[common.Address]*StakerListener)}
+	return &ValidatorChainListener{chain, make(map[common.Address]*StakerListener), make(map[[32]byte]bool)}
 }
 
 func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
@@ -299,17 +300,24 @@ func (lis *ValidatorChainListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
 }
 
 func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion) {
-	leaf, ok := lis.chain.nodeGraph.nodeFromHash[prepared.prevLeaf]
+	_, alreadySent := lis.broadcastAssertions[prepared.leafHash]
+	if alreadySent {
+		return
+	}
+	leaf, ok := lis.chain.nodeGraph.nodeFromHash[prepared.leafHash]
 	if ok {
 		for _, staker := range lis.stakers {
 			stakerPos := lis.chain.nodeGraph.stakers.Get(staker.myAddr)
 			if stakerPos != nil {
 				proof := GeneratePathProof(stakerPos.location, leaf)
 				if proof != nil {
+					lis.broadcastAssertions[prepared.leafHash] = true
 					go func() {
 						err := staker.makeAssertion(context.TODO(), prepared, proof)
 						if err != nil {
 							log.Println("Error making assertion", err)
+						} else {
+							log.Println("Successfully made assertion")
 						}
 					}()
 

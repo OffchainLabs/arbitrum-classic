@@ -93,6 +93,16 @@ void deleteVal(CheckpointStorage& storage,
 TEST_CASE("Checkpointstorage initialize") {
     TuplePool pool;
     CheckpointStorage storage(dbPath, test_contract_path);
+    SECTION("construction fails") {
+        bool fails;
+        try {
+            CheckpointStorage storage2(dbPath, test_contract_path);
+            fails = false;
+        } catch (std::exception ex) {
+            fails = true;
+        }
+        REQUIRE(fails == true);
+    }
     SECTION("get") {
         getVal(storage, hash_key1, 0, false, std::vector<unsigned char>());
     }
@@ -102,6 +112,7 @@ TEST_CASE("Checkpointstorage initialize") {
     SECTION("save") { saveVal(storage, value1, hash_key1, 1, true); }
     SECTION("increment") { incrementRef(storage, hash_key1, 0, false); }
     SECTION("delete") { deleteVal(storage, hash_key1, 0, false); }
+
     boost::filesystem::remove_all(dbPath);
 }
 

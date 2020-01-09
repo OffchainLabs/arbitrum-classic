@@ -232,7 +232,7 @@ contract ArbRollup is NodeGraph, Staking {
     {
         _confirmNode(
             deadlineTicks,
-            RollupUtils.validNodeHash(
+            RollupUtils.validDataHash(
                 Protocol.generateLastMessageHash(_messages),
                 logsAcc
             ),

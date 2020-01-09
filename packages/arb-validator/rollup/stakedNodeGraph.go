@@ -77,9 +77,14 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 }
 
 func (chain *StakedNodeGraph) CreateStake(ev ethbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+	node, ok := chain.nodeFromHash[ev.NodeHash]
+	if !ok {
+		log.Println("Bad location", hexutil.Encode(ev.NodeHash[:]))
+		panic("Tried to create stake on bad node")
+	}
 	chain.stakers.Add(&Staker{
 		ev.Staker,
-		chain.nodeFromHash[ev.NodeHash],
+		node,
 		currentTime,
 		common.Address{},
 	})

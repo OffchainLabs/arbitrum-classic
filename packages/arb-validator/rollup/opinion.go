@@ -29,7 +29,7 @@ import (
 )
 
 type preparedAssertion struct {
-	prevLeaf         [32]byte
+	leafHash         [32]byte
 	prevPrevLeafHash [32]byte
 	prevDataHash     [32]byte
 	prevDeadline     structures.TimeTicks
@@ -40,6 +40,21 @@ type preparedAssertion struct {
 	claim       *structures.AssertionClaim
 	assertion   *protocol.ExecutionAssertion
 	machine     machine.Machine
+}
+
+func (pa *preparedAssertion) Clone() *preparedAssertion {
+	return &preparedAssertion{
+		leafHash:         pa.leafHash,
+		prevPrevLeafHash: pa.prevPrevLeafHash,
+		prevDataHash:     pa.prevDataHash,
+		prevDeadline:     structures.TimeTicks{new(big.Int).Set(pa.prevDeadline.Val)},
+		prevChildType:    pa.prevChildType,
+		beforeState:      pa.beforeState.Clone(),
+		params:           pa.params.Clone(),
+		claim:            pa.claim.Clone(),
+		assertion:        pa.assertion,
+		machine:          pa.machine,
+	}
 }
 
 func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
@@ -98,17 +113,17 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			correctNode, ok := chain.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
 			if ok {
 				if newOpinion == structures.ValidChildType {
-					correctNode.machine = nextMachine
-				} else {
-					correctNode.machine = chain.knownValidNode.machine.Clone()
-				}
-				if newOpinion == structures.ValidChildType {
 					for _, lis := range chain.listeners {
 						lis.AdvancedKnownAssertion(validExecution, correctNode.assertionTxHash)
 					}
 				}
 				chain.RUnlock()
 				chain.Lock()
+				if newOpinion == structures.ValidChildType {
+					correctNode.machine = nextMachine
+				} else {
+					correctNode.machine = chain.knownValidNode.machine.Clone()
+				}
 				chain.knownValidNode = correctNode
 				chain.Unlock()
 			} else {
@@ -122,12 +137,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			case <-ctx.Done():
 				break
 			case prepped := <-assertionPreparedChan:
-				preparedAssertions[prepped.prevLeaf] = prepped
-				chain.RLock()
-				for _, lis := range chain.listeners {
-					lis.AssertionPrepared(prepped)
-				}
-				chain.RUnlock()
+				preparedAssertions[prepped.leafHash] = prepped
 			case <-ticker.C:
 				chain.RLock()
 				// Catch up to current head
@@ -135,27 +145,25 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					updateCurrent()
 					chain.RLock()
 				}
-				currentTime := chain.latestBlockNumber
-				currentValidHash := chain.knownValidNode.hash
-				chain.RUnlock()
 				// Prepare next assertion
-				_, isPreparing := preparingAssertions[currentValidHash]
-				prepared, isPrepared := preparedAssertions[currentValidHash]
+				_, isPreparing := preparingAssertions[chain.knownValidNode.hash]
 				if !isPreparing {
-					preparingAssertions[currentValidHash] = true
+					preparingAssertions[chain.knownValidNode.hash] = true
 					go func() {
 						assertionPreparedChan <- chain.prepareAssertion(protocol.NewTimeBoundsBlocks(
-							protocol.NewTimeBlocks(currentTime),
-							protocol.NewTimeBlocks(new(big.Int).Add(currentTime, big.NewInt(10))),
+							protocol.NewTimeBlocks(chain.latestBlockNumber),
+							protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber, big.NewInt(10))),
 						))
 					}()
-				} else if isPrepared {
-					chain.RLock()
-					for _, lis := range chain.listeners {
-						lis.AssertionPrepared(prepared)
+				} else {
+					prepared, isPrepared := preparedAssertions[chain.knownValidNode.hash]
+					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.knownValidNode) {
+						for _, lis := range chain.listeners {
+							lis.AssertionPrepared(prepared.Clone())
+						}
 					}
-					chain.RUnlock()
 				}
+				chain.RUnlock()
 
 			}
 		}
@@ -212,7 +220,7 @@ func (chain *ChainObserver) prepareAssertion(
 		}
 	}
 	return &preparedAssertion{
-		prevLeaf:         currentOpinionHash,
+		leafHash:         currentOpinionHash,
 		prevPrevLeafHash: prevPrevLeafHash,
 		prevDataHash:     prevDataHash,
 		prevDeadline:     prevDeadline,
