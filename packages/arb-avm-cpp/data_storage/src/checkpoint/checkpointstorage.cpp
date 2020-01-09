@@ -31,6 +31,11 @@ CheckpointStorage::CheckpointStorage(const std::string& db_path,
     initial_state = parseInitialVmValues(contract_path, *pool.get());
 }
 
+bool CheckpointStorage::closeCheckpointStorage() {
+    auto status = datastorage->closeDb();
+    return status.ok();
+}
+
 InitialVmValues CheckpointStorage::getInitialVmValues() const {
     return initial_state;
 }

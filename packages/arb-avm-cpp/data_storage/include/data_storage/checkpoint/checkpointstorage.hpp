@@ -39,6 +39,7 @@ class CheckpointStorage {
     std::shared_ptr<TuplePool> pool;
     CheckpointStorage(const std::string& db_path,
                       const std::string& contract_path);
+    bool closeCheckpointStorage();
     InitialVmValues getInitialVmValues() const;
     GetResults getValue(const std::vector<unsigned char>& hash_key) const;
     std::unique_ptr<Transaction> makeTransaction();

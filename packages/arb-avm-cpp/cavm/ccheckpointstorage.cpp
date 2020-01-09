@@ -46,6 +46,11 @@ CCheckpointStorage* createCheckpointStorage(const char* db_path,
     }
 }
 
+int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    return storage->closeCheckpointStorage();
+}
+
 void destroyCheckpointStorage(CCheckpointStorage* storage) {
     if (storage == NULL)
         return;

@@ -112,6 +112,17 @@ TEST_CASE("Checkpointstorage initialize") {
     SECTION("save") { saveVal(storage, value1, hash_key1, 1, true); }
     SECTION("increment") { incrementRef(storage, hash_key1, 0, false); }
     SECTION("delete") { deleteVal(storage, hash_key1, 0, false); }
+    SECTION("construction succeeds") {
+        bool fails;
+        try {
+            storage.closeCheckpointStorage();
+            CheckpointStorage storage2(dbPath, test_contract_path);
+            fails = false;
+        } catch (std::exception ex) {
+            fails = true;
+        }
+        REQUIRE(fails == false);
+    }
 
     boost::filesystem::remove_all(dbPath);
 }
