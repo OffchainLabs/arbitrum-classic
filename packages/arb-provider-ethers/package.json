@@ -24,7 +24,7 @@
         "test": "jest --config jest.config.js",
         "format": "yarn run prettier '**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
         "lint": "eslint . src/**/*.ts tests/**/*.ts",
-        "update-abi": "typechain --target=ethers --outDir src/lib '../arb-bridge-eth/build/contracts/{ArbChannel,ArbChain,GlobalPendingInbox}.json'"
+        "update-abi": "typechain --target=ethers --outDir src/lib '../arb-bridge-eth/build/contracts/{ArbRollup,GlobalPendingInbox}.json'"
     },
     "dependencies": {
         "@types/node-fetch": "^2.5.0",
