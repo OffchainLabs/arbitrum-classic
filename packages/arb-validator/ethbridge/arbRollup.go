@@ -231,7 +231,7 @@ func (vm *ArbRollup) MakeAssertion(
 
 func (vm *ArbRollup) ConfirmValid(
 	ctx context.Context,
-	deadlineTics *big.Int,
+	deadline structures.TimeTicks,
 	outMsgs []value.Value,
 	logsAccHash [32]byte,
 	protoHash [32]byte,
@@ -243,7 +243,7 @@ func (vm *ArbRollup) ConfirmValid(
 	messages := hashing.CombineMessages(outMsgs)
 	tx, err := vm.ArbRollup.ConfirmValid(
 		vm.auth,
-		deadlineTics,
+		deadline.Val,
 		messages,
 		logsAccHash,
 		protoHash,
@@ -259,9 +259,9 @@ func (vm *ArbRollup) ConfirmValid(
 
 func (vm *ArbRollup) ConfirmInvalid(
 	ctx context.Context,
-	deadlineTics *big.Int,
+	deadline structures.TimeTicks,
 	challengeNodeData [32]byte,
-	branch uint64,
+	branch structures.ChildType,
 	protoHash [32]byte,
 	stakerAddresses []common.Address,
 	stakerProofs [][32]byte,
@@ -270,9 +270,9 @@ func (vm *ArbRollup) ConfirmInvalid(
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.ConfirmInvalid(
 		vm.auth,
-		deadlineTics,
+		deadline.Val,
 		challengeNodeData,
-		new(big.Int).SetUint64(branch),
+		new(big.Int).SetUint64(uint64(branch)),
 		protoHash,
 		stakerAddresses,
 		stakerProofs,

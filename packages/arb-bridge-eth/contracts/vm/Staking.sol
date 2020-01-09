@@ -67,6 +67,7 @@ contract Staking is ChallengeType {
     string constant CHCK_ORDER = "CHCK_ORDER";
     // at least one active staker disagrees
     string constant CHCK_STAKER_PROOF = "CHCK_STAKER_PROOF";
+    string constant CHCK_OFFSETS = "CHCK_OFFSETS";
 
 
     uint256 internal constant VALID_CHILD_TYPE = 3;
@@ -259,6 +260,7 @@ contract Staking is ChallengeType {
     {
         uint256 _stakerCount = stakerAddresses.length;
         require(_stakerCount == stakerCount, CHCK_COUNT);
+        require(_stakerCount == stakerProofOffsets.length + 1, CHCK_OFFSETS);
         bytes20 prevStaker = 0x00;
         uint activeCount = 0;
         for (uint256 i = 0; i < _stakerCount; i++) {

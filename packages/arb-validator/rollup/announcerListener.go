@@ -58,6 +58,12 @@ func (al *AnnouncerListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
 func (al *AnnouncerListener) AssertionPrepared(*preparedAssertion) {
 	log.Println("AssertionPrepared")
 }
+func (al *AnnouncerListener) ValidNodeConfirmable(*confirmValidOpportunity) {
+	log.Println("ValidNodeConfirmable")
+}
+func (al *AnnouncerListener) InvalidNodeConfirmable(*confirmInvalidOpportunity) {
+	log.Println("InvalidNodeConfirmable")
+}
 func (al *AnnouncerListener) PrunableLeafs([]pruneParams) {
 	log.Println("PrunableLeafs")
 }

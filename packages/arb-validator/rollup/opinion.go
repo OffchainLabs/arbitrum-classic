@@ -121,6 +121,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				chain.Lock()
 				if newOpinion == structures.ValidChildType {
 					correctNode.machine = nextMachine
+					correctNode.assertion = validExecution
 				} else {
 					correctNode.machine = chain.knownValidNode.machine.Clone()
 				}
@@ -151,8 +152,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					preparingAssertions[chain.knownValidNode.hash] = true
 					go func() {
 						assertionPreparedChan <- chain.prepareAssertion(protocol.NewTimeBoundsBlocks(
-							protocol.NewTimeBlocks(chain.latestBlockNumber),
-							protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber, big.NewInt(10))),
+							chain.latestBlockNumber,
+							protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
 						))
 					}()
 				} else {

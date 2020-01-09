@@ -37,7 +37,8 @@ type Node struct {
 	linkType    structures.ChildType
 	vmProtoData *structures.VMProtoData
 
-	machine         machine.Machine // nil if unknown
+	machine         machine.Machine              // nil if unknown
+	assertion       *protocol.ExecutionAssertion // nil if not valid node or unknown
 	depth           uint64
 	nodeDataHash    [32]byte
 	innerHash       [32]byte

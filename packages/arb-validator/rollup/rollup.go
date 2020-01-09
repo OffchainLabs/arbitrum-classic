@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -45,7 +44,7 @@ type ChainObserver struct {
 	rollupAddr        common.Address
 	pendingInbox      *structures.PendingInbox
 	knownValidNode    *Node
-	latestBlockNumber *big.Int
+	latestBlockNumber *protocol.TimeBlocks
 	listeners         []ChainListener
 	checkpointer      *structures.RollupCheckpointer
 	isOpinionated     bool
@@ -58,7 +57,7 @@ func NewChain(
 	checkpointer *structures.RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
-	startTime *big.Int,
+	startTime *protocol.TimeBlocks,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -78,6 +77,7 @@ func NewChain(
 	defer ret.Unlock()
 
 	ret.startCleanupThread(ctx)
+	ret.startConfirmThread(ctx)
 	if updateOpinion {
 		ret.isOpinionated = true
 		ret.assertionMadeChan = make(chan bool, 20)
@@ -232,7 +232,7 @@ func (chain *ChainObserver) notifyAssert(
 	return nil
 }
 
-func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
+func (chain *ChainObserver) notifyNewBlockNumber(blockNum *protocol.TimeBlocks) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockNumber = blockNum
@@ -241,7 +241,7 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockNum, buf, ckptCtx, nil)
+	chain.checkpointer.AsyncSaveCheckpoint(blockNum.AsInt(), buf, ckptCtx, nil)
 }
 
 func (co *ChainObserver) Equals(co2 *ChainObserver) bool {

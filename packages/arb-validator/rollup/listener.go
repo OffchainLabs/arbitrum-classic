@@ -19,9 +19,7 @@ package rollup
 import (
 	"context"
 	"log"
-	"sync"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -29,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -45,6 +42,8 @@ type ChainListener interface {
 	ConfirmedNode(ethbridge.ConfirmedEvent)
 
 	AssertionPrepared(*preparedAssertion)
+	ValidNodeConfirmable(*confirmValidOpportunity)
+	InvalidNodeConfirmable(*confirmInvalidOpportunity)
 	PrunableLeafs([]pruneParams)
 	MootableStakes([]recoverStakeMootedParams)
 	OldStakes([]recoverStakeOldParams)
@@ -52,126 +51,22 @@ type ChainListener interface {
 	AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte)
 }
 
-type StakerListener struct {
-	sync.Mutex
-	myAddr   common.Address
-	auth     *bind.TransactOpts
-	client   *ethclient.Client
-	contract *ethbridge.ArbRollup
-}
-
-func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
-	go func() { // we're holding a lock on the chain, so launch the challenge asynchronously
-		staker.contract.StartChallenge(
-			ctx,
-			opp.asserter,
-			opp.challenger,
-			opp.prevNodeHash,
-			opp.deadlineTicks.Val,
-			opp.asserterNodeType,
-			opp.challengerNodeType,
-			opp.asserterVMProtoHash,
-			opp.challengerVMProtoHash,
-			opp.asserterProof,
-			opp.challengerProof,
-			opp.asserterDataHash,
-			opp.asserterPeriodTicks,
-			opp.challengerNodeHash,
-		)
-	}()
-}
-
-func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) error {
-	staker.Lock()
-	_, err := staker.contract.MakeAssertion(
-		ctx,
-		opp.prevPrevLeafHash,
-		opp.prevDataHash,
-		opp.prevDeadline,
-		opp.prevChildType,
-		opp.beforeState,
-		opp.params,
-		opp.claim,
-		proof,
-	)
-	staker.Unlock()
-	return err
-}
-
-func (staker *StakerListener) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
-	go challenges.ChallengePendingTopClaim(
-		staker.auth,
-		staker.client,
-		contractAddress,
-		pendingInbox,
-	)
-}
-
-func (staker *StakerListener) challengeMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
-	go challenges.ChallengeMessagesClaim(
-		staker.auth,
-		staker.client,
-		contractAddress,
-		pendingInbox,
-		conflictNode.vmProtoData.PendingTop,
-		conflictNode.disputable.AssertionClaim.AfterPendingTop,
-	)
-}
-
-func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition) {
-	go challenges.ChallengeExecutionClaim(
-		staker.auth,
-		staker.client,
-		contractAddress,
-		pre,
-		mach,
-	)
-}
-
-func (staker *StakerListener) defendPendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
-	go challenges.DefendPendingTopClaim(
-		staker.auth,
-		staker.client,
-		contractAddress,
-		pendingInbox,
-		conflictNode.disputable.AssertionClaim.AfterPendingTop,
-		conflictNode.disputable.MaxPendingTop,
-	)
-}
-
-func (staker *StakerListener) defendMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
-	go challenges.DefendMessagesClaim(
-		staker.auth,
-		staker.client,
-		contractAddress,
-		pendingInbox,
-		conflictNode.vmProtoData.PendingTop,
-		conflictNode.disputable.AssertionClaim.AfterPendingTop,
-		conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
-	)
-}
-
-func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition, numSteps uint32) {
-	go challenges.DefendExecutionClaim(
-		staker.auth,
-		staker.client,
-		contractAddress,
-		pre,
-		numSteps,
-		mach,
-	)
-}
-
 type ValidatorChainListener struct {
-	chain               *ChainObserver
-	stakers             map[common.Address]*StakerListener
-	broadcastAssertions map[[32]byte]bool
+	chain                  *ChainObserver
+	stakers                map[common.Address]*StakerListener
+	broadcastAssertions    map[[32]byte]bool
+	broadcastConfirmations map[[32]byte]bool
 }
 
 func NewValidatorChainListener(
 	chain *ChainObserver,
 ) *ValidatorChainListener {
-	return &ValidatorChainListener{chain, make(map[common.Address]*StakerListener), make(map[[32]byte]bool)}
+	return &ValidatorChainListener{
+		chain:                  chain,
+		stakers:                make(map[common.Address]*StakerListener),
+		broadcastAssertions:    make(map[[32]byte]bool),
+		broadcastConfirmations: make(map[[32]byte]bool),
+	}
 }
 
 func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
@@ -198,7 +93,7 @@ func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) 
 	if ok {
 		opps := lis.chain.nodeGraph.checkChallengeOpportunityAllPairs()
 		for _, opp := range opps {
-			staker.initiateChallenge(context.TODO(), opp)
+			go staker.initiateChallenge(context.TODO(), opp)
 		}
 	} else {
 		lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
@@ -228,7 +123,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 			}
 			opp := lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
 			if opp != nil {
-				staker.initiateChallenge(ctx, opp)
+				go staker.initiateChallenge(ctx, opp)
 				return
 			}
 		}
@@ -240,11 +135,11 @@ func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStarte
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			asserter.defendPendingTop(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+			go asserter.defendPendingTop(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
 		case structures.InvalidMessagesChildType:
-			asserter.defendMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+			go asserter.defendMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
 		case structures.InvalidExecutionChildType:
-			asserter.defendExecution(
+			go asserter.defendExecution(
 				ev.ChallengeContract,
 				conflictNode.machine,
 				lis.chain.ExecutionPrecondition(conflictNode),
@@ -257,11 +152,11 @@ func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStarte
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			challenger.challengePendingTop(ev.ChallengeContract, lis.chain.pendingInbox)
+			go challenger.challengePendingTop(ev.ChallengeContract, lis.chain.pendingInbox)
 		case structures.InvalidMessagesChildType:
-			challenger.challengeMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+			go challenger.challengeMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
 		case structures.InvalidExecutionChildType:
-			challenger.challengeExecution(
+			go challenger.challengeExecution(
 				ev.ChallengeContract,
 				conflictNode.machine,
 				lis.chain.ExecutionPrecondition(conflictNode),
@@ -325,6 +220,54 @@ func (lis *ValidatorChainListener) AssertionPrepared(prepared *preparedAssertion
 				}
 			}
 		}
+	}
+}
+
+func (lis *ValidatorChainListener) ValidNodeConfirmable(conf *confirmValidOpportunity) {
+	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
+	if alreadySent {
+		return
+	}
+	for _, staker := range lis.stakers {
+		go func() {
+			staker.Lock()
+			staker.contract.ConfirmValid(
+				context.TODO(),
+				conf.deadlineTicks,
+				conf.messages,
+				conf.logsAcc,
+				conf.vmProtoStateHash,
+				conf.stakerAddresses,
+				conf.stakerProofs,
+				conf.stakerProofOffsets,
+			)
+			staker.Unlock()
+		}()
+		break
+	}
+}
+
+func (lis *ValidatorChainListener) InvalidNodeConfirmable(conf *confirmInvalidOpportunity) {
+	_, alreadySent := lis.broadcastConfirmations[conf.nodeHash]
+	if alreadySent {
+		return
+	}
+	for _, staker := range lis.stakers {
+		go func() {
+			staker.Lock()
+			staker.contract.ConfirmInvalid(
+				context.TODO(),
+				conf.deadlineTicks,
+				conf.challengeNodeData,
+				conf.branch,
+				conf.vmProtoStateHash,
+				conf.stakerAddresses,
+				conf.stakerProofs,
+				conf.stakerProofOffsets,
+			)
+			staker.Unlock()
+		}()
+		break
 	}
 }
 
