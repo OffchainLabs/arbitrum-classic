@@ -38,13 +38,15 @@ func (al *AssertionListener) CompletedChallenge(event arbbridge.ChallengeComplet
 func (al *AssertionListener) SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {}
 func (al *AssertionListener) ConfirmedNode(arbbridge.ConfirmedEvent)                               {}
 
-func (al *AssertionListener) AssertionPrepared(*preparedAssertion)      {}
-func (al *AssertionListener) PrunableLeafs([]pruneParams)               {}
-func (al *AssertionListener) MootableStakes([]recoverStakeMootedParams) {}
-func (al *AssertionListener) OldStakes([]recoverStakeOldParams)         {}
+func (al *AssertionListener) AssertionPrepared(*preparedAssertion)              {}
+func (al *AssertionListener) ValidNodeConfirmable(*confirmValidOpportunity)     {}
+func (al *AssertionListener) InvalidNodeConfirmable(*confirmInvalidOpportunity) {}
+func (al *AssertionListener) PrunableLeafs([]pruneParams)                       {}
+func (al *AssertionListener) MootableStakes([]recoverStakeMootedParams)         {}
+func (al *AssertionListener) OldStakes([]recoverStakeOldParams)                 {}
 
-func (lis *AssertionListener) AdvancedKnownAssertion(assertion *protocol.ExecutionAssertion, txHash [32]byte) {
-	lis.CompletedAssertionChan <- FinalizedAssertion{
+func (al *AssertionListener) AdvancedKnownAssertion(assertion *protocol.ExecutionAssertion, txHash [32]byte) {
+	al.CompletedAssertionChan <- FinalizedAssertion{
 		Assertion:     assertion,
 		OnChainTxHash: txHash,
 	}

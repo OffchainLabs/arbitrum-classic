@@ -57,7 +57,7 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := structures.NewCheckpointContextImpl()
 	chainBuf := chain.MarshalForCheckpoint(ctx)
-	chain2 := chainBuf.UnmarshalFromCheckpoint(ctx, nil)
+	chain2 := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
 	if !chain.Equals(chain2) {
 		t.Fail()
 	}
@@ -73,7 +73,7 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 	doneChan := make(chan interface{})
 	cp.AsyncSaveCheckpoint(blockHeight, buf, ctx, doneChan)
 	<-doneChan
-	chain2, err := UnmarshalChainObserverFromBytes(buf, ctx, nil)
+	chain2, err := UnmarshalChainObserverFromBytes(context.TODO(), buf, ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

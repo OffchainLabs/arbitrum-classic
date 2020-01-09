@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -45,7 +44,7 @@ type ChainObserver struct {
 	rollupAddr        common.Address
 	pendingInbox      *structures.PendingInbox
 	knownValidNode    *Node
-	latestBlockNumber *big.Int
+	latestBlockNumber *protocol.TimeBlocks
 	listeners         []ChainListener
 	checkpointer      *structures.RollupCheckpointer
 	isOpinionated     bool
@@ -58,7 +57,7 @@ func NewChain(
 	checkpointer *structures.RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
-	startTime *big.Int,
+	startTime *protocol.TimeBlocks,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -78,6 +77,7 @@ func NewChain(
 	defer ret.Unlock()
 
 	ret.startCleanupThread(ctx)
+	ret.startConfirmThread(ctx)
 	if updateOpinion {
 		ret.isOpinionated = true
 		ret.assertionMadeChan = make(chan bool, 20)
@@ -106,33 +106,37 @@ func (chain *ChainObserver) MarshalToBytes(ctx structures.CheckpointContext) ([]
 	return proto.Marshal(cob)
 }
 
-func (m *ChainObserverBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, _client arbbridge.ArbRollup) *ChainObserver {
+func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
+	ctx context.Context,
+	restoreCtx structures.RestoreContext,
+	_client arbbridge.ArbRollup,
+) *ChainObserver {
 	chain := &ChainObserver{
 		RWMutex:      &sync.RWMutex{},
-		nodeGraph:    m.StakedNodeGraph.UnmarshalFromCheckpoint(ctx),
+		nodeGraph:    m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx),
 		rollupAddr:   common.BytesToAddress(m.ContractAddress),
-		pendingInbox: &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(ctx)},
+		pendingInbox: &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
 		listeners:    []ChainListener{},
 	}
 	chain.Lock()
 	defer chain.Unlock()
 	if _client != nil {
-		chain.startCleanupThread(context.TODO())
+		chain.startCleanupThread(ctx)
 	}
 	if m.IsOpinionated {
 		chain.isOpinionated = true
 		chain.assertionMadeChan = make(chan bool)
-		chain.startOpinionUpdateThread(context.TODO())
+		chain.startOpinionUpdateThread(ctx)
 	}
 	return chain
 }
 
-func UnmarshalChainObserverFromBytes(buf []byte, ctx structures.RestoreContext, client arbbridge.ArbRollup) (*ChainObserver, error) {
+func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, client arbbridge.ArbRollup) (*ChainObserver, error) {
 	cob := &ChainObserverBuf{}
 	if err := proto.Unmarshal(buf, cob); err != nil {
 		return nil, err
 	}
-	return cob.UnmarshalFromCheckpoint(ctx, client), nil
+	return cob.UnmarshalFromCheckpoint(ctx, restoreCtx, client), nil
 }
 
 func (chain *ChainObserver) PruneNode(ev arbbridge.PrunedEvent) {
@@ -228,7 +232,7 @@ func (chain *ChainObserver) notifyAssert(
 	return nil
 }
 
-func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
+func (chain *ChainObserver) notifyNewBlockNumber(blockNum *protocol.TimeBlocks) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockNumber = blockNum
@@ -237,7 +241,7 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockNum, buf, ckptCtx, nil)
+	chain.checkpointer.AsyncSaveCheckpoint(blockNum.AsInt(), buf, ckptCtx, nil)
 }
 
 func (co *ChainObserver) Equals(co2 *ChainObserver) bool {

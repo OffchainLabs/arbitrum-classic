@@ -58,8 +58,7 @@ func RunObserver(ctx context.Context, chain *ChainObserver, clnt *ethclient.Clie
 				}
 				if notification.Header.Number.Cmp(lastBlockNumberSeen) > 0 {
 					lastBlockNumberSeen = notification.Header.Number
-					chain.notifyNewBlockNumber(lastBlockNumberSeen)
-
+					chain.notifyNewBlockNumber(protocol.NewTimeBlocks(lastBlockNumberSeen))
 				}
 				handleNotification(notification, chain)
 			case <-errChan:

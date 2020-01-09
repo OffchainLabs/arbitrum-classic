@@ -18,10 +18,7 @@ package rollup
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
@@ -40,7 +37,8 @@ type Node struct {
 	linkType    structures.ChildType
 	vmProtoData *structures.VMProtoData
 
-	machine         machine.Machine // nil if unknown
+	machine         machine.Machine              // nil if unknown
+	assertion       *protocol.ExecutionAssertion // nil if not valid node or unknown
 	depth           uint64
 	nodeDataHash    [32]byte
 	innerHash       [32]byte
@@ -51,22 +49,21 @@ type Node struct {
 	numStakers      uint64
 }
 
-func NewInitialNode(machine machine.Machine) *Node {
+func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
 		prev:       nil,
 		deadline:   structures.TimeTicks{big.NewInt(0)},
 		disputable: nil,
 		linkType:   0,
 		vmProtoData: structures.NewVMProtoData(
-			machine.Hash(),
+			mach.Hash(),
 			value.NewEmptyTuple().Hash(),
 			big.NewInt(0),
 		),
-		machine: machine,
+		machine: mach,
 		depth:   0,
 	}
 	ret.setHash([32]byte{})
-	fmt.Println("Made initial node", hexutil.Encode(ret.hash[:]))
 	return ret
 }
 

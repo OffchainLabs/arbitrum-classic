@@ -19,17 +19,17 @@ package rollup
 import (
 	"bytes"
 	"log"
+	"math/big"
 	"sort"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
@@ -76,9 +76,14 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 }
 
 func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+	node, ok := chain.nodeFromHash[ev.NodeHash]
+	if !ok {
+		log.Println("Bad location", hexutil.Encode(ev.NodeHash[:]))
+		panic("Tried to create stake on bad node")
+	}
 	chain.stakers.Add(&Staker{
 		ev.Staker,
-		chain.nodeFromHash[ev.NodeHash],
+		node,
 		currentTime,
 		common.Address{},
 	})
@@ -131,24 +136,105 @@ func (sa SortableAddressList) Swap(i, j int) {
 	sa[i], sa[j] = sa[j], sa[i]
 }
 
-func (sng *StakedNodeGraph) generateAlignedStakersProof(
-	confirmingNode *Node,
-	deadline structures.TimeTicks,
-) (stakerAddrs []common.Address, proof [][32]byte, offsets []uint64) {
+type confirmValidOpportunity struct {
+	nodeHash           [32]byte
+	deadlineTicks      structures.TimeTicks
+	messages           []value.Value
+	logsAcc            [32]byte
+	vmProtoStateHash   [32]byte
+	stakerAddresses    []common.Address
+	stakerProofs       [][32]byte
+	stakerProofOffsets []*big.Int
+}
+
+type confirmInvalidOpportunity struct {
+	nodeHash           [32]byte
+	deadlineTicks      structures.TimeTicks
+	challengeNodeData  [32]byte
+	branch             structures.ChildType
+	vmProtoStateHash   [32]byte
+	stakerAddresses    []common.Address
+	stakerProofs       [][32]byte
+	stakerProofOffsets []*big.Int
+}
+
+func (sng *StakedNodeGraph) generateNextConfProof(
+	currentTime structures.TimeTicks,
+) (*confirmValidOpportunity, *confirmInvalidOpportunity) {
+	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)
 	})
 	sort.Sort(SortableAddressList(stakerAddrs))
 
-	for _, sa := range stakerAddrs {
-		staker := sng.stakers.Get(sa)
-		if staker.creationTime.Cmp(deadline) >= 0 {
-			offsets = append(offsets, uint64(len(proof)))
-			subProof := GeneratePathProof(confirmingNode, staker.location)
-			proof = append(proof, subProof...)
+	for _, successor := range sng.latestConfirmed.successorHashes {
+		node := sng.nodeFromHash[successor]
+		proof, offsets := sng.generateAlignedStakersProof(
+			node,
+			currentTime,
+			stakerAddrs,
+		)
+
+		if proof != nil {
+			if node.linkType == structures.ValidChildType {
+				if node.assertion == nil {
+					return nil, nil
+				}
+				return &confirmValidOpportunity{
+					nodeHash:           node.hash,
+					deadlineTicks:      node.deadline,
+					messages:           node.assertion.OutMsgs,
+					logsAcc:            node.disputable.AssertionClaim.AssertionStub.LastLogHashValue(),
+					vmProtoStateHash:   node.vmProtoData.Hash(),
+					stakerAddresses:    stakerAddrs,
+					stakerProofs:       proof,
+					stakerProofOffsets: offsets,
+				}, nil
+			} else {
+				return nil, &confirmInvalidOpportunity{
+					nodeHash:           node.hash,
+					deadlineTicks:      node.deadline,
+					challengeNodeData:  node.nodeDataHash,
+					branch:             node.linkType,
+					vmProtoStateHash:   node.vmProtoData.Hash(),
+					stakerAddresses:    stakerAddrs,
+					stakerProofs:       proof,
+					stakerProofOffsets: offsets,
+				}
+			}
 		}
 	}
-	return
+
+	return nil, nil
+}
+
+func (sng *StakedNodeGraph) generateAlignedStakersProof(
+	confirmingNode *Node,
+	currentTime structures.TimeTicks,
+	stakerAddrs []common.Address,
+) ([][32]byte, []*big.Int) {
+	proof := make([][32]byte, 0)
+	offsets := make([]*big.Int, 0)
+	if currentTime.Cmp(confirmingNode.deadline) < 0 {
+		return nil, nil
+	}
+	offsets = append(offsets, big.NewInt(0))
+	for _, sa := range stakerAddrs {
+		staker := sng.stakers.Get(sa)
+		if staker.creationTime.Cmp(confirmingNode.deadline) >= 0 {
+			continue
+		}
+		subProof := GeneratePathProof(confirmingNode, staker.location)
+		if subProof == nil {
+			return nil, nil
+		}
+		proof = append(proof, subProof...)
+		offsets = append(offsets, new(big.Int).SetUint64(uint64(len(proof))))
+	}
+	if len(proof) == 0 {
+		return nil, nil
+	}
+	return proof, offsets
 }
 
 func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedParams, []recoverStakeOldParams) {

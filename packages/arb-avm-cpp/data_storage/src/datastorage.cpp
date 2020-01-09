@@ -49,6 +49,10 @@ DataStorage::~DataStorage() {
     txn_db->Close();
 }
 
+rocksdb::Status DataStorage::closeDb() {
+    return txn_db->Close();
+}
+
 GetResults DataStorage::getValue(
     const std::vector<unsigned char>& hash_key) const {
     auto read_options = rocksdb::ReadOptions();

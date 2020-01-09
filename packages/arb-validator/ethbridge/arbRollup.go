@@ -194,12 +194,21 @@ func (vm *ArbRollup) MakeAssertion(
 	return vm.waitForReceipt(ctx, tx, "MakeAssertion")
 }
 
-func (vm *ArbRollup) ConfirmValid(ctx context.Context, deadlineTics *big.Int, outMsgs []value.Value, logsAccHash [32]byte, protoHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
+func (vm *ArbRollup) ConfirmValid(
+	ctx context.Context,
+	deadline structures.TimeTicks,
+	outMsgs []value.Value,
+	logsAccHash [32]byte,
+	protoHash [32]byte,
+	stakerAddresses []common.Address,
+	stakerProofs [][32]byte,
+	stakerProofOffsets []*big.Int,
+) (*types.Receipt, error) {
 	vm.auth.Context = ctx
 	messages := hashing.CombineMessages(outMsgs)
 	tx, err := vm.ArbRollup.ConfirmValid(
 		vm.auth,
-		deadlineTics,
+		deadline.Val,
 		messages,
 		logsAccHash,
 		protoHash,
@@ -213,13 +222,22 @@ func (vm *ArbRollup) ConfirmValid(ctx context.Context, deadlineTics *big.Int, ou
 	return vm.waitForReceipt(ctx, tx, "ConfirmValid")
 }
 
-func (vm *ArbRollup) ConfirmInvalid(ctx context.Context, deadlineTics *big.Int, challengeNodeData [32]byte, branch uint64, protoHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error {
+func (vm *ArbRollup) ConfirmInvalid(
+	ctx context.Context,
+	deadline structures.TimeTicks,
+	challengeNodeData [32]byte,
+	branch structures.ChildType,
+	protoHash [32]byte,
+	stakerAddresses []common.Address,
+	stakerProofs [][32]byte,
+	stakerProofOffsets []*big.Int,
+) (*types.Receipt, error) {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.ConfirmInvalid(
 		vm.auth,
-		deadlineTics,
+		deadline.Val,
 		challengeNodeData,
-		new(big.Int).SetUint64(branch),
+		new(big.Int).SetUint64(uint64(branch)),
 		protoHash,
 		stakerAddresses,
 		stakerProofs,

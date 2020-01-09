@@ -55,6 +55,12 @@ func NewCheckpoint(dbPath string, contractPath string) (*CheckpointStorage, erro
 	return returnVal, nil
 }
 
+func (checkpoint *CheckpointStorage) CloseCheckpointStorage() bool {
+	success := C.closeCheckpointStorage(checkpoint.c)
+
+	return success == 1
+}
+
 func cDestroyCheckpointStorage(cCheckpointStorage *CheckpointStorage) {
 	C.destroyCheckpointStorage(cCheckpointStorage.c)
 }
