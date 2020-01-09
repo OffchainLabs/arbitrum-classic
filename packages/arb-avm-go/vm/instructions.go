@@ -690,6 +690,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 	}
 	inboxVal := state.GetInbox()
 	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
+		PushStackInt(state, mods, timeout)
 		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
 	state.context.ReadInbox()
