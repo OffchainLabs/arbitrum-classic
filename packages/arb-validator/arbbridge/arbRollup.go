@@ -35,8 +35,26 @@ type ArbRollup interface {
 	MoveStake(ctx context.Context, proof1 [][32]byte, proof2 [][32]byte) error
 	PruneLeaf(ctx context.Context, from [32]byte, proof1 [][32]byte, proof2 [][32]byte) error
 	MakeAssertion(ctx context.Context, prevPrevLeafHash [32]byte, prevDataHash [32]byte, prevDeadline structures.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof [][32]byte) error
-	ConfirmValid(ctx context.Context, deadlineTics *big.Int, outMsgs []value.Value, logsAccHash [32]byte, protoHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error
-	ConfirmInvalid(ctx context.Context, deadlineTics *big.Int, challengeNodeData [32]byte, branch uint64, protoHash [32]byte, stakerAddresses []common.Address, stakerProofs [][32]byte, stakerProofOffsets []*big.Int) error
+	ConfirmValid(
+		ctx context.Context,
+		deadline structures.TimeTicks,
+		outMsgs []value.Value,
+		logsAccHash [32]byte,
+		protoHash [32]byte,
+		stakerAddresses []common.Address,
+		stakerProofs [][32]byte,
+		stakerProofOffsets []*big.Int,
+	) error
+	ConfirmInvalid(
+		ctx context.Context,
+		deadline structures.TimeTicks,
+		challengeNodeData [32]byte,
+		branch structures.ChildType,
+		protoHash [32]byte,
+		stakerAddresses []common.Address,
+		stakerProofs [][32]byte,
+		stakerProofOffsets []*big.Int,
+	) error
 	StartChallenge(ctx context.Context, asserterAddress common.Address, challengerAddress common.Address, prevNode [32]byte, disputableDeadline *big.Int, asserterPosition structures.ChildType, challengerPosition structures.ChildType, asserterVMProtoHash [32]byte, challengerVMProtoHash [32]byte, asserterProof [][32]byte, challengerProof [][32]byte, asserterDataHash [32]byte, asserterPeriodTicks structures.TimeTicks, challengerNodeHash [32]byte) error
 }
 

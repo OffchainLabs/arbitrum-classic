@@ -224,7 +224,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
-		big.NewInt(10),
+		&protocol.TimeBlocks{},
 	)
 }
 

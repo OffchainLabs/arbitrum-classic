@@ -203,7 +203,7 @@ func (vm *ArbRollup) ConfirmValid(
 	stakerAddresses []common.Address,
 	stakerProofs [][32]byte,
 	stakerProofOffsets []*big.Int,
-) (*types.Receipt, error) {
+) error {
 	vm.auth.Context = ctx
 	messages := hashing.CombineMessages(outMsgs)
 	tx, err := vm.ArbRollup.ConfirmValid(
@@ -231,7 +231,7 @@ func (vm *ArbRollup) ConfirmInvalid(
 	stakerAddresses []common.Address,
 	stakerProofs [][32]byte,
 	stakerProofOffsets []*big.Int,
-) (*types.Receipt, error) {
+) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.ConfirmInvalid(
 		vm.auth,
