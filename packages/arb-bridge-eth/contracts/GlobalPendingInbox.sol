@@ -19,6 +19,7 @@ pragma solidity ^0.5.3;
 import "./GlobalWallet.sol";
 import "./IGlobalPendingInbox.sol";
 
+import "./arch/Protocol.sol";
 import "./arch/Value.sol";
 
 import "./libraries/SigUtils.sol";
@@ -221,11 +222,10 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             values[3] = Value.newInt(uint256(bytes32(_tokenType)));
             bytes32 messageHash =  Value.newTuple(values).hash().hash;
 
-            pendingInbox.value = Value.hashTuple([
-                Value.newInt(0),
-                Value.newHashOnly(pendingInbox.value),
-                Value.newHashOnly(messageHash)
-            ]);
+            pendingInbox.value = Protocol.addMessageToPending(
+                pendingInbox.value,
+                messageHash
+            );
             pendingInbox.count++;
         }
 

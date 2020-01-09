@@ -27,6 +27,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
@@ -103,6 +106,10 @@ func main() {
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
+	validatorConfig := rollup.ChainObserverConfig{
+		MaxCallSteps: 200000,
+	}
+
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthClient(ethURL)
@@ -123,7 +130,7 @@ func main() {
 		common.Address{},
 	)
 
-	server, err := rollupvalidator.NewRPCServer(auth, client, address, flag.Arg(0), config)
+	server, err := rollupvalidator.NewRPCServer(auth, client, address, flag.Arg(0), config, validatorConfig)
 	if err != nil {
 		log.Fatal(err)
 	}

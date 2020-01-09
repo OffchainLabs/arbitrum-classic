@@ -83,19 +83,21 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	chain.Lock()
 	defer chain.Unlock()
 	switch ev := notification.Event.(type) {
+	case arbbridge.MessageDeliveredEvent:
+		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
 		currentTime := structures.TimeFromBlockNum(protocol.NewTimeBlocks(notification.Header.Number))
-		chain.CreateStake(ev, currentTime)
+		chain.createStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
-		chain.NewChallenge(ev)
+		chain.newChallenge(ev)
 	case arbbridge.ChallengeCompletedEvent:
-		chain.ChallengeResolved(ev)
+		chain.challengeResolved(ev)
 	case arbbridge.StakeRefundedEvent:
-		chain.RemoveStake(ev)
+		chain.removeStake(ev)
 	case arbbridge.PrunedEvent:
-		chain.PruneLeaf(ev)
+		chain.pruneLeaf(ev)
 	case arbbridge.StakeMovedEvent:
-		chain.MoveStake(ev)
+		chain.moveStake(ev)
 	case arbbridge.AssertedEvent:
 		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
 		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
@@ -103,7 +105,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 			panic(err)
 		}
 	case arbbridge.ConfirmedEvent:
-		chain.ConfirmNode(ev)
+		chain.confirmNode(ev)
 	}
 }
 

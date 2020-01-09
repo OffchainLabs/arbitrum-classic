@@ -331,7 +331,7 @@ contract NodeGraph is ChallengeType {
         bytes32 preconditionHash = Protocol.generatePreconditionHash(
              data.beforeVMHash,
              data.timeBoundsBlocks,
-             Protocol.addMessagesToInbox(Value.hashEmptyTuple(), data.importedMessagesSlice)
+             data.importedMessagesSlice
         );
         bytes32 assertionHash = Protocol.generateAssertionHash(
             data.afterVMHash,

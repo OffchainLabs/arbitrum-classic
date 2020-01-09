@@ -47,7 +47,7 @@ func TestMachineAdd(t *testing.T) {
 		protocol.NewTimeBlocks(big.NewInt(0)),
 		protocol.NewTimeBlocks(big.NewInt(100000)),
 	)
-	m.ExecuteAssertion(80000, tb)
+	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue())
 }
 
 func runInstOpNoFault(m *Machine, oper value.Operation) (bool, string) {
@@ -765,16 +765,13 @@ func TestInbox(t *testing.T) {
 	messageStack := protocol.NewMessageStack()
 	messageStack.AddMessage(msg.AsValue())
 
-	inbox := protocol.NewInbox()
-	inbox.WithAddedMessages(messageStack.GetValue())
-
 	NewMachineAssertionContext(
 		m,
 		protocol.NewTimeBoundsBlocks(
 			protocol.NewTimeBlocks(big.NewInt(0)),
 			protocol.NewTimeBlocks(big.NewInt(100000)),
 		),
-		inbox.Receive(),
+		messageStack.GetValue(),
 	)
 
 	tup, _ := value.NewTupleFromSlice([]value.Value{
@@ -787,7 +784,7 @@ func TestInbox(t *testing.T) {
 	if succeeded, reason := runInstNoFault(m, code.INBOX); !succeeded {
 		t.Error(reason)
 	}
-	knownMachine.Stack().Push(inbox.Receive())
+	knownMachine.Stack().Push(messageStack.GetValue())
 	if ok, err := Equal(knownMachine, m); !ok {
 		t.Error(err)
 	}

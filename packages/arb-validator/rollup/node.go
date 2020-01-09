@@ -158,11 +158,10 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Nod
 
 func (node *Node) ExecutionPreconditionHash() [32]byte {
 	vmProtoData := node.prev.vmProtoData
-	beforeInbox := protocol.AddMessagesHashToInboxHash(value.NewEmptyTuple().Hash(), node.disputable.AssertionClaim.ImportedMessagesSlice)
 	pre := &protocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: value.NewHashOnlyValue(beforeInbox, 0),
+		BeforeInbox: value.NewHashOnlyValue(node.disputable.AssertionClaim.ImportedMessagesSlice, 0),
 	}
 	return pre.Hash()
 }

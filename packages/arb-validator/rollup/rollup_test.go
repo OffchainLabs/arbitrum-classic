@@ -56,9 +56,9 @@ func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, c
 
 func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	ctx := structures.NewCheckpointContextImpl()
-	chainBuf := chain.MarshalForCheckpoint(ctx)
+	chainBuf := chain.marshalForCheckpoint(ctx)
 	chain2 := chainBuf.UnmarshalFromCheckpoint(context.TODO(), ctx, nil)
-	if !chain.Equals(chain2) {
+	if !chain.equals(chain2) {
 		t.Fail()
 	}
 }
@@ -66,7 +66,7 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.RollupCheckpointer, t *testing.T) {
 	blockHeight := big.NewInt(7337)
 	ctx := structures.NewCheckpointContextImpl()
-	buf, err := chain.MarshalToBytes(ctx)
+	buf, err := chain.marshalToBytes(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.Ro
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !chain.Equals(chain2) {
+	if !chain.equals(chain2) {
 		t.Fail()
 	}
 }
@@ -235,7 +235,7 @@ func createSomeStakers(chain *ChainObserver) {
 }
 
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash [32]byte) {
-	chain.CreateStake(
+	chain.createStake(
 		arbbridge.StakeCreatedEvent{
 			Staker:   stakerAddr,
 			NodeHash: nodeHash,

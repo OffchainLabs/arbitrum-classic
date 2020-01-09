@@ -144,7 +144,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStarte
 			go asserter.defendExecution(
 				ev.ChallengeContract,
 				conflictNode.machine,
-				lis.chain.ExecutionPrecondition(conflictNode),
+				lis.chain.executionPrecondition(conflictNode),
 				conflictNode.disputable.AssertionParams.NumSteps,
 			)
 		}
@@ -161,7 +161,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStarte
 			go challenger.challengeExecution(
 				ev.ChallengeContract,
 				conflictNode.machine,
-				lis.chain.ExecutionPrecondition(conflictNode),
+				lis.chain.executionPrecondition(conflictNode),
 			)
 		}
 	}
