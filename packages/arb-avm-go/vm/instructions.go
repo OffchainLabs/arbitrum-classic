@@ -925,7 +925,7 @@ func insnTget(state *Machine) (StackMods, error) {
 	if err != nil {
 		// index out of range
 		fmt.Println(state.stack)
-		fmt.Println("pc = ", state.pc.GetPC())
+		fmt.Println("pc = ", state.pc.pc, state.pc.GetPC().Op)
 		return mods, fmt.Errorf("insn_tget: index %v out of range %v", index.BigInt(), tuple.Len())
 	}
 

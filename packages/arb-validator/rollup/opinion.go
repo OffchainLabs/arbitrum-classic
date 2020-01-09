@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"log"
 	"math/big"
 	"time"
 
@@ -157,10 +158,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					if !machine.IsMachineBlocked(chain.knownValidNode.machine, chain.latestBlockNumber, newMessages) {
 						preparingAssertions[chain.knownValidNode.hash] = true
 						go func() {
-							assertionPreparedChan <- chain.prepareAssertion(protocol.NewTimeBoundsBlocks(
-								chain.latestBlockNumber,
-								protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
-							))
+							assertionPreparedChan <- chain.prepareAssertion()
 						}()
 					}
 				} else {
@@ -178,9 +176,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	}()
 }
 
-func (chain *ChainObserver) prepareAssertion(
-	timeBounds *protocol.TimeBoundsBlocks,
-) *preparedAssertion {
+func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.knownValidNode
 	currentOpinionHash := currentOpinion.hash
@@ -197,11 +193,14 @@ func (chain *ChainObserver) prepareAssertion(
 	messageStack, _ := chain.pendingInbox.Substack(beforePendingTop, afterPendingTop)
 	messagesVal := chain.pendingInbox.ValueForSubseq(beforePendingTop, afterPendingTop)
 	mach := currentOpinion.machine.Clone()
+	timeBounds := chain.currentTimeBounds()
 	chain.RUnlock()
 
 	inbox := protocol.NewInbox()
 	inbox.WithAddedMessages(messagesVal)
 	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, inbox.Receive())
+
+	log.Println("Prepared assertion of", stepsRun, "steps, ending with", mach.LastBlockReason())
 	var params *structures.AssertionParams
 	var claim *structures.AssertionClaim
 	if assertion.DidInboxInsn {

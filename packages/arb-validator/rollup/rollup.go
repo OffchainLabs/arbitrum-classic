@@ -21,7 +21,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/big"
 	"sync"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -38,10 +43,15 @@ import (
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
 
+type ChainObserverConfig struct {
+	MaxCallSteps uint32
+}
+
 type ChainObserver struct {
 	*sync.RWMutex
 	nodeGraph         *StakedNodeGraph
 	rollupAddr        common.Address
+	config            ChainObserverConfig
 	pendingInbox      *structures.PendingInbox
 	knownValidNode    *Node
 	latestBlockNumber *protocol.TimeBlocks
@@ -54,6 +64,7 @@ type ChainObserver struct {
 func NewChain(
 	ctx context.Context,
 	rollupAddr common.Address,
+	config ChainObserverConfig,
 	checkpointer *structures.RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
@@ -63,16 +74,20 @@ func NewChain(
 	if err != nil {
 		return nil, err
 	}
+	nodeGraph := NewStakedNodeGraph(mach, vmParams)
 	ret := &ChainObserver{
 		RWMutex:           &sync.RWMutex{},
-		nodeGraph:         NewStakedNodeGraph(mach, vmParams),
+		nodeGraph:         nodeGraph,
 		rollupAddr:        rollupAddr,
+		config:            config,
 		pendingInbox:      structures.NewPendingInbox(),
+		knownValidNode:    nodeGraph.latestConfirmed,
 		latestBlockNumber: startTime,
 		listeners:         []ChainListener{},
 		checkpointer:      checkpointer,
+		isOpinionated:     false,
+		assertionMadeChan: nil,
 	}
-	ret.knownValidNode = ret.nodeGraph.latestConfirmed
 	ret.Lock()
 	defer ret.Unlock()
 
@@ -97,7 +112,9 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContex
 		StakedNodeGraph: chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress: chain.rollupAddr.Bytes(),
 		PendingInbox:    chain.pendingInbox.MarshalForCheckpoint(ctx),
+		KnownValidNode:  utils.MarshalHash(chain.knownValidNode.hash),
 		IsOpinionated:   chain.isOpinionated,
+		MaxCallSteps:    chain.config.MaxCallSteps,
 	}
 }
 
@@ -111,12 +128,19 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	restoreCtx structures.RestoreContext,
 	_client arbbridge.ArbRollup,
 ) *ChainObserver {
+	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
 	chain := &ChainObserver{
-		RWMutex:      &sync.RWMutex{},
-		nodeGraph:    m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx),
-		rollupAddr:   common.BytesToAddress(m.ContractAddress),
-		pendingInbox: &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
-		listeners:    []ChainListener{},
+		RWMutex:           &sync.RWMutex{},
+		nodeGraph:         nodeGraph,
+		rollupAddr:        common.BytesToAddress(m.ContractAddress),
+		config:            ChainObserverConfig{MaxCallSteps: m.MaxCallSteps},
+		pendingInbox:      &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
+		knownValidNode:    nodeGraph.nodeFromHash[utils.UnmarshalHash(m.KnownValidNode)],
+		latestBlockNumber: nil,
+		listeners:         []ChainListener{},
+		checkpointer:      nil,
+		isOpinionated:     false,
+		assertionMadeChan: nil,
 	}
 	chain.Lock()
 	defer chain.Unlock()
@@ -264,4 +288,26 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *protocol.Precondi
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
 		BeforeInbox: inbox.Receive(),
 	}
+}
+
+func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
+	return protocol.NewTimeBoundsBlocks(
+		chain.latestBlockNumber,
+		protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
+	)
+}
+
+func (chain *ChainObserver) CurrentTime() *protocol.TimeBlocks {
+	chain.RLock()
+	time := chain.latestBlockNumber
+	chain.RUnlock()
+	return time
+}
+
+func (chain *ChainObserver) ExecuteCall(messages value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
+	chain.RLock()
+	mach := chain.knownValidNode.machine.Clone()
+	chain.RUnlock()
+	assertion, steps := mach.ExecuteAssertion(chain.config.MaxCallSteps, chain.currentTimeBounds(), messages)
+	return assertion, steps
 }

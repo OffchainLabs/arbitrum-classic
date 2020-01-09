@@ -20,6 +20,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -40,8 +42,9 @@ func NewRPCServer(
 	rollupAddress common.Address,
 	codeFile string,
 	config structures.ChainParams,
+	validatorConfig rollup.ChainObserverConfig,
 ) (*RPCServer, error) {
-	server, err := NewServer(auth, client, rollupAddress, codeFile, config)
+	server, err := NewServer(auth, client, rollupAddress, codeFile, config, validatorConfig)
 	return &RPCServer{server}, err
 }
 
