@@ -131,12 +131,12 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	return chain
 }
 
-func UnmarshalChainObserverFromBytes(buf []byte, ctx structures.RestoreContext, client *ethbridge.ArbRollup) (*ChainObserver, error) {
+func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, client *ethbridge.ArbRollup) (*ChainObserver, error) {
 	cob := &ChainObserverBuf{}
 	if err := proto.Unmarshal(buf, cob); err != nil {
 		return nil, err
 	}
-	return cob.UnmarshalFromCheckpoint(ctx, client), nil
+	return cob.UnmarshalFromCheckpoint(ctx, restoreCtx, client), nil
 }
 
 func (chain *ChainObserver) PruneNode(ev ethbridge.PrunedEvent) {
