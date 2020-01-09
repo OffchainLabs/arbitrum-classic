@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"time"
@@ -29,15 +30,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
 )
 
 func RunObserver(ctx context.Context, chain *ChainObserver, clnt *ethclient.Client) error {
-	rollup, err := ethbridge.NewRollupWatcher(chain.rollupAddr, clnt)
+	rollup, err := arb.NewRollupWatcher(chain.rollupAddr, clnt)
 	if err != nil {
 		return err
 	}
-	outChan := make(chan ethbridge.Notification, 1024)
+	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
@@ -79,30 +80,30 @@ func RunObserver(ctx context.Context, chain *ChainObserver, clnt *ethclient.Clie
 	return nil
 }
 
-func handleNotification(notification ethbridge.Notification, chain *ChainObserver) {
+func handleNotification(notification arbbridge.Notification, chain *ChainObserver) {
 	chain.Lock()
 	defer chain.Unlock()
 	switch ev := notification.Event.(type) {
-	case ethbridge.StakeCreatedEvent:
+	case arbbridge.StakeCreatedEvent:
 		currentTime := structures.TimeFromBlockNum(protocol.NewTimeBlocks(notification.Header.Number))
 		chain.CreateStake(ev, currentTime)
-	case ethbridge.ChallengeStartedEvent:
+	case arbbridge.ChallengeStartedEvent:
 		chain.NewChallenge(ev)
-	case ethbridge.ChallengeCompletedEvent:
+	case arbbridge.ChallengeCompletedEvent:
 		chain.ChallengeResolved(ev)
-	case ethbridge.StakeRefundedEvent:
+	case arbbridge.StakeRefundedEvent:
 		chain.RemoveStake(ev)
-	case ethbridge.PrunedEvent:
+	case arbbridge.PrunedEvent:
 		chain.PruneNode(ev)
-	case ethbridge.StakeMovedEvent:
+	case arbbridge.StakeMovedEvent:
 		chain.MoveStake(ev)
-	case ethbridge.AssertedEvent:
+	case arbbridge.AssertedEvent:
 		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
 		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
 		if err != nil {
 			panic(err)
 		}
-	case ethbridge.ConfirmedEvent:
+	case arbbridge.ConfirmedEvent:
 		chain.ConfirmNode(ev)
 	}
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package arbbridge
 
 import (
 	"context"
@@ -115,9 +115,7 @@ type ChainContract interface {
 type ChallengeContract interface {
 	ChainContract
 
-	TimeoutChallenge(
-		ctx context.Context,
-	) (*types.Receipt, error)
+	TimeoutChallenge(ctx context.Context) error
 }
 
 func HandleBlockchainNotifications(ctx context.Context, noteChan chan Notification, contract ContractConnection) {

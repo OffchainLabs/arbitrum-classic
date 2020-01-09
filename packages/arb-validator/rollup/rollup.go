@@ -27,7 +27,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
@@ -109,7 +109,7 @@ func (chain *ChainObserver) MarshalToBytes(ctx structures.CheckpointContext) ([]
 func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
 	restoreCtx structures.RestoreContext,
-	_client *ethbridge.ArbRollup,
+	_client arbbridge.ArbRollup,
 ) *ChainObserver {
 	chain := &ChainObserver{
 		RWMutex:      &sync.RWMutex{},
@@ -131,7 +131,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	return chain
 }
 
-func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, client *ethbridge.ArbRollup) (*ChainObserver, error) {
+func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, client arbbridge.ArbRollup) (*ChainObserver, error) {
 	cob := &ChainObserverBuf{}
 	if err := proto.Unmarshal(buf, cob); err != nil {
 		return nil, err
@@ -139,32 +139,32 @@ func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx
 	return cob.UnmarshalFromCheckpoint(ctx, restoreCtx, client), nil
 }
 
-func (chain *ChainObserver) PruneNode(ev ethbridge.PrunedEvent) {
+func (chain *ChainObserver) PruneNode(ev arbbridge.PrunedEvent) {
 	chain.nodeGraph.PruneNodeByHash(ev.Leaf)
 }
 
-func (chain *ChainObserver) CreateStake(ev ethbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+func (chain *ChainObserver) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
 	chain.nodeGraph.CreateStake(ev, currentTime)
 	for _, lis := range chain.listeners {
 		lis.StakeCreated(ev)
 	}
 }
 
-func (chain *ChainObserver) RemoveStake(ev ethbridge.StakeRefundedEvent) {
+func (chain *ChainObserver) RemoveStake(ev arbbridge.StakeRefundedEvent) {
 	chain.nodeGraph.RemoveStake(ev.Staker)
 	for _, lis := range chain.listeners {
 		lis.StakeRemoved(ev)
 	}
 }
 
-func (chain *ChainObserver) MoveStake(ev ethbridge.StakeMovedEvent) {
+func (chain *ChainObserver) MoveStake(ev arbbridge.StakeMovedEvent) {
 	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
 	for _, lis := range chain.listeners {
 		lis.StakeMoved(ev)
 	}
 }
 
-func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
+func (chain *ChainObserver) NewChallenge(ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
 	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
@@ -183,14 +183,14 @@ func (chain *ChainObserver) NewChallenge(ev ethbridge.ChallengeStartedEvent) {
 	}
 }
 
-func (chain *ChainObserver) ChallengeResolved(ev ethbridge.ChallengeCompletedEvent) {
+func (chain *ChainObserver) ChallengeResolved(ev arbbridge.ChallengeCompletedEvent) {
 	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
 	for _, lis := range chain.listeners {
 		lis.CompletedChallenge(ev)
 	}
 }
 
-func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
+func (chain *ChainObserver) ConfirmNode(ev arbbridge.ConfirmedEvent) {
 	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
 	if newNode.depth > chain.knownValidNode.depth {
 		chain.knownValidNode = newNode
@@ -202,7 +202,7 @@ func (chain *ChainObserver) ConfirmNode(ev ethbridge.ConfirmedEvent) {
 }
 
 func (chain *ChainObserver) notifyAssert(
-	ev ethbridge.AssertedEvent,
+	ev arbbridge.AssertedEvent,
 	currentTime *protocol.TimeBlocks,
 	assertionTxHash [32]byte,
 ) error {

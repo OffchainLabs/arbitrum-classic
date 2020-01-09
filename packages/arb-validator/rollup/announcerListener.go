@@ -17,33 +17,33 @@
 package rollup
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type AnnouncerListener struct{}
 
-func (al *AnnouncerListener) StakeCreated(ethbridge.StakeCreatedEvent) {
+func (al *AnnouncerListener) StakeCreated(arbbridge.StakeCreatedEvent) {
 	log.Println("StakeCreated")
 }
-func (al *AnnouncerListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
+func (al *AnnouncerListener) StakeRemoved(arbbridge.StakeRefundedEvent) {
 	log.Println("StakeRemoved")
 }
-func (al *AnnouncerListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
+func (al *AnnouncerListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
 	log.Printf("StakeMoved(staker: %v, location: %v)\n", hexutil.Encode(ev.Staker[:]), hexutil.Encode(ev.Location[:]))
 }
-func (al *AnnouncerListener) StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node) {
+func (al *AnnouncerListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node) {
 	log.Println("StartedChallenge")
 }
-func (al *AnnouncerListener) CompletedChallenge(event ethbridge.ChallengeCompletedEvent) {
+func (al *AnnouncerListener) CompletedChallenge(event arbbridge.ChallengeCompletedEvent) {
 	log.Println("CompletedChallenge")
 }
 
-func (al *AnnouncerListener) SawAssertion(ev ethbridge.AssertedEvent, time *protocol.TimeBlocks, txHash [32]byte) {
+func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *protocol.TimeBlocks, txHash [32]byte) {
 	log.Println("SawAssertion")
 	log.Println("Prev Leaf:", hexutil.Encode(ev.PrevLeafHash[:]))
 	log.Println("Max pending value:", hexutil.Encode(ev.MaxPendingTop[:]))
@@ -51,7 +51,7 @@ func (al *AnnouncerListener) SawAssertion(ev ethbridge.AssertedEvent, time *prot
 	log.Println("Claim:", ev.Claim)
 }
 
-func (al *AnnouncerListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
+func (al *AnnouncerListener) ConfirmedNode(arbbridge.ConfirmedEvent) {
 	log.Println("ConfirmedNode")
 }
 

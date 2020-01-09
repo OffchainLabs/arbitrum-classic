@@ -14,30 +14,14 @@
  * limitations under the License.
  */
 
-package ethbridge
+package arbbridge
 
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-type ClientConnection struct {
-	Client *ethclient.Client
-}
-
-func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error) {
-	header, err := c.Client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return protocol.NewTimeBlocks(header.Number), nil
-}
-
-func (c *ClientConnection) waitForReceipt(ctx context.Context, from common.Address, tx *types.Transaction, methodName string) error {
-	return waitForReceipt(ctx, c.Client, from, tx, methodName)
+type ClientConnection interface {
+	CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error)
 }

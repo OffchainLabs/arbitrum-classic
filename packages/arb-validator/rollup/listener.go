@@ -18,6 +18,8 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -28,18 +30,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type ChainListener interface {
-	StakeCreated(ethbridge.StakeCreatedEvent)
-	StakeRemoved(ethbridge.StakeRefundedEvent)
-	StakeMoved(ethbridge.StakeMovedEvent)
-	StartedChallenge(ethbridge.ChallengeStartedEvent, *Node, *Node)
-	CompletedChallenge(event ethbridge.ChallengeCompletedEvent)
-	SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
-	ConfirmedNode(ethbridge.ConfirmedEvent)
+	StakeCreated(arbbridge.StakeCreatedEvent)
+	StakeRemoved(arbbridge.StakeRefundedEvent)
+	StakeMoved(arbbridge.StakeMovedEvent)
+	StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)
+	CompletedChallenge(event arbbridge.ChallengeCompletedEvent)
+	SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
+	ConfirmedNode(arbbridge.ConfirmedEvent)
 
 	AssertionPrepared(*preparedAssertion)
 	ValidNodeConfirmable(*confirmValidOpportunity)
@@ -70,7 +70,7 @@ func NewValidatorChainListener(
 }
 
 func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bind.TransactOpts) error {
-	contract, err := ethbridge.NewRollup(lis.chain.rollupAddr, client, auth)
+	contract, err := arb.NewRollup(lis.chain.rollupAddr, client, auth)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (lis *ValidatorChainListener) AddStaker(client *ethclient.Client, auth *bin
 	return nil
 }
 
-func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) {
+func (lis *ValidatorChainListener) StakeCreated(ev arbbridge.StakeCreatedEvent) {
 	staker, ok := lis.stakers[ev.Staker]
 	if ok {
 		opps := lis.chain.nodeGraph.checkChallengeOpportunityAllPairs()
@@ -100,11 +100,11 @@ func (lis *ValidatorChainListener) StakeCreated(ev ethbridge.StakeCreatedEvent) 
 	}
 }
 
-func (lis *ValidatorChainListener) StakeRemoved(ethbridge.StakeRefundedEvent) {
+func (lis *ValidatorChainListener) StakeRemoved(arbbridge.StakeRefundedEvent) {
 
 }
 
-func (lis *ValidatorChainListener) StakeMoved(ev ethbridge.StakeMovedEvent) {
+func (lis *ValidatorChainListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
 	lis.challengeStakerIfPossible(context.TODO(), ev.Staker)
 }
 
@@ -130,7 +130,7 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 	}
 }
 
-func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
+func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
 	asserter, ok := lis.stakers[ev.Asserter]
 	if ok {
 		switch conflictNode.linkType {
@@ -165,7 +165,7 @@ func (lis *ValidatorChainListener) StartedChallenge(ev ethbridge.ChallengeStarte
 	}
 }
 
-func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) CompletedChallenge(ev arbbridge.ChallengeCompletedEvent) {
 	_, ok := lis.stakers[ev.Winner]
 	if ok {
 		lis.wonChallenge(ev)
@@ -178,19 +178,19 @@ func (lis *ValidatorChainListener) CompletedChallenge(ev ethbridge.ChallengeComp
 	lis.challengeStakerIfPossible(context.TODO(), ev.Winner)
 }
 
-func (lis *ValidatorChainListener) lostChallenge(ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) lostChallenge(arbbridge.ChallengeCompletedEvent) {
 
 }
 
-func (lis *ValidatorChainListener) wonChallenge(ethbridge.ChallengeCompletedEvent) {
+func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEvent) {
 
 }
 
-func (lis *ValidatorChainListener) SawAssertion(ethbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
+func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
 
 }
 
-func (lis *ValidatorChainListener) ConfirmedNode(ethbridge.ConfirmedEvent) {
+func (lis *ValidatorChainListener) ConfirmedNode(arbbridge.ConfirmedEvent) {
 
 }
 

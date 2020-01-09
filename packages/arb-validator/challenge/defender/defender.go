@@ -20,8 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -89,9 +88,9 @@ func (bot bisectedAssert) UpdateTime(time uint64, bridge bridge.Challenge) (chal
 	return challenge.TimedOutAsserter{}, nil
 }
 
-func (bot bisectedAssert) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
+func (bot bisectedAssert) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ExecutionBisectionEvent:
+	case arbbridge.ExecutionBisectionEvent:
 		return waitingBisected{
 			bot.splitDefenders,
 			ev.Deadline,
@@ -122,9 +121,9 @@ func (bot waitingBisected) UpdateTime(time uint64, brdg bridge.Challenge) (chall
 	return challenge.TimedOutChallenger{}, err
 }
 
-func (bot waitingBisected) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
+func (bot waitingBisected) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
-	case ethbridge.ContinueChallengeEvent:
+	case arbbridge.ContinueChallengeEvent:
 		if int(ev.ChallengedAssertion) >= len(bot.defenders) {
 			return nil, errors.New("ChallengedAssertion number is out of bounds")
 		}
@@ -153,9 +152,9 @@ func (bot oneStepChallenged) UpdateTime(time uint64, bridge bridge.Challenge) (c
 	return challenge.TimedOutAsserter{}, nil
 }
 
-func (bot oneStepChallenged) UpdateState(ev ethbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
+func (bot oneStepChallenged) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev.(type) {
-	case ethbridge.OneStepProofEvent:
+	case arbbridge.OneStepProofEvent:
 		fmt.Println("oneStepChallenged: Proof was accepted")
 		brdg.SendMonitorMsg(bridge.ProofAccepted)
 		return nil, nil

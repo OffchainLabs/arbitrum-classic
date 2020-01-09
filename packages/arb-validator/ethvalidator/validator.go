@@ -19,6 +19,8 @@ package ethvalidator
 import (
 	"context"
 	"crypto/ecdsa"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -43,8 +45,8 @@ type Validator struct {
 	arbAddresses  ethbridge.ArbAddresses
 	Client        *ethclient.Client
 
-	*ethbridge.ArbFactory
-	*ethbridge.PendingInbox
+	arbbridge.ArbFactory
+	arbbridge.PendingInbox
 	auth *bind.TransactOpts
 }
 
@@ -60,12 +62,12 @@ func NewValidator(
 		return nil, err
 	}
 
-	arbFactory, err := ethbridge.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
+	arbFactory, err := arb.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
 	if err != nil {
 		return nil, err
 	}
 
-	pendingInbox, err := ethbridge.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
+	pendingInbox, err := arb.NewPendingInbox(common.HexToAddress(connectionInfo.GlobalPendingInbox), client)
 	if err != nil {
 		return nil, err
 	}

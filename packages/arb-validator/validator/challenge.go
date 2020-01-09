@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/observer"
@@ -34,7 +35,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type challengerInitiator struct {
@@ -43,7 +43,7 @@ type challengerInitiator struct {
 	challengeEverything bool
 }
 
-func (bot *challengerInitiator) initiateBot(ev ethbridge.InitiateChallengeEvent, brdg bridge.Challenge) (challenge.State, error) {
+func (bot *challengerInitiator) initiateBot(ev arbbridge.InitiateChallengeEvent, brdg bridge.Challenge) (challenge.State, error) {
 	return challenger.New(bot.precondition, bot.machine, ev.Deadline, bot.challengeEverything), nil
 }
 
@@ -51,19 +51,19 @@ type defenderInitiator struct {
 	assDef machine.AssertionDefender
 }
 
-func (bot *defenderInitiator) initiateBot(ev ethbridge.InitiateChallengeEvent, brdg bridge.Challenge) (challenge.State, error) {
+func (bot *defenderInitiator) initiateBot(ev arbbridge.InitiateChallengeEvent, brdg bridge.Challenge) (challenge.State, error) {
 	return defender.New(bot.assDef, ev.Deadline, brdg)
 }
 
 type observerInitiator struct {
 }
 
-func (bot *observerInitiator) initiateBot(ev ethbridge.InitiateChallengeEvent, brdg bridge.Challenge) (challenge.State, error) {
+func (bot *observerInitiator) initiateBot(ev arbbridge.InitiateChallengeEvent, brdg bridge.Challenge) (challenge.State, error) {
 	return observer.New(ev.Deadline), nil
 }
 
 type initiator interface {
-	initiateBot(ethbridge.InitiateChallengeEvent, bridge.Challenge) (challenge.State, error)
+	initiateBot(arbbridge.InitiateChallengeEvent, bridge.Challenge) (challenge.State, error)
 }
 
 type Challenge struct {
@@ -128,7 +128,7 @@ func (c *Challenge) validatorClosing() {
 	c.brdge.SendMonitorErr(bridge.Error{errors.New("WARNING: c closing"), "WARNING: c closing", false})
 }
 
-func (c *Challenge) Run(ctx context.Context, recvChan <-chan ethbridge.Notification) {
+func (c *Challenge) Run(ctx context.Context, recvChan <-chan arbbridge.Notification) {
 	defer c.validatorClosing()
 	for {
 		select {
@@ -164,9 +164,9 @@ func (c *Challenge) Run(ctx context.Context, recvChan <-chan ethbridge.Notificat
 			}
 
 			switch ev := notification.Event.(type) {
-			case ethbridge.NewTimeEvent:
+			case arbbridge.NewTimeEvent:
 				break
-			case ethbridge.InitiateChallengeEvent:
+			case arbbridge.InitiateChallengeEvent:
 				bot, err := c.init.initiateBot(ev, c.brdge)
 				if err != nil {
 					c.brdge.SendMonitorErr(bridge.Error{
@@ -177,7 +177,7 @@ func (c *Challenge) Run(ctx context.Context, recvChan <-chan ethbridge.Notificat
 					return
 				}
 				c.bot = bot
-			case ethbridge.VMEvent:
+			case arbbridge.VMEvent:
 				err := c.eventUpdate(ev, notification.Header)
 				if err != nil {
 					//log.Printf("*****Validator %v: error - %v\n", c.Name, err)
@@ -211,7 +211,7 @@ func (c *Challenge) timeUpdate() error {
 	return nil
 }
 
-func (c *Challenge) eventUpdate(ev ethbridge.VMEvent, header *types.Header) error {
+func (c *Challenge) eventUpdate(ev arbbridge.VMEvent, header *types.Header) error {
 	newBot, err := c.bot.UpdateState(ev, header.Number.Uint64(), c.brdge)
 	if err != nil {
 		return err

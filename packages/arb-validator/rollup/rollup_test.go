@@ -25,7 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -224,7 +224,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
-		big.NewInt(10),
+		&protocol.TimeBlocks{},
 	)
 }
 
@@ -236,7 +236,7 @@ func createSomeStakers(chain *ChainObserver) {
 
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash [32]byte) {
 	chain.CreateStake(
-		ethbridge.StakeCreatedEvent{
+		arbbridge.StakeCreatedEvent{
 			Staker:   stakerAddr,
 			NodeHash: nodeHash,
 		},

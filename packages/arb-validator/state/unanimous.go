@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 
@@ -40,7 +41,7 @@ func (bot attemptingUnanimousClosing) ChannelUpdateTime(time uint64, bridge brid
 	return bot, nil
 }
 
-func (bot attemptingUnanimousClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
+func (bot attemptingUnanimousClosing) ChannelUpdateState(ev arbbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev.(type) {
 	case ethbridge.PendingUnanimousAssertEvent:
 		// Someone proposed a pending update
@@ -78,7 +79,7 @@ func (bot attemptingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridg
 	return bot, nil
 }
 
-func (bot attemptingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
+func (bot attemptingOffchainClosing) ChannelUpdateState(ev arbbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev := ev.(type) {
 	case ethbridge.PendingUnanimousAssertEvent:
 		if ev.SequenceNum < bot.sequenceNum {
@@ -154,7 +155,7 @@ func (bot waitingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridge.B
 	}, nil
 }
 
-func (bot waitingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
+func (bot waitingOffchainClosing) ChannelUpdateState(ev arbbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev.(type) {
 	case ethbridge.PendingUnanimousAssertEvent:
 		err := errors.New("unanimous ExecutionAssertion unexpectedly superseded by sequence number")
@@ -187,7 +188,7 @@ func (bot finalizingOffchainClosing) ChannelUpdateTime(time uint64, bridge bridg
 	return bot, nil
 }
 
-func (bot finalizingOffchainClosing) ChannelUpdateState(ev ethbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
+func (bot finalizingOffchainClosing) ChannelUpdateState(ev arbbridge.Event, time uint64, bridge bridge.Bridge) (ChannelState, error) {
 	switch ev.(type) {
 	case ethbridge.ConfirmedUnanimousAssertEvent:
 		bot.GetCore().DeliverMessagesToVM(bridge)

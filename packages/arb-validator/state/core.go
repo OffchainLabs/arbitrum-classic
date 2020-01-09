@@ -18,9 +18,9 @@ package state
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type State interface {
@@ -32,11 +32,11 @@ type State interface {
 type ChannelState interface {
 	State
 	ChannelUpdateTime(uint64, bridge.Bridge) (ChannelState, error)
-	ChannelUpdateState(ethbridge.Event, uint64, bridge.Bridge) (ChannelState, error)
+	ChannelUpdateState(arbbridge.Event, uint64, bridge.Bridge) (ChannelState, error)
 }
 
 type ChainState interface {
 	ChannelState
 	ChainUpdateTime(uint64, bridge.ArbVMBridge) (ChainState, error)
-	ChainUpdateState(ethbridge.Event, uint64, bridge.ArbVMBridge) (ChainState, error)
+	ChainUpdateState(arbbridge.Event, uint64, bridge.ArbVMBridge) (ChainState, error)
 }

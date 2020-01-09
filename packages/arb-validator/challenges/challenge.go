@@ -19,11 +19,10 @@ package challenges
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 type ChallengeState uint8
@@ -37,17 +36,17 @@ const (
 
 var challengeNoEvents = errors.New("PendingTopChallengeContract notification channel terminated unexpectedly")
 
-func handleNextEvent(note ethbridge.Notification) (outNote ethbridge.Notification, state ChallengeState, err error) {
+func handleNextEvent(note arbbridge.Notification) (outNote arbbridge.Notification, state ChallengeState, err error) {
 	switch note.Event.(type) {
-	case ethbridge.AsserterTimeoutEvent:
+	case arbbridge.AsserterTimeoutEvent:
 		return note, ChallengeAsserterTimedOut, nil
-	case ethbridge.ChallengerTimeoutEvent:
+	case arbbridge.ChallengerTimeoutEvent:
 		return note, ChallengeChallengerTimedOut, nil
 	}
 	return note, 0, nil
 }
 
-func getNextEvent(outChan chan ethbridge.Notification) (note ethbridge.Notification, state ChallengeState, err error) {
+func getNextEvent(outChan chan arbbridge.Notification) (note arbbridge.Notification, state ChallengeState, err error) {
 	note, ok := <-outChan
 	if !ok {
 		return note, 0, challengeNoEvents
@@ -57,10 +56,10 @@ func getNextEvent(outChan chan ethbridge.Notification) (note ethbridge.Notificat
 
 func getNextEventWithTimeout(
 	ctx context.Context,
-	outChan chan ethbridge.Notification,
+	outChan chan arbbridge.Notification,
 	deadline structures.TimeTicks,
-	contract ethbridge.ChallengeContract,
-) (note ethbridge.Notification, state ChallengeState, err error) {
+	contract arbbridge.ChallengeContract,
+) (note arbbridge.Notification, state ChallengeState, err error) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
@@ -72,7 +71,7 @@ func getNextEventWithTimeout(
 				return note, 0, err
 			}
 			if structures.TimeFromBlockNum(currentTime).Cmp(deadline) >= 0 {
-				_, err := contract.TimeoutChallenge(ctx)
+				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return note, 0, err
 				}
