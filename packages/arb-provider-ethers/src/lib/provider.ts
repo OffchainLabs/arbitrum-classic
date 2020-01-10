@@ -201,7 +201,8 @@ export class ArbProvider extends ethers.providers.BaseProvider {
 
         // Step 2: prove that logPostHash is in assertion and assertion is valid
         if (validatorSigs && validatorSigs.length > 0) {
-            this.processUnanimousAssertion(partialHash, logPostHash, validatorSigs);
+            throw Error('Unanimous assertions not supported');
+            // this.processUnanimousAssertion(partialHash, logPostHash, validatorSigs);
         } else {
             this.processConfirmedDisputableAssertion(logPostHash, onChainTxHash);
         }
@@ -362,18 +363,18 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     // logPostHash: hexString
     // validatorSigs: []hexString
     // Throws error if assertionHash is not signed by all validators
-    private async processUnanimousAssertion(
-        partialHash: string,
-        logPostHash: string,
-        validatorSigs: string[],
-    ): Promise<void> {
-        const vmId = await this.getVmID();
-        const assertionHash = ethers.utils.solidityKeccak256(
-            ['address', 'bytes32', 'bytes32'],
-            [vmId, partialHash, logPostHash],
-        );
-        await this.verifyUnanimousSignatures(assertionHash, validatorSigs);
-    }
+    // private async processUnanimousAssertion(
+    //     partialHash: string,
+    //     logPostHash: string,
+    //     validatorSigs: string[],
+    // ): Promise<void> {
+    //     const vmId = await this.getVmID();
+    //     const assertionHash = ethers.utils.solidityKeccak256(
+    //         ['address', 'bytes32', 'bytes32'],
+    //         [vmId, partialHash, logPostHash],
+    //     );
+    //     await this.verifyUnanimousSignatures(assertionHash, validatorSigs);
+    // }
 
     // logPostHash: hexString
     // onChainTxHash: hexString
