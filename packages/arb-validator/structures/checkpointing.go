@@ -18,19 +18,18 @@ package structures
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"log"
-	"math/big"
-	"os"
-	"sync"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"log"
+	"math/big"
+	"os"
+	"sync"
 )
 
 type CheckpointContext interface {
@@ -143,7 +142,7 @@ func NewRollupCheckpointerWithType(
 	case "rocksdb": // store in rocksdb database, keyed to rollupAddr -- use this for production
 		ret := &RollupCheckpointer{
 			maxReorgDepth: maxReorgDepth,
-			cp:            newProductionCheckpointer(databasePath, arbitrumCodeFilePath),
+			cp:            newProductionCheckpointer(databasePath, arbitrumCodeFilePath, maxReorgDepth),
 		}
 		ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)
 		return ret
@@ -270,11 +269,13 @@ func NewAsyncCheckpointWriter(ctx context.Context, cp *RollupCheckpointer) *Asyn
 				if job != nil {
 					job()
 				}
+				ret.Lock()
 				for _, dc := range doneChansCopy {
 					if dc != nil {
 						close(dc)
 					}
 				}
+				ret.Unlock()
 			case <-ctx.Done():
 				return
 			}
@@ -289,10 +290,8 @@ func (acw *AsyncCheckpointWriter) SubmitJob(job func(), doneChan chan interface{
 	acw.nextJob = job
 	acw.doneChans = append(acw.doneChans, doneChan)
 	select {
-	case acw.notifyChan <- nil:
-		// do nothing; only purpose was to send on the channel
-	default:
-		// no need to do anything, because channel already has something in it
+	case acw.notifyChan <- nil: // do nothing; only purpose was to send on the channel
+	default: // no need to do anything, because channel already has something in it
 	}
 }
 
@@ -308,7 +307,7 @@ type checkpointerWithMetadata interface {
 		machines map[[32]byte]machine.Machine,
 	)
 	RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext) // returns nil, nil if no data at blockHeight
-	DeleteCheckpoint(blockHeight *big.Int)
+	DeleteOldCheckpoints(earliestRollbackPoint *big.Int)
 
 	GetInitialMachine() (machine.Machine, error)
 }
@@ -374,8 +373,8 @@ func (cp *dummyCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, Re
 	}
 }
 
-func (cp *dummyCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
-	delete(cp.cp, blockHeight)
+func (cp *dummyCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *big.Int) {
+	// ignore cleanup requests; we're being simple and inefficient for debugging
 }
 
 func (cp *dummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
@@ -400,24 +399,17 @@ func linksKey(blockHeight *big.Int) []byte {
 	return append([]byte("links:"), bhBytes...)
 }
 
-func lastTouchedKey(h [32]byte, isMachine bool) []byte {
-	if isMachine {
-		return append([]byte{73, 0}, h[:]...)
-	} else {
-		return append([]byte{73, 1}, h[:]...)
-	}
-}
-
 type productionCheckpointer struct {
-	st machine.CheckpointStorage
+	st            machine.CheckpointStorage
+	maxReorgDepth *big.Int
 }
 
-func newProductionCheckpointer(dbpath, contractpath string) *productionCheckpointer {
+func newProductionCheckpointer(dbpath, contractpath string, maxReorgDepth *big.Int) *productionCheckpointer {
 	checkpoint, err := cmachine.NewCheckpoint(dbpath, contractpath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return &productionCheckpointer{checkpoint}
+	return &productionCheckpointer{checkpoint, maxReorgDepth}
 }
 
 func (csc *productionCheckpointer) SaveMetadata(data []byte) {
@@ -439,19 +431,11 @@ func (csc *productionCheckpointer) SaveCheckpoint(
 	values map[[32]byte]value.Value,
 	machines map[[32]byte]machine.Machine,
 ) {
-	blockHeightBuf := utils.MarshalBigInt(blockHeight)
-	blockHeightBytes, err := proto.Marshal(blockHeightBuf)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for h, val := range values {
-		csc.st.SaveData(lastTouchedKey(h, false), blockHeightBytes)
+	for _, val := range values {
 		csc.st.SaveValue(val)
 	}
 
-	for h, mach := range machines {
-		csc.st.SaveData(lastTouchedKey(h, false), blockHeightBytes)
+	for _, mach := range machines {
 		mach.Checkpoint(csc.st)
 	}
 
@@ -528,34 +512,41 @@ func (csc *productionCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]by
 	return contentBytes, csc
 }
 
-func (csc *productionCheckpointer) DeleteCheckpoint(blockHeight *big.Int) {
+func (csc *productionCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *big.Int) {
 	// make a best effort to delete an old checkpoint, but ignore any errors
 	// errors might cause some harmless extra info to remain in the database
-	//
-	// this assumes it's being called on the oldest remaining checkpoint
-	// if that's not true, older checkpoints will remain harmlessly in the database
 
-	// update metadata to reflect deletion
-	metadataBytes := csc.RestoreMetadata()
-	metadataBuf := &CheckpointMetadata{}
-	if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
-		return
-	}
-	oldestHeight := utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
-	newestHeight := utils.UnmarshalBigInt(metadataBuf.NewestBlockHeight)
-	if blockHeight.Cmp(newestHeight) >= 0 {
-		// deleted the last item, so null the metadata
-		csc.SaveMetadata([]byte{})
-	} else if blockHeight.Cmp(oldestHeight) > 0 {
-		metadataBuf.OldestBlockHeight = utils.MarshalBigInt(blockHeight)
-		var err error
-		metadataBytes, err = proto.Marshal(metadataBuf)
+	for {
+		metadataBytes := csc.RestoreMetadata()
+		metadataBuf := &CheckpointMetadata{}
+		if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
+			return
+		}
+		oldestHeight := utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
+
+		linksBuf := csc.st.GetData(linksKey(oldestHeight))
+		links := &CheckpointLinks{}
+		if err := proto.Unmarshal(linksBuf, links); err != nil {
+			return
+		}
+
+		nextHeight := utils.UnmarshalBigInt(links.NextBlockHeight)
+		if nextHeight.Cmp(earliestRollbackPoint) >= 0 {
+			return
+		}
+
+		metadataBuf.NewestBlockHeight = utils.MarshalBigInt(nextHeight)
+		metadataBytes, err := proto.Marshal(metadataBuf)
 		if err != nil {
 			return
 		}
-		csc.SaveMetadata(metadataBytes)
-	}
 
+		csc.DeleteOneOldCheckpoint(oldestHeight)
+	}
+}
+
+func (csc *productionCheckpointer) DeleteOneOldCheckpoint(blockHeight *big.Int) {
+	// assume metadata has already been updated to reflect deletion
 	manifestBytes := csc.st.GetData(manifestKey(blockHeight))
 	if manifestBytes == nil {
 		return
