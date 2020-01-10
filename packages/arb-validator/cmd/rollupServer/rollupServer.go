@@ -169,6 +169,7 @@ func setupChainObserver(
 		return nil, err
 	}
 	chainObserver.AddListener(&rollup.AnnouncerListener{})
+	chainObserver.AddListener(validatorListener)
 	return chainObserver, nil
 }
 
@@ -187,7 +188,7 @@ func validateRollupChain() {
 	}
 
 	// 2) Private key
-	keyFile, err := os.Open(flag.Arg(2))
+	keyFile, err := os.Open(validateCmd.Arg(1))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -205,10 +206,10 @@ func validateRollupChain() {
 	}
 
 	// 3) URL
-	ethURL := flag.Arg(3)
+	ethURL := validateCmd.Arg(2)
 
 	// 4) Rollup contract address
-	addressString := flag.Arg(4)
+	addressString := validateCmd.Arg(3)
 	address := common.HexToAddress(addressString)
 
 	// Rollup creation
@@ -218,7 +219,7 @@ func validateRollupChain() {
 		log.Fatal(err)
 	}
 
-	chainObserver, err := setupChainObserver(client, address, flag.Arg(1))
+	chainObserver, err := setupChainObserver(client, address, validateCmd.Arg(0))
 	if err != nil {
 		log.Fatal(err)
 	}

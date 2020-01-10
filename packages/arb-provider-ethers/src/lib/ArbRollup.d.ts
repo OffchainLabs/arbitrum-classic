@@ -210,6 +210,8 @@ export class ArbRollup extends Contract {
     interface: ArbRollupInterface;
 
     functions: {
+        isStaked(_stakerAddress: string): Promise<boolean>;
+
         isValidLeaf(leaf: Arrayish): Promise<boolean>;
 
         vmParams(): Promise<{

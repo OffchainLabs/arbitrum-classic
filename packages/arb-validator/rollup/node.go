@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"errors"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -220,7 +221,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 		challengePeriod := params.GracePeriod.Add(node.disputable.CheckTime(params))
 		return ret, challengePeriod
 	default:
-		panic("Unhandled challenge type")
+		log.Fatal("Unhandled challenge type", node.linkType)
 	}
 }
 

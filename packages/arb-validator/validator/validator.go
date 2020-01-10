@@ -21,9 +21,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 
@@ -185,7 +186,6 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 		msgHashInt := new(big.Int).SetBytes(messageHash[:])
 		val, _ := value.NewTupleFromSlice([]value.Value{
 			msg.Data,
-			value.NewIntValue(new(big.Int).SetUint64(validator.latestHeader.Time)),
 			value.NewIntValue(validator.latestHeader.Number),
 			value.NewIntValue(msgHashInt),
 		})

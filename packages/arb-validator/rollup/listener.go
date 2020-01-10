@@ -74,16 +74,34 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 	if err != nil {
 		return err
 	}
-	location := lis.chain.knownValidNode
-	proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
-	proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
-	go contract.PlaceStake(context.TODO(), lis.chain.nodeGraph.params.StakeRequirement, proof1, proof2)
+
 	address := client.Address()
 	staker := &StakerListener{
 		myAddr:   address,
 		client:   client,
 		contract: contract,
 	}
+
+	isStaked, err := contract.IsStaked(client.Address())
+	if err != nil {
+		return err
+	}
+	if !isStaked {
+		log.Println("Staking", address.Hex())
+		lis.chain.RLock()
+		location := lis.chain.knownValidNode
+		proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
+		proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
+		lis.chain.RUnlock()
+		go func() {
+			staker.Lock()
+			contract.PlaceStake(context.TODO(), lis.chain.nodeGraph.params.StakeRequirement, proof1, proof2)
+			staker.Unlock()
+		}()
+	} else {
+		log.Println("Already staked", address.Hex())
+	}
+
 	lis.stakers[address] = staker
 	return nil
 }
