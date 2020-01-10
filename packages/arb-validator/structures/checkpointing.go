@@ -123,26 +123,23 @@ func NewRollupCheckpointerWithType(
 	checkpointerType string,
 ) *RollupCheckpointer {
 	databasePath := makeCheckpointDatabasePath(rollupAddr)
-	asyncWorker := func() chan func() {
-		workChan := make(chan func())
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case job := <-workChan:
-					job()
-				}
+	asyncWorkerChan := make(chan func())
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case job := <-asyncWorkerChan:
+				job()
 			}
-		}()
-		return workChan
+		}
 	}()
 	switch checkpointerType {
 	case "inmemory_testing": // inefficient in-memory checkpointer, for testing
 		return &RollupCheckpointer{
 			big.NewInt(int64(maxReorgDepth)),
 			newDummyCheckpointer(arbitrumCodeFilePath),
-			asyncWorker,
+			asyncWorkerChan,
 		}
 	case "fresh_rocksdb": // for testing only -- use rocksdb but delete old database first
 		if err := os.RemoveAll(databasePath); err != nil {
@@ -155,7 +152,7 @@ func NewRollupCheckpointerWithType(
 		return &RollupCheckpointer{
 			big.NewInt(int64(maxReorgDepth)),
 			newProductionCheckpointer(databasePath, arbitrumCodeFilePath),
-			asyncWorker,
+			asyncWorkerChan,
 		}
 	default:
 		return nil
