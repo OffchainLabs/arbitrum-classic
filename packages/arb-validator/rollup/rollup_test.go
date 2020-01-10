@@ -64,7 +64,7 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 }
 
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp *structures.RollupCheckpointer, t *testing.T) {
-	blockHeight := big.NewInt(7337)
+	blockHeight := protocol.NewTimeBlocks(big.NewInt(7337))
 	ctx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ctx)
 	if err != nil {

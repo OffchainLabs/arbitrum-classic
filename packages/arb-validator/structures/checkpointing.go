@@ -18,9 +18,11 @@ package structures
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"log"
 	"math/big"
 	"os"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -97,7 +99,7 @@ func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
 type RollupCheckpointer struct {
 	maxReorgDepth *big.Int
 	cp            checkpointerWithMetadata
-	asyncCkptChan chan func()
+	asyncWriter   *AsyncCheckpointWriter
 }
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
@@ -136,11 +138,12 @@ func NewRollupCheckpointerWithType(
 	}()
 	switch checkpointerType {
 	case "inmemory_testing": // inefficient in-memory checkpointer, for testing
-		return &RollupCheckpointer{
-			big.NewInt(int64(maxReorgDepth)),
-			newDummyCheckpointer(arbitrumCodeFilePath),
-			asyncWorkerChan,
+		ret := &RollupCheckpointer{
+			maxReorgDepth: big.NewInt(int64(maxReorgDepth)),
+			cp:            newDummyCheckpointer(arbitrumCodeFilePath),
 		}
+		ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)
+		return ret
 	case "fresh_rocksdb": // for testing only -- use rocksdb but delete old database first
 		if err := os.RemoveAll(databasePath); err != nil {
 			log.Fatal(err)
@@ -149,29 +152,14 @@ func NewRollupCheckpointerWithType(
 	case "": // empty string gives you what you want for production
 		fallthrough
 	case "rocksdb": // store in rocksdb database, keyed to rollupAddr -- use this for production
-		return &RollupCheckpointer{
-			big.NewInt(int64(maxReorgDepth)),
-			newProductionCheckpointer(databasePath, arbitrumCodeFilePath),
-			asyncWorkerChan,
+		ret := &RollupCheckpointer{
+			maxReorgDepth: big.NewInt(int64(maxReorgDepth)),
+			cp:            newProductionCheckpointer(databasePath, arbitrumCodeFilePath),
 		}
+		ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)
+		return ret
 	default:
 		return nil
-	}
-}
-
-func (rcp *RollupCheckpointer) AsyncSaveCheckpoint(
-	blockHeight *big.Int,
-	contents []byte,
-	checkpointCtx CheckpointContext,
-	doneChan chan interface{},
-) {
-	rcp.asyncCkptChan <- func() {
-		if err := rcp._saveCheckpoint(blockHeight, contents, checkpointCtx); err != nil {
-			log.Fatal(err)
-		}
-		if doneChan != nil {
-			close(doneChan)
-		}
 	}
 }
 
@@ -249,6 +237,68 @@ func (rcp *RollupCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, 
 
 func (cp *RollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return cp.cp.GetInitialMachine()
+}
+
+func (cp *RollupCheckpointer) AsyncSaveCheckpoint(
+	blocknum *protocol.TimeBlocks,
+	buf []byte,
+	cpCtx CheckpointContext,
+	doneChan chan interface{},
+) {
+	cp.asyncWriter.SubmitJob(
+		func() {
+			cp._saveCheckpoint(blocknum.AsInt(), buf, cpCtx)
+		},
+		doneChan,
+	)
+}
+
+type AsyncCheckpointWriter struct {
+	*sync.Mutex
+	checkpointer *RollupCheckpointer
+	notifyChan   chan interface{}
+	nextJob      func()
+	doneChans    []chan interface{}
+}
+
+func NewAsyncCheckpointWriter(ctx context.Context, cp *RollupCheckpointer) *AsyncCheckpointWriter {
+	ret := &AsyncCheckpointWriter{&sync.Mutex{}, cp, make(chan interface{}, 1), nil, nil}
+	go func() {
+		for {
+			select {
+			case <-ret.notifyChan:
+				ret.Lock()
+				job := ret.nextJob
+				if job != nil {
+					ret.nextJob = nil
+				}
+				doneChansCopy := append([]chan interface{}{}, ret.doneChans...)
+				ret.Unlock()
+				if job != nil {
+					job()
+				}
+				for _, dc := range doneChansCopy {
+					close(dc)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return ret
+}
+
+func (acw *AsyncCheckpointWriter) SubmitJob(job func(), doneChan chan interface{}) {
+	acw.Lock()
+	defer acw.Unlock()
+	acw.nextJob = job
+	acw.doneChans = append(acw.doneChans, doneChan)
+	select {
+	case acw.notifyChan <- nil:
+		// do nothing
+	default:
+		// do nothing
+	}
 }
 
 type checkpointerWithMetadata interface {

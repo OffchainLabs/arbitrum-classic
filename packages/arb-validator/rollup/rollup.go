@@ -259,7 +259,7 @@ func (chain *ChainObserver) notifyNewBlockNumber(blockNum *protocol.TimeBlocks) 
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockNum.AsInt(), buf, ckptCtx, nil)
+	chain.checkpointer.AsyncSaveCheckpoint(blockNum, buf, ckptCtx, nil)
 }
 
 func (co *ChainObserver) equals(co2 *ChainObserver) bool {
