@@ -271,7 +271,9 @@ func NewAsyncCheckpointWriter(ctx context.Context, cp *RollupCheckpointer) *Asyn
 					job()
 				}
 				for _, dc := range doneChansCopy {
-					close(dc)
+					if dc != nil {
+						close(dc)
+					}
 				}
 			case <-ctx.Done():
 				return
