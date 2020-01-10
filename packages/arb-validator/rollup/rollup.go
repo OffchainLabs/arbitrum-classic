@@ -40,15 +40,16 @@ import (
 
 type ChainObserver struct {
 	*sync.RWMutex
-	nodeGraph         *StakedNodeGraph
-	rollupAddr        common.Address
-	pendingInbox      *structures.PendingInbox
-	knownValidNode    *Node
-	latestBlockNumber *protocol.TimeBlocks
-	listeners         []ChainListener
-	checkpointer      *structures.RollupCheckpointer
-	isOpinionated     bool
-	assertionMadeChan chan bool
+	nodeGraph           *StakedNodeGraph
+	rollupAddr          common.Address
+	pendingInbox        *structures.PendingInbox
+	knownValidNode      *Node
+	calculatedValidNode *Node
+	latestBlockNumber   *protocol.TimeBlocks
+	listeners           []ChainListener
+	checkpointer        *structures.RollupCheckpointer
+	isOpinionated       bool
+	assertionMadeChan   chan bool
 }
 
 func NewChain(
@@ -65,16 +66,17 @@ func NewChain(
 	}
 	nodeGraph := NewStakedNodeGraph(mach, vmParams)
 	ret := &ChainObserver{
-		RWMutex:           &sync.RWMutex{},
-		nodeGraph:         nodeGraph,
-		rollupAddr:        rollupAddr,
-		pendingInbox:      structures.NewPendingInbox(),
-		knownValidNode:    nodeGraph.latestConfirmed,
-		latestBlockNumber: startTime,
-		listeners:         []ChainListener{},
-		checkpointer:      checkpointer,
-		isOpinionated:     false,
-		assertionMadeChan: nil,
+		RWMutex:             &sync.RWMutex{},
+		nodeGraph:           nodeGraph,
+		rollupAddr:          rollupAddr,
+		pendingInbox:        structures.NewPendingInbox(),
+		knownValidNode:      nodeGraph.latestConfirmed,
+		calculatedValidNode: nodeGraph.latestConfirmed,
+		latestBlockNumber:   startTime,
+		listeners:           []ChainListener{},
+		checkpointer:        checkpointer,
+		isOpinionated:       false,
+		assertionMadeChan:   nil,
 	}
 	ret.Lock()
 	defer ret.Unlock()
@@ -97,11 +99,12 @@ func (chain *ChainObserver) AddListener(listener ChainListener) {
 
 func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
-		StakedNodeGraph: chain.nodeGraph.MarshalForCheckpoint(ctx),
-		ContractAddress: chain.rollupAddr.Bytes(),
-		PendingInbox:    chain.pendingInbox.MarshalForCheckpoint(ctx),
-		KnownValidNode:  utils.MarshalHash(chain.knownValidNode.hash),
-		IsOpinionated:   chain.isOpinionated,
+		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
+		ContractAddress:     chain.rollupAddr.Bytes(),
+		PendingInbox:        chain.pendingInbox.MarshalForCheckpoint(ctx),
+		KnownValidNode:      utils.MarshalHash(chain.knownValidNode.hash),
+		CalculatedValidNode: utils.MarshalHash(chain.calculatedValidNode.hash),
+		IsOpinionated:       chain.isOpinionated,
 	}
 }
 
@@ -117,16 +120,17 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 ) *ChainObserver {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
 	chain := &ChainObserver{
-		RWMutex:           &sync.RWMutex{},
-		nodeGraph:         nodeGraph,
-		rollupAddr:        common.BytesToAddress(m.ContractAddress),
-		pendingInbox:      &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
-		knownValidNode:    nodeGraph.nodeFromHash[utils.UnmarshalHash(m.KnownValidNode)],
-		latestBlockNumber: nil,
-		listeners:         []ChainListener{},
-		checkpointer:      nil,
-		isOpinionated:     false,
-		assertionMadeChan: nil,
+		RWMutex:             &sync.RWMutex{},
+		nodeGraph:           nodeGraph,
+		rollupAddr:          common.BytesToAddress(m.ContractAddress),
+		pendingInbox:        &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
+		knownValidNode:      nodeGraph.nodeFromHash[utils.UnmarshalHash(m.KnownValidNode)],
+		calculatedValidNode: nodeGraph.nodeFromHash[utils.UnmarshalHash(m.CalculatedValidNode)],
+		latestBlockNumber:   nil,
+		listeners:           []ChainListener{},
+		checkpointer:        nil,
+		isOpinionated:       false,
+		assertionMadeChan:   nil,
 	}
 	chain.Lock()
 	defer chain.Unlock()
@@ -154,7 +158,11 @@ func (chain *ChainObserver) messageDelivered(ev arbbridge.MessageDeliveredEvent)
 }
 
 func (chain *ChainObserver) pruneLeaf(ev arbbridge.PrunedEvent) {
-	chain.nodeGraph.leaves.Delete(chain.nodeGraph.nodeFromHash[ev.Leaf])
+	leaf, found := chain.nodeGraph.nodeFromHash[ev.Leaf]
+	if !found {
+		panic("Tried to prune nonexistant leaf")
+	}
+	chain.nodeGraph.leaves.Delete(leaf)
 	chain.nodeGraph.PruneNodeByHash(ev.Leaf)
 	for _, lis := range chain.listeners {
 		lis.PrunedLeaf(ev)

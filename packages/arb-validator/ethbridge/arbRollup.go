@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"log"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -275,6 +276,11 @@ func (vm *ArbRollup) StartChallenge(ctx context.Context, asserterAddress common.
 		return err
 	}
 	return vm.waitForReceipt(ctx, tx, "StartExecutionChallenge")
+}
+
+func (vm *ArbRollup) IsStaked(address common.Address) (bool, error) {
+	log.Println("Calling IsStaked")
+	return vm.ArbRollup.IsStaked(nil, address)
 }
 
 //func (vm *ArbRollup) VerifyVM(

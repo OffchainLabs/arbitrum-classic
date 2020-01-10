@@ -66,7 +66,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 		preparedAssertions := make(map[[32]byte]*preparedAssertion)
 
 		updateCurrent := func() {
-			currentOpinion := chain.knownValidNode
+			currentOpinion := chain.calculatedValidNode
 			successorHashes := [4][32]byte{}
 			copy(successorHashes[:], currentOpinion.successorHashes[:])
 			successor := func() *Node {
@@ -124,13 +124,16 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 					correctNode.machine = nextMachine
 					correctNode.assertion = validExecution
 				} else {
-					correctNode.machine = chain.knownValidNode.machine.Clone()
+					correctNode.machine = chain.calculatedValidNode.machine.Clone()
 				}
-				chain.knownValidNode = correctNode
+				chain.calculatedValidNode = correctNode
+				if correctNode.depth > chain.knownValidNode.depth {
+					chain.knownValidNode = correctNode
+				}
 				chain.Unlock()
 				chain.RLock()
 				for _, listener := range chain.listeners {
-					listener.AdvancedKnownValidNode(chain.knownValidNode.hash)
+					listener.AdvancedKnownValidNode(chain.calculatedValidNode.hash)
 				}
 
 			}
@@ -147,23 +150,24 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			case <-ticker.C:
 				chain.RLock()
 				// Catch up to current head
-				for !chain.nodeGraph.leaves.IsLeaf(chain.knownValidNode) {
+				for !chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 					updateCurrent()
 					chain.RLock()
 				}
 				// Prepare next assertion
-				_, isPreparing := preparingAssertions[chain.knownValidNode.hash]
+				_, isPreparing := preparingAssertions[chain.calculatedValidNode.hash]
 				if !isPreparing {
-					newMessages := chain.knownValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
-					if !machine.IsMachineBlocked(chain.knownValidNode.machine, chain.latestBlockNumber, newMessages) {
-						preparingAssertions[chain.knownValidNode.hash] = true
+					newMessages := chain.calculatedValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
+					if chain.calculatedValidNode.machine != nil &&
+						!machine.IsMachineBlocked(chain.calculatedValidNode.machine, chain.latestBlockNumber, newMessages) {
+						preparingAssertions[chain.calculatedValidNode.hash] = true
 						go func() {
 							assertionPreparedChan <- chain.prepareAssertion()
 						}()
 					}
 				} else {
-					prepared, isPrepared := preparedAssertions[chain.knownValidNode.hash]
-					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.knownValidNode) {
+					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
+					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
 						for _, lis := range chain.listeners {
 							lis.AssertionPrepared(prepared.Clone())
 						}
@@ -178,7 +182,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 
 func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	chain.RLock()
-	currentOpinion := chain.knownValidNode
+	currentOpinion := chain.calculatedValidNode
 	currentOpinionHash := currentOpinion.hash
 	prevPrevLeafHash := currentOpinion.PrevHash()
 	prevDataHash := currentOpinion.nodeDataHash

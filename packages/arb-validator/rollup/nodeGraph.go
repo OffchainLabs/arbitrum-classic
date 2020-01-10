@@ -40,15 +40,18 @@ type NodeGraph struct {
 }
 
 func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeGraph {
-	ret := &NodeGraph{
-		latestConfirmed: nil,
-		leaves:          NewLeafSet(),
-		nodeFromHash:    make(map[[32]byte]*Node),
-		oldestNode:      nil,
+	newNode := NewInitialNode(machine)
+	nodeFromHash := make(map[[32]byte]*Node)
+	nodeFromHash[newNode.hash] = newNode
+	leaves := NewLeafSet()
+	leaves.Add(newNode)
+	return &NodeGraph{
+		latestConfirmed: newNode,
+		leaves:          leaves,
+		nodeFromHash:    nodeFromHash,
+		oldestNode:      newNode,
 		params:          params,
 	}
-	ret.CreateInitialNode(machine)
-	return ret
 }
 
 func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
@@ -124,14 +127,6 @@ func (ng *NodeGraph) Equals(ng2 *NodeGraph) bool {
 		}
 	}
 	return true
-}
-
-func (chain *NodeGraph) CreateInitialNode(machine machine.Machine) {
-	newNode := NewInitialNode(machine)
-	chain.nodeFromHash[newNode.hash] = newNode
-	chain.leaves.Add(newNode)
-	chain.latestConfirmed = newNode
-	chain.oldestNode = newNode
 }
 
 func (chain *NodeGraph) pruneNode(node *Node) {

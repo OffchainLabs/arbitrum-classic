@@ -56,6 +56,7 @@ type ArbRollup interface {
 		stakerProofOffsets []*big.Int,
 	) error
 	StartChallenge(ctx context.Context, asserterAddress common.Address, challengerAddress common.Address, prevNode [32]byte, disputableDeadline *big.Int, asserterPosition structures.ChildType, challengerPosition structures.ChildType, asserterVMProtoHash [32]byte, challengerVMProtoHash [32]byte, asserterProof [][32]byte, challengerProof [][32]byte, asserterDataHash [32]byte, asserterPeriodTicks structures.TimeTicks, challengerNodeHash [32]byte) error
+	IsStaked(address common.Address) (bool, error)
 }
 
 //func (vm *ArbRollup) VerifyVM(

@@ -114,6 +114,10 @@ contract Staking is ChallengeType {
         return stakeRequirement;
     }
 
+    function isStaked(address _stakerAddress) external view returns (bool) {
+        return stakers[_stakerAddress].location != 0x00;
+    }
+
     function resolveChallenge(address payable winner, address loser) external {
         address sender = msg.sender;
         bytes32 codehash;
