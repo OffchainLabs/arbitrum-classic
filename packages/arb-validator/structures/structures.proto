@@ -72,3 +72,8 @@ message CheckpointMetadata {
     value.BigIntegerBuf newestBlockHeight = 3;
 }
 
+message CheckpointLinks {
+    value.BigIntegerBuf nextBlockHeight = 1;
+    value.BigIntegerBuf prevBlockHeight = 2;
+}
+

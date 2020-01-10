@@ -210,7 +210,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		context.TODO(),
 		rollupAddress,
 		contractPath,
-		1000000,
+		big.NewInt(1000000),
 		checkpointType,
 	)
 	return NewChain(
