@@ -68,7 +68,7 @@ class App {
       testToken.networks[network.chainId.toString()].address;
     this.testTokenAddres = testTokenAddress;
 
-    console.log("eth tooken addresss: " + testTokenAddress);
+    console.log("eth token contract addresss: " + testTokenAddress);
 
     let ethTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
@@ -76,25 +76,27 @@ class App {
       this.ethProvider
     );
 
-    let ethWallet = await this.ethProvider.getSigner(0);
-    this.contracts.EthTestToken = ethTestTokenContractRaw.connect(ethWallet);
-
-    let arbWallet = await this.arbProvider.getSigner(0);
-    this.arbWallet = arbWallet;
-
-    let ethAddress = await ethWallet.getAddress();
-    this.walletAddress = await arbWallet.getAddress();
-
-    console.log("eth address " + ethAddress);
-    console.log("arb address " + this.walletAddress);
-
     let arbTestTokenContractRaw = new ethers.Contract(
       testTokenAddress,
       testToken.abi,
       this.arbProvider
     );
 
-    this.contracts.ArbTestToken = arbTestTokenContractRaw.connect(arbWallet);
+    this.ethWallet = await this.ethProvider.getSigner(0);
+    this.arbWallet = await this.arbProvider.getSigner(0);
+
+    this.ethwalletAddress = await this.ethWallet.getAddress();
+    this.arbwalletAddress = await this.arbWallet.getAddress();
+
+    console.log("eth address " + this.ethwalletAddress);
+    console.log("arb address " + this.arbwalletAddress);
+
+    this.contracts.ArbTestToken = arbTestTokenContractRaw.connect(
+      this.arbWallet
+    );
+    this.contracts.EthTestToken = ethTestTokenContractRaw.connect(
+      this.ethWallet
+    );
 
     this.listenForEvents();
     this.setupHooks();
@@ -119,9 +121,8 @@ class App {
   // Listen for events emitted from the contract
   listenForEvents() {
     var accountInterval = setInterval(async () => {
-      //console.log(this.ethProvider.getSigner(0).getAddress())
-      let signer = this.ethProvider.getSigner(0);
-      let address = await signer.getAddress();
+      let address = await this.arbWallet.getAddress();
+
       if (address != this.account) {
         this.account = address;
         this.render();
@@ -148,19 +149,28 @@ class App {
 
   async render() {
     var content = $("#content");
-    if (this.walletAddress) {
-      $("#accountAddress").html(this.walletAddress);
-      console.log(this.account);
+    if (this.ethwalletAddress) {
+      $("#accountAddress").html(this.ethwalletAddress);
+      console.log("this account: " + this.account);
+
       const ethBalance = await this.contracts.EthTestToken.balanceOf(
-        this.walletAddress
+        this.ethwalletAddress
       );
-      $("#ethBalance").html("eth balance: " + ethBalance.toString());
-      console.log(ethBalance);
+
+      $("#ethBalance").html(ethBalance.toString());
+      console.log("ethbalance: " + ethBalance);
+
+      const inboxManager = await this.arbProvider.globalInboxConn();
+      const tx = await inboxManager.getTokenBalances(this.arbwalletAddress);
+
+      console.log("arbBalance in GolbalWallet: " + tx[1]);
+
       const arbBalance = await this.contracts.ArbTestToken.balanceOf(
-        this.walletAddress
+        this.arbwalletAddress
       );
-      $("#arbBalance").html("arb balance: " + arbBalance.toString());
-      console.log(arbBalance);
+      $("#arbBalance").html(arbBalance.toString());
+
+      console.log("arbBalance : " + arbBalance);
     } else {
       $("#accountAddress").html("Loading");
     }
@@ -170,12 +180,20 @@ class App {
 
   async mint() {
     let val = parseInt($("#mintAmount").val());
-    console.log("mint to " + this.walletAddress);
-    const tx = await this.contracts.EthTestToken.mint(this.walletAddress, val);
+
+    console.log("mint to " + this.ethwalletAddress);
+
+    const tx = await this.contracts.EthTestToken.mint(
+      this.ethwalletAddress,
+      val
+    );
+
     $("#mintForm").hide();
     $("#mintMessage").html("Tokens are minting...");
     $("#mintMessage").show();
+
     await tx.wait();
+
     console.log("minted");
     $("#mintMessage").hide();
     $("#mintForm").show();
@@ -184,26 +202,23 @@ class App {
 
   async deposit() {
     let val = parseInt($("#depositAmount").val());
-    let dest = parseInt($("#destination").val());
+
     const inboxManager = await this.arbProvider.globalInboxConn();
     const tx1 = await this.contracts.EthTestToken.approve(
       inboxManager.address,
       val
     );
-    // $("#depositForm").hide();
-    // $("#depositMessage").html("Approving transfer for deposit");
-    // $("#depositMessage").show();
-    // await tx1.wait();
+    console.log("approved from : " + this.ethwalletAddress);
+
     const signer = await this.arbProvider.getSigner();
-    console.log();
-    // Not yet implemented
-    const tx2 = await signer.depositERC20(
+
+    const tx2 = await this.arbWallet.depositERC20(
       this.contracts.EthTestToken.address,
-      this.walletAddress,
+      this.arbwalletAddress,
       val
     );
+
     $("#depositMessage").html("Depositing into EthBridge");
-    await tx2.wait();
     $("#depositMessage").hide();
     $("#depositForm").show();
   }
