@@ -25,8 +25,8 @@ import * as ethers from 'ethers';
 
 const promisePoller = require('promise-poller').default;
 
-import { ArbChannelFactory } from './ArbChannelFactory';
-import { ArbChannel } from './ArbChannel';
+import { ArbRollupFactory } from './ArbRollupFactory';
+import { ArbRollup } from './ArbRollup';
 
 import { GlobalPendingInboxFactory } from './GlobalPendingInboxFactory';
 import { GlobalPendingInbox } from './GlobalPendingInbox';
@@ -39,7 +39,7 @@ function sleep(ms: number): Promise<void> {
 
 // EthBridge event names
 const EB_EVENT_VMC = 'VMCreated';
-const EB_EVENT_CDA = 'ConfirmedDisputableAssertion';
+const EB_EVENT_CDA = 'RollupAsserted';
 
 interface MessageResult {
     evmVal: EVMResult;
@@ -58,7 +58,7 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     public client: ArbClient;
     public contracts: Map<string, Contract>;
 
-    private arbChannelCache?: ArbChannel;
+    private arbRollupCache?: ArbRollup;
     private inboxManagerCache?: GlobalPendingInbox;
     private validatorAddressesCache?: string[];
     private vmIdCache?: string;
@@ -74,20 +74,20 @@ export class ArbProvider extends ethers.providers.BaseProvider {
         }
     }
 
-    private async arbChannelConn(): Promise<ArbChannel> {
-        if (!this.arbChannelCache) {
+    private async arbRollupConn(): Promise<ArbRollup> {
+        if (!this.arbRollupCache) {
             const vmID = await this.client.getVmID();
-            const arbChannel = ArbChannelFactory.connect(vmID, this.provider);
-            this.arbChannelCache = arbChannel;
-            return arbChannel;
+            const arbRollup = ArbRollupFactory.connect(vmID, this.provider);
+            this.arbRollupCache = arbRollup;
+            return arbRollup;
         }
-        return this.arbChannelCache;
+        return this.arbRollupCache;
     }
 
     public async globalInboxConn(): Promise<GlobalPendingInbox> {
         if (!this.inboxManagerCache) {
-            const arbChannel = await this.arbChannelConn();
-            const globalInboxAddress = arbChannel.globalInbox();
+            const arbRollup = await this.arbRollupConn();
+            const globalInboxAddress = arbRollup.globalInbox();
             const inboxManager = GlobalPendingInboxFactory.connect(globalInboxAddress, this.provider);
             this.inboxManagerCache = inboxManager;
             return inboxManager;
@@ -96,51 +96,51 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     }
 
     public async getSigner(index: number): Promise<ArbWallet> {
-        const wallet = new ArbWallet(this.client, this.contracts, this.provider.getSigner(index), this);
+        const wallet = new ArbWallet(this.client, this.contracts, this.provider.getSigner(index), this, false);
         await wallet.initialize();
         return wallet;
     }
 
-    public async getValidatorAddresses(): Promise<string[]> {
-        if (!this.validatorAddressesCache) {
-            const arbChannel = await this.arbChannelConn();
-            const validators = await this.client.getValidatorList();
-            const isValidators = await arbChannel.isValidatorList(validators);
-            if (!isValidators) {
-                throw new Error('Incorrect validator list');
-            }
+    // public async getValidatorAddresses(): Promise<string[]> {
+    //     if (!this.validatorAddressesCache) {
+    //         const ArbRollup = await this.arbChannelConn();
+    //         const validators = await this.client.getValidatorList();
+    //         const isValidators = await arbChannel.isValidatorList(validators);
+    //         if (!isValidators) {
+    //             throw new Error('Incorrect validator list');
+    //         }
 
-            // Cache the set of lowercase validator addresses (without "0x")
-            this.validatorAddressesCache = validators.map((addr: string) => addr.toLowerCase().slice(2)).sort();
-            return this.validatorAddressesCache;
-        }
-        return this.validatorAddressesCache;
-    }
+    //         // Cache the set of lowercase validator addresses (without "0x")
+    //         this.validatorAddressesCache = validators.map((addr: string) => addr.toLowerCase().slice(2)).sort();
+    //         return this.validatorAddressesCache;
+    //     }
+    //     return this.validatorAddressesCache;
+    // }
 
-    public async verifyUnanimousSignatures(
-        assertionHash: ethers.utils.Arrayish,
-        validatorSigs: string[],
-    ): Promise<void> {
-        const validatorAddresses = await this.getValidatorAddresses();
-        if (validatorAddresses.length !== validatorSigs.length) {
-            throw Error('Expected: ' + validatorAddresses.length + ' signatures.\nReceived: ' + validatorSigs.length);
-        }
+    // public async verifyUnanimousSignatures(
+    //     assertionHash: ethers.utils.Arrayish,
+    //     validatorSigs: string[],
+    // ): Promise<void> {
+    //     const validatorAddresses = await this.getValidatorAddresses();
+    //     if (validatorAddresses.length !== validatorSigs.length) {
+    //         throw Error('Expected: ' + validatorAddresses.length + ' signatures.\nReceived: ' + validatorSigs.length);
+    //     }
 
-        const addresses = validatorSigs
-            .map(sig =>
-                ethers.utils
-                    .verifyMessage(ethers.utils.arrayify(assertionHash), sig)
-                    .toLowerCase()
-                    .slice(2),
-            )
-            .sort();
+    //     const addresses = validatorSigs
+    //         .map(sig =>
+    //             ethers.utils
+    //                 .verifyMessage(ethers.utils.arrayify(assertionHash), sig)
+    //                 .toLowerCase()
+    //                 .slice(2),
+    //         )
+    //         .sort();
 
-        for (let i = 0; i < validatorAddresses.length; i++) {
-            if (validatorAddresses[i] !== addresses[i]) {
-                throw Error('Invalid signature');
-            }
-        }
-    }
+    //     for (let i = 0; i < validatorAddresses.length; i++) {
+    //         if (validatorAddresses[i] !== addresses[i]) {
+    //             throw Error('Invalid signature');
+    //         }
+    //     }
+    // }
 
     public async sendMessages(messages: Message[]): Promise<string> {
         let txHash: Promise<string> = new Promise<string>((): string => '');
@@ -381,27 +381,29 @@ export class ArbProvider extends ethers.providers.BaseProvider {
     private async processConfirmedDisputableAssertion(logPostHash: string, onChainTxHash: string): Promise<void> {
         const receipt = await this.provider.waitForTransaction(onChainTxHash);
         if (!receipt.logs) {
-            throw Error('DisputableAssertion tx had no logs');
+            throw Error('RollupAsserted tx had no logs');
         }
-        const arbChannel = await this.arbChannelConn();
-        const events = receipt.logs.map(l => arbChannel.interface.parseLog(l));
+        const arbRollup = await this.arbRollupConn();
+        const events = receipt.logs.map(l => arbRollup.interface.parseLog(l));
         // DisputableAssertion Event
-        const cda = events.find(event => event.name === EB_EVENT_CDA);
-        if (!cda) {
-            throw Error('DisputableAssertion ' + onChainTxHash + ' not found on chain');
+        const eventIndex = events.findIndex(event => event.name === EB_EVENT_CDA);
+        if (eventIndex == -1) {
+            throw Error('RollupAsserted ' + onChainTxHash + ' not found on chain');
         }
+        const rawLog = receipt.logs[eventIndex];
+        const cda = events[eventIndex];
         const vmId = await this.getVmID();
         // Check correct VM
-        if (cda.values.vmId !== vmId) {
+        if (rawLog.address.toLowerCase() !== vmId.toLowerCase()) {
             throw Error(
-                'DisputableAssertion Event is from a different VM: ' + cda.values.vmId + '\nExpected VM ID: ' + vmId,
+                'RollupAsserted Event is from a different address: ' + rawLog.address + '\nExpected address: ' + vmId,
             );
         }
 
         // Check correct logs hash
         if (cda.values.logsAccHash !== logPostHash) {
             throw Error(
-                'DisputableAssertion Event on-chain logPostHash is: ' +
+                'RollupAsserted Event on-chain logPostHash is: ' +
                     cda.values.logsAccHash +
                     '\nExpected: ' +
                     logPostHash,

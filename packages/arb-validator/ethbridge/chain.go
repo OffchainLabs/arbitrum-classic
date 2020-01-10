@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,11 @@ type ArbAddresses struct {
 	OneStepProof       string `json:"OneStepProof"`
 }
 
-func waitForReceipt(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func waitForReceipt(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) error {
+	_, err := waitForReceiptWithResults(ctx, client, from, tx, methodName)
+	return err
+}
+func waitForReceiptWithResults(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):

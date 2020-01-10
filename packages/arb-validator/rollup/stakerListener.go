@@ -22,12 +22,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -35,8 +34,8 @@ type StakerListener struct {
 	sync.Mutex
 	myAddr   common.Address
 	auth     *bind.TransactOpts
-	client   *ethclient.Client
-	contract *ethbridge.ArbRollup
+	client   arbbridge.ArbClient
+	contract arbbridge.ArbRollup
 }
 
 func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
@@ -62,7 +61,7 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 
 func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) error {
 	staker.Lock()
-	_, err := staker.contract.MakeAssertion(
+	err := staker.contract.MakeAssertion(
 		ctx,
 		opp.prevPrevLeafHash,
 		opp.prevDataHash,

@@ -38,6 +38,6 @@ func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*protocol.Time
 	return protocol.NewTimeBlocks(header.Number), nil
 }
 
-func (c *ClientConnection) waitForReceipt(ctx context.Context, from common.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func (c *ClientConnection) waitForReceipt(ctx context.Context, from common.Address, tx *types.Transaction, methodName string) error {
 	return waitForReceipt(ctx, c.Client, from, tx, methodName)
 }

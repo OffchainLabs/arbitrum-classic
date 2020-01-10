@@ -180,7 +180,7 @@ func TestChallenge(t *testing.T) {
 		seq,
 	})
 	//coordinator.Val.Validator.
-	receipt, err := coordinator.Val.SendEthMessage(
+	status, err := coordinator.Val.SendEthMessage(
 		context.Background(),
 		tup,
 		big.NewInt(0),
@@ -188,7 +188,7 @@ func TestChallenge(t *testing.T) {
 	if err != nil {
 		t.Fatal("Send error", err)
 	}
-	if receipt.Status == 0 {
+	if status == 0 {
 		t.Fatal("Follower could not send message")
 	}
 	for {

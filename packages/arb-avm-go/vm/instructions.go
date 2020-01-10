@@ -690,6 +690,7 @@ func insnInbox(state *Machine) (StackMods, error) {
 	}
 	inboxVal := state.GetInbox()
 	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
+		PushStackInt(state, mods, timeout)
 		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
 	state.context.ReadInbox()
@@ -925,7 +926,7 @@ func insnTget(state *Machine) (StackMods, error) {
 	if err != nil {
 		// index out of range
 		fmt.Println(state.stack)
-		fmt.Println("pc = ", state.pc.GetPC())
+		fmt.Println("pc = ", state.pc.pc, state.pc.GetPC().Op)
 		return mods, fmt.Errorf("insn_tget: index %v out of range %v", index.BigInt(), tuple.Len())
 	}
 

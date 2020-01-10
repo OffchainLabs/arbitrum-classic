@@ -27,6 +27,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arb"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
@@ -35,7 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -104,17 +106,22 @@ func main() {
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
+	validatorConfig := rollup.ChainObserverConfig{
+		MaxCallSteps: 200000,
+	}
+
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	client, err := ethclient.Dial(ethURL)
+	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	factory, err := ethbridge.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory), client)
+	factory, err := client.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory))
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	auth.Context = context.Background()
 	address, err := factory.CreateRollup(
 		auth,
@@ -123,7 +130,7 @@ func main() {
 		common.Address{},
 	)
 
-	server, err := rollupvalidator.NewRPCServer(auth, client, address, flag.Arg(0), config)
+	server, err := rollupvalidator.NewRPCServer(auth, client, address, flag.Arg(0), config, validatorConfig)
 	if err != nil {
 		log.Fatal(err)
 	}

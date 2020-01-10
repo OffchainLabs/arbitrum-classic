@@ -274,7 +274,7 @@ type dummyCheckpointer struct {
 }
 
 func newDummyCheckpointer(contractPath string) *dummyCheckpointer {
-	theMachine, err := loader.LoadMachineFromFile("contract.ao", true, "test")
+	theMachine, err := loader.LoadMachineFromFile(contractPath, true, "test")
 	if err != nil {
 		log.Fatal("newDummyCheckpointer: error loading ", contractPath)
 	}

@@ -19,35 +19,32 @@ package challenges
 import (
 	"context"
 	"errors"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 )
 
 func DefendExecutionClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	precondition *protocol.Precondition,
 	numSteps uint32,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client, auth)
+	contract, err := client.NewExecutionChallenge(address, auth)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan ethbridge.Notification, 1024)
+	noteChan := make(chan arbbridge.Notification, 1024)
 
-	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return defendExecution(
 		ctx,
 		contract,
@@ -62,20 +59,20 @@ func DefendExecutionClaim(
 
 func ChallengeExecutionClaim(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	address common.Address,
 	startPrecondition *protocol.Precondition,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
-	contract, err := ethbridge.NewExecutionChallenge(address, client, auth)
+	contract, err := client.NewExecutionChallenge(address, auth)
 	if err != nil {
 		return 0, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan ethbridge.Notification, 1024)
+	noteChan := make(chan arbbridge.Notification, 1024)
 
-	go ethbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
 	return challengeExecution(
 		ctx,
 		contract,
@@ -87,15 +84,15 @@ func ChallengeExecutionClaim(
 
 func defendExecution(
 	ctx context.Context,
-	contract *ethbridge.ExecutionChallenge,
-	outChan chan ethbridge.Notification,
+	contract arbbridge.ExecutionChallenge,
+	outChan chan arbbridge.Notification,
 	startDefender machine.AssertionDefender,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	_, ok = note.Event.(ethbridge.InitiateChallengeEvent)
+	_, ok = note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
 		return 0, errors.New("ExecutionChallenge expected InitiateChallengeEvent")
 	}
@@ -110,7 +107,7 @@ func defendExecution(
 			}
 			pre := defender.GetPrecondition()
 			assertion, _ := defender.GetMachineState().ExecuteAssertion(1, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
-			_, err = contract.OneStepProof(ctx, defender.GetPrecondition(), assertion.Stub(), proof)
+			err = contract.OneStepProof(ctx, defender.GetPrecondition(), assertion.Stub(), proof)
 			if err != nil {
 				return 0, err
 			}
@@ -118,7 +115,7 @@ func defendExecution(
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(ethbridge.OneStepProof)
+			_, ok = note.Event.(arbbridge.OneStepProof)
 			if !ok {
 				return 0, errors.New("ExecutionChallenge expected OneStepProof")
 			}
@@ -126,13 +123,13 @@ func defendExecution(
 		}
 
 		defenders, assertions := defender.NBisect(50)
-		_, err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
+		err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
 
 		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		ev, ok := note.Event.(ethbridge.ExecutionBisectionEvent)
+		ev, ok := note.Event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
 			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
 		}
@@ -146,7 +143,7 @@ func defendExecution(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
+		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
 			return 0, errors.New("ExecutionChallenge expected ContinueChallengeEvent")
 		}
@@ -156,8 +153,8 @@ func defendExecution(
 
 func challengeExecution(
 	ctx context.Context,
-	contract *ethbridge.ExecutionChallenge,
-	outChan chan ethbridge.Notification,
+	contract arbbridge.ExecutionChallenge,
+	outChan chan arbbridge.Notification,
 	startMachine machine.Machine,
 	startPrecondition *protocol.Precondition,
 ) (ChallengeState, error) {
@@ -165,7 +162,7 @@ func challengeExecution(
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	ev, ok := note.Event.(ethbridge.InitiateChallengeEvent)
+	ev, ok := note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
 		return 0, errors.New("ExecutionChallenge expected InitiateChallengeEvent")
 	}
@@ -184,11 +181,11 @@ func challengeExecution(
 			return state, err
 		}
 
-		if _, ok := note.Event.(ethbridge.OneStepProof); ok {
+		if _, ok := note.Event.(arbbridge.OneStepProof); ok {
 			return ChallengeAsserterWon, nil
 		}
 
-		ev, ok := note.Event.(ethbridge.ExecutionBisectionEvent)
+		ev, ok := note.Event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
 			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
 		}
@@ -197,7 +194,7 @@ func challengeExecution(
 			return 0, err
 		}
 		preconditions := protocol.GeneratePreconditions(precondition, ev.Assertions)
-		_, err = contract.ChooseSegment(
+		err = contract.ExecutionChallengeChooseSegment(
 			ctx,
 			challengedAssertionNum,
 			preconditions,
@@ -207,7 +204,7 @@ func challengeExecution(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(ethbridge.ContinueChallengeEvent)
+		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
 			return 0, errors.New("ExecutionChallenge expected ContinueChallengeEvent")
 		}

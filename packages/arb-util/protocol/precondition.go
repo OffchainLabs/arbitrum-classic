@@ -104,11 +104,12 @@ func (pre *Precondition) Equals(b *Precondition) bool {
 
 func (pre *Precondition) Hash() [32]byte {
 	var ret [32]byte
+	bounds := pre.TimeBounds.AsIntArray()
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(pre.BeforeHash),
-		solsha3.Uint128(utils.UnmarshalBigInt(pre.TimeBounds.Start.Val)),
-		solsha3.Uint128(utils.UnmarshalBigInt(pre.TimeBounds.End.Val)),
-		solsha3.Bytes32(pre.BeforeInbox),
+		solsha3.Uint128(bounds[0]),
+		solsha3.Uint128(bounds[1]),
+		solsha3.Bytes32(pre.BeforeInbox.Hash()),
 	))
 	return ret
 }

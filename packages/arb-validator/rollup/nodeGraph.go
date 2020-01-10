@@ -20,6 +20,8 @@ import (
 	"errors"
 	"log"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
@@ -181,6 +183,15 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	}
 	chain.leaves.Delete(prevNode)
 
+	// create nodes for invalid branches
+	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
+		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
+		chain.nodeFromHash[newNode.hash] = newNode
+		chain.leaves.Add(newNode)
+
+		log.Println("New node created", hexutil.Encode(newNode.hash[:]))
+	}
+
 	// create node for valid branch
 	if afterMachine != nil {
 		afterMachine = afterMachine.Clone()
@@ -189,13 +200,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime, assertionTxHash)
 	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
-
-	// create nodes for invalid branches
-	for kind := structures.ChildType(0); kind <= structures.MaxInvalidChildType; kind++ {
-		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
-		chain.nodeFromHash[newNode.hash] = newNode
-		chain.leaves.Add(newNode)
-	}
+	log.Println("New node created valid", hexutil.Encode(newNode.hash[:]))
 }
 
 func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {
@@ -221,7 +226,8 @@ func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {
 }
 
 func (chain *NodeGraph) PruneNodeByHash(nodeHash [32]byte) {
-	chain.pruneNode(chain.nodeFromHash[nodeHash])
+	node := chain.nodeFromHash[nodeHash]
+	chain.pruneNode(node)
 }
 
 func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
@@ -232,14 +238,16 @@ func (chain *NodeGraph) CommonAncestor(n1, n2 *Node) *Node {
 func (chain *NodeGraph) generateNodePruneInfo() []pruneParams {
 	prunesToDo := []pruneParams{}
 	chain.leaves.forall(func(leaf *Node) {
-		leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
-		if err == nil {
-			prunesToDo = append(prunesToDo, pruneParams{
-				leaf,
-				leafAncestor.prev,
-				GeneratePathProof(leafAncestor.prev, leaf),
-				GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
-			})
+		if leaf != chain.latestConfirmed {
+			leafAncestor, _, err := GetConflictAncestor(leaf, chain.latestConfirmed)
+			if err == nil {
+				prunesToDo = append(prunesToDo, pruneParams{
+					leafHash:     leaf.hash,
+					ancestorHash: leafAncestor.prev.hash,
+					leafProof:    GeneratePathProof(leafAncestor.prev, leaf),
+					ancProof:     GeneratePathProof(leafAncestor.prev, chain.latestConfirmed),
+				})
+			}
 		}
 	})
 	return prunesToDo

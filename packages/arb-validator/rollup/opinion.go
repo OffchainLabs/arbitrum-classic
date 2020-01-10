@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"log"
 	"math/big"
 	"time"
 
@@ -127,9 +128,13 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				}
 				chain.knownValidNode = correctNode
 				chain.Unlock()
-			} else {
-				chain.RUnlock()
+				chain.RLock()
+				for _, listener := range chain.listeners {
+					listener.AdvancedKnownValidNode(chain.knownValidNode.hash)
+				}
+
 			}
+			chain.RUnlock()
 
 		}
 
@@ -149,13 +154,13 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				// Prepare next assertion
 				_, isPreparing := preparingAssertions[chain.knownValidNode.hash]
 				if !isPreparing {
-					preparingAssertions[chain.knownValidNode.hash] = true
-					go func() {
-						assertionPreparedChan <- chain.prepareAssertion(protocol.NewTimeBoundsBlocks(
-							chain.latestBlockNumber,
-							protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
-						))
-					}()
+					newMessages := chain.knownValidNode.vmProtoData.PendingTop != chain.pendingInbox.GetTopHash()
+					if !machine.IsMachineBlocked(chain.knownValidNode.machine, chain.latestBlockNumber, newMessages) {
+						preparingAssertions[chain.knownValidNode.hash] = true
+						go func() {
+							assertionPreparedChan <- chain.prepareAssertion()
+						}()
+					}
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.knownValidNode.hash]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.knownValidNode) {
@@ -171,9 +176,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	}()
 }
 
-func (chain *ChainObserver) prepareAssertion(
-	timeBounds *protocol.TimeBoundsBlocks,
-) *preparedAssertion {
+func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	chain.RLock()
 	currentOpinion := chain.knownValidNode
 	currentOpinionHash := currentOpinion.hash
@@ -190,11 +193,12 @@ func (chain *ChainObserver) prepareAssertion(
 	messageStack, _ := chain.pendingInbox.Substack(beforePendingTop, afterPendingTop)
 	messagesVal := chain.pendingInbox.ValueForSubseq(beforePendingTop, afterPendingTop)
 	mach := currentOpinion.machine.Clone()
+	timeBounds := chain.currentTimeBounds()
 	chain.RUnlock()
 
-	inbox := protocol.NewInbox()
-	inbox.WithAddedMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, inbox.Receive())
+	assertion, stepsRun := mach.ExecuteAssertion(chain.nodeGraph.params.MaxExecutionSteps, timeBounds, messagesVal)
+
+	log.Println("Prepared assertion of", stepsRun, "steps, ending with", mach.LastBlockReason())
 	var params *structures.AssertionParams
 	var claim *structures.AssertionClaim
 	if assertion.DidInboxInsn {
@@ -252,9 +256,7 @@ func getNodeOpinion(
 	}
 
 	mach := prevMach
-	inbox := protocol.NewInbox()
-	inbox.WithAddedMessages(messagesVal)
-	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, inbox.Receive())
+	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, messagesVal)
 	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
 		return structures.InvalidExecutionChildType, nil
 	}

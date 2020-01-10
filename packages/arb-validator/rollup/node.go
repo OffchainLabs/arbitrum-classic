@@ -158,11 +158,10 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Nod
 
 func (node *Node) ExecutionPreconditionHash() [32]byte {
 	vmProtoData := node.prev.vmProtoData
-	beforeInbox := protocol.AddMessagesHashToInboxHash(value.NewEmptyTuple().Hash(), node.disputable.AssertionClaim.ImportedMessagesSlice)
 	pre := &protocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
-		BeforeInbox: value.NewHashOnlyValue(beforeInbox, 0),
+		BeforeInbox: value.NewHashOnlyValue(node.disputable.AssertionClaim.ImportedMessagesSlice, 0),
 	}
 	return pre.Hash()
 }
@@ -342,8 +341,6 @@ func CommonAncestor(n1, n2 *Node) *Node {
 }
 
 func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
-	n1Orig := n1
-	n2Orig := n2
 	for n1.depth > n2.depth {
 		n1 = n1.prev
 	}
@@ -352,13 +349,12 @@ func GetConflictAncestor(n1, n2 *Node) (*Node, *Node, error) {
 	}
 
 	// Now n1 and n2 are at the same height so we can start looking for a challenge
-
 	for n1.prev != n2.prev {
 		n1 = n1.prev
 		n2 = n2.prev
 	}
 
-	if n1 == n1Orig || n1 == n2Orig {
+	if n1.linkType == n2.linkType {
 		return n1, n2, errors.New("no conflict")
 	}
 	return n1, n2, nil

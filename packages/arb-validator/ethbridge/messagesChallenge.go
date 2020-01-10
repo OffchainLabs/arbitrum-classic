@@ -18,6 +18,8 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
 
@@ -30,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	errors2 "github.com/pkg/errors"
 )
 
@@ -71,7 +72,7 @@ func (c *MessagesChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error {
+func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
@@ -129,14 +130,14 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan No
 	return nil
 }
 
-func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan Notification) error {
-	event, err := func() (Event, error) {
+func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == messagesBisectedID {
 			eventVal, err := c.Challenge.ParseBisected(log)
 			if err != nil {
 				return nil, err
 			}
-			return MessagesBisectionEvent{
+			return arbbridge.MessagesBisectionEvent{
 				ChainHashes:   eventVal.ChainHashes,
 				SegmentHashes: eventVal.SegmentHashes,
 				TotalLength:   eventVal.TotalLength,
@@ -147,7 +148,7 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 			if err != nil {
 				return nil, err
 			}
-			return OneStepProofEvent{}, nil
+			return arbbridge.OneStepProofEvent{}, nil
 		}
 		return nil, errors2.New("unknown arbitrum event type")
 	}()
@@ -160,7 +161,7 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 	if err != nil {
 		return err
 	}
-	outChan <- Notification{
+	outChan <- arbbridge.Notification{
 		Header: header,
 		VMID:   c.address,
 		Event:  event,
@@ -174,7 +175,7 @@ func (c *MessagesChallenge) Bisect(
 	chainHashes [][32]byte,
 	segmentHashes [][32]byte,
 	chainLength *big.Int,
-) (*types.Receipt, error) {
+) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.Bisect(
 		c.auth,
@@ -183,7 +184,7 @@ func (c *MessagesChallenge) Bisect(
 		chainLength,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
@@ -195,7 +196,7 @@ func (c *MessagesChallenge) OneStepProof(
 	lowerHashB [32]byte,
 	topHashB [32]byte,
 	value [32]byte,
-) (*types.Receipt, error) {
+) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
 		c.auth,
@@ -206,7 +207,7 @@ func (c *MessagesChallenge) OneStepProof(
 		value,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }

@@ -19,15 +19,20 @@ package rollupvalidator
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"log"
 	"math/big"
 	"strconv"
+
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -40,15 +45,17 @@ import (
 type Server struct {
 	rollupAddress common.Address
 	tracker       *txTracker
+	chain         *rollup.ChainObserver
 }
 
 // NewServer returns a new instance of the Server class
 func NewServer(
 	auth *bind.TransactOpts,
-	client *ethclient.Client,
+	client arbbridge.ArbClient,
 	rollupAddress common.Address,
 	codeFile string,
-	config structures.ChainParams,
+	params structures.ChainParams,
+	validatorConfig rollup.ChainObserverConfig,
 ) (*Server, error) {
 	header, err := client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
@@ -56,9 +63,9 @@ func NewServer(
 	}
 	ctx := context.Background()
 
-	checkpointer := structures.NewRollupCheckpointer(ctx, rollupAddress, codeFile, 100)
+	checkpointer := structures.NewRollupCheckpointerWithType(ctx, rollupAddress, codeFile, 100, "")
 
-	chainObserver, err := rollup.NewChain(ctx, rollupAddress, checkpointer, config, true, protocol.NewTimeBlocks(header.Number))
+	chainObserver, err := rollup.NewChain(ctx, rollupAddress, validatorConfig, checkpointer, params, true, protocol.NewTimeBlocks(header.Number))
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +91,7 @@ func NewServer(
 		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
 	}()
 
-	return &Server{rollupAddress, tracker}, nil
+	return &Server{rollupAddress, tracker, chainObserver}, nil
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -176,38 +183,69 @@ func (m *Server) GetVMInfo(ctx context.Context, args *GetVMInfoArgs) (*GetVMInfo
 
 // CallMessage takes a request from a client to process in a temporary context and return the result
 func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallMessageReply, error) {
-	//	if !<-m.coordinator.ChannelVal.CanRun() {
-	//		return nil, errors.New("Cannot call when machine can't run")
-	//	}
-	//	dataBytes, err := hexutil.Decode(args.Data)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	rd := bytes.NewReader(dataBytes)
-	//	dataVal, err := value.UnmarshalValue(rd)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	senderBytes, err := hexutil.Decode(args.Sender)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	var sender common.Address
-	//	copy(sender[:], senderBytes)
-	//
-	//	msg := protocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
-	//	resultChan, errChan := m.coordinator.ChannelVal.RequestCall(msg)
-	//
-	//	select {
-	//	case logVal := <-resultChan:
-	//		var buf bytes.Buffer
-	//		_ = value.MarshalValue(logVal, &buf) // error can only occur from writes and bytes.Buffer is safe
-	//		return &CallMessageReply{
-	//			RawVal: hexutil.Encode(buf.Bytes()),
-	//		}, nil
-	//	case err := <-errChan:
-	//		return nil, err
-	//	}
-	return nil, nil
+	dataBytes, err := hexutil.Decode(args.Data)
+	if err != nil {
+		return nil, err
+	}
+	rd := bytes.NewReader(dataBytes)
+	dataVal, err := value.UnmarshalValue(rd)
+	if err != nil {
+		return nil, err
+	}
+
+	senderBytes, err := hexutil.Decode(args.Sender)
+	if err != nil {
+		return nil, err
+	}
+	var sender common.Address
+	copy(sender[:], senderBytes)
+
+	msg := protocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
+	messageHash := solsha3.SoliditySHA3(
+		solsha3.Bytes32(msg.Destination),
+		solsha3.Bytes32(msg.Data.Hash()),
+		solsha3.Uint256(msg.Currency),
+		msg.TokenType[:],
+	)
+	msgHashInt := new(big.Int).SetBytes(messageHash[:])
+	val, _ := value.NewTupleFromSlice([]value.Value{
+		msg.Data,
+		value.NewIntValue(new(big.Int).SetUint64(0)),
+		value.NewIntValue(m.chain.CurrentTime().AsInt()),
+		value.NewIntValue(msgHashInt),
+	})
+	callingMessage := protocol.Message{
+		Data:        val.Clone(),
+		TokenType:   msg.TokenType,
+		Currency:    msg.Currency,
+		Destination: msg.Destination,
+	}
+	messageStack := protocol.NewMessageStack()
+	messageStack.AddMessage(callingMessage.AsValue())
+
+	assertion, steps := m.chain.ExecuteCall(messageStack.GetValue())
+
+	log.Println("Executed call for", steps, "steps")
+
+	results := assertion.Logs
+	if len(results) == 0 {
+		return nil, errors.New("call produced no output")
+	}
+	lastLogVal := results[len(results)-1]
+	lastLog, err := evm.ProcessLog(lastLogVal)
+	if err != nil {
+		return nil, err
+	}
+	logHash := lastLog.GetEthMsg().Data.TxHash
+	if !bytes.Equal(logHash[:], messageHash) {
+		// Last produced log is not the call we sent
+		return nil, errors.New("call took too long to execute")
+	}
+
+	result := results[len(results)-1]
+	var buf bytes.Buffer
+	_ = value.MarshalValue(result, &buf) // error can only occur from writes and bytes.Buffer is safe
+	return &CallMessageReply{
+		RawVal: hexutil.Encode(buf.Bytes()),
+	}, nil
 }

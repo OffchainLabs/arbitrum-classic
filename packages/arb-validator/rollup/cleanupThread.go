@@ -24,10 +24,19 @@ import (
 )
 
 type pruneParams struct {
-	leaf      *Node
-	ancestor  *Node
-	leafProof [][32]byte
-	ancProof  [][32]byte
+	leafHash     [32]byte
+	ancestorHash [32]byte
+	leafProof    [][32]byte
+	ancProof     [][32]byte
+}
+
+func (pp pruneParams) Clone() pruneParams {
+	return pruneParams{
+		leafHash:     pp.leafHash,
+		ancestorHash: pp.ancestorHash,
+		leafProof:    append(make([][32]byte, 0), pp.leafProof...),
+		ancProof:     append(make([][32]byte, 0), pp.ancProof...),
+	}
 }
 
 type recoverStakeOldParams struct {
@@ -36,15 +45,15 @@ type recoverStakeOldParams struct {
 }
 
 type recoverStakeMootedParams struct {
-	addr     common.Address
-	ancestor *Node
-	lcProof  [][32]byte
-	stProof  [][32]byte
+	addr         common.Address
+	ancestorHash [32]byte
+	lcProof      [][32]byte
+	stProof      [][32]byte
 }
 
 func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(time.Minute)
+		ticker := time.NewTicker(time.Second * 5)
 		defer ticker.Stop()
 		for {
 			select {
@@ -56,11 +65,22 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 				mootedToDo, oldToDo := chain.nodeGraph.generateStakerPruneInfo()
 				chain.RUnlock()
 
-				for _, listener := range chain.listeners {
-					listener.PrunableLeafs(prunesToDo)
-					listener.MootableStakes(mootedToDo)
-					listener.OldStakes(oldToDo)
+				if len(prunesToDo) > 0 {
+					for _, listener := range chain.listeners {
+						listener.PrunableLeafs(prunesToDo)
+					}
 				}
+				if len(mootedToDo) > 0 {
+					for _, listener := range chain.listeners {
+						listener.MootableStakes(mootedToDo)
+					}
+				}
+				if len(oldToDo) > 0 {
+					for _, listener := range chain.listeners {
+						listener.OldStakes(oldToDo)
+					}
+				}
+
 			}
 		}
 	}()
