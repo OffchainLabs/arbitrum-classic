@@ -221,9 +221,33 @@ func (chain *ChainObserver) confirmNode(ev arbbridge.ConfirmedEvent) {
 	if newNode.depth > chain.knownValidNode.depth {
 		chain.knownValidNode = newNode
 	}
-	chain.nodeGraph.ConfirmNode(ev.NodeHash)
+	chain.nodeGraph.latestConfirmed = newNode
+	chain.nodeGraph.considerPruningNode(newNode.prev)
+	chain.updateOldest(newNode)
 	for _, listener := range chain.listeners {
 		listener.ConfirmedNode(ev)
+	}
+}
+
+func (chain *ChainObserver) updateOldest(node *Node) {
+	for chain.nodeGraph.oldestNode != chain.nodeGraph.latestConfirmed {
+		if chain.nodeGraph.oldestNode.numStakers > 0 {
+			return
+		}
+		if chain.calculatedValidNode == chain.nodeGraph.oldestNode {
+			return
+		}
+		var successor *Node
+		for _, successorHash := range chain.nodeGraph.oldestNode.successorHashes {
+			if successorHash != zeroBytes32 {
+				if successor != nil {
+					return
+				}
+				successor = chain.nodeGraph.nodeFromHash[successorHash]
+			}
+		}
+		chain.nodeGraph.pruneNode(chain.nodeGraph.oldestNode)
+		chain.nodeGraph.oldestNode = successor
 	}
 }
 

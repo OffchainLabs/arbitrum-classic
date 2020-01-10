@@ -26,9 +26,9 @@ interface ArbRollupInterface extends Interface {
                 vmProtoHashes,
                 asserterProof,
                 challengerProof,
-                asserterDataHash,
-                asserterPeriodTicks,
-                challengerNodeHash,
+                asserterNodeHash,
+                challengerDataHash,
+                challengerPeriodTicks,
             ]: [
                 string,
                 string,
@@ -39,8 +39,8 @@ interface ArbRollupInterface extends Interface {
                 (Arrayish)[],
                 (Arrayish)[],
                 Arrayish,
-                BigNumberish,
                 Arrayish,
+                BigNumberish,
             ]): string;
         }>;
 
@@ -241,9 +241,9 @@ export class ArbRollup extends Contract {
             vmProtoHashes: (Arrayish)[],
             asserterProof: (Arrayish)[],
             challengerProof: (Arrayish)[],
-            asserterDataHash: Arrayish,
-            asserterPeriodTicks: BigNumberish,
-            challengerNodeHash: Arrayish,
+            asserterNodeHash: Arrayish,
+            challengerDataHash: Arrayish,
+            challengerPeriodTicks: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -391,9 +391,9 @@ export class ArbRollup extends Contract {
             vmProtoHashes: (Arrayish)[],
             asserterProof: (Arrayish)[],
             challengerProof: (Arrayish)[],
-            asserterDataHash: Arrayish,
-            asserterPeriodTicks: BigNumberish,
-            challengerNodeHash: Arrayish,
+            asserterNodeHash: Arrayish,
+            challengerDataHash: Arrayish,
+            challengerPeriodTicks: BigNumberish,
         ): Promise<BigNumber>;
 
         init(

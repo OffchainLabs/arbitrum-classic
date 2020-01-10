@@ -20,8 +20,6 @@ import (
 	"errors"
 	"log"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
@@ -183,8 +181,6 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 		newNode := NewNodeFromInvalidPrev(prevNode, dispNode, kind, chain.params, currentTime, assertionTxHash)
 		chain.nodeFromHash[newNode.hash] = newNode
 		chain.leaves.Add(newNode)
-
-		log.Println("New node created", hexutil.Encode(newNode.hash[:]))
 	}
 
 	// create node for valid branch
@@ -195,29 +191,6 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	newNode := NewNodeFromValidPrev(prevNode, dispNode, afterMachine, chain.params, currentTime, assertionTxHash)
 	chain.nodeFromHash[newNode.hash] = newNode
 	chain.leaves.Add(newNode)
-	log.Println("New node created valid", hexutil.Encode(newNode.hash[:]))
-}
-
-func (chain *NodeGraph) ConfirmNode(nodeHash [32]byte) {
-	node := chain.nodeFromHash[nodeHash]
-	chain.latestConfirmed = node
-	chain.considerPruningNode(node.prev)
-	for chain.oldestNode != chain.latestConfirmed {
-		if chain.oldestNode.numStakers > 0 {
-			return
-		}
-		var successor *Node
-		for _, successorHash := range chain.oldestNode.successorHashes {
-			if successorHash != zeroBytes32 {
-				if successor != nil {
-					return
-				}
-				successor = chain.nodeFromHash[successorHash]
-			}
-		}
-		chain.pruneNode(chain.oldestNode)
-		chain.oldestNode = successor
-	}
 }
 
 func (chain *NodeGraph) PruneNodeByHash(nodeHash [32]byte) {

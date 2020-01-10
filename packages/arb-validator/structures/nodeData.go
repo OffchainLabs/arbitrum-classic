@@ -165,17 +165,10 @@ type AssertionClaim struct {
 func (dn *AssertionClaim) String() string {
 	return fmt.Sprintf(
 		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, "+
-			"Assertion: (AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
-			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v))",
+			"Assertion: %v)",
 		hexutil.Encode(dn.AfterPendingTop[:]),
 		hexutil.Encode(dn.ImportedMessagesSlice[:]),
-		hexutil.Encode(dn.AssertionStub.AfterHash.Value),
-		dn.AssertionStub.DidInboxInsn,
-		dn.AssertionStub.NumGas,
-		hexutil.Encode(dn.AssertionStub.FirstMessageHash.Value),
-		hexutil.Encode(dn.AssertionStub.LastMessageHash.Value),
-		hexutil.Encode(dn.AssertionStub.FirstLogHash.Value),
-		hexutil.Encode(dn.AssertionStub.LastLogHash.Value),
+		dn.AssertionStub.ToString(),
 	)
 }
 

@@ -18,6 +18,9 @@ package protocol
 
 import (
 	"bytes"
+	fmt "fmt"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
@@ -48,6 +51,20 @@ func NewExecutionAssertionStub(
 
 func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
 	return proto.Clone(a).(*ExecutionAssertionStub)
+}
+
+func (a *ExecutionAssertionStub) ToString() string {
+	return fmt.Sprintf(
+		"Assertion: (AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
+			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v)",
+		hexutil.Encode(a.AfterHash.Value),
+		a.DidInboxInsn,
+		a.NumGas,
+		hexutil.Encode(a.FirstMessageHash.Value),
+		hexutil.Encode(a.LastMessageHash.Value),
+		hexutil.Encode(a.FirstLogHash.Value),
+		hexutil.Encode(a.LastLogHash.Value),
+	)
 }
 
 func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {

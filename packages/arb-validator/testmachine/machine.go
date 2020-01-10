@@ -99,7 +99,13 @@ func (m *Machine) LastBlockReason() machine.BlockReason {
 }
 
 func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBoundsBlocks, inbox value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
-	a := &protocol.ExecutionAssertion{}
+	a := &protocol.ExecutionAssertion{
+		AfterHash:    m.cppmachine.Hash(),
+		DidInboxInsn: false,
+		NumGas:       0,
+		OutMsgs:      nil,
+		Logs:         nil,
+	}
 	totalSteps := uint32(0)
 	stepIncrease := uint32(50)
 	for i := uint32(0); i < maxSteps; i += stepIncrease {
@@ -116,6 +122,8 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 			pcEnd := m.gomachine.GetPC()
 			log.Println("cpp num steps", ranSteps1, a1.NumGas)
 			log.Println("go num steps", ranSteps2, a2.NumGas)
+			log.Println("cpp stopped for", m.cppmachine.LastBlockReason())
+			log.Println("go stopped for", m.gomachine.LastBlockReason())
 			log.Fatalln("ExecuteAssertion error after running step", pcStart, pcEnd, a1, a2)
 		} else if !a1.Equals(a2) {
 			pcEnd := m.gomachine.GetPC()

@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -67,6 +69,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
+			log.Println("Building opinion on top of", hexutil.Encode(currentOpinion.hash[:]))
 			successorHashes := [4][32]byte{}
 			copy(successorHashes[:], currentOpinion.successorHashes[:])
 			successor := func() *Node {
@@ -78,10 +81,18 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				return nil
 			}()
 
+			if successor == nil {
+				panic("Node has no successor")
+			}
+
 			var newOpinion structures.ChildType
 			var nextMachine machine.Machine
 			var validExecution *protocol.ExecutionAssertion
 			prepped, found := preparedAssertions[currentOpinion.hash]
+
+			if successor.disputable == nil {
+				panic("Node was created with disputable assertion")
+			}
 
 			if found &&
 				prepped.params.Equals(successor.disputable.AssertionParams) &&
@@ -111,6 +122,7 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 			preparedAssertions = make(map[[32]byte]*preparedAssertion)
 
 			chain.RLock()
+			log.Println("Formed opinion that", newOpinion, hexutil.Encode(successorHashes[newOpinion][:]), "is the successor of", hexutil.Encode(currentOpinion.hash[:]))
 			correctNode, ok := chain.nodeGraph.nodeFromHash[successorHashes[newOpinion]]
 			if ok {
 				if newOpinion == structures.ValidChildType {
@@ -135,7 +147,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				for _, listener := range chain.listeners {
 					listener.AdvancedKnownValidNode(chain.calculatedValidNode.hash)
 				}
-
+			} else {
+				log.Println("Formed opinion on nonexistant node", hexutil.Encode(successorHashes[newOpinion][:]))
 			}
 			chain.RUnlock()
 

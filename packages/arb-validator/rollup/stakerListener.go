@@ -50,9 +50,9 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 		opp.challengerVMProtoHash,
 		opp.asserterProof,
 		opp.challengerProof,
-		opp.asserterDataHash,
-		opp.asserterPeriodTicks,
-		opp.challengerNodeHash,
+		opp.asserterNodeHash,
+		opp.challengerDataHash,
+		opp.challengerPeriodTicks,
 	)
 	staker.Unlock()
 }

@@ -250,7 +250,22 @@ func (vm *ArbRollup) ConfirmInvalid(
 	return vm.waitForReceipt(ctx, tx, "ConfirmInvalid")
 }
 
-func (vm *ArbRollup) StartChallenge(ctx context.Context, asserterAddress common.Address, challengerAddress common.Address, prevNode [32]byte, disputableDeadline *big.Int, asserterPosition structures.ChildType, challengerPosition structures.ChildType, asserterVMProtoHash [32]byte, challengerVMProtoHash [32]byte, asserterProof [][32]byte, challengerProof [][32]byte, asserterDataHash [32]byte, asserterPeriodTicks structures.TimeTicks, challengerNodeHash [32]byte) error {
+func (vm *ArbRollup) StartChallenge(
+	ctx context.Context,
+	asserterAddress common.Address,
+	challengerAddress common.Address,
+	prevNode [32]byte,
+	disputableDeadline *big.Int,
+	asserterPosition structures.ChildType,
+	challengerPosition structures.ChildType,
+	asserterVMProtoHash [32]byte,
+	challengerVMProtoHash [32]byte,
+	asserterProof [][32]byte,
+	challengerProof [][32]byte,
+	asserterNodeHash [32]byte,
+	challengerDataHash [32]byte,
+	challengerPeriodTicks structures.TimeTicks,
+) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.StartChallenge(
 		vm.auth,
@@ -268,9 +283,9 @@ func (vm *ArbRollup) StartChallenge(ctx context.Context, asserterAddress common.
 		},
 		asserterProof,
 		challengerProof,
-		asserterDataHash,
-		asserterPeriodTicks.Val,
-		challengerNodeHash,
+		asserterNodeHash,
+		challengerDataHash,
+		challengerPeriodTicks.Val,
 	)
 	if err != nil {
 		return err

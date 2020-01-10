@@ -216,13 +216,11 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 					Event:  arbbridge.NewTimeEvent{},
 				}
 			case log := <-messagesLogChan:
-				fmt.Println("Got live message log", log.Topics[0].Hex(), "from tx", log.TxHash.Hex())
 				if err := vm.processEvents(ctx, log, outChan); err != nil {
 					errChan <- err
 					return
 				}
 			case log := <-logChan:
-				fmt.Println("Got live vm log", log.Topics[0].Hex(), "from tx", log.TxHash.Hex())
 				if err := vm.processEvents(ctx, log, outChan); err != nil {
 					errChan <- err
 					return
@@ -365,7 +363,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 
 			msgVal, _ := value.NewTupleFromSlice([]value.Value{
 				msgData,
-				value.NewIntValue(new(big.Int).SetUint64(val.Raw.BlockNumber)),
+				value.NewIntValue(new(big.Int).SetUint64(log.BlockNumber)),
 				value.NewIntValue(msgHashInt),
 			})
 

@@ -274,9 +274,9 @@ type challengeOpportunity struct {
 	challengerVMProtoHash [32]byte
 	asserterProof         [][32]byte
 	challengerProof       [][32]byte
-	asserterDataHash      [32]byte
-	asserterPeriodTicks   structures.TimeTicks
-	challengerNodeHash    [32]byte
+	asserterNodeHash      [32]byte
+	challengerDataHash    [32]byte
+	challengerPeriodTicks structures.TimeTicks
 }
 
 func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {
@@ -306,7 +306,7 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 		challengerAncestor = staker2Ancestor
 	}
 
-	asserterDataHash, asserterPeriodTicks := asserterAncestor.ChallengeNodeData(chain.params)
+	asserterDataHash, asserterPeriodTicks := challengerAncestor.ChallengeNodeData(chain.params)
 
 	return &challengeOpportunity{
 		asserter:              asserterStaker.address,
@@ -319,9 +319,9 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 		challengerVMProtoHash: challengerAncestor.vmProtoData.Hash(),
 		asserterProof:         GeneratePathProof(asserterAncestor, asserterStaker.location),
 		challengerProof:       GeneratePathProof(challengerAncestor, challengerStaker.location),
-		asserterDataHash:      asserterDataHash,
-		asserterPeriodTicks:   asserterPeriodTicks,
-		challengerNodeHash:    challengerAncestor.nodeDataHash,
+		asserterNodeHash:      challengerAncestor.nodeDataHash,
+		challengerDataHash:    asserterDataHash,
+		challengerPeriodTicks: asserterPeriodTicks,
 	}
 }
 

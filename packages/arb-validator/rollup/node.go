@@ -222,6 +222,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 		return ret, challengePeriod
 	default:
 		log.Fatal("Unhandled challenge type", node.linkType)
+		return ret, structures.TimeTicks{}
 	}
 }
 

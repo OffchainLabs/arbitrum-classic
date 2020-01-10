@@ -45,6 +45,12 @@ func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 	if a.AfterHash != b.AfterHash || (a.NumGas != b.NumGas) || (len(a.OutMsgs) != len(b.OutMsgs)) {
 		return false
 	}
+	if a.DidInboxInsn != b.DidInboxInsn {
+		return false
+	}
+	if a.NumGas != b.NumGas {
+		return false
+	}
 	for i, ao := range a.OutMsgs {
 		if !value.Eq(ao, b.OutMsgs[i]) {
 			return false

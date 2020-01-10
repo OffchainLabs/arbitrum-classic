@@ -16,7 +16,11 @@
 
 package rollup
 
-import "log"
+import (
+	"log"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
 
 type LeafSet struct {
 	idx map[[32]byte]*Node
@@ -38,6 +42,7 @@ func (ll *LeafSet) NumLeaves() int {
 }
 
 func (ll *LeafSet) Add(node *Node) {
+	log.Println("Added leaf", node.linkType, hexutil.Encode(node.hash[:]))
 	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
 	}
@@ -45,6 +50,7 @@ func (ll *LeafSet) Add(node *Node) {
 }
 
 func (ll *LeafSet) Delete(node *Node) {
+	log.Println("Removed leaf", node.linkType, hexutil.Encode(node.hash[:]))
 	delete(ll.idx, node.hash)
 }
 

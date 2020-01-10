@@ -280,10 +280,9 @@ func (data EthCallData) Equals(data2 EthCallData) bool {
 }
 
 type EthMsgData struct {
-	CallData  EthCallData
-	Timestamp *big.Int
-	Number    *big.Int
-	TxHash    [32]byte
+	CallData EthCallData
+	Number   *big.Int
+	TxHash   [32]byte
 
 	dataHash [32]byte
 }
@@ -293,22 +292,16 @@ func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
 	if !ok {
 		return EthMsgData{}, errors.New("msg must be tuple value")
 	}
-	if tup.Len() != 4 {
-		return EthMsgData{}, fmt.Errorf("expected tuple of length 4, but recieved %v", tup)
+	if tup.Len() != 3 {
+		return EthMsgData{}, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
 	}
 	dataVal, _ := tup.GetByInt64(0)
-	timestampVal, _ := tup.GetByInt64(1)
-	numberVal, _ := tup.GetByInt64(2)
-	txHashVal, _ := tup.GetByInt64(3)
+	numberVal, _ := tup.GetByInt64(1)
+	txHashVal, _ := tup.GetByInt64(2)
 
 	callData, err := NewEthCallDataFromValue(dataVal)
 	if err != nil {
 		return EthMsgData{}, err
-	}
-
-	timestampInt, ok := timestampVal.(value.IntValue)
-	if !ok {
-		return EthMsgData{}, errors.New("timestamp must be an int")
 	}
 
 	numberInt, ok := numberVal.(value.IntValue)
@@ -323,7 +316,6 @@ func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
 
 	return EthMsgData{
 		callData,
-		timestampInt.BigInt(),
 		numberInt.BigInt(),
 		txHashInt.ToBytes(),
 		dataVal.Hash(),
@@ -332,7 +324,6 @@ func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
 
 func (data EthMsgData) Equals(data2 EthMsgData) bool {
 	return data.CallData.Equals(data2.CallData) &&
-		data.Timestamp.Cmp(data2.Timestamp) == 0 &&
 		data.Number.Cmp(data2.Number) == 0 &&
 		data.TxHash == data2.TxHash &&
 		data.dataHash == data2.dataHash
