@@ -20,7 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -33,8 +32,7 @@ import (
 type StakerListener struct {
 	sync.Mutex
 	myAddr   common.Address
-	auth     *bind.TransactOpts
-	client   arbbridge.ArbClient
+	client   arbbridge.ArbAuthClient
 	contract arbbridge.ArbRollup
 }
 
@@ -79,7 +77,6 @@ func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAs
 func (staker *StakerListener) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
 	staker.Lock()
 	challenges.ChallengePendingTopClaim(
-		staker.auth,
 		staker.client,
 		contractAddress,
 		pendingInbox,
@@ -90,7 +87,6 @@ func (staker *StakerListener) challengePendingTop(contractAddress common.Address
 func (staker *StakerListener) challengeMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
 	staker.Lock()
 	challenges.ChallengeMessagesClaim(
-		staker.auth,
 		staker.client,
 		contractAddress,
 		pendingInbox,
@@ -103,7 +99,6 @@ func (staker *StakerListener) challengeMessages(contractAddress common.Address, 
 func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition) {
 	staker.Lock()
 	challenges.ChallengeExecutionClaim(
-		staker.auth,
 		staker.client,
 		contractAddress,
 		pre,
@@ -115,7 +110,6 @@ func (staker *StakerListener) challengeExecution(contractAddress common.Address,
 func (staker *StakerListener) defendPendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
 	staker.Lock()
 	challenges.DefendPendingTopClaim(
-		staker.auth,
 		staker.client,
 		contractAddress,
 		pendingInbox,
@@ -128,7 +122,6 @@ func (staker *StakerListener) defendPendingTop(contractAddress common.Address, p
 func (staker *StakerListener) defendMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
 	staker.Lock()
 	challenges.DefendMessagesClaim(
-		staker.auth,
 		staker.client,
 		contractAddress,
 		pendingInbox,
@@ -142,7 +135,6 @@ func (staker *StakerListener) defendMessages(contractAddress common.Address, pen
 func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition, numSteps uint32) {
 	staker.Lock()
 	challenges.DefendExecutionClaim(
-		staker.auth,
 		staker.client,
 		contractAddress,
 		pre,

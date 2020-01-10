@@ -32,15 +32,39 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func RunObserver(ctx context.Context, chain *ChainObserver, clnt arbbridge.ArbClient) error {
-	rollup, err := clnt.NewRollupWatcher(chain.rollupAddr)
+func CreateObserver(
+	ctx context.Context,
+	rollupAddr common.Address,
+	checkpointer *structures.RollupCheckpointer,
+	updateOpinion bool,
+	startTime *protocol.TimeBlocks,
+	clnt arbbridge.ArbClient,
+) (*ChainObserver, error) {
+	rollup, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	vmParams, err := rollup.GetParams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	chain, err := NewChain(
+		ctx,
+		rollupAddr,
+		checkpointer,
+		vmParams,
+		updateOpinion,
+		startTime,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
-		return err
+		return nil, err
 	}
 
 	go func() {
@@ -76,7 +100,7 @@ func RunObserver(ctx context.Context, chain *ChainObserver, clnt arbbridge.ArbCl
 			}
 		}
 	}()
-	return nil
+	return chain, nil
 }
 
 func handleNotification(notification arbbridge.Notification, chain *ChainObserver) {

@@ -24,34 +24,24 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/golang/protobuf/proto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/ethereum/go-ethereum/common"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
-
-type ChainObserverConfig struct {
-	MaxCallSteps uint32
-}
 
 type ChainObserver struct {
 	*sync.RWMutex
 	nodeGraph         *StakedNodeGraph
 	rollupAddr        common.Address
-	config            ChainObserverConfig
 	pendingInbox      *structures.PendingInbox
 	knownValidNode    *Node
 	latestBlockNumber *protocol.TimeBlocks
@@ -64,7 +54,6 @@ type ChainObserver struct {
 func NewChain(
 	ctx context.Context,
 	rollupAddr common.Address,
-	config ChainObserverConfig,
 	checkpointer *structures.RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
@@ -79,7 +68,6 @@ func NewChain(
 		RWMutex:           &sync.RWMutex{},
 		nodeGraph:         nodeGraph,
 		rollupAddr:        rollupAddr,
-		config:            config,
 		pendingInbox:      structures.NewPendingInbox(),
 		knownValidNode:    nodeGraph.latestConfirmed,
 		latestBlockNumber: startTime,
@@ -114,7 +102,6 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContex
 		PendingInbox:    chain.pendingInbox.MarshalForCheckpoint(ctx),
 		KnownValidNode:  utils.MarshalHash(chain.knownValidNode.hash),
 		IsOpinionated:   chain.isOpinionated,
-		MaxCallSteps:    chain.config.MaxCallSteps,
 	}
 }
 
@@ -133,7 +120,6 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		RWMutex:           &sync.RWMutex{},
 		nodeGraph:         nodeGraph,
 		rollupAddr:        common.BytesToAddress(m.ContractAddress),
-		config:            ChainObserverConfig{MaxCallSteps: m.MaxCallSteps},
 		pendingInbox:      &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
 		knownValidNode:    nodeGraph.nodeFromHash[utils.UnmarshalHash(m.KnownValidNode)],
 		latestBlockNumber: nil,
@@ -306,10 +292,17 @@ func (chain *ChainObserver) CurrentTime() *protocol.TimeBlocks {
 	return time
 }
 
-func (chain *ChainObserver) ExecuteCall(messages value.TupleValue) (*protocol.ExecutionAssertion, uint32) {
+func (chain *ChainObserver) ContractAddress() common.Address {
+	chain.RLock()
+	address := chain.rollupAddr
+	chain.RUnlock()
+	return address
+}
+
+func (chain *ChainObserver) ExecuteCall(messages value.TupleValue, maxSteps uint32) (*protocol.ExecutionAssertion, uint32) {
 	chain.RLock()
 	mach := chain.knownValidNode.machine.Clone()
 	chain.RUnlock()
-	assertion, steps := mach.ExecuteAssertion(chain.config.MaxCallSteps, chain.currentTimeBounds(), messages)
+	assertion, steps := mach.ExecuteAssertion(maxSteps, chain.currentTimeBounds(), messages)
 	return assertion, steps
 }

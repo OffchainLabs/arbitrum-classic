@@ -18,6 +18,8 @@ package arbbridge
 
 import (
 	"context"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbLog interface {
@@ -25,4 +27,6 @@ type ArbLog interface {
 
 type ArbRollupWatcher interface {
 	StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
+
+	GetParams(ctx context.Context) (structures.ChainParams, error)
 }

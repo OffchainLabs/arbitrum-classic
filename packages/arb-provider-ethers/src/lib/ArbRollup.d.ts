@@ -212,6 +212,15 @@ export class ArbRollup extends Contract {
     functions: {
         isValidLeaf(leaf: Arrayish): Promise<boolean>;
 
+        vmParams(): Promise<{
+            gracePeriodTicks: BigNumber;
+            arbGasSpeedLimitPerTick: BigNumber;
+            maxExecutionSteps: number;
+            0: BigNumber;
+            1: BigNumber;
+            2: number;
+        }>;
+
         pruneLeaf(
             from: Arrayish,
             leafProof: (Arrayish)[],
@@ -323,6 +332,7 @@ export class ArbRollup extends Contract {
         ): Promise<ContractTransaction>;
 
         challengeFactory(): Promise<string>;
+        getStakeRequired(): Promise<BigNumber>;
         globalInbox(): Promise<string>;
         latestConfirmed(): Promise<string>;
     };

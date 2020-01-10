@@ -110,6 +110,10 @@ contract Staking is ChallengeType {
         address loser
     );
 
+    function getStakeRequired() external view returns(uint128) {
+        return stakeRequirement;
+    }
+
     function resolveChallenge(address payable winner, address loser) external {
         address sender = msg.sender;
         bytes32 codehash;

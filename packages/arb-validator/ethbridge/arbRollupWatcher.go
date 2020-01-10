@@ -371,3 +371,20 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	}
 	return nil
 }
+
+func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
+	rawParams, err := vm.ArbRollup.VmParams(nil)
+	if err != nil {
+		return structures.ChainParams{}, err
+	}
+	stakeRequired, err := vm.ArbRollup.GetStakeRequired(nil)
+	if err != nil {
+		return structures.ChainParams{}, err
+	}
+	return structures.ChainParams{
+		StakeRequirement:        stakeRequired,
+		GracePeriod:             structures.TimeTicks{rawParams.GracePeriodTicks},
+		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
+		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
+	}, nil
+}

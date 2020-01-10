@@ -24,8 +24,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -71,8 +69,8 @@ func NewValidatorChainListener(
 	}
 }
 
-func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbClient, auth *bind.TransactOpts) error {
-	contract, err := client.NewRollup(lis.chain.rollupAddr, auth)
+func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) error {
+	contract, err := client.NewRollup(lis.chain.rollupAddr)
 	if err != nil {
 		return err
 	}
@@ -80,7 +78,7 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbClient, auth *b
 	proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
 	proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
 	go contract.PlaceStake(context.TODO(), lis.chain.nodeGraph.params.StakeRequirement, proof1, proof2)
-	address := auth.From
+	address := client.Address()
 	staker := &StakerListener{
 		myAddr:   address,
 		client:   client,

@@ -18,14 +18,9 @@ package rollupvalidator
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"net/http"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --tstypes_out=../../arb-provider-ethers/src/lib --go_out=paths=source_relative,plugins=grpc:. *.proto"
@@ -35,15 +30,8 @@ type RPCServer struct {
 }
 
 // NewServer returns a new instance of the Server class
-func NewRPCServer(
-	auth *bind.TransactOpts,
-	client arbbridge.ArbClient,
-	rollupAddress common.Address,
-	codeFile string,
-	config structures.ChainParams,
-	validatorConfig rollup.ChainObserverConfig,
-) (*RPCServer, error) {
-	server, err := NewServer(auth, client, rollupAddress, codeFile, config, validatorConfig)
+func NewRPCServer(chainObserver *rollup.ChainObserver, maxCallSteps uint32) (*RPCServer, error) {
+	server, err := NewServer(chainObserver, maxCallSteps)
 	return &RPCServer{server}, err
 }
 

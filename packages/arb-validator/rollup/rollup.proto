@@ -53,7 +53,6 @@ message ChainObserverBuf {
     structures.PendingInboxBuf pendingInbox = 3;
     value.HashBuf knownValidNode = 4;
     bool isOpinionated = 5;
-    uint32 maxCallSteps = 6;
 }
 
 message StakerBuf {

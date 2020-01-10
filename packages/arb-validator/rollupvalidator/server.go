@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"strconv"
@@ -30,13 +29,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
@@ -46,52 +43,22 @@ type Server struct {
 	rollupAddress common.Address
 	tracker       *txTracker
 	chain         *rollup.ChainObserver
+	maxCallSteps  uint32
 }
 
 // NewServer returns a new instance of the Server class
-func NewServer(
-	auth *bind.TransactOpts,
-	client arbbridge.ArbClient,
-	rollupAddress common.Address,
-	codeFile string,
-	params structures.ChainParams,
-	validatorConfig rollup.ChainObserverConfig,
-) (*Server, error) {
-	header, err := client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, err
-	}
-	ctx := context.Background()
-
-	checkpointer := structures.NewRollupCheckpointerWithType(ctx, rollupAddress, codeFile, 100, "")
-
-	chainObserver, err := rollup.NewChain(ctx, rollupAddress, validatorConfig, checkpointer, params, true, protocol.NewTimeBlocks(header.Number))
-	if err != nil {
-		return nil, err
-	}
-
-	err = rollup.RunObserver(ctx, chainObserver, client)
-	if err != nil {
-		return nil, err
-	}
-
-	validatorListener := rollup.NewValidatorChainListener(chainObserver)
-	err = validatorListener.AddStaker(client, auth)
-	if err != nil {
-		return nil, err
-	}
+func NewServer(chainObserver *rollup.ChainObserver, maxCallSteps uint32) (*Server, error) {
 	completedAssertionChan := make(chan rollup.FinalizedAssertion)
 	assertionListener := &rollup.AssertionListener{completedAssertionChan}
-	chainObserver.AddListener(&rollup.AnnouncerListener{})
-	chainObserver.AddListener(validatorListener)
 	chainObserver.AddListener(assertionListener)
 
+	rollupAddress := chainObserver.ContractAddress()
 	tracker := newTxTracker(rollupAddress)
 	go func() {
 		tracker.handleTxResults(assertionListener.CompletedAssertionChan)
 	}()
 
-	return &Server{rollupAddress, tracker, chainObserver}, nil
+	return &Server{rollupAddress, tracker, chainObserver, maxCallSteps}, nil
 }
 
 // FindLogs takes a set of parameters and return the list of all logs that match the query
@@ -223,7 +190,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	messageStack := protocol.NewMessageStack()
 	messageStack.AddMessage(callingMessage.AsValue())
 
-	assertion, steps := m.chain.ExecuteCall(messageStack.GetValue())
+	assertion, steps := m.chain.ExecuteCall(messageStack.GetValue(), m.maxCallSteps)
 
 	log.Println("Executed call for", steps, "steps")
 

@@ -19,25 +19,24 @@ package challenges
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func DefendMessagesClaim(
-	auth *bind.TransactOpts,
-	client arbbridge.ArbClient,
+	client arbbridge.ArbAuthClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
 ) (ChallengeState, error) {
-	contract, err := client.NewMessagesChallenge(address, auth)
+	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
 		return 0, err
 	}
@@ -58,14 +57,13 @@ func DefendMessagesClaim(
 }
 
 func ChallengeMessagesClaim(
-	auth *bind.TransactOpts,
-	client arbbridge.ArbClient,
+	client arbbridge.ArbAuthClient,
 	address common.Address,
 	pendingInbox *structures.PendingInbox,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
-	contract, err := client.NewMessagesChallenge(address, auth)
+	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
 		return 0, err
 	}

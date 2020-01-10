@@ -18,12 +18,13 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"math/big"
 )
 
 type EthArbClient struct {
@@ -43,20 +44,8 @@ func (c *EthArbClient) NewArbFactory(address common.Address) (arbbridge.ArbFacto
 	return NewArbFactory(address, c.client)
 }
 
-func (c *EthArbClient) NewRollup(address common.Address, auth *bind.TransactOpts) (arbbridge.ArbRollup, error) {
-	return NewRollup(address, c.client, auth)
-}
-
 func (c *EthArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
 	return NewRollupWatcher(address, c.client)
-}
-
-func (c *EthArbClient) NewExecutionChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address, c.client, auth)
-}
-
-func (c *EthArbClient) NewMessagesChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.MessagesChallenge, error) {
-	return NewMessagesChallenge(address, c.client, auth)
 }
 
 func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
@@ -67,10 +56,42 @@ func (c *EthArbClient) NewPendingInbox(address common.Address) (arbbridge.Pendin
 	return NewPendingInbox(address, c.client)
 }
 
-func (c *EthArbClient) NewPendingTopChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c.client, auth)
-}
-
 func (c *EthArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
 	return c.client.HeaderByNumber(ctx, number)
+}
+
+type EthArbAuthClient struct {
+	*EthArbClient
+	auth *bind.TransactOpts
+}
+
+func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*EthArbAuthClient, error) {
+	client, err := NewEthClient(ethURL)
+	if err != nil {
+		return nil, err
+	}
+	return &EthArbAuthClient{
+		EthArbClient: client,
+		auth:         auth,
+	}, nil
+}
+
+func (c *EthArbAuthClient) Address() common.Address {
+	return c.auth.From
+}
+
+func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
+	return NewRollup(address, c.client, c.auth)
+}
+
+func (c *EthArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
+	return NewExecutionChallenge(address, c.client, c.auth)
+}
+
+func (c *EthArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
+	return NewMessagesChallenge(address, c.client, c.auth)
+}
+
+func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
+	return NewPendingTopChallenge(address, c.client, c.auth)
 }
