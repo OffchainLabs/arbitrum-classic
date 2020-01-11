@@ -97,6 +97,23 @@ func (chain *ChainObserver) AddListener(listener ChainListener) {
 	chain.Unlock()
 }
 
+func MakeInitialChainObserverBuf(
+	contractAddress common.Address,
+	machineHash [32]byte,
+	params *structures.ChainParams,
+	opinionated bool,
+) *ChainObserverBuf {
+	initStakedNodeGraphBuf, initNodeHashBuf := MakeInitialStakedNodeGraphBuf(machineHash, params)
+	return &ChainObserverBuf{
+		StakedNodeGraph:     initStakedNodeGraphBuf,
+		ContractAddress:     contractAddress.Bytes(),
+		PendingInbox:        structures.MakeInitialPendingInboxBuf(),
+		KnownValidNode:      initNodeHashBuf,
+		CalculatedValidNode: initNodeHashBuf,
+		IsOpinionated:       opinionated,
+	}
+}
+
 func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),

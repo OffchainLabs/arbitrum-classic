@@ -34,6 +34,7 @@ import (
 )
 
 type RollupCheckpointer interface {
+	RestoreLatestState(common.Address, *structures.ChainParams, bool) (blockHeight *protocol.TimeBlocks, content *ChainObserverBuf, resCtx structures.RestoreContext)
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(*protocol.TimeBlocks, []byte, structures.CheckpointContext, chan interface{})
 }
@@ -48,6 +49,18 @@ func NewDummyCheckpointer(arbitrumCodefilePath string) RollupCheckpointer {
 		log.Fatal("newDummyCheckpointer: error loading ", arbitrumCodefilePath)
 	}
 	return &DummyCheckpointer{theMachine}
+}
+
+func (dcp *DummyCheckpointer) RestoreLatestState(
+	contractAddr common.Address,
+	params *structures.ChainParams,
+	beOpinionated bool,
+) (*protocol.TimeBlocks, *ChainObserverBuf, structures.RestoreContext) {
+	blockHeight := protocol.NewTimeBlocks(big.NewInt(0))
+	cob := &ChainObserverBuf{}
+	resCtx := structures.NewSimpleRestoreContext()
+	resCtx.AddMachine(dcp.initialMachine)
+	return blockHeight, cob, resCtx
 }
 
 func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
@@ -149,6 +162,39 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	rcp.cp.SaveMetadata(buf)
 
 	return nil
+}
+
+func (rcp *ProductionCheckpointer) RestoreLatestState(
+	contractAddr common.Address,
+	params *structures.ChainParams,
+	beOpinionated bool,
+) (*protocol.TimeBlocks, *ChainObserverBuf, structures.RestoreContext) {
+	metadataBytes := rcp.cp.RestoreMetadata()
+	if metadataBytes == nil || len(metadataBytes) == 0 {
+		initMachine, err := rcp.GetInitialMachine()
+		if err != nil {
+			return nil, nil, nil
+		}
+		blockHeight := protocol.NewTimeBlocks(big.NewInt(0))
+		cob := MakeInitialChainObserverBuf(contractAddr, initMachine.Hash(), params, beOpinionated)
+		resCtx := structures.NewSimpleRestoreContext()
+		resCtx.AddMachine(initMachine)
+		return blockHeight, cob, resCtx
+	}
+	metadata := &structures.CheckpointMetadata{}
+	if err := proto.Unmarshal(metadataBytes, metadata); err != nil {
+		return nil, nil, nil
+	}
+	blockHeight := utils.UnmarshalBigInt(metadata.NewestBlockHeight)
+	cobBytes, resCtx, err := rcp.RestoreCheckpoint(blockHeight)
+	if err != nil {
+		return nil, nil, nil
+	}
+	cob := &ChainObserverBuf{}
+	if err := proto.Unmarshal(cobBytes, cob); err != nil {
+		return nil, nil, nil
+	}
+	return protocol.NewTimeBlocks(blockHeight), cob, resCtx
 }
 
 func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, structures.RestoreContext, error) {

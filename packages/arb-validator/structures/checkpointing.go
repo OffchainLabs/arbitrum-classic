@@ -84,3 +84,31 @@ func (ctx *CheckpointContextImpl) GetValue(h [32]byte) value.Value {
 func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
 	return ctx.machines[h]
 }
+
+type SimpleRestoreContext struct {
+	values   map[[32]byte]value.Value
+	machines map[[32]byte]machine.Machine
+}
+
+func NewSimpleRestoreContext() *SimpleRestoreContext {
+	return &SimpleRestoreContext{
+		values:   make(map[[32]byte]value.Value),
+		machines: make(map[[32]byte]machine.Machine),
+	}
+}
+
+func (src *SimpleRestoreContext) GetValue(h [32]byte) value.Value {
+	return src.values[h]
+}
+
+func (src *SimpleRestoreContext) GetMachine(h [32]byte) machine.Machine {
+	return src.machines[h]
+}
+
+func (src *SimpleRestoreContext) AddValue(val value.Value) {
+	src.values[val.Hash()] = val
+}
+
+func (src *SimpleRestoreContext) AddMachine(mach machine.Machine) {
+	src.machines[mach.Hash()] = mach
+}

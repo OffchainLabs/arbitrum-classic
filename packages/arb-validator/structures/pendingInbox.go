@@ -150,6 +150,14 @@ func hash2(h1, h2 [32]byte) [32]byte {
 	).Hash()
 }
 
+func MakeInitialPendingInboxBuf() *PendingInboxBuf {
+	return &PendingInboxBuf{
+		TopCount:   utils.MarshalBigInt(big.NewInt(0)),
+		ItemHashes: []*value.HashBuf{},
+		HashOfRest: utils.MarshalHash(value.NewEmptyTuple().Hash()),
+	}
+}
+
 func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInboxBuf {
 	var msgHashes []*value.HashBuf
 	for item := pi.newest; item != nil; item = item.prev {

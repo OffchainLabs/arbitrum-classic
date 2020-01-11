@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -50,6 +51,17 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 		oldestNode:      newNode,
 		params:          params,
 	}
+}
+
+func MakeInitialNodeGraphBuf(machineHash [32]byte, params *structures.ChainParams) (*NodeGraphBuf, *value.HashBuf) {
+	nodeBuf, nodeHashBuf := MakeInitialNodeBuf(machineHash)
+	return &NodeGraphBuf{
+		Nodes:               []*NodeBuf{nodeBuf},
+		OldestNodeHash:      nodeHashBuf,
+		LatestConfirmedHash: nodeHashBuf,
+		LeafHashes:          []*value.HashBuf{nodeHashBuf},
+		Params:              params.MarshalToBuf(),
+	}, nodeHashBuf
 }
 
 func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeGraphBuf {
