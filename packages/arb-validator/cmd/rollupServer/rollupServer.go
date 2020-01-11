@@ -158,7 +158,7 @@ func setupChainObserver(
 	}
 	ctx := context.Background()
 
-	checkpointer := structures.NewDummyCheckpointer(codeFile)
+	checkpointer := rollup.NewDummyCheckpointer(codeFile)
 	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, protocol.NewTimeBlocks(header.Number), client)
 	if err != nil {
 		return nil, err

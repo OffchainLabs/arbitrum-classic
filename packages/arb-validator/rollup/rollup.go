@@ -47,7 +47,7 @@ type ChainObserver struct {
 	calculatedValidNode *Node
 	latestBlockNumber   *protocol.TimeBlocks
 	listeners           []ChainListener
-	checkpointer        structures.RollupCheckpointer
+	checkpointer        RollupCheckpointer
 	isOpinionated       bool
 	assertionMadeChan   chan bool
 }
@@ -55,7 +55,7 @@ type ChainObserver struct {
 func NewChain(
 	ctx context.Context,
 	rollupAddr common.Address,
-	checkpointer structures.RollupCheckpointer,
+	checkpointer RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
 	startTime *protocol.TimeBlocks,

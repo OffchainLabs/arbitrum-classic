@@ -63,7 +63,7 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 	}
 }
 
-func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp structures.RollupCheckpointer, t *testing.T) {
+func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpointer, t *testing.T) {
 	blockHeight := protocol.NewTimeBlocks(big.NewInt(7337))
 	ctx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ctx)
@@ -207,12 +207,12 @@ func testCreateStakers(dummyRollupAddress common.Address, checkpointType string,
 }
 
 func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
-	var checkpointer structures.RollupCheckpointer
+	var checkpointer RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
-		checkpointer = structures.NewDummyCheckpointer(contractPath)
+		checkpointer = NewDummyCheckpointer(contractPath)
 	case "fresh_rocksdb":
-		checkpointer = structures.NewProductionCheckpointer(
+		checkpointer = NewProductionCheckpointer(
 			context.TODO(),
 			rollupAddress,
 			contractPath,
