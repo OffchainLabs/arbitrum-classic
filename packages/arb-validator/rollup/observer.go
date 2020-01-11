@@ -35,7 +35,7 @@ import (
 func CreateObserver(
 	ctx context.Context,
 	rollupAddr common.Address,
-	checkpointer *structures.RollupCheckpointer,
+	checkpointer structures.RollupCheckpointer,
 	updateOpinion bool,
 	startTime *protocol.TimeBlocks,
 	clnt arbbridge.ArbClient,

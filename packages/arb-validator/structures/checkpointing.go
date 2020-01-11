@@ -95,7 +95,39 @@ func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
 	return ctx.machines[h]
 }
 
-type RollupCheckpointer struct {
+type RollupCheckpointer interface {
+	GetInitialMachine() (machine.Machine, error)
+	AsyncSaveCheckpoint(*protocol.TimeBlocks, []byte, CheckpointContext, chan interface{})
+}
+
+type DummyCheckpointer struct {
+	initialMachine machine.Machine
+}
+
+func NewDummyCheckpointer(arbitrumCodefilePath string) RollupCheckpointer {
+	theMachine, err := loader.LoadMachineFromFile(arbitrumCodefilePath, true, "test")
+	if err != nil {
+		log.Fatal("newDummyCheckpointer: error loading ", arbitrumCodefilePath)
+	}
+	return &DummyCheckpointer{theMachine}
+}
+
+func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
+	return dcp.initialMachine.Clone(), nil
+}
+
+func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(
+	blockNum *protocol.TimeBlocks,
+	contents []byte,
+	cpCtx CheckpointContext,
+	doneChan chan interface{},
+) {
+	if doneChan != nil {
+		doneChan <- struct{}{}
+	}
+}
+
+type ProductionCheckpointer struct {
 	maxReorgDepth *big.Int
 	cp            checkpointerWithMetadata
 	asyncWriter   *AsyncCheckpointWriter
@@ -107,51 +139,29 @@ func makeCheckpointDatabasePath(rollupAddr common.Address) string {
 	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
 }
 
-func NewRollupCheckpointer(
+func NewProductionCheckpointer(
 	ctx context.Context,
 	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	maxReorgDepth *big.Int,
-) *RollupCheckpointer {
-	return NewRollupCheckpointerWithType(ctx, rollupAddr, arbitrumCodeFilePath, maxReorgDepth, "")
-}
-
-func NewRollupCheckpointerWithType(
-	ctx context.Context,
-	rollupAddr common.Address,
-	arbitrumCodeFilePath string,
-	maxReorgDepth *big.Int,
-	checkpointerType string,
-) *RollupCheckpointer {
+	forceFreshStart bool, // this should be false in production use
+) RollupCheckpointer {
 	databasePath := makeCheckpointDatabasePath(rollupAddr)
-	switch checkpointerType {
-	case "inmemory_testing": // inefficient in-memory checkpointer, for testing
-		ret := &RollupCheckpointer{
-			maxReorgDepth: maxReorgDepth,
-			cp:            newDummyCheckpointer(arbitrumCodeFilePath),
-		}
-		ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)
-		return ret
-	case "fresh_rocksdb": // for testing only -- use rocksdb but delete old database first
+	if forceFreshStart {
+		// for testing only -- use production checkpointer but delete old database first
 		if err := os.RemoveAll(databasePath); err != nil {
 			log.Fatal(err)
 		}
-		fallthrough
-	case "": // empty string gives you what you want for production
-		fallthrough
-	case "rocksdb": // store in rocksdb database, keyed to rollupAddr -- use this for production
-		ret := &RollupCheckpointer{
-			maxReorgDepth: maxReorgDepth,
-			cp:            newProductionCheckpointer(databasePath, arbitrumCodeFilePath, maxReorgDepth),
-		}
-		ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)
-		return ret
-	default:
-		return nil
 	}
+	ret := &ProductionCheckpointer{
+		maxReorgDepth: maxReorgDepth,
+		cp:            newProductionCheckpointer(databasePath, arbitrumCodeFilePath, maxReorgDepth),
+	}
+	ret.asyncWriter = NewAsyncCheckpointWriter(ctx, ret)
+	return ret
 }
 
-func (rcp *RollupCheckpointer) _saveCheckpoint(
+func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	blockHeight *big.Int,
 	contents []byte,
 	checkpointCtx CheckpointContext,
@@ -203,7 +213,7 @@ func (rcp *RollupCheckpointer) _saveCheckpoint(
 	return nil
 }
 
-func (rcp *RollupCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext, error) {
+func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, RestoreContext, error) {
 	var metadataBuf *CheckpointMetadata
 	var oldestInCp *big.Int
 	var newestInCp *big.Int
@@ -227,11 +237,11 @@ func (rcp *RollupCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, 
 	return buf, checkpointCtx, nil
 }
 
-func (cp *RollupCheckpointer) GetInitialMachine() (machine.Machine, error) {
+func (cp *ProductionCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return cp.cp.GetInitialMachine()
 }
 
-func (cp *RollupCheckpointer) AsyncSaveCheckpoint(
+func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(
 	blocknum *protocol.TimeBlocks,
 	buf []byte,
 	cpCtx CheckpointContext,
@@ -247,13 +257,13 @@ func (cp *RollupCheckpointer) AsyncSaveCheckpoint(
 
 type AsyncCheckpointWriter struct {
 	*sync.Mutex
-	checkpointer *RollupCheckpointer
+	checkpointer *ProductionCheckpointer
 	notifyChan   chan interface{}
 	nextJob      func()
 	doneChans    []chan interface{}
 }
 
-func NewAsyncCheckpointWriter(ctx context.Context, cp *RollupCheckpointer) *AsyncCheckpointWriter {
+func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *AsyncCheckpointWriter {
 	ret := &AsyncCheckpointWriter{&sync.Mutex{}, cp, make(chan interface{}, 1), nil, nil}
 	go func() {
 		for {
