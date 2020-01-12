@@ -28,14 +28,10 @@ import (
 	"testing"
 	"time"
 
-	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -43,6 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient) (ChallengeState, error)
@@ -93,7 +90,7 @@ func testChallenge(
 		return err
 	}
 
-	factory, err := client1.NewArbFactoryWatcher(common.HexToAddress(connectionInfo.ArbFactory))
+	factory, err := client1.NewArbFactoryWatcher(connectionInfo.ArbFactoryAddress())
 	if err != nil {
 		return err
 	}
@@ -291,8 +288,8 @@ func TestExecution(t *testing.T) {
 	}
 
 	timeBounds := &protocol.TimeBoundsBlocks{
-		common2.NewTimeBlocks(big.NewInt(100)),
-		common2.NewTimeBlocks(big.NewInt(200)),
+		common.NewTimeBlocks(big.NewInt(100)),
+		common.NewTimeBlocks(big.NewInt(200)),
 	}
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())

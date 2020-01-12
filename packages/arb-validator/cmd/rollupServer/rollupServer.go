@@ -126,7 +126,7 @@ func createRollupChain() {
 		log.Fatal(err)
 	}
 
-	factory, err := client.NewArbFactory(common.NewAddressFromEth(ethcommon.HexToAddress(connectionInfo.ArbFactory)))
+	factory, err := client.NewArbFactory(connectionInfo.ArbFactoryAddress())
 	if err != nil {
 		log.Fatal(err)
 	}

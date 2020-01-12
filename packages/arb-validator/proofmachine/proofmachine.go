@@ -24,7 +24,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -42,25 +41,25 @@ type Machine struct {
 }
 
 type Connection struct {
-	fromAddress ethcommon.Address
+	fromAddress common.Address
 	osp         arbbridge.OneStepProof
 	client      arbbridge.ArbClient
 	proofbounds [2]uint32
 }
 
-func NewEthConnection(contractAddress ethcommon.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
+func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
 	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
 	}
-	osp, err := client.NewOneStepProof(common.NewAddressFromEth(contractAddress))
+	osp, err := client.NewOneStepProof(contractAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	keyAddr := crypto.PubkeyToAddress(key.PublicKey)
 	return &Connection{
-		fromAddress: keyAddr,
+		fromAddress: common.NewAddressFromEth(keyAddr),
 		osp:         osp,
 		client:      client,
 		proofbounds: proofbounds,
@@ -130,7 +129,7 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 		if i >= m.ethConn.proofbounds[0] && i <= m.ethConn.proofbounds[1] {
 			callOpts := &bind.CallOpts{
 				Pending: true,
-				From:    m.ethConn.fromAddress,
+				From:    m.ethConn.fromAddress.ToEthAddress(),
 				Context: context.Background(),
 			}
 			// uncomment to force proof fail

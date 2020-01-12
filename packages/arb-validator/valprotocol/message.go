@@ -22,9 +22,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	ethcommon "github.com/ethereum/go-ethereum/common"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -57,18 +54,6 @@ func NewTokenTypeFromBuf(buf *TokenTypeBuf) [21]byte {
 	var ret [21]byte
 	copy(ret[:], buf.Value)
 	return ret
-}
-
-func tokenTypeEncoded(input [21]byte) []byte {
-	return ethcommon.RightPadBytes(input[:], 21)
-}
-
-func TokenTypeArrayEncoded(input [][21]byte) []byte {
-	var values []byte
-	for _, val := range input {
-		values = append(values, ethcommon.RightPadBytes(val[:], 32)...)
-	}
-	return values
 }
 
 type Message struct {
