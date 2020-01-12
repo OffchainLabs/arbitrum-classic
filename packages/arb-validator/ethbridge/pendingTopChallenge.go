@@ -64,7 +64,7 @@ func NewPendingTopChallenge(address ethcommon.Address, client *ethclient.Client,
 }
 
 func (c *PendingTopChallenge) setupContracts() error {
-	challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.Client)
+	challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
 	}
@@ -80,7 +80,7 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 	if err := c.setupContracts(); err != nil {
 		return err
 	}
-	header, err := c.Client.HeaderByNumber(ctx, nil)
+	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 		}},
 	}
 
-	logs, err := c.Client.FilterLogs(ctx, filter)
+	logs, err := c.client.FilterLogs(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 
 	filter.FromBlock = header.Number
 	logChan := make(chan types.Log)
-	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
+	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 			return arbbridge.PendingTopBisectionEvent{
 				ChainHashes: hashSliceToHashes(eventVal.ChainHashes),
 				TotalLength: eventVal.TotalLength,
-				Deadline:    structures.TimeTicks{Val: eventVal.DeadlineTicks},
+				Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
 			_, err := c.Challenge.ParseOneStepProofCompleted(log)
@@ -157,7 +157,7 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 		return err
 	}
 
-	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
+	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (c *PendingTopChallenge) ChooseSegment(
 	chainLength uint32,
 ) error {
 	bisectionCount := uint32(len(chainHashes) - 1)
-	bisectionHashes := make([][32]byte, 0, bisectionCount)
+	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint32(0); i < bisectionCount; i++ {
 		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength)
 		bisectionHashes = append(

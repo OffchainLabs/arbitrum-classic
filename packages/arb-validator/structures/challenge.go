@@ -19,7 +19,7 @@ package structures
 import (
 	"math/big"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -37,13 +37,11 @@ func PendingTopChallengeDataHash(
 	upperPending common.Hash,
 	messageCount *big.Int,
 ) common.Hash {
-	ret := common.Hash{}
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(lowerPending.Bytes()),
-		solsha3.Bytes32(upperPending.Bytes()),
-		solsha3.Uint256(messageCount),
-	))
-	return ret
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(lowerPending),
+		hashing.Bytes32(upperPending),
+		hashing.Uint256(messageCount),
+	)
 }
 
 func MessageChallengeDataHash(
@@ -53,15 +51,13 @@ func MessageChallengeDataHash(
 	upperMessages common.Hash,
 	messageCount *big.Int,
 ) common.Hash {
-	ret := common.Hash{}
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(lowerPending.Bytes()),
-		solsha3.Bytes32(upperPending.Bytes()),
-		solsha3.Bytes32(lowerMessages.Bytes()),
-		solsha3.Bytes32(upperMessages.Bytes()),
-		solsha3.Uint256(messageCount),
-	))
-	return ret
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(lowerPending),
+		hashing.Bytes32(upperPending),
+		hashing.Bytes32(lowerMessages),
+		hashing.Bytes32(upperMessages),
+		hashing.Uint256(messageCount),
+	)
 }
 
 func ExecutionDataHash(
@@ -69,11 +65,9 @@ func ExecutionDataHash(
 	preconditionHash common.Hash,
 	assertionHash common.Hash,
 ) common.Hash {
-	ret := common.Hash{}
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Uint32(numSteps),
-		solsha3.Bytes32(preconditionHash.Bytes()),
-		solsha3.Bytes32(assertionHash.Bytes()),
-	))
-	return ret
+	return hashing.SoliditySHA3(
+		hashing.Uint32(numSteps),
+		hashing.Bytes32(preconditionHash),
+		hashing.Bytes32(assertionHash),
+	)
 }

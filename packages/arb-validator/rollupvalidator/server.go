@@ -25,7 +25,7 @@ import (
 	"math/big"
 	"strconv"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -169,13 +169,13 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	copy(sender[:], senderBytes)
 
 	msg := valprotocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
-	messageHash := solsha3.SoliditySHA3(
-		solsha3.Address(msg.Destination.ToEthAddress()),
-		solsha3.Bytes32(msg.Data.Hash().Bytes()),
-		solsha3.Uint256(msg.Currency),
+	messageHash := hashing.SoliditySHA3(
+		hashing.Address(msg.Destination),
+		hashing.Bytes32(msg.Data.Hash()),
+		hashing.Uint256(msg.Currency),
 		msg.TokenType[:],
 	)
-	msgHashInt := new(big.Int).SetBytes(messageHash[:])
+	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		msg.Data,
 		value.NewIntValue(m.chain.CurrentTime().AsInt()),
@@ -204,7 +204,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 		return nil, err
 	}
 	logHash := lastLog.GetEthMsg().Data.TxHash
-	if !bytes.Equal(logHash[:], messageHash) {
+	if logHash != messageHash {
 		// Last produced log is not the call we sent
 		return nil, errors.New("call took too long to execute")
 	}

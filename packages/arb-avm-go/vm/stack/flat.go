@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -312,12 +312,10 @@ func (f *Flat) addedValueAddHash(itemHash1 common.Hash) {
 	} else {
 		prevItem = value.NewEmptyTuple().Hash()
 	}
-	val := solsha3.SoliditySHA3(
-		solsha3.Uint8(value.TypeCodeTuple+2),
+	ret := hashing.SoliditySHA3(
+		hashing.Uint8(value.TypeCodeTuple+2),
 		value.Bytes32ArrayEncoded([]common.Hash{itemHash1, prevItem}),
 	)
-	var ret common.Hash
-	copy(ret[:], val)
 	f.hashes = append(f.hashes, ret)
 }
 

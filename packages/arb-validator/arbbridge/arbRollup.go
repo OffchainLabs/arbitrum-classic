@@ -33,10 +33,10 @@ type ArbRollup interface {
 	RecoverStakePassedDeadline(ctx context.Context, stakerAddress common.Address, deadlineTicks *big.Int, disputableNodeHashVal common.Hash, childType uint64, vmProtoStateHash common.Hash, proof []common.Hash) error
 	MoveStake(ctx context.Context, proof1 []common.Hash, proof2 []common.Hash) error
 	PruneLeaf(ctx context.Context, from common.Hash, proof1 []common.Hash, proof2 []common.Hash) error
-	MakeAssertion(ctx context.Context, prevPrevLeafHash common.Hash, prevDataHash common.Hash, prevDeadline structures.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof []common.Hash) error
+	MakeAssertion(ctx context.Context, prevPrevLeafHash common.Hash, prevDataHash common.Hash, prevDeadline common.TimeTicks, prevChildType structures.ChildType, beforeState *structures.VMProtoData, assertionParams *structures.AssertionParams, assertionClaim *structures.AssertionClaim, stakerProof []common.Hash) error
 	ConfirmValid(
 		ctx context.Context,
-		deadline structures.TimeTicks,
+		deadline common.TimeTicks,
 		outMsgs []value.Value,
 		logsAccHash common.Hash,
 		protoHash common.Hash,
@@ -46,7 +46,7 @@ type ArbRollup interface {
 	) error
 	ConfirmInvalid(
 		ctx context.Context,
-		deadline structures.TimeTicks,
+		deadline common.TimeTicks,
 		challengeNodeData common.Hash,
 		branch structures.ChildType,
 		protoHash common.Hash,
@@ -68,7 +68,7 @@ type ArbRollup interface {
 		challengerProof []common.Hash,
 		asserterNodeHash common.Hash,
 		challengerDataHash common.Hash,
-		challengerPeriodTicks structures.TimeTicks,
+		challengerPeriodTicks common.TimeTicks,
 	) error
 	IsStaked(address common.Address) (bool, error)
 }

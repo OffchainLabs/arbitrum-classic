@@ -22,9 +22,8 @@ import (
 	"fmt"
 	"io"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 type Opcode uint8
@@ -240,22 +239,18 @@ func init() {
 func (cv CodePointValue) Hash() common.Hash {
 	switch op := cv.Op.(type) {
 	case ImmediateOperation:
-		hash := common.Hash{}
-		copy(hash[:], solsha3.SoliditySHA3(
-			solsha3.Uint8(TypeCodeCodePoint),
-			solsha3.Uint8(byte(op.Op)),
-			solsha3.Bytes32(op.Val.Hash().Bytes()),
-			solsha3.Bytes32(cv.NextHash.Bytes()),
-		))
-		return hash
+		return hashing.SoliditySHA3(
+			hashing.Uint8(TypeCodeCodePoint),
+			hashing.Uint8(byte(op.Op)),
+			hashing.Bytes32(op.Val.Hash()),
+			hashing.Bytes32(cv.NextHash),
+		)
 	case BasicOperation:
-		hash := common.Hash{}
-		copy(hash[:], solsha3.SoliditySHA3(
-			solsha3.Uint8(TypeCodeCodePoint),
-			solsha3.Uint8(byte(op.Op)),
-			solsha3.Bytes32(cv.NextHash.Bytes()),
-		))
-		return hash
+		return hashing.SoliditySHA3(
+			hashing.Uint8(TypeCodeCodePoint),
+			hashing.Uint8(byte(op.Op)),
+			hashing.Bytes32(cv.NextHash),
+		)
 	default:
 		panic(fmt.Sprintf("Bad operation type: %T in with pc %d", op, cv.InsnNum))
 	}

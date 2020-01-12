@@ -34,7 +34,7 @@ type preparedAssertion struct {
 	leafHash         common.Hash
 	prevPrevLeafHash common.Hash
 	prevDataHash     common.Hash
-	prevDeadline     structures.TimeTicks
+	prevDeadline     common.TimeTicks
 	prevChildType    structures.ChildType
 
 	beforeState *structures.VMProtoData
@@ -49,7 +49,7 @@ func (pa *preparedAssertion) Clone() *preparedAssertion {
 		leafHash:         pa.leafHash,
 		prevPrevLeafHash: pa.prevPrevLeafHash,
 		prevDataHash:     pa.prevDataHash,
-		prevDeadline:     structures.TimeTicks{new(big.Int).Set(pa.prevDeadline.Val)},
+		prevDeadline:     common.TimeTicks{new(big.Int).Set(pa.prevDeadline.Val)},
 		prevChildType:    pa.prevChildType,
 		beforeState:      pa.beforeState.Clone(),
 		params:           pa.params.Clone(),
@@ -198,7 +198,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 	currentOpinionHash := currentOpinion.hash
 	prevPrevLeafHash := currentOpinion.PrevHash()
 	prevDataHash := currentOpinion.nodeDataHash
-	prevDeadline := structures.TimeTicks{new(big.Int).Set(currentOpinion.deadline.Val)}
+	prevDeadline := common.TimeTicks{new(big.Int).Set(currentOpinion.deadline.Val)}
 	prevChildType := currentOpinion.linkType
 	beforeState := currentOpinion.vmProtoData.Clone()
 	if !chain.nodeGraph.leaves.IsLeaf(currentOpinion) {

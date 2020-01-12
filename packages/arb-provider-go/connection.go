@@ -10,21 +10,21 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 type ArbConnection struct {
 	proxy      ValidatorProxy
-	vmId       []byte
+	vmId       common.Address
 	privateKey []byte
 	hexPubkey  string
 }
@@ -35,11 +35,8 @@ func Dial(url string, privateKey []byte, hexPubkey string) (*ArbConnection, erro
 	if err != nil {
 		return nil, err
 	}
-	vmId, err := hexutil.Decode(vmIdStr)
-	if err != nil {
-		return nil, err
-	}
-	return &ArbConnection{proxy, vmId, append([]byte{}, privateKey...), hexPubkey}, nil
+	vmId := ethcommon.HexToAddress(vmIdStr)
+	return &ArbConnection{proxy, common.NewAddressFromEth(vmId), append([]byte{}, privateKey...), hexPubkey}, nil
 }
 
 func _nyiError(funcname string) error {
@@ -154,14 +151,14 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 	}
 
 	tokenType := [21]byte{}
-	messageHash := solsha3.SoliditySHA3(
-		solsha3.Address(conn.vmId),
-		solsha3.Bytes32(arbCallValue.Hash().Bytes()),
-		solsha3.Uint256(big.NewInt(0)), // amount
+	messageHash := hashing.SoliditySHA3(
+		hashing.Address(conn.vmId),
+		hashing.Bytes32(arbCallValue.Hash()),
+		hashing.Uint256(big.NewInt(0)), // amount
 		tokenType[:],
 	)
-	signedMsg := solsha3.SoliditySHA3WithPrefix(solsha3.Bytes32(messageHash))
-	sig, err := secp256k1.Sign(signedMsg, conn.privateKey)
+	signedMsg := hashing.SoliditySHA3WithPrefix(hashing.Bytes32(messageHash))
+	sig, err := secp256k1.Sign(signedMsg.Bytes(), conn.privateKey)
 	if err != nil {
 		return err
 	}
@@ -237,7 +234,7 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	if len(query.Addresses) > 1 {
 		panic("GoArbitrum: subscription can't handle more than one contract address")
 	}
-	addr = query.Addresses[0]
+	addr = common.NewAddressFromEth(query.Addresses[0])
 
 	topics = make([][32]byte, len(query.Topics))
 	for i, sl := range query.Topics {
@@ -249,7 +246,7 @@ func _extractAddrTopics(query ethereum.FilterQuery) (addr common.Address, topics
 	return
 }
 
-func _decodeLogInfo(ins *coordinator.LogInfo) (*types.Log, error) {
+func _decodeLogInfo(ins *rollupvalidator.LogInfo) (*types.Log, error) {
 	outs := &types.Log{}
 	addr, err := hexutil.Decode(ins.Address)
 	if err != nil {
@@ -257,7 +254,7 @@ func _decodeLogInfo(ins *coordinator.LogInfo) (*types.Log, error) {
 		return nil, err
 	}
 	copy(outs.Address[:], addr)
-	outs.Topics = make([]common.Hash, len(ins.Topics))
+	outs.Topics = make([]ethcommon.Hash, len(ins.Topics))
 	for i, top := range ins.Topics {
 		decodedTopic, err := hexutil.Decode(top)
 		if err != nil {

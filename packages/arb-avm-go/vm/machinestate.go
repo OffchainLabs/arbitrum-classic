@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"io"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/stack"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -269,16 +268,14 @@ func (m *Machine) Log(val value.Value) {
 func (m *Machine) Hash() common.Hash {
 	switch m.status {
 	case machine.Extensive:
-		ret := common.Hash{}
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(m.pc.GetCurrentCodePointHash().Bytes()),
-			solsha3.Bytes32(m.stack.StateValue().Hash().Bytes()),
-			solsha3.Bytes32(m.auxstack.StateValue().Hash().Bytes()),
-			solsha3.Bytes32(m.register.StateValue().Hash().Bytes()),
-			solsha3.Bytes32(m.static.StateValue().Hash().Bytes()),
-			solsha3.Bytes32(m.errHandler.Hash().Bytes()),
-		))
-		return ret
+		return hashing.SoliditySHA3(
+			hashing.Bytes32(m.pc.GetCurrentCodePointHash()),
+			hashing.Bytes32(m.stack.StateValue().Hash()),
+			hashing.Bytes32(m.auxstack.StateValue().Hash()),
+			hashing.Bytes32(m.register.StateValue().Hash()),
+			hashing.Bytes32(m.static.StateValue().Hash()),
+			hashing.Bytes32(m.errHandler.Hash()),
+		)
 	case machine.ErrorStop:
 		return value.NewInt64Value(1).ToBytes()
 	case machine.Halt:

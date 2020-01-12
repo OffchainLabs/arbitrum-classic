@@ -29,10 +29,10 @@ import (
 func DefendPendingTopClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	bisectionCount uint64,
 	pendingInbox *structures.MessageStack,
 	afterPendingTop common.Hash,
 	topPending common.Hash,
+	bisectionCount uint64,
 ) (ChallengeState, error) {
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
@@ -56,10 +56,11 @@ func DefendPendingTopClaim(
 		ctx,
 		noteChan,
 		contract,
-		bisectionCount,
+		client,
 		pendingInbox,
 		afterPendingTop,
 		topPending,
+		bisectionCount,
 	)
 }
 
@@ -90,6 +91,7 @@ func ChallengePendingTopClaim(
 		ctx,
 		noteChan,
 		contract,
+		client,
 		pendingInbox,
 	)
 }
@@ -98,10 +100,11 @@ func defendPendingTop(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.PendingTopChallenge,
-	bisectionCount uint64,
+	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 	afterPendingTop common.Hash,
 	topPending common.Hash,
+	bisectionCount uint64,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -164,6 +167,7 @@ func defendPendingTop(
 			outChan,
 			ev.Deadline,
 			contract,
+			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -181,6 +185,7 @@ func challengePendingTop(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.PendingTopChallenge,
+	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
@@ -199,6 +204,7 @@ func challengePendingTop(
 			outChan,
 			deadline,
 			contract,
+			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err

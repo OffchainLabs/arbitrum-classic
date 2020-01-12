@@ -334,7 +334,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
 	return structures.ChainParams{
 		StakeRequirement:        nil,
-		GracePeriod:             structures.TimeTicks{},
+		GracePeriod:             common.TimeTicks{},
 		MaxExecutionSteps:       0,
 		ArbGasSpeedLimitPerTick: 0,
 	}, nil

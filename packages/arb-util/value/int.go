@@ -20,9 +20,9 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -115,12 +115,9 @@ func (iv IntValue) String() string {
 }
 
 func (iv IntValue) hashImpl() common.Hash {
-	hashVal := solsha3.SoliditySHA3(
-		solsha3.Uint256(iv.BigInt()),
+	return hashing.SoliditySHA3(
+		hashing.Uint256(iv.BigInt()),
 	)
-	ret := common.Hash{}
-	copy(ret[:], hashVal)
-	return ret
 }
 
 func (iv IntValue) ToBytes() [32]byte {

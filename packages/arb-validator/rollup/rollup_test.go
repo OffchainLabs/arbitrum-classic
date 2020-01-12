@@ -225,7 +225,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		checkpointer,
 		structures.ChainParams{
 			StakeRequirement:        big.NewInt(1),
-			GracePeriod:             structures.TimeFromSeconds(60 * 60),
+			GracePeriod:             common.TimeFromSeconds(60 * 60),
 			MaxExecutionSteps:       1000000,
 			ArbGasSpeedLimitPerTick: 1000,
 		},
@@ -246,6 +246,6 @@ func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash [
 			Staker:   stakerAddr,
 			NodeHash: nodeHash,
 		},
-		structures.TimeFromSeconds(73),
+		common.TimeFromSeconds(73),
 	)
 }

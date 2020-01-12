@@ -30,11 +30,11 @@ import (
 func DefendMessagesClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	bisectionCount uint64,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
 	afterPending common.Hash,
 	importedMessagesSlice common.Hash,
+	bisectionCount uint64,
 ) (ChallengeState, error) {
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
@@ -58,11 +58,12 @@ func DefendMessagesClaim(
 		ctx,
 		noteChan,
 		contract,
-		bisectionCount,
+		client,
 		pendingInbox,
 		beforePending,
 		afterPending,
 		importedMessagesSlice,
+		bisectionCount,
 	)
 }
 
@@ -95,6 +96,7 @@ func ChallengeMessagesClaim(
 		ctx,
 		noteChan,
 		contract,
+		client,
 		pendingInbox,
 		beforePending,
 		afterPending,
@@ -105,11 +107,12 @@ func defendMessages(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.MessagesChallenge,
-	bisectionCount uint64,
+	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
 	afterPending common.Hash,
 	importedMessagesSlice common.Hash,
+	bisectionCount uint64,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -187,6 +190,7 @@ func defendMessages(
 			outChan,
 			ev.Deadline,
 			contract,
+			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -206,6 +210,7 @@ func challengeMessages(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.MessagesChallenge,
+	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
 	afterPending common.Hash,
@@ -231,6 +236,7 @@ func challengeMessages(
 			outChan,
 			deadline,
 			contract,
+			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err

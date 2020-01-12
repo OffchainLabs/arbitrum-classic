@@ -22,7 +22,7 @@ import (
 	"log"
 	"math/big"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -34,7 +34,7 @@ import (
 
 type Node struct {
 	prev        *Node
-	deadline    structures.TimeTicks
+	deadline    common.TimeTicks
 	disputable  *structures.DisputableNode
 	linkType    structures.ChildType
 	vmProtoData *structures.VMProtoData
@@ -58,7 +58,7 @@ func (n *Node) String() string {
 func NewInitialNode(mach machine.Machine) *Node {
 	ret := &Node{
 		prev:       nil,
-		deadline:   structures.TimeTicks{big.NewInt(0)},
+		deadline:   common.TimeTicks{big.NewInt(0)},
 		disputable: nil,
 		linkType:   0,
 		vmProtoData: structures.NewVMProtoData(
@@ -76,7 +76,7 @@ func NewInitialNode(mach machine.Machine) *Node {
 func newInitialNode_hashOnly(machHash common.Hash) *Node {
 	ret := &Node{
 		prev:       nil,
-		deadline:   structures.TimeTicks{big.NewInt(0)},
+		deadline:   common.TimeTicks{big.NewInt(0)},
 		disputable: nil,
 		linkType:   0,
 		vmProtoData: structures.NewVMProtoData(
@@ -147,7 +147,7 @@ func NewNodeFromPrev(
 	assertionTxHash common.Hash,
 ) *Node {
 	checkTime := disputable.CheckTime(params)
-	deadlineTicks := structures.TimeFromBlockNum(currentTime).Add(params.GracePeriod)
+	deadlineTicks := common.TimeFromBlockNum(currentTime).Add(params.GracePeriod)
 	if deadlineTicks.Cmp(prev.deadline) >= 0 {
 		deadlineTicks = deadlineTicks.Add(checkTime)
 	} else {
@@ -196,26 +196,24 @@ func (node *Node) ExecutionPreconditionHash() common.Hash {
 }
 
 func (node *Node) NodeDataHash(params structures.ChainParams) common.Hash {
-	ret := common.Hash{}
 	if node.disputable == nil {
-		return ret
+		return common.Hash{}
 	}
 	if node.linkType == structures.ValidChildType {
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash.Bytes()),
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHash.Bytes()),
-		))
+		return hashing.SoliditySHA3(
+			hashing.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash),
+			hashing.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHash),
+		)
 	} else {
 		challengeDataHash, challengePeriodTicks := node.ChallengeNodeData(params)
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(challengeDataHash.Bytes()),
-			solsha3.Uint256(challengePeriodTicks.Val),
-		))
+		return hashing.SoliditySHA3(
+			hashing.Bytes32(challengeDataHash),
+			hashing.TimeTicks(challengePeriodTicks),
+		)
 	}
-	return ret
 }
 
-func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash, structures.TimeTicks) {
+func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash, common.TimeTicks) {
 	vmProtoData := node.prev.vmProtoData
 	switch node.linkType {
 	case structures.InvalidPendingChildType:
@@ -226,7 +224,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash,
 			node.disputable.MaxPendingTop,
 			pendingLeft,
 		)
-		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
+		challengePeriod := params.GracePeriod.Add(common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidMessagesChildType:
 		ret := structures.MessageChallengeDataHash(
@@ -236,7 +234,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash,
 			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionParams.ImportedMessageCount,
 		)
-		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
+		challengePeriod := params.GracePeriod.Add(common.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidExecutionChildType:
 		ret := structures.ExecutionDataHash(
@@ -248,7 +246,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash,
 		return ret, challengePeriod
 	default:
 		log.Fatal("Unhandled challenge type", node.linkType)
-		return common.Hash{}, structures.TimeTicks{}
+		return common.Hash{}, common.TimeTicks{}
 	}
 }
 
@@ -257,19 +255,19 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
-	innerHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(node.vmProtoData.Hash().Bytes()),
-		solsha3.Uint256(node.deadline.Val),
-		solsha3.Bytes32(nodeDataHash.Bytes()),
-		solsha3.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
+	innerHash := hashing.SoliditySHA3(
+		hashing.Bytes32(node.vmProtoData.Hash()),
+		hashing.TimeTicks(node.deadline),
+		hashing.Bytes32(nodeDataHash),
+		hashing.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
 	)
-	hashSlice := solsha3.SoliditySHA3(
-		solsha3.Bytes32(prevHashArr.Bytes()),
-		solsha3.Bytes32(innerHash),
+	hash := hashing.SoliditySHA3(
+		hashing.Bytes32(prevHashArr),
+		hashing.Bytes32(innerHash),
 	)
 	node.nodeDataHash = nodeDataHash
-	copy(node.innerHash[:], innerHash)
-	copy(node.hash[:], hashSlice)
+	node.innerHash = innerHash
+	node.hash = hash
 }
 
 func (node *Node) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeBuf {

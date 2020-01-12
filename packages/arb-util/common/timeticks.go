@@ -14,12 +14,10 @@
 * limitations under the License.
  */
 
-package structures
+package common
 
 import (
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type TimeTicks struct {
@@ -34,7 +32,7 @@ func init() {
 	_timeConversionFactor = new(big.Int).Mul(big.NewInt(13), _timeTicksPerSecond)
 }
 
-func TimeFromBlockNum(blockNum *common.TimeBlocks) TimeTicks {
+func TimeFromBlockNum(blockNum *TimeBlocks) TimeTicks {
 	return TimeTicks{new(big.Int).Mul(_timeConversionFactor, blockNum.AsInt())}
 }
 
@@ -52,7 +50,7 @@ func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
 	return &TimeTicksBuf{
-		Val: common.MarshalBigInt(rt.Val),
+		Val: MarshalBigInt(rt.Val),
 	}
 }
 

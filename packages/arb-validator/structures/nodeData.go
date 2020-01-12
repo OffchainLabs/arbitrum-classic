@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -84,13 +84,11 @@ func (d *VMProtoData) Clone() *VMProtoData {
 }
 
 func (d *VMProtoData) Hash() common.Hash {
-	var ret common.Hash
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(d.MachineHash.Bytes()),
-		solsha3.Bytes32(d.PendingTop.Bytes()),
-		solsha3.Uint256(d.PendingCount),
-	))
-	return ret
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(d.MachineHash),
+		hashing.Bytes32(d.PendingTop),
+		hashing.Uint256(d.PendingCount),
+	)
 }
 
 func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
@@ -239,9 +237,9 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	)
 }
 
-func (dn *DisputableNode) CheckTime(params ChainParams) TimeTicks {
+func (dn *DisputableNode) CheckTime(params ChainParams) common.TimeTicks {
 	checkTimeRaw := dn.AssertionClaim.AssertionStub.NumGas / params.ArbGasSpeedLimitPerTick
-	return TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
+	return common.TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
 }
 
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {

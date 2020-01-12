@@ -33,7 +33,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var continuedChallengeID ethcommon.Hash
@@ -65,7 +64,7 @@ func NewBisectionChallenge(address ethcommon.Address, client *ethclient.Client, 
 }
 
 func (c *BisectionChallenge) setupContracts() error {
-	challengeManagerContract, err := executionchallenge.NewBisectionChallenge(c.address, c.Client)
+	challengeManagerContract, err := executionchallenge.NewBisectionChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -82,7 +81,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 		return err
 	}
 
-	header, err := c.Client.HeaderByNumber(ctx, nil)
+	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -95,7 +94,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 	}
 
 	filter.ToBlock = header.Number
-	logs, err := c.Client.FilterLogs(ctx, filter)
+	logs, err := c.client.FilterLogs(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -108,7 +107,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 	filter.FromBlock = new(big.Int).Add(header.Number, big.NewInt(1))
 	filter.ToBlock = nil
 	logChan := make(chan types.Log)
-	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
+	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {
 		return err
 	}
@@ -135,7 +134,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 }
 
 func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
+	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -151,7 +150,7 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 			VMID:        common.NewAddressFromEth(c.address),
 			Event: arbbridge.ContinueChallengeEvent{
 				SegmentIndex: contChal.SegmentIndex,
-				Deadline:     structures.TimeTicks{Val: contChal.DeadlineTicks},
+				Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
 			},
 			TxHash: log.TxHash,
 		}
@@ -162,7 +161,7 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 func (c *BisectionChallenge) chooseSegment(
 	ctx context.Context,
 	segmentToChallenge uint16,
-	segments [][32]byte,
+	segments []common.Hash,
 ) error {
 	tree := NewMerkleTree(segments)
 	c.auth.Context = ctx

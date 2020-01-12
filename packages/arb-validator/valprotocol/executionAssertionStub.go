@@ -19,7 +19,7 @@ package valprotocol
 import (
 	"fmt"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -36,10 +36,13 @@ type ExecutionAssertionStub struct {
 }
 
 func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *ExecutionAssertionStub {
-	var lastHash common.Hash
+	var lastMsgHash common.Hash
 	for _, msg := range a.OutMsgs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash.Bytes()), solsha3.Bytes32(msg.Hash().Bytes()))
-		copy(lastHash[:], next)
+		lastMsgHash = hashing.SoliditySHA3(hashing.Bytes32(lastMsgHash), hashing.Bytes32(msg.Hash()))
+	}
+	var lastLogHash common.Hash
+	for _, logVal := range a.Logs {
+		lastLogHash = hashing.SoliditySHA3(hashing.Bytes32(lastLogHash), hashing.Bytes32(logVal.Hash()))
 	}
 
 	return &ExecutionAssertionStub{
@@ -47,9 +50,9 @@ func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *Exe
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
 		FirstMessageHash: common.Hash{},
-		LastMessageHash:  lastHash,
+		LastMessageHash:  lastMsgHash,
 		FirstLogHash:     common.Hash{},
-		LastLogHash:      a.LogsHash(),
+		LastLogHash:      lastLogHash,
 	}
 }
 
@@ -113,16 +116,13 @@ func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
 }
 
 func (a *ExecutionAssertionStub) Hash() common.Hash {
-	var ret common.Hash
-	hashVal := solsha3.SoliditySHA3(
-		solsha3.Bytes32(a.AfterHash.Bytes()),
-		solsha3.Bool(a.DidInboxInsn),
-		solsha3.Uint64(a.NumGas),
-		solsha3.Bytes32(a.FirstMessageHash.Bytes()),
-		solsha3.Bytes32(a.LastMessageHash.Bytes()),
-		solsha3.Bytes32(a.FirstLogHash.Bytes()),
-		solsha3.Bytes32(a.LastLogHash.Bytes()),
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(a.AfterHash),
+		hashing.Bool(a.DidInboxInsn),
+		hashing.Uint64(a.NumGas),
+		hashing.Bytes32(a.FirstMessageHash),
+		hashing.Bytes32(a.LastMessageHash),
+		hashing.Bytes32(a.FirstLogHash),
+		hashing.Bytes32(a.LastLogHash),
 	)
-	copy(ret[:], hashVal)
-	return ret
 }

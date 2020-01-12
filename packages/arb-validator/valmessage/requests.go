@@ -17,7 +17,7 @@
 package valmessage
 
 import (
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -32,15 +32,13 @@ type UnanimousRequestData struct {
 }
 
 func (r UnanimousRequestData) Hash() common.Hash {
-	var ret common.Hash
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(r.BeforeHash.Bytes()),
-		solsha3.Bytes32(r.BeforeInbox.Bytes()),
-		solsha3.Uint64(r.SequenceNum),
-		solsha3.Uint128(r.TimeBounds.Start.AsInt()),
-		solsha3.Uint128(r.TimeBounds.End.AsInt()),
-	))
-	return ret
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(r.BeforeHash),
+		hashing.Bytes32(r.BeforeInbox),
+		hashing.Uint64(r.SequenceNum),
+		hashing.TimeBlocks(r.TimeBounds.Start),
+		hashing.TimeBlocks(r.TimeBounds.End),
+	)
 }
 
 type UnanimousRequest struct {

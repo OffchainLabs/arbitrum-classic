@@ -18,10 +18,8 @@ package arbbridge
 
 import (
 	"context"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type ClientConnection interface {
-	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
+type ContractWatcher interface {
+	StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
 }

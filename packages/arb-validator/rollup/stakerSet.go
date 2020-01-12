@@ -21,13 +21,12 @@ import (
 	"log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type Staker struct {
 	address      common.Address
 	location     *Node
-	creationTime structures.TimeTicks
+	creationTime common.TimeTicks
 	challenge    common.Address
 }
 

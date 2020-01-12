@@ -28,7 +28,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ChallengeTester struct {
@@ -50,7 +49,7 @@ func (con *ChallengeTester) StartChallenge(
 	factory common.Address,
 	asserter common.Address,
 	challenger common.Address,
-	challengePeriod structures.TimeTicks,
+	challengePeriod common.TimeTicks,
 	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, error) {

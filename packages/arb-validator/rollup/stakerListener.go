@@ -112,10 +112,10 @@ func (staker *StakerListener) defendPendingTop(contractAddress common.Address, p
 	challenges.DefendPendingTopClaim(
 		staker.client,
 		contractAddress,
-		100,
 		pendingInbox.MessageStack,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
 		conflictNode.disputable.MaxPendingTop,
+		100,
 	)
 	staker.Unlock()
 }
@@ -125,11 +125,11 @@ func (staker *StakerListener) defendMessages(contractAddress common.Address, pen
 	challenges.DefendMessagesClaim(
 		staker.client,
 		contractAddress,
-		100,
 		pendingInbox.MessageStack,
 		conflictNode.vmProtoData.PendingTop,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
 		conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+		100,
 	)
 	staker.Unlock()
 }
@@ -139,10 +139,10 @@ func (staker *StakerListener) defendExecution(contractAddress common.Address, ma
 	challenges.DefendExecutionClaim(
 		staker.client,
 		contractAddress,
-		50,
 		pre,
-		numSteps,
 		mach,
+		numSteps,
+		50,
 	)
 	staker.Unlock()
 }

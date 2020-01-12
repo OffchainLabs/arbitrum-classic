@@ -19,7 +19,7 @@ package valprotocol
 import (
 	"fmt"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -53,16 +53,13 @@ func (pre *Precondition) Equals(b *Precondition) bool {
 		value.Eq(pre.BeforeInbox, b.BeforeInbox)
 }
 
-func (pre *Precondition) Hash() [32]byte {
-	var ret [32]byte
-	bounds := pre.TimeBounds.AsIntArray()
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(pre.BeforeHash.Bytes()),
-		solsha3.Uint128(bounds[0]),
-		solsha3.Uint128(bounds[1]),
-		solsha3.Bytes32(pre.BeforeInbox.Hash().Bytes()),
-	))
-	return ret
+func (pre *Precondition) Hash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(pre.BeforeHash),
+		hashing.TimeBlocks(pre.TimeBounds.Start),
+		hashing.TimeBlocks(pre.TimeBounds.End),
+		hashing.Bytes32(pre.BeforeInbox.Hash()),
+	)
 }
 
 func (pre *Precondition) GeneratePostcondition(a *ExecutionAssertionStub) *Precondition {

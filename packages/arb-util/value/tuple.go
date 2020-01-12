@@ -25,9 +25,8 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 const MaxTupleSize = 8
@@ -35,8 +34,7 @@ const MaxTupleSize = 8
 var hashOfNone common.Hash
 
 func init() {
-	hashOfNoneVal := solsha3.SoliditySHA3(solsha3.Uint8(TypeCodeTuple))
-	copy(hashOfNone[:], hashOfNoneVal)
+	hashOfNone = hashing.SoliditySHA3(hashing.Uint8(TypeCodeTuple))
 }
 
 type TupleValue struct {
@@ -249,13 +247,10 @@ func (tv TupleValue) internalHash() common.Hash {
 		hashes = append(hashes, v.Hash())
 	}
 
-	hashVal := solsha3.SoliditySHA3(
-		solsha3.Uint8(tv.InternalTypeCode()),
+	return hashing.SoliditySHA3(
+		hashing.Uint8(tv.InternalTypeCode()),
 		Bytes32ArrayEncoded(hashes),
 	)
-	ret := common.Hash{}
-	copy(ret[:], hashVal)
-	return ret
 }
 
 func (tv TupleValue) Hash() common.Hash {

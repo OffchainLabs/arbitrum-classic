@@ -80,7 +80,7 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 		s.stakers.Equals(s2.stakers)
 }
 
-func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime common.TimeTicks) {
 	node, ok := chain.nodeFromHash[ev.NodeHash]
 	if !ok {
 		log.Println("Bad location", ev.NodeHash)
@@ -143,7 +143,7 @@ func (sa SortableAddressList) Swap(i, j int) {
 
 type confirmValidOpportunity struct {
 	nodeHash           common.Hash
-	deadlineTicks      structures.TimeTicks
+	deadlineTicks      common.TimeTicks
 	messages           []value.Value
 	logsAcc            common.Hash
 	vmProtoStateHash   common.Hash
@@ -154,7 +154,7 @@ type confirmValidOpportunity struct {
 
 type confirmInvalidOpportunity struct {
 	nodeHash           common.Hash
-	deadlineTicks      structures.TimeTicks
+	deadlineTicks      common.TimeTicks
 	challengeNodeData  common.Hash
 	branch             structures.ChildType
 	vmProtoStateHash   common.Hash
@@ -164,7 +164,7 @@ type confirmInvalidOpportunity struct {
 }
 
 func (sng *StakedNodeGraph) generateNextConfProof(
-	currentTime structures.TimeTicks,
+	currentTime common.TimeTicks,
 ) (*confirmValidOpportunity, *confirmInvalidOpportunity) {
 	stakerAddrs := make([]common.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
@@ -190,7 +190,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 				}
 				return &confirmValidOpportunity{
 					nodeHash:           node.hash,
-					deadlineTicks:      structures.TimeTicks{new(big.Int).Set(node.deadline.Val)},
+					deadlineTicks:      common.TimeTicks{new(big.Int).Set(node.deadline.Val)},
 					messages:           node.assertion.OutMsgs,
 					logsAcc:            node.disputable.AssertionClaim.AssertionStub.LastLogHash,
 					vmProtoStateHash:   node.vmProtoData.Hash(),
@@ -201,7 +201,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 			} else {
 				return nil, &confirmInvalidOpportunity{
 					nodeHash:           node.hash,
-					deadlineTicks:      structures.TimeTicks{new(big.Int).Set(node.deadline.Val)},
+					deadlineTicks:      common.TimeTicks{new(big.Int).Set(node.deadline.Val)},
 					challengeNodeData:  node.nodeDataHash,
 					branch:             node.linkType,
 					vmProtoStateHash:   node.vmProtoData.Hash(),
@@ -218,7 +218,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 
 func (sng *StakedNodeGraph) generateAlignedStakersProof(
 	confirmingNode *Node,
-	currentTime structures.TimeTicks,
+	currentTime common.TimeTicks,
 	stakerAddrs []common.Address,
 ) ([]common.Hash, []*big.Int) {
 	proof := make([]common.Hash, 0)
@@ -272,7 +272,7 @@ type challengeOpportunity struct {
 	asserter              common.Address
 	challenger            common.Address
 	prevNodeHash          common.Hash
-	deadlineTicks         structures.TimeTicks
+	deadlineTicks         common.TimeTicks
 	asserterNodeType      structures.ChildType
 	challengerNodeType    structures.ChildType
 	asserterVMProtoHash   common.Hash
@@ -281,7 +281,7 @@ type challengeOpportunity struct {
 	challengerProof       []common.Hash
 	asserterNodeHash      common.Hash
 	challengerDataHash    common.Hash
-	challengerPeriodTicks structures.TimeTicks
+	challengerPeriodTicks common.TimeTicks
 }
 
 func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {

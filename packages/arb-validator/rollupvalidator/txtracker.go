@@ -21,9 +21,9 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -169,17 +169,17 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 	logs := assertion.Assertion.Logs
 	info.LogsValHashes = make([]string, 0, len(logs))
 	info.LogsAccHashes = make([]string, 0, len(logs))
-	acc := zero[:]
+	acc := common.Hash{}
 	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
 		info.LogsValHashes = append(info.LogsValHashes,
 			hexutil.Encode(logsValHash[:]))
-		acc = solsha3.SoliditySHA3(
-			solsha3.Bytes32(acc),
-			solsha3.Bytes32(logsValHash.Bytes()),
+		acc = hashing.SoliditySHA3(
+			hashing.Bytes32(acc),
+			hashing.Bytes32(logsValHash),
 		)
 		info.LogsAccHashes = append(info.LogsAccHashes,
-			hexutil.Encode(acc))
+			hexutil.Encode(acc.Bytes()))
 	}
 
 	var logsPostHash string

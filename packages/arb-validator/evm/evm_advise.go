@@ -23,9 +23,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -336,14 +336,12 @@ type EthMsg struct {
 }
 
 func (msg EthMsg) MsgHash(vmID common.Address) common.Hash {
-	ret := common.Hash{}
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Address(vmID.ToEthAddress()),
-		solsha3.Bytes32(msg.Data.dataHash.Bytes()),
-		solsha3.Uint256(msg.Currency),
+	return hashing.SoliditySHA3(
+		hashing.Address(vmID),
+		hashing.Bytes32(msg.Data.dataHash),
+		hashing.Uint256(msg.Currency),
 		msg.TokenType[:],
-	))
-	return ret
+	)
 }
 
 func NewEthMsgFromValue(val value.Value) (EthMsg, error) {

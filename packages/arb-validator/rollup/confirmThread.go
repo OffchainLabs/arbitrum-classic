@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
@@ -33,7 +33,7 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 				return
 			case <-ticker.C:
 				chain.RLock()
-				confValid, confInvalid := chain.nodeGraph.generateNextConfProof(structures.TimeFromBlockNum(chain.latestBlockNumber))
+				confValid, confInvalid := chain.nodeGraph.generateNextConfProof(common.TimeFromBlockNum(chain.latestBlockNumber))
 				if confValid != nil {
 					for _, listener := range chain.listeners {
 						listener.ValidNodeConfirmable(confValid)

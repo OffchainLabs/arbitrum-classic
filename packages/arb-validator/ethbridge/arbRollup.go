@@ -21,6 +21,8 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/unanimous"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -31,7 +33,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -157,7 +158,7 @@ func (vm *ArbRollup) MakeAssertion(
 
 	prevPrevLeafHash common.Hash,
 	prevDataHash common.Hash,
-	prevDeadline structures.TimeTicks,
+	prevDeadline common.TimeTicks,
 	prevChildType structures.ChildType,
 
 	beforeState *structures.VMProtoData,
@@ -197,7 +198,7 @@ func (vm *ArbRollup) MakeAssertion(
 
 func (vm *ArbRollup) ConfirmValid(
 	ctx context.Context,
-	deadline structures.TimeTicks,
+	deadline common.TimeTicks,
 	outMsgs []value.Value,
 	logsAccHash common.Hash,
 	protoHash common.Hash,
@@ -206,7 +207,7 @@ func (vm *ArbRollup) ConfirmValid(
 	stakerProofOffsets []*big.Int,
 ) error {
 	vm.auth.Context = ctx
-	messages := hashing.CombineMessages(outMsgs)
+	messages := unanimous.CombineMessages(outMsgs)
 	tx, err := vm.ArbRollup.ConfirmValid(
 		vm.auth,
 		deadline.Val,
@@ -225,7 +226,7 @@ func (vm *ArbRollup) ConfirmValid(
 
 func (vm *ArbRollup) ConfirmInvalid(
 	ctx context.Context,
-	deadline structures.TimeTicks,
+	deadline common.TimeTicks,
 	challengeNodeData common.Hash,
 	branch structures.ChildType,
 	protoHash common.Hash,
@@ -264,7 +265,7 @@ func (vm *ArbRollup) StartChallenge(
 	challengerProof []common.Hash,
 	asserterNodeHash common.Hash,
 	challengerDataHash common.Hash,
-	challengerPeriodTicks structures.TimeTicks,
+	challengerPeriodTicks common.TimeTicks,
 ) error {
 	vm.auth.Context = ctx
 	tx, err := vm.ArbRollup.StartChallenge(

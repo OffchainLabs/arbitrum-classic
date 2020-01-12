@@ -32,10 +32,10 @@ import (
 func DefendExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	bisectionCount uint32,
 	precondition *valprotocol.Precondition,
-	numSteps uint32,
 	startMachine machine.Machine,
+	numSteps uint32,
+	bisectionCount uint32,
 ) (ChallengeState, error) {
 	contract, err := client.NewExecutionChallenge(address)
 	if err != nil {
@@ -58,13 +58,14 @@ func DefendExecutionClaim(
 	return defendExecution(
 		ctx,
 		contract,
+		client,
 		noteChan,
-		bisectionCount,
 		NewAssertionDefender(
 			precondition,
 			numSteps,
 			startMachine,
 		),
+		bisectionCount,
 	)
 }
 
@@ -96,6 +97,7 @@ func ChallengeExecutionClaim(
 	return challengeExecution(
 		ctx,
 		contract,
+		client,
 		noteChan,
 		startMachine,
 		startPrecondition,
@@ -106,9 +108,10 @@ func ChallengeExecutionClaim(
 func defendExecution(
 	ctx context.Context,
 	contract arbbridge.ExecutionChallenge,
+	client arbbridge.ArbClient,
 	outChan chan arbbridge.Notification,
-	bisectionCount uint32,
 	startDefender AssertionDefender,
+	bisectionCount uint32,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -168,6 +171,7 @@ func defendExecution(
 			outChan,
 			ev.Deadline,
 			contract,
+			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
@@ -183,6 +187,7 @@ func defendExecution(
 func challengeExecution(
 	ctx context.Context,
 	contract arbbridge.ExecutionChallenge,
+	client arbbridge.ArbClient,
 	outChan chan arbbridge.Notification,
 	startMachine machine.Machine,
 	startPrecondition *valprotocol.Precondition,
@@ -206,6 +211,7 @@ func challengeExecution(
 			outChan,
 			deadline,
 			contract,
+			client,
 		)
 		if err != nil || state != ChallengeContinuing {
 			return state, err

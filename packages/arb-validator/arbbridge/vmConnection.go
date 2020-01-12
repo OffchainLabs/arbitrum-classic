@@ -20,25 +20,9 @@ import (
 	"context"
 	"log"
 	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-type ContractConnection interface {
-	StartConnection(context.Context, chan Notification, chan error) error
-}
-
-type ChainContract interface {
-	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
-}
-
-type ChallengeContract interface {
-	ChainContract
-
-	TimeoutChallenge(ctx context.Context) error
-}
-
-func HandleBlockchainNotifications(ctx context.Context, contract ContractConnection) chan Notification {
+func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher) chan Notification {
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := contract.StartConnection(ctx, outChan, errChan); err != nil {

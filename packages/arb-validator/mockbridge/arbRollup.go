@@ -163,7 +163,7 @@ func (vm *ArbRollup) MakeAssertion(
 
 	prevPrevLeafHash common.Hash,
 	prevDataHash common.Hash,
-	prevDeadline structures.TimeTicks,
+	prevDeadline common.TimeTicks,
 	prevChildType structures.ChildType,
 
 	beforeState *structures.VMProtoData,
@@ -204,7 +204,7 @@ func (vm *ArbRollup) MakeAssertion(
 
 func (vm *ArbRollup) ConfirmValid(
 	ctx context.Context,
-	deadline structures.TimeTicks,
+	deadline common.TimeTicks,
 	outMsgs []value.Value,
 	logsAccHash common.Hash,
 	protoHash common.Hash,
@@ -233,7 +233,7 @@ func (vm *ArbRollup) ConfirmValid(
 
 func (vm *ArbRollup) ConfirmInvalid(
 	ctx context.Context,
-	deadline structures.TimeTicks,
+	deadline common.TimeTicks,
 	challengeNodeData common.Hash,
 	branch structures.ChildType,
 	protoHash common.Hash,
@@ -273,7 +273,7 @@ func (vm *ArbRollup) StartChallenge(
 	challengerProof []common.Hash,
 	asserterNodeHash common.Hash,
 	challengerDataHash common.Hash,
-	challengerPeriodTicks structures.TimeTicks,
+	challengerPeriodTicks common.TimeTicks,
 ) error {
 	//vm.auth.Context = ctx
 	//tx, err := vm.ArbRollup.StartChallenge(

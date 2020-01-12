@@ -64,7 +64,7 @@ func NewMessagesChallenge(address ethcommon.Address, client *ethclient.Client, a
 }
 
 func (c *MessagesChallenge) setupContracts() error {
-	challengeManagerContract, err := messageschallenge.NewMessagesChallenge(c.address, c.Client)
+	challengeManagerContract, err := messageschallenge.NewMessagesChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
 	}
@@ -80,7 +80,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 	if err := c.setupContracts(); err != nil {
 		return err
 	}
-	header, err := c.Client.HeaderByNumber(ctx, nil)
+	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 		}},
 	}
 
-	logs, err := c.Client.FilterLogs(ctx, filter)
+	logs, err := c.client.FilterLogs(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 
 	filter.FromBlock = header.Number
 	logChan := make(chan types.Log)
-	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
+	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 				ChainHashes:   hashSliceToHashes(eventVal.ChainHashes),
 				SegmentHashes: hashSliceToHashes(eventVal.SegmentHashes),
 				TotalLength:   eventVal.TotalLength,
-				Deadline:      structures.TimeTicks{Val: eventVal.DeadlineTicks},
+				Deadline:      common.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == messagesOneStepProofCompletedID {
 			_, err := c.Challenge.ParseOneStepProofCompleted(log)
@@ -158,7 +158,7 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 		return err
 	}
 
-	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
+	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (c *MessagesChallenge) ChooseSegment(
 	chainLength *big.Int,
 ) error {
 	bisectionCount := uint32(len(chainHashes) - 1)
-	bisectionHashes := make([][32]byte, 0, bisectionCount)
+	bisectionHashes := make([]common.Hash, 0, bisectionCount)
 	for i := uint32(0); i < bisectionCount; i++ {
 		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, uint32(chainLength.Uint64()))
 		bisectionHashes = append(

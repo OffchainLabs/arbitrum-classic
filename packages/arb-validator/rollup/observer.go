@@ -25,7 +25,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func CreateObserver(
@@ -107,7 +106,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.MessageDeliveredEvent:
 		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := structures.TimeFromBlockNum(common.NewTimeBlocks(notification.BlockHeight))
+		currentTime := common.TimeFromBlockNum(common.NewTimeBlocks(notification.BlockHeight))
 		chain.createStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.newChallenge(ev)

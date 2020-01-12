@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ChallengeFactory interface {
@@ -29,7 +28,7 @@ type ChallengeFactory interface {
 		ctx context.Context,
 		asserter common.Address,
 		challenger common.Address,
-		challengePeriod structures.TimeTicks,
+		challengePeriod common.TimeTicks,
 		challengeHash common.Hash,
 		challengeType *big.Int,
 	) (common.Address, error)

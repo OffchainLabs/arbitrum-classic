@@ -34,7 +34,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var initiatedChallengeID ethcommon.Hash
@@ -52,7 +51,6 @@ func init() {
 }
 
 type Challenge struct {
-	*ClientConnection
 	Challenge *executionchallenge.Challenge
 
 	address ethcommon.Address
@@ -61,13 +59,13 @@ type Challenge struct {
 }
 
 func NewChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*Challenge, error) {
-	vm := &Challenge{ClientConnection: &ClientConnection{client}, address: address, auth: auth}
+	vm := &Challenge{address: address, client: client, auth: auth}
 	err := vm.setupContracts()
 	return vm, err
 }
 
 func (c *Challenge) setupContracts() error {
-	challengeManagerContract, err := executionchallenge.NewChallenge(c.address, c.Client)
+	challengeManagerContract, err := executionchallenge.NewChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -81,12 +79,12 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 		return err
 	}
 	headers := make(chan *types.Header)
-	headersSub, err := c.Client.SubscribeNewHead(ctx, headers)
+	headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		return err
 	}
 
-	header, err := c.Client.HeaderByNumber(ctx, nil)
+	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -101,7 +99,7 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 	}
 
 	filter.ToBlock = header.Number
-	logs, err := c.Client.FilterLogs(ctx, filter)
+	logs, err := c.client.FilterLogs(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -114,7 +112,7 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 	filter.FromBlock = new(big.Int).Add(header.Number, big.NewInt(1))
 	filter.ToBlock = nil
 	logChan := make(chan types.Log)
-	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
+	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {
 		return err
 	}
@@ -158,7 +156,7 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 				return nil, err
 			}
 			return arbbridge.InitiateChallengeEvent{
-				Deadline: structures.TimeTicks{Val: eventVal.DeadlineTicks},
+				Deadline: common.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == timedOutAsserterID {
 			_, err := c.Challenge.ParseAsserterTimedOut(log)
@@ -179,7 +177,7 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 		return err
 	}
 
-	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
+	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -207,5 +205,5 @@ func (c *Challenge) TimeoutChallenge(
 }
 
 func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
-	return c.ClientConnection.waitForReceipt(ctx, c.auth.From, tx, methodName)
+	return waitForReceipt(ctx, c.client, c.auth.From, tx, methodName)
 }

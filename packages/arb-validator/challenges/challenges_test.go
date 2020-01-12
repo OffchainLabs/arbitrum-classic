@@ -125,7 +125,7 @@ func testChallenge(
 		challengeFactoryAddress,
 		client1.Address(),
 		client2.Address(),
-		structures.TimeTicks{big.NewInt(13000 * 5)},
+		common.TimeTicks{big.NewInt(13000 * 5)},
 		challengeHash,
 		new(big.Int).SetUint64(uint64(challengeType)),
 	)
@@ -209,10 +209,10 @@ func TestPendingTopChallenge(t *testing.T) {
 			return DefendPendingTopClaim(
 				client,
 				challengeAddress,
-				2,
 				messageStack,
 				bottomHash,
 				topHash,
+				2,
 			)
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
@@ -258,11 +258,11 @@ func TestMessagesChallenge(t *testing.T) {
 			return DefendMessagesClaim(
 				client,
 				challengeAddress,
-				2,
 				messageStack,
 				beforePending,
 				afterPending,
 				importedMessages,
+				2,
 			)
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
@@ -308,10 +308,10 @@ func TestExecution(t *testing.T) {
 			return DefendExecutionClaim(
 				client,
 				challengeAddress,
-				2,
 				precondition,
-				numSteps,
 				mach.Clone(),
+				numSteps,
+				2,
 			)
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {

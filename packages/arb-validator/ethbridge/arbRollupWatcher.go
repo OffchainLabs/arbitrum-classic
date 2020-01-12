@@ -23,9 +23,9 @@ import (
 	"math/big"
 	"strings"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -351,13 +351,13 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 
-			messageHash := solsha3.SoliditySHA3(
-				solsha3.Address(val.VmId),
-				solsha3.Bytes32(msgData.Hash().Bytes()),
-				solsha3.Uint256(val.Value),
+			messageHash := hashing.SoliditySHA3(
+				hashing.Address(common.NewAddressFromEth(val.VmId)),
+				hashing.Bytes32(msgData.Hash()),
+				hashing.Uint256(val.Value),
 				val.TokenType[:],
 			)
-			msgHashInt := new(big.Int).SetBytes(messageHash[:])
+			msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 
 			msgVal, _ := value.NewTupleFromSlice([]value.Value{
 				msgData,
@@ -404,7 +404,7 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 	}
 	return structures.ChainParams{
 		StakeRequirement:        stakeRequired,
-		GracePeriod:             structures.TimeTicks{rawParams.GracePeriodTicks},
+		GracePeriod:             common.TimeTicks{rawParams.GracePeriodTicks},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil

@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-package hashing
+package unanimous
 
 import (
 	"bytes"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 func CombineMessages(
@@ -41,10 +39,10 @@ func CombineMessages(
 func UnanimousAssertPartialPartialHash(
 	newInboxHash common.Hash,
 	assertion *protocol.ExecutionAssertion,
-) []byte {
-	return solsha3.SoliditySHA3(
-		solsha3.Bytes32(newInboxHash.Bytes()),
-		solsha3.Bytes32(assertion.AfterHash.Bytes()),
+) common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(newInboxHash),
+		hashing.Bytes32(assertion.AfterHash),
 	)
 }
 
@@ -60,15 +58,13 @@ func UnanimousAssertPartialHash(
 		newInboxHash,
 		assertion,
 	)
-	var ret common.Hash
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(unanRest),
-		solsha3.Bytes32(beforeHash.Bytes()),
-		solsha3.Bytes32(originalInboxHash.Bytes()),
-		solsha3.Uint64(sequenceNum),
-		solsha3.Bytes32(stub.LastMessageHash.Bytes()),
-	))
-	return ret, nil
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(unanRest),
+		hashing.Bytes32(beforeHash),
+		hashing.Bytes32(originalInboxHash),
+		hashing.Uint64(sequenceNum),
+		hashing.Bytes32(stub.LastMessageHash),
+	), nil
 }
 
 func UnanimousAssertHash(
@@ -90,11 +86,9 @@ func UnanimousAssertHash(
 		return common.Hash{}, nil
 	}
 
-	var hash common.Hash
-	copy(hash[:], solsha3.SoliditySHA3(
-		solsha3.Address(vmID.ToEthAddress()),
-		solsha3.Bytes32(partialHash.Bytes()),
-		solsha3.Bytes32(assertion.LogsHash().Bytes()),
-	))
-	return hash, nil
+	return hashing.SoliditySHA3(
+		hashing.Address(vmID),
+		hashing.Bytes32(partialHash),
+		hashing.Bytes32(valprotocol.NewExecutionAssertionStubFromAssertion(assertion).LastLogHash),
+	), nil
 }

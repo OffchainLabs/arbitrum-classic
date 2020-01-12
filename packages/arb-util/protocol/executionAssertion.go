@@ -17,8 +17,6 @@
 package protocol
 
 import (
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -101,13 +99,4 @@ func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 		}
 	}
 	return true
-}
-
-func (a *ExecutionAssertion) LogsHash() common.Hash {
-	var logHash common.Hash
-	for _, logVal := range a.Logs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(logHash.Bytes()), solsha3.Bytes32(logVal.Hash().Bytes()))
-		copy(logHash[:], next)
-	}
-	return logHash
 }

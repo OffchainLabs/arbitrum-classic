@@ -65,7 +65,7 @@ func NewExecutionChallenge(address ethcommon.Address, client *ethclient.Client, 
 }
 
 func (c *ExecutionChallenge) setupContracts() error {
-	challengeManagerContract, err := executionchallenge.NewExecutionChallenge(c.address, c.Client)
+	challengeManagerContract, err := executionchallenge.NewExecutionChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
@@ -81,7 +81,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 	if err := c.setupContracts(); err != nil {
 		return err
 	}
-	header, err := c.Client.HeaderByNumber(ctx, nil)
+	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 	}
 
 	filter.ToBlock = header.Number
-	logs, err := c.Client.FilterLogs(ctx, filter)
+	logs, err := c.client.FilterLogs(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 	filter.FromBlock = header.Number
 	filter.ToBlock = nil
 	logChan := make(chan types.Log)
-	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
+	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 			return arbbridge.ExecutionBisectionEvent{
 				Assertions: translateBisectionEvent(bisectChal),
 				TotalSteps: bisectChal.TotalSteps,
-				Deadline:   structures.TimeTicks{Val: bisectChal.DeadlineTicks},
+				Deadline:   common.TimeTicks{Val: bisectChal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == oneStepProofCompletedID {
 			_, err := c.Challenge.ParseOneStepProofCompleted(log)
@@ -163,7 +163,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 	if event == nil {
 		return nil
 	}
-	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
+	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) error {
-	bisectionHashes := make([][32]byte, 0, len(assertions))
+	bisectionHashes := make([]common.Hash, 0, len(assertions))
 	for i := range assertions {
 		stepCount := structures.CalculateBisectionStepCount(uint32(i), uint32(len(assertions)), totalSteps)
 		bisectionHashes = append(

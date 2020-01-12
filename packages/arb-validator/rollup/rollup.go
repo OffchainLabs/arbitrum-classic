@@ -185,7 +185,7 @@ func (chain *ChainObserver) pruneLeaf(ev arbbridge.PrunedEvent) {
 	}
 }
 
-func (chain *ChainObserver) createStake(ev arbbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
+func (chain *ChainObserver) createStake(ev arbbridge.StakeCreatedEvent, currentTime common.TimeTicks) {
 	chain.nodeGraph.CreateStake(ev, currentTime)
 	for _, lis := range chain.listeners {
 		lis.StakeCreated(ev)

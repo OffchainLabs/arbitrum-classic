@@ -22,7 +22,7 @@ option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rol
 
 message NodeBuf {
     common.HashBuf prevHash = 1;
-    structures.TimeTicksBuf deadline = 2;
+    common.TimeTicksBuf deadline = 2;
     structures.DisputableNodeBuf disputableNode = 3;
     uint32 linkType = 4;
     structures.VMProtoDataBuf vmProtoData = 5;
@@ -59,6 +59,6 @@ message ChainObserverBuf {
 message StakerBuf {
     common.AddressBuf address = 1;
     common.HashBuf location = 2;
-    structures.TimeTicksBuf creationTime = 3;
+    common.TimeTicksBuf creationTime = 3;
     common.AddressBuf challengeAddr = 4;
 }
