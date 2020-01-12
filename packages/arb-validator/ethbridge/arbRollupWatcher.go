@@ -185,7 +185,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 		}
 	}
 
-	filter.FromBlock = new(big.Int).Add(currentHeader.Number, big.NewInt(1))
+	filter.FromBlock = currentHeader.Number
 	filter.ToBlock = nil
 	logChan := make(chan types.Log)
 	logSub, err := vm.Client.SubscribeFilterLogs(ctx, filter, logChan)
@@ -193,7 +193,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 		return err
 	}
 
-	messagesFilter.FromBlock = new(big.Int).Add(currentHeader.Number, big.NewInt(1))
+	messagesFilter.FromBlock = currentHeader.Number
 	messagesFilter.ToBlock = nil
 	messagesLogChan := make(chan types.Log)
 	messagesLogSub, err := vm.Client.SubscribeFilterLogs(ctx, messagesFilter, messagesLogChan)
