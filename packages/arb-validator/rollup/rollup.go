@@ -101,7 +101,7 @@ func (chain *ChainObserver) AddListener(listener ChainListener) {
 
 func MakeInitialChainObserverBuf(
 	contractAddress common.Address,
-	machineHash [32]byte,
+	machineHash common.Hash,
 	params *structures.ChainParams,
 	opinionated bool,
 ) *ChainObserverBuf {
@@ -300,7 +300,7 @@ func (chain *ChainObserver) notifyAssert(
 	return nil
 }
 
-func (chain *ChainObserver) notifyNewBlock(blockNum *common.TimeBlocks, blockHash [32]byte) {
+func (chain *ChainObserver) notifyNewBlock(blockNum *common.TimeBlocks, blockHash common.Hash) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockNumber = blockNum

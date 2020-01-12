@@ -23,6 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -137,14 +138,14 @@ func (cp *Checkpointer) AddRefToValue(val value.Value) error {
 	})
 }
 
-func (cp *Checkpointer) RemoveRefToValue(hash [32]byte) {
+func (cp *Checkpointer) RemoveRefToValue(hash common.Hash) {
 	go func() {
 		_ = cp.synchronousRemoveRefToValue(hash) // accept that error will leave unneeded values laying around
 	}()
 }
 
-func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
-	var more [][32]byte
+func (cp *Checkpointer) synchronousRemoveRefToValue(hash common.Hash) error {
+	var more []common.Hash
 	err := cp.db.Update(func(txn *badger.Txn) error {
 		key := append([]byte{PrefixValue}, hash[:]...)
 		item, err := txn.Get(key)
@@ -170,9 +171,9 @@ func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
 			if valCopy[8] == value.TypeCodeTuple {
 				size := int(valCopy[9])
 				rd := bytes.NewReader(valCopy[10:])
-				more = make([][32]byte, size)
+				more = make([]common.Hash, size)
 				for i := 0; i < size; i++ {
-					h := [32]byte{}
+					h := common.Hash{}
 					if _, err := io.ReadFull(rd, h[:]); err != nil {
 						return err
 					}
@@ -196,14 +197,14 @@ func (cp *Checkpointer) synchronousRemoveRefToValue(hash [32]byte) error {
 	return nil
 }
 
-func (cp *Checkpointer) RestoreValueFromHash(hash [32]byte) (value.Value, error) {
+func (cp *Checkpointer) RestoreValueFromHash(hash common.Hash) (value.Value, error) {
 	txn := cp.db.NewTransaction(false) // open a read-only transaction
 	defer txn.Discard()
 
 	return cp.restoreValueFromHashInTxn(txn, hash)
 }
 
-func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash [32]byte) (value.Value, error) {
+func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash common.Hash) (value.Value, error) {
 	hkey := append([]byte{PrefixValue}, hash[:]...)
 	item, err := txn.Get(hkey)
 	if err != nil {
@@ -238,7 +239,7 @@ func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash [32]byte
 		if err2 != nil {
 			return nil, err2
 		}
-		var nextHash [32]byte
+		var nextHash common.Hash
 		if _, err2 := io.ReadFull(rd, nextHash[:]); err2 != nil {
 			return nil, err2
 		}
@@ -251,7 +252,7 @@ func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash [32]byte
 		size := int(sizeAsByte)
 		contents := make([]value.Value, size)
 		for i := 0; i < size; i++ {
-			var subHash [32]byte
+			var subHash common.Hash
 			if _, err2 := io.ReadFull(rd, subHash[:]); err2 != nil {
 				return nil, err
 			}
@@ -262,7 +263,7 @@ func (cp *Checkpointer) restoreValueFromHashInTxn(txn *badger.Txn, hash [32]byte
 		}
 		return value.NewTupleFromSlice(contents)
 	case value.TypeCodeHashOnly:
-		var h [32]byte
+		var h common.Hash
 		if _, err := io.ReadFull(rd, h[:]); err != nil {
 			return nil, err
 		}

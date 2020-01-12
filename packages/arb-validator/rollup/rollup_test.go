@@ -63,7 +63,7 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpointer, t *testing.T) {
 	blockHeight := common.NewTimeBlocks(big.NewInt(7337))
-	var blockHeaderHash [32]byte
+	var blockHeaderHash common.Hash
 	ctx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ctx)
 	if err != nil {
@@ -244,7 +244,7 @@ func createSomeStakers(chain *ChainObserver) {
 	}
 }
 
-func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash [32]byte) {
+func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash common.Hash) {
 	chain.createStake(
 		arbbridge.StakeCreatedEvent{
 			Staker:   stakerAddr,

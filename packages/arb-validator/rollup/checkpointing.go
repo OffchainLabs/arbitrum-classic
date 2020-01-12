@@ -38,7 +38,7 @@ type RollupCheckpointer interface {
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(
 		blockHeight *common.TimeBlocks,
-		blockHeaderHash [32]byte,
+		blockHeaderHash common.Hash,
 		contents []byte,
 		cpCtx structures.CheckpointContext,
 		closeWhenDone chan interface{},
@@ -75,7 +75,7 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 
 func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(
 	blockNum *common.TimeBlocks,
-	blockHeaderHash [32]byte,
+	blockHeaderHash common.Hash,
 	contents []byte,
 	cpCtx structures.CheckpointContext,
 	doneChan chan interface{},
@@ -246,7 +246,7 @@ func (cp *ProductionCheckpointer) GetInitialMachine() (machine.Machine, error) {
 
 func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(
 	blocknum *common.TimeBlocks,
-	blockHeaderHash [32]byte,
+	blockHeaderHash common.Hash,
 	buf []byte,
 	cpCtx structures.CheckpointContext,
 	doneChan chan interface{},
