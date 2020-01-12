@@ -106,7 +106,7 @@ func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 func (a *ExecutionAssertion) LogsHash() common.Hash {
 	var logHash common.Hash
 	for _, logVal := range a.Logs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(logHash), solsha3.Bytes32(logVal.Hash()))
+		next := solsha3.SoliditySHA3(solsha3.Bytes32(logHash.Bytes()), solsha3.Bytes32(logVal.Hash().Bytes()))
 		copy(logHash[:], next)
 	}
 	return logHash

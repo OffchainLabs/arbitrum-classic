@@ -28,8 +28,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -276,7 +274,7 @@ func (chain *ChainObserver) notifyAssert(
 ) error {
 	topPendingCount, ok := chain.pendingInbox.GetHeight(ev.MaxPendingTop)
 	if !ok {
-		return fmt.Errorf("Couldn't find top message in inbox: %v", hexutil.Encode(ev.MaxPendingTop[:]))
+		return fmt.Errorf("Couldn't find top message in inbox: %v", ev.MaxPendingTop)
 	}
 	disputableNode := structures.NewDisputableNode(
 		ev.Params,

@@ -20,12 +20,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
@@ -46,14 +43,14 @@ const (
 )
 
 type VMProtoData struct {
-	MachineHash  [32]byte
-	PendingTop   [32]byte
+	MachineHash  common.Hash
+	PendingTop   common.Hash
 	PendingCount *big.Int
 }
 
 func NewVMProtoData(
-	machineHash [32]byte,
-	pendingTop [32]byte,
+	machineHash common.Hash,
+	pendingTop common.Hash,
 	pendingCount *big.Int,
 ) *VMProtoData {
 	return &VMProtoData{
@@ -66,8 +63,8 @@ func NewVMProtoData(
 func (d *VMProtoData) String() string {
 	return fmt.Sprintf(
 		"VMProtoData(MachineHash: %v, PendingTop: %v, PendingCount: %v)",
-		hexutil.Encode(d.MachineHash[:]),
-		hexutil.Encode(d.PendingTop[:]),
+		d.MachineHash,
+		d.PendingTop,
 		d.PendingCount,
 	)
 }
@@ -86,11 +83,11 @@ func (d *VMProtoData) Clone() *VMProtoData {
 	}
 }
 
-func (d *VMProtoData) Hash() [32]byte {
-	var ret [32]byte
+func (d *VMProtoData) Hash() common.Hash {
+	var ret common.Hash
 	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(d.MachineHash),
-		solsha3.Bytes32(d.PendingTop),
+		solsha3.Bytes32(d.MachineHash.Bytes()),
+		solsha3.Bytes32(d.PendingTop.Bytes()),
 		solsha3.Uint256(d.PendingCount),
 	))
 	return ret
@@ -159,16 +156,16 @@ func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 }
 
 type AssertionClaim struct {
-	AfterPendingTop       [32]byte
-	ImportedMessagesSlice [32]byte
+	AfterPendingTop       common.Hash
+	ImportedMessagesSlice common.Hash
 	AssertionStub         *valprotocol.ExecutionAssertionStub
 }
 
 func (dn *AssertionClaim) String() string {
 	return fmt.Sprintf(
 		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
-		hexutil.Encode(dn.AfterPendingTop[:]),
-		hexutil.Encode(dn.ImportedMessagesSlice[:]),
+		dn.AfterPendingTop,
+		dn.ImportedMessagesSlice,
 		dn.AssertionStub,
 	)
 }
@@ -206,14 +203,14 @@ func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 type DisputableNode struct {
 	AssertionParams *AssertionParams
 	AssertionClaim  *AssertionClaim
-	MaxPendingTop   [32]byte
+	MaxPendingTop   common.Hash
 	MaxPendingCount *big.Int
 }
 
 func NewDisputableNode(
 	assertionParams *AssertionParams,
 	assertionClaim *AssertionClaim,
-	maxPendingTop [32]byte,
+	maxPendingTop common.Hash,
 	maxPendingCount *big.Int,
 ) *DisputableNode {
 	return &DisputableNode{

@@ -19,8 +19,6 @@ package rollup
 import (
 	"log"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -44,7 +42,7 @@ func (ll *LeafSet) NumLeaves() int {
 }
 
 func (ll *LeafSet) Add(node *Node) {
-	log.Println("Added leaf", node.linkType, hexutil.Encode(node.hash[:]))
+	log.Println("Added leaf", node.linkType, node.hash)
 	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
 	}
@@ -52,7 +50,7 @@ func (ll *LeafSet) Add(node *Node) {
 }
 
 func (ll *LeafSet) Delete(node *Node) {
-	log.Println("Removed leaf", node.linkType, hexutil.Encode(node.hash[:]))
+	log.Println("Removed leaf", node.linkType, node.hash)
 	delete(ll.idx, node.hash)
 }
 

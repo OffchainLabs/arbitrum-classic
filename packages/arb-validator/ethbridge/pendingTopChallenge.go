@@ -32,7 +32,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -216,7 +215,7 @@ func (c *PendingTopChallenge) ChooseSegment(
 	bisectionCount := uint32(len(chainHashes) - 1)
 	bisectionHashes := make([][32]byte, 0, bisectionCount)
 	for i := uint32(0); i < bisectionCount; i++ {
-		stepCount := challenges.CalculateBisectionStepCount(i, bisectionCount, chainLength)
+		stepCount := structures.CalculateBisectionStepCount(i, bisectionCount, chainLength)
 		bisectionHashes = append(
 			bisectionHashes,
 			structures.PendingTopChallengeDataHash(

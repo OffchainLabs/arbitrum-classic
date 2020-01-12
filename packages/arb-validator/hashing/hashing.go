@@ -39,34 +39,34 @@ func CombineMessages(
 }
 
 func UnanimousAssertPartialPartialHash(
-	newInboxHash [32]byte,
+	newInboxHash common.Hash,
 	assertion *protocol.ExecutionAssertion,
 ) []byte {
 	return solsha3.SoliditySHA3(
-		solsha3.Bytes32(newInboxHash),
-		solsha3.Bytes32(assertion.AfterHash),
+		solsha3.Bytes32(newInboxHash.Bytes()),
+		solsha3.Bytes32(assertion.AfterHash.Bytes()),
 	)
 }
 
 func UnanimousAssertPartialHash(
 	sequenceNum uint64,
-	beforeHash [32]byte,
-	newInboxHash [32]byte,
-	originalInboxHash [32]byte,
+	beforeHash common.Hash,
+	newInboxHash common.Hash,
+	originalInboxHash common.Hash,
 	assertion *protocol.ExecutionAssertion,
-) ([32]byte, error) {
+) (common.Hash, error) {
 	stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	unanRest := UnanimousAssertPartialPartialHash(
 		newInboxHash,
 		assertion,
 	)
-	var ret [32]byte
+	var ret common.Hash
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Bytes32(unanRest),
-		solsha3.Bytes32(beforeHash),
-		solsha3.Bytes32(originalInboxHash),
+		solsha3.Bytes32(beforeHash.Bytes()),
+		solsha3.Bytes32(originalInboxHash.Bytes()),
 		solsha3.Uint64(sequenceNum),
-		solsha3.Bytes32(stub.LastMessageHash),
+		solsha3.Bytes32(stub.LastMessageHash.Bytes()),
 	))
 	return ret, nil
 }
@@ -74,11 +74,11 @@ func UnanimousAssertPartialHash(
 func UnanimousAssertHash(
 	vmID common.Address,
 	sequenceNum uint64,
-	beforeHash [32]byte,
-	newInboxHash [32]byte,
-	originalInboxHash [32]byte,
+	beforeHash common.Hash,
+	newInboxHash common.Hash,
+	originalInboxHash common.Hash,
 	assertion *protocol.ExecutionAssertion,
-) ([32]byte, error) {
+) (common.Hash, error) {
 	partialHash, err := UnanimousAssertPartialHash(
 		sequenceNum,
 		beforeHash,
@@ -87,14 +87,14 @@ func UnanimousAssertHash(
 		assertion,
 	)
 	if err != nil {
-		return [32]byte{}, nil
+		return common.Hash{}, nil
 	}
 
-	var hash [32]byte
+	var hash common.Hash
 	copy(hash[:], solsha3.SoliditySHA3(
 		solsha3.Address(vmID.ToEthAddress()),
-		solsha3.Bytes32(partialHash),
-		solsha3.Bytes32(assertion.LogsHash()),
+		solsha3.Bytes32(partialHash.Bytes()),
+		solsha3.Bytes32(assertion.LogsHash().Bytes()),
 	))
 	return hash, nil
 }

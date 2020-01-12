@@ -21,12 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-type Address ethcommon.Address
-
-func test() {
-	addr := Address{}
-	ethcommon.Address(addr).Bytes()
-}
+type Address [20]byte
 
 func NewAddressFromEth(a ethcommon.Address) Address {
 	return Address(a)

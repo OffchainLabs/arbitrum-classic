@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -89,7 +87,7 @@ func (nv HashOnlyValue) Equal(val Value) bool {
 }
 
 func (nv HashOnlyValue) String() string {
-	return fmt.Sprintf("HashOnlyValue(%v)", hexutil.Encode(nv.hash[:]))
+	return fmt.Sprintf("HashOnlyValue(%v)", nv.hash)
 }
 
 func (nv HashOnlyValue) Hash() common.Hash {

@@ -23,14 +23,13 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type Result interface {
@@ -167,7 +166,7 @@ const (
 type Log struct {
 	ContractID value.IntValue
 	Data       []byte
-	Topics     [][32]byte
+	Topics     []common.Hash
 }
 
 func (l Log) String() string {
@@ -205,7 +204,7 @@ func LogValToLog(val value.Value) (Log, error) {
 	if err != nil {
 		return Log{}, err
 	}
-	topics := make([][32]byte, 0, tupVal.Len()-2)
+	topics := make([]common.Hash, 0, tupVal.Len()-2)
 	for _, topicVal := range tupVal.Contents()[2:] {
 		topicValInt, ok := topicVal.(value.IntValue)
 		if !ok {
@@ -282,9 +281,9 @@ func (data EthCallData) Equals(data2 EthCallData) bool {
 type EthMsgData struct {
 	CallData EthCallData
 	Number   *big.Int
-	TxHash   [32]byte
+	TxHash   common.Hash
 
-	dataHash [32]byte
+	dataHash common.Hash
 }
 
 func NewEthMsgDataFromValue(val value.Value) (EthMsgData, error) {
@@ -336,11 +335,11 @@ type EthMsg struct {
 	Caller    common.Address
 }
 
-func (msg EthMsg) MsgHash(vmID common.Address) [32]byte {
-	ret := [32]byte{}
+func (msg EthMsg) MsgHash(vmID common.Address) common.Hash {
+	ret := common.Hash{}
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Address(vmID.ToEthAddress()),
-		solsha3.Bytes32(msg.Data.dataHash),
+		solsha3.Bytes32(msg.Data.dataHash.Bytes()),
 		solsha3.Uint256(msg.Currency),
 		msg.TokenType[:],
 	))

@@ -19,6 +19,8 @@ package challenges
 import (
 	"errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
@@ -57,7 +59,7 @@ func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*valp
 
 	pre := ad.precondition
 	for i := uint32(0); i < slices; i++ {
-		steps := CalculateBisectionStepCount(uint32(i), slices, nsteps)
+		steps := structures.CalculateBisectionStepCount(uint32(i), slices, nsteps)
 		initState := m.Clone()
 
 		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
@@ -77,14 +79,6 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 	return ad.initState.MarshalForProof()
 }
 
-func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) uint32 {
-	if chunkIndex == 0 {
-		return totalSteps/segmentCount + totalSteps%segmentCount
-	} else {
-		return totalSteps / segmentCount
-	}
-}
-
 func ChooseAssertionToChallenge(
 	m machine.Machine,
 	pre *valprotocol.Precondition,
@@ -93,7 +87,7 @@ func ChooseAssertionToChallenge(
 ) (uint16, machine.Machine, error) {
 	assertionCount := uint32(len(assertions))
 	for i := range assertions {
-		steps := CalculateBisectionStepCount(uint32(i), assertionCount, totalSteps)
+		steps := structures.CalculateBisectionStepCount(uint32(i), assertionCount, totalSteps)
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,

@@ -18,23 +18,24 @@ package valmessage
 
 import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type UnanimousRequestData struct {
-	BeforeHash  [32]byte
-	BeforeInbox [32]byte
+	BeforeHash  common.Hash
+	BeforeInbox common.Hash
 	SequenceNum uint64
 	TimeBounds  *protocol.TimeBoundsBlocks
 }
 
-func (r UnanimousRequestData) Hash() [32]byte {
-	var ret [32]byte
+func (r UnanimousRequestData) Hash() common.Hash {
+	var ret common.Hash
 	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(r.BeforeHash),
-		solsha3.Bytes32(r.BeforeInbox),
+		solsha3.Bytes32(r.BeforeHash.Bytes()),
+		solsha3.Bytes32(r.BeforeInbox.Bytes()),
 		solsha3.Uint64(r.SequenceNum),
 		solsha3.Uint128(r.TimeBounds.Start.AsInt()),
 		solsha3.Uint128(r.TimeBounds.End.AsInt()),
@@ -49,7 +50,7 @@ type UnanimousRequest struct {
 
 type UnanimousUpdateResults struct {
 	UnanimousRequestData
-	NewInboxHash [32]byte
+	NewInboxHash common.Hash
 	Assertion    *protocol.ExecutionAssertion
 	NewLogCount  int
 }

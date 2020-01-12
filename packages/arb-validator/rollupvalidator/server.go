@@ -25,8 +25,6 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -36,6 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
@@ -72,11 +71,11 @@ func (m *Server) FindLogs(ctx context.Context, args *FindLogsArgs) (*FindLogsRep
 	}
 	addressInt := new(big.Int).SetBytes(addressBytes[:])
 
-	topics := make([][32]byte, 0, len(args.Topics))
+	topics := make([]common.Hash, 0, len(args.Topics))
 	for _, topic := range args.Topics {
 		topicBytes, err := hexutil.Decode(topic)
 		if err == nil {
-			var topic [32]byte
+			var topic common.Hash
 			copy(topic[:], topicBytes)
 			topics = append(topics, topic)
 		}
@@ -112,7 +111,7 @@ func (m *Server) GetMessageResult(ctx context.Context, args *GetMessageResultArg
 	if err != nil {
 		return nil, err
 	}
-	txHash := [32]byte{}
+	txHash := common.Hash{}
 	copy(txHash[:], txHashBytes)
 	resultChan := m.tracker.TxInfo(txHash)
 
@@ -171,8 +170,8 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 
 	msg := valprotocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
 	messageHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(msg.Destination),
-		solsha3.Bytes32(msg.Data.Hash()),
+		solsha3.Address(msg.Destination.ToEthAddress()),
+		solsha3.Bytes32(msg.Data.Hash().Bytes()),
 		solsha3.Uint256(msg.Currency),
 		msg.TokenType[:],
 	)

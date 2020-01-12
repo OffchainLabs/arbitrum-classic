@@ -19,10 +19,18 @@ package common
 import (
 	"math/big"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-type Hash ethcommon.Hash
+type Hash [32]byte
+
+func (h Hash) String() string {
+	return hexutil.Encode(h[:])
+}
+
+func (h Hash) Bytes() []byte {
+	return h[:]
+}
 
 func MarshalHash(h Hash) *HashBuf {
 	return &HashBuf{

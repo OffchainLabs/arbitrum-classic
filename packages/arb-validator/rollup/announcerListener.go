@@ -19,8 +19,6 @@ package rollup
 import (
 	"log"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -35,7 +33,7 @@ func (al *AnnouncerListener) StakeRemoved(arbbridge.StakeRefundedEvent) {
 	log.Println("StakeRemoved")
 }
 func (al *AnnouncerListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
-	log.Printf("StakeMoved(staker: %v, location: %v)\n", hexutil.Encode(ev.Staker[:]), hexutil.Encode(ev.Location[:]))
+	log.Printf("StakeMoved(staker: %v, location: %v)\n", ev.Staker, ev.Location)
 }
 func (al *AnnouncerListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node) {
 	log.Println("StartedChallenge")
@@ -51,11 +49,11 @@ func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *comm
 }
 
 func (al *AnnouncerListener) ConfirmedNode(ev arbbridge.ConfirmedEvent) {
-	log.Println("ConfirmedNode", hexutil.Encode(ev.NodeHash[:]))
+	log.Println("ConfirmedNode", ev.NodeHash)
 }
 
 func (al *AnnouncerListener) PrunedLeaf(ev arbbridge.PrunedEvent) {
-	log.Println("PrunedLeaf", hexutil.Encode(ev.Leaf[:]))
+	log.Println("PrunedLeaf", ev.Leaf)
 }
 
 func (al *AnnouncerListener) AssertionPrepared(*preparedAssertion) {
@@ -78,7 +76,7 @@ func (al *AnnouncerListener) OldStakes([]recoverStakeOldParams) {
 }
 
 func (al *AnnouncerListener) AdvancedKnownValidNode(nodeHash common.Hash) {
-	log.Println("AdvancedKnownValidNode", hexutil.Encode(nodeHash[:]))
+	log.Println("AdvancedKnownValidNode", nodeHash)
 }
 
 func (lis *AnnouncerListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, common.Hash) {

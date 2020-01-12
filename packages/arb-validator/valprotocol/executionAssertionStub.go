@@ -19,8 +19,6 @@ package valprotocol
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -28,19 +26,19 @@ import (
 )
 
 type ExecutionAssertionStub struct {
-	AfterHash        [32]byte
+	AfterHash        common.Hash
 	DidInboxInsn     bool
 	NumGas           uint64
-	FirstMessageHash [32]byte
-	LastMessageHash  [32]byte
-	FirstLogHash     [32]byte
-	LastLogHash      [32]byte
+	FirstMessageHash common.Hash
+	LastMessageHash  common.Hash
+	FirstLogHash     common.Hash
+	LastLogHash      common.Hash
 }
 
 func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *ExecutionAssertionStub {
-	var lastHash [32]byte
+	var lastHash common.Hash
 	for _, msg := range a.OutMsgs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
+		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash.Bytes()), solsha3.Bytes32(msg.Hash().Bytes()))
 		copy(lastHash[:], next)
 	}
 
@@ -48,9 +46,9 @@ func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *Exe
 		AfterHash:        a.AfterHash,
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
-		FirstMessageHash: [32]byte{},
+		FirstMessageHash: common.Hash{},
 		LastMessageHash:  lastHash,
-		FirstLogHash:     [32]byte{},
+		FirstLogHash:     common.Hash{},
 		LastLogHash:      a.LogsHash(),
 	}
 }
@@ -95,13 +93,13 @@ func (a *ExecutionAssertionStub) String() string {
 	return fmt.Sprintf(
 		"Assertion(AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
 			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v)",
-		hexutil.Encode(a.AfterHash[:]),
+		a.AfterHash,
 		a.DidInboxInsn,
 		a.NumGas,
-		hexutil.Encode(a.FirstMessageHash[:]),
-		hexutil.Encode(a.LastMessageHash[:]),
-		hexutil.Encode(a.FirstLogHash[:]),
-		hexutil.Encode(a.LastLogHash[:]),
+		a.FirstMessageHash,
+		a.LastMessageHash,
+		a.FirstLogHash,
+		a.LastLogHash,
 	)
 }
 
@@ -114,16 +112,16 @@ func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
 		a.LastLogHash == b.LastLogHash
 }
 
-func (a *ExecutionAssertionStub) Hash() [32]byte {
-	var ret [32]byte
+func (a *ExecutionAssertionStub) Hash() common.Hash {
+	var ret common.Hash
 	hashVal := solsha3.SoliditySHA3(
-		solsha3.Bytes32(a.AfterHash),
+		solsha3.Bytes32(a.AfterHash.Bytes()),
 		solsha3.Bool(a.DidInboxInsn),
 		solsha3.Uint64(a.NumGas),
-		solsha3.Bytes32(a.FirstMessageHash),
-		solsha3.Bytes32(a.LastMessageHash),
-		solsha3.Bytes32(a.FirstLogHash),
-		solsha3.Bytes32(a.LastLogHash),
+		solsha3.Bytes32(a.FirstMessageHash.Bytes()),
+		solsha3.Bytes32(a.LastMessageHash.Bytes()),
+		solsha3.Bytes32(a.FirstLogHash.Bytes()),
+		solsha3.Bytes32(a.LastLogHash.Bytes()),
 	)
 	copy(ret[:], hashVal)
 	return ret

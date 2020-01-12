@@ -25,6 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
@@ -223,7 +224,7 @@ func challengeExecution(
 			cMach := mach.Clone()
 			challengedAssertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
 			for i := 0; i < len(ev.Assertions); i++ {
-				stepCount := CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
+				stepCount := structures.CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
 				m = cMach.Clone()
 				assertion, _ := cMach.ExecuteAssertion(stepCount, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
 				startPrecondition = startPrecondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))

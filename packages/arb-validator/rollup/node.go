@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 
@@ -48,6 +49,10 @@ type Node struct {
 
 	successorHashes [structures.MaxChildType + 1]common.Hash
 	numStakers      uint64
+}
+
+func (n *Node) String() string {
+	return fmt.Sprintf("Node(type: %v, disputable: %v, deadline: %v, protodata: %v)", n.linkType, n.disputable, n.deadline.Val, n.vmProtoData)
 }
 
 func NewInitialNode(mach machine.Machine) *Node {
@@ -197,13 +202,13 @@ func (node *Node) NodeDataHash(params structures.ChainParams) common.Hash {
 	}
 	if node.linkType == structures.ValidChildType {
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash),
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHash),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash.Bytes()),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHash.Bytes()),
 		))
 	} else {
 		challengeDataHash, challengePeriodTicks := node.ChallengeNodeData(params)
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(challengeDataHash),
+			solsha3.Bytes32(challengeDataHash.Bytes()),
 			solsha3.Uint256(challengePeriodTicks.Val),
 		))
 	}
@@ -253,13 +258,13 @@ func (node *Node) setHash(nodeDataHash common.Hash) {
 		prevHashArr = node.prev.hash
 	}
 	innerHash := solsha3.SoliditySHA3(
-		solsha3.Bytes32(node.vmProtoData.Hash()),
+		solsha3.Bytes32(node.vmProtoData.Hash().Bytes()),
 		solsha3.Uint256(node.deadline.Val),
-		solsha3.Bytes32(nodeDataHash),
+		solsha3.Bytes32(nodeDataHash.Bytes()),
 		solsha3.Uint256(new(big.Int).SetUint64(uint64(node.linkType))),
 	)
 	hashSlice := solsha3.SoliditySHA3(
-		solsha3.Bytes32(prevHashArr),
+		solsha3.Bytes32(prevHashArr.Bytes()),
 		solsha3.Bytes32(innerHash),
 	)
 	node.nodeDataHash = nodeDataHash

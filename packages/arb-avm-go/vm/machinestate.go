@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
@@ -273,12 +271,12 @@ func (m *Machine) Hash() common.Hash {
 	case machine.Extensive:
 		ret := common.Hash{}
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
-			solsha3.Bytes32(m.stack.StateValue().Hash()),
-			solsha3.Bytes32(m.auxstack.StateValue().Hash()),
-			solsha3.Bytes32(m.register.StateValue().Hash()),
-			solsha3.Bytes32(m.static.StateValue().Hash()),
-			solsha3.Bytes32(m.errHandler.Hash()),
+			solsha3.Bytes32(m.pc.GetCurrentCodePointHash().Bytes()),
+			solsha3.Bytes32(m.stack.StateValue().Hash().Bytes()),
+			solsha3.Bytes32(m.auxstack.StateValue().Hash().Bytes()),
+			solsha3.Bytes32(m.register.StateValue().Hash().Bytes()),
+			solsha3.Bytes32(m.static.StateValue().Hash().Bytes()),
+			solsha3.Bytes32(m.errHandler.Hash().Bytes()),
 		))
 		return ret
 	case machine.ErrorStop:
@@ -297,12 +295,12 @@ func (m *Machine) PrintState() {
 	staticHash := m.static.StateValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
 	fmt.Println("machine state", m.status)
-	fmt.Println("codePointHash", hexutil.Encode(codePointHash[:]))
-	fmt.Println("stackHash", hexutil.Encode(stackHash[:]))
-	fmt.Println("auxStackHash", hexutil.Encode(auxStackHash[:]))
-	fmt.Println("registerHash", hexutil.Encode(registerHash[:]))
-	fmt.Println("staticHash", hexutil.Encode(staticHash[:]))
-	fmt.Println("errHandlerHash", hexutil.Encode(errHandlerHash[:]))
+	fmt.Println("codePointHash", codePointHash)
+	fmt.Println("stackHash", stackHash[:])
+	fmt.Println("auxStackHash", auxStackHash)
+	fmt.Println("registerHash", registerHash)
+	fmt.Println("staticHash", staticHash)
+	fmt.Println("errHandlerHash", errHandlerHash)
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

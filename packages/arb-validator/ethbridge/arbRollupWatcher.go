@@ -352,7 +352,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 
 			messageHash := solsha3.SoliditySHA3(
 				solsha3.Address(val.VmId),
-				solsha3.Bytes32(msgData.Hash()),
+				solsha3.Bytes32(msgData.Hash().Bytes()),
 				solsha3.Uint256(val.Value),
 				val.TokenType[:],
 			)

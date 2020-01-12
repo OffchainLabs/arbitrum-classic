@@ -32,7 +32,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
@@ -253,7 +252,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 ) error {
 	bisectionHashes := make([][32]byte, 0, len(assertions))
 	for i := range assertions {
-		stepCount := challenges.CalculateBisectionStepCount(uint32(i), uint32(len(assertions)), totalSteps)
+		stepCount := structures.CalculateBisectionStepCount(uint32(i), uint32(len(assertions)), totalSteps)
 		bisectionHashes = append(
 			bisectionHashes,
 			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),

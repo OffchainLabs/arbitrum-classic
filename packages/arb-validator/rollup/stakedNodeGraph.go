@@ -85,7 +85,7 @@ func (s *StakedNodeGraph) Equals(s2 *StakedNodeGraph) bool {
 func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime structures.TimeTicks) {
 	node, ok := chain.nodeFromHash[ev.NodeHash]
 	if !ok {
-		log.Println("Bad location", hexutil.Encode(ev.NodeHash[:]))
+		log.Println("Bad location", ev.NodeHash)
 		panic("Tried to create stake on bad node")
 	}
 	chain.stakers.Add(&Staker{

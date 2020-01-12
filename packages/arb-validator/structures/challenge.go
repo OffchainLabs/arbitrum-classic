@@ -19,36 +19,46 @@ package structures
 import (
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
+func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) uint32 {
+	if chunkIndex == 0 {
+		return totalSteps/segmentCount + totalSteps%segmentCount
+	} else {
+		return totalSteps / segmentCount
+	}
+}
+
 func PendingTopChallengeDataHash(
-	lowerPending [32]byte,
-	upperPending [32]byte,
+	lowerPending common.Hash,
+	upperPending common.Hash,
 	messageCount *big.Int,
-) [32]byte {
-	ret := [32]byte{}
+) common.Hash {
+	ret := common.Hash{}
 	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(lowerPending),
-		solsha3.Bytes32(upperPending),
+		solsha3.Bytes32(lowerPending.Bytes()),
+		solsha3.Bytes32(upperPending.Bytes()),
 		solsha3.Uint256(messageCount),
 	))
 	return ret
 }
 
 func MessageChallengeDataHash(
-	lowerPending [32]byte,
-	upperPending [32]byte,
-	lowerMessages [32]byte,
-	upperMessages [32]byte,
+	lowerPending common.Hash,
+	upperPending common.Hash,
+	lowerMessages common.Hash,
+	upperMessages common.Hash,
 	messageCount *big.Int,
-) [32]byte {
-	ret := [32]byte{}
+) common.Hash {
+	ret := common.Hash{}
 	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(lowerPending),
-		solsha3.Bytes32(upperPending),
-		solsha3.Bytes32(lowerMessages),
-		solsha3.Bytes32(upperMessages),
+		solsha3.Bytes32(lowerPending.Bytes()),
+		solsha3.Bytes32(upperPending.Bytes()),
+		solsha3.Bytes32(lowerMessages.Bytes()),
+		solsha3.Bytes32(upperMessages.Bytes()),
 		solsha3.Uint256(messageCount),
 	))
 	return ret
@@ -56,14 +66,14 @@ func MessageChallengeDataHash(
 
 func ExecutionDataHash(
 	numSteps uint32,
-	preconditionHash [32]byte,
-	assertionHash [32]byte,
-) [32]byte {
-	ret := [32]byte{}
+	preconditionHash common.Hash,
+	assertionHash common.Hash,
+) common.Hash {
+	ret := common.Hash{}
 	copy(ret[:], solsha3.SoliditySHA3(
 		solsha3.Uint32(numSteps),
-		solsha3.Bytes32(preconditionHash),
-		solsha3.Bytes32(assertionHash),
+		solsha3.Bytes32(preconditionHash.Bytes()),
+		solsha3.Bytes32(assertionHash.Bytes()),
 	))
 	return ret
 }
