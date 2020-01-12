@@ -19,9 +19,9 @@ package arbbridge
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type OneStepProof interface {

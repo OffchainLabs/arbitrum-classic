@@ -44,13 +44,13 @@ func Uint64FromBuf(buf *BigIntegerBuf) (uint64, error) {
 	return bi.Uint64(), nil
 }
 
-func NewHashBuf(h [32]byte) *HashBuf {
+func NewHashBuf(h Hash) *HashBuf {
 	return &HashBuf{
 		Value: h[:],
 	}
 }
 
-func NewHashFromBuf(buf *HashBuf) [32]byte {
+func NewHashFromBuf(buf *HashBuf) Hash {
 	var ret [32]byte
 	copy(ret[:], buf.Value)
 	return ret

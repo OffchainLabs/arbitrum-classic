@@ -19,31 +19,28 @@ package valmessage
 import (
 	"math/big"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 func NewVMConfiguration(
 	gracePeriod uint64,
 	escrowRequired *big.Int,
-	escrowCurrency ethcommon.Address,
-	assertKeys []ethcommon.Address,
+	escrowCurrency common.Address,
+	assertKeys []common.Address,
 	maxSteps uint32,
-	owner ethcommon.Address,
+	owner common.Address,
 ) *VMConfiguration {
-	keys := make([]*valprotocol.AddressBuf, 0, len(assertKeys))
+	keys := make([]*common.AddressBuf, 0, len(assertKeys))
 	for _, key := range assertKeys {
-		keys = append(keys, valprotocol.NewAddressBuf(key))
+		keys = append(keys, key.MarshallToBuf())
 	}
 
 	return &VMConfiguration{
 		GracePeriod:           gracePeriod,
 		EscrowRequired:        common.NewBigIntBuf(escrowRequired),
-		EscrowCurrency:        &valprotocol.AddressBuf{Value: escrowCurrency.Bytes()},
+		EscrowCurrency:        escrowCurrency.MarshallToBuf(),
 		AssertKeys:            keys,
 		MaxExecutionStepCount: maxSteps,
-		Owner:                 &valprotocol.AddressBuf{Value: owner.Bytes()},
+		Owner:                 owner.MarshallToBuf(),
 	}
 }

@@ -21,10 +21,9 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -93,7 +92,7 @@ func UnanimousAssertHash(
 
 	var hash [32]byte
 	copy(hash[:], solsha3.SoliditySHA3(
-		solsha3.Address(vmID),
+		solsha3.Address(vmID.ToEthAddress()),
 		solsha3.Bytes32(partialHash),
 		solsha3.Bytes32(assertion.LogsHash()),
 	))

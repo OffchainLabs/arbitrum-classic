@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -78,7 +79,7 @@ func (checkpoint *CheckpointStorage) GetInitialMachine() (machine.Machine, error
 	return ret, nil
 }
 
-func (checkpoint *CheckpointStorage) DeleteCheckpoint(machineHash [32]byte) bool {
+func (checkpoint *CheckpointStorage) DeleteCheckpoint(machineHash common.Hash) bool {
 	success := C.deleteCheckpoint(checkpoint.c, unsafe.Pointer(&machineHash[0]))
 
 	return success == 1
@@ -98,7 +99,7 @@ func (checkpoint *CheckpointStorage) SaveValue(val value.Value) bool {
 	return success == 1
 }
 
-func (checkpoint *CheckpointStorage) GetValue(hashValue [32]byte) value.Value {
+func (checkpoint *CheckpointStorage) GetValue(hashValue common.Hash) value.Value {
 	cData := C.getValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
 	dataBuff := C.GoBytes(unsafe.Pointer(cData.data), cData.length)
 
@@ -112,7 +113,7 @@ func (checkpoint *CheckpointStorage) GetValue(hashValue [32]byte) value.Value {
 	return val
 }
 
-func (checkpoint *CheckpointStorage) DeleteValue(hashValue [32]byte) bool {
+func (checkpoint *CheckpointStorage) DeleteValue(hashValue common.Hash) bool {
 	success := C.deleteValue(checkpoint.c, unsafe.Pointer(&hashValue[0]))
 
 	return success == 1

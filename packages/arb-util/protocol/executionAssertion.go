@@ -18,19 +18,20 @@ package protocol
 
 import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type ExecutionAssertion struct {
-	AfterHash    [32]byte
+	AfterHash    common.Hash
 	DidInboxInsn bool
 	NumGas       uint64
 	OutMsgs      []value.Value
 	Logs         []value.Value
 }
 
-func NewExecutionAssertion(afterHash [32]byte, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
+func NewExecutionAssertion(afterHash common.Hash, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
 	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
 }
 
@@ -102,8 +103,8 @@ func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 	return true
 }
 
-func (a *ExecutionAssertion) LogsHash() [32]byte {
-	var logHash [32]byte
+func (a *ExecutionAssertion) LogsHash() common.Hash {
+	var logHash common.Hash
 	for _, logVal := range a.Logs {
 		next := solsha3.SoliditySHA3(solsha3.Bytes32(logHash), solsha3.Bytes32(logVal.Hash()))
 		copy(logHash[:], next)

@@ -23,9 +23,10 @@ import (
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -36,7 +37,7 @@ type ArbFactory struct {
 	auth     *bind.TransactOpts
 }
 
-func NewArbFactory(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ArbFactory, error) {
+func NewArbFactory(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ArbFactory, error) {
 	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ArbFactory")
@@ -44,17 +45,9 @@ func NewArbFactory(address common.Address, client *ethclient.Client, auth *bind.
 	return &ArbFactory{vmCreatorContract, client, auth}, nil
 }
 
-func (con *ArbFactory) GlobalPendingInboxAddress() (common.Address, error) {
-	return con.contract.GlobalInboxAddress(nil)
-}
-
-func (con *ArbFactory) ChallengeFactoryAddress() (common.Address, error) {
-	return con.contract.ChallengeFactoryAddress(nil)
-}
-
 func (con *ArbFactory) CreateRollup(
 	ctx context.Context,
-	vmState [32]byte,
+	vmState common.Hash,
 	params structures.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
@@ -66,7 +59,7 @@ func (con *ArbFactory) CreateRollup(
 		new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
 		params.MaxExecutionSteps,
 		params.StakeRequirement,
-		owner,
+		owner.ToEthAddress(),
 	)
 	if err != nil {
 		return common.Address{}, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
@@ -82,7 +75,7 @@ func (con *ArbFactory) CreateRollup(
 	if err != nil {
 		return common.Address{}, err
 	}
-	return event.VmAddress, nil
+	return common.NewAddressFromEth(event.VmAddress), nil
 }
 
 type ArbFactoryWatcher struct {
@@ -90,7 +83,7 @@ type ArbFactoryWatcher struct {
 	client   *ethclient.Client
 }
 
-func NewArbFactoryWatcher(address common.Address, client *ethclient.Client) (*ArbFactoryWatcher, error) {
+func NewArbFactoryWatcher(address ethcommon.Address, client *ethclient.Client) (*ArbFactoryWatcher, error) {
 	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ArbFactory")
@@ -99,9 +92,11 @@ func NewArbFactoryWatcher(address common.Address, client *ethclient.Client) (*Ar
 }
 
 func (con *ArbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {
-	return con.contract.GlobalInboxAddress(nil)
+	addr, err := con.contract.GlobalInboxAddress(nil)
+	return common.NewAddressFromEth(addr), err
 }
 
 func (con *ArbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
-	return con.contract.ChallengeFactoryAddress(nil)
+	addr, err := con.contract.ChallengeFactoryAddress(nil)
+	return common.NewAddressFromEth(addr), err
 }

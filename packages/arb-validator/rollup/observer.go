@@ -22,9 +22,7 @@ import (
 	"math/big"
 	"time"
 
-	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -32,7 +30,7 @@ import (
 
 func CreateObserver(
 	ctx context.Context,
-	rollupAddr ethcommon.Address,
+	rollupAddr common.Address,
 	checkpointer RollupCheckpointer,
 	updateOpinion bool,
 	startTime *common.TimeBlocks,

@@ -23,9 +23,10 @@ import (
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -36,7 +37,7 @@ type ChallengeTester struct {
 	auth     *bind.TransactOpts
 }
 
-func NewChallengeTester(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ChallengeTester, error) {
+func NewChallengeTester(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ChallengeTester, error) {
 	vmCreatorContract, err := challengetester.NewChallengeTester(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeTester")
@@ -50,15 +51,15 @@ func (con *ChallengeTester) StartChallenge(
 	asserter common.Address,
 	challenger common.Address,
 	challengePeriod structures.TimeTicks,
-	challengeHash [32]byte,
+	challengeHash common.Hash,
 	challengeType *big.Int,
 ) (common.Address, error) {
 	con.auth.Context = ctx
 	tx, err := con.contract.StartChallenge(
 		con.auth,
-		factory,
-		asserter,
-		challenger,
+		factory.ToEthAddress(),
+		asserter.ToEthAddress(),
+		challenger.ToEthAddress(),
 		challengePeriod.Val,
 		challengeHash,
 		challengeType,
@@ -76,5 +77,5 @@ func (con *ChallengeTester) StartChallenge(
 		return common.Address{}, errors2.New("Wrong receipt count")
 	}
 
-	return receipt.Logs[0].Address, nil
+	return common.NewAddressFromEth(receipt.Logs[0].Address), nil
 }

@@ -21,15 +21,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type VMConnection interface {
@@ -40,7 +38,7 @@ type VMConnection interface {
 	VerifyVM(
 		auth *bind.CallOpts,
 		config *valmessage.VMConfiguration,
-		machine [32]byte,
+		machine common.Hash,
 	) error
 
 	IsEnabled(

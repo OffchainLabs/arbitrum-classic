@@ -794,7 +794,7 @@ func TestJump(t *testing.T) {
 		t.Error(reason)
 	}
 	// push 2 to set jump point
-	var nextHash [32]byte
+	var nextHash common.Hash
 	codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// JUMP
@@ -833,7 +833,7 @@ func TestCJump(t *testing.T) {
 		// push 0 for conditional
 		m.Stack().Push(value.NewInt64Value(0))
 		// push 2 to set jump point
-		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: [32]byte{}}
+		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: common.Hash{}}
 		m.Stack().Push(codept)
 		// CJUMP
 		if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
@@ -861,7 +861,7 @@ func TestCJump(t *testing.T) {
 		// push 1 for conditional
 		m.Stack().Push(value.NewInt64Value(1))
 		// push 2 to set jump point
-		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: [32]byte{}}
+		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: common.Hash{}}
 		m.Stack().Push(codept)
 		// CJUMP
 		if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
@@ -931,7 +931,7 @@ func TestPcpush(t *testing.T) {
 		t.Error(tmp)
 	}
 	// verify known and unknown match one item value = 1
-	var nextHash [32]byte
+	var nextHash common.Hash
 	codept := value.CodePointValue{Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	knownMachine.Stack().Push(codept)
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1100,7 +1100,7 @@ func TestErrpush(t *testing.T) {
 	knownMachine := m.Clone().(*Machine)
 
 	// push codepoint onto stack
-	var nextHash [32]byte
+	var nextHash common.Hash
 	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
@@ -1154,7 +1154,7 @@ func TestErrset(t *testing.T) {
 	knownMachine := m.Clone().(*Machine)
 
 	// push codepoint onto stack
-	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: [32]byte{}}
+	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: common.Hash{}}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
 	if ok, err := Equal(knownMachine, m); !ok {

@@ -21,26 +21,25 @@ import (
 	"log"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-var bisectedAssertionID common.Hash
-var oneStepProofCompletedID common.Hash
+var bisectedAssertionID ethcommon.Hash
+var oneStepProofCompletedID ethcommon.Hash
 
 func init() {
 	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
@@ -56,7 +55,7 @@ type ExecutionChallenge struct {
 	Challenge *executionchallenge.ExecutionChallenge
 }
 
-func NewExecutionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
+func NewExecutionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
 	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -89,8 +88,8 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 	}
 
 	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{c.address},
-		Topics: [][]common.Hash{{
+		Addresses: []ethcommon.Address{c.address},
+		Topics: [][]ethcommon.Hash{{
 			bisectedAssertionID,
 			oneStepProofCompletedID,
 		}},
@@ -171,7 +170,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 	}
 	outChan <- arbbridge.Notification{
 		Header: header,
-		VMID:   c.address,
+		VMID:   common.NewAddressFromEth(c.address),
 		Event:  event,
 		TxHash: log.TxHash,
 	}
@@ -260,7 +259,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
 		)
 	}
-	return c.BisectionChallenge.ChooseSegment(
+	return c.BisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,
 		bisectionHashes,

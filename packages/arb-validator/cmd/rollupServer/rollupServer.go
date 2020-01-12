@@ -28,17 +28,16 @@ import (
 	"os"
 	"strings"
 
-	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -127,7 +126,7 @@ func createRollupChain() {
 		log.Fatal(err)
 	}
 
-	factory, err := client.NewArbFactory(common.HexToAddress(connectionInfo.ArbFactory))
+	factory, err := client.NewArbFactory(common.NewAddressFromEth(ethcommon.HexToAddress(connectionInfo.ArbFactory)))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -156,7 +155,7 @@ func setupChainObserver(
 	ctx := context.Background()
 
 	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, common2.NewTimeBlocks(header.Number), client)
+	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, common.NewTimeBlocks(header.Number), client)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +206,7 @@ func validateRollupChain() {
 
 	// 4) Rollup contract address
 	addressString := validateCmd.Arg(3)
-	address := common.HexToAddress(addressString)
+	address := common.NewAddressFromEth(ethcommon.HexToAddress(addressString))
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)

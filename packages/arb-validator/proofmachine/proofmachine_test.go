@@ -26,11 +26,9 @@ import (
 	"testing"
 	"time"
 
-	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -65,7 +63,7 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 		t.Fatal(err)
 	}
 	proofbounds := [2]uint32{0, 10000}
-	return NewEthConnection(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	return NewEthConnection(connectionInfo.OneStepProofAddress(), key1, ethURL, proofbounds)
 }
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
@@ -80,7 +78,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := &protocol.TimeBoundsBlocks{common2.NewTimeBlocks(big.NewInt(0)), common2.NewTimeBlocks(big.NewInt(10000))}
+	timeBounds := &protocol.TimeBoundsBlocks{common.NewTimeBlocks(big.NewInt(0)), common.NewTimeBlocks(big.NewInt(10000))}
 	steps := uint32(100000)
 	cont := true
 
@@ -88,13 +86,13 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple())
 		lastReason := mach.LastBlockReason()
 		if lastReason != nil {
-			if lastReason.IsBlocked(mach, common2.NewTimeBlocks(big.NewInt(0)), false) && lastReason.Equals(machine.ErrorBlocked{}) {
+			if lastReason.IsBlocked(mach, common.NewTimeBlocks(big.NewInt(0)), false) && lastReason.Equals(machine.ErrorBlocked{}) {
 				t.Fatal("Machine in error state")
 				break
 			}
 		}
 		if stepsExecuted == 0 {
-			if lastReason.IsBlocked(mach, common2.NewTimeBlocks(big.NewInt(0)), false) && !lastReason.Equals(machine.BreakpointBlocked{}) {
+			if lastReason.IsBlocked(mach, common.NewTimeBlocks(big.NewInt(0)), false) && !lastReason.Equals(machine.BreakpointBlocked{}) {
 				cont = false
 			}
 			fmt.Println(" machine halted ")

@@ -19,15 +19,14 @@ package arbbridge
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbFactory interface {
 	CreateRollup(
 		ctx context.Context,
-		vmState [32]byte,
+		vmState common.Hash,
 		params structures.ChainParams,
 		owner common.Address,
 	) (common.Address, error)

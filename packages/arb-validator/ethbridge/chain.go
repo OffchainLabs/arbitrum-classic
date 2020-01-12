@@ -35,6 +35,18 @@ type ArbAddresses struct {
 	OneStepProof       string `json:"OneStepProof"`
 }
 
+func (a ArbAddresses) ArbFactoryAddress() common.Address {
+	return common.HexToAddress(a.ArbFactory)
+}
+
+func (a ArbAddresses) GlobalPendingInboxAddress() common.Address {
+	return common.HexToAddress(a.GlobalPendingInbox)
+}
+
+func (a ArbAddresses) OneStepProofAddress() common.Address {
+	return common.HexToAddress(a.OneStepProof)
+}
+
 func waitForReceipt(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) error {
 	_, err := WaitForReceiptWithResults(ctx, client, from, tx, methodName)
 	return err

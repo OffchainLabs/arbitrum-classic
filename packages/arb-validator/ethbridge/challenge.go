@@ -21,12 +21,14 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -35,9 +37,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-var initiatedChallengeID common.Hash
-var timedOutAsserterID common.Hash
-var timedOutChallengerID common.Hash
+var initiatedChallengeID ethcommon.Hash
+var timedOutAsserterID ethcommon.Hash
+var timedOutChallengerID ethcommon.Hash
 
 func init() {
 	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
@@ -53,12 +55,12 @@ type Challenge struct {
 	*ClientConnection
 	Challenge *executionchallenge.Challenge
 
-	address common.Address
+	address ethcommon.Address
 	client  *ethclient.Client
 	auth    *bind.TransactOpts
 }
 
-func NewChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*Challenge, error) {
+func NewChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*Challenge, error) {
 	vm := &Challenge{ClientConnection: &ClientConnection{client}, address: address, auth: auth}
 	err := vm.setupContracts()
 	return vm, err
@@ -90,8 +92,8 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 	}
 
 	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{c.address},
-		Topics: [][]common.Hash{{
+		Addresses: []ethcommon.Address{c.address},
+		Topics: [][]ethcommon.Hash{{
 			initiatedChallengeID,
 			timedOutAsserterID,
 			timedOutChallengerID,
@@ -183,7 +185,7 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 
 	outChan <- arbbridge.Notification{
 		Header: header,
-		VMID:   c.address,
+		VMID:   common.NewAddressFromEth(c.address),
 		Event:  event,
 		TxHash: log.TxHash,
 	}

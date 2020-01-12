@@ -18,29 +18,13 @@ package mockbridge
 
 import (
 	"context"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
-
-var initiatedChallengeID common.Hash
-var timedOutAsserterID common.Hash
-var timedOutChallengerID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	initiatedChallengeID = parsed.Events["InitiatedChallenge"].ID()
-	timedOutAsserterID = parsed.Events["AsserterTimedOut"].ID()
-	timedOutChallengerID = parsed.Events["ChallengerTimedOut"].ID()
-}
 
 type Challenge struct {
 	*ClientConnection

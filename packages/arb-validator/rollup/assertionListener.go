@@ -24,21 +24,21 @@ import (
 
 type FinalizedAssertion struct {
 	Assertion     *protocol.ExecutionAssertion // Disputable assertion
-	OnChainTxHash [32]byte                     // Disputable assertion on-chain Tx hash
+	OnChainTxHash common.Hash                  // Disputable assertion on-chain Tx hash
 }
 
 type AssertionListener struct {
 	CompletedAssertionChan chan FinalizedAssertion
 }
 
-func (al *AssertionListener) StakeCreated(arbbridge.StakeCreatedEvent)                           {}
-func (al *AssertionListener) StakeRemoved(arbbridge.StakeRefundedEvent)                          {}
-func (al *AssertionListener) StakeMoved(arbbridge.StakeMovedEvent)                               {}
-func (al *AssertionListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)     {}
-func (al *AssertionListener) CompletedChallenge(event arbbridge.ChallengeCompletedEvent)         {}
-func (al *AssertionListener) SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, [32]byte) {}
-func (al *AssertionListener) ConfirmedNode(arbbridge.ConfirmedEvent)                             {}
-func (al *AssertionListener) PrunedLeaf(arbbridge.PrunedEvent)                                   {}
+func (al *AssertionListener) StakeCreated(arbbridge.StakeCreatedEvent)                              {}
+func (al *AssertionListener) StakeRemoved(arbbridge.StakeRefundedEvent)                             {}
+func (al *AssertionListener) StakeMoved(arbbridge.StakeMovedEvent)                                  {}
+func (al *AssertionListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)        {}
+func (al *AssertionListener) CompletedChallenge(event arbbridge.ChallengeCompletedEvent)            {}
+func (al *AssertionListener) SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash) {}
+func (al *AssertionListener) ConfirmedNode(arbbridge.ConfirmedEvent)                                {}
+func (al *AssertionListener) PrunedLeaf(arbbridge.PrunedEvent)                                      {}
 
 func (al *AssertionListener) AssertionPrepared(*preparedAssertion)              {}
 func (al *AssertionListener) ValidNodeConfirmable(*confirmValidOpportunity)     {}
@@ -47,8 +47,8 @@ func (al *AssertionListener) PrunableLeafs([]pruneParams)                       
 func (al *AssertionListener) MootableStakes([]recoverStakeMootedParams)         {}
 func (al *AssertionListener) OldStakes([]recoverStakeOldParams)                 {}
 
-func (al *AssertionListener) AdvancedKnownValidNode([32]byte) {}
-func (al *AssertionListener) AdvancedKnownAssertion(assertion *protocol.ExecutionAssertion, txHash [32]byte) {
+func (al *AssertionListener) AdvancedKnownValidNode(common.Hash) {}
+func (al *AssertionListener) AdvancedKnownAssertion(assertion *protocol.ExecutionAssertion, txHash common.Hash) {
 	al.CompletedAssertionChan <- FinalizedAssertion{
 		Assertion:     assertion,
 		OnChainTxHash: txHash,

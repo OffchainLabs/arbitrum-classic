@@ -20,14 +20,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type StakerListener struct {
@@ -58,7 +56,7 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 	staker.Unlock()
 }
 
-func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) error {
+func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof []common.Hash) error {
 	staker.Lock()
 	err := staker.contract.MakeAssertion(
 		ctx,

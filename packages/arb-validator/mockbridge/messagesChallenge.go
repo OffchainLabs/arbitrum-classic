@@ -19,27 +19,13 @@ package mockbridge
 import (
 	"context"
 	"math/big"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
 )
-
-var messagesBisectedID common.Hash
-var messagesOneStepProofCompletedID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	messagesBisectedID = parsed.Events["Bisected"].ID()
-	messagesOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
 
 type MessagesChallenge struct {
 	*BisectionChallenge
@@ -166,8 +152,8 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 
 func (c *MessagesChallenge) Bisect(
 	ctx context.Context,
-	chainHashes [][32]byte,
-	segmentHashes [][32]byte,
+	chainHashes []common.Hash,
+	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	//c.auth.Context = ctx
@@ -186,11 +172,11 @@ func (c *MessagesChallenge) Bisect(
 
 func (c *MessagesChallenge) OneStepProof(
 	ctx context.Context,
-	lowerHashA [32]byte,
-	topHashA [32]byte,
-	lowerHashB [32]byte,
-	topHashB [32]byte,
-	value [32]byte,
+	lowerHashA common.Hash,
+	topHashA common.Hash,
+	lowerHashB common.Hash,
+	topHashB common.Hash,
+	value common.Hash,
 ) error {
 	//c.auth.Context = ctx
 	//tx, err := c.Challenge.OneStepProof(
@@ -205,5 +191,15 @@ func (c *MessagesChallenge) OneStepProof(
 	//	return err
 	//}
 	//return c.waitForReceipt(ctx, tx, "OneStepProof")
+	return nil
+}
+
+func (c *MessagesChallenge) ChooseSegment(
+	ctx context.Context,
+	assertionToChallenge uint16,
+	chainHashes []common.Hash,
+	segmentHashes []common.Hash,
+	chainLength *big.Int,
+) error {
 	return nil
 }

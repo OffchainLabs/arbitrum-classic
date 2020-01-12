@@ -20,10 +20,7 @@ import (
 	"bytes"
 	"log"
 
-	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -68,34 +65,34 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	emptyAddress := common.Address{}
 	if staker.challenge == emptyAddress {
 		return &StakerBuf{
-			Address:       staker.address.Bytes(),
-			Location:      common2.MarshalHash(staker.location.hash),
+			Address:       staker.address.MarshallToBuf(),
+			Location:      common.MarshalHash(staker.location.hash),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: nil,
 		}
 	} else {
 		return &StakerBuf{
-			Address:       staker.address.Bytes(),
-			Location:      common2.MarshalHash(staker.location.hash),
+			Address:       staker.address.MarshallToBuf(),
+			Location:      common.MarshalHash(staker.location.hash),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
-			ChallengeAddr: staker.challenge.Bytes(),
+			ChallengeAddr: staker.challenge.MarshallToBuf(),
 		}
 	}
 }
 
 func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	locArr := common2.UnmarshalHash(buf.Location)
+	locArr := common.UnmarshalHash(buf.Location)
 	if buf.ChallengeAddr != nil {
 		return &Staker{
-			address:      common.BytesToAddress([]byte(buf.Address)),
+			address:      buf.Address.Unmarshal(),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    common.BytesToAddress(buf.ChallengeAddr),
+			challenge:    buf.ChallengeAddr.Unmarshal(),
 		}
 	} else {
 		return &Staker{
-			address:      common.BytesToAddress([]byte(buf.Address)),
+			address:      buf.Address.Unmarshal(),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
 			challenge:    common.Address{},

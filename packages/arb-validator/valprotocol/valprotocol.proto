@@ -20,10 +20,6 @@ message ExecutionAssertionStubBuf {
     common.HashBuf lastLogHash = 7;
 }
 
-message AddressBuf {
-    bytes value = 1;
-}
-
 message TokenTypeBuf {
     bytes value = 1;
 }
@@ -32,6 +28,6 @@ message MessageBuf {
     bytes value = 1;
     TokenTypeBuf tokenType = 2;
     common.BigIntegerBuf amount = 3;
-    AddressBuf sender = 4;
+    common.AddressBuf sender = 4;
 }
 

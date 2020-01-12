@@ -19,28 +19,13 @@ package mockbridge
 import (
 	"context"
 	"math/big"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
 )
-
-var pendingTopBisectedID common.Hash
-var pendingTopOneStepProofCompletedID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	pendingTopBisectedID = parsed.Events["Bisected"].ID()
-	pendingTopOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
 
 type PendingTopChallenge struct {
 	*BisectionChallenge
@@ -166,7 +151,7 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 
 func (c *PendingTopChallenge) Bisect(
 	ctx context.Context,
-	chainHashes [][32]byte,
+	chainHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	//c.auth.Context = ctx
@@ -184,9 +169,9 @@ func (c *PendingTopChallenge) Bisect(
 
 func (c *PendingTopChallenge) OneStepProof(
 	ctx context.Context,
-	lowerHashA [32]byte,
-	topHashA [32]byte,
-	value [32]byte,
+	lowerHashA common.Hash,
+	topHashA common.Hash,
+	value common.Hash,
 ) error {
 	//c.auth.Context = ctx
 	//tx, err := c.Challenge.OneStepProof(
@@ -199,5 +184,14 @@ func (c *PendingTopChallenge) OneStepProof(
 	//	return err
 	//}
 	//return c.waitForReceipt(ctx, tx, "OneStepProof")
+	return nil
+}
+
+func (c *PendingTopChallenge) ChooseSegment(
+	ctx context.Context,
+	assertionToChallenge uint16,
+	chainHashes []common.Hash,
+	chainLength uint32,
+) error {
 	return nil
 }

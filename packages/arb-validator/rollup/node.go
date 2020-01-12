@@ -41,12 +41,12 @@ type Node struct {
 	machine         machine.Machine              // nil if unknown
 	assertion       *protocol.ExecutionAssertion // nil if not valid node or unknown
 	depth           uint64
-	nodeDataHash    [32]byte
-	innerHash       [32]byte
-	hash            [32]byte
-	assertionTxHash [32]byte
+	nodeDataHash    common.Hash
+	innerHash       common.Hash
+	hash            common.Hash
+	assertionTxHash common.Hash
 
-	successorHashes [structures.MaxChildType + 1][32]byte
+	successorHashes [structures.MaxChildType + 1]common.Hash
 	numStakers      uint64
 }
 
@@ -64,11 +64,11 @@ func NewInitialNode(mach machine.Machine) *Node {
 		machine: mach,
 		depth:   0,
 	}
-	ret.setHash([32]byte{})
+	ret.setHash(common.Hash{})
 	return ret
 }
 
-func newInitialNode_hashOnly(machHash [32]byte) *Node {
+func newInitialNode_hashOnly(machHash common.Hash) *Node {
 	ret := &Node{
 		prev:       nil,
 		deadline:   structures.TimeTicks{big.NewInt(0)},
@@ -82,11 +82,11 @@ func newInitialNode_hashOnly(machHash [32]byte) *Node {
 		machine: nil,
 		depth:   0,
 	}
-	ret.setHash([32]byte{})
+	ret.setHash(common.Hash{})
 	return ret
 }
 
-func MakeInitialNodeBuf(machineHash [32]byte) (*NodeBuf, *common.HashBuf) {
+func MakeInitialNodeBuf(machineHash common.Hash) (*NodeBuf, *common.HashBuf) {
 	initNode := newInitialNode_hashOnly(machineHash)
 	return initNode.MarshalForCheckpoint(nil), common.MarshalHash(initNode.hash)
 }
@@ -97,7 +97,7 @@ func NewNodeFromValidPrev(
 	machine machine.Machine,
 	params structures.ChainParams,
 	currentTime *common.TimeBlocks,
-	assertionTxHash [32]byte,
+	assertionTxHash common.Hash,
 ) *Node {
 	return NewNodeFromPrev(
 		prev,
@@ -117,7 +117,7 @@ func NewNodeFromInvalidPrev(
 	kind structures.ChildType,
 	params structures.ChainParams,
 	currentTime *common.TimeBlocks,
-	assertionTxHash [32]byte,
+	assertionTxHash common.Hash,
 ) *Node {
 	return NewNodeFromPrev(
 		prev,
@@ -139,7 +139,7 @@ func NewNodeFromPrev(
 	currentTime *common.TimeBlocks,
 	vmProtoData *structures.VMProtoData,
 	machine machine.Machine,
-	assertionTxHash [32]byte,
+	assertionTxHash common.Hash,
 ) *Node {
 	checkTime := disputable.CheckTime(params)
 	deadlineTicks := structures.TimeFromBlockNum(currentTime).Add(params.GracePeriod)
@@ -168,11 +168,11 @@ func (node *Node) Equals(node2 *Node) bool {
 	return node.hash == node2.hash
 }
 
-func (node *Node) PrevHash() [32]byte {
+func (node *Node) PrevHash() common.Hash {
 	if node.prev != nil {
 		return node.prev.hash
 	} else {
-		return [32]byte{}
+		return common.Hash{}
 	}
 }
 
@@ -180,7 +180,7 @@ func (node *Node) GetSuccessor(chain *NodeGraph, kind structures.ChildType) *Nod
 	return chain.nodeFromHash[node.successorHashes[kind]]
 }
 
-func (node *Node) ExecutionPreconditionHash() [32]byte {
+func (node *Node) ExecutionPreconditionHash() common.Hash {
 	vmProtoData := node.prev.vmProtoData
 	pre := &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
@@ -190,8 +190,8 @@ func (node *Node) ExecutionPreconditionHash() [32]byte {
 	return pre.Hash()
 }
 
-func (node *Node) NodeDataHash(params structures.ChainParams) [32]byte {
-	ret := [32]byte{}
+func (node *Node) NodeDataHash(params structures.ChainParams) common.Hash {
+	ret := common.Hash{}
 	if node.disputable == nil {
 		return ret
 	}
@@ -210,7 +210,7 @@ func (node *Node) NodeDataHash(params structures.ChainParams) [32]byte {
 	return ret
 }
 
-func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, structures.TimeTicks) {
+func (node *Node) ChallengeNodeData(params structures.ChainParams) (common.Hash, structures.TimeTicks) {
 	vmProtoData := node.prev.vmProtoData
 	switch node.linkType {
 	case structures.InvalidPendingChildType:
@@ -243,12 +243,12 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 		return ret, challengePeriod
 	default:
 		log.Fatal("Unhandled challenge type", node.linkType)
-		return [32]byte{}, structures.TimeTicks{}
+		return common.Hash{}, structures.TimeTicks{}
 	}
 }
 
-func (node *Node) setHash(nodeDataHash [32]byte) {
-	var prevHashArr [32]byte
+func (node *Node) setHash(nodeDataHash common.Hash) {
+	var prevHashArr common.Hash
 	if node.prev != nil {
 		prevHashArr = node.prev.hash
 	}
@@ -323,13 +323,13 @@ func (m *NodeBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, chain *
 	return node
 }
 
-func GeneratePathProof(from, to *Node) [][32]byte {
+func GeneratePathProof(from, to *Node) []common.Hash {
 	// returns nil if no proof exists
 	if to == nil {
 		return nil
 	}
 	if from == to {
-		return [][32]byte{}
+		return []common.Hash{}
 	}
 	sub := GeneratePathProof(from, to.prev)
 	if sub == nil {
@@ -338,7 +338,7 @@ func GeneratePathProof(from, to *Node) [][32]byte {
 	return append(sub, to.innerHash)
 }
 
-func GenerateConflictProof(from, to1, to2 *Node) ([][32]byte, [][32]byte) {
+func GenerateConflictProof(from, to1, to2 *Node) ([]common.Hash, []common.Hash) {
 	// returns nil, nil if no proof exists
 	proof1 := GeneratePathProof(from, to1)
 	proof2 := GeneratePathProof(from, to2)

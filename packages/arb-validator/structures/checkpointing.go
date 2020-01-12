@@ -26,24 +26,24 @@ type CheckpointContext interface {
 	AddValue(value.Value)
 	AddMachine(machine.Machine)
 	Manifest() *CheckpointManifest
-	Values() map[[32]byte]value.Value
-	Machines() map[[32]byte]machine.Machine
+	Values() map[common.Hash]value.Value
+	Machines() map[common.Hash]machine.Machine
 }
 
 type RestoreContext interface {
-	GetValue([32]byte) value.Value
-	GetMachine([32]byte) machine.Machine
+	GetValue(common.Hash) value.Value
+	GetMachine(common.Hash) machine.Machine
 }
 
 type CheckpointContextImpl struct {
-	values   map[[32]byte]value.Value
-	machines map[[32]byte]machine.Machine
+	values   map[common.Hash]value.Value
+	machines map[common.Hash]machine.Machine
 }
 
 func NewCheckpointContextImpl() *CheckpointContextImpl {
 	return &CheckpointContextImpl{
-		values:   make(map[[32]byte]value.Value),
-		machines: make(map[[32]byte]machine.Machine),
+		values:   make(map[common.Hash]value.Value),
+		machines: make(map[common.Hash]machine.Machine),
 	}
 }
 
@@ -69,39 +69,39 @@ func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
 	return &CheckpointManifest{Values: vals, Machines: machines}
 }
 
-func (ctx *CheckpointContextImpl) Values() map[[32]byte]value.Value {
+func (ctx *CheckpointContextImpl) Values() map[common.Hash]value.Value {
 	return ctx.values
 }
 
-func (ctx *CheckpointContextImpl) Machines() map[[32]byte]machine.Machine {
+func (ctx *CheckpointContextImpl) Machines() map[common.Hash]machine.Machine {
 	return ctx.machines
 }
 
-func (ctx *CheckpointContextImpl) GetValue(h [32]byte) value.Value {
+func (ctx *CheckpointContextImpl) GetValue(h common.Hash) value.Value {
 	return ctx.values[h]
 }
 
-func (ctx *CheckpointContextImpl) GetMachine(h [32]byte) machine.Machine {
+func (ctx *CheckpointContextImpl) GetMachine(h common.Hash) machine.Machine {
 	return ctx.machines[h]
 }
 
 type SimpleRestoreContext struct {
-	values   map[[32]byte]value.Value
-	machines map[[32]byte]machine.Machine
+	values   map[common.Hash]value.Value
+	machines map[common.Hash]machine.Machine
 }
 
 func NewSimpleRestoreContext() *SimpleRestoreContext {
 	return &SimpleRestoreContext{
-		values:   make(map[[32]byte]value.Value),
-		machines: make(map[[32]byte]machine.Machine),
+		values:   make(map[common.Hash]value.Value),
+		machines: make(map[common.Hash]machine.Machine),
 	}
 }
 
-func (src *SimpleRestoreContext) GetValue(h [32]byte) value.Value {
+func (src *SimpleRestoreContext) GetValue(h common.Hash) value.Value {
 	return src.values[h]
 }
 
-func (src *SimpleRestoreContext) GetMachine(h [32]byte) machine.Machine {
+func (src *SimpleRestoreContext) GetMachine(h common.Hash) machine.Machine {
 	return src.machines[h]
 }
 

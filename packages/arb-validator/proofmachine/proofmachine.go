@@ -23,17 +23,17 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type Machine struct {
@@ -42,18 +42,18 @@ type Machine struct {
 }
 
 type Connection struct {
-	fromAddress common.Address
+	fromAddress ethcommon.Address
 	osp         arbbridge.OneStepProof
 	client      arbbridge.ArbClient
 	proofbounds [2]uint32
 }
 
-func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
+func NewEthConnection(contractAddress ethcommon.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
 	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
 	}
-	osp, err := client.NewOneStepProof(contractAddress)
+	osp, err := client.NewOneStepProof(common.NewAddressFromEth(contractAddress))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func New(mach machine.Machine, ethConn *Connection) (*Machine, error) {
 	}, nil
 }
 
-func (m *Machine) Hash() [32]byte {
+func (m *Machine) Hash() common.Hash {
 	return m.machine.Hash()
 }
 
@@ -168,6 +168,6 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return m.machine.Checkpoint(storage)
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	return m.machine.RestoreCheckpoint(storage, machineHash)
 }

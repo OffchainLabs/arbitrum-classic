@@ -22,20 +22,20 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type preparedAssertion struct {
-	leafHash         [32]byte
-	prevPrevLeafHash [32]byte
-	prevDataHash     [32]byte
+	leafHash         common.Hash
+	prevPrevLeafHash common.Hash
+	prevDataHash     common.Hash
 	prevDeadline     structures.TimeTicks
 	prevChildType    structures.ChildType
 
@@ -65,13 +65,13 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(time.Second)
 		assertionPreparedChan := make(chan *preparedAssertion, 20)
-		preparingAssertions := make(map[[32]byte]bool)
-		preparedAssertions := make(map[[32]byte]*preparedAssertion)
+		preparingAssertions := make(map[common.Hash]bool)
+		preparedAssertions := make(map[common.Hash]*preparedAssertion)
 
 		updateCurrent := func() {
 			currentOpinion := chain.calculatedValidNode
 			log.Println("Building opinion on top of", hexutil.Encode(currentOpinion.hash[:]))
-			successorHashes := [4][32]byte{}
+			successorHashes := [4]common.Hash{}
 			copy(successorHashes[:], currentOpinion.successorHashes[:])
 			successor := func() *Node {
 				for _, successor := range currentOpinion.successorHashes {
@@ -119,8 +119,8 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				newOpinion, validExecution = getNodeOpinion(params, claim, prevPendingCount, claimHeightCopy, messageStack, messagesVal, nextMachine)
 			}
 			// Reset prepared
-			preparingAssertions = make(map[[32]byte]bool)
-			preparedAssertions = make(map[[32]byte]*preparedAssertion)
+			preparingAssertions = make(map[common.Hash]bool)
+			preparedAssertions = make(map[common.Hash]*preparedAssertion)
 
 			chain.RLock()
 			log.Println("Formed opinion that", newOpinion, hexutil.Encode(successorHashes[newOpinion][:]), "is the successor of", hexutil.Encode(currentOpinion.hash[:]))

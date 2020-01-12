@@ -20,9 +20,7 @@ import (
 	"context"
 	"log"
 
-	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -35,7 +33,7 @@ type ChainListener interface {
 	StakeMoved(arbbridge.StakeMovedEvent)
 	StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)
 	CompletedChallenge(event arbbridge.ChallengeCompletedEvent)
-	SawAssertion(arbbridge.AssertedEvent, *common2.TimeBlocks, [32]byte)
+	SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash)
 	ConfirmedNode(arbbridge.ConfirmedEvent)
 	PrunedLeaf(arbbridge.PrunedEvent)
 
@@ -46,16 +44,16 @@ type ChainListener interface {
 	MootableStakes([]recoverStakeMootedParams)
 	OldStakes([]recoverStakeOldParams)
 
-	AdvancedKnownValidNode([32]byte)
-	AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte)
+	AdvancedKnownValidNode(common.Hash)
+	AdvancedKnownAssertion(*protocol.ExecutionAssertion, common.Hash)
 }
 
 type ValidatorChainListener struct {
 	chain                  *ChainObserver
 	stakers                map[common.Address]*StakerListener
-	broadcastAssertions    map[[32]byte]bool
-	broadcastConfirmations map[[32]byte]bool
-	broadcastLeafPrunes    map[[32]byte]bool
+	broadcastAssertions    map[common.Hash]bool
+	broadcastConfirmations map[common.Hash]bool
+	broadcastLeafPrunes    map[common.Hash]bool
 }
 
 func NewValidatorChainListener(
@@ -64,9 +62,9 @@ func NewValidatorChainListener(
 	return &ValidatorChainListener{
 		chain:                  chain,
 		stakers:                make(map[common.Address]*StakerListener),
-		broadcastAssertions:    make(map[[32]byte]bool),
-		broadcastConfirmations: make(map[[32]byte]bool),
-		broadcastLeafPrunes:    make(map[[32]byte]bool),
+		broadcastAssertions:    make(map[common.Hash]bool),
+		broadcastConfirmations: make(map[common.Hash]bool),
+		broadcastLeafPrunes:    make(map[common.Hash]bool),
 	}
 }
 
@@ -205,7 +203,7 @@ func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEven
 
 }
 
-func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *common2.TimeBlocks, [32]byte) {
+func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash) {
 
 }
 
@@ -356,5 +354,5 @@ func (lis *ValidatorChainListener) OldStakes(params []recoverStakeOldParams) {
 	}
 }
 
-func (lis *ValidatorChainListener) AdvancedKnownValidNode([32]byte)                               {}
-func (lis *ValidatorChainListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {}
+func (lis *ValidatorChainListener) AdvancedKnownValidNode(common.Hash)                               {}
+func (lis *ValidatorChainListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, common.Hash) {}

@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -32,8 +31,8 @@ func DefendPendingTopClaim(
 	address common.Address,
 	bisectionCount uint64,
 	pendingInbox *structures.MessageStack,
-	afterPendingTop [32]byte,
-	topPending [32]byte,
+	afterPendingTop common.Hash,
+	topPending common.Hash,
 ) (ChallengeState, error) {
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
@@ -101,8 +100,8 @@ func defendPendingTop(
 	contract arbbridge.PendingTopChallenge,
 	bisectionCount uint64,
 	pendingInbox *structures.MessageStack,
-	afterPendingTop [32]byte,
-	topPending [32]byte,
+	afterPendingTop common.Hash,
+	topPending common.Hash,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {

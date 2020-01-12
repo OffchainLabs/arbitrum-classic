@@ -22,13 +22,15 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 )
 
-func MarshalHash(h [32]byte) *HashBuf {
+type Hash ethcommon.Hash
+
+func MarshalHash(h Hash) *HashBuf {
 	return &HashBuf{
 		Value: append([]byte{}, h[:]...),
 	}
 }
 
-func MarshalSliceOfHashes(hs [][32]byte) []*HashBuf {
+func MarshalSliceOfHashes(hs []Hash) []*HashBuf {
 	ret := make([]*HashBuf, 0, len(hs))
 	for _, h := range hs {
 		ret = append(ret, MarshalHash(h))
@@ -36,8 +38,8 @@ func MarshalSliceOfHashes(hs [][32]byte) []*HashBuf {
 	return ret
 }
 
-func UnmarshalHash(hb *HashBuf) [32]byte {
-	var ret [32]byte
+func UnmarshalHash(hb *HashBuf) Hash {
+	var ret Hash
 	copy(ret[:], hb.Value)
 	return ret
 }
@@ -55,12 +57,12 @@ func UnmarshalBigInt(buf *BigIntegerBuf) *big.Int {
 	return new(big.Int).SetBytes(buf.Value)
 }
 
-var zeroAddress ethcommon.Address
+var zeroAddress Address
 
 func init() {
-	zeroAddress = ethcommon.BytesToAddress([]byte{})
+	zeroAddress = Address{}
 }
 
-func AddressIsZero(addr ethcommon.Address) bool {
+func AddressIsZero(addr Address) bool {
 	return addr == zeroAddress
 }

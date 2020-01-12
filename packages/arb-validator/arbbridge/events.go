@@ -19,12 +19,11 @@ package arbbridge
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type IncomingMessageType int
@@ -50,7 +49,7 @@ type Notification struct {
 
 type StakeCreatedEvent struct {
 	Staker   common.Address
-	NodeHash [32]byte
+	NodeHash common.Hash
 }
 
 func (e StakeCreatedEvent) RelatedToStaker(staker common.Address) bool {
@@ -87,7 +86,7 @@ func (e StakeRefundedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type PrunedEvent struct {
-	Leaf [32]byte
+	Leaf common.Hash
 }
 
 func (e PrunedEvent) RelatedToStaker(staker common.Address) bool {
@@ -96,7 +95,7 @@ func (e PrunedEvent) RelatedToStaker(staker common.Address) bool {
 
 type StakeMovedEvent struct {
 	Staker   common.Address
-	Location [32]byte
+	Location common.Hash
 }
 
 func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
@@ -104,10 +103,10 @@ func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type AssertedEvent struct {
-	PrevLeafHash  [32]byte
+	PrevLeafHash  common.Hash
 	Params        *structures.AssertionParams
 	Claim         *structures.AssertionClaim
-	MaxPendingTop [32]byte
+	MaxPendingTop common.Hash
 }
 
 func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {
@@ -115,7 +114,7 @@ func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type ConfirmedEvent struct {
-	NodeHash [32]byte
+	NodeHash common.Hash
 }
 
 func (e ConfirmedEvent) RelatedToStaker(staker common.Address) bool {
@@ -123,7 +122,7 @@ func (e ConfirmedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type ConfirmedAssertionEvent struct {
-	LogsAccHash [32]byte
+	LogsAccHash common.Hash
 }
 
 type InitiateChallengeEvent struct {
@@ -142,14 +141,14 @@ type ContinueChallengeEvent struct {
 type OneStepProofEvent struct{}
 
 type PendingTopBisectionEvent struct {
-	ChainHashes [][32]byte
+	ChainHashes []common.Hash
 	TotalLength *big.Int
 	Deadline    structures.TimeTicks
 }
 
 type MessagesBisectionEvent struct {
-	ChainHashes   [][32]byte
-	SegmentHashes [][32]byte
+	ChainHashes   []common.Hash
+	SegmentHashes []common.Hash
 	TotalLength   *big.Int
 	Deadline      structures.TimeTicks
 }

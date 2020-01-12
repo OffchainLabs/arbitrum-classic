@@ -19,10 +19,9 @@ package rollup
 import (
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -45,7 +44,7 @@ func (al *AnnouncerListener) CompletedChallenge(event arbbridge.ChallengeComplet
 	log.Println("CompletedChallenge")
 }
 
-func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *common.TimeBlocks, txHash [32]byte) {
+func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *common.TimeBlocks, txHash common.Hash) {
 	log.Println("SawAssertion")
 	log.Println("Params:", ev.Params)
 	log.Println("Claim:", ev.Claim)
@@ -78,10 +77,10 @@ func (al *AnnouncerListener) OldStakes([]recoverStakeOldParams) {
 	log.Println("OldStakes")
 }
 
-func (al *AnnouncerListener) AdvancedKnownValidNode(nodeHash [32]byte) {
+func (al *AnnouncerListener) AdvancedKnownValidNode(nodeHash common.Hash) {
 	log.Println("AdvancedKnownValidNode", hexutil.Encode(nodeHash[:]))
 }
 
-func (lis *AnnouncerListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {
+func (lis *AnnouncerListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, common.Hash) {
 	log.Println("AdvancedKnownAssertion")
 }

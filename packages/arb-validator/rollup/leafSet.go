@@ -20,15 +20,17 @@ import (
 	"log"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type LeafSet struct {
-	idx map[[32]byte]*Node
+	idx map[common.Hash]*Node
 }
 
 func NewLeafSet() *LeafSet {
 	return &LeafSet{
-		make(map[[32]byte]*Node),
+		make(map[common.Hash]*Node),
 	}
 }
 

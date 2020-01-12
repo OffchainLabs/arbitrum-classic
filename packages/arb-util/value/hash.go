@@ -22,14 +22,16 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type HashOnlyValue struct {
-	hash [32]byte
+	hash common.Hash
 	size int64
 }
 
-func NewHashOnlyValue(hash [32]byte, size int64) HashOnlyValue {
+func NewHashOnlyValue(hash common.Hash, size int64) HashOnlyValue {
 	return HashOnlyValue{hash, size}
 }
 
@@ -43,7 +45,7 @@ func NewHashOnlyValueFromReader(rd io.Reader) (HashOnlyValue, error) {
 	if err != nil {
 		return HashOnlyValue{}, err
 	}
-	var hash [32]byte
+	var hash common.Hash
 	if _, err := io.ReadFull(rd, hash[:]); err != nil {
 		return HashOnlyValue{}, err
 	}
@@ -90,6 +92,6 @@ func (nv HashOnlyValue) String() string {
 	return fmt.Sprintf("HashOnlyValue(%v)", hexutil.Encode(nv.hash[:]))
 }
 
-func (nv HashOnlyValue) Hash() [32]byte {
+func (nv HashOnlyValue) Hash() common.Hash {
 	return nv.hash
 }

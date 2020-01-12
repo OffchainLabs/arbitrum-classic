@@ -28,7 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type Identity [32]byte
 type TokenType [21]byte
 
 func TokenTypeFromIntValue(val value.IntValue) TokenType {
@@ -72,33 +71,21 @@ func TokenTypeArrayEncoded(input [][21]byte) []byte {
 	return values
 }
 
-func NewAddressBuf(tok ethcommon.Address) *AddressBuf {
-	return &AddressBuf{
-		Value: tok.Bytes(),
-	}
-}
-
-func NewAddressFromBuf(buf *AddressBuf) ethcommon.Address {
-	var ret ethcommon.Address
-	copy(ret[:], buf.Value)
-	return ret
-}
-
 type Message struct {
 	Data        value.Value
 	TokenType   [21]byte
 	Currency    *big.Int
-	Destination ethcommon.Address
+	Destination common.Address
 }
 
 func NewMessage(data value.Value, tokenType [21]byte, currency *big.Int, destination *big.Int) Message {
-	var dest ethcommon.Address
+	var dest common.Address
 	destBytes := value.NewIntValue(destination).ToBytes()
 	copy(dest[:], destBytes[12:])
 	return Message{data, tokenType, new(big.Int).Set(currency), dest}
 }
 
-func NewSimpleMessage(data value.Value, tokenType [21]byte, currency *big.Int, sender ethcommon.Address) Message {
+func NewSimpleMessage(data value.Value, tokenType [21]byte, currency *big.Int, sender common.Address) Message {
 	return Message{data, tokenType, currency, sender}
 }
 
@@ -147,7 +134,7 @@ func NewMessageBuf(val Message) *MessageBuf {
 		Value:     value.MarshalValueToBytes(val.Data),
 		TokenType: NewTokenTypeBuf(val.TokenType),
 		Amount:    common.NewBigIntBuf(val.Currency),
-		Sender:    NewAddressBuf(val.Destination),
+		Sender:    val.Destination.MarshallToBuf(),
 	}
 }
 
@@ -157,7 +144,7 @@ func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 		val,
 		NewTokenTypeFromBuf(buf.TokenType),
 		common.NewBigIntFromBuf(buf.Amount),
-		NewAddressFromBuf(buf.Sender),
+		buf.Sender.Unmarshal(),
 	), err
 }
 

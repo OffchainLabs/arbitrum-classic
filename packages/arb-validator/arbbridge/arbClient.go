@@ -20,8 +20,9 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type ArbClient interface {

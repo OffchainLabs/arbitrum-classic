@@ -23,6 +23,8 @@ import (
 	"io"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type Opcode uint8
@@ -163,7 +165,7 @@ func NewCodePointForProofFromReader(rd io.Reader) (CodePointValue, error) {
 	if err != nil {
 		return CodePointValue{}, err
 	}
-	var nextHash [32]byte
+	var nextHash common.Hash
 	_, err = io.ReadFull(rd, nextHash[:])
 	return CodePointValue{0, op, nextHash}, err
 }
@@ -171,7 +173,7 @@ func NewCodePointForProofFromReader(rd io.Reader) (CodePointValue, error) {
 type CodePointValue struct {
 	InsnNum  int64
 	Op       Operation
-	NextHash [32]byte
+	NextHash common.Hash
 }
 
 func NewCodePointValueFromReader(rd io.Reader) (CodePointValue, error) {
@@ -184,7 +186,7 @@ func NewCodePointValueFromReader(rd io.Reader) (CodePointValue, error) {
 	if err != nil {
 		return CodePointValue{}, err
 	}
-	var nextHash [32]byte
+	var nextHash common.Hash
 	_, err = io.ReadFull(rd, nextHash[:])
 	return CodePointValue{insnNum, op, nextHash}, err
 }
@@ -232,13 +234,13 @@ func (cv CodePointValue) Size() int64 {
 var ErrorCodePoint CodePointValue
 
 func init() {
-	ErrorCodePoint = CodePointValue{0, BasicOperation{0}, [32]byte{}}
+	ErrorCodePoint = CodePointValue{0, BasicOperation{0}, common.Hash{}}
 }
 
-func (cv CodePointValue) Hash() [32]byte {
+func (cv CodePointValue) Hash() common.Hash {
 	switch op := cv.Op.(type) {
 	case ImmediateOperation:
-		hash := [32]byte{}
+		hash := common.Hash{}
 		copy(hash[:], solsha3.SoliditySHA3(
 			solsha3.Uint8(TypeCodeCodePoint),
 			solsha3.Uint8(byte(op.Op)),
@@ -247,7 +249,7 @@ func (cv CodePointValue) Hash() [32]byte {
 		))
 		return hash
 	case BasicOperation:
-		hash := [32]byte{}
+		hash := common.Hash{}
 		copy(hash[:], solsha3.SoliditySHA3(
 			solsha3.Uint8(TypeCodeCodePoint),
 			solsha3.Uint8(byte(op.Op)),

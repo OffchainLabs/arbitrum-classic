@@ -26,16 +26,17 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-var continuedChallengeID common.Hash
+var continuedChallengeID ethcommon.Hash
 
 func init() {
 	parsed, err := abi.JSON(strings.NewReader(executionchallenge.BisectionChallengeABI))
@@ -50,7 +51,7 @@ type BisectionChallenge struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func NewBisectionChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*BisectionChallenge, error) {
+func NewBisectionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*BisectionChallenge, error) {
 	challenge, err := NewChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -87,8 +88,8 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 	}
 
 	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{c.address},
-		Topics: [][]common.Hash{{
+		Addresses: []ethcommon.Address{c.address},
+		Topics: [][]ethcommon.Hash{{
 			continuedChallengeID,
 		}},
 	}
@@ -146,7 +147,7 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 		}
 		outChan <- arbbridge.Notification{
 			Header: header,
-			VMID:   c.address,
+			VMID:   common.NewAddressFromEth(c.address),
 			Event: arbbridge.ContinueChallengeEvent{
 				SegmentIndex: contChal.SegmentIndex,
 				Deadline:     structures.TimeTicks{Val: contChal.DeadlineTicks},
@@ -157,7 +158,7 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 	return nil
 }
 
-func (c *BisectionChallenge) ChooseSegment(
+func (c *BisectionChallenge) chooseSegment(
 	ctx context.Context,
 	segmentToChallenge uint16,
 	segments [][32]byte,

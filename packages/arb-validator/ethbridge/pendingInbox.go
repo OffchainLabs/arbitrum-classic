@@ -20,16 +20,16 @@ import (
 	"bytes"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type PendingInbox struct {
@@ -37,7 +37,7 @@ type PendingInbox struct {
 	client             *ethclient.Client
 }
 
-func NewPendingInbox(address common.Address, client *ethclient.Client) (*PendingInbox, error) {
+func NewPendingInbox(address ethcommon.Address, client *ethclient.Client) (*PendingInbox, error) {
 	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
@@ -55,7 +55,7 @@ func (con *PendingInbox) SendMessage(
 	}
 	tx, err := con.GlobalPendingInbox.SendMessage(
 		auth,
-		msg.Destination,
+		msg.Destination.ToEthAddress(),
 		msg.TokenType,
 		msg.Currency,
 		dataBuf.Bytes(),
@@ -77,7 +77,7 @@ func (con *PendingInbox) ForwardMessage(
 	}
 	tx, err := con.GlobalPendingInbox.ForwardMessage(
 		auth,
-		msg.Destination,
+		msg.Destination.ToEthAddress(),
 		msg.TokenType,
 		msg.Currency,
 		dataBuf.Bytes(),
@@ -106,7 +106,7 @@ func (con *PendingInbox) SendEthMessage(
 			GasLimit: auth.GasLimit,
 			Value:    amount,
 		},
-		destination,
+		destination.ToEthAddress(),
 		dataBuf.Bytes(),
 	)
 	if err != nil {
@@ -124,7 +124,7 @@ func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, 
 			GasLimit: auth.GasLimit,
 			Value:    amount,
 		},
-		dest,
+		dest.ToEthAddress(),
 	)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (con *PendingInbox) GetTokenBalance(
 ) (*big.Int, error) {
 	return con.GlobalPendingInbox.GetTokenBalance(
 		auth,
-		tokenContract,
-		user,
+		tokenContract.ToEthAddress(),
+		user.ToEthAddress(),
 	)
 }

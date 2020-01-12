@@ -18,32 +18,14 @@ package mockbridge
 
 import (
 	"context"
-	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
-
-var bisectedAssertionID common.Hash
-var oneStepProofCompletedID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID()
-	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
 
 type ExecutionChallenge struct {
 	*BisectionChallenge
@@ -235,42 +217,26 @@ func (c *ExecutionChallenge) OneStepProof(
 	return nil
 }
 
-func (c *ExecutionChallenge) ExecutionChallengeChooseSegment(
+func (c *ExecutionChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	preconditions []*valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
+	totalSteps uint32,
 ) error {
-	bisectionHashes := make([][32]byte, 0, len(assertions))
-	for i := range assertions {
-		bisectionHash := [32]byte{}
-		copy(bisectionHash[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(preconditions[i].Hash()),
-			solsha3.Bytes32(assertions[i].Hash()),
-		))
-		bisectionHashes = append(bisectionHashes, bisectionHash)
-	}
-	return c.BisectionChallenge.ChooseSegment(
-		ctx,
-		assertionToChallenge,
-		bisectionHashes,
-	)
-}
-
-func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisectedAssertion) []*valprotocol.ExecutionAssertionStub {
-	bisectionCount := len(event.MachineHashes) - 1
-	assertions := make([]*valprotocol.ExecutionAssertionStub, 0, bisectionCount)
-	for i := 0; i < bisectionCount; i++ {
-		assertion := &valprotocol.ExecutionAssertionStub{
-			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
-			DidInboxInsn:     event.DidInboxInsns[i],
-			NumGas:           event.Gases[i],
-			FirstMessageHash: value.NewHashBuf(event.MessageAccs[i]),
-			LastMessageHash:  value.NewHashBuf(event.MessageAccs[i+1]),
-			FirstLogHash:     value.NewHashBuf(event.LogAccs[i]),
-			LastLogHash:      value.NewHashBuf(event.LogAccs[i+1]),
-		}
-		assertions = append(assertions, assertion)
-	}
-	return assertions
+	//bisectionHashes := make([][32]byte, 0, len(assertions))
+	//for i := range assertions {
+	//	bisectionHash := [32]byte{}
+	//	copy(bisectionHash[:], solsha3.SoliditySHA3(
+	//		solsha3.Bytes32(preconditions[i].Hash()),
+	//		solsha3.Bytes32(assertions[i].Hash()),
+	//	))
+	//	bisectionHashes = append(bisectionHashes, bisectionHash)
+	//}
+	//return c.BisectionChallenge.ChooseSegment(
+	//	ctx,
+	//	assertionToChallenge,
+	//	bisectionHashes,
+	//)
+	return nil
 }

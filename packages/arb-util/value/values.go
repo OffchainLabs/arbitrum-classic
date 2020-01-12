@@ -19,6 +19,8 @@ package value
 import (
 	"bytes"
 	"io"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 const (
@@ -49,7 +51,7 @@ type Value interface {
 	Clone() Value
 	CloneShallow() Value
 	Equal(Value) bool
-	Hash() [32]byte
+	Hash() common.Hash
 	Size() int64
 	Marshal(io.Writer) error
 	MarshalForProof(io.Writer) error
@@ -57,22 +59,6 @@ type Value interface {
 
 func Eq(x, y Value) bool {
 	return x.Equal(y)
-	// xt := x.TypeCode()
-	// yt := y.TypeCode()
-	// if xt == TypeCodeHashOnly || yt == TypeCodeHashOnly {
-	//	return x.Hash() == y.Hash()
-	//} else if xt != yt {
-	//	return false
-	//} else {
-	//	switch xt {
-	//	case TypeCodeInt:
-	//		return x.(IntValue).val.Cmp(y.(IntValue).val) == 0
-	//	case TypeCodeTuple:
-	//		return x.(TupleValue).cachedHash == y.(TupleValue).cachedHash
-	//	default:
-	//		panic("ValueEq: Value has invalid TypeCode")
-	//	}
-	//}
 }
 
 type UnmarshalError struct {

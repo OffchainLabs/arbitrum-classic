@@ -21,8 +21,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -33,9 +32,9 @@ func DefendMessagesClaim(
 	address common.Address,
 	bisectionCount uint64,
 	pendingInbox *structures.MessageStack,
-	beforePending [32]byte,
-	afterPending [32]byte,
-	importedMessagesSlice [32]byte,
+	beforePending common.Hash,
+	afterPending common.Hash,
+	importedMessagesSlice common.Hash,
 ) (ChallengeState, error) {
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
@@ -71,8 +70,8 @@ func ChallengeMessagesClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
 	pendingInbox *structures.MessageStack,
-	beforePending [32]byte,
-	afterPending [32]byte,
+	beforePending common.Hash,
+	afterPending common.Hash,
 ) (ChallengeState, error) {
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
@@ -108,9 +107,9 @@ func defendMessages(
 	contract arbbridge.MessagesChallenge,
 	bisectionCount uint64,
 	pendingInbox *structures.MessageStack,
-	beforePending [32]byte,
-	afterPending [32]byte,
-	importedMessagesSlice [32]byte,
+	beforePending common.Hash,
+	afterPending common.Hash,
+	importedMessagesSlice common.Hash,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -208,8 +207,8 @@ func challengeMessages(
 	outChan chan arbbridge.Notification,
 	contract arbbridge.MessagesChallenge,
 	pendingInbox *structures.MessageStack,
-	beforePending [32]byte,
-	afterPending [32]byte,
+	beforePending common.Hash,
+	afterPending common.Hash,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {

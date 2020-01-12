@@ -33,6 +33,7 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -59,7 +60,7 @@ func cdestroyVM(cMachine *Machine) {
 	C.machineDestroy(cMachine.c)
 }
 
-func (m *Machine) Hash() (ret [32]byte) {
+func (m *Machine) Hash() (ret common.Hash) {
 	C.machineHash(m.c, unsafe.Pointer(&ret[0]))
 	return
 }
@@ -180,7 +181,7 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return success == 1
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	cCheckpointStorage, ok := storage.(*CheckpointStorage)
 
 	if ok {

@@ -13,3 +13,7 @@ message HashBuf {
 message TimeBlocksBuf {
     BigIntegerBuf val = 1;
 }
+
+message AddressBuf {
+    bytes value = 1;
+}

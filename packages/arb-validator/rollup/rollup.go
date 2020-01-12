@@ -26,17 +26,15 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	"github.com/golang/protobuf/proto"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. -I .. --go_out=paths=source_relative:. *.proto"
@@ -44,7 +42,7 @@ import (
 type ChainObserver struct {
 	*sync.RWMutex
 	nodeGraph           *StakedNodeGraph
-	rollupAddr          ethcommon.Address
+	rollupAddr          common.Address
 	pendingInbox        *structures.PendingInbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
@@ -57,7 +55,7 @@ type ChainObserver struct {
 
 func NewChain(
 	ctx context.Context,
-	rollupAddr ethcommon.Address,
+	rollupAddr common.Address,
 	checkpointer RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
@@ -101,7 +99,7 @@ func (chain *ChainObserver) AddListener(listener ChainListener) {
 }
 
 func MakeInitialChainObserverBuf(
-	contractAddress ethcommon.Address,
+	contractAddress common.Address,
 	machineHash [32]byte,
 	params *structures.ChainParams,
 	opinionated bool,
@@ -109,7 +107,7 @@ func MakeInitialChainObserverBuf(
 	initStakedNodeGraphBuf, initNodeHashBuf := MakeInitialStakedNodeGraphBuf(machineHash, params)
 	return &ChainObserverBuf{
 		StakedNodeGraph:     initStakedNodeGraphBuf,
-		ContractAddress:     contractAddress.Bytes(),
+		ContractAddress:     contractAddress.MarshallToBuf(),
 		PendingInbox:        structures.MakeInitialPendingInboxBuf(),
 		KnownValidNode:      initNodeHashBuf,
 		CalculatedValidNode: initNodeHashBuf,
@@ -120,7 +118,7 @@ func MakeInitialChainObserverBuf(
 func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContext) *ChainObserverBuf {
 	return &ChainObserverBuf{
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
-		ContractAddress:     chain.rollupAddr.Bytes(),
+		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
 		PendingInbox:        chain.pendingInbox.MarshalForCheckpoint(ctx),
 		KnownValidNode:      common.MarshalHash(chain.knownValidNode.hash),
 		CalculatedValidNode: common.MarshalHash(chain.calculatedValidNode.hash),
@@ -142,7 +140,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	chain := &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
-		rollupAddr:          ethcommon.BytesToAddress(m.ContractAddress),
+		rollupAddr:          m.ContractAddress.Unmarshal(),
 		pendingInbox:        &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
 		knownValidNode:      nodeGraph.nodeFromHash[common.UnmarshalHash(m.KnownValidNode)],
 		calculatedValidNode: nodeGraph.nodeFromHash[common.UnmarshalHash(m.CalculatedValidNode)],
@@ -274,7 +272,7 @@ func (chain *ChainObserver) updateOldest(node *Node) {
 func (chain *ChainObserver) notifyAssert(
 	ev arbbridge.AssertedEvent,
 	currentTime *common.TimeBlocks,
-	assertionTxHash [32]byte,
+	assertionTxHash common.Hash,
 ) error {
 	topPendingCount, ok := chain.pendingInbox.GetHeight(ev.MaxPendingTop)
 	if !ok {
@@ -344,7 +342,7 @@ func (chain *ChainObserver) CurrentTime() *common.TimeBlocks {
 	return time
 }
 
-func (chain *ChainObserver) ContractAddress() ethcommon.Address {
+func (chain *ChainObserver) ContractAddress() common.Address {
 	chain.RLock()
 	address := chain.rollupAddr
 	chain.RUnlock()

@@ -1,9 +1,9 @@
 package mockbridge
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -18,8 +18,8 @@ func NewArbFactory(address common.Address, client arbbridge.ArbClient) (*ArbFact
 }
 
 func (con *ArbFactory) CreateRollup(
-	auth *bind.TransactOpts,
-	vmState [32]byte,
+	ctx context.Context,
+	vmState common.Hash,
 	params structures.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {

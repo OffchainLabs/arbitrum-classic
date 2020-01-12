@@ -19,6 +19,8 @@ package arbbridge
 import (
 	"context"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type PendingTopChallenge interface {
@@ -26,21 +28,21 @@ type PendingTopChallenge interface {
 
 	Bisect(
 		ctx context.Context,
-		chainHashes [][32]byte,
+		chainHashes []common.Hash,
 		chainLength *big.Int,
 	) error
 
 	OneStepProof(
 		ctx context.Context,
-		lowerHashA [32]byte,
-		topHashA [32]byte,
-		value [32]byte,
+		lowerHashA common.Hash,
+		topHashA common.Hash,
+		value common.Hash,
 	) error
 
 	ChooseSegment(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		chainHashes [][32]byte,
+		chainHashes []common.Hash,
 		chainLength uint32,
 	) error
 }

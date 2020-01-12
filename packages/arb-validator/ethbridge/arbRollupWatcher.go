@@ -23,10 +23,6 @@ import (
 	"math/big"
 	"strings"
 
-	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -34,27 +30,29 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-var rollupStakeCreatedID common.Hash
-var rollupChallengeStartedID common.Hash
-var rollupChallengeCompletedID common.Hash
-var rollupRefundedID common.Hash
-var rollupPrunedID common.Hash
-var rollupStakeMovedID common.Hash
-var rollupAssertedID common.Hash
-var rollupConfirmedID common.Hash
-var confirmedAssertionID common.Hash
-var messageDeliveredID common.Hash
+var rollupStakeCreatedID ethcommon.Hash
+var rollupChallengeStartedID ethcommon.Hash
+var rollupChallengeCompletedID ethcommon.Hash
+var rollupRefundedID ethcommon.Hash
+var rollupPrunedID ethcommon.Hash
+var rollupStakeMovedID ethcommon.Hash
+var rollupAssertedID ethcommon.Hash
+var rollupConfirmedID ethcommon.Hash
+var confirmedAssertionID ethcommon.Hash
+var messageDeliveredID ethcommon.Hash
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
@@ -83,12 +81,12 @@ type EthRollupWatcher struct {
 	ArbRollup          *rollup.ArbRollup
 	GlobalPendingInbox *rollup.IGlobalPendingInbox
 
-	address             common.Address
-	pendingInboxAddress common.Address
+	address             ethcommon.Address
+	pendingInboxAddress ethcommon.Address
 	client              *ethclient.Client
 }
 
-func NewRollupWatcher(address common.Address, client *ethclient.Client) (*EthRollupWatcher, error) {
+func NewRollupWatcher(address ethcommon.Address, client *ethclient.Client) (*EthRollupWatcher, error) {
 	vm := &EthRollupWatcher{Client: client, address: address}
 	err := vm.setupContracts()
 	return vm, err
@@ -135,8 +133,8 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 	}
 
 	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{vm.address},
-		Topics: [][]common.Hash{
+		Addresses: []ethcommon.Address{vm.address},
+		Topics: [][]ethcommon.Hash{
 			{
 				rollupStakeCreatedID,
 				rollupChallengeStartedID,
@@ -151,11 +149,11 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 		},
 	}
 
-	addressIndex := common.Hash{}
-	copy(addressIndex[:], common.LeftPadBytes(vm.address.Bytes(), 32))
+	addressIndex := ethcommon.Hash{}
+	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.address.Bytes(), 32))
 	messagesFilter := ethereum.FilterQuery{
-		Addresses: []common.Address{vm.pendingInboxAddress},
-		Topics: [][]common.Hash{
+		Addresses: []ethcommon.Address{vm.pendingInboxAddress},
+		Topics: [][]ethcommon.Hash{
 			{messageDeliveredID},
 			{addressIndex},
 		},
@@ -245,7 +243,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.StakeCreatedEvent{
-				Staker:   eventVal.Staker,
+				Staker:   common.NewAddressFromEth(eventVal.Staker),
 				NodeHash: eventVal.NodeHash,
 			}, nil
 		} else if log.Topics[0] == rollupChallengeStartedID {
@@ -254,10 +252,10 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.ChallengeStartedEvent{
-				Asserter:          eventVal.Asserter,
-				Challenger:        eventVal.Challenger,
+				Asserter:          common.NewAddressFromEth(eventVal.Asserter),
+				Challenger:        common.NewAddressFromEth(eventVal.Challenger),
 				ChallengeType:     structures.ChildType(eventVal.ChallengeType.Uint64()),
-				ChallengeContract: eventVal.ChallengeContract,
+				ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
 			}, nil
 		} else if log.Topics[0] == rollupChallengeCompletedID {
 			eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(log)
@@ -265,9 +263,9 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.ChallengeCompletedEvent{
-				Winner:            eventVal.Winner,
-				Loser:             eventVal.Loser,
-				ChallengeContract: eventVal.ChallengeContract,
+				Winner:            common.NewAddressFromEth(eventVal.Winner),
+				Loser:             common.NewAddressFromEth(eventVal.Loser),
+				ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
 			}, nil
 		} else if log.Topics[0] == rollupRefundedID {
 			eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(log)
@@ -275,7 +273,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.StakeRefundedEvent{
-				Staker: eventVal.Staker,
+				Staker: common.NewAddressFromEth(eventVal.Staker),
 			}, nil
 		} else if log.Topics[0] == rollupPrunedID {
 			eventVal, err := vm.ArbRollup.ParseRollupPruned(log)
@@ -291,7 +289,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.StakeMovedEvent{
-				Staker:   eventVal.Staker,
+				Staker:   common.NewAddressFromEth(eventVal.Staker),
 				Location: eventVal.ToNodeHash,
 			}, nil
 		} else if log.Topics[0] == rollupAssertedID {
@@ -304,8 +302,8 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
 					TimeBounds: &protocol.TimeBoundsBlocks{
-						common2.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
-						common2.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
+						common.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
+						common.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
 					},
 					ImportedMessageCount: eventVal.ImportedMessageCount,
 				},
@@ -366,7 +364,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				value.NewIntValue(msgHashInt),
 			})
 
-			msg := valprotocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
+			msg := valprotocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, common.NewAddressFromEth(val.Sender))
 			return arbbridge.MessageDeliveredEvent{
 				Msg: msg,
 			}, nil
@@ -384,7 +382,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 		}
 		outChan <- arbbridge.Notification{
 			Header: header,
-			VMID:   vm.address,
+			VMID:   common.NewAddressFromEth(vm.address),
 			Event:  event,
 			TxHash: log.TxHash,
 		}
@@ -411,5 +409,6 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 }
 
 func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
-	return vm.ArbRollup.GlobalInbox(nil)
+	addr, err := vm.ArbRollup.GlobalInbox(nil)
+	return common.NewAddressFromEth(addr), err
 }

@@ -49,7 +49,7 @@ message StakedNodeGraphBuf {
 
 message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
-    bytes contractAddress = 2;
+    common.AddressBuf contractAddress = 2;
     structures.PendingInboxBuf pendingInbox = 3;
     common.HashBuf knownValidNode = 4;
     common.HashBuf calculatedValidNode = 5;
@@ -57,8 +57,8 @@ message ChainObserverBuf {
 }
 
 message StakerBuf {
-    bytes address = 1;
+    common.AddressBuf address = 1;
     common.HashBuf location = 2;
     structures.TimeTicksBuf creationTime = 3;
-    bytes challengeAddr = 4;
+    common.AddressBuf challengeAddr = 4;
 }

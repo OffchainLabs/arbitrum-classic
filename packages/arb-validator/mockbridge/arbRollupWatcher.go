@@ -18,43 +18,15 @@ package mockbridge
 
 import (
 	"context"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 )
-
-var rollupStakeCreatedID common.Hash
-var rollupChallengeStartedID common.Hash
-var rollupChallengeCompletedID common.Hash
-var rollupRefundedID common.Hash
-var rollupPrunedID common.Hash
-var rollupStakeMovedID common.Hash
-var rollupAssertedID common.Hash
-var rollupConfirmedID common.Hash
-var confirmedAssertionID common.Hash
-var debugEventID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
-	if err != nil {
-		panic(err)
-	}
-	rollupStakeCreatedID = parsed.Events["RollupStakeCreated"].ID()
-	rollupChallengeStartedID = parsed.Events["RollupChallengeStarted"].ID()
-	rollupChallengeCompletedID = parsed.Events["RollupChallengeCompleted"].ID()
-	rollupRefundedID = parsed.Events["RollupStakeRefunded"].ID()
-	rollupPrunedID = parsed.Events["RollupPruned"].ID()
-	rollupStakeMovedID = parsed.Events["RollupStakeMoved"].ID()
-	rollupAssertedID = parsed.Events["RollupAsserted"].ID()
-	rollupConfirmedID = parsed.Events["RollupConfirmed"].ID()
-	confirmedAssertionID = parsed.Events["ConfirmedAssertion"].ID()
-	debugEventID = parsed.Events["DebugData"].ID()
-}
 
 type EthRollupWatcher struct {
 	Client             *ethclient.Client
@@ -358,3 +330,16 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 //	}
 //	return nil
 //}
+
+func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
+	return structures.ChainParams{
+		StakeRequirement:        nil,
+		GracePeriod:             structures.TimeTicks{},
+		MaxExecutionSteps:       0,
+		ArbGasSpeedLimitPerTick: 0,
+	}, nil
+}
+
+func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+	return common.Address{}, nil
+}

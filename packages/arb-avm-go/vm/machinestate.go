@@ -27,6 +27,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/stack"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -54,7 +55,7 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	panic("implement me")
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	panic("implement me")
 }
 
@@ -267,10 +268,10 @@ func (m *Machine) Log(val value.Value) {
 	m.context.LoggedValue(val)
 }
 
-func (m *Machine) Hash() [32]byte {
+func (m *Machine) Hash() common.Hash {
 	switch m.status {
 	case machine.Extensive:
-		ret := [32]byte{}
+		ret := common.Hash{}
 		copy(ret[:], solsha3.SoliditySHA3(
 			solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
 			solsha3.Bytes32(m.stack.StateValue().Hash()),

@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 func DefendExecutionClaim(

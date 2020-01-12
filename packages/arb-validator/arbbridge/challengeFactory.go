@@ -20,8 +20,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -31,7 +30,7 @@ type ChallengeFactory interface {
 		asserter common.Address,
 		challenger common.Address,
 		challengePeriod structures.TimeTicks,
-		challengeHash [32]byte,
+		challengeHash common.Hash,
 		challengeType *big.Int,
 	) (common.Address, error)
 }

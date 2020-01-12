@@ -15,7 +15,7 @@ const (
 )
 
 type Machine interface {
-	Hash() [32]byte
+	Hash() common.Hash
 	Clone() Machine
 	PrintState()
 
@@ -26,7 +26,7 @@ type Machine interface {
 	MarshalForProof() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool
-	RestoreCheckpoint(storage CheckpointStorage, machineHash [32]byte) bool
+	RestoreCheckpoint(storage CheckpointStorage, machineHash common.Hash) bool
 }
 
 func IsMachineBlocked(machine Machine, currentTime *common.TimeBlocks, newMessages bool) bool {

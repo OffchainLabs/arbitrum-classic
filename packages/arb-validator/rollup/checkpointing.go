@@ -23,13 +23,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
 	"github.com/gogo/protobuf/proto"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -96,13 +95,13 @@ type ProductionCheckpointer struct {
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
 
-func makeCheckpointDatabasePath(rollupAddr ethcommon.Address) string {
+func makeCheckpointDatabasePath(rollupAddr common.Address) string {
 	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
 }
 
 func NewProductionCheckpointer(
 	ctx context.Context,
-	rollupAddr ethcommon.Address,
+	rollupAddr common.Address,
 	arbitrumCodeFilePath string,
 	maxReorgDepth *big.Int,
 	forceFreshStart bool, // this should be false in production use
@@ -156,7 +155,6 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 		}
 	}
 	newestInCp = metadataBuf.Newest
-
 	// save all of the data for this checkpoint
 	blockId := &structures.BlockIdBuf{
 		Height:     common.MarshalBigInt(blockHeight),
@@ -321,8 +319,8 @@ type checkpointerWithMetadata interface {
 		prevBlockId *structures.BlockIdBuf,
 		contents []byte,
 		manifest *structures.CheckpointManifest,
-		values map[[32]byte]value.Value,
-		machines map[[32]byte]machine.Machine,
+		values map[common.Hash]value.Value,
+		machines map[common.Hash]machine.Machine,
 	)
 	RestoreCheckpoint(blockId *structures.BlockIdBuf) ([]byte, structures.RestoreContext) // returns nil, nil if no data at blockHeight
 	DeleteOldCheckpoints(earliestRollbackPoint *big.Int)
@@ -351,15 +349,15 @@ func newDummyCheckpointer(contractPath string) *dummyCheckpointer {
 type dummyCheckpoint struct {
 	contents []byte
 	manifest *structures.CheckpointManifest
-	values   map[[32]byte]value.Value
-	machines map[[32]byte]machine.Machine
+	values   map[common.Hash]value.Value
+	machines map[common.Hash]machine.Machine
 }
 
-func (dcp *dummyCheckpoint) GetValue(h [32]byte) value.Value {
+func (dcp *dummyCheckpoint) GetValue(h common.Hash) value.Value {
 	return dcp.values[h]
 }
 
-func (dcp *dummyCheckpoint) GetMachine(h [32]byte) machine.Machine {
+func (dcp *dummyCheckpoint) GetMachine(h common.Hash) machine.Machine {
 	return dcp.machines[h]
 }
 
@@ -376,8 +374,8 @@ func (cp *dummyCheckpointer) SaveCheckpoint(
 	prevBlockHeight *big.Int,
 	contents []byte,
 	manifest *structures.CheckpointManifest,
-	values map[[32]byte]value.Value,
-	machines map[[32]byte]machine.Machine,
+	values map[common.Hash]value.Value,
+	machines map[common.Hash]machine.Machine,
 ) {
 	cp.cp[blockHeight] = &dummyCheckpoint{contents, manifest, values, machines}
 }
@@ -448,8 +446,8 @@ func (csc *productionCheckpointer) SaveCheckpoint(
 	prevBlockId *structures.BlockIdBuf,
 	contents []byte,
 	manifest *structures.CheckpointManifest,
-	values map[[32]byte]value.Value,
-	machines map[[32]byte]machine.Machine,
+	values map[common.Hash]value.Value,
+	machines map[common.Hash]machine.Machine,
 ) {
 	for _, val := range values {
 		csc.st.SaveValue(val)
@@ -588,11 +586,11 @@ func (csc *productionCheckpointer) DeleteOneOldCheckpoint(blockId *structures.Bl
 	csc.st.DeleteData(getContentsKey(blockId))
 }
 
-func (csc *productionCheckpointer) GetValue(h [32]byte) value.Value {
+func (csc *productionCheckpointer) GetValue(h common.Hash) value.Value {
 	return csc.st.GetValue(h)
 }
 
-func (csc *productionCheckpointer) GetMachine(h [32]byte) machine.Machine {
+func (csc *productionCheckpointer) GetMachine(h common.Hash) machine.Machine {
 	ret, err := csc.st.GetInitialMachine()
 	if err != nil {
 		log.Fatal(err)

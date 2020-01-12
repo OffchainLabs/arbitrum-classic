@@ -22,6 +22,7 @@ import (
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -31,7 +32,7 @@ type Flat struct {
 	codePoints []value.CodePointValue
 	hashOnly   []value.HashOnlyValue
 	itemTypes  []byte
-	hashes     [][32]byte
+	hashes     []common.Hash
 	size       int64
 }
 
@@ -79,7 +80,7 @@ func (f *Flat) CloneImpl() *Flat {
 	copy(hashOnly, f.hashOnly)
 	itemTypes := make([]byte, len(f.itemTypes))
 	copy(itemTypes, f.itemTypes)
-	hashes := make([][32]byte, len(f.hashes))
+	hashes := make([]common.Hash, len(f.hashes))
 	copy(hashes, f.hashes)
 	newS := &Flat{ints, tuples, codePoints, hashOnly, itemTypes, hashes, f.size}
 	newS.verifyHeight()
@@ -304,8 +305,8 @@ func (f *Flat) FullyExpandedValueImpl() value.Value {
 	return value.NewTuple2(top, f.FullyExpandedValueImpl())
 }
 
-func (f *Flat) addedValueAddHash(itemHash1 [32]byte) {
-	var prevItem [32]byte
+func (f *Flat) addedValueAddHash(itemHash1 common.Hash) {
+	var prevItem common.Hash
 	if len(f.hashes) > 0 {
 		prevItem = f.hashes[len(f.hashes)-1]
 	} else {
@@ -313,9 +314,9 @@ func (f *Flat) addedValueAddHash(itemHash1 [32]byte) {
 	}
 	val := solsha3.SoliditySHA3(
 		solsha3.Uint8(value.TypeCodeTuple+2),
-		value.Bytes32ArrayEncoded([][32]byte{itemHash1, prevItem}),
+		value.Bytes32ArrayEncoded([]common.Hash{itemHash1, prevItem}),
 	)
-	var ret [32]byte
+	var ret common.Hash
 	copy(ret[:], val)
 	f.hashes = append(f.hashes, ret)
 }
@@ -335,7 +336,7 @@ func (f *Flat) countOfType(tipe byte) int {
 	}
 }
 
-func (f *Flat) hashOfItem(tipe byte, offset int) [32]byte {
+func (f *Flat) hashOfItem(tipe byte, offset int) common.Hash {
 	switch tipe {
 	case value.TypeCodeInt:
 		return f.ints[offset].Hash()

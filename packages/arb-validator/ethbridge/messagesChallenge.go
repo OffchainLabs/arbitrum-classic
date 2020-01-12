@@ -21,24 +21,24 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-var messagesBisectedID common.Hash
-var messagesOneStepProofCompletedID common.Hash
+var messagesBisectedID ethcommon.Hash
+var messagesOneStepProofCompletedID ethcommon.Hash
 
 func init() {
 	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
@@ -54,7 +54,7 @@ type MessagesChallenge struct {
 	Challenge *messageschallenge.MessagesChallenge
 }
 
-func NewMessagesChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*MessagesChallenge, error) {
+func NewMessagesChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*MessagesChallenge, error) {
 	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -87,8 +87,8 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 	}
 
 	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{c.address},
-		Topics: [][]common.Hash{{
+		Addresses: []ethcommon.Address{c.address},
+		Topics: [][]ethcommon.Hash{{
 			messagesBisectedID,
 			messagesOneStepProofCompletedID,
 		}},
@@ -140,8 +140,8 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.MessagesBisectionEvent{
-				ChainHashes:   eventVal.ChainHashes,
-				SegmentHashes: eventVal.SegmentHashes,
+				ChainHashes:   hashSliceToHashes(eventVal.ChainHashes),
+				SegmentHashes: hashSliceToHashes(eventVal.SegmentHashes),
 				TotalLength:   eventVal.TotalLength,
 				Deadline:      structures.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
@@ -165,7 +165,7 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 	}
 	outChan <- arbbridge.Notification{
 		Header: header,
-		VMID:   c.address,
+		VMID:   common.NewAddressFromEth(c.address),
 		Event:  event,
 		TxHash: log.TxHash,
 	}
@@ -174,15 +174,15 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 
 func (c *MessagesChallenge) Bisect(
 	ctx context.Context,
-	chainHashes [][32]byte,
-	segmentHashes [][32]byte,
+	chainHashes []common.Hash,
+	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.Bisect(
 		c.auth,
-		chainHashes,
-		segmentHashes,
+		hashSliceToRaw(chainHashes),
+		hashSliceToRaw(segmentHashes),
 		chainLength,
 	)
 	if err != nil {
@@ -193,11 +193,11 @@ func (c *MessagesChallenge) Bisect(
 
 func (c *MessagesChallenge) OneStepProof(
 	ctx context.Context,
-	lowerHashA [32]byte,
-	topHashA [32]byte,
-	lowerHashB [32]byte,
-	topHashB [32]byte,
-	value [32]byte,
+	lowerHashA common.Hash,
+	topHashA common.Hash,
+	lowerHashB common.Hash,
+	topHashB common.Hash,
+	value common.Hash,
 ) error {
 	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
@@ -217,8 +217,8 @@ func (c *MessagesChallenge) OneStepProof(
 func (c *MessagesChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
-	chainHashes [][32]byte,
-	segmentHashes [][32]byte,
+	chainHashes []common.Hash,
+	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	bisectionCount := uint32(len(chainHashes) - 1)
@@ -236,7 +236,7 @@ func (c *MessagesChallenge) ChooseSegment(
 			),
 		)
 	}
-	return c.BisectionChallenge.ChooseSegment(
+	return c.BisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,
 		bisectionHashes,

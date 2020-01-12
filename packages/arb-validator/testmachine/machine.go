@@ -25,6 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/goloader"
 	gomachine "github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -54,7 +55,7 @@ func New(codeFile string, warnMode bool) (*Machine, error) {
 	}, err
 }
 
-func (m *Machine) Hash() [32]byte {
+func (m *Machine) Hash() common.Hash {
 	h1 := m.cppmachine.Hash()
 	h2 := m.gomachine.Hash()
 	if h1 != h2 {
@@ -179,7 +180,7 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	return h1
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	h1 := m.cppmachine.RestoreCheckpoint(storage, machineHash)
 	h2 := m.gomachine.RestoreCheckpoint(storage, machineHash)
 	if h1 != h2 {

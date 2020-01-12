@@ -18,25 +18,13 @@ package mockbridge
 
 import (
 	"context"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
-
-var continuedChallengeID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.BisectionChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	continuedChallengeID = parsed.Events["Continued"].ID()
-}
 
 type BisectionChallenge struct {
 	*Challenge
@@ -151,7 +139,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 func (c *BisectionChallenge) ChooseSegment(
 	ctx context.Context,
 	segmentToChallenge uint16,
-	segments [][32]byte,
+	segments []common.Hash,
 ) error {
 	//tree := NewMerkleTree(segments)
 	//c.auth.Context = ctx

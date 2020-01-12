@@ -28,14 +28,14 @@ import (
 type NodeGraph struct {
 	latestConfirmed *Node
 	leaves          *LeafSet
-	nodeFromHash    map[[32]byte]*Node
+	nodeFromHash    map[common.Hash]*Node
 	oldestNode      *Node
 	params          structures.ChainParams
 }
 
 func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeGraph {
 	newNode := NewInitialNode(machine)
-	nodeFromHash := make(map[[32]byte]*Node)
+	nodeFromHash := make(map[common.Hash]*Node)
 	nodeFromHash[newNode.hash] = newNode
 	leaves := NewLeafSet()
 	leaves.Add(newNode)
@@ -48,7 +48,7 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 	}
 }
 
-func MakeInitialNodeGraphBuf(machineHash [32]byte, params *structures.ChainParams) (*NodeGraphBuf, *common.HashBuf) {
+func MakeInitialNodeGraphBuf(machineHash common.Hash, params *structures.ChainParams) (*NodeGraphBuf, *common.HashBuf) {
 	nodeBuf, nodeHashBuf := MakeInitialNodeBuf(machineHash)
 	return &NodeGraphBuf{
 		Nodes:               []*NodeBuf{nodeBuf},
@@ -64,7 +64,7 @@ func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *
 	for _, n := range chain.nodeFromHash {
 		allNodes = append(allNodes, n.MarshalForCheckpoint(ctx))
 	}
-	var leafHashes [][32]byte
+	var leafHashes []common.Hash
 	chain.leaves.forall(func(node *Node) {
 		leafHashes = append(leafHashes, node.hash)
 	})
@@ -81,7 +81,7 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 	chain := &NodeGraph{
 		latestConfirmed: nil,
 		leaves:          NewLeafSet(),
-		nodeFromHash:    make(map[[32]byte]*Node),
+		nodeFromHash:    make(map[common.Hash]*Node),
 		oldestNode:      nil,
 		params:          buf.Params.Unmarshal(),
 	}
@@ -176,7 +176,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	dispNode *structures.DisputableNode,
 	afterMachine machine.Machine,
 	currentTime *common.TimeBlocks,
-	assertionTxHash [32]byte,
+	assertionTxHash common.Hash,
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
 		log.Fatal("can't assert on non-leaf node")
@@ -200,7 +200,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	chain.leaves.Add(newNode)
 }
 
-func (chain *NodeGraph) PruneNodeByHash(nodeHash [32]byte) {
+func (chain *NodeGraph) PruneNodeByHash(nodeHash common.Hash) {
 	node := chain.nodeFromHash[nodeHash]
 	chain.pruneNode(node)
 }
