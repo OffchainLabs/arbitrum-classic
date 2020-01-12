@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
 )
@@ -46,7 +47,7 @@ func NewPendingInbox(address common.Address, client *ethclient.Client) (*Pending
 
 func (con *PendingInbox) SendMessage(
 	auth *bind.TransactOpts,
-	msg protocol.Message,
+	msg valprotocol.Message,
 ) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
@@ -67,7 +68,7 @@ func (con *PendingInbox) SendMessage(
 
 func (con *PendingInbox) ForwardMessage(
 	auth *bind.TransactOpts,
-	msg protocol.Message,
+	msg valprotocol.Message,
 	sig []byte,
 ) error {
 	var dataBuf bytes.Buffer

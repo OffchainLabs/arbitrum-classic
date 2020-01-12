@@ -364,7 +364,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				value.NewIntValue(msgHashInt),
 			})
 
-			msg := protocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
+			msg := valprotocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
 			return arbbridge.MessageDeliveredEvent{
 				Msg: msg,
 			}, nil

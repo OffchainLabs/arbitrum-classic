@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -752,11 +754,11 @@ func TestInbox(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 
-	var tok protocol.TokenType
+	var tok valprotocol.TokenType
 	tok[0] = 15
 	tok[20] = 1
 
-	msg := protocol.NewSimpleMessage(
+	msg := valprotocol.NewSimpleMessage(
 		value.NewInt64Value(1),
 		tok,
 		big.NewInt(3),
@@ -1531,7 +1533,7 @@ func TestSendFungible(t *testing.T) {
 	knownMachine := m.Clone().(*Machine)
 
 	// fungible value=10
-	var tok protocol.TokenType
+	var tok valprotocol.TokenType
 	tok[0] = 15
 	tok[20] = 0
 	tup, _ := value.NewTupleFromSlice([]value.Value{
@@ -1562,7 +1564,7 @@ func TestSendFungible(t *testing.T) {
 
 	dest := common.Address{}
 	dest[19] = 4
-	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
+	knownmessage := valprotocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
 	if !value.Eq(ad.OutMsgs[0], knownmessage.AsValue()) {
 		t.Errorf("Out message incorrect\nGot %v\nExpected %v\n", ad.OutMsgs[0], knownmessage.AsValue())
 	}

@@ -25,6 +25,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/golang/protobuf/proto"
@@ -274,7 +276,7 @@ func (m *ClientManager) WaitForFollowers(ctx context.Context) bool {
 }
 
 type OffchainMessage struct {
-	Message   protocol.Message
+	Message   valprotocol.Message
 	Hash      []byte
 	Signature []byte
 }
@@ -510,7 +512,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 
 	err := func() error {
 		log.Println("Coordinator making unanimous assertion with", len(queuedMessages), "messages")
-		newMessages := make([]protocol.Message, 0, len(queuedMessages))
+		newMessages := make([]valprotocol.Message, 0, len(queuedMessages))
 		messageHashes := make([][]byte, 0, len(newMessages))
 		for _, msg := range queuedMessages {
 			newMessages = append(newMessages, msg.Message)
@@ -537,7 +539,7 @@ func (m *ValidatorCoordinator) initiateUnanimousAssertionImpl(ctx context.Contex
 		requestMessages := make([]*valmessage.SignedMessage, 0, len(unanRequest.NewMessages))
 		for i, msg := range unanRequest.NewMessages {
 			requestMessages = append(requestMessages, &valmessage.SignedMessage{
-				Message:   protocol.NewMessageBuf(msg),
+				Message:   valprotocol.NewMessageBuf(msg),
 				Signature: queuedMessages[i].Signature,
 			})
 		}

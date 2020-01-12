@@ -11,13 +11,6 @@ message AddressBuf {
     bytes value = 1;
 }
 
-message MessageBuf {
-    value.ValueBuf value = 1;
-    TokenTypeBuf tokenType = 2;
-    value.BigIntegerBuf amount = 3;
-    AddressBuf sender = 4;
-}
-
 message TimeBlocksBuf {
     value.BigIntegerBuf val = 1;
 }

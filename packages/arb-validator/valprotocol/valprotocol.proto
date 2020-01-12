@@ -19,3 +19,10 @@ message ExecutionAssertionStubBuf {
     value.HashBuf firstLogHash = 6;
     value.HashBuf lastLogHash = 7;
 }
+
+message MessageBuf {
+    value.ValueBuf value = 1;
+    protocol.TokenTypeBuf tokenType = 2;
+    value.BigIntegerBuf amount = 3;
+    protocol.AddressBuf sender = 4;
+}

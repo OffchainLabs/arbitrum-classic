@@ -288,14 +288,14 @@ func (val *VMValidator) InitiateChallenge(
 
 func (val *VMValidator) SendMessage(ctx context.Context, data value.Value, tokenType [21]byte, currency *big.Int) error {
 	val.Mutex.Unlock()
-	err := val.Validator.SendMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
+	err := val.Validator.SendMessage(val.Validator.MakeAuth(ctx), valprotocol.NewSimpleMessage(data, tokenType, currency, val.VMID))
 	val.Mutex.Unlock()
 	return err
 }
 
 func (val *VMValidator) ForwardMessage(ctx context.Context, data value.Value, tokenType [21]byte, currency *big.Int, sig []byte) error {
 	val.Mutex.Lock()
-	err := val.Validator.ForwardMessage(val.Validator.MakeAuth(ctx), protocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
+	err := val.Validator.ForwardMessage(val.Validator.MakeAuth(ctx), valprotocol.NewSimpleMessage(data, tokenType, currency, val.VMID), sig)
 	val.Mutex.Unlock()
 	return err
 }

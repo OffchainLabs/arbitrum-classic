@@ -27,6 +27,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -183,7 +185,7 @@ func (m *Server) SendMessage(ctx context.Context, args *SendMessageArgs) (*SendM
 			return
 		}
 		m.coordinator.SendMessage(channel.OffchainMessage{
-			Message: protocol.Message{
+			Message: valprotocol.Message{
 				Data:        dataVal,
 				TokenType:   tokenType,
 				Currency:    amount,
@@ -279,7 +281,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	var sender common.Address
 	copy(sender[:], senderBytes)
 
-	msg := protocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
+	msg := valprotocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
 	resultChan, errChan := m.coordinator.ChannelVal.RequestCall(msg)
 
 	select {

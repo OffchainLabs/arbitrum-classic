@@ -23,12 +23,13 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -347,7 +348,7 @@ func (msg EthMsg) MsgHash(vmID common.Address) [32]byte {
 }
 
 func NewEthMsgFromValue(val value.Value) (EthMsg, error) {
-	msg, err := protocol.NewMessageFromValue(val)
+	msg, err := valprotocol.NewMessageFromValue(val)
 	if err != nil {
 		return EthMsg{}, err
 	}

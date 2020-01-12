@@ -22,6 +22,8 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -85,7 +87,7 @@ func (validator *ChannelValidator) HasOpenAssertion() chan bool {
 type unanimousUpdateRequest struct {
 	valmessage.UnanimousRequestData
 
-	NewMessages []protocol.Message
+	NewMessages []valprotocol.Message
 
 	Machine   machine.Machine
 	Assertion *protocol.ExecutionAssertion
@@ -98,7 +100,7 @@ type unanimousUpdateRequest struct {
 
 func (validator *ChannelValidator) InitiateUnanimousRequest(
 	length uint64,
-	messages []protocol.Message,
+	messages []valprotocol.Message,
 	messageHashes [][]byte,
 	final bool,
 	maxSteps int32,
@@ -122,8 +124,8 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 			errChan <- fmt.Errorf("recieved initiate unanimous request, but was in the wrong state to handle it: %T", validator.channelBot.ChannelState)
 			return
 		}
-		newMessages := make([]protocol.Message, 0, len(messages))
-		messageRecords := make([]protocol.Message, 0, len(messages))
+		newMessages := make([]valprotocol.Message, 0, len(messages))
+		messageRecords := make([]valprotocol.Message, 0, len(messages))
 		for i, msg := range messages {
 			msgHashInt := new(big.Int).SetBytes(messageHashes[i])
 			val, _ := value.NewTupleFromSlice([]value.Value{
@@ -132,13 +134,13 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 				value.NewIntValue(validator.latestHeader.Number),
 				value.NewIntValue(msgHashInt),
 			})
-			newMessages = append(newMessages, protocol.Message{
+			newMessages = append(newMessages, valprotocol.Message{
 				Data:        val,
 				TokenType:   msg.TokenType,
 				Currency:    msg.Currency,
 				Destination: msg.Destination,
 			})
-			messageRecords = append(messageRecords, protocol.Message{
+			messageRecords = append(messageRecords, valprotocol.Message{
 				Data:        val.Clone(),
 				TokenType:   msg.TokenType,
 				Currency:    msg.Currency,
@@ -181,7 +183,7 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 
 func (validator *ChannelValidator) RequestFollowUnanimous(
 	request valmessage.UnanimousRequestData,
-	messages []protocol.Message,
+	messages []valprotocol.Message,
 	maxSteps int32,
 	shouldFinalize func(*protocol.ExecutionAssertion) bool,
 ) (<-chan valmessage.UnanimousUpdateResults, <-chan error) {

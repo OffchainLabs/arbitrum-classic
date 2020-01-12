@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package protocol
+package valprotocol
 
 import (
 	"errors"
 	"fmt"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -114,6 +116,25 @@ func NewMessageFromValue(val value.Value) (Message, error) {
 		amountInt.BigInt(),
 		destInt.BigInt(),
 	), nil
+}
+
+func NewMessageBuf(val Message) *MessageBuf {
+	return &MessageBuf{
+		Value:     value.NewValueBuf(val.Data),
+		TokenType: protocol.NewTokenTypeBuf(val.TokenType),
+		Amount:    value.NewBigIntBuf(val.Currency),
+		Sender:    protocol.NewAddressBuf(val.Destination),
+	}
+}
+
+func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
+	val, err := value.NewValueFromBuf(buf.Value)
+	return NewSimpleMessage(
+		val,
+		protocol.NewTokenTypeFromBuf(buf.TokenType),
+		value.NewBigIntFromBuf(buf.Amount),
+		protocol.NewAddressFromBuf(buf.Sender),
+	), err
 }
 
 func (msg Message) Clone() Message {

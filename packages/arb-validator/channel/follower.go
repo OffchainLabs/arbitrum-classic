@@ -22,6 +22,8 @@ import (
 	"errors"
 	"log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/golang/protobuf/proto"
 
 	"github.com/gorilla/websocket"
@@ -157,9 +159,9 @@ func (m *ValidatorFollower) HandleUnanimousRequest(
 	requestID [32]byte,
 ) error {
 	sig, unanHash, err := func() ([]byte, [32]byte, error) {
-		messages := make([]protocol.Message, 0, len(request.SignedMessages))
+		messages := make([]valprotocol.Message, 0, len(request.SignedMessages))
 		for _, signedMsg := range request.SignedMessages {
-			msg, err := protocol.NewMessageFromBuf(signedMsg.Message)
+			msg, err := valprotocol.NewMessageFromBuf(signedMsg.Message)
 			if err != nil {
 				return nil, [32]byte{}, errors2.Wrap(err, "Follower recieved message in bad format")
 			}

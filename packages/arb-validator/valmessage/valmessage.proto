@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 package valmessage;
+import "valprotocol/valprotocol.proto";
 import "protocol/protocol.proto";
 import "value/value.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage";
@@ -39,7 +40,7 @@ message UnanimousAssertionValidatorNotification {
 }
 
 message SignedMessage {
-    protocol.MessageBuf message = 1;
+    valprotocol.MessageBuf message = 1;
     bytes signature = 2;
 }
 

@@ -18,6 +18,7 @@ package valmessage
 
 import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
@@ -43,7 +44,7 @@ func (r UnanimousRequestData) Hash() [32]byte {
 
 type UnanimousRequest struct {
 	UnanimousRequestData
-	NewMessages []protocol.Message
+	NewMessages []valprotocol.Message
 }
 
 type UnanimousUpdateResults struct {

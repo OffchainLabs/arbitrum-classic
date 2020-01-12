@@ -21,7 +21,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
@@ -66,7 +65,7 @@ func (c *Core) GetCore() *Core {
 	return c
 }
 
-func (c *Core) SendMessageToVM(msg protocol.Message) {
+func (c *Core) SendMessageToVM(msg valprotocol.Message) {
 	c.machine.SendOnchainMessage(msg)
 }
 

@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -162,7 +161,7 @@ type ExecutionBisectionEvent struct {
 }
 
 type MessageDeliveredEvent struct {
-	Msg protocol.Message
+	Msg valprotocol.Message
 }
 
 type NewTimeEvent struct{}

@@ -48,25 +48,6 @@ func NewAddressFromBuf(buf *AddressBuf) common.Address {
 	return ret
 }
 
-func NewMessageBuf(val Message) *MessageBuf {
-	return &MessageBuf{
-		Value:     value.NewValueBuf(val.Data),
-		TokenType: NewTokenTypeBuf(val.TokenType),
-		Amount:    value.NewBigIntBuf(val.Currency),
-		Sender:    NewAddressBuf(val.Destination),
-	}
-}
-
-func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
-	val, err := value.NewValueFromBuf(buf.Value)
-	return NewSimpleMessage(
-		val,
-		NewTokenTypeFromBuf(buf.TokenType),
-		value.NewBigIntFromBuf(buf.Amount),
-		NewAddressFromBuf(buf.Sender),
-	), err
-}
-
 func NewAssertionBuf(a *ExecutionAssertion) *ExecutionAssertionBuf {
 	messages := make([]*value.ValueBuf, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {

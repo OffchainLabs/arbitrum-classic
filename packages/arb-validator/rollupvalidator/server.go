@@ -25,6 +25,8 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -167,7 +169,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	var sender common.Address
 	copy(sender[:], senderBytes)
 
-	msg := protocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
+	msg := valprotocol.NewSimpleMessage(dataVal, [21]byte{}, big.NewInt(0), sender)
 	messageHash := solsha3.SoliditySHA3(
 		solsha3.Bytes32(msg.Destination),
 		solsha3.Bytes32(msg.Data.Hash()),
@@ -180,7 +182,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 		value.NewIntValue(m.chain.CurrentTime().AsInt()),
 		value.NewIntValue(msgHashInt),
 	})
-	callingMessage := protocol.Message{
+	callingMessage := valprotocol.Message{
 		Data:        val.Clone(),
 		TokenType:   msg.TokenType,
 		Currency:    msg.Currency,

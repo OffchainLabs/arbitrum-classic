@@ -19,21 +19,22 @@ package arbbridge
 import (
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type PendingInbox interface {
 	SendMessage(
 		auth *bind.TransactOpts,
-		msg protocol.Message,
+		msg valprotocol.Message,
 	) error
 	ForwardMessage(
 		auth *bind.TransactOpts,
-		msg protocol.Message,
+		msg valprotocol.Message,
 		sig []byte,
 	) error
 	SendEthMessage(

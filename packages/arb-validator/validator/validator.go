@@ -164,7 +164,7 @@ func NewValidator(
 	}
 }
 
-func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Value, <-chan error) {
+func (validator *Validator) RequestCall(msg valprotocol.Message) (<-chan value.Value, <-chan error) {
 	resultChan := make(chan value.Value, 1)
 	errChan := make(chan error, 1)
 	validator.actions <- func() {
@@ -187,7 +187,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 			value.NewIntValue(validator.latestHeader.Number),
 			value.NewIntValue(msgHashInt),
 		})
-		callingMessage := protocol.Message{
+		callingMessage := valprotocol.Message{
 			Data:        val.Clone(),
 			TokenType:   msg.TokenType,
 			Currency:    msg.Currency,
@@ -195,7 +195,7 @@ func (validator *Validator) RequestCall(msg protocol.Message) (<-chan value.Valu
 		}
 		maxCallSteps := validator.bot.GetConfig().MaxCallSteps
 		go func() {
-			updatedState.SendOffchainMessages([]protocol.Message{callingMessage})
+			updatedState.SendOffchainMessages([]valprotocol.Message{callingMessage})
 			assertion := updatedState.ExecuteAssertion(
 				maxCallSteps,
 				protocol.NewTimeBoundsBlocks(startTime, startTime+1),

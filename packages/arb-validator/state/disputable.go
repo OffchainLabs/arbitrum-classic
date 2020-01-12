@@ -187,7 +187,7 @@ func (bot Waiting) GetCore() *core.Core {
 	return bot.orig
 }
 
-func (bot Waiting) SendMessageToVM(msg protocol.Message) {
+func (bot Waiting) SendMessageToVM(msg valprotocol.Message) {
 	bot.orig.SendMessageToVM(msg)
 	if bot.proposed != nil {
 		bot.proposed.machine.SendOnchainMessage(msg)
@@ -293,7 +293,7 @@ func (bot Waiting) ValidateUnanimousAssertion(request valmessage.UnanimousReques
 
 func (bot Waiting) PreparePendingUnanimous(
 	newAssertion *protocol.ExecutionAssertion,
-	messages []protocol.Message,
+	messages []valprotocol.Message,
 	machine machine.Machine,
 	sequenceNum uint64,
 	timeBounds *protocol.TimeBounds,
@@ -435,7 +435,7 @@ type watchingAssertion struct {
 	assertion    *protocol.ExecutionAssertion
 }
 
-func (bot watchingAssertion) SendMessageToVM(msg protocol.Message) {
+func (bot watchingAssertion) SendMessageToVM(msg valprotocol.Message) {
 	bot.Core.SendMessageToVM(msg)
 	bot.pending.SendMessageToVM(msg)
 }
@@ -503,7 +503,7 @@ type disputableAssertCore struct {
 	errorChan    chan<- error
 }
 
-func (d *disputableAssertCore) SendMessageToVM(msg protocol.Message) {
+func (d *disputableAssertCore) SendMessageToVM(msg valprotocol.Message) {
 	d.Core.SendMessageToVM(msg)
 	d.afterCore.SendMessageToVM(msg)
 }
