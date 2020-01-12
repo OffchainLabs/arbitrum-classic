@@ -35,7 +35,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -123,8 +122,8 @@ func (m *Machine) ExecuteAssertion(
 	timeBounds *protocol.TimeBoundsBlocks,
 	inbox value.TupleValue,
 ) (*protocol.ExecutionAssertion, uint32) {
-	startTime := utils.UnmarshalBigInt(timeBounds.Start.Val)
-	endTime := utils.UnmarshalBigInt(timeBounds.End.Val)
+	startTime := timeBounds.Start.AsInt()
+	endTime := timeBounds.End.AsInt()
 
 	var startTimeBuf bytes.Buffer
 	err := value.NewIntValue(startTime).Marshal(&startTimeBuf)

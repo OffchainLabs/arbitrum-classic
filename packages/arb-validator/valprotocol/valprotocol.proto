@@ -6,7 +6,7 @@ option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/val
 
 message PreconditionBuf {
     value.HashBuf beforeHash = 1;
-    protocol.TimeBoundsBlocks timeBounds = 2;
+    protocol.TimeBoundsBlocksBuf timeBounds = 2;
     value.HashBuf beforeInbox = 3;
 }
 
@@ -20,9 +20,18 @@ message ExecutionAssertionStubBuf {
     value.HashBuf lastLogHash = 7;
 }
 
+message AddressBuf {
+    bytes value = 1;
+}
+
+message TokenTypeBuf {
+    bytes value = 1;
+}
+
 message MessageBuf {
     value.ValueBuf value = 1;
-    protocol.TokenTypeBuf tokenType = 2;
+    TokenTypeBuf tokenType = 2;
     value.BigIntegerBuf amount = 3;
-    protocol.AddressBuf sender = 4;
+    AddressBuf sender = 4;
 }
+

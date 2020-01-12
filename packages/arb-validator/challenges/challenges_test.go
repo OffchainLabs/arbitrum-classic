@@ -288,10 +288,10 @@ func TestExecution(t *testing.T) {
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := protocol.NewTimeBoundsBlocks(
+	timeBounds := &protocol.TimeBoundsBlocks{
 		protocol.NewTimeBlocks(big.NewInt(100)),
 		protocol.NewTimeBlocks(big.NewInt(200)),
-	)
+	}
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
 	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple())

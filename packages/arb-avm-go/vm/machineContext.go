@@ -122,11 +122,11 @@ func (ac *MachineAssertionContext) OutMessageCount() int {
 }
 
 func (m *MachineAssertionContext) GetStartTime() value.IntValue {
-	return value.NewIntValue(m.timeBounds.Start.Unmarshal().AsInt())
+	return value.NewIntValue(m.timeBounds.Start.AsInt())
 }
 
 func (m *MachineAssertionContext) GetEndTime() value.IntValue {
-	return value.NewIntValue(m.timeBounds.End.Unmarshal().AsInt())
+	return value.NewIntValue(m.timeBounds.End.AsInt())
 }
 
 func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {

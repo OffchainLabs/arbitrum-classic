@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -48,6 +46,18 @@ func (t TokenType) IsToken() bool {
 	return t[20] == 0
 }
 
+func NewTokenTypeBuf(tok [21]byte) *TokenTypeBuf {
+	return &TokenTypeBuf{
+		Value: tok[:],
+	}
+}
+
+func NewTokenTypeFromBuf(buf *TokenTypeBuf) [21]byte {
+	var ret [21]byte
+	copy(ret[:], buf.Value)
+	return ret
+}
+
 func tokenTypeEncoded(input [21]byte) []byte {
 	return common.RightPadBytes(input[:], 21)
 }
@@ -58,6 +68,18 @@ func TokenTypeArrayEncoded(input [][21]byte) []byte {
 		values = append(values, common.RightPadBytes(val[:], 32)...)
 	}
 	return values
+}
+
+func NewAddressBuf(tok common.Address) *AddressBuf {
+	return &AddressBuf{
+		Value: tok.Bytes(),
+	}
+}
+
+func NewAddressFromBuf(buf *AddressBuf) common.Address {
+	var ret common.Address
+	copy(ret[:], buf.Value)
+	return ret
 }
 
 type Message struct {
@@ -121,9 +143,9 @@ func NewMessageFromValue(val value.Value) (Message, error) {
 func NewMessageBuf(val Message) *MessageBuf {
 	return &MessageBuf{
 		Value:     value.NewValueBuf(val.Data),
-		TokenType: protocol.NewTokenTypeBuf(val.TokenType),
+		TokenType: NewTokenTypeBuf(val.TokenType),
 		Amount:    value.NewBigIntBuf(val.Currency),
-		Sender:    protocol.NewAddressBuf(val.Destination),
+		Sender:    NewAddressBuf(val.Destination),
 	}
 }
 
@@ -131,9 +153,9 @@ func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 	val, err := value.NewValueFromBuf(buf.Value)
 	return NewSimpleMessage(
 		val,
-		protocol.NewTokenTypeFromBuf(buf.TokenType),
+		NewTokenTypeFromBuf(buf.TokenType),
 		value.NewBigIntFromBuf(buf.Amount),
-		protocol.NewAddressFromBuf(buf.Sender),
+		NewAddressFromBuf(buf.Sender),
 	), err
 }
 

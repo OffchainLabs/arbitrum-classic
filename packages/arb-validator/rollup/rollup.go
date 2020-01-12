@@ -330,10 +330,10 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Preco
 }
 
 func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
-	return protocol.NewTimeBoundsBlocks(
+	return &protocol.TimeBoundsBlocks{
 		chain.latestBlockNumber,
 		protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
-	)
+	}
 }
 
 func (chain *ChainObserver) CurrentTime() *protocol.TimeBlocks {

@@ -27,8 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
-
 type Precondition struct {
 	BeforeHash  [32]byte
 	TimeBounds  *protocol.TimeBoundsBlocks
@@ -44,8 +42,8 @@ func (pre *Precondition) String() string {
 	return fmt.Sprintf(
 		"Precondition(beforeHash: %v, timebounds: [%v, %v], BeforeInbox: %v)",
 		hexutil.Encode(pre.BeforeHash[:]),
-		pre.TimeBounds.Start.Unmarshal().AsInt(),
-		pre.TimeBounds.End.Unmarshal().AsInt(),
+		pre.TimeBounds.Start.AsInt(),
+		pre.TimeBounds.End.AsInt(),
 		hexutil.Encode(inboxHash[:]),
 	)
 }

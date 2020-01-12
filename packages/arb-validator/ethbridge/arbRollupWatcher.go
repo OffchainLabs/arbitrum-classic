@@ -301,10 +301,10 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				PrevLeafHash: eventVal.PrevLeaf,
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
-					TimeBounds: protocol.NewTimeBoundsBlocks(
+					TimeBounds: &protocol.TimeBoundsBlocks{
 						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
 						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
-					),
+					},
 					ImportedMessageCount: eventVal.ImportedMessageCount,
 				},
 				Claim: &structures.AssertionClaim{

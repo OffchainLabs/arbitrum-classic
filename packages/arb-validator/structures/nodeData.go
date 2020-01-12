@@ -121,8 +121,8 @@ func (ap *AssertionParams) String() string {
 	return fmt.Sprintf(
 		"AssertionParams(NumSteps: %v, TimeBounds: [%v, %v], ImportedCount: %v)",
 		ap.NumSteps,
-		ap.TimeBounds.Start.Unmarshal().AsInt(),
-		ap.TimeBounds.End.Unmarshal().AsInt(),
+		ap.TimeBounds.Start.AsInt(),
+		ap.TimeBounds.End.AsInt(),
 		ap.ImportedMessageCount,
 	)
 }
@@ -144,7 +144,7 @@ func (ap *AssertionParams) Clone() *AssertionParams {
 func (ap *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 	return &AssertionParamsBuf{
 		NumSteps:             ap.NumSteps,
-		TimeBounds:           ap.TimeBounds,
+		TimeBounds:           ap.TimeBounds.MarshalToBuf(),
 		ImportedMessageCount: utils.MarshalBigInt(ap.ImportedMessageCount),
 	}
 }
@@ -152,7 +152,7 @@ func (ap *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             m.NumSteps,
-		TimeBounds:           m.TimeBounds,
+		TimeBounds:           m.TimeBounds.Unmarshal(),
 		ImportedMessageCount: utils.UnmarshalBigInt(m.ImportedMessageCount),
 	}
 }

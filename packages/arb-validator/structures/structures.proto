@@ -39,7 +39,7 @@ message VMProtoDataBuf {
 
 message AssertionParamsBuf {
     uint32 numSteps = 1;
-    protocol.TimeBoundsBlocks timeBounds = 2;
+    protocol.TimeBoundsBlocksBuf timeBounds = 2;
     value.BigIntegerBuf importedMessageCount = 3;
 }
 

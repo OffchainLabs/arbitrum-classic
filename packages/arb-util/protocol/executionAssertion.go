@@ -18,6 +18,7 @@ package protocol
 
 import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -32,6 +33,51 @@ type ExecutionAssertion struct {
 
 func NewExecutionAssertion(afterHash [32]byte, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
 	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
+}
+
+func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
+	messages := make([]*value.ValueBuf, 0, len(a.OutMsgs))
+	for _, msg := range a.OutMsgs {
+		messages = append(messages, value.NewValueBuf(msg))
+	}
+	logs := make([]*value.ValueBuf, 0, len(a.Logs))
+	for _, msg := range a.OutMsgs {
+		logs = append(logs, value.NewValueBuf(msg))
+	}
+	return &ExecutionAssertionBuf{
+		AfterHash:    utils.MarshalHash(a.AfterHash),
+		DidInboxInsn: a.DidInboxInsn,
+		NumGas:       a.NumGas,
+		Messages:     messages,
+		Logs:         logs,
+	}
+}
+
+func (a *ExecutionAssertionBuf) Unmarshal() (*ExecutionAssertion, error) {
+	messages := make([]value.Value, 0, len(a.Logs))
+	for _, valLog := range a.Messages {
+		v, err := value.NewValueFromBuf(valLog)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, v)
+	}
+
+	logs := make([]value.Value, 0, len(a.Logs))
+	for _, valLog := range a.Logs {
+		v, err := value.NewValueFromBuf(valLog)
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, v)
+	}
+	return &ExecutionAssertion{
+		AfterHash:    utils.UnmarshalHash(a.AfterHash),
+		DidInboxInsn: a.DidInboxInsn,
+		NumGas:       a.NumGas,
+		OutMsgs:      messages,
+		Logs:         logs,
+	}, nil
 }
 
 func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {

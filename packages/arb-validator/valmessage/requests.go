@@ -36,8 +36,8 @@ func (r UnanimousRequestData) Hash() [32]byte {
 		solsha3.Bytes32(r.BeforeHash),
 		solsha3.Bytes32(r.BeforeInbox),
 		solsha3.Uint64(r.SequenceNum),
-		solsha3.Uint128(r.TimeBounds.Start.Unmarshal().AsInt()),
-		solsha3.Uint128(r.TimeBounds.End.Unmarshal().AsInt()),
+		solsha3.Uint128(r.TimeBounds.Start.AsInt()),
+		solsha3.Uint128(r.TimeBounds.End.AsInt()),
 	))
 	return ret
 }

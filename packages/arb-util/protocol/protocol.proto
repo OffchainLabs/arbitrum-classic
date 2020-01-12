@@ -3,19 +3,11 @@ package protocol;
 import "value/value.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
-message TokenTypeBuf {
-    bytes value = 1;
-}
-
-message AddressBuf {
-    bytes value = 1;
-}
-
 message TimeBlocksBuf {
     value.BigIntegerBuf val = 1;
 }
 
-message TimeBoundsBlocks {
+message TimeBoundsBlocksBuf {
     TimeBlocksBuf start = 1;
     TimeBlocksBuf end = 2;
 }
