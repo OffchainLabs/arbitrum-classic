@@ -361,7 +361,7 @@ func (bot Waiting) updateState(ev arbbridge.Event, time uint64, brdg bridge.ArbV
 			int32(ev.Assertion.NumSteps),
 			ev.Precondition.TimeBounds,
 		)
-		if !assertion.Stub().Equals(ev.Assertion) || bot.ChallengeEverything {
+		if !valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Equals(ev.Assertion) || bot.ChallengeEverything {
 			_, err := brdg.InitiateChallenge(
 				context.Background(),
 				ev.Precondition,

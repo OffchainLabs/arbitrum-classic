@@ -104,7 +104,7 @@ type continuing struct {
 	challengedState     machine.Machine
 	deadline            uint64
 	precondition        *valprotocol.Precondition
-	assertions          []*protocol.ExecutionAssertionStub
+	assertions          []*valprotocol.ExecutionAssertionStub
 	challengeEverything bool
 }
 

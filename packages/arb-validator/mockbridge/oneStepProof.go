@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
@@ -45,7 +44,7 @@ func NewOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneSt
 func (con *OneStepProof) ValidateProof(
 	auth *bind.CallOpts,
 	precondition *valprotocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
 	//return con.contract.ValidateProof(

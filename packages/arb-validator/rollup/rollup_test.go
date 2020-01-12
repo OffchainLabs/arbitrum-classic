@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -160,7 +162,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		TimeBounds:           timeBounds,
 		ImportedMessageCount: big.NewInt(0),
 	}
-	assertionStub := &protocol.ExecutionAssertionStub{
+	assertionStub := &valprotocol.ExecutionAssertionStub{
 		AfterHash:        value.NewHashBuf(theMachine.Hash()),
 		DidInboxInsn:     false,
 		NumGas:           uint64(numGas),

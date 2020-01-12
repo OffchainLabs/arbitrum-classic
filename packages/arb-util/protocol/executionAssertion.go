@@ -63,21 +63,3 @@ func (a *ExecutionAssertion) LogsHash() [32]byte {
 	}
 	return logHash
 }
-
-func (a *ExecutionAssertion) Stub() *ExecutionAssertionStub {
-	var lastHash [32]byte
-	for _, msg := range a.OutMsgs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
-		copy(lastHash[:], next)
-	}
-
-	return &ExecutionAssertionStub{
-		AfterHash:        a.AfterHash,
-		DidInboxInsn:     a.DidInboxInsn,
-		NumGas:           a.NumGas,
-		FirstMessageHash: [32]byte{},
-		LastMessageHash:  lastHash,
-		FirstLogHash:     [32]byte{},
-		LastLogHash:      a.LogsHash(),
-	}
-}

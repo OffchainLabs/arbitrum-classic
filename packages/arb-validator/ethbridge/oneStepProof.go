@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
 
@@ -48,7 +47,7 @@ func NewOneStepProof(address common.Address, client *ethclient.Client) (*OneStep
 func (con *OneStepProof) ValidateProof(
 	auth *bind.CallOpts,
 	precondition *valprotocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
 	return con.contract.ValidateProof(

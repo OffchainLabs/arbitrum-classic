@@ -89,7 +89,7 @@ type ArbVMBridge interface {
 	InitiateChallenge(
 		ctx context.Context,
 		precondition *valprotocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		assertion *valprotocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	IsPendingUnanimous(
@@ -122,20 +122,20 @@ type Challenge interface {
 	BisectAssertion(
 		ctx context.Context,
 		precondition *valprotocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		assertions []*valprotocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		ctx context.Context,
 		assertionToChallenge uint16,
 		preconditions *valprotocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		assertions []*valprotocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	OneStepProof(
 		ctx context.Context,
 		precondition *valprotocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*types.Receipt, error)
 

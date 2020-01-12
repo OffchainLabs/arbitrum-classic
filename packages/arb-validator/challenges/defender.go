@@ -20,7 +20,6 @@ import (
 	"errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
@@ -47,13 +46,13 @@ func (ad AssertionDefender) GetMachineState() machine.Machine {
 	return ad.initState
 }
 
-func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*protocol.ExecutionAssertionStub) {
+func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*valprotocol.ExecutionAssertionStub) {
 	nsteps := ad.NumSteps()
 	if nsteps < slices {
 		slices = nsteps
 	}
 	defenders := make([]AssertionDefender, 0, slices)
-	assertions := make([]*protocol.ExecutionAssertionStub, 0, slices)
+	assertions := make([]*valprotocol.ExecutionAssertionStub, 0, slices)
 	m := ad.initState.Clone()
 
 	pre := ad.precondition
@@ -67,7 +66,7 @@ func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*prot
 			numSteps,
 			initState,
 		))
-		stub := assertion.Stub()
+		stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 		assertions = append(assertions, stub)
 		pre = pre.GeneratePostcondition(stub)
 	}
@@ -89,7 +88,7 @@ func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) ui
 func ChooseAssertionToChallenge(
 	m machine.Machine,
 	pre *valprotocol.Precondition,
-	assertions []*protocol.ExecutionAssertionStub,
+	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) (uint16, machine.Machine, error) {
 	assertionCount := uint32(len(assertions))
@@ -101,7 +100,7 @@ func ChooseAssertionToChallenge(
 			pre.TimeBounds,
 			pre.BeforeInbox.(value.TupleValue),
 		)
-		stub := generatedAssertion.Stub()
+		stub := valprotocol.NewExecutionAssertionStubFromAssertion(generatedAssertion)
 		if numSteps != steps || !stub.Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}

@@ -68,7 +68,7 @@ func (pre *Precondition) Hash() [32]byte {
 	return ret
 }
 
-func (pre *Precondition) GeneratePostcondition(a *protocol.ExecutionAssertionStub) *Precondition {
+func (pre *Precondition) GeneratePostcondition(a *ExecutionAssertionStub) *Precondition {
 	nextBeforeInbox := pre.BeforeInbox
 	if a.DidInboxInsn {
 		nextBeforeInbox = value.NewEmptyTuple()
@@ -80,7 +80,7 @@ func (pre *Precondition) GeneratePostcondition(a *protocol.ExecutionAssertionStu
 	}
 }
 
-func GeneratePreconditions(pre *Precondition, assertions []*protocol.ExecutionAssertionStub) []*Precondition {
+func GeneratePreconditions(pre *Precondition, assertions []*ExecutionAssertionStub) []*Precondition {
 	preconditions := make([]*Precondition, 0, len(assertions))
 	for _, assertion := range assertions {
 		preconditions = append(preconditions, pre)

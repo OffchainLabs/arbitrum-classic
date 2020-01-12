@@ -18,6 +18,7 @@ syntax = "proto3";
 package structures;
 import "value/value.proto";
 import "protocol/protocol.proto";
+import "valprotocol/valprotocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
 
 message TimeTicksBuf {
@@ -45,7 +46,7 @@ message AssertionParamsBuf {
 message AssertionClaimBuf {
     value.HashBuf afterPendingTop = 1;
     value.HashBuf importedMessagesSlice = 2;
-    protocol.ExecutionAssertionStubBuf assertionStub = 3;
+    valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
 }
 
 message DisputableNodeBuf {

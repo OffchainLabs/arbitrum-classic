@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -308,7 +310,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				Claim: &structures.AssertionClaim{
 					AfterPendingTop:       eventVal.AfterPendingTop,
 					ImportedMessagesSlice: eventVal.ImportedMessagesSlice,
-					AssertionStub: &protocol.ExecutionAssertionStub{
+					AssertionStub: &valprotocol.ExecutionAssertionStub{
 						AfterHash:        eventVal.AfterVMHash,
 						DidInboxInsn:     eventVal.DidInboxInsn,
 						NumGas:           eventVal.NumArbGas,

@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
@@ -121,7 +120,7 @@ func (val *ChallengeValidator) StartListening(ctx context.Context) (chan arbbrid
 func (val *ChallengeValidator) BisectAssertion(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
-	assertions []*protocol.ExecutionAssertionStub,
+	assertions []*valprotocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.challenge.BisectAssertion(
@@ -137,7 +136,7 @@ func (val *ChallengeValidator) ContinueChallenge(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	precondition *valprotocol.Precondition,
-	assertions []*protocol.ExecutionAssertionStub,
+	assertions []*valprotocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.challenge.ContinueChallenge(
@@ -153,7 +152,7 @@ func (val *ChallengeValidator) ContinueChallenge(
 func (val *ChallengeValidator) OneStepProof(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()

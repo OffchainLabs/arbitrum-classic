@@ -22,15 +22,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type OneStepProof interface {
 	ValidateProof(
 		auth *bind.CallOpts,
 		precondition *valprotocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*big.Int, error)
 }

@@ -137,7 +137,7 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 			//beforeHash[0] = 5
 			precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
 
-			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
+			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, valprotocol.NewExecutionAssertionStubFromAssertion(a1), proof)
 			if err != nil {
 				log.Println("Machine ended with error:")
 				m.PrintState()

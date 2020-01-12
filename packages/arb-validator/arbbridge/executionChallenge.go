@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type ExecutionChallenge interface {
@@ -30,14 +28,14 @@ type ExecutionChallenge interface {
 	BisectAssertion(
 		ctx context.Context,
 		precondition *valprotocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		assertions []*valprotocol.ExecutionAssertionStub,
 		totalSteps uint32,
 	) error
 
 	OneStepProof(
 		ctx context.Context,
 		precondition *valprotocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
 	) error
 
@@ -45,7 +43,7 @@ type ExecutionChallenge interface {
 		ctx context.Context,
 		assertionToChallenge uint16,
 		preconditions []*valprotocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		assertions []*valprotocol.ExecutionAssertionStub,
 		totalSteps uint32,
 	) error
 }

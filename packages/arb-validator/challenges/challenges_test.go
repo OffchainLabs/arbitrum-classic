@@ -296,7 +296,11 @@ func TestExecution(t *testing.T) {
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
 	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple())
 
-	challengeHash := structures.ExecutionDataHash(numSteps, precondition.Hash(), assertion.Stub().Hash())
+	challengeHash := structures.ExecutionDataHash(
+		numSteps,
+		precondition.Hash(),
+		valprotocol.NewExecutionAssertionStubFromAssertion(assertion).Hash(),
+	)
 
 	if err := testChallenge(
 		structures.InvalidExecutionChildType,

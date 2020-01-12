@@ -19,6 +19,8 @@ package arbbridge
 import (
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -154,7 +156,7 @@ type MessagesBisectionEvent struct {
 }
 
 type ExecutionBisectionEvent struct {
-	Assertions []*protocol.ExecutionAssertionStub
+	Assertions []*valprotocol.ExecutionAssertionStub
 	TotalSteps uint32
 	Deadline   structures.TimeTicks
 }

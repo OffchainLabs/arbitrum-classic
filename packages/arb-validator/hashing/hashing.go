@@ -19,6 +19,8 @@ package hashing
 import (
 	"bytes"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -54,7 +56,7 @@ func UnanimousAssertPartialHash(
 	originalInboxHash [32]byte,
 	assertion *protocol.ExecutionAssertion,
 ) ([32]byte, error) {
-	stub := assertion.Stub()
+	stub := valprotocol.NewExecutionAssertionStubFromAssertion(assertion)
 	unanRest := UnanimousAssertPartialPartialHash(
 		newInboxHash,
 		assertion,

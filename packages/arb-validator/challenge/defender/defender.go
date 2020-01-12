@@ -25,7 +25,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
@@ -55,7 +54,7 @@ func New(assDef challenges.AssertionDefender, deadline uint64, brdg bridge.Chall
 	}
 
 	defenders := assDef.NBisect(50)
-	assertions := make([]*protocol.ExecutionAssertionStub, 0, len(defenders))
+	assertions := make([]*valprotocol.ExecutionAssertionStub, 0, len(defenders))
 	for _, defender := range defenders {
 		assertions = append(assertions, defender.GetAssertion().Stub())
 	}
@@ -74,7 +73,7 @@ func New(assDef challenges.AssertionDefender, deadline uint64, brdg bridge.Chall
 
 type bisectedAssert struct {
 	wholePrecondition *valprotocol.Precondition
-	wholeAssertion    *protocol.ExecutionAssertionStub
+	wholeAssertion    *valprotocol.ExecutionAssertionStub
 	splitDefenders    []challenges.AssertionDefender
 	deadline          uint64
 }
@@ -138,7 +137,7 @@ func (bot waitingBisected) UpdateState(ev arbbridge.Event, time uint64, brdg bri
 
 type oneStepChallenged struct {
 	precondition *valprotocol.Precondition
-	assertion    *protocol.ExecutionAssertionStub
+	assertion    *valprotocol.ExecutionAssertionStub
 	deadline     uint64
 }
 

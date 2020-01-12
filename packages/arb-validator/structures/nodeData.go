@@ -26,9 +26,10 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
+//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
 
 type ChildType uint
 
@@ -159,7 +160,7 @@ func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 type AssertionClaim struct {
 	AfterPendingTop       [32]byte
 	ImportedMessagesSlice [32]byte
-	AssertionStub         *protocol.ExecutionAssertionStub
+	AssertionStub         *valprotocol.ExecutionAssertionStub
 }
 
 func (dn *AssertionClaim) String() string {

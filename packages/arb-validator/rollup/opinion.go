@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -226,7 +228,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		claim = &structures.AssertionClaim{
 			AfterPendingTop:       afterPendingTop,
 			ImportedMessagesSlice: messageStack.GetTopHash(),
-			AssertionStub:         assertion.Stub(),
+			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	} else {
 		params = &structures.AssertionParams{
@@ -237,7 +239,7 @@ func (chain *ChainObserver) prepareAssertion() *preparedAssertion {
 		claim = &structures.AssertionClaim{
 			AfterPendingTop:       beforePendingTop,
 			ImportedMessagesSlice: value.NewEmptyTuple().Hash(),
-			AssertionStub:         assertion.Stub(),
+			AssertionStub:         valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
 		}
 	}
 	return &preparedAssertion{
@@ -273,7 +275,7 @@ func getNodeOpinion(
 
 	mach := prevMach
 	assertion, stepsRun := mach.ExecuteAssertion(params.NumSteps, params.TimeBounds, messagesVal)
-	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(assertion.Stub()) {
+	if params.NumSteps != stepsRun || !claim.AssertionStub.Equals(valprotocol.NewExecutionAssertionStubFromAssertion(assertion)) {
 		return structures.InvalidExecutionChildType, nil
 	}
 

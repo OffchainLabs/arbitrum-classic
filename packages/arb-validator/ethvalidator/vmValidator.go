@@ -274,7 +274,7 @@ func (val *VMValidator) ConfirmDisputableAsserted(
 func (val *VMValidator) InitiateChallenge(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+	assertion *valprotocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
 	receipt, err := val.arbitrumVM.InitiateChallenge(

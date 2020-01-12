@@ -130,7 +130,12 @@ func defendExecution(
 			}
 			pre := defender.GetPrecondition()
 			assertion, _ := defender.GetMachineState().ExecuteAssertion(1, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
-			err = contract.OneStepProof(ctx, defender.GetPrecondition(), assertion.Stub(), proof)
+			err = contract.OneStepProof(
+				ctx,
+				defender.GetPrecondition(),
+				valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+				proof,
+			)
 			if err != nil {
 				return 0, err
 			}
@@ -223,7 +228,7 @@ func challengeExecution(
 				stepCount := CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
 				m = cMach.Clone()
 				assertion, _ := cMach.ExecuteAssertion(stepCount, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
-				startPrecondition = startPrecondition.GeneratePostcondition(assertion.Stub())
+				startPrecondition = startPrecondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
 			}
 			err = nil
 		}

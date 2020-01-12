@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package protocol
+package valprotocol
 
 import (
 	"fmt"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -34,6 +36,24 @@ type ExecutionAssertionStub struct {
 	LastMessageHash  [32]byte
 	FirstLogHash     [32]byte
 	LastLogHash      [32]byte
+}
+
+func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *ExecutionAssertionStub {
+	var lastHash [32]byte
+	for _, msg := range a.OutMsgs {
+		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
+		copy(lastHash[:], next)
+	}
+
+	return &ExecutionAssertionStub{
+		AfterHash:        a.AfterHash,
+		DidInboxInsn:     a.DidInboxInsn,
+		NumGas:           a.NumGas,
+		FirstMessageHash: [32]byte{},
+		LastMessageHash:  lastHash,
+		FirstLogHash:     [32]byte{},
+		LastLogHash:      a.LogsHash(),
+	}
 }
 
 func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {

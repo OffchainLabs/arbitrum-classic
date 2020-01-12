@@ -68,7 +68,7 @@ type VMConnection interface {
 	InitiateChallenge(
 		auth *bind.TransactOpts,
 		precondition *valprotocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		assertion *valprotocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 }
 
@@ -80,20 +80,20 @@ type ChallengeConnection interface {
 	BisectAssertion(
 		auth *bind.TransactOpts,
 		precondition *valprotocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		assertions []*valprotocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		auth *bind.TransactOpts,
 		assertionToChallenge uint16,
 		precondition *valprotocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		assertions []*valprotocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	OneStepProof(
 		auth *bind.TransactOpts,
 		precondition *valprotocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*types.Receipt, error)
 

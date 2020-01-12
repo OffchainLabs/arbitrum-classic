@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
@@ -171,7 +170,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 func (c *ExecutionChallenge) BisectAssertion(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
-	assertions []*protocol.ExecutionAssertionStub,
+	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) error {
 	//machineHashes := make([][32]byte, 0, len(assertions)+1)
@@ -211,7 +210,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 func (c *ExecutionChallenge) OneStepProof(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
 	//c.auth.Context = ctx
@@ -240,7 +239,7 @@ func (c *ExecutionChallenge) ExecutionChallengeChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	preconditions []*valprotocol.Precondition,
-	assertions []*protocol.ExecutionAssertionStub,
+	assertions []*valprotocol.ExecutionAssertionStub,
 ) error {
 	bisectionHashes := make([][32]byte, 0, len(assertions))
 	for i := range assertions {
@@ -258,11 +257,11 @@ func (c *ExecutionChallenge) ExecutionChallengeChooseSegment(
 	)
 }
 
-func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisectedAssertion) []*protocol.ExecutionAssertionStub {
+func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisectedAssertion) []*valprotocol.ExecutionAssertionStub {
 	bisectionCount := len(event.MachineHashes) - 1
-	assertions := make([]*protocol.ExecutionAssertionStub, 0, bisectionCount)
+	assertions := make([]*valprotocol.ExecutionAssertionStub, 0, bisectionCount)
 	for i := 0; i < bisectionCount; i++ {
-		assertion := &protocol.ExecutionAssertionStub{
+		assertion := &valprotocol.ExecutionAssertionStub{
 			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
 			DidInboxInsn:     event.DidInboxInsns[i],
 			NumGas:           event.Gases[i],
