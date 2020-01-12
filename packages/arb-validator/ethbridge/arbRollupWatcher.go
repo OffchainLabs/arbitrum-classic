@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"strings"
@@ -167,7 +166,6 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 		return err
 	}
 	for _, log := range messageLogs {
-		fmt.Println("Got message log", log.Topics[0].Hex(), "from tx", log.TxHash.Hex())
 		if err := vm.processEvents(ctx, log, outChan); err != nil {
 			return err
 		}
@@ -179,7 +177,6 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 		return err
 	}
 	for _, log := range logs {
-		fmt.Println("Got vm log", log.Topics[0].Hex(), "from tx", log.TxHash.Hex())
 		if err := vm.processEvents(ctx, log, outChan); err != nil {
 			return err
 		}
