@@ -26,9 +26,9 @@ contract ArbFactory is CloneFactory {
         address vmAddress
     );
 
-    address rollupTemplate;
-    address globalInboxAddress;
-    address challengeFactoryAddress;
+    address public rollupTemplate;
+    address public globalInboxAddress;
+    address public challengeFactoryAddress;
 
     constructor(
         address _rollupTemplate,

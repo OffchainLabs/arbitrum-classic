@@ -18,7 +18,7 @@ package challenges
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -31,7 +31,8 @@ import (
 func DefendPendingTopClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	pendingInbox *structures.PendingInbox,
+	bisectionCount uint64,
+	pendingInbox *structures.MessageStack,
 	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
@@ -42,12 +43,22 @@ func DefendPendingTopClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
+	defer close(noteChan)
 
-	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	go func() {
+		for event := range parsingChan {
+			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			if !ok {
+				noteChan <- event
+			}
+		}
+	}()
 	return defendPendingTop(
 		ctx,
 		noteChan,
 		contract,
+		bisectionCount,
 		pendingInbox,
 		afterPendingTop,
 		topPending,
@@ -57,7 +68,7 @@ func DefendPendingTopClaim(
 func ChallengePendingTopClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	pendingInbox *structures.PendingInbox,
+	pendingInbox *structures.MessageStack,
 ) (ChallengeState, error) {
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
@@ -66,8 +77,17 @@ func ChallengePendingTopClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
+	defer close(noteChan)
 
-	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	go func() {
+		for event := range parsingChan {
+			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			if !ok {
+				noteChan <- event
+			}
+		}
+	}()
 	return challengePendingTop(
 		ctx,
 		noteChan,
@@ -80,7 +100,8 @@ func defendPendingTop(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.PendingTopChallenge,
-	pendingInbox *structures.PendingInbox,
+	bisectionCount uint64,
+	pendingInbox *structures.MessageStack,
 	afterPendingTop [32]byte,
 	topPending [32]byte,
 ) (ChallengeState, error) {
@@ -90,7 +111,7 @@ func defendPendingTop(
 	}
 	_, ok = note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
+		return 0, fmt.Errorf("PendingTopChallenge defender expected InitiateChallengeEvent but got %T", note.Event)
 	}
 
 	startState := afterPendingTop
@@ -115,14 +136,14 @@ func defendPendingTop(
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(arbbridge.OneStepProof)
+			_, ok = note.Event.(arbbridge.OneStepProofEvent)
 			if !ok {
-				return 0, errors.New("PendingTopChallenge expected OneStepProof")
+				return 0, fmt.Errorf("PendingTopChallenge defender expected OneStepProof but got %T", note.Event)
 			}
 			return ChallengeAsserterWon, nil
 		}
 
-		chainHashes, err := pendingInbox.GenerateBisection(startState, endState, 100)
+		chainHashes, err := pendingInbox.GenerateBisection(startState, endState, bisectionCount)
 		if err != nil {
 			return 0, err
 		}
@@ -137,7 +158,7 @@ func defendPendingTop(
 		}
 		ev, ok := note.Event.(arbbridge.PendingTopBisectionEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected PendingTopBisectionEvent")
+			return 0, fmt.Errorf("PendingTopChallenge defender expected PendingTopBisectionEvent but got %T", note.Event)
 		}
 
 		note, state, err = getNextEventWithTimeout(
@@ -151,7 +172,7 @@ func defendPendingTop(
 		}
 		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
+			return 0, fmt.Errorf("PendingTopChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
 		}
 		startState = chainHashes[contEv.SegmentIndex.Uint64()]
 		endState = chainHashes[contEv.SegmentIndex.Uint64()+1]
@@ -162,7 +183,7 @@ func challengePendingTop(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.PendingTopChallenge,
-	pendingInbox *structures.PendingInbox,
+	pendingInbox *structures.MessageStack,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -170,7 +191,7 @@ func challengePendingTop(
 	}
 	ev, ok := note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("PendingTopChallenge expected InitiateChallengeEvent")
+		return 0, fmt.Errorf("PendingTopChallenge challenger expected InitiateChallengeEvent but got %T", note.Event)
 	}
 
 	deadline := ev.Deadline
@@ -185,19 +206,19 @@ func challengePendingTop(
 			return state, err
 		}
 
-		if _, ok := note.Event.(arbbridge.OneStepProof); ok {
+		if _, ok := note.Event.(arbbridge.OneStepProofEvent); ok {
 			return ChallengeAsserterWon, nil
 		}
 
 		ev, ok := note.Event.(arbbridge.PendingTopBisectionEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected PendingTopBisectionEvent")
+			return 0, fmt.Errorf("PendingTopChallenge challenger expected PendingTopBisectionEvent but got %T", note.Event)
 		}
 		challengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
 		if err != nil {
 			return 0, err
 		}
-		err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes)
+		err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes, uint32(ev.TotalLength.Uint64()))
 		if err != nil {
 			return 0, err
 		}
@@ -207,7 +228,7 @@ func challengePendingTop(
 		}
 		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("PendingTopChallenge expected ContinueChallengeEvent")
+			return 0, fmt.Errorf("PendingTopChallenge challenger expected ContinueChallengeEvent but got %T", note.Event)
 		}
 		deadline = contEv.Deadline
 	}

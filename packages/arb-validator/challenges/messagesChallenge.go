@@ -31,7 +31,8 @@ import (
 func DefendMessagesClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	pendingInbox *structures.PendingInbox,
+	bisectionCount uint64,
+	pendingInbox *structures.MessageStack,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
@@ -43,12 +44,22 @@ func DefendMessagesClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
+	defer close(noteChan)
 
-	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	go func() {
+		for event := range parsingChan {
+			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			if !ok {
+				noteChan <- event
+			}
+		}
+	}()
 	return defendMessages(
 		ctx,
 		noteChan,
 		contract,
+		bisectionCount,
 		pendingInbox,
 		beforePending,
 		afterPending,
@@ -59,7 +70,7 @@ func DefendMessagesClaim(
 func ChallengeMessagesClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	pendingInbox *structures.PendingInbox,
+	pendingInbox *structures.MessageStack,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
@@ -70,8 +81,17 @@ func ChallengeMessagesClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
+	defer close(noteChan)
 
-	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	go func() {
+		for event := range parsingChan {
+			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			if !ok {
+				noteChan <- event
+			}
+		}
+	}()
 	return challengeMessages(
 		ctx,
 		noteChan,
@@ -86,7 +106,8 @@ func defendMessages(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.MessagesChallenge,
-	pendingInbox *structures.PendingInbox,
+	bisectionCount uint64,
+	pendingInbox *structures.MessageStack,
 	beforePending [32]byte,
 	afterPending [32]byte,
 	importedMessagesSlice [32]byte,
@@ -121,7 +142,7 @@ func defendMessages(
 			if err != nil {
 				return 0, err
 			}
-			messagesNextHash, _, err := pendingInbox.GenerateOneStepProof(startMessages)
+			messagesNextHash, _, err := messagesStack.GenerateOneStepProof(startMessages)
 			if err != nil {
 				return 0, err
 			}
@@ -133,18 +154,18 @@ func defendMessages(
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(arbbridge.OneStepProof)
+			_, ok = note.Event.(arbbridge.OneStepProofEvent)
 			if !ok {
 				return 0, errors.New("MessagesChallenge expected OneStepProof")
 			}
 			return ChallengeAsserterWon, nil
 		}
 
-		chainHashes, err := pendingInbox.GenerateBisection(startPending, endPending, 100)
+		chainHashes, err := pendingInbox.GenerateBisection(startPending, endPending, bisectionCount)
 		if err != nil {
 			return 0, err
 		}
-		stackHashes, err := messagesStack.GenerateBisection(startMessages, endMessages, 100)
+		stackHashes, err := messagesStack.GenerateBisection(startMessages, endMessages, bisectionCount)
 		if err != nil {
 			return 0, err
 		}
@@ -186,7 +207,7 @@ func challengeMessages(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
 	contract arbbridge.MessagesChallenge,
-	pendingInbox *structures.PendingInbox,
+	pendingInbox *structures.MessageStack,
 	beforePending [32]byte,
 	afterPending [32]byte,
 ) (ChallengeState, error) {
@@ -216,7 +237,7 @@ func challengeMessages(
 			return state, err
 		}
 
-		if _, ok := note.Event.(arbbridge.OneStepProof); ok {
+		if _, ok := note.Event.(arbbridge.OneStepProofEvent); ok {
 			return ChallengeAsserterWon, nil
 		}
 
@@ -237,7 +258,7 @@ func challengeMessages(
 			maxSegment = messagesChallengedSegment
 		}
 
-		err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes)
+		err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes, ev.SegmentHashes, ev.TotalLength)
 		if err != nil {
 			return 0, err
 		}

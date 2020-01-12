@@ -28,11 +28,11 @@ import (
 )
 
 type EthArbClient struct {
-	client *ethclient.Client
+	Client *ethclient.Client
 }
 
 func (c *EthArbClient) GetClient() *ethclient.Client {
-	return c.client
+	return c.Client
 }
 
 func NewEthClient(ethURL string) (*EthArbClient, error) {
@@ -40,24 +40,24 @@ func NewEthClient(ethURL string) (*EthArbClient, error) {
 	return &EthArbClient{client}, err
 }
 
-func (c *EthArbClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
-	return NewArbFactory(address, c.client)
+func (c *EthArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
+	return NewArbFactoryWatcher(address, c.Client)
 }
 
 func (c *EthArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
-	return NewRollupWatcher(address, c.client)
+	return NewRollupWatcher(address, c.Client)
 }
 
 func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
-	return NewOneStepProof(address, c.client)
+	return NewOneStepProof(address, c.Client)
 }
 
 func (c *EthArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return NewPendingInbox(address, c.client)
+	return NewPendingInbox(address, c.Client)
 }
 
 func (c *EthArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.client.HeaderByNumber(ctx, number)
+	return c.Client.HeaderByNumber(ctx, number)
 }
 
 type EthArbAuthClient struct {
@@ -80,18 +80,26 @@ func (c *EthArbAuthClient) Address() common.Address {
 	return c.auth.From
 }
 
+func (c *EthArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
+	return NewArbFactory(address, c.Client, c.auth)
+}
+
 func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
-	return NewRollup(address, c.client, c.auth)
+	return NewRollup(address, c.Client, c.auth)
+}
+
+func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
+	return NewChallengeFactory(address, c.Client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address, c.client, c.auth)
+	return NewExecutionChallenge(address, c.Client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
-	return NewMessagesChallenge(address, c.client, c.auth)
+	return NewMessagesChallenge(address, c.Client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c.client, c.auth)
+	return NewPendingTopChallenge(address, c.Client, c.auth)
 }

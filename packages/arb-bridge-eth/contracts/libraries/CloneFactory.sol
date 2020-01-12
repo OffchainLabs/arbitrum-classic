@@ -37,7 +37,7 @@ contract CloneFactory {
         }
     }
 
-    function cloneCodeHash(address target) internal pure returns (uint256 result) {
+    function cloneCodeHash(address target) internal pure returns (bytes32 result) {
         _createClone(target);
         assembly {
             // create the hash of the delegate contract reference and return it

@@ -55,7 +55,7 @@ func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
 
 func (a *ExecutionAssertionStub) ToString() string {
 	return fmt.Sprintf(
-		"Assertion: (AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
+		"Assertion(AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
 			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v)",
 		hexutil.Encode(a.AfterHash.Value),
 		a.DidInboxInsn,

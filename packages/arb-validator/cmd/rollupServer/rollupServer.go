@@ -134,9 +134,8 @@ func createRollupChain() {
 		log.Fatal(err)
 	}
 
-	auth.Context = context.Background()
 	address, err := factory.CreateRollup(
-		auth,
+		context.Background(),
 		mach.Hash(),
 		config,
 		common.Address{},

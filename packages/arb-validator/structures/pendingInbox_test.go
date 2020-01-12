@@ -23,6 +23,53 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+func getStack() *MessageStack {
+	messageStack := NewMessageStack()
+	messageStack.DeliverMessage(value.NewInt64Value(0))
+	messageStack.DeliverMessage(value.NewInt64Value(1))
+	messageStack.DeliverMessage(value.NewInt64Value(2))
+	messageStack.DeliverMessage(value.NewInt64Value(3))
+	return messageStack
+}
+
+func TestBisection(t *testing.T) {
+	messageStack := getStack()
+
+	bottomHash, err := messageStack.GetHashAtIndex(big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	topHash, err := messageStack.GetHashAtIndex(big.NewInt(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = messageStack.GenerateBisection(bottomHash, topHash, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSegmentSize(t *testing.T) {
+	messageStack := getStack()
+
+	bottomHash, err := messageStack.GetHashAtIndex(big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	topHash, err := messageStack.GetHashAtIndex(big.NewInt(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	size, err := messageStack.SegmentSize(bottomHash, topHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size != 4 {
+		t.Errorf("Segment starting a beginning has wrong size %v", size)
+	}
+}
+
 func TestPendingInboxInsert(t *testing.T) {
 	pi := NewPendingInbox()
 	if pi.newest != nil {

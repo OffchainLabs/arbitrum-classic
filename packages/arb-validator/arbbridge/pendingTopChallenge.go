@@ -22,17 +22,25 @@ import (
 )
 
 type PendingTopChallenge interface {
-	BisectionChallenge
-	//StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
+	Challenge
+
 	Bisect(
 		ctx context.Context,
 		chainHashes [][32]byte,
 		chainLength *big.Int,
 	) error
+
 	OneStepProof(
 		ctx context.Context,
 		lowerHashA [32]byte,
 		topHashA [32]byte,
 		value [32]byte,
+	) error
+
+	ChooseSegment(
+		ctx context.Context,
+		assertionToChallenge uint16,
+		chainHashes [][32]byte,
+		chainLength uint32,
 	) error
 }

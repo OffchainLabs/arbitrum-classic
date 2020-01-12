@@ -23,7 +23,8 @@ import (
 
 type Context interface {
 	Send(message value.Value)
-	GetTimeBounds() value.TupleValue
+	GetStartTime() value.IntValue
+	GetEndTime() value.IntValue
 	NotifyStep(uint64)
 	LoggedValue(value.Value)
 	GetInbox() value.TupleValue
@@ -54,8 +55,12 @@ func (m *NoContext) OutMessageCount() int {
 	return 0
 }
 
-func (m *NoContext) GetTimeBounds() value.TupleValue {
-	return value.NewEmptyTuple()
+func (m *NoContext) GetStartTime() value.IntValue {
+	return value.NewInt64Value(0)
+}
+
+func (m *NoContext) GetEndTime() value.IntValue {
+	return value.NewInt64Value(0)
 }
 
 func (m *NoContext) NotifyStep(uint64) {
@@ -116,8 +121,12 @@ func (ac *MachineAssertionContext) OutMessageCount() int {
 	return len(ac.outMsgs)
 }
 
-func (ac *MachineAssertionContext) GetTimeBounds() value.TupleValue {
-	return ac.timeBounds.AsValue()
+func (m *MachineAssertionContext) GetStartTime() value.IntValue {
+	return value.NewIntValue(m.timeBounds.Start.Unmarshal().AsInt())
+}
+
+func (m *MachineAssertionContext) GetEndTime() value.IntValue {
+	return value.NewIntValue(m.timeBounds.End.Unmarshal().AsInt())
 }
 
 func (ac *MachineAssertionContext) NotifyStep(numGas uint64) {

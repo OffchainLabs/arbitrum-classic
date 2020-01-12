@@ -28,15 +28,18 @@ var (
 )
 
 // ArbFactoryABI is the input ABI used to generate the binding from.
-const ArbFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createRollup\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbFactoryABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupTemplate\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_globalInboxAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_challengeFactoryAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"vmAddress\",\"type\":\"address\"}],\"name\":\"RollupCreated\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"challengeFactoryAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_vmState\",\"type\":\"bytes32\"},{\"internalType\":\"uint128\",\"name\":\"_gracePeriodTicks\",\"type\":\"uint128\"},{\"internalType\":\"uint128\",\"name\":\"_arbGasSpeedLimitPerTick\",\"type\":\"uint128\"},{\"internalType\":\"uint32\",\"name\":\"_maxExecutionSteps\",\"type\":\"uint32\"},{\"internalType\":\"uint128\",\"name\":\"_stakeRequirement\",\"type\":\"uint128\"},{\"internalType\":\"addresspayable\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"createRollup\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"globalInboxAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"rollupTemplate\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ArbFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var ArbFactoryFuncSigs = map[string]string{
+	"62e3c0b1": "challengeFactoryAddress()",
 	"dd7a2504": "createRollup(bytes32,uint128,uint128,uint32,uint128,address)",
+	"582923c7": "globalInboxAddress()",
+	"8689d996": "rollupTemplate()",
 }
 
 // ArbFactoryBin is the compiled bytecode used for deploying new contracts.
-var ArbFactoryBin = "0x608060405234801561001057600080fd5b506040516102b83803806102b88339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556102298061008f6000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063dd7a250414610030575b600080fd5b61008a600480360360c081101561004657600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013563ffffffff169160808101359091169060a001356001600160a01b031661008c565b005b600080546100a2906001600160a01b0316610196565b600254600154604080516322aeea8d60e01b8152600481018c90526001600160801b03808c166024830152808b16604483015263ffffffff8a166064830152881660848201526001600160a01b0387811660a483015293841660c482015291831660e483015251929350908316916322aeea8d916101048082019260009290919082900301818387803b15801561013857600080fd5b505af115801561014c573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a150505050505050565b60006101a1826101b1565b6040516037816000f09392505050565b604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b815260609190911b60148201526e5af43d82803e903d91602b57fd5bf360881b60289091015256fea265627a7a72315820c7b3f57585cbe7159cd32ac745a283bebf42382f872ce8e3721c238958a33d9a64736f6c634300050d0032"
+var ArbFactoryBin = "0x608060405234801561001057600080fd5b5060405161033a38038061033a8339818101604052606081101561003357600080fd5b5080516020820151604090920151600080546001600160a01b039384166001600160a01b03199182161790915560018054948416948216949094179093556002805492909116919092161790556102ab8061008f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063582923c71461005157806362e3c0b1146100755780638689d9961461007d578063dd7a250414610085575b600080fd5b6100596100e1565b604080516001600160a01b039092168252519081900360200190f35b6100596100f0565b6100596100ff565b6100df600480360360c081101561009b57600080fd5b5080359060208101356001600160801b03908116916040810135821691606082013563ffffffff169160808101359091169060a001356001600160a01b031661010e565b005b6001546001600160a01b031681565b6002546001600160a01b031681565b6000546001600160a01b031681565b60008054610124906001600160a01b0316610218565b600254600154604080516322aeea8d60e01b8152600481018c90526001600160801b03808c166024830152808b16604483015263ffffffff8a166064830152881660848201526001600160a01b0387811660a483015293841660c482015291831660e483015251929350908316916322aeea8d916101048082019260009290919082900301818387803b1580156101ba57600080fd5b505af11580156101ce573d6000803e3d6000fd5b5050604080516001600160a01b038516815290517f84c162f1396badc29f9c932c79d7495db699b615e2c0da163ae26bd5dbe71d7c9350908190036020019150a150505050505050565b600061022382610233565b6040516037816000f09392505050565b604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b815260609190911b60148201526e5af43d82803e903d91602b57fd5bf360881b60289091015256fea265627a7a72315820631b17aeec31790d3342ef99950fc82fb73b5ab614c8773682731b9f265baea264736f6c634300050d0032"
 
 // DeployArbFactory deploys a new Ethereum contract, binding an instance of ArbFactory to it.
 func DeployArbFactory(auth *bind.TransactOpts, backend bind.ContractBackend, _rollupTemplate common.Address, _globalInboxAddress common.Address, _challengeFactoryAddress common.Address) (common.Address, *types.Transaction, *ArbFactory, error) {
@@ -192,6 +195,84 @@ func (_ArbFactory *ArbFactoryTransactorRaw) Transfer(opts *bind.TransactOpts) (*
 // Transact invokes the (paid) contract method with params as input values.
 func (_ArbFactory *ArbFactoryTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _ArbFactory.Contract.contract.Transact(opts, method, params...)
+}
+
+// ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
+//
+// Solidity: function challengeFactoryAddress() constant returns(address)
+func (_ArbFactory *ArbFactoryCaller) ChallengeFactoryAddress(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ArbFactory.contract.Call(opts, out, "challengeFactoryAddress")
+	return *ret0, err
+}
+
+// ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
+//
+// Solidity: function challengeFactoryAddress() constant returns(address)
+func (_ArbFactory *ArbFactorySession) ChallengeFactoryAddress() (common.Address, error) {
+	return _ArbFactory.Contract.ChallengeFactoryAddress(&_ArbFactory.CallOpts)
+}
+
+// ChallengeFactoryAddress is a free data retrieval call binding the contract method 0x62e3c0b1.
+//
+// Solidity: function challengeFactoryAddress() constant returns(address)
+func (_ArbFactory *ArbFactoryCallerSession) ChallengeFactoryAddress() (common.Address, error) {
+	return _ArbFactory.Contract.ChallengeFactoryAddress(&_ArbFactory.CallOpts)
+}
+
+// GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
+//
+// Solidity: function globalInboxAddress() constant returns(address)
+func (_ArbFactory *ArbFactoryCaller) GlobalInboxAddress(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ArbFactory.contract.Call(opts, out, "globalInboxAddress")
+	return *ret0, err
+}
+
+// GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
+//
+// Solidity: function globalInboxAddress() constant returns(address)
+func (_ArbFactory *ArbFactorySession) GlobalInboxAddress() (common.Address, error) {
+	return _ArbFactory.Contract.GlobalInboxAddress(&_ArbFactory.CallOpts)
+}
+
+// GlobalInboxAddress is a free data retrieval call binding the contract method 0x582923c7.
+//
+// Solidity: function globalInboxAddress() constant returns(address)
+func (_ArbFactory *ArbFactoryCallerSession) GlobalInboxAddress() (common.Address, error) {
+	return _ArbFactory.Contract.GlobalInboxAddress(&_ArbFactory.CallOpts)
+}
+
+// RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
+//
+// Solidity: function rollupTemplate() constant returns(address)
+func (_ArbFactory *ArbFactoryCaller) RollupTemplate(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ArbFactory.contract.Call(opts, out, "rollupTemplate")
+	return *ret0, err
+}
+
+// RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
+//
+// Solidity: function rollupTemplate() constant returns(address)
+func (_ArbFactory *ArbFactorySession) RollupTemplate() (common.Address, error) {
+	return _ArbFactory.Contract.RollupTemplate(&_ArbFactory.CallOpts)
+}
+
+// RollupTemplate is a free data retrieval call binding the contract method 0x8689d996.
+//
+// Solidity: function rollupTemplate() constant returns(address)
+func (_ArbFactory *ArbFactoryCallerSession) RollupTemplate() (common.Address, error) {
+	return _ArbFactory.Contract.RollupTemplate(&_ArbFactory.CallOpts)
 }
 
 // CreateRollup is a paid mutator transaction binding the contract method 0xdd7a2504.
@@ -352,7 +433,7 @@ func (_ArbFactory *ArbFactoryFilterer) ParseRollupCreated(log types.Log) (*ArbFa
 const CloneFactoryABI = "[]"
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72315820748078069721dc0ada7d07dbb7947bcfbdde6013c79c9c13b8218a0f3643523164736f6c634300050d0032"
+var CloneFactoryBin = "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a7231582065eec450bf591cdeb10a534854429bdfa67521cf67ca35af79489092d05420f164736f6c634300050d0032"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {

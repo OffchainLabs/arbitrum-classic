@@ -25,7 +25,7 @@ import (
 )
 
 type ArbClient interface {
-	NewArbFactory(address common.Address) (ArbFactory, error)
+	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
 	NewPendingInbox(address common.Address) (PendingInbox, error)
@@ -35,7 +35,9 @@ type ArbClient interface {
 type ArbAuthClient interface {
 	ArbClient
 	Address() common.Address
+	NewArbFactory(address common.Address) (ArbFactory, error)
 	NewRollup(address common.Address) (ArbRollup, error)
+	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
 	NewPendingTopChallenge(address common.Address) (PendingTopChallenge, error)

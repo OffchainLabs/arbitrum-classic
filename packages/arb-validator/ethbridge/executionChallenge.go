@@ -18,13 +18,15 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"log"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	errors2 "github.com/pkg/errors"
 
@@ -96,6 +98,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 		}},
 	}
 
+	filter.ToBlock = header.Number
 	logs, err := c.Client.FilterLogs(ctx, filter)
 	if err != nil {
 		return err
@@ -107,6 +110,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 	}
 
 	filter.FromBlock = header.Number
+	filter.ToBlock = nil
 	logChan := make(chan types.Log)
 	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {
@@ -160,6 +164,9 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 		return err
 	}
 
+	if event == nil {
+		return nil
+	}
 	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
@@ -197,7 +204,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	c.auth.Context = ctx
 	tx, err := c.Challenge.BisectAssertion(
 		c.auth,
-		precondition.BeforeHash,
+		precondition.BeforeInbox.Hash(),
 		precondition.TimeBounds.AsIntArray(),
 		machineHashes,
 		didInboxInsns,
@@ -218,6 +225,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
+	log.Println("Calling OneStepProof proof with size", len(proof))
 	c.auth.Context = ctx
 	tx, err := c.Challenge.OneStepProof(
 		c.auth,
@@ -239,20 +247,20 @@ func (c *ExecutionChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
-func (c *ExecutionChallenge) ExecutionChallengeChooseSegment(
+func (c *ExecutionChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	preconditions []*protocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
+	totalSteps uint32,
 ) error {
 	bisectionHashes := make([][32]byte, 0, len(assertions))
 	for i := range assertions {
-		bisectionHash := [32]byte{}
-		copy(bisectionHash[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(preconditions[i].Hash()),
-			solsha3.Bytes32(assertions[i].Hash()),
-		))
-		bisectionHashes = append(bisectionHashes, bisectionHash)
+		stepCount := machine.CalculateBisectionStepCount(uint32(i), uint32(len(assertions)), totalSteps)
+		bisectionHashes = append(
+			bisectionHashes,
+			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
+		)
 	}
 	return c.BisectionChallenge.ChooseSegment(
 		ctx,

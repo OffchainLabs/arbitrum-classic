@@ -18,7 +18,8 @@ package challenges
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -31,6 +32,7 @@ import (
 func DefendExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
+	bisectionCount uint32,
 	precondition *protocol.Precondition,
 	numSteps uint32,
 	startMachine machine.Machine,
@@ -42,12 +44,22 @@ func DefendExecutionClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
+	defer close(noteChan)
 
-	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	go func() {
+		for event := range parsingChan {
+			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			if !ok {
+				noteChan <- event
+			}
+		}
+	}()
 	return defendExecution(
 		ctx,
 		contract,
 		noteChan,
+		bisectionCount,
 		machine.NewAssertionDefender(
 			precondition,
 			numSteps,
@@ -61,6 +73,7 @@ func ChallengeExecutionClaim(
 	address common.Address,
 	startPrecondition *protocol.Precondition,
 	startMachine machine.Machine,
+	challengeEverything bool,
 ) (ChallengeState, error) {
 	contract, err := client.NewExecutionChallenge(address)
 	if err != nil {
@@ -69,14 +82,24 @@ func ChallengeExecutionClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
+	defer close(noteChan)
 
-	go arbbridge.HandleBlockchainNotifications(ctx, noteChan, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	go func() {
+		for event := range parsingChan {
+			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			if !ok {
+				noteChan <- event
+			}
+		}
+	}()
 	return challengeExecution(
 		ctx,
 		contract,
 		noteChan,
 		startMachine,
 		startPrecondition,
+		challengeEverything,
 	)
 }
 
@@ -84,6 +107,7 @@ func defendExecution(
 	ctx context.Context,
 	contract arbbridge.ExecutionChallenge,
 	outChan chan arbbridge.Notification,
+	bisectionCount uint32,
 	startDefender machine.AssertionDefender,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
@@ -92,7 +116,7 @@ func defendExecution(
 	}
 	_, ok = note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("ExecutionChallenge expected InitiateChallengeEvent")
+		return 0, fmt.Errorf("ExecutionChallenge expected InitiateChallengeEvent but got %T", note.Event)
 	}
 
 	defender := startDefender
@@ -113,23 +137,25 @@ func defendExecution(
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(arbbridge.OneStepProof)
+			_, ok = note.Event.(arbbridge.OneStepProofEvent)
 			if !ok {
-				return 0, errors.New("ExecutionChallenge expected OneStepProof")
+				return 0, fmt.Errorf("ExecutionChallenge defender expected OneStepProof but got %T", note.Event)
 			}
 			return ChallengeAsserterWon, nil
 		}
 
-		defenders, assertions := defender.NBisect(50)
+		defenders, assertions := defender.NBisect(bisectionCount)
 		err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
-
+		if err != nil {
+			return 0, err
+		}
 		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
 		ev, ok := note.Event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
+			return 0, fmt.Errorf("ExecutionChallenge defender expected ExecutionBisectionEvent but got %T", note.Event)
 		}
 
 		note, state, err = getNextEventWithTimeout(
@@ -143,7 +169,7 @@ func defendExecution(
 		}
 		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ContinueChallengeEvent")
+			return 0, fmt.Errorf("ExecutionChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
 		}
 		defender = defenders[contEv.SegmentIndex.Uint64()]
 	}
@@ -155,6 +181,7 @@ func challengeExecution(
 	outChan chan arbbridge.Notification,
 	startMachine machine.Machine,
 	startPrecondition *protocol.Precondition,
+	challengeEverything bool,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -162,7 +189,7 @@ func challengeExecution(
 	}
 	ev, ok := note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("ExecutionChallenge expected InitiateChallengeEvent")
+		return 0, fmt.Errorf("ExecutionChallenge challenger expected InitiateChallengeEvent but got %T", note.Event)
 	}
 
 	mach := startMachine
@@ -179,24 +206,36 @@ func challengeExecution(
 			return state, err
 		}
 
-		if _, ok := note.Event.(arbbridge.OneStepProof); ok {
+		if _, ok := note.Event.(arbbridge.OneStepProofEvent); ok {
 			return ChallengeAsserterWon, nil
 		}
 
 		ev, ok := note.Event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ExecutionBisectionEvent")
+			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", note.Event)
 		}
-		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach, startPrecondition, ev.Assertions, ev.TotalSteps)
+		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach.Clone(), startPrecondition, ev.Assertions, ev.TotalSteps)
+		if err != nil && challengeEverything {
+			cMach := mach.Clone()
+			challengedAssertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
+			for i := 0; i < len(ev.Assertions); i++ {
+				stepCount := machine.CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
+				m = cMach.Clone()
+				assertion, _ := cMach.ExecuteAssertion(stepCount, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
+				startPrecondition = assertion.Stub().GeneratePostcondition(startPrecondition)
+			}
+			err = nil
+		}
 		if err != nil {
 			return 0, err
 		}
 		preconditions := protocol.GeneratePreconditions(precondition, ev.Assertions)
-		err = contract.ExecutionChallengeChooseSegment(
+		err = contract.ChooseSegment(
 			ctx,
 			challengedAssertionNum,
 			preconditions,
 			ev.Assertions,
+			ev.TotalSteps,
 		)
 		note, state, err = getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
@@ -204,7 +243,7 @@ func challengeExecution(
 		}
 		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("ExecutionChallenge expected ContinueChallengeEvent")
+			return 0, fmt.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", note.Event)
 		}
 		mach = m
 		precondition = preconditions[contEv.SegmentIndex.Uint64()]

@@ -18,27 +18,32 @@ package arbbridge
 
 import (
 	"context"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type ExecutionChallenge interface {
-	BisectionChallenge
+	Challenge
+
 	BisectAssertion(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertions []*protocol.ExecutionAssertionStub,
 		totalSteps uint32,
 	) error
+
 	OneStepProof(
 		ctx context.Context,
 		precondition *protocol.Precondition,
 		assertion *protocol.ExecutionAssertionStub,
 		proof []byte,
 	) error
-	ExecutionChallengeChooseSegment(
+
+	ChooseSegment(
 		ctx context.Context,
 		assertionToChallenge uint16,
 		preconditions []*protocol.Precondition,
 		assertions []*protocol.ExecutionAssertionStub,
+		totalSteps uint32,
 	) error
 }

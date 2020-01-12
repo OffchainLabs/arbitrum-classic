@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package test
+package proofmachine
 
 import (
 	"encoding/json"
@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -33,14 +35,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/proofmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
-func setupTestValidateProof(t *testing.T) (*proofmachine.Connection, error) {
+func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	var connectionInfo ethbridge.ArbAddresses
 
-	bridge_eth_addresses := "bridge_eth_addresses.json"
-	ethURL := GetEthUrl()
+	bridge_eth_addresses := "../bridge_eth_addresses.json"
+	ethURL := test.GetEthUrl()
 
 	seed := time.Now().UnixNano()
 	//seed := int64(1571337692091150000)
@@ -62,17 +64,17 @@ func setupTestValidateProof(t *testing.T) (*proofmachine.Connection, error) {
 		t.Fatal(err)
 	}
 	proofbounds := [2]uint32{0, 10000}
-	return proofmachine.NewEthConnection(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	return NewEthConnection(common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
 }
 
-func runTestValidateProof(t *testing.T, contract string, ethCon *proofmachine.Connection) {
+func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	mach, err := proofmachine.New(basemach, ethCon)
+	mach, err := New(basemach, ethCon)
 	if err != nil {
 		t.Fatal("Loader Error: ", err)
 	}
@@ -82,16 +84,16 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *proofmachine.Co
 	cont := true
 
 	for cont {
-		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds)
+		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple())
 		lastReason := mach.LastBlockReason()
 		if lastReason != nil {
-			if lastReason.IsBlocked(mach, 0) && lastReason.Equals(machine.ErrorBlocked{}) {
+			if lastReason.IsBlocked(mach, protocol.NewTimeBlocks(big.NewInt(0)), false) && lastReason.Equals(machine.ErrorBlocked{}) {
 				t.Fatal("Machine in error state")
 				break
 			}
 		}
 		if stepsExecuted == 0 {
-			if lastReason.IsBlocked(mach, 0) && !lastReason.Equals(machine.BreakpointBlocked{}) {
+			if lastReason.IsBlocked(mach, protocol.NewTimeBlocks(big.NewInt(0)), false) && !lastReason.Equals(machine.BreakpointBlocked{}) {
 				cont = false
 			}
 			fmt.Println(" machine halted ")

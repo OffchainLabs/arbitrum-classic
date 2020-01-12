@@ -410,3 +410,7 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil
 }
+
+func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+	return vm.ArbRollup.GlobalInbox(nil)
+}

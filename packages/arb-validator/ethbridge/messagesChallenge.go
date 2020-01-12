@@ -18,10 +18,12 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -210,4 +212,33 @@ func (c *MessagesChallenge) OneStepProof(
 		return err
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
+}
+
+func (c *MessagesChallenge) ChooseSegment(
+	ctx context.Context,
+	assertionToChallenge uint16,
+	chainHashes [][32]byte,
+	segmentHashes [][32]byte,
+	chainLength *big.Int,
+) error {
+	bisectionCount := uint32(len(chainHashes) - 1)
+	bisectionHashes := make([][32]byte, 0, bisectionCount)
+	for i := uint32(0); i < bisectionCount; i++ {
+		stepCount := machine.CalculateBisectionStepCount(i, bisectionCount, uint32(chainLength.Uint64()))
+		bisectionHashes = append(
+			bisectionHashes,
+			structures.MessageChallengeDataHash(
+				chainHashes[i],
+				chainHashes[i+1],
+				segmentHashes[i],
+				segmentHashes[i+1],
+				new(big.Int).SetUint64(uint64(stepCount)),
+			),
+		)
+	}
+	return c.BisectionChallenge.ChooseSegment(
+		ctx,
+		assertionToChallenge,
+		bisectionHashes,
+	)
 }

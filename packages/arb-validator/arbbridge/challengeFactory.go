@@ -18,13 +18,20 @@ package arbbridge
 
 import (
 	"context"
+	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
-type BisectionChallenge interface {
-	Challenge
-	ChooseSegment(
+type ChallengeFactory interface {
+	CreateChallenge(
 		ctx context.Context,
-		segmentToChallenge uint16,
-		segments [][32]byte,
-	) error
+		asserter common.Address,
+		challenger common.Address,
+		challengePeriod structures.TimeTicks,
+		challengeHash [32]byte,
+		challengeType *big.Int,
+	) (common.Address, error)
 }

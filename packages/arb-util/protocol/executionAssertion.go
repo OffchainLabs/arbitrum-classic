@@ -17,8 +17,6 @@
 package protocol
 
 import (
-	"io"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -32,23 +30,16 @@ type ExecutionAssertion struct {
 	Logs         []value.Value
 }
 
-type MultiReader interface {
-	io.Reader
-	io.ByteReader
-}
-
 func NewExecutionAssertion(afterHash [32]byte, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
 	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
 }
 
 func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
-	if a.AfterHash != b.AfterHash || (a.NumGas != b.NumGas) || (len(a.OutMsgs) != len(b.OutMsgs)) {
-		return false
-	}
-	if a.DidInboxInsn != b.DidInboxInsn {
-		return false
-	}
-	if a.NumGas != b.NumGas {
+	if a.AfterHash != b.AfterHash ||
+		a.DidInboxInsn != b.DidInboxInsn ||
+		a.NumGas != b.NumGas ||
+		len(a.OutMsgs) != len(b.OutMsgs) ||
+		len(a.Logs) != len(b.Logs) {
 		return false
 	}
 	for i, ao := range a.OutMsgs {

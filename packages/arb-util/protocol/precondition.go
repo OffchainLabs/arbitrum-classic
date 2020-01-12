@@ -18,7 +18,10 @@ package protocol
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/golang/protobuf/proto"
 
@@ -94,6 +97,17 @@ type Precondition struct {
 
 func NewPrecondition(beforeHash [32]byte, timeBounds *TimeBoundsBlocks, beforeInbox value.Value) *Precondition {
 	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
+}
+
+func (pre *Precondition) String() string {
+	inboxHash := pre.BeforeInbox.Hash()
+	return fmt.Sprintf(
+		"Precondition(beforeHash: %v, timebounds: [%v, %v], BeforeInbox: %v)",
+		hexutil.Encode(pre.BeforeHash[:]),
+		pre.TimeBounds.Start.Unmarshal().AsInt(),
+		pre.TimeBounds.End.Unmarshal().AsInt(),
+		hexutil.Encode(inboxHash[:]),
+	)
 }
 
 func (pre *Precondition) Equals(b *Precondition) bool {

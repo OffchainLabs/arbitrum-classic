@@ -154,8 +154,12 @@ func (m *Machine) GetInbox() value.TupleValue {
 	return m.context.GetInbox()
 }
 
-func (m *Machine) GetTimeBounds() value.TupleValue {
-	return m.context.GetTimeBounds()
+func (m *Machine) GetStartTime() value.IntValue {
+	return m.context.GetStartTime()
+}
+
+func (m *Machine) GetEndTime() value.IntValue {
+	return m.context.GetEndTime()
 }
 
 func (m *Machine) IncrPC() {
@@ -284,7 +288,7 @@ func (m *Machine) Hash() [32]byte {
 }
 
 func (m *Machine) PrintState() {
-	codePointHash := m.pc.GetPC().Hash()
+	codePointHash := m.pc.GetCurrentCodePointHash()
 	stackHash := m.stack.StateValue().Hash()
 	auxStackHash := m.auxstack.StateValue().Hash()
 	registerHash := m.register.StateValue().Hash()

@@ -19,6 +19,8 @@ package arbbridge
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -29,4 +31,5 @@ type ArbRollupWatcher interface {
 	StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
 
 	GetParams(ctx context.Context) (structures.ChainParams, error)
+	InboxAddress(ctx context.Context) (common.Address, error)
 }

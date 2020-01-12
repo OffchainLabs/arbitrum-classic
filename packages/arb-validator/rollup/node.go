@@ -211,41 +211,39 @@ func (node *Node) NodeDataHash(params structures.ChainParams) [32]byte {
 }
 
 func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, structures.TimeTicks) {
-	ret := [32]byte{}
 	vmProtoData := node.prev.vmProtoData
-
 	switch node.linkType {
 	case structures.InvalidPendingChildType:
 		pendingLeft := new(big.Int).Add(vmProtoData.PendingCount, node.disputable.AssertionParams.ImportedMessageCount)
 		pendingLeft = pendingLeft.Sub(node.disputable.MaxPendingCount, pendingLeft)
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
-			solsha3.Bytes32(node.disputable.MaxPendingTop),
-			solsha3.Uint256(pendingLeft),
-		))
+		ret := structures.PendingTopChallengeDataHash(
+			node.disputable.AssertionClaim.AfterPendingTop,
+			node.disputable.MaxPendingTop,
+			pendingLeft,
+		)
 		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidMessagesChildType:
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(vmProtoData.PendingTop),
-			solsha3.Bytes32(node.disputable.AssertionClaim.AfterPendingTop),
-			solsha3.Bytes32(value.NewEmptyTuple().Hash()),
-			solsha3.Bytes32(node.disputable.AssertionClaim.ImportedMessagesSlice),
-			solsha3.Uint256(node.disputable.AssertionParams.ImportedMessageCount),
-		))
+		ret := structures.MessageChallengeDataHash(
+			vmProtoData.PendingTop,
+			node.disputable.AssertionClaim.AfterPendingTop,
+			value.NewEmptyTuple().Hash(),
+			node.disputable.AssertionClaim.ImportedMessagesSlice,
+			node.disputable.AssertionParams.ImportedMessageCount,
+		)
 		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidExecutionChildType:
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Uint32(node.disputable.AssertionParams.NumSteps),
-			solsha3.Bytes32(node.ExecutionPreconditionHash()),
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.Hash()),
-		))
+		ret := structures.ExecutionDataHash(
+			node.disputable.AssertionParams.NumSteps,
+			node.ExecutionPreconditionHash(),
+			node.disputable.AssertionClaim.AssertionStub.Hash(),
+		)
 		challengePeriod := params.GracePeriod.Add(node.disputable.CheckTime(params))
 		return ret, challengePeriod
 	default:
 		log.Fatal("Unhandled challenge type", node.linkType)
-		return ret, structures.TimeTicks{}
+		return [32]byte{}, structures.TimeTicks{}
 	}
 }
 

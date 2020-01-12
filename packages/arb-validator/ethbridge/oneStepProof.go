@@ -19,9 +19,10 @@ package ethbridge
 import (
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/onestepproof"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -29,12 +30,12 @@ import (
 )
 
 type OneStepProof struct {
-	contract *onestepproof.OneStepProof
+	contract *executionchallenge.OneStepProof
 	client   *ethclient.Client
 }
 
 func NewOneStepProof(address common.Address, client *ethclient.Client) (*OneStepProof, error) {
-	contract, err := onestepproof.NewOneStepProof(address, client)
+	contract, err := executionchallenge.NewOneStepProof(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to OneStepProof")
 	}

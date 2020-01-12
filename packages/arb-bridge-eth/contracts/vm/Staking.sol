@@ -194,13 +194,13 @@ contract Staking is ChallengeType {
             challengerAddress,
             challengerPeriodTicks,
             challengerDataHash,
-            stakerNodeTypes[0]
+            stakerNodeTypes[1]
         );
 
         emit RollupChallengeStarted(
             asserterAddress,
             challengerAddress,
-            stakerNodeTypes[0],
+            stakerNodeTypes[1],
             newChallengeAddr
         );
     }

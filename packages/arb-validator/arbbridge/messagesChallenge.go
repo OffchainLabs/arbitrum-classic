@@ -22,13 +22,15 @@ import (
 )
 
 type MessagesChallenge interface {
-	BisectionChallenge
+	Challenge
+
 	Bisect(
 		ctx context.Context,
 		chainHashes [][32]byte,
 		segmentHashes [][32]byte,
 		chainLength *big.Int,
 	) error
+
 	OneStepProof(
 		ctx context.Context,
 		lowerHashA [32]byte,
@@ -36,5 +38,13 @@ type MessagesChallenge interface {
 		lowerHashB [32]byte,
 		topHashB [32]byte,
 		value [32]byte,
+	) error
+
+	ChooseSegment(
+		ctx context.Context,
+		assertionToChallenge uint16,
+		chainHashes [][32]byte,
+		segmentHashes [][32]byte,
+		chainLength *big.Int,
 	) error
 }

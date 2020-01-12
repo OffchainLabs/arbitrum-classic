@@ -118,38 +118,46 @@ type ChallengeContract interface {
 	TimeoutChallenge(ctx context.Context) error
 }
 
-func HandleBlockchainNotifications(ctx context.Context, noteChan chan Notification, contract ContractConnection) {
+func HandleBlockchainNotifications(ctx context.Context, contract ContractConnection) chan Notification {
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
-	defer close(outChan)
-	defer close(errChan)
 	if err := contract.StartConnection(ctx, outChan, errChan); err != nil {
-		return
+		close(outChan)
+		close(errChan)
+		return nil
 	}
-	for {
-		hitError := false
-		select {
-		case <-ctx.Done():
-			break
-		case notification, ok := <-outChan:
-			if !ok {
-				hitError = true
-				break
-			}
-			noteChan <- notification
-		case <-errChan:
-			hitError = true
-		}
 
-		if hitError {
-			// Ignore error and try to reset connection
-			for {
-				if err := contract.StartConnection(ctx, outChan, errChan); err == nil {
+	noteChan := make(chan Notification, 1024)
+	go func() {
+		defer close(outChan)
+		defer close(errChan)
+		defer close(noteChan)
+		for {
+			hitError := false
+			select {
+			case <-ctx.Done():
+				break
+			case notification, ok := <-outChan:
+				if !ok {
+					hitError = true
 					break
 				}
-				log.Println("Error: Can't connect to blockchain")
-				time.Sleep(5 * time.Second)
+				noteChan <- notification
+			case <-errChan:
+				hitError = true
+			}
+
+			if hitError {
+				// Ignore error and try to reset connection
+				for {
+					if err := contract.StartConnection(ctx, outChan, errChan); err == nil {
+						break
+					}
+					log.Println("Error: Can't connect to blockchain")
+					time.Sleep(5 * time.Second)
+				}
 			}
 		}
-	}
+	}()
+	return noteChan
 }

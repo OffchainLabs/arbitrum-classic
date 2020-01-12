@@ -18,30 +18,30 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
+	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
-
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	errors2 "github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var pendingTopBisectedID common.Hash
 var pendingTopOneStepProofCompletedID common.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
+	parsed, err := abi.JSON(strings.NewReader(pendingtopchallenge.PendingTopChallengeABI))
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func NewPendingTopChallenge(address common.Address, client *ethclient.Client, au
 func (c *PendingTopChallenge) setupContracts() error {
 	challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.Client)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
+		return errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
 	}
 
 	c.Challenge = challengeManagerContract
@@ -205,4 +205,30 @@ func (c *PendingTopChallenge) OneStepProof(
 		return err
 	}
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
+}
+
+func (c *PendingTopChallenge) ChooseSegment(
+	ctx context.Context,
+	assertionToChallenge uint16,
+	chainHashes [][32]byte,
+	chainLength uint32,
+) error {
+	bisectionCount := uint32(len(chainHashes) - 1)
+	bisectionHashes := make([][32]byte, 0, bisectionCount)
+	for i := uint32(0); i < bisectionCount; i++ {
+		stepCount := machine.CalculateBisectionStepCount(i, bisectionCount, chainLength)
+		bisectionHashes = append(
+			bisectionHashes,
+			structures.PendingTopChallengeDataHash(
+				chainHashes[i],
+				chainHashes[i+1],
+				new(big.Int).SetUint64(uint64(stepCount)),
+			),
+		)
+	}
+	return c.BisectionChallenge.ChooseSegment(
+		ctx,
+		assertionToChallenge,
+		bisectionHashes,
+	)
 }

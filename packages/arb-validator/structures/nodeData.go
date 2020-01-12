@@ -164,8 +164,7 @@ type AssertionClaim struct {
 
 func (dn *AssertionClaim) String() string {
 	return fmt.Sprintf(
-		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, "+
-			"Assertion: %v)",
+		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
 		hexutil.Encode(dn.AfterPendingTop[:]),
 		hexutil.Encode(dn.ImportedMessagesSlice[:]),
 		dn.AssertionStub.ToString(),

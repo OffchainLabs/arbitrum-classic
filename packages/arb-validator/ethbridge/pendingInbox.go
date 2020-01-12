@@ -112,7 +112,7 @@ func (con *PendingInbox) SendEthMessage(
 	if err != nil {
 		return 0, err
 	}
-	receipt, err := waitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "SendEthMessage")
+	receipt, err := WaitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "SendEthMessage")
 	return receipt.Status, err
 }
 

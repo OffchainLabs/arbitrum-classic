@@ -18,9 +18,10 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
@@ -94,6 +95,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 		}},
 	}
 
+	filter.ToBlock = header.Number
 	logs, err := c.Client.FilterLogs(ctx, filter)
 	if err != nil {
 		return err
@@ -104,7 +106,8 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 		}
 	}
 
-	filter.FromBlock = header.Number
+	filter.FromBlock = new(big.Int).Add(header.Number, big.NewInt(1))
+	filter.ToBlock = nil
 	logChan := make(chan types.Log)
 	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {

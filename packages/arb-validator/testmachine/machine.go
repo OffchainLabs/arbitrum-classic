@@ -109,9 +109,9 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 	totalSteps := uint32(0)
 	stepIncrease := uint32(50)
 	for i := uint32(0); i < maxSteps; i += stepIncrease {
-		steps := maxSteps - i
-		if steps > stepIncrease {
-			steps = stepIncrease
+		steps := stepIncrease
+		if i+stepIncrease > maxSteps {
+			steps = maxSteps - i
 		}
 
 		pcStart := m.gomachine.GetPC()

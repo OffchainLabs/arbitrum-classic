@@ -116,6 +116,10 @@ void Machine::runOne() {
             machine_state.context.numSteps++;
             machine_state.context.numGas +=
                 InstructionArbGasCost.at(instruction.op.opcode);
+        } else {
+            if (instruction.op.immediate) {
+                machine_state.stack.popClear();
+            }
         }
 
         if (machine_state.state != Status::Error) {

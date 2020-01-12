@@ -57,14 +57,9 @@ func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*prot
 
 	pre := ad.precondition
 	for i := uint32(0); i < slices; i++ {
-		steps := uint32(0)
-		if i == 0 {
-			steps = nsteps/slices + nsteps%slices
-		} else {
-			steps = nsteps / slices
-		}
-
+		steps := CalculateBisectionStepCount(uint32(i), slices, nsteps)
 		initState := m.Clone()
+
 		assertion, numSteps := m.ExecuteAssertion(steps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
 		defenders = append(defenders, NewAssertionDefender(
 			pre,
@@ -82,6 +77,14 @@ func (ad AssertionDefender) SolidityOneStepProof() ([]byte, error) {
 	return ad.initState.MarshalForProof()
 }
 
+func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) uint32 {
+	if chunkIndex == 0 {
+		return totalSteps/segmentCount + totalSteps%segmentCount
+	} else {
+		return totalSteps / segmentCount
+	}
+}
+
 func ChooseAssertionToChallenge(
 	m Machine,
 	pre *protocol.Precondition,
@@ -90,13 +93,7 @@ func ChooseAssertionToChallenge(
 ) (uint16, Machine, error) {
 	assertionCount := uint32(len(assertions))
 	for i := range assertions {
-		steps := uint32(0)
-		if i == 0 {
-			steps = totalSteps/assertionCount + totalSteps%assertionCount
-		} else {
-			steps = totalSteps / assertionCount
-		}
-
+		steps := CalculateBisectionStepCount(uint32(i), assertionCount, totalSteps)
 		initState := m.Clone()
 		generatedAssertion, numSteps := m.ExecuteAssertion(
 			steps,
