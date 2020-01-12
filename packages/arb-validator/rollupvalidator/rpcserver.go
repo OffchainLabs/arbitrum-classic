@@ -35,10 +35,10 @@ type RPCServer struct {
 	*Server
 }
 
-func LaunchRPC(chainObserver *rollup.ChainObserver, port string) {
+func LaunchRPC(chainObserver *rollup.ChainObserver, port string) error {
 	server, err := NewRPCServer(chainObserver, 200000)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Run server
@@ -56,10 +56,7 @@ func LaunchRPC(chainObserver *rollup.ChainObserver, port string) {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
-	err = http.ListenAndServe(":"+port, handlers.CORS(headersOk, originsOk, methodsOk)(r))
-	if err != nil {
-		panic(err)
-	}
+	return http.ListenAndServe(":"+port, handlers.CORS(headersOk, originsOk, methodsOk)(r))
 }
 
 // NewServer returns a new instance of the Server class

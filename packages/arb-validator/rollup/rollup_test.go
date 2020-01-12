@@ -219,8 +219,7 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			true,
 		)
 	}
-	return NewChain(
-		context.TODO(),
+	chain, err := NewChain(
 		dummyAddress,
 		checkpointer,
 		structures.ChainParams{
@@ -232,6 +231,11 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 		false,
 		common.NewTimeBlocks(big.NewInt(10)),
 	)
+	if err != nil {
+		return nil, err
+	}
+	chain.Start(context.Background())
+	return chain, nil
 }
 
 func createSomeStakers(chain *ChainObserver) {

@@ -19,7 +19,6 @@ package rollup
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -52,7 +51,6 @@ type ChainObserver struct {
 }
 
 func NewChain(
-	ctx context.Context,
 	rollupAddr common.Address,
 	checkpointer RollupCheckpointer,
 	vmParams structures.ChainParams,
@@ -79,15 +77,20 @@ func NewChain(
 	}
 	ret.Lock()
 	defer ret.Unlock()
-
-	ret.startCleanupThread(ctx)
-	ret.startConfirmThread(ctx)
 	if updateOpinion {
 		ret.isOpinionated = true
 		ret.assertionMadeChan = make(chan bool, 20)
-		ret.startOpinionUpdateThread(ctx)
 	}
 	return ret, nil
+}
+
+func (chain *ChainObserver) Start(ctx context.Context) {
+	chain.startCleanupThread(ctx)
+	chain.startConfirmThread(ctx)
+
+	if chain.isOpinionated {
+		chain.startOpinionUpdateThread(ctx)
+	}
 }
 
 func (chain *ChainObserver) AddListener(listener ChainListener) {
@@ -275,15 +278,11 @@ func (chain *ChainObserver) notifyAssert(
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
 ) error {
-	topPendingCount, ok := chain.pendingInbox.GetHeight(ev.MaxPendingTop)
-	if !ok {
-		return fmt.Errorf("Couldn't find top message in inbox: %v", ev.MaxPendingTop)
-	}
 	disputableNode := structures.NewDisputableNode(
 		ev.Params,
 		ev.Claim,
 		ev.MaxPendingTop,
-		topPendingCount,
+		ev.MaxPendingCount,
 	)
 	chain.nodeGraph.CreateNodesOnAssert(
 		chain.nodeGraph.nodeFromHash[ev.PrevLeafHash],

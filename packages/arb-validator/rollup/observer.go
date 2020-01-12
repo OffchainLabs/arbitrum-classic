@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -48,7 +49,6 @@ func CreateObserver(
 	}
 
 	chain, err := NewChain(
-		ctx,
 		rollupAddr,
 		checkpointer,
 		vmParams,
@@ -59,11 +59,17 @@ func CreateObserver(
 		return nil, err
 	}
 
+	fmt.Println("Starting connection")
+
 	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("Started connection")
+
+	chain.Start(ctx)
 
 	go func() {
 		lastBlockNumberSeen := big.NewInt(0)

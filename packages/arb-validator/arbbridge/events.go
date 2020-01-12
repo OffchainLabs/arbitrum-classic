@@ -91,10 +91,11 @@ func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type AssertedEvent struct {
-	PrevLeafHash  common.Hash
-	Params        *structures.AssertionParams
-	Claim         *structures.AssertionClaim
-	MaxPendingTop common.Hash
+	PrevLeafHash    common.Hash
+	Params          *structures.AssertionParams
+	Claim           *structures.AssertionClaim
+	MaxPendingTop   common.Hash
+	MaxPendingCount *big.Int
 }
 
 func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {

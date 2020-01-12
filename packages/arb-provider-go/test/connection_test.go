@@ -6,13 +6,16 @@ import (
 	jsonenc "encoding/json"
 	"errors"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"math/rand"
+	"net"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
@@ -46,7 +49,6 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 		t.Errorf("setupValidators ReadAll error %v", err)
 		return err
 	}
-	t.Log("bridge_eth_addresses.json loaded")
 	var connectionInfo ethbridge.ArbAddresses
 	if err := jsonenc.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Errorf("setupValidators Unmarshal error %v", err)
@@ -122,7 +124,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	if err != nil {
 		return err
 	}
-	chainObserver1.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
+	chainObserver2.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
 
 	validatorListener2 := rollup.NewValidatorChainListener(chainObserver2)
 	err = validatorListener2.AddStaker(client2)
@@ -131,13 +133,36 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 	chainObserver2.AddListener(validatorListener2)
 
-	go rollupvalidator.LaunchRPC(chainObserver1, "1235")
+	go func() {
+		err := rollupvalidator.LaunchRPC(chainObserver2, "1235")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second)
+waitloop:
+	for {
+		select {
+		case <-ticker.C:
+			conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", "1235"), time.Second)
+			if err != nil || conn == nil {
+				continue
+			}
+			if err := conn.Close(); err != nil {
+				t.Fatal(err)
+			}
+			break waitloop
+		case <-time.After(time.Second * 5):
+			t.Fatal("Couldn't connect to rpc")
+		}
+	}
 
 	return nil
 
 }
 
-func RunValidators(t *testing.T) (*FibonacciSession, error) {
+func RunValidators(t *testing.T) (*FibonacciSession, *goarbitrum.ArbConnection, error) {
 	ethURL := test.GetEthUrl()
 	val1Key := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
 	val2Key := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
@@ -146,29 +171,30 @@ func RunValidators(t *testing.T) (*FibonacciSession, error) {
 	err := setupValidators(val1Key, val2Key, t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	privateKeyBytes, _ := hex.DecodeString(userKeyHex)
-	conn, dialerr := goarbitrum.Dial("", privateKeyBytes, ethURL)
+	conn, dialerr := goarbitrum.Dial("http://localhost:1235", privateKeyBytes, ethURL)
 	if dialerr != nil {
 		t.Errorf("Dial error %v", dialerr)
-		return nil, err
+		return nil, nil, err
 	}
 	userKey, err := crypto.HexToECDSA(userKeyHex)
 	if err != nil {
 		t.Errorf("HexToECDSA error %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 	auth := bind.NewKeyedTransactor(userKey)
 	auth.GasLimit = 100000000
+	auth.Signer = auth.Signer
 
 	var fibAddr common.Address
 	fibAddr = common.HexToAddress("0x895521964D724c8362A36608AAf09A3D7d0A0445")
 	fib, err := NewFibonacci(fibAddr.ToEthAddress(), conn)
 	if err != nil {
 		t.Errorf("NewFibonacci error %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	//Wrap the Token contract instance into a session
@@ -180,7 +206,7 @@ func RunValidators(t *testing.T) (*FibonacciSession, error) {
 		TransactOpts: *auth,
 	}
 
-	return fibonacciSession, nil
+	return fibonacciSession, conn, nil
 }
 
 type ListenerError struct {
@@ -224,8 +250,26 @@ func startFibTestEventListener(fibonacci *Fibonacci, ch chan interface{}, t *tes
 	}()
 }
 
+func waitForReceipt(client *goarbitrum.ArbConnection, tx *types.Transaction) (*types.Receipt, error) {
+	txhash, err := client.TxHash(tx)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		receipt, err := client.TransactionReceipt(context.Background(), txhash.ToEthHash())
+		if err == nil {
+			return receipt, nil
+		}
+		if err.Error() == "not found" {
+			continue
+		}
+		log.Println("GetMessageResult error:", err)
+		return nil, err
+	}
+}
+
 func TestFib(t *testing.T) {
-	session, err := RunValidators(t)
+	session, client, err := RunValidators(t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
 		t.FailNow()
@@ -234,9 +278,14 @@ func TestFib(t *testing.T) {
 	t.Run("TestFibResult", func(t *testing.T) {
 		fibsize := 15
 		fibnum := 11
-		_, err := session.GenerateFib(big.NewInt(int64(fibsize)))
+		tx, err := session.GenerateFib(big.NewInt(int64(fibsize)))
 		if err != nil {
 			t.Errorf("GenerateFib error %v", err)
+			return
+		}
+		_, err = waitForReceipt(client, tx)
+		if err != nil {
+			t.Errorf("GenerateFib receipt error %v", err)
 			return
 		}
 		fibval, err := session.GetFib(big.NewInt(int64(fibnum)))

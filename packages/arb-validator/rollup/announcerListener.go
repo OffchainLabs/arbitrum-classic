@@ -37,7 +37,7 @@ func (al *AnnouncerListener) StakeRemoved(ev arbbridge.StakeRefundedEvent) {
 }
 
 func (al *AnnouncerListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
-	log.Printf("%v Staker %v moved to location: %v\n", &al.Prefix, ev.Staker, ev.Location)
+	log.Printf("%v Staker %v moved to location: %v\n", al.Prefix, ev.Staker, ev.Location)
 }
 
 func (al *AnnouncerListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node) {

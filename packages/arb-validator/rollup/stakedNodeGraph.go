@@ -97,14 +97,13 @@ func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, curren
 func (chain *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash common.Hash) {
 	staker := chain.stakers.Get(stakerAddr)
 	if staker == nil {
-		panic("Moved nonexistant staker")
+		log.Fatalf("Moved nonexistant staker %v to node %v", stakerAddr, nodeHash)
 	}
 	staker.location.numStakers--
 	// no need to consider pruning staker.location, because a successor of it is getting a stake
 	newLocation, ok := chain.nodeFromHash[nodeHash]
 	if !ok {
-		log.Println("Bad location", nodeHash)
-		panic("Moved to nonexistant location")
+		log.Fatalf("Moved staker %v to nonexistant node %v", stakerAddr, nodeHash)
 	}
 	staker.location = newLocation
 	staker.location.numStakers++

@@ -151,19 +151,32 @@ interface ArbRollupInterface extends Interface {
 
         RollupAsserted: TypedEventDescription<{
             encodeTopics([
+                fields,
+                pendingCount,
+                importedMessageCount,
+                timeBoundsBlocks,
+                numArbGas,
+                numSteps,
+                didInboxInsn,
+            ]: [null, null, null, null, null, null, null]): string[];
+        }>;
+
+        RollupAsserted: TypedEventDescription<{
+            encodeTopics([
                 prevLeaf,
                 pendingValue,
-                importedMessageCount,
                 afterPendingTop,
                 importedMessagesSlice,
                 afterVMHash,
                 messagesAccHash,
                 logsAccHash,
+                pendingCount,
+                importedMessageCount,
                 timeBoundsBlocks,
                 numArbGas,
                 numSteps,
                 didInboxInsn,
-            ]: [null, null, null, null, null, null, null, null, null, null, null, null]): string[];
+            ]: [null, null, null, null, null, null, null, null, null, null, null, null, null]): string[];
         }>;
 
         RollupChallengeCompleted: TypedEventDescription<{
@@ -343,14 +356,25 @@ export class ArbRollup extends Contract {
         ConfirmedAssertion(logsAccHash: null): EventFilter;
 
         RollupAsserted(
+            fields: null,
+            pendingCount: null,
+            importedMessageCount: null,
+            timeBoundsBlocks: null,
+            numArbGas: null,
+            numSteps: null,
+            didInboxInsn: null,
+        ): EventFilter;
+
+        RollupAsserted(
             prevLeaf: null,
             pendingValue: null,
-            importedMessageCount: null,
             afterPendingTop: null,
             importedMessagesSlice: null,
             afterVMHash: null,
             messagesAccHash: null,
             logsAccHash: null,
+            pendingCount: null,
+            importedMessageCount: null,
             timeBoundsBlocks: null,
             numArbGas: null,
             numSteps: null,

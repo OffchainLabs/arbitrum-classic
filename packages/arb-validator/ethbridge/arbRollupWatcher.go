@@ -91,6 +91,37 @@ func newRollupWatcher(address ethcommon.Address, client *ethclient.Client) (*eth
 	return vm, err
 }
 
+func (vm *ethRollupWatcher) messageFilter() ethereum.FilterQuery {
+	addressIndex := ethcommon.Hash{}
+	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.address.Bytes(), 32))
+	return ethereum.FilterQuery{
+		Addresses: []ethcommon.Address{vm.pendingInboxAddress},
+		Topics: [][]ethcommon.Hash{
+			{messageDeliveredID},
+			{addressIndex},
+		},
+	}
+}
+
+func (vm *ethRollupWatcher) rollupFilter() ethereum.FilterQuery {
+	return ethereum.FilterQuery{
+		Addresses: []ethcommon.Address{vm.address},
+		Topics: [][]ethcommon.Hash{
+			{
+				rollupStakeCreatedID,
+				rollupChallengeStartedID,
+				rollupChallengeCompletedID,
+				rollupRefundedID,
+				rollupPrunedID,
+				rollupStakeMovedID,
+				rollupAssertedID,
+				rollupConfirmedID,
+				confirmedAssertionID,
+			},
+		},
+	}
+}
+
 func (vm *ethRollupWatcher) setupContracts() error {
 	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
 	if err != nil {
@@ -126,69 +157,15 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 		return err
 	}
 
-	currentHeader, err := vm.Client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
+	filter := vm.rollupFilter()
+	messagesFilter := vm.messageFilter()
 
-	filter := ethereum.FilterQuery{
-		Addresses: []ethcommon.Address{vm.address},
-		Topics: [][]ethcommon.Hash{
-			{
-				rollupStakeCreatedID,
-				rollupChallengeStartedID,
-				rollupChallengeCompletedID,
-				rollupRefundedID,
-				rollupPrunedID,
-				rollupStakeMovedID,
-				rollupAssertedID,
-				rollupConfirmedID,
-				confirmedAssertionID,
-			},
-		},
-	}
-
-	addressIndex := ethcommon.Hash{}
-	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.address.Bytes(), 32))
-	messagesFilter := ethereum.FilterQuery{
-		Addresses: []ethcommon.Address{vm.pendingInboxAddress},
-		Topics: [][]ethcommon.Hash{
-			{messageDeliveredID},
-			{addressIndex},
-		},
-	}
-	messagesFilter.ToBlock = currentHeader.Number
-	messageLogs, err := vm.Client.FilterLogs(ctx, messagesFilter)
-	if err != nil {
-		return err
-	}
-	for _, log := range messageLogs {
-		if err := vm.processEvents(ctx, log, outChan); err != nil {
-			return err
-		}
-	}
-
-	filter.ToBlock = currentHeader.Number
-	logs, err := vm.Client.FilterLogs(ctx, filter)
-	if err != nil {
-		return err
-	}
-	for _, log := range logs {
-		if err := vm.processEvents(ctx, log, outChan); err != nil {
-			return err
-		}
-	}
-
-	filter.FromBlock = currentHeader.Number
-	filter.ToBlock = nil
 	logChan := make(chan types.Log)
 	logSub, err := vm.Client.SubscribeFilterLogs(ctx, filter, logChan)
 	if err != nil {
 		return err
 	}
 
-	messagesFilter.FromBlock = currentHeader.Number
-	messagesFilter.ToBlock = nil
 	messagesLogChan := make(chan types.Log)
 	messagesLogSub, err := vm.Client.SubscribeFilterLogs(ctx, messagesFilter, messagesLogChan)
 	if err != nil {
@@ -298,7 +275,7 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.AssertedEvent{
-				PrevLeafHash: eventVal.PrevLeaf,
+				PrevLeafHash: eventVal.Fields[0],
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
 					TimeBounds: &protocol.TimeBoundsBlocks{
@@ -308,19 +285,20 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 					ImportedMessageCount: eventVal.ImportedMessageCount,
 				},
 				Claim: &structures.AssertionClaim{
-					AfterPendingTop:       eventVal.AfterPendingTop,
-					ImportedMessagesSlice: eventVal.ImportedMessagesSlice,
+					AfterPendingTop:       eventVal.Fields[2],
+					ImportedMessagesSlice: eventVal.Fields[3],
 					AssertionStub: &valprotocol.ExecutionAssertionStub{
-						AfterHash:        eventVal.AfterVMHash,
+						AfterHash:        eventVal.Fields[4],
 						DidInboxInsn:     eventVal.DidInboxInsn,
 						NumGas:           eventVal.NumArbGas,
 						FirstMessageHash: [32]byte{},
-						LastMessageHash:  eventVal.MessagesAccHash,
+						LastMessageHash:  eventVal.Fields[5],
 						FirstLogHash:     [32]byte{},
-						LastLogHash:      eventVal.LogsAccHash,
+						LastLogHash:      eventVal.Fields[6],
 					},
 				},
-				MaxPendingTop: eventVal.PendingValue,
+				MaxPendingTop:   eventVal.Fields[1],
+				MaxPendingCount: eventVal.PendingCount,
 			}, nil
 		} else if log.Topics[0] == rollupConfirmedID {
 			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(log)

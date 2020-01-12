@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -162,19 +164,10 @@ func (conn *ArbConnection) EstimateGas(
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
+	arbCallValue, err := conn.TxToVal(tx)
 	if err != nil {
-		log.Println("Error converting to SizedByteArray")
 		return err
 	}
-	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(tx.To()[:]))
-	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
-
-	arbCallValue, err := value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
-	if err != nil {
-		panic("Unexpected error building arbCallValue")
-	}
-
 	return conn.pendingInbox.SendEthMessage(ctx, arbCallValue, conn.vmId, tx.Value())
 }
 
@@ -350,4 +343,105 @@ func (sub *subscription) Unsubscribe() {
 // The error channel is closed by Unsubscribe.
 func (sub *subscription) Err() <-chan error {
 	return sub.errChan
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Methods of Deploy Backend
+// CodeAt is implemented above
+
+// TransactionReceipt returns the receipt of a transaction by transaction hash.
+// Note that the receipt is not available for pending transactions.
+func (conn *ArbConnection) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+	result, ok, err := conn.proxy.GetMessageResult(txHash.Bytes())
+	if err != nil {
+		log.Println("TransactionReceipt error:", err)
+		return nil, err
+	} else if !ok {
+		return nil, ethereum.NotFound
+	}
+
+	processed, err := evm.ProcessLog(result)
+	if err != nil {
+		log.Println("TransactionReceipt ProcessLog error:", err)
+		return nil, err
+	}
+
+	status := uint64(0)
+	var logs []evm.Log
+	switch res := processed.(type) {
+	case evm.Return:
+		status = 1
+		logs = res.Logs
+	case evm.Stop:
+		status = 1
+		logs = res.Logs
+	default:
+		// Transaction unsuccessful
+	}
+
+	ethMsg := processed.GetEthMsg()
+
+	var evmLogs []*types.Log
+	if logs != nil {
+		for i, l := range logs {
+			addressBytes := l.ContractID.ToBytes()
+
+			evmParsedTopics := make([]ethcommon.Hash, len(l.Topics))
+			for j, t := range l.Topics {
+				evmParsedTopics[j] = ethcommon.BytesToHash(t[:])
+			}
+
+			evmLogs = append(evmLogs, &types.Log{
+				Address:     ethcommon.BytesToAddress(addressBytes[12:]),
+				Topics:      evmParsedTopics,
+				Data:        l.Data,
+				BlockNumber: ethMsg.Data.Number.Uint64(),
+				TxHash:      txHash,
+				TxIndex:     0,
+				BlockHash:   txHash,
+				Index:       uint(i),
+				Removed:     false,
+			})
+		}
+	}
+
+	return &types.Receipt{
+		PostState:         []byte{0},
+		Status:            status,
+		CumulativeGasUsed: 1,
+		Bloom:             types.BytesToBloom([]byte{0}),
+		Logs:              evmLogs,
+		TxHash:            txHash,
+		ContractAddress:   ethcommon.BytesToAddress([]byte{0}),
+		GasUsed:           1,
+		BlockHash:         txHash,
+		BlockNumber:       ethMsg.Data.Number,
+		TransactionIndex:  0,
+	}, nil
+}
+
+func (conn *ArbConnection) TxToVal(tx *types.Transaction) (value.Value, error) {
+	dataValue, err := evm.BytesToSizedByteArray(tx.Data())
+	if err != nil {
+		log.Println("Error converting to SizedByteArray")
+		return nil, err
+	}
+	destAddrValue := value.NewIntValue(new(big.Int).SetBytes(tx.To()[:]))
+	seqNumValue := value.NewIntValue(new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(2)))
+
+	return value.NewTupleFromSlice([]value.Value{dataValue, destAddrValue, seqNumValue})
+}
+
+func (conn *ArbConnection) TxHash(tx *types.Transaction) (common.Hash, error) {
+	arbCallValue, err := conn.TxToVal(tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	tokenType := [21]byte{}
+	return hashing.SoliditySHA3(
+		hashing.Address(conn.vmId),
+		hashing.Bytes32(arbCallValue.Hash()),
+		hashing.Uint256(big.NewInt(0)), // amount
+		tokenType[:],
+	), nil
 }

@@ -35,6 +35,10 @@ func (h Hash) Bytes() []byte {
 	return h[:]
 }
 
+func (h Hash) ToEthHash() ethcommon.Hash {
+	return ethcommon.Hash(h)
+}
+
 func (h Hash) MarshalToBuf() *HashBuf {
 	return &HashBuf{
 		Value: append([]byte{}, h[:]...),
