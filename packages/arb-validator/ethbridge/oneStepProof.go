@@ -17,11 +17,13 @@
 package ethbridge
 
 import (
+	"context"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -44,13 +46,13 @@ func NewOneStepProof(address ethcommon.Address, client *ethclient.Client) (*OneS
 }
 
 func (con *OneStepProof) ValidateProof(
-	auth *bind.CallOpts,
+	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
 	return con.contract.ValidateProof(
-		auth,
+		&bind.CallOpts{Context: ctx},
 		precondition.BeforeHash,
 		precondition.TimeBounds.AsIntArray(),
 		precondition.BeforeInbox.Hash(),

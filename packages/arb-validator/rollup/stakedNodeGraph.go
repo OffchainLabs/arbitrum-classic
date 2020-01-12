@@ -22,8 +22,6 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -105,7 +103,7 @@ func (chain *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash comm
 	// no need to consider pruning staker.location, because a successor of it is getting a stake
 	newLocation, ok := chain.nodeFromHash[nodeHash]
 	if !ok {
-		log.Println("Bad location", hexutil.Encode(nodeHash[:]))
+		log.Println("Bad location", nodeHash)
 		panic("Moved to nonexistant location")
 	}
 	staker.location = newLocation

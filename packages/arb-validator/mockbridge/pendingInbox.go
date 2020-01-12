@@ -17,9 +17,8 @@
 package mockbridge
 
 import (
+	"context"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -41,7 +40,7 @@ func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (*Pendi
 }
 
 func (con *PendingInbox) SendMessage(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	msg valprotocol.Message,
 ) error {
 	//var dataBuf bytes.Buffer
@@ -63,7 +62,7 @@ func (con *PendingInbox) SendMessage(
 }
 
 func (con *PendingInbox) ForwardMessage(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	msg valprotocol.Message,
 	sig []byte,
 ) error {
@@ -87,11 +86,11 @@ func (con *PendingInbox) ForwardMessage(
 }
 
 func (con *PendingInbox) SendEthMessage(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	data value.Value,
 	destination common.Address,
 	amount *big.Int,
-) (uint64, error) {
+) error {
 	//var dataBuf bytes.Buffer
 	//if err := value.MarshalValue(data, &dataBuf); err != nil {
 	//	return 0, err
@@ -111,10 +110,10 @@ func (con *PendingInbox) SendEthMessage(
 	//}
 	//receipt, err := waitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "SendEthMessage")
 	//return receipt.Status, err
-	return 0, nil
+	return nil
 }
 
-func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) error {
+func (con *PendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
 	//tx, err := con.GlobalPendingInbox.DepositEth(
 	//	&bind.TransactOpts{
 	//		From:     auth.From,
@@ -132,7 +131,7 @@ func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, 
 }
 
 func (con *PendingInbox) GetTokenBalance(
-	auth *bind.CallOpts,
+	ctx context.Context,
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {

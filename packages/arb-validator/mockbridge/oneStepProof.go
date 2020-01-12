@@ -17,9 +17,8 @@
 package mockbridge
 
 import (
+	"context"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -41,7 +40,7 @@ func NewOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneSt
 }
 
 func (con *OneStepProof) ValidateProof(
-	auth *bind.CallOpts,
+	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,

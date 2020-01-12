@@ -19,9 +19,9 @@ package structures
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) uint32 {

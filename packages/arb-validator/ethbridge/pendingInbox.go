@@ -18,12 +18,14 @@ package ethbridge
 
 import (
 	"bytes"
+	"context"
 	"math/big"
 
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -35,26 +37,28 @@ import (
 type PendingInbox struct {
 	GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
 	client             *ethclient.Client
+	auth               *bind.TransactOpts
 }
 
-func NewPendingInbox(address ethcommon.Address, client *ethclient.Client) (*PendingInbox, error) {
+func NewPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*PendingInbox, error) {
 	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
-	return &PendingInbox{globalPendingInboxContract, client}, nil
+	return &PendingInbox{globalPendingInboxContract, client, auth}, nil
 }
 
 func (con *PendingInbox) SendMessage(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	msg valprotocol.Message,
 ) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
 		return err
 	}
+	con.auth.Context = ctx
 	tx, err := con.GlobalPendingInbox.SendMessage(
-		auth,
+		con.auth,
 		msg.Destination.ToEthAddress(),
 		msg.TokenType,
 		msg.Currency,
@@ -63,11 +67,11 @@ func (con *PendingInbox) SendMessage(
 	if err != nil {
 		return err
 	}
-	return waitForReceipt(auth.Context, con.client, auth.From, tx, "SendMessage")
+	return con.waitForReceipt(ctx, tx, "SendMessage")
 }
 
 func (con *PendingInbox) ForwardMessage(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	msg valprotocol.Message,
 	sig []byte,
 ) error {
@@ -75,8 +79,9 @@ func (con *PendingInbox) ForwardMessage(
 	if err := value.MarshalValue(msg.Data, &dataBuf); err != nil {
 		return err
 	}
+	con.auth.Context = ctx
 	tx, err := con.GlobalPendingInbox.ForwardMessage(
-		auth,
+		con.auth,
 		msg.Destination.ToEthAddress(),
 		msg.TokenType,
 		msg.Currency,
@@ -86,60 +91,65 @@ func (con *PendingInbox) ForwardMessage(
 	if err != nil {
 		return err
 	}
-	return waitForReceipt(auth.Context, con.client, auth.From, tx, "ForwardMessage")
+	return con.waitForReceipt(ctx, tx, "ForwardMessage")
 }
 
 func (con *PendingInbox) SendEthMessage(
-	auth *bind.TransactOpts,
+	ctx context.Context,
 	data value.Value,
 	destination common.Address,
 	amount *big.Int,
-) (uint64, error) {
+) error {
 	var dataBuf bytes.Buffer
 	if err := value.MarshalValue(data, &dataBuf); err != nil {
-		return 0, err
+		return err
 	}
 	tx, err := con.GlobalPendingInbox.SendEthMessage(
 		&bind.TransactOpts{
-			From:     auth.From,
-			Signer:   auth.Signer,
-			GasLimit: auth.GasLimit,
+			From:     con.auth.From,
+			Signer:   con.auth.Signer,
+			GasLimit: con.auth.GasLimit,
 			Value:    amount,
+			Context:  ctx,
 		},
 		destination.ToEthAddress(),
 		dataBuf.Bytes(),
 	)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	receipt, err := WaitForReceiptWithResults(auth.Context, con.client, auth.From, tx, "SendEthMessage")
-	return receipt.Status, err
+	return con.waitForReceipt(ctx, tx, "SendEthMessage")
 }
 
-func (con *PendingInbox) DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) error {
+func (con *PendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
 	tx, err := con.GlobalPendingInbox.DepositEth(
 		&bind.TransactOpts{
-			From:     auth.From,
-			Signer:   auth.Signer,
-			GasLimit: auth.GasLimit,
+			From:     con.auth.From,
+			Signer:   con.auth.Signer,
+			GasLimit: con.auth.GasLimit,
 			Value:    amount,
+			Context:  ctx,
 		},
 		dest.ToEthAddress(),
 	)
 	if err != nil {
 		return err
 	}
-	return waitForReceipt(auth.Context, con.client, auth.From, tx, "DepositFunds")
+	return con.waitForReceipt(ctx, tx, "DepositFunds")
 }
 
 func (con *PendingInbox) GetTokenBalance(
-	auth *bind.CallOpts,
+	ctx context.Context,
 	user common.Address,
 	tokenContract common.Address,
 ) (*big.Int, error) {
 	return con.GlobalPendingInbox.GetTokenBalance(
-		auth,
+		&bind.CallOpts{Context: ctx},
 		tokenContract.ToEthAddress(),
 		user.ToEthAddress(),
 	)
+}
+
+func (con *PendingInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+	return waitForReceipt(ctx, con.client, con.auth.From, tx, methodName)
 }

@@ -19,32 +19,20 @@ package arbbridge
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-type IncomingMessageType int
-
-const (
-	CommonMessage IncomingMessageType = iota
-	ChallengeMessage
-)
-
 type Event interface {
 }
 
-type VMEvent interface {
-	GetIncomingMessageType() IncomingMessageType
-}
-
 type Notification struct {
-	Header *types.Header
-	VMID   common.Address
-	Event  Event
-	TxHash [32]byte
+	BlockHeader common.Hash
+	BlockHeight *big.Int
+	VMID        common.Address
+	Event       Event
+	TxHash      [32]byte
 }
 
 type StakeCreatedEvent struct {

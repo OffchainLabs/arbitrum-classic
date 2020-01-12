@@ -75,9 +75,9 @@ func CreateObserver(
 					hitError = true
 					break
 				}
-				if notification.Header.Number.Cmp(lastBlockNumberSeen) > 0 {
-					lastBlockNumberSeen = notification.Header.Number
-					blockHeaderHash := notification.Header.Root
+				if notification.BlockHeight.Cmp(lastBlockNumberSeen) > 0 {
+					lastBlockNumberSeen = notification.BlockHeight
+					blockHeaderHash := notification.BlockHeader
 					chain.notifyNewBlock(common.NewTimeBlocks(lastBlockNumberSeen), blockHeaderHash)
 				}
 				handleNotification(notification, chain)
@@ -107,7 +107,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.MessageDeliveredEvent:
 		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := structures.TimeFromBlockNum(common.NewTimeBlocks(notification.Header.Number))
+		currentTime := structures.TimeFromBlockNum(common.NewTimeBlocks(notification.BlockHeight))
 		chain.createStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.newChallenge(ev)
@@ -120,7 +120,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ev)
 	case arbbridge.AssertedEvent:
-		currentTime := common.NewTimeBlocks(notification.Header.Number)
+		currentTime := common.NewTimeBlocks(notification.BlockHeight)
 		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
 		if err != nil {
 			panic(err)

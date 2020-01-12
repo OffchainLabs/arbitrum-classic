@@ -16,9 +16,16 @@
 
 package common
 
-import "github.com/ethereum/go-ethereum/common/hexutil"
+import (
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
 
 type Hash [32]byte
+
+func NewHashFromEth(a ethcommon.Hash) Hash {
+	return Hash(a)
+}
 
 func (h Hash) String() string {
 	return hexutil.Encode(h[:])

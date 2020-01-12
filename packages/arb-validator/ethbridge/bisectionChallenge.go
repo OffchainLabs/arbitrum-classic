@@ -146,8 +146,9 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 			return err
 		}
 		outChan <- arbbridge.Notification{
-			Header: header,
-			VMID:   common.NewAddressFromEth(c.address),
+			BlockHeader: common.NewHashFromEth(header.Hash()),
+			BlockHeight: header.Number,
+			VMID:        common.NewAddressFromEth(c.address),
 			Event: arbbridge.ContinueChallengeEvent{
 				SegmentIndex: contChal.SegmentIndex,
 				Deadline:     structures.TimeTicks{Val: contChal.DeadlineTicks},

@@ -18,10 +18,8 @@ package ethbridge
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -53,12 +51,12 @@ func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneSte
 	return NewOneStepProof(address.ToEthAddress(), c.Client)
 }
 
-func (c *EthArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return NewPendingInbox(address.ToEthAddress(), c.Client)
-}
-
-func (c *EthArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.Client.HeaderByNumber(ctx, number)
+func (c *EthArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
+	header, err := c.Client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return common.NewTimeBlocks(header.Number), nil
 }
 
 type EthArbAuthClient struct {
@@ -87,6 +85,10 @@ func (c *EthArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbF
 
 func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
 	return NewRollup(address.ToEthAddress(), c.Client, c.auth)
+}
+
+func (c *EthArbAuthClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
+	return NewPendingInbox(address.ToEthAddress(), c.Client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {

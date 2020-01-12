@@ -129,8 +129,9 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 				break
 			case header := <-headers:
 				outChan <- arbbridge.Notification{
-					Header: header,
-					Event:  arbbridge.NewTimeEvent{},
+					BlockHeader: common.NewHashFromEth(header.Hash()),
+					BlockHeight: header.Number,
+					Event:       arbbridge.NewTimeEvent{},
 				}
 			case log := <-logChan:
 				if err := c.processEvents(ctx, log, outChan); err != nil {
@@ -184,10 +185,11 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 	}
 
 	outChan <- arbbridge.Notification{
-		Header: header,
-		VMID:   common.NewAddressFromEth(c.address),
-		Event:  event,
-		TxHash: log.TxHash,
+		BlockHeader: common.NewHashFromEth(header.Hash()),
+		BlockHeight: header.Number,
+		VMID:        common.NewAddressFromEth(c.address),
+		Event:       event,
+		TxHash:      log.TxHash,
 	}
 
 	return nil

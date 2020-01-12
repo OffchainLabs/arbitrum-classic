@@ -23,7 +23,6 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -127,16 +126,11 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 
 		// only marshall and validate if step is within proofbounds
 		if i >= m.ethConn.proofbounds[0] && i <= m.ethConn.proofbounds[1] {
-			callOpts := &bind.CallOpts{
-				Pending: true,
-				From:    m.ethConn.fromAddress.ToEthAddress(),
-				Context: context.Background(),
-			}
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
 			precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
 
-			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, valprotocol.NewExecutionAssertionStubFromAssertion(a1), proof)
+			res, err := m.ethConn.osp.ValidateProof(context.Background(), precond, valprotocol.NewExecutionAssertionStubFromAssertion(a1), proof)
 			if err != nil {
 				log.Println("Machine ended with error:")
 				m.PrintState()

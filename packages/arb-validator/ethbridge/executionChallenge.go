@@ -168,10 +168,11 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 		return err
 	}
 	outChan <- arbbridge.Notification{
-		Header: header,
-		VMID:   common.NewAddressFromEth(c.address),
-		Event:  event,
-		TxHash: log.TxHash,
+		BlockHeader: common.NewHashFromEth(header.Hash()),
+		BlockHeight: header.Number,
+		VMID:        common.NewAddressFromEth(c.address),
+		Event:       event,
+		TxHash:      log.TxHash,
 	}
 	return nil
 }

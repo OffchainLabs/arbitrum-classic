@@ -18,11 +18,8 @@ package mockbridge
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -73,6 +70,6 @@ func (c *ArbClient) NewPendingTopChallenge(address common.Address, auth *bind.Tr
 	return NewPendingTopChallenge(address, c.client, auth)
 }
 
-func (c *ArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.client.HeaderByNumber(ctx, number)
+func (c *ArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
+	return c.client.CurrentBlockTime(ctx)
 }

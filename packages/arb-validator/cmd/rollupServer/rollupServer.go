@@ -148,14 +148,13 @@ func setupChainObserver(
 	rollupAddress common.Address,
 	codeFile string,
 ) (*rollup.ChainObserver, error) {
-	header, err := client.HeaderByNumber(context.Background(), nil)
+	ctx := context.Background()
+	currentTime, err := client.CurrentBlockTime(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.Background()
-
 	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, common.NewTimeBlocks(header.Number), client)
+	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, currentTime, client)
 	if err != nil {
 		return nil, err
 	}

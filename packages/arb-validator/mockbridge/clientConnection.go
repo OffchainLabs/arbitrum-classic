@@ -28,9 +28,5 @@ type ClientConnection struct {
 }
 
 func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
-	header, err := c.Client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return common.NewTimeBlocks(header.Number), nil
+	return c.Client.CurrentBlockTime(ctx)
 }
