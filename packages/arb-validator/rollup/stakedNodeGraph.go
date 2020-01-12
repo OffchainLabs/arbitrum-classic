@@ -195,7 +195,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 					nodeHash:           node.hash,
 					deadlineTicks:      structures.TimeTicks{new(big.Int).Set(node.deadline.Val)},
 					messages:           node.assertion.OutMsgs,
-					logsAcc:            node.disputable.AssertionClaim.AssertionStub.LastLogHashValue(),
+					logsAcc:            node.disputable.AssertionClaim.AssertionStub.LastLogHash,
 					vmProtoStateHash:   node.vmProtoData.Hash(),
 					stakerAddresses:    stakerAddrs,
 					stakerProofs:       proof,

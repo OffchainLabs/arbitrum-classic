@@ -167,7 +167,7 @@ func (dn *AssertionClaim) String() string {
 		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
 		hexutil.Encode(dn.AfterPendingTop[:]),
 		hexutil.Encode(dn.ImportedMessagesSlice[:]),
-		dn.AssertionStub.ToString(),
+		dn.AssertionStub,
 	)
 }
 
@@ -189,7 +189,7 @@ func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 	return &AssertionClaimBuf{
 		AfterPendingTop:       utils.MarshalHash(dn.AfterPendingTop),
 		ImportedMessagesSlice: utils.MarshalHash(dn.ImportedMessagesSlice),
-		AssertionStub:         dn.AssertionStub,
+		AssertionStub:         dn.AssertionStub.MarshalToBuf(),
 	}
 }
 
@@ -197,7 +197,7 @@ func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 	return &AssertionClaim{
 		AfterPendingTop:       utils.UnmarshalHash(m.AfterPendingTop),
 		ImportedMessagesSlice: utils.UnmarshalHash(m.ImportedMessagesSlice),
-		AssertionStub:         m.AssertionStub,
+		AssertionStub:         m.AssertionStub.Unmarshal(),
 	}
 }
 
@@ -247,7 +247,7 @@ func (dn *DisputableNode) CheckTime(params ChainParams) TimeTicks {
 
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
-		dn.AssertionClaim.AssertionStub.AfterHashValue(),
+		dn.AssertionClaim.AssertionStub.AfterHash,
 		dn.AssertionClaim.AfterPendingTop,
 		new(big.Int).Add(prevState.PendingCount, dn.AssertionParams.ImportedMessageCount),
 	)

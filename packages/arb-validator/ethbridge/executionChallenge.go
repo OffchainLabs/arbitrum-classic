@@ -32,7 +32,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -189,13 +188,13 @@ func (c *ExecutionChallenge) BisectAssertion(
 	logAccs := make([][32]byte, 0, len(assertions)+1)
 	gasses := make([]uint64, 0, len(assertions))
 	machineHashes = append(machineHashes, precondition.BeforeHash)
-	messageAccs = append(messageAccs, assertions[0].FirstMessageHashValue())
-	logAccs = append(logAccs, assertions[0].FirstLogHashValue())
+	messageAccs = append(messageAccs, assertions[0].FirstMessageHash)
+	logAccs = append(logAccs, assertions[0].FirstLogHash)
 	for _, assertion := range assertions {
-		machineHashes = append(machineHashes, assertion.AfterHashValue())
+		machineHashes = append(machineHashes, assertion.AfterHash)
 		didInboxInsns = append(didInboxInsns, assertion.DidInboxInsn)
-		messageAccs = append(messageAccs, assertion.LastMessageHashValue())
-		logAccs = append(logAccs, assertion.LastLogHashValue())
+		messageAccs = append(messageAccs, assertion.LastMessageHash)
+		logAccs = append(logAccs, assertion.LastLogHash)
 		gasses = append(gasses, assertion.NumGas)
 	}
 	c.auth.Context = ctx
@@ -229,12 +228,12 @@ func (c *ExecutionChallenge) OneStepProof(
 		precondition.BeforeHash,
 		precondition.BeforeInbox.Hash(),
 		precondition.TimeBounds.AsIntArray(),
-		assertion.AfterHashValue(),
+		assertion.AfterHash,
 		assertion.DidInboxInsn,
-		assertion.FirstMessageHashValue(),
-		assertion.LastMessageHashValue(),
-		assertion.FirstLogHashValue(),
-		assertion.LastLogHashValue(),
+		assertion.FirstMessageHash,
+		assertion.LastMessageHash,
+		assertion.FirstLogHash,
+		assertion.LastLogHash,
 		assertion.NumGas,
 		proof,
 	)
@@ -271,13 +270,13 @@ func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisecte
 	assertions := make([]*protocol.ExecutionAssertionStub, 0, bisectionCount)
 	for i := 0; i < bisectionCount; i++ {
 		assertion := &protocol.ExecutionAssertionStub{
-			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
+			AfterHash:        event.MachineHashes[i+1],
 			DidInboxInsn:     event.DidInboxInsns[i],
 			NumGas:           event.Gases[i],
-			FirstMessageHash: value.NewHashBuf(event.MessageAccs[i]),
-			LastMessageHash:  value.NewHashBuf(event.MessageAccs[i+1]),
-			FirstLogHash:     value.NewHashBuf(event.LogAccs[i]),
-			LastLogHash:      value.NewHashBuf(event.LogAccs[i+1]),
+			FirstMessageHash: event.MessageAccs[i],
+			LastMessageHash:  event.MessageAccs[i+1],
+			FirstLogHash:     event.LogAccs[i],
+			LastLogHash:      event.LogAccs[i+1],
 		}
 		assertions = append(assertions, assertion)
 	}

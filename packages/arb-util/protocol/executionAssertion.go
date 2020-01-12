@@ -71,11 +71,13 @@ func (a *ExecutionAssertion) Stub() *ExecutionAssertionStub {
 		copy(lastHash[:], next)
 	}
 
-	return NewExecutionAssertionStub(
-		a.AfterHash,
-		a.DidInboxInsn,
-		a.NumGas,
-		lastHash,
-		a.LogsHash(),
-	)
+	return &ExecutionAssertionStub{
+		AfterHash:        a.AfterHash,
+		DidInboxInsn:     a.DidInboxInsn,
+		NumGas:           a.NumGas,
+		FirstMessageHash: [32]byte{},
+		LastMessageHash:  lastHash,
+		FirstLogHash:     [32]byte{},
+		LastLogHash:      a.LogsHash(),
+	}
 }

@@ -33,7 +33,7 @@ message PreconditionBuf {
     value.HashBuf beforeInbox = 3;
 }
 
-message ExecutionAssertionStub {
+message ExecutionAssertionStubBuf {
     value.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;
     uint64 numGas = 3;

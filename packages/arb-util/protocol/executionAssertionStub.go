@@ -17,10 +17,7 @@
 package protocol
 
 import (
-	"bytes"
 	"fmt"
-
-	"github.com/golang/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -30,91 +27,85 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func NewExecutionAssertionStub(
-	afterHash [32]byte,
-	didInboxInsn bool,
-	numGas uint64,
-	messagesAcc [32]byte,
-	logsAcc [32]byte,
-) *ExecutionAssertionStub {
+type ExecutionAssertionStub struct {
+	AfterHash        [32]byte
+	DidInboxInsn     bool
+	NumGas           uint64
+	FirstMessageHash [32]byte
+	LastMessageHash  [32]byte
+	FirstLogHash     [32]byte
+	LastLogHash      [32]byte
+}
+
+func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {
+	return &ExecutionAssertionStubBuf{
+		AfterHash:        utils.MarshalHash(a.AfterHash),
+		DidInboxInsn:     a.DidInboxInsn,
+		NumGas:           a.NumGas,
+		FirstMessageHash: utils.MarshalHash(a.FirstMessageHash),
+		LastMessageHash:  utils.MarshalHash(a.LastMessageHash),
+		FirstLogHash:     utils.MarshalHash(a.FirstLogHash),
+		LastLogHash:      utils.MarshalHash(a.LastLogHash),
+	}
+}
+
+func (a *ExecutionAssertionStubBuf) Unmarshal() *ExecutionAssertionStub {
 	return &ExecutionAssertionStub{
-		AfterHash:        value.NewHashBuf(afterHash),
-		DidInboxInsn:     didInboxInsn,
-		NumGas:           numGas,
-		FirstMessageHash: value.NewHashBuf([32]byte{}),
-		LastMessageHash:  value.NewHashBuf(messagesAcc),
-		FirstLogHash:     value.NewHashBuf([32]byte{}),
-		LastLogHash:      value.NewHashBuf(logsAcc),
+		AfterHash:        utils.UnmarshalHash(a.AfterHash),
+		DidInboxInsn:     a.DidInboxInsn,
+		NumGas:           a.NumGas,
+		FirstMessageHash: utils.UnmarshalHash(a.FirstMessageHash),
+		LastMessageHash:  utils.UnmarshalHash(a.LastMessageHash),
+		FirstLogHash:     utils.UnmarshalHash(a.FirstLogHash),
+		LastLogHash:      utils.UnmarshalHash(a.LastLogHash),
 	}
 }
 
 func (a *ExecutionAssertionStub) Clone() *ExecutionAssertionStub {
-	return proto.Clone(a).(*ExecutionAssertionStub)
+	return &ExecutionAssertionStub{
+		AfterHash:        a.AfterHash,
+		DidInboxInsn:     a.DidInboxInsn,
+		NumGas:           a.NumGas,
+		FirstMessageHash: a.FirstMessageHash,
+		LastMessageHash:  a.LastMessageHash,
+		FirstLogHash:     a.FirstLogHash,
+		LastLogHash:      a.LastLogHash,
+	}
 }
 
-func (a *ExecutionAssertionStub) ToString() string {
+func (a *ExecutionAssertionStub) String() string {
 	return fmt.Sprintf(
 		"Assertion(AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
 			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v)",
-		hexutil.Encode(a.AfterHash.Value),
+		hexutil.Encode(a.AfterHash[:]),
 		a.DidInboxInsn,
 		a.NumGas,
-		hexutil.Encode(a.FirstMessageHash.Value),
-		hexutil.Encode(a.LastMessageHash.Value),
-		hexutil.Encode(a.FirstLogHash.Value),
-		hexutil.Encode(a.LastLogHash.Value),
+		hexutil.Encode(a.FirstMessageHash[:]),
+		hexutil.Encode(a.LastMessageHash[:]),
+		hexutil.Encode(a.FirstLogHash[:]),
+		hexutil.Encode(a.LastLogHash[:]),
 	)
 }
 
 func (a *ExecutionAssertionStub) Equals(b *ExecutionAssertionStub) bool {
-	return bytes.Equal(a.AfterHash.Value, b.AfterHash.Value) &&
+	return a.AfterHash == b.AfterHash &&
 		a.NumGas == b.NumGas &&
-		bytes.Equal(a.FirstMessageHash.Value, b.FirstMessageHash.Value) &&
-		bytes.Equal(a.LastMessageHash.Value, b.LastMessageHash.Value) &&
-		bytes.Equal(a.FirstLogHash.Value, b.FirstLogHash.Value) &&
-		bytes.Equal(a.LastLogHash.Value, b.LastLogHash.Value)
-}
-
-func (a *ExecutionAssertionStub) AfterHashValue() [32]byte {
-	var ret [32]byte
-	copy(ret[:], a.AfterHash.Value)
-	return ret
-}
-
-func (a *ExecutionAssertionStub) FirstMessageHashValue() [32]byte {
-	var ret [32]byte
-	copy(ret[:], a.FirstMessageHash.Value)
-	return ret
-}
-
-func (a *ExecutionAssertionStub) LastMessageHashValue() [32]byte {
-	var ret [32]byte
-	copy(ret[:], a.LastMessageHash.Value)
-	return ret
-}
-
-func (a *ExecutionAssertionStub) FirstLogHashValue() [32]byte {
-	var ret [32]byte
-	copy(ret[:], a.FirstLogHash.Value)
-	return ret
-}
-
-func (a *ExecutionAssertionStub) LastLogHashValue() [32]byte {
-	var ret [32]byte
-	copy(ret[:], a.LastLogHash.Value)
-	return ret
+		a.FirstMessageHash == b.FirstMessageHash &&
+		a.LastMessageHash == b.LastMessageHash &&
+		a.FirstLogHash == b.FirstLogHash &&
+		a.LastLogHash == b.LastLogHash
 }
 
 func (a *ExecutionAssertionStub) Hash() [32]byte {
 	var ret [32]byte
 	hashVal := solsha3.SoliditySHA3(
-		solsha3.Bytes32(a.AfterHash.Value),
+		solsha3.Bytes32(a.AfterHash),
 		solsha3.Bool(a.DidInboxInsn),
 		solsha3.Uint64(a.NumGas),
-		solsha3.Bytes32(a.FirstMessageHash.Value),
-		solsha3.Bytes32(a.LastMessageHash.Value),
-		solsha3.Bytes32(a.FirstLogHash.Value),
-		solsha3.Bytes32(a.LastLogHash.Value),
+		solsha3.Bytes32(a.FirstMessageHash),
+		solsha3.Bytes32(a.LastMessageHash),
+		solsha3.Bytes32(a.FirstLogHash),
+		solsha3.Bytes32(a.LastLogHash),
 	)
 	copy(ret[:], hashVal)
 	return ret
@@ -126,7 +117,7 @@ func (a *ExecutionAssertionStub) GeneratePostcondition(pre *Precondition) *Preco
 		nextBeforeInbox = value.NewEmptyTuple()
 	}
 	return &Precondition{
-		BeforeHash:  utils.UnmarshalHash(a.AfterHash),
+		BeforeHash:  a.AfterHash,
 		TimeBounds:  pre.TimeBounds,
 		BeforeInbox: nextBeforeInbox,
 	}

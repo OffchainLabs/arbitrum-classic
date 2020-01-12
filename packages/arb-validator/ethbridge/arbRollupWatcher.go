@@ -308,13 +308,15 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				Claim: &structures.AssertionClaim{
 					AfterPendingTop:       eventVal.AfterPendingTop,
 					ImportedMessagesSlice: eventVal.ImportedMessagesSlice,
-					AssertionStub: protocol.NewExecutionAssertionStub(
-						eventVal.AfterVMHash,
-						eventVal.DidInboxInsn,
-						eventVal.NumArbGas,
-						eventVal.MessagesAccHash,
-						eventVal.LogsAccHash,
-					),
+					AssertionStub: &protocol.ExecutionAssertionStub{
+						AfterHash:        eventVal.AfterVMHash,
+						DidInboxInsn:     eventVal.DidInboxInsn,
+						NumGas:           eventVal.NumArbGas,
+						FirstMessageHash: [32]byte{},
+						LastMessageHash:  eventVal.MessagesAccHash,
+						FirstLogHash:     [32]byte{},
+						LastLogHash:      eventVal.LogsAccHash,
+					},
 				},
 				MaxPendingTop: eventVal.PendingValue,
 			}, nil

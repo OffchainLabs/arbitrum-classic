@@ -196,8 +196,8 @@ func (node *Node) NodeDataHash(params structures.ChainParams) [32]byte {
 	}
 	if node.linkType == structures.ValidChildType {
 		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHashValue()),
-			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHashValue()),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastMessageHash),
+			solsha3.Bytes32(node.disputable.AssertionClaim.AssertionStub.LastLogHash),
 		))
 	} else {
 		challengeDataHash, challengePeriodTicks := node.ChallengeNodeData(params)

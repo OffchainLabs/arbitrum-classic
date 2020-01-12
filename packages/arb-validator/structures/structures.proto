@@ -45,7 +45,7 @@ message AssertionParamsBuf {
 message AssertionClaimBuf {
     value.HashBuf afterPendingTop = 1;
     value.HashBuf importedMessagesSlice = 2;
-    protocol.ExecutionAssertionStub assertionStub = 3;
+    protocol.ExecutionAssertionStubBuf assertionStub = 3;
 }
 
 message DisputableNodeBuf {
