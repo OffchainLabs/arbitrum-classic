@@ -30,21 +30,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-type OneStepProof struct {
+type oneStepProof struct {
 	contract *executionchallenge.OneStepProof
 	client   *ethclient.Client
 }
 
-func NewOneStepProof(address ethcommon.Address, client *ethclient.Client) (*OneStepProof, error) {
+func newOneStepProof(address ethcommon.Address, client *ethclient.Client) (*oneStepProof, error) {
 	contract, err := executionchallenge.NewOneStepProof(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to OneStepProof")
+		return nil, errors2.Wrap(err, "Failed to connect to oneStepProof")
 	}
 
-	return &OneStepProof{contract, client}, nil
+	return &oneStepProof{contract, client}, nil
 }
 
-func (con *OneStepProof) ValidateProof(
+func (con *oneStepProof) ValidateProof(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertion *valprotocol.ExecutionAssertionStub,

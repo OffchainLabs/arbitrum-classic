@@ -31,21 +31,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type ArbFactory struct {
+type arbFactory struct {
 	contract *arbfactory.ArbFactory
 	client   *ethclient.Client
 	auth     *bind.TransactOpts
 }
 
-func NewArbFactory(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ArbFactory, error) {
+func newArbFactory(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*arbFactory, error) {
 	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbFactory")
+		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
-	return &ArbFactory{vmCreatorContract, client, auth}, nil
+	return &arbFactory{vmCreatorContract, client, auth}, nil
 }
 
-func (con *ArbFactory) CreateRollup(
+func (con *arbFactory) CreateRollup(
 	ctx context.Context,
 	vmState common.Hash,
 	params structures.ChainParams,
@@ -78,25 +78,25 @@ func (con *ArbFactory) CreateRollup(
 	return common.NewAddressFromEth(event.VmAddress), nil
 }
 
-type ArbFactoryWatcher struct {
+type arbFactoryWatcher struct {
 	contract *arbfactory.ArbFactory
 	client   *ethclient.Client
 }
 
-func NewArbFactoryWatcher(address ethcommon.Address, client *ethclient.Client) (*ArbFactoryWatcher, error) {
+func newArbFactoryWatcher(address ethcommon.Address, client *ethclient.Client) (*arbFactoryWatcher, error) {
 	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbFactory")
+		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
-	return &ArbFactoryWatcher{vmCreatorContract, client}, nil
+	return &arbFactoryWatcher{vmCreatorContract, client}, nil
 }
 
-func (con *ArbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {
+func (con *arbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {
 	addr, err := con.contract.GlobalInboxAddress(nil)
 	return common.NewAddressFromEth(addr), err
 }
 
-func (con *ArbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
+func (con *arbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
 	addr, err := con.contract.ChallengeFactoryAddress(nil)
 	return common.NewAddressFromEth(addr), err
 }

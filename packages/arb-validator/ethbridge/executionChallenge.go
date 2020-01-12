@@ -49,33 +49,33 @@ func init() {
 	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
 }
 
-type ExecutionChallenge struct {
-	*BisectionChallenge
-	Challenge *executionchallenge.ExecutionChallenge
+type executionChallenge struct {
+	*bisectionChallenge
+	challenge *executionchallenge.ExecutionChallenge
 }
 
-func NewExecutionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func newExecutionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*executionChallenge, error) {
+	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
-	vm := &ExecutionChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &executionChallenge{bisectionChallenge: bisectionChallenge}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *ExecutionChallenge) setupContracts() error {
+func (c *executionChallenge) setupContracts() error {
 	challengeManagerContract, err := executionchallenge.NewExecutionChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 
-	c.Challenge = challengeManagerContract
+	c.challenge = challengeManagerContract
 	return nil
 }
 
-func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
+func (c *executionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+	if err := c.bisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
 	if err := c.setupContracts(); err != nil {
@@ -134,10 +134,10 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 	return nil
 }
 
-func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (c *executionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == bisectedAssertionID {
-			bisectChal, err := c.Challenge.ParseBisectedAssertion(log)
+			bisectChal, err := c.challenge.ParseBisectedAssertion(log)
 			if err != nil {
 				return nil, err
 			}
@@ -147,7 +147,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 				Deadline:   common.TimeTicks{Val: bisectChal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == oneStepProofCompletedID {
-			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+			_, err := c.challenge.ParseOneStepProofCompleted(log)
 			if err != nil {
 				return nil, err
 			}
@@ -177,7 +177,7 @@ func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, o
 	return nil
 }
 
-func (c *ExecutionChallenge) BisectAssertion(
+func (c *executionChallenge) BisectAssertion(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertions []*valprotocol.ExecutionAssertionStub,
@@ -199,7 +199,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 		gasses = append(gasses, assertion.NumGas)
 	}
 	c.auth.Context = ctx
-	tx, err := c.Challenge.BisectAssertion(
+	tx, err := c.challenge.BisectAssertion(
 		c.auth,
 		precondition.BeforeInbox.Hash(),
 		precondition.TimeBounds.AsIntArray(),
@@ -216,7 +216,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	return c.waitForReceipt(ctx, tx, "BisectAssertion")
 }
 
-func (c *ExecutionChallenge) OneStepProof(
+func (c *executionChallenge) OneStepProof(
 	ctx context.Context,
 	precondition *valprotocol.Precondition,
 	assertion *valprotocol.ExecutionAssertionStub,
@@ -224,7 +224,7 @@ func (c *ExecutionChallenge) OneStepProof(
 ) error {
 	log.Println("Calling OneStepProof proof with size", len(proof))
 	c.auth.Context = ctx
-	tx, err := c.Challenge.OneStepProof(
+	tx, err := c.challenge.OneStepProof(
 		c.auth,
 		precondition.BeforeHash,
 		precondition.BeforeInbox.Hash(),
@@ -244,7 +244,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
-func (c *ExecutionChallenge) ChooseSegment(
+func (c *executionChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	preconditions []*valprotocol.Precondition,
@@ -259,7 +259,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 			structures.ExecutionDataHash(stepCount, preconditions[i].Hash(), assertions[i].Hash()),
 		)
 	}
-	return c.BisectionChallenge.chooseSegment(
+	return c.bisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,
 		bisectionHashes,

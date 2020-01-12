@@ -24,14 +24,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
 )
 
 type EthArbClient struct {
-	Client *ethclient.Client
-}
-
-func (c *EthArbClient) GetClient() *ethclient.Client {
-	return c.Client
+	client *ethclient.Client
 }
 
 func NewEthClient(ethURL string) (*EthArbClient, error) {
@@ -40,19 +37,19 @@ func NewEthClient(ethURL string) (*EthArbClient, error) {
 }
 
 func (c *EthArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
-	return NewArbFactoryWatcher(address.ToEthAddress(), c.Client)
+	return newArbFactoryWatcher(address.ToEthAddress(), c.client)
 }
 
 func (c *EthArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
-	return NewRollupWatcher(address.ToEthAddress(), c.Client)
+	return newRollupWatcher(address.ToEthAddress(), c.client)
 }
 
 func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
-	return NewOneStepProof(address.ToEthAddress(), c.Client)
+	return newOneStepProof(address.ToEthAddress(), c.client)
 }
 
 func (c *EthArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
-	header, err := c.Client.HeaderByNumber(ctx, nil)
+	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -80,29 +77,50 @@ func (c *EthArbAuthClient) Address() common.Address {
 }
 
 func (c *EthArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
-	return NewArbFactory(address.ToEthAddress(), c.Client, c.auth)
+	return newArbFactory(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
-	return NewRollup(address.ToEthAddress(), c.Client, c.auth)
+	return newRollup(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return NewPendingInbox(address.ToEthAddress(), c.Client, c.auth)
+	return newPendingInbox(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
-	return NewChallengeFactory(address.ToEthAddress(), c.Client, c.auth)
+	return newChallengeFactory(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address.ToEthAddress(), c.Client, c.auth)
+	return newExecutionChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
-	return NewMessagesChallenge(address.ToEthAddress(), c.Client, c.auth)
+	return newMessagesChallenge(address.ToEthAddress(), c.client, c.auth)
 }
 
 func (c *EthArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address.ToEthAddress(), c.Client, c.auth)
+	return newPendingTopChallenge(address.ToEthAddress(), c.client, c.auth)
+}
+
+func (c *EthArbAuthClient) DeployChallengeTest() (*ChallengeTester, error) {
+	testerAddress, tx, _, err := challengetester.DeployChallengeTester(c.auth, c.client)
+	if err != nil {
+		return nil, err
+	}
+	if err := waitForReceipt(
+		context.Background(),
+		c.client,
+		c.auth.From,
+		tx,
+		"DeployChallengeTester",
+	); err != nil {
+		return nil, err
+	}
+	tester, err := NewChallengeTester(testerAddress, c.client, c.auth)
+	if err != nil {
+		return nil, err
+	}
+	return tester, nil
 }

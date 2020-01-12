@@ -45,25 +45,25 @@ func init() {
 	continuedChallengeID = parsed.Events["Continued"].ID()
 }
 
-type BisectionChallenge struct {
-	*Challenge
+type bisectionChallenge struct {
+	*challenge
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func NewBisectionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*BisectionChallenge, error) {
-	challenge, err := NewChallenge(address, client, auth)
+func newBisectionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*bisectionChallenge, error) {
+	challenge, err := newChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
-	vm := &BisectionChallenge{
-		Challenge:          challenge,
+	vm := &bisectionChallenge{
+		challenge:          challenge,
 		BisectionChallenge: nil,
 	}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *BisectionChallenge) setupContracts() error {
+func (c *bisectionChallenge) setupContracts() error {
 	challengeManagerContract, err := executionchallenge.NewBisectionChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
@@ -73,8 +73,8 @@ func (c *BisectionChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.Challenge.StartConnection(ctx, outChan, errChan); err != nil {
+func (c *bisectionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+	if err := c.challenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
 	if err := c.setupContracts(); err != nil {
@@ -133,7 +133,7 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 	return nil
 }
 
-func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (c *bisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
 	if err != nil {
 		return err
@@ -158,7 +158,7 @@ func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, o
 	return nil
 }
 
-func (c *BisectionChallenge) chooseSegment(
+func (c *bisectionChallenge) chooseSegment(
 	ctx context.Context,
 	segmentToChallenge uint16,
 	segments []common.Hash,

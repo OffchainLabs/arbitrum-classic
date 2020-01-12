@@ -48,33 +48,33 @@ func init() {
 	messagesOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
 }
 
-type MessagesChallenge struct {
-	*BisectionChallenge
-	Challenge *messageschallenge.MessagesChallenge
+type messagesChallenge struct {
+	*bisectionChallenge
+	contract *messageschallenge.MessagesChallenge
 }
 
-func NewMessagesChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*MessagesChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func newMessagesChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*messagesChallenge, error) {
+	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
-	vm := &MessagesChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &messagesChallenge{bisectionChallenge: bisectionChallenge}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *MessagesChallenge) setupContracts() error {
+func (c *messagesChallenge) setupContracts() error {
 	challengeManagerContract, err := messageschallenge.NewMessagesChallenge(c.address, c.client)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
+		return errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	}
 
-	c.Challenge = challengeManagerContract
+	c.contract = challengeManagerContract
 	return nil
 }
 
-func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
+func (c *messagesChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+	if err := c.bisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
 	if err := c.setupContracts(); err != nil {
@@ -131,10 +131,10 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 	return nil
 }
 
-func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (c *messagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == messagesBisectedID {
-			eventVal, err := c.Challenge.ParseBisected(log)
+			eventVal, err := c.contract.ParseBisected(log)
 			if err != nil {
 				return nil, err
 			}
@@ -145,7 +145,7 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 				Deadline:      common.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == messagesOneStepProofCompletedID {
-			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+			_, err := c.contract.ParseOneStepProofCompleted(log)
 			if err != nil {
 				return nil, err
 			}
@@ -172,14 +172,14 @@ func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 	return nil
 }
 
-func (c *MessagesChallenge) Bisect(
+func (c *messagesChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	c.auth.Context = ctx
-	tx, err := c.Challenge.Bisect(
+	tx, err := c.contract.Bisect(
 		c.auth,
 		hashSliceToRaw(chainHashes),
 		hashSliceToRaw(segmentHashes),
@@ -191,7 +191,7 @@ func (c *MessagesChallenge) Bisect(
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
 
-func (c *MessagesChallenge) OneStepProof(
+func (c *messagesChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	topHashA common.Hash,
@@ -200,7 +200,7 @@ func (c *MessagesChallenge) OneStepProof(
 	value common.Hash,
 ) error {
 	c.auth.Context = ctx
-	tx, err := c.Challenge.OneStepProof(
+	tx, err := c.contract.OneStepProof(
 		c.auth,
 		lowerHashA,
 		topHashA,
@@ -214,7 +214,7 @@ func (c *MessagesChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
-func (c *MessagesChallenge) ChooseSegment(
+func (c *messagesChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,
@@ -236,7 +236,7 @@ func (c *MessagesChallenge) ChooseSegment(
 			),
 		)
 	}
-	return c.BisectionChallenge.chooseSegment(
+	return c.bisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,
 		bisectionHashes,

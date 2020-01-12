@@ -22,12 +22,10 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
 )
 
 type MessagesChallenge struct {
 	*BisectionChallenge
-	Challenge *messageschallenge.MessagesChallenge
 }
 
 func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*MessagesChallenge, error) {
@@ -46,7 +44,7 @@ func (c *MessagesChallenge) setupContracts() error {
 	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
 	//}
 	//
-	//c.Challenge = challengeManagerContract
+	//c.challenge = challengeManagerContract
 	return nil
 }
 
@@ -111,7 +109,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 //func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	event, err := func() (arbbridge.Event, error) {
 //		if log.Topics[0] == messagesBisectedID {
-//			eventVal, err := c.Challenge.ParseBisected(log)
+//			eventVal, err := c.challenge.ParseBisected(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -122,7 +120,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 //				Deadline:      structures.TimeTicks{Val: eventVal.DeadlineTicks},
 //			}, nil
 //		} else if log.Topics[0] == messagesOneStepProofCompletedID {
-//			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+//			_, err := c.challenge.ParseOneStepProofCompleted(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -155,7 +153,7 @@ func (c *MessagesChallenge) Bisect(
 	chainLength *big.Int,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.Bisect(
+	//tx, err := c.challenge.Bisect(
 	//	c.auth,
 	//	chainHashes,
 	//	segmentHashes,
@@ -177,7 +175,7 @@ func (c *MessagesChallenge) OneStepProof(
 	value common.Hash,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.OneStepProof(
+	//tx, err := c.challenge.OneStepProof(
 	//	c.auth,
 	//	lowerHashA,
 	//	topHashA,

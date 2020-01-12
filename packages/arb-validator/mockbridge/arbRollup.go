@@ -25,13 +25,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbRollup struct {
-	Client    *ethclient.Client
-	ArbRollup *rollup.ArbRollup
+	Client *ethclient.Client
 }
 
 func NewRollup(address common.Address, client arbbridge.ArbClient) (*ArbRollup, error) {
@@ -41,8 +39,7 @@ func NewRollup(address common.Address, client arbbridge.ArbClient) (*ArbRollup, 
 	//}
 	//vm := &ArbRollup{Client: client.(*ArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
 	return &ArbRollup{
-		Client:    nil,
-		ArbRollup: nil,
+		Client: nil,
 	}, nil
 }
 

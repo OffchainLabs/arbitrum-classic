@@ -49,7 +49,7 @@ func init() {
 	timedOutChallengerID = parsed.Events["ChallengerTimedOut"].ID()
 }
 
-type Challenge struct {
+type challenge struct {
 	Challenge *executionchallenge.Challenge
 
 	address ethcommon.Address
@@ -57,13 +57,13 @@ type Challenge struct {
 	auth    *bind.TransactOpts
 }
 
-func NewChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*Challenge, error) {
-	vm := &Challenge{address: address, client: client, auth: auth}
+func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*challenge, error) {
+	vm := &challenge{address: address, client: client, auth: auth}
 	err := vm.setupContracts()
 	return vm, err
 }
 
-func (c *Challenge) setupContracts() error {
+func (c *challenge) setupContracts() error {
 	challengeManagerContract, err := executionchallenge.NewChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
@@ -73,7 +73,7 @@ func (c *Challenge) setupContracts() error {
 	return nil
 }
 
-func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (c *challenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := c.setupContracts(); err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 	return nil
 }
 
-func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (c *challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == initiatedChallengeID {
 			eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
@@ -192,7 +192,7 @@ func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan ch
 	return nil
 }
 
-func (c *Challenge) TimeoutChallenge(
+func (c *challenge) TimeoutChallenge(
 	ctx context.Context,
 ) error {
 	c.auth.Context = ctx
@@ -203,6 +203,6 @@ func (c *Challenge) TimeoutChallenge(
 	return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
 }
 
-func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 	return waitForReceipt(ctx, c.client, c.auth.From, tx, methodName)
 }

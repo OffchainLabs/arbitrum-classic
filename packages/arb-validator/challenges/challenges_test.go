@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
@@ -94,22 +93,7 @@ func testChallenge(
 		return err
 	}
 
-	testerAddress, tx, _, err := challengetester.DeployChallengeTester(auth1, client1.Client)
-	if err != nil {
-		return err
-	}
-
-	_, err = ethbridge.WaitForReceiptWithResults(
-		context.Background(),
-		client1.Client,
-		auth1.From,
-		tx,
-		"DeployChallengeTester",
-	)
-	if err != nil {
-		return err
-	}
-	tester, err := ethbridge.NewChallengeTester(testerAddress, client1.Client, auth1)
+	tester, err := client1.DeployChallengeTest()
 	if err != nil {
 		return err
 	}

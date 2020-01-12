@@ -48,33 +48,33 @@ func init() {
 	pendingTopOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
 }
 
-type PendingTopChallenge struct {
-	*BisectionChallenge
-	Challenge *pendingtopchallenge.PendingTopChallenge
+type pendingTopChallenge struct {
+	*bisectionChallenge
+	contract *pendingtopchallenge.PendingTopChallenge
 }
 
-func NewPendingTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*PendingTopChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func newPendingTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*pendingTopChallenge, error) {
+	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
 	}
-	vm := &PendingTopChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &pendingTopChallenge{bisectionChallenge: bisectionChallenge}
 	err = vm.setupContracts()
 	return vm, err
 }
 
-func (c *PendingTopChallenge) setupContracts() error {
+func (c *pendingTopChallenge) setupContracts() error {
 	challengeManagerContract, err := pendingtopchallenge.NewPendingTopChallenge(c.address, c.client)
 	if err != nil {
 		return errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
 	}
 
-	c.Challenge = challengeManagerContract
+	c.contract = challengeManagerContract
 	return nil
 }
 
-func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
+func (c *pendingTopChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+	if err := c.bisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
 		return err
 	}
 	if err := c.setupContracts(); err != nil {
@@ -131,10 +131,10 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 	return nil
 }
 
-func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (c *pendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == pendingTopBisectedID {
-			eventVal, err := c.Challenge.ParseBisected(log)
+			eventVal, err := c.contract.ParseBisected(log)
 			if err != nil {
 				return nil, err
 			}
@@ -144,7 +144,7 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 				Deadline:    common.TimeTicks{Val: eventVal.DeadlineTicks},
 			}, nil
 		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
-			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+			_, err := c.contract.ParseOneStepProofCompleted(log)
 			if err != nil {
 				return nil, err
 			}
@@ -171,13 +171,13 @@ func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, 
 	return nil
 }
 
-func (c *PendingTopChallenge) Bisect(
+func (c *pendingTopChallenge) Bisect(
 	ctx context.Context,
 	chainHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	c.auth.Context = ctx
-	tx, err := c.Challenge.Bisect(
+	tx, err := c.contract.Bisect(
 		c.auth,
 		hashSliceToRaw(chainHashes),
 		chainLength,
@@ -188,14 +188,14 @@ func (c *PendingTopChallenge) Bisect(
 	return c.waitForReceipt(ctx, tx, "Bisect")
 }
 
-func (c *PendingTopChallenge) OneStepProof(
+func (c *pendingTopChallenge) OneStepProof(
 	ctx context.Context,
 	lowerHashA common.Hash,
 	topHashA common.Hash,
 	value common.Hash,
 ) error {
 	c.auth.Context = ctx
-	tx, err := c.Challenge.OneStepProof(
+	tx, err := c.contract.OneStepProof(
 		c.auth,
 		lowerHashA,
 		topHashA,
@@ -207,7 +207,7 @@ func (c *PendingTopChallenge) OneStepProof(
 	return c.waitForReceipt(ctx, tx, "OneStepProof")
 }
 
-func (c *PendingTopChallenge) ChooseSegment(
+func (c *pendingTopChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
 	chainHashes []common.Hash,
@@ -226,7 +226,7 @@ func (c *PendingTopChallenge) ChooseSegment(
 			),
 		)
 	}
-	return c.BisectionChallenge.chooseSegment(
+	return c.bisectionChallenge.chooseSegment(
 		ctx,
 		assertionToChallenge,
 		bisectionHashes,

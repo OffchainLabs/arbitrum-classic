@@ -30,21 +30,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengefactory"
 )
 
-type ChallengeFactory struct {
+type challengeFactory struct {
 	contract *challengefactory.ChallengeFactory
 	client   *ethclient.Client
 	auth     *bind.TransactOpts
 }
 
-func NewChallengeFactory(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*ChallengeFactory, error) {
+func newChallengeFactory(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*challengeFactory, error) {
 	vmCreatorContract, err := challengefactory.NewChallengeFactory(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to ArbFactory")
+		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
 	}
-	return &ChallengeFactory{vmCreatorContract, client, auth}, nil
+	return &challengeFactory{vmCreatorContract, client, auth}, nil
 }
 
-func (con *ChallengeFactory) CreateChallenge(
+func (con *challengeFactory) CreateChallenge(
 	ctx context.Context,
 	asserter common.Address,
 	challenger common.Address,
@@ -62,7 +62,7 @@ func (con *ChallengeFactory) CreateChallenge(
 		challengeType,
 	)
 	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Failed to call to ChallengeFactory.CreateChallenge")
+		return common.Address{}, errors2.Wrap(err, "Failed to call to challengeFactory.CreateChallenge")
 	}
 
 	receipt, err := WaitForReceiptWithResults(con.auth.Context, con.client, con.auth.From, tx, "CreateChallenge")

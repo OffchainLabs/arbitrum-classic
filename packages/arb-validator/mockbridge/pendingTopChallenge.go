@@ -22,12 +22,10 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/pendingtopchallenge"
 )
 
 type PendingTopChallenge struct {
 	*BisectionChallenge
-	Challenge *pendingtopchallenge.PendingTopChallenge
 }
 
 func NewPendingTopChallenge(address common.Address, client arbbridge.ArbClient) (*PendingTopChallenge, error) {
@@ -46,7 +44,7 @@ func (c *PendingTopChallenge) setupContracts() error {
 	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
 	//}
 	//
-	//c.Challenge = challengeManagerContract
+	//c.challenge = challengeManagerContract
 	return nil
 }
 
@@ -111,7 +109,7 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 //func (c *PendingTopChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	event, err := func() (arbbridge.Event, error) {
 //		if log.Topics[0] == pendingTopBisectedID {
-//			eventVal, err := c.Challenge.ParseBisected(log)
+//			eventVal, err := c.challenge.ParseBisected(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -121,7 +119,7 @@ func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan 
 //				Deadline:    structures.TimeTicks{Val: eventVal.DeadlineTicks},
 //			}, nil
 //		} else if log.Topics[0] == pendingTopOneStepProofCompletedID {
-//			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+//			_, err := c.challenge.ParseOneStepProofCompleted(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -153,7 +151,7 @@ func (c *PendingTopChallenge) Bisect(
 	chainLength *big.Int,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.Bisect(
+	//tx, err := c.challenge.Bisect(
 	//	c.auth,
 	//	chainHashes,
 	//	chainLength,
@@ -172,7 +170,7 @@ func (c *PendingTopChallenge) OneStepProof(
 	value common.Hash,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.OneStepProof(
+	//tx, err := c.challenge.OneStepProof(
 	//	c.auth,
 	//	lowerHashA,
 	//	topHashA,

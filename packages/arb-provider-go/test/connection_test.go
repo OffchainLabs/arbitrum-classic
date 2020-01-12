@@ -26,10 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/coordinator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
@@ -94,7 +91,7 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	}
 	mach := basemach
 	//proofbounds := protocol.TimeBounds{25,30}
-	//mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.OneStepProof), key1, ethURL, proofbounds)
+	//mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.oneStepProof), key1, ethURL, proofbounds)
 	//if err != nil {
 	//	t.Fatal("Loader Error: ", err)
 	//}

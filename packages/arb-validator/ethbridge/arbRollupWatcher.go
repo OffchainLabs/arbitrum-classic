@@ -75,7 +75,7 @@ func init() {
 	messageDeliveredID = parsedInbox.Events["MessageDelivered"].ID()
 }
 
-type EthRollupWatcher struct {
+type ethRollupWatcher struct {
 	Client             *ethclient.Client
 	ArbRollup          *rollup.ArbRollup
 	GlobalPendingInbox *rollup.IGlobalPendingInbox
@@ -85,16 +85,16 @@ type EthRollupWatcher struct {
 	client              *ethclient.Client
 }
 
-func NewRollupWatcher(address ethcommon.Address, client *ethclient.Client) (*EthRollupWatcher, error) {
-	vm := &EthRollupWatcher{Client: client, address: address}
+func newRollupWatcher(address ethcommon.Address, client *ethclient.Client) (*ethRollupWatcher, error) {
+	vm := &ethRollupWatcher{Client: client, address: address}
 	err := vm.setupContracts()
 	return vm, err
 }
 
-func (vm *EthRollupWatcher) setupContracts() error {
+func (vm *ethRollupWatcher) setupContracts() error {
 	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ArbRollup")
+		return errors2.Wrap(err, "Failed to connect to arbRollup")
 	}
 
 	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
@@ -115,7 +115,7 @@ func (vm *EthRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := vm.setupContracts(); err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 	return nil
 }
 
-func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (vm *ethRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 	event, err := func() (arbbridge.Event, error) {
 		if log.Topics[0] == rollupStakeCreatedID {
 			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(log)
@@ -391,7 +391,7 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 	return nil
 }
 
-func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
+func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
 	log.Println("Calling GetParams")
 	rawParams, err := vm.ArbRollup.VmParams(nil)
 	if err != nil {
@@ -409,7 +409,7 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 	}, nil
 }
 
-func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
 	addr, err := vm.ArbRollup.GlobalInbox(nil)
 	return common.NewAddressFromEth(addr), err
 }

@@ -21,12 +21,10 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
 
 type Challenge struct {
 	*ClientConnection
-	Challenge *executionchallenge.Challenge
 
 	address common.Address
 	client  arbbridge.ArbClient
@@ -38,13 +36,13 @@ func NewChallenge(address common.Address, client arbbridge.ArbClient) (*Challeng
 	return vm, nil
 }
 
-//func (c *Challenge) setupContracts() error {
+//func (c *challenge) setupContracts() error {
 //	challengeManagerContract, err := executionchallenge.NewChallenge(c.address, c.Client)
 //	if err != nil {
 //		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 //	}
 //
-//	c.Challenge = challengeManagerContract
+//	c.challenge = challengeManagerContract
 //	return nil
 //}
 
@@ -119,10 +117,10 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 	return nil
 }
 
-//func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+//func (c *challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	event, err := func() (arbbridge.Event, error) {
 //		if log.Topics[0] == initiatedChallengeID {
-//			eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
+//			eventVal, err := c.challenge.ParseInitiatedChallenge(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -130,13 +128,13 @@ func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.
 //				Deadline: structures.TimeTicks{Val: eventVal.DeadlineTicks},
 //			}, nil
 //		} else if log.Topics[0] == timedOutAsserterID {
-//			_, err := c.Challenge.ParseAsserterTimedOut(log)
+//			_, err := c.challenge.ParseAsserterTimedOut(log)
 //			if err != nil {
 //				return nil, err
 //			}
 //			return arbbridge.AsserterTimeoutEvent{}, nil
 //		} else if log.Topics[0] == timedOutChallengerID {
-//			_, err := c.Challenge.ParseChallengerTimedOut(log)
+//			_, err := c.challenge.ParseChallengerTimedOut(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -167,7 +165,7 @@ func (c *Challenge) TimeoutChallenge(
 	ctx context.Context,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.TimeoutChallenge(c.auth)
+	//tx, err := c.challenge.TimeoutChallenge(c.auth)
 	//if err != nil {
 	//	return err
 	//}
@@ -175,6 +173,6 @@ func (c *Challenge) TimeoutChallenge(
 	return nil
 }
 
-//func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+//func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 //	return c.ClientConnection.waitForReceipt(ctx, c.auth.From, tx, methodName)
 //}

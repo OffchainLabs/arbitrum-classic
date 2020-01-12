@@ -21,19 +21,16 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type EthRollupWatcher struct {
-	client             *ArbClient
-	ArbRollup          *rollup.ArbRollup
-	GlobalPendingInbox *rollup.IGlobalPendingInbox
+	client arbbridge.ArbClient
 
 	address common.Address
 }
 
-func NewRollupWatcher(address common.Address, client *ArbClient) (*EthRollupWatcher, error) {
+func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthRollupWatcher, error) {
 	//vm := &EthRollupWatcher{Client: client.(*ArbClient).client, address: address}
 	//err := vm.setupContracts()
 	//return vm, err

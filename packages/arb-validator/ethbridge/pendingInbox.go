@@ -34,21 +34,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-type PendingInbox struct {
+type pendingInbox struct {
 	GlobalPendingInbox *globalpendinginbox.GlobalPendingInbox
 	client             *ethclient.Client
 	auth               *bind.TransactOpts
 }
 
-func NewPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*PendingInbox, error) {
+func newPendingInbox(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*pendingInbox, error) {
 	globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
 	}
-	return &PendingInbox{globalPendingInboxContract, client, auth}, nil
+	return &pendingInbox{globalPendingInboxContract, client, auth}, nil
 }
 
-func (con *PendingInbox) SendMessage(
+func (con *pendingInbox) SendMessage(
 	ctx context.Context,
 	msg valprotocol.Message,
 ) error {
@@ -70,7 +70,7 @@ func (con *PendingInbox) SendMessage(
 	return con.waitForReceipt(ctx, tx, "SendMessage")
 }
 
-func (con *PendingInbox) ForwardMessage(
+func (con *pendingInbox) ForwardMessage(
 	ctx context.Context,
 	msg valprotocol.Message,
 	sig []byte,
@@ -94,7 +94,7 @@ func (con *PendingInbox) ForwardMessage(
 	return con.waitForReceipt(ctx, tx, "ForwardMessage")
 }
 
-func (con *PendingInbox) SendEthMessage(
+func (con *pendingInbox) SendEthMessage(
 	ctx context.Context,
 	data value.Value,
 	destination common.Address,
@@ -121,7 +121,7 @@ func (con *PendingInbox) SendEthMessage(
 	return con.waitForReceipt(ctx, tx, "SendEthMessage")
 }
 
-func (con *PendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
+func (con *pendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error {
 	tx, err := con.GlobalPendingInbox.DepositEth(
 		&bind.TransactOpts{
 			From:     con.auth.From,
@@ -138,7 +138,7 @@ func (con *PendingInbox) DepositFunds(ctx context.Context, amount *big.Int, dest
 	return con.waitForReceipt(ctx, tx, "DepositFunds")
 }
 
-func (con *PendingInbox) GetTokenBalance(
+func (con *pendingInbox) GetTokenBalance(
 	ctx context.Context,
 	user common.Address,
 	tokenContract common.Address,
@@ -150,6 +150,6 @@ func (con *PendingInbox) GetTokenBalance(
 	)
 }
 
-func (con *PendingInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+func (con *pendingInbox) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
 	return waitForReceipt(ctx, con.client, con.auth.From, tx, methodName)
 }

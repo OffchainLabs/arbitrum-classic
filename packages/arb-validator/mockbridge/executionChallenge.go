@@ -21,13 +21,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type ExecutionChallenge struct {
 	*BisectionChallenge
-	Challenge *executionchallenge.ExecutionChallenge
 }
 
 func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (*ExecutionChallenge, error) {
@@ -46,7 +44,7 @@ func (c *ExecutionChallenge) setupContracts() error {
 	//		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	//	}
 	//
-	//	c.Challenge = challengeManagerContract
+	//	c.challenge = challengeManagerContract
 	return nil
 }
 
@@ -111,7 +109,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 //func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	event, err := func() (arbbridge.Event, error) {
 //		if log.Topics[0] == bisectedAssertionID {
-//			bisectChal, err := c.Challenge.ParseBisectedAssertion(log)
+//			bisectChal, err := c.challenge.ParseBisectedAssertion(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -121,7 +119,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 //				Deadline:   structures.TimeTicks{Val: bisectChal.DeadlineTicks},
 //			}, nil
 //		} else if log.Topics[0] == oneStepProofCompletedID {
-//			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+//			_, err := c.challenge.ParseOneStepProofCompleted(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -169,7 +167,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	//	gasses = append(gasses, assertion.NumGas)
 	//}
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.BisectAssertion(
+	//tx, err := c.challenge.BisectAssertion(
 	//	c.auth,
 	//	precondition.BeforeHash,
 	//	precondition.TimeBounds.AsIntArray(),
@@ -194,7 +192,7 @@ func (c *ExecutionChallenge) OneStepProof(
 	proof []byte,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.OneStepProof(
+	//tx, err := c.challenge.OneStepProof(
 	//	c.auth,
 	//	precondition.BeforeHash,
 	//	precondition.BeforeInbox.Hash(),
@@ -231,7 +229,7 @@ func (c *ExecutionChallenge) ChooseSegment(
 	//	))
 	//	bisectionHashes = append(bisectionHashes, bisectionHash)
 	//}
-	//return c.BisectionChallenge.ChooseSegment(
+	//return c.bisectionChallenge.ChooseSegment(
 	//	ctx,
 	//	assertionToChallenge,
 	//	bisectionHashes,
