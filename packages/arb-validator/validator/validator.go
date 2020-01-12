@@ -30,7 +30,6 @@ import (
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -38,6 +37,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/disputable"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )

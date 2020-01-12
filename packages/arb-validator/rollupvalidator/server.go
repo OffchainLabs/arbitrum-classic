@@ -32,9 +32,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
