@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -59,25 +61,25 @@ func NewTokenTypeFromBuf(buf *TokenTypeBuf) [21]byte {
 }
 
 func tokenTypeEncoded(input [21]byte) []byte {
-	return common.RightPadBytes(input[:], 21)
+	return ethcommon.RightPadBytes(input[:], 21)
 }
 
 func TokenTypeArrayEncoded(input [][21]byte) []byte {
 	var values []byte
 	for _, val := range input {
-		values = append(values, common.RightPadBytes(val[:], 32)...)
+		values = append(values, ethcommon.RightPadBytes(val[:], 32)...)
 	}
 	return values
 }
 
-func NewAddressBuf(tok common.Address) *AddressBuf {
+func NewAddressBuf(tok ethcommon.Address) *AddressBuf {
 	return &AddressBuf{
 		Value: tok.Bytes(),
 	}
 }
 
-func NewAddressFromBuf(buf *AddressBuf) common.Address {
-	var ret common.Address
+func NewAddressFromBuf(buf *AddressBuf) ethcommon.Address {
+	var ret ethcommon.Address
 	copy(ret[:], buf.Value)
 	return ret
 }
@@ -86,17 +88,17 @@ type Message struct {
 	Data        value.Value
 	TokenType   [21]byte
 	Currency    *big.Int
-	Destination common.Address
+	Destination ethcommon.Address
 }
 
 func NewMessage(data value.Value, tokenType [21]byte, currency *big.Int, destination *big.Int) Message {
-	var dest common.Address
+	var dest ethcommon.Address
 	destBytes := value.NewIntValue(destination).ToBytes()
 	copy(dest[:], destBytes[12:])
 	return Message{data, tokenType, new(big.Int).Set(currency), dest}
 }
 
-func NewSimpleMessage(data value.Value, tokenType [21]byte, currency *big.Int, sender common.Address) Message {
+func NewSimpleMessage(data value.Value, tokenType [21]byte, currency *big.Int, sender ethcommon.Address) Message {
 	return Message{data, tokenType, currency, sender}
 }
 
@@ -142,19 +144,19 @@ func NewMessageFromValue(val value.Value) (Message, error) {
 
 func NewMessageBuf(val Message) *MessageBuf {
 	return &MessageBuf{
-		Value:     value.NewValueBuf(val.Data),
+		Value:     value.MarshalValueToBytes(val.Data),
 		TokenType: NewTokenTypeBuf(val.TokenType),
-		Amount:    value.NewBigIntBuf(val.Currency),
+		Amount:    common.NewBigIntBuf(val.Currency),
 		Sender:    NewAddressBuf(val.Destination),
 	}
 }
 
 func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
-	val, err := value.NewValueFromBuf(buf.Value)
+	val, err := value.UnmarshalValueFromBytes(buf.Value)
 	return NewSimpleMessage(
 		val,
 		NewTokenTypeFromBuf(buf.TokenType),
-		value.NewBigIntFromBuf(buf.Amount),
+		common.NewBigIntFromBuf(buf.Amount),
 		NewAddressFromBuf(buf.Sender),
 	), err
 }

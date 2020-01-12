@@ -16,7 +16,10 @@
 
 package value
 
-import "io"
+import (
+	"bytes"
+	"io"
+)
 
 const (
 	TypeCodeInt       uint8 = 0
@@ -88,6 +91,12 @@ func MarshalValue(v Value, w io.Writer) error {
 	return v.Marshal(w)
 }
 
+func MarshalValueToBytes(val Value) []byte {
+	var buf bytes.Buffer
+	_ = MarshalValue(val, &buf)
+	return buf.Bytes()
+}
+
 func MarshalValueForProof(v Value, w io.Writer) error {
 	_, err := w.Write([]byte{v.InternalTypeCode()})
 	if err != nil {
@@ -118,4 +127,9 @@ func UnmarshalValue(r io.Reader) (Value, error) {
 		return NewEmptyTuple(), err
 	}
 	return UnmarshalValueWithType(tipe[0], r)
+}
+
+func UnmarshalValueFromBytes(val []byte) (Value, error) {
+	buf := bytes.NewReader(val)
+	return UnmarshalValue(buf)
 }

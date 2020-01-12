@@ -17,8 +17,8 @@
 package structures
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -58,13 +58,13 @@ func (ctx *CheckpointContextImpl) AddMachine(mach machine.Machine) {
 }
 
 func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
-	vals := []*value.HashBuf{}
+	vals := []*common.HashBuf{}
 	for h, _ := range ctx.values {
-		vals = append(vals, utils.MarshalHash(h))
+		vals = append(vals, common.MarshalHash(h))
 	}
-	machines := []*value.HashBuf{}
+	machines := []*common.HashBuf{}
 	for h, _ := range ctx.machines {
-		machines = append(machines, utils.MarshalHash(h))
+		machines = append(machines, common.MarshalHash(h))
 	}
 	return &CheckpointManifest{Values: vals, Machines: machines}
 }

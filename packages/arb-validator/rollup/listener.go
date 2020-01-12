@@ -20,6 +20,8 @@ import (
 	"context"
 	"log"
 
+	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -33,7 +35,7 @@ type ChainListener interface {
 	StakeMoved(arbbridge.StakeMovedEvent)
 	StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)
 	CompletedChallenge(event arbbridge.ChallengeCompletedEvent)
-	SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
+	SawAssertion(arbbridge.AssertedEvent, *common2.TimeBlocks, [32]byte)
 	ConfirmedNode(arbbridge.ConfirmedEvent)
 	PrunedLeaf(arbbridge.PrunedEvent)
 
@@ -203,7 +205,7 @@ func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEven
 
 }
 
-func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
+func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *common2.TimeBlocks, [32]byte) {
 
 }
 

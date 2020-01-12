@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -78,7 +80,7 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		t.Fatal("Loader Error: ", err)
 	}
 
-	timeBounds := &protocol.TimeBoundsBlocks{protocol.NewTimeBlocks(big.NewInt(0)), protocol.NewTimeBlocks(big.NewInt(10000))}
+	timeBounds := &protocol.TimeBoundsBlocks{common2.NewTimeBlocks(big.NewInt(0)), common2.NewTimeBlocks(big.NewInt(10000))}
 	steps := uint32(100000)
 	cont := true
 
@@ -86,13 +88,13 @@ func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {
 		_, stepsExecuted := mach.ExecuteAssertion(steps, timeBounds, value.NewEmptyTuple())
 		lastReason := mach.LastBlockReason()
 		if lastReason != nil {
-			if lastReason.IsBlocked(mach, protocol.NewTimeBlocks(big.NewInt(0)), false) && lastReason.Equals(machine.ErrorBlocked{}) {
+			if lastReason.IsBlocked(mach, common2.NewTimeBlocks(big.NewInt(0)), false) && lastReason.Equals(machine.ErrorBlocked{}) {
 				t.Fatal("Machine in error state")
 				break
 			}
 		}
 		if stepsExecuted == 0 {
-			if lastReason.IsBlocked(mach, protocol.NewTimeBlocks(big.NewInt(0)), false) && !lastReason.Equals(machine.BreakpointBlocked{}) {
+			if lastReason.IsBlocked(mach, common2.NewTimeBlocks(big.NewInt(0)), false) && !lastReason.Equals(machine.BreakpointBlocked{}) {
 				cont = false
 			}
 			fmt.Println(" machine halted ")

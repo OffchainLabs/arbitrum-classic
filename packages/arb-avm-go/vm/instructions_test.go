@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
@@ -43,8 +45,8 @@ func TestMachineAdd(t *testing.T) {
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	tb := &protocol.TimeBoundsBlocks{
-		protocol.NewTimeBlocks(big.NewInt(0)),
-		protocol.NewTimeBlocks(big.NewInt(100000)),
+		common.NewTimeBlocks(big.NewInt(0)),
+		common.NewTimeBlocks(big.NewInt(100000)),
 	}
 	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue())
 }
@@ -758,8 +760,8 @@ func TestInbox(t *testing.T) {
 	NewMachineAssertionContext(
 		m,
 		&protocol.TimeBoundsBlocks{
-			protocol.NewTimeBlocks(big.NewInt(0)),
-			protocol.NewTimeBlocks(big.NewInt(100000)),
+			common.NewTimeBlocks(big.NewInt(0)),
+			common.NewTimeBlocks(big.NewInt(100000)),
 		},
 		messageStack.GetValue(),
 	)
@@ -1485,8 +1487,8 @@ func TestLog(t *testing.T) {
 	ad, _ := m.ExecuteAssertion(
 		10,
 		&protocol.TimeBoundsBlocks{
-			protocol.NewTimeBlocks(big.NewInt(0)),
-			protocol.NewTimeBlocks(big.NewInt(10000)),
+			common.NewTimeBlocks(big.NewInt(0)),
+			common.NewTimeBlocks(big.NewInt(10000)),
 		},
 		value.NewEmptyTuple(),
 	)
@@ -1521,8 +1523,8 @@ func TestSend(t *testing.T) {
 	ad, _ := m.ExecuteAssertion(
 		10,
 		&protocol.TimeBoundsBlocks{
-			protocol.NewTimeBlocks(big.NewInt(0)),
-			protocol.NewTimeBlocks(big.NewInt(10000)),
+			common.NewTimeBlocks(big.NewInt(0)),
+			common.NewTimeBlocks(big.NewInt(10000)),
 		},
 		value.NewEmptyTuple(),
 	)
@@ -1552,8 +1554,8 @@ func TestGettime(t *testing.T) {
 	m.ExecuteAssertion(
 		10,
 		&protocol.TimeBoundsBlocks{
-			protocol.NewTimeBlocks(big.NewInt(5)),
-			protocol.NewTimeBlocks(big.NewInt(10)),
+			common.NewTimeBlocks(big.NewInt(5)),
+			common.NewTimeBlocks(big.NewInt(10)),
 		},
 		value.NewEmptyTuple(),
 	)

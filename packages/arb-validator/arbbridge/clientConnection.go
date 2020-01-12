@@ -19,9 +19,9 @@ package arbbridge
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type ClientConnection interface {
-	CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error)
+	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
 }

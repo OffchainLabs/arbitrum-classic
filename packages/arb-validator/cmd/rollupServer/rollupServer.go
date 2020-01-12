@@ -28,6 +28,8 @@ import (
 	"os"
 	"strings"
 
+	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
@@ -37,7 +39,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
@@ -155,7 +156,7 @@ func setupChainObserver(
 	ctx := context.Background()
 
 	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, protocol.NewTimeBlocks(header.Number), client)
+	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, common2.NewTimeBlocks(header.Number), client)
 	if err != nil {
 		return nil, err
 	}

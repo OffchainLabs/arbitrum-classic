@@ -22,6 +22,8 @@ import (
 	"math"
 	"math/big"
 
+	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	errors2 "github.com/pkg/errors"
@@ -148,8 +150,8 @@ func (validator *ChannelValidator) InitiateUnanimousRequest(
 			})
 		}
 		timeBounds := &protocol.TimeBoundsBlocks{
-			protocol.NewTimeBlocks(validator.latestHeader.Number),
-			protocol.NewTimeBlocks(new(big.Int).Add(validator.latestHeader.Number, new(big.Int).SetUint64(length))),
+			common2.NewTimeBlocks(validator.latestHeader.Number),
+			common2.NewTimeBlocks(new(big.Int).Add(validator.latestHeader.Number, new(big.Int).SetUint64(length))),
 		}
 		seqNum := bot.OffchainContext(final)
 		clonedMachine := bot.GetCore().GetMachine().Clone()

@@ -19,13 +19,13 @@ package valprotocol
 import (
 	"fmt"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 )
 
 type ExecutionAssertionStub struct {
@@ -58,25 +58,25 @@ func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *Exe
 
 func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {
 	return &ExecutionAssertionStubBuf{
-		AfterHash:        utils.MarshalHash(a.AfterHash),
+		AfterHash:        common.MarshalHash(a.AfterHash),
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
-		FirstMessageHash: utils.MarshalHash(a.FirstMessageHash),
-		LastMessageHash:  utils.MarshalHash(a.LastMessageHash),
-		FirstLogHash:     utils.MarshalHash(a.FirstLogHash),
-		LastLogHash:      utils.MarshalHash(a.LastLogHash),
+		FirstMessageHash: common.MarshalHash(a.FirstMessageHash),
+		LastMessageHash:  common.MarshalHash(a.LastMessageHash),
+		FirstLogHash:     common.MarshalHash(a.FirstLogHash),
+		LastLogHash:      common.MarshalHash(a.LastLogHash),
 	}
 }
 
 func (a *ExecutionAssertionStubBuf) Unmarshal() *ExecutionAssertionStub {
 	return &ExecutionAssertionStub{
-		AfterHash:        utils.UnmarshalHash(a.AfterHash),
+		AfterHash:        common.UnmarshalHash(a.AfterHash),
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
-		FirstMessageHash: utils.UnmarshalHash(a.FirstMessageHash),
-		LastMessageHash:  utils.UnmarshalHash(a.LastMessageHash),
-		FirstLogHash:     utils.UnmarshalHash(a.FirstLogHash),
-		LastLogHash:      utils.UnmarshalHash(a.LastLogHash),
+		FirstMessageHash: common.UnmarshalHash(a.FirstMessageHash),
+		LastMessageHash:  common.UnmarshalHash(a.LastMessageHash),
+		FirstLogHash:     common.UnmarshalHash(a.FirstLogHash),
+		LastLogHash:      common.UnmarshalHash(a.LastLogHash),
 	}
 }
 

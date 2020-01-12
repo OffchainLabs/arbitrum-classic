@@ -19,6 +19,8 @@ package rollup
 import (
 	"log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -43,7 +45,7 @@ func (al *AnnouncerListener) CompletedChallenge(event arbbridge.ChallengeComplet
 	log.Println("CompletedChallenge")
 }
 
-func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *protocol.TimeBlocks, txHash [32]byte) {
+func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *common.TimeBlocks, txHash [32]byte) {
 	log.Println("SawAssertion")
 	log.Println("Params:", ev.Params)
 	log.Println("Claim:", ev.Claim)

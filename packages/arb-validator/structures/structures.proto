@@ -16,55 +16,55 @@
 
 syntax = "proto3";
 package structures;
-import "value/value.proto";
+import "common/common.proto";
 import "protocol/protocol.proto";
 import "valprotocol/valprotocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/structures";
 
 message TimeTicksBuf {
-    value.BigIntegerBuf val = 1;
+    common.BigIntegerBuf val = 1;
 }
 
 message ChainParamsBuf {
-    value.BigIntegerBuf stakeRequirement = 1;
+    common.BigIntegerBuf stakeRequirement = 1;
     TimeTicksBuf gracePeriod = 2;
     uint32 maxExecutionSteps = 3;
 }
 
 message VMProtoDataBuf {
-    value.HashBuf machineHash = 1;
-    value.HashBuf pendingTop = 2;
-    value.BigIntegerBuf pendingCount = 3;
+    common.HashBuf machineHash = 1;
+    common.HashBuf pendingTop = 2;
+    common.BigIntegerBuf pendingCount = 3;
 }
 
 message AssertionParamsBuf {
     uint32 numSteps = 1;
     protocol.TimeBoundsBlocksBuf timeBounds = 2;
-    value.BigIntegerBuf importedMessageCount = 3;
+    common.BigIntegerBuf importedMessageCount = 3;
 }
 
 message AssertionClaimBuf {
-    value.HashBuf afterPendingTop = 1;
-    value.HashBuf importedMessagesSlice = 2;
+    common.HashBuf afterPendingTop = 1;
+    common.HashBuf importedMessagesSlice = 2;
     valprotocol.ExecutionAssertionStubBuf assertionStub = 3;
 }
 
 message DisputableNodeBuf {
     AssertionParamsBuf assertionParams = 1;
     AssertionClaimBuf assertionClaim = 2;
-    value.HashBuf maxPendingTop = 3;
-    value.BigIntegerBuf maxPendingCount = 4;
+    common.HashBuf maxPendingTop = 3;
+    common.BigIntegerBuf maxPendingCount = 4;
 }
 
 message PendingInboxBuf {
-    value.BigIntegerBuf topCount = 1;
-    repeated value.HashBuf itemHashes = 2;
-    value.HashBuf hashOfRest = 3;
+    common.BigIntegerBuf topCount = 1;
+    repeated common.HashBuf itemHashes = 2;
+    common.HashBuf hashOfRest = 3;
 }
 
 message CheckpointManifest {
-    repeated value.HashBuf values = 1;
-    repeated value.HashBuf machines = 2;
+    repeated common.HashBuf values = 1;
+    repeated common.HashBuf machines = 2;
 }
 
 message CheckpointMetadata {
@@ -79,7 +79,7 @@ message CheckpointLinks {
 }
 
 message BlockIdBuf {
-    value.BigIntegerBuf height = 1;
-    value.HashBuf headerHash = 2;
+    common.BigIntegerBuf height = 1;
+    common.HashBuf headerHash = 2;
 }
 

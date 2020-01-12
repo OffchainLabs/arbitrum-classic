@@ -16,29 +16,29 @@
 
 syntax = "proto3";
 package rollup;
-import "value/value.proto";
+import "common/common.proto";
 import "structures/structures.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/rollup";
 
 message NodeBuf {
-    value.HashBuf prevHash = 1;
+    common.HashBuf prevHash = 1;
     structures.TimeTicksBuf deadline = 2;
     structures.DisputableNodeBuf disputableNode = 3;
     uint32 linkType = 4;
     structures.VMProtoDataBuf vmProtoData = 5;
 
-    value.HashBuf machineHash = 6;
+    common.HashBuf machineHash = 6;
     uint64 depth = 7;
-    value.HashBuf nodeDataHash = 8;
-    value.HashBuf innerHash = 9;
-    value.HashBuf hash = 10;
+    common.HashBuf nodeDataHash = 8;
+    common.HashBuf innerHash = 9;
+    common.HashBuf hash = 10;
 }
 
 message NodeGraphBuf {
     repeated NodeBuf nodes = 1;
-    value.HashBuf oldestNodeHash = 2;
-    value.HashBuf latestConfirmedHash = 3;
-    repeated value.HashBuf    leafHashes = 4;
+    common.HashBuf oldestNodeHash = 2;
+    common.HashBuf latestConfirmedHash = 3;
+    repeated common.HashBuf    leafHashes = 4;
     structures.ChainParamsBuf params = 5;
 }
 
@@ -51,14 +51,14 @@ message ChainObserverBuf {
     StakedNodeGraphBuf stakedNodeGraph = 1;
     bytes contractAddress = 2;
     structures.PendingInboxBuf pendingInbox = 3;
-    value.HashBuf knownValidNode = 4;
-    value.HashBuf calculatedValidNode = 5;
+    common.HashBuf knownValidNode = 4;
+    common.HashBuf calculatedValidNode = 5;
     bool isOpinionated = 6;
 }
 
 message StakerBuf {
     bytes address = 1;
-    value.HashBuf location = 2;
+    common.HashBuf location = 2;
     structures.TimeTicksBuf creationTime = 3;
     bytes challengeAddr = 4;
 }

@@ -1,0 +1,15 @@
+syntax = "proto3";
+package common;
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/common";
+
+message BigIntegerBuf {
+    bytes value = 1;
+}
+
+message HashBuf {
+    bytes value = 1;
+}
+
+message TimeBlocksBuf {
+    BigIntegerBuf val = 1;
+}

@@ -19,23 +19,23 @@ package ethbridge
 import (
 	"context"
 
+	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 type ClientConnection struct {
 	Client *ethclient.Client
 }
 
-func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error) {
+func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*common2.TimeBlocks, error) {
 	header, err := c.Client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
 		return nil, err
 	}
-	return protocol.NewTimeBlocks(header.Number), nil
+	return common2.NewTimeBlocks(header.Number), nil
 }
 
 func (c *ClientConnection) waitForReceipt(ctx context.Context, from common.Address, tx *types.Transaction, methodName string) error {

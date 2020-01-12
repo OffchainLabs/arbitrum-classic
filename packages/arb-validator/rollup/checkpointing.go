@@ -23,24 +23,24 @@ import (
 	"os"
 	"sync"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type RollupCheckpointer interface {
-	RestoreLatestState(common.Address, *structures.ChainParams, bool) (blockHeight *protocol.TimeBlocks, content *ChainObserverBuf, resCtx structures.RestoreContext)
+	RestoreLatestState(ethcommon.Address, *structures.ChainParams, bool) (blockHeight *common.TimeBlocks, content *ChainObserverBuf, resCtx structures.RestoreContext)
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(
-		blockHeight *protocol.TimeBlocks,
+		blockHeight *common.TimeBlocks,
 		blockHeaderHash [32]byte,
 		contents []byte,
 		cpCtx structures.CheckpointContext,
@@ -61,11 +61,11 @@ func NewDummyCheckpointer(arbitrumCodefilePath string) RollupCheckpointer {
 }
 
 func (dcp *DummyCheckpointer) RestoreLatestState(
-	contractAddr common.Address,
+	contractAddr ethcommon.Address,
 	params *structures.ChainParams,
 	beOpinionated bool,
-) (*protocol.TimeBlocks, *ChainObserverBuf, structures.RestoreContext) {
-	blockHeight := protocol.NewTimeBlocks(big.NewInt(0))
+) (*common.TimeBlocks, *ChainObserverBuf, structures.RestoreContext) {
+	blockHeight := common.NewTimeBlocks(big.NewInt(0))
 	cob := &ChainObserverBuf{}
 	resCtx := structures.NewSimpleRestoreContext()
 	resCtx.AddMachine(dcp.initialMachine)
@@ -77,7 +77,7 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 }
 
 func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(
-	blockNum *protocol.TimeBlocks,
+	blockNum *common.TimeBlocks,
 	blockHeaderHash [32]byte,
 	contents []byte,
 	cpCtx structures.CheckpointContext,
@@ -96,13 +96,13 @@ type ProductionCheckpointer struct {
 
 const checkpointDatabasePathBase = "/tmp/arb-validator-checkpoint-"
 
-func makeCheckpointDatabasePath(rollupAddr common.Address) string {
+func makeCheckpointDatabasePath(rollupAddr ethcommon.Address) string {
 	return checkpointDatabasePathBase + rollupAddr.Hex()[2:]
 }
 
 func NewProductionCheckpointer(
 	ctx context.Context,
-	rollupAddr common.Address,
+	rollupAddr ethcommon.Address,
 	arbitrumCodeFilePath string,
 	maxReorgDepth *big.Int,
 	forceFreshStart bool, // this should be false in production use
@@ -136,8 +136,8 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	// read in metadata, or create it if it doesn't already exist
 	if rawMetadata == nil || len(rawMetadata) == 0 {
 		idBuf := &structures.BlockIdBuf{
-			Height:     utils.MarshalBigInt(blockHeight),
-			HeaderHash: utils.MarshalHash(blockHeaderHash),
+			Height:     common.MarshalBigInt(blockHeight),
+			HeaderHash: common.MarshalHash(blockHeaderHash),
 		}
 		metadataBuf = &structures.CheckpointMetadata{
 			FormatVersion: 1,
@@ -159,8 +159,8 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 
 	// save all of the data for this checkpoint
 	blockId := &structures.BlockIdBuf{
-		Height:     utils.MarshalBigInt(blockHeight),
-		HeaderHash: utils.MarshalHash(blockHeaderHash),
+		Height:     common.MarshalBigInt(blockHeight),
+		HeaderHash: common.MarshalHash(blockHeaderHash),
 	}
 	rcp.cp.SaveCheckpoint(
 		blockId,
@@ -173,8 +173,8 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 
 	// update the metadata to include this checkpoint
 	newId := &structures.BlockIdBuf{
-		Height:     utils.MarshalBigInt(blockHeight),
-		HeaderHash: utils.MarshalHash(blockHeaderHash),
+		Height:     common.MarshalBigInt(blockHeight),
+		HeaderHash: common.MarshalHash(blockHeaderHash),
 	}
 	metadataBuf.Newest = newId
 	buf, err := proto.Marshal(metadataBuf)
@@ -187,17 +187,17 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 }
 
 func (rcp *ProductionCheckpointer) RestoreLatestState(
-	contractAddr common.Address,
+	contractAddr ethcommon.Address,
 	params *structures.ChainParams,
 	beOpinionated bool,
-) (*protocol.TimeBlocks, *ChainObserverBuf, structures.RestoreContext) {
+) (*common.TimeBlocks, *ChainObserverBuf, structures.RestoreContext) {
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
 		initMachine, err := rcp.GetInitialMachine()
 		if err != nil {
 			return nil, nil, nil
 		}
-		blockHeight := protocol.NewTimeBlocks(big.NewInt(0))
+		blockHeight := common.NewTimeBlocks(big.NewInt(0))
 		cob := MakeInitialChainObserverBuf(contractAddr, initMachine.Hash(), params, beOpinionated)
 		resCtx := structures.NewSimpleRestoreContext()
 		resCtx.AddMachine(initMachine)
@@ -216,7 +216,7 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 	if err := proto.Unmarshal(cobBytes, cob); err != nil {
 		return nil, nil, nil
 	}
-	return protocol.NewTimeBlocks(utils.UnmarshalBigInt(newestId.Height)), cob, resCtx
+	return common.NewTimeBlocks(common.UnmarshalBigInt(newestId.Height)), cob, resCtx
 }
 
 func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockId *structures.BlockIdBuf) ([]byte, structures.RestoreContext, error) {
@@ -232,10 +232,10 @@ func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId
 	if err := proto.Unmarshal(rawMetadata, metadataBuf); err != nil {
 		return nil, nil, err
 	}
-	oldestHeightInCp = utils.UnmarshalBigInt(metadataBuf.Oldest.Height)
-	newestHeightInCp = utils.UnmarshalBigInt(metadataBuf.Newest.Height)
+	oldestHeightInCp = common.UnmarshalBigInt(metadataBuf.Oldest.Height)
+	newestHeightInCp = common.UnmarshalBigInt(metadataBuf.Newest.Height)
 
-	blockHeight := utils.UnmarshalBigInt(blockId.Height)
+	blockHeight := common.UnmarshalBigInt(blockId.Height)
 	if blockHeight.Cmp(oldestHeightInCp) < 0 || blockHeight.Cmp(newestHeightInCp) > 0 {
 		return nil, nil, nil
 	}
@@ -249,7 +249,7 @@ func (cp *ProductionCheckpointer) GetInitialMachine() (machine.Machine, error) {
 }
 
 func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(
-	blocknum *protocol.TimeBlocks,
+	blocknum *common.TimeBlocks,
 	blockHeaderHash [32]byte,
 	buf []byte,
 	cpCtx structures.CheckpointContext,
@@ -520,9 +520,9 @@ func (csc *productionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId
 	if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
 		log.Fatal(err)
 	}
-	oldestHeight := utils.UnmarshalBigInt(metadataBuf.Oldest.Height)
-	newestHeight := utils.UnmarshalBigInt(metadataBuf.Newest.Height)
-	blockHeight := utils.UnmarshalBigInt(blockId.Height)
+	oldestHeight := common.UnmarshalBigInt(metadataBuf.Oldest.Height)
+	newestHeight := common.UnmarshalBigInt(metadataBuf.Newest.Height)
+	blockHeight := common.UnmarshalBigInt(blockId.Height)
 	if blockHeight.Cmp(oldestHeight) < 0 || blockHeight.Cmp(newestHeight) > 0 {
 		return nil, nil
 	}
@@ -551,12 +551,12 @@ func (csc *productionCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *b
 			return
 		}
 
-		nextHeight := utils.UnmarshalBigInt(links.Next.Height)
+		nextHeight := common.UnmarshalBigInt(links.Next.Height)
 		if nextHeight.Cmp(earliestRollbackPoint) >= 0 {
 			return
 		}
 
-		metadataBuf.Newest.Height = utils.MarshalBigInt(nextHeight)
+		metadataBuf.Newest.Height = common.MarshalBigInt(nextHeight)
 		metadataBytes, err := proto.Marshal(metadataBuf)
 		if err != nil {
 			return
@@ -578,11 +578,11 @@ func (csc *productionCheckpointer) DeleteOneOldCheckpoint(blockId *structures.Bl
 	}
 	csc.st.DeleteData(getManifestKey(blockId))
 	for _, vbuf := range manifestBuf.Values {
-		valhash := utils.UnmarshalHash(vbuf)
+		valhash := common.UnmarshalHash(vbuf)
 		csc.st.DeleteValue(valhash)
 	}
 	for _, mbuf := range manifestBuf.Machines {
-		machhash := utils.UnmarshalHash(mbuf)
+		machhash := common.UnmarshalHash(mbuf)
 		csc.st.DeleteCheckpoint(machhash)
 	}
 	csc.st.DeleteData(getContentsKey(blockId))

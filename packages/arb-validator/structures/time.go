@@ -19,8 +19,7 @@ package structures
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type TimeTicks struct {
@@ -35,7 +34,7 @@ func init() {
 	_timeConversionFactor = new(big.Int).Mul(big.NewInt(13), _timeTicksPerSecond)
 }
 
-func TimeFromBlockNum(blockNum *protocol.TimeBlocks) TimeTicks {
+func TimeFromBlockNum(blockNum *common.TimeBlocks) TimeTicks {
 	return TimeTicks{new(big.Int).Mul(_timeConversionFactor, blockNum.AsInt())}
 }
 
@@ -53,12 +52,12 @@ func (rt TimeTicks) Cmp(rt2 TimeTicks) int {
 
 func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
 	return &TimeTicksBuf{
-		Val: utils.MarshalBigInt(rt.Val),
+		Val: common.MarshalBigInt(rt.Val),
 	}
 }
 
 func (rtb *TimeTicksBuf) Unmarshal() TimeTicks {
-	return TimeTicks{utils.UnmarshalBigInt(rtb.Val)}
+	return TimeTicks{common.UnmarshalBigInt(rtb.Val)}
 }
 
 func (rt TimeTicks) Equals(rt2 TimeTicks) bool {

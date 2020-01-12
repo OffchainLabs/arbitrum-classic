@@ -24,15 +24,16 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -43,11 +44,11 @@ import (
 type ChainObserver struct {
 	*sync.RWMutex
 	nodeGraph           *StakedNodeGraph
-	rollupAddr          common.Address
+	rollupAddr          ethcommon.Address
 	pendingInbox        *structures.PendingInbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
-	latestBlockNumber   *protocol.TimeBlocks
+	latestBlockNumber   *common.TimeBlocks
 	listeners           []ChainListener
 	checkpointer        RollupCheckpointer
 	isOpinionated       bool
@@ -56,11 +57,11 @@ type ChainObserver struct {
 
 func NewChain(
 	ctx context.Context,
-	rollupAddr common.Address,
+	rollupAddr ethcommon.Address,
 	checkpointer RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
-	startTime *protocol.TimeBlocks,
+	startTime *common.TimeBlocks,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -100,7 +101,7 @@ func (chain *ChainObserver) AddListener(listener ChainListener) {
 }
 
 func MakeInitialChainObserverBuf(
-	contractAddress common.Address,
+	contractAddress ethcommon.Address,
 	machineHash [32]byte,
 	params *structures.ChainParams,
 	opinionated bool,
@@ -121,8 +122,8 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContex
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.Bytes(),
 		PendingInbox:        chain.pendingInbox.MarshalForCheckpoint(ctx),
-		KnownValidNode:      utils.MarshalHash(chain.knownValidNode.hash),
-		CalculatedValidNode: utils.MarshalHash(chain.calculatedValidNode.hash),
+		KnownValidNode:      common.MarshalHash(chain.knownValidNode.hash),
+		CalculatedValidNode: common.MarshalHash(chain.calculatedValidNode.hash),
 		IsOpinionated:       chain.isOpinionated,
 	}
 }
@@ -141,10 +142,10 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	chain := &ChainObserver{
 		RWMutex:             &sync.RWMutex{},
 		nodeGraph:           nodeGraph,
-		rollupAddr:          common.BytesToAddress(m.ContractAddress),
+		rollupAddr:          ethcommon.BytesToAddress(m.ContractAddress),
 		pendingInbox:        &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
-		knownValidNode:      nodeGraph.nodeFromHash[utils.UnmarshalHash(m.KnownValidNode)],
-		calculatedValidNode: nodeGraph.nodeFromHash[utils.UnmarshalHash(m.CalculatedValidNode)],
+		knownValidNode:      nodeGraph.nodeFromHash[common.UnmarshalHash(m.KnownValidNode)],
+		calculatedValidNode: nodeGraph.nodeFromHash[common.UnmarshalHash(m.CalculatedValidNode)],
 		latestBlockNumber:   nil,
 		listeners:           []ChainListener{},
 		checkpointer:        nil,
@@ -272,7 +273,7 @@ func (chain *ChainObserver) updateOldest(node *Node) {
 
 func (chain *ChainObserver) notifyAssert(
 	ev arbbridge.AssertedEvent,
-	currentTime *protocol.TimeBlocks,
+	currentTime *common.TimeBlocks,
 	assertionTxHash [32]byte,
 ) error {
 	topPendingCount, ok := chain.pendingInbox.GetHeight(ev.MaxPendingTop)
@@ -301,7 +302,7 @@ func (chain *ChainObserver) notifyAssert(
 	return nil
 }
 
-func (chain *ChainObserver) notifyNewBlock(blockNum *protocol.TimeBlocks, blockHash [32]byte) {
+func (chain *ChainObserver) notifyNewBlock(blockNum *common.TimeBlocks, blockHash [32]byte) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockNumber = blockNum
@@ -332,18 +333,18 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Preco
 func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
 	return &protocol.TimeBoundsBlocks{
 		chain.latestBlockNumber,
-		protocol.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
+		common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
 	}
 }
 
-func (chain *ChainObserver) CurrentTime() *protocol.TimeBlocks {
+func (chain *ChainObserver) CurrentTime() *common.TimeBlocks {
 	chain.RLock()
 	time := chain.latestBlockNumber
 	chain.RUnlock()
 	return time
 }
 
-func (chain *ChainObserver) ContractAddress() common.Address {
+func (chain *ChainObserver) ContractAddress() ethcommon.Address {
 	chain.RLock()
 	address := chain.rollupAddr
 	chain.RUnlock()

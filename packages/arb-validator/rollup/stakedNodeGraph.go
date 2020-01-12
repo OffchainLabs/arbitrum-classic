@@ -22,11 +22,12 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -48,7 +49,7 @@ func NewStakedNodeGraph(machine machine.Machine, params structures.ChainParams) 
 	}
 }
 
-func MakeInitialStakedNodeGraphBuf(machineHash [32]byte, params *structures.ChainParams) (*StakedNodeGraphBuf, *value.HashBuf) {
+func MakeInitialStakedNodeGraphBuf(machineHash [32]byte, params *structures.ChainParams) (*StakedNodeGraphBuf, *common.HashBuf) {
 	initialNodeGraphBuf, initialNodeHashBuf := MakeInitialNodeGraphBuf(machineHash, params)
 	return &StakedNodeGraphBuf{
 		NodeGraph: initialNodeGraphBuf,
@@ -93,11 +94,11 @@ func (chain *StakedNodeGraph) CreateStake(ev arbbridge.StakeCreatedEvent, curren
 		ev.Staker,
 		node,
 		currentTime,
-		common.Address{},
+		ethcommon.Address{},
 	})
 }
 
-func (chain *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash [32]byte) {
+func (chain *StakedNodeGraph) MoveStake(stakerAddr ethcommon.Address, nodeHash [32]byte) {
 	staker := chain.stakers.Get(stakerAddr)
 	if staker == nil {
 		panic("Moved nonexistant staker")
@@ -113,24 +114,24 @@ func (chain *StakedNodeGraph) MoveStake(stakerAddr common.Address, nodeHash [32]
 	staker.location.numStakers++
 }
 
-func (chain *StakedNodeGraph) RemoveStake(stakerAddr common.Address) {
+func (chain *StakedNodeGraph) RemoveStake(stakerAddr ethcommon.Address) {
 	staker := chain.stakers.Get(stakerAddr)
 	staker.location.numStakers--
 	chain.considerPruningNode(staker.location)
 	chain.stakers.Delete(staker)
 }
 
-func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger common.Address, kind structures.ChildType) {
+func (chain *StakedNodeGraph) NewChallenge(contract, asserter, challenger ethcommon.Address, kind structures.ChildType) {
 	chain.stakers.Get(asserter).challenge = contract
 	chain.stakers.Get(challenger).challenge = contract
 }
 
-func (chain *StakedNodeGraph) ChallengeResolved(contract, winner, loser common.Address) {
-	chain.stakers.Get(winner).challenge = common.Address{}
+func (chain *StakedNodeGraph) ChallengeResolved(contract, winner, loser ethcommon.Address) {
+	chain.stakers.Get(winner).challenge = ethcommon.Address{}
 	chain.RemoveStake(loser)
 }
 
-type SortableAddressList []common.Address
+type SortableAddressList []ethcommon.Address
 
 func (sa SortableAddressList) Len() int {
 	return len(sa)
@@ -150,7 +151,7 @@ type confirmValidOpportunity struct {
 	messages           []value.Value
 	logsAcc            [32]byte
 	vmProtoStateHash   [32]byte
-	stakerAddresses    []common.Address
+	stakerAddresses    []ethcommon.Address
 	stakerProofs       [][32]byte
 	stakerProofOffsets []*big.Int
 }
@@ -161,7 +162,7 @@ type confirmInvalidOpportunity struct {
 	challengeNodeData  [32]byte
 	branch             structures.ChildType
 	vmProtoStateHash   [32]byte
-	stakerAddresses    []common.Address
+	stakerAddresses    []ethcommon.Address
 	stakerProofs       [][32]byte
 	stakerProofOffsets []*big.Int
 }
@@ -169,7 +170,7 @@ type confirmInvalidOpportunity struct {
 func (sng *StakedNodeGraph) generateNextConfProof(
 	currentTime structures.TimeTicks,
 ) (*confirmValidOpportunity, *confirmInvalidOpportunity) {
-	stakerAddrs := make([]common.Address, 0)
+	stakerAddrs := make([]ethcommon.Address, 0)
 	sng.stakers.forall(func(st *Staker) {
 		stakerAddrs = append(stakerAddrs, st.address)
 	})
@@ -222,7 +223,7 @@ func (sng *StakedNodeGraph) generateNextConfProof(
 func (sng *StakedNodeGraph) generateAlignedStakersProof(
 	confirmingNode *Node,
 	currentTime structures.TimeTicks,
-	stakerAddrs []common.Address,
+	stakerAddrs []ethcommon.Address,
 ) ([][32]byte, []*big.Int) {
 	proof := make([][32]byte, 0)
 	offsets := make([]*big.Int, 0)
@@ -272,8 +273,8 @@ func (chain *StakedNodeGraph) generateStakerPruneInfo() ([]recoverStakeMootedPar
 }
 
 type challengeOpportunity struct {
-	asserter              common.Address
-	challenger            common.Address
+	asserter              ethcommon.Address
+	challenger            ethcommon.Address
 	prevNodeHash          [32]byte
 	deadlineTicks         structures.TimeTicks
 	asserterNodeType      structures.ChildType
@@ -288,7 +289,7 @@ type challengeOpportunity struct {
 }
 
 func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {
-	if !utils.AddressIsZero(staker1.challenge) || !utils.AddressIsZero(staker2.challenge) {
+	if !common.AddressIsZero(staker1.challenge) || !common.AddressIsZero(staker2.challenge) {
 		return nil
 	}
 	staker1Ancestor, staker2Ancestor, err := GetConflictAncestor(staker1.location, staker2.location)
@@ -334,7 +335,7 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 }
 
 func (chain *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *challengeOpportunity {
-	if !utils.AddressIsZero(staker.challenge) {
+	if !common.AddressIsZero(staker.challenge) {
 		return nil
 	}
 	var ret *challengeOpportunity

@@ -1,23 +1,23 @@
 syntax = "proto3";
 package valprotocol;
-import "value/value.proto";
+import "common/common.proto";
 import "protocol/protocol.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol";
 
 message PreconditionBuf {
-    value.HashBuf beforeHash = 1;
+    common.HashBuf beforeHash = 1;
     protocol.TimeBoundsBlocksBuf timeBounds = 2;
-    value.HashBuf beforeInbox = 3;
+    common.HashBuf beforeInbox = 3;
 }
 
 message ExecutionAssertionStubBuf {
-    value.HashBuf afterHash = 1;
+    common.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;
     uint64 numGas = 3;
-    value.HashBuf firstMessageHash = 4;
-    value.HashBuf lastMessageHash = 5;
-    value.HashBuf firstLogHash = 6;
-    value.HashBuf lastLogHash = 7;
+    common.HashBuf firstMessageHash = 4;
+    common.HashBuf lastMessageHash = 5;
+    common.HashBuf firstLogHash = 6;
+    common.HashBuf lastLogHash = 7;
 }
 
 message AddressBuf {
@@ -29,9 +29,9 @@ message TokenTypeBuf {
 }
 
 message MessageBuf {
-    value.ValueBuf value = 1;
+    bytes value = 1;
     TokenTypeBuf tokenType = 2;
-    value.BigIntegerBuf amount = 3;
+    common.BigIntegerBuf amount = 3;
     AddressBuf sender = 4;
 }
 

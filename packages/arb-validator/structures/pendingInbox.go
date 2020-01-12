@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -174,17 +174,17 @@ func hash2(h1, h2 [32]byte) [32]byte {
 
 func MakeInitialPendingInboxBuf() *PendingInboxBuf {
 	return &PendingInboxBuf{
-		TopCount:   utils.MarshalBigInt(big.NewInt(0)),
-		ItemHashes: []*value.HashBuf{},
-		HashOfRest: utils.MarshalHash(value.NewEmptyTuple().Hash()),
+		TopCount:   common.MarshalBigInt(big.NewInt(0)),
+		ItemHashes: []*common.HashBuf{},
+		HashOfRest: common.MarshalHash(value.NewEmptyTuple().Hash()),
 	}
 }
 
 func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInboxBuf {
-	var msgHashes []*value.HashBuf
+	var msgHashes []*common.HashBuf
 	for item := pi.newest; item != nil; item = item.prev {
 		ctx.AddValue(item.message)
-		msgHashes = append(msgHashes, utils.MarshalHash(item.message.Hash()))
+		msgHashes = append(msgHashes, common.MarshalHash(item.message.Hash()))
 	}
 	var topCount *big.Int
 	if pi.newest == nil {
@@ -193,17 +193,17 @@ func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInbo
 		topCount = pi.newest.count
 	}
 	return &PendingInboxBuf{
-		TopCount:   utils.MarshalBigInt(topCount),
+		TopCount:   common.MarshalBigInt(topCount),
 		ItemHashes: msgHashes,
-		HashOfRest: utils.MarshalHash(pi.hashOfRest),
+		HashOfRest: common.MarshalHash(pi.hashOfRest),
 	}
 }
 
 func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) *MessageStack {
 	ret := NewMessageStack()
-	ret.hashOfRest = utils.UnmarshalHash(buf.HashOfRest)
+	ret.hashOfRest = common.UnmarshalHash(buf.HashOfRest)
 	for i := len(buf.ItemHashes) - 1; i >= 0; i = i - 1 {
-		val := ctx.GetValue(utils.UnmarshalHash(buf.ItemHashes[i]))
+		val := ctx.GetValue(common.UnmarshalHash(buf.ItemHashes[i]))
 		ret.DeliverMessage(val)
 	}
 	return ret

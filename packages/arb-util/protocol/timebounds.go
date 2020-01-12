@@ -20,35 +20,14 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type TimeBlocks big.Int
-
-func NewTimeBlocks(val *big.Int) *TimeBlocks {
-	return (*TimeBlocks)(val)
-}
-
-func (tb *TimeBlocks) Clone() *TimeBlocks {
-	return NewTimeBlocks(new(big.Int).Set(tb.AsInt()))
-}
-
-func (tb *TimeBlocks) AsInt() *big.Int {
-	return (*big.Int)(tb)
-}
-
-func (tb *TimeBlocks) Marshal() *TimeBlocksBuf {
-	return &TimeBlocksBuf{Val: utils.MarshalBigInt(tb.AsInt())}
-}
-
-func (tb *TimeBlocksBuf) Unmarshal() *TimeBlocks {
-	return (*TimeBlocks)(utils.UnmarshalBigInt(tb.Val))
-}
-
 type TimeBoundsBlocks struct {
-	Start *TimeBlocks
-	End   *TimeBlocks
+	Start *common.TimeBlocks
+	End   *common.TimeBlocks
 }
 
 func (a *TimeBoundsBlocks) MarshalToBuf() *TimeBoundsBlocksBuf {
@@ -81,7 +60,7 @@ func (tb *TimeBoundsBlocks) Equals(other *TimeBoundsBlocks) bool {
 		tb.End.AsInt().Cmp(other.End.AsInt()) == 0
 }
 
-func (tb *TimeBoundsBlocks) IsValidTime(time *TimeBlocks) error {
+func (tb *TimeBoundsBlocks) IsValidTime(time *common.TimeBlocks) error {
 	startTime := tb.Start.AsInt()
 	if time.AsInt().Cmp(startTime) < 0 {
 		return errors.New("TimeBounds minimum time must less than the time")

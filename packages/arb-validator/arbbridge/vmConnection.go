@@ -21,6 +21,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -111,7 +113,7 @@ type ContractConnection interface {
 }
 
 type ChainContract interface {
-	CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error)
+	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
 }
 
 type ChallengeContract interface {

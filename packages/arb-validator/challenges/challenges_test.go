@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -289,8 +291,8 @@ func TestExecution(t *testing.T) {
 	}
 
 	timeBounds := &protocol.TimeBoundsBlocks{
-		protocol.NewTimeBlocks(big.NewInt(100)),
-		protocol.NewTimeBlocks(big.NewInt(200)),
+		common2.NewTimeBlocks(big.NewInt(100)),
+		common2.NewTimeBlocks(big.NewInt(200)),
 	}
 	afterMachine := mach.Clone()
 	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())

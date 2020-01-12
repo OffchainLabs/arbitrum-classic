@@ -21,15 +21,14 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type Node struct {
@@ -87,9 +86,9 @@ func newInitialNode_hashOnly(machHash [32]byte) *Node {
 	return ret
 }
 
-func MakeInitialNodeBuf(machineHash [32]byte) (*NodeBuf, *value.HashBuf) {
+func MakeInitialNodeBuf(machineHash [32]byte) (*NodeBuf, *common.HashBuf) {
 	initNode := newInitialNode_hashOnly(machineHash)
-	return initNode.MarshalForCheckpoint(nil), utils.MarshalHash(initNode.hash)
+	return initNode.MarshalForCheckpoint(nil), common.MarshalHash(initNode.hash)
 }
 
 func NewNodeFromValidPrev(
@@ -97,7 +96,7 @@ func NewNodeFromValidPrev(
 	disputable *structures.DisputableNode,
 	machine machine.Machine,
 	params structures.ChainParams,
-	currentTime *protocol.TimeBlocks,
+	currentTime *common.TimeBlocks,
 	assertionTxHash [32]byte,
 ) *Node {
 	return NewNodeFromPrev(
@@ -117,7 +116,7 @@ func NewNodeFromInvalidPrev(
 	disputable *structures.DisputableNode,
 	kind structures.ChildType,
 	params structures.ChainParams,
-	currentTime *protocol.TimeBlocks,
+	currentTime *common.TimeBlocks,
 	assertionTxHash [32]byte,
 ) *Node {
 	return NewNodeFromPrev(
@@ -137,7 +136,7 @@ func NewNodeFromPrev(
 	disputable *structures.DisputableNode,
 	kind structures.ChildType,
 	params structures.ChainParams,
-	currentTime *protocol.TimeBlocks,
+	currentTime *common.TimeBlocks,
 	vmProtoData *structures.VMProtoData,
 	machine machine.Machine,
 	assertionTxHash [32]byte,
@@ -222,7 +221,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 			node.disputable.MaxPendingTop,
 			pendingLeft,
 		)
-		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
+		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidMessagesChildType:
 		ret := structures.MessageChallengeDataHash(
@@ -232,7 +231,7 @@ func (node *Node) ChallengeNodeData(params structures.ChainParams) ([32]byte, st
 			node.disputable.AssertionClaim.ImportedMessagesSlice,
 			node.disputable.AssertionParams.ImportedMessageCount,
 		)
-		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(protocol.NewTimeBlocks(big.NewInt(1))))
+		challengePeriod := params.GracePeriod.Add(structures.TimeFromBlockNum(common.NewTimeBlocks(big.NewInt(1))))
 		return ret, challengePeriod
 	case structures.InvalidExecutionChildType:
 		ret := structures.ExecutionDataHash(
@@ -269,14 +268,14 @@ func (node *Node) setHash(nodeDataHash [32]byte) {
 }
 
 func (node *Node) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeBuf {
-	var machineHash *value.HashBuf
+	var machineHash *common.HashBuf
 	if node.machine != nil {
 		ctx.AddMachine(node.machine)
-		machineHash = utils.MarshalHash(node.machine.Hash())
+		machineHash = common.MarshalHash(node.machine.Hash())
 	}
-	var prevHashBuf *value.HashBuf
+	var prevHashBuf *common.HashBuf
 	if node.prev != nil {
-		prevHashBuf = utils.MarshalHash(node.prev.hash)
+		prevHashBuf = common.MarshalHash(node.prev.hash)
 	}
 	var disputableNodeBuf *structures.DisputableNodeBuf
 	if node.disputable != nil {
@@ -290,9 +289,9 @@ func (node *Node) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeBu
 		VmProtoData:    node.vmProtoData.MarshalToBuf(),
 		MachineHash:    machineHash,
 		Depth:          node.depth,
-		NodeDataHash:   utils.MarshalHash(node.nodeDataHash),
-		InnerHash:      utils.MarshalHash(node.innerHash),
-		Hash:           utils.MarshalHash(node.hash),
+		NodeDataHash:   common.MarshalHash(node.nodeDataHash),
+		InnerHash:      common.MarshalHash(node.innerHash),
+		Hash:           common.MarshalHash(node.hash),
 	}
 }
 
@@ -309,13 +308,13 @@ func (m *NodeBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, chain *
 		vmProtoData:  m.VmProtoData.Unmarshal(),
 		machine:      nil,
 		depth:        m.Depth,
-		nodeDataHash: utils.UnmarshalHash(m.NodeDataHash),
-		innerHash:    utils.UnmarshalHash(m.InnerHash),
-		hash:         utils.UnmarshalHash(m.Hash),
+		nodeDataHash: common.UnmarshalHash(m.NodeDataHash),
+		innerHash:    common.UnmarshalHash(m.InnerHash),
+		hash:         common.UnmarshalHash(m.Hash),
 	}
 
 	if m.MachineHash != nil {
-		node.machine = ctx.GetMachine(utils.UnmarshalHash(m.MachineHash))
+		node.machine = ctx.GetMachine(common.UnmarshalHash(m.MachineHash))
 	}
 
 	chain.nodeFromHash[node.hash] = node

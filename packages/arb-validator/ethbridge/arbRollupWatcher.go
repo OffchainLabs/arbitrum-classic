@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	common2 "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	errors2 "github.com/pkg/errors"
@@ -302,8 +304,8 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
 					TimeBounds: &protocol.TimeBoundsBlocks{
-						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
-						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
+						common2.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
+						common2.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
 					},
 					ImportedMessageCount: eventVal.ImportedMessageCount,
 				},

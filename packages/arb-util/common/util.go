@@ -14,55 +14,53 @@
 * limitations under the License.
  */
 
-package utils
+package common
 
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 )
 
-func MarshalHash(h [32]byte) *value.HashBuf {
-	return &value.HashBuf{
+func MarshalHash(h [32]byte) *HashBuf {
+	return &HashBuf{
 		Value: append([]byte{}, h[:]...),
 	}
 }
 
-func MarshalSliceOfHashes(hs [][32]byte) []*value.HashBuf {
-	ret := make([]*value.HashBuf, 0, len(hs))
+func MarshalSliceOfHashes(hs [][32]byte) []*HashBuf {
+	ret := make([]*HashBuf, 0, len(hs))
 	for _, h := range hs {
 		ret = append(ret, MarshalHash(h))
 	}
 	return ret
 }
 
-func UnmarshalHash(hb *value.HashBuf) [32]byte {
+func UnmarshalHash(hb *HashBuf) [32]byte {
 	var ret [32]byte
 	copy(ret[:], hb.Value)
 	return ret
 }
 
-func MarshalBigInt(bi *big.Int) *value.BigIntegerBuf {
-	return &value.BigIntegerBuf{
+func MarshalBigInt(bi *big.Int) *BigIntegerBuf {
+	return &BigIntegerBuf{
 		Value: bi.Bytes(),
 	}
 }
-func MarshalInt64ToBigIntBuf(val int64) *value.BigIntegerBuf {
+func MarshalInt64ToBigIntBuf(val int64) *BigIntegerBuf {
 	return MarshalBigInt(big.NewInt(val))
 }
 
-func UnmarshalBigInt(buf *value.BigIntegerBuf) *big.Int {
+func UnmarshalBigInt(buf *BigIntegerBuf) *big.Int {
 	return new(big.Int).SetBytes(buf.Value)
 }
 
-var zeroAddress common.Address
+var zeroAddress ethcommon.Address
 
 func init() {
-	zeroAddress = common.BytesToAddress([]byte{})
+	zeroAddress = ethcommon.BytesToAddress([]byte{})
 }
 
-func AddressIsZero(addr common.Address) bool {
+func AddressIsZero(addr ethcommon.Address) bool {
 	return addr == zeroAddress
 }

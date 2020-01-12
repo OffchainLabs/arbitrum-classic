@@ -19,7 +19,7 @@ package structures
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type ChainParams struct {
@@ -31,7 +31,7 @@ type ChainParams struct {
 
 func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 	return &ChainParamsBuf{
-		StakeRequirement:  utils.MarshalBigInt(params.StakeRequirement),
+		StakeRequirement:  common.MarshalBigInt(params.StakeRequirement),
 		GracePeriod:       params.GracePeriod.MarshalToBuf(),
 		MaxExecutionSteps: params.MaxExecutionSteps,
 	}
@@ -39,7 +39,7 @@ func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 
 func (m *ChainParamsBuf) Unmarshal() ChainParams {
 	return ChainParams{
-		StakeRequirement:  utils.UnmarshalBigInt(m.StakeRequirement),
+		StakeRequirement:  common.UnmarshalBigInt(m.StakeRequirement),
 		GracePeriod:       m.GracePeriod.Unmarshal(),
 		MaxExecutionSteps: m.MaxExecutionSteps,
 	}

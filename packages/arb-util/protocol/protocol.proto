@@ -1,21 +1,17 @@
 syntax = "proto3";
 package protocol;
-import "value/value.proto";
+import "common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
-message TimeBlocksBuf {
-    value.BigIntegerBuf val = 1;
-}
-
 message TimeBoundsBlocksBuf {
-    TimeBlocksBuf start = 1;
-    TimeBlocksBuf end = 2;
+    common.TimeBlocksBuf start = 1;
+    common.TimeBlocksBuf end = 2;
 }
 
 message ExecutionAssertionBuf {
-    value.HashBuf afterHash = 1;
+    common.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;
     uint64 numGas = 3;
-    repeated value.ValueBuf messages = 4;
-    repeated value.ValueBuf logs = 5;
+    repeated bytes messages = 4;
+    repeated bytes logs = 5;
 }

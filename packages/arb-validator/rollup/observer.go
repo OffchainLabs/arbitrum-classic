@@ -22,19 +22,20 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 func CreateObserver(
 	ctx context.Context,
-	rollupAddr common.Address,
+	rollupAddr ethcommon.Address,
 	checkpointer RollupCheckpointer,
 	updateOpinion bool,
-	startTime *protocol.TimeBlocks,
+	startTime *common.TimeBlocks,
 	clnt arbbridge.ArbClient,
 ) (*ChainObserver, error) {
 	rollup, err := clnt.NewRollupWatcher(rollupAddr)
@@ -79,7 +80,7 @@ func CreateObserver(
 				if notification.Header.Number.Cmp(lastBlockNumberSeen) > 0 {
 					lastBlockNumberSeen = notification.Header.Number
 					blockHeaderHash := notification.Header.Root
-					chain.notifyNewBlock(protocol.NewTimeBlocks(lastBlockNumberSeen), blockHeaderHash)
+					chain.notifyNewBlock(common.NewTimeBlocks(lastBlockNumberSeen), blockHeaderHash)
 				}
 				handleNotification(notification, chain)
 			case <-errChan:
@@ -108,7 +109,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.MessageDeliveredEvent:
 		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := structures.TimeFromBlockNum(protocol.NewTimeBlocks(notification.Header.Number))
+		currentTime := structures.TimeFromBlockNum(common.NewTimeBlocks(notification.Header.Number))
 		chain.createStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.newChallenge(ev)
@@ -121,7 +122,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ev)
 	case arbbridge.AssertedEvent:
-		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
+		currentTime := common.NewTimeBlocks(notification.Header.Number)
 		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
 		if err != nil {
 			panic(err)

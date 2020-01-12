@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,30 @@
  * limitations under the License.
  */
 
-package mockbridge
+package common
 
 import (
-	"context"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"math/big"
 )
 
-type ClientConnection struct {
-	Client arbbridge.ArbClient
+type TimeBlocks big.Int
+
+func NewTimeBlocks(val *big.Int) *TimeBlocks {
+	return (*TimeBlocks)(val)
 }
 
-func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
-	header, err := c.Client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return common.NewTimeBlocks(header.Number), nil
+func (tb *TimeBlocks) Clone() *TimeBlocks {
+	return NewTimeBlocks(new(big.Int).Set(tb.AsInt()))
+}
+
+func (tb *TimeBlocks) AsInt() *big.Int {
+	return (*big.Int)(tb)
+}
+
+func (tb *TimeBlocks) Marshal() *TimeBlocksBuf {
+	return &TimeBlocksBuf{Val: MarshalBigInt(tb.AsInt())}
+}
+
+func (tb *TimeBlocksBuf) Unmarshal() *TimeBlocks {
+	return (*TimeBlocks)(UnmarshalBigInt(tb.Val))
 }

@@ -18,8 +18,7 @@ package protocol
 
 import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -36,16 +35,18 @@ func NewExecutionAssertion(afterHash [32]byte, didInboxInsn bool, numGas uint64,
 }
 
 func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
-	messages := make([]*value.ValueBuf, 0, len(a.OutMsgs))
+	messages := make([][]byte, 0, len(a.OutMsgs))
 	for _, msg := range a.OutMsgs {
-		messages = append(messages, value.NewValueBuf(msg))
+		valBytes := value.MarshalValueToBytes(msg)
+		messages = append(messages, valBytes)
 	}
-	logs := make([]*value.ValueBuf, 0, len(a.Logs))
+	logs := make([][]byte, 0, len(a.Logs))
 	for _, msg := range a.OutMsgs {
-		logs = append(logs, value.NewValueBuf(msg))
+		valBytes := value.MarshalValueToBytes(msg)
+		logs = append(logs, valBytes)
 	}
 	return &ExecutionAssertionBuf{
-		AfterHash:    utils.MarshalHash(a.AfterHash),
+		AfterHash:    common.MarshalHash(a.AfterHash),
 		DidInboxInsn: a.DidInboxInsn,
 		NumGas:       a.NumGas,
 		Messages:     messages,
@@ -56,23 +57,23 @@ func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
 func (a *ExecutionAssertionBuf) Unmarshal() (*ExecutionAssertion, error) {
 	messages := make([]value.Value, 0, len(a.Logs))
 	for _, valLog := range a.Messages {
-		v, err := value.NewValueFromBuf(valLog)
+		val, err := value.UnmarshalValueFromBytes(valLog)
 		if err != nil {
 			return nil, err
 		}
-		messages = append(messages, v)
+		messages = append(messages, val)
 	}
 
 	logs := make([]value.Value, 0, len(a.Logs))
 	for _, valLog := range a.Logs {
-		v, err := value.NewValueFromBuf(valLog)
+		val, err := value.UnmarshalValueFromBytes(valLog)
 		if err != nil {
 			return nil, err
 		}
-		logs = append(logs, v)
+		logs = append(logs, val)
 	}
 	return &ExecutionAssertion{
-		AfterHash:    utils.UnmarshalHash(a.AfterHash),
+		AfterHash:    common.UnmarshalHash(a.AfterHash),
 		DidInboxInsn: a.DidInboxInsn,
 		NumGas:       a.NumGas,
 		OutMsgs:      messages,

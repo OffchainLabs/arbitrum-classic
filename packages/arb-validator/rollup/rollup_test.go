@@ -21,30 +21,31 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-var dummyAddress common.Address
+var dummyAddress ethcommon.Address
 
-var dummyRollupAddress1 = common.BytesToAddress([]byte{1})
-var dummyRollupAddress2 = common.BytesToAddress([]byte{2})
-var dummyRollupAddress3 = common.BytesToAddress([]byte{3})
-var dummyRollupAddress4 = common.BytesToAddress([]byte{4})
+var dummyRollupAddress1 = ethcommon.BytesToAddress([]byte{1})
+var dummyRollupAddress2 = ethcommon.BytesToAddress([]byte{2})
+var dummyRollupAddress3 = ethcommon.BytesToAddress([]byte{3})
+var dummyRollupAddress4 = ethcommon.BytesToAddress([]byte{4})
 
 func TestCreateEmptyChain(t *testing.T) {
 	testCreateEmptyChain(dummyRollupAddress1, "dummy", "contract.ao", t)
 	testCreateEmptyChain(dummyRollupAddress1, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+func testCreateEmptyChain(rollupAddress ethcommon.Address, checkpointType string, contractPath string, t *testing.T) {
 	chain, err := setUpChain(rollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +66,7 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 }
 
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpointer, t *testing.T) {
-	blockHeight := protocol.NewTimeBlocks(big.NewInt(7337))
+	blockHeight := common.NewTimeBlocks(big.NewInt(7337))
 	var blockHeaderHash [32]byte
 	ctx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ctx)
@@ -89,7 +90,7 @@ func TestDoAssertion(t *testing.T) {
 	testDoAssertion(dummyRollupAddress2, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+func testDoAssertion(dummyRollupAddress ethcommon.Address, checkpointType string, contractPath string, t *testing.T) {
 
 	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
@@ -111,7 +112,7 @@ func TestChallenge(t *testing.T) {
 	testChallenge(dummyRollupAddress3, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testChallenge(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+func testChallenge(dummyRollupAddress ethcommon.Address, checkpointType string, contractPath string, t *testing.T) {
 
 	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
@@ -119,9 +120,9 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 	}
 
 	doAnAssertion(chain, chain.nodeGraph.latestConfirmed)
-	staker1addr := common.BytesToAddress([]byte{1})
-	staker2addr := common.BytesToAddress([]byte{2})
-	contractAddr := common.BytesToAddress([]byte{3})
+	staker1addr := ethcommon.BytesToAddress([]byte{1})
+	staker2addr := ethcommon.BytesToAddress([]byte{2})
+	contractAddr := ethcommon.BytesToAddress([]byte{3})
 	validTip := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.ValidChildType)
 	tip2 := chain.nodeGraph.latestConfirmed.GetSuccessor(chain.nodeGraph.NodeGraph, structures.InvalidMessagesChildType)
 	n1, _, childType, err := chain.nodeGraph.GetConflictAncestor(validTip, tip2)
@@ -151,8 +152,8 @@ func testChallenge(dummyRollupAddress common.Address, checkpointType string, con
 func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 	theMachine := baseNode.machine
 	timeBounds := &protocol.TimeBoundsBlocks{
-		Start: &protocol.TimeBlocksBuf{Val: utils.MarshalInt64ToBigIntBuf(0)},
-		End:   &protocol.TimeBlocksBuf{Val: utils.MarshalInt64ToBigIntBuf(1000)},
+		Start: common.NewTimeBlocks(big.NewInt(0)),
+		End:   common.NewTimeBlocks(big.NewInt(1000)),
 	}
 	execAssertion, numGas := theMachine.ExecuteAssertion(1, timeBounds, value.NewEmptyTuple())
 	_ = execAssertion
@@ -163,13 +164,13 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		ImportedMessageCount: big.NewInt(0),
 	}
 	assertionStub := &valprotocol.ExecutionAssertionStub{
-		AfterHash:        value.NewHashBuf(theMachine.Hash()),
+		AfterHash:        theMachine.Hash(),
 		DidInboxInsn:     false,
 		NumGas:           uint64(numGas),
-		FirstMessageHash: value.NewHashBuf([32]byte{}),
-		LastMessageHash:  value.NewHashBuf([32]byte{}),
-		FirstLogHash:     value.NewHashBuf([32]byte{}),
-		LastLogHash:      value.NewHashBuf([32]byte{}),
+		FirstMessageHash: [32]byte{},
+		LastMessageHash:  [32]byte{},
+		FirstLogHash:     [32]byte{},
+		LastLogHash:      [32]byte{},
 	}
 	assertionClaim := &structures.AssertionClaim{
 		AfterPendingTop:       chain.pendingInbox.GetTopHash(),
@@ -186,7 +187,7 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 		baseNode,
 		disputableNode,
 		theMachine,
-		protocol.NewTimeBlocks(big.NewInt(10)),
+		common.NewTimeBlocks(big.NewInt(10)),
 		[32]byte{},
 	)
 }
@@ -196,7 +197,7 @@ func TestCreateStakers(t *testing.T) {
 	testCreateStakers(dummyRollupAddress4, "fresh_rocksdb", "contract.ao", t)
 }
 
-func testCreateStakers(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
+func testCreateStakers(dummyRollupAddress ethcommon.Address, checkpointType string, contractPath string, t *testing.T) {
 	chain, err := setUpChain(dummyRollupAddress, checkpointType, contractPath)
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +209,7 @@ func testCreateStakers(dummyRollupAddress common.Address, checkpointType string,
 	}
 }
 
-func setUpChain(rollupAddress common.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
+func setUpChain(rollupAddress ethcommon.Address, checkpointType string, contractPath string) (*ChainObserver, error) {
 	var checkpointer RollupCheckpointer
 	switch checkpointType {
 	case "dummy":
@@ -233,17 +234,17 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
-		protocol.NewTimeBlocks(big.NewInt(10)),
+		common.NewTimeBlocks(big.NewInt(10)),
 	)
 }
 
 func createSomeStakers(chain *ChainObserver) {
 	for i := 0; i < 5; i++ {
-		createOneStaker(chain, common.BytesToAddress([]byte{byte(i)}), chain.nodeGraph.latestConfirmed.hash)
+		createOneStaker(chain, ethcommon.BytesToAddress([]byte{byte(i)}), chain.nodeGraph.latestConfirmed.hash)
 	}
 }
 
-func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash [32]byte) {
+func createOneStaker(chain *ChainObserver, stakerAddr ethcommon.Address, nodeHash [32]byte) {
 	chain.createStake(
 		arbbridge.StakeCreatedEvent{
 			Staker:   stakerAddr,

@@ -20,10 +20,8 @@ import (
 	"errors"
 	"log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -50,13 +48,13 @@ func NewNodeGraph(machine machine.Machine, params structures.ChainParams) *NodeG
 	}
 }
 
-func MakeInitialNodeGraphBuf(machineHash [32]byte, params *structures.ChainParams) (*NodeGraphBuf, *value.HashBuf) {
+func MakeInitialNodeGraphBuf(machineHash [32]byte, params *structures.ChainParams) (*NodeGraphBuf, *common.HashBuf) {
 	nodeBuf, nodeHashBuf := MakeInitialNodeBuf(machineHash)
 	return &NodeGraphBuf{
 		Nodes:               []*NodeBuf{nodeBuf},
 		OldestNodeHash:      nodeHashBuf,
 		LatestConfirmedHash: nodeHashBuf,
-		LeafHashes:          []*value.HashBuf{nodeHashBuf},
+		LeafHashes:          []*common.HashBuf{nodeHashBuf},
 		Params:              params.MarshalToBuf(),
 	}, nodeHashBuf
 }
@@ -72,9 +70,9 @@ func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *
 	})
 	return &NodeGraphBuf{
 		Nodes:               allNodes,
-		OldestNodeHash:      utils.MarshalHash(chain.oldestNode.hash),
-		LatestConfirmedHash: utils.MarshalHash(chain.latestConfirmed.hash),
-		LeafHashes:          utils.MarshalSliceOfHashes(leafHashes),
+		OldestNodeHash:      common.MarshalHash(chain.oldestNode.hash),
+		LatestConfirmedHash: common.MarshalHash(chain.latestConfirmed.hash),
+		LeafHashes:          common.MarshalSliceOfHashes(leafHashes),
 		Params:              chain.params.MarshalToBuf(),
 	}
 }
@@ -94,19 +92,19 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 	}
 	// now set up prevs and successors for all nodes
 	for _, nodeBuf := range buf.Nodes {
-		nodeHash := utils.UnmarshalHash(nodeBuf.Hash)
+		nodeHash := common.UnmarshalHash(nodeBuf.Hash)
 		node := chain.nodeFromHash[nodeHash]
 		if nodeBuf.PrevHash != nil {
-			prevHash := utils.UnmarshalHash(nodeBuf.PrevHash)
+			prevHash := common.UnmarshalHash(nodeBuf.PrevHash)
 			prev := chain.nodeFromHash[prevHash]
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
 		}
 	}
 
-	chain.oldestNode = chain.nodeFromHash[utils.UnmarshalHash(buf.OldestNodeHash)]
+	chain.oldestNode = chain.nodeFromHash[common.UnmarshalHash(buf.OldestNodeHash)]
 	for _, leafHashStr := range buf.LeafHashes {
-		leafHash := utils.UnmarshalHash(leafHashStr)
+		leafHash := common.UnmarshalHash(leafHashStr)
 		node := chain.nodeFromHash[leafHash]
 		if node == nil {
 			log.Fatal("unexpected nil node")
@@ -114,7 +112,7 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 		chain.leaves.Add(node)
 	}
 
-	lcHash := utils.UnmarshalHash(buf.LatestConfirmedHash)
+	lcHash := common.UnmarshalHash(buf.LatestConfirmedHash)
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
 	return chain
@@ -177,7 +175,7 @@ func (chain *NodeGraph) CreateNodesOnAssert(
 	prevNode *Node,
 	dispNode *structures.DisputableNode,
 	afterMachine machine.Machine,
-	currentTime *protocol.TimeBlocks,
+	currentTime *common.TimeBlocks,
 	assertionTxHash [32]byte,
 ) {
 	if !chain.leaves.IsLeaf(prevNode) {
