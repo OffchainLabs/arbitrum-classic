@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -30,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -223,7 +224,7 @@ func (c *MessagesChallenge) ChooseSegment(
 	bisectionCount := uint32(len(chainHashes) - 1)
 	bisectionHashes := make([][32]byte, 0, bisectionCount)
 	for i := uint32(0); i < bisectionCount; i++ {
-		stepCount := machine.CalculateBisectionStepCount(i, bisectionCount, uint32(chainLength.Uint64()))
+		stepCount := challenges.CalculateBisectionStepCount(i, bisectionCount, uint32(chainLength.Uint64()))
 		bisectionHashes = append(
 			bisectionHashes,
 			structures.MessageChallengeDataHash(

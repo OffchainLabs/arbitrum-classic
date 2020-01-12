@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -118,7 +120,7 @@ func (val *ChallengeValidator) StartListening(ctx context.Context) (chan arbbrid
 
 func (val *ChallengeValidator) BisectAssertion(
 	ctx context.Context,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
@@ -134,7 +136,7 @@ func (val *ChallengeValidator) BisectAssertion(
 func (val *ChallengeValidator) ContinueChallenge(
 	ctx context.Context,
 	assertionToChallenge uint16,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
@@ -150,7 +152,7 @@ func (val *ChallengeValidator) ContinueChallenge(
 
 func (val *ChallengeValidator) OneStepProof(
 	ctx context.Context,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*types.Receipt, error) {

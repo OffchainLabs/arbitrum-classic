@@ -27,12 +27,6 @@ message TimeBoundsBlocks {
     TimeBlocksBuf end = 2;
 }
 
-message PreconditionBuf {
-    value.HashBuf beforeHash = 1;
-    TimeBoundsBlocks timeBounds = 2;
-    value.HashBuf beforeInbox = 3;
-}
-
 message ExecutionAssertionStubBuf {
     value.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;

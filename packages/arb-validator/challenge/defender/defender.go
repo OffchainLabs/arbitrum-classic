@@ -21,14 +21,17 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
 )
 
-func New(assDef machine.AssertionDefender, deadline uint64, brdg bridge.Challenge) (challenge.State, error) {
+func New(assDef challenges.AssertionDefender, deadline uint64, brdg bridge.Challenge) (challenge.State, error) {
 	if assDef.NumSteps() == 1 {
 		fmt.Println("Generating proof")
 		proofData, err := assDef.SolidityOneStepProof()
@@ -70,9 +73,9 @@ func New(assDef machine.AssertionDefender, deadline uint64, brdg bridge.Challeng
 }
 
 type bisectedAssert struct {
-	wholePrecondition *protocol.Precondition
+	wholePrecondition *valprotocol.Precondition
 	wholeAssertion    *protocol.ExecutionAssertionStub
-	splitDefenders    []machine.AssertionDefender
+	splitDefenders    []challenges.AssertionDefender
 	deadline          uint64
 }
 
@@ -101,7 +104,7 @@ func (bot bisectedAssert) UpdateState(ev arbbridge.Event, time uint64, brdg brid
 }
 
 type waitingBisected struct {
-	defenders []machine.AssertionDefender
+	defenders []challenges.AssertionDefender
 	deadline  uint64
 }
 
@@ -134,7 +137,7 @@ func (bot waitingBisected) UpdateState(ev arbbridge.Event, time uint64, brdg bri
 }
 
 type oneStepChallenged struct {
-	precondition *protocol.Precondition
+	precondition *valprotocol.Precondition
 	assertion    *protocol.ExecutionAssertionStub
 	deadline     uint64
 }

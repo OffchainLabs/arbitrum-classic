@@ -22,10 +22,13 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
@@ -35,7 +38,7 @@ import (
 )
 
 type challengerInitiator struct {
-	precondition        *protocol.Precondition
+	precondition        *valprotocol.Precondition
 	machine             machine.Machine
 	challengeEverything bool
 }
@@ -45,7 +48,7 @@ func (bot *challengerInitiator) initiateBot(ev arbbridge.InitiateChallengeEvent,
 }
 
 type defenderInitiator struct {
-	assDef machine.AssertionDefender
+	assDef challenges.AssertionDefender
 }
 
 func (bot *defenderInitiator) initiateBot(ev arbbridge.InitiateChallengeEvent, brdg bridge.Challenge) (challenge.State, error) {
@@ -74,7 +77,7 @@ type Challenge struct {
 func NewChallengerValidator(
 	brdge bridge.Challenge,
 	latestHeader *types.Header,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	machine machine.Machine,
 	challengeEverything bool,
 
@@ -94,7 +97,7 @@ func NewChallengerValidator(
 func NewDefenderValidator(
 	brdge bridge.Challenge,
 	latestHeader *types.Header,
-	assDef machine.AssertionDefender,
+	assDef challenges.AssertionDefender,
 
 ) *Challenge {
 	return &Challenge{

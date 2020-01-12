@@ -23,6 +23,8 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -133,7 +135,7 @@ func (m *Machine) ExecuteAssertion(maxSteps uint32, timeBounds *protocol.TimeBou
 			}
 			// uncomment to force proof fail
 			//beforeHash[0] = 5
-			precond := protocol.NewPrecondition(beforeHash, timeBounds, inbox)
+			precond := valprotocol.NewPrecondition(beforeHash, timeBounds, inbox)
 
 			res, err := m.ethConn.osp.ValidateProof(callOpts, precond, a1.Stub(), proof)
 			if err != nil {

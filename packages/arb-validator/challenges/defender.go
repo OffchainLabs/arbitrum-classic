@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-package machine
+package challenges
 
 import (
 	"errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type AssertionDefender struct {
-	precondition *protocol.Precondition
+	precondition *valprotocol.Precondition
 	numSteps     uint32
-	initState    Machine
+	initState    machine.Machine
 }
 
-func NewAssertionDefender(precondition *protocol.Precondition, numSteps uint32, initState Machine) AssertionDefender {
+func NewAssertionDefender(precondition *valprotocol.Precondition, numSteps uint32, initState machine.Machine) AssertionDefender {
 	return AssertionDefender{precondition, numSteps, initState.Clone()}
 }
 
@@ -37,11 +39,11 @@ func (ad AssertionDefender) NumSteps() uint32 {
 	return ad.numSteps
 }
 
-func (ad AssertionDefender) GetPrecondition() *protocol.Precondition {
+func (ad AssertionDefender) GetPrecondition() *valprotocol.Precondition {
 	return ad.precondition
 }
 
-func (ad AssertionDefender) GetMachineState() Machine {
+func (ad AssertionDefender) GetMachineState() machine.Machine {
 	return ad.initState
 }
 
@@ -67,7 +69,7 @@ func (ad AssertionDefender) NBisect(slices uint32) ([]AssertionDefender, []*prot
 		))
 		stub := assertion.Stub()
 		assertions = append(assertions, stub)
-		pre = stub.GeneratePostcondition(pre)
+		pre = pre.GeneratePostcondition(stub)
 	}
 	return defenders, assertions
 }
@@ -85,11 +87,11 @@ func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) ui
 }
 
 func ChooseAssertionToChallenge(
-	m Machine,
-	pre *protocol.Precondition,
+	m machine.Machine,
+	pre *valprotocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
 	totalSteps uint32,
-) (uint16, Machine, error) {
+) (uint16, machine.Machine, error) {
 	assertionCount := uint32(len(assertions))
 	for i := range assertions {
 		steps := CalculateBisectionStepCount(uint32(i), assertionCount, totalSteps)
@@ -103,7 +105,7 @@ func ChooseAssertionToChallenge(
 		if numSteps != steps || !stub.Equals(assertions[i]) {
 			return uint16(i), initState, nil
 		}
-		pre = stub.GeneratePostcondition(pre)
+		pre = pre.GeneratePostcondition(stub)
 	}
 	return 0, nil, errors.New("all segments in false ExecutionAssertion are valid")
 }

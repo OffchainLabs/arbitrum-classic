@@ -20,6 +20,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -168,7 +170,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 
 func (c *ExecutionChallenge) BisectAssertion(
 	ctx context.Context,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) error {
@@ -208,7 +210,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 
 func (c *ExecutionChallenge) OneStepProof(
 	ctx context.Context,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
@@ -237,7 +239,7 @@ func (c *ExecutionChallenge) OneStepProof(
 func (c *ExecutionChallenge) ExecutionChallengeChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
-	preconditions []*protocol.Precondition,
+	preconditions []*valprotocol.Precondition,
 	assertions []*protocol.ExecutionAssertionStub,
 ) error {
 	bisectionHashes := make([][32]byte, 0, len(assertions))

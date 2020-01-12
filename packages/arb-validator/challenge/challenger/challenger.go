@@ -20,6 +20,10 @@ import (
 	"context"
 	"math/rand"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -28,7 +32,7 @@ import (
 )
 
 func New(
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	machine machine.Machine,
 	deadline uint64,
 	challengeEverything bool,
@@ -42,7 +46,7 @@ func New(
 }
 
 type waitingContinuing struct {
-	challengedPrecondition *protocol.Precondition
+	challengedPrecondition *valprotocol.Precondition
 	startState             machine.Machine
 	deadline               uint64
 	challengeEverything    bool
@@ -61,7 +65,7 @@ func (bot waitingContinuing) UpdateTime(time uint64, bridge bridge.Challenge) (c
 func (bot waitingContinuing) UpdateState(ev arbbridge.Event, time uint64, brdg bridge.Challenge) (challenge.State, error) {
 	switch ev := ev.(type) {
 	case arbbridge.ExecutionBisectionEvent:
-		assertionNum, m, err := machine.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
+		assertionNum, m, err := challenges.ChooseAssertionToChallenge(bot.startState, ev.Assertions, bot.challengedPrecondition)
 		if err != nil && bot.challengeEverything {
 			assertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
 			m = bot.startState
@@ -99,7 +103,7 @@ func (bot waitingContinuing) UpdateState(ev arbbridge.Event, time uint64, brdg b
 type continuing struct {
 	challengedState     machine.Machine
 	deadline            uint64
-	precondition        *protocol.Precondition
+	precondition        *valprotocol.Precondition
 	assertions          []*protocol.ExecutionAssertionStub
 	challengeEverything bool
 }

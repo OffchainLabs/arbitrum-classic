@@ -20,6 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -72,19 +76,19 @@ type ArbVMBridge interface {
 
 	PendingDisputableAssert(
 		ctx context.Context,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	ConfirmDisputableAsserted(
 		ctx context.Context,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	InitiateChallenge(
 		ctx context.Context,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
@@ -95,14 +99,14 @@ type ArbVMBridge interface {
 	Challenge(
 		ctx context.Context,
 		address common.Address,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		machine machine.Machine,
 	) error
 
 	DefendChallenge(
 		ctx context.Context,
 		address common.Address,
-		assDef machine.AssertionDefender,
+		assDef challenges.AssertionDefender,
 	) error
 
 	ObserveChallenge(
@@ -117,20 +121,20 @@ type Challenge interface {
 
 	BisectAssertion(
 		ctx context.Context,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		preconditions *protocol.Precondition,
+		preconditions *valprotocol.Precondition,
 		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	OneStepProof(
 		ctx context.Context,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*types.Receipt, error)

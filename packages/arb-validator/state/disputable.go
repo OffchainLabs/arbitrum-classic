@@ -22,6 +22,10 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -427,7 +431,7 @@ type watchingAssertion struct {
 	inboxVal     value.Value
 	pending      *core.Core
 	deadline     uint64
-	precondition *protocol.Precondition
+	precondition *valprotocol.Precondition
 	assertion    *protocol.ExecutionAssertion
 }
 
@@ -493,7 +497,7 @@ type disputableAssertCore struct {
 	*core.Core
 	*core.Config
 	afterCore    *core.Core
-	precondition *protocol.Precondition
+	precondition *valprotocol.Precondition
 	assertion    *protocol.ExecutionAssertion
 	resultChan   chan<- bool
 	errorChan    chan<- error
@@ -573,7 +577,7 @@ func (bot waitingAssertion) updateState(ev arbbridge.Event, time uint64, bridge 
 		err := bridge.DefendChallenge(
 			context.Background(),
 			ev.ChallengeAddress,
-			machine.NewAssertionDefender(
+			challenges.NewAssertionDefender(
 				bot.assertion,
 				bot.precondition,
 				bot.GetMachine().Clone(),

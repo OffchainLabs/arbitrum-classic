@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -291,7 +293,7 @@ func TestExecution(t *testing.T) {
 		protocol.NewTimeBlocks(big.NewInt(200)),
 	)
 	afterMachine := mach.Clone()
-	precondition := protocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
+	precondition := valprotocol.NewPrecondition(mach.Hash(), timeBounds, value.NewEmptyTuple())
 	assertion, numSteps := afterMachine.ExecuteAssertion(1000, timeBounds, value.NewEmptyTuple())
 
 	challengeHash := structures.ExecutionDataHash(numSteps, precondition.Hash(), assertion.Stub().Hash())

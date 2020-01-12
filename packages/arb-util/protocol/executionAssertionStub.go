@@ -24,7 +24,6 @@ import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type ExecutionAssertionStub struct {
@@ -109,25 +108,4 @@ func (a *ExecutionAssertionStub) Hash() [32]byte {
 	)
 	copy(ret[:], hashVal)
 	return ret
-}
-
-func (a *ExecutionAssertionStub) GeneratePostcondition(pre *Precondition) *Precondition {
-	nextBeforeInbox := pre.BeforeInbox
-	if a.DidInboxInsn {
-		nextBeforeInbox = value.NewEmptyTuple()
-	}
-	return &Precondition{
-		BeforeHash:  a.AfterHash,
-		TimeBounds:  pre.TimeBounds,
-		BeforeInbox: nextBeforeInbox,
-	}
-}
-
-func GeneratePreconditions(pre *Precondition, assertions []*ExecutionAssertionStub) []*Precondition {
-	preconditions := make([]*Precondition, 0, len(assertions))
-	for _, assertion := range assertions {
-		preconditions = append(preconditions, pre)
-		pre = assertion.GeneratePostcondition(pre)
-	}
-	return preconditions
 }

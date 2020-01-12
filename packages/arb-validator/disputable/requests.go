@@ -19,11 +19,12 @@ package disputable
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type AssertionRequest struct {
 	AfterCore    *core.Core
-	Precondition *protocol.Precondition
+	Precondition *valprotocol.Precondition
 	Assertion    *protocol.ExecutionAssertion
 	ResultChan   chan<- bool
 	ErrorChan    chan<- error

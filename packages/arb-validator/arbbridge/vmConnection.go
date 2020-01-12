@@ -21,6 +21,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -53,19 +55,19 @@ type VMConnection interface {
 
 	PendingDisputableAssert(
 		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	ConfirmDisputableAsserted(
 		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertion,
 	) (*types.Receipt, error)
 
 	InitiateChallenge(
 		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 }
@@ -77,20 +79,20 @@ type ChallengeConnection interface {
 
 	BisectAssertion(
 		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	ContinueChallenge(
 		auth *bind.TransactOpts,
 		assertionToChallenge uint16,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertions []*protocol.ExecutionAssertionStub,
 	) (*types.Receipt, error)
 
 	OneStepProof(
 		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
+		precondition *valprotocol.Precondition,
 		assertion *protocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*types.Receipt, error)

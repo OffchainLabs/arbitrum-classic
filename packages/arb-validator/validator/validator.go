@@ -24,6 +24,8 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/core/types"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -293,7 +295,7 @@ func (validator *Validator) RequestDisputableAssertion(length uint64) (<-chan bo
 			tb := protocol.NewTimeBoundsBlocks(startTime, endTime)
 			beforeHash := mClone.Hash()
 			assertion := mClone.ExecuteAssertion(int32(maxSteps), tb)
-			pre := protocol.NewPrecondition(beforeHash, tb, mClone.InboxHash())
+			pre := valprotocol.NewPrecondition(beforeHash, tb, mClone.InboxHash())
 			request := &disputable.AssertionRequest{
 				AfterCore:    core.NewCore(mClone),
 				Precondition: pre,

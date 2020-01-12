@@ -20,10 +20,11 @@ import (
 	"context"
 	"sync"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -96,7 +97,7 @@ func (staker *StakerListener) challengeMessages(contractAddress common.Address, 
 	staker.Unlock()
 }
 
-func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition) {
+func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition) {
 	staker.Lock()
 	challenges.ChallengeExecutionClaim(
 		staker.client,
@@ -135,7 +136,7 @@ func (staker *StakerListener) defendMessages(contractAddress common.Address, pen
 	staker.Unlock()
 }
 
-func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition, numSteps uint32) {
+func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition, numSteps uint32) {
 	staker.Lock()
 	challenges.DefendExecutionClaim(
 		staker.client,

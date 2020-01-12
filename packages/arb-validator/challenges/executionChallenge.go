@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -33,7 +34,7 @@ func DefendExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
 	bisectionCount uint32,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	numSteps uint32,
 	startMachine machine.Machine,
 ) (ChallengeState, error) {
@@ -60,7 +61,7 @@ func DefendExecutionClaim(
 		contract,
 		noteChan,
 		bisectionCount,
-		machine.NewAssertionDefender(
+		NewAssertionDefender(
 			precondition,
 			numSteps,
 			startMachine,
@@ -71,7 +72,7 @@ func DefendExecutionClaim(
 func ChallengeExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startPrecondition *protocol.Precondition,
+	startPrecondition *valprotocol.Precondition,
 	startMachine machine.Machine,
 	challengeEverything bool,
 ) (ChallengeState, error) {
@@ -108,7 +109,7 @@ func defendExecution(
 	contract arbbridge.ExecutionChallenge,
 	outChan chan arbbridge.Notification,
 	bisectionCount uint32,
-	startDefender machine.AssertionDefender,
+	startDefender AssertionDefender,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
 	if !ok {
@@ -180,7 +181,7 @@ func challengeExecution(
 	contract arbbridge.ExecutionChallenge,
 	outChan chan arbbridge.Notification,
 	startMachine machine.Machine,
-	startPrecondition *protocol.Precondition,
+	startPrecondition *valprotocol.Precondition,
 	challengeEverything bool,
 ) (ChallengeState, error) {
 	note, ok := <-outChan
@@ -214,22 +215,22 @@ func challengeExecution(
 		if !ok {
 			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", note.Event)
 		}
-		challengedAssertionNum, m, err := machine.ChooseAssertionToChallenge(mach.Clone(), startPrecondition, ev.Assertions, ev.TotalSteps)
+		challengedAssertionNum, m, err := ChooseAssertionToChallenge(mach.Clone(), startPrecondition, ev.Assertions, ev.TotalSteps)
 		if err != nil && challengeEverything {
 			cMach := mach.Clone()
 			challengedAssertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
 			for i := 0; i < len(ev.Assertions); i++ {
-				stepCount := machine.CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
+				stepCount := CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
 				m = cMach.Clone()
 				assertion, _ := cMach.ExecuteAssertion(stepCount, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
-				startPrecondition = assertion.Stub().GeneratePostcondition(startPrecondition)
+				startPrecondition = startPrecondition.GeneratePostcondition(assertion.Stub())
 			}
 			err = nil
 		}
 		if err != nil {
 			return 0, err
 		}
-		preconditions := protocol.GeneratePreconditions(precondition, ev.Assertions)
+		preconditions := valprotocol.GeneratePreconditions(precondition, ev.Assertions)
 		err = contract.ChooseSegment(
 			ctx,
 			challengedAssertionNum,

@@ -24,6 +24,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -239,7 +243,7 @@ func (val *VMValidator) IsInChallenge(
 
 func (val *VMValidator) PendingDisputableAssert(
 	ctx context.Context,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertion *protocol.ExecutionAssertion,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
@@ -254,7 +258,7 @@ func (val *VMValidator) PendingDisputableAssert(
 
 func (val *VMValidator) ConfirmDisputableAsserted(
 	ctx context.Context,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertion *protocol.ExecutionAssertion,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
@@ -269,7 +273,7 @@ func (val *VMValidator) ConfirmDisputableAsserted(
 
 func (val *VMValidator) InitiateChallenge(
 	ctx context.Context,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertion *protocol.ExecutionAssertionStub,
 ) (*types.Receipt, error) {
 	val.Mutex.Lock()
@@ -327,7 +331,7 @@ func (val *VMValidator) UnanimousAssertHash(
 func (val *VMValidator) Challenge(
 	ctx context.Context,
 	address common.Address,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	machine machine.Machine,
 ) error {
 	challenge, err := NewChallengeValidator(val.Validator, address)
@@ -358,7 +362,7 @@ func (val *VMValidator) Challenge(
 func (val *VMValidator) DefendChallenge(
 	ctx context.Context,
 	address common.Address,
-	assDef machine.AssertionDefender,
+	assDef challenges.AssertionDefender,
 ) error {
 	challenge, err := NewChallengeValidator(val.Validator, address)
 

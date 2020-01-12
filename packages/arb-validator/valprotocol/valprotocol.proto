@@ -1,0 +1,11 @@
+syntax = "proto3";
+package valprotocol;
+import "value/value.proto";
+import "protocol/protocol.proto";
+option go_package = "github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol";
+
+message PreconditionBuf {
+    value.HashBuf beforeHash = 1;
+    protocol.TimeBoundsBlocks timeBounds = 2;
+    value.HashBuf beforeInbox = 3;
+}

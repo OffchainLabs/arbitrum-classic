@@ -19,6 +19,8 @@ package ethbridge
 import (
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -45,7 +47,7 @@ func NewOneStepProof(address common.Address, client *ethclient.Client) (*OneStep
 
 func (con *OneStepProof) ValidateProof(
 	auth *bind.CallOpts,
-	precondition *protocol.Precondition,
+	precondition *valprotocol.Precondition,
 	assertion *protocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {

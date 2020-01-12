@@ -18,14 +18,9 @@ package protocol
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 
-	"github.com/golang/protobuf/proto"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -87,43 +82,4 @@ func (tb *TimeBoundsBlocks) AsValue() value.TupleValue {
 		value.NewIntValue(tb.End.Unmarshal().AsInt()),
 	})
 	return newTup
-}
-
-type Precondition struct {
-	BeforeHash  [32]byte
-	TimeBounds  *TimeBoundsBlocks
-	BeforeInbox value.Value
-}
-
-func NewPrecondition(beforeHash [32]byte, timeBounds *TimeBoundsBlocks, beforeInbox value.Value) *Precondition {
-	return &Precondition{BeforeHash: beforeHash, TimeBounds: timeBounds, BeforeInbox: beforeInbox}
-}
-
-func (pre *Precondition) String() string {
-	inboxHash := pre.BeforeInbox.Hash()
-	return fmt.Sprintf(
-		"Precondition(beforeHash: %v, timebounds: [%v, %v], BeforeInbox: %v)",
-		hexutil.Encode(pre.BeforeHash[:]),
-		pre.TimeBounds.Start.Unmarshal().AsInt(),
-		pre.TimeBounds.End.Unmarshal().AsInt(),
-		hexutil.Encode(inboxHash[:]),
-	)
-}
-
-func (pre *Precondition) Equals(b *Precondition) bool {
-	return pre.BeforeHash == b.BeforeHash ||
-		pre.TimeBounds.Equals(b.TimeBounds) ||
-		value.Eq(pre.BeforeInbox, b.BeforeInbox)
-}
-
-func (pre *Precondition) Hash() [32]byte {
-	var ret [32]byte
-	bounds := pre.TimeBounds.AsIntArray()
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(pre.BeforeHash),
-		solsha3.Uint128(bounds[0]),
-		solsha3.Uint128(bounds[1]),
-		solsha3.Bytes32(pre.BeforeInbox.Hash()),
-	))
-	return ret
 }

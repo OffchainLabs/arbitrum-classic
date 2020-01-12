@@ -18,6 +18,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -77,7 +78,7 @@ func (c *Core) GetMachine() machine.Machine {
 	return c.machine
 }
 
-func (c *Core) ValidateAssertion(pre *protocol.Precondition, time uint64) bool {
+func (c *Core) ValidateAssertion(pre *valprotocol.Precondition, time uint64) bool {
 	if pre.BeforeHashValue() != c.machine.Hash() {
 		return false
 	}

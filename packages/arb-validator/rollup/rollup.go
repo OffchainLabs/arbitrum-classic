@@ -24,6 +24,8 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
+
 	"github.com/golang/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -317,10 +319,10 @@ func (co *ChainObserver) equals(co2 *ChainObserver) bool {
 		co.pendingInbox.Equals(co2.pendingInbox)
 }
 
-func (chain *ChainObserver) executionPrecondition(node *Node) *protocol.Precondition {
+func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Precondition {
 	vmProtoData := node.prev.vmProtoData
 	messages := chain.pendingInbox.ValueForSubseq(node.prev.vmProtoData.PendingTop, node.disputable.AssertionClaim.AfterPendingTop)
-	return &protocol.Precondition{
+	return &valprotocol.Precondition{
 		BeforeHash:  vmProtoData.MachineHash,
 		TimeBounds:  node.disputable.AssertionParams.TimeBounds,
 		BeforeInbox: messages,
