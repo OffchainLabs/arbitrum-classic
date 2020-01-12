@@ -171,6 +171,9 @@ func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx
 
 func (chain *ChainObserver) messageDelivered(ev arbbridge.MessageDeliveredEvent) {
 	chain.pendingInbox.DeliverMessage(ev.Msg.AsValue())
+	for _, lis := range chain.listeners {
+		lis.MessageDelivered(ev)
+	}
 }
 
 func (chain *ChainObserver) pruneLeaf(ev arbbridge.PrunedEvent) {

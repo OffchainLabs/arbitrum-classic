@@ -32,9 +32,12 @@ func CreateObserver(
 	rollupAddr common.Address,
 	checkpointer RollupCheckpointer,
 	updateOpinion bool,
-	startTime *common.TimeBlocks,
 	clnt arbbridge.ArbClient,
 ) (*ChainObserver, error) {
+	currentTime, err := clnt.CurrentBlockTime(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rollup, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
 		return nil, err
@@ -50,7 +53,7 @@ func CreateObserver(
 		checkpointer,
 		vmParams,
 		updateOpinion,
-		startTime,
+		currentTime,
 	)
 	if err != nil {
 		return nil, err

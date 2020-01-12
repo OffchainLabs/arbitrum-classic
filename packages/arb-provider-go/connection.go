@@ -9,34 +9,59 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 )
 
 type ArbConnection struct {
-	proxy      ValidatorProxy
-	vmId       common.Address
-	privateKey []byte
-	hexPubkey  string
+	proxy        ValidatorProxy
+	vmId         common.Address
+	pendingInbox arbbridge.PendingInbox
 }
 
-func Dial(url string, privateKey []byte, hexPubkey string) (*ArbConnection, error) {
+func Dial(url string, privateKeyBytes []byte, ethUrl string) (*ArbConnection, error) {
+	privateKey, err := crypto.ToECDSA(privateKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+	auth := bind.NewKeyedTransactor(privateKey)
+	client, err := ethbridge.NewEthAuthClient(ethUrl, auth)
+	if err != nil {
+		return nil, err
+	}
 	proxy := NewValidatorProxyImpl(url)
 	vmIdStr, err := proxy.GetVMInfo()
 	if err != nil {
 		return nil, err
 	}
-	vmId := ethcommon.HexToAddress(vmIdStr)
-	return &ArbConnection{proxy, common.NewAddressFromEth(vmId), append([]byte{}, privateKey...), hexPubkey}, nil
+	vmId := common.HexToAddress(vmIdStr)
+	rollup, err := client.NewRollupWatcher(vmId)
+	if err != nil {
+		return nil, err
+	}
+	inboxAddr, err := rollup.InboxAddress(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	pendingInbox, err := client.NewPendingInbox(inboxAddr)
+	if err != nil {
+		return nil, err
+	}
+	return &ArbConnection{proxy, vmId, pendingInbox}, nil
 }
 
 func _nyiError(funcname string) error {
@@ -50,7 +75,7 @@ func _nyiError(funcname string) error {
 // between contract internal errors and the local chain being out of sync.
 func (conn *ArbConnection) CodeAt(
 	ctx context.Context,
-	contract common.Address,
+	contract ethcommon.Address,
 	blockNumber *big.Int,
 ) ([]byte, error) {
 	return nil, _nyiError("CodeAt")
@@ -98,7 +123,7 @@ func (conn *ArbConnection) CallContract(
 // PendingCodeAt returns the code of the given account in the pending state.
 func (conn *ArbConnection) PendingCodeAt(
 	ctx context.Context,
-	account common.Address,
+	account ethcommon.Address,
 ) ([]byte, error) {
 	return nil, _nyiError("PendingCodeAt")
 }
@@ -106,7 +131,7 @@ func (conn *ArbConnection) PendingCodeAt(
 // PendingNonceAt retrieves the current pending nonce associated with an account.
 func (conn *ArbConnection) PendingNonceAt(
 	ctx context.Context,
-	account common.Address,
+	account ethcommon.Address,
 ) (uint64, error) {
 	return 0, nil
 }
@@ -150,50 +175,7 @@ func (conn *ArbConnection) SendTransaction(ctx context.Context, tx *types.Transa
 		panic("Unexpected error building arbCallValue")
 	}
 
-	tokenType := [21]byte{}
-	messageHash := hashing.SoliditySHA3(
-		hashing.Address(conn.vmId),
-		hashing.Bytes32(arbCallValue.Hash()),
-		hashing.Uint256(big.NewInt(0)), // amount
-		tokenType[:],
-	)
-	signedMsg := hashing.SoliditySHA3WithPrefix(hashing.Bytes32(messageHash))
-	sig, err := secp256k1.Sign(signedMsg.Bytes(), conn.privateKey)
-	if err != nil {
-		return err
-	}
-
-	txHash, err := conn.proxy.SendMessage(arbCallValue, conn.hexPubkey, sig)
-	if err != nil {
-		log.Println("SendTransaction: error returned from proxy.SendMessage:", err)
-		return err
-	}
-
-	return func() error {
-		for {
-			resultVal, ok, err := conn.proxy.GetMessageResult(txHash)
-			if err != nil {
-				log.Println("GetMessageResult error:", err)
-				return err
-			}
-			if !ok {
-				time.Sleep(2 * time.Second)
-			} else {
-				result, err := evm.ProcessLog(resultVal)
-				if err != nil {
-					log.Println("GetMessageResultLog error:", err)
-					return err
-				}
-				switch res := result.(type) {
-				case evm.Revert:
-					log.Println("call reverted:", string(res.ReturnVal))
-				default:
-					// do nothing
-				}
-				return nil
-			}
-		}
-	}()
+	return conn.pendingInbox.SendEthMessage(ctx, arbCallValue, conn.vmId, tx.Value())
 }
 
 ///////////////////////////////////////////////////////////////////////////////

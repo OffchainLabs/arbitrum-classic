@@ -18,7 +18,13 @@ package rollupvalidator
 
 import (
 	"context"
+	"log"
 	"net/http"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
@@ -27,6 +33,33 @@ import (
 // Server provides an interface for interacting with a a running coordinator
 type RPCServer struct {
 	*Server
+}
+
+func LaunchRPC(chainObserver *rollup.ChainObserver, port string) {
+	server, err := NewRPCServer(chainObserver, 200000)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Run server
+	s := rpc.NewServer()
+	s.RegisterCodec(json.NewCodec(), "application/json")
+	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
+
+	if err := s.RegisterService(server, "Validator"); err != nil {
+		log.Fatal(err)
+	}
+	r := mux.NewRouter()
+	r.Handle("/", s).Methods("GET", "POST", "OPTIONS")
+
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
+
+	err = http.ListenAndServe(":"+port, handlers.CORS(headersOk, originsOk, methodsOk)(r))
+	if err != nil {
+		panic(err)
+	}
 }
 
 // NewServer returns a new instance of the Server class

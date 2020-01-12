@@ -19,19 +19,16 @@ package main
 import (
 	"context"
 	jsonenc "encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
-	"net/http"
 	"os"
 	"strings"
 
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -41,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -57,7 +53,9 @@ func main() {
 	case "create":
 		createRollupChain()
 	case "validate":
-		validateRollupChain()
+		if err := validateRollupChain(); err != nil {
+			log.Fatal(err)
+		}
 	default:
 	}
 }
@@ -143,60 +141,50 @@ func createRollupChain() {
 }
 
 func setupChainObserver(
-	client arbbridge.ArbAuthClient,
+	client arbbridge.ArbClient,
 	rollupAddress common.Address,
 	codeFile string,
 ) (*rollup.ChainObserver, error) {
 	ctx := context.Background()
-	currentTime, err := client.CurrentBlockTime(ctx)
-	if err != nil {
-		return nil, err
-	}
 	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, currentTime, client)
-	if err != nil {
-		return nil, err
-	}
-	validatorListener := rollup.NewValidatorChainListener(chainObserver)
-	err = validatorListener.AddStaker(client)
+	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, client)
 	if err != nil {
 		return nil, err
 	}
 	chainObserver.AddListener(&rollup.AnnouncerListener{})
-	chainObserver.AddListener(validatorListener)
 	return chainObserver, nil
 }
 
-func validateRollupChain() {
+func validateRollupChain() error {
 	// Check number of args
 
 	validateCmd := flag.NewFlagSet("validate", flag.ExitOnError)
 	rpcEnable := validateCmd.Bool("rpc", false, "rpc")
 	err := validateCmd.Parse(os.Args[2:])
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	if validateCmd.NArg() != 4 {
-		log.Fatalln("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <bridge_eth_addresses.json>")
+		return errors.New("usage: rollupServer validate [--rpc] <contract.ao> <private_key.txt> <ethURL> <bridge_eth_addresses.json>")
 	}
 
 	// 2) Private key
 	keyFile, err := os.Open(validateCmd.Arg(1))
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	byteValue, err := ioutil.ReadAll(keyFile)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	if err := keyFile.Close(); err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	rawKey := strings.TrimPrefix(strings.TrimSpace(string(byteValue)), "0x")
 	key, err := crypto.HexToECDSA(rawKey)
 	if err != nil {
-		log.Fatal("HexToECDSA private key error: ", err)
+		return fmt.Errorf("HexToECDSA private key error: %v", err)
 	}
 
 	// 3) URL
@@ -210,42 +198,25 @@ func validateRollupChain() {
 	auth := bind.NewKeyedTransactor(key)
 	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	chainObserver, err := setupChainObserver(client, address, validateCmd.Arg(0))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	validatorListener := rollup.NewValidatorChainListener(chainObserver)
+	err = validatorListener.AddStaker(client)
+	if err != nil {
+		return err
+	}
+	chainObserver.AddListener(validatorListener)
 
 	if *rpcEnable {
-		server, err := rollupvalidator.NewRPCServer(chainObserver, 200000)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Run server
-		s := rpc.NewServer()
-		s.RegisterCodec(json.NewCodec(), "application/json")
-		s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
-
-		if err := s.RegisterService(server, "Validator"); err != nil {
-			log.Fatal(err)
-		}
-		r := mux.NewRouter()
-		r.Handle("/", s).Methods("GET", "POST", "OPTIONS")
-		//attachProfiler(r)
-
-		headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-		originsOk := handlers.AllowedOrigins([]string{"*"})
-		methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
-
-		err = http.ListenAndServe(":1235", handlers.CORS(headersOk, originsOk, methodsOk)(r))
-		if err != nil {
-			panic(err)
-		}
+		rollupvalidator.LaunchRPC(chainObserver, "1235")
 	} else {
 		wait := make(chan bool)
 		<-wait
 	}
+	return nil
 }

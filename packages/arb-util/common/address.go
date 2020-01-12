@@ -33,6 +33,10 @@ func NewAddressFromEth(a ethcommon.Address) Address {
 	return Address(a)
 }
 
+func (a Address) String() string {
+	return a.Hex()
+}
+
 func (a Address) IsZero() bool {
 	return a == zeroAddress
 }

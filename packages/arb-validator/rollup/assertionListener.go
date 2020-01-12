@@ -39,6 +39,7 @@ func (al *AssertionListener) CompletedChallenge(event arbbridge.ChallengeComplet
 func (al *AssertionListener) SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash) {}
 func (al *AssertionListener) ConfirmedNode(arbbridge.ConfirmedEvent)                                {}
 func (al *AssertionListener) PrunedLeaf(arbbridge.PrunedEvent)                                      {}
+func (al *AssertionListener) MessageDelivered(arbbridge.MessageDeliveredEvent)                      {}
 
 func (al *AssertionListener) AssertionPrepared(*preparedAssertion)              {}
 func (al *AssertionListener) ValidNodeConfirmable(*confirmValidOpportunity)     {}

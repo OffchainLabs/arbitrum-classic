@@ -32,17 +32,12 @@ import (
 )
 
 type ArbAddresses struct {
-	ArbFactory         string `json:"ArbFactory"`
-	GlobalPendingInbox string `json:"GlobalPendingInbox"`
-	OneStepProof       string `json:"OneStepProof"`
+	ArbFactory   string `json:"ArbFactory"`
+	OneStepProof string `json:"OneStepProof"`
 }
 
 func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
-}
-
-func (a ArbAddresses) GlobalPendingInboxAddress() common.Address {
-	return common.NewAddressFromEth(ethcommon.HexToAddress(a.GlobalPendingInbox))
 }
 
 func (a ArbAddresses) OneStepProofAddress() common.Address {

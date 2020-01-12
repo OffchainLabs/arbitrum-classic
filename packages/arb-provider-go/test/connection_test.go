@@ -2,34 +2,27 @@ package test
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/hex"
 	jsonenc "encoding/json"
 	"errors"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"math/rand"
-	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	goarbitrum "github.com/offchainlabs/arbitrum/packages/arb-provider-go"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 /********************************************/
@@ -39,6 +32,9 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
+
+	ethURL := test.GetEthUrl()
+	contract := "contract.ao"
 
 	jsonFile, err := os.Open("bridge_eth_addresses.json")
 	if err != nil {
@@ -71,156 +67,105 @@ func setupValidators(coordinatorKey string, followerKey string, t *testing.T) er
 	auth1 := bind.NewKeyedTransactor(key1)
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	validators := []common.Address{auth1.From, auth2.From}
-	escrowRequired := big.NewInt(10)
-	config := valmessage.NewVMConfiguration(
-		10,
-		escrowRequired,
-		common.Address{}, // Address 0 is eth
-		validators,
-		200000,
-		common.Address{}, // Address 0 means no owner
-	)
-	ethURL := test.GetEthUrl()
-	contract := "contract.ao"
-
-	basemach, err := loader.LoadMachineFromFile(contract, true, "test")
+	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
 	if err != nil {
-		t.Errorf("setupValidators LoadMachineFromFile error %v", err)
-		return err
-	}
-	mach := basemach
-	//proofbounds := protocol.TimeBounds{25,30}
-	//mach, err := proofmachine.New(contract, basemach, true, common.HexToAddress(connectionInfo.oneStepProof), key1, ethURL, proofbounds)
-	//if err != nil {
-	//	t.Fatal("Loader Error: ", err)
-	//}
-	t.Log("creating coordinator")
-	// Validator creation
-	val1, err := ethvalidator.NewValidator(key1, connectionInfo, ethURL)
-	if err != nil {
-		t.Error(err)
 		return err
 	}
 
-	val2, err := ethvalidator.NewValidator(key2, connectionInfo, ethURL)
+	client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
 	if err != nil {
-		t.Error(err)
 		return err
 	}
 
-	address, err := val1.CreateChannel(context.Background(), config, mach.Hash())
+	checkpointer1 := rollup.NewDummyCheckpointer(contract)
+	checkpointer2 := rollup.NewDummyCheckpointer(contract)
+	config := structures.ChainParams{
+		StakeRequirement:        big.NewInt(10),
+		GracePeriod:             common.TimeTicks{big.NewInt(13000 * 2)},
+		MaxExecutionSteps:       250000,
+		ArbGasSpeedLimitPerTick: 200000,
+	}
+
+	factory, err := client1.NewArbFactory(connectionInfo.ArbFactoryAddress())
 	if err != nil {
-		t.Error(err)
 		return err
 	}
 
-	server, err := coordinator.NewRPCServer(val1, address, mach, config)
+	mach, err := checkpointer1.GetInitialMachine()
 	if err != nil {
-		t.Error(err)
 		return err
 	}
 
-	// follower/challenger creation
-	challenger, err := channel.NewValidatorFollower(
-		"Bob",
-		val2,
-		mach,
+	ctx := context.Background()
+
+	rollupAddress, err := factory.CreateRollup(
+		ctx,
+		mach.Hash(),
 		config,
-		false,
-		math.MaxInt32, // maxCallSteps,
-		math.MaxInt32, // maxUnanSteps,
-		"wss://127.0.0.1:1236/ws",
+		common.Address{},
 	)
+
+	chainObserver1, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer1, true, client1)
 	if err != nil {
-		t.Errorf("setupValidators NewValidatorFollower error %v", err)
 		return err
 	}
+	chainObserver1.AddListener(&rollup.AnnouncerListener{"chainObserver1: "})
 
-	if err := server.Run(context.Background()); err != nil {
-		t.Errorf("setupValidators coordinator run error %v", err)
+	validatorListener1 := rollup.NewValidatorChainListener(chainObserver1)
+	err = validatorListener1.AddStaker(client1)
+	if err != nil {
 		return err
 	}
+	chainObserver1.AddListener(validatorListener1)
 
-	if err := challenger.Run(context.Background()); err != nil {
-		t.Errorf("setupValidators challenger run error %v", err)
+	chainObserver2, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer2, true, client2)
+	if err != nil {
 		return err
 	}
+	chainObserver1.AddListener(&rollup.AnnouncerListener{"chainObserver2: "})
 
-	t.Log("challenger created")
-	t.Log("starting RPCServerVM")
-
-	// Run server
-	s := rpc.NewServer()
-
-	s.RegisterCodec(json.NewCodec(), "application/json")
-	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
-
-	if err := s.RegisterService(server, "Validator"); err != nil {
-		t.Errorf("setupValidators RegisterService error %v", err)
+	validatorListener2 := rollup.NewValidatorChainListener(chainObserver2)
+	err = validatorListener2.AddStaker(client2)
+	if err != nil {
 		return err
 	}
-	r := mux.NewRouter()
-	r.Handle("/", s).Methods("GET", "POST", "OPTIONS")
-	//attachProfiler(r)
+	chainObserver2.AddListener(validatorListener2)
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
-
-	go func() {
-		err = http.ListenAndServe(":1235", handlers.CORS(headersOk, originsOk, methodsOk)(r))
-		if err != nil {
-			t.Errorf("ListenAndServe error %v", err)
-		}
-	}()
+	go rollupvalidator.LaunchRPC(chainObserver1, "1235")
 
 	return nil
 
 }
 
-func _computePubKeyString(privKeyBytes []byte) (string, error) {
-	privKey, err := crypto.ToECDSA(privKeyBytes)
-	if err != nil {
-		return "", err
-	}
-	pubKey := privKey.Public().(*ecdsa.PublicKey)
-	buf := crypto.FromECDSAPub(pubKey)
-	return hexutil.Encode(buf), nil
-}
-
 func RunValidators(t *testing.T) (*FibonacciSession, error) {
-	coordinatorKey := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
-	followerKey := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
-	err := setupValidators(coordinatorKey, followerKey, t)
+	ethURL := test.GetEthUrl()
+	val1Key := "ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39"
+	val2Key := "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76"
+	userKeyHex := "d26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e"
+
+	err := setupValidators(val1Key, val2Key, t)
 	if err != nil {
 		t.Errorf("Validator setup error %v", err)
 		return nil, err
 	}
 
-	privateKeyBytes, _ := hex.DecodeString(coordinatorKey)
-	pubKey, err := _computePubKeyString(privateKeyBytes)
-	if err != nil {
-		t.Errorf("_computePubKeyString error %v", err)
-		return nil, err
-	}
-	conn, dialerr := goarbitrum.Dial("", privateKeyBytes, pubKey)
+	privateKeyBytes, _ := hex.DecodeString(userKeyHex)
+	conn, dialerr := goarbitrum.Dial("", privateKeyBytes, ethURL)
 	if dialerr != nil {
 		t.Errorf("Dial error %v", dialerr)
 		return nil, err
 	}
-	key1, err := crypto.HexToECDSA(coordinatorKey)
+	userKey, err := crypto.HexToECDSA(userKeyHex)
 	if err != nil {
 		t.Errorf("HexToECDSA error %v", err)
 		return nil, err
 	}
-	auth := bind.NewKeyedTransactor(key1)
+	auth := bind.NewKeyedTransactor(userKey)
 	auth.GasLimit = 100000000
 
-	//conn, err = goarbitrum.Dial("", privateKeyBytes, _computePubKeyString(privateKeyBytes))
 	var fibAddr common.Address
 	fibAddr = common.HexToAddress("0x895521964D724c8362A36608AAf09A3D7d0A0445")
-	fib, err := NewFibonacci(fibAddr, conn)
+	fib, err := NewFibonacci(fibAddr.ToEthAddress(), conn)
 	if err != nil {
 		t.Errorf("NewFibonacci error %v", err)
 		return nil, err

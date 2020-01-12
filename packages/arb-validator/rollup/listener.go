@@ -35,6 +35,7 @@ type ChainListener interface {
 	SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash)
 	ConfirmedNode(arbbridge.ConfirmedEvent)
 	PrunedLeaf(arbbridge.PrunedEvent)
+	MessageDelivered(arbbridge.MessageDeliveredEvent)
 
 	AssertionPrepared(*preparedAssertion)
 	ValidNodeConfirmable(*confirmValidOpportunity)
@@ -126,24 +127,33 @@ func (lis *ValidatorChainListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
 
 func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context, stakerAddr common.Address) {
 	_, ok := lis.stakers[stakerAddr]
-	if !ok {
-		newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
-		for myAddr, staker := range lis.stakers {
-			meAsStaker := lis.chain.nodeGraph.stakers.Get(myAddr)
-			if meAsStaker != nil {
-				opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
-				if opp != nil {
-					staker.initiateChallenge(ctx, opp)
-					return
-				}
-			}
-			opp := lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
-			if opp != nil {
-				go staker.initiateChallenge(ctx, opp)
-				return
-			}
+	if ok {
+		// Can't challenge yourself
+		return
+	}
+
+	newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
+	if newStaker == nil {
+		log.Fatalf("Nonexistant staker moved %v", stakerAddr)
+	}
+
+	for myAddr, staker := range lis.stakers {
+		meAsStaker := lis.chain.nodeGraph.stakers.Get(myAddr)
+		if meAsStaker == nil {
+			continue
+		}
+		opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
+		if opp != nil {
+			staker.initiateChallenge(ctx, opp)
+			return
+		}
+		opp = lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
+		if opp != nil {
+			go staker.initiateChallenge(ctx, opp)
+			return
 		}
 	}
+
 }
 
 func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
@@ -211,6 +221,10 @@ func (lis *ValidatorChainListener) ConfirmedNode(arbbridge.ConfirmedEvent) {
 }
 
 func (lis *ValidatorChainListener) PrunedLeaf(arbbridge.PrunedEvent) {
+
+}
+
+func (lis *ValidatorChainListener) MessageDelivered(arbbridge.MessageDeliveredEvent) {
 
 }
 
