@@ -25,13 +25,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
+	errors2 "github.com/pkg/errors"
 
 	"github.com/golang/protobuf/proto"
+
 	"github.com/gorilla/websocket"
-	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -40,6 +38,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 

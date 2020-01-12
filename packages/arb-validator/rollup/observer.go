@@ -22,14 +22,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func CreateObserver(
@@ -132,8 +129,4 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.ConfirmedEvent:
 		chain.confirmNode(ev)
 	}
-}
-
-func calcSigHash(sig string) common.Hash {
-	return crypto.Keccak256Hash([]byte(sig))
 }

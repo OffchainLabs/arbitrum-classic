@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/golang/protobuf/proto"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 

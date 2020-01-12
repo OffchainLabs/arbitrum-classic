@@ -22,6 +22,7 @@ import (
 	"io"
 
 	"github.com/dgraph-io/badger"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 

@@ -21,20 +21,19 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	errors2 "github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
-
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	errors2 "github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var messagesBisectedID common.Hash

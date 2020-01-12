@@ -20,7 +20,6 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 )
 

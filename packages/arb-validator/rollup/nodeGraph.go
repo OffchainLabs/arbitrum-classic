@@ -18,16 +18,13 @@ package rollup
 
 import (
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type NodeGraph struct {

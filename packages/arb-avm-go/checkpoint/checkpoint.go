@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )

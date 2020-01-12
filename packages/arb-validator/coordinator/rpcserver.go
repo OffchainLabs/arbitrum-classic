@@ -22,11 +22,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
 //go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --tstypes_out=../../arb-provider-ethers/src/lib --go_out=paths=source_relative,plugins=grpc:. *.proto"

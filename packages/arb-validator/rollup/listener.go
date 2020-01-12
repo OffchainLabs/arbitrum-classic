@@ -20,11 +20,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 

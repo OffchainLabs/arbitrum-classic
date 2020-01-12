@@ -27,10 +27,11 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"runtime"
 	"unsafe"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type CheckpointStorage struct {

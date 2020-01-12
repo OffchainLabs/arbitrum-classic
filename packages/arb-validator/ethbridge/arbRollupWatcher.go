@@ -23,12 +23,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	errors2 "github.com/pkg/errors"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -42,7 +36,9 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var rollupStakeCreatedID common.Hash
@@ -61,7 +57,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	parsedInbox, err := abi.JSON(strings.NewReader(globalpendinginbox.IGlobalPendingInboxABI))
+	parsedInbox, err := abi.JSON(strings.NewReader(rollup.IGlobalPendingInboxABI))
 	if err != nil {
 		panic(err)
 	}

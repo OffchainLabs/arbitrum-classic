@@ -18,17 +18,16 @@ package protocol
 
 import (
 	"bytes"
-	fmt "fmt"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"fmt"
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func NewExecutionAssertionStub(

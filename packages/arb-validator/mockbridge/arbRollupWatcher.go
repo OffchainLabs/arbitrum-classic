@@ -20,12 +20,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 )
 

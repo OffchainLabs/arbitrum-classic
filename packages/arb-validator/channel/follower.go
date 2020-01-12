@@ -22,21 +22,22 @@ import (
 	"errors"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/golang/protobuf/proto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
+	"github.com/gorilla/websocket"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/golang/protobuf/proto"
-	"github.com/gorilla/websocket"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
 	errors2 "github.com/pkg/errors"
+
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 

@@ -28,8 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -40,6 +38,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
 type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient) (ChallengeState, error)

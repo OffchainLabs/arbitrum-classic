@@ -18,8 +18,15 @@ package rollup
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/common"
+	"log"
+	"math/big"
+	"os"
+	"sync"
+
 	"github.com/gogo/protobuf/proto"
+
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -27,10 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"log"
-	"math/big"
-	"os"
-	"sync"
 )
 
 type RollupCheckpointer interface {

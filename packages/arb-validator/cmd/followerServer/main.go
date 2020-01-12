@@ -29,14 +29,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/channel"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"

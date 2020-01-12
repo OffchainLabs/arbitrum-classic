@@ -20,11 +20,10 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type Staker struct {

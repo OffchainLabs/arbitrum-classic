@@ -21,11 +21,9 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )

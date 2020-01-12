@@ -20,9 +20,9 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ChallengeFactory interface {

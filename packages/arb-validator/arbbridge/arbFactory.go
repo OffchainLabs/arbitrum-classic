@@ -19,9 +19,9 @@ package arbbridge
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbFactory interface {

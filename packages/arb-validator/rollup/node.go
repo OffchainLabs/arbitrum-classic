@@ -21,14 +21,13 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 type Node struct {

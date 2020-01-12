@@ -19,10 +19,9 @@ package valmessage
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 

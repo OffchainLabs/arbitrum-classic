@@ -19,19 +19,18 @@ package ethvalidator
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-
-	"github.com/ethereum/go-ethereum/core/types"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type Validator struct {

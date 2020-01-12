@@ -20,21 +20,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/observer"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/defender"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/challenger"
 
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/challenger"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/defender"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenge/observer"
 )
 
 type challengerInitiator struct {

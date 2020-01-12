@@ -20,15 +20,14 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/challengetester"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ChallengeTester struct {

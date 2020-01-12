@@ -19,15 +19,10 @@ package ethvalidator
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"sync"
 	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 
 	errors2 "github.com/pkg/errors"
 
@@ -39,7 +34,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/validator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 

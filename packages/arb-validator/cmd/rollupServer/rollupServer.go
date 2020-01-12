@@ -33,19 +33,16 @@ import (
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 

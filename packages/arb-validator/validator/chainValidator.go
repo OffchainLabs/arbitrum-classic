@@ -17,14 +17,13 @@
 package validator
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/bridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/state"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 

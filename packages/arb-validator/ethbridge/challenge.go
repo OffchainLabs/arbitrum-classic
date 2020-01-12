@@ -21,10 +21,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -34,7 +30,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 var initiatedChallengeID common.Hash

@@ -33,10 +33,9 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 

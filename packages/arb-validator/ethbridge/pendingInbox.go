@@ -28,7 +28,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/globalpendinginbox"
 )
 
