@@ -19,9 +19,8 @@ package structures
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 func CalculateBisectionStepCount(chunkIndex, segmentCount, totalSteps uint32) uint32 {

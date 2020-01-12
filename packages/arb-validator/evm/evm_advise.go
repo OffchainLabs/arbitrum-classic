@@ -23,11 +23,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )

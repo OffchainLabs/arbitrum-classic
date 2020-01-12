@@ -34,7 +34,6 @@ import (
 	"github.com/gorilla/rpc/json"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -205,7 +204,7 @@ func validateRollupChain() {
 
 	// 4) Rollup contract address
 	addressString := validateCmd.Arg(3)
-	address := common.NewAddressFromEth(ethcommon.HexToAddress(addressString))
+	address := common.HexToAddress(addressString)
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)

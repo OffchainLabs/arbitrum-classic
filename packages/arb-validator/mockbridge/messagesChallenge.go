@@ -20,8 +20,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
@@ -32,8 +30,8 @@ type MessagesChallenge struct {
 	Challenge *messageschallenge.MessagesChallenge
 }
 
-func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*MessagesChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*MessagesChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}

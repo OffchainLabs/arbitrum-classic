@@ -17,24 +17,11 @@
 package unanimous
 
 import (
-	"bytes"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
-
-func CombineMessages(
-	messages []value.Value,
-) []byte {
-	var messageData bytes.Buffer
-	for _, msg := range messages {
-		_ = value.MarshalValue(msg, &messageData)
-	}
-	return messageData.Bytes()
-}
 
 func UnanimousAssertPartialPartialHash(
 	newInboxHash common.Hash,

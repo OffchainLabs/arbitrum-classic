@@ -18,12 +18,9 @@ package proofmachine
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 	"log"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -40,13 +37,12 @@ type Machine struct {
 }
 
 type Connection struct {
-	fromAddress common.Address
 	osp         arbbridge.OneStepProof
 	client      arbbridge.ArbClient
 	proofbounds [2]uint32
 }
 
-func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, ethURL string, proofbounds [2]uint32) (*Connection, error) {
+func NewEthConnection(contractAddress common.Address, ethURL string, proofbounds [2]uint32) (*Connection, error) {
 	client, err := ethbridge.NewEthClient(ethURL)
 	if err != nil {
 		log.Fatal("Connection failure ", err)
@@ -56,9 +52,7 @@ func NewEthConnection(contractAddress common.Address, key *ecdsa.PrivateKey, eth
 		log.Fatal(err)
 	}
 
-	keyAddr := crypto.PubkeyToAddress(key.PublicKey)
 	return &Connection{
-		fromAddress: common.NewAddressFromEth(keyAddr),
 		osp:         osp,
 		client:      client,
 		proofbounds: proofbounds,

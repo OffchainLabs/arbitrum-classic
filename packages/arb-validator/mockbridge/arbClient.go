@@ -19,7 +19,6 @@ package mockbridge
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -42,20 +41,20 @@ func (c *ArbClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory,
 	return NewArbFactory(address, c.client)
 }
 
-func (c *ArbClient) NewRollup(address common.Address, auth *bind.TransactOpts) (arbbridge.ArbRollup, error) {
-	return NewRollup(address, c.client, auth)
+func (c *ArbClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
+	return NewRollup(address, c.client)
 }
 
 func (c *ArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
 	return NewRollupWatcher(address, c.client)
 }
 
-func (c *ArbClient) NewExecutionChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address, c.client, auth)
+func (c *ArbClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
+	return NewExecutionChallenge(address, c.client)
 }
 
-func (c *ArbClient) NewMessagesChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.MessagesChallenge, error) {
-	return NewMessagesChallenge(address, c.client, auth)
+func (c *ArbClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
+	return NewMessagesChallenge(address, c.client)
 }
 
 func (c *ArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
@@ -66,8 +65,8 @@ func (c *ArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingIn
 	return NewPendingInbox(address, c.client)
 }
 
-func (c *ArbClient) NewPendingTopChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c.client, auth)
+func (c *ArbClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
+	return NewPendingTopChallenge(address, c.client)
 }
 
 func (c *ArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {

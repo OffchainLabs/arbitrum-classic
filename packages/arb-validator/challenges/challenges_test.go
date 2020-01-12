@@ -28,9 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -69,17 +66,14 @@ func testChallenge(
 		return err
 	}
 
-	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
+	auth1, err := test.SetupAuth("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
 	if err != nil {
 		return err
 	}
-	key2, err := crypto.HexToECDSA("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
+	auth2, err := test.SetupAuth("979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76")
 	if err != nil {
 		return err
 	}
-
-	auth1 := bind.NewKeyedTransactor(key1)
-	auth2 := bind.NewKeyedTransactor(key2)
 
 	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
 	if err != nil {

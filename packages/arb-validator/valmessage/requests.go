@@ -17,9 +17,8 @@
 package valmessage
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )

@@ -56,3 +56,7 @@ func (a *AddressBuf) Unmarshal() Address {
 	copy(ret[:], a.Value)
 	return ret
 }
+
+func HexToAddress(hex string) Address {
+	return NewAddressFromEth(ethcommon.HexToAddress(hex))
+}

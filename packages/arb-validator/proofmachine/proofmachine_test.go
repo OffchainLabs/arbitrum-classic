@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -58,12 +56,8 @@ func setupTestValidateProof(t *testing.T) (*Connection, error) {
 	if err := json.Unmarshal(byteValue, &connectionInfo); err != nil {
 		t.Fatal(err)
 	}
-	key1, err := crypto.HexToECDSA("ffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39")
-	if err != nil {
-		t.Fatal(err)
-	}
 	proofbounds := [2]uint32{0, 10000}
-	return NewEthConnection(connectionInfo.OneStepProofAddress(), key1, ethURL, proofbounds)
+	return NewEthConnection(connectionInfo.OneStepProofAddress(), ethURL, proofbounds)
 }
 
 func runTestValidateProof(t *testing.T, contract string, ethCon *Connection) {

@@ -21,8 +21,6 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/unanimous"
-
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -207,7 +205,7 @@ func (vm *ArbRollup) ConfirmValid(
 	stakerProofOffsets []*big.Int,
 ) error {
 	vm.auth.Context = ctx
-	messages := unanimous.CombineMessages(outMsgs)
+	messages := combineMessages(outMsgs)
 	tx, err := vm.ArbRollup.ConfirmValid(
 		vm.auth,
 		deadline.Val,

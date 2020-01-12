@@ -25,37 +25,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type TokenType [21]byte
-
-func TokenTypeFromIntValue(val value.IntValue) TokenType {
-	var tokType TokenType
-	tokBytes := val.ToBytes()
-	copy(tokType[:], tokBytes[11:])
-	return tokType
-}
-
-func (t TokenType) ToIntValue() value.IntValue {
-	var bigtok [32]byte
-	copy(bigtok[11:], t[:])
-	return value.NewIntValue(new(big.Int).SetBytes(bigtok[:]))
-}
-
-func (t TokenType) IsToken() bool {
-	return t[20] == 0
-}
-
-func NewTokenTypeBuf(tok [21]byte) *TokenTypeBuf {
-	return &TokenTypeBuf{
-		Value: tok[:],
-	}
-}
-
-func NewTokenTypeFromBuf(buf *TokenTypeBuf) [21]byte {
-	var ret [21]byte
-	copy(ret[:], buf.Value)
-	return ret
-}
-
 type Message struct {
 	Data        value.Value
 	TokenType   [21]byte
@@ -114,7 +83,7 @@ func NewMessageFromValue(val value.Value) (Message, error) {
 	), nil
 }
 
-func NewMessageBuf(val Message) *MessageBuf {
+func (msg Message) MarshalToBuf(val Message) *MessageBuf {
 	return &MessageBuf{
 		Value:     value.MarshalValueToBytes(val.Data),
 		TokenType: NewTokenTypeBuf(val.TokenType),
@@ -123,11 +92,11 @@ func NewMessageBuf(val Message) *MessageBuf {
 	}
 }
 
-func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
+func (buf *MessageBuf) Unmarshal() (Message, error) {
 	val, err := value.UnmarshalValueFromBytes(buf.Value)
 	return NewSimpleMessage(
 		val,
-		NewTokenTypeFromBuf(buf.TokenType),
+		buf.TokenType.Unmarshal(),
 		buf.Amount.Unmarshal(),
 		buf.Sender.Unmarshal(),
 	), err

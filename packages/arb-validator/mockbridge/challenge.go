@@ -19,8 +19,6 @@ package mockbridge
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
@@ -32,11 +30,10 @@ type Challenge struct {
 
 	address common.Address
 	client  arbbridge.ArbClient
-	auth    *bind.TransactOpts
 }
 
-func NewChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*Challenge, error) {
-	vm := &Challenge{ClientConnection: &ClientConnection{client}, address: address, auth: auth}
+func NewChallenge(address common.Address, client arbbridge.ArbClient) (*Challenge, error) {
+	vm := &Challenge{ClientConnection: &ClientConnection{client}, address: address}
 	//err := vm.setupContracts()
 	return vm, nil
 }

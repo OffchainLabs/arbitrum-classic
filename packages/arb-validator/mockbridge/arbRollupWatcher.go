@@ -19,29 +19,25 @@ package mockbridge
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type EthRollupWatcher struct {
-	Client             *ethclient.Client
+	client             *ArbClient
 	ArbRollup          *rollup.ArbRollup
 	GlobalPendingInbox *rollup.IGlobalPendingInbox
 
 	address common.Address
-	client  *ethclient.Client
 }
 
-func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthRollupWatcher, error) {
+func NewRollupWatcher(address common.Address, client *ArbClient) (*EthRollupWatcher, error) {
 	//vm := &EthRollupWatcher{Client: client.(*ArbClient).client, address: address}
 	//err := vm.setupContracts()
 	//return vm, err
-	return &EthRollupWatcher{}, nil
+	return &EthRollupWatcher{client: client}, nil
 }
 
 //func (vm *EthRollupWatcher) setupContracts() error {

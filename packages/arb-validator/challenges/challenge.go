@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 

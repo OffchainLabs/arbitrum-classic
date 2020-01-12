@@ -19,8 +19,6 @@ package mockbridge
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
@@ -31,8 +29,8 @@ type BisectionChallenge struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*BisectionChallenge, error) {
-	challenge, err := NewChallenge(address, client, auth)
+func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient) (*BisectionChallenge, error) {
+	challenge, err := NewChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}

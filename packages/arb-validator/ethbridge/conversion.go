@@ -17,8 +17,12 @@
 package ethbridge
 
 import (
+	"bytes"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func hashSliceToRaw(slice []common.Hash) [][32]byte {
@@ -51,4 +55,14 @@ func hashSliceToHashes(slice [][32]byte) []common.Hash {
 		ret = append(ret, a)
 	}
 	return ret
+}
+
+func combineMessages(
+	messages []value.Value,
+) []byte {
+	var messageData bytes.Buffer
+	for _, msg := range messages {
+		_ = value.MarshalValue(msg, &messageData)
+	}
+	return messageData.Bytes()
 }
