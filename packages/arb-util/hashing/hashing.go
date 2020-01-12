@@ -19,6 +19,8 @@ package hashing
 import (
 	"math/big"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -70,4 +72,12 @@ func Uint32(input uint32) []byte {
 
 func Uint8(input uint8) []byte {
 	return solsha3.Uint8(input)
+}
+
+func Bytes32ArrayEncoded(input []common.Hash) []byte {
+	var values []byte
+	for _, val := range input {
+		values = append(values, ethcommon.RightPadBytes(val[:], 32)...)
+	}
+	return values
 }

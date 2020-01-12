@@ -314,7 +314,7 @@ func (f *Flat) addedValueAddHash(itemHash1 common.Hash) {
 	}
 	ret := hashing.SoliditySHA3(
 		hashing.Uint8(value.TypeCodeTuple+2),
-		value.Bytes32ArrayEncoded([]common.Hash{itemHash1, prevItem}),
+		hashing.Bytes32ArrayEncoded([]common.Hash{itemHash1, prevItem}),
 	)
 	f.hashes = append(f.hashes, ret)
 }

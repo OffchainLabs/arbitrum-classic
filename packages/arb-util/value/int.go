@@ -58,14 +58,6 @@ func NewBooleanValue(val bool) IntValue {
 	return NewInt64Value(0)
 }
 
-func NewIntValueFromString(str string) Value {
-	val, valid := math.ParseBig256(str)
-	if !valid {
-		return NewEmptyTuple()
-	}
-	return NewIntValue(val)
-}
-
 func NewIntValueFromReader(rd io.Reader) (IntValue, error) {
 	var data common.Hash
 	_, err := rd.Read(data[:])
@@ -137,7 +129,8 @@ func (iv IntValue) Hash() common.Hash {
 }
 
 func (iv IntValue) Marshal(w io.Writer) error {
-	_, err := w.Write(math.PaddedBigBytes(math.U256(new(big.Int).Set(iv.val)), 32))
+	bytesVal := iv.ToBytes()
+	_, err := w.Write(bytesVal[:])
 	return err
 }
 

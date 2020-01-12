@@ -23,8 +23,6 @@ import (
 	"io"
 	"math/big"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
@@ -233,14 +231,6 @@ func (tv TupleValue) String() string {
 	return buf.String()
 }
 
-func Bytes32ArrayEncoded(input []common.Hash) []byte {
-	var values []byte
-	for _, val := range input {
-		values = append(values, ethcommon.RightPadBytes(val[:], 32)...)
-	}
-	return values
-}
-
 func (tv TupleValue) internalHash() common.Hash {
 	hashes := make([]common.Hash, 0, tv.itemCount)
 	for _, v := range tv.Contents() {
@@ -249,7 +239,7 @@ func (tv TupleValue) internalHash() common.Hash {
 
 	return hashing.SoliditySHA3(
 		hashing.Uint8(tv.InternalTypeCode()),
-		Bytes32ArrayEncoded(hashes),
+		hashing.Bytes32ArrayEncoded(hashes),
 	)
 }
 
