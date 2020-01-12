@@ -55,25 +55,25 @@ func NewExecutionAssertionStubFromAssertion(a *protocol.ExecutionAssertion) *Exe
 
 func (a *ExecutionAssertionStub) MarshalToBuf() *ExecutionAssertionStubBuf {
 	return &ExecutionAssertionStubBuf{
-		AfterHash:        common.MarshalHash(a.AfterHash),
+		AfterHash:        a.AfterHash.MarshalToBuf(),
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
-		FirstMessageHash: common.MarshalHash(a.FirstMessageHash),
-		LastMessageHash:  common.MarshalHash(a.LastMessageHash),
-		FirstLogHash:     common.MarshalHash(a.FirstLogHash),
-		LastLogHash:      common.MarshalHash(a.LastLogHash),
+		FirstMessageHash: a.FirstMessageHash.MarshalToBuf(),
+		LastMessageHash:  a.LastMessageHash.MarshalToBuf(),
+		FirstLogHash:     a.FirstLogHash.MarshalToBuf(),
+		LastLogHash:      a.LastLogHash.MarshalToBuf(),
 	}
 }
 
 func (a *ExecutionAssertionStubBuf) Unmarshal() *ExecutionAssertionStub {
 	return &ExecutionAssertionStub{
-		AfterHash:        common.UnmarshalHash(a.AfterHash),
+		AfterHash:        a.AfterHash.Unmarshal(),
 		DidInboxInsn:     a.DidInboxInsn,
 		NumGas:           a.NumGas,
-		FirstMessageHash: common.UnmarshalHash(a.FirstMessageHash),
-		LastMessageHash:  common.UnmarshalHash(a.LastMessageHash),
-		FirstLogHash:     common.UnmarshalHash(a.FirstLogHash),
-		LastLogHash:      common.UnmarshalHash(a.LastLogHash),
+		FirstMessageHash: a.FirstMessageHash.Unmarshal(),
+		LastMessageHash:  a.LastMessageHash.Unmarshal(),
+		FirstLogHash:     a.FirstLogHash.Unmarshal(),
+		LastLogHash:      a.LastLogHash.Unmarshal(),
 	}
 }
 

@@ -287,7 +287,7 @@ type challengeOpportunity struct {
 }
 
 func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *Staker) *challengeOpportunity {
-	if !common.AddressIsZero(staker1.challenge) || !common.AddressIsZero(staker2.challenge) {
+	if !staker1.challenge.IsZero() || !staker2.challenge.IsZero() {
 		return nil
 	}
 	staker1Ancestor, staker2Ancestor, err := GetConflictAncestor(staker1.location, staker2.location)
@@ -333,7 +333,7 @@ func (chain *StakedNodeGraph) checkChallengeOpportunityPair(staker1, staker2 *St
 }
 
 func (chain *StakedNodeGraph) checkChallengeOpportunityAny(staker *Staker) *challengeOpportunity {
-	if !common.AddressIsZero(staker.challenge) {
+	if !staker.challenge.IsZero() {
 		return nil
 	}
 	var ret *challengeOpportunity

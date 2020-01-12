@@ -95,17 +95,17 @@ func (d *VMProtoData) Hash() common.Hash {
 
 func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 	return &VMProtoDataBuf{
-		MachineHash:  common.MarshalHash(node.MachineHash),
-		PendingTop:   common.MarshalHash(node.PendingTop),
+		MachineHash:  node.MachineHash.MarshalToBuf(),
+		PendingTop:   node.PendingTop.MarshalToBuf(),
 		PendingCount: common.MarshalBigInt(node.PendingCount),
 	}
 }
 
 func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	return &VMProtoData{
-		MachineHash:  common.UnmarshalHash(buf.MachineHash),
-		PendingTop:   common.UnmarshalHash(buf.PendingTop),
-		PendingCount: common.UnmarshalBigInt(buf.PendingCount),
+		MachineHash:  buf.MachineHash.Unmarshal(),
+		PendingTop:   buf.PendingTop.Unmarshal(),
+		PendingCount: buf.PendingCount.Unmarshal(),
 	}
 }
 
@@ -151,7 +151,7 @@ func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             m.NumSteps,
 		TimeBounds:           m.TimeBounds.Unmarshal(),
-		ImportedMessageCount: common.UnmarshalBigInt(m.ImportedMessageCount),
+		ImportedMessageCount: m.ImportedMessageCount.Unmarshal(),
 	}
 }
 
@@ -186,16 +186,16 @@ func (dn *AssertionClaim) Clone() *AssertionClaim {
 
 func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 	return &AssertionClaimBuf{
-		AfterPendingTop:       common.MarshalHash(dn.AfterPendingTop),
-		ImportedMessagesSlice: common.MarshalHash(dn.ImportedMessagesSlice),
+		AfterPendingTop:       dn.AfterPendingTop.MarshalToBuf(),
+		ImportedMessagesSlice: dn.ImportedMessagesSlice.MarshalToBuf(),
 		AssertionStub:         dn.AssertionStub.MarshalToBuf(),
 	}
 }
 
 func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 	return &AssertionClaim{
-		AfterPendingTop:       common.UnmarshalHash(m.AfterPendingTop),
-		ImportedMessagesSlice: common.UnmarshalHash(m.ImportedMessagesSlice),
+		AfterPendingTop:       m.AfterPendingTop.Unmarshal(),
+		ImportedMessagesSlice: m.ImportedMessagesSlice.Unmarshal(),
 		AssertionStub:         m.AssertionStub.Unmarshal(),
 	}
 }
@@ -225,7 +225,7 @@ func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
 		AssertionParams: dn.AssertionParams.MarshalToBuf(),
 		AssertionClaim:  dn.AssertionClaim.MarshalToBuf(),
-		MaxPendingTop:   common.MarshalHash(dn.MaxPendingTop),
+		MaxPendingTop:   dn.MaxPendingTop.MarshalToBuf(),
 		MaxPendingCount: common.MarshalBigInt(dn.MaxPendingCount),
 	}
 }
@@ -234,8 +234,8 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	return NewDisputableNode(
 		buf.AssertionParams.Unmarshal(),
 		buf.AssertionClaim.Unmarshal(),
-		common.UnmarshalHash(buf.MaxPendingTop),
-		common.UnmarshalBigInt(buf.MaxPendingCount),
+		buf.MaxPendingTop.Unmarshal(),
+		buf.MaxPendingCount.Unmarshal(),
 	)
 }
 

@@ -93,7 +93,7 @@ func newInitialNode_hashOnly(machHash common.Hash) *Node {
 
 func MakeInitialNodeBuf(machineHash common.Hash) (*NodeBuf, *common.HashBuf) {
 	initNode := newInitialNode_hashOnly(machineHash)
-	return initNode.MarshalForCheckpoint(nil), common.MarshalHash(initNode.hash)
+	return initNode.MarshalForCheckpoint(nil), initNode.hash.MarshalToBuf()
 }
 
 func NewNodeFromValidPrev(
@@ -276,11 +276,11 @@ func (node *Node) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeBu
 	var machineHash *common.HashBuf
 	if node.machine != nil {
 		ctx.AddMachine(node.machine)
-		machineHash = common.MarshalHash(node.machine.Hash())
+		machineHash = node.machine.Hash().MarshalToBuf()
 	}
 	var prevHashBuf *common.HashBuf
 	if node.prev != nil {
-		prevHashBuf = common.MarshalHash(node.prev.hash)
+		prevHashBuf = node.prev.hash.MarshalToBuf()
 	}
 	var disputableNodeBuf *structures.DisputableNodeBuf
 	if node.disputable != nil {
@@ -294,9 +294,9 @@ func (node *Node) MarshalForCheckpoint(ctx structures.CheckpointContext) *NodeBu
 		VmProtoData:    node.vmProtoData.MarshalToBuf(),
 		MachineHash:    machineHash,
 		Depth:          node.depth,
-		NodeDataHash:   common.MarshalHash(node.nodeDataHash),
-		InnerHash:      common.MarshalHash(node.innerHash),
-		Hash:           common.MarshalHash(node.hash),
+		NodeDataHash:   node.nodeDataHash.MarshalToBuf(),
+		InnerHash:      node.innerHash.MarshalToBuf(),
+		Hash:           node.hash.MarshalToBuf(),
 	}
 }
 
@@ -313,13 +313,13 @@ func (m *NodeBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext, chain *
 		vmProtoData:  m.VmProtoData.Unmarshal(),
 		machine:      nil,
 		depth:        m.Depth,
-		nodeDataHash: common.UnmarshalHash(m.NodeDataHash),
-		innerHash:    common.UnmarshalHash(m.InnerHash),
-		hash:         common.UnmarshalHash(m.Hash),
+		nodeDataHash: m.NodeDataHash.Unmarshal(),
+		innerHash:    m.InnerHash.Unmarshal(),
+		hash:         m.Hash.Unmarshal(),
 	}
 
 	if m.MachineHash != nil {
-		node.machine = ctx.GetMachine(common.UnmarshalHash(m.MachineHash))
+		node.machine = ctx.GetMachine(m.MachineHash.Unmarshal())
 	}
 
 	chain.nodeFromHash[node.hash] = node

@@ -37,7 +37,7 @@ func NewVMConfiguration(
 
 	return &VMConfiguration{
 		GracePeriod:           gracePeriod,
-		EscrowRequired:        common.NewBigIntBuf(escrowRequired),
+		EscrowRequired:        common.MarshalBigInt(escrowRequired),
 		EscrowCurrency:        escrowCurrency.MarshallToBuf(),
 		AssertKeys:            keys,
 		MaxExecutionStepCount: maxSteps,

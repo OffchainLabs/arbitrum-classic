@@ -70,8 +70,8 @@ func (chain *NodeGraph) MarshalForCheckpoint(ctx structures.CheckpointContext) *
 	})
 	return &NodeGraphBuf{
 		Nodes:               allNodes,
-		OldestNodeHash:      common.MarshalHash(chain.oldestNode.hash),
-		LatestConfirmedHash: common.MarshalHash(chain.latestConfirmed.hash),
+		OldestNodeHash:      chain.oldestNode.hash.MarshalToBuf(),
+		LatestConfirmedHash: chain.latestConfirmed.hash.MarshalToBuf(),
 		LeafHashes:          common.MarshalSliceOfHashes(leafHashes),
 		Params:              chain.params.MarshalToBuf(),
 	}
@@ -92,19 +92,19 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 	}
 	// now set up prevs and successors for all nodes
 	for _, nodeBuf := range buf.Nodes {
-		nodeHash := common.UnmarshalHash(nodeBuf.Hash)
+		nodeHash := nodeBuf.Hash.Unmarshal()
 		node := chain.nodeFromHash[nodeHash]
 		if nodeBuf.PrevHash != nil {
-			prevHash := common.UnmarshalHash(nodeBuf.PrevHash)
+			prevHash := nodeBuf.PrevHash.Unmarshal()
 			prev := chain.nodeFromHash[prevHash]
 			node.prev = prev
 			prev.successorHashes[node.linkType] = nodeHash
 		}
 	}
 
-	chain.oldestNode = chain.nodeFromHash[common.UnmarshalHash(buf.OldestNodeHash)]
+	chain.oldestNode = chain.nodeFromHash[buf.OldestNodeHash.Unmarshal()]
 	for _, leafHashStr := range buf.LeafHashes {
-		leafHash := common.UnmarshalHash(leafHashStr)
+		leafHash := leafHashStr.Unmarshal()
 		node := chain.nodeFromHash[leafHash]
 		if node == nil {
 			log.Fatal("unexpected nil node")
@@ -112,7 +112,7 @@ func (buf *NodeGraphBuf) UnmarshalFromCheckpoint(ctx structures.RestoreContext) 
 		chain.leaves.Add(node)
 	}
 
-	lcHash := common.UnmarshalHash(buf.LatestConfirmedHash)
+	lcHash := buf.LatestConfirmedHash.Unmarshal()
 	chain.latestConfirmed = chain.nodeFromHash[lcHash]
 
 	return chain

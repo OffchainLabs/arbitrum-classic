@@ -176,7 +176,7 @@ func MakeInitialPendingInboxBuf() *PendingInboxBuf {
 	return &PendingInboxBuf{
 		TopCount:   common.MarshalBigInt(big.NewInt(0)),
 		ItemHashes: []*common.HashBuf{},
-		HashOfRest: common.MarshalHash(value.NewEmptyTuple().Hash()),
+		HashOfRest: value.NewEmptyTuple().Hash().MarshalToBuf(),
 	}
 }
 
@@ -184,7 +184,7 @@ func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInbo
 	var msgHashes []*common.HashBuf
 	for item := pi.newest; item != nil; item = item.prev {
 		ctx.AddValue(item.message)
-		msgHashes = append(msgHashes, common.MarshalHash(item.message.Hash()))
+		msgHashes = append(msgHashes, item.message.Hash().MarshalToBuf())
 	}
 	var topCount *big.Int
 	if pi.newest == nil {
@@ -195,15 +195,15 @@ func (pi *MessageStack) MarshalForCheckpoint(ctx CheckpointContext) *PendingInbo
 	return &PendingInboxBuf{
 		TopCount:   common.MarshalBigInt(topCount),
 		ItemHashes: msgHashes,
-		HashOfRest: common.MarshalHash(pi.hashOfRest),
+		HashOfRest: pi.hashOfRest.MarshalToBuf(),
 	}
 }
 
 func (buf *PendingInboxBuf) UnmarshalFromCheckpoint(ctx RestoreContext) *MessageStack {
 	ret := NewMessageStack()
-	ret.hashOfRest = common.UnmarshalHash(buf.HashOfRest)
+	ret.hashOfRest = buf.HashOfRest.Unmarshal()
 	for i := len(buf.ItemHashes) - 1; i >= 0; i = i - 1 {
-		val := ctx.GetValue(common.UnmarshalHash(buf.ItemHashes[i]))
+		val := ctx.GetValue(buf.ItemHashes[i].Unmarshal())
 		ret.DeliverMessage(val)
 	}
 	return ret

@@ -39,5 +39,5 @@ func (tb *TimeBlocks) Marshal() *TimeBlocksBuf {
 }
 
 func (tb *TimeBlocksBuf) Unmarshal() *TimeBlocks {
-	return (*TimeBlocks)(UnmarshalBigInt(tb.Val))
+	return (*TimeBlocks)(tb.Val.Unmarshal())
 }

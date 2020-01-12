@@ -17,41 +17,17 @@
 package common
 
 import (
-	"errors"
 	"math/big"
 )
 
 //go:generate protoc -I.. -I. --go_out=paths=source_relative:. common.proto
 
-func NewBigIntBuf(buf *big.Int) *BigIntegerBuf {
+func MarshalBigInt(bi *big.Int) *BigIntegerBuf {
 	return &BigIntegerBuf{
-		Value: buf.Bytes(),
+		Value: bi.Bytes(),
 	}
 }
-func NewBigIntBufFromUint64(val uint64) *BigIntegerBuf {
-	return NewBigIntBuf(big.NewInt(int64(val)))
-}
 
-func NewBigIntFromBuf(buf *BigIntegerBuf) *big.Int {
+func (buf *BigIntegerBuf) Unmarshal() *big.Int {
 	return new(big.Int).SetBytes(buf.Value)
-}
-
-func Uint64FromBuf(buf *BigIntegerBuf) (uint64, error) {
-	bi := NewBigIntFromBuf(buf)
-	if !bi.IsUint64() {
-		return 0, errors.New("block number does not fit in uint64")
-	}
-	return bi.Uint64(), nil
-}
-
-func NewHashBuf(h Hash) *HashBuf {
-	return &HashBuf{
-		Value: h[:],
-	}
-}
-
-func NewHashFromBuf(buf *HashBuf) Hash {
-	var ret [32]byte
-	copy(ret[:], buf.Value)
-	return ret
 }

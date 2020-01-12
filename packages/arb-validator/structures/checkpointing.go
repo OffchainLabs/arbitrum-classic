@@ -60,11 +60,11 @@ func (ctx *CheckpointContextImpl) AddMachine(mach machine.Machine) {
 func (ctx *CheckpointContextImpl) Manifest() *CheckpointManifest {
 	vals := []*common.HashBuf{}
 	for h, _ := range ctx.values {
-		vals = append(vals, common.MarshalHash(h))
+		vals = append(vals, h.MarshalToBuf())
 	}
 	machines := []*common.HashBuf{}
 	for h, _ := range ctx.machines {
-		machines = append(machines, common.MarshalHash(h))
+		machines = append(machines, h.MarshalToBuf())
 	}
 	return &CheckpointManifest{Values: vals, Machines: machines}
 }

@@ -57,7 +57,7 @@ func (rt TimeTicks) MarshalToBuf() *TimeTicksBuf {
 }
 
 func (rtb *TimeTicksBuf) Unmarshal() TimeTicks {
-	return TimeTicks{common.UnmarshalBigInt(rtb.Val)}
+	return TimeTicks{rtb.Val.Unmarshal()}
 }
 
 func (rt TimeTicks) Equals(rt2 TimeTicks) bool {

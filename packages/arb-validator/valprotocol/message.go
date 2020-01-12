@@ -118,7 +118,7 @@ func NewMessageBuf(val Message) *MessageBuf {
 	return &MessageBuf{
 		Value:     value.MarshalValueToBytes(val.Data),
 		TokenType: NewTokenTypeBuf(val.TokenType),
-		Amount:    common.NewBigIntBuf(val.Currency),
+		Amount:    common.MarshalBigInt(val.Currency),
 		Sender:    val.Destination.MarshallToBuf(),
 	}
 }
@@ -128,7 +128,7 @@ func NewMessageFromBuf(buf *MessageBuf) (Message, error) {
 	return NewSimpleMessage(
 		val,
 		NewTokenTypeFromBuf(buf.TokenType),
-		common.NewBigIntFromBuf(buf.Amount),
+		buf.Amount.Unmarshal(),
 		buf.Sender.Unmarshal(),
 	), err
 }

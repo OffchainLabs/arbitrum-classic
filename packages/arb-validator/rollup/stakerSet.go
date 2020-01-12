@@ -66,14 +66,14 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	if staker.challenge == emptyAddress {
 		return &StakerBuf{
 			Address:       staker.address.MarshallToBuf(),
-			Location:      common.MarshalHash(staker.location.hash),
+			Location:      staker.location.hash.MarshalToBuf(),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: nil,
 		}
 	} else {
 		return &StakerBuf{
 			Address:       staker.address.MarshallToBuf(),
-			Location:      common.MarshalHash(staker.location.hash),
+			Location:      staker.location.hash.MarshalToBuf(),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: staker.challenge.MarshallToBuf(),
 		}
@@ -82,7 +82,7 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 
 func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	locArr := common.UnmarshalHash(buf.Location)
+	locArr := buf.Location.Unmarshal()
 	if buf.ChallengeAddr != nil {
 		return &Staker{
 			address:      buf.Address.Unmarshal(),

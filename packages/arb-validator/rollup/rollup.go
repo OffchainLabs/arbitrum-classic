@@ -118,8 +118,8 @@ func (chain *ChainObserver) marshalForCheckpoint(ctx structures.CheckpointContex
 		StakedNodeGraph:     chain.nodeGraph.MarshalForCheckpoint(ctx),
 		ContractAddress:     chain.rollupAddr.MarshallToBuf(),
 		PendingInbox:        chain.pendingInbox.MarshalForCheckpoint(ctx),
-		KnownValidNode:      common.MarshalHash(chain.knownValidNode.hash),
-		CalculatedValidNode: common.MarshalHash(chain.calculatedValidNode.hash),
+		KnownValidNode:      chain.knownValidNode.hash.MarshalToBuf(),
+		CalculatedValidNode: chain.calculatedValidNode.hash.MarshalToBuf(),
 		IsOpinionated:       chain.isOpinionated,
 	}
 }
@@ -140,8 +140,8 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		nodeGraph:           nodeGraph,
 		rollupAddr:          m.ContractAddress.Unmarshal(),
 		pendingInbox:        &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
-		knownValidNode:      nodeGraph.nodeFromHash[common.UnmarshalHash(m.KnownValidNode)],
-		calculatedValidNode: nodeGraph.nodeFromHash[common.UnmarshalHash(m.CalculatedValidNode)],
+		knownValidNode:      nodeGraph.nodeFromHash[m.KnownValidNode.Unmarshal()],
+		calculatedValidNode: nodeGraph.nodeFromHash[m.CalculatedValidNode.Unmarshal()],
 		latestBlockNumber:   nil,
 		listeners:           []ChainListener{},
 		checkpointer:        nil,

@@ -47,7 +47,7 @@ func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
 		logs = append(logs, valBytes)
 	}
 	return &ExecutionAssertionBuf{
-		AfterHash:    common.MarshalHash(a.AfterHash),
+		AfterHash:    a.AfterHash.MarshalToBuf(),
 		DidInboxInsn: a.DidInboxInsn,
 		NumGas:       a.NumGas,
 		Messages:     messages,
@@ -74,7 +74,7 @@ func (a *ExecutionAssertionBuf) Unmarshal() (*ExecutionAssertion, error) {
 		logs = append(logs, val)
 	}
 	return &ExecutionAssertion{
-		AfterHash:    common.UnmarshalHash(a.AfterHash),
+		AfterHash:    a.AfterHash.Unmarshal(),
 		DidInboxInsn: a.DidInboxInsn,
 		NumGas:       a.NumGas,
 		OutMsgs:      messages,

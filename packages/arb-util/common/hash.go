@@ -16,43 +16,34 @@
 
 package common
 
-import (
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-)
+import "github.com/ethereum/go-ethereum/common/hexutil"
 
-type Address [20]byte
+type Hash [32]byte
 
-var zeroAddress Address
-
-func init() {
-	zeroAddress = Address{}
+func (h Hash) String() string {
+	return hexutil.Encode(h[:])
 }
 
-func NewAddressFromEth(a ethcommon.Address) Address {
-	return Address(a)
+func (h Hash) Bytes() []byte {
+	return h[:]
 }
 
-func (a Address) IsZero() bool {
-	return a == zeroAddress
-}
-
-func (a Address) ToEthAddress() ethcommon.Address {
-	return ethcommon.Address(a)
-}
-
-func (a Address) Hex() string {
-	return hexutil.Encode(a[:])
-}
-
-func (a Address) MarshallToBuf() *AddressBuf {
-	return &AddressBuf{
-		Value: a[:],
+func (h Hash) MarshalToBuf() *HashBuf {
+	return &HashBuf{
+		Value: append([]byte{}, h[:]...),
 	}
 }
 
-func (a *AddressBuf) Unmarshal() Address {
-	var ret Address
-	copy(ret[:], a.Value)
+func MarshalSliceOfHashes(hs []Hash) []*HashBuf {
+	ret := make([]*HashBuf, 0, len(hs))
+	for _, h := range hs {
+		ret = append(ret, h.MarshalToBuf())
+	}
+	return ret
+}
+
+func (hb *HashBuf) Unmarshal() Hash {
+	var ret Hash
+	copy(ret[:], hb.Value)
 	return ret
 }

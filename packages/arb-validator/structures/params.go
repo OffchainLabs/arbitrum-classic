@@ -39,7 +39,7 @@ func (params ChainParams) MarshalToBuf() *ChainParamsBuf {
 
 func (m *ChainParamsBuf) Unmarshal() ChainParams {
 	return ChainParams{
-		StakeRequirement:  common.UnmarshalBigInt(m.StakeRequirement),
+		StakeRequirement:  m.StakeRequirement.Unmarshal(),
 		GracePeriod:       m.GracePeriod.Unmarshal(),
 		MaxExecutionSteps: m.MaxExecutionSteps,
 	}
