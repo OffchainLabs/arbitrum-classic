@@ -36,7 +36,13 @@ import (
 type RollupCheckpointer interface {
 	RestoreLatestState(common.Address, *structures.ChainParams, bool) (blockHeight *protocol.TimeBlocks, content *ChainObserverBuf, resCtx structures.RestoreContext)
 	GetInitialMachine() (machine.Machine, error)
-	AsyncSaveCheckpoint(*protocol.TimeBlocks, []byte, structures.CheckpointContext, chan interface{})
+	AsyncSaveCheckpoint(
+		blockHeight *protocol.TimeBlocks,
+		blockHeaderHash [32]byte,
+		contents []byte,
+		cpCtx structures.CheckpointContext,
+		closeWhenDone chan interface{},
+	)
 }
 
 type DummyCheckpointer struct {
@@ -69,6 +75,7 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 
 func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(
 	blockNum *protocol.TimeBlocks,
+	blockHeaderHash [32]byte,
 	contents []byte,
 	cpCtx structures.CheckpointContext,
 	doneChan chan interface{},
@@ -114,21 +121,25 @@ func NewProductionCheckpointer(
 
 func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	blockHeight *big.Int,
+	blockHeaderHash [32]byte,
 	contents []byte,
 	checkpointCtx structures.CheckpointContext,
 ) error {
 	// read in metadata
 	var metadataBuf *structures.CheckpointMetadata
-	var newestInCp *big.Int
+	var newestInCp *structures.BlockIdBuf
 	rawMetadata := rcp.cp.RestoreMetadata()
 
 	// read in metadata, or create it if it doesn't already exist
 	if rawMetadata == nil || len(rawMetadata) == 0 {
-		heightBuf := utils.MarshalBigInt(blockHeight)
+		idBuf := &structures.BlockIdBuf{
+			Height:     utils.MarshalBigInt(blockHeight),
+			HeaderHash: utils.MarshalHash(blockHeaderHash),
+		}
 		metadataBuf = &structures.CheckpointMetadata{
-			FormatVersion:     1,
-			OldestBlockHeight: heightBuf,
-			NewestBlockHeight: heightBuf,
+			FormatVersion: 1,
+			Oldest:        idBuf,
+			Newest:        idBuf,
 		}
 		buf, err := proto.Marshal(metadataBuf)
 		if err != nil {
@@ -141,11 +152,12 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 			return err
 		}
 	}
-	newestInCp = utils.UnmarshalBigInt(metadataBuf.NewestBlockHeight)
+	newestInCp = metadataBuf.Newest
 
 	// save all of the data for this checkpoint
 	rcp.cp.SaveCheckpoint(
 		blockHeight,
+		blockHeaderHash,
 		newestInCp,
 		contents,
 		checkpointCtx.Manifest(),
@@ -154,7 +166,11 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	)
 
 	// update the metadata to include this checkpoint
-	metadataBuf.NewestBlockHeight = utils.MarshalBigInt(blockHeight)
+	newId := &structures.BlockIdBuf{
+		Height:     utils.MarshalBigInt(blockHeight),
+		HeaderHash: utils.MarshalHash(blockHeaderHash),
+	}
+	metadataBuf.Newest = newId
 	buf, err := proto.Marshal(metadataBuf)
 	if err != nil {
 		return err
@@ -185,8 +201,8 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 	if err := proto.Unmarshal(metadataBytes, metadata); err != nil {
 		return nil, nil, nil
 	}
-	blockHeight := utils.UnmarshalBigInt(metadata.NewestBlockHeight)
-	cobBytes, resCtx, err := rcp.RestoreCheckpoint(blockHeight)
+	newestId := metadata.Newest
+	cobBytes, resCtx, err := rcp.RestoreCheckpoint(utils.UnmarshalBigInt(newestId.Height))
 	if err != nil {
 		return nil, nil, nil
 	}
@@ -194,13 +210,13 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 	if err := proto.Unmarshal(cobBytes, cob); err != nil {
 		return nil, nil, nil
 	}
-	return protocol.NewTimeBlocks(blockHeight), cob, resCtx
+	return protocol.NewTimeBlocks(utils.UnmarshalBigInt(newestId.Height)), cob, resCtx
 }
 
 func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]byte, structures.RestoreContext, error) {
 	var metadataBuf *structures.CheckpointMetadata
-	var oldestInCp *big.Int
-	var newestInCp *big.Int
+	var oldestHeightInCp *big.Int
+	var newestHeightInCp *big.Int
 	rawMetadata := rcp.cp.RestoreMetadata()
 	if rawMetadata == nil {
 		return nil, nil, nil
@@ -210,10 +226,10 @@ func (rcp *ProductionCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]by
 	if err := proto.Unmarshal(rawMetadata, metadataBuf); err != nil {
 		return nil, nil, err
 	}
-	oldestInCp = utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
-	newestInCp = utils.UnmarshalBigInt(metadataBuf.NewestBlockHeight)
+	oldestHeightInCp = utils.UnmarshalBigInt(metadataBuf.Oldest.Height)
+	newestHeightInCp = utils.UnmarshalBigInt(metadataBuf.Newest.Height)
 
-	if blockHeight.Cmp(oldestInCp) < 0 || blockHeight.Cmp(newestInCp) > 0 {
+	if blockHeight.Cmp(oldestHeightInCp) < 0 || blockHeight.Cmp(newestHeightInCp) > 0 {
 		return nil, nil, nil
 	}
 
@@ -227,13 +243,14 @@ func (cp *ProductionCheckpointer) GetInitialMachine() (machine.Machine, error) {
 
 func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(
 	blocknum *protocol.TimeBlocks,
+	blockHeaderHash [32]byte,
 	buf []byte,
 	cpCtx structures.CheckpointContext,
 	doneChan chan interface{},
 ) {
 	cp.asyncWriter.SubmitJob(
 		func() {
-			cp._saveCheckpoint(blocknum.AsInt(), buf, cpCtx)
+			cp._saveCheckpoint(blocknum.AsInt(), blockHeaderHash, buf, cpCtx)
 		},
 		doneChan,
 	)
@@ -294,7 +311,8 @@ type checkpointerWithMetadata interface {
 	RestoreMetadata() []byte
 	SaveCheckpoint(
 		blockHeight *big.Int,
-		prevHeight *big.Int,
+		blockHash [32]byte,
+		prevBlockId *structures.BlockIdBuf,
 		contents []byte,
 		manifest *structures.CheckpointManifest,
 		values map[[32]byte]value.Value,
@@ -419,7 +437,8 @@ func (csc *productionCheckpointer) RestoreMetadata() []byte {
 
 func (csc *productionCheckpointer) SaveCheckpoint(
 	blockHeight *big.Int,
-	prevBlockHeight *big.Int,
+	blockHash [32]byte,
+	prevBlockId *structures.BlockIdBuf,
 	contents []byte,
 	manifest *structures.CheckpointManifest,
 	values map[[32]byte]value.Value,
@@ -441,14 +460,18 @@ func (csc *productionCheckpointer) SaveCheckpoint(
 
 	csc.st.SaveData(contentsKey, contents)
 
-	csc._updateNextPointer(prevBlockHeight, blockHeight)
-	csc._setBothPointers(blockHeight, prevBlockHeight, blockHeight)
+	blockId := &structures.BlockIdBuf{
+		Height:     utils.MarshalBigInt(blockHeight),
+		HeaderHash: utils.MarshalHash(blockHash),
+	}
+	csc._updateNextPointer(utils.UnmarshalBigInt(prevBlockId.Height), blockId)
+	csc._setBothPointers(blockHeight, prevBlockId, blockId)
 }
 
-func (csc *productionCheckpointer) _setBothPointers(idx, prev, next *big.Int) {
+func (csc *productionCheckpointer) _setBothPointers(idx *big.Int, prev, next *structures.BlockIdBuf) {
 	links := &structures.CheckpointLinks{
-		PrevBlockHeight: utils.MarshalBigInt(prev),
-		NextBlockHeight: utils.MarshalBigInt(next),
+		Prev: prev,
+		Next: next,
 	}
 	linksBuf, err := proto.Marshal(links)
 	if err != nil {
@@ -457,14 +480,14 @@ func (csc *productionCheckpointer) _setBothPointers(idx, prev, next *big.Int) {
 	csc.st.SaveData(linksKey(idx), linksBuf)
 }
 
-func (csc *productionCheckpointer) _updatePrevPointer(idx, prev *big.Int) {
+func (csc *productionCheckpointer) _updatePrevPointer(idx *big.Int, prev *structures.BlockIdBuf) {
 	key := linksKey(idx)
 	linksBuf := csc.st.GetData(key)
 	links := &structures.CheckpointLinks{}
 	if err := proto.Unmarshal(linksBuf, links); err != nil {
 		log.Fatal(err)
 	}
-	links.PrevBlockHeight = utils.MarshalBigInt(prev)
+	links.Prev = prev
 	linksBuf, err := proto.Marshal(links)
 	if err != nil {
 		log.Fatal(err)
@@ -472,14 +495,14 @@ func (csc *productionCheckpointer) _updatePrevPointer(idx, prev *big.Int) {
 	csc.st.SaveData(key, linksBuf)
 }
 
-func (csc *productionCheckpointer) _updateNextPointer(idx, next *big.Int) {
+func (csc *productionCheckpointer) _updateNextPointer(idx *big.Int, next *structures.BlockIdBuf) {
 	key := linksKey(idx)
 	linksBuf := csc.st.GetData(key)
 	links := &structures.CheckpointLinks{}
 	if err := proto.Unmarshal(linksBuf, links); err != nil {
 		log.Fatal(err)
 	}
-	links.NextBlockHeight = utils.MarshalBigInt(next)
+	links.Next = next
 	linksBuf, err := proto.Marshal(links)
 	if err != nil {
 		log.Fatal(err)
@@ -494,8 +517,8 @@ func (csc *productionCheckpointer) RestoreCheckpoint(blockHeight *big.Int) ([]by
 	if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
 		log.Fatal(err)
 	}
-	oldestHeight := utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
-	newestHeight := utils.UnmarshalBigInt(metadataBuf.NewestBlockHeight)
+	oldestHeight := utils.UnmarshalBigInt(metadataBuf.Oldest.Height)
+	newestHeight := utils.UnmarshalBigInt(metadataBuf.Newest.Height)
 	if blockHeight.Cmp(oldestHeight) < 0 || blockHeight.Cmp(newestHeight) > 0 {
 		return nil, nil
 	}
@@ -516,7 +539,7 @@ func (csc *productionCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *b
 		if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
 			return
 		}
-		oldestHeight := utils.UnmarshalBigInt(metadataBuf.OldestBlockHeight)
+		oldestHeight := utils.UnmarshalBigInt(metadataBuf.Oldest.Height)
 
 		linksBuf := csc.st.GetData(linksKey(oldestHeight))
 		links := &structures.CheckpointLinks{}
@@ -524,12 +547,12 @@ func (csc *productionCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *b
 			return
 		}
 
-		nextHeight := utils.UnmarshalBigInt(links.NextBlockHeight)
+		nextHeight := utils.UnmarshalBigInt(links.Next.Height)
 		if nextHeight.Cmp(earliestRollbackPoint) >= 0 {
 			return
 		}
 
-		metadataBuf.NewestBlockHeight = utils.MarshalBigInt(nextHeight)
+		metadataBuf.Newest.Height = utils.MarshalBigInt(nextHeight)
 		metadataBytes, err := proto.Marshal(metadataBuf)
 		if err != nil {
 			return

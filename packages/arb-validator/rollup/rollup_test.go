@@ -65,13 +65,14 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpointer, t *testing.T) {
 	blockHeight := protocol.NewTimeBlocks(big.NewInt(7337))
+	var blockHeaderHash [32]byte
 	ctx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	doneChan := make(chan interface{})
-	cp.AsyncSaveCheckpoint(blockHeight, buf, ctx, doneChan)
+	cp.AsyncSaveCheckpoint(blockHeight, blockHeaderHash, buf, ctx, doneChan)
 	<-doneChan
 	chain2, err := UnmarshalChainObserverFromBytes(context.TODO(), buf, ctx, nil)
 	if err != nil {

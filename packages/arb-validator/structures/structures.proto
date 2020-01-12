@@ -68,12 +68,17 @@ message CheckpointManifest {
 
 message CheckpointMetadata {
     uint64 formatVersion = 1;
-    value.BigIntegerBuf oldestBlockHeight = 2;
-    value.BigIntegerBuf newestBlockHeight = 3;
+    BlockIdBuf oldest = 2;
+    BlockIdBuf newest = 3;
 }
 
 message CheckpointLinks {
-    value.BigIntegerBuf nextBlockHeight = 1;
-    value.BigIntegerBuf prevBlockHeight = 2;
+    BlockIdBuf next = 1;
+    BlockIdBuf prev = 2;
+}
+
+message BlockIdBuf {
+    value.BigIntegerBuf height = 1;
+    value.HashBuf headerHash = 2;
 }
 

@@ -81,7 +81,8 @@ func CreateObserver(
 				}
 				if notification.Header.Number.Cmp(lastBlockNumberSeen) > 0 {
 					lastBlockNumberSeen = notification.Header.Number
-					chain.notifyNewBlockNumber(protocol.NewTimeBlocks(lastBlockNumberSeen))
+					blockHeaderHash := notification.Header.Root
+					chain.notifyNewBlock(protocol.NewTimeBlocks(lastBlockNumberSeen), blockHeaderHash)
 				}
 				handleNotification(notification, chain)
 			case <-errChan:
