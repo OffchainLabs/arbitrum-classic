@@ -64,7 +64,12 @@ func newMessagesChallengeWatcher(address ethcommon.Address, client *ethclient.Cl
 		return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	}
 
-	return &messagesChallengeWatcher{bisectionChallengeWatcher: bisectionChallenge, contract: messagesContract}, nil
+	return &messagesChallengeWatcher{
+		bisectionChallengeWatcher: bisectionChallenge,
+		contract:                  messagesContract,
+		client:                    client,
+		address:                   address,
+	}, nil
 }
 
 func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {
