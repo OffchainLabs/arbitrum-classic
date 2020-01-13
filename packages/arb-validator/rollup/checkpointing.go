@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 
@@ -255,6 +256,8 @@ type AsyncCheckpointWriter struct {
 func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *AsyncCheckpointWriter {
 	ret := &AsyncCheckpointWriter{&sync.Mutex{}, cp, make(chan interface{}, 1), nil, nil}
 	go func() {
+		deleteTicker := time.NewTicker(time.Minute)
+		defer deleteTicker.Stop()
 		for {
 			select {
 			case <-ret.notifyChan:
@@ -274,6 +277,10 @@ func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *
 						close(dc)
 					}
 				}
+				ret.Unlock()
+			case <-deleteTicker.C:
+				ret.Lock()
+				ret.checkpointer.cp.(*productionCheckpointer).deleteSomeOldCheckpoints()
 				ret.Unlock()
 			case <-ctx.Done():
 				return
@@ -555,6 +562,31 @@ func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollba
 		}
 		csc.st.SaveData([]byte("deadqueue"), queueBytes)
 	}
+}
+
+func (csc *productionCheckpointer) deleteSomeOldCheckpoints() {
+	queueBytes := csc.st.GetData([]byte("deadqueue"))
+	queue := &structures.BlockIdBufList{}
+	if err := proto.Unmarshal(queueBytes, queue); err != nil {
+		return
+	}
+	numInQueue := len(queue.Bufs)
+	numToDelete := numInQueue / 10
+	if numToDelete == 0 && numInQueue > 0 {
+		numToDelete = 1
+	}
+
+	for i := 0; i < numToDelete; i++ {
+		blockId := queue.Bufs[0].Unmarshal()
+		csc.DeleteOneOldCheckpoint(blockId)
+		queue.Bufs = queue.Bufs[1:]
+	}
+
+	queueBytes, err := proto.Marshal(queue)
+	if err != nil {
+		return
+	}
+	csc.st.SaveData([]byte("deadqueue"), queueBytes)
 }
 
 func (csc *productionCheckpointer) DeleteOneOldCheckpoint(blockId *structures.BlockId) {
