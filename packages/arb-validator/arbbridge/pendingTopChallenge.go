@@ -46,3 +46,7 @@ type PendingTopChallenge interface {
 		chainLength uint32,
 	) error
 }
+
+type PendingTopChallengeWatcher interface {
+	ContractWatcher
+}

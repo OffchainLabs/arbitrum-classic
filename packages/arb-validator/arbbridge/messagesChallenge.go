@@ -50,3 +50,7 @@ type MessagesChallenge interface {
 		chainLength *big.Int,
 	) error
 }
+
+type MessagesChallengeWatcher interface {
+	ContractWatcher
+}

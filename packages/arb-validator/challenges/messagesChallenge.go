@@ -36,16 +36,16 @@ func DefendMessagesClaim(
 	importedMessagesSlice common.Hash,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
-	contract, err := client.NewMessagesChallenge(address)
+	contractWatcher, err := client.NewMessagesChallengeWatcher(address)
 	if err != nil {
-		return 0, err
+		return ChallengeContinuing, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
 	defer close(noteChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contractWatcher)
 	go func() {
 		for event := range parsingChan {
 			_, ok := event.Event.(arbbridge.NewTimeEvent)
@@ -54,6 +54,10 @@ func DefendMessagesClaim(
 			}
 		}
 	}()
+	contract, err := client.NewMessagesChallenge(address)
+	if err != nil {
+		return 0, err
+	}
 	return defendMessages(
 		ctx,
 		noteChan,
@@ -74,16 +78,16 @@ func ChallengeMessagesClaim(
 	beforePending common.Hash,
 	afterPending common.Hash,
 ) (ChallengeState, error) {
-	contract, err := client.NewMessagesChallenge(address)
+	contractWatcher, err := client.NewMessagesChallengeWatcher(address)
 	if err != nil {
-		return 0, err
+		return ChallengeContinuing, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	noteChan := make(chan arbbridge.Notification, 1024)
 	defer close(noteChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contract)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contractWatcher)
 	go func() {
 		for event := range parsingChan {
 			_, ok := event.Event.(arbbridge.NewTimeEvent)
@@ -92,6 +96,10 @@ func ChallengeMessagesClaim(
 			}
 		}
 	}()
+	contract, err := client.NewMessagesChallenge(address)
+	if err != nil {
+		return 0, err
+	}
 	return challengeMessages(
 		ctx,
 		noteChan,

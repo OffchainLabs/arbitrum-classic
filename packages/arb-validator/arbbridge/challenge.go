@@ -21,7 +21,6 @@ import (
 )
 
 type Challenge interface {
-	ContractWatcher
 	TimeoutChallenge(
 		ctx context.Context,
 	) error

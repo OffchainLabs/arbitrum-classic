@@ -47,3 +47,7 @@ type ExecutionChallenge interface {
 		totalSteps uint32,
 	) error
 }
+
+type ExecutionChallengeWatcher interface {
+	ContractWatcher
+}

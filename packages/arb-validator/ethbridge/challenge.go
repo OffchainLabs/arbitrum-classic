@@ -50,28 +50,48 @@ func init() {
 type challenge struct {
 	Challenge *executionchallenge.Challenge
 
-	address ethcommon.Address
-	client  *ethclient.Client
-	auth    *bind.TransactOpts
+	client *ethclient.Client
+	auth   *bind.TransactOpts
 }
 
 func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*challenge, error) {
-	vm := &challenge{address: address, client: client, auth: auth}
-	err := vm.setupContracts()
-	return vm, err
-}
-
-func (c *challenge) setupContracts() error {
-	challengeManagerContract, err := executionchallenge.NewChallenge(c.address, c.client)
+	challengeContract, err := executionchallenge.NewChallenge(address, client)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
+		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	}
 
-	c.Challenge = challengeManagerContract
-	return nil
+	return &challenge{Challenge: challengeContract, client: client, auth: auth}, nil
 }
 
-func (c *challenge) topics() []ethcommon.Hash {
+func (c *challenge) TimeoutChallenge(
+	ctx context.Context,
+) error {
+	c.auth.Context = ctx
+	tx, err := c.Challenge.TimeoutChallenge(c.auth)
+	if err != nil {
+		return err
+	}
+	return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
+}
+
+func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+	return waitForReceipt(ctx, c.client, c.auth.From, tx, methodName)
+}
+
+type challengeWatcher struct {
+	Challenge *executionchallenge.Challenge
+}
+
+func newChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*challengeWatcher, error) {
+	challengeContract, err := executionchallenge.NewChallenge(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	}
+
+	return &challengeWatcher{Challenge: challengeContract}, nil
+}
+
+func (c *challengeWatcher) topics() []ethcommon.Hash {
 	return []ethcommon.Hash{
 		initiatedChallengeID,
 		timedOutAsserterID,
@@ -79,7 +99,7 @@ func (c *challenge) topics() []ethcommon.Hash {
 	}
 }
 
-func (c *challenge) parseChallengeEvent(log types.Log) (arbbridge.Event, error) {
+func (c *challengeWatcher) parseChallengeEvent(log types.Log) (arbbridge.Event, error) {
 	if log.Topics[0] == initiatedChallengeID {
 		eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
 		if err != nil {
@@ -102,19 +122,4 @@ func (c *challenge) parseChallengeEvent(log types.Log) (arbbridge.Event, error) 
 		return arbbridge.ChallengerTimeoutEvent{}, nil
 	}
 	return nil, nil
-}
-
-func (c *challenge) TimeoutChallenge(
-	ctx context.Context,
-) error {
-	c.auth.Context = ctx
-	tx, err := c.Challenge.TimeoutChallenge(c.auth)
-	if err != nil {
-		return err
-	}
-	return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
-}
-
-func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
-	return waitForReceipt(ctx, c.client, c.auth.From, tx, methodName)
 }

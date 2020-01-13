@@ -44,6 +44,18 @@ func (c *EthArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRo
 	return newRollupWatcher(address.ToEthAddress(), c.client)
 }
 
+func (c *EthArbClient) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
+	return newExecutionChallengeWatcher(address.ToEthAddress(), c.client)
+}
+
+func (c *EthArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
+	return newMessagesChallengeWatcher(address.ToEthAddress(), c.client)
+}
+
+func (c *EthArbClient) NewPendingTopChallengeWatcher(address common.Address) (arbbridge.PendingTopChallengeWatcher, error) {
+	return newPendingTopChallengeWatcher(address.ToEthAddress(), c.client)
+}
+
 func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
 	return newOneStepProof(address.ToEthAddress(), c.client)
 }

@@ -54,44 +54,15 @@ func newBisectionChallenge(address ethcommon.Address, client *ethclient.Client, 
 	if err != nil {
 		return nil, err
 	}
+	bisectionContract, err := executionchallenge.NewBisectionChallenge(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	}
 	vm := &bisectionChallenge{
 		challenge:          challenge,
-		BisectionChallenge: nil,
+		BisectionChallenge: bisectionContract,
 	}
-	err = vm.setupContracts()
 	return vm, err
-}
-
-func (c *bisectionChallenge) setupContracts() error {
-	challengeManagerContract, err := executionchallenge.NewBisectionChallenge(c.address, c.client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
-	}
-
-	c.BisectionChallenge = challengeManagerContract
-	return nil
-}
-
-func (c *bisectionChallenge) topics() []ethcommon.Hash {
-	tops := []ethcommon.Hash{
-		continuedChallengeID,
-	}
-	return append(tops, c.challenge.topics()...)
-}
-
-func (c *bisectionChallenge) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
-	if log.Topics[0] == continuedChallengeID {
-		contChal, err := c.BisectionChallenge.ParseContinued(log)
-		if err != nil {
-			return nil, err
-		}
-		return arbbridge.ContinueChallengeEvent{
-			SegmentIndex: contChal.SegmentIndex,
-			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
-		}, nil
-	} else {
-		return c.challenge.parseChallengeEvent(log)
-	}
 }
 
 func (c *bisectionChallenge) chooseSegment(
@@ -112,4 +83,47 @@ func (c *bisectionChallenge) chooseSegment(
 		return err
 	}
 	return c.waitForReceipt(ctx, tx, "ChooseSegment")
+}
+
+type bisectionChallengeWatcher struct {
+	*challengeWatcher
+	BisectionChallenge *executionchallenge.BisectionChallenge
+}
+
+func newBisectionChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*bisectionChallengeWatcher, error) {
+	challenge, err := newChallengeWatcher(address, client)
+	if err != nil {
+		return nil, err
+	}
+	bisectionContract, err := executionchallenge.NewBisectionChallenge(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	}
+	vm := &bisectionChallengeWatcher{
+		challengeWatcher:   challenge,
+		BisectionChallenge: bisectionContract,
+	}
+	return vm, err
+}
+
+func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
+	tops := []ethcommon.Hash{
+		continuedChallengeID,
+	}
+	return append(tops, c.challengeWatcher.topics()...)
+}
+
+func (c *bisectionChallengeWatcher) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
+	if log.Topics[0] == continuedChallengeID {
+		contChal, err := c.BisectionChallenge.ParseContinued(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.ContinueChallengeEvent{
+			SegmentIndex: contChal.SegmentIndex,
+			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
+		}, nil
+	} else {
+		return c.challengeWatcher.parseChallengeEvent(log)
+	}
 }

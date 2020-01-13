@@ -25,6 +25,9 @@ import (
 type ArbClient interface {
 	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
+	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
+	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
+	NewPendingTopChallengeWatcher(address common.Address) (PendingTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
 	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
 }
