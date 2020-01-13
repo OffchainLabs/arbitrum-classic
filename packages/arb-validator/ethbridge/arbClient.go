@@ -19,6 +19,8 @@ package ethbridge
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -60,20 +62,12 @@ func (c *EthArbClient) NewOneStepProof(address common.Address) (arbbridge.OneSte
 	return newOneStepProof(address.ToEthAddress(), c.client)
 }
 
-func (c *EthArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
+func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
 	header, err := c.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return common.NewTimeBlocks(header.Number), nil
-}
-
-func (c *EthArbClient) CurrentBlockTimeAndHash(ctx context.Context) (*common.TimeBlocks, common.Hash, error) {
-	header, err := c.client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, common.Hash{}, err
-	}
-	return common.NewTimeBlocks(header.Number), common.NewHashFromEth(header.Root), nil
+	return getBlockID(header), nil
 }
 
 type EthArbAuthClient struct {

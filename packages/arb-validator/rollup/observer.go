@@ -19,7 +19,6 @@ package rollup
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"time"
@@ -36,14 +35,11 @@ func CreateObserver(
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
 ) (*ChainObserver, error) {
-	currentBlockNum, currentHeaderHash, err := clnt.CurrentBlockTimeAndHash(ctx)
+	currentBlockId, err := clnt.CurrentBlockId(ctx)
 	if err != nil {
 		return nil, err
 	}
-	currentBlockId := &structures.BlockId{
-		Height:     currentBlockNum,
-		HeaderHash: currentHeaderHash,
-	}
+
 	rollup, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
 		return nil, err
@@ -77,7 +73,7 @@ func CreateObserver(
 	chain.Start(ctx)
 
 	go func() {
-		lastBlockNumberSeen := big.NewInt(0)
+		lastBlockNumberSeen := common.NewTimeBlocks(big.NewInt(0))
 		for {
 			hitError := false
 			select {
@@ -88,12 +84,8 @@ func CreateObserver(
 					hitError = true
 					break
 				}
-				if notification.BlockHeight.Cmp(lastBlockNumberSeen) > 0 {
-					blockId := &structures.BlockId{
-						common.NewTimeBlocks(notification.BlockHeight),
-						notification.BlockHeader,
-					}
-					chain.notifyNewBlock(blockId)
+				if notification.BlockId.Height.Cmp(lastBlockNumberSeen) > 0 {
+					chain.notifyNewBlock(notification.BlockId)
 				}
 				handleNotification(notification, chain)
 			case <-errChan:
@@ -122,7 +114,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.MessageDeliveredEvent:
 		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := common.TimeFromBlockNum(common.NewTimeBlocks(notification.BlockHeight))
+		currentTime := common.TimeFromBlockNum(notification.BlockId.Height)
 		chain.createStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.newChallenge(ev)
@@ -135,8 +127,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ev)
 	case arbbridge.AssertedEvent:
-		currentTime := common.NewTimeBlocks(notification.BlockHeight)
-		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
+		err := chain.notifyAssert(ev, notification.BlockId.Height, notification.TxHash)
 		if err != nil {
 			panic(err)
 		}

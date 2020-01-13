@@ -19,6 +19,8 @@ package arbbridge
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -29,8 +31,7 @@ type ArbClient interface {
 	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
 	NewPendingTopChallengeWatcher(address common.Address) (PendingTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
-	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
-	CurrentBlockTimeAndHash(ctx context.Context) (*common.TimeBlocks, common.Hash, error)
+	CurrentBlockId(ctx context.Context) (*structures.BlockId, error)
 }
 
 type ArbAuthClient interface {

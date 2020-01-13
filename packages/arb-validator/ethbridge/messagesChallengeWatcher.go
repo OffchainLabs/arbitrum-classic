@@ -64,7 +64,12 @@ func newMessagesChallengeWatcher(address ethcommon.Address, client *ethclient.Cl
 		return nil, errors2.Wrap(err, "Failed to connect to messagesChallenge")
 	}
 
-	return &messagesChallengeWatcher{bisectionChallengeWatcher: bisectionChallenge, contract: messagesContract}, nil
+	return &messagesChallengeWatcher{
+		bisectionChallengeWatcher: bisectionChallenge,
+		contract:                  messagesContract,
+		client:                    client,
+		address:                   address,
+	}, nil
 }
 
 func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {
@@ -159,11 +164,9 @@ func (c *messagesChallengeWatcher) processEvents(ctx context.Context, log types.
 		return err
 	}
 	outChan <- arbbridge.Notification{
-		BlockHeader: common.NewHashFromEth(header.Hash()),
-		BlockHeight: header.Number,
-		VMID:        common.NewAddressFromEth(c.address),
-		Event:       event,
-		TxHash:      log.TxHash,
+		BlockId: getBlockID(header),
+		Event:   event,
+		TxHash:  log.TxHash,
 	}
 	return nil
 }

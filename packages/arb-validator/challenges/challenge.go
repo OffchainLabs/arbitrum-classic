@@ -67,11 +67,11 @@ func getNextEventWithTimeout(
 		case <-ctx.Done():
 			return note, state, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
-			currentTime, err := client.CurrentBlockTime(ctx)
+			blockId, err := client.CurrentBlockId(ctx)
 			if err != nil {
 				return note, 0, err
 			}
-			if common.TimeFromBlockNum(currentTime).Cmp(deadline) >= 0 {
+			if common.TimeFromBlockNum(blockId.Height).Cmp(deadline) >= 0 {
 				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return note, 0, err
