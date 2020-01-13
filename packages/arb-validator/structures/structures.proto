@@ -75,7 +75,7 @@ message CheckpointLinks {
 }
 
 message BlockIdBuf {
-    common.BigIntegerBuf height = 1;
+    common.TimeBlocksBuf height = 1;
     common.HashBuf headerHash = 2;
 }
 

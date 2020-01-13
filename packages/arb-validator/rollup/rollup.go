@@ -43,7 +43,7 @@ type ChainObserver struct {
 	pendingInbox        *structures.PendingInbox
 	knownValidNode      *Node
 	calculatedValidNode *Node
-	latestBlockNumber   *common.TimeBlocks
+	latestBlockId       *structures.BlockId
 	listeners           []ChainListener
 	checkpointer        RollupCheckpointer
 	isOpinionated       bool
@@ -55,7 +55,7 @@ func NewChain(
 	checkpointer RollupCheckpointer,
 	vmParams structures.ChainParams,
 	updateOpinion bool,
-	startTime *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 ) (*ChainObserver, error) {
 	mach, err := checkpointer.GetInitialMachine()
 	if err != nil {
@@ -69,7 +69,7 @@ func NewChain(
 		pendingInbox:        structures.NewPendingInbox(),
 		knownValidNode:      nodeGraph.latestConfirmed,
 		calculatedValidNode: nodeGraph.latestConfirmed,
-		latestBlockNumber:   startTime,
+		latestBlockId:       startBlockId,
 		listeners:           []ChainListener{},
 		checkpointer:        checkpointer,
 		isOpinionated:       false,
@@ -145,7 +145,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 		pendingInbox:        &structures.PendingInbox{m.PendingInbox.UnmarshalFromCheckpoint(restoreCtx)},
 		knownValidNode:      nodeGraph.nodeFromHash[m.KnownValidNode.Unmarshal()],
 		calculatedValidNode: nodeGraph.nodeFromHash[m.CalculatedValidNode.Unmarshal()],
-		latestBlockNumber:   nil,
+		latestBlockId:       nil,
 		listeners:           []ChainListener{},
 		checkpointer:        nil,
 		isOpinionated:       false,
@@ -300,16 +300,16 @@ func (chain *ChainObserver) notifyAssert(
 	return nil
 }
 
-func (chain *ChainObserver) notifyNewBlock(blockNum *common.TimeBlocks, blockHash common.Hash) {
+func (chain *ChainObserver) notifyNewBlock(blockId *structures.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
-	chain.latestBlockNumber = blockNum
+	chain.latestBlockId = blockId
 	ckptCtx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ckptCtx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	chain.checkpointer.AsyncSaveCheckpoint(blockNum, blockHash, buf, ckptCtx, nil)
+	chain.checkpointer.AsyncSaveCheckpoint(blockId, buf, ckptCtx, nil)
 }
 
 func (co *ChainObserver) equals(co2 *ChainObserver) bool {
@@ -329,17 +329,18 @@ func (chain *ChainObserver) executionPrecondition(node *Node) *valprotocol.Preco
 }
 
 func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
+	latestTime := chain.latestBlockId.Height
 	return &protocol.TimeBoundsBlocks{
-		chain.latestBlockNumber,
-		common.NewTimeBlocks(new(big.Int).Add(chain.latestBlockNumber.AsInt(), big.NewInt(10))),
+		latestTime,
+		common.NewTimeBlocks(new(big.Int).Add(latestTime.AsInt(), big.NewInt(10))),
 	}
 }
 
 func (chain *ChainObserver) CurrentTime() *common.TimeBlocks {
 	chain.RLock()
-	time := chain.latestBlockNumber
+	time := chain.latestBlockId
 	chain.RUnlock()
-	return time
+	return time.Height
 }
 
 func (chain *ChainObserver) ContractAddress() common.Address {

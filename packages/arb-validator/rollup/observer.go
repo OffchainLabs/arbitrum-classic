@@ -19,6 +19,7 @@ package rollup
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"time"
@@ -35,9 +36,13 @@ func CreateObserver(
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
 ) (*ChainObserver, error) {
-	currentTime, err := clnt.CurrentBlockTime(ctx)
+	currentBlockNum, currentHeaderHash, err := clnt.CurrentBlockTimeAndHash(ctx)
 	if err != nil {
 		return nil, err
+	}
+	currentBlockId := &structures.BlockId{
+		Height:     currentBlockNum,
+		HeaderHash: currentHeaderHash,
 	}
 	rollup, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
@@ -53,7 +58,7 @@ func CreateObserver(
 		checkpointer,
 		vmParams,
 		updateOpinion,
-		currentTime,
+		currentBlockId,
 	)
 	if err != nil {
 		return nil, err
@@ -84,9 +89,11 @@ func CreateObserver(
 					break
 				}
 				if notification.BlockHeight.Cmp(lastBlockNumberSeen) > 0 {
-					lastBlockNumberSeen = notification.BlockHeight
-					blockHeaderHash := notification.BlockHeader
-					chain.notifyNewBlock(common.NewTimeBlocks(lastBlockNumberSeen), blockHeaderHash)
+					blockId := &structures.BlockId{
+						common.NewTimeBlocks(notification.BlockHeight),
+						notification.BlockHeader,
+					}
+					chain.notifyNewBlock(blockId)
 				}
 				handleNotification(notification, chain)
 			case <-errChan:

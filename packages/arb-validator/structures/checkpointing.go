@@ -112,3 +112,22 @@ func (src *SimpleRestoreContext) AddValue(val value.Value) {
 func (src *SimpleRestoreContext) AddMachine(mach machine.Machine) {
 	src.machines[mach.Hash()] = mach
 }
+
+type BlockId struct {
+	Height     *common.TimeBlocks
+	HeaderHash common.Hash
+}
+
+func (id *BlockId) MarshalToBuf() *BlockIdBuf {
+	return &BlockIdBuf{
+		Height:     id.Height.Marshal(),
+		HeaderHash: id.HeaderHash.MarshalToBuf(),
+	}
+}
+
+func (idb *BlockIdBuf) Unmarshal() *BlockId {
+	return &BlockId{
+		Height:     idb.Height.Unmarshal(),
+		HeaderHash: idb.HeaderHash.Unmarshal(),
+	}
+}

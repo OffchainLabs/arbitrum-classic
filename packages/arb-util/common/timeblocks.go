@@ -33,6 +33,9 @@ func (tb *TimeBlocks) Clone() *TimeBlocks {
 func (tb *TimeBlocks) AsInt() *big.Int {
 	return (*big.Int)(tb)
 }
+func (tb *TimeBlocks) Cmp(tb2 *TimeBlocks) int {
+	return (*big.Int)(tb).Cmp((*big.Int)(tb2))
+}
 
 func (tb *TimeBlocks) Marshal() *TimeBlocksBuf {
 	return &TimeBlocksBuf{Val: MarshalBigInt(tb.AsInt())}

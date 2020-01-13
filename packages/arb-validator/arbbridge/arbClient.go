@@ -30,6 +30,7 @@ type ArbClient interface {
 	NewPendingTopChallengeWatcher(address common.Address) (PendingTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
 	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
+	CurrentBlockTimeAndHash(ctx context.Context) (*common.TimeBlocks, common.Hash, error)
 }
 
 type ArbAuthClient interface {

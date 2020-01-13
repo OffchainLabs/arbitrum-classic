@@ -64,15 +64,17 @@ func tryMarshalUnmarshal(chain *ChainObserver, t *testing.T) {
 }
 
 func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpointer, t *testing.T) {
-	blockHeight := common.NewTimeBlocks(big.NewInt(7337))
-	var blockHeaderHash common.Hash
+	blockId := &structures.BlockId{
+		common.NewTimeBlocks(big.NewInt(7337)),
+		common.Hash{},
+	}
 	ctx := structures.NewCheckpointContextImpl()
 	buf, err := chain.marshalToBytes(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	doneChan := make(chan interface{})
-	cp.AsyncSaveCheckpoint(blockHeight, blockHeaderHash, buf, ctx, doneChan)
+	cp.AsyncSaveCheckpoint(blockId, buf, ctx, doneChan)
 	<-doneChan
 	chain2, err := UnmarshalChainObserverFromBytes(context.TODO(), buf, ctx, nil)
 	if err != nil {
@@ -231,7 +233,10 @@ func setUpChain(rollupAddress common.Address, checkpointType string, contractPat
 			ArbGasSpeedLimitPerTick: 1000,
 		},
 		false,
-		common.NewTimeBlocks(big.NewInt(10)),
+		&structures.BlockId{
+			Height:     common.NewTimeBlocks(big.NewInt(10)),
+			HeaderHash: common.Hash{},
+		},
 	)
 	if err != nil {
 		return nil, err

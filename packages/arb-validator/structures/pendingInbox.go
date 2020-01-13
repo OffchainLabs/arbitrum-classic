@@ -131,7 +131,7 @@ func (pi *MessageStack) GetHashAtIndex(height *big.Int) (common.Hash, error) {
 		return common.Hash{}, errors.New("Height is below bottom of message stack")
 	}
 	if height.Cmp(pi.TopCount()) > 0 {
-		return common.Hash{}, errors.New("height is above top of message stack")
+		return common.Hash{}, errors.New("Height is above top of message stack")
 	}
 	offset := new(big.Int).Sub(height, pi.BottomIndex())
 	return pi.oldest.skipNext(offset.Uint64()).hash, nil

@@ -68,6 +68,14 @@ func (c *EthArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks
 	return common.NewTimeBlocks(header.Number), nil
 }
 
+func (c *EthArbClient) CurrentBlockTimeAndHash(ctx context.Context) (*common.TimeBlocks, common.Hash, error) {
+	header, err := c.client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, common.Hash{}, err
+	}
+	return common.NewTimeBlocks(header.Number), common.NewHashFromEth(header.Root), nil
+}
+
 type EthArbAuthClient struct {
 	*EthArbClient
 	auth *bind.TransactOpts
