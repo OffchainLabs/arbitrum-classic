@@ -50,12 +50,17 @@ flags:
       - packages/arb-validator
 
 ignore:
-  - "packages/arb-validator/ethbridge/arbchain/*"
-  - "packages/arb-validator/ethbridge/arbchannel/*"
-  - "packages/arb-validator/ethbridge/chainfactory/*"
-  - "packages/arb-validator/ethbridge/challenge/*"
-  - "packages/arb-validator/ethbridge/channelfactory/*"
+  - "packages/arb-validator/ethbridge/arbfactory/*"
+  - "packages/arb-validator/ethbridge/challengefactory/*"
+  - "packages/arb-validator/ethbridge/challengetester/*"
+  - "packages/arb-validator/ethbridge/executionchallenge/*"
   - "packages/arb-validator/ethbridge/globalpendinginbox/*"
-  - "packages/arb-validator/ethbridge/onestepproof/*"
+  - "packages/arb-validator/ethbridge/messageschallenge/*"
+  - "packages/arb-validator/ethbridge/pendingtopchallenge/*"
+  - "packages/arb-validator/ethbridge/rollup/*"
   - "packages/arb-provider-go/test/fibabi.go"
+  - "packages/arb-provider-ethers/src/lib/ArbRollup.d.ts"
+  - "packages/arb-provider-ethers/src/lib/ArbRollupFactory.ts"
+  - "packages/arb-provider-ethers/src/lib/GlobalPendingInbox.d.ts"
+  - "packages/arb-provider-ethers/src/lib/GlobalPendingInboxFactory.ts"
   - "**/*.pb.go"
