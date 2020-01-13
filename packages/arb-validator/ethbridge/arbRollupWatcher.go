@@ -175,7 +175,7 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 				break
 			case header := <-headers:
 				outChan <- arbbridge.Notification{
-					BlockID: getBlockID(header),
+					BlockId: getBlockID(header),
 					Event:   arbbridge.NewTimeEvent{},
 				}
 			case ethLog := <-logChan:
@@ -342,7 +342,7 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log,
 			return err
 		}
 		outChan <- arbbridge.Notification{
-			BlockID: getBlockID(header),
+			BlockId: getBlockID(header),
 			Event:   event,
 			TxHash:  ethLog.TxHash,
 		}

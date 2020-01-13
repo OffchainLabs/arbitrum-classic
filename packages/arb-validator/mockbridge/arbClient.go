@@ -19,6 +19,8 @@ package mockbridge
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -69,6 +71,6 @@ func (c *ArbClient) NewPendingTopChallenge(address common.Address) (arbbridge.Pe
 	return NewPendingTopChallenge(address, c.client)
 }
 
-func (c *ArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
-	return c.client.CurrentBlockTime(ctx)
+func (c *ArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId, error) {
+	return c.client.CurrentBlockId(ctx)
 }

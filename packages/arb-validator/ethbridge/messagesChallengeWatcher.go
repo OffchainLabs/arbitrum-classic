@@ -164,7 +164,7 @@ func (c *messagesChallengeWatcher) processEvents(ctx context.Context, log types.
 		return err
 	}
 	outChan <- arbbridge.Notification{
-		BlockID: getBlockID(header),
+		BlockId: getBlockID(header),
 		Event:   event,
 		TxHash:  log.TxHash,
 	}

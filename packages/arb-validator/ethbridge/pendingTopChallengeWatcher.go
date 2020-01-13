@@ -162,7 +162,7 @@ func (c *pendingTopChallengeWatcher) processEvents(ctx context.Context, log type
 		return err
 	}
 	outChan <- arbbridge.Notification{
-		BlockID: getBlockID(header),
+		BlockId: getBlockID(header),
 		Event:   event,
 		TxHash:  log.TxHash,
 	}

@@ -177,7 +177,7 @@ func (m *Server) CallMessage(ctx context.Context, args *CallMessageArgs) (*CallM
 	msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
 	val, _ := value.NewTupleFromSlice([]value.Value{
 		msg.Data,
-		value.NewIntValue(m.chain.CurrentTime().AsInt()),
+		value.NewIntValue(m.chain.CurrentBlockId().Height.AsInt()),
 		value.NewIntValue(msgHashInt),
 	})
 	callingMessage := valprotocol.Message{

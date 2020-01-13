@@ -23,8 +23,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -37,14 +35,11 @@ func CreateObserver(
 	updateOpinion bool,
 	clnt arbbridge.ArbClient,
 ) (*ChainObserver, error) {
-	currentBlockNum, currentHeaderHash, err := clnt.CurrentBlockTimeAndHash(ctx)
+	currentBlockId, err := clnt.CurrentBlockId(ctx)
 	if err != nil {
 		return nil, err
 	}
-	currentBlockId := &structures.BlockId{
-		Height:     currentBlockNum,
-		HeaderHash: currentHeaderHash,
-	}
+
 	rollup, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
 		return nil, err
@@ -89,8 +84,8 @@ func CreateObserver(
 					hitError = true
 					break
 				}
-				if notification.BlockID.Height.Cmp(lastBlockNumberSeen) > 0 {
-					chain.notifyNewBlock(notification.BlockID)
+				if notification.BlockId.Height.Cmp(lastBlockNumberSeen) > 0 {
+					chain.notifyNewBlock(notification.BlockId)
 				}
 				handleNotification(notification, chain)
 			case <-errChan:
@@ -119,7 +114,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.MessageDeliveredEvent:
 		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := common.TimeFromBlockNum(notification.BlockID.Height)
+		currentTime := common.TimeFromBlockNum(notification.BlockId.Height)
 		chain.createStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.newChallenge(ev)
@@ -132,7 +127,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ev)
 	case arbbridge.AssertedEvent:
-		err := chain.notifyAssert(ev, notification.BlockID.Height, notification.TxHash)
+		err := chain.notifyAssert(ev, notification.BlockId.Height, notification.TxHash)
 		if err != nil {
 			panic(err)
 		}

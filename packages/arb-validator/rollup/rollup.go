@@ -336,11 +336,11 @@ func (chain *ChainObserver) currentTimeBounds() *protocol.TimeBoundsBlocks {
 	}
 }
 
-func (chain *ChainObserver) CurrentTime() *common.TimeBlocks {
+func (chain *ChainObserver) CurrentBlockId() *structures.BlockId {
 	chain.RLock()
-	time := chain.latestBlockId
+	blockId := chain.latestBlockId
 	chain.RUnlock()
-	return time.Height
+	return blockId
 }
 
 func (chain *ChainObserver) ContractAddress() common.Address {

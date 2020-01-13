@@ -28,7 +28,7 @@ type Event interface {
 }
 
 type Notification struct {
-	BlockID *structures.BlockId
+	BlockId *structures.BlockId
 	Event   Event
 	TxHash  [32]byte
 }
