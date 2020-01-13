@@ -9,11 +9,11 @@ import { TransactionOverrides, TypedEventDescription, TypedFunctionDescription }
 interface GlobalPendingInboxInterface extends Interface {
     functions: {
         depositERC20: TypedFunctionDescription<{
-            encode([_tokenContract, _value]: [string, BigNumberish]): string;
+            encode([_tokenContract, _destination, _value]: [string, string, BigNumberish]): string;
         }>;
 
         depositERC721: TypedFunctionDescription<{
-            encode([_tokenContract, _tokenId]: [string, BigNumberish]): string;
+            encode([_tokenContract, _destination, _tokenId]: [string, string, BigNumberish]): string;
         }>;
 
         depositEth: TypedFunctionDescription<{
@@ -24,12 +24,16 @@ interface GlobalPendingInboxInterface extends Interface {
             encode([, _from, _tokenId]: [string, string, BigNumberish, Arrayish]): string;
         }>;
 
+        transferEth: TypedFunctionDescription<{
+            encode([_destination, _value]: [string, BigNumberish]): string;
+        }>;
+
         withdrawERC20: TypedFunctionDescription<{
-            encode([_tokenContract, _value]: [string, BigNumberish]): string;
+            encode([_tokenContract, _destination, _value]: [string, string, BigNumberish]): string;
         }>;
 
         withdrawERC721: TypedFunctionDescription<{
-            encode([_tokenContract, _tokenId]: [string, BigNumberish]): string;
+            encode([_tokenContract, _destination, _tokenId]: [string, string, BigNumberish]): string;
         }>;
 
         withdrawEth: TypedFunctionDescription<{
@@ -38,34 +42,80 @@ interface GlobalPendingInboxInterface extends Interface {
 
         getPending: TypedFunctionDescription<{ encode([]: []): string }>;
 
+        registerForInbox: TypedFunctionDescription<{ encode([]: []): string }>;
+
         sendMessages: TypedFunctionDescription<{
             encode([_messages]: [Arrayish]): string;
         }>;
 
-        registerForInbox: TypedFunctionDescription<{ encode([]: []): string }>;
-
-        sendMessage: TypedFunctionDescription<{
-            encode([_destination, _tokenType, _amount, _data]: [string, Arrayish, BigNumberish, Arrayish]): string;
-        }>;
-
-        forwardMessage: TypedFunctionDescription<{
-            encode([_destination, _tokenType, _amount, _data, _signature]: [
+        forwardTransactionMessage: TypedFunctionDescription<{
+            encode([_vmAddress, _contractAddress, _seqNumber, _value, _data, _signature]: [
                 string,
-                Arrayish,
+                string,
+                BigNumberish,
                 BigNumberish,
                 Arrayish,
                 Arrayish,
             ]): string;
         }>;
 
-        sendEthMessage: TypedFunctionDescription<{
-            encode([_destination, _data]: [string, Arrayish]): string;
+        sendTransactionMessage: TypedFunctionDescription<{
+            encode([_vmAddress, _contractAddress, _seqNumber, _value, _data]: [
+                string,
+                string,
+                BigNumberish,
+                BigNumberish,
+                Arrayish,
+            ]): string;
+        }>;
+
+        depositEthMessage: TypedFunctionDescription<{
+            encode([_vmAddress, _destination, _value]: [string, string, BigNumberish]): string;
+        }>;
+
+        depositERC20Message: TypedFunctionDescription<{
+            encode([_vmAddress, _tokenContract, _destination, _value]: [string, string, string, BigNumberish]): string;
+        }>;
+
+        depositERC721Message: TypedFunctionDescription<{
+            encode([_vmAddress, _tokenContract, _destination, _value]: [string, string, string, BigNumberish]): string;
         }>;
     };
 
     events: {
-        MessageDelivered: TypedEventDescription<{
-            encodeTopics([vmId, sender, tokenType, value, data]: [string | null, null, null, null, null]): string[];
+        DepositERC20MessageDelivered: TypedEventDescription<{
+            encodeTopics([vmReceiverId, sender, destination, tokenAddress, value]: [
+                string | null,
+                null,
+                null,
+                null,
+                null,
+            ]): string[];
+        }>;
+
+        DepositERC721MessageDelivered: TypedEventDescription<{
+            encodeTopics([vmReceiverId, sender, destination, tokenAddress, value]: [
+                string | null,
+                null,
+                null,
+                null,
+                null,
+            ]): string[];
+        }>;
+
+        EthDepositMessageDelivered: TypedEventDescription<{
+            encodeTopics([vmReceiverId, sender, destination, value]: [string | null, null, null, null]): string[];
+        }>;
+
+        TransactionMessageDelivered: TypedEventDescription<{
+            encodeTopics([vmSenderId, vmReceiverId, contractAddress, seqNumber, value, data]: [
+                string | null,
+                string | null,
+                null,
+                null,
+                null,
+                null,
+            ]): string[];
         }>;
     };
 }
@@ -102,22 +152,16 @@ export class GlobalPendingInbox extends Contract {
 
         hasNFT(_tokenContract: string, _owner: string, _tokenId: BigNumberish): Promise<boolean>;
 
-        generateSentMessageHash(
-            _dest: string,
-            _data: Arrayish,
-            _tokenType: Arrayish,
-            _value: BigNumberish,
-            _sender: string,
-        ): Promise<string>;
-
         depositERC20(
             _tokenContract: string,
+            _destination: string,
             _value: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
         depositERC721(
             _tokenContract: string,
+            _destination: string,
             _tokenId: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
@@ -132,14 +176,22 @@ export class GlobalPendingInbox extends Contract {
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
+        transferEth(
+            _destination: string,
+            _value: BigNumberish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
         withdrawERC20(
             _tokenContract: string,
+            _destination: string,
             _value: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
         withdrawERC721(
             _tokenContract: string,
+            _destination: string,
             _tokenId: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
@@ -148,74 +200,141 @@ export class GlobalPendingInbox extends Contract {
 
         getPending(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
-
         registerForInbox(overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        sendMessage(
-            _destination: string,
-            _tokenType: Arrayish,
-            _amount: BigNumberish,
-            _data: Arrayish,
-            overrides?: TransactionOverrides,
-        ): Promise<ContractTransaction>;
+        sendMessages(_messages: Arrayish, overrides?: TransactionOverrides): Promise<ContractTransaction>;
 
-        forwardMessage(
-            _destination: string,
-            _tokenType: Arrayish,
-            _amount: BigNumberish,
+        forwardTransactionMessage(
+            _vmAddress: string,
+            _contractAddress: string,
+            _seqNumber: BigNumberish,
+            _value: BigNumberish,
             _data: Arrayish,
             _signature: Arrayish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
-        sendEthMessage(
-            _destination: string,
+        sendTransactionMessage(
+            _vmAddress: string,
+            _contractAddress: string,
+            _seqNumber: BigNumberish,
+            _value: BigNumberish,
             _data: Arrayish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        depositEthMessage(
+            _vmAddress: string,
+            _destination: string,
+            _value: BigNumberish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        depositERC20Message(
+            _vmAddress: string,
+            _tokenContract: string,
+            _destination: string,
+            _value: BigNumberish,
+            overrides?: TransactionOverrides,
+        ): Promise<ContractTransaction>;
+
+        depositERC721Message(
+            _vmAddress: string,
+            _tokenContract: string,
+            _destination: string,
+            _value: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
     };
 
     filters: {
-        MessageDelivered(vmId: string | null, sender: null, tokenType: null, value: null, data: null): EventFilter;
+        DepositERC20MessageDelivered(
+            vmReceiverId: string | null,
+            sender: null,
+            destination: null,
+            tokenAddress: null,
+            value: null,
+        ): EventFilter;
+
+        DepositERC721MessageDelivered(
+            vmReceiverId: string | null,
+            sender: null,
+            destination: null,
+            tokenAddress: null,
+            value: null,
+        ): EventFilter;
+
+        EthDepositMessageDelivered(
+            vmReceiverId: string | null,
+            sender: null,
+            destination: null,
+            value: null,
+        ): EventFilter;
+
+        TransactionMessageDelivered(
+            vmSenderId: string | null,
+            vmReceiverId: string | null,
+            contractAddress: null,
+            seqNumber: null,
+            value: null,
+            data: null,
+        ): EventFilter;
     };
 
     estimate: {
-        depositERC20(_tokenContract: string, _value: BigNumberish): Promise<BigNumber>;
+        depositERC20(_tokenContract: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
 
-        depositERC721(_tokenContract: string, _tokenId: BigNumberish): Promise<BigNumber>;
+        depositERC721(_tokenContract: string, _destination: string, _tokenId: BigNumberish): Promise<BigNumber>;
 
         depositEth(_destination: string): Promise<BigNumber>;
 
         onERC721Received(arg0: string, _from: string, _tokenId: BigNumberish, arg3: Arrayish): Promise<BigNumber>;
 
-        withdrawERC20(_tokenContract: string, _value: BigNumberish): Promise<BigNumber>;
+        transferEth(_destination: string, _value: BigNumberish): Promise<BigNumber>;
 
-        withdrawERC721(_tokenContract: string, _tokenId: BigNumberish): Promise<BigNumber>;
+        withdrawERC20(_tokenContract: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
+
+        withdrawERC721(_tokenContract: string, _destination: string, _tokenId: BigNumberish): Promise<BigNumber>;
 
         withdrawEth(_value: BigNumberish): Promise<BigNumber>;
 
         getPending(): Promise<BigNumber>;
 
-        sendMessages(_messages: Arrayish): Promise<BigNumber>;
-
         registerForInbox(): Promise<BigNumber>;
 
-        sendMessage(
-            _destination: string,
-            _tokenType: Arrayish,
-            _amount: BigNumberish,
-            _data: Arrayish,
-        ): Promise<BigNumber>;
+        sendMessages(_messages: Arrayish): Promise<BigNumber>;
 
-        forwardMessage(
-            _destination: string,
-            _tokenType: Arrayish,
-            _amount: BigNumberish,
+        forwardTransactionMessage(
+            _vmAddress: string,
+            _contractAddress: string,
+            _seqNumber: BigNumberish,
+            _value: BigNumberish,
             _data: Arrayish,
             _signature: Arrayish,
         ): Promise<BigNumber>;
 
-        sendEthMessage(_destination: string, _data: Arrayish): Promise<BigNumber>;
+        sendTransactionMessage(
+            _vmAddress: string,
+            _contractAddress: string,
+            _seqNumber: BigNumberish,
+            _value: BigNumberish,
+            _data: Arrayish,
+        ): Promise<BigNumber>;
+
+        depositEthMessage(_vmAddress: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
+
+        depositERC20Message(
+            _vmAddress: string,
+            _tokenContract: string,
+            _destination: string,
+            _value: BigNumberish,
+        ): Promise<BigNumber>;
+
+        depositERC721Message(
+            _vmAddress: string,
+            _tokenContract: string,
+            _destination: string,
+            _value: BigNumberish,
+        ): Promise<BigNumber>;
     };
 }

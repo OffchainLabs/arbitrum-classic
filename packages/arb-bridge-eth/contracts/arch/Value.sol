@@ -406,57 +406,150 @@ library Value {
             bool valid,
             uint256 offset,
             bytes32 messageHash,
-            uint256 destination,
-            uint256 value,
-            uint256 tokenType,
+            uint256 msgType,
+            uint256 sender,
             bytes memory messageData
         )
     {
-        bytes32 messageDataHash;
         offset = startOffset;
         uint8 valType = uint8(data[offset]);
         offset++;
-        if (valType != TUPLE_TYPECODE + 4) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
+
+        if(valType != TUPLE_TYPECODE + 3){ 
+            return (valid, offset, messageHash, msgType, sender, messageData); 
         }
 
-        (offset, messageDataHash) = deserializeValidHashed(data, offset);
-        messageData = data.slice(startOffset + 1, offset - startOffset - 1);
-
-        valType = uint8(data[offset]);
-        offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
-        }
-        (destination, offset) = deserializeInt(data, offset);
+        (msgType, offset) = deserializeInt(data, offset);
 
         valType = uint8(data[offset]);
         offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
-        }
-        (value, offset) = deserializeInt(data, offset);
+        (sender, offset) = deserializeInt(data, offset);
 
         valType = uint8(data[offset]);
+        uint tmpOffset = offset;
         offset++;
-        if (valType != INT_TYPECODE) {
-            (offset, messageHash) = deserializeValidHashed(data, offset - 1);
-            return (valid, offset, messageHash, destination, value, tokenType, messageData);
-        }
-        (tokenType, offset) = deserializeInt(data, offset);
+
+        uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
+        Data[] memory tupleVal;
+        uint tupleValid;
+        (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);// just for offset
+
+        messageData = data.slice(tmpOffset, offset - tmpOffset); //make sure correct
 
         valid = true;
 
-        bytes32[] memory hashes = new bytes32[](4);
-        hashes[0] = messageDataHash;
-        hashes[1] = hashInt(destination);
-        hashes[2] = hashInt(value);
-        hashes[3] = hashInt(tokenType);
+        bytes32[] memory hashes = new bytes32[](2);
+        hashes[0] = hashInt(msgType);
+        hashes[1] = hashInt(sender);
         messageHash = hashTuple(hashes);
 
-        return (valid, offset, messageHash, destination, value, tokenType, messageData);
+        return (valid, offset, messageHash, msgType, sender, messageData);
+    }
+
+    function getTransactionMsgData(
+        bytes memory data)
+        public
+        pure
+        returns(
+            bool valid,
+            uint256 vmAddress,
+            uint256 destination,
+            uint256 seqNumber,
+            uint256 value,
+            bytes memory messageData
+        )
+    {
+        uint offset = 0;
+        uint8 valType = uint8(data[offset]);
+        offset++;
+
+        if(valType == TUPLE_TYPECODE + 4){
+
+            valType = uint8(data[offset]);
+            offset++;
+            (destination, offset) = deserializeInt(data, offset);
+
+            valType = uint8(data[offset]);
+            offset++;
+            (seqNumber, offset) = deserializeInt(data, offset);
+            
+
+            valType = uint8(data[offset]);
+            offset++;
+            (value, offset) = deserializeInt(data, offset);
+
+            // fix incorrect
+            bytes32 messageDataHash;
+            (offset, messageDataHash) = deserializeValidHashed(data, offset);
+            messageData = data.slice(1, offset - 1);// fix incorrect
+
+            valid = true;
+        }
+
+        return (valid,vmAddress,destination, seqNumber, value, messageData);
+    }
+
+    function getEthMsgData(
+        bytes memory data)
+        public
+        pure
+        returns(
+            bool valid,
+            uint256 destination,
+            uint256 value)
+    {
+        uint offset = 0;
+        uint8 valType = uint8(data[offset]);
+        offset++;
+
+        if(valType == TUPLE_TYPECODE + 2){
+
+            uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
+            Data[] memory tupleVal;
+            uint tupleValid;
+            (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
+
+            // 0 means success?
+            if( tupleValid == 0 && 
+                tupleVal[0].typeCode == INT_TYPECODE && 
+                tupleVal[1].typeCode == INT_TYPECODE){
+                return (true, tupleVal[0].intVal, tupleVal[1].intVal);
+            }
+        }
+
+        return (false, destination, value);
+    }
+
+    function getERCTokenMsgData(
+        bytes memory data)
+        public
+        pure
+        returns(
+            bool valid,
+            uint256 tokenAddress,
+            uint256 destination,
+            uint256 value)
+    {
+        uint offset = 0;
+        uint8 valType = uint8(data[offset]);
+        offset++;
+
+        if(valType == TUPLE_TYPECODE + 3){
+
+            uint8 tupLength = uint8(valType - TUPLE_TYPECODE);
+            Data[] memory tupleVal;
+            uint tupleValid;
+            (tupleValid, offset, tupleVal) = deserializeTuple(tupLength, data, offset);
+
+            // 0 means success?
+            if( tupleValid == 0 && 
+                tupleVal[0].typeCode == INT_TYPECODE && 
+                tupleVal[1].typeCode == INT_TYPECODE && 
+                tupleVal[2].typeCode == INT_TYPECODE){
+                return (true, tupleVal[0].intVal, tupleVal[1].intVal, tupleVal[2].intVal);
+            }
+        }
+
+        return (false, tokenAddress, destination, value);
     }
 }

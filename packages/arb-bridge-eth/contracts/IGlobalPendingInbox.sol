@@ -18,36 +18,73 @@ pragma solidity ^0.5.3;
 
 interface IGlobalPendingInbox {
 
-    event MessageDelivered(
-        address indexed vmId,
-        address sender,
-        bytes21 tokenType,
+    event TransactionMessageDelivered(
+        address indexed vmSenderId,
+        address indexed vmReceiverId,
+        address contractAddress,
+        uint256 seqNumber,
         uint256 value,
         bytes data
     );
 
+
     function getPending() external returns(bytes32, uint);
+
+    event EthDepositMessageDelivered(
+        address indexed vmReceiverId,
+        address sender,
+        address destination,
+        uint256 value
+    );
+
+    event DepositERC20MessageDelivered(
+        address indexed vmReceiverId,
+        address sender,
+        address destination,
+        address tokenAddress,
+        uint256 value
+    );
+
+    event DepositERC721MessageDelivered(
+        address indexed vmReceiverId,
+        address sender,
+        address destination,
+        address tokenAddress,
+        uint256 value
+    );
 
     function sendMessages(bytes calldata _messages) external;
 
     function registerForInbox() external;
 
-    function sendMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
-        bytes calldata _data
-    )
-        external;
+    function depositEthMessage(address _destination) external payable;
 
-    function forwardMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
+    function depositEthMessage(address payable _destination, uint256 _value) external;
+
+    function forwardTransactionMessage(
+        address _vmAddress,
+        address _contractAddress,
+        uint256 _seqNumber,
+        uint256 _value,
         bytes calldata _data,
-        bytes calldata _signature
-    )
-        external;
+        bytes calldata _signature) external;
 
-    function sendEthMessage(address _destination, bytes calldata _data) external payable;
+    function sendTransactionMessage(
+        address _vmAddress, 
+        address _contractAddress, 
+        uint256 _seqNumber,
+        uint256 _value,
+        bytes calldata _data) external;
+
+    function depositERC20Message(
+        address _vmAddress,
+        address _tokenContract,
+        address _destination,
+        uint256 _value) external;
+
+    function depositERC721Message(
+        address _vmAddress,
+        address _tokenContract,
+        address _destination,
+        uint256 _value) external;
 }

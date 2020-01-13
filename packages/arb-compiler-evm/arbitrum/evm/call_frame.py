@@ -14,22 +14,21 @@
 
 from .. import std
 from .. import value
-from . import types
+from .types import local_exec_state
+from .accounts import account_state
+from . import accounts
 from ..vm import VM
 from ..annotation import modifies_stack
-
-sent_queue = std.make_queue_type(types.local_exec_state.typ)
 
 call_frame = std.struct.Struct(
     "call_frame",
     [
         ("contractID", value.IntType()),  # transient
         ("memory", std.sized_byterange.sized_byterange.typ),  # transient
-        ("contract_state", types.contract_state.typ),  # record
-        ("contracts", types.contract_store.typ),  # record
-        ("local_exec_state", types.local_exec_state.typ),  # transient
+        ("account_state", accounts.account_state.typ),  # record
+        ("accounts", accounts.account_store.typ),  # record
+        ("local_exec_state", local_exec_state.typ),  # transient
         ("return_data", std.sized_byterange.sized_byterange.typ),  # transient
-        ("sent_queue", sent_queue.typ),  # record
         ("logs", std.stack_tup.typ),  # record
         "parent_frame",
         ("return_location", value.CodePointType()),
@@ -45,7 +44,6 @@ call_frame.update_type("parent_frame", call_frame.typ)
 
 def make_empty():
     vm = VM()
-    std.queue.new(vm)
     std.sized_byterange.new(vm)
     std.stack.new(vm)
     std.sized_byterange.new(vm)
@@ -53,31 +51,30 @@ def make_empty():
     call_frame.set_val("memory")(vm)
     call_frame.set_val("logs")(vm)
     call_frame.set_val("return_data")(vm)
-    call_frame.set_val("sent_queue")(vm)
     return vm.stack.items[0]
 
 
-@modifies_stack([call_frame.typ], [types.contract_state.typ])
+@modifies_stack([call_frame.typ], [accounts.account_state.typ])
 def lookup_current_state(vm):
     vm.dup0()
     call_frame.get("contractID")(vm)
     vm.swap1()
-    call_frame.get("contracts")(vm)
-    types.contract_store.get(vm)
+    call_frame.get("accounts")(vm)
+    accounts.account_store.get(vm)
 
 
 @modifies_stack([call_frame.typ], [call_frame.typ])
 def save_state(vm):
     # frame
     vm.dup0()
-    call_frame.get("contract_state")(vm)
+    call_frame.get("account_state")(vm)
     vm.dup1()
     call_frame.get("contractID")(vm)
     vm.dup2()
-    call_frame.get("contracts")(vm)
-    types.contract_store.set_val(vm)
+    call_frame.get("accounts")(vm)
+    accounts.account_store.set_val(vm)
     vm.swap1()
-    call_frame.set_val("contracts")(vm)
+    call_frame.set_val("accounts")(vm)
 
 
 @modifies_stack([call_frame.typ], [call_frame.typ])
@@ -86,7 +83,7 @@ def setup_state(vm):
     vm.dup0()
     lookup_current_state(vm)
     vm.swap1()
-    call_frame.set_val("contract_state")(vm)
+    call_frame.set_val("account_state")(vm)
 
 
 @modifies_stack([call_frame.typ, call_frame.typ], [call_frame.typ])
@@ -97,14 +94,9 @@ def merge(vm):
     vm.swap1()
     # parent_frame current_frame
     vm.dup1()
-    call_frame.get("contracts")(vm)
+    call_frame.get("accounts")(vm)
     vm.swap1()
-    call_frame.set_val("contracts")(vm)
-    # parent_frame current_frame
-    vm.dup1()
-    call_frame.get("sent_queue")(vm)
-    vm.swap1()
-    call_frame.set_val("sent_queue")(vm)
+    call_frame.set_val("accounts")(vm)
     # parent_frame current_frame
     vm.dup1()
     call_frame.get("logs")(vm)
@@ -123,43 +115,163 @@ def merge(vm):
 #   storage
 #   wallet
 # maintain:
-#   contracts
-#   sent_queue
+#   accounts
 #   logs
-# unhandled (BUG):
-#   return_data
 @modifies_stack(
-    [
-        call_frame.typ,
-        value.IntType(),
-        types.local_exec_state.typ,
-        value.CodePointType(),
-    ],
+    [call_frame.typ, local_exec_state.typ, value.IntType(), value.CodePointType()],
     [call_frame.typ],
 )
 def spawn(vm):
-    # frame contractID message return_location
+    # parent_frame local_exec_state contractID ret_pc
     vm.dup0()
-    vm.swap2()
-    # contractID frame frame message return_location
-    vm.swap1()
-    call_frame.set_val("contractID")(vm)
-    setup_state(vm)
-    # updated_frame parent_frame message return_location
     call_frame.set_val("parent_frame")(vm)
-    # updated_frame message return_location
-    call_frame.set_val("local_exec_state")(vm)
-    # frame return_location
-    call_frame.set_val("return_location")(vm)
-    # frame
     std.sized_byterange.new(vm)
     vm.swap1()
     call_frame.set_val("memory")(vm)
 
+    # subtract sent funds from balance
+    # frame local_exec_state contractID ret_pc
+    vm.dup1()
+    local_exec_state.get("value")(vm)
+    # value frame local_exec_state contractID ret_pc
+    vm.dup1()
+    call_frame.get("account_state")(vm)
+    account_state.get("balance")(vm)
+    vm.sub()
+    # new_balance frame local_exec_state contractID ret_pc
+    update_frame_balance(vm)
+    save_state(vm)
 
-@modifies_stack([types.contract_store.typ], [call_frame.typ])
+    # frame local_exec_state contractID ret_pc
+    call_frame.set_val("local_exec_state")(vm)
+    call_frame.set_val("contractID")(vm)
+    call_frame.set_val("return_location")(vm)
+    setup_state(vm)
+    # frame
+
+    # add received funds to balance
+    vm.dup0()
+    call_frame.get("local_exec_state")(vm)
+    local_exec_state.get("value")(vm)
+    # value frame
+    vm.dup1()
+    call_frame.get("account_state")(vm)
+    account_state.get("balance")(vm)
+    vm.add()
+    # new_balance frame
+    update_frame_balance(vm)
+    # frame
+
+
+# update:
+#   contractID
+#   message
+#   memory
+#   storage
+#   wallet
+# maintain:
+#   accounts
+#   logs
+@modifies_stack(
+    [call_frame.typ, local_exec_state.typ, value.IntType(), value.CodePointType()],
+    [call_frame.typ],
+)
+def spawn_callcode(vm):
+    # parent_frame local_exec_state contractID ret_pc
+    vm.dup0()
+    call_frame.set_val("parent_frame")(vm)
+    std.sized_byterange.new(vm)
+    vm.swap1()
+    call_frame.set_val("memory")(vm)
+
+    # subtract sent funds from balance
+    # frame local_exec_state contractID ret_pc
+    vm.dup1()
+    local_exec_state.get("value")(vm)
+    # value frame local_exec_state contractID ret_pc
+    vm.dup1()
+    call_frame.get("account_state")(vm)
+    account_state.get("balance")(vm)
+    vm.sub()
+    # new_balance frame local_exec_state contractID ret_pc
+    update_frame_balance(vm)
+    save_state(vm)
+
+    # frame local_exec_state contractID ret_pc
+    call_frame.set_val("local_exec_state")(vm)
+    vm.swap1()
+    vm.swap2()
+    vm.swap1()
+    call_frame.set_val("return_location")(vm)
+    # frame contractID
+    vm.dup1()
+    vm.dup1()
+    call_frame.get("accounts")(vm)
+    accounts.account_store.get(vm)
+    # account frame contractID
+    vm.dup1()
+    call_frame.get("local_exec_state")(vm)
+    local_exec_state.get("value")(vm)
+    # message_val account frame contractID
+    vm.dup1()
+    account_state.get("balance")(vm)
+    vm.add()
+    # new_balance account frame contractID
+    vm.swap1()
+    account_state.set_val("balance")(vm)
+    # new_account frame contractID
+    vm.swap1()
+    vm.swap2()
+    vm.dup2()
+    # frame contractID new_account frame
+    call_frame.get("accounts")(vm)
+    accounts.account_store.set_val(vm)
+    # new_accounts frame
+    vm.swap1()
+    call_frame.set_val("accounts")(vm)
+    setup_state(vm)
+    # frame
+
+
+# update:
+#   message
+#   memory
+# maintain:
+#   contractID
+#   storage
+#   balance
+#   accounts
+#   logs
+@modifies_stack(
+    [call_frame.typ, local_exec_state.typ, value.CodePointType()], [call_frame.typ]
+)
+def spawn_delegatecall(vm):
+    # parent_frame local_exec_state ret_pc
+    vm.dup0()
+    call_frame.set_val("parent_frame")(vm)
+    std.sized_byterange.new(vm)
+    vm.swap1()
+    call_frame.set_val("memory")(vm)
+    # frame local_exec_state ret_pc
+
+    # frame local_exec_state ret_pc
+    call_frame.set_val("local_exec_state")(vm)
+    call_frame.set_val("return_location")(vm)
+    # frame
+
+
+@modifies_stack([value.IntType(), call_frame.typ], [call_frame.typ])
+def update_frame_balance(vm):
+    vm.dup1()
+    call_frame.get("account_state")(vm)
+    account_state.set_val("balance")(vm)
+    vm.swap1()
+    call_frame.set_val("account_state")(vm)
+
+
+@modifies_stack([accounts.account_store.typ], [call_frame.typ])
 def new_fresh(vm):
-    # chain_state
+    # accounts
     vm.push(make_empty())
     vm.cast(call_frame.typ)
-    call_frame.set_val("contracts")(vm)
+    call_frame.set_val("accounts")(vm)

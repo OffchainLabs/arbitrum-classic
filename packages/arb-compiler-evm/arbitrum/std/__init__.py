@@ -28,6 +28,7 @@ from . import currency_store
 from . import tup
 from . import sha3
 from . import arith
+from . import comparison
 from .struct import Struct
 
 __all__ = [
@@ -39,6 +40,7 @@ __all__ = [
     "make_bigtuple_type",
     "boundedq",
     "make_boundedq_type",
+    "comparison",
     "keyvalue",
     "keyvalue_int_int",
     "make_keyvalue_type",

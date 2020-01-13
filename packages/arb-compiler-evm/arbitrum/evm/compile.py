@@ -15,13 +15,15 @@
 import pyevmasm
 
 from ..annotation import modifies_stack
-from ..std import stack_manip
+from ..std import stack_manip, tup
 from ..std import byterange, bitwise
+from ..std import bst
 from ..vm import AVMOp
 from ..ast import AVMLabel
 from ..ast import BlockStatement
 from ..compiler import compile_block
 from .. import value
+from .types import message
 
 from . import os, call_frame
 from . import execution
@@ -54,152 +56,87 @@ def replace_self_balance(instrs):
     return out
 
 
-def contains_endcode(val):
-    if not isinstance(val, int):
-        return False
-    while val >= 0xA265:
-        if (val & 0xFFFF == 0xA165) or (val & 0xFFFF == 0xA265):
-            return True
-        val = val // 256
-    return False
+def process_tx_call_message(vm):
+    vm.pop()
+    os.process_tx_message(vm)
+    vm.dup0()
+    vm.push(value.Tuple([]))
+    vm.eq()
+    vm.ifelse(
+        lambda vm: [],
+        lambda vm: [
+            tup.tbreak(2)(vm),
+            execution.initial_call(vm, "tx_call_initial"),
+            vm.pop(),
+        ],
+    )
 
 
-def remove_metadata(instrs):
-    for i in range(len(instrs) - 2, -1, -1):
-        first_byte = instrs[i].opcode
-        second_byte = instrs[i + 1].opcode
-        if ((first_byte == 0xA1) or (first_byte == 0xA2)) and second_byte == 0x65:
-            return instrs[:i]
-        if hasattr(instrs[i], "operand") and contains_endcode(instrs[i].operand):
-            # leave the boundary instruction in--it's probably valid and minimal testing suggests this reduces errors
-            return instrs[: i + 1]
-    return instrs
+def process_deposit_eth(vm):
+    vm.pop()
+    os.process_deposit_eth_message(vm)
 
 
-def make_bst_lookup(items):
-    return _make_bst_lookup([(x, items[x]) for x in sorted(items)])
+def process_deposit_erc20(vm):
+    vm.pop()
+    os.process_deposit_erc20_message(vm)
+    vm.swap1()
+    execution.initial_call(vm, "deposit_erc20_initial")
+    vm.pop()
 
 
-def _make_bst_lookup(items):
-    def handle_bad_jump(vm):
-        vm.tnewn(0)
+def process_deposit_erc721(vm):
+    vm.pop()
+    os.process_deposit_erc721_message(vm)
+    vm.swap1()
+    execution.initial_call(vm, "deposit_erc712_initial")
+    vm.pop()
 
-    if len(items) >= 3:
-        mid = len(items) // 2
-        left = items[:mid]
-        right = items[mid + 1 :]
-        pivot = items[mid][0]
 
-        def impl_n(vm):
-            # index
-            vm.push(pivot)
-            vm.dup1()
-            vm.lt()
-            # index < pivot, index
+def run_loop_start(vm):
+    vm.set_label(AVMLabel("run_loop_start"))
+    os.get_next_message(vm)
+    # msg
+    vm.dup0()
+    vm.swap1()
+    message.get("type")(vm)
+    # type msg
+    vm.dup0()
+    vm.push(0)
+    vm.eq()
+    vm.ifelse(
+        process_tx_call_message,
+        lambda vm: [
+            vm.dup0(),
+            vm.push(1),
+            vm.eq(),
             vm.ifelse(
+                process_deposit_eth,
                 lambda vm: [
-                    # index < pivot
-                    _make_bst_lookup(left)(vm)
-                ],
-                lambda vm: [
-                    vm.push(pivot),
-                    vm.dup1(),
-                    vm.gt(),
+                    vm.dup0(),
+                    vm.push(2),
+                    vm.eq(),
                     vm.ifelse(
+                        process_deposit_erc20,
                         lambda vm: [
-                            # index > pivot
-                            _make_bst_lookup(right)(vm)
-                        ],
-                        lambda vm: [
-                            # index == pivot
-                            vm.pop(),
-                            vm.push(items[mid][1]),
+                            vm.dup0(),
+                            vm.push(3),
+                            vm.eq(),
+                            vm.ifelse(process_deposit_erc721),
                         ],
                     ),
                 ],
-            )
-
-        return impl_n
-
-    if len(items) == 2:
-
-        def impl_2(vm):
-            # index
-            vm.dup0()
-            vm.push(items[0][0])
-            vm.eq()
-            vm.ifelse(
-                lambda vm: [vm.pop(), vm.push(items[0][1])],
-                lambda vm: [
-                    vm.push(items[1][0]),
-                    vm.eq(),
-                    vm.ifelse(lambda vm: [vm.push(items[1][1])], handle_bad_jump),
-                ],
-            )
-
-        return impl_2
-
-    if len(items) == 1:
-
-        def impl_1(vm):
-            vm.push(items[0][0])
-            vm.eq()
-            vm.ifelse(lambda vm: [vm.push(items[0][1])], handle_bad_jump)
-
-        return impl_1
-
-    return handle_bad_jump
+            ),
+        ],
+    )
+    vm.push(AVMLabel("run_loop_start"))
+    vm.jump()
 
 
 def generate_evm_code(raw_code, storage):
     contracts = {}
     for contract in raw_code:
         contracts[contract] = list(pyevmasm.disassemble_all(raw_code[contract]))
-
-    code_tuples_data = {}
-    for contract in raw_code:
-        code_tuples_data[contract] = byterange.frombytes(
-            bytes.fromhex(raw_code[contract].hex())
-        )
-    code_tuples_func = make_bst_lookup(code_tuples_data)
-
-    @modifies_stack([value.IntType()], 1)
-    def code_tuples(vm):
-        code_tuples_func(vm)
-
-    code_hashes_data = {}
-    for contract in raw_code:
-        code_hashes_data[contract] = int.from_bytes(
-            eth_utils.crypto.keccak(raw_code[contract]), byteorder="big"
-        )
-    code_hashes_func = make_bst_lookup(code_hashes_data)
-
-    @modifies_stack([value.IntType()], [value.ValueType()])
-    def code_hashes(vm):
-        code_hashes_func(vm)
-
-    contract_dispatch = {}
-    for contract in contracts:
-        contract_dispatch[contract] = AVMLabel("contract_entry_" + str(contract))
-    contract_dispatch_func = make_bst_lookup(contract_dispatch)
-
-    @modifies_stack([value.IntType()], 1)
-    def dispatch_contract(vm):
-        contract_dispatch_func(vm)
-
-    code_sizes = {}
-    for contract in contracts:
-        code_sizes[contract] = len(contracts[contract]) + sum(
-            op.operand_size for op in contracts[contract]
-        )
-
-    # Give the interrupt contract address a nonzero size
-    code_sizes[0x01] = 1
-    code_size_func = make_bst_lookup(code_sizes)
-
-    @modifies_stack([value.IntType()], 1)
-    def code_size(vm):
-        code_size_func(vm)
 
     impls = []
     contract_info = []
@@ -210,26 +147,37 @@ def generate_evm_code(raw_code, storage):
             generate_contract_code(
                 AVMLabel("contract_entry_" + str(contract)),
                 contracts[contract],
-                code_tuples_data[contract],
                 contract,
-                code_size,
-                code_tuples,
-                code_hashes,
-                dispatch_contract,
             )
         )
-        contract_info.append({"contractID": contract, "storage": storage[contract]})
+        contract_info.append(
+            {
+                "code_point": AVMLabel("contract_entry_" + str(contract)),
+                "contractID": contract,
+                "storage": storage[contract],
+                "code_size": len(contracts[contract])
+                + sum(op.operand_size for op in contracts[contract]),
+                "code_hash": int.from_bytes(
+                    eth_utils.crypto.keccak(raw_code[contract]), byteorder="big"
+                ),
+                "code": byterange.frombytes(bytes.fromhex(raw_code[contract].hex())),
+            }
+        )
+
+    contract_info.append(
+        {
+            "code_point": value.Tuple([]),
+            "contractID": 100,
+            "storage": {},
+            "code_size": 1,
+            "code_hash": 1,
+            "code": byterange.frombytes(b""),
+        }
+    )
 
     def initialization(vm):
         os.initialize(vm, contract_info)
         vm.jump_direct(AVMLabel("run_loop_start"))
-
-    def run_loop_start(vm):
-        vm.set_label(AVMLabel("run_loop_start"))
-        os.get_next_message(vm)
-        execution.setup_initial_call(vm, dispatch_contract)
-        vm.push(AVMLabel("run_loop_start"))
-        vm.jump()
 
     main_code = []
     main_code.append(compile_block(run_loop_start))
@@ -278,7 +226,7 @@ def not_supported_op(name):
 
 
 EVM_STATIC_OPS = {
-    "SELF_BALANCE": lambda vm: [vm.push(0), os.balance_get(vm)],
+    "SELF_BALANCE": lambda vm: [os.balance_get(vm)],
     # 0s: Stop and Arithmetic Operations
     "STOP": execution.stop,
     "ADD": lambda vm: vm.add(),
@@ -330,7 +278,7 @@ EVM_STATIC_OPS = {
     "TIMESTAMP": lambda vm: not_supported_op("TIMESTAMP"),
     "NUMBER": os.get_block_number,
     "DIFFICULTY": lambda vm: not_supported_op("DIFFICULTY"),
-    "GASLIMIT": lambda vm: not_supported_op("GASLIMIT"),
+    "GASLIMIT": lambda vm: vm.push(10000000000),
     # 50s: Stack, Memory, Storage and Flow Operations
     "POP": lambda vm: vm.pop(),
     "MLOAD": os.memory_load,
@@ -385,12 +333,12 @@ EVM_STATIC_OPS = {
     "RETURN": execution.ret,
     "REVERT": execution.revert,
     "SELFDESTRUCT": execution.selfdestruct,
-    "BALANCE": lambda vm: [
-        print("Warning: BALANCE was used which may lead to an error"),
-        vm.push(0),
-        vm.swap1(),
-        os.ext_balance(vm),
-    ],
+    "BALANCE": lambda vm: [os.ext_balance(vm)],
+    "CODESIZE": os.codesize_get,
+    "CODECOPY": lambda vm: os.evm_copy_to_memory(vm, os.code_get),
+    "EXTCODESIZE": os.ext_codesize,
+    "EXTCODECOPY": os.ext_codecopy,
+    "EXTCODEHASH": os.ext_codehash,
 }
 
 UNHANDLED_OPCODE = {
@@ -410,17 +358,7 @@ def get_opcode_name(instr):
     return instr.name
 
 
-def generate_contract_code(
-    label,
-    code,
-    code_tuple,
-    contract_id,
-    code_size,
-    code_tuples,
-    code_hashes,
-    dispatch_contract,
-):
-    code = remove_metadata(code)
+def generate_contract_code(label, code, contract_id):
     code = replace_self_balance(code)
 
     jump_table = {}
@@ -429,43 +367,13 @@ def generate_contract_code(
             jump_table[insn.pc] = AVMLabel(
                 "jumpdest_{}_{}".format(contract_id, insn.pc)
             )
-    dispatch_func = make_bst_lookup(jump_table)
+    dispatch_func = bst.make_static_lookup(jump_table)
 
     @modifies_stack([value.IntType()], [value.ValueType()], contract_id)
     def dispatch(vm):
         dispatch_func(vm)
 
-    @modifies_stack(0, 1, contract_id)
-    def get_contract_code(vm):
-        vm.push(code_tuple)
-
-    def evm_extcodesize(vm):
-        print("Warning: EXTCODESIZE was used which may lead to an error")
-        code_size(vm)
-        vm.dup0()
-        vm.tnewn(0)
-        vm.eq()
-        vm.ifelse(lambda vm: [vm.error()])
-
-    def evm_extcodecopy(vm):
-        print("Warning: EXTCODECOPY was used which may lead to an error")
-        code_tuples(vm)
-        vm.dup0()
-        vm.tnewn(0)
-        vm.eq()
-        vm.ifelse(lambda vm: [vm.error()])
-        os.set_scratch(vm)
-        os.evm_copy_to_memory(vm, os.get_scratch)
-
-    def evm_extcodehash(vm):
-        print("Warning: EXTCODEHASH was used which may lead to an error")
-        code_hashes(vm)
-        vm.dup0()
-        vm.tnewn(0)
-        vm.eq()
-        vm.ifelse(lambda vm: [vm.error()])
-
-    EVM_CONTRACT_OPS = {
+    evm_contract_ops = {
         "JUMP": lambda vm: [
             dispatch(vm),
             vm.dup0(),
@@ -474,17 +382,18 @@ def generate_contract_code(
             vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.jump()]),
         ],
         "JUMPI": lambda vm: [
-            dispatch(vm),
-            vm.dup0(),
-            vm.tnewn(0),
-            vm.eq(),
-            vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.cjump()]),
+            vm.swap1(),
+            vm.ifelse(
+                lambda vm: [
+                    dispatch(vm),
+                    vm.dup0(),
+                    vm.tnewn(0),
+                    vm.eq(),
+                    vm.ifelse(lambda vm: [vm.error()], lambda vm: [vm.jump()]),
+                ],
+                lambda vm: [vm.pop()],
+            ),
         ],
-        "CODESIZE": lambda vm: vm.push(len(code)),
-        "CODECOPY": lambda vm: os.evm_copy_to_memory(vm, get_contract_code),
-        "EXTCODESIZE": evm_extcodesize,
-        "EXTCODECOPY": evm_extcodecopy,
-        "EXTCODEHASH": evm_extcodehash,
     }
 
     def run_op(instr):
@@ -497,23 +406,16 @@ def generate_contract_code(
                 )
             execution.revert(vm)
 
+        call_id = "{}_{}".format(contract_id, instr.pc)
         evm_instr_ops = {
             "PUSH": lambda vm: vm.push(instr.operand),
             "JUMPDEST": lambda vm: vm.set_label(
-                AVMLabel("jumpdest_{}_{}".format(contract_id, instr.pc))
+                AVMLabel("jumpdest_{}".format(call_id))
             ),
-            "CALL": lambda vm: execution.call(
-                vm, dispatch_contract, instr.pc, contract_id
-            ),
-            "CALLCODE": lambda vm: execution.call(
-                vm, dispatch_contract, instr.pc, contract_id
-            ),
-            "DELEGATECALL": lambda vm: execution.delegatecall(
-                vm, dispatch_contract, instr.pc, contract_id
-            ),
-            "STATICCALL": lambda vm: execution.staticcall(
-                vm, dispatch_contract, instr.pc, contract_id
-            ),
+            "CALL": lambda vm: execution.call(vm, call_id),
+            "CALLCODE": lambda vm: execution.call(vm, call_id),
+            "DELEGATECALL": lambda vm: execution.delegatecall(vm, call_id),
+            "STATICCALL": lambda vm: execution.staticcall(vm, call_id),
             "INVALID": evm_invalid_op,
         }
 
@@ -522,8 +424,8 @@ def generate_contract_code(
         if instr_name in EVM_STATIC_OPS:
             return EVM_STATIC_OPS[instr_name]
 
-        if instr_name in EVM_CONTRACT_OPS:
-            return EVM_CONTRACT_OPS[instr_name]
+        if instr_name in evm_contract_ops:
+            return evm_contract_ops[instr_name]
 
         if instr_name in evm_instr_ops:
             return evm_instr_ops[instr_name]

@@ -5,7 +5,7 @@ import "./ArbSys.sol";
 contract Test {
   function sendERC20(address tokenAddress, uint256 amount) public {
     ArbSys(address(0x01)).sendERC20(
-      bytes32(bytes20(msg.sender)),
+      msg.sender,
       tokenAddress,
       amount
     );
@@ -13,7 +13,7 @@ contract Test {
 
   function sendERC721(address tokenAddress, uint256 id) public {
     ArbSys(address(0x01)).sendERC721(
-      bytes32(bytes20(msg.sender)),
+      msg.sender,
       tokenAddress,
       id
     );

@@ -83,25 +83,29 @@ contract GlobalWallet {
         return (addresses, tokens);
     }
 
-    function withdrawEth(uint256 _value) external {
-        require(
-            removeToken(msg.sender, ETH_ADDRESS, _value),
-            "Wallet doesn't own sufficient balance of token"
-        );
-        msg.sender.transfer(_value);
+    function depositERC20(address _tokenContract, address _destination, uint256 _value) public {
+        uint256 currentBalance = getTokenBalance(msg.sender, _tokenContract);
+
+        if (currentBalance >= _value) {
+            require(transferToken(msg.sender, _destination, _tokenContract, _value));
+        } else if (currentBalance == 0){
+            IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
+            addToken(_destination, _tokenContract, _value);
+        }else{
+            require(transferToken(msg.sender, _destination, _tokenContract, currentBalance));
+            uint remaining = _value - currentBalance;
+
+            IERC20(_tokenContract).transferFrom(msg.sender, address(this), remaining);
+            addToken(_destination, _tokenContract, remaining);
+        }
     }
 
-    function depositERC20(address _tokenContract, uint256 _value) external {
-        IERC20(_tokenContract).transferFrom(msg.sender, address(this), _value);
-        addToken(msg.sender, _tokenContract, _value);
-    }
-
-    function withdrawERC20(address _tokenContract, uint256 _value) external {
+    function withdrawERC20(address _tokenContract, address _destination, uint256 _value) public {
         require(
             removeToken(msg.sender, _tokenContract, _value),
             "Wallet doesn't own sufficient balance of token"
         );
-        IERC20(_tokenContract).transfer(msg.sender, _value);
+        IERC20(_tokenContract).transfer(_destination, _value);
     }
 
     function onERC721Received(
@@ -117,21 +121,44 @@ contract GlobalWallet {
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 
-    function depositERC721(address _tokenContract, uint256 _tokenId) external {
-        IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
-        addNFTToken(msg.sender, _tokenContract, _tokenId);
+    function depositERC721(address _tokenContract, address _destination, uint256 _tokenId) public {
+        bool hasToken = hasNFT(_tokenContract, msg.sender, _tokenId);
+
+        if(hasToken){
+            require(transferNFT(msg.sender, _destination, _tokenContract, _tokenId));
+        }else{
+            IERC721(_tokenContract).transferFrom(msg.sender, address(this), _tokenId);
+            addNFTToken(_destination, _tokenContract, _tokenId);
+        }
     }
 
-    function withdrawERC721(address _tokenContract, uint256 _tokenId) external {
+    function withdrawERC721(address _tokenContract, address _destination, uint256 _tokenId) public {
         require(
             removeNFTToken(msg.sender, _tokenContract, _tokenId),
             "Wallet doesn't own token"
         );
-        IERC721(_tokenContract).safeTransferFrom(address(this), msg.sender, _tokenId);
+        IERC721(_tokenContract).safeTransferFrom(address(this), _destination, _tokenId);
     }
 
     function depositEth(address _destination) public payable {
         addToken(_destination, ETH_ADDRESS, msg.value);
+    }
+
+    function withdrawEth(uint256 _value) external {
+        require(
+            removeToken(msg.sender, ETH_ADDRESS, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+        msg.sender.transfer(_value);
+    }
+
+    function transferEth(address payable _destination, uint256 _value) public {
+        require(
+            removeToken(msg.sender, ETH_ADDRESS, _value),
+            "Wallet doesn't own sufficient balance of token"
+        );
+
+        _destination.transfer(_value);
     }
 
     function getTokenBalance(address _tokenContract, address _owner) public view returns (uint256) {

@@ -26,8 +26,13 @@ import "./libraries/SigUtils.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-
 contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
+
+    uint8 internal constant TRANSACTION_MSG = 0;
+    uint8 internal constant ETH_DEPOSIT = 1;
+    uint8 internal constant ERC20_DEPOSIT = 2;
+    uint8 internal constant ERC721_DEPOSIT = 3;
+
     using SafeMath for uint256;
     using Value for Value.Data;
 
@@ -45,195 +50,399 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         return (pendingInbox.value, pendingInbox.count);
     }
 
-    function sendMessages(bytes calldata _messages) external {
-        uint256 offset = 0;
-        bool valid;
-        bytes32 messageHash;
-        uint256 destination;
-        uint256 value;
-        uint256 tokenType;
-        bytes memory messageData;
-        uint256 totalLength = _messages.length;
-        while (offset < totalLength) {
-            (
-                valid,
-                offset,
-                messageHash,
-                destination,
-                value,
-                tokenType,
-                messageData
-            ) = Value.deserializeMessage(_messages, offset);
-            if (valid) {
-                _sendUnpaidMessage(
-                    address(bytes20(bytes32(destination))),
-                    bytes21(bytes32(tokenType)),
-                    value,
-                    msg.sender,
-                    messageData
-                );
-            }
-        }
-    }
-
     function registerForInbox() external {
         require(pending[msg.sender].value == 0, "Pending must be uninitialized");
         pending[msg.sender].value = Value.hashEmptyTuple();
     }
 
-    function sendMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
-        bytes calldata _data
-    )
-        external
-    {
-        _sendUnpaidMessage(
-            _destination,
-            _tokenType,
-            _amount,
-            msg.sender,
-            _data
-        );
+    function sendMessages(bytes calldata _messages) external {
+        bool valid;
+        uint offset = 0;
+        bytes32 messageHash;
+        uint256 messageType;
+        uint256 sender;
+        bytes memory messageData;
+        uint256 totalLength = _messages.length;
+
+        while (offset < totalLength) {
+            (
+                valid, 
+                offset, 
+                messageHash, 
+                messageType, 
+                sender, 
+                messageData) = Value.deserializeMessage(_messages, offset);
+
+            if(valid){
+                sendDeserializedMsgs(messageData, messageType);
+            }
+        }
     }
 
-    function forwardMessage(
-        address _destination,
-        bytes21 _tokenType,
-        uint256 _amount,
+    function sendDeserializedMsgs(bytes memory messageData, uint256 messageType) private {
+        if(messageType == TRANSACTION_MSG)
+        {
+            bool valid;
+            uint256 vmAddress;
+            uint256 contractAddress;
+            uint256 seqNumber;
+            uint256 value;
+            (   valid,
+                vmAddress,
+                contractAddress,
+                seqNumber,
+                value,
+                messageData
+            ) = Value.getTransactionMsgData(messageData);
+        
+            if(valid){
+                _deliverTransactionMessage(
+                    msg.sender,
+                    address(bytes20(bytes32(vmAddress))),
+                    address(bytes20(bytes32(contractAddress))),
+                    seqNumber,
+                    value,
+                    messageData
+                );
+            }
+        }else if(messageType == ETH_DEPOSIT)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 value;
+
+            (   valid,
+                destination,
+                value
+            ) = Value.getEthMsgData(messageData);
+
+            if(valid){
+                transferEth(address(bytes20(bytes32(destination))), value);
+            }   
+
+        }else if(messageType == ERC20_DEPOSIT)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 tokenContract;
+            uint256 value;
+
+            (   valid,
+                tokenContract,
+                destination,
+                value
+            ) = Value.getERCTokenMsgData(messageData);
+
+            if(valid){
+                depositERC20Message(
+                    address(bytes20(bytes32(destination))), //wrong
+                    address(bytes20(bytes32(tokenContract))), 
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }   
+
+        }else if(messageType == ERC721_DEPOSIT)
+        {
+            bool valid;
+            uint256 destination;
+            uint256 tokenContract;
+            uint256 value;
+
+            (   valid,
+                tokenContract,
+                destination,
+                value
+            ) = Value.getERCTokenMsgData(messageData);
+
+            if(valid){
+                depositERC721Message(
+                    address(bytes20(bytes32(destination))), //wrong
+                    address(bytes20(bytes32(tokenContract))), 
+                    address(bytes20(bytes32(destination))), 
+                    value);
+            }   
+
+        }
+    }
+
+    function forwardTransactionMessage(
+        address _vmAddress,
+        address _contractAddress, 
+        uint256 _seqNumber,
+        uint256 _value,
         bytes calldata _data,
-        bytes calldata _signature
-    )
-        external
+        bytes calldata _signature) external
     {
         address sender = SigUtils.recoverAddress(
             keccak256(
                 abi.encodePacked(
-                    _destination,
-                    Value.deserializeHashed(_data),
-                    _amount,
-                    _tokenType
+                    _vmAddress,
+                    _contractAddress,
+                    _seqNumber,
+                    _value,
+                    Value.deserializeHashed(_data)
                 )
             ),
             _signature
         );
 
-        _sendUnpaidMessage(
-            _destination,
-            _tokenType,
-            _amount,
+        _deliverTransactionMessage(
             sender,
+            _vmAddress,
+            _contractAddress,
+            _seqNumber,
+            _value,
             _data
         );
     }
 
-    function sendEthMessage(address _destination, bytes calldata _data) external payable {
-        depositEth(_destination);
-        _deliverMessage(
-            _destination,
-            bytes21(0),
-            msg.value,
-            msg.sender,
-            _data
-        );
-    }
-
-    function _sendUnpaidMessage(
-        address _destination,
-        bytes21 _tokenType,
+    function sendTransactionMessage(
+        address _vmAddress,
+        address _contractAddress, 
+        uint256 _seqNumber,
         uint256 _value,
-        address _sender,
-        bytes memory _data
-    )
-        private
+        bytes calldata _data) external
     {
-        bool sent = false;
-        if (_tokenType[20] == 0x01) {
-            sent = transferNFT(
-                _sender,
-                _destination,
-                address(bytes20(_tokenType)),
-                _value
-            );
-        } else {
-            sent = transferToken(
-                _sender,
-                _destination,
-                address(bytes20(_tokenType)),
-                _value
-            );
-        }
-        if (sent) {
-            _deliverMessage(
-                _destination,
-                _tokenType,
-                _value,
-                _sender,
-                _data
-            );
-        }
+        _deliverTransactionMessage(
+            msg.sender,
+            _vmAddress,
+            _contractAddress,
+            _seqNumber,
+            _value,
+            _data
+        );
     }
 
-    function generateSentMessageHash(
-        address _dest,
-        bytes32 _data,
-        bytes21 _tokenType,
-        uint256 _value,
-        address _sender
+    function depositEthMessage(address _vmAddress, address _destination) external payable 
+    {
+        depositEth(_destination);
+        
+        _deliverEthMessage(
+            msg.sender,
+            _destination,
+            ETH_DEPOSIT,
+            msg.value
+        );
+
+        emit IGlobalPendingInbox.EthDepositMessageDelivered(
+            _vmAddress,
+            msg.sender,
+            _destination,
+            msg.value);
+    }
+
+    function depositEthMessage(address _vmAddress, address payable _destination, uint256 _value) public
+    {
+        transferEth(_destination, _value);
+        
+        _deliverEthMessage(
+            msg.sender,
+            _destination,
+            ETH_DEPOSIT,
+            _value
+        );
+
+        emit IGlobalPendingInbox.EthDepositMessageDelivered(
+            _vmAddress,
+            msg.sender,
+            _destination,
+            _value);
+    }
+
+    function depositERC20Message(
+        address _vmAddress,
+        address _tokenContract,
+        address _destination,
+        uint256 _value
     )
         public
-        view
-        returns (bytes32)
     {
+        depositERC20(_tokenContract, _vmAddress, _value);
+
+        _deliverERCTokenMessage(
+            _vmAddress,
+            msg.sender,
+            _destination,
+            ERC20_DEPOSIT,
+            _tokenContract,
+            _value);
+    }
+
+    function depositERC721Message(
+        address _vmAddress,
+        address _tokenContract,
+        address _destination,
+        uint256 _value) public
+    {
+        depositERC721(_tokenContract, _vmAddress, _value);
+
+        _deliverERCTokenMessage(
+            _vmAddress,
+            msg.sender,
+            _destination,
+            ERC721_DEPOSIT,
+            _tokenContract,
+            _value);
+    }
+
+    function _deliverTransactionMessage(
+        address _sender,
+        address _vmAddress,
+        address _contractAddress,
+        uint256 _seqNumber,
+        uint256 _value,
+        bytes memory _data) private
+    {
+        PendingInbox storage pendingInbox = pending[_vmAddress];
+
+        if (pendingInbox.value != 0) {
+            bytes32 dataHash = Value.deserializeHashed(_data);
+            bytes32 txHash = keccak256(
+                abi.encodePacked(
+                    _sender,
+                    _contractAddress,
+                    _seqNumber,
+                    dataHash
+                )
+            );
+
+            Value.Data[] memory msgValues = new Value.Data[](4);
+            msgValues[0] = Value.newInt(uint256(_contractAddress));
+            msgValues[1] = Value.newInt(_seqNumber);
+            msgValues[2] = Value.newInt(_value);
+            msgValues[3] = Value.newHashOnly(dataHash);
+
+            Value.Data[] memory msgType = new Value.Data[](3);
+            msgType[0] = Value.newInt(TRANSACTION_MSG);
+            msgType[1] = Value.newInt(uint256(_sender));
+            msgType[2] = Value.newTuple(msgValues);
+
+            Value.Data[] memory dataMsg = new Value.Data[](3);
+            dataMsg[0] = Value.newInt(block.number);
+            dataMsg[1] = Value.newInt(uint256(txHash));
+            dataMsg[2] = Value.newTuple(msgType);
+
+            bytes32 messageHash =  Value.newTuple(dataMsg).hash().hash;
+
+            _deliverMessage(_vmAddress, messageHash);
+
+            emit IGlobalPendingInbox.TransactionMessageDelivered(
+                _sender,
+                _vmAddress,
+                _contractAddress,
+                _seqNumber,
+                _value,
+                _data);
+        }
+    }
+
+    function _deliverEthMessage(
+        address _sender,
+        address _destination,
+        uint256 _messageType,
+        uint256 _value) private
+    {
+        if (pending[_destination].value != 0) 
+        {
+            bytes32 txHash = keccak256(
+                abi.encodePacked(
+                    _sender,
+                    _destination,
+                    _value
+                )
+            );
+
+            Value.Data[] memory msgValues = new Value.Data[](3);
+            msgValues[0] = Value.newInt(uint256(_destination));
+            msgValues[1] = Value.newInt(_value);
+
+            Value.Data[] memory msgType = new Value.Data[](3);
+            msgType[0] = Value.newInt(_messageType);
+            msgType[1] = Value.newInt(uint256(_sender));
+            msgType[2] = Value.newTuple(msgValues);
+
+            Value.Data[] memory ethMsg = new Value.Data[](3);
+            ethMsg[0] = Value.newInt(block.number);
+            ethMsg[1] = Value.newInt(uint256(txHash));
+            ethMsg[2] = Value.newTuple(msgType);
+
+            bytes32 messageHash =  Value.newTuple(ethMsg).hash().hash;
+
+            _deliverMessage(_destination, messageHash);
+        }
+    }
+
+    function _deliverERCTokenMessage(
+        address _vmAddress,
+        address _sender,
+        address _destination,
+        uint256 _messageType,
+        address _tokenContract,
+        uint256 _value) private
+    {
+        if (pending[_vmAddress].value != 0) 
+        {
+            bytes32 txHash = keccak256(
+                abi.encodePacked(
+                    _sender,
+                    _destination,
+                    _tokenContract,
+                    _value
+                )
+            );
+
+            Value.Data[] memory msgValues = new Value.Data[](3);
+            msgValues[0] = Value.newInt(uint256(_tokenContract));
+            msgValues[1] = Value.newInt(uint256(_destination));
+            msgValues[2] = Value.newInt(_value);
+
+            Value.Data[] memory msgType = new Value.Data[](3);
+            msgType[0] = Value.newInt(_messageType);
+            msgType[1] = Value.newInt(uint256(_sender));
+            msgType[2] = Value.newTuple(msgValues);
+
+            Value.Data[] memory ercTokenMsg = new Value.Data[](3);
+            ercTokenMsg[0] = Value.newInt(block.number);
+            ercTokenMsg[1] = Value.newInt(uint(txHash));
+            ercTokenMsg[2] = Value.newTuple(msgType);
+
+            bytes32 messageHash =  Value.newTuple(ercTokenMsg).hash().hash;
+
+            _deliverMessage(_vmAddress, messageHash);
+
+            if(_messageType == ERC20_DEPOSIT){
+
+                emit IGlobalPendingInbox.DepositERC20MessageDelivered(
+                    _vmAddress,
+                    _sender,
+                    _destination,
+                    _tokenContract,
+                    _value);
+
+            }else if(_messageType == ERC721_DEPOSIT){
+
+                emit IGlobalPendingInbox.DepositERC721MessageDelivered(
+                    _vmAddress,
+                    _sender,
+                    _destination,
+                    _tokenContract,
+                    _value);
+            }
+        }
 
     }
 
     function _deliverMessage(
         address _destination,
-        bytes21 _tokenType,
-        uint256 _value,
-        address _sender,
-        bytes memory _data
-    )
-        private
+        bytes32 _messageHash) private 
     {
         PendingInbox storage pendingInbox = pending[_destination];
-        if (pendingInbox.value != 0) {
-            bytes32 dataHash = Value.deserializeHashed(_data);
-            bytes32 txHash = keccak256(
-                abi.encodePacked(
-                    _destination,
-                    dataHash,
-                    _value,
-                    _tokenType
-                )
-            );
-            Value.Data[] memory dataValues = new Value.Data[](3);
-            dataValues[0] = Value.newHashOnly(dataHash);
-            dataValues[1] = Value.newInt(block.number);
-            dataValues[2] = Value.newInt(uint(txHash));
 
-            Value.Data[] memory values = new Value.Data[](4);
-            values[0] = Value.newTuple(dataValues);
-            values[1] = Value.newInt(uint256(_sender));
-            values[2] = Value.newInt(_value);
-            values[3] = Value.newInt(uint256(bytes32(_tokenType)));
-            bytes32 messageHash =  Value.newTuple(values).hash().hash;
-
-            pendingInbox.value = Protocol.addMessageToPending(
-                pendingInbox.value,
-                messageHash
-            );
-            pendingInbox.count++;
-        }
-
-        emit IGlobalPendingInbox.MessageDelivered(
-            _destination,
-            _sender,
-            _tokenType,
-            _value,
-            _data
+        pendingInbox.value = Protocol.addMessageToPending(
+            pendingInbox.value,
+            _messageHash
         );
+
+        pendingInbox.count++;
     }
 }

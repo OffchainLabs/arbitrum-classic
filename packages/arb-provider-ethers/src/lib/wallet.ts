@@ -86,6 +86,42 @@ export class ArbWallet extends ethers.Signer {
         return this.signer.signMessage(message);
     }
 
+    public async depositERC20(
+        tokenAddress: string,
+        destAddress: string,
+        value: number,
+    ): Promise<ethers.providers.TransactionResponse> {
+        const sendValue = ethers.utils.bigNumberify(value);
+
+        const vmId = await this.provider.getVmID();
+
+        console.log('vmId add: ' + vmId);
+        console.log('dest add: ' + destAddress);
+
+        const inboxManager = await this.globalInboxConn();
+        const blockchainTx = await inboxManager.depositERC20Message(vmId, tokenAddress, destAddress, sendValue);
+        await blockchainTx.wait();
+
+        console.log('dest add2sfsf: ' + destAddress);
+
+        const fromAddress = await this.getAddress();
+        const args = [fromAddress, destAddress, tokenAddress, value];
+        const messageHash = ethers.utils.solidityKeccak256(['address', 'address', 'address', 'uint256'], args);
+
+        const tx = {
+            data: '',
+            value: ethers.utils.bigNumberify(0),
+            from: fromAddress,
+            gasLimit: ethers.utils.bigNumberify(1),
+            gasPrice: ethers.utils.bigNumberify(1),
+            hash: messageHash,
+            nonce: 0,
+            to: destAddress,
+            chainId: 1578891852042,
+        };
+        return this.provider._wrapTransaction(tx, messageHash);
+    }
+
     public async sendTransaction(
         transaction: ethers.providers.TransactionRequest,
     ): Promise<ethers.providers.TransactionResponse> {

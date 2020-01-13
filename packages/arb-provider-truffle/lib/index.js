@@ -25,7 +25,11 @@ const spawnSync = require("child_process").spawnSync;
 const filenameEVM = "compiled.json";
 const filenameAO = "contract.ao";
 
-function provider(outputFolder, buildLocation, options) {
+function provider(outputFolder, buildLocation, options, should_compile) {
+  if (should_compile === undefined) {
+    should_compile = true;
+  }
+
   const outputLocationEVM = path.resolve(outputFolder, filenameEVM);
   const outputLocationAO = path.resolve(outputFolder, filenameAO);
   const stack = callsite();
@@ -33,7 +37,6 @@ function provider(outputFolder, buildLocation, options) {
   if (!buildLocation) {
     buildLocation = path.resolve(rootPath, "build/contracts");
   }
-  options.network_id = 123456789;
   options.allowUnlimitedContractSize = true;
   const arbProvider = ganache.provider(options);
 
@@ -101,18 +104,21 @@ function provider(outputFolder, buildLocation, options) {
       );
       throw e;
     }
-    console.log("arbc-truffle " + filenameEVM + " " + filenameAO);
-    try {
-      var compile = spawnSync(
-        "arbc-truffle",
-        [outputLocationEVM, outputLocationAO],
-        { encoding: "utf-8" }
-      );
-      console.log(compile.stdout);
-      console.log(compile.stderr);
-    } catch (e) {
-      console.log("Error arbc-truffle: " + e.name + " " + e.message);
-      throw e;
+
+    if (should_compile) {
+      console.log("arbc-truffle " + filenameEVM + " " + filenameAO);
+      try {
+        var compile = spawnSync(
+          "arbc-truffle",
+          [outputLocationEVM, outputLocationAO],
+          { encoding: "utf-8" }
+        );
+        console.log(compile.stdout);
+        console.log(compile.stderr);
+      } catch (e) {
+        console.log("Error arbc-truffle: " + e.name + " " + e.message);
+        throw e;
+      }
     }
   });
   return arbProvider;

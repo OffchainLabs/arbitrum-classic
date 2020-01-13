@@ -15,6 +15,7 @@
 import eth_abi
 import eth_utils
 
+from . import contract_templates
 from ..std import sized_byterange, stack
 
 REVERT_CODE = 0
@@ -22,6 +23,8 @@ INVALID_CODE = 1
 RETURN_CODE = 2
 STOP_CODE = 3
 INVALID_SEQUENCE_CODE = 4
+INSUFFICIENT_BALANCE = 5
+ETH_DEPOSIT = 6
 
 
 class EVMLog:
@@ -39,12 +42,11 @@ class EVMLog:
             self.topics.append(raw_bytes)
 
     def decode(self, events):
-        abi = events[(self.contract_id, self.event_id)]
+        abi = events[self.contract_id][self.event_id]
         ret = {}
         topics = [inp for inp in abi["inputs"] if inp["indexed"]]
         for (topic, topic_data) in zip(topics, self.topics):
             ret[topic["name"]] = eth_abi.decode_single(topic["type"], topic_data)
-
         other_inputs = [inp for inp in abi["inputs"] if not inp["indexed"]]
         arg_type = "(" + ",".join([inp["type"] for inp in other_inputs]) + ")"
         decoded = eth_abi.decode_single(arg_type, self.data)
@@ -71,20 +73,51 @@ class EVMLog:
 
 class LogMessage:
     def __init__(self, value):
-        wrapped_data = value[0]
-        calldata = wrapped_data[0]
-
-        self.data = sized_byterange.tohex(calldata[0])
-        self.contract_id = calldata[1]
-        self.sequence_num = calldata[2]
-        self.timestamp = wrapped_data[1]
-        self.tx_hash = wrapped_data[2]
-        self.caller = value[1]
-        self.value = value[2]
-        self.token_type = value[3]
+        self.timestamp = value[0]
+        self.block_number = value[1]
+        self.tx_hash = value[2]
+        wrapped_data = value[3]
+        self.message_type = wrapped_data[0]
+        self.caller = wrapped_data[1]
+        if self.message_type == 0:
+            tx_message = wrapped_data[2]
+            self.contract_id = tx_message[0]
+            self.sequence_num = tx_message[1]
+            self.value = tx_message[2]
+            self.data = sized_byterange.tohex(tx_message[3])
+        elif self.message_type in [2, 3]:
+            token_message = wrapped_data[2]
+            self.token_address = token_message[0]
+            self.dest = token_message[1]
+            self.amount = token_message[2]
 
     def func_id(self):
         return self.data[2:10]
+
+    def get_abi(self, functions):
+        funcs = functions.get(self.contract_id, None)
+        if funcs:
+            return funcs.get(self.func_id(), None)
+        else:
+            return None
+
+    def raw_func_name(self):
+        if self.message_type == 0:
+            return self.func_id()
+        elif self.message_type == 1:
+            return "ETH_DEPOSIT"
+        elif self.message_type == 2:
+            return "ERC20_DEPOSIT"
+        elif self.message_type == 3:
+            return "ERC721_DEPOSIT"
+        elif self.message_type == 4:
+            return "ETH_WITHDRAWAL"
+        elif self.message_type == 5:
+            return "ERC20_WITHDRAWAL"
+        elif self.message_type == 6:
+            return "ERC721_WITHDRAWAL"
+        else:
+            raise Exception("Unknown function type")
 
 
 class EVMOutput:
@@ -92,15 +125,29 @@ class EVMOutput:
         self.orig_message = LogMessage(val[0])
         self.decoded = False
         self.abi = {}
-        self.name = "Unknown Function"
+        self.name = self.orig_message.raw_func_name()
 
     def decode(self, functions, events):
-        self.abi = functions.get(
-            (self.orig_message.contract_id, self.orig_message.func_id()),
-            "Unknown Function",
-        )
-        if self.abi:
-            self.name = self.abi["name"]
+        if self.orig_message.message_type == 0:
+            self.abi = self.orig_message.get_abi(functions)
+            if self.abi:
+                self.name = self.abi["name"]
+
+        if self.orig_message.message_type == 2:
+            events[self.orig_message.token_address] = events[
+                contract_templates.ERC20_ADDRESS
+            ]
+            functions[self.orig_message.token_address] = functions[
+                contract_templates.ERC20_ADDRESS
+            ]
+        elif self.orig_message.message_type == 3:
+            events[self.orig_message.token_address] = events[
+                contract_templates.ERC721_ADDRESS
+            ]
+            functions[self.orig_message.token_address] = functions[
+                contract_templates.ERC721_ADDRESS
+            ]
+
         self.decoded = True
 
 
@@ -116,8 +163,8 @@ class EVMCall(EVMOutput):
             return "EVMCall({}, {}, {})".format(
                 self.name, self.output_values, self.logs
             )
-        return "EVMCall({}, {})".format(
-            self.orig_message.func_id(), self.output_bytes, self.logs
+        return "EVMCall({}, {}, {})".format(
+            self.orig_message.raw_func_name(), self.output_bytes, self.logs
         )
 
     def __str__(self):
@@ -146,7 +193,7 @@ class EVMStop(EVMOutput):
     def __repr__(self):
         if self.decoded:
             return "EVMStop({}, {})".format(self.name, self.logs)
-        return "EVMStop({}, {})".format(self.orig_message.func_id(), self.logs)
+        return "EVMStop({}, {})".format(self.orig_message.raw_func_name(), self.logs)
 
     def __str__(self):
         if self.decoded:
@@ -169,17 +216,10 @@ class EVMRevert(EVMOutput):
         self.output_bytes = eth_utils.to_bytes(hexstr=sized_byterange.tohex(val[2]))
 
     def __repr__(self):
-        if self.decoded:
-            return "EVMRevert({}, {})".format(self.name, self.output_bytes)
-        return "EVMRevert({}, {})".format(
-            self.orig_message.func_id(), self.output_values
-        )
+        return "EVMRevert({}, {})".format(self.name, self.output_bytes)
 
     def decode(self, functions, events):
         super().decode(functions, events)
-        self.output_values = eth_abi.decode_abi(
-            [out["type"] for out in self.abi["outputs"]], self.output_bytes
-        )
 
 
 class EVMInvalid(EVMOutput):
@@ -198,13 +238,29 @@ class EVMInvalidSequence(EVMOutput):
         return "EVMInvalidSequence()"
 
 
+class EVMInsufficientBalance(EVMOutput):
+    def __init__(self, val):
+        super().__init__(val)
+
+    def __repr__(self):
+        return "EVMInsufficientBalance()"
+
+
+class EVMDeposit(EVMOutput):
+    def __init__(self, val):
+        super().__init__(val)
+
+    def __repr__(self):
+        return "EVMDeposit()"
+
+
 class EVMUnknownResponseError(EVMOutput):
     def __init__(self, val):
         super().__init__(val)
         self.val = val
 
     def __repr__(self):
-        return "EVMUnknownResponseError()"
+        return "EVMUnknownResponseError({})".format(self.val[3])
 
 
 EVM_OUTPUT_TYPES = {
@@ -212,7 +268,9 @@ EVM_OUTPUT_TYPES = {
     REVERT_CODE: EVMRevert,
     INVALID_CODE: EVMInvalid,
     INVALID_SEQUENCE_CODE: EVMInvalidSequence,
+    INSUFFICIENT_BALANCE: EVMInsufficientBalance,
     STOP_CODE: EVMStop,
+    ETH_DEPOSIT: EVMDeposit,
 }
 
 
