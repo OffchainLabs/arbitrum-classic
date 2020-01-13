@@ -175,9 +175,8 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 				break
 			case header := <-headers:
 				outChan <- arbbridge.Notification{
-					BlockHeader: common.NewHashFromEth(header.Hash()),
-					BlockHeight: header.Number,
-					Event:       arbbridge.NewTimeEvent{},
+					BlockID: getBlockID(header),
+					Event:   arbbridge.NewTimeEvent{},
 				}
 			case ethLog := <-logChan:
 				if err := vm.processEvents(ctx, ethLog, outChan); err != nil {
@@ -343,11 +342,10 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log,
 			return err
 		}
 		outChan <- arbbridge.Notification{
-			BlockHeader: common.NewHashFromEth(header.Hash()),
-			BlockHeight: header.Number,
-			VMID:        common.NewAddressFromEth(vm.address),
-			Event:       event,
-			TxHash:      ethLog.TxHash,
+			BlockID: getBlockID(header),
+			VMID:    common.NewAddressFromEth(vm.address),
+			Event:   event,
+			TxHash:  ethLog.TxHash,
 		}
 	}
 	return nil

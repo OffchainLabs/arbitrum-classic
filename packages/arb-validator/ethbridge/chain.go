@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
@@ -42,6 +44,13 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 
 func (a ArbAddresses) OneStepProofAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.OneStepProof))
+}
+
+func getBlockID(header *types.Header) *structures.BlockId {
+	return &structures.BlockId{
+		Height:     common.NewTimeBlocks(header.Number),
+		HeaderHash: common.NewHashFromEth(header.Hash()),
+	}
 }
 
 func waitForReceipt(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) error {
