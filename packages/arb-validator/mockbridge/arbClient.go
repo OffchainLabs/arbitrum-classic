@@ -25,52 +25,67 @@ import (
 	"math/big"
 )
 
-type ArbClient struct {
-	client arbbridge.ArbClient
+type MockArbClient struct {
+	MockEthClient *mockEthdata
 }
 
-//func (c *ArbClient) GetClient() *ethclient.Client {
-//	return c.client
-//}
-
-func NewEthClient(ethURL string) (*ArbClient, error) {
-	// call to mockEth.go - initMock(ethURL)
-	//client, err := ethclient.Dial(ethURL)
-	return &ArbClient{nil}, nil
+func NewEthClient(ethURL string) (*MockArbClient, error) {
+	// call to mockEth.go - getMockEth(ethURL)
+	return &MockArbClient{getMockEth(ethURL)}, nil
 }
 
-func (c *ArbClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
-	return NewArbFactory(address, c.client)
+func (c *MockArbClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
+	return NewArbFactory(address, c)
 }
 
-func (c *ArbClient) NewRollup(address common.Address, auth *bind.TransactOpts) (arbbridge.ArbRollup, error) {
-	return NewRollup(address, c.client, auth)
+func (c *MockArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
+	return NewRollupWatcher(address, c)
 }
 
-func (c *ArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
-	return NewRollupWatcher(address, c.client)
+func (c *MockArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
+	return NewOneStepProof(address, c)
 }
 
-func (c *ArbClient) NewExecutionChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address, c.client, auth)
+func (c *MockArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
+	return NewPendingInbox(address, c)
 }
 
-func (c *ArbClient) NewMessagesChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.MessagesChallenge, error) {
-	return NewMessagesChallenge(address, c.client, auth)
+func (c *MockArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	return c.MockEthClient.headerNumber[number], nil
 }
 
-func (c *ArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
-	return NewOneStepProof(address, c.client)
+type ArbAuthClient struct {
+	*MockArbClient
+	auth *bind.TransactOpts
 }
 
-func (c *ArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return NewPendingInbox(address, c.client)
+func (c *ArbAuthClient) Address() common.Address {
+	return c.auth.From
 }
 
-func (c *ArbClient) NewPendingTopChallenge(address common.Address, auth *bind.TransactOpts) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c.client, auth)
+func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*ArbAuthClient, error) {
+	client, err := NewEthClient(ethURL)
+	if err != nil {
+		return nil, err
+	}
+	return &ArbAuthClient{
+		MockArbClient: client,
+		auth:          auth,
+	}, nil
 }
 
-func (c *ArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.client.HeaderByNumber(ctx, number)
+func (c *ArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
+	return NewRollup(address, c, c.auth)
+}
+
+func (c *ArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
+	return NewExecutionChallenge(address, c, c.auth)
+}
+
+func (c *ArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
+	return NewMessagesChallenge(address, c, c.auth)
+}
+
+func (c *ArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
+	return NewPendingTopChallenge(address, c, c.auth)
 }

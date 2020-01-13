@@ -21,6 +21,8 @@ import (
 	jsonenc "encoding/json"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -44,7 +46,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
@@ -124,7 +125,8 @@ func createRollupChain() {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	//client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	client, err := mockbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
 		log.Fatal(err)
 	}

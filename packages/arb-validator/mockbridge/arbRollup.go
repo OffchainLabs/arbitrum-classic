@@ -25,24 +25,22 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 )
 
 type ArbRollup struct {
-	Client    *ethclient.Client
+	Client    arbbridge.ArbClient
 	ArbRollup *rollup.ArbRollup
 	auth      *bind.TransactOpts
 }
 
 func NewRollup(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*ArbRollup, error) {
-	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*ArbClient).client)
+	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*MockArbClient).client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")
 	//}
-	//vm := &ArbRollup{Client: client.(*ArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
+	//vm := &ArbRollup{Client: client.(*MockArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
 	return &ArbRollup{
 		Client:    nil,
 		ArbRollup: nil,

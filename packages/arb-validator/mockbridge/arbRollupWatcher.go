@@ -18,6 +18,8 @@ package mockbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -25,8 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
+	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
 )
 
 var rollupStakeCreatedID common.Hash
@@ -63,11 +64,11 @@ type EthRollupWatcher struct {
 	GlobalPendingInbox *rollup.IGlobalPendingInbox
 
 	address common.Address
-	client  *ethclient.Client
+	client  arbbridge.ArbClient
 }
 
 func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthRollupWatcher, error) {
-	//vm := &EthRollupWatcher{Client: client.(*ArbClient).client, address: address}
+	//vm := &EthRollupWatcher{Client: client.(*MockArbClient).client, address: address}
 	//err := vm.setupContracts()
 	//return vm, err
 	return &EthRollupWatcher{}, nil
@@ -359,3 +360,20 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 //	}
 //	return nil
 //}
+
+func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
+	rawParams, err := vm.ArbRollup.VmParams(nil)
+	if err != nil {
+		return structures.ChainParams{}, err
+	}
+	stakeRequired, err := vm.ArbRollup.GetStakeRequired(nil)
+	if err != nil {
+		return structures.ChainParams{}, err
+	}
+	return structures.ChainParams{
+		StakeRequirement:        stakeRequired,
+		GracePeriod:             structures.TimeTicks{rawParams.GracePeriodTicks},
+		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
+		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
+	}, nil
+}

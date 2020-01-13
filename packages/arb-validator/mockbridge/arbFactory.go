@@ -2,6 +2,7 @@ package mockbridge
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -9,12 +10,12 @@ import (
 )
 
 type ArbFactory struct {
-	//contract *arbfactory.ArbFactory
-	client arbbridge.ArbClient
+	contract *arbfactory.ArbFactory
+	client   arbbridge.ArbClient
 }
 
 func NewArbFactory(address common.Address, client arbbridge.ArbClient) (*ArbFactory, error) {
-	return &ArbFactory{client}, nil
+	return &ArbFactory{nil, client}, nil
 }
 
 func (con *ArbFactory) CreateRollup(
