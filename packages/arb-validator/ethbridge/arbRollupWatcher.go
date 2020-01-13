@@ -343,7 +343,6 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log,
 		}
 		outChan <- arbbridge.Notification{
 			BlockID: getBlockID(header),
-			VMID:    common.NewAddressFromEth(vm.address),
 			Event:   event,
 			TxHash:  ethLog.TxHash,
 		}

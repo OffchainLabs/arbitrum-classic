@@ -165,7 +165,6 @@ func (c *messagesChallengeWatcher) processEvents(ctx context.Context, log types.
 	}
 	outChan <- arbbridge.Notification{
 		BlockID: getBlockID(header),
-		VMID:    common.NewAddressFromEth(c.address),
 		Event:   event,
 		TxHash:  log.TxHash,
 	}
