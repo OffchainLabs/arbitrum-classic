@@ -18,6 +18,7 @@ package rollup
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"os"
@@ -35,7 +36,7 @@ import (
 )
 
 type RollupCheckpointer interface {
-	RestoreLatestState(common.Address, *structures.ChainParams, bool) (blockId *structures.BlockId, content *ChainObserverBuf, resCtx structures.RestoreContext)
+	RestoreLatestState(arbbridge.ArbClient, common.Address, bool) (blockId *structures.BlockId, content *ChainObserverBuf, resCtx structures.RestoreContext)
 	GetInitialMachine() (machine.Machine, error)
 	AsyncSaveCheckpoint(
 		blockId *structures.BlockId,
@@ -58,8 +59,8 @@ func NewDummyCheckpointer(arbitrumCodefilePath string) RollupCheckpointer {
 }
 
 func (dcp *DummyCheckpointer) RestoreLatestState(
+	client arbbridge.ArbClient,
 	contractAddr common.Address,
-	params *structures.ChainParams,
 	beOpinionated bool,
 ) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
 	blockId := &structures.BlockId{common.NewTimeBlocks(big.NewInt(0)), common.Hash{}}
@@ -169,11 +170,23 @@ func (rcp *ProductionCheckpointer) _saveCheckpoint(
 	return nil
 }
 
+func getParamsForChain(client arbbridge.ArbClient, contractAddr common.Address) (structures.ChainParams, error) {
+	rollupWatcher, err := client.NewRollupWatcher(contractAddr)
+	if err != nil {
+		return structures.ChainParams{}, err
+	}
+	return rollupWatcher.GetParams(context.TODO())
+}
 func (rcp *ProductionCheckpointer) RestoreLatestState(
+	client arbbridge.ArbClient,
 	contractAddr common.Address,
-	params *structures.ChainParams,
 	beOpinionated bool,
 ) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
+	params, err := getParamsForChain(client, contractAddr)
+	if err != nil {
+		return nil, nil, nil
+	}
+
 	metadataBytes := rcp.cp.RestoreMetadata()
 	if metadataBytes == nil || len(metadataBytes) == 0 {
 		initMachine, err := rcp.GetInitialMachine()
@@ -181,7 +194,7 @@ func (rcp *ProductionCheckpointer) RestoreLatestState(
 			return nil, nil, nil
 		}
 		blockId := &structures.BlockId{common.NewTimeBlocks(big.NewInt(0)), common.Hash{}}
-		cob := MakeInitialChainObserverBuf(contractAddr, initMachine.Hash(), params, beOpinionated)
+		cob := MakeInitialChainObserverBuf(contractAddr, initMachine.Hash(), &params, beOpinionated)
 		resCtx := structures.NewSimpleRestoreContext()
 		resCtx.AddMachine(initMachine)
 		return blockId, cob, resCtx
