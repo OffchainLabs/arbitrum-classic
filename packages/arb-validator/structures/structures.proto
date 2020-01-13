@@ -79,3 +79,7 @@ message BlockIdBuf {
     common.HashBuf headerHash = 2;
 }
 
+message BlockIdBufList {
+    repeated BlockIdBuf bufs = 1;
+}
+

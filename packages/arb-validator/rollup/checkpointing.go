@@ -306,7 +306,7 @@ type checkpointerWithMetadata interface {
 		machines map[common.Hash]machine.Machine,
 	)
 	RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) // returns nil, nil if no data at blockHeight
-	DeleteOldCheckpoints(earliestRollbackPoint *common.TimeBlocks)
+	QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks)
 
 	GetInitialMachine() (machine.Machine, error)
 }
@@ -514,18 +514,24 @@ func (csc *productionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId
 	return contentBytes, csc
 }
 
-func (csc *productionCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *common.TimeBlocks) {
+func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks) {
 	// make a best effort to delete an old checkpoint, but ignore any errors
 	// errors might cause some harmless extra info to remain in the database
 
+	queueBytes := csc.st.GetData([]byte("deadqueue"))
+	queue := &structures.BlockIdBufList{}
+	if err := proto.Unmarshal(queueBytes, queue); err != nil {
+		return
+	}
 	for {
 		metadataBytes := csc.RestoreMetadata()
 		metadataBuf := &structures.CheckpointMetadata{}
 		if err := proto.Unmarshal(metadataBytes, metadataBuf); err != nil {
 			return
 		}
+		candidateId := metadataBuf.Oldest.Unmarshal()
 
-		linksBuf := csc.st.GetData(getLinksKey(metadataBuf.Oldest.Unmarshal()))
+		linksBuf := csc.st.GetData(getLinksKey(candidateId))
 		links := &structures.CheckpointLinks{}
 		if err := proto.Unmarshal(linksBuf, links); err != nil {
 			return
@@ -536,13 +542,18 @@ func (csc *productionCheckpointer) DeleteOldCheckpoints(earliestRollbackPoint *c
 			return
 		}
 
-		metadataBuf.Newest.Height = nextHeight.Marshal()
+		metadataBuf.Oldest = links.Next
 		metadataBytes, err := proto.Marshal(metadataBuf)
 		if err != nil {
 			return
 		}
 
-		csc.DeleteOneOldCheckpoint(metadataBuf.Oldest.Unmarshal())
+		queue.Bufs = append(queue.Bufs, candidateId.MarshalToBuf())
+		queueBytes, err = proto.Marshal(queue)
+		if err != nil {
+			return
+		}
+		csc.st.SaveData([]byte("deadqueue"), queueBytes)
 	}
 }
 
@@ -566,6 +577,7 @@ func (csc *productionCheckpointer) DeleteOneOldCheckpoint(blockId *structures.Bl
 		csc.st.DeleteCheckpoint(machhash)
 	}
 	csc.st.DeleteData(getContentsKey(blockId))
+	csc.st.DeleteData(getLinksKey(blockId))
 }
 
 func (csc *productionCheckpointer) GetValue(h common.Hash) value.Value {
