@@ -36,9 +36,11 @@ var dummyRollupAddress2 = common.Address{2}
 var dummyRollupAddress3 = common.Address{3}
 var dummyRollupAddress4 = common.Address{4}
 
+var contractPath string = "../contract.ao"
+
 func TestCreateEmptyChain(t *testing.T) {
-	testCreateEmptyChain(dummyRollupAddress1, "dummy", "contract.ao", t)
-	testCreateEmptyChain(dummyRollupAddress1, "fresh_rocksdb", "contract.ao", t)
+	testCreateEmptyChain(dummyRollupAddress1, "dummy", contractPath, t)
+	testCreateEmptyChain(dummyRollupAddress1, "fresh_rocksdb", contractPath, t)
 }
 
 func testCreateEmptyChain(rollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
@@ -82,8 +84,8 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpoi
 }
 
 func TestDoAssertion(t *testing.T) {
-	testDoAssertion(dummyRollupAddress2, "dummy", "contract.ao", t)
-	testDoAssertion(dummyRollupAddress2, "fresh_rocksdb", "contract.ao", t)
+	testDoAssertion(dummyRollupAddress2, "dummy", contractPath, t)
+	testDoAssertion(dummyRollupAddress2, "fresh_rocksdb", contractPath, t)
 }
 
 func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
@@ -104,8 +106,8 @@ func testDoAssertion(dummyRollupAddress common.Address, checkpointType string, c
 }
 
 func TestChallenge(t *testing.T) {
-	testChallenge(dummyRollupAddress3, "dummy", "contract.ao", t)
-	testChallenge(dummyRollupAddress3, "fresh_rocksdb", "contract.ao", t)
+	testChallenge(dummyRollupAddress3, "dummy", contractPath, t)
+	testChallenge(dummyRollupAddress3, "fresh_rocksdb", contractPath, t)
 }
 
 func testChallenge(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
@@ -189,8 +191,8 @@ func doAnAssertion(chain *ChainObserver, baseNode *Node) {
 }
 
 func TestCreateStakers(t *testing.T) {
-	testCreateStakers(dummyRollupAddress4, "dummy", "contract.ao", t)
-	testCreateStakers(dummyRollupAddress4, "fresh_rocksdb", "contract.ao", t)
+	testCreateStakers(dummyRollupAddress4, "dummy", contractPath, t)
+	testCreateStakers(dummyRollupAddress4, "fresh_rocksdb", contractPath, t)
 }
 
 func testCreateStakers(dummyRollupAddress common.Address, checkpointType string, contractPath string, t *testing.T) {
