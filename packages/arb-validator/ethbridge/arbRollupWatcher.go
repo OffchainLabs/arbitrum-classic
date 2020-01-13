@@ -22,112 +22,89 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
 	errors2 "github.com/pkg/errors"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-var rollupStakeCreatedID common.Hash
-var rollupChallengeStartedID common.Hash
-var rollupChallengeCompletedID common.Hash
-var rollupRefundedID common.Hash
-var rollupPrunedID common.Hash
-var rollupStakeMovedID common.Hash
-var rollupAssertedID common.Hash
-var rollupConfirmedID common.Hash
-var confirmedAssertionID common.Hash
-var debugEventID common.Hash
+var rollupStakeCreatedID ethcommon.Hash
+var rollupChallengeStartedID ethcommon.Hash
+var rollupChallengeCompletedID ethcommon.Hash
+var rollupRefundedID ethcommon.Hash
+var rollupPrunedID ethcommon.Hash
+var rollupStakeMovedID ethcommon.Hash
+var rollupAssertedID ethcommon.Hash
+var rollupConfirmedID ethcommon.Hash
+var confirmedAssertionID ethcommon.Hash
+var messageDeliveredID ethcommon.Hash
 
 func init() {
-	parsed, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
+	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
 	if err != nil {
 		panic(err)
 	}
-	rollupStakeCreatedID = parsed.Events["RollupStakeCreated"].ID()
-	rollupChallengeStartedID = parsed.Events["RollupChallengeStarted"].ID()
-	rollupChallengeCompletedID = parsed.Events["RollupChallengeCompleted"].ID()
-	rollupRefundedID = parsed.Events["RollupStakeRefunded"].ID()
-	rollupPrunedID = parsed.Events["RollupPruned"].ID()
-	rollupStakeMovedID = parsed.Events["RollupStakeMoved"].ID()
-	rollupAssertedID = parsed.Events["RollupAsserted"].ID()
-	rollupConfirmedID = parsed.Events["RollupConfirmed"].ID()
-	confirmedAssertionID = parsed.Events["ConfirmedAssertion"].ID()
-	debugEventID = parsed.Events["DebugData"].ID()
+	parsedInbox, err := abi.JSON(strings.NewReader(rollup.IGlobalPendingInboxABI))
+	if err != nil {
+		panic(err)
+	}
+	rollupStakeCreatedID = parsedRollup.Events["RollupStakeCreated"].ID()
+	rollupChallengeStartedID = parsedRollup.Events["RollupChallengeStarted"].ID()
+	rollupChallengeCompletedID = parsedRollup.Events["RollupChallengeCompleted"].ID()
+	rollupRefundedID = parsedRollup.Events["RollupStakeRefunded"].ID()
+	rollupPrunedID = parsedRollup.Events["RollupPruned"].ID()
+	rollupStakeMovedID = parsedRollup.Events["RollupStakeMoved"].ID()
+	rollupAssertedID = parsedRollup.Events["RollupAsserted"].ID()
+	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID()
+	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
+
+	messageDeliveredID = parsedInbox.Events["MessageDelivered"].ID()
 }
 
-type EthRollupWatcher struct {
-	Client             *ethclient.Client
+type ethRollupWatcher struct {
 	ArbRollup          *rollup.ArbRollup
 	GlobalPendingInbox *rollup.IGlobalPendingInbox
 
-	address common.Address
-	client  *ethclient.Client
+	address             ethcommon.Address
+	pendingInboxAddress ethcommon.Address
+	client              *ethclient.Client
 }
 
-func NewRollupWatcher(address common.Address, client *ethclient.Client) (*EthRollupWatcher, error) {
-	vm := &EthRollupWatcher{Client: client, address: address}
+func newRollupWatcher(address ethcommon.Address, client *ethclient.Client) (*ethRollupWatcher, error) {
+	vm := &ethRollupWatcher{client: client, address: address}
 	err := vm.setupContracts()
 	return vm, err
 }
 
-func (vm *EthRollupWatcher) setupContracts() error {
-	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.Client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ArbRollup")
+func (vm *ethRollupWatcher) messageFilter() ethereum.FilterQuery {
+	addressIndex := ethcommon.Hash{}
+	copy(addressIndex[:], ethcommon.LeftPadBytes(vm.address.Bytes(), 32))
+	return ethereum.FilterQuery{
+		Addresses: []ethcommon.Address{vm.pendingInboxAddress},
+		Topics: [][]ethcommon.Hash{
+			{messageDeliveredID},
+			{addressIndex},
+		},
 	}
-
-	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
-		Pending: false,
-		Context: context.Background(),
-	})
-	if err != nil {
-		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
-	}
-	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.Client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
-	}
-
-	vm.ArbRollup = arbitrumRollupContract
-	vm.GlobalPendingInbox = globalPendingContract
-	return nil
 }
 
-func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := vm.setupContracts(); err != nil {
-		return err
-	}
-
-	start := uint64(0)
-	watch := &bind.WatchOpts{
-		Context: ctx,
-		Start:   &start,
-	}
-
-	headers := make(chan *types.Header)
-	headersSub, err := vm.Client.SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return err
-	}
-
-	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{vm.address},
-		Topics: [][]common.Hash{
+func (vm *ethRollupWatcher) rollupFilter() ethereum.FilterQuery {
+	return ethereum.FilterQuery{
+		Addresses: []ethcommon.Address{vm.address},
+		Topics: [][]ethcommon.Hash{
 			{
 				rollupStakeCreatedID,
 				rollupChallengeStartedID,
@@ -138,27 +115,59 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 				rollupAssertedID,
 				rollupConfirmedID,
 				confirmedAssertionID,
-				debugEventID,
 			},
 		},
 	}
+}
 
-	logChan := make(chan types.Log)
-	logSub, err := vm.Client.SubscribeFilterLogs(ctx, filter, logChan)
+func (vm *ethRollupWatcher) setupContracts() error {
+	arbitrumRollupContract, err := rollup.NewArbRollup(vm.address, vm.client)
+	if err != nil {
+		return errors2.Wrap(err, "Failed to connect to arbRollup")
+	}
+
+	globalPendingInboxAddress, err := arbitrumRollupContract.GlobalInbox(&bind.CallOpts{
+		Pending: false,
+		Context: context.Background(),
+	})
+	if err != nil {
+		return errors2.Wrap(err, "Failed to get GlobalPendingInbox address")
+	}
+	vm.pendingInboxAddress = globalPendingInboxAddress
+	globalPendingContract, err := rollup.NewIGlobalPendingInbox(globalPendingInboxAddress, vm.client)
+	if err != nil {
+		return errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")
+	}
+
+	vm.ArbRollup = arbitrumRollupContract
+	vm.GlobalPendingInbox = globalPendingContract
+	return nil
+}
+
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+	if err := vm.setupContracts(); err != nil {
+		return err
+	}
+
+	headers := make(chan *types.Header)
+	headersSub, err := vm.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		return err
 	}
 
-	messageDeliveredChan := make(chan *rollup.IGlobalPendingInboxMessageDelivered)
-	messageDeliveredSub, err := vm.GlobalPendingInbox.WatchMessageDelivered(watch, messageDeliveredChan, []common.Address{vm.address})
-	if err != nil {
+	logChan := make(chan types.Log, 1024)
+	logErrChan := make(chan error, 10)
+
+	if err := getLogs(ctx, vm.client, vm.rollupFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
+		return err
+	}
+
+	if err := getLogs(ctx, vm.client, vm.messageFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
 		return err
 	}
 
 	go func() {
 		defer headersSub.Unsubscribe()
-		defer messageDeliveredSub.Unsubscribe()
-		defer logSub.Unsubscribe()
 
 		for {
 			select {
@@ -166,58 +175,19 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 				break
 			case header := <-headers:
 				outChan <- arbbridge.Notification{
-					Header: header,
-					Event:  arbbridge.NewTimeEvent{},
+					BlockHeader: common.NewHashFromEth(header.Hash()),
+					BlockHeight: header.Number,
+					Event:       arbbridge.NewTimeEvent{},
 				}
-			case val := <-messageDeliveredChan:
-				header, err := vm.Client.HeaderByHash(context.Background(), val.Raw.BlockHash)
-				if err != nil {
+			case ethLog := <-logChan:
+				if err := vm.processEvents(ctx, ethLog, outChan); err != nil {
 					errChan <- err
 					return
 				}
-				rd := bytes.NewReader(val.Data)
-				msgData, err := value.UnmarshalValue(rd)
-				if err != nil {
-					errChan <- err
-					return
-				}
-
-				messageHash := solsha3.SoliditySHA3(
-					solsha3.Address(val.VmId),
-					solsha3.Bytes32(msgData.Hash()),
-					solsha3.Uint256(val.Value),
-					val.TokenType[:],
-				)
-				msgHashInt := new(big.Int).SetBytes(messageHash[:])
-
-				msgVal, _ := value.NewTupleFromSlice([]value.Value{
-					msgData,
-					value.NewIntValue(new(big.Int).SetUint64(header.Time)),
-					value.NewIntValue(header.Number),
-					value.NewIntValue(msgHashInt),
-				})
-
-				msg := protocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, val.Sender)
-				outChan <- arbbridge.Notification{
-					Header: header,
-					VMID:   val.VmId,
-					Event: arbbridge.MessageDeliveredEvent{
-						Msg: msg,
-					},
-					TxHash: val.Raw.TxHash,
-				}
-			case log := <-logChan:
-				if err := vm.processEvents(ctx, log, outChan); err != nil {
-					errChan <- err
-					return
-				}
+			case err := <-logErrChan:
+				errChan <- err
+				return
 			case err := <-headersSub.Err():
-				errChan <- err
-				return
-			case err := <-messageDeliveredSub.Err():
-				errChan <- err
-				return
-			case err := <-logSub.Err():
 				errChan <- err
 				return
 			}
@@ -226,130 +196,140 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 	return nil
 }
 
-func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log, outChan chan arbbridge.Notification) error {
 	event, err := func() (arbbridge.Event, error) {
-		if log.Topics[0] == rollupStakeCreatedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(log)
+		if ethLog.Topics[0] == rollupStakeCreatedID {
+			eventVal, err := vm.ArbRollup.ParseRollupStakeCreated(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.StakeCreatedEvent{
-				Staker:   eventVal.Staker,
+				Staker:   common.NewAddressFromEth(eventVal.Staker),
 				NodeHash: eventVal.NodeHash,
 			}, nil
-		} else if log.Topics[0] == rollupChallengeStartedID {
-			eventVal, err := vm.ArbRollup.ParseRollupChallengeStarted(log)
+		} else if ethLog.Topics[0] == rollupChallengeStartedID {
+			eventVal, err := vm.ArbRollup.ParseRollupChallengeStarted(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.ChallengeStartedEvent{
-				Asserter:          eventVal.Asserter,
-				Challenger:        eventVal.Challenger,
+				Asserter:          common.NewAddressFromEth(eventVal.Asserter),
+				Challenger:        common.NewAddressFromEth(eventVal.Challenger),
 				ChallengeType:     structures.ChildType(eventVal.ChallengeType.Uint64()),
-				ChallengeContract: eventVal.ChallengeContract,
+				ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
 			}, nil
-		} else if log.Topics[0] == rollupChallengeCompletedID {
-			eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(log)
+		} else if ethLog.Topics[0] == rollupChallengeCompletedID {
+			eventVal, err := vm.ArbRollup.ParseRollupChallengeCompleted(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.ChallengeCompletedEvent{
-				Winner:            eventVal.Winner,
-				Loser:             eventVal.Loser,
-				ChallengeContract: eventVal.ChallengeContract,
+				Winner:            common.NewAddressFromEth(eventVal.Winner),
+				Loser:             common.NewAddressFromEth(eventVal.Loser),
+				ChallengeContract: common.NewAddressFromEth(eventVal.ChallengeContract),
 			}, nil
-		} else if log.Topics[0] == rollupRefundedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(log)
+		} else if ethLog.Topics[0] == rollupRefundedID {
+			eventVal, err := vm.ArbRollup.ParseRollupStakeRefunded(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.StakeRefundedEvent{
-				Staker: eventVal.Staker,
+				Staker: common.NewAddressFromEth(eventVal.Staker),
 			}, nil
-		} else if log.Topics[0] == rollupPrunedID {
-			eventVal, err := vm.ArbRollup.ParseRollupPruned(log)
+		} else if ethLog.Topics[0] == rollupPrunedID {
+			eventVal, err := vm.ArbRollup.ParseRollupPruned(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.PrunedEvent{
 				Leaf: eventVal.Leaf,
 			}, nil
-		} else if log.Topics[0] == rollupStakeMovedID {
-			eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(log)
+		} else if ethLog.Topics[0] == rollupStakeMovedID {
+			eventVal, err := vm.ArbRollup.ParseRollupStakeMoved(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.StakeMovedEvent{
-				Staker:   eventVal.Staker,
+				Staker:   common.NewAddressFromEth(eventVal.Staker),
 				Location: eventVal.ToNodeHash,
 			}, nil
-		} else if log.Topics[0] == rollupAssertedID {
-			eventVal, err := vm.ArbRollup.ParseRollupAsserted(log)
+		} else if ethLog.Topics[0] == rollupAssertedID {
+			eventVal, err := vm.ArbRollup.ParseRollupAsserted(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.AssertedEvent{
-				PrevLeafHash: eventVal.PrevLeaf,
+				PrevLeafHash: eventVal.Fields[0],
 				Params: &structures.AssertionParams{
 					NumSteps: eventVal.NumSteps,
-					TimeBounds: protocol.NewTimeBoundsBlocks(
-						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
-						protocol.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
-					),
+					TimeBounds: &protocol.TimeBoundsBlocks{
+						common.NewTimeBlocks(eventVal.TimeBoundsBlocks[0]),
+						common.NewTimeBlocks(eventVal.TimeBoundsBlocks[1]),
+					},
 					ImportedMessageCount: eventVal.ImportedMessageCount,
 				},
 				Claim: &structures.AssertionClaim{
-					AfterPendingTop:       eventVal.AfterPendingTop,
-					ImportedMessagesSlice: eventVal.ImportedMessagesSlice,
-					AssertionStub: protocol.NewExecutionAssertionStub(
-						eventVal.AfterVMHash,
-						eventVal.DidInboxInsn,
-						eventVal.NumArbGas,
-						eventVal.MessagesAccHash,
-						eventVal.LogsAccHash,
-					),
+					AfterPendingTop:       eventVal.Fields[2],
+					ImportedMessagesSlice: eventVal.Fields[3],
+					AssertionStub: &valprotocol.ExecutionAssertionStub{
+						AfterHash:        eventVal.Fields[4],
+						DidInboxInsn:     eventVal.DidInboxInsn,
+						NumGas:           eventVal.NumArbGas,
+						FirstMessageHash: [32]byte{},
+						LastMessageHash:  eventVal.Fields[5],
+						FirstLogHash:     [32]byte{},
+						LastLogHash:      eventVal.Fields[6],
+					},
 				},
-				MaxPendingTop: eventVal.PendingValue,
+				MaxPendingTop:   eventVal.Fields[1],
+				MaxPendingCount: eventVal.PendingCount,
 			}, nil
-		} else if log.Topics[0] == rollupConfirmedID {
-			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(log)
+		} else if ethLog.Topics[0] == rollupConfirmedID {
+			eventVal, err := vm.ArbRollup.ParseRollupConfirmed(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.ConfirmedEvent{
 				NodeHash: eventVal.NodeHash,
 			}, nil
-		} else if log.Topics[0] == confirmedAssertionID {
-			eventVal, err := vm.ArbRollup.ParseConfirmedAssertion(log)
+		} else if ethLog.Topics[0] == confirmedAssertionID {
+			eventVal, err := vm.ArbRollup.ParseConfirmedAssertion(ethLog)
 			if err != nil {
 				return nil, err
 			}
 			return arbbridge.ConfirmedAssertionEvent{
 				LogsAccHash: eventVal.LogsAccHash,
 			}, nil
-		} else if log.Topics[0] == debugEventID {
-			//eventVal, err := vm.ArbRollup.ParseDebugData(log)
-			//if err != nil {
-			//	return nil, err
-			//}
-			//fmt.Println("Debug event")
-			//fmt.Println("BeforeVMHash", hexutil.Encode(eventVal.BeforeVMHash[:]))
-			//fmt.Println("TimeBounds", eventVal.TimeBoundsBlocks)
-			//fmt.Println("Inbox hash", hexutil.Encode(eventVal.Inbox[:]))
-			//fmt.Println("PreconditionHash", hexutil.Encode(eventVal.Precondition[:]))
+		} else if ethLog.Topics[0] == messageDeliveredID {
+			val, err := vm.GlobalPendingInbox.ParseMessageDelivered(ethLog)
+			if err != nil {
+				return nil, err
+			}
 
-			//fmt.Println("PrevLeaf", hexutil.Encode(eventVal.PrevLeaf[:]))
-			//fmt.Println("DeadlineTicks", eventVal.DeadlineTicks)
-			//fmt.Println("BeforePendingTop", hexutil.Encode(eventVal.BeforePendingTop[:]))
-			//fmt.Println("AfterPendingTop", hexutil.Encode(eventVal.AfterPendingTop[:]))
-			//fmt.Println("ImportedMessagesSlice", hexutil.Encode(eventVal.ImportedMessagesSlice[:]))
-			//fmt.Println("ImportedMessageCount", eventVal.ImportedMessageCount)
-			//fmt.Println("ChallengePeriod", eventVal.ChallengePeriod)
-			//fmt.Println("ChildType", eventVal.ChildType)
-			//fmt.Println("VmProtoHashBefore", hexutil.Encode(eventVal.VmProtoHashBefore[:]))
-			//fmt.Println("ChallengeHash", hexutil.Encode(eventVal.ChallengeHash[:]))
-			//fmt.Println("NodeDataHash", hexutil.Encode(eventVal.NodeDataHash[:]))
-			return nil, nil
+			rd := bytes.NewReader(val.Data)
+			msgData, err := value.UnmarshalValue(rd)
+			if err != nil {
+				return nil, err
+			}
+
+			messageHash := hashing.SoliditySHA3(
+				hashing.Address(common.NewAddressFromEth(val.VmId)),
+				hashing.Bytes32(msgData.Hash()),
+				hashing.Uint256(val.Value),
+				val.TokenType[:],
+			)
+			msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
+
+			msgVal, _ := value.NewTupleFromSlice([]value.Value{
+				msgData,
+				value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
+				value.NewIntValue(msgHashInt),
+			})
+
+			msg := valprotocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, common.NewAddressFromEth(val.Sender))
+			return arbbridge.MessageDeliveredEvent{
+				Msg: msg,
+			}, nil
 		}
 		return nil, errors2.New("unknown arbitrum event type")
 	}()
@@ -358,21 +338,22 @@ func (vm *EthRollupWatcher) processEvents(ctx context.Context, log types.Log, ou
 		return err
 	}
 	if event != nil {
-		header, err := vm.Client.HeaderByHash(ctx, log.BlockHash)
+		header, err := vm.client.HeaderByHash(ctx, ethLog.BlockHash)
 		if err != nil {
 			return err
 		}
 		outChan <- arbbridge.Notification{
-			Header: header,
-			VMID:   vm.address,
-			Event:  event,
-			TxHash: log.TxHash,
+			BlockHeader: common.NewHashFromEth(header.Hash()),
+			BlockHeight: header.Number,
+			VMID:        common.NewAddressFromEth(vm.address),
+			Event:       event,
+			TxHash:      ethLog.TxHash,
 		}
 	}
 	return nil
 }
 
-func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
+func (vm *ethRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
 	rawParams, err := vm.ArbRollup.VmParams(nil)
 	if err != nil {
 		return structures.ChainParams{}, err
@@ -383,8 +364,13 @@ func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainPara
 	}
 	return structures.ChainParams{
 		StakeRequirement:        stakeRequired,
-		GracePeriod:             structures.TimeTicks{rawParams.GracePeriodTicks},
+		GracePeriod:             common.TimeTicks{rawParams.GracePeriodTicks},
 		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
 		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
 	}, nil
+}
+
+func (vm *ethRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+	addr, err := vm.ArbRollup.GlobalInbox(nil)
+	return common.NewAddressFromEth(addr), err
 }

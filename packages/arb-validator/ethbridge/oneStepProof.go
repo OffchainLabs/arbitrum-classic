@@ -17,48 +17,50 @@
 package ethbridge
 
 import (
+	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/onestepproof"
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-type OneStepProof struct {
-	contract *onestepproof.OneStepProof
+type oneStepProof struct {
+	contract *executionchallenge.OneStepProof
 	client   *ethclient.Client
 }
 
-func NewOneStepProof(address common.Address, client *ethclient.Client) (*OneStepProof, error) {
-	contract, err := onestepproof.NewOneStepProof(address, client)
+func newOneStepProof(address ethcommon.Address, client *ethclient.Client) (*oneStepProof, error) {
+	contract, err := executionchallenge.NewOneStepProof(address, client)
 	if err != nil {
-		return nil, errors2.Wrap(err, "Failed to connect to OneStepProof")
+		return nil, errors2.Wrap(err, "Failed to connect to oneStepProof")
 	}
 
-	return &OneStepProof{contract, client}, nil
+	return &oneStepProof{contract, client}, nil
 }
 
-func (con *OneStepProof) ValidateProof(
-	auth *bind.CallOpts,
-	precondition *protocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+func (con *oneStepProof) ValidateProof(
+	ctx context.Context,
+	precondition *valprotocol.Precondition,
+	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
 	return con.contract.ValidateProof(
-		auth,
+		&bind.CallOpts{Context: ctx},
 		precondition.BeforeHash,
 		precondition.TimeBounds.AsIntArray(),
 		precondition.BeforeInbox.Hash(),
-		assertion.AfterHashValue(),
+		assertion.AfterHash,
 		assertion.DidInboxInsn,
-		assertion.FirstMessageHashValue(),
-		assertion.LastMessageHashValue(),
-		assertion.FirstLogHashValue(),
-		assertion.LastLogHashValue(),
+		assertion.FirstMessageHash,
+		assertion.LastMessageHash,
+		assertion.FirstLogHash,
+		assertion.LastLogHash,
 		assertion.NumGas,
 		proof,
 	)

@@ -26,9 +26,9 @@ interface ArbRollupInterface extends Interface {
                 vmProtoHashes,
                 asserterProof,
                 challengerProof,
-                asserterDataHash,
-                asserterPeriodTicks,
-                challengerNodeHash,
+                asserterNodeHash,
+                challengerDataHash,
+                challengerPeriodTicks,
             ]: [
                 string,
                 string,
@@ -39,8 +39,8 @@ interface ArbRollupInterface extends Interface {
                 (Arrayish)[],
                 (Arrayish)[],
                 Arrayish,
-                BigNumberish,
                 Arrayish,
+                BigNumberish,
             ]): string;
         }>;
 
@@ -151,19 +151,14 @@ interface ArbRollupInterface extends Interface {
 
         RollupAsserted: TypedEventDescription<{
             encodeTopics([
-                prevLeaf,
-                pendingValue,
+                fields,
+                pendingCount,
                 importedMessageCount,
-                afterPendingTop,
-                importedMessagesSlice,
-                afterVMHash,
-                messagesAccHash,
-                logsAccHash,
                 timeBoundsBlocks,
                 numArbGas,
                 numSteps,
                 didInboxInsn,
-            ]: [null, null, null, null, null, null, null, null, null, null, null, null]): string[];
+            ]: [null, null, null, null, null, null, null]): string[];
         }>;
 
         RollupChallengeCompleted: TypedEventDescription<{
@@ -210,6 +205,8 @@ export class ArbRollup extends Contract {
     interface: ArbRollupInterface;
 
     functions: {
+        isStaked(_stakerAddress: string): Promise<boolean>;
+
         isValidLeaf(leaf: Arrayish): Promise<boolean>;
 
         vmParams(): Promise<{
@@ -239,9 +236,9 @@ export class ArbRollup extends Contract {
             vmProtoHashes: (Arrayish)[],
             asserterProof: (Arrayish)[],
             challengerProof: (Arrayish)[],
-            asserterDataHash: Arrayish,
-            asserterPeriodTicks: BigNumberish,
-            challengerNodeHash: Arrayish,
+            asserterNodeHash: Arrayish,
+            challengerDataHash: Arrayish,
+            challengerPeriodTicks: BigNumberish,
             overrides?: TransactionOverrides,
         ): Promise<ContractTransaction>;
 
@@ -341,14 +338,9 @@ export class ArbRollup extends Contract {
         ConfirmedAssertion(logsAccHash: null): EventFilter;
 
         RollupAsserted(
-            prevLeaf: null,
-            pendingValue: null,
+            fields: null,
+            pendingCount: null,
             importedMessageCount: null,
-            afterPendingTop: null,
-            importedMessagesSlice: null,
-            afterVMHash: null,
-            messagesAccHash: null,
-            logsAccHash: null,
             timeBoundsBlocks: null,
             numArbGas: null,
             numSteps: null,
@@ -389,9 +381,9 @@ export class ArbRollup extends Contract {
             vmProtoHashes: (Arrayish)[],
             asserterProof: (Arrayish)[],
             challengerProof: (Arrayish)[],
-            asserterDataHash: Arrayish,
-            asserterPeriodTicks: BigNumberish,
-            challengerNodeHash: Arrayish,
+            asserterNodeHash: Arrayish,
+            challengerDataHash: Arrayish,
+            challengerPeriodTicks: BigNumberish,
         ): Promise<BigNumber>;
 
         init(

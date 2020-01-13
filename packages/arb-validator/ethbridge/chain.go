@@ -21,26 +21,34 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type ArbAddresses struct {
-	ArbFactory         string `json:"ArbFactory"`
-	GlobalPendingInbox string `json:"GlobalPendingInbox"`
-	OneStepProof       string `json:"OneStepProof"`
+	ArbFactory   string `json:"ArbFactory"`
+	OneStepProof string `json:"OneStepProof"`
 }
 
-func waitForReceipt(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) error {
-	_, err := waitForReceiptWithResults(ctx, client, from, tx, methodName)
+func (a ArbAddresses) ArbFactoryAddress() common.Address {
+	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
+}
+
+func (a ArbAddresses) OneStepProofAddress() common.Address {
+	return common.NewAddressFromEth(ethcommon.HexToAddress(a.OneStepProof))
+}
+
+func waitForReceipt(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) error {
+	_, err := WaitForReceiptWithResults(ctx, client, from, tx, methodName)
 	return err
 }
-func waitForReceiptWithResults(ctx context.Context, client *ethclient.Client, from common.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+func WaitForReceiptWithResults(ctx context.Context, client *ethclient.Client, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
 	for {
 		select {
 		case _ = <-time.After(time.Second):

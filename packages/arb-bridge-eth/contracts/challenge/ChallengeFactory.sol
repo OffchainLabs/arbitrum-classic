@@ -75,16 +75,7 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
         external
         returns(address)
     {
-        address challengeTemplate;
-        if (challengeType == INVALID_PENDING_TOP_TYPE) {
-            challengeTemplate = pendingTopChallengeTemplate;
-        } else if (challengeType == INVALID_MESSAGES_TYPE) {
-            challengeTemplate = messagesChallengeTemplate;
-        } else if (challengeType == INVALID_EXECUTION_TYPE) {
-            challengeTemplate = executionChallengeTemplate;
-        } else {
-            require(false, INVALID_TYPE);
-        }
+        address challengeTemplate = getChallengeTemplate(challengeType);
         address clone = create2Clone(
             challengeTemplate,
             generateNonce(address(_asserter), address(_challenger))
@@ -99,7 +90,7 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
         return address(clone);
     }
 
-    function generateNonce(address asserter, address challenger) public view returns(uint) {
+    function generateNonce(address asserter, address challenger) private view returns(uint) {
         return uint(
             keccak256(
                 abi.encodePacked(
@@ -109,5 +100,17 @@ contract ChallengeFactory is CloneFactory, ChallengeType, IChallengeFactory {
                 )
             )
         );
+    }
+
+    function getChallengeTemplate(uint256 challengeType) private view returns(address) {
+        if (challengeType == INVALID_PENDING_TOP_TYPE) {
+            return pendingTopChallengeTemplate;
+        } else if (challengeType == INVALID_MESSAGES_TYPE) {
+            return messagesChallengeTemplate;
+        } else if (challengeType == INVALID_EXECUTION_TYPE) {
+            return executionChallengeTemplate;
+        } else {
+            require(false, INVALID_TYPE);
+        }
     }
 }

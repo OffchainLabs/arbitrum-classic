@@ -20,11 +20,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
@@ -34,9 +32,10 @@ type ChainListener interface {
 	StakeMoved(arbbridge.StakeMovedEvent)
 	StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node)
 	CompletedChallenge(event arbbridge.ChallengeCompletedEvent)
-	SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte)
+	SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash)
 	ConfirmedNode(arbbridge.ConfirmedEvent)
 	PrunedLeaf(arbbridge.PrunedEvent)
+	MessageDelivered(arbbridge.MessageDeliveredEvent)
 
 	AssertionPrepared(*preparedAssertion)
 	ValidNodeConfirmable(*confirmValidOpportunity)
@@ -45,16 +44,16 @@ type ChainListener interface {
 	MootableStakes([]recoverStakeMootedParams)
 	OldStakes([]recoverStakeOldParams)
 
-	AdvancedKnownValidNode([32]byte)
-	AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte)
+	AdvancedKnownValidNode(common.Hash)
+	AdvancedKnownAssertion(*protocol.ExecutionAssertion, common.Hash)
 }
 
 type ValidatorChainListener struct {
 	chain                  *ChainObserver
 	stakers                map[common.Address]*StakerListener
-	broadcastAssertions    map[[32]byte]bool
-	broadcastConfirmations map[[32]byte]bool
-	broadcastLeafPrunes    map[[32]byte]bool
+	broadcastAssertions    map[common.Hash]bool
+	broadcastConfirmations map[common.Hash]bool
+	broadcastLeafPrunes    map[common.Hash]bool
 }
 
 func NewValidatorChainListener(
@@ -63,9 +62,9 @@ func NewValidatorChainListener(
 	return &ValidatorChainListener{
 		chain:                  chain,
 		stakers:                make(map[common.Address]*StakerListener),
-		broadcastAssertions:    make(map[[32]byte]bool),
-		broadcastConfirmations: make(map[[32]byte]bool),
-		broadcastLeafPrunes:    make(map[[32]byte]bool),
+		broadcastAssertions:    make(map[common.Hash]bool),
+		broadcastConfirmations: make(map[common.Hash]bool),
+		broadcastLeafPrunes:    make(map[common.Hash]bool),
 	}
 }
 
@@ -74,16 +73,34 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 	if err != nil {
 		return err
 	}
-	location := lis.chain.knownValidNode
-	proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
-	proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
-	go contract.PlaceStake(context.TODO(), lis.chain.nodeGraph.params.StakeRequirement, proof1, proof2)
+
 	address := client.Address()
 	staker := &StakerListener{
 		myAddr:   address,
 		client:   client,
 		contract: contract,
 	}
+
+	isStaked, err := contract.IsStaked(client.Address())
+	if err != nil {
+		return err
+	}
+	if !isStaked {
+		log.Println("Staking", address.Hex())
+		lis.chain.RLock()
+		location := lis.chain.knownValidNode
+		proof1 := GeneratePathProof(lis.chain.nodeGraph.latestConfirmed, location)
+		proof2 := GeneratePathProof(location, lis.chain.nodeGraph.getLeaf(location))
+		lis.chain.RUnlock()
+		go func() {
+			staker.Lock()
+			contract.PlaceStake(context.TODO(), lis.chain.nodeGraph.params.StakeRequirement, proof1, proof2)
+			staker.Unlock()
+		}()
+	} else {
+		log.Println("Already staked", address.Hex())
+	}
+
 	lis.stakers[address] = staker
 	return nil
 }
@@ -110,24 +127,33 @@ func (lis *ValidatorChainListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
 
 func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context, stakerAddr common.Address) {
 	_, ok := lis.stakers[stakerAddr]
-	if !ok {
-		newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
-		for myAddr, staker := range lis.stakers {
-			meAsStaker := lis.chain.nodeGraph.stakers.Get(myAddr)
-			if meAsStaker != nil {
-				opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
-				if opp != nil {
-					staker.initiateChallenge(ctx, opp)
-					return
-				}
-			}
-			opp := lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
-			if opp != nil {
-				go staker.initiateChallenge(ctx, opp)
-				return
-			}
+	if ok {
+		// Can't challenge yourself
+		return
+	}
+
+	newStaker := lis.chain.nodeGraph.stakers.Get(stakerAddr)
+	if newStaker == nil {
+		log.Fatalf("Nonexistant staker moved %v", stakerAddr)
+	}
+
+	for myAddr, staker := range lis.stakers {
+		meAsStaker := lis.chain.nodeGraph.stakers.Get(myAddr)
+		if meAsStaker == nil {
+			continue
+		}
+		opp := lis.chain.nodeGraph.checkChallengeOpportunityPair(newStaker, meAsStaker)
+		if opp != nil {
+			staker.initiateChallenge(ctx, opp)
+			return
+		}
+		opp = lis.chain.nodeGraph.checkChallengeOpportunityAny(newStaker)
+		if opp != nil {
+			go staker.initiateChallenge(ctx, opp)
+			return
 		}
 	}
+
 }
 
 func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
@@ -186,7 +212,7 @@ func (lis *ValidatorChainListener) wonChallenge(arbbridge.ChallengeCompletedEven
 
 }
 
-func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *protocol.TimeBlocks, [32]byte) {
+func (lis *ValidatorChainListener) SawAssertion(arbbridge.AssertedEvent, *common.TimeBlocks, common.Hash) {
 
 }
 
@@ -195,6 +221,10 @@ func (lis *ValidatorChainListener) ConfirmedNode(arbbridge.ConfirmedEvent) {
 }
 
 func (lis *ValidatorChainListener) PrunedLeaf(arbbridge.PrunedEvent) {
+
+}
+
+func (lis *ValidatorChainListener) MessageDelivered(arbbridge.MessageDeliveredEvent) {
 
 }
 
@@ -337,5 +367,5 @@ func (lis *ValidatorChainListener) OldStakes(params []recoverStakeOldParams) {
 	}
 }
 
-func (lis *ValidatorChainListener) AdvancedKnownValidNode([32]byte)                               {}
-func (lis *ValidatorChainListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {}
+func (lis *ValidatorChainListener) AdvancedKnownValidNode(common.Hash)                               {}
+func (lis *ValidatorChainListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, common.Hash) {}

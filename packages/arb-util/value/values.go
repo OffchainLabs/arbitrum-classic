@@ -16,7 +16,12 @@
 
 package value
 
-import "io"
+import (
+	"bytes"
+	"io"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+)
 
 const (
 	TypeCodeInt       uint8 = 0
@@ -46,7 +51,7 @@ type Value interface {
 	Clone() Value
 	CloneShallow() Value
 	Equal(Value) bool
-	Hash() [32]byte
+	Hash() common.Hash
 	Size() int64
 	Marshal(io.Writer) error
 	MarshalForProof(io.Writer) error
@@ -54,22 +59,6 @@ type Value interface {
 
 func Eq(x, y Value) bool {
 	return x.Equal(y)
-	// xt := x.TypeCode()
-	// yt := y.TypeCode()
-	// if xt == TypeCodeHashOnly || yt == TypeCodeHashOnly {
-	//	return x.Hash() == y.Hash()
-	//} else if xt != yt {
-	//	return false
-	//} else {
-	//	switch xt {
-	//	case TypeCodeInt:
-	//		return x.(IntValue).val.Cmp(y.(IntValue).val) == 0
-	//	case TypeCodeTuple:
-	//		return x.(TupleValue).cachedHash == y.(TupleValue).cachedHash
-	//	default:
-	//		panic("ValueEq: Value has invalid TypeCode")
-	//	}
-	//}
 }
 
 type UnmarshalError struct {
@@ -86,6 +75,12 @@ func MarshalValue(v Value, w io.Writer) error {
 		return err
 	}
 	return v.Marshal(w)
+}
+
+func MarshalValueToBytes(val Value) []byte {
+	var buf bytes.Buffer
+	_ = MarshalValue(val, &buf)
+	return buf.Bytes()
 }
 
 func MarshalValueForProof(v Value, w io.Writer) error {
@@ -118,4 +113,9 @@ func UnmarshalValue(r io.Reader) (Value, error) {
 		return NewEmptyTuple(), err
 	}
 	return UnmarshalValueWithType(tipe[0], r)
+}
+
+func UnmarshalValueFromBytes(val []byte) (Value, error) {
+	buf := bytes.NewReader(val)
+	return UnmarshalValue(buf)
 }

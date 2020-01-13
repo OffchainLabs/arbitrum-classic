@@ -19,37 +19,25 @@ package arbbridge
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-)
-
-type IncomingMessageType int
-
-const (
-	CommonMessage IncomingMessageType = iota
-	ChallengeMessage
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type Event interface {
 }
 
-type VMEvent interface {
-	GetIncomingMessageType() IncomingMessageType
-}
-
 type Notification struct {
-	Header *types.Header
-	VMID   common.Address
-	Event  Event
-	TxHash [32]byte
+	BlockHeader common.Hash
+	BlockHeight *big.Int
+	VMID        common.Address
+	Event       Event
+	TxHash      [32]byte
 }
 
 type StakeCreatedEvent struct {
 	Staker   common.Address
-	NodeHash [32]byte
+	NodeHash common.Hash
 }
 
 func (e StakeCreatedEvent) RelatedToStaker(staker common.Address) bool {
@@ -86,7 +74,7 @@ func (e StakeRefundedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type PrunedEvent struct {
-	Leaf [32]byte
+	Leaf common.Hash
 }
 
 func (e PrunedEvent) RelatedToStaker(staker common.Address) bool {
@@ -95,7 +83,7 @@ func (e PrunedEvent) RelatedToStaker(staker common.Address) bool {
 
 type StakeMovedEvent struct {
 	Staker   common.Address
-	Location [32]byte
+	Location common.Hash
 }
 
 func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
@@ -103,10 +91,11 @@ func (e StakeMovedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type AssertedEvent struct {
-	PrevLeafHash  [32]byte
-	Params        *structures.AssertionParams
-	Claim         *structures.AssertionClaim
-	MaxPendingTop [32]byte
+	PrevLeafHash    common.Hash
+	Params          *structures.AssertionParams
+	Claim           *structures.AssertionClaim
+	MaxPendingTop   common.Hash
+	MaxPendingCount *big.Int
 }
 
 func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {
@@ -114,7 +103,7 @@ func (e AssertedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type ConfirmedEvent struct {
-	NodeHash [32]byte
+	NodeHash common.Hash
 }
 
 func (e ConfirmedEvent) RelatedToStaker(staker common.Address) bool {
@@ -122,11 +111,11 @@ func (e ConfirmedEvent) RelatedToStaker(staker common.Address) bool {
 }
 
 type ConfirmedAssertionEvent struct {
-	LogsAccHash [32]byte
+	LogsAccHash common.Hash
 }
 
 type InitiateChallengeEvent struct {
-	Deadline structures.TimeTicks
+	Deadline common.TimeTicks
 }
 
 type AsserterTimeoutEvent struct{}
@@ -135,32 +124,32 @@ type ChallengerTimeoutEvent struct{}
 
 type ContinueChallengeEvent struct {
 	SegmentIndex *big.Int
-	Deadline     structures.TimeTicks
+	Deadline     common.TimeTicks
 }
 
 type OneStepProofEvent struct{}
 
 type PendingTopBisectionEvent struct {
-	ChainHashes [][32]byte
+	ChainHashes []common.Hash
 	TotalLength *big.Int
-	Deadline    structures.TimeTicks
+	Deadline    common.TimeTicks
 }
 
 type MessagesBisectionEvent struct {
-	ChainHashes   [][32]byte
-	SegmentHashes [][32]byte
+	ChainHashes   []common.Hash
+	SegmentHashes []common.Hash
 	TotalLength   *big.Int
-	Deadline      structures.TimeTicks
+	Deadline      common.TimeTicks
 }
 
 type ExecutionBisectionEvent struct {
-	Assertions []*protocol.ExecutionAssertionStub
+	Assertions []*valprotocol.ExecutionAssertionStub
 	TotalSteps uint32
-	Deadline   structures.TimeTicks
+	Deadline   common.TimeTicks
 }
 
 type MessageDeliveredEvent struct {
-	Msg protocol.Message
+	Msg valprotocol.Message
 }
 
 type NewTimeEvent struct{}

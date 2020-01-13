@@ -17,32 +17,75 @@
 package protocol
 
 import (
-	"io"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type ExecutionAssertion struct {
-	AfterHash    [32]byte
+	AfterHash    common.Hash
 	DidInboxInsn bool
 	NumGas       uint64
 	OutMsgs      []value.Value
 	Logs         []value.Value
 }
 
-type MultiReader interface {
-	io.Reader
-	io.ByteReader
-}
-
-func NewExecutionAssertion(afterHash [32]byte, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
+func NewExecutionAssertion(afterHash common.Hash, didInboxInsn bool, numGas uint64, outMsgs []value.Value, logs []value.Value) *ExecutionAssertion {
 	return &ExecutionAssertion{afterHash, didInboxInsn, numGas, outMsgs, logs}
 }
 
+func (a *ExecutionAssertion) MarshalToBuf() *ExecutionAssertionBuf {
+	messages := make([][]byte, 0, len(a.OutMsgs))
+	for _, msg := range a.OutMsgs {
+		valBytes := value.MarshalValueToBytes(msg)
+		messages = append(messages, valBytes)
+	}
+	logs := make([][]byte, 0, len(a.Logs))
+	for _, msg := range a.OutMsgs {
+		valBytes := value.MarshalValueToBytes(msg)
+		logs = append(logs, valBytes)
+	}
+	return &ExecutionAssertionBuf{
+		AfterHash:    a.AfterHash.MarshalToBuf(),
+		DidInboxInsn: a.DidInboxInsn,
+		NumGas:       a.NumGas,
+		Messages:     messages,
+		Logs:         logs,
+	}
+}
+
+func (a *ExecutionAssertionBuf) Unmarshal() (*ExecutionAssertion, error) {
+	messages := make([]value.Value, 0, len(a.Logs))
+	for _, valLog := range a.Messages {
+		val, err := value.UnmarshalValueFromBytes(valLog)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, val)
+	}
+
+	logs := make([]value.Value, 0, len(a.Logs))
+	for _, valLog := range a.Logs {
+		val, err := value.UnmarshalValueFromBytes(valLog)
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, val)
+	}
+	return &ExecutionAssertion{
+		AfterHash:    a.AfterHash.Unmarshal(),
+		DidInboxInsn: a.DidInboxInsn,
+		NumGas:       a.NumGas,
+		OutMsgs:      messages,
+		Logs:         logs,
+	}, nil
+}
+
 func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
-	if a.AfterHash != b.AfterHash || (a.NumGas != b.NumGas) || (len(a.OutMsgs) != len(b.OutMsgs)) {
+	if a.AfterHash != b.AfterHash ||
+		a.DidInboxInsn != b.DidInboxInsn ||
+		a.NumGas != b.NumGas ||
+		len(a.OutMsgs) != len(b.OutMsgs) ||
+		len(a.Logs) != len(b.Logs) {
 		return false
 	}
 	for i, ao := range a.OutMsgs {
@@ -56,29 +99,4 @@ func (a *ExecutionAssertion) Equals(b *ExecutionAssertion) bool {
 		}
 	}
 	return true
-}
-
-func (a *ExecutionAssertion) LogsHash() [32]byte {
-	var logHash [32]byte
-	for _, logVal := range a.Logs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(logHash), solsha3.Bytes32(logVal.Hash()))
-		copy(logHash[:], next)
-	}
-	return logHash
-}
-
-func (a *ExecutionAssertion) Stub() *ExecutionAssertionStub {
-	var lastHash [32]byte
-	for _, msg := range a.OutMsgs {
-		next := solsha3.SoliditySHA3(solsha3.Bytes32(lastHash), solsha3.Bytes32(msg.Hash()))
-		copy(lastHash[:], next)
-	}
-
-	return NewExecutionAssertionStub(
-		a.AfterHash,
-		a.DidInboxInsn,
-		a.NumGas,
-		lastHash,
-		a.LogsHash(),
-	)
 }

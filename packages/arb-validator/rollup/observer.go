@@ -18,28 +18,32 @@ package rollup
 
 import (
 	"context"
+	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 	"log"
 	"math/big"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func CreateObserver(
 	ctx context.Context,
 	rollupAddr common.Address,
-	checkpointer *structures.RollupCheckpointer,
+	checkpointer RollupCheckpointer,
 	updateOpinion bool,
-	startTime *protocol.TimeBlocks,
 	clnt arbbridge.ArbClient,
 ) (*ChainObserver, error) {
+	currentBlockNum, currentHeaderHash, err := clnt.CurrentBlockTimeAndHash(ctx)
+	if err != nil {
+		return nil, err
+	}
+	currentBlockId := &structures.BlockId{
+		Height:     currentBlockNum,
+		HeaderHash: currentHeaderHash,
+	}
 	rollup, err := clnt.NewRollupWatcher(rollupAddr)
 	if err != nil {
 		return nil, err
@@ -50,22 +54,27 @@ func CreateObserver(
 	}
 
 	chain, err := NewChain(
-		ctx,
 		rollupAddr,
 		checkpointer,
 		vmParams,
 		updateOpinion,
-		startTime,
+		currentBlockId,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("Starting connection")
 
 	outChan := make(chan arbbridge.Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := rollup.StartConnection(ctx, outChan, errChan); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("Started connection")
+
+	chain.Start(ctx)
 
 	go func() {
 		lastBlockNumberSeen := big.NewInt(0)
@@ -79,9 +88,12 @@ func CreateObserver(
 					hitError = true
 					break
 				}
-				if notification.Header.Number.Cmp(lastBlockNumberSeen) > 0 {
-					lastBlockNumberSeen = notification.Header.Number
-					chain.notifyNewBlockNumber(protocol.NewTimeBlocks(lastBlockNumberSeen))
+				if notification.BlockHeight.Cmp(lastBlockNumberSeen) > 0 {
+					blockId := &structures.BlockId{
+						common.NewTimeBlocks(notification.BlockHeight),
+						notification.BlockHeader,
+					}
+					chain.notifyNewBlock(blockId)
 				}
 				handleNotification(notification, chain)
 			case <-errChan:
@@ -110,7 +122,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.MessageDeliveredEvent:
 		chain.messageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := structures.TimeFromBlockNum(protocol.NewTimeBlocks(notification.Header.Number))
+		currentTime := common.TimeFromBlockNum(common.NewTimeBlocks(notification.BlockHeight))
 		chain.createStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.newChallenge(ev)
@@ -123,7 +135,7 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.StakeMovedEvent:
 		chain.moveStake(ev)
 	case arbbridge.AssertedEvent:
-		currentTime := protocol.NewTimeBlocks(notification.Header.Number)
+		currentTime := common.NewTimeBlocks(notification.BlockHeight)
 		err := chain.notifyAssert(ev, currentTime, notification.TxHash)
 		if err != nil {
 			panic(err)
@@ -131,8 +143,4 @@ func handleNotification(notification arbbridge.Notification, chain *ChainObserve
 	case arbbridge.ConfirmedEvent:
 		chain.confirmNode(ev)
 	}
-}
-
-func calcSigHash(sig string) common.Hash {
-	return crypto.Keccak256Hash([]byte(sig))
 }

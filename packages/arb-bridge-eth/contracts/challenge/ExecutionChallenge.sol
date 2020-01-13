@@ -152,27 +152,35 @@ contract ExecutionChallenge is BisectionChallenge {
             everDidInboxInsn = everDidInboxInsn || _data.didInboxInsns[i];
         }
 
+        bytes32 preconditionHash = Protocol.generatePreconditionHash(
+             _data.machineHashes[0],
+             _data.timeBoundsBlocks,
+             _data.beforeInbox
+        );
+        bytes32 assertionHash = Protocol.generateAssertionHash(
+            _data.machineHashes[bisectionCount],
+            everDidInboxInsn,
+            totalGas,
+            _data.messageAccs[0],
+            _data.messageAccs[bisectionCount],
+            _data.logAccs[0],
+            _data.logAccs[bisectionCount]
+        );
+
         requireMatchesPrevState(
-            ChallengeUtils.executionHash(
-                _data.totalSteps,
-                Protocol.generatePreconditionHash(
-                     _data.machineHashes[0],
-                     _data.timeBoundsBlocks,
-                     _data.beforeInbox
-                ),
-                Protocol.generateAssertionHash(
-                    _data.machineHashes[bisectionCount],
-                    everDidInboxInsn,
-                    totalGas,
-                    _data.messageAccs[0],
-                    _data.messageAccs[bisectionCount],
-                    _data.logAccs[0],
-                    _data.logAccs[bisectionCount]
-                )
-            )
+            ChallengeUtils.executionHash(_data.totalSteps, preconditionHash, assertionHash)
         );
 
         bytes32[] memory hashes = new bytes32[](bisectionCount);
+        assertionHash = Protocol.generateAssertionHash(
+            _data.machineHashes[1],
+            _data.didInboxInsns[0],
+            _data.gases[0],
+            _data.messageAccs[0],
+            _data.messageAccs[1],
+            _data.logAccs[0],
+            _data.logAccs[1]
+        );
         hashes[0] = ChallengeUtils.executionHash(
             uint32(firstSegmentSize(uint(_data.totalSteps), bisectionCount)),
             Protocol.generatePreconditionHash(
@@ -180,17 +188,9 @@ contract ExecutionChallenge is BisectionChallenge {
                  _data.timeBoundsBlocks,
                  _data.beforeInbox
             ),
-            Protocol.generateAssertionHash(
-                _data.machineHashes[1],
-                _data.didInboxInsns[0],
-                _data.gases[0],
-                _data.messageAccs[0],
-                _data.messageAccs[1],
-                _data.logAccs[0],
-                _data.logAccs[1]
-            )
+            assertionHash
         );
-        bytes32 assertionHash;
+
         for (uint256 i = 1; i < bisectionCount; i++) {
             if (_data.didInboxInsns[i-1]) {
                 _data.beforeInbox = Value.hashEmptyTuple();

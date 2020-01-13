@@ -21,13 +21,12 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 )
 
@@ -39,7 +38,7 @@ type assertionCountRequest struct {
 }
 
 type txRequest struct {
-	txHash     [32]byte
+	txHash     common.Hash
 	resultChan chan<- txInfo
 }
 
@@ -47,7 +46,7 @@ type findLogsRequest struct {
 	fromHeight *int64
 	toHeight   *int64
 	address    *big.Int
-	topics     [][32]byte
+	topics     []common.Hash
 
 	resultChan chan<- []*LogInfo
 }
@@ -72,8 +71,8 @@ type assertionInfo struct {
 	LogsAccHashes     []string
 	LogsValHashes     []string
 	SequenceNum       uint64
-	BeforeHash        [32]byte
-	OriginalInboxHash [32]byte
+	BeforeHash        common.Hash
+	OriginalInboxHash common.Hash
 }
 
 type logResponse struct {
@@ -81,7 +80,7 @@ type logResponse struct {
 	Msg evm.EthMsg
 }
 
-func (a *assertionInfo) FindLogs(address *big.Int, topics [][32]byte) []logResponse {
+func (a *assertionInfo) FindLogs(address *big.Int, topics []common.Hash) []logResponse {
 	logs := make([]logResponse, 0)
 	for _, txLogs := range a.TxLogs {
 		for _, evmLog := range txLogs.Logs {
@@ -114,7 +113,7 @@ func newAssertionInfo() *assertionInfo {
 
 type txTracker struct {
 	txRequestIndex int
-	transactions   map[[32]byte]txInfo
+	transactions   map[common.Hash]txInfo
 	assertionInfo  []*assertionInfo
 	accountNonces  map[common.Address]uint64
 	vmID           common.Address
@@ -127,7 +126,7 @@ func newTxTracker(
 	requests := make(chan validatorRequest, 100)
 	return &txTracker{
 		txRequestIndex: 0,
-		transactions:   make(map[[32]byte]txInfo),
+		transactions:   make(map[common.Hash]txInfo),
 		assertionInfo:  make([]*assertionInfo, 0),
 		accountNonces:  make(map[common.Address]uint64),
 		vmID:           vmID,
@@ -141,7 +140,7 @@ func (tr *txTracker) AssertionCount() <-chan int {
 	return req
 }
 
-func (tr *txTracker) TxInfo(txHash [32]byte) <-chan txInfo {
+func (tr *txTracker) TxInfo(txHash common.Hash) <-chan txInfo {
 	req := make(chan txInfo, 1)
 	tr.requests <- txRequest{txHash, req}
 	return req
@@ -151,7 +150,7 @@ func (tr *txTracker) FindLogs(
 	fromHeight *int64,
 	toHeight *int64,
 	address *big.Int,
-	topics [][32]byte,
+	topics []common.Hash,
 ) <-chan []*LogInfo {
 	req := make(chan []*LogInfo, 1)
 	tr.requests <- findLogsRequest{fromHeight, toHeight, address, topics, req}
@@ -161,7 +160,7 @@ func (tr *txTracker) FindLogs(
 func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAssertion) {
 	info := newAssertionInfo()
 
-	zero := [32]byte{}
+	zero := common.Hash{}
 	logsPreHash := hexutil.Encode(zero[:])
 
 	disputableTxHash := hexutil.Encode(assertion.OnChainTxHash[:])
@@ -169,17 +168,17 @@ func (tr *txTracker) processFinalizedAssertion(assertion rollup.FinalizedAsserti
 	logs := assertion.Assertion.Logs
 	info.LogsValHashes = make([]string, 0, len(logs))
 	info.LogsAccHashes = make([]string, 0, len(logs))
-	acc := zero[:]
+	acc := common.Hash{}
 	for _, logsVal := range logs {
 		logsValHash := logsVal.Hash()
 		info.LogsValHashes = append(info.LogsValHashes,
 			hexutil.Encode(logsValHash[:]))
-		acc = solsha3.SoliditySHA3(
-			solsha3.Bytes32(acc),
-			solsha3.Bytes32(logsValHash),
+		acc = hashing.SoliditySHA3(
+			hashing.Bytes32(acc),
+			hashing.Bytes32(logsValHash),
 		)
 		info.LogsAccHashes = append(info.LogsAccHashes,
-			hexutil.Encode(acc))
+			hexutil.Encode(acc.Bytes()))
 	}
 
 	var logsPostHash string

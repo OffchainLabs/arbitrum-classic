@@ -152,6 +152,9 @@ func RunInstruction(m *Machine, op value.Operation) (StackMods, machine.BlockRea
 	}
 
 	if blocked, isBlocked := err.(BlockedError); isBlocked {
+		if _, ok := op.(value.ImmediateOperation); ok {
+			PopStackBox(m, mods)
+		}
 		return mods, blocked.reason
 	}
 	m.context.NotifyStep(gas)
@@ -684,13 +687,10 @@ func insnInbox(state *Machine) (StackMods, error) {
 		return mods, err
 	}
 	biTimeout := timeout.BigInt()
-	lowerTimeBound, err := state.GetTimeBounds().GetByInt64(0)
-	if err != nil {
-		log.Fatal(err)
-	}
+	lowerTimeBound := state.GetStartTime()
 	inboxVal := state.GetInbox()
-	if (biTimeout.Cmp(lowerTimeBound.(value.IntValue).BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
-		PushStackInt(state, mods, timeout)
+	if (biTimeout.Cmp(lowerTimeBound.BigInt()) > 0) && value.Eq(inboxVal, value.NewEmptyTuple()) {
+		mods = PushStackInt(state, mods, timeout)
 		return mods, BlockedError{machine.InboxBlocked{Timeout: timeout}}
 	}
 	state.context.ReadInbox()
@@ -1016,13 +1016,16 @@ func insnSend(state *Machine) (StackMods, error) {
 
 func insnGettime(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 1)
-	mods = PushStackTuple(state, mods, state.GetTimeBounds())
+	mods = PushStackTuple(state, mods, value.NewTuple2(state.GetStartTime(), state.GetEndTime()))
 	state.IncrPC()
 	return mods, nil
 }
 
 func insnDebug(state *Machine) (StackMods, error) {
 	mods := NewStackMods(0, 0)
+	val, _ := state.stack.Pop()
+	log.Println("Debug", val)
+	state.stack.Push(val)
 	state.IncrPC()
 	return mods, nil
 }

@@ -20,35 +20,35 @@ import (
 	"context"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type pruneParams struct {
-	leafHash     [32]byte
-	ancestorHash [32]byte
-	leafProof    [][32]byte
-	ancProof     [][32]byte
+	leafHash     common.Hash
+	ancestorHash common.Hash
+	leafProof    []common.Hash
+	ancProof     []common.Hash
 }
 
 func (pp pruneParams) Clone() pruneParams {
 	return pruneParams{
 		leafHash:     pp.leafHash,
 		ancestorHash: pp.ancestorHash,
-		leafProof:    append(make([][32]byte, 0), pp.leafProof...),
-		ancProof:     append(make([][32]byte, 0), pp.ancProof...),
+		leafProof:    append(make([]common.Hash, 0), pp.leafProof...),
+		ancProof:     append(make([]common.Hash, 0), pp.ancProof...),
 	}
 }
 
 type recoverStakeOldParams struct {
 	addr  common.Address
-	proof [][32]byte
+	proof []common.Hash
 }
 
 type recoverStakeMootedParams struct {
 	addr         common.Address
-	ancestorHash [32]byte
-	lcProof      [][32]byte
-	stProof      [][32]byte
+	ancestorHash common.Hash
+	lcProof      []common.Hash
+	stProof      []common.Hash
 }
 
 func (chain *ChainObserver) startCleanupThread(ctx context.Context) {

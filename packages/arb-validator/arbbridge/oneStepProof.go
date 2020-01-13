@@ -17,17 +17,17 @@
 package arbbridge
 
 import (
+	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type OneStepProof interface {
 	ValidateProof(
-		auth *bind.CallOpts,
-		precondition *protocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		ctx context.Context,
+		precondition *valprotocol.Precondition,
+		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
 	) (*big.Int, error)
 }

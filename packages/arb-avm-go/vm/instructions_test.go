@@ -22,7 +22,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
@@ -43,10 +44,10 @@ func TestMachineAdd(t *testing.T) {
 	}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
-	tb := protocol.NewTimeBoundsBlocks(
-		protocol.NewTimeBlocks(big.NewInt(0)),
-		protocol.NewTimeBlocks(big.NewInt(100000)),
-	)
+	tb := &protocol.TimeBoundsBlocks{
+		common.NewTimeBlocks(big.NewInt(0)),
+		common.NewTimeBlocks(big.NewInt(100000)),
+	}
 	m.ExecuteAssertion(80000, tb, protocol.NewMessageStack().GetValue())
 }
 
@@ -746,41 +747,26 @@ func TestRset(t *testing.T) {
 }
 
 func TestInbox(t *testing.T) {
-	//test:
 	insns := []value.Operation{value.BasicOperation{Op: code.NOP}, value.BasicOperation{Op: code.HALT}}
 
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 
-	var tok protocol.TokenType
-	tok[0] = 15
-	tok[20] = 1
+	val := value.NewInt64Value(53456345)
 
-	msg := protocol.NewSimpleMessage(
-		value.NewInt64Value(1),
-		tok,
-		big.NewInt(3),
-		common.HexToAddress("af3253"),
-	)
 	messageStack := protocol.NewMessageStack()
-	messageStack.AddMessage(msg.AsValue())
+	messageStack.AddMessage(val)
 
 	NewMachineAssertionContext(
 		m,
-		protocol.NewTimeBoundsBlocks(
-			protocol.NewTimeBlocks(big.NewInt(0)),
-			protocol.NewTimeBlocks(big.NewInt(100000)),
-		),
+		&protocol.TimeBoundsBlocks{
+			common.NewTimeBlocks(big.NewInt(0)),
+			common.NewTimeBlocks(big.NewInt(100000)),
+		},
 		messageStack.GetValue(),
 	)
 
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		tok.ToIntValue(),
-		value.NewInt64Value(3),
-		value.NewInt64Value(4),
-	})
-	m.Stack().Push(tup)
+	m.Stack().Push(val)
 	if succeeded, reason := runInstNoFault(m, code.INBOX); !succeeded {
 		t.Error(reason)
 	}
@@ -808,7 +794,7 @@ func TestJump(t *testing.T) {
 		t.Error(reason)
 	}
 	// push 2 to set jump point
-	var nextHash [32]byte
+	var nextHash common.Hash
 	codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	// JUMP
@@ -847,7 +833,7 @@ func TestCJump(t *testing.T) {
 		// push 0 for conditional
 		m.Stack().Push(value.NewInt64Value(0))
 		// push 2 to set jump point
-		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: [32]byte{}}
+		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: common.Hash{}}
 		m.Stack().Push(codept)
 		// CJUMP
 		if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
@@ -875,7 +861,7 @@ func TestCJump(t *testing.T) {
 		// push 1 for conditional
 		m.Stack().Push(value.NewInt64Value(1))
 		// push 2 to set jump point
-		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: [32]byte{}}
+		codept := value.CodePointValue{InsnNum: 2, Op: value.BasicOperation{Op: code.SUB}, NextHash: common.Hash{}}
 		m.Stack().Push(codept)
 		// CJUMP
 		if succeeded, reason := runInstNoFault(m, code.CJUMP); !succeeded {
@@ -945,7 +931,7 @@ func TestPcpush(t *testing.T) {
 		t.Error(tmp)
 	}
 	// verify known and unknown match one item value = 1
-	var nextHash [32]byte
+	var nextHash common.Hash
 	codept := value.CodePointValue{Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	knownMachine.Stack().Push(codept)
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1114,7 +1100,7 @@ func TestErrpush(t *testing.T) {
 	knownMachine := m.Clone().(*Machine)
 
 	// push codepoint onto stack
-	var nextHash [32]byte
+	var nextHash common.Hash
 	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: nextHash}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
@@ -1168,7 +1154,7 @@ func TestErrset(t *testing.T) {
 	knownMachine := m.Clone().(*Machine)
 
 	// push codepoint onto stack
-	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: [32]byte{}}
+	codept := value.CodePointValue{InsnNum: 4, Op: value.BasicOperation{Op: code.HALT}, NextHash: common.Hash{}}
 	m.Stack().Push(codept)
 	knownMachine.Stack().Push(codept)
 	if ok, err := Equal(knownMachine, m); !ok {
@@ -1500,10 +1486,10 @@ func TestLog(t *testing.T) {
 	m.Stack().Push(value.NewInt64Value(5))
 	ad, _ := m.ExecuteAssertion(
 		10,
-		protocol.NewTimeBoundsBlocks(
-			protocol.NewTimeBlocks(big.NewInt(0)),
-			protocol.NewTimeBlocks(big.NewInt(10000)),
-		),
+		&protocol.TimeBoundsBlocks{
+			common.NewTimeBlocks(big.NewInt(0)),
+			common.NewTimeBlocks(big.NewInt(10000)),
+		},
 		value.NewEmptyTuple(),
 	)
 	// verify known and unknown match
@@ -1520,7 +1506,7 @@ func TestLog(t *testing.T) {
 	}
 }
 
-func TestSendFungible(t *testing.T) {
+func TestSend(t *testing.T) {
 	// test
 	insns := []value.Operation{
 		value.BasicOperation{Op: code.SEND},
@@ -1530,25 +1516,16 @@ func TestSendFungible(t *testing.T) {
 	m := NewMachine(insns, value.NewInt64Value(1), false, 100)
 	knownMachine := m.Clone().(*Machine)
 
-	// fungible value=10
-	var tok protocol.TokenType
-	tok[0] = 15
-	tok[20] = 0
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewInt64Value(4),
-		value.NewInt64Value(7),
-		tok.ToIntValue(),
-	})
-	m.Stack().Push(tup)
+	val := value.NewInt64Value(63453)
+	m.Stack().Push(val)
 
 	// send token 15 value=7 to dest 4
 	ad, _ := m.ExecuteAssertion(
 		10,
-		protocol.NewTimeBoundsBlocks(
-			protocol.NewTimeBlocks(big.NewInt(0)),
-			protocol.NewTimeBlocks(big.NewInt(10000)),
-		),
+		&protocol.TimeBoundsBlocks{
+			common.NewTimeBlocks(big.NewInt(0)),
+			common.NewTimeBlocks(big.NewInt(10000)),
+		},
 		value.NewEmptyTuple(),
 	)
 	// verify known and unknown match
@@ -1559,12 +1536,8 @@ func TestSendFungible(t *testing.T) {
 	if len(ad.OutMsgs) != 1 {
 		t.Error("No out message generated")
 	}
-
-	dest := common.Address{}
-	dest[19] = 4
-	knownmessage := protocol.NewSimpleMessage(value.NewInt64Value(1), tok, big.NewInt(7), dest)
-	if !value.Eq(ad.OutMsgs[0], knownmessage.AsValue()) {
-		t.Errorf("Out message incorrect\nGot %v\nExpected %v\n", ad.OutMsgs[0], knownmessage.AsValue())
+	if !value.Eq(ad.OutMsgs[0], val) {
+		t.Errorf("Out message incorrect\nGot %v\nExpected %v\n", ad.OutMsgs[0], val)
 	}
 }
 
@@ -1580,10 +1553,10 @@ func TestGettime(t *testing.T) {
 
 	m.ExecuteAssertion(
 		10,
-		protocol.NewTimeBoundsBlocks(
-			protocol.NewTimeBlocks(big.NewInt(5)),
-			protocol.NewTimeBlocks(big.NewInt(10)),
-		),
+		&protocol.TimeBoundsBlocks{
+			common.NewTimeBlocks(big.NewInt(5)),
+			common.NewTimeBlocks(big.NewInt(10)),
+		},
 		value.NewEmptyTuple(),
 	)
 	// verify known and unknown match

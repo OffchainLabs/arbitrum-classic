@@ -17,33 +17,33 @@
 package arbbridge
 
 import (
+	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type PendingInbox interface {
 	SendMessage(
-		auth *bind.TransactOpts,
-		msg protocol.Message,
+		ctx context.Context,
+		msg valprotocol.Message,
 	) error
 	ForwardMessage(
-		auth *bind.TransactOpts,
-		msg protocol.Message,
+		ctx context.Context,
+		msg valprotocol.Message,
 		sig []byte,
 	) error
 	SendEthMessage(
-		auth *bind.TransactOpts,
+		ctx context.Context,
 		data value.Value,
 		destination common.Address,
 		amount *big.Int,
-	) (uint64, error)
-	DepositFunds(auth *bind.TransactOpts, amount *big.Int, dest common.Address) error
+	) error
+	DepositFunds(ctx context.Context, amount *big.Int, dest common.Address) error
 	GetTokenBalance(
-		auth *bind.CallOpts,
+		ctx context.Context,
 		user common.Address,
 		tokenContract common.Address,
 	) (*big.Int, error)

@@ -18,50 +18,34 @@ package mockbridge
 
 import (
 	"context"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"strings"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
-
-var continuedChallengeID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.BisectionChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	continuedChallengeID = parsed.Events["Continued"].ID()
-}
 
 type BisectionChallenge struct {
 	*Challenge
-	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*BisectionChallenge, error) {
-	challenge, err := NewChallenge(address, client, auth)
+func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient) (*BisectionChallenge, error) {
+	challenge, err := NewChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
 	vm := &BisectionChallenge{
-		Challenge:          challenge,
-		BisectionChallenge: nil,
+		Challenge: challenge,
 	}
 	//err = vm.setupContracts()
 	return vm, nil
 }
 
-//func (c *BisectionChallenge) setupContracts() error {
+//func (c *bisectionChallenge) setupContracts() error {
 //	challengeManagerContract, err := executionchallenge.NewBisectionChallenge(c.address, c.Client)
 //	if err != nil {
 //		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 //	}
 //
-//	c.BisectionChallenge = challengeManagerContract
+//	c.bisectionChallenge = challengeManagerContract
 //	return nil
 //}
 
@@ -123,14 +107,14 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 	return nil
 }
 
-//func (c *BisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
+//func (c *bisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
 //	if err != nil {
 //		return err
 //	}
 //
 //	if log.Topics[0] == continuedChallengeID {
-//		contChal, err := c.BisectionChallenge.ParseContinued(log)
+//		contChal, err := c.bisectionChallenge.ParseContinued(log)
 //		if err != nil {
 //			return err
 //		}
@@ -150,11 +134,11 @@ func (c *BisectionChallenge) StartConnection(ctx context.Context, outChan chan a
 func (c *BisectionChallenge) ChooseSegment(
 	ctx context.Context,
 	segmentToChallenge uint16,
-	segments [][32]byte,
+	segments []common.Hash,
 ) error {
 	//tree := NewMerkleTree(segments)
 	//c.auth.Context = ctx
-	//tx, err := c.BisectionChallenge.ChooseSegment(
+	//tx, err := c.bisectionChallenge.ChooseSegment(
 	//	c.auth,
 	//	big.NewInt(int64(segmentToChallenge)),
 	//	tree.GetProofFlat(int(segmentToChallenge)),

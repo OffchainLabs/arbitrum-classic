@@ -19,22 +19,38 @@ package arbbridge
 import (
 	"context"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type MessagesChallenge interface {
-	BisectionChallenge
+	Challenge
+
 	Bisect(
 		ctx context.Context,
-		chainHashes [][32]byte,
-		segmentHashes [][32]byte,
+		chainHashes []common.Hash,
+		segmentHashes []common.Hash,
 		chainLength *big.Int,
 	) error
+
 	OneStepProof(
 		ctx context.Context,
-		lowerHashA [32]byte,
-		topHashA [32]byte,
-		lowerHashB [32]byte,
-		topHashB [32]byte,
-		value [32]byte,
+		lowerHashA common.Hash,
+		topHashA common.Hash,
+		lowerHashB common.Hash,
+		topHashB common.Hash,
+		value common.Hash,
 	) error
+
+	ChooseSegment(
+		ctx context.Context,
+		assertionToChallenge uint16,
+		chainHashes []common.Hash,
+		segmentHashes []common.Hash,
+		chainLength *big.Int,
+	) error
+}
+
+type MessagesChallengeWatcher interface {
+	ContractWatcher
 }

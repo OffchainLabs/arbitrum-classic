@@ -18,26 +18,24 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"strings"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
 
-var initiatedChallengeID common.Hash
-var timedOutAsserterID common.Hash
-var timedOutChallengerID common.Hash
+var initiatedChallengeID ethcommon.Hash
+var timedOutAsserterID ethcommon.Hash
+var timedOutChallengerID ethcommon.Hash
 
 func init() {
 	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
@@ -49,147 +47,23 @@ func init() {
 	timedOutChallengerID = parsed.Events["ChallengerTimedOut"].ID()
 }
 
-type Challenge struct {
-	*ClientConnection
+type challenge struct {
 	Challenge *executionchallenge.Challenge
 
-	address common.Address
-	client  *ethclient.Client
-	auth    *bind.TransactOpts
+	client *ethclient.Client
+	auth   *bind.TransactOpts
 }
 
-func NewChallenge(address common.Address, client *ethclient.Client, auth *bind.TransactOpts) (*Challenge, error) {
-	vm := &Challenge{ClientConnection: &ClientConnection{client}, address: address, auth: auth}
-	err := vm.setupContracts()
-	return vm, err
+func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*challenge, error) {
+	challengeContract, err := executionchallenge.NewChallenge(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	}
+
+	return &challenge{Challenge: challengeContract, client: client, auth: auth}, nil
 }
 
-func (c *Challenge) setupContracts() error {
-	challengeManagerContract, err := executionchallenge.NewChallenge(c.address, c.Client)
-	if err != nil {
-		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
-	}
-
-	c.Challenge = challengeManagerContract
-	return nil
-}
-
-func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.setupContracts(); err != nil {
-		return err
-	}
-	headers := make(chan *types.Header)
-	headersSub, err := c.Client.SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return err
-	}
-
-	header, err := c.Client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{c.address},
-		Topics: [][]common.Hash{{
-			initiatedChallengeID,
-			timedOutAsserterID,
-			timedOutChallengerID,
-		}},
-	}
-
-	logs, err := c.Client.FilterLogs(ctx, filter)
-	if err != nil {
-		return err
-	}
-	for _, log := range logs {
-		if err := c.processEvents(ctx, log, outChan); err != nil {
-			return err
-		}
-	}
-
-	filter.FromBlock = header.Number
-	logChan := make(chan types.Log)
-	logSub, err := c.Client.SubscribeFilterLogs(ctx, filter, logChan)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer headersSub.Unsubscribe()
-		defer logSub.Unsubscribe()
-
-		for {
-			select {
-			case <-ctx.Done():
-				break
-			case header := <-headers:
-				outChan <- arbbridge.Notification{
-					Header: header,
-					Event:  arbbridge.NewTimeEvent{},
-				}
-			case log := <-logChan:
-				if err := c.processEvents(ctx, log, outChan); err != nil {
-					errChan <- err
-					return
-				}
-			case err := <-headersSub.Err():
-				errChan <- err
-				return
-			case err := <-logSub.Err():
-				errChan <- err
-				return
-			}
-		}
-	}()
-	return nil
-}
-
-func (c *Challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-	event, err := func() (arbbridge.Event, error) {
-		if log.Topics[0] == initiatedChallengeID {
-			eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.InitiateChallengeEvent{
-				Deadline: structures.TimeTicks{Val: eventVal.DeadlineTicks},
-			}, nil
-		} else if log.Topics[0] == timedOutAsserterID {
-			_, err := c.Challenge.ParseAsserterTimedOut(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.AsserterTimeoutEvent{}, nil
-		} else if log.Topics[0] == timedOutChallengerID {
-			_, err := c.Challenge.ParseChallengerTimedOut(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.ChallengerTimeoutEvent{}, nil
-		}
-		return nil, errors2.New("unknown arbitrum event type")
-	}()
-	if err != nil {
-		return err
-	}
-
-	header, err := c.Client.HeaderByHash(ctx, log.BlockHash)
-	if err != nil {
-		return err
-	}
-
-	outChan <- arbbridge.Notification{
-		Header: header,
-		VMID:   c.address,
-		Event:  event,
-		TxHash: log.TxHash,
-	}
-
-	return nil
-}
-
-func (c *Challenge) TimeoutChallenge(
+func (c *challenge) TimeoutChallenge(
 	ctx context.Context,
 ) error {
 	c.auth.Context = ctx
@@ -200,6 +74,52 @@ func (c *Challenge) TimeoutChallenge(
 	return c.waitForReceipt(ctx, tx, "TimeoutChallenge")
 }
 
-func (c *Challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
-	return c.ClientConnection.waitForReceipt(ctx, c.auth.From, tx, methodName)
+func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
+	return waitForReceipt(ctx, c.client, c.auth.From, tx, methodName)
+}
+
+type challengeWatcher struct {
+	Challenge *executionchallenge.Challenge
+}
+
+func newChallengeWatcher(address ethcommon.Address, client *ethclient.Client) (*challengeWatcher, error) {
+	challengeContract, err := executionchallenge.NewChallenge(address, client)
+	if err != nil {
+		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	}
+
+	return &challengeWatcher{Challenge: challengeContract}, nil
+}
+
+func (c *challengeWatcher) topics() []ethcommon.Hash {
+	return []ethcommon.Hash{
+		initiatedChallengeID,
+		timedOutAsserterID,
+		timedOutChallengerID,
+	}
+}
+
+func (c *challengeWatcher) parseChallengeEvent(log types.Log) (arbbridge.Event, error) {
+	if log.Topics[0] == initiatedChallengeID {
+		eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.InitiateChallengeEvent{
+			Deadline: common.TimeTicks{Val: eventVal.DeadlineTicks},
+		}, nil
+	} else if log.Topics[0] == timedOutAsserterID {
+		_, err := c.Challenge.ParseAsserterTimedOut(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.AsserterTimeoutEvent{}, nil
+	} else if log.Topics[0] == timedOutChallengerID {
+		_, err := c.Challenge.ParseChallengerTimedOut(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.ChallengerTimeoutEvent{}, nil
+	}
+	return nil, nil
 }

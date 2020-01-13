@@ -19,68 +19,76 @@ package rollup
 import (
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
-type AnnouncerListener struct{}
+type AnnouncerListener struct {
+	Prefix string
+}
 
-func (al *AnnouncerListener) StakeCreated(arbbridge.StakeCreatedEvent) {
-	log.Println("StakeCreated")
+func (al *AnnouncerListener) StakeCreated(ev arbbridge.StakeCreatedEvent) {
+	log.Printf("%v Staker %v created at %v\n", al.Prefix, ev.Staker, ev.NodeHash)
 }
-func (al *AnnouncerListener) StakeRemoved(arbbridge.StakeRefundedEvent) {
-	log.Println("StakeRemoved")
+
+func (al *AnnouncerListener) StakeRemoved(ev arbbridge.StakeRefundedEvent) {
+	log.Printf("%v Staker %v removed\n", al.Prefix, ev.Staker)
 }
+
 func (al *AnnouncerListener) StakeMoved(ev arbbridge.StakeMovedEvent) {
-	log.Printf("StakeMoved(staker: %v, location: %v)\n", hexutil.Encode(ev.Staker[:]), hexutil.Encode(ev.Location[:]))
-}
-func (al *AnnouncerListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node) {
-	log.Println("StartedChallenge")
-}
-func (al *AnnouncerListener) CompletedChallenge(event arbbridge.ChallengeCompletedEvent) {
-	log.Println("CompletedChallenge")
+	log.Printf("%v Staker %v moved to location: %v\n", al.Prefix, ev.Staker, ev.Location)
 }
 
-func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *protocol.TimeBlocks, txHash [32]byte) {
-	log.Println("SawAssertion")
-	log.Println("Params:", ev.Params)
-	log.Println("Claim:", ev.Claim)
+func (al *AnnouncerListener) StartedChallenge(arbbridge.ChallengeStartedEvent, *Node, *Node) {
+	log.Println(al.Prefix, "StartedChallenge")
+}
+
+func (al *AnnouncerListener) CompletedChallenge(event arbbridge.ChallengeCompletedEvent) {
+	log.Println(al.Prefix, "CompletedChallenge")
+}
+
+func (al *AnnouncerListener) SawAssertion(ev arbbridge.AssertedEvent, time *common.TimeBlocks, txHash common.Hash) {
+	log.Println(al.Prefix, "SawAssertion")
+	log.Println(al.Prefix, "Params:", ev.Params)
+	log.Println(al.Prefix, "Claim:", ev.Claim)
 }
 
 func (al *AnnouncerListener) ConfirmedNode(ev arbbridge.ConfirmedEvent) {
-	log.Println("ConfirmedNode", hexutil.Encode(ev.NodeHash[:]))
+	log.Println(al.Prefix, "ConfirmedNode", ev.NodeHash)
 }
 
 func (al *AnnouncerListener) PrunedLeaf(ev arbbridge.PrunedEvent) {
-	log.Println("PrunedLeaf", hexutil.Encode(ev.Leaf[:]))
+	log.Println(al.Prefix, "PrunedLeaf", ev.Leaf)
+}
+
+func (al *AnnouncerListener) MessageDelivered(arbbridge.MessageDeliveredEvent) {
+	log.Println(al.Prefix, "MessageDelivered")
 }
 
 func (al *AnnouncerListener) AssertionPrepared(*preparedAssertion) {
-	log.Println("AssertionPrepared")
+	log.Println(al.Prefix, "AssertionPrepared")
 }
 func (al *AnnouncerListener) ValidNodeConfirmable(*confirmValidOpportunity) {
-	log.Println("ValidNodeConfirmable")
+	log.Println(al.Prefix, "ValidNodeConfirmable")
 }
 func (al *AnnouncerListener) InvalidNodeConfirmable(*confirmInvalidOpportunity) {
-	log.Println("InvalidNodeConfirmable")
+	log.Println(al.Prefix, "InvalidNodeConfirmable")
 }
 func (al *AnnouncerListener) PrunableLeafs([]pruneParams) {
-	log.Println("PrunableLeafs")
+	log.Println(al.Prefix, "PrunableLeafs")
 }
 func (al *AnnouncerListener) MootableStakes([]recoverStakeMootedParams) {
-	log.Println("MootableStakes")
+	log.Println(al.Prefix, "MootableStakes")
 }
 func (al *AnnouncerListener) OldStakes([]recoverStakeOldParams) {
-	log.Println("OldStakes")
+	log.Println(al.Prefix, "OldStakes")
 }
 
-func (al *AnnouncerListener) AdvancedKnownValidNode(nodeHash [32]byte) {
-	log.Println("AdvancedKnownValidNode", hexutil.Encode(nodeHash[:]))
+func (al *AnnouncerListener) AdvancedKnownValidNode(nodeHash common.Hash) {
+	log.Println(al.Prefix, "AdvancedKnownValidNode", nodeHash)
 }
 
-func (lis *AnnouncerListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, [32]byte) {
-	log.Println("AdvancedKnownAssertion")
+func (al *AnnouncerListener) AdvancedKnownAssertion(*protocol.ExecutionAssertion, common.Hash) {
+	log.Println(al.Prefix, "AdvancedKnownAssertion")
 }

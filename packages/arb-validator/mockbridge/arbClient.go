@@ -18,11 +18,9 @@ package mockbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"math/big"
 )
 
 type MockArbClient struct {
@@ -50,8 +48,8 @@ func (c *MockArbClient) NewPendingInbox(address common.Address) (arbbridge.Pendi
 	return NewPendingInbox(address, c)
 }
 
-func (c *MockArbClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return c.MockEthClient.headerNumber[number], nil
+func (c *ArbClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
+	return NewRollup(address, c.client)
 }
 
 type ArbAuthClient struct {
@@ -59,19 +57,12 @@ type ArbAuthClient struct {
 	auth *bind.TransactOpts
 }
 
-func (c *ArbAuthClient) Address() common.Address {
-	return c.auth.From
+func (c *ArbClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
+	return NewExecutionChallenge(address, c.client)
 }
 
-func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*ArbAuthClient, error) {
-	client, err := NewEthClient(ethURL)
-	if err != nil {
-		return nil, err
-	}
-	return &ArbAuthClient{
-		MockArbClient: client,
-		auth:          auth,
-	}, nil
+func (c *ArbClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
+	return NewMessagesChallenge(address, c.client)
 }
 
 func (c *ArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
@@ -82,10 +73,10 @@ func (c *ArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge
 	return NewExecutionChallenge(address, c, c.auth)
 }
 
-func (c *ArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
-	return NewMessagesChallenge(address, c, c.auth)
+func (c *ArbClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
+	return NewPendingTopChallenge(address, c.client)
 }
 
-func (c *ArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c, c.auth)
+func (c *ArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
+	return c.client.CurrentBlockTime(ctx)
 }

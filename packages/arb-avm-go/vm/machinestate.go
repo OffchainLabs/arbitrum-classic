@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/code"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-go/vm/stack"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -53,7 +52,7 @@ func (m *Machine) Checkpoint(storage machine.CheckpointStorage) bool {
 	panic("implement me")
 }
 
-func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash [32]byte) bool {
+func (m *Machine) RestoreCheckpoint(storage machine.CheckpointStorage, machineHash common.Hash) bool {
 	panic("implement me")
 }
 
@@ -154,8 +153,12 @@ func (m *Machine) GetInbox() value.TupleValue {
 	return m.context.GetInbox()
 }
 
-func (m *Machine) GetTimeBounds() value.TupleValue {
-	return m.context.GetTimeBounds()
+func (m *Machine) GetStartTime() value.IntValue {
+	return m.context.GetStartTime()
+}
+
+func (m *Machine) GetEndTime() value.IntValue {
+	return m.context.GetEndTime()
 }
 
 func (m *Machine) IncrPC() {
@@ -262,19 +265,17 @@ func (m *Machine) Log(val value.Value) {
 	m.context.LoggedValue(val)
 }
 
-func (m *Machine) Hash() [32]byte {
+func (m *Machine) Hash() common.Hash {
 	switch m.status {
 	case machine.Extensive:
-		ret := [32]byte{}
-		copy(ret[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(m.pc.GetCurrentCodePointHash()),
-			solsha3.Bytes32(m.stack.StateValue().Hash()),
-			solsha3.Bytes32(m.auxstack.StateValue().Hash()),
-			solsha3.Bytes32(m.register.StateValue().Hash()),
-			solsha3.Bytes32(m.static.StateValue().Hash()),
-			solsha3.Bytes32(m.errHandler.Hash()),
-		))
-		return ret
+		return hashing.SoliditySHA3(
+			hashing.Bytes32(m.pc.GetCurrentCodePointHash()),
+			hashing.Bytes32(m.stack.StateValue().Hash()),
+			hashing.Bytes32(m.auxstack.StateValue().Hash()),
+			hashing.Bytes32(m.register.StateValue().Hash()),
+			hashing.Bytes32(m.static.StateValue().Hash()),
+			hashing.Bytes32(m.errHandler.Hash()),
+		)
 	case machine.ErrorStop:
 		return value.NewInt64Value(1).ToBytes()
 	case machine.Halt:
@@ -284,19 +285,19 @@ func (m *Machine) Hash() [32]byte {
 }
 
 func (m *Machine) PrintState() {
-	codePointHash := m.pc.GetPC().Hash()
+	codePointHash := m.pc.GetCurrentCodePointHash()
 	stackHash := m.stack.StateValue().Hash()
 	auxStackHash := m.auxstack.StateValue().Hash()
 	registerHash := m.register.StateValue().Hash()
 	staticHash := m.static.StateValue().Hash()
 	errHandlerHash := m.errHandler.Hash()
 	fmt.Println("machine state", m.status)
-	fmt.Println("codePointHash", hexutil.Encode(codePointHash[:]))
-	fmt.Println("stackHash", hexutil.Encode(stackHash[:]))
-	fmt.Println("auxStackHash", hexutil.Encode(auxStackHash[:]))
-	fmt.Println("registerHash", hexutil.Encode(registerHash[:]))
-	fmt.Println("staticHash", hexutil.Encode(staticHash[:]))
-	fmt.Println("errHandlerHash", hexutil.Encode(errHandlerHash[:]))
+	fmt.Println("codePointHash", codePointHash)
+	fmt.Println("stackHash", stackHash[:])
+	fmt.Println("auxStackHash", auxStackHash)
+	fmt.Println("registerHash", registerHash)
+	fmt.Println("staticHash", staticHash)
+	fmt.Println("errHandlerHash", errHandlerHash)
 }
 
 func (m *Machine) MarshalForProof() ([]byte, error) {

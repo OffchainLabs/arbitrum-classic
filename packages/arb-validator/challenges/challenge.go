@@ -19,10 +19,10 @@ package challenges
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
 type ChallengeState uint8
@@ -57,8 +57,9 @@ func getNextEvent(outChan chan arbbridge.Notification) (note arbbridge.Notificat
 func getNextEventWithTimeout(
 	ctx context.Context,
 	outChan chan arbbridge.Notification,
-	deadline structures.TimeTicks,
-	contract arbbridge.ChallengeContract,
+	deadline common.TimeTicks,
+	contract arbbridge.Challenge,
+	client arbbridge.ArbClient,
 ) (note arbbridge.Notification, state ChallengeState, err error) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
@@ -66,11 +67,11 @@ func getNextEventWithTimeout(
 		case <-ctx.Done():
 			return note, state, errors.New("context cancelled while waiting for event")
 		case <-ticker.C:
-			currentTime, err := contract.CurrentBlockTime(ctx)
+			currentTime, err := client.CurrentBlockTime(ctx)
 			if err != nil {
 				return note, 0, err
 			}
-			if structures.TimeFromBlockNum(currentTime).Cmp(deadline) >= 0 {
+			if common.TimeFromBlockNum(currentTime).Cmp(deadline) >= 0 {
 				err := contract.TimeoutChallenge(ctx)
 				if err != nil {
 					return note, 0, err

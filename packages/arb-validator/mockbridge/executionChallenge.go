@@ -18,39 +18,18 @@ package mockbridge
 
 import (
 	"context"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"strings"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
-
-var bisectedAssertionID common.Hash
-var oneStepProofCompletedID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(executionchallenge.ExecutionChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	bisectedAssertionID = parsed.Events["BisectedAssertion"].ID()
-	oneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
 
 type ExecutionChallenge struct {
 	*BisectionChallenge
-	Challenge *executionchallenge.ExecutionChallenge
 }
 
-func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*ExecutionChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (*ExecutionChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +44,7 @@ func (c *ExecutionChallenge) setupContracts() error {
 	//		return errors2.Wrap(err, "Failed to connect to ChallengeManager")
 	//	}
 	//
-	//	c.Challenge = challengeManagerContract
+	//	c.challenge = challengeManagerContract
 	return nil
 }
 
@@ -130,7 +109,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 //func (c *ExecutionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	event, err := func() (arbbridge.Event, error) {
 //		if log.Topics[0] == bisectedAssertionID {
-//			bisectChal, err := c.Challenge.ParseBisectedAssertion(log)
+//			bisectChal, err := c.challenge.ParseBisectedAssertion(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -140,7 +119,7 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 //				Deadline:   structures.TimeTicks{Val: bisectChal.DeadlineTicks},
 //			}, nil
 //		} else if log.Topics[0] == oneStepProofCompletedID {
-//			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+//			_, err := c.challenge.ParseOneStepProofCompleted(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -168,8 +147,8 @@ func (c *ExecutionChallenge) StartConnection(ctx context.Context, outChan chan a
 
 func (c *ExecutionChallenge) BisectAssertion(
 	ctx context.Context,
-	precondition *protocol.Precondition,
-	assertions []*protocol.ExecutionAssertionStub,
+	precondition *valprotocol.Precondition,
+	assertions []*valprotocol.ExecutionAssertionStub,
 	totalSteps uint32,
 ) error {
 	//machineHashes := make([][32]byte, 0, len(assertions)+1)
@@ -188,7 +167,7 @@ func (c *ExecutionChallenge) BisectAssertion(
 	//	gasses = append(gasses, assertion.NumGas)
 	//}
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.BisectAssertion(
+	//tx, err := c.challenge.BisectAssertion(
 	//	c.auth,
 	//	precondition.BeforeHash,
 	//	precondition.TimeBounds.AsIntArray(),
@@ -208,12 +187,12 @@ func (c *ExecutionChallenge) BisectAssertion(
 
 func (c *ExecutionChallenge) OneStepProof(
 	ctx context.Context,
-	precondition *protocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+	precondition *valprotocol.Precondition,
+	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.OneStepProof(
+	//tx, err := c.challenge.OneStepProof(
 	//	c.auth,
 	//	precondition.BeforeHash,
 	//	precondition.BeforeInbox.Hash(),
@@ -234,42 +213,26 @@ func (c *ExecutionChallenge) OneStepProof(
 	return nil
 }
 
-func (c *ExecutionChallenge) ExecutionChallengeChooseSegment(
+func (c *ExecutionChallenge) ChooseSegment(
 	ctx context.Context,
 	assertionToChallenge uint16,
-	preconditions []*protocol.Precondition,
-	assertions []*protocol.ExecutionAssertionStub,
+	preconditions []*valprotocol.Precondition,
+	assertions []*valprotocol.ExecutionAssertionStub,
+	totalSteps uint32,
 ) error {
-	bisectionHashes := make([][32]byte, 0, len(assertions))
-	for i := range assertions {
-		bisectionHash := [32]byte{}
-		copy(bisectionHash[:], solsha3.SoliditySHA3(
-			solsha3.Bytes32(preconditions[i].Hash()),
-			solsha3.Bytes32(assertions[i].Hash()),
-		))
-		bisectionHashes = append(bisectionHashes, bisectionHash)
-	}
-	return c.BisectionChallenge.ChooseSegment(
-		ctx,
-		assertionToChallenge,
-		bisectionHashes,
-	)
-}
-
-func translateBisectionEvent(event *executionchallenge.ExecutionChallengeBisectedAssertion) []*protocol.ExecutionAssertionStub {
-	bisectionCount := len(event.MachineHashes) - 1
-	assertions := make([]*protocol.ExecutionAssertionStub, 0, bisectionCount)
-	for i := 0; i < bisectionCount; i++ {
-		assertion := &protocol.ExecutionAssertionStub{
-			AfterHash:        value.NewHashBuf(event.MachineHashes[i+1]),
-			DidInboxInsn:     event.DidInboxInsns[i],
-			NumGas:           event.Gases[i],
-			FirstMessageHash: value.NewHashBuf(event.MessageAccs[i]),
-			LastMessageHash:  value.NewHashBuf(event.MessageAccs[i+1]),
-			FirstLogHash:     value.NewHashBuf(event.LogAccs[i]),
-			LastLogHash:      value.NewHashBuf(event.LogAccs[i+1]),
-		}
-		assertions = append(assertions, assertion)
-	}
-	return assertions
+	//bisectionHashes := make([][32]byte, 0, len(assertions))
+	//for i := range assertions {
+	//	bisectionHash := [32]byte{}
+	//	copy(bisectionHash[:], solsha3.SoliditySHA3(
+	//		solsha3.Bytes32(preconditions[i].Hash()),
+	//		solsha3.Bytes32(assertions[i].Hash()),
+	//	))
+	//	bisectionHashes = append(bisectionHashes, bisectionHash)
+	//}
+	//return c.bisectionChallenge.ChooseSegment(
+	//	ctx,
+	//	assertionToChallenge,
+	//	bisectionHashes,
+	//)
+	return nil
 }

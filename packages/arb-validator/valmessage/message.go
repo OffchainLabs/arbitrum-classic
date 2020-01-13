@@ -19,11 +19,7 @@ package valmessage
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func NewVMConfiguration(
@@ -34,17 +30,17 @@ func NewVMConfiguration(
 	maxSteps uint32,
 	owner common.Address,
 ) *VMConfiguration {
-	keys := make([]*protocol.AddressBuf, 0, len(assertKeys))
+	keys := make([]*common.AddressBuf, 0, len(assertKeys))
 	for _, key := range assertKeys {
-		keys = append(keys, protocol.NewAddressBuf(key))
+		keys = append(keys, key.MarshallToBuf())
 	}
 
 	return &VMConfiguration{
 		GracePeriod:           gracePeriod,
-		EscrowRequired:        value.NewBigIntBuf(escrowRequired),
-		EscrowCurrency:        &protocol.AddressBuf{Value: escrowCurrency.Bytes()},
+		EscrowRequired:        common.MarshalBigInt(escrowRequired),
+		EscrowCurrency:        escrowCurrency.MarshallToBuf(),
 		AssertKeys:            keys,
 		MaxExecutionStepCount: maxSteps,
-		Owner:                 &protocol.AddressBuf{Value: owner.Bytes()},
+		Owner:                 owner.MarshallToBuf(),
 	}
 }

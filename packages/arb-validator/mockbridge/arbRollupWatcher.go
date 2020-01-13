@@ -18,60 +18,23 @@ package mockbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	//"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/rollup"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-var rollupStakeCreatedID common.Hash
-var rollupChallengeStartedID common.Hash
-var rollupChallengeCompletedID common.Hash
-var rollupRefundedID common.Hash
-var rollupPrunedID common.Hash
-var rollupStakeMovedID common.Hash
-var rollupAssertedID common.Hash
-var rollupConfirmedID common.Hash
-var confirmedAssertionID common.Hash
-var debugEventID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
-	if err != nil {
-		panic(err)
-	}
-	rollupStakeCreatedID = parsed.Events["RollupStakeCreated"].ID()
-	rollupChallengeStartedID = parsed.Events["RollupChallengeStarted"].ID()
-	rollupChallengeCompletedID = parsed.Events["RollupChallengeCompleted"].ID()
-	rollupRefundedID = parsed.Events["RollupStakeRefunded"].ID()
-	rollupPrunedID = parsed.Events["RollupPruned"].ID()
-	rollupStakeMovedID = parsed.Events["RollupStakeMoved"].ID()
-	rollupAssertedID = parsed.Events["RollupAsserted"].ID()
-	rollupConfirmedID = parsed.Events["RollupConfirmed"].ID()
-	confirmedAssertionID = parsed.Events["ConfirmedAssertion"].ID()
-	debugEventID = parsed.Events["DebugData"].ID()
-}
-
 type EthRollupWatcher struct {
-	Client             *ethclient.Client
-	ArbRollup          *rollup.ArbRollup
-	GlobalPendingInbox *rollup.IGlobalPendingInbox
+	client arbbridge.ArbClient
 
 	address common.Address
-	client  arbbridge.ArbClient
 }
 
 func NewRollupWatcher(address common.Address, client arbbridge.ArbClient) (*EthRollupWatcher, error) {
 	//vm := &EthRollupWatcher{Client: client.(*MockArbClient).client, address: address}
 	//err := vm.setupContracts()
 	//return vm, err
-	return &EthRollupWatcher{}, nil
+	return &EthRollupWatcher{client: client}, nil
 }
 
 //func (vm *EthRollupWatcher) setupContracts() error {
@@ -362,18 +325,14 @@ func (vm *EthRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 //}
 
 func (vm *EthRollupWatcher) GetParams(ctx context.Context) (structures.ChainParams, error) {
-	rawParams, err := vm.ArbRollup.VmParams(nil)
-	if err != nil {
-		return structures.ChainParams{}, err
-	}
-	stakeRequired, err := vm.ArbRollup.GetStakeRequired(nil)
-	if err != nil {
-		return structures.ChainParams{}, err
-	}
 	return structures.ChainParams{
-		StakeRequirement:        stakeRequired,
-		GracePeriod:             structures.TimeTicks{rawParams.GracePeriodTicks},
-		MaxExecutionSteps:       rawParams.MaxExecutionSteps,
-		ArbGasSpeedLimitPerTick: rawParams.ArbGasSpeedLimitPerTick.Uint64(),
+		StakeRequirement:        nil,
+		GracePeriod:             common.TimeTicks{},
+		MaxExecutionSteps:       0,
+		ArbGasSpeedLimitPerTick: 0,
 	}, nil
+}
+
+func (vm *EthRollupWatcher) InboxAddress(ctx context.Context) (common.Address, error) {
+	return common.Address{}, nil
 }

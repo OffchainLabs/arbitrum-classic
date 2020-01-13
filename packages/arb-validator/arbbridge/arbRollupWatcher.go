@@ -19,14 +19,13 @@ package arbbridge
 import (
 	"context"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-type ArbLog interface {
-}
-
 type ArbRollupWatcher interface {
-	StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
+	ContractWatcher
 
 	GetParams(ctx context.Context) (structures.ChainParams, error)
+	InboxAddress(ctx context.Context) (common.Address, error)
 }

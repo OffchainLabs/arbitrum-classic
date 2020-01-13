@@ -20,15 +20,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
-	protocol "github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I. --go_out=paths=source_relative:. *.proto"
+//go:generate bash -c "protoc -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-util) -I$(go list -f '{{ .Dir }}' -m github.com/offchainlabs/arbitrum/packages/arb-validator) -I. --go_out=paths=source_relative:. *.proto"
 
 type ChildType uint
 
@@ -44,14 +42,14 @@ const (
 )
 
 type VMProtoData struct {
-	MachineHash  [32]byte
-	PendingTop   [32]byte
+	MachineHash  common.Hash
+	PendingTop   common.Hash
 	PendingCount *big.Int
 }
 
 func NewVMProtoData(
-	machineHash [32]byte,
-	pendingTop [32]byte,
+	machineHash common.Hash,
+	pendingTop common.Hash,
 	pendingCount *big.Int,
 ) *VMProtoData {
 	return &VMProtoData{
@@ -64,8 +62,8 @@ func NewVMProtoData(
 func (d *VMProtoData) String() string {
 	return fmt.Sprintf(
 		"VMProtoData(MachineHash: %v, PendingTop: %v, PendingCount: %v)",
-		hexutil.Encode(d.MachineHash[:]),
-		hexutil.Encode(d.PendingTop[:]),
+		d.MachineHash,
+		d.PendingTop,
 		d.PendingCount,
 	)
 }
@@ -84,29 +82,27 @@ func (d *VMProtoData) Clone() *VMProtoData {
 	}
 }
 
-func (d *VMProtoData) Hash() [32]byte {
-	var ret [32]byte
-	copy(ret[:], solsha3.SoliditySHA3(
-		solsha3.Bytes32(d.MachineHash),
-		solsha3.Bytes32(d.PendingTop),
-		solsha3.Uint256(d.PendingCount),
-	))
-	return ret
+func (d *VMProtoData) Hash() common.Hash {
+	return hashing.SoliditySHA3(
+		hashing.Bytes32(d.MachineHash),
+		hashing.Bytes32(d.PendingTop),
+		hashing.Uint256(d.PendingCount),
+	)
 }
 
 func (node *VMProtoData) MarshalToBuf() *VMProtoDataBuf {
 	return &VMProtoDataBuf{
-		MachineHash:  utils.MarshalHash(node.MachineHash),
-		PendingTop:   utils.MarshalHash(node.PendingTop),
-		PendingCount: utils.MarshalBigInt(node.PendingCount),
+		MachineHash:  node.MachineHash.MarshalToBuf(),
+		PendingTop:   node.PendingTop.MarshalToBuf(),
+		PendingCount: common.MarshalBigInt(node.PendingCount),
 	}
 }
 
 func (buf *VMProtoDataBuf) Unmarshal() *VMProtoData {
 	return &VMProtoData{
-		MachineHash:  utils.UnmarshalHash(buf.MachineHash),
-		PendingTop:   utils.UnmarshalHash(buf.PendingTop),
-		PendingCount: utils.UnmarshalBigInt(buf.PendingCount),
+		MachineHash:  buf.MachineHash.Unmarshal(),
+		PendingTop:   buf.PendingTop.Unmarshal(),
+		PendingCount: buf.PendingCount.Unmarshal(),
 	}
 }
 
@@ -120,8 +116,8 @@ func (ap *AssertionParams) String() string {
 	return fmt.Sprintf(
 		"AssertionParams(NumSteps: %v, TimeBounds: [%v, %v], ImportedCount: %v)",
 		ap.NumSteps,
-		ap.TimeBounds.Start.Unmarshal().AsInt(),
-		ap.TimeBounds.End.Unmarshal().AsInt(),
+		ap.TimeBounds.Start.AsInt(),
+		ap.TimeBounds.End.AsInt(),
 		ap.ImportedMessageCount,
 	)
 }
@@ -143,39 +139,31 @@ func (ap *AssertionParams) Clone() *AssertionParams {
 func (ap *AssertionParams) MarshalToBuf() *AssertionParamsBuf {
 	return &AssertionParamsBuf{
 		NumSteps:             ap.NumSteps,
-		TimeBounds:           ap.TimeBounds,
-		ImportedMessageCount: utils.MarshalBigInt(ap.ImportedMessageCount),
+		TimeBounds:           ap.TimeBounds.MarshalToBuf(),
+		ImportedMessageCount: common.MarshalBigInt(ap.ImportedMessageCount),
 	}
 }
 
 func (m *AssertionParamsBuf) Unmarshal() *AssertionParams {
 	return &AssertionParams{
 		NumSteps:             m.NumSteps,
-		TimeBounds:           m.TimeBounds,
-		ImportedMessageCount: utils.UnmarshalBigInt(m.ImportedMessageCount),
+		TimeBounds:           m.TimeBounds.Unmarshal(),
+		ImportedMessageCount: m.ImportedMessageCount.Unmarshal(),
 	}
 }
 
 type AssertionClaim struct {
-	AfterPendingTop       [32]byte
-	ImportedMessagesSlice [32]byte
-	AssertionStub         *protocol.ExecutionAssertionStub
+	AfterPendingTop       common.Hash
+	ImportedMessagesSlice common.Hash
+	AssertionStub         *valprotocol.ExecutionAssertionStub
 }
 
 func (dn *AssertionClaim) String() string {
 	return fmt.Sprintf(
-		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, "+
-			"Assertion: (AfterHash: %v, DidInboxInsn: %v, NumGas: %v, "+
-			"FirstMessageHash: %v, LastMessageHash: %v, FirstLogHash: %v LastLogHash: %v))",
-		hexutil.Encode(dn.AfterPendingTop[:]),
-		hexutil.Encode(dn.ImportedMessagesSlice[:]),
-		hexutil.Encode(dn.AssertionStub.AfterHash.Value),
-		dn.AssertionStub.DidInboxInsn,
-		dn.AssertionStub.NumGas,
-		hexutil.Encode(dn.AssertionStub.FirstMessageHash.Value),
-		hexutil.Encode(dn.AssertionStub.LastMessageHash.Value),
-		hexutil.Encode(dn.AssertionStub.FirstLogHash.Value),
-		hexutil.Encode(dn.AssertionStub.LastLogHash.Value),
+		"AssertionClaim(AfterPendingTop: %v, ImportedMessagesSlice: %v, Assertion: %v)",
+		dn.AfterPendingTop,
+		dn.ImportedMessagesSlice,
+		dn.AssertionStub,
 	)
 }
 
@@ -195,31 +183,31 @@ func (dn *AssertionClaim) Clone() *AssertionClaim {
 
 func (dn *AssertionClaim) MarshalToBuf() *AssertionClaimBuf {
 	return &AssertionClaimBuf{
-		AfterPendingTop:       utils.MarshalHash(dn.AfterPendingTop),
-		ImportedMessagesSlice: utils.MarshalHash(dn.ImportedMessagesSlice),
-		AssertionStub:         dn.AssertionStub,
+		AfterPendingTop:       dn.AfterPendingTop.MarshalToBuf(),
+		ImportedMessagesSlice: dn.ImportedMessagesSlice.MarshalToBuf(),
+		AssertionStub:         dn.AssertionStub.MarshalToBuf(),
 	}
 }
 
 func (m *AssertionClaimBuf) Unmarshal() *AssertionClaim {
 	return &AssertionClaim{
-		AfterPendingTop:       utils.UnmarshalHash(m.AfterPendingTop),
-		ImportedMessagesSlice: utils.UnmarshalHash(m.ImportedMessagesSlice),
-		AssertionStub:         m.AssertionStub,
+		AfterPendingTop:       m.AfterPendingTop.Unmarshal(),
+		ImportedMessagesSlice: m.ImportedMessagesSlice.Unmarshal(),
+		AssertionStub:         m.AssertionStub.Unmarshal(),
 	}
 }
 
 type DisputableNode struct {
 	AssertionParams *AssertionParams
 	AssertionClaim  *AssertionClaim
-	MaxPendingTop   [32]byte
+	MaxPendingTop   common.Hash
 	MaxPendingCount *big.Int
 }
 
 func NewDisputableNode(
 	assertionParams *AssertionParams,
 	assertionClaim *AssertionClaim,
-	maxPendingTop [32]byte,
+	maxPendingTop common.Hash,
 	maxPendingCount *big.Int,
 ) *DisputableNode {
 	return &DisputableNode{
@@ -234,8 +222,8 @@ func (dn *DisputableNode) MarshalToBuf() *DisputableNodeBuf {
 	return &DisputableNodeBuf{
 		AssertionParams: dn.AssertionParams.MarshalToBuf(),
 		AssertionClaim:  dn.AssertionClaim.MarshalToBuf(),
-		MaxPendingTop:   utils.MarshalHash(dn.MaxPendingTop),
-		MaxPendingCount: utils.MarshalBigInt(dn.MaxPendingCount),
+		MaxPendingTop:   dn.MaxPendingTop.MarshalToBuf(),
+		MaxPendingCount: common.MarshalBigInt(dn.MaxPendingCount),
 	}
 }
 
@@ -243,19 +231,19 @@ func (buf *DisputableNodeBuf) Unmarshal() *DisputableNode {
 	return NewDisputableNode(
 		buf.AssertionParams.Unmarshal(),
 		buf.AssertionClaim.Unmarshal(),
-		utils.UnmarshalHash(buf.MaxPendingTop),
-		utils.UnmarshalBigInt(buf.MaxPendingCount),
+		buf.MaxPendingTop.Unmarshal(),
+		buf.MaxPendingCount.Unmarshal(),
 	)
 }
 
-func (dn *DisputableNode) CheckTime(params ChainParams) TimeTicks {
+func (dn *DisputableNode) CheckTime(params ChainParams) common.TimeTicks {
 	checkTimeRaw := dn.AssertionClaim.AssertionStub.NumGas / params.ArbGasSpeedLimitPerTick
-	return TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
+	return common.TimeTicks{Val: new(big.Int).SetUint64(checkTimeRaw)}
 }
 
 func (dn *DisputableNode) ValidAfterVMProtoData(prevState *VMProtoData) *VMProtoData {
 	return NewVMProtoData(
-		dn.AssertionClaim.AssertionStub.AfterHashValue(),
+		dn.AssertionClaim.AssertionStub.AfterHash,
 		dn.AssertionClaim.AfterPendingTop,
 		new(big.Int).Add(prevState.PendingCount, dn.AssertionParams.ImportedMessageCount),
 	)

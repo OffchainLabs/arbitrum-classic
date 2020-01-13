@@ -17,6 +17,8 @@ import json
 import sys
 
 import arbitrum as arb
+from arbitrum import value
+from arbitrum import messagestack
 from arbitrum.evm.contract import create_evm_vm
 from arbitrum.evm.contract_abi import ContractABI, create_output_handler
 
@@ -71,38 +73,55 @@ def main():
     erc20_address = "0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359"
     erc721_address = "0x06012c8cf97BEaD5deAe237070F9587f8E7A266d"
 
-    vm.env.send_message(
-        [
-            make_msg_val(contract.deposit(10)),
-            person_a_int,
-            10000000,
-            eth_utils.to_int(hexstr=erc20_address + "00"),
-        ]
+    messages = value.Tuple([])
+    messages = messagestack.addMessage(
+        messages,
+        value.Tuple(
+            [
+                make_msg_val(contract.deposit(10)),
+                person_a_int,
+                10000000,
+                eth_utils.to_int(hexstr=erc20_address + "00"),
+            ]
+        ),
+    )
+    messages = messagestack.addMessage(
+        messages,
+        value.Tuple(
+            [
+                make_msg_val(contract.sendERC20(12, erc20_address, 5432)),
+                person_a_int,
+                0,
+                0,
+            ]
+        ),
     )
 
-    vm.env.send_message(
-        [make_msg_val(contract.sendERC20(12, erc20_address, 5432)), person_a_int, 0, 0]
+    messages = messagestack.addMessage(
+        messages,
+        value.Tuple(
+            [
+                make_msg_val(contract.deposit(10)),
+                person_a_int,
+                10000000,
+                eth_utils.to_int(hexstr=erc721_address + "01"),
+            ]
+        ),
     )
 
-    vm.env.send_message(
-        [
-            make_msg_val(contract.deposit(10)),
-            person_a_int,
-            10000000,
-            eth_utils.to_int(hexstr=erc721_address + "01"),
-        ]
+    messages = messagestack.addMessage(
+        messages,
+        value.Tuple(
+            [
+                make_msg_val(contract.sendERC721(12, erc721_address, 10000000)),
+                person_a_int,
+                0,
+                0,
+            ]
+        ),
     )
 
-    vm.env.send_message(
-        [
-            make_msg_val(contract.sendERC721(12, erc721_address, 10000000)),
-            person_a_int,
-            0,
-            0,
-        ]
-    )
-
-    vm.env.deliver_pending()
+    vm.env.messages = messages
     logs = run_until_halt(vm)
     for log in logs:
         print(output_handler(log))

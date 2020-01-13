@@ -20,136 +20,55 @@ import (
 	"context"
 	"log"
 	"time"
-
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valmessage"
 )
 
-type VMConnection interface {
-	StartConnection(ctx context.Context) error
-
-	GetChans() (chan Notification, chan error)
-
-	VerifyVM(
-		auth *bind.CallOpts,
-		config *valmessage.VMConfiguration,
-		machine [32]byte,
-	) error
-
-	IsEnabled(
-		auth *bind.CallOpts,
-	) (bool, error)
-
-	IsPendingUnanimous(
-		auth *bind.CallOpts,
-	) (bool, error)
-
-	IsInChallenge(
-		auth *bind.CallOpts,
-	) (bool, error)
-
-	PendingDisputableAssert(
-		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
-		assertion *protocol.ExecutionAssertion,
-	) (*types.Receipt, error)
-
-	ConfirmDisputableAsserted(
-		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
-		assertion *protocol.ExecutionAssertion,
-	) (*types.Receipt, error)
-
-	InitiateChallenge(
-		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
-	) (*types.Receipt, error)
-}
-
-type ChallengeConnection interface {
-	StartConnection(ctx context.Context) error
-
-	GetChans() (chan Notification, chan error)
-
-	BisectAssertion(
-		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
-	) (*types.Receipt, error)
-
-	ContinueChallenge(
-		auth *bind.TransactOpts,
-		assertionToChallenge uint16,
-		precondition *protocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
-	) (*types.Receipt, error)
-
-	OneStepProof(
-		auth *bind.TransactOpts,
-		precondition *protocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
-		proof []byte,
-	) (*types.Receipt, error)
-
-	AsserterTimedOutChallenge(
-		auth *bind.TransactOpts,
-	) (*types.Receipt, error)
-
-	ChallengerTimedOutChallenge(
-		auth *bind.TransactOpts,
-	) (*types.Receipt, error)
-}
-
-type ContractConnection interface {
-	StartConnection(context.Context, chan Notification, chan error) error
-}
-
-type ChainContract interface {
-	CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error)
-}
-
-type ChallengeContract interface {
-	ChainContract
-
-	TimeoutChallenge(ctx context.Context) error
-}
-
-func HandleBlockchainNotifications(ctx context.Context, noteChan chan Notification, contract ContractConnection) {
+func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher) chan Notification {
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
-	defer close(outChan)
-	defer close(errChan)
 	if err := contract.StartConnection(ctx, outChan, errChan); err != nil {
-		return
+		log.Println("Bad conn 1", err)
+		close(outChan)
+		close(errChan)
+		return nil
 	}
-	for {
-		hitError := false
-		select {
-		case <-ctx.Done():
-			break
-		case notification, ok := <-outChan:
-			if !ok {
-				hitError = true
-				break
-			}
-			noteChan <- notification
-		case <-errChan:
-			hitError = true
-		}
 
-		if hitError {
-			// Ignore error and try to reset connection
-			for {
-				if err := contract.StartConnection(ctx, outChan, errChan); err == nil {
+	noteChan := make(chan Notification, 1024)
+	go func() {
+		defer close(outChan)
+		defer close(errChan)
+		defer close(noteChan)
+		for {
+			hitError := false
+			select {
+			case <-ctx.Done():
+				break
+			case notification, ok := <-outChan:
+				if !ok {
+					hitError = true
 					break
 				}
-				log.Println("Error: Can't connect to blockchain")
-				time.Sleep(5 * time.Second)
+				noteChan <- notification
+			case <-errChan:
+				hitError = true
+			}
+
+			if hitError {
+				// Ignore error and try to reset connection
+				for {
+					err := contract.StartConnection(ctx, outChan, errChan)
+					if err == nil {
+						break
+					}
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
+					log.Println("Error: Can't connect to blockchain", err)
+					time.Sleep(5 * time.Second)
+				}
 			}
 		}
-	}
+	}()
+	return noteChan
 }

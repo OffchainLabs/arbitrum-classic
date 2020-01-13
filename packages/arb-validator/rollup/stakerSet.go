@@ -20,17 +20,13 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/utils"
-
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type Staker struct {
 	address      common.Address
 	location     *Node
-	creationTime structures.TimeTicks
+	creationTime common.TimeTicks
 	challenge    common.Address
 }
 
@@ -68,34 +64,34 @@ func (staker *Staker) MarshalToBuf() *StakerBuf {
 	emptyAddress := common.Address{}
 	if staker.challenge == emptyAddress {
 		return &StakerBuf{
-			Address:       staker.address.Bytes(),
-			Location:      utils.MarshalHash(staker.location.hash),
+			Address:       staker.address.MarshallToBuf(),
+			Location:      staker.location.hash.MarshalToBuf(),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
 			ChallengeAddr: nil,
 		}
 	} else {
 		return &StakerBuf{
-			Address:       staker.address.Bytes(),
-			Location:      utils.MarshalHash(staker.location.hash),
+			Address:       staker.address.MarshallToBuf(),
+			Location:      staker.location.hash.MarshalToBuf(),
 			CreationTime:  staker.creationTime.MarshalToBuf(),
-			ChallengeAddr: staker.challenge.Bytes(),
+			ChallengeAddr: staker.challenge.MarshallToBuf(),
 		}
 	}
 }
 
 func (buf *StakerBuf) Unmarshal(chain *StakedNodeGraph) *Staker {
 	// chain.nodeFromHash and chain.challenges must have already been unmarshaled
-	locArr := utils.UnmarshalHash(buf.Location)
+	locArr := buf.Location.Unmarshal()
 	if buf.ChallengeAddr != nil {
 		return &Staker{
-			address:      common.BytesToAddress([]byte(buf.Address)),
+			address:      buf.Address.Unmarshal(),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
-			challenge:    common.BytesToAddress(buf.ChallengeAddr),
+			challenge:    buf.ChallengeAddr.Unmarshal(),
 		}
 	} else {
 		return &Staker{
-			address:      common.BytesToAddress([]byte(buf.Address)),
+			address:      buf.Address.Unmarshal(),
 			location:     chain.nodeFromHash[locArr],
 			creationTime: buf.CreationTime.Unmarshal(),
 			challenge:    common.Address{},

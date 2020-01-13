@@ -16,15 +16,19 @@
 
 package rollup
 
-import "log"
+import (
+	"log"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+)
 
 type LeafSet struct {
-	idx map[[32]byte]*Node
+	idx map[common.Hash]*Node
 }
 
 func NewLeafSet() *LeafSet {
 	return &LeafSet{
-		make(map[[32]byte]*Node),
+		make(map[common.Hash]*Node),
 	}
 }
 
@@ -38,6 +42,7 @@ func (ll *LeafSet) NumLeaves() int {
 }
 
 func (ll *LeafSet) Add(node *Node) {
+	log.Println("Added leaf", node.linkType, node.hash)
 	if ll.IsLeaf(node) {
 		log.Fatal("tried to insert leaf twice")
 	}
@@ -45,6 +50,7 @@ func (ll *LeafSet) Add(node *Node) {
 }
 
 func (ll *LeafSet) Delete(node *Node) {
+	log.Println("Removed leaf", node.linkType, node.hash)
 	delete(ll.idx, node.hash)
 }
 

@@ -18,19 +18,15 @@ package mockbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
 
 type ClientConnection struct {
 	Client arbbridge.ArbClient
 }
 
-func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*protocol.TimeBlocks, error) {
-	header, err := c.Client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return protocol.NewTimeBlocks(header.Number), nil
+func (c *ClientConnection) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
+	return c.Client.CurrentBlockTime(ctx)
 }

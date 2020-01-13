@@ -114,6 +114,10 @@ contract Staking is ChallengeType {
         return stakeRequirement;
     }
 
+    function isStaked(address _stakerAddress) external view returns (bool) {
+        return stakers[_stakerAddress].location != 0x00;
+    }
+
     function resolveChallenge(address payable winner, address loser) external {
         address sender = msg.sender;
         bytes32 codehash;
@@ -138,9 +142,9 @@ contract Staking is ChallengeType {
         bytes32[2] memory vmProtoHashes, // [asserterVMProtoHash, challengerVMProtoHash]
         bytes32[] memory asserterProof,
         bytes32[] memory challengerProof,
-        bytes32 asserterDataHash,
-        uint128 asserterPeriodTicks,
-        bytes32 challengerNodeHash
+        bytes32 asserterNodeHash,
+        bytes32 challengerDataHash,
+        uint128 challengerPeriodTicks
     )
         public
     {
@@ -157,10 +161,7 @@ contract Staking is ChallengeType {
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
-                    RollupUtils.challengeDataHash(
-                        asserterDataHash,
-                        asserterPeriodTicks
-                    ),
+                    asserterNodeHash,
                     stakerNodeTypes[0],
                     vmProtoHashes[0]
                 ),
@@ -173,7 +174,10 @@ contract Staking is ChallengeType {
                 RollupUtils.childNodeHash(
                     prevNode,
                     deadlineTicks,
-                    challengerNodeHash,
+                    RollupUtils.challengeDataHash(
+                        challengerDataHash,
+                        challengerPeriodTicks
+                    ),
                     stakerNodeTypes[1],
                     vmProtoHashes[1]
                 ),
@@ -188,15 +192,15 @@ contract Staking is ChallengeType {
         address newChallengeAddr = challengeFactory.createChallenge(
             asserterAddress,
             challengerAddress,
-            asserterPeriodTicks,
-            asserterDataHash,
-            stakerNodeTypes[0]
+            challengerPeriodTicks,
+            challengerDataHash,
+            stakerNodeTypes[1]
         );
 
         emit RollupChallengeStarted(
             asserterAddress,
             challengerAddress,
-            stakerNodeTypes[0],
+            stakerNodeTypes[1],
             newChallengeAddr
         );
     }

@@ -6,8 +6,9 @@ package structures
 import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
+	common "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	protocol "github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	value "github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	valprotocol "github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 	math "math"
 )
 
@@ -22,59 +23,20 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type TimeTicksBuf struct {
-	Val                  *value.BigIntegerBuf `protobuf:"bytes,1,opt,name=val,proto3" json:"val,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
-}
-
-func (m *TimeTicksBuf) Reset()         { *m = TimeTicksBuf{} }
-func (m *TimeTicksBuf) String() string { return proto.CompactTextString(m) }
-func (*TimeTicksBuf) ProtoMessage()    {}
-func (*TimeTicksBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{0}
-}
-
-func (m *TimeTicksBuf) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_TimeTicksBuf.Unmarshal(m, b)
-}
-func (m *TimeTicksBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_TimeTicksBuf.Marshal(b, m, deterministic)
-}
-func (m *TimeTicksBuf) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TimeTicksBuf.Merge(m, src)
-}
-func (m *TimeTicksBuf) XXX_Size() int {
-	return xxx_messageInfo_TimeTicksBuf.Size(m)
-}
-func (m *TimeTicksBuf) XXX_DiscardUnknown() {
-	xxx_messageInfo_TimeTicksBuf.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_TimeTicksBuf proto.InternalMessageInfo
-
-func (m *TimeTicksBuf) GetVal() *value.BigIntegerBuf {
-	if m != nil {
-		return m.Val
-	}
-	return nil
-}
-
 type ChainParamsBuf struct {
-	StakeRequirement     *value.BigIntegerBuf `protobuf:"bytes,1,opt,name=stakeRequirement,proto3" json:"stakeRequirement,omitempty"`
-	GracePeriod          *TimeTicksBuf        `protobuf:"bytes,2,opt,name=gracePeriod,proto3" json:"gracePeriod,omitempty"`
-	MaxExecutionSteps    uint32               `protobuf:"varint,3,opt,name=maxExecutionSteps,proto3" json:"maxExecutionSteps,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+	StakeRequirement     *common.BigIntegerBuf `protobuf:"bytes,1,opt,name=stakeRequirement,proto3" json:"stakeRequirement,omitempty"`
+	GracePeriod          *common.TimeTicksBuf  `protobuf:"bytes,2,opt,name=gracePeriod,proto3" json:"gracePeriod,omitempty"`
+	MaxExecutionSteps    uint32                `protobuf:"varint,3,opt,name=maxExecutionSteps,proto3" json:"maxExecutionSteps,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
 func (m *ChainParamsBuf) Reset()         { *m = ChainParamsBuf{} }
 func (m *ChainParamsBuf) String() string { return proto.CompactTextString(m) }
 func (*ChainParamsBuf) ProtoMessage()    {}
 func (*ChainParamsBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{1}
+	return fileDescriptor_66ea84bc81126bff, []int{0}
 }
 
 func (m *ChainParamsBuf) XXX_Unmarshal(b []byte) error {
@@ -95,14 +57,14 @@ func (m *ChainParamsBuf) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ChainParamsBuf proto.InternalMessageInfo
 
-func (m *ChainParamsBuf) GetStakeRequirement() *value.BigIntegerBuf {
+func (m *ChainParamsBuf) GetStakeRequirement() *common.BigIntegerBuf {
 	if m != nil {
 		return m.StakeRequirement
 	}
 	return nil
 }
 
-func (m *ChainParamsBuf) GetGracePeriod() *TimeTicksBuf {
+func (m *ChainParamsBuf) GetGracePeriod() *common.TimeTicksBuf {
 	if m != nil {
 		return m.GracePeriod
 	}
@@ -117,19 +79,19 @@ func (m *ChainParamsBuf) GetMaxExecutionSteps() uint32 {
 }
 
 type VMProtoDataBuf struct {
-	MachineHash          *value.HashBuf       `protobuf:"bytes,1,opt,name=machineHash,proto3" json:"machineHash,omitempty"`
-	PendingTop           *value.HashBuf       `protobuf:"bytes,2,opt,name=pendingTop,proto3" json:"pendingTop,omitempty"`
-	PendingCount         *value.BigIntegerBuf `protobuf:"bytes,3,opt,name=pendingCount,proto3" json:"pendingCount,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+	MachineHash          *common.HashBuf       `protobuf:"bytes,1,opt,name=machineHash,proto3" json:"machineHash,omitempty"`
+	PendingTop           *common.HashBuf       `protobuf:"bytes,2,opt,name=pendingTop,proto3" json:"pendingTop,omitempty"`
+	PendingCount         *common.BigIntegerBuf `protobuf:"bytes,3,opt,name=pendingCount,proto3" json:"pendingCount,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
 func (m *VMProtoDataBuf) Reset()         { *m = VMProtoDataBuf{} }
 func (m *VMProtoDataBuf) String() string { return proto.CompactTextString(m) }
 func (*VMProtoDataBuf) ProtoMessage()    {}
 func (*VMProtoDataBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{2}
+	return fileDescriptor_66ea84bc81126bff, []int{1}
 }
 
 func (m *VMProtoDataBuf) XXX_Unmarshal(b []byte) error {
@@ -150,21 +112,21 @@ func (m *VMProtoDataBuf) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_VMProtoDataBuf proto.InternalMessageInfo
 
-func (m *VMProtoDataBuf) GetMachineHash() *value.HashBuf {
+func (m *VMProtoDataBuf) GetMachineHash() *common.HashBuf {
 	if m != nil {
 		return m.MachineHash
 	}
 	return nil
 }
 
-func (m *VMProtoDataBuf) GetPendingTop() *value.HashBuf {
+func (m *VMProtoDataBuf) GetPendingTop() *common.HashBuf {
 	if m != nil {
 		return m.PendingTop
 	}
 	return nil
 }
 
-func (m *VMProtoDataBuf) GetPendingCount() *value.BigIntegerBuf {
+func (m *VMProtoDataBuf) GetPendingCount() *common.BigIntegerBuf {
 	if m != nil {
 		return m.PendingCount
 	}
@@ -172,19 +134,19 @@ func (m *VMProtoDataBuf) GetPendingCount() *value.BigIntegerBuf {
 }
 
 type AssertionParamsBuf struct {
-	NumSteps             uint32                     `protobuf:"varint,1,opt,name=numSteps,proto3" json:"numSteps,omitempty"`
-	TimeBounds           *protocol.TimeBoundsBlocks `protobuf:"bytes,2,opt,name=timeBounds,proto3" json:"timeBounds,omitempty"`
-	ImportedMessageCount *value.BigIntegerBuf       `protobuf:"bytes,3,opt,name=importedMessageCount,proto3" json:"importedMessageCount,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
-	XXX_unrecognized     []byte                     `json:"-"`
-	XXX_sizecache        int32                      `json:"-"`
+	NumSteps             uint32                        `protobuf:"varint,1,opt,name=numSteps,proto3" json:"numSteps,omitempty"`
+	TimeBounds           *protocol.TimeBoundsBlocksBuf `protobuf:"bytes,2,opt,name=timeBounds,proto3" json:"timeBounds,omitempty"`
+	ImportedMessageCount *common.BigIntegerBuf         `protobuf:"bytes,3,opt,name=importedMessageCount,proto3" json:"importedMessageCount,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                      `json:"-"`
+	XXX_unrecognized     []byte                        `json:"-"`
+	XXX_sizecache        int32                         `json:"-"`
 }
 
 func (m *AssertionParamsBuf) Reset()         { *m = AssertionParamsBuf{} }
 func (m *AssertionParamsBuf) String() string { return proto.CompactTextString(m) }
 func (*AssertionParamsBuf) ProtoMessage()    {}
 func (*AssertionParamsBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{3}
+	return fileDescriptor_66ea84bc81126bff, []int{2}
 }
 
 func (m *AssertionParamsBuf) XXX_Unmarshal(b []byte) error {
@@ -212,14 +174,14 @@ func (m *AssertionParamsBuf) GetNumSteps() uint32 {
 	return 0
 }
 
-func (m *AssertionParamsBuf) GetTimeBounds() *protocol.TimeBoundsBlocks {
+func (m *AssertionParamsBuf) GetTimeBounds() *protocol.TimeBoundsBlocksBuf {
 	if m != nil {
 		return m.TimeBounds
 	}
 	return nil
 }
 
-func (m *AssertionParamsBuf) GetImportedMessageCount() *value.BigIntegerBuf {
+func (m *AssertionParamsBuf) GetImportedMessageCount() *common.BigIntegerBuf {
 	if m != nil {
 		return m.ImportedMessageCount
 	}
@@ -227,19 +189,19 @@ func (m *AssertionParamsBuf) GetImportedMessageCount() *value.BigIntegerBuf {
 }
 
 type AssertionClaimBuf struct {
-	AfterPendingTop       *value.HashBuf                   `protobuf:"bytes,1,opt,name=afterPendingTop,proto3" json:"afterPendingTop,omitempty"`
-	ImportedMessagesSlice *value.HashBuf                   `protobuf:"bytes,2,opt,name=importedMessagesSlice,proto3" json:"importedMessagesSlice,omitempty"`
-	AssertionStub         *protocol.ExecutionAssertionStub `protobuf:"bytes,3,opt,name=assertionStub,proto3" json:"assertionStub,omitempty"`
-	XXX_NoUnkeyedLiteral  struct{}                         `json:"-"`
-	XXX_unrecognized      []byte                           `json:"-"`
-	XXX_sizecache         int32                            `json:"-"`
+	AfterPendingTop       *common.HashBuf                        `protobuf:"bytes,1,opt,name=afterPendingTop,proto3" json:"afterPendingTop,omitempty"`
+	ImportedMessagesSlice *common.HashBuf                        `protobuf:"bytes,2,opt,name=importedMessagesSlice,proto3" json:"importedMessagesSlice,omitempty"`
+	AssertionStub         *valprotocol.ExecutionAssertionStubBuf `protobuf:"bytes,3,opt,name=assertionStub,proto3" json:"assertionStub,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}                               `json:"-"`
+	XXX_unrecognized      []byte                                 `json:"-"`
+	XXX_sizecache         int32                                  `json:"-"`
 }
 
 func (m *AssertionClaimBuf) Reset()         { *m = AssertionClaimBuf{} }
 func (m *AssertionClaimBuf) String() string { return proto.CompactTextString(m) }
 func (*AssertionClaimBuf) ProtoMessage()    {}
 func (*AssertionClaimBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{4}
+	return fileDescriptor_66ea84bc81126bff, []int{3}
 }
 
 func (m *AssertionClaimBuf) XXX_Unmarshal(b []byte) error {
@@ -260,21 +222,21 @@ func (m *AssertionClaimBuf) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AssertionClaimBuf proto.InternalMessageInfo
 
-func (m *AssertionClaimBuf) GetAfterPendingTop() *value.HashBuf {
+func (m *AssertionClaimBuf) GetAfterPendingTop() *common.HashBuf {
 	if m != nil {
 		return m.AfterPendingTop
 	}
 	return nil
 }
 
-func (m *AssertionClaimBuf) GetImportedMessagesSlice() *value.HashBuf {
+func (m *AssertionClaimBuf) GetImportedMessagesSlice() *common.HashBuf {
 	if m != nil {
 		return m.ImportedMessagesSlice
 	}
 	return nil
 }
 
-func (m *AssertionClaimBuf) GetAssertionStub() *protocol.ExecutionAssertionStub {
+func (m *AssertionClaimBuf) GetAssertionStub() *valprotocol.ExecutionAssertionStubBuf {
 	if m != nil {
 		return m.AssertionStub
 	}
@@ -282,20 +244,20 @@ func (m *AssertionClaimBuf) GetAssertionStub() *protocol.ExecutionAssertionStub 
 }
 
 type DisputableNodeBuf struct {
-	AssertionParams      *AssertionParamsBuf  `protobuf:"bytes,1,opt,name=assertionParams,proto3" json:"assertionParams,omitempty"`
-	AssertionClaim       *AssertionClaimBuf   `protobuf:"bytes,2,opt,name=assertionClaim,proto3" json:"assertionClaim,omitempty"`
-	MaxPendingTop        *value.HashBuf       `protobuf:"bytes,3,opt,name=maxPendingTop,proto3" json:"maxPendingTop,omitempty"`
-	MaxPendingCount      *value.BigIntegerBuf `protobuf:"bytes,4,opt,name=maxPendingCount,proto3" json:"maxPendingCount,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+	AssertionParams      *AssertionParamsBuf   `protobuf:"bytes,1,opt,name=assertionParams,proto3" json:"assertionParams,omitempty"`
+	AssertionClaim       *AssertionClaimBuf    `protobuf:"bytes,2,opt,name=assertionClaim,proto3" json:"assertionClaim,omitempty"`
+	MaxPendingTop        *common.HashBuf       `protobuf:"bytes,3,opt,name=maxPendingTop,proto3" json:"maxPendingTop,omitempty"`
+	MaxPendingCount      *common.BigIntegerBuf `protobuf:"bytes,4,opt,name=maxPendingCount,proto3" json:"maxPendingCount,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
 func (m *DisputableNodeBuf) Reset()         { *m = DisputableNodeBuf{} }
 func (m *DisputableNodeBuf) String() string { return proto.CompactTextString(m) }
 func (*DisputableNodeBuf) ProtoMessage()    {}
 func (*DisputableNodeBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{5}
+	return fileDescriptor_66ea84bc81126bff, []int{4}
 }
 
 func (m *DisputableNodeBuf) XXX_Unmarshal(b []byte) error {
@@ -330,14 +292,14 @@ func (m *DisputableNodeBuf) GetAssertionClaim() *AssertionClaimBuf {
 	return nil
 }
 
-func (m *DisputableNodeBuf) GetMaxPendingTop() *value.HashBuf {
+func (m *DisputableNodeBuf) GetMaxPendingTop() *common.HashBuf {
 	if m != nil {
 		return m.MaxPendingTop
 	}
 	return nil
 }
 
-func (m *DisputableNodeBuf) GetMaxPendingCount() *value.BigIntegerBuf {
+func (m *DisputableNodeBuf) GetMaxPendingCount() *common.BigIntegerBuf {
 	if m != nil {
 		return m.MaxPendingCount
 	}
@@ -345,19 +307,19 @@ func (m *DisputableNodeBuf) GetMaxPendingCount() *value.BigIntegerBuf {
 }
 
 type PendingInboxBuf struct {
-	TopCount             *value.BigIntegerBuf `protobuf:"bytes,1,opt,name=topCount,proto3" json:"topCount,omitempty"`
-	ItemHashes           []*value.HashBuf     `protobuf:"bytes,2,rep,name=itemHashes,proto3" json:"itemHashes,omitempty"`
-	HashOfRest           *value.HashBuf       `protobuf:"bytes,3,opt,name=hashOfRest,proto3" json:"hashOfRest,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+	TopCount             *common.BigIntegerBuf `protobuf:"bytes,1,opt,name=topCount,proto3" json:"topCount,omitempty"`
+	ItemHashes           []*common.HashBuf     `protobuf:"bytes,2,rep,name=itemHashes,proto3" json:"itemHashes,omitempty"`
+	HashOfRest           *common.HashBuf       `protobuf:"bytes,3,opt,name=hashOfRest,proto3" json:"hashOfRest,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
 func (m *PendingInboxBuf) Reset()         { *m = PendingInboxBuf{} }
 func (m *PendingInboxBuf) String() string { return proto.CompactTextString(m) }
 func (*PendingInboxBuf) ProtoMessage()    {}
 func (*PendingInboxBuf) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{6}
+	return fileDescriptor_66ea84bc81126bff, []int{5}
 }
 
 func (m *PendingInboxBuf) XXX_Unmarshal(b []byte) error {
@@ -378,21 +340,21 @@ func (m *PendingInboxBuf) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PendingInboxBuf proto.InternalMessageInfo
 
-func (m *PendingInboxBuf) GetTopCount() *value.BigIntegerBuf {
+func (m *PendingInboxBuf) GetTopCount() *common.BigIntegerBuf {
 	if m != nil {
 		return m.TopCount
 	}
 	return nil
 }
 
-func (m *PendingInboxBuf) GetItemHashes() []*value.HashBuf {
+func (m *PendingInboxBuf) GetItemHashes() []*common.HashBuf {
 	if m != nil {
 		return m.ItemHashes
 	}
 	return nil
 }
 
-func (m *PendingInboxBuf) GetHashOfRest() *value.HashBuf {
+func (m *PendingInboxBuf) GetHashOfRest() *common.HashBuf {
 	if m != nil {
 		return m.HashOfRest
 	}
@@ -400,18 +362,18 @@ func (m *PendingInboxBuf) GetHashOfRest() *value.HashBuf {
 }
 
 type CheckpointManifest struct {
-	Values               []*value.HashBuf `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
-	Machines             []*value.HashBuf `protobuf:"bytes,2,rep,name=machines,proto3" json:"machines,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
-	XXX_unrecognized     []byte           `json:"-"`
-	XXX_sizecache        int32            `json:"-"`
+	Values               []*common.HashBuf `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	Machines             []*common.HashBuf `protobuf:"bytes,2,rep,name=machines,proto3" json:"machines,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *CheckpointManifest) Reset()         { *m = CheckpointManifest{} }
 func (m *CheckpointManifest) String() string { return proto.CompactTextString(m) }
 func (*CheckpointManifest) ProtoMessage()    {}
 func (*CheckpointManifest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{7}
+	return fileDescriptor_66ea84bc81126bff, []int{6}
 }
 
 func (m *CheckpointManifest) XXX_Unmarshal(b []byte) error {
@@ -432,14 +394,14 @@ func (m *CheckpointManifest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CheckpointManifest proto.InternalMessageInfo
 
-func (m *CheckpointManifest) GetValues() []*value.HashBuf {
+func (m *CheckpointManifest) GetValues() []*common.HashBuf {
 	if m != nil {
 		return m.Values
 	}
 	return nil
 }
 
-func (m *CheckpointManifest) GetMachines() []*value.HashBuf {
+func (m *CheckpointManifest) GetMachines() []*common.HashBuf {
 	if m != nil {
 		return m.Machines
 	}
@@ -447,19 +409,19 @@ func (m *CheckpointManifest) GetMachines() []*value.HashBuf {
 }
 
 type CheckpointMetadata struct {
-	FormatVersion        uint64               `protobuf:"varint,1,opt,name=formatVersion,proto3" json:"formatVersion,omitempty"`
-	OldestBlockHeight    *value.BigIntegerBuf `protobuf:"bytes,2,opt,name=oldestBlockHeight,proto3" json:"oldestBlockHeight,omitempty"`
-	NewestBlockHeight    *value.BigIntegerBuf `protobuf:"bytes,3,opt,name=newestBlockHeight,proto3" json:"newestBlockHeight,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+	FormatVersion        uint64      `protobuf:"varint,1,opt,name=formatVersion,proto3" json:"formatVersion,omitempty"`
+	Oldest               *BlockIdBuf `protobuf:"bytes,2,opt,name=oldest,proto3" json:"oldest,omitempty"`
+	Newest               *BlockIdBuf `protobuf:"bytes,3,opt,name=newest,proto3" json:"newest,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
 }
 
 func (m *CheckpointMetadata) Reset()         { *m = CheckpointMetadata{} }
 func (m *CheckpointMetadata) String() string { return proto.CompactTextString(m) }
 func (*CheckpointMetadata) ProtoMessage()    {}
 func (*CheckpointMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_66ea84bc81126bff, []int{8}
+	return fileDescriptor_66ea84bc81126bff, []int{7}
 }
 
 func (m *CheckpointMetadata) XXX_Unmarshal(b []byte) error {
@@ -487,22 +449,115 @@ func (m *CheckpointMetadata) GetFormatVersion() uint64 {
 	return 0
 }
 
-func (m *CheckpointMetadata) GetOldestBlockHeight() *value.BigIntegerBuf {
+func (m *CheckpointMetadata) GetOldest() *BlockIdBuf {
 	if m != nil {
-		return m.OldestBlockHeight
+		return m.Oldest
 	}
 	return nil
 }
 
-func (m *CheckpointMetadata) GetNewestBlockHeight() *value.BigIntegerBuf {
+func (m *CheckpointMetadata) GetNewest() *BlockIdBuf {
 	if m != nil {
-		return m.NewestBlockHeight
+		return m.Newest
+	}
+	return nil
+}
+
+type CheckpointLinks struct {
+	Next                 *BlockIdBuf `protobuf:"bytes,1,opt,name=next,proto3" json:"next,omitempty"`
+	Prev                 *BlockIdBuf `protobuf:"bytes,2,opt,name=prev,proto3" json:"prev,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *CheckpointLinks) Reset()         { *m = CheckpointLinks{} }
+func (m *CheckpointLinks) String() string { return proto.CompactTextString(m) }
+func (*CheckpointLinks) ProtoMessage()    {}
+func (*CheckpointLinks) Descriptor() ([]byte, []int) {
+	return fileDescriptor_66ea84bc81126bff, []int{8}
+}
+
+func (m *CheckpointLinks) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CheckpointLinks.Unmarshal(m, b)
+}
+func (m *CheckpointLinks) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CheckpointLinks.Marshal(b, m, deterministic)
+}
+func (m *CheckpointLinks) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CheckpointLinks.Merge(m, src)
+}
+func (m *CheckpointLinks) XXX_Size() int {
+	return xxx_messageInfo_CheckpointLinks.Size(m)
+}
+func (m *CheckpointLinks) XXX_DiscardUnknown() {
+	xxx_messageInfo_CheckpointLinks.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CheckpointLinks proto.InternalMessageInfo
+
+func (m *CheckpointLinks) GetNext() *BlockIdBuf {
+	if m != nil {
+		return m.Next
+	}
+	return nil
+}
+
+func (m *CheckpointLinks) GetPrev() *BlockIdBuf {
+	if m != nil {
+		return m.Prev
+	}
+	return nil
+}
+
+type BlockIdBuf struct {
+	Height               *common.TimeBlocksBuf `protobuf:"bytes,1,opt,name=height,proto3" json:"height,omitempty"`
+	HeaderHash           *common.HashBuf       `protobuf:"bytes,2,opt,name=headerHash,proto3" json:"headerHash,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *BlockIdBuf) Reset()         { *m = BlockIdBuf{} }
+func (m *BlockIdBuf) String() string { return proto.CompactTextString(m) }
+func (*BlockIdBuf) ProtoMessage()    {}
+func (*BlockIdBuf) Descriptor() ([]byte, []int) {
+	return fileDescriptor_66ea84bc81126bff, []int{9}
+}
+
+func (m *BlockIdBuf) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BlockIdBuf.Unmarshal(m, b)
+}
+func (m *BlockIdBuf) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BlockIdBuf.Marshal(b, m, deterministic)
+}
+func (m *BlockIdBuf) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BlockIdBuf.Merge(m, src)
+}
+func (m *BlockIdBuf) XXX_Size() int {
+	return xxx_messageInfo_BlockIdBuf.Size(m)
+}
+func (m *BlockIdBuf) XXX_DiscardUnknown() {
+	xxx_messageInfo_BlockIdBuf.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BlockIdBuf proto.InternalMessageInfo
+
+func (m *BlockIdBuf) GetHeight() *common.TimeBlocksBuf {
+	if m != nil {
+		return m.Height
+	}
+	return nil
+}
+
+func (m *BlockIdBuf) GetHeaderHash() *common.HashBuf {
+	if m != nil {
+		return m.HeaderHash
 	}
 	return nil
 }
 
 func init() {
-	proto.RegisterType((*TimeTicksBuf)(nil), "structures.TimeTicksBuf")
 	proto.RegisterType((*ChainParamsBuf)(nil), "structures.ChainParamsBuf")
 	proto.RegisterType((*VMProtoDataBuf)(nil), "structures.VMProtoDataBuf")
 	proto.RegisterType((*AssertionParamsBuf)(nil), "structures.AssertionParamsBuf")
@@ -511,54 +566,60 @@ func init() {
 	proto.RegisterType((*PendingInboxBuf)(nil), "structures.PendingInboxBuf")
 	proto.RegisterType((*CheckpointManifest)(nil), "structures.CheckpointManifest")
 	proto.RegisterType((*CheckpointMetadata)(nil), "structures.CheckpointMetadata")
+	proto.RegisterType((*CheckpointLinks)(nil), "structures.CheckpointLinks")
+	proto.RegisterType((*BlockIdBuf)(nil), "structures.BlockIdBuf")
 }
 
 func init() { proto.RegisterFile("structures.proto", fileDescriptor_66ea84bc81126bff) }
 
 var fileDescriptor_66ea84bc81126bff = []byte{
-	// 704 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x55, 0x41, 0x6f, 0xda, 0x48,
-	0x14, 0x96, 0x43, 0x14, 0x45, 0x2f, 0x01, 0x96, 0x51, 0x56, 0x8b, 0x90, 0x76, 0x15, 0x59, 0xab,
-	0x28, 0x5a, 0xed, 0xc2, 0x6a, 0x77, 0xb5, 0x8a, 0x72, 0xa8, 0x1a, 0x43, 0x2a, 0x72, 0x48, 0x8b,
-	0x1c, 0x94, 0x43, 0x6f, 0x0f, 0xfb, 0x19, 0x8f, 0xb0, 0x3d, 0xee, 0xcc, 0x38, 0xe5, 0xb7, 0xf4,
-	0xda, 0x6b, 0xcf, 0x3d, 0xf5, 0xd4, 0xbf, 0xd1, 0x3f, 0x53, 0x8d, 0x71, 0xc0, 0x80, 0xa1, 0x17,
-	0xc0, 0xef, 0x7d, 0xef, 0xcd, 0xf7, 0x7d, 0x6f, 0x9e, 0x81, 0x9f, 0x94, 0x96, 0x99, 0xa7, 0x33,
-	0x49, 0xaa, 0x9b, 0x4a, 0xa1, 0x05, 0x83, 0x55, 0xa4, 0xd3, 0x7a, 0xc2, 0x28, 0xa3, 0x5e, 0xfe,
-	0xb9, 0x48, 0x77, 0x7e, 0xc9, 0xbf, 0x3c, 0x11, 0xf5, 0x9e, 0x7f, 0x2c, 0x12, 0xf6, 0xff, 0x70,
-	0x3a, 0xe6, 0x31, 0x8d, 0xb9, 0x37, 0x53, 0x4e, 0x16, 0xb0, 0x0b, 0xa8, 0x3d, 0x61, 0xd4, 0xb6,
-	0xce, 0xad, 0xcb, 0x93, 0x7f, 0xce, 0xba, 0x8b, 0x1e, 0x0e, 0x9f, 0xde, 0x25, 0x9a, 0xa6, 0x24,
-	0x9d, 0x2c, 0x70, 0x0d, 0xc0, 0xfe, 0x62, 0x41, 0xa3, 0x1f, 0x22, 0x4f, 0x46, 0x28, 0x31, 0xce,
-	0x4b, 0x5f, 0x1a, 0x5a, 0x38, 0x23, 0x97, 0xde, 0x65, 0x5c, 0x52, 0x4c, 0x89, 0xde, 0xdb, 0x67,
-	0x0b, 0xcd, 0xae, 0xe1, 0x64, 0x2a, 0xd1, 0xa3, 0x11, 0x49, 0x2e, 0xfc, 0xf6, 0x41, 0x5e, 0xdc,
-	0xee, 0x96, 0xc4, 0x96, 0xb9, 0xba, 0x65, 0x30, 0xfb, 0x13, 0x5a, 0x31, 0xce, 0x6f, 0xe7, 0xe4,
-	0x65, 0x9a, 0x8b, 0xe4, 0x41, 0x53, 0xaa, 0xda, 0xb5, 0x73, 0xeb, 0xb2, 0xee, 0x6e, 0x27, 0xec,
-	0x4f, 0x16, 0x34, 0x1e, 0xef, 0x47, 0xc6, 0x82, 0x01, 0x6a, 0x34, 0xf4, 0xff, 0x86, 0x93, 0x18,
-	0xbd, 0x90, 0x27, 0x34, 0x44, 0x15, 0x16, 0xcc, 0x1b, 0x05, 0x73, 0x13, 0xca, 0x8f, 0x2c, 0x41,
-	0x58, 0x17, 0x20, 0xa5, 0xc4, 0xe7, 0xc9, 0x74, 0x2c, 0xd2, 0x82, 0xed, 0x66, 0x41, 0x09, 0xc1,
-	0xae, 0xe0, 0xb4, 0x78, 0xea, 0x8b, 0x2c, 0xd1, 0x39, 0xbb, 0x5d, 0xe6, 0xac, 0x21, 0xed, 0xcf,
-	0x16, 0xb0, 0x1b, 0xa5, 0x48, 0x1a, 0x05, 0x2b, 0xc7, 0x3b, 0x70, 0x9c, 0x64, 0xf1, 0x42, 0xaa,
-	0x95, 0x4b, 0x5d, 0x3e, 0xb3, 0x6b, 0x00, 0xcd, 0x63, 0x72, 0x44, 0x96, 0xf8, 0xaa, 0x20, 0xd7,
-	0xe9, 0x2e, 0xa7, 0x3f, 0x5e, 0xe6, 0x9c, 0x48, 0x78, 0x33, 0xe5, 0x96, 0xd0, 0x6c, 0x08, 0x67,
-	0x3c, 0x4e, 0x85, 0xd4, 0xe4, 0xdf, 0x93, 0x52, 0x38, 0xa5, 0x1f, 0x13, 0xae, 0xac, 0xb0, 0xbf,
-	0x59, 0xd0, 0x5a, 0x12, 0xef, 0x47, 0xc8, 0x63, 0xc3, 0xfb, 0x0a, 0x9a, 0x18, 0x68, 0x92, 0xa3,
-	0x95, 0x7b, 0xd5, 0x76, 0x6f, 0xc2, 0xd8, 0x00, 0x7e, 0xde, 0x38, 0x47, 0x3d, 0x44, 0xdc, 0xa3,
-	0x1d, 0xee, 0x57, 0x83, 0xd9, 0x2b, 0xa8, 0xe3, 0x33, 0xa9, 0x07, 0x9d, 0x4d, 0x0a, 0x61, 0xe7,
-	0x2b, 0x7b, 0x96, 0xd7, 0xe5, 0xa6, 0x8c, 0x73, 0xd7, 0xcb, 0xec, 0x0f, 0x07, 0xd0, 0x1a, 0x70,
-	0x95, 0x66, 0x1a, 0x27, 0x11, 0xbd, 0x16, 0x3e, 0x19, 0x75, 0x43, 0x68, 0xe2, 0xfa, 0xac, 0x0a,
-	0x75, 0xbf, 0x95, 0x6f, 0xf2, 0xf6, 0x38, 0xdd, 0xcd, 0x32, 0x76, 0x0b, 0x0d, 0x5c, 0x33, 0xaf,
-	0x90, 0xf9, 0x6b, 0x65, 0xa3, 0x67, 0x7b, 0xdd, 0x8d, 0x22, 0xf6, 0x1f, 0xd4, 0x63, 0x9c, 0x97,
-	0xcc, 0xae, 0x55, 0x9a, 0xb5, 0x0e, 0x62, 0x2f, 0xa0, 0xb9, 0x0a, 0x2c, 0xe6, 0x7f, 0xb8, 0x67,
-	0xfe, 0x9b, 0x60, 0xfb, 0xa3, 0x05, 0xcd, 0x22, 0x70, 0x97, 0x4c, 0xc4, 0x7c, 0xb1, 0x63, 0xc7,
-	0x5a, 0xa4, 0x8b, 0x66, 0xfb, 0x5e, 0x0d, 0x4b, 0x94, 0xd9, 0x31, 0xae, 0x29, 0x36, 0x1c, 0xc9,
-	0x5c, 0xe3, 0x5a, 0xd5, 0x8e, 0xad, 0x10, 0x06, 0x1f, 0xa2, 0x0a, 0xdf, 0x04, 0x2e, 0x29, 0xbd,
-	0x43, 0x68, 0x09, 0x61, 0x87, 0xc0, 0xfa, 0x21, 0x79, 0xb3, 0x54, 0xf0, 0x44, 0xdf, 0x63, 0xc2,
-	0x03, 0x52, 0x9a, 0x5d, 0xc0, 0x51, 0x5e, 0x62, 0x26, 0x57, 0x75, 0x62, 0x91, 0x65, 0x7f, 0xc0,
-	0x71, 0xf1, 0x42, 0xd8, 0xc5, 0x6d, 0x99, 0xb7, 0xbf, 0x5a, 0x6b, 0x47, 0x91, 0x46, 0x1f, 0x35,
-	0xb2, 0xdf, 0xa1, 0x1e, 0x08, 0x19, 0xa3, 0x7e, 0x24, 0xa9, 0xb8, 0x48, 0x72, 0x5f, 0x0e, 0xdd,
-	0xf5, 0x20, 0x73, 0xa0, 0x25, 0x22, 0x9f, 0x94, 0xce, 0xb7, 0x75, 0x48, 0x7c, 0x1a, 0xea, 0xe2,
-	0x32, 0x54, 0x3b, 0xb8, 0x0d, 0x37, 0x3d, 0x12, 0x7a, 0xbf, 0xd1, 0x63, 0xdf, 0x4a, 0x6f, 0xc3,
-	0x9d, 0xc1, 0x5b, 0x67, 0xca, 0x75, 0x98, 0x4d, 0xba, 0x9e, 0x88, 0x7b, 0x22, 0x08, 0x3c, 0xf3,
-	0x1f, 0x10, 0xe1, 0x44, 0xf5, 0x50, 0x4e, 0xb8, 0x96, 0x59, 0xdc, 0x4b, 0xd1, 0x9b, 0x99, 0x5d,
-	0x33, 0x91, 0xbf, 0x9e, 0x30, 0xe2, 0x3e, 0x6a, 0x21, 0x7b, 0xab, 0x2b, 0x3b, 0x39, 0xca, 0xf7,
-	0xec, 0xdf, 0xef, 0x01, 0x00, 0x00, 0xff, 0xff, 0x8f, 0xe3, 0xdd, 0x4a, 0xc7, 0x06, 0x00, 0x00,
+	// 759 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x95, 0xdd, 0x6e, 0xeb, 0x44,
+	0x10, 0xc7, 0xe5, 0xd3, 0x2a, 0xaa, 0xa6, 0xa4, 0xa1, 0xcb, 0x39, 0x50, 0x55, 0x3a, 0xa8, 0xb2,
+	0x10, 0x54, 0x40, 0x13, 0x01, 0x02, 0xa9, 0x17, 0x08, 0x35, 0x69, 0xa5, 0x46, 0x6a, 0x21, 0x72,
+	0xa3, 0x5e, 0x70, 0x37, 0xb1, 0xc7, 0xf1, 0x12, 0x7b, 0xd7, 0xec, 0xae, 0x43, 0x9e, 0x05, 0x71,
+	0xcd, 0x2d, 0xd7, 0xf0, 0x3a, 0xbc, 0x08, 0x5a, 0xdb, 0xb1, 0x9d, 0x0f, 0x97, 0x73, 0x95, 0x64,
+	0xf6, 0x37, 0x3b, 0xff, 0xf9, 0xd8, 0x09, 0xbc, 0xaf, 0x8d, 0xca, 0x7c, 0x93, 0x29, 0xd2, 0xfd,
+	0x54, 0x49, 0x23, 0x19, 0xd4, 0x96, 0xf3, 0x0f, 0x7c, 0x99, 0x24, 0x52, 0x0c, 0x8a, 0x8f, 0x02,
+	0x38, 0xff, 0x28, 0xff, 0xf0, 0x65, 0x3c, 0x58, 0x7f, 0x29, 0x0f, 0xde, 0x2e, 0x31, 0xae, 0xce,
+	0x1a, 0xdf, 0x8b, 0x63, 0xf7, 0x6f, 0x07, 0x4e, 0x46, 0x11, 0x72, 0x31, 0x41, 0x85, 0x89, 0x1e,
+	0x66, 0x21, 0xbb, 0xb1, 0xf1, 0x71, 0x41, 0x1e, 0xfd, 0x9a, 0x71, 0x45, 0x09, 0x09, 0x73, 0xe6,
+	0x5c, 0x38, 0x97, 0xc7, 0x5f, 0xbf, 0xe9, 0x97, 0x31, 0x87, 0x7c, 0x3e, 0x16, 0x86, 0xe6, 0xa4,
+	0x86, 0x59, 0xe8, 0xed, 0xe0, 0xec, 0x3b, 0x38, 0x9e, 0x2b, 0xf4, 0x69, 0x42, 0x8a, 0xcb, 0xe0,
+	0xec, 0x55, 0xee, 0xfd, 0x7a, 0xed, 0x3d, 0xe5, 0x09, 0x4d, 0xb9, 0xbf, 0xb0, 0xd1, 0xbc, 0x26,
+	0xc8, 0xbe, 0x84, 0xd3, 0x04, 0x57, 0x77, 0x2b, 0xf2, 0x33, 0xc3, 0xa5, 0x78, 0x32, 0x94, 0xea,
+	0xb3, 0x83, 0x0b, 0xe7, 0xb2, 0xeb, 0xed, 0x1e, 0xb8, 0x7f, 0x39, 0x70, 0xf2, 0xfc, 0x38, 0xb1,
+	0x79, 0xdc, 0xa2, 0x41, 0xab, 0xfd, 0x2b, 0x38, 0x4e, 0xd0, 0x8f, 0xb8, 0xa0, 0x7b, 0xd4, 0x51,
+	0x29, 0xbb, 0xb7, 0x0e, 0x6c, 0x6d, 0x79, 0xcc, 0x06, 0xc3, 0x06, 0x00, 0x29, 0x89, 0x80, 0x8b,
+	0xf9, 0x54, 0xa6, 0xa5, 0xd4, 0x1d, 0x8f, 0x06, 0xc2, 0xae, 0xe1, 0xbd, 0xf2, 0xd7, 0x48, 0x66,
+	0xc2, 0xe4, 0xfa, 0x5a, 0x6b, 0xb3, 0x81, 0xba, 0xff, 0x38, 0xc0, 0x6e, 0xb4, 0x26, 0x65, 0x93,
+	0xa8, 0x2b, 0x7e, 0x0e, 0x47, 0x22, 0x4b, 0x8a, 0x6c, 0x9d, 0x3c, 0xdb, 0xea, 0x37, 0xfb, 0x1e,
+	0xc0, 0xf0, 0x84, 0x86, 0x32, 0x13, 0x81, 0x2e, 0xe5, 0xbd, 0xed, 0x57, 0x5d, 0x9c, 0x56, 0x67,
+	0xc3, 0x58, 0x96, 0x25, 0x6d, 0x38, 0xb0, 0x31, 0xbc, 0xe6, 0x49, 0x2a, 0x95, 0xa1, 0xe0, 0x91,
+	0xb4, 0xc6, 0x39, 0xbd, 0x83, 0xe8, 0xbd, 0x2e, 0xee, 0xbf, 0x0e, 0x9c, 0x56, 0xe2, 0x47, 0x31,
+	0xf2, 0xc4, 0x6a, 0xbf, 0x86, 0x1e, 0x86, 0x86, 0xd4, 0xa4, 0xae, 0x61, 0x4b, 0xd5, 0xb7, 0x39,
+	0x76, 0x07, 0x6f, 0xb6, 0x02, 0xe9, 0xa7, 0x98, 0xfb, 0xd4, 0xd6, 0x84, 0xfd, 0x34, 0x7b, 0x80,
+	0x2e, 0xae, 0x65, 0x3d, 0x99, 0x6c, 0x56, 0xe6, 0xf6, 0x69, 0xbf, 0x39, 0xed, 0xd5, 0xe8, 0xdc,
+	0x34, 0x51, 0x7b, 0xeb, 0xa6, 0xb3, 0xfb, 0xc7, 0x2b, 0x38, 0xbd, 0xe5, 0x3a, 0xcd, 0x0c, 0xce,
+	0x62, 0xfa, 0x51, 0x06, 0x64, 0xb3, 0xbc, 0x87, 0x1e, 0x6e, 0xf6, 0xad, 0xcc, 0xf2, 0xe3, 0x7e,
+	0xe3, 0xad, 0xee, 0xb6, 0xd6, 0xdb, 0x76, 0x63, 0x77, 0x70, 0x82, 0x1b, 0x45, 0xac, 0x7a, 0xba,
+	0xef, 0xa2, 0x75, 0x99, 0xbd, 0x2d, 0x27, 0xf6, 0x2d, 0x74, 0x13, 0x5c, 0x35, 0x8a, 0x7e, 0xb0,
+	0xbf, 0x66, 0x9b, 0x14, 0xfb, 0x01, 0x7a, 0xb5, 0xa1, 0x98, 0x84, 0xc3, 0x97, 0x26, 0x61, 0x9b,
+	0x76, 0xff, 0x74, 0xa0, 0x57, 0x1a, 0xc6, 0x62, 0x26, 0x57, 0xc5, 0xa3, 0x3b, 0x32, 0x32, 0x2d,
+	0x6e, 0x7b, 0x71, 0x51, 0x54, 0x98, 0x7d, 0x74, 0xdc, 0x50, 0x62, 0x55, 0x92, 0x9d, 0xea, 0x83,
+	0xbd, 0x8f, 0xae, 0x46, 0xac, 0x43, 0x84, 0x3a, 0xfa, 0x29, 0xf4, 0x48, 0x9b, 0xb6, 0x64, 0x1b,
+	0x88, 0xfb, 0x0b, 0xb0, 0x51, 0x44, 0xfe, 0x22, 0x95, 0x5c, 0x98, 0x47, 0x14, 0x3c, 0x24, 0x6d,
+	0xd8, 0x67, 0xd0, 0x59, 0x62, 0x9c, 0x91, 0x6d, 0xdf, 0xde, 0x98, 0xe5, 0x31, 0xfb, 0x02, 0x8e,
+	0xca, 0x25, 0xd1, 0x2a, 0xaf, 0x02, 0xdc, 0xdf, 0x9d, 0x8d, 0x60, 0x64, 0x30, 0x40, 0x83, 0xec,
+	0x13, 0xe8, 0x86, 0x52, 0x25, 0x68, 0x9e, 0x49, 0x69, 0x2e, 0x45, 0x5e, 0x9c, 0x43, 0x6f, 0xd3,
+	0xc8, 0xfa, 0xd0, 0x91, 0x71, 0x60, 0xb3, 0x2a, 0x06, 0xe1, 0xc3, 0xe6, 0x20, 0xe4, 0x8f, 0x7a,
+	0x1c, 0xe4, 0xca, 0x0a, 0xca, 0xf2, 0x82, 0x7e, 0xab, 0xab, 0xd0, 0xca, 0x17, 0x94, 0xcb, 0xa1,
+	0x57, 0x6b, 0x7b, 0xe0, 0x62, 0xa1, 0xd9, 0xe7, 0x70, 0x28, 0x68, 0xb5, 0x6e, 0x56, 0xdb, 0x05,
+	0x39, 0x63, 0xd9, 0x54, 0xd1, 0xf2, 0x7f, 0xc4, 0xe5, 0x8c, 0x1b, 0x03, 0xd4, 0x36, 0x76, 0x05,
+	0x9d, 0x88, 0xf8, 0x3c, 0xda, 0x19, 0x8a, 0x7c, 0x67, 0x55, 0xdb, 0xaa, 0x84, 0xf2, 0x0e, 0x13,
+	0x06, 0xa4, 0xf2, 0xcd, 0xdd, 0xb6, 0x87, 0x6b, 0x64, 0x78, 0xfb, 0xf3, 0x70, 0xce, 0x4d, 0x94,
+	0xcd, 0x2c, 0x34, 0x90, 0x61, 0xe8, 0xdb, 0xff, 0xb1, 0x18, 0x67, 0x7a, 0x80, 0x6a, 0xc6, 0x8d,
+	0xca, 0x92, 0x41, 0x8a, 0xfe, 0xc2, 0x6e, 0x0a, 0x6b, 0xb9, 0x5a, 0x62, 0xcc, 0x03, 0x34, 0x52,
+	0x0d, 0xea, 0x24, 0x66, 0x9d, 0x7c, 0x45, 0x7c, 0xf3, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x69,
+	0x37, 0xf8, 0x4a, 0x74, 0x07, 0x00, 0x00,
 }

@@ -20,13 +20,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type StakerListener struct {
@@ -50,14 +49,14 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 		opp.challengerVMProtoHash,
 		opp.asserterProof,
 		opp.challengerProof,
-		opp.asserterDataHash,
-		opp.asserterPeriodTicks,
-		opp.challengerNodeHash,
+		opp.asserterNodeHash,
+		opp.challengerDataHash,
+		opp.challengerPeriodTicks,
 	)
 	staker.Unlock()
 }
 
-func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof [][32]byte) error {
+func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof []common.Hash) error {
 	staker.Lock()
 	err := staker.contract.MakeAssertion(
 		ctx,
@@ -79,7 +78,7 @@ func (staker *StakerListener) challengePendingTop(contractAddress common.Address
 	challenges.ChallengePendingTopClaim(
 		staker.client,
 		contractAddress,
-		pendingInbox,
+		pendingInbox.MessageStack,
 	)
 	staker.Unlock()
 }
@@ -89,20 +88,21 @@ func (staker *StakerListener) challengeMessages(contractAddress common.Address, 
 	challenges.ChallengeMessagesClaim(
 		staker.client,
 		contractAddress,
-		pendingInbox,
+		pendingInbox.MessageStack,
 		conflictNode.vmProtoData.PendingTop,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
 	)
 	staker.Unlock()
 }
 
-func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition) {
+func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition) {
 	staker.Lock()
 	challenges.ChallengeExecutionClaim(
 		staker.client,
 		contractAddress,
 		pre,
 		mach,
+		false,
 	)
 	staker.Unlock()
 }
@@ -112,9 +112,10 @@ func (staker *StakerListener) defendPendingTop(contractAddress common.Address, p
 	challenges.DefendPendingTopClaim(
 		staker.client,
 		contractAddress,
-		pendingInbox,
+		pendingInbox.MessageStack,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
 		conflictNode.disputable.MaxPendingTop,
+		100,
 	)
 	staker.Unlock()
 }
@@ -124,22 +125,24 @@ func (staker *StakerListener) defendMessages(contractAddress common.Address, pen
 	challenges.DefendMessagesClaim(
 		staker.client,
 		contractAddress,
-		pendingInbox,
+		pendingInbox.MessageStack,
 		conflictNode.vmProtoData.PendingTop,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
 		conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+		100,
 	)
 	staker.Unlock()
 }
 
-func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *protocol.Precondition, numSteps uint32) {
+func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition, numSteps uint32) {
 	staker.Lock()
 	challenges.DefendExecutionClaim(
 		staker.client,
 		contractAddress,
 		pre,
-		numSteps,
 		mach,
+		numSteps,
+		50,
 	)
 	staker.Unlock()
 }

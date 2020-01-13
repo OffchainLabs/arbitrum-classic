@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -14,7 +15,7 @@ const (
 )
 
 type Machine interface {
-	Hash() [32]byte
+	Hash() common.Hash
 	Clone() Machine
 	PrintState()
 
@@ -25,10 +26,10 @@ type Machine interface {
 	MarshalForProof() ([]byte, error)
 
 	Checkpoint(storage CheckpointStorage) bool
-	RestoreCheckpoint(storage CheckpointStorage, machineHash [32]byte) bool
+	RestoreCheckpoint(storage CheckpointStorage, machineHash common.Hash) bool
 }
 
-func IsMachineBlocked(machine Machine, currentTime *protocol.TimeBlocks, newMessages bool) bool {
+func IsMachineBlocked(machine Machine, currentTime *common.TimeBlocks, newMessages bool) bool {
 	lastReason := machine.LastBlockReason()
 	if lastReason == nil {
 		return false

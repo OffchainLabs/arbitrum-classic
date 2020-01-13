@@ -18,27 +18,36 @@ package arbbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type ExecutionChallenge interface {
-	BisectionChallenge
+	Challenge
+
 	BisectAssertion(
 		ctx context.Context,
-		precondition *protocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		precondition *valprotocol.Precondition,
+		assertions []*valprotocol.ExecutionAssertionStub,
 		totalSteps uint32,
 	) error
+
 	OneStepProof(
 		ctx context.Context,
-		precondition *protocol.Precondition,
-		assertion *protocol.ExecutionAssertionStub,
+		precondition *valprotocol.Precondition,
+		assertion *valprotocol.ExecutionAssertionStub,
 		proof []byte,
 	) error
-	ExecutionChallengeChooseSegment(
+
+	ChooseSegment(
 		ctx context.Context,
 		assertionToChallenge uint16,
-		preconditions []*protocol.Precondition,
-		assertions []*protocol.ExecutionAssertionStub,
+		preconditions []*valprotocol.Precondition,
+		assertions []*valprotocol.ExecutionAssertionStub,
+		totalSteps uint32,
 	) error
+}
+
+type ExecutionChallengeWatcher interface {
+	ContractWatcher
 }

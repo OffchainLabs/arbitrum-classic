@@ -1,52 +1,17 @@
 syntax = "proto3";
 package protocol;
-import "value/value.proto";
+import "common/common.proto";
 option go_package = "github.com/offchainlabs/arbitrum/packages/arb-util/protocol";
 
-message TokenTypeBuf {
-    bytes value = 1;
-}
-
-message AddressBuf {
-    bytes value = 1;
-}
-
-message MessageBuf {
-    value.ValueBuf value = 1;
-    TokenTypeBuf tokenType = 2;
-    value.BigIntegerBuf amount = 3;
-    AddressBuf sender = 4;
-}
-
-message TimeBlocksBuf {
-    value.BigIntegerBuf val = 1;
-}
-
-message TimeBoundsBlocks {
-    TimeBlocksBuf start = 1;
-    TimeBlocksBuf end = 2;
-}
-
-message PreconditionBuf {
-    value.HashBuf beforeHash = 1;
-    TimeBoundsBlocks timeBounds = 2;
-    value.HashBuf beforeInbox = 3;
-}
-
-message ExecutionAssertionStub {
-    value.HashBuf afterHash = 1;
-    bool   didInboxInsn = 2;
-    uint64 numGas = 3;
-    value.HashBuf firstMessageHash = 4;
-    value.HashBuf lastMessageHash = 5;
-    value.HashBuf firstLogHash = 6;
-    value.HashBuf lastLogHash = 7;
+message TimeBoundsBlocksBuf {
+    common.TimeBlocksBuf start = 1;
+    common.TimeBlocksBuf end = 2;
 }
 
 message ExecutionAssertionBuf {
-    value.HashBuf afterHash = 1;
+    common.HashBuf afterHash = 1;
     bool   didInboxInsn = 2;
     uint64 numGas = 3;
-    repeated value.ValueBuf messages = 4;
-    repeated value.ValueBuf logs = 5;
+    repeated bytes messages = 4;
+    repeated bytes logs = 5;
 }

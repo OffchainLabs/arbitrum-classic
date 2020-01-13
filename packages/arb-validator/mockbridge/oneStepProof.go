@@ -17,12 +17,12 @@
 package mockbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
 type OneStepProof struct {
@@ -40,9 +40,9 @@ func NewOneStepProof(address common.Address, client arbbridge.ArbClient) (*OneSt
 }
 
 func (con *OneStepProof) ValidateProof(
-	auth *bind.CallOpts,
-	precondition *protocol.Precondition,
-	assertion *protocol.ExecutionAssertionStub,
+	ctx context.Context,
+	precondition *valprotocol.Precondition,
+	assertion *valprotocol.ExecutionAssertionStub,
 	proof []byte,
 ) (*big.Int, error) {
 	//return con.contract.ValidateProof(

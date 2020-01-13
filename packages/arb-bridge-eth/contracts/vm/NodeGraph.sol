@@ -52,15 +52,19 @@ contract NodeGraph is ChallengeType {
     uint256 constant VALID_CHILD_TYPE = 3;
     uint256 constant MAX_CHILD_TYPE = 3;
 
+    // Fields
+    //  prevLeaf
+    //  pendingValue
+    //  afterPendingTop
+    //  importedMessagesSlice
+    //  afterVMHash
+    //  messagesAccHash
+    //  logsAccHash
+
     event RollupAsserted(
-        bytes32 prevLeaf,
-        bytes32 pendingValue,
+        bytes32[7] fields,
+        uint256 pendingCount,
         uint256 importedMessageCount,
-        bytes32 afterPendingTop,
-        bytes32 importedMessagesSlice,
-        bytes32 afterVMHash,
-        bytes32 messagesAccHash,
-        bytes32 logsAccHash,
         uint128[2] timeBoundsBlocks,
         uint64 numArbGas,
         uint32 numSteps,
@@ -229,7 +233,7 @@ contract NodeGraph is ChallengeType {
         leaves[validHash] = true;
         delete leaves[prevLeaf];
 
-        emitAssertedEvent(data, prevLeaf, pendingValue);
+        emitAssertedEvent(data, prevLeaf, pendingValue, pendingCount);
         return (prevLeaf, validHash);
     }
 
@@ -238,16 +242,19 @@ contract NodeGraph is ChallengeType {
         emit RollupConfirmed(to);
     }
 
-    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue) private {
+    function emitAssertedEvent(MakeAssertionData memory data, bytes32 prevLeaf, bytes32 pendingValue, uint256 pendingCount) private {
         emit RollupAsserted(
-            prevLeaf,
-            pendingValue,
+            [
+                prevLeaf,
+                pendingValue,
+                data.afterPendingTop,
+                data.importedMessagesSlice,
+                data.afterVMHash,
+                data.messagesAccHash,
+                data.logsAccHash
+            ],
+            pendingCount,
             data.importedMessageCount,
-            data.afterPendingTop,
-            data.importedMessagesSlice,
-            data.afterVMHash,
-            data.messagesAccHash,
-            data.logsAccHash,
             data.timeBoundsBlocks,
             data.numArbGas,
             data.numSteps,

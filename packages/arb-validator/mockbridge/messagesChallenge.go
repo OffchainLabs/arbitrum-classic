@@ -18,36 +18,18 @@ package mockbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
-	"strings"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
-
-var messagesBisectedID common.Hash
-var messagesOneStepProofCompletedID common.Hash
-
-func init() {
-	parsed, err := abi.JSON(strings.NewReader(messageschallenge.MessagesChallengeABI))
-	if err != nil {
-		panic(err)
-	}
-	messagesBisectedID = parsed.Events["Bisected"].ID()
-	messagesOneStepProofCompletedID = parsed.Events["OneStepProofCompleted"].ID()
-}
 
 type MessagesChallenge struct {
 	*BisectionChallenge
-	Challenge *messageschallenge.MessagesChallenge
 }
 
-func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient, auth *bind.TransactOpts) (*MessagesChallenge, error) {
-	bisectionChallenge, err := NewBisectionChallenge(address, client, auth)
+func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*MessagesChallenge, error) {
+	bisectionChallenge, err := NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +44,7 @@ func (c *MessagesChallenge) setupContracts() error {
 	//	return errors2.Wrap(err, "Failed to connect to MessagesChallenge")
 	//}
 	//
-	//c.Challenge = challengeManagerContract
+	//c.challenge = challengeManagerContract
 	return nil
 }
 
@@ -127,7 +109,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 //func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
 //	event, err := func() (arbbridge.Event, error) {
 //		if log.Topics[0] == messagesBisectedID {
-//			eventVal, err := c.Challenge.ParseBisected(log)
+//			eventVal, err := c.challenge.ParseBisected(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -138,7 +120,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 //				Deadline:      structures.TimeTicks{Val: eventVal.DeadlineTicks},
 //			}, nil
 //		} else if log.Topics[0] == messagesOneStepProofCompletedID {
-//			_, err := c.Challenge.ParseOneStepProofCompleted(log)
+//			_, err := c.challenge.ParseOneStepProofCompleted(log)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -166,12 +148,12 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, outChan chan ar
 
 func (c *MessagesChallenge) Bisect(
 	ctx context.Context,
-	chainHashes [][32]byte,
-	segmentHashes [][32]byte,
+	chainHashes []common.Hash,
+	segmentHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.Bisect(
+	//tx, err := c.challenge.Bisect(
 	//	c.auth,
 	//	chainHashes,
 	//	segmentHashes,
@@ -186,14 +168,14 @@ func (c *MessagesChallenge) Bisect(
 
 func (c *MessagesChallenge) OneStepProof(
 	ctx context.Context,
-	lowerHashA [32]byte,
-	topHashA [32]byte,
-	lowerHashB [32]byte,
-	topHashB [32]byte,
-	value [32]byte,
+	lowerHashA common.Hash,
+	topHashA common.Hash,
+	lowerHashB common.Hash,
+	topHashB common.Hash,
+	value common.Hash,
 ) error {
 	//c.auth.Context = ctx
-	//tx, err := c.Challenge.OneStepProof(
+	//tx, err := c.challenge.OneStepProof(
 	//	c.auth,
 	//	lowerHashA,
 	//	topHashA,
@@ -205,5 +187,15 @@ func (c *MessagesChallenge) OneStepProof(
 	//	return err
 	//}
 	//return c.waitForReceipt(ctx, tx, "OneStepProof")
+	return nil
+}
+
+func (c *MessagesChallenge) ChooseSegment(
+	ctx context.Context,
+	assertionToChallenge uint16,
+	chainHashes []common.Hash,
+	segmentHashes []common.Hash,
+	chainLength *big.Int,
+) error {
 	return nil
 }

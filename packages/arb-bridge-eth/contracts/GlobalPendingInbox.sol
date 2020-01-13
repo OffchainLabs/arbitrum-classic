@@ -209,11 +209,10 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                     _tokenType
                 )
             );
-            Value.Data[] memory dataValues = new Value.Data[](4);
+            Value.Data[] memory dataValues = new Value.Data[](3);
             dataValues[0] = Value.newHashOnly(dataHash);
-            dataValues[1] = Value.newInt(block.timestamp);
-            dataValues[2] = Value.newInt(block.number);
-            dataValues[3] = Value.newInt(uint(txHash));
+            dataValues[1] = Value.newInt(block.number);
+            dataValues[2] = Value.newInt(uint(txHash));
 
             Value.Data[] memory values = new Value.Data[](4);
             values[0] = Value.newTuple(dataValues);

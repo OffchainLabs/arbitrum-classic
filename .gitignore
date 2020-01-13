@@ -283,3 +283,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+packages/arb-validator/cmd/rollupServer/rollupServer

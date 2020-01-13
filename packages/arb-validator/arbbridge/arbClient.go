@@ -18,24 +18,28 @@ package arbbridge
 
 import (
 	"context"
-	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type ArbClient interface {
-	NewArbFactory(address common.Address) (ArbFactory, error)
+	NewArbFactoryWatcher(address common.Address) (ArbFactoryWatcher, error)
 	NewRollupWatcher(address common.Address) (ArbRollupWatcher, error)
+	NewExecutionChallengeWatcher(address common.Address) (ExecutionChallengeWatcher, error)
+	NewMessagesChallengeWatcher(address common.Address) (MessagesChallengeWatcher, error)
+	NewPendingTopChallengeWatcher(address common.Address) (PendingTopChallengeWatcher, error)
 	NewOneStepProof(address common.Address) (OneStepProof, error)
-	NewPendingInbox(address common.Address) (PendingInbox, error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error)
+	CurrentBlockTimeAndHash(ctx context.Context) (*common.TimeBlocks, common.Hash, error)
 }
 
 type ArbAuthClient interface {
 	ArbClient
 	Address() common.Address
+	NewArbFactory(address common.Address) (ArbFactory, error)
 	NewRollup(address common.Address) (ArbRollup, error)
+	NewPendingInbox(address common.Address) (PendingInbox, error)
+	NewChallengeFactory(address common.Address) (ChallengeFactory, error)
 	NewExecutionChallenge(address common.Address) (ExecutionChallenge, error)
 	NewMessagesChallenge(address common.Address) (MessagesChallenge, error)
 	NewPendingTopChallenge(address common.Address) (PendingTopChallenge, error)

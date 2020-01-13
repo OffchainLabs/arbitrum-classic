@@ -17,17 +17,22 @@
 package arbbridge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+	"context"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
 type ArbFactory interface {
 	CreateRollup(
-		auth *bind.TransactOpts,
-		vmState [32]byte,
+		ctx context.Context,
+		vmState common.Hash,
 		params structures.ChainParams,
 		owner common.Address,
 	) (common.Address, error)
+}
+
+type ArbFactoryWatcher interface {
+	GlobalPendingInboxAddress() (common.Address, error)
+	ChallengeFactoryAddress() (common.Address, error)
 }
