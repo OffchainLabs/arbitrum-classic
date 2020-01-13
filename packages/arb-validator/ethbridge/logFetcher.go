@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math/big"
 
@@ -43,51 +44,64 @@ func getLogs(
 	if err != nil {
 		return err
 	}
+	//debug.PrintStack()
 	go func() {
 		defer close(logChan)
 		defer logSub.Unsubscribe()
 		// Get initial old logs
 		filter.FromBlock = startHeight
 		filter.ToBlock = header.Number
+		log.Println("Filter1 from", filter.FromBlock, "to", filter.ToBlock)
 		logs, err := client.FilterLogs(ctx, filter)
 		if err != nil {
 			errChan <- err
 			return
 		}
 		for _, ethLog := range logs {
-			log.Println("getLogs1", ethLog.BlockNumber, ethLog.TxIndex, ethLog.Index)
 			logChan <- ethLog
 		}
 
 		// Retreive for log from stream
-		ethLog := <-streamingLogChan
-		log.Println("getLogs2", ethLog.BlockNumber, ethLog.TxIndex, ethLog.Index)
+		var ethStreamLog types.Log
+		select {
+		case <-ctx.Done():
+			return
+		case ethStreamLog = <-streamingLogChan:
+			log.Println("First stream log", ethStreamLog.BlockNumber)
+		case err := <-logSub.Err():
+			errChan <- err
+			return
+		}
 
 		// If there was a gap between initial retrieval and the stream, fill it in
-		if ethLog.BlockNumber > header.Number.Uint64() {
-			filter.FromBlock = header.Number
-			filter.ToBlock = new(big.Int).Sub(new(big.Int).SetUint64(ethLog.BlockNumber), big.NewInt(1))
+		if ethStreamLog.BlockNumber > header.Number.Uint64()+1 {
+			filter.FromBlock = new(big.Int).Add(header.Number, big.NewInt(1))
+			filter.ToBlock = new(big.Int).Sub(new(big.Int).SetUint64(ethStreamLog.BlockNumber), big.NewInt(1))
+			log.Println("Filter2 from", filter.FromBlock, "to", filter.ToBlock)
 			logs, err := client.FilterLogs(ctx, filter)
 			if err != nil {
 				errChan <- err
 				return
 			}
 			for _, ethLog := range logs {
-				log.Println("getLogs3", ethLog.BlockNumber, ethLog.TxIndex, ethLog.Index)
 				logChan <- ethLog
 			}
 		}
-		logChan <- ethLog
+		logChan <- ethStreamLog
 
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case ethLog := <-streamingLogChan:
-				log.Println("getLogs4", ethLog.BlockNumber, ethLog.TxIndex, ethLog.Index)
+			case ethLog, ok := <-streamingLogChan:
+				if !ok {
+					errChan <- errors.New("streamingLogChan terminated early2")
+					return
+				}
 				logChan <- ethLog
 			case err := <-logSub.Err():
 				errChan <- err
+				return
 			}
 		}
 	}()

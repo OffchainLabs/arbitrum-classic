@@ -18,12 +18,10 @@ package ethbridge
 
 import (
 	"context"
-	"math/big"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -73,123 +71,37 @@ func (c *challenge) setupContracts() error {
 	return nil
 }
 
-func (c *challenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.setupContracts(); err != nil {
-		return err
+func (c *challenge) topics() []ethcommon.Hash {
+	return []ethcommon.Hash{
+		initiatedChallengeID,
+		timedOutAsserterID,
+		timedOutChallengerID,
 	}
-	headers := make(chan *types.Header)
-	headersSub, err := c.client.SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return err
-	}
-
-	header, err := c.client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	filter := ethereum.FilterQuery{
-		Addresses: []ethcommon.Address{c.address},
-		Topics: [][]ethcommon.Hash{{
-			initiatedChallengeID,
-			timedOutAsserterID,
-			timedOutChallengerID,
-		}},
-	}
-
-	filter.ToBlock = header.Number
-	logs, err := c.client.FilterLogs(ctx, filter)
-	if err != nil {
-		return err
-	}
-	for _, log := range logs {
-		if err := c.processEvents(ctx, log, outChan); err != nil {
-			return err
-		}
-	}
-
-	filter.FromBlock = new(big.Int).Add(header.Number, big.NewInt(1))
-	filter.ToBlock = nil
-	logChan := make(chan types.Log)
-	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer headersSub.Unsubscribe()
-		defer logSub.Unsubscribe()
-
-		for {
-			select {
-			case <-ctx.Done():
-				break
-			case header := <-headers:
-				outChan <- arbbridge.Notification{
-					BlockHeader: common.NewHashFromEth(header.Hash()),
-					BlockHeight: header.Number,
-					Event:       arbbridge.NewTimeEvent{},
-				}
-			case log := <-logChan:
-				if err := c.processEvents(ctx, log, outChan); err != nil {
-					errChan <- err
-					return
-				}
-			case err := <-headersSub.Err():
-				errChan <- err
-				return
-			case err := <-logSub.Err():
-				errChan <- err
-				return
-			}
-		}
-	}()
-	return nil
 }
 
-func (c *challenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-	event, err := func() (arbbridge.Event, error) {
-		if log.Topics[0] == initiatedChallengeID {
-			eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.InitiateChallengeEvent{
-				Deadline: common.TimeTicks{Val: eventVal.DeadlineTicks},
-			}, nil
-		} else if log.Topics[0] == timedOutAsserterID {
-			_, err := c.Challenge.ParseAsserterTimedOut(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.AsserterTimeoutEvent{}, nil
-		} else if log.Topics[0] == timedOutChallengerID {
-			_, err := c.Challenge.ParseChallengerTimedOut(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.ChallengerTimeoutEvent{}, nil
+func (c *challenge) parseChallengeEvent(log types.Log) (arbbridge.Event, error) {
+	if log.Topics[0] == initiatedChallengeID {
+		eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
+		if err != nil {
+			return nil, err
 		}
-		return nil, errors2.New("unknown arbitrum event type")
-	}()
-	if err != nil {
-		return err
+		return arbbridge.InitiateChallengeEvent{
+			Deadline: common.TimeTicks{Val: eventVal.DeadlineTicks},
+		}, nil
+	} else if log.Topics[0] == timedOutAsserterID {
+		_, err := c.Challenge.ParseAsserterTimedOut(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.AsserterTimeoutEvent{}, nil
+	} else if log.Topics[0] == timedOutChallengerID {
+		_, err := c.Challenge.ParseChallengerTimedOut(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.ChallengerTimeoutEvent{}, nil
 	}
-
-	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
-	if err != nil {
-		return err
-	}
-
-	outChan <- arbbridge.Notification{
-		BlockHeader: common.NewHashFromEth(header.Hash()),
-		BlockHeight: header.Number,
-		VMID:        common.NewAddressFromEth(c.address),
-		Event:       event,
-		TxHash:      log.TxHash,
-	}
-
-	return nil
+	return nil, nil
 }
 
 func (c *challenge) TimeoutChallenge(

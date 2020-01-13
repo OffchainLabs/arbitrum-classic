@@ -26,6 +26,7 @@ func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
 	if err := contract.StartConnection(ctx, outChan, errChan); err != nil {
+		log.Println("Bad conn 1", err)
 		close(outChan)
 		close(errChan)
 		return nil
@@ -54,10 +55,16 @@ func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher
 			if hitError {
 				// Ignore error and try to reset connection
 				for {
-					if err := contract.StartConnection(ctx, outChan, errChan); err == nil {
+					err := contract.StartConnection(ctx, outChan, errChan)
+					if err == nil {
 						break
 					}
-					log.Println("Error: Can't connect to blockchain")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
+					log.Println("Error: Can't connect to blockchain", err)
 					time.Sleep(5 * time.Second)
 				}
 			}

@@ -71,22 +71,6 @@ contract NodeGraph is ChallengeType {
         bool didInboxInsn
     );
 
-    event RollupAsserted(
-        bytes32 prevLeaf,
-        bytes32 pendingValue,
-        bytes32 afterPendingTop,
-        bytes32 importedMessagesSlice,
-        bytes32 afterVMHash,
-        bytes32 messagesAccHash,
-        bytes32 logsAccHash,
-        uint256 pendingCount,
-        uint256 importedMessageCount,
-        uint128[2] timeBoundsBlocks,
-        uint64 numArbGas,
-        uint32 numSteps,
-        bool didInboxInsn
-    );
-
     event RollupConfirmed(bytes32 nodeHash);
 
     event RollupPruned(bytes32 leaf);

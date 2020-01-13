@@ -23,7 +23,6 @@ import (
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -73,89 +72,26 @@ func (c *bisectionChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *bisectionChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.challenge.StartConnection(ctx, outChan, errChan); err != nil {
-		return err
+func (c *bisectionChallenge) topics() []ethcommon.Hash {
+	tops := []ethcommon.Hash{
+		continuedChallengeID,
 	}
-	if err := c.setupContracts(); err != nil {
-		return err
-	}
-
-	header, err := c.client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	filter := ethereum.FilterQuery{
-		Addresses: []ethcommon.Address{c.address},
-		Topics: [][]ethcommon.Hash{{
-			continuedChallengeID,
-		}},
-	}
-
-	filter.ToBlock = header.Number
-	logs, err := c.client.FilterLogs(ctx, filter)
-	if err != nil {
-		return err
-	}
-	for _, log := range logs {
-		if err := c.processEvents(ctx, log, outChan); err != nil {
-			return err
-		}
-	}
-
-	filter.FromBlock = new(big.Int).Add(header.Number, big.NewInt(1))
-	filter.ToBlock = nil
-	logChan := make(chan types.Log)
-	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer logSub.Unsubscribe()
-
-		for {
-			select {
-			case <-ctx.Done():
-				break
-			case log := <-logChan:
-				if err := c.processEvents(ctx, log, outChan); err != nil {
-					errChan <- err
-					return
-				}
-			case err := <-logSub.Err():
-				errChan <- err
-				return
-			}
-		}
-	}()
-	return nil
+	return append(tops, c.challenge.topics()...)
 }
 
-func (c *bisectionChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
-	if err != nil {
-		return err
-	}
-
+func (c *bisectionChallenge) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
 	if log.Topics[0] == continuedChallengeID {
 		contChal, err := c.BisectionChallenge.ParseContinued(log)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		outChan <- arbbridge.Notification{
-			BlockHeader: common.NewHashFromEth(header.Hash()),
-			BlockHeight: header.Number,
-			VMID:        common.NewAddressFromEth(c.address),
-			Event: arbbridge.ContinueChallengeEvent{
-				SegmentIndex: contChal.SegmentIndex,
-				Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
-			},
-			TxHash: log.TxHash,
-		}
+		return arbbridge.ContinueChallengeEvent{
+			SegmentIndex: contChal.SegmentIndex,
+			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
+		}, nil
+	} else {
+		return c.challenge.parseChallengeEvent(log)
 	}
-	return nil
 }
 
 func (c *bisectionChallenge) chooseSegment(

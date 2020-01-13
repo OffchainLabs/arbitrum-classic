@@ -161,24 +161,6 @@ interface ArbRollupInterface extends Interface {
             ]: [null, null, null, null, null, null, null]): string[];
         }>;
 
-        RollupAsserted: TypedEventDescription<{
-            encodeTopics([
-                prevLeaf,
-                pendingValue,
-                afterPendingTop,
-                importedMessagesSlice,
-                afterVMHash,
-                messagesAccHash,
-                logsAccHash,
-                pendingCount,
-                importedMessageCount,
-                timeBoundsBlocks,
-                numArbGas,
-                numSteps,
-                didInboxInsn,
-            ]: [null, null, null, null, null, null, null, null, null, null, null, null, null]): string[];
-        }>;
-
         RollupChallengeCompleted: TypedEventDescription<{
             encodeTopics([challengeContract, winner, loser]: [null, null, null]): string[];
         }>;
@@ -357,22 +339,6 @@ export class ArbRollup extends Contract {
 
         RollupAsserted(
             fields: null,
-            pendingCount: null,
-            importedMessageCount: null,
-            timeBoundsBlocks: null,
-            numArbGas: null,
-            numSteps: null,
-            didInboxInsn: null,
-        ): EventFilter;
-
-        RollupAsserted(
-            prevLeaf: null,
-            pendingValue: null,
-            afterPendingTop: null,
-            importedMessagesSlice: null,
-            afterVMHash: null,
-            messagesAccHash: null,
-            logsAccHash: null,
             pendingCount: null,
             importedMessageCount: null,
             timeBoundsBlocks: null,

@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"strings"
 
@@ -73,56 +74,57 @@ func (c *messagesChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *messagesChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.bisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
-		return err
+func (c *messagesChallenge) topics() []ethcommon.Hash {
+	tops := []ethcommon.Hash{
+		messagesBisectedID,
+		messagesOneStepProofCompletedID,
 	}
+	return append(tops, c.bisectionChallenge.topics()...)
+}
+
+func (c *messagesChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
 	if err := c.setupContracts(); err != nil {
 		return err
 	}
-	header, err := c.client.HeaderByNumber(ctx, nil)
+
+	headers := make(chan *types.Header)
+	headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
 		return err
 	}
 
 	filter := ethereum.FilterQuery{
 		Addresses: []ethcommon.Address{c.address},
-		Topics: [][]ethcommon.Hash{{
-			messagesBisectedID,
-			messagesOneStepProofCompletedID,
-		}},
+		Topics:    [][]ethcommon.Hash{c.topics()},
 	}
 
-	logs, err := c.client.FilterLogs(ctx, filter)
-	if err != nil {
-		return err
-	}
-	for _, log := range logs {
-		if err := c.processEvents(ctx, log, outChan); err != nil {
-			return err
-		}
-	}
+	logChan := make(chan types.Log, 1024)
+	logErrChan := make(chan error, 10)
 
-	filter.FromBlock = header.Number
-	logChan := make(chan types.Log)
-	logSub, err := c.client.SubscribeFilterLogs(ctx, filter, logChan)
-	if err != nil {
+	if err := getLogs(ctx, c.client, filter, big.NewInt(0), logChan, logErrChan); err != nil {
 		return err
 	}
 
 	go func() {
-		defer logSub.Unsubscribe()
+		defer headersSub.Unsubscribe()
 
 		for {
 			select {
 			case <-ctx.Done():
 				break
-			case log := <-logChan:
-				if err := c.processEvents(ctx, log, outChan); err != nil {
+			case evmLog, ok := <-logChan:
+				if !ok {
+					errChan <- errors.New("logChan terminated early")
+					return
+				}
+				if err := c.processEvents(ctx, evmLog, outChan); err != nil {
 					errChan <- err
 					return
 				}
-			case err := <-logSub.Err():
+			case err := <-logErrChan:
+				errChan <- err
+				return
+			case err := <-headersSub.Err():
 				errChan <- err
 				return
 			}
@@ -150,6 +152,11 @@ func (c *messagesChallenge) processEvents(ctx context.Context, log types.Log, ou
 				return nil, err
 			}
 			return arbbridge.OneStepProofEvent{}, nil
+		} else {
+			event, err := c.bisectionChallenge.parseBisectionEvent(log)
+			if event != nil || err != nil {
+				return event, err
+			}
 		}
 		return nil, errors2.New("unknown arbitrum event type")
 	}()

@@ -18,7 +18,7 @@ package challenges
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -120,7 +120,7 @@ func defendMessages(
 	}
 	_, ok = note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("MessagesChallenge expected InitiateChallengeEvent")
+		return 0, fmt.Errorf("MessagesChallenge defender expected InitiateChallengeEvent but got %T", note.Event)
 	}
 
 	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
@@ -158,7 +158,7 @@ func defendMessages(
 			}
 			_, ok = note.Event.(arbbridge.OneStepProofEvent)
 			if !ok {
-				return 0, errors.New("MessagesChallenge expected OneStepProof")
+				return 0, fmt.Errorf("MessagesChallenge defender expected OneStepProof but got %T", note.Event)
 			}
 			return ChallengeAsserterWon, nil
 		}
@@ -182,7 +182,7 @@ func defendMessages(
 		}
 		ev, ok := note.Event.(arbbridge.MessagesBisectionEvent)
 		if !ok {
-			return 0, errors.New("MessagesChallenge expected MessagesBisectionEvent")
+			return 0, fmt.Errorf("MessagesChallenge defender expected MessagesBisectionEvent but got %T", note.Event)
 		}
 
 		note, state, err = getNextEventWithTimeout(
@@ -197,7 +197,7 @@ func defendMessages(
 		}
 		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("MessagesChallenge expected ContinueChallengeEvent")
+			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
 		}
 		startPending = chainHashes[contEv.SegmentIndex.Uint64()]
 		endPending = chainHashes[contEv.SegmentIndex.Uint64()+1]
@@ -221,7 +221,7 @@ func challengeMessages(
 	}
 	ev, ok := note.Event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, errors.New("MessagesChallenge expected InitiateChallengeEvent")
+		return 0, fmt.Errorf("MessagesChallenge challenger expected InitiateChallengeEvent but got %T", note.Event)
 	}
 
 	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
@@ -248,7 +248,7 @@ func challengeMessages(
 
 		ev, ok := note.Event.(arbbridge.MessagesBisectionEvent)
 		if !ok {
-			return 0, errors.New("MessagesChallenge expected MessagesBisectionEvent")
+			return 0, fmt.Errorf("MessagesChallenge challenger expected MessagesBisectionEvent but got %T", note.Event)
 		}
 		pendingChallengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
 		if err != nil {
@@ -273,7 +273,7 @@ func challengeMessages(
 		}
 		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, errors.New("MessagesChallenge expected ContinueChallengeEvent")
+			return 0, fmt.Errorf("MessagesChallenge challenger expected ContinueChallengeEvent but got %T", note.Event)
 		}
 		deadline = contEv.Deadline
 	}
