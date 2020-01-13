@@ -524,6 +524,10 @@ const _abi = [
         constant: false,
         inputs: [
             {
+                name: '_vmAddress',
+                type: 'address',
+            },
+            {
                 name: '_tokenContract',
                 type: 'address',
             },
@@ -545,6 +549,10 @@ const _abi = [
     {
         constant: false,
         inputs: [
+            {
+                name: '_vmAddress',
+                type: 'address',
+            },
             {
                 name: '_tokenContract',
                 type: 'address',

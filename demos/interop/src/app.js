@@ -68,6 +68,10 @@ class App {
       testToken.networks[network.chainId.toString()].address;
     this.testTokenAddres = testTokenAddress;
 
+    // let testTokenAddress2 =
+    //   testToken.networks[network2.chainId.toString()].address;
+    // this.testTokenAddres = testTokenAddress;
+
     console.log("eth token contract addresss: " + testTokenAddress);
 
     let ethTestTokenContractRaw = new ethers.Contract(
@@ -88,8 +92,8 @@ class App {
     this.ethwalletAddress = await this.ethWallet.getAddress();
     this.arbwalletAddress = await this.arbWallet.getAddress();
 
-    console.log("eth address " + this.ethwalletAddress);
-    console.log("arb address " + this.arbwalletAddress);
+    console.log("eth wallet address " + this.ethwalletAddress);
+    console.log("arb wallet address " + this.arbwalletAddress);
 
     this.contracts.ArbTestToken = arbTestTokenContractRaw.connect(
       this.arbWallet
@@ -119,7 +123,24 @@ class App {
   }
 
   // Listen for events emitted from the contract
-  listenForEvents() {
+  async listenForEvents() {
+    const arbsigner = await this.arbProvider.getSigner();
+    const inboxManager = await arbsigner.globalInboxConn();
+    inboxManager.on(
+      "DepositERC20MessageDelivered",
+      (dest, sender, contract, value) => {
+        console.log(
+          "deposit ERC20 triggered",
+          "arb address: " + dest,
+          "eth address: " + sender,
+          "token address: " + contract,
+          value,
+          event
+        );
+        this.render();
+      }
+    );
+
     var accountInterval = setInterval(async () => {
       let address = await this.arbWallet.getAddress();
 
@@ -127,23 +148,6 @@ class App {
         this.account = address;
         this.render();
       }
-
-      const arbsigner = await this.arbProvider.getSigner();
-      const inboxManager = await arbsigner.globalInboxConn();
-      inboxManager.on(
-        "DepositERC20MessageDelivered",
-        (dest, sender, contract, value) => {
-          console.log(
-            "deposit ERC20 triggered",
-            dest,
-            sender,
-            contract,
-            value,
-            event
-          );
-          this.render();
-        }
-      );
     }, 200);
   }
 
@@ -151,7 +155,6 @@ class App {
     var content = $("#content");
     if (this.ethwalletAddress) {
       $("#accountAddress").html(this.ethwalletAddress);
-      console.log("this account: " + this.account);
 
       const ethBalance = await this.contracts.EthTestToken.balanceOf(
         this.ethwalletAddress
@@ -162,7 +165,6 @@ class App {
 
       const inboxManager = await this.arbProvider.globalInboxConn();
       const tx = await inboxManager.getTokenBalances(this.arbwalletAddress);
-
       console.log("arbBalance in GolbalWallet: " + tx[1]);
 
       const arbBalance = await this.contracts.ArbTestToken.balanceOf(
@@ -209,8 +211,6 @@ class App {
       val
     );
     console.log("approved from : " + this.ethwalletAddress);
-
-    const signer = await this.arbProvider.getSigner();
 
     const tx2 = await this.arbWallet.depositERC20(
       this.contracts.EthTestToken.address,

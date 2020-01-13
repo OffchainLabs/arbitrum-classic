@@ -132,6 +132,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             if(valid){
                 depositERC20Message(
+                    address(bytes20(bytes32(destination))), //wrong
                     address(bytes20(bytes32(tokenContract))), 
                     address(bytes20(bytes32(destination))), 
                     value);
@@ -152,6 +153,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             if(valid){
                 depositERC721Message(
+                    address(bytes20(bytes32(destination))), //wrong
                     address(bytes20(bytes32(tokenContract))), 
                     address(bytes20(bytes32(destination))), 
                     value);
@@ -244,13 +246,17 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function depositERC20Message(
+        address _vmAddress,
         address _tokenContract,
         address _destination,
-        uint256 _value) public
+        uint256 _value
+    )
+        public
     {
-        depositERC20(_tokenContract, _destination, _value);
+        depositERC20(_tokenContract, _vmAddress, _value);
 
         _deliverERCTokenMessage(
+            _vmAddress,
             msg.sender,
             _destination,
             ERC20_DEPOSIT,
@@ -259,13 +265,15 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function depositERC721Message(
+        address _vmAddress,
         address _tokenContract,
         address _destination,
         uint256 _value) public
     {
-        depositERC721(_tokenContract, _destination, _value);
+        depositERC721(_tokenContract, _vmAddress, _value);
 
         _deliverERCTokenMessage(
+            _vmAddress,
             msg.sender,
             _destination,
             ERC721_DEPOSIT,
@@ -364,21 +372,21 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function _deliverERCTokenMessage(
+        address _vmAddress,
         address _sender,
         address _destination,
         uint256 _messageType,
         address _tokenContract,
         uint256 _value) private
     {
-        if (pending[_destination] != 0) 
+        if (pending[_vmAddress] != 0) 
         {
             bytes32 txHash = keccak256(
                 abi.encodePacked(
                     _sender,
                     _destination,
                     _tokenContract,
-                    _value,
-                    pending[_destination]
+                    _value
                 )
             );
 
@@ -395,12 +403,22 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             Value.Data[] memory ercTokenMsg = new Value.Data[](4);
             ercTokenMsg[0] = Value.newInt(block.timestamp);
             ercTokenMsg[1] = Value.newInt(block.number);
-            ercTokenMsg[2] = Value.newInt(uint256(txHash));
+            ercTokenMsg[2] = Value.newInt(uint(txHash));
             ercTokenMsg[3] = Value.newTuple(msgType);
 
             bytes32 messageHash =  Value.newTuple(ercTokenMsg).hash().hash;
 
-            _deliverMessage(_destination, messageHash);
+            _deliverMessage(_vmAddress, messageHash);
+
+            if(_messageType == ERC20_DEPOSIT){
+
+            emit IGlobalPendingInbox.DepositERC20MessageDelivered(
+                _vmAddress,
+                msg.sender,
+                _tokenContract,
+                _value);
+
+            }
         }
 
         if(_messageType == ERC20_DEPOSIT){

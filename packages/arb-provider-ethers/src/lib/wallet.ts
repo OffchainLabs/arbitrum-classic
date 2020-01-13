@@ -85,15 +85,20 @@ export class ArbWallet extends ethers.Signer {
     ): Promise<ethers.providers.TransactionResponse> {
         const sendValue = ethers.utils.bigNumberify(value);
 
+        const vmId = await this.provider.getVmID();
+
+        console.log('vmId add: ' + vmId);
+        console.log('dest add: ' + destAddress);
+
         const inboxManager = await this.globalInboxConn();
-        const blockchainTx = await inboxManager.depositERC20Message(tokenAddress, destAddress, sendValue);
+        const blockchainTx = await inboxManager.depositERC20Message(vmId, tokenAddress, destAddress, sendValue);
         await blockchainTx.wait();
 
-        const fromAddress = await this.getAddress();
+        console.log('dest add2sfsf: ' + destAddress);
 
-        // what args necessary?
-        const args = [tokenAddress, destAddress, value];
-        const messageHash = ethers.utils.solidityKeccak256(['address', 'address', 'uint256'], args);
+        const fromAddress = await this.getAddress();
+        const args = [fromAddress, destAddress, tokenAddress, value];
+        const messageHash = ethers.utils.solidityKeccak256(['address', 'address', 'address', 'uint256'], args);
 
         const tx = {
             data: '',
@@ -104,7 +109,7 @@ export class ArbWallet extends ethers.Signer {
             hash: messageHash,
             nonce: 0,
             to: destAddress,
-            chainId: 123456789,
+            chainId: 1578891852042,
         };
         return this.provider._wrapTransaction(tx, messageHash);
     }

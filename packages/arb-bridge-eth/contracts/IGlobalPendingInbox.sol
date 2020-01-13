@@ -73,11 +73,13 @@ interface IGlobalPendingInbox {
         bytes calldata _data) external;
 
     function depositERC20Message(
+        address _vmAddress,
         address _tokenContract,
         address _destination,
         uint256 _value) external;
 
     function depositERC721Message(
+        address _vmAddress,
         address _tokenContract,
         address _destination,
         uint256 _value) external;

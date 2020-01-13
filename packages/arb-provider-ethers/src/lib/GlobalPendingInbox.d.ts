@@ -74,11 +74,11 @@ interface GlobalPendingInboxInterface extends Interface {
         }>;
 
         depositERC20Message: TypedFunctionDescription<{
-            encode([_tokenContract, _destination, _value]: [string, string, BigNumberish]): string;
+            encode([_vmAddress, _tokenContract, _destination, _value]: [string, string, string, BigNumberish]): string;
         }>;
 
         depositERC721Message: TypedFunctionDescription<{
-            encode([_tokenContract, _destination, _value]: [string, string, BigNumberish]): string;
+            encode([_vmAddress, _tokenContract, _destination, _value]: [string, string, string, BigNumberish]): string;
         }>;
     };
 
@@ -218,6 +218,7 @@ export class GlobalPendingInbox extends Contract {
         ): Promise<ContractTransaction>;
 
         depositERC20Message(
+            _vmAddress: string,
             _tokenContract: string,
             _destination: string,
             _value: BigNumberish,
@@ -225,6 +226,7 @@ export class GlobalPendingInbox extends Contract {
         ): Promise<ContractTransaction>;
 
         depositERC721Message(
+            _vmAddress: string,
             _tokenContract: string,
             _destination: string,
             _value: BigNumberish,
@@ -301,8 +303,18 @@ export class GlobalPendingInbox extends Contract {
 
         depositEthMessage(_destination: string, _value: BigNumberish): Promise<BigNumber>;
 
-        depositERC20Message(_tokenContract: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
+        depositERC20Message(
+            _vmAddress: string,
+            _tokenContract: string,
+            _destination: string,
+            _value: BigNumberish,
+        ): Promise<BigNumber>;
 
-        depositERC721Message(_tokenContract: string, _destination: string, _value: BigNumberish): Promise<BigNumber>;
+        depositERC721Message(
+            _vmAddress: string,
+            _tokenContract: string,
+            _destination: string,
+            _value: BigNumberish,
+        ): Promise<BigNumber>;
     };
 }
