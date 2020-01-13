@@ -20,6 +20,7 @@ from .annotation import modifies_stack
 from .vm_runner import run_vm_once
 from . import marshall
 from . import evm
+from . import messagestack
 
 __all__ = [
     "BasicVM",
@@ -31,5 +32,6 @@ __all__ = [
     "modifies_stack",
     "run_vm_once",
     "marshall",
+    "messagestack",
     "evm",
 ]
