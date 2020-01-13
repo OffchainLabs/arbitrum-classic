@@ -180,9 +180,16 @@ func (chain *ChainObserver) startOpinionUpdateThread(ctx context.Context) {
 				} else {
 					prepared, isPrepared := preparedAssertions[chain.calculatedValidNode.hash]
 					if isPrepared && chain.nodeGraph.leaves.IsLeaf(chain.calculatedValidNode) {
-						for _, lis := range chain.listeners {
-							lis.AssertionPrepared(prepared.Clone())
+						if prepared.params.TimeBounds.IsValidTime(chain.latestBlockNumber) == nil {
+							for _, lis := range chain.listeners {
+								lis.AssertionPrepared(prepared.Clone())
+							}
+						} else {
+							// Prepared assertion is out of date
+							delete(preparingAssertions, chain.calculatedValidNode.hash)
+							delete(preparedAssertions, chain.calculatedValidNode.hash)
 						}
+
 					}
 				}
 				chain.RUnlock()
