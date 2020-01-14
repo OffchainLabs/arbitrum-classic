@@ -144,7 +144,7 @@ func (vm *ethRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
 	if err := vm.setupContracts(); err != nil {
 		return err
 	}
@@ -158,11 +158,11 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 	logChan := make(chan types.Log, 1024)
 	logErrChan := make(chan error, 10)
 
-	if err := getLogs(ctx, vm.client, vm.rollupFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
+	if err := getLogs(ctx, vm.client, vm.rollupFilter(), startHeight, logChan, logErrChan); err != nil {
 		return err
 	}
 
-	if err := getLogs(ctx, vm.client, vm.messageFilter(), big.NewInt(0), logChan, logErrChan); err != nil {
+	if err := getLogs(ctx, vm.client, vm.messageFilter(), startHeight, logChan, logErrChan); err != nil {
 		return err
 	}
 
@@ -175,8 +175,9 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 				break
 			case header := <-headers:
 				outChan <- arbbridge.Notification{
-					BlockId: getBlockID(header),
-					Event:   arbbridge.NewTimeEvent{},
+					BlockId:  getBlockID(header),
+					LogIndex: 0,
+					Event:    arbbridge.NewTimeEvent{},
 				}
 			case ethLog := <-logChan:
 				if err := vm.processEvents(ctx, ethLog, outChan); err != nil {
@@ -342,9 +343,10 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log,
 			return err
 		}
 		outChan <- arbbridge.Notification{
-			BlockId: getBlockID(header),
-			Event:   event,
-			TxHash:  ethLog.TxHash,
+			BlockId:  getBlockID(header),
+			LogIndex: ethLog.Index,
+			Event:    event,
+			TxHash:   ethLog.TxHash,
 		}
 	}
 	return nil

@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"log"
 	"math/big"
 
@@ -31,7 +32,7 @@ func getLogs(
 	ctx context.Context,
 	client *ethclient.Client,
 	filter ethereum.FilterQuery,
-	startHeight *big.Int,
+	startHeight *common.TimeBlocks,
 	logChan chan types.Log,
 	errChan chan error,
 ) error {
@@ -49,7 +50,7 @@ func getLogs(
 		defer close(logChan)
 		defer logSub.Unsubscribe()
 		// Get initial old logs
-		filter.FromBlock = startHeight
+		filter.FromBlock = startHeight.AsInt()
 		filter.ToBlock = header.Number
 		log.Println("Filter1 from", filter.FromBlock, "to", filter.ToBlock)
 		logs, err := client.FilterLogs(ctx, filter)

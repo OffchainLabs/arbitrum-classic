@@ -135,7 +135,7 @@ func (chain *ChainObserver) marshalToBytes(ctx structures.CheckpointContext) ([]
 func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	ctx context.Context,
 	restoreCtx structures.RestoreContext,
-	_client arbbridge.ArbRollup,
+	_client arbbridge.ArbRollupWatcher,
 ) *ChainObserver {
 	nodeGraph := m.StakedNodeGraph.UnmarshalFromCheckpoint(restoreCtx)
 	chain := &ChainObserver{
@@ -164,7 +164,7 @@ func (m *ChainObserverBuf) UnmarshalFromCheckpoint(
 	return chain
 }
 
-func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, client arbbridge.ArbRollup) (*ChainObserver, error) {
+func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx structures.RestoreContext, client arbbridge.ArbRollupWatcher) (*ChainObserver, error) {
 	cob := &ChainObserverBuf{}
 	if err := proto.Unmarshal(buf, cob); err != nil {
 		return nil, err
@@ -172,14 +172,14 @@ func UnmarshalChainObserverFromBytes(ctx context.Context, buf []byte, restoreCtx
 	return cob.UnmarshalFromCheckpoint(ctx, restoreCtx, client), nil
 }
 
-func (chain *ChainObserver) messageDelivered(ev arbbridge.MessageDeliveredEvent) {
+func (chain *ChainObserver) MessageDelivered(ev arbbridge.MessageDeliveredEvent) {
 	chain.pendingInbox.DeliverMessage(ev.Msg.AsValue())
 	for _, lis := range chain.listeners {
 		lis.MessageDelivered(ev)
 	}
 }
 
-func (chain *ChainObserver) pruneLeaf(ev arbbridge.PrunedEvent) {
+func (chain *ChainObserver) PruneLeaf(ev arbbridge.PrunedEvent) {
 	leaf, found := chain.nodeGraph.nodeFromHash[ev.Leaf]
 	if !found {
 		panic("Tried to prune nonexistant leaf")
@@ -191,28 +191,28 @@ func (chain *ChainObserver) pruneLeaf(ev arbbridge.PrunedEvent) {
 	}
 }
 
-func (chain *ChainObserver) createStake(ev arbbridge.StakeCreatedEvent, currentTime common.TimeTicks) {
+func (chain *ChainObserver) CreateStake(ev arbbridge.StakeCreatedEvent, currentTime common.TimeTicks) {
 	chain.nodeGraph.CreateStake(ev, currentTime)
 	for _, lis := range chain.listeners {
 		lis.StakeCreated(ev)
 	}
 }
 
-func (chain *ChainObserver) removeStake(ev arbbridge.StakeRefundedEvent) {
+func (chain *ChainObserver) RemoveStake(ev arbbridge.StakeRefundedEvent) {
 	chain.nodeGraph.RemoveStake(ev.Staker)
 	for _, lis := range chain.listeners {
 		lis.StakeRemoved(ev)
 	}
 }
 
-func (chain *ChainObserver) moveStake(ev arbbridge.StakeMovedEvent) {
+func (chain *ChainObserver) MoveStake(ev arbbridge.StakeMovedEvent) {
 	chain.nodeGraph.MoveStake(ev.Staker, ev.Location)
 	for _, lis := range chain.listeners {
 		lis.StakeMoved(ev)
 	}
 }
 
-func (chain *ChainObserver) newChallenge(ev arbbridge.ChallengeStartedEvent) {
+func (chain *ChainObserver) NewChallenge(ev arbbridge.ChallengeStartedEvent) {
 	asserter := chain.nodeGraph.stakers.Get(ev.Asserter)
 	challenger := chain.nodeGraph.stakers.Get(ev.Challenger)
 	asserterAncestor, challengerAncestor, err := GetConflictAncestor(asserter.location, challenger.location)
@@ -231,14 +231,14 @@ func (chain *ChainObserver) newChallenge(ev arbbridge.ChallengeStartedEvent) {
 	}
 }
 
-func (chain *ChainObserver) challengeResolved(ev arbbridge.ChallengeCompletedEvent) {
+func (chain *ChainObserver) ChallengeResolved(ev arbbridge.ChallengeCompletedEvent) {
 	chain.nodeGraph.ChallengeResolved(ev.ChallengeContract, ev.Winner, ev.Loser)
 	for _, lis := range chain.listeners {
 		lis.CompletedChallenge(ev)
 	}
 }
 
-func (chain *ChainObserver) confirmNode(ev arbbridge.ConfirmedEvent) {
+func (chain *ChainObserver) ConfirmNode(ev arbbridge.ConfirmedEvent) {
 	newNode := chain.nodeGraph.nodeFromHash[ev.NodeHash]
 	if newNode.depth > chain.knownValidNode.depth {
 		chain.knownValidNode = newNode
@@ -273,7 +273,7 @@ func (chain *ChainObserver) updateOldest(node *Node) {
 	}
 }
 
-func (chain *ChainObserver) notifyAssert(
+func (chain *ChainObserver) NotifyAssert(
 	ev arbbridge.AssertedEvent,
 	currentTime *common.TimeBlocks,
 	assertionTxHash common.Hash,
@@ -300,7 +300,7 @@ func (chain *ChainObserver) notifyAssert(
 	return nil
 }
 
-func (chain *ChainObserver) notifyNewBlock(blockId *structures.BlockId) {
+func (chain *ChainObserver) NotifyNewBlock(blockId *structures.BlockId) {
 	chain.Lock()
 	defer chain.Unlock()
 	chain.latestBlockId = blockId

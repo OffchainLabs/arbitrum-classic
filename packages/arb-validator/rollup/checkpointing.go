@@ -38,12 +38,7 @@ import (
 type RollupCheckpointer interface {
 	RestoreLatestState(arbbridge.ArbClient, common.Address, bool) (blockId *structures.BlockId, content *ChainObserverBuf, resCtx structures.RestoreContext)
 	GetInitialMachine() (machine.Machine, error)
-	AsyncSaveCheckpoint(
-		blockId *structures.BlockId,
-		contents []byte,
-		cpCtx structures.CheckpointContext,
-		closeWhenDone chan interface{},
-	)
+	AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{})
 }
 
 type DummyCheckpointer struct {
@@ -74,14 +69,9 @@ func (dcp *DummyCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return dcp.initialMachine.Clone(), nil
 }
 
-func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(
-	blockId *structures.BlockId,
-	contents []byte,
-	cpCtx structures.CheckpointContext,
-	doneChan chan interface{},
-) {
-	if doneChan != nil {
-		doneChan <- struct{}{}
+func (dcp *DummyCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
+	if closeWhenDone != nil {
+		closeWhenDone <- struct{}{}
 	}
 }
 
@@ -244,18 +234,17 @@ func (cp *ProductionCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return cp.cp.GetInitialMachine()
 }
 
-func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(
-	blockId *structures.BlockId,
-	buf []byte,
-	cpCtx structures.CheckpointContext,
-	doneChan chan interface{},
-) {
+func (cp *ProductionCheckpointer) AsyncSaveCheckpoint(blockId *structures.BlockId, contents []byte, cpCtx structures.CheckpointContext, closeWhenDone chan struct{}) {
 	cp.asyncWriter.SubmitJob(
 		func() {
-			cp._saveCheckpoint(blockId, buf, cpCtx)
+			cp._saveCheckpoint(blockId, contents, cpCtx)
 		},
-		doneChan,
+		closeWhenDone,
 	)
+}
+
+func (cp *ProductionCheckpointer) Close() {
+	cp.cp.Close()
 }
 
 type AsyncCheckpointWriter struct {
@@ -263,7 +252,7 @@ type AsyncCheckpointWriter struct {
 	checkpointer *ProductionCheckpointer
 	notifyChan   chan interface{}
 	nextJob      func()
-	doneChans    []chan interface{}
+	doneChans    []chan struct{}
 }
 
 func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *AsyncCheckpointWriter {
@@ -279,7 +268,7 @@ func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *
 				if job != nil {
 					ret.nextJob = nil
 				}
-				doneChansCopy := append([]chan interface{}{}, ret.doneChans...)
+				doneChansCopy := append([]chan struct{}{}, ret.doneChans...)
 				ret.Unlock()
 				if job != nil {
 					job()
@@ -296,6 +285,7 @@ func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *
 				ret.checkpointer.cp.(*productionCheckpointer).deleteSomeOldCheckpoints()
 				ret.Unlock()
 			case <-ctx.Done():
+				ret.checkpointer.Close() //BUGBUG: must ensure this finishes before allowing db to be reopened
 				return
 			}
 		}
@@ -303,7 +293,7 @@ func NewAsyncCheckpointWriter(ctx context.Context, cp *ProductionCheckpointer) *
 	return ret
 }
 
-func (acw *AsyncCheckpointWriter) SubmitJob(job func(), doneChan chan interface{}) {
+func (acw *AsyncCheckpointWriter) SubmitJob(job func(), doneChan chan struct{}) {
 	acw.Lock()
 	defer acw.Unlock()
 	acw.nextJob = job
@@ -329,6 +319,8 @@ type checkpointerWithMetadata interface {
 	QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks)
 
 	GetInitialMachine() (machine.Machine, error)
+
+	Close()
 }
 
 type dummyCheckpointer struct {
@@ -640,4 +632,8 @@ func (csc *productionCheckpointer) GetMachine(h common.Hash) machine.Machine {
 
 func (csc *productionCheckpointer) GetInitialMachine() (machine.Machine, error) {
 	return csc.st.GetInitialMachine()
+}
+
+func (csc *productionCheckpointer) Close() {
+	csc.st.CloseCheckpointStorage()
 }

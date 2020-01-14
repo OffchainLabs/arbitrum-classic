@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"context"
 	"errors"
-	"math/big"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
@@ -80,7 +79,7 @@ func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
 	headers := make(chan *types.Header)
 	headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
@@ -95,7 +94,7 @@ func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, outChan 
 	logChan := make(chan types.Log, 1024)
 	logErrChan := make(chan error, 10)
 
-	if err := getLogs(ctx, c.client, filter, big.NewInt(0), logChan, logErrChan); err != nil {
+	if err := getLogs(ctx, c.client, filter, startHeight, logChan, logErrChan); err != nil {
 		return err
 	}
 
@@ -164,9 +163,10 @@ func (c *messagesChallengeWatcher) processEvents(ctx context.Context, log types.
 		return err
 	}
 	outChan <- arbbridge.Notification{
-		BlockId: getBlockID(header),
-		Event:   event,
-		TxHash:  log.TxHash,
+		BlockId:  getBlockID(header),
+		LogIndex: log.Index,
+		Event:    event,
+		TxHash:   log.TxHash,
 	}
 	return nil
 }

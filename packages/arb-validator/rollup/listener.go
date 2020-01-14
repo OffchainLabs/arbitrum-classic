@@ -50,7 +50,7 @@ type ChainListener interface {
 
 type ValidatorChainListener struct {
 	chain                  *ChainObserver
-	stakers                map[common.Address]*StakerListener
+	stakers                map[common.Address]*StakingKey
 	broadcastAssertions    map[common.Hash]bool
 	broadcastConfirmations map[common.Hash]bool
 	broadcastLeafPrunes    map[common.Hash]bool
@@ -61,7 +61,7 @@ func NewValidatorChainListener(
 ) *ValidatorChainListener {
 	return &ValidatorChainListener{
 		chain:                  chain,
-		stakers:                make(map[common.Address]*StakerListener),
+		stakers:                make(map[common.Address]*StakingKey),
 		broadcastAssertions:    make(map[common.Hash]bool),
 		broadcastConfirmations: make(map[common.Hash]bool),
 		broadcastLeafPrunes:    make(map[common.Hash]bool),
@@ -75,7 +75,7 @@ func (lis *ValidatorChainListener) AddStaker(client arbbridge.ArbAuthClient) err
 	}
 
 	address := client.Address()
-	staker := &StakerListener{
+	staker := &StakingKey{
 		myAddr:   address,
 		client:   client,
 		contract: contract,

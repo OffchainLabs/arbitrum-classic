@@ -28,9 +28,10 @@ type Event interface {
 }
 
 type Notification struct {
-	BlockId *structures.BlockId
-	Event   Event
-	TxHash  [32]byte
+	BlockId  *structures.BlockId
+	LogIndex uint
+	Event    Event
+	TxHash   [32]byte
 }
 
 type StakeCreatedEvent struct {
