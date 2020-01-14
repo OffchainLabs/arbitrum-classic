@@ -18,17 +18,21 @@ package mockbridge
 
 import (
 	"context"
-
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/executionchallenge"
 )
+
+var continuedChallengeID ethcommon.Hash
 
 type BisectionChallenge struct {
 	*Challenge
 }
 
 func NewBisectionChallenge(address common.Address, client arbbridge.ArbClient) (*BisectionChallenge, error) {
-	challenge, err := NewChallenge(address, client)
+	challenge, err := newChallenge(address, client)
 	if err != nil {
 		return nil, err
 	}
@@ -150,4 +154,47 @@ func (c *BisectionChallenge) ChooseSegment(
 	//}
 	//return c.waitForReceipt(ctx, tx, "ChooseSegment")
 	return nil
+}
+
+type bisectionChallengeWatcher struct {
+	*challengeWatcher
+	BisectionChallenge *executionchallenge.BisectionChallenge
+}
+
+func newBisectionChallengeWatcher(address ethcommon.Address, client arbbridge.ArbClient) (*bisectionChallengeWatcher, error) {
+	challenge, err := newChallengeWatcher(address, client)
+	if err != nil {
+		return nil, err
+	}
+	//bisectionContract, err := executionchallenge.NewBisectionChallenge(address, client)
+	//if err != nil {
+	//	return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
+	//}
+	vm := &bisectionChallengeWatcher{
+		challengeWatcher:   challenge,
+		BisectionChallenge: nil,
+	}
+	return vm, err
+}
+
+func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
+	tops := []ethcommon.Hash{
+		continuedChallengeID,
+	}
+	return append(tops, c.challengeWatcher.topics()...)
+}
+
+func (c *bisectionChallengeWatcher) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
+	if log.Topics[0] == continuedChallengeID {
+		contChal, err := c.BisectionChallenge.ParseContinued(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.ContinueChallengeEvent{
+			SegmentIndex: contChal.SegmentIndex,
+			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
+		}, nil
+	} else {
+		return c.challengeWatcher.parseChallengeEvent(log)
+	}
 }

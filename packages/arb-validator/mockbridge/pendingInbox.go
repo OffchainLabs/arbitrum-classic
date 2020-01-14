@@ -31,7 +31,7 @@ type PendingInbox struct {
 	client arbbridge.ArbClient
 }
 
-func NewPendingInbox(address common.Address, client arbbridge.ArbClient) (*PendingInbox, error) {
+func newPendingInbox(address common.Address, client arbbridge.ArbClient) (*PendingInbox, error) {
 	//globalPendingInboxContract, err := globalpendinginbox.NewGlobalPendingInbox(address, client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to GlobalPendingInbox")

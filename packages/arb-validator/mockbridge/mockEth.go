@@ -18,12 +18,12 @@ package mockbridge
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"math/big"
+	rand2 "math/rand"
 	"sync"
 	"time"
 )
@@ -70,7 +70,7 @@ type channelData struct {
 	ValidatorBalances      map[common.Address]*big.Int
 }
 
-type chainData struct {
+type rollupData struct {
 	state          EthState
 	gracePeriod    uint64
 	maxSteps       uint32
@@ -86,19 +86,19 @@ var Void void
 type mockEthdata struct {
 	Vm           map[common.Address]*VmData
 	channels     map[common.Address]*channelData
-	chains       map[common.Address]*chainData
+	rollups      map[common.Address]*rollupData
 	nextAddress  common.Address // unique 'address'
 	BlockNumber  uint64
 	pending      map[common.Address][32]byte
-	LatestHeader *types.Header
-	headerNumber map[*big.Int]*types.Header
-	headerhash   map[[32]byte]*types.Header
+	LatestHeight *big.Int
+	headerNumber map[*big.Int]common.Hash
+	headerhash   map[common.Hash]*big.Int
 
 	// need to hold list of out chans to publish to
-	outchans      map[chan arbbridge.Notification]void
-	cm            chan chan arbbridge.Notification
-	pubchan       chan arbbridge.Notification
-	ChannelWallet map[common.Address]protocol.TokenTracker
+	outchans map[chan arbbridge.Notification]void
+	cm       chan chan arbbridge.Notification
+	pubchan  chan arbbridge.Notification
+	//ChannelWallet map[common.Address]protocol.TokenTracker
 	//create channel manager for adding, removing and publishing to list of outchans
 }
 
@@ -117,12 +117,16 @@ func getMockEth(ethURL string) *mockEthdata {
 		mEthData := new(mockEthdata)
 		MockEth[ethURL] = mEthData
 		//init header number to 0 at startup
-		mEthData.LatestHeader = new(types.Header)
-		mEthData.LatestHeader.Number = big.NewInt(0)
+		mEthData.LatestHeight = big.NewInt(0)
+		mEthData.headerNumber = make(map[*big.Int]common.Hash)
+		mEthData.headerhash = make(map[common.Hash]*big.Int)
+		blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
+		mEthData.headerNumber[mEthData.LatestHeight] = blockHash
+		mEthData.headerhash[blockHash] = mEthData.LatestHeight
 		mEthData.outchans = make(map[chan arbbridge.Notification]void)
 		mEthData.cm = make(chan chan arbbridge.Notification)
 		mEthData.pubchan = make(chan arbbridge.Notification)
-		mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
+		//mEthData.ChannelWallet = make(map[common.Address]protocol.TokenTracker)
 		//mEthData
 		go func() {
 			for {
@@ -137,7 +141,7 @@ func getMockEth(ethURL string) *mockEthdata {
 			}
 		}()
 		go func() {
-			for x := range time.Tick(1000 * time.Millisecond) {
+			for x := range time.Tick(1 * time.Second) {
 				mine(mEthData, x)
 			}
 		}()
@@ -151,20 +155,23 @@ func (m *mockEthdata) registerOutChan(oc chan arbbridge.Notification) {
 }
 
 func (m *mockEthdata) pubMsg(msg arbbridge.Notification) {
-	fmt.Println("publishing block number", msg.Header.Number, " message", msg)
+	//fmt.Println("publishing block number", msg.Header.Number, " message", msg)
+	fmt.Println("publishing block number", *msg.BlockHeight, " message", msg)
 	m.pubchan <- msg
 }
 
 func mine(m *mockEthdata, t time.Time) {
 	fmt.Println("mining - time = ", t)
-	one := big.NewInt(1)
-	var nextBlock types.Header
-	nextBlock.Number = m.LatestHeader.Number.Add(m.LatestHeader.Number, one)
-	m.LatestHeader = &nextBlock
-	fmt.Println("mined block number", nextBlock.Number)
+	nextBlock := m.LatestHeight.Add(m.LatestHeight, big.NewInt(1))
+	m.LatestHeight = nextBlock
+	blockHash := common.NewHashFromEth(ethcommon.BigToHash(big.NewInt(rand2.Int63())))
+	m.headerNumber[nextBlock] = blockHash
+	m.headerhash[blockHash] = nextBlock
+	fmt.Println("mined block number", nextBlock)
 	m.pubMsg(arbbridge.Notification{
-		Header: m.LatestHeader,
-		Event:  arbbridge.NewTimeEvent{},
+		BlockHeader: blockHash,
+		BlockHeight: nextBlock,
+		Event:       arbbridge.NewTimeEvent{},
 	})
 }
 

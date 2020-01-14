@@ -20,8 +20,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
@@ -32,7 +30,7 @@ type ArbRollup struct {
 	Client arbbridge.ArbClient
 }
 
-func NewRollup(address common.Address, client arbbridge.ArbClient) (*ArbRollup, error) {
+func newRollup(address common.Address, client arbbridge.ArbClient) (*ArbRollup, error) {
 	//arbitrumRollupContract, err := rollup.NewArbRollup(address, client.(*ArbClient).client)
 	//if err != nil {
 	//	return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")

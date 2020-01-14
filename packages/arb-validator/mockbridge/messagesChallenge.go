@@ -28,7 +28,7 @@ type MessagesChallenge struct {
 	*BisectionChallenge
 }
 
-func NewMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*MessagesChallenge, error) {
+func newMessagesChallenge(address common.Address, client arbbridge.ArbClient) (*MessagesChallenge, error) {
 	bisectionChallenge, err := NewBisectionChallenge(address, client)
 	if err != nil {
 		return nil, err

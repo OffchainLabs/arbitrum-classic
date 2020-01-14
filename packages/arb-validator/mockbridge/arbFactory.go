@@ -2,7 +2,6 @@ package mockbridge
 
 import (
 	"context"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/arbfactory"
@@ -10,12 +9,12 @@ import (
 )
 
 type ArbFactory struct {
-	contract *arbfactory.ArbFactory
+	contract common.Address
 	client   arbbridge.ArbClient
 }
 
-func NewArbFactory(address common.Address, client arbbridge.ArbClient) (*ArbFactory, error) {
-	return &ArbFactory{nil, client}, nil
+func newArbFactory(address common.Address, client arbbridge.ArbClient) (*ArbFactory, error) {
+	return &ArbFactory{address, client}, nil
 }
 
 func (con *ArbFactory) CreateRollup(
@@ -24,6 +23,7 @@ func (con *ArbFactory) CreateRollup(
 	params structures.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
+	//con.contract =
 	//tx, err := con.contract.CreateRollup(
 	//	auth,
 	//	vmState,
@@ -48,4 +48,27 @@ func (con *ArbFactory) CreateRollup(
 	//	return common.Address{}, err
 	//}
 	return common.Address{}, nil
+}
+
+type arbFactoryWatcher struct {
+	contract *arbfactory.ArbFactory
+	client   arbbridge.ArbClient
+}
+
+func newArbFactoryWatcher(address common.Address, client arbbridge.ArbClient) (*arbFactoryWatcher, error) {
+	//vmCreatorContract, err := arbfactory.newArbFactory(address, client)
+	//if err != nil {
+	//	return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
+	//}
+	return &arbFactoryWatcher{nil, client}, nil
+}
+
+func (con *arbFactoryWatcher) GlobalPendingInboxAddress() (common.Address, error) {
+	addr, err := con.contract.GlobalInboxAddress(nil)
+	return common.NewAddressFromEth(addr), err
+}
+
+func (con *arbFactoryWatcher) ChallengeFactoryAddress() (common.Address, error) {
+	addr, err := con.contract.ChallengeFactoryAddress(nil)
+	return common.NewAddressFromEth(addr), err
 }

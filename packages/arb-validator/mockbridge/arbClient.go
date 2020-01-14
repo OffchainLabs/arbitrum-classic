@@ -18,7 +18,7 @@ package mockbridge
 
 import (
 	"context"
-
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )
@@ -32,51 +32,90 @@ func NewEthClient(ethURL string) (*MockArbClient, error) {
 	return &MockArbClient{getMockEth(ethURL)}, nil
 }
 
-func (c *MockArbClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
-	return NewArbFactory(address, c)
+func (c *MockArbClient) NewArbFactoryWatcher(address common.Address) (arbbridge.ArbFactoryWatcher, error) {
+	return newArbFactoryWatcher(address, c)
 }
 
 func (c *MockArbClient) NewRollupWatcher(address common.Address) (arbbridge.ArbRollupWatcher, error) {
-	return NewRollupWatcher(address, c)
+	return newRollupWatcher(address, c)
+}
+
+func (c *MockArbClient) NewExecutionChallengeWatcher(address common.Address) (arbbridge.ExecutionChallengeWatcher, error) {
+	return newExecutionChallengeWatcher(address.ToEthAddress(), c)
+}
+
+func (c *MockArbClient) NewMessagesChallengeWatcher(address common.Address) (arbbridge.MessagesChallengeWatcher, error) {
+	return newMessagesChallengeWatcher(address.ToEthAddress(), c)
+}
+
+func (c *MockArbClient) NewPendingTopChallengeWatcher(address common.Address) (arbbridge.PendingTopChallengeWatcher, error) {
+	return newPendingTopChallengeWatcher(address.ToEthAddress(), c)
 }
 
 func (c *MockArbClient) NewOneStepProof(address common.Address) (arbbridge.OneStepProof, error) {
-	return NewOneStepProof(address, c)
+	return newOneStepProof(address, c)
 }
 
 func (c *MockArbClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
-	return NewPendingInbox(address, c)
+	return newPendingInbox(address, c)
 }
 
-func (c *ArbClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
-	return NewRollup(address, c.client)
+func (c *MockArbClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
+	return newRollup(address, c)
 }
 
-type ArbAuthClient struct {
+func (c *MockArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
+	return common.NewTimeBlocks(c.MockEthClient.LatestHeight), nil
+}
+
+func (c *MockArbClient) CurrentBlockTimeAndHash(ctx context.Context) (*common.TimeBlocks, common.Hash, error) {
+	return common.NewTimeBlocks(c.MockEthClient.LatestHeight), c.MockEthClient.headerNumber[c.MockEthClient.LatestHeight], nil
+}
+
+type MockArbAuthClient struct {
 	*MockArbClient
 	auth *bind.TransactOpts
 }
 
-func (c *ArbClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address, c.client)
+func NewEthAuthClient(ethURL string, auth *bind.TransactOpts) (*MockArbAuthClient, error) {
+	client, err := NewEthClient(ethURL)
+	if err != nil {
+		return nil, err
+	}
+	return &MockArbAuthClient{
+		MockArbClient: client,
+		auth:          auth,
+	}, nil
 }
 
-func (c *ArbClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
-	return NewMessagesChallenge(address, c.client)
+func (c *MockArbAuthClient) Address() common.Address {
+	return common.NewAddressFromEth(c.auth.From)
 }
 
-func (c *ArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
-	return NewRollup(address, c, c.auth)
+func (c *MockArbAuthClient) NewArbFactory(address common.Address) (arbbridge.ArbFactory, error) {
+	return newArbFactory(address, c)
 }
 
-func (c *ArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
-	return NewExecutionChallenge(address, c, c.auth)
+func (c *MockArbAuthClient) NewRollup(address common.Address) (arbbridge.ArbRollup, error) {
+	return newRollup(address, c)
 }
 
-func (c *ArbClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
-	return NewPendingTopChallenge(address, c.client)
+func (c *MockArbAuthClient) NewPendingInbox(address common.Address) (arbbridge.PendingInbox, error) {
+	return newPendingInbox(address, c)
 }
 
-func (c *ArbClient) CurrentBlockTime(ctx context.Context) (*common.TimeBlocks, error) {
-	return c.client.CurrentBlockTime(ctx)
+func (c *MockArbAuthClient) NewChallengeFactory(address common.Address) (arbbridge.ChallengeFactory, error) {
+	return newChallengeFactory(address, c, c.auth)
+}
+
+func (c *MockArbAuthClient) NewExecutionChallenge(address common.Address) (arbbridge.ExecutionChallenge, error) {
+	return NewExecutionChallenge(address, c)
+}
+
+func (c *MockArbAuthClient) NewMessagesChallenge(address common.Address) (arbbridge.MessagesChallenge, error) {
+	return newMessagesChallenge(address, c)
+}
+
+func (c *MockArbAuthClient) NewPendingTopChallenge(address common.Address) (arbbridge.PendingTopChallenge, error) {
+	return NewPendingTopChallenge(address, c)
 }

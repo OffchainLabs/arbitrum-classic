@@ -29,6 +29,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 
@@ -37,7 +38,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
@@ -51,15 +51,21 @@ import (
 func main() {
 	// Check number of args
 	flag.Parse()
-	switch os.Args[1] {
-	case "create":
-		createRollupChain()
-	case "validate":
-		if err := validateRollupChain(); err != nil {
-			log.Fatal(err)
-		}
-	default:
+	//switch os.Args[1] {
+	//case "create":
+	//	createRollupChain()
+	//case "validate":
+	//	if err := validateRollupChain(); err != nil {
+	//		log.Fatal(err)
+	//	}
+	//default:
+	//}
+	createRollupChain()
+	time.Sleep(2 * time.Second)
+	if err := validateRollupChain(); err != nil {
+		log.Fatal(err)
 	}
+	time.Sleep(7 * time.Second)
 }
 
 func createRollupChain() {
@@ -140,6 +146,7 @@ func createRollupChain() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("********************************************")
 	fmt.Println(address.Hex())
 }
 
@@ -199,7 +206,8 @@ func validateRollupChain() error {
 
 	// Rollup creation
 	auth := bind.NewKeyedTransactor(key)
-	client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	//client, err := ethbridge.NewEthAuthClient(ethURL, auth)
+	client, err := mockbridge.NewEthAuthClient(ethURL, auth)
 	if err != nil {
 		return err
 	}
