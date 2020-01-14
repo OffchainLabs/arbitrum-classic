@@ -79,13 +79,7 @@ func (c *messagesChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, outChan chan arbbridge.Event, errChan chan error) error {
-	headers := make(chan *types.Header)
-	headersSub, err := c.client.SubscribeNewHead(ctx, headers)
-	if err != nil {
-		return err
-	}
-
+func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, eventChan chan arbbridge.Event, errChan chan error) error {
 	filter := ethereum.FilterQuery{
 		Addresses: []ethcommon.Address{c.address},
 		Topics:    [][]ethcommon.Hash{c.topics()},
@@ -99,8 +93,6 @@ func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHei
 	}
 
 	go func() {
-		defer headersSub.Unsubscribe()
-
 		for {
 			select {
 			case <-ctx.Done():
@@ -121,11 +113,8 @@ func (c *messagesChallengeWatcher) StartConnection(ctx context.Context, startHei
 					errChan <- err
 					return
 				}
-				outChan <- event
+				eventChan <- event
 			case err := <-logErrChan:
-				errChan <- err
-				return
-			case err := <-headersSub.Err():
 				errChan <- err
 				return
 			}

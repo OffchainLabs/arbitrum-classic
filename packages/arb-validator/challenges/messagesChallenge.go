@@ -44,18 +44,8 @@ func DefendMessagesClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	eventChan := make(chan arbbridge.Event, 1024)
-	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
-	go func() {
-		for event := range parsingChan {
-			_, ok := event.(arbbridge.NewTimeEvent)
-			if !ok {
-				eventChan <- event
-			}
-		}
-	}()
+	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
 		return 0, err
@@ -88,18 +78,8 @@ func ChallengeMessagesClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	eventChan := make(chan arbbridge.Event, 1024)
-	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
-	go func() {
-		for event := range parsingChan {
-			_, ok := event.(arbbridge.NewTimeEvent)
-			if !ok {
-				eventChan <- event
-			}
-		}
-	}()
+	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	contract, err := client.NewMessagesChallenge(address)
 	if err != nil {
 		return 0, err
@@ -117,7 +97,7 @@ func ChallengeMessagesClaim(
 
 func defendMessages(
 	ctx context.Context,
-	eventChan chan arbbridge.Event,
+	eventChan <-chan arbbridge.Event,
 	contract arbbridge.MessagesChallenge,
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
@@ -228,7 +208,7 @@ func defendMessages(
 
 func challengeMessages(
 	ctx context.Context,
-	eventChan chan arbbridge.Event,
+	eventChan <-chan arbbridge.Event,
 	contract arbbridge.MessagesChallenge,
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,

@@ -24,31 +24,31 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func HandleBlockchainNotifications(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, contract ContractWatcher) chan Event {
-	outChan := make(chan Event, 1024)
+func HandleBlockchainNotifications(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, contract ContractWatcher) <-chan Event {
+	rawEventChan := make(chan Event, 1024)
 	errChan := make(chan error, 1024)
-	if err := contract.StartConnection(ctx, startHeight, startLogIndex, outChan, errChan); err != nil {
-		close(outChan)
+	if err := contract.StartConnection(ctx, startHeight, startLogIndex, rawEventChan, errChan); err != nil {
+		close(rawEventChan)
 		close(errChan)
 		return nil
 	}
 
-	noteChan := make(chan Event, 1024)
+	eventChan := make(chan Event, 1024)
 	go func() {
-		defer close(outChan)
+		defer close(rawEventChan)
 		defer close(errChan)
-		defer close(noteChan)
+		defer close(eventChan)
 		for {
 			hitError := false
 			select {
 			case <-ctx.Done():
 				break
-			case notification, ok := <-outChan:
+			case notification, ok := <-rawEventChan:
 				if !ok {
 					hitError = true
 					break
 				}
-				noteChan <- notification
+				eventChan <- notification
 			case <-errChan:
 				hitError = true
 			}
@@ -56,7 +56,7 @@ func HandleBlockchainNotifications(ctx context.Context, startHeight *common.Time
 			if hitError {
 				// Ignore error and try to reset connection
 				for {
-					err := contract.StartConnection(ctx, startHeight, 0, outChan, errChan)
+					err := contract.StartConnection(ctx, startHeight, 0, rawEventChan, errChan)
 					if err == nil {
 						break
 					}
@@ -71,5 +71,5 @@ func HandleBlockchainNotifications(ctx context.Context, startHeight *common.Time
 			}
 		}
 	}()
-	return noteChan
+	return eventChan
 }

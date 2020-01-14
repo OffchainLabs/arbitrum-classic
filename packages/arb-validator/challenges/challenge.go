@@ -48,7 +48,7 @@ func getAfterState(event arbbridge.Event) ChallengeState {
 	return ChallengeContinuing
 }
 
-func getNextEvent(outChan chan arbbridge.Event) (arbbridge.Event, ChallengeState, error) {
+func getNextEvent(outChan <-chan arbbridge.Event) (arbbridge.Event, ChallengeState, error) {
 	event, ok := <-outChan
 	if !ok {
 		return nil, 0, challengeNoEvents
@@ -58,7 +58,7 @@ func getNextEvent(outChan chan arbbridge.Event) (arbbridge.Event, ChallengeState
 
 func getNextEventWithTimeout(
 	ctx context.Context,
-	outChan chan arbbridge.Event,
+	outChan <-chan arbbridge.Event,
 	deadline common.TimeTicks,
 	contract arbbridge.Challenge,
 	client arbbridge.ArbClient,
@@ -89,7 +89,7 @@ func getNextEventWithTimeout(
 	}
 }
 
-func getNextEventIfExists(ctx context.Context, outChan chan arbbridge.Event, timeout time.Duration) (bool, arbbridge.Event, ChallengeState, error) {
+func getNextEventIfExists(ctx context.Context, outChan <-chan arbbridge.Event, timeout time.Duration) (bool, arbbridge.Event, ChallengeState, error) {
 	for {
 		select {
 		case event, ok := <-outChan:

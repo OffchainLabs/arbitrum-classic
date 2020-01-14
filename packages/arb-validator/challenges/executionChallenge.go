@@ -45,19 +45,8 @@ func DefendExecutionClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	eventChan := make(chan arbbridge.Event, 1024)
-	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
-	go func() {
-		for event := range parsingChan {
-			_, ok := event.(arbbridge.NewTimeEvent)
-			if !ok {
-				eventChan <- event
-			}
-		}
-	}()
-
+	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	contract, err := client.NewExecutionChallenge(address)
 	if err != nil {
 		return ChallengeContinuing, err
@@ -91,19 +80,8 @@ func ChallengeExecutionClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	eventChan := make(chan arbbridge.Event, 1024)
-	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
-	go func() {
-		for event := range parsingChan {
-			_, ok := event.(arbbridge.NewTimeEvent)
-			if !ok {
-				eventChan <- event
-			}
-		}
-	}()
-
+	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	contract, err := client.NewExecutionChallenge(address)
 	if err != nil {
 		return 0, err
@@ -123,7 +101,7 @@ func defendExecution(
 	ctx context.Context,
 	contract arbbridge.ExecutionChallenge,
 	client arbbridge.ArbClient,
-	eventChan chan arbbridge.Event,
+	eventChan <-chan arbbridge.Event,
 	startDefender AssertionDefender,
 	bisectionCount uint32,
 ) (ChallengeState, error) {
@@ -230,12 +208,12 @@ func challengeExecution(
 	ctx context.Context,
 	contract arbbridge.ExecutionChallenge,
 	client arbbridge.ArbClient,
-	outChan chan arbbridge.Event,
+	eventChan <-chan arbbridge.Event,
 	startMachine machine.Machine,
 	startPrecondition *valprotocol.Precondition,
 	challengeEverything bool,
 ) (ChallengeState, error) {
-	event, ok := <-outChan
+	event, ok := <-eventChan
 	if !ok {
 		return 0, challengeNoEvents
 	}
@@ -250,7 +228,7 @@ func challengeExecution(
 	for {
 		event, state, err := getNextEventWithTimeout(
 			ctx,
-			outChan,
+			eventChan,
 			deadline,
 			contract,
 			client,
@@ -267,7 +245,7 @@ func challengeExecution(
 		if !ok {
 			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
 		}
-		timedOut, event, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		var preconditions []*valprotocol.Precondition
 		var m machine.Machine
 		if timedOut {
@@ -296,7 +274,7 @@ func challengeExecution(
 				ev.Assertions,
 				ev.TotalSteps,
 			)
-			event, state, err = getNextEvent(outChan)
+			event, state, err = getNextEvent(eventChan)
 		}
 
 		if err != nil || state != ChallengeContinuing {

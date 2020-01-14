@@ -42,18 +42,8 @@ func DefendPendingTopClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	eventChan := make(chan arbbridge.Event, 1024)
-	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
-	go func() {
-		for event := range parsingChan {
-			_, ok := event.(arbbridge.NewTimeEvent)
-			if !ok {
-				eventChan <- event
-			}
-		}
-	}()
+	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
 		return ChallengeContinuing, err
@@ -83,18 +73,8 @@ func ChallengePendingTopClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	eventChan := make(chan arbbridge.Event, 1024)
-	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
-	go func() {
-		for event := range parsingChan {
-			_, ok := event.(arbbridge.NewTimeEvent)
-			if !ok {
-				eventChan <- event
-			}
-		}
-	}()
+	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
 		return 0, err
@@ -110,7 +90,7 @@ func ChallengePendingTopClaim(
 
 func defendPendingTop(
 	ctx context.Context,
-	eventChan chan arbbridge.Event,
+	eventChan <-chan arbbridge.Event,
 	contract arbbridge.PendingTopChallenge,
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
@@ -202,7 +182,7 @@ func defendPendingTop(
 
 func challengePendingTop(
 	ctx context.Context,
-	eventChan chan arbbridge.Event,
+	eventChan <-chan arbbridge.Event,
 	contract arbbridge.PendingTopChallenge,
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
