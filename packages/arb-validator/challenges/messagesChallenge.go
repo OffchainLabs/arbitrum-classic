@@ -148,19 +148,23 @@ func defendMessages(
 		}
 
 		if messageCount == 1 {
-			pendingNextHash, pendingValueHash, err := pendingInbox.GenerateOneStepProof(startPending)
-			if err != nil {
-				return 0, err
+			timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+			if timedOut {
+				pendingNextHash, pendingValueHash, err := pendingInbox.GenerateOneStepProof(startPending)
+				if err != nil {
+					return 0, err
+				}
+				messagesNextHash, _, err := messagesStack.GenerateOneStepProof(startMessages)
+				if err != nil {
+					return 0, err
+				}
+				err = contract.OneStepProof(ctx, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
+				if err != nil {
+					return 0, err
+				}
+				note, state, err = getNextEvent(outChan)
 			}
-			messagesNextHash, _, err := messagesStack.GenerateOneStepProof(startMessages)
-			if err != nil {
-				return 0, err
-			}
-			err = contract.OneStepProof(ctx, startPending, pendingNextHash, startMessages, messagesNextHash, pendingValueHash)
-			if err != nil {
-				return 0, err
-			}
-			note, state, err := getNextEvent(outChan)
+
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
@@ -171,20 +175,24 @@ func defendMessages(
 			return ChallengeAsserterWon, nil
 		}
 
-		chainHashes, err := pendingInbox.GenerateBisection(startPending, endPending, bisectionCount)
-		if err != nil {
-			return 0, err
-		}
-		stackHashes, err := messagesStack.GenerateBisection(startMessages, endMessages, bisectionCount)
-		if err != nil {
-			return 0, err
-		}
-		err = contract.Bisect(ctx, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
-		if err != nil {
-			return 0, err
+		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		if timedOut {
+			chainHashes, err := pendingInbox.GenerateBisection(startPending, endPending, bisectionCount)
+			if err != nil {
+				return 0, err
+			}
+			stackHashes, err := messagesStack.GenerateBisection(startMessages, endMessages, bisectionCount)
+			if err != nil {
+				return 0, err
+			}
+			err = contract.Bisect(ctx, chainHashes, stackHashes, new(big.Int).SetUint64(messageCount))
+			if err != nil {
+				return 0, err
+			}
+
+			note, state, err = getNextEvent(outChan)
 		}
 
-		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
@@ -207,10 +215,10 @@ func defendMessages(
 		if !ok {
 			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
 		}
-		startPending = chainHashes[contEv.SegmentIndex.Uint64()]
-		endPending = chainHashes[contEv.SegmentIndex.Uint64()+1]
-		startMessages = stackHashes[contEv.SegmentIndex.Uint64()]
-		endMessages = stackHashes[contEv.SegmentIndex.Uint64()+1]
+		startPending = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
+		endPending = ev.ChainHashes[contEv.SegmentIndex.Uint64()+1]
+		startMessages = ev.SegmentHashes[contEv.SegmentIndex.Uint64()]
+		endMessages = ev.SegmentHashes[contEv.SegmentIndex.Uint64()+1]
 	}
 }
 
@@ -258,24 +266,28 @@ func challengeMessages(
 		if !ok {
 			return 0, fmt.Errorf("MessagesChallenge challenger expected MessagesBisectionEvent but got %T", note.Event)
 		}
-		pendingChallengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
-		if err != nil {
-			return 0, err
-		}
-		messagesChallengedSegment, err := messagesStack.CheckBisection(ev.SegmentHashes)
-		if err != nil {
-			return 0, err
-		}
-		maxSegment := pendingChallengedSegment
-		if messagesChallengedSegment > maxSegment {
-			maxSegment = messagesChallengedSegment
-		}
 
-		err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes, ev.SegmentHashes, ev.TotalLength)
-		if err != nil {
-			return 0, err
+		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		if timedOut {
+			pendingChallengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
+			if err != nil {
+				return 0, err
+			}
+			messagesChallengedSegment, err := messagesStack.CheckBisection(ev.SegmentHashes)
+			if err != nil {
+				return 0, err
+			}
+			maxSegment := pendingChallengedSegment
+			if messagesChallengedSegment > maxSegment {
+				maxSegment = messagesChallengedSegment
+			}
+
+			err = contract.ChooseSegment(ctx, uint16(maxSegment), ev.ChainHashes, ev.SegmentHashes, ev.TotalLength)
+			if err != nil {
+				return 0, err
+			}
+			note, state, err = getNextEvent(outChan)
 		}
-		note, state, err = getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
