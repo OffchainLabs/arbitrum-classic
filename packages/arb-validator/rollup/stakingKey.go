@@ -75,7 +75,7 @@ func (staker *StakingKey) makeAssertion(ctx context.Context, opp *preparedAssert
 
 func (staker *StakingKey) challengePendingTop(
 	contractAddress common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	pendingInbox *structures.PendingInbox,
 ) {
@@ -83,7 +83,7 @@ func (staker *StakingKey) challengePendingTop(
 	challenges.ChallengePendingTopClaim(
 		staker.client,
 		contractAddress,
-		startHeight,
+		startBlockId,
 		startLogIndex,
 		pendingInbox.MessageStack,
 	)
@@ -92,7 +92,7 @@ func (staker *StakingKey) challengePendingTop(
 
 func (staker *StakingKey) challengeMessages(
 	contractAddress common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	pendingInbox *structures.PendingInbox,
 	conflictNode *Node,
@@ -101,7 +101,7 @@ func (staker *StakingKey) challengeMessages(
 	challenges.ChallengeMessagesClaim(
 		staker.client,
 		contractAddress,
-		startHeight,
+		startBlockId,
 		startLogIndex,
 		pendingInbox.MessageStack,
 		conflictNode.vmProtoData.PendingTop,
@@ -112,7 +112,7 @@ func (staker *StakingKey) challengeMessages(
 
 func (staker *StakingKey) challengeExecution(
 	contractAddress common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	mach machine.Machine,
 	pre *valprotocol.Precondition,
@@ -121,7 +121,7 @@ func (staker *StakingKey) challengeExecution(
 	challenges.ChallengeExecutionClaim(
 		staker.client,
 		contractAddress,
-		startHeight,
+		startBlockId,
 		startLogIndex,
 		pre,
 		mach,
@@ -132,7 +132,7 @@ func (staker *StakingKey) challengeExecution(
 
 func (staker *StakingKey) defendPendingTop(
 	contractAddress common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	pendingInbox *structures.PendingInbox,
 	conflictNode *Node,
@@ -141,7 +141,7 @@ func (staker *StakingKey) defendPendingTop(
 	challenges.DefendPendingTopClaim(
 		staker.client,
 		contractAddress,
-		startHeight,
+		startBlockId,
 		startLogIndex,
 		pendingInbox.MessageStack,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
@@ -153,7 +153,7 @@ func (staker *StakingKey) defendPendingTop(
 
 func (staker *StakingKey) defendMessages(
 	contractAddress common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	pendingInbox *structures.PendingInbox,
 	conflictNode *Node,
@@ -162,7 +162,7 @@ func (staker *StakingKey) defendMessages(
 	challenges.DefendMessagesClaim(
 		staker.client,
 		contractAddress,
-		startHeight,
+		startBlockId,
 		startLogIndex,
 		pendingInbox.MessageStack,
 		conflictNode.vmProtoData.PendingTop,
@@ -175,7 +175,7 @@ func (staker *StakingKey) defendMessages(
 
 func (staker *StakingKey) defendExecution(
 	contractAddress common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	mach machine.Machine,
 	pre *valprotocol.Precondition,
@@ -185,7 +185,7 @@ func (staker *StakingKey) defendExecution(
 	challenges.DefendExecutionClaim(
 		staker.client,
 		contractAddress,
-		startHeight,
+		startBlockId,
 		startLogIndex,
 		pre,
 		mach,

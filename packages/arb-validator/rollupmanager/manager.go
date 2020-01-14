@@ -18,7 +18,6 @@ package rollupmanager
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -53,87 +52,49 @@ func CreateManager(
 
 	go func() {
 		for {
-			reorgCtx, cancelFunc := context.WithCancel(ctx)
+			runCtx, cancelFunc := context.WithCancel(ctx)
 
 			checkpointer := rollup.NewProductionCheckpointer(
-				reorgCtx,
+				runCtx,
 				rollupAddr,
 				arbitrumCodeFilePath,
 				big.NewInt(maxReorgDepth),
 				false,
 			)
 
-			latestBlockId, chainObserverBuf, restoreCtx := checkpointer.RestoreLatestState(clnt, rollupAddr, true)
+			latestBlockId, chainObserverBuf, restoreCtx := checkpointer.RestoreLatestState(clnt, rollupAddr, updateOpinion)
 			watcher, err := clnt.NewRollupWatcher(rollupAddr)
 			if err != nil {
 				log.Fatal(err)
 			}
-			chain := chainObserverBuf.UnmarshalFromCheckpoint(reorgCtx, restoreCtx, watcher)
+			chain := chainObserverBuf.UnmarshalFromCheckpoint(runCtx, restoreCtx, watcher)
 
-			fmt.Println("Starting connection")
-
-			outChan := make(chan arbbridge.Event, 1024)
-			errChan := make(chan error, 1024)
-			if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, 0, outChan, errChan); err != nil {
+			reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(runCtx, latestBlockId, 0, rollupWatcher)
+			if err != nil {
 				log.Fatal(err)
 			}
 
-			fmt.Println("Started connection")
+		runLoop:
+			for {
+				select {
+				case <-reorgCtx.Done():
+					break runLoop
+				case event, ok := <-eventChan:
+					if !ok {
+						break runLoop
+					}
+					chainInfo := event.GetChainInfo()
 
-			chain.Start(reorgCtx)
-
-			go func() {
-				latestLogIndex := uint(0)
-				for {
-					hitError := false
-					select {
-					case <-ctx.Done():
-						return
-					case event, ok := <-outChan:
-						if !ok {
-							hitError = true
-							break
-						}
-						chainInfo := event.GetChainInfo()
-						switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
-						case -1:
-							// reorg
-							cancelFunc()
-							return
-						case 0:
-							if !chainInfo.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
-								// reorg
-								cancelFunc()
-								return
-							}
-							if chainInfo.LogIndex > latestLogIndex {
-								latestLogIndex = chainInfo.LogIndex
-								handleNotification(event, chain)
-							}
-						case 1:
-							latestBlockId = chainInfo.BlockId
-							latestLogIndex = chainInfo.LogIndex
-							chain.NotifyNewBlock(chainInfo.BlockId)
-							handleNotification(event, chain)
-						}
-					case <-errChan:
-						hitError = true
+					if chainInfo.BlockId.Height.Cmp(latestBlockId.Height) > 0 {
+						chain.NotifyNewBlock(chainInfo.BlockId)
 					}
 
-					if hitError {
-						// Ignore error and try to reset connection
-						for {
-							if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1, outChan, errChan); err == nil {
-								break
-							}
-							log.Println("Error: Can't connect to blockchain")
-							time.Sleep(5 * time.Second)
-						}
-					}
+					handleNotification(event, chain)
+					latestBlockId = chainInfo.BlockId
 				}
-			}()
+			}
+			cancelFunc()
 
-			<-reorgCtx.Done()
 			select {
 			case <-ctx.Done():
 				return

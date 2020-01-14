@@ -144,29 +144,33 @@ func (vm *ethRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, eventChan chan<- arbbridge.Event, errChan chan<- error) error {
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.Event, <-chan error, error) {
 	if err := vm.setupContracts(); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	headers := make(chan *types.Header)
 	headersSub, err := vm.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	logCtx, cancelFunc := context.WithCancel(ctx)
 
 	rollupLogChan, rollupErrChan, err := getLogs(logCtx, vm.client, vm.rollupFilter(), startHeight, startLogIndex)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	inboxLogChan, inboxErrChan, err := getLogs(logCtx, vm.client, vm.messageFilter(), startHeight, startLogIndex)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
+	eventChan := make(chan arbbridge.Event, 1024)
+	errChan := make(chan error, 1024)
 	go func() {
+		defer close(eventChan)
+		defer close(errChan)
 		defer cancelFunc()
 		defer headersSub.Unsubscribe()
 
@@ -200,7 +204,7 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *co
 			}
 		}
 	}()
-	return nil
+	return eventChan, errChan, nil
 }
 
 func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log, outChan chan<- arbbridge.Event) error {

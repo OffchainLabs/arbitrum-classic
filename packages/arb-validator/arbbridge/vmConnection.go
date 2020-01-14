@@ -26,11 +26,8 @@ import (
 )
 
 func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures.BlockId, startLogIndex uint, contract ContractWatcher) (context.Context, <-chan Event, error) {
-	rawEventChan := make(chan Event, 1024)
-	errChan := make(chan error, 1024)
-	if err := contract.StartConnection(ctx, startBlockId.Height, startLogIndex, rawEventChan, errChan); err != nil {
-		close(rawEventChan)
-		close(errChan)
+	rawEventChan, errChan, err := contract.StartConnection(ctx, startBlockId.Height, startLogIndex)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -38,8 +35,7 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 
 	eventChan := make(chan Event, 1024)
 	go func() {
-		defer close(rawEventChan)
-		defer close(errChan)
+		defer cancelFunc()
 		defer close(eventChan)
 
 		latestBlockId := startBlockId
@@ -58,12 +54,10 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 				switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
 				case -1:
 					// reorg
-					cancelFunc()
 					return
 				case 0:
 					if !chainInfo.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
 						// reorg
-						cancelFunc()
 						return
 					}
 					if chainInfo.LogIndex >= latestLogIndex {
@@ -82,7 +76,7 @@ func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures
 				// Ignore error and try to reset connection
 				log.Println("Restarting connection due to error", err)
 				for {
-					err := contract.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1, rawEventChan, errChan)
+					rawEventChan, errChan, err = contract.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1)
 					if err == nil {
 						break
 					}

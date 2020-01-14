@@ -48,12 +48,12 @@ func (c *MessagesChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *MessagesChallenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, eventChan chan<- arbbridge.Event, errChan chan<- error) error {
-	if err := c.BisectionChallenge.StartConnection(ctx, startHeight, startLogIndex, eventChan, errChan); err != nil {
-		return err
-	}
+func (c *MessagesChallenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint) (<-chan arbbridge.Event, <-chan error, error) {
+	//if _, _, err := c.BisectionChallenge.StartConnection(ctx, startHeight, startLogIndex, eventChan); err != nil {
+	//	return nil, nil, err
+	//}
 	if err := c.setupContracts(); err != nil {
-		return err
+		return nil, nil, err
 	}
 	//header, err := c.Client.HeaderByNumber(ctx, nil)
 	//if err != nil {
@@ -103,7 +103,7 @@ func (c *MessagesChallenge) StartConnection(ctx context.Context, startHeight *co
 	//		}
 	//	}
 	//}()
-	return nil
+	return nil, nil, nil
 }
 
 //func (c *MessagesChallenge) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
