@@ -18,14 +18,15 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"log"
 	"time"
 )
 
-func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher) chan Notification {
+func HandleBlockchainNotifications(ctx context.Context, startHeight *common.TimeBlocks, contract ContractWatcher) chan Notification {
 	outChan := make(chan Notification, 1024)
 	errChan := make(chan error, 1024)
-	if err := contract.StartConnection(ctx, outChan, errChan); err != nil {
+	if err := contract.StartConnection(ctx, startHeight, 0, errChan, outChan); err != nil {
 		log.Println("Bad conn 1", err)
 		close(outChan)
 		close(errChan)
@@ -55,7 +56,7 @@ func HandleBlockchainNotifications(ctx context.Context, contract ContractWatcher
 			if hitError {
 				// Ignore error and try to reset connection
 				for {
-					err := contract.StartConnection(ctx, outChan, errChan)
+					err := contract.StartConnection(ctx, startHeight, 0, errChan, outChan)
 					if err == nil {
 						break
 					}

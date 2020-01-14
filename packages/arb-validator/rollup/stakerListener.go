@@ -28,14 +28,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
 )
 
-type StakerListener struct {
+type StakingKey struct {
 	sync.Mutex
 	myAddr   common.Address
 	client   arbbridge.ArbAuthClient
 	contract arbbridge.ArbRollup
 }
 
-func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
+func (staker *StakingKey) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
 	staker.Lock()
 	staker.contract.StartChallenge(
 		ctx,
@@ -56,7 +56,7 @@ func (staker *StakerListener) initiateChallenge(ctx context.Context, opp *challe
 	staker.Unlock()
 }
 
-func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAssertion, proof []common.Hash) error {
+func (staker *StakingKey) makeAssertion(ctx context.Context, opp *preparedAssertion, proof []common.Hash) error {
 	staker.Lock()
 	err := staker.contract.MakeAssertion(
 		ctx,
@@ -73,7 +73,7 @@ func (staker *StakerListener) makeAssertion(ctx context.Context, opp *preparedAs
 	return err
 }
 
-func (staker *StakerListener) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
+func (staker *StakingKey) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
 	staker.Lock()
 	challenges.ChallengePendingTopClaim(
 		staker.client,
@@ -83,7 +83,7 @@ func (staker *StakerListener) challengePendingTop(contractAddress common.Address
 	staker.Unlock()
 }
 
-func (staker *StakerListener) challengeMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+func (staker *StakingKey) challengeMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
 	staker.Lock()
 	challenges.ChallengeMessagesClaim(
 		staker.client,
@@ -95,7 +95,7 @@ func (staker *StakerListener) challengeMessages(contractAddress common.Address, 
 	staker.Unlock()
 }
 
-func (staker *StakerListener) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition) {
+func (staker *StakingKey) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition) {
 	staker.Lock()
 	challenges.ChallengeExecutionClaim(
 		staker.client,
@@ -107,7 +107,7 @@ func (staker *StakerListener) challengeExecution(contractAddress common.Address,
 	staker.Unlock()
 }
 
-func (staker *StakerListener) defendPendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+func (staker *StakingKey) defendPendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
 	staker.Lock()
 	challenges.DefendPendingTopClaim(
 		staker.client,
@@ -120,7 +120,7 @@ func (staker *StakerListener) defendPendingTop(contractAddress common.Address, p
 	staker.Unlock()
 }
 
-func (staker *StakerListener) defendMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+func (staker *StakingKey) defendMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
 	staker.Lock()
 	challenges.DefendMessagesClaim(
 		staker.client,
@@ -134,7 +134,7 @@ func (staker *StakerListener) defendMessages(contractAddress common.Address, pen
 	staker.Unlock()
 }
 
-func (staker *StakerListener) defendExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition, numSteps uint32) {
+func (staker *StakingKey) defendExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition, numSteps uint32) {
 	staker.Lock()
 	challenges.DefendExecutionClaim(
 		staker.client,

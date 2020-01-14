@@ -18,7 +18,9 @@ package mockbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 )

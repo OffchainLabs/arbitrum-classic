@@ -18,8 +18,9 @@ package arbbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type ContractWatcher interface {
-	StartConnection(ctx context.Context, outChan chan Notification, errChan chan error) error
+	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan Notification) error
 }

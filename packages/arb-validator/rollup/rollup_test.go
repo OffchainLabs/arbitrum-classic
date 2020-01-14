@@ -73,7 +73,7 @@ func tryMarshalUnmarshalWithCheckpointer(chain *ChainObserver, cp RollupCheckpoi
 	if err != nil {
 		t.Fatal(err)
 	}
-	doneChan := make(chan interface{})
+	doneChan := make(chan struct{})
 	cp.AsyncSaveCheckpoint(blockId, buf, ctx, doneChan)
 	<-doneChan
 	chain2, err := UnmarshalChainObserverFromBytes(context.TODO(), buf, ctx, nil)
@@ -252,7 +252,7 @@ func createSomeStakers(chain *ChainObserver) {
 }
 
 func createOneStaker(chain *ChainObserver, stakerAddr common.Address, nodeHash common.Hash) {
-	chain.createStake(
+	chain.CreateStake(
 		arbbridge.StakeCreatedEvent{
 			Staker:   stakerAddr,
 			NodeHash: nodeHash,

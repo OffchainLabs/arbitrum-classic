@@ -22,8 +22,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -157,7 +156,7 @@ func setupChainObserver(
 ) (*rollup.ChainObserver, error) {
 	ctx := context.Background()
 	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollup.CreateObserver(ctx, rollupAddress, checkpointer, true, client)
+	chainObserver, err := rollupmanager.CreateObserver(ctx, rollupAddress, checkpointer, true, client)
 	if err != nil {
 		return nil, err
 	}

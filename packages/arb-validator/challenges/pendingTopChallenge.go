@@ -43,7 +43,7 @@ func DefendPendingTopClaim(
 	noteChan := make(chan arbbridge.Notification, 1024)
 	defer close(noteChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
 	go func() {
 		for event := range parsingChan {
 			_, ok := event.Event.(arbbridge.NewTimeEvent)
@@ -82,7 +82,7 @@ func ChallengePendingTopClaim(
 	noteChan := make(chan arbbridge.Notification, 1024)
 	defer close(noteChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
 	go func() {
 		for event := range parsingChan {
 			_, ok := event.Event.(arbbridge.NewTimeEvent)
@@ -133,15 +133,19 @@ func defendPendingTop(
 		}
 
 		if messageCount == 1 {
-			nextHash, valueHash, err := pendingInbox.GenerateOneStepProof(startState)
-			if err != nil {
-				return 0, err
+			timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+			if timedOut {
+				nextHash, valueHash, err := pendingInbox.GenerateOneStepProof(startState)
+				if err != nil {
+					return 0, err
+				}
+				err = contract.OneStepProof(ctx, startState, nextHash, valueHash)
+				if err != nil {
+					return 0, err
+				}
+				note, state, err = getNextEvent(outChan)
 			}
-			err = contract.OneStepProof(ctx, startState, nextHash, valueHash)
-			if err != nil {
-				return 0, err
-			}
-			note, state, err := getNextEvent(outChan)
+
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
@@ -152,16 +156,19 @@ func defendPendingTop(
 			return ChallengeAsserterWon, nil
 		}
 
-		chainHashes, err := pendingInbox.GenerateBisection(startState, endState, bisectionCount)
-		if err != nil {
-			return 0, err
-		}
-		err = contract.Bisect(ctx, chainHashes, new(big.Int).SetUint64(messageCount))
-		if err != nil {
-			return 0, err
+		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		if timedOut {
+			chainHashes, err := pendingInbox.GenerateBisection(startState, endState, bisectionCount)
+			if err != nil {
+				return 0, err
+			}
+			err = contract.Bisect(ctx, chainHashes, new(big.Int).SetUint64(messageCount))
+			if err != nil {
+				return 0, err
+			}
+			note, state, err = getNextEvent(outChan)
 		}
 
-		note, state, err := getNextEvent(outChan)
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
@@ -184,8 +191,8 @@ func defendPendingTop(
 		if !ok {
 			return 0, fmt.Errorf("PendingTopChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
 		}
-		startState = chainHashes[contEv.SegmentIndex.Uint64()]
-		endState = chainHashes[contEv.SegmentIndex.Uint64()+1]
+		startState = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
+		endState = ev.ChainHashes[contEv.SegmentIndex.Uint64()+1]
 	}
 }
 
@@ -226,15 +233,22 @@ func challengePendingTop(
 		if !ok {
 			return 0, fmt.Errorf("PendingTopChallenge challenger expected PendingTopBisectionEvent but got %T", note.Event)
 		}
-		challengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
-		if err != nil {
-			return 0, err
+
+		// Wait to check if we've already chosen a segment
+		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		if timedOut {
+			err = nil
+			challengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
+			if err != nil {
+				return 0, err
+			}
+			err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes, uint32(ev.TotalLength.Uint64()))
+			if err != nil {
+				return 0, err
+			}
+			note, state, err = getNextEvent(outChan)
 		}
-		err = contract.ChooseSegment(ctx, uint16(challengedSegment), ev.ChainHashes, uint32(ev.TotalLength.Uint64()))
-		if err != nil {
-			return 0, err
-		}
-		note, state, err = getNextEvent(outChan)
+
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}

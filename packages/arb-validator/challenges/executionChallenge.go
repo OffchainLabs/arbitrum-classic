@@ -19,6 +19,7 @@ package challenges
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -46,7 +47,7 @@ func DefendExecutionClaim(
 	noteChan := make(chan arbbridge.Notification, 1024)
 	defer close(noteChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
 	go func() {
 		for event := range parsingChan {
 			_, ok := event.Event.(arbbridge.NewTimeEvent)
@@ -90,7 +91,7 @@ func ChallengeExecutionClaim(
 	noteChan := make(chan arbbridge.Notification, 1024)
 	defer close(noteChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
 	go func() {
 		for event := range parsingChan {
 			_, ok := event.Event.(arbbridge.NewTimeEvent)
@@ -136,22 +137,26 @@ func defendExecution(
 
 	for {
 		if defender.NumSteps() == 1 {
-			proof, err := defender.SolidityOneStepProof()
-			if err != nil {
-				return 0, err
+			timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+			if timedOut {
+				proof, err := defender.SolidityOneStepProof()
+				if err != nil {
+					return 0, err
+				}
+				pre := defender.GetPrecondition()
+				assertion, _ := defender.GetMachineState().ExecuteAssertion(1, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+				err = contract.OneStepProof(
+					ctx,
+					defender.GetPrecondition(),
+					valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
+					proof,
+				)
+				if err != nil {
+					return 0, err
+				}
+				note, state, err = getNextEvent(outChan)
 			}
-			pre := defender.GetPrecondition()
-			assertion, _ := defender.GetMachineState().ExecuteAssertion(1, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
-			err = contract.OneStepProof(
-				ctx,
-				defender.GetPrecondition(),
-				valprotocol.NewExecutionAssertionStubFromAssertion(assertion),
-				proof,
-			)
-			if err != nil {
-				return 0, err
-			}
-			note, state, err := getNextEvent(outChan)
+
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
@@ -161,13 +166,18 @@ func defendExecution(
 			}
 			return ChallengeAsserterWon, nil
 		}
-
-		defenders, assertions := defender.NBisect(bisectionCount)
-		err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
-		if err != nil {
-			return 0, err
+		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		var defenders []AssertionDefender = nil
+		if timedOut {
+			var assertions []*valprotocol.ExecutionAssertionStub
+			defenders, assertions = defender.NBisect(bisectionCount)
+			err := contract.BisectAssertion(ctx, defender.GetPrecondition(), assertions, defender.NumSteps())
+			if err != nil {
+				return 0, err
+			}
+			note, state, err = getNextEvent(outChan)
 		}
-		note, state, err := getNextEvent(outChan)
+
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
@@ -190,7 +200,26 @@ func defendExecution(
 		if !ok {
 			return 0, fmt.Errorf("ExecutionChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
 		}
-		defender = defenders[contEv.SegmentIndex.Uint64()]
+
+		if timedOut {
+			// Freshly bisected assertion
+			defender = defenders[contEv.SegmentIndex.Uint64()]
+		} else {
+			// Replayed from existing event
+			totalSteps := uint32(0)
+			for i := uint32(0); i < uint32(contEv.SegmentIndex.Uint64()); i++ {
+				totalSteps += structures.CalculateBisectionStepCount(i, uint32(len(ev.Assertions)), ev.TotalSteps)
+			}
+
+			mach := defender.initState
+			pre := defender.precondition
+			// Update mach, precondition, deadline
+			assertion, _ := mach.ExecuteAssertion(totalSteps, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+			pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
+
+			steps := structures.CalculateBisectionStepCount(uint32(contEv.SegmentIndex.Uint64()), uint32(len(ev.Assertions)), ev.TotalSteps)
+			defender = NewAssertionDefender(pre, steps, mach)
+		}
 	}
 }
 
@@ -235,30 +264,38 @@ func challengeExecution(
 		if !ok {
 			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", note.Event)
 		}
-		challengedAssertionNum, m, err := ChooseAssertionToChallenge(mach.Clone(), startPrecondition, ev.Assertions, ev.TotalSteps)
-		if err != nil && challengeEverything {
-			cMach := mach.Clone()
-			challengedAssertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
-			for i := 0; i < len(ev.Assertions); i++ {
-				stepCount := structures.CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
-				m = cMach.Clone()
-				assertion, _ := cMach.ExecuteAssertion(stepCount, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
-				startPrecondition = startPrecondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
+		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		var preconditions []*valprotocol.Precondition
+		var m machine.Machine
+		if timedOut {
+			var challengedAssertionNum uint16
+			challengedAssertionNum, m, err = ChooseAssertionToChallenge(mach.Clone(), precondition, ev.Assertions, ev.TotalSteps)
+			if err != nil && challengeEverything {
+				pre := precondition
+				cMach := mach.Clone()
+				challengedAssertionNum = uint16(rand.Int31n(int32(len(ev.Assertions))))
+				for i := 0; i < len(ev.Assertions); i++ {
+					stepCount := structures.CalculateBisectionStepCount(uint32(i), uint32(len(ev.Assertions)), ev.TotalSteps)
+					m = cMach.Clone()
+					assertion, _ := cMach.ExecuteAssertion(stepCount, pre.TimeBounds, pre.BeforeInbox.(value.TupleValue))
+					pre = pre.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
+				}
+				err = nil
 			}
-			err = nil
+			if err != nil {
+				return 0, err
+			}
+			preconditions = valprotocol.GeneratePreconditions(precondition, ev.Assertions)
+			err = contract.ChooseSegment(
+				ctx,
+				challengedAssertionNum,
+				preconditions,
+				ev.Assertions,
+				ev.TotalSteps,
+			)
+			note, state, err = getNextEvent(outChan)
 		}
-		if err != nil {
-			return 0, err
-		}
-		preconditions := valprotocol.GeneratePreconditions(precondition, ev.Assertions)
-		err = contract.ChooseSegment(
-			ctx,
-			challengedAssertionNum,
-			preconditions,
-			ev.Assertions,
-			ev.TotalSteps,
-		)
-		note, state, err = getNextEvent(outChan)
+
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
@@ -266,8 +303,21 @@ func challengeExecution(
 		if !ok {
 			return 0, fmt.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", note.Event)
 		}
-		mach = m
-		precondition = preconditions[contEv.SegmentIndex.Uint64()]
+
+		// Update mach, precondition, deadline
+		if timedOut {
+			// Freshly bisected assertion
+			mach = m
+			precondition = preconditions[contEv.SegmentIndex.Uint64()]
+		} else {
+			// Replayed from existing event
+			totalSteps := uint32(0)
+			for i := uint32(0); i < uint32(contEv.SegmentIndex.Uint64()); i++ {
+				totalSteps += structures.CalculateBisectionStepCount(i, uint32(len(ev.Assertions)), ev.TotalSteps)
+			}
+			assertion, _ := mach.ExecuteAssertion(totalSteps, startPrecondition.TimeBounds, startPrecondition.BeforeInbox.(value.TupleValue))
+			precondition = precondition.GeneratePostcondition(valprotocol.NewExecutionAssertionStubFromAssertion(assertion))
+		}
 		deadline = contEv.Deadline
 	}
 }
