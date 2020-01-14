@@ -70,6 +70,14 @@ func (c *EthArbClient) CurrentBlockId(ctx context.Context) (*structures.BlockId,
 	return getBlockID(header), nil
 }
 
+func (c *EthArbClient) BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*structures.BlockId, error) {
+	header, err := c.client.HeaderByNumber(ctx, height.AsInt())
+	if err != nil {
+		return nil, err
+	}
+	return getBlockID(header), nil
+}
+
 type EthArbAuthClient struct {
 	*EthArbClient
 	auth *bind.TransactOpts

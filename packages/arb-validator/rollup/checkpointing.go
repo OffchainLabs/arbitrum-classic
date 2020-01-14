@@ -167,11 +167,14 @@ func getParamsForChain(client arbbridge.ArbClient, contractAddr common.Address) 
 	}
 	return rollupWatcher.GetParams(context.TODO())
 }
+
 func (rcp *ProductionCheckpointer) RestoreLatestState(
 	client arbbridge.ArbClient,
 	contractAddr common.Address,
 	beOpinionated bool,
 ) (*structures.BlockId, *ChainObserverBuf, structures.RestoreContext) {
+	rcp.cp.QueueReorgedCheckpointsForDeletion(client)
+
 	params, err := getParamsForChain(client, contractAddr)
 	if err != nil {
 		return nil, nil, nil
@@ -317,6 +320,8 @@ type checkpointerWithMetadata interface {
 	)
 	RestoreCheckpoint(blockId *structures.BlockId) ([]byte, structures.RestoreContext) // returns nil, nil if no data at blockHeight
 	QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks)
+	QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient)
+	QueueCheckpointForDeletion(blockId *structures.BlockId)
 
 	GetInitialMachine() (machine.Machine, error)
 
@@ -526,7 +531,7 @@ func (csc *productionCheckpointer) RestoreCheckpoint(blockId *structures.BlockId
 	return contentBytes, csc
 }
 
-func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks) {
+func (csc *productionCheckpointer) QueueCheckpointForDeletion(blockId *structures.BlockId) {
 	// make a best effort to delete an old checkpoint, but ignore any errors
 	// errors might cause some harmless extra info to remain in the database
 
@@ -535,6 +540,61 @@ func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollba
 	if err := proto.Unmarshal(queueBytes, queue); err != nil {
 		return
 	}
+
+	queue.Bufs = append(queue.Bufs, blockId.MarshalToBuf())
+
+	queueBytes, err := proto.Marshal(queue)
+	if err != nil {
+		return
+	}
+	csc.st.SaveData([]byte("deadqueue"), queueBytes)
+}
+
+func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arbbridge.ArbClient) {
+	metadataBuf := csc.RestoreMetadata()
+	metadata := &structures.CheckpointMetadata{}
+	if err := proto.Unmarshal(metadataBuf, metadata); err != nil {
+		return
+	}
+
+	oldestId := metadata.Oldest.Unmarshal()
+	newestId := metadata.Newest.Unmarshal()
+	for oldestId.Height.Cmp(newestId.Height) < 0 {
+		onChainId, err := client.BlockIdForHeight(context.TODO(), newestId.Height)
+		if err != nil {
+			return
+		}
+		if onChainId.HeaderHash.Equals(newestId.HeaderHash) {
+			// success
+			return
+		}
+		linksBytes := csc.st.GetData(getLinksKey(newestId))
+		linksBuf := &structures.CheckpointLinks{}
+		if err := proto.Unmarshal(linksBytes, linksBuf); err != nil {
+			return
+		}
+		metadata.Newest = linksBuf.Prev
+		metadataBuf, err = proto.Marshal(metadata)
+		if err != nil {
+			return
+		}
+		csc.SaveMetadata(metadataBuf)
+		csc.QueueCheckpointForDeletion(newestId)
+		newestId = metadata.Newest.Unmarshal()
+	}
+
+	// now only a single checkpoint remains
+	onChainId, err := client.BlockIdForHeight(context.TODO(), newestId.Height)
+	if err != nil {
+		return
+	}
+	if !onChainId.HeaderHash.Equals(newestId.HeaderHash) {
+		csc.DeleteMetadata()
+		csc.QueueCheckpointForDeletion(newestId)
+	}
+}
+
+func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollbackPoint *common.TimeBlocks) {
 	for {
 		metadataBytes := csc.RestoreMetadata()
 		metadataBuf := &structures.CheckpointMetadata{}
@@ -560,12 +620,7 @@ func (csc *productionCheckpointer) QueueOldCheckpointsForDeletion(earliestRollba
 			return
 		}
 
-		queue.Bufs = append(queue.Bufs, candidateId.MarshalToBuf())
-		queueBytes, err = proto.Marshal(queue)
-		if err != nil {
-			return
-		}
-		csc.st.SaveData([]byte("deadqueue"), queueBytes)
+		csc.QueueCheckpointForDeletion(candidateId)
 	}
 }
 
@@ -636,4 +691,8 @@ func (csc *productionCheckpointer) GetInitialMachine() (machine.Machine, error) 
 
 func (csc *productionCheckpointer) Close() {
 	csc.st.CloseCheckpointStorage()
+}
+
+func (csc *productionCheckpointer) DeleteMetadata() {
+	csc.st.DeleteData([]byte("metadata"))
 }
