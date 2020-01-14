@@ -20,6 +20,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
+
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -52,7 +54,7 @@ func (con *ChallengeTester) StartChallenge(
 	challengePeriod common.TimeTicks,
 	challengeHash common.Hash,
 	challengeType *big.Int,
-) (common.Address, error) {
+) (common.Address, *structures.BlockId, error) {
 	con.auth.Context = ctx
 	tx, err := con.contract.StartChallenge(
 		con.auth,
@@ -64,17 +66,17 @@ func (con *ChallengeTester) StartChallenge(
 		challengeType,
 	)
 	if err != nil {
-		return common.Address{}, errors2.Wrap(err, "Failed to call to ChallengeTester.StartChallenge")
+		return common.Address{}, nil, errors2.Wrap(err, "Failed to call to ChallengeTester.StartChallenge")
 	}
 
 	receipt, err := WaitForReceiptWithResults(con.auth.Context, con.client, con.auth.From, tx, "CreateChallenge")
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil, err
 	}
 
 	if len(receipt.Logs) != 1 {
-		return common.Address{}, errors2.New("Wrong receipt count")
+		return common.Address{}, nil, errors2.New("Wrong receipt count")
 	}
 
-	return common.NewAddressFromEth(receipt.Logs[0].Address), nil
+	return common.NewAddressFromEth(receipt.Logs[0].Address), getTxBlockID(receipt), nil
 }

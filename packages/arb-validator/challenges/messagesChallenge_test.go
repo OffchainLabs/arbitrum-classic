@@ -57,11 +57,11 @@ func TestMessagesChallenge(t *testing.T) {
 	if err := testChallenge(
 		structures.InvalidMessagesChildType,
 		challengeHash,
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return DefendMessagesClaim(
 				client,
 				challengeAddress,
-				common.NewTimeBlocks(big.NewInt(0)),
+				blockId,
 				0,
 				messageStack,
 				beforePending,
@@ -70,11 +70,11 @@ func TestMessagesChallenge(t *testing.T) {
 				2,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return ChallengeMessagesClaim(
 				client,
 				challengeAddress,
-				common.NewTimeBlocks(big.NewInt(0)),
+				blockId,
 				0,
 				messageStack,
 				beforePending,

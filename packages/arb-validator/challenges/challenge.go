@@ -36,7 +36,8 @@ const (
 
 var replayTimeout = time.Second
 
-var challengeNoEvents = errors.New("PendingTopChallengeContract notification channel terminated unexpectedly")
+var challengeNoEvents = errors.New("challenge notification channel terminated unexpectedly")
+var challengeReorg = errors.New("reorg occurred during challenge")
 
 func getAfterState(event arbbridge.Event) ChallengeState {
 	switch event.(type) {
@@ -48,8 +49,8 @@ func getAfterState(event arbbridge.Event) ChallengeState {
 	return ChallengeContinuing
 }
 
-func getNextEvent(outChan <-chan arbbridge.Event) (arbbridge.Event, ChallengeState, error) {
-	event, ok := <-outChan
+func getNextEvent(eventChan <-chan arbbridge.Event) (arbbridge.Event, ChallengeState, error) {
+	event, ok := <-eventChan
 	if !ok {
 		return nil, 0, challengeNoEvents
 	}
@@ -58,7 +59,7 @@ func getNextEvent(outChan <-chan arbbridge.Event) (arbbridge.Event, ChallengeSta
 
 func getNextEventWithTimeout(
 	ctx context.Context,
-	outChan <-chan arbbridge.Event,
+	eventChan <-chan arbbridge.Event,
 	deadline common.TimeTicks,
 	contract arbbridge.Challenge,
 	client arbbridge.ArbClient,
@@ -80,7 +81,7 @@ func getNextEventWithTimeout(
 				}
 				ticker.Stop()
 			}
-		case event, ok := <-outChan:
+		case event, ok := <-eventChan:
 			if !ok {
 				return nil, 0, challengeNoEvents
 			}
@@ -89,10 +90,10 @@ func getNextEventWithTimeout(
 	}
 }
 
-func getNextEventIfExists(ctx context.Context, outChan <-chan arbbridge.Event, timeout time.Duration) (bool, arbbridge.Event, ChallengeState, error) {
+func getNextEventIfExists(ctx context.Context, eventChan <-chan arbbridge.Event, timeout time.Duration) (bool, arbbridge.Event, ChallengeState, error) {
 	for {
 		select {
-		case event, ok := <-outChan:
+		case event, ok := <-eventChan:
 			if !ok {
 				return false, nil, 0, challengeNoEvents
 			}

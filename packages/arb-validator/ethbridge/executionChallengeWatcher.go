@@ -79,20 +79,20 @@ func (c *executionChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, eventChan chan arbbridge.Event, errChan chan error) error {
+func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, eventChan chan<- arbbridge.Event, errChan chan<- error) error {
 	filter := ethereum.FilterQuery{
 		Addresses: []ethcommon.Address{c.address},
 		Topics:    [][]ethcommon.Hash{c.topics()},
 	}
 
-	logChan := make(chan types.Log, 1024)
-	logErrChan := make(chan error, 10)
-
-	if err := getLogs(ctx, c.client, filter, startHeight, startLogIndex, logChan, logErrChan); err != nil {
+	logCtx, cancelFunc := context.WithCancel(ctx)
+	logChan, logErrChan, err := getLogs(logCtx, c.client, filter, startHeight, startLogIndex)
+	if err != nil {
 		return err
 	}
 
 	go func() {
+		defer cancelFunc()
 		for {
 			select {
 			case <-ctx.Done():

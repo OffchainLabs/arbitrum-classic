@@ -54,11 +54,11 @@ func TestExecution(t *testing.T) {
 	if err := testChallenge(
 		structures.InvalidExecutionChildType,
 		challengeHash,
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return DefendExecutionClaim(
 				client,
 				challengeAddress,
-				common.NewTimeBlocks(big.NewInt(0)),
+				blockId,
 				0,
 				precondition,
 				mach.Clone(),
@@ -66,11 +66,11 @@ func TestExecution(t *testing.T) {
 				2,
 			)
 		},
-		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
+		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient, blockId *structures.BlockId) (ChallengeState, error) {
 			return ChallengeExecutionClaim(
 				client,
 				challengeAddress,
-				common.NewTimeBlocks(big.NewInt(0)),
+				blockId,
 				0,
 				precondition,
 				mach.Clone(),

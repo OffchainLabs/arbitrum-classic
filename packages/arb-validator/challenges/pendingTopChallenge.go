@@ -29,7 +29,7 @@ import (
 func DefendPendingTopClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	afterPendingTop common.Hash,
@@ -38,18 +38,19 @@ func DefendPendingTopClaim(
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewPendingTopChallengeWatcher(address)
 	if err != nil {
-		return ChallengeContinuing, err
+		return 0, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
-	contract, err := client.NewPendingTopChallenge(address)
+	reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(ctx, startBlockId, startLogIndex, contractWatcher)
 	if err != nil {
-		return ChallengeContinuing, err
+		return 0, err
 	}
+	contract, err := client.NewPendingTopChallenge(address)
+
 	return defendPendingTop(
-		ctx,
+		reorgCtx,
 		eventChan,
 		contract,
 		client,
@@ -63,24 +64,28 @@ func DefendPendingTopClaim(
 func ChallengePendingTopClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 ) (ChallengeState, error) {
 	contractWatcher, err := client.NewPendingTopChallengeWatcher(address)
 	if err != nil {
-		return ChallengeContinuing, err
+		return 0, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
+	reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(ctx, startBlockId, startLogIndex, contractWatcher)
+	if err != nil {
+		return 0, err
+	}
+
 	contract, err := client.NewPendingTopChallenge(address)
 	if err != nil {
 		return 0, err
 	}
 	return challengePendingTop(
-		ctx,
+		reorgCtx,
 		eventChan,
 		contract,
 		client,

@@ -144,7 +144,7 @@ func (vm *ethRollupWatcher) setupContracts() error {
 	return nil
 }
 
-func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, outChan chan arbbridge.Event, errChan chan error) error {
+func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, eventChan chan<- arbbridge.Event, errChan chan<- error) error {
 	if err := vm.setupContracts(); err != nil {
 		return err
 	}
@@ -155,34 +155,43 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *co
 		return err
 	}
 
-	logChan := make(chan types.Log, 1024)
-	logErrChan := make(chan error, 10)
+	logCtx, cancelFunc := context.WithCancel(ctx)
 
-	if err := getLogs(ctx, vm.client, vm.rollupFilter(), startHeight, startLogIndex, logChan, logErrChan); err != nil {
+	rollupLogChan, rollupErrChan, err := getLogs(logCtx, vm.client, vm.rollupFilter(), startHeight, startLogIndex)
+	if err != nil {
 		return err
 	}
-
-	if err := getLogs(ctx, vm.client, vm.messageFilter(), startHeight, startLogIndex, logChan, logErrChan); err != nil {
+	inboxLogChan, inboxErrChan, err := getLogs(logCtx, vm.client, vm.messageFilter(), startHeight, startLogIndex)
+	if err != nil {
 		return err
 	}
 
 	go func() {
+		defer cancelFunc()
 		defer headersSub.Unsubscribe()
 
 		for {
 			select {
 			case <-ctx.Done():
-				break
+				return
 			case header := <-headers:
-				outChan <- arbbridge.NewTimeEvent{arbbridge.ChainInfo{
+				eventChan <- arbbridge.NewTimeEvent{arbbridge.ChainInfo{
 					BlockId: getBlockID(header),
 				}}
-			case ethLog := <-logChan:
-				if err := vm.processEvents(ctx, ethLog, outChan); err != nil {
+			case ethLog := <-rollupLogChan:
+				if err := vm.processEvents(ctx, ethLog, eventChan); err != nil {
 					errChan <- err
 					return
 				}
-			case err := <-logErrChan:
+			case ethLog := <-inboxLogChan:
+				if err := vm.processEvents(ctx, ethLog, eventChan); err != nil {
+					errChan <- err
+					return
+				}
+			case err := <-rollupErrChan:
+				errChan <- err
+				return
+			case err := <-inboxErrChan:
 				errChan <- err
 				return
 			case err := <-headersSub.Err():
@@ -194,7 +203,7 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, startHeight *co
 	return nil
 }
 
-func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log, outChan chan arbbridge.Event) error {
+func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log, outChan chan<- arbbridge.Event) error {
 	header, err := vm.client.HeaderByHash(ctx, ethLog.BlockHash)
 	if err != nil {
 		return err

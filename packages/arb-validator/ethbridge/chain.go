@@ -55,6 +55,13 @@ func getBlockID(header *types.Header) *structures.BlockId {
 	}
 }
 
+func getTxBlockID(receipt *types.Receipt) *structures.BlockId {
+	return &structures.BlockId{
+		Height:     common.NewTimeBlocks(receipt.BlockNumber),
+		HeaderHash: common.NewHashFromEth(receipt.BlockHash),
+	}
+}
+
 func getChainInfo(log types.Log, header *types.Header) arbbridge.ChainInfo {
 	return arbbridge.ChainInfo{
 		BlockId:  getBlockID(header),

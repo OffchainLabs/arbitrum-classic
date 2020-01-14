@@ -33,7 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
-type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient) (ChallengeState, error)
+type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient, *structures.BlockId) (ChallengeState, error)
 
 func testChallenge(
 	challengeType structures.ChildType,
@@ -93,7 +93,7 @@ func testChallenge(
 		return err
 	}
 
-	challengeAddress, err := tester.StartChallenge(
+	challengeAddress, blockId, err := tester.StartChallenge(
 		context.Background(),
 		challengeFactoryAddress,
 		client1.Address(),
@@ -112,7 +112,7 @@ func testChallenge(
 	challengerErrChan := make(chan error)
 
 	go func() {
-		endState, err := asserterFunc(challengeAddress, client1)
+		endState, err := asserterFunc(challengeAddress, client1, blockId)
 		if err != nil {
 			asserterErrChan <- err
 		} else {
@@ -121,7 +121,7 @@ func testChallenge(
 	}()
 
 	go func() {
-		endState, err := challengerFunc(challengeAddress, client2)
+		endState, err := challengerFunc(challengeAddress, client2, blockId)
 		if err != nil {
 			challengerErrChan <- err
 		} else {

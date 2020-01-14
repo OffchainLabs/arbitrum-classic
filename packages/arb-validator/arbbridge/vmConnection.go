@@ -18,45 +18,71 @@ package arbbridge
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
 )
 
-func HandleBlockchainNotifications(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, contract ContractWatcher) <-chan Event {
+func HandleBlockchainNotifications(ctx context.Context, startBlockId *structures.BlockId, startLogIndex uint, contract ContractWatcher) (context.Context, <-chan Event, error) {
 	rawEventChan := make(chan Event, 1024)
 	errChan := make(chan error, 1024)
-	if err := contract.StartConnection(ctx, startHeight, startLogIndex, rawEventChan, errChan); err != nil {
+	if err := contract.StartConnection(ctx, startBlockId.Height, startLogIndex, rawEventChan, errChan); err != nil {
 		close(rawEventChan)
 		close(errChan)
-		return nil
+		return nil, nil, err
 	}
+
+	reorgCtx, cancelFunc := context.WithCancel(ctx)
 
 	eventChan := make(chan Event, 1024)
 	go func() {
 		defer close(rawEventChan)
 		defer close(errChan)
 		defer close(eventChan)
+
+		latestBlockId := startBlockId
+		latestLogIndex := startLogIndex
 		for {
-			hitError := false
+			var err error
 			select {
 			case <-ctx.Done():
 				break
-			case notification, ok := <-rawEventChan:
+			case event, ok := <-rawEventChan:
 				if !ok {
-					hitError = true
+					err = errors.New("rawEventChan closed")
 					break
 				}
-				eventChan <- notification
-			case <-errChan:
-				hitError = true
+				chainInfo := event.GetChainInfo()
+				switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
+				case -1:
+					// reorg
+					cancelFunc()
+					return
+				case 0:
+					if !chainInfo.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
+						// reorg
+						cancelFunc()
+						return
+					}
+					if chainInfo.LogIndex >= latestLogIndex {
+						latestLogIndex = chainInfo.LogIndex
+						eventChan <- event
+					}
+				case 1:
+					latestBlockId = chainInfo.BlockId
+					latestLogIndex = chainInfo.LogIndex
+					eventChan <- event
+				}
+			case err = <-errChan:
 			}
 
-			if hitError {
+			if err != nil {
 				// Ignore error and try to reset connection
+				log.Println("Restarting connection due to error", err)
 				for {
-					err := contract.StartConnection(ctx, startHeight, 0, rawEventChan, errChan)
+					err := contract.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1, rawEventChan, errChan)
 					if err == nil {
 						break
 					}
@@ -71,5 +97,5 @@ func HandleBlockchainNotifications(ctx context.Context, startHeight *common.Time
 			}
 		}
 	}()
-	return eventChan
+	return reorgCtx, eventChan, nil
 }

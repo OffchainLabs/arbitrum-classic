@@ -32,7 +32,7 @@ import (
 func DefendExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	precondition *valprotocol.Precondition,
 	startMachine machine.Machine,
@@ -46,16 +46,19 @@ func DefendExecutionClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
+	reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(ctx, startBlockId, startLogIndex, contractWatcher)
+	if err != nil {
+		return 0, err
+	}
 	contract, err := client.NewExecutionChallenge(address)
 	if err != nil {
 		return ChallengeContinuing, err
 	}
 	return defendExecution(
-		ctx,
+		reorgCtx,
+		eventChan,
 		contract,
 		client,
-		eventChan,
 		NewAssertionDefender(
 			precondition,
 			numSteps,
@@ -68,7 +71,7 @@ func DefendExecutionClaim(
 func ChallengeExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
-	startHeight *common.TimeBlocks,
+	startBlockId *structures.BlockId,
 	startLogIndex uint,
 	startPrecondition *valprotocol.Precondition,
 	startMachine machine.Machine,
@@ -81,16 +84,19 @@ func ChallengeExecutionClaim(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	eventChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
+	reorgCtx, eventChan, err := arbbridge.HandleBlockchainNotifications(ctx, startBlockId, startLogIndex, contractWatcher)
+	if err != nil {
+		return 0, err
+	}
 	contract, err := client.NewExecutionChallenge(address)
 	if err != nil {
 		return 0, err
 	}
 	return challengeExecution(
-		ctx,
+		reorgCtx,
+		eventChan,
 		contract,
 		client,
-		eventChan,
 		startMachine,
 		startPrecondition,
 		challengeEverything,
@@ -99,9 +105,9 @@ func ChallengeExecutionClaim(
 
 func defendExecution(
 	ctx context.Context,
+	eventChan <-chan arbbridge.Event,
 	contract arbbridge.ExecutionChallenge,
 	client arbbridge.ArbClient,
-	eventChan <-chan arbbridge.Event,
 	startDefender AssertionDefender,
 	bisectionCount uint32,
 ) (ChallengeState, error) {
@@ -206,9 +212,9 @@ func defendExecution(
 
 func challengeExecution(
 	ctx context.Context,
+	eventChan <-chan arbbridge.Event,
 	contract arbbridge.ExecutionChallenge,
 	client arbbridge.ArbClient,
-	eventChan <-chan arbbridge.Event,
 	startMachine machine.Machine,
 	startPrecondition *valprotocol.Precondition,
 	challengeEverything bool,

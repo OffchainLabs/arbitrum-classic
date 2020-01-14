@@ -23,5 +23,5 @@ import (
 )
 
 type ContractWatcher interface {
-	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, outChan chan Event, errChan chan error) error
+	StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, eventChan chan<- Event, errChan chan<- error) error
 }

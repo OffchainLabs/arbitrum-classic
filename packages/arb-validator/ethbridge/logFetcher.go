@@ -35,21 +35,23 @@ func getLogs(
 	filter ethereum.FilterQuery,
 	startHeight *common.TimeBlocks,
 	startIndex uint,
-	logChan chan types.Log,
-	errChan chan error,
-) error {
+) (<-chan types.Log, <-chan error, error) {
+	header, err := client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, nil, err
+	}
 	streamingLogChan := make(chan types.Log)
 	logSub, err := client.SubscribeFilterLogs(ctx, filter, streamingLogChan)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	header, err := client.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
+	logChan := make(chan types.Log, 1024)
+	errChan := make(chan error, 10)
 	go func() {
 		defer close(logChan)
+		defer close(errChan)
 		defer logSub.Unsubscribe()
+
 		// Get initial old logs
 		filter.FromBlock = startHeight.AsInt()
 		filter.ToBlock = header.Number
@@ -65,12 +67,17 @@ func getLogs(
 			}
 		}
 
-		// Retreive for log from stream
+		// Retrieve for log from stream
 		var ethStreamLog types.Log
+		var ok bool
 		select {
 		case <-ctx.Done():
 			return
-		case ethStreamLog = <-streamingLogChan:
+		case ethStreamLog, ok = <-streamingLogChan:
+			if !ok {
+				errChan <- errors.New("streamingLogChan terminated early1")
+				return
+			}
 			log.Println("First stream log", ethStreamLog.BlockNumber)
 		case err := <-logSub.Err():
 			errChan <- err
@@ -91,6 +98,7 @@ func getLogs(
 				logChan <- ethLog
 			}
 		}
+
 		logChan <- ethStreamLog
 
 		for {
@@ -110,5 +118,5 @@ func getLogs(
 		}
 	}()
 
-	return nil
+	return logChan, errChan, nil
 }
