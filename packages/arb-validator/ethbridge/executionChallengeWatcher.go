@@ -79,7 +79,7 @@ func (c *executionChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.bisectionChallengeWatcher.topics()...)
 }
 
-func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, errChan chan error, outChan chan arbbridge.Notification) error {
+func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, outChan chan arbbridge.Event, errChan chan error) error {
 	headers := make(chan *types.Header)
 	headersSub, err := c.client.SubscribeNewHead(ctx, headers)
 	if err != nil {
@@ -94,7 +94,7 @@ func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHe
 	logChan := make(chan types.Log, 1024)
 	logErrChan := make(chan error, 10)
 
-	if err := getLogs(ctx, c.client, filter, startHeight, logChan, logErrChan); err != nil {
+	if err := getLogs(ctx, c.client, filter, startHeight, startLogIndex, logChan, logErrChan); err != nil {
 		return err
 	}
 
@@ -110,10 +110,18 @@ func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHe
 					errChan <- errors.New("logChan terminated early")
 					return
 				}
-				if err := c.processEvents(ctx, evmLog, outChan); err != nil {
+				header, err := c.client.HeaderByHash(ctx, evmLog.BlockHash)
+				if err != nil {
 					errChan <- err
 					return
 				}
+				chainInfo := getChainInfo(evmLog, header)
+				event, err := c.parseExecutionEvent(chainInfo, evmLog)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				outChan <- event
 			case err := <-logErrChan:
 				errChan <- err
 				return
@@ -126,63 +134,40 @@ func (c *executionChallengeWatcher) StartConnection(ctx context.Context, startHe
 	return nil
 }
 
-func (c *executionChallengeWatcher) processEvents(ctx context.Context, log types.Log, outChan chan arbbridge.Notification) error {
-	event, err := func() (arbbridge.Event, error) {
-		if log.Topics[0] == bisectedAssertionID {
-			bisectChal, err := c.challenge.ParseBisectedAssertion(log)
-			if err != nil {
-				return nil, err
-			}
-			bisectionCount := len(bisectChal.MachineHashes) - 1
-			assertions := make([]*valprotocol.ExecutionAssertionStub, 0, bisectionCount)
-			for i := 0; i < bisectionCount; i++ {
-				assertion := &valprotocol.ExecutionAssertionStub{
-					AfterHash:        bisectChal.MachineHashes[i+1],
-					DidInboxInsn:     bisectChal.DidInboxInsns[i],
-					NumGas:           bisectChal.Gases[i],
-					FirstMessageHash: bisectChal.MessageAccs[i],
-					LastMessageHash:  bisectChal.MessageAccs[i+1],
-					FirstLogHash:     bisectChal.LogAccs[i],
-					LastLogHash:      bisectChal.LogAccs[i+1],
-				}
-				assertions = append(assertions, assertion)
-			}
-			return arbbridge.ExecutionBisectionEvent{
-				Assertions: assertions,
-				TotalSteps: bisectChal.TotalSteps,
-				Deadline:   common.TimeTicks{Val: bisectChal.DeadlineTicks},
-			}, nil
-		} else if log.Topics[0] == oneStepProofCompletedID {
-			_, err := c.challenge.ParseOneStepProofCompleted(log)
-			if err != nil {
-				return nil, err
-			}
-			return arbbridge.OneStepProofEvent{}, nil
-		} else {
-			event, err := c.bisectionChallengeWatcher.parseBisectionEvent(log)
-			if event != nil || err != nil {
-				return event, err
-			}
+func (c *executionChallengeWatcher) parseExecutionEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
+	if log.Topics[0] == bisectedAssertionID {
+		bisectChal, err := c.challenge.ParseBisectedAssertion(log)
+		if err != nil {
+			return nil, err
 		}
-		return nil, errors2.New("unknown arbitrum event type")
-	}()
-
-	if err != nil {
-		return err
+		bisectionCount := len(bisectChal.MachineHashes) - 1
+		assertions := make([]*valprotocol.ExecutionAssertionStub, 0, bisectionCount)
+		for i := 0; i < bisectionCount; i++ {
+			assertion := &valprotocol.ExecutionAssertionStub{
+				AfterHash:        bisectChal.MachineHashes[i+1],
+				DidInboxInsn:     bisectChal.DidInboxInsns[i],
+				NumGas:           bisectChal.Gases[i],
+				FirstMessageHash: bisectChal.MessageAccs[i],
+				LastMessageHash:  bisectChal.MessageAccs[i+1],
+				FirstLogHash:     bisectChal.LogAccs[i],
+				LastLogHash:      bisectChal.LogAccs[i+1],
+			}
+			assertions = append(assertions, assertion)
+		}
+		return arbbridge.ExecutionBisectionEvent{
+			ChainInfo:  chainInfo,
+			Assertions: assertions,
+			TotalSteps: bisectChal.TotalSteps,
+			Deadline:   common.TimeTicks{Val: bisectChal.DeadlineTicks},
+		}, nil
+	} else if log.Topics[0] == oneStepProofCompletedID {
+		_, err := c.challenge.ParseOneStepProofCompleted(log)
+		if err != nil {
+			return nil, err
+		}
+		return arbbridge.OneStepProofEvent{
+			ChainInfo: chainInfo,
+		}, nil
 	}
-
-	if event == nil {
-		return nil
-	}
-	header, err := c.client.HeaderByHash(ctx, log.BlockHash)
-	if err != nil {
-		return err
-	}
-	outChan <- arbbridge.Notification{
-		BlockId:  getBlockID(header),
-		LogIndex: log.Index,
-		Event:    event,
-		TxHash:   log.TxHash,
-	}
-	return nil
+	return c.bisectionChallengeWatcher.parseBisectionEvent(chainInfo, log)
 }

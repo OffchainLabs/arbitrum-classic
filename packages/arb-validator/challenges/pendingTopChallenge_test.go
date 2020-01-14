@@ -50,6 +50,8 @@ func TestPendingTopChallenge(t *testing.T) {
 			return DefendPendingTopClaim(
 				client,
 				challengeAddress,
+				common.NewTimeBlocks(big.NewInt(0)),
+				0,
 				messageStack,
 				bottomHash,
 				topHash,
@@ -57,7 +59,13 @@ func TestPendingTopChallenge(t *testing.T) {
 			)
 		},
 		func(challengeAddress common.Address, client *ethbridge.EthArbAuthClient) (ChallengeState, error) {
-			return ChallengePendingTopClaim(client, challengeAddress, messageStack)
+			return ChallengePendingTopClaim(
+				client,
+				challengeAddress,
+				common.NewTimeBlocks(big.NewInt(0)),
+				0,
+				messageStack,
+			)
 		},
 	); err != nil {
 		t.Fatal(err)

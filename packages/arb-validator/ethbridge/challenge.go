@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	errors2 "github.com/pkg/errors"
@@ -99,27 +100,32 @@ func (c *challengeWatcher) topics() []ethcommon.Hash {
 	}
 }
 
-func (c *challengeWatcher) parseChallengeEvent(log types.Log) (arbbridge.Event, error) {
+func (c *challengeWatcher) parseChallengeEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
 	if log.Topics[0] == initiatedChallengeID {
 		eventVal, err := c.Challenge.ParseInitiatedChallenge(log)
 		if err != nil {
 			return nil, err
 		}
 		return arbbridge.InitiateChallengeEvent{
-			Deadline: common.TimeTicks{Val: eventVal.DeadlineTicks},
+			ChainInfo: chainInfo,
+			Deadline:  common.TimeTicks{Val: eventVal.DeadlineTicks},
 		}, nil
 	} else if log.Topics[0] == timedOutAsserterID {
 		_, err := c.Challenge.ParseAsserterTimedOut(log)
 		if err != nil {
 			return nil, err
 		}
-		return arbbridge.AsserterTimeoutEvent{}, nil
+		return arbbridge.AsserterTimeoutEvent{
+			ChainInfo: chainInfo,
+		}, nil
 	} else if log.Topics[0] == timedOutChallengerID {
 		_, err := c.Challenge.ParseChallengerTimedOut(log)
 		if err != nil {
 			return nil, err
 		}
-		return arbbridge.ChallengerTimeoutEvent{}, nil
+		return arbbridge.ChallengerTimeoutEvent{
+			ChainInfo: chainInfo,
+		}, nil
 	}
-	return nil, nil
+	return nil, errors.New("unknown arbitrum event type")
 }

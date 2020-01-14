@@ -30,6 +30,8 @@ import (
 func DefendMessagesClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
 	afterPending common.Hash,
@@ -42,15 +44,15 @@ func DefendMessagesClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan arbbridge.Notification, 1024)
-	defer close(noteChan)
+	eventChan := make(chan arbbridge.Event, 1024)
+	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	go func() {
 		for event := range parsingChan {
-			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			_, ok := event.(arbbridge.NewTimeEvent)
 			if !ok {
-				noteChan <- event
+				eventChan <- event
 			}
 		}
 	}()
@@ -60,7 +62,7 @@ func DefendMessagesClaim(
 	}
 	return defendMessages(
 		ctx,
-		noteChan,
+		eventChan,
 		contract,
 		client,
 		pendingInbox,
@@ -74,6 +76,8 @@ func DefendMessagesClaim(
 func ChallengeMessagesClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
 	afterPending common.Hash,
@@ -84,15 +88,15 @@ func ChallengeMessagesClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan arbbridge.Notification, 1024)
-	defer close(noteChan)
+	eventChan := make(chan arbbridge.Event, 1024)
+	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	go func() {
 		for event := range parsingChan {
-			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			_, ok := event.(arbbridge.NewTimeEvent)
 			if !ok {
-				noteChan <- event
+				eventChan <- event
 			}
 		}
 	}()
@@ -102,7 +106,7 @@ func ChallengeMessagesClaim(
 	}
 	return challengeMessages(
 		ctx,
-		noteChan,
+		eventChan,
 		contract,
 		client,
 		pendingInbox,
@@ -113,7 +117,7 @@ func ChallengeMessagesClaim(
 
 func defendMessages(
 	ctx context.Context,
-	outChan chan arbbridge.Notification,
+	eventChan chan arbbridge.Event,
 	contract arbbridge.MessagesChallenge,
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
@@ -122,13 +126,13 @@ func defendMessages(
 	importedMessagesSlice common.Hash,
 	bisectionCount uint64,
 ) (ChallengeState, error) {
-	note, ok := <-outChan
+	event, ok := <-eventChan
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	_, ok = note.Event.(arbbridge.InitiateChallengeEvent)
+	_, ok = event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("MessagesChallenge defender expected InitiateChallengeEvent but got %T", note.Event)
+		return 0, fmt.Errorf("MessagesChallenge defender expected InitiateChallengeEvent but got %T", event)
 	}
 
 	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
@@ -148,7 +152,7 @@ func defendMessages(
 		}
 
 		if messageCount == 1 {
-			timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
 				pendingNextHash, pendingValueHash, err := pendingInbox.GenerateOneStepProof(startPending)
 				if err != nil {
@@ -162,20 +166,20 @@ func defendMessages(
 				if err != nil {
 					return 0, err
 				}
-				note, state, err = getNextEvent(outChan)
+				event, state, err = getNextEvent(eventChan)
 			}
 
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(arbbridge.OneStepProofEvent)
+			_, ok = event.(arbbridge.OneStepProofEvent)
 			if !ok {
-				return 0, fmt.Errorf("MessagesChallenge defender expected OneStepProof but got %T", note.Event)
+				return 0, fmt.Errorf("MessagesChallenge defender expected OneStepProof but got %T", event)
 			}
 			return ChallengeAsserterWon, nil
 		}
 
-		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
 			chainHashes, err := pendingInbox.GenerateBisection(startPending, endPending, bisectionCount)
 			if err != nil {
@@ -190,20 +194,20 @@ func defendMessages(
 				return 0, err
 			}
 
-			note, state, err = getNextEvent(outChan)
+			event, state, err = getNextEvent(eventChan)
 		}
 
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		ev, ok := note.Event.(arbbridge.MessagesBisectionEvent)
+		ev, ok := event.(arbbridge.MessagesBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("MessagesChallenge defender expected MessagesBisectionEvent but got %T", note.Event)
+			return 0, fmt.Errorf("MessagesChallenge defender expected MessagesBisectionEvent but got %T", event)
 		}
 
-		note, state, err = getNextEventWithTimeout(
+		event, state, err = getNextEventWithTimeout(
 			ctx,
-			outChan,
+			eventChan,
 			ev.Deadline,
 			contract,
 			client,
@@ -211,9 +215,9 @@ func defendMessages(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
+		contEv, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
+			return 0, fmt.Errorf("MessagesChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 		startPending = ev.ChainHashes[contEv.SegmentIndex.Uint64()]
 		endPending = ev.ChainHashes[contEv.SegmentIndex.Uint64()+1]
@@ -224,20 +228,20 @@ func defendMessages(
 
 func challengeMessages(
 	ctx context.Context,
-	outChan chan arbbridge.Notification,
+	eventChan chan arbbridge.Event,
 	contract arbbridge.MessagesChallenge,
 	client arbbridge.ArbClient,
 	pendingInbox *structures.MessageStack,
 	beforePending common.Hash,
 	afterPending common.Hash,
 ) (ChallengeState, error) {
-	note, ok := <-outChan
+	event, ok := <-eventChan
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	ev, ok := note.Event.(arbbridge.InitiateChallengeEvent)
+	ev, ok := event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("MessagesChallenge challenger expected InitiateChallengeEvent but got %T", note.Event)
+		return 0, fmt.Errorf("MessagesChallenge challenger expected InitiateChallengeEvent but got %T", event)
 	}
 
 	messagesStack, err := pendingInbox.Substack(beforePending, afterPending)
@@ -247,9 +251,9 @@ func challengeMessages(
 
 	deadline := ev.Deadline
 	for {
-		note, state, err := getNextEventWithTimeout(
+		event, state, err := getNextEventWithTimeout(
 			ctx,
-			outChan,
+			eventChan,
 			deadline,
 			contract,
 			client,
@@ -258,16 +262,16 @@ func challengeMessages(
 			return state, err
 		}
 
-		if _, ok := note.Event.(arbbridge.OneStepProofEvent); ok {
+		if _, ok := event.(arbbridge.OneStepProofEvent); ok {
 			return ChallengeAsserterWon, nil
 		}
 
-		ev, ok := note.Event.(arbbridge.MessagesBisectionEvent)
+		ev, ok := event.(arbbridge.MessagesBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("MessagesChallenge challenger expected MessagesBisectionEvent but got %T", note.Event)
+			return 0, fmt.Errorf("MessagesChallenge challenger expected MessagesBisectionEvent but got %T", event)
 		}
 
-		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		if timedOut {
 			pendingChallengedSegment, err := pendingInbox.CheckBisection(ev.ChainHashes)
 			if err != nil {
@@ -286,14 +290,14 @@ func challengeMessages(
 			if err != nil {
 				return 0, err
 			}
-			note, state, err = getNextEvent(outChan)
+			event, state, err = getNextEvent(eventChan)
 		}
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
+		contEv, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("MessagesChallenge challenger expected ContinueChallengeEvent but got %T", note.Event)
+			return 0, fmt.Errorf("MessagesChallenge challenger expected ContinueChallengeEvent but got %T", event)
 		}
 		deadline = contEv.Deadline
 	}

@@ -113,17 +113,18 @@ func (c *bisectionChallengeWatcher) topics() []ethcommon.Hash {
 	return append(tops, c.challengeWatcher.topics()...)
 }
 
-func (c *bisectionChallengeWatcher) parseBisectionEvent(log types.Log) (arbbridge.Event, error) {
+func (c *bisectionChallengeWatcher) parseBisectionEvent(chainInfo arbbridge.ChainInfo, log types.Log) (arbbridge.Event, error) {
 	if log.Topics[0] == continuedChallengeID {
 		contChal, err := c.BisectionChallenge.ParseContinued(log)
 		if err != nil {
 			return nil, err
 		}
 		return arbbridge.ContinueChallengeEvent{
+			ChainInfo:    chainInfo,
 			SegmentIndex: contChal.SegmentIndex,
 			Deadline:     common.TimeTicks{Val: contChal.DeadlineTicks},
 		}, nil
 	} else {
-		return c.challengeWatcher.parseChallengeEvent(log)
+		return c.challengeWatcher.parseChallengeEvent(chainInfo, log)
 	}
 }

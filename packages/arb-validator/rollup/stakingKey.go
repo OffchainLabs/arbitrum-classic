@@ -73,21 +73,36 @@ func (staker *StakingKey) makeAssertion(ctx context.Context, opp *preparedAssert
 	return err
 }
 
-func (staker *StakingKey) challengePendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox) {
+func (staker *StakingKey) challengePendingTop(
+	contractAddress common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
+	pendingInbox *structures.PendingInbox,
+) {
 	staker.Lock()
 	challenges.ChallengePendingTopClaim(
 		staker.client,
 		contractAddress,
+		startHeight,
+		startLogIndex,
 		pendingInbox.MessageStack,
 	)
 	staker.Unlock()
 }
 
-func (staker *StakingKey) challengeMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+func (staker *StakingKey) challengeMessages(
+	contractAddress common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
+	pendingInbox *structures.PendingInbox,
+	conflictNode *Node,
+) {
 	staker.Lock()
 	challenges.ChallengeMessagesClaim(
 		staker.client,
 		contractAddress,
+		startHeight,
+		startLogIndex,
 		pendingInbox.MessageStack,
 		conflictNode.vmProtoData.PendingTop,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
@@ -95,11 +110,19 @@ func (staker *StakingKey) challengeMessages(contractAddress common.Address, pend
 	staker.Unlock()
 }
 
-func (staker *StakingKey) challengeExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition) {
+func (staker *StakingKey) challengeExecution(
+	contractAddress common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
+	mach machine.Machine,
+	pre *valprotocol.Precondition,
+) {
 	staker.Lock()
 	challenges.ChallengeExecutionClaim(
 		staker.client,
 		contractAddress,
+		startHeight,
+		startLogIndex,
 		pre,
 		mach,
 		false,
@@ -107,11 +130,19 @@ func (staker *StakingKey) challengeExecution(contractAddress common.Address, mac
 	staker.Unlock()
 }
 
-func (staker *StakingKey) defendPendingTop(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+func (staker *StakingKey) defendPendingTop(
+	contractAddress common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
+	pendingInbox *structures.PendingInbox,
+	conflictNode *Node,
+) {
 	staker.Lock()
 	challenges.DefendPendingTopClaim(
 		staker.client,
 		contractAddress,
+		startHeight,
+		startLogIndex,
 		pendingInbox.MessageStack,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
 		conflictNode.disputable.MaxPendingTop,
@@ -120,11 +151,19 @@ func (staker *StakingKey) defendPendingTop(contractAddress common.Address, pendi
 	staker.Unlock()
 }
 
-func (staker *StakingKey) defendMessages(contractAddress common.Address, pendingInbox *structures.PendingInbox, conflictNode *Node) {
+func (staker *StakingKey) defendMessages(
+	contractAddress common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
+	pendingInbox *structures.PendingInbox,
+	conflictNode *Node,
+) {
 	staker.Lock()
 	challenges.DefendMessagesClaim(
 		staker.client,
 		contractAddress,
+		startHeight,
+		startLogIndex,
 		pendingInbox.MessageStack,
 		conflictNode.vmProtoData.PendingTop,
 		conflictNode.disputable.AssertionClaim.AfterPendingTop,
@@ -134,11 +173,20 @@ func (staker *StakingKey) defendMessages(contractAddress common.Address, pending
 	staker.Unlock()
 }
 
-func (staker *StakingKey) defendExecution(contractAddress common.Address, mach machine.Machine, pre *valprotocol.Precondition, numSteps uint32) {
+func (staker *StakingKey) defendExecution(
+	contractAddress common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
+	mach machine.Machine,
+	pre *valprotocol.Precondition,
+	numSteps uint32,
+) {
 	staker.Lock()
 	challenges.DefendExecutionClaim(
 		staker.client,
 		contractAddress,
+		startHeight,
+		startLogIndex,
 		pre,
 		mach,
 		numSteps,

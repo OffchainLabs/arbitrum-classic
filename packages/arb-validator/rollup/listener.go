@@ -157,16 +157,20 @@ func (lis *ValidatorChainListener) challengeStakerIfPossible(ctx context.Context
 }
 
 func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStartedEvent, conflictNode *Node, challengerAncestor *Node) {
+	startHeight := ev.BlockId.Height
+	startLogIndex := ev.LogIndex - 1
 	asserter, ok := lis.stakers[ev.Asserter]
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			go asserter.defendPendingTop(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+			go asserter.defendPendingTop(ev.ChallengeContract, startHeight, startLogIndex, lis.chain.pendingInbox, conflictNode)
 		case structures.InvalidMessagesChildType:
-			go asserter.defendMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+			go asserter.defendMessages(ev.ChallengeContract, startHeight, startLogIndex, lis.chain.pendingInbox, conflictNode)
 		case structures.InvalidExecutionChildType:
 			go asserter.defendExecution(
 				ev.ChallengeContract,
+				startHeight,
+				startLogIndex,
 				conflictNode.machine,
 				lis.chain.executionPrecondition(conflictNode),
 				conflictNode.disputable.AssertionParams.NumSteps,
@@ -178,12 +182,14 @@ func (lis *ValidatorChainListener) StartedChallenge(ev arbbridge.ChallengeStarte
 	if ok {
 		switch conflictNode.linkType {
 		case structures.InvalidPendingChildType:
-			go challenger.challengePendingTop(ev.ChallengeContract, lis.chain.pendingInbox)
+			go challenger.challengePendingTop(ev.ChallengeContract, startHeight, startLogIndex, lis.chain.pendingInbox)
 		case structures.InvalidMessagesChildType:
-			go challenger.challengeMessages(ev.ChallengeContract, lis.chain.pendingInbox, conflictNode)
+			go challenger.challengeMessages(ev.ChallengeContract, startHeight, startLogIndex, lis.chain.pendingInbox, conflictNode)
 		case structures.InvalidExecutionChildType:
 			go challenger.challengeExecution(
 				ev.ChallengeContract,
+				startHeight,
+				startLogIndex,
 				conflictNode.machine,
 				lis.chain.executionPrecondition(conflictNode),
 			)

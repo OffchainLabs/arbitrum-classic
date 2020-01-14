@@ -19,9 +19,10 @@ package ethbridge
 import (
 	"context"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"log"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -33,6 +34,7 @@ func getLogs(
 	client *ethclient.Client,
 	filter ethereum.FilterQuery,
 	startHeight *common.TimeBlocks,
+	startIndex uint,
 	logChan chan types.Log,
 	errChan chan error,
 ) error {
@@ -45,7 +47,6 @@ func getLogs(
 	if err != nil {
 		return err
 	}
-	//debug.PrintStack()
 	go func() {
 		defer close(logChan)
 		defer logSub.Unsubscribe()
@@ -59,7 +60,9 @@ func getLogs(
 			return
 		}
 		for _, ethLog := range logs {
-			logChan <- ethLog
+			if ethLog.BlockNumber > startHeight.AsInt().Uint64() || ethLog.Index >= startIndex {
+				logChan <- ethLog
+			}
 		}
 
 		// Retreive for log from stream

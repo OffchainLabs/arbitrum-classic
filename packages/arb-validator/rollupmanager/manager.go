@@ -19,10 +19,11 @@ package rollupmanager
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 	"log"
 	"math/big"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
@@ -71,9 +72,9 @@ func CreateManager(
 
 			fmt.Println("Starting connection")
 
-			outChan := make(chan arbbridge.Notification, 1024)
+			outChan := make(chan arbbridge.Event, 1024)
 			errChan := make(chan error, 1024)
-			if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, 0, errChan, outChan); err != nil {
+			if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, 0, outChan, errChan); err != nil {
 				log.Fatal(err)
 			}
 
@@ -88,31 +89,32 @@ func CreateManager(
 					select {
 					case <-ctx.Done():
 						return
-					case notification, ok := <-outChan:
+					case event, ok := <-outChan:
 						if !ok {
 							hitError = true
 							break
 						}
-						switch notification.BlockId.Height.Cmp(latestBlockId.Height) {
+						chainInfo := event.GetChainInfo()
+						switch chainInfo.BlockId.Height.Cmp(latestBlockId.Height) {
 						case -1:
 							// reorg
 							cancelFunc()
 							return
 						case 0:
-							if !notification.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
+							if !chainInfo.BlockId.HeaderHash.Equals(latestBlockId.HeaderHash) {
 								// reorg
 								cancelFunc()
 								return
 							}
-							if notification.LogIndex > latestLogIndex {
-								latestLogIndex = notification.LogIndex
-								handleNotification(notification, chain)
+							if chainInfo.LogIndex > latestLogIndex {
+								latestLogIndex = chainInfo.LogIndex
+								handleNotification(event, chain)
 							}
 						case 1:
-							latestBlockId = notification.BlockId
-							latestLogIndex = notification.LogIndex
-							chain.NotifyNewBlock(notification.BlockId)
-							handleNotification(notification, chain)
+							latestBlockId = chainInfo.BlockId
+							latestLogIndex = chainInfo.LogIndex
+							chain.NotifyNewBlock(chainInfo.BlockId)
+							handleNotification(event, chain)
 						}
 					case <-errChan:
 						hitError = true
@@ -121,7 +123,7 @@ func CreateManager(
 					if hitError {
 						// Ignore error and try to reset connection
 						for {
-							if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1, errChan, outChan); err == nil {
+							if err := rollupWatcher.StartConnection(ctx, latestBlockId.Height, latestLogIndex+1, outChan, errChan); err == nil {
 								break
 							}
 							log.Println("Error: Can't connect to blockchain")
@@ -144,14 +146,14 @@ func CreateManager(
 	return &Manager{rollupAddr, clnt}, nil
 }
 
-func handleNotification(notification arbbridge.Notification, chain *rollup.ChainObserver) {
+func handleNotification(notification arbbridge.Event, chain *rollup.ChainObserver) {
 	chain.Lock()
 	defer chain.Unlock()
-	switch ev := notification.Event.(type) {
+	switch ev := notification.(type) {
 	case arbbridge.MessageDeliveredEvent:
 		chain.MessageDelivered(ev)
 	case arbbridge.StakeCreatedEvent:
-		currentTime := common.TimeFromBlockNum(notification.BlockId.Height)
+		currentTime := common.TimeFromBlockNum(ev.BlockId.Height)
 		chain.CreateStake(ev, currentTime)
 	case arbbridge.ChallengeStartedEvent:
 		chain.NewChallenge(ev)
@@ -164,7 +166,7 @@ func handleNotification(notification arbbridge.Notification, chain *rollup.Chain
 	case arbbridge.StakeMovedEvent:
 		chain.MoveStake(ev)
 	case arbbridge.AssertedEvent:
-		err := chain.NotifyAssert(ev, notification.BlockId.Height, notification.TxHash)
+		err := chain.NotifyAssert(ev, ev.BlockId.Height, ev.TxHash)
 		if err != nil {
 			panic(err)
 		}

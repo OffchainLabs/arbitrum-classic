@@ -48,8 +48,8 @@ func (c *PendingTopChallenge) setupContracts() error {
 	return nil
 }
 
-func (c *PendingTopChallenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
-	if err := c.BisectionChallenge.StartConnection(ctx, outChan, errChan); err != nil {
+func (c *PendingTopChallenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, outChan chan arbbridge.Event, errChan chan error) error {
+	if err := c.BisectionChallenge.StartConnection(ctx, startHeight, startLogIndex, outChan, errChan); err != nil {
 		return err
 	}
 	if err := c.setupContracts(); err != nil {

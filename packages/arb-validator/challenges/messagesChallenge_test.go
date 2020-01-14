@@ -61,6 +61,8 @@ func TestMessagesChallenge(t *testing.T) {
 			return DefendMessagesClaim(
 				client,
 				challengeAddress,
+				common.NewTimeBlocks(big.NewInt(0)),
+				0,
 				messageStack,
 				beforePending,
 				afterPending,
@@ -72,6 +74,8 @@ func TestMessagesChallenge(t *testing.T) {
 			return ChallengeMessagesClaim(
 				client,
 				challengeAddress,
+				common.NewTimeBlocks(big.NewInt(0)),
+				0,
 				messageStack,
 				beforePending,
 				afterPending,

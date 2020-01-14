@@ -19,7 +19,6 @@ package challenges
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -33,6 +32,8 @@ import (
 func DefendExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
 	precondition *valprotocol.Precondition,
 	startMachine machine.Machine,
 	numSteps uint32,
@@ -44,15 +45,15 @@ func DefendExecutionClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan arbbridge.Notification, 1024)
-	defer close(noteChan)
+	eventChan := make(chan arbbridge.Event, 1024)
+	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	go func() {
 		for event := range parsingChan {
-			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			_, ok := event.(arbbridge.NewTimeEvent)
 			if !ok {
-				noteChan <- event
+				eventChan <- event
 			}
 		}
 	}()
@@ -65,7 +66,7 @@ func DefendExecutionClaim(
 		ctx,
 		contract,
 		client,
-		noteChan,
+		eventChan,
 		NewAssertionDefender(
 			precondition,
 			numSteps,
@@ -78,6 +79,8 @@ func DefendExecutionClaim(
 func ChallengeExecutionClaim(
 	client arbbridge.ArbAuthClient,
 	address common.Address,
+	startHeight *common.TimeBlocks,
+	startLogIndex uint,
 	startPrecondition *valprotocol.Precondition,
 	startMachine machine.Machine,
 	challengeEverything bool,
@@ -88,15 +91,15 @@ func ChallengeExecutionClaim(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	noteChan := make(chan arbbridge.Notification, 1024)
-	defer close(noteChan)
+	eventChan := make(chan arbbridge.Event, 1024)
+	defer close(eventChan)
 
-	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, common.NewTimeBlocks(big.NewInt(0)), contractWatcher)
+	parsingChan := arbbridge.HandleBlockchainNotifications(ctx, startHeight, startLogIndex, contractWatcher)
 	go func() {
 		for event := range parsingChan {
-			_, ok := event.Event.(arbbridge.NewTimeEvent)
+			_, ok := event.(arbbridge.NewTimeEvent)
 			if !ok {
-				noteChan <- event
+				eventChan <- event
 			}
 		}
 	}()
@@ -109,7 +112,7 @@ func ChallengeExecutionClaim(
 		ctx,
 		contract,
 		client,
-		noteChan,
+		eventChan,
 		startMachine,
 		startPrecondition,
 		challengeEverything,
@@ -120,24 +123,24 @@ func defendExecution(
 	ctx context.Context,
 	contract arbbridge.ExecutionChallenge,
 	client arbbridge.ArbClient,
-	outChan chan arbbridge.Notification,
+	eventChan chan arbbridge.Event,
 	startDefender AssertionDefender,
 	bisectionCount uint32,
 ) (ChallengeState, error) {
-	note, ok := <-outChan
+	event, ok := <-eventChan
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	_, ok = note.Event.(arbbridge.InitiateChallengeEvent)
+	_, ok = event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("ExecutionChallenge expected InitiateChallengeEvent but got %T", note.Event)
+		return 0, fmt.Errorf("ExecutionChallenge expected InitiateChallengeEvent but got %T", event)
 	}
 
 	defender := startDefender
 
 	for {
 		if defender.NumSteps() == 1 {
-			timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+			timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 			if timedOut {
 				proof, err := defender.SolidityOneStepProof()
 				if err != nil {
@@ -154,19 +157,19 @@ func defendExecution(
 				if err != nil {
 					return 0, err
 				}
-				note, state, err = getNextEvent(outChan)
+				event, state, err = getNextEvent(eventChan)
 			}
 
 			if err != nil || state != ChallengeContinuing {
 				return state, err
 			}
-			_, ok = note.Event.(arbbridge.OneStepProofEvent)
+			_, ok = event.(arbbridge.OneStepProofEvent)
 			if !ok {
-				return 0, fmt.Errorf("ExecutionChallenge defender expected OneStepProof but got %T", note.Event)
+				return 0, fmt.Errorf("ExecutionChallenge defender expected OneStepProof but got %T", event)
 			}
 			return ChallengeAsserterWon, nil
 		}
-		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		timedOut, event, state, err := getNextEventIfExists(ctx, eventChan, replayTimeout)
 		var defenders []AssertionDefender = nil
 		if timedOut {
 			var assertions []*valprotocol.ExecutionAssertionStub
@@ -175,20 +178,20 @@ func defendExecution(
 			if err != nil {
 				return 0, err
 			}
-			note, state, err = getNextEvent(outChan)
+			event, state, err = getNextEvent(eventChan)
 		}
 
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		ev, ok := note.Event.(arbbridge.ExecutionBisectionEvent)
+		ev, ok := event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge defender expected ExecutionBisectionEvent but got %T", note.Event)
+			return 0, fmt.Errorf("ExecutionChallenge defender expected ExecutionBisectionEvent but got %T", event)
 		}
 
-		note, state, err = getNextEventWithTimeout(
+		event, state, err = getNextEventWithTimeout(
 			ctx,
-			outChan,
+			eventChan,
 			ev.Deadline,
 			contract,
 			client,
@@ -196,9 +199,9 @@ func defendExecution(
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
+		contEv, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge defender expected ContinueChallengeEvent but got %T", note.Event)
+			return 0, fmt.Errorf("ExecutionChallenge defender expected ContinueChallengeEvent but got %T", event)
 		}
 
 		if timedOut {
@@ -227,25 +230,25 @@ func challengeExecution(
 	ctx context.Context,
 	contract arbbridge.ExecutionChallenge,
 	client arbbridge.ArbClient,
-	outChan chan arbbridge.Notification,
+	outChan chan arbbridge.Event,
 	startMachine machine.Machine,
 	startPrecondition *valprotocol.Precondition,
 	challengeEverything bool,
 ) (ChallengeState, error) {
-	note, ok := <-outChan
+	event, ok := <-outChan
 	if !ok {
 		return 0, challengeNoEvents
 	}
-	ev, ok := note.Event.(arbbridge.InitiateChallengeEvent)
+	ev, ok := event.(arbbridge.InitiateChallengeEvent)
 	if !ok {
-		return 0, fmt.Errorf("ExecutionChallenge challenger expected InitiateChallengeEvent but got %T", note.Event)
+		return 0, fmt.Errorf("ExecutionChallenge challenger expected InitiateChallengeEvent but got %T", event)
 	}
 
 	mach := startMachine
 	precondition := startPrecondition
 	deadline := ev.Deadline
 	for {
-		note, state, err := getNextEventWithTimeout(
+		event, state, err := getNextEventWithTimeout(
 			ctx,
 			outChan,
 			deadline,
@@ -256,15 +259,15 @@ func challengeExecution(
 			return state, err
 		}
 
-		if _, ok := note.Event.(arbbridge.OneStepProofEvent); ok {
+		if _, ok := event.(arbbridge.OneStepProofEvent); ok {
 			return ChallengeAsserterWon, nil
 		}
 
-		ev, ok := note.Event.(arbbridge.ExecutionBisectionEvent)
+		ev, ok := event.(arbbridge.ExecutionBisectionEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", note.Event)
+			return 0, fmt.Errorf("ExecutionChallenge challenger expected ExecutionBisectionEvent but got %T", event)
 		}
-		timedOut, note, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
+		timedOut, event, state, err := getNextEventIfExists(ctx, outChan, replayTimeout)
 		var preconditions []*valprotocol.Precondition
 		var m machine.Machine
 		if timedOut {
@@ -293,15 +296,15 @@ func challengeExecution(
 				ev.Assertions,
 				ev.TotalSteps,
 			)
-			note, state, err = getNextEvent(outChan)
+			event, state, err = getNextEvent(outChan)
 		}
 
 		if err != nil || state != ChallengeContinuing {
 			return state, err
 		}
-		contEv, ok := note.Event.(arbbridge.ContinueChallengeEvent)
+		contEv, ok := event.(arbbridge.ContinueChallengeEvent)
 		if !ok {
-			return 0, fmt.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", note.Event)
+			return 0, fmt.Errorf("ExecutionChallenge challenger expected ContinueChallengeEvent but got %T", event)
 		}
 
 		// Update mach, precondition, deadline

@@ -58,6 +58,8 @@ func TestExecution(t *testing.T) {
 			return DefendExecutionClaim(
 				client,
 				challengeAddress,
+				common.NewTimeBlocks(big.NewInt(0)),
+				0,
 				precondition,
 				mach.Clone(),
 				numSteps,
@@ -68,6 +70,8 @@ func TestExecution(t *testing.T) {
 			return ChallengeExecutionClaim(
 				client,
 				challengeAddress,
+				common.NewTimeBlocks(big.NewInt(0)),
+				0,
 				precondition,
 				mach.Clone(),
 				true,

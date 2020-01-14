@@ -46,7 +46,7 @@ func NewChallenge(address common.Address, client arbbridge.ArbClient) (*Challeng
 //	return nil
 //}
 
-func (c *Challenge) StartConnection(ctx context.Context, outChan chan arbbridge.Notification, errChan chan error) error {
+func (c *Challenge) StartConnection(ctx context.Context, startHeight *common.TimeBlocks, startLogIndex uint, outChan chan arbbridge.Event, errChan chan error) error {
 	//if err := c.setupContracts(); err != nil {
 	//	return err
 	//}
