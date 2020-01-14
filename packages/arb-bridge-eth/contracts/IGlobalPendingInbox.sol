@@ -21,12 +21,10 @@ interface IGlobalPendingInbox {
     event TransactionMessageDelivered(
         address indexed vmSenderId,
         address indexed vmReceiverId,
-        address contractAddress,
         uint256 seqNumber,
         uint256 value,
         bytes data
     );
-
 
     function getPending() external returns(bytes32, uint);
 
@@ -37,7 +35,7 @@ interface IGlobalPendingInbox {
         uint256 value
     );
 
-    event DepositERC20MessageDelivered(
+    event ERC20DepositMessageDelivered(
         address indexed vmReceiverId,
         address sender,
         address destination,
@@ -45,7 +43,7 @@ interface IGlobalPendingInbox {
         uint256 value
     );
 
-    event DepositERC721MessageDelivered(
+    event ERC721DepositMessageDelivered(
         address indexed vmReceiverId,
         address sender,
         address destination,

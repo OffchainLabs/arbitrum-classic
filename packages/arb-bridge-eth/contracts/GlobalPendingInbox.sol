@@ -99,7 +99,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
                 _deliverTransactionMessage(
                     msg.sender,
                     address(bytes20(bytes32(vmAddress))),
-                    address(bytes20(bytes32(contractAddress))),
                     seqNumber,
                     value,
                     messageData
@@ -167,7 +166,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function forwardTransactionMessage(
         address _vmAddress,
-        address _contractAddress, 
         uint256 _seqNumber,
         uint256 _value,
         bytes calldata _data,
@@ -177,7 +175,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             keccak256(
                 abi.encodePacked(
                     _vmAddress,
-                    _contractAddress,
                     _seqNumber,
                     _value,
                     Value.deserializeHashed(_data)
@@ -189,7 +186,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         _deliverTransactionMessage(
             sender,
             _vmAddress,
-            _contractAddress,
             _seqNumber,
             _value,
             _data
@@ -198,7 +194,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function sendTransactionMessage(
         address _vmAddress,
-        address _contractAddress, 
         uint256 _seqNumber,
         uint256 _value,
         bytes calldata _data) external
@@ -206,7 +201,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         _deliverTransactionMessage(
             msg.sender,
             _vmAddress,
-            _contractAddress,
             _seqNumber,
             _value,
             _data
@@ -215,9 +209,10 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function depositEthMessage(address _vmAddress, address _destination) external payable 
     {
-        depositEth(_destination);
+        depositEth(_vmAddress);
         
         _deliverEthMessage(
+            _vmAddress,
             msg.sender,
             _destination,
             ETH_DEPOSIT,
@@ -233,9 +228,10 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
     function depositEthMessage(address _vmAddress, address payable _destination, uint256 _value) public
     {
-        transferEth(_destination, _value);
+        transferEth(_vmAddress, _value);
         
         _deliverEthMessage(
+            _vmAddress,
             msg.sender,
             _destination,
             ETH_DEPOSIT,
@@ -288,7 +284,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     function _deliverTransactionMessage(
         address _sender,
         address _vmAddress,
-        address _contractAddress,
         uint256 _seqNumber,
         uint256 _value,
         bytes memory _data) private
@@ -299,18 +294,18 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             bytes32 dataHash = Value.deserializeHashed(_data);
             bytes32 txHash = keccak256(
                 abi.encodePacked(
+                    _vmAddress,
                     _sender,
-                    _contractAddress,
                     _seqNumber,
+                    _value,
                     dataHash
                 )
             );
 
-            Value.Data[] memory msgValues = new Value.Data[](4);
-            msgValues[0] = Value.newInt(uint256(_contractAddress));
-            msgValues[1] = Value.newInt(_seqNumber);
-            msgValues[2] = Value.newInt(_value);
-            msgValues[3] = Value.newHashOnly(dataHash);
+            Value.Data[] memory msgValues = new Value.Data[](3);
+            msgValues[0] = Value.newInt(_seqNumber);
+            msgValues[1] = Value.newInt(_value);
+            msgValues[2] = Value.newHashOnly(dataHash);
 
             Value.Data[] memory msgType = new Value.Data[](3);
             msgType[0] = Value.newInt(TRANSACTION_MSG);
@@ -329,7 +324,6 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
             emit IGlobalPendingInbox.TransactionMessageDelivered(
                 _sender,
                 _vmAddress,
-                _contractAddress,
                 _seqNumber,
                 _value,
                 _data);
@@ -337,15 +331,17 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
     }
 
     function _deliverEthMessage(
+        address _vmAddress,
         address _sender,
         address _destination,
         uint256 _messageType,
         uint256 _value) private
     {
-        if (pending[_destination].value != 0) 
+        if (pending[_vmAddress].value != 0) 
         {
             bytes32 txHash = keccak256(
                 abi.encodePacked(
+                    _vmAddress,
                     _sender,
                     _destination,
                     _value
@@ -384,6 +380,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
         {
             bytes32 txHash = keccak256(
                 abi.encodePacked(
+                    _vmAddress,
                     _sender,
                     _destination,
                     _tokenContract,
@@ -412,7 +409,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             if(_messageType == ERC20_DEPOSIT){
 
-                emit IGlobalPendingInbox.DepositERC20MessageDelivered(
+                emit IGlobalPendingInbox.ERC20DepositMessageDelivered(
                     _vmAddress,
                     _sender,
                     _destination,
@@ -421,7 +418,7 @@ contract GlobalPendingInbox is GlobalWallet, IGlobalPendingInbox {
 
             }else if(_messageType == ERC721_DEPOSIT){
 
-                emit IGlobalPendingInbox.DepositERC721MessageDelivered(
+                emit IGlobalPendingInbox.ERC721DepositMessageDelivered(
                     _vmAddress,
                     _sender,
                     _destination,

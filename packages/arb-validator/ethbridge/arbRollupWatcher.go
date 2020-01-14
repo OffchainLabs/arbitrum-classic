@@ -50,7 +50,10 @@ var rollupStakeMovedID ethcommon.Hash
 var rollupAssertedID ethcommon.Hash
 var rollupConfirmedID ethcommon.Hash
 var confirmedAssertionID ethcommon.Hash
-var messageDeliveredID ethcommon.Hash
+var transactionMessageDeliveredID ethcommon.Hash
+var ethDepositMessageDeliveredID ethcommon.Hash
+var depositERC20MessageDeliveredID ethcommon.Hash
+var depositERC721MessageDeliveredID ethcommon.Hash
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(rollup.ArbRollupABI))
@@ -71,7 +74,10 @@ func init() {
 	rollupConfirmedID = parsedRollup.Events["RollupConfirmed"].ID()
 	confirmedAssertionID = parsedRollup.Events["ConfirmedAssertion"].ID()
 
-	messageDeliveredID = parsedInbox.Events["MessageDelivered"].ID()
+	transactionMessageDeliveredID = parsedInbox.Events["TransactionMessageDelivered"].ID()
+	ethDepositMessageDeliveredID = parsedInbox.Events["EthDepositMessageDelivered"].ID()
+	depositERC20MessageDeliveredID = parsedInbox.Events["ERC20DepositMessageDelivered"].ID()
+	depositERC721MessageDeliveredID = parsedInbox.Events["ERC721DepositMessageDelivered"].ID()
 }
 
 type ethRollupWatcher struct {
@@ -95,7 +101,10 @@ func (vm *ethRollupWatcher) messageFilter() ethereum.FilterQuery {
 	return ethereum.FilterQuery{
 		Addresses: []ethcommon.Address{vm.pendingInboxAddress},
 		Topics: [][]ethcommon.Hash{
-			{messageDeliveredID},
+			{transactionMessageDeliveredID},
+			{ethDepositMessageDeliveredID},
+			{depositERC20MessageDeliveredID},
+			{depositERC721MessageDeliveredID},
 			{addressIndex},
 		},
 	}
@@ -193,6 +202,176 @@ func (vm *ethRollupWatcher) StartConnection(ctx context.Context, outChan chan ar
 		}
 	}()
 	return nil
+}
+
+func AddressToIntValue(address common.Address) value.IntValue {
+	addressBytes := [32]byte{}
+	copy(addressBytes[12:], address[:])
+	addressVal := big.NewInt(0).SetBytes(addressBytes[:])
+
+	return value.NewIntValue(addressVal)
+}
+
+func (vm *ethRollupWatcher) ProcessMessageDeliveredEvents(ethLog types.Log) (arbbridge.Event, error) {
+	if ethLog.Topics[0] == transactionMessageDeliveredID {
+		val, err := vm.GlobalPendingInbox.ParseTransactionMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		rd := bytes.NewReader(val.Data)
+		msgData, err := value.UnmarshalValue(rd)
+		if err != nil {
+			return nil, err
+		}
+
+		messageHash := hashing.SoliditySHA3(
+			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
+			hashing.Address(common.NewAddressFromEth(val.VmSenderId)),
+			hashing.Uint256(val.SeqNumber),
+			hashing.Uint256(val.Value),
+			hashing.Bytes32(msgData.Hash()),
+		)
+
+		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
+
+		msgVal, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(val.SeqNumber),
+			value.NewIntValue(val.Value),
+			msgData,
+		})
+
+		msgType, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(big.NewInt(0)),
+			AddressToIntValue(common.NewAddressFromEth(val.VmSenderId)),
+			msgVal,
+		})
+
+		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			value.NewIntValue(msgHashInt),
+			msgType,
+		})
+
+		return arbbridge.MessageDeliveredEvent{
+			MsgValue: dataMsg,
+		}, nil
+
+	} else if ethLog.Topics[0] == ethDepositMessageDeliveredID {
+		val, err := vm.GlobalPendingInbox.ParseEthDepositMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		messageHash := hashing.SoliditySHA3(
+			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
+			hashing.Address(common.NewAddressFromEth(val.Sender)),
+			hashing.Address(common.NewAddressFromEth(val.Destination)),
+			hashing.Uint256(val.Value),
+		)
+
+		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
+
+		msgVal, _ := value.NewTupleFromSlice([]value.Value{
+			AddressToIntValue(common.NewAddressFromEth(val.Destination)),
+			value.NewIntValue(val.Value),
+		})
+
+		msgType, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(big.NewInt(1)),
+			AddressToIntValue(common.NewAddressFromEth(val.Sender)),
+			msgVal,
+		})
+
+		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			value.NewIntValue(msgHashInt),
+			msgType,
+		})
+
+		return arbbridge.MessageDeliveredEvent{
+			MsgValue: dataMsg,
+		}, nil
+
+	} else if ethLog.Topics[0] == depositERC20MessageDeliveredID {
+		val, err := vm.GlobalPendingInbox.ParseERC20DepositMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		messageHash := hashing.SoliditySHA3(
+			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
+			hashing.Address(common.NewAddressFromEth(val.Sender)),
+			hashing.Address(common.NewAddressFromEth(val.Destination)),
+			hashing.Address(common.NewAddressFromEth(val.TokenAddress)),
+			hashing.Uint256(val.Value),
+		)
+
+		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
+
+		msgVal, _ := value.NewTupleFromSlice([]value.Value{
+			AddressToIntValue(common.NewAddressFromEth(val.TokenAddress)),
+			AddressToIntValue(common.NewAddressFromEth(val.Destination)),
+			value.NewIntValue(val.Value),
+		})
+
+		msgType, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(big.NewInt(2)),
+			AddressToIntValue(common.NewAddressFromEth(val.Sender)),
+			msgVal,
+		})
+
+		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			value.NewIntValue(msgHashInt),
+			msgType,
+		})
+
+		return arbbridge.MessageDeliveredEvent{
+			MsgValue: dataMsg,
+		}, nil
+
+	} else if ethLog.Topics[0] == depositERC721MessageDeliveredID {
+		val, err := vm.GlobalPendingInbox.ParseERC721DepositMessageDelivered(ethLog)
+		if err != nil {
+			return nil, err
+		}
+
+		messageHash := hashing.SoliditySHA3(
+			hashing.Address(common.NewAddressFromEth(val.VmReceiverId)),
+			hashing.Address(common.NewAddressFromEth(val.Sender)),
+			hashing.Address(common.NewAddressFromEth(val.Destination)),
+			hashing.Address(common.NewAddressFromEth(val.TokenAddress)),
+			hashing.Uint256(val.Value),
+		)
+
+		msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
+
+		msgVal, _ := value.NewTupleFromSlice([]value.Value{
+			AddressToIntValue(common.NewAddressFromEth(val.TokenAddress)),
+			AddressToIntValue(common.NewAddressFromEth(val.Destination)),
+			value.NewIntValue(val.Value),
+		})
+
+		msgType, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(big.NewInt(3)),
+			AddressToIntValue(common.NewAddressFromEth(val.Sender)),
+			msgVal,
+		})
+
+		dataMsg, _ := value.NewTupleFromSlice([]value.Value{
+			value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
+			value.NewIntValue(msgHashInt),
+			msgType,
+		})
+
+		return arbbridge.MessageDeliveredEvent{
+			MsgValue: dataMsg,
+		}, nil
+
+	} else {
+		return nil, errors2.New("unknown arbitrum event type")
+	}
 }
 
 func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log, outChan chan arbbridge.Notification) error {
@@ -299,38 +478,9 @@ func (vm *ethRollupWatcher) processEvents(ctx context.Context, ethLog types.Log,
 			return arbbridge.ConfirmedAssertionEvent{
 				LogsAccHash: eventVal.LogsAccHash,
 			}, nil
-		} else if ethLog.Topics[0] == messageDeliveredID {
-			val, err := vm.GlobalPendingInbox.ParseMessageDelivered(ethLog)
-			if err != nil {
-				return nil, err
-			}
-
-			rd := bytes.NewReader(val.Data)
-			msgData, err := value.UnmarshalValue(rd)
-			if err != nil {
-				return nil, err
-			}
-
-			messageHash := hashing.SoliditySHA3(
-				hashing.Address(common.NewAddressFromEth(val.VmId)),
-				hashing.Bytes32(msgData.Hash()),
-				hashing.Uint256(val.Value),
-				val.TokenType[:],
-			)
-			msgHashInt := new(big.Int).SetBytes(messageHash.Bytes())
-
-			msgVal, _ := value.NewTupleFromSlice([]value.Value{
-				msgData,
-				value.NewIntValue(new(big.Int).SetUint64(ethLog.BlockNumber)),
-				value.NewIntValue(msgHashInt),
-			})
-
-			msg := valprotocol.NewSimpleMessage(msgVal, val.TokenType, val.Value, common.NewAddressFromEth(val.Sender))
-			return arbbridge.MessageDeliveredEvent{
-				Msg: msg,
-			}, nil
+		} else {
+			return vm.ProcessMessageDeliveredEvents(ethLog)
 		}
-		return nil, errors2.New("unknown arbitrum event type")
 	}()
 
 	if err != nil {

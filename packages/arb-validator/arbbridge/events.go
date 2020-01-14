@@ -17,6 +17,7 @@
 package arbbridge
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -147,7 +148,7 @@ type ExecutionBisectionEvent struct {
 }
 
 type MessageDeliveredEvent struct {
-	Msg valprotocol.Message
+	MsgValue value.Value
 }
 
 type NewTimeEvent struct{}
