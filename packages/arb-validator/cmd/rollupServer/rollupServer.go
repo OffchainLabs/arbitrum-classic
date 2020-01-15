@@ -22,12 +22,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupvalidator"
 
@@ -35,7 +36,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/loader"
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollup"
@@ -141,21 +141,6 @@ func createRollupChain() {
 	fmt.Println(address.Hex())
 }
 
-func setupChainObserver(
-	client arbbridge.ArbClient,
-	rollupAddress common.Address,
-	codeFile string,
-) (*rollup.ChainObserver, error) {
-	ctx := context.Background()
-	checkpointer := rollup.NewDummyCheckpointer(codeFile)
-	chainObserver, err := rollupmanager.CreateObserver(ctx, rollupAddress, checkpointer, true, client)
-	if err != nil {
-		return nil, err
-	}
-	chainObserver.AddListener(&rollup.AnnouncerListener{})
-	return chainObserver, nil
-}
-
 func validateRollupChain() error {
 	// Check number of args
 
@@ -202,15 +187,18 @@ func validateRollupChain() error {
 		return err
 	}
 
-	chainObserver, err := setupChainObserver(client, address, validateCmd.Arg(0))
-	if err != nil {
-		return err
-	}
-	validatorListener := rollup.NewValidatorChainListener(chainObserver)
+	validatorListener := rollup.NewValidatorChainListener(address)
 	err = validatorListener.AddStaker(client)
 	if err != nil {
 		return err
 	}
+
+	ctx := context.Background()
+	chainObserver, err := rollupmanager.CreateManager(ctx, address, validateCmd.Arg(0), true, client)
+	if err != nil {
+		return err
+	}
+	chainObserver.AddListener(&rollup.AnnouncerListener{})
 	chainObserver.AddListener(validatorListener)
 
 	if *rpcEnable {

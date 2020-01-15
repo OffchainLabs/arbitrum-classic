@@ -67,17 +67,17 @@ func (chain *ChainObserver) startCleanupThread(ctx context.Context) {
 
 				if len(prunesToDo) > 0 {
 					for _, listener := range chain.listeners {
-						listener.PrunableLeafs(prunesToDo)
+						listener.PrunableLeafs(nil, prunesToDo)
 					}
 				}
 				if len(mootedToDo) > 0 {
 					for _, listener := range chain.listeners {
-						listener.MootableStakes(mootedToDo)
+						listener.MootableStakes(nil, mootedToDo)
 					}
 				}
 				if len(oldToDo) > 0 {
 					for _, listener := range chain.listeners {
-						listener.OldStakes(oldToDo)
+						listener.OldStakes(nil, oldToDo)
 					}
 				}
 

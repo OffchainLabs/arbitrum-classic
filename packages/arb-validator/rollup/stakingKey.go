@@ -16,181 +16,163 @@
 
 package rollup
 
-import (
-	"context"
-	"sync"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/challenges"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/structures"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/valprotocol"
-)
-
-type StakingKey struct {
-	sync.Mutex
-	myAddr   common.Address
-	client   arbbridge.ArbAuthClient
-	contract arbbridge.ArbRollup
-}
-
-func (staker *StakingKey) initiateChallenge(ctx context.Context, opp *challengeOpportunity) {
-	staker.Lock()
-	staker.contract.StartChallenge(
-		ctx,
-		opp.asserter,
-		opp.challenger,
-		opp.prevNodeHash,
-		opp.deadlineTicks.Val,
-		opp.asserterNodeType,
-		opp.challengerNodeType,
-		opp.asserterVMProtoHash,
-		opp.challengerVMProtoHash,
-		opp.asserterProof,
-		opp.challengerProof,
-		opp.asserterNodeHash,
-		opp.challengerDataHash,
-		opp.challengerPeriodTicks,
-	)
-	staker.Unlock()
-}
-
-func (staker *StakingKey) makeAssertion(ctx context.Context, opp *preparedAssertion, proof []common.Hash) error {
-	staker.Lock()
-	err := staker.contract.MakeAssertion(
-		ctx,
-		opp.prevPrevLeafHash,
-		opp.prevDataHash,
-		opp.prevDeadline,
-		opp.prevChildType,
-		opp.beforeState,
-		opp.params,
-		opp.claim,
-		proof,
-	)
-	staker.Unlock()
-	return err
-}
-
-func (staker *StakingKey) challengePendingTop(
-	contractAddress common.Address,
-	startBlockId *structures.BlockId,
-	startLogIndex uint,
-	pendingInbox *structures.PendingInbox,
-) {
-	staker.Lock()
-	challenges.ChallengePendingTopClaim(
-		staker.client,
-		contractAddress,
-		startBlockId,
-		startLogIndex,
-		pendingInbox.MessageStack,
-	)
-	staker.Unlock()
-}
-
-func (staker *StakingKey) challengeMessages(
-	contractAddress common.Address,
-	startBlockId *structures.BlockId,
-	startLogIndex uint,
-	pendingInbox *structures.PendingInbox,
-	conflictNode *Node,
-) {
-	staker.Lock()
-	challenges.ChallengeMessagesClaim(
-		staker.client,
-		contractAddress,
-		startBlockId,
-		startLogIndex,
-		pendingInbox.MessageStack,
-		conflictNode.vmProtoData.PendingTop,
-		conflictNode.disputable.AssertionClaim.AfterPendingTop,
-	)
-	staker.Unlock()
-}
-
-func (staker *StakingKey) challengeExecution(
-	contractAddress common.Address,
-	startBlockId *structures.BlockId,
-	startLogIndex uint,
-	mach machine.Machine,
-	pre *valprotocol.Precondition,
-) {
-	staker.Lock()
-	challenges.ChallengeExecutionClaim(
-		staker.client,
-		contractAddress,
-		startBlockId,
-		startLogIndex,
-		pre,
-		mach,
-		false,
-	)
-	staker.Unlock()
-}
-
-func (staker *StakingKey) defendPendingTop(
-	contractAddress common.Address,
-	startBlockId *structures.BlockId,
-	startLogIndex uint,
-	pendingInbox *structures.PendingInbox,
-	conflictNode *Node,
-) {
-	staker.Lock()
-	challenges.DefendPendingTopClaim(
-		staker.client,
-		contractAddress,
-		startBlockId,
-		startLogIndex,
-		pendingInbox.MessageStack,
-		conflictNode.disputable.AssertionClaim.AfterPendingTop,
-		conflictNode.disputable.MaxPendingTop,
-		100,
-	)
-	staker.Unlock()
-}
-
-func (staker *StakingKey) defendMessages(
-	contractAddress common.Address,
-	startBlockId *structures.BlockId,
-	startLogIndex uint,
-	pendingInbox *structures.PendingInbox,
-	conflictNode *Node,
-) {
-	staker.Lock()
-	challenges.DefendMessagesClaim(
-		staker.client,
-		contractAddress,
-		startBlockId,
-		startLogIndex,
-		pendingInbox.MessageStack,
-		conflictNode.vmProtoData.PendingTop,
-		conflictNode.disputable.AssertionClaim.AfterPendingTop,
-		conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
-		100,
-	)
-	staker.Unlock()
-}
-
-func (staker *StakingKey) defendExecution(
-	contractAddress common.Address,
-	startBlockId *structures.BlockId,
-	startLogIndex uint,
-	mach machine.Machine,
-	pre *valprotocol.Precondition,
-	numSteps uint32,
-) {
-	staker.Lock()
-	challenges.DefendExecutionClaim(
-		staker.client,
-		contractAddress,
-		startBlockId,
-		startLogIndex,
-		pre,
-		mach,
-		numSteps,
-		50,
-	)
-	staker.Unlock()
-}
+//type StakingKey struct {
+//	address  common.Address
+//	client   arbbridge.ArbAuthClient
+//	contract arbbridge.ArbRollup
+//}
+//
+//func (staker *StakingKey) placeStake(ctx context.Context, chain *ChainObserver) error {
+//	log.Println("Staking", staker.address)
+//	chain.RLock()
+//	location := chain.knownValidNode
+//	proof1 := GeneratePathProof(chain.nodeGraph.latestConfirmed, location)
+//	proof2 := GeneratePathProof(location, chain.nodeGraph.getLeaf(location))
+//	stakeAmount := chain.nodeGraph.params.StakeRequirement
+//	chain.RUnlock()
+//
+//	return staker.contract.PlaceStake(ctx, stakeAmount, proof1, proof2)
+//}
+//
+//func (staker *StakingKey) initiateChallenge(ctx context.Context, opp *challengeOpportunity) error {
+//	return staker.contract.StartChallenge(
+//		ctx,
+//		opp.asserter,
+//		opp.challenger,
+//		opp.prevNodeHash,
+//		opp.deadlineTicks.Val,
+//		opp.asserterNodeType,
+//		opp.challengerNodeType,
+//		opp.asserterVMProtoHash,
+//		opp.challengerVMProtoHash,
+//		opp.asserterProof,
+//		opp.challengerProof,
+//		opp.asserterNodeHash,
+//		opp.challengerDataHash,
+//		opp.challengerPeriodTicks,
+//	)
+//}
+//
+//func (staker *StakingKey) makeAssertion(ctx context.Context, opp *preparedAssertion, proof []common.Hash) error {
+//	return staker.contract.MakeAssertion(
+//		ctx,
+//		opp.prevPrevLeafHash,
+//		opp.prevDataHash,
+//		opp.prevDeadline,
+//		opp.prevChildType,
+//		opp.beforeState,
+//		opp.params,
+//		opp.claim,
+//		proof,
+//	)
+//}
+//
+//func (staker *StakingKey) challengePendingTop(
+//	contractAddress common.Address,
+//	startBlockId *structures.BlockId,
+//	startLogIndex uint,
+//	pendingInbox *structures.PendingInbox,
+//) (challenges.ChallengeState, error) {
+//	return challenges.ChallengePendingTopClaim(
+//		staker.client,
+//		contractAddress,
+//		startBlockId,
+//		startLogIndex,
+//		pendingInbox.MessageStack,
+//	)
+//}
+//
+//func (staker *StakingKey) challengeMessages(
+//	contractAddress common.Address,
+//	startBlockId *structures.BlockId,
+//	startLogIndex uint,
+//	pendingInbox *structures.PendingInbox,
+//	conflictNode *Node,
+//) (challenges.ChallengeState, error) {
+//	return challenges.ChallengeMessagesClaim(
+//		staker.client,
+//		contractAddress,
+//		startBlockId,
+//		startLogIndex,
+//		pendingInbox.MessageStack,
+//		conflictNode.vmProtoData.PendingTop,
+//		conflictNode.disputable.AssertionClaim.AfterPendingTop,
+//	)
+//}
+//
+//func (staker *StakingKey) challengeExecution(
+//	contractAddress common.Address,
+//	startBlockId *structures.BlockId,
+//	startLogIndex uint,
+//	mach machine.Machine,
+//	pre *valprotocol.Precondition,
+//) (challenges.ChallengeState, error) {
+//	return challenges.ChallengeExecutionClaim(
+//		staker.client,
+//		contractAddress,
+//		startBlockId,
+//		startLogIndex,
+//		pre,
+//		mach,
+//		false,
+//	)
+//}
+//
+//func (staker *StakingKey) defendPendingTop(
+//	contractAddress common.Address,
+//	startBlockId *structures.BlockId,
+//	startLogIndex uint,
+//	pendingInbox *structures.PendingInbox,
+//	conflictNode *Node,
+//) (challenges.ChallengeState, error) {
+//	return challenges.DefendPendingTopClaim(
+//		staker.client,
+//		contractAddress,
+//		startBlockId,
+//		startLogIndex,
+//		pendingInbox.MessageStack,
+//		conflictNode.disputable.AssertionClaim.AfterPendingTop,
+//		conflictNode.disputable.MaxPendingTop,
+//		100,
+//	)
+//}
+//
+//func (staker *StakingKey) defendMessages(
+//	contractAddress common.Address,
+//	startBlockId *structures.BlockId,
+//	startLogIndex uint,
+//	pendingInbox *structures.PendingInbox,
+//	conflictNode *Node,
+//) (challenges.ChallengeState, error) {
+//	return challenges.DefendMessagesClaim(
+//		staker.client,
+//		contractAddress,
+//		startBlockId,
+//		startLogIndex,
+//		pendingInbox.MessageStack,
+//		conflictNode.vmProtoData.PendingTop,
+//		conflictNode.disputable.AssertionClaim.AfterPendingTop,
+//		conflictNode.disputable.AssertionClaim.ImportedMessagesSlice,
+//		100,
+//	)
+//}
+//
+//func (staker *StakingKey) defendExecution(
+//	contractAddress common.Address,
+//	startBlockId *structures.BlockId,
+//	startLogIndex uint,
+//	mach machine.Machine,
+//	pre *valprotocol.Precondition,
+//	numSteps uint32,
+//) (challenges.ChallengeState, error) {
+//	return challenges.DefendExecutionClaim(
+//		staker.client,
+//		contractAddress,
+//		startBlockId,
+//		startLogIndex,
+//		pre,
+//		mach,
+//		numSteps,
+//		50,
+//	)
+//}

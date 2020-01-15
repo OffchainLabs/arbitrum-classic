@@ -24,7 +24,6 @@ import (
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -52,10 +51,10 @@ type challenge struct {
 	Challenge *executionchallenge.Challenge
 
 	client *ethclient.Client
-	auth   *bind.TransactOpts
+	auth   *TransactAuth
 }
 
-func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*challenge, error) {
+func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*challenge, error) {
 	challengeContract, err := executionchallenge.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to ChallengeManager")
@@ -64,11 +63,10 @@ func newChallenge(address ethcommon.Address, client *ethclient.Client, auth *bin
 	return &challenge{Challenge: challengeContract, client: client, auth: auth}, nil
 }
 
-func (c *challenge) TimeoutChallenge(
-	ctx context.Context,
-) error {
-	c.auth.Context = ctx
-	tx, err := c.Challenge.TimeoutChallenge(c.auth)
+func (c *challenge) TimeoutChallenge(ctx context.Context) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+	tx, err := c.Challenge.TimeoutChallenge(c.auth.getAuth(ctx))
 	if err != nil {
 		return err
 	}
@@ -76,7 +74,7 @@ func (c *challenge) TimeoutChallenge(
 }
 
 func (c *challenge) waitForReceipt(ctx context.Context, tx *types.Transaction, methodName string) error {
-	return waitForReceipt(ctx, c.client, c.auth.From, tx, methodName)
+	return waitForReceipt(ctx, c.client, c.auth.auth.From, tx, methodName)
 }
 
 type challengeWatcher struct {

@@ -22,7 +22,6 @@ import (
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -34,10 +33,10 @@ import (
 type arbFactory struct {
 	contract *arbfactory.ArbFactory
 	client   *ethclient.Client
-	auth     *bind.TransactOpts
+	auth     *TransactAuth
 }
 
-func newArbFactory(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*arbFactory, error) {
+func newArbFactory(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*arbFactory, error) {
 	vmCreatorContract, err := arbfactory.NewArbFactory(address, client)
 	if err != nil {
 		return nil, errors2.Wrap(err, "Failed to connect to arbFactory")
@@ -51,9 +50,10 @@ func (con *arbFactory) CreateRollup(
 	params structures.ChainParams,
 	owner common.Address,
 ) (common.Address, error) {
-	con.auth.Context = ctx
+	con.auth.Lock()
+	defer con.auth.Unlock()
 	tx, err := con.contract.CreateRollup(
-		con.auth,
+		con.auth.getAuth(ctx),
 		vmState,
 		params.GracePeriod.Val,
 		new(big.Int).SetUint64(params.ArbGasSpeedLimitPerTick),
@@ -64,7 +64,7 @@ func (con *arbFactory) CreateRollup(
 	if err != nil {
 		return common.Address{}, errors2.Wrap(err, "Failed to call to ChainFactory.CreateChain")
 	}
-	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.From, tx, "CreateChain")
+	receipt, err := WaitForReceiptWithResults(ctx, con.client, con.auth.auth.From, tx, "CreateChain")
 	if err != nil {
 		return common.Address{}, err
 	}

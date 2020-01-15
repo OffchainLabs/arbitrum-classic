@@ -36,12 +36,12 @@ func (chain *ChainObserver) startConfirmThread(ctx context.Context) {
 				confValid, confInvalid := chain.nodeGraph.generateNextConfProof(common.TimeFromBlockNum(chain.latestBlockId.Height))
 				if confValid != nil {
 					for _, listener := range chain.listeners {
-						listener.ValidNodeConfirmable(confValid)
+						listener.ValidNodeConfirmable(nil, confValid)
 					}
 				}
 				if confInvalid != nil {
 					for _, listener := range chain.listeners {
-						listener.InvalidNodeConfirmable(confInvalid)
+						listener.InvalidNodeConfirmable(nil, confInvalid)
 					}
 				}
 				chain.RUnlock()

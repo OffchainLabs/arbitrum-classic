@@ -18,12 +18,13 @@ package rollup
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 	"log"
 	"math/big"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
 
 	"github.com/gogo/protobuf/proto"
 
@@ -556,6 +557,8 @@ func (csc *productionCheckpointer) QueueReorgedCheckpointsForDeletion(client arb
 	if err := proto.Unmarshal(metadataBuf, metadata); err != nil {
 		return
 	}
+
+	log.Println("Metadata", metadata)
 
 	oldestId := metadata.Oldest.Unmarshal()
 	newestId := metadata.Newest.Unmarshal()

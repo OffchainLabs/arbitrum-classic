@@ -24,7 +24,6 @@ import (
 	errors2 "github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -49,7 +48,7 @@ type bisectionChallenge struct {
 	BisectionChallenge *executionchallenge.BisectionChallenge
 }
 
-func newBisectionChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*bisectionChallenge, error) {
+func newBisectionChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*bisectionChallenge, error) {
 	challenge, err := newChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -70,10 +69,11 @@ func (c *bisectionChallenge) chooseSegment(
 	segmentToChallenge uint16,
 	segments []common.Hash,
 ) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	tree := NewMerkleTree(segments)
-	c.auth.Context = ctx
 	tx, err := c.BisectionChallenge.ChooseSegment(
-		c.auth,
+		c.auth.getAuth(ctx),
 		big.NewInt(int64(segmentToChallenge)),
 		tree.GetProofFlat(int(segmentToChallenge)),
 		tree.GetRoot(),

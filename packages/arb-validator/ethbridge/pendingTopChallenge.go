@@ -22,7 +22,6 @@ import (
 
 	errors2 "github.com/pkg/errors"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -36,7 +35,7 @@ type pendingTopChallenge struct {
 	contract *pendingtopchallenge.PendingTopChallenge
 }
 
-func newPendingTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *bind.TransactOpts) (*pendingTopChallenge, error) {
+func newPendingTopChallenge(address ethcommon.Address, client *ethclient.Client, auth *TransactAuth) (*pendingTopChallenge, error) {
 	bisectionChallenge, err := newBisectionChallenge(address, client, auth)
 	if err != nil {
 		return nil, err
@@ -53,9 +52,10 @@ func (c *pendingTopChallenge) Bisect(
 	chainHashes []common.Hash,
 	chainLength *big.Int,
 ) error {
-	c.auth.Context = ctx
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	tx, err := c.contract.Bisect(
-		c.auth,
+		c.auth.getAuth(ctx),
 		hashSliceToRaw(chainHashes),
 		chainLength,
 	)
@@ -71,9 +71,10 @@ func (c *pendingTopChallenge) OneStepProof(
 	topHashA common.Hash,
 	value common.Hash,
 ) error {
-	c.auth.Context = ctx
+	c.auth.Lock()
+	defer c.auth.Unlock()
 	tx, err := c.contract.OneStepProof(
-		c.auth,
+		c.auth.getAuth(ctx),
 		lowerHashA,
 		topHashA,
 		value,
