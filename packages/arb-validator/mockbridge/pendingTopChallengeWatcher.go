@@ -57,7 +57,7 @@ func newPendingTopChallengeWatcher(address ethcommon.Address, client arbbridge.A
 	}
 	//pendingTopContract, err := pendingtopchallenge.NewPendingTopChallenge(address, client)
 	//if err != nil {
-	//	return nil, errors2.Wrap(err, "Failed to connect to PendingTopChallenge")
+	//	return nil, errors2.Wrap(err, "Failed to connect to pendingTopChallenge")
 	//}
 	return &pendingTopChallengeWatcher{
 		bisectionChallengeWatcher: bisectionChallenge,

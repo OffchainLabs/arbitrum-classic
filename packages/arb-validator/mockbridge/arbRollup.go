@@ -36,6 +36,18 @@ func newRollup(address common.Address, client arbbridge.ArbClient) (*ArbRollup, 
 	//	return nil, errors2.Wrap(err, "Failed to connect to ArbRollup")
 	//}
 	//vm := &ArbRollup{Client: client.(*MockArbClient).client, ArbRollup: arbitrumRollupContract, auth: auth}
+
+	// arbRollup init()
+	// 	NodeGraph init()
+	//	Staking init()
+	//        require(address(challengeFactory) == address(0), INIT_TWICE);
+	//        require(_challengeFactoryAddress != address(0), INIT_NONZERO);
+	//
+	//        challengeFactory = IChallengeFactory(_challengeFactoryAddress);
+	//
+	//        // VM parameters
+	//        stakeRequirement = _stakeRequirement;
+
 	return &ArbRollup{
 		Client: nil,
 	}, nil
@@ -57,6 +69,12 @@ func (vm *ArbRollup) PlaceStake(ctx context.Context, stakeAmount *big.Int, proof
 	//	return err
 	//}
 	//return vm.waitForReceipt(ctx, tx, "PlaceStake")
+
+	//        bytes32 location = RollupUtils.calculatePath(latestConfirmedPriv, proof1);
+	//        bytes32 leaf = RollupUtils.calculatePath(location, proof2);
+	//        require(isValidLeaf(leaf), PLACE_LEAF);
+	//        createStake(location);
+
 	return nil
 }
 

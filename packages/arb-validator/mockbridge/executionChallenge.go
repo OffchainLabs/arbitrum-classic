@@ -25,7 +25,7 @@ import (
 )
 
 type ExecutionChallenge struct {
-	*BisectionChallenge
+	*bisectionChallenge
 }
 
 func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (*ExecutionChallenge, error) {
@@ -33,7 +33,7 @@ func NewExecutionChallenge(address common.Address, client arbbridge.ArbClient) (
 	if err != nil {
 		return nil, err
 	}
-	vm := &ExecutionChallenge{BisectionChallenge: bisectionChallenge}
+	vm := &ExecutionChallenge{bisectionChallenge: bisectionChallenge}
 	//err = vm.setupContracts()
 	return vm, err
 }

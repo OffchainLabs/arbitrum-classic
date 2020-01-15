@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/arbbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-validator/mockbridge"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -33,7 +35,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/test"
 )
 
-type ChallengeFunc func(common.Address, *ethbridge.EthArbAuthClient) (ChallengeState, error)
+type ChallengeFunc func(common.Address, arbbridge.ArbAuthClient) (ChallengeState, error)
 
 func testChallenge(
 	challengeType structures.ChildType,
@@ -69,11 +71,13 @@ func testChallenge(
 		return err
 	}
 
-	client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+	//client1, err := ethbridge.NewEthAuthClient(ethURL, auth1)
+	client1, err := mockbridge.NewEthAuthClient(ethURL, auth1)
 	if err != nil {
 		return err
 	}
-	client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+	//client2, err := ethbridge.NewEthAuthClient(ethURL, auth2)
+	client2, err := mockbridge.NewEthAuthClient(ethURL, auth2)
 	if err != nil {
 		return err
 	}

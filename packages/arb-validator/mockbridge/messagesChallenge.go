@@ -18,8 +18,6 @@ package mockbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-validator/ethbridge/messageschallenge"
-	errors2 "github.com/pkg/errors"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
